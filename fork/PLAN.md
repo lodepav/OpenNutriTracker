@@ -43,13 +43,16 @@ Checked on `develop` at 1bc934b1 (2026-10-17).
 
 ## 2b. Phase 1b — Offline food tables (D11)
 
-1. `fork/tools/build_food_db`: USDA Foundation + SR Legacy (with portions) and Livsmedelsverket,
-   normalised to per-100 g plus portions, written to a SQLite asset.
+1. `fork/tools/build_food_db`: Fineli, BLS 4.0, USDA Foundation + SR Legacy, normalised to
+   per 100 g plus portions, with the source on every row, written to a SQLite asset. First
+   check: which tables have English names and portion sizes (USDA does; Fineli and BLS to
+   be checked). AI matching needs both.
 2. A local food data source beside OFF in search and in AI matching, behind a seam where
    upstream's `sp_food_data_source.dart` is called. Local results rank first for generic foods.
-3. Credits on the Sources screen (CC BY attribution for Livsmedelsverket).
-4. Check: "rye bread", "kefir", "buckwheat", "2 eggs", a pizza photo resolve without D9's
-   estimate.
+3. Credits on the Sources screen (CC BY: THL/Fineli, Max Rubner-Institut/BLS; USDA).
+4. Check: rye bread, biezpiens (quark), kefir, buckwheat, grey peas, "2 eggs" and a pizza
+   photo resolve without D9's estimate. Gaps found here decide whether Livsmedelsverket is
+   added.
 
 ## 3. Phase 2 — Backup to Google Drive
 
@@ -108,7 +111,7 @@ seams.
 | Q1 | Which AI model or provider? | D7 |
 | Q2 | Install beside the official app? | D8 (name still open) |
 | Q3 | Grounded only, or estimate when nothing matches? | D9 |
-| Q4 | How to get generic foods (USDA/BLS) without ONT's backend key? | D11 (option b, plus Livsmedelsverket) |
+| Q4 | How to get generic foods (USDA/BLS) without ONT's backend key? | D11 (option b: USDA, Fineli, BLS) |
 | Q5 | Drive backup through a sync app? | D10 |
 
 **Q4.** Open Food Facts is mostly packaged, branded products: searching "banana" or
