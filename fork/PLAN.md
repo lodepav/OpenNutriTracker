@@ -99,6 +99,13 @@ seams.
 
 ## 5. Backlog (after phases 1–3)
 
+- **Research: dishes from recipes, not more tables** (user's idea, 2026-10-18). Instead of
+  adding a table per country, find an open recipe database (Latvian, Georgian, etc.), and build
+  a dish's nutrition from its ingredients searched in the bundled tables. It would cover
+  pelmeni, khachapuri and grey peas with bacon, which no table has, and could replace
+  Fineli/Livsmedelsverket. Check licences and whether recipes give gram amounts. Upstream's
+  recipe builder may already do the summing.
+
 - AI nutrition-label scan (reference: aeobrien/OpenNutriTracker "Phase 11").
 - AI recipe builder from text or a URL (reference: aeobrien "Phase 12": unmatched
   ingredients fall back to search, label scan or manual entry).
