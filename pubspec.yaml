@@ -132,6 +132,9 @@ flutter:
     # in unsplash_attribution.dart). Shipping them means Try Demo never
     # contacts Unsplash's CDN, at seed time or at render time.
     - assets/demo/meals/
+    # [fork] S2 food-asset: the bundled food table (D11), fork/tools/build_food_db.py
+    - assets/fork/
+    # [/fork]
 
   fonts:
     - family: CustomIcons

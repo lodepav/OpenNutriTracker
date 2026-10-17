@@ -43,6 +43,11 @@ Checked on `develop` at 1bc934b1 (2026-10-17).
 
 ## 2b. Phase 1b — Offline food tables (D11)
 
+Status 2026-10-17: USDA (SR Legacy, Foundation, FNDDS survey) and BLS 4.0 are built and
+searched on the emulator: 20,687 foods, 13,006 with portions, a 1.4 MB asset. Fineli waits
+on a browser download. Only USDA rows carry portions; BLS has none (upstream's backend has
+the same gap). Pelmeni and khachapuri are in no table and go to D9.
+
 1. `fork/tools/build_food_db`: Fineli, BLS 4.0, USDA Foundation + SR Legacy, normalised to
    per 100 g plus portions, with the source on every row, written to a SQLite asset. First
    check: which tables have English names and portion sizes (USDA does; Fineli and BLS to
