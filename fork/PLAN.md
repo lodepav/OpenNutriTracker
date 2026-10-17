@@ -27,6 +27,25 @@ Checked on `develop` at 1bc934b1 (2026-10-17).
 - [ ] Fork identity, if wanted (Q2): a `fork` flavour with its own app id and name, set in a fork-owned `android/app/fork.gradle` applied by one seam line, as openGym-Hevier's S7 does.
 - [ ] `.env`: placeholders stay; ONT's hosted backend isn't used (D11).
 
+## 1c. Phase 1c — Dishes as recipes (D12, revised D9)
+
+Before phase 1, at the user's request.
+
+1. **Breakdown.** Find where the resolver gives up on an item (`resolve_parsed_meals_usecase.dart`).
+   For that item, ask the model for its ingredients with grams in a second, text-only call
+   (cheap; the photo isn't resent), then resolve each ingredient the usual way. Fork-only,
+   behind a seam. The first step is reading how upstream's three clients build their JSON schema,
+   so the breakdown reuses it.
+2. **Review screen.** The dish shows as a group of its ingredients, each editable, and is
+   marked as an AI breakdown. Ingredients that still match nothing carry the model's estimate,
+   marked as such (D9).
+3. **Save as recipe.** One action stores the breakdown through upstream's recipe builder. Check
+   that a saved recipe is found first next time, by search and by the AI resolver.
+4. **Starter recipes.** The four CC0 Latvian recipes, entered as recipes on first run (or via a
+   bundled recipe import file, if upstream's JSON recipe import fits).
+5. **Check:** khachapuri, pelmeni and grey peas with bacon, typed and photographed, give
+   plausible totals with every number traced to a table row or a marked estimate.
+
 ## 2. Phase 1 — AI logging complete
 
 1. **Photo + note.** Send the user's typed text along with the photo, in all three clients
@@ -34,9 +53,7 @@ Checked on `develop` at 1bc934b1 (2026-10-17).
    `openai_compatible_meal_items_api.dart`) and the add-meal screen. Upstream PR (rule 1).
 2. **Gemini.** Upstream PR #1257 fixes Gemini through the OpenAI-compatible client. Review it,
    then merge it into `fork/main` until upstream takes it, if Gemini is the model (Q1).
-3. **Estimate when nothing matches (D9).** The prompt also asks for a per-item estimate, which
-   the fork reads only for items the database can't resolve; the review row shows it marked
-   as an AI estimate. Fork-only, behind a seam.
+3. **Estimate when nothing matches (D9):** covered by phase 1c.
 4. **Check on real meals.** Ten meal photos and descriptions through the chosen model. Note
    what the grounding misses: dishes with no database match, portions the database lacks.
    This decides Q3.
@@ -44,8 +61,8 @@ Checked on `develop` at 1bc934b1 (2026-10-17).
 ## 2b. Phase 1b — Offline food tables (D11)
 
 Status 2026-10-17: USDA (SR Legacy, Foundation, FNDDS survey) and BLS 4.0 are built and
-searched on the emulator: 20,687 foods, 13,006 with portions, a 1.4 MB asset. Fineli waits
-on a browser download. Only USDA rows carry portions; BLS has none (upstream's backend has
+searched on the emulator: 20,687 foods, 13,006 with portions, a 1.4 MB asset. Fineli is dropped
+(D11, D12). Only USDA rows carry portions; BLS has none (upstream's backend has
 the same gap). Pelmeni and khachapuri are in no table and go to D9.
 
 1. `fork/tools/build_food_db`: Fineli, BLS 4.0, USDA Foundation + SR Legacy, normalised to
@@ -99,17 +116,9 @@ seams.
 
 ## 5. Backlog (after phases 1–3)
 
-- **Research: dishes from recipes, not more tables** (user's idea, 2026-10-18). Instead of
-  adding a table per country, find an open recipe database (Latvian, Georgian, etc.), and build
-  a dish's nutrition from its ingredients searched in the bundled tables. It would cover
-  pelmeni, khachapuri and grey peas with bacon, which no table has, and could replace
-  Fineli/Livsmedelsverket. Check licences and whether recipes give gram amounts. Upstream's
-  recipe builder may already do the summing.
-
 - AI nutrition-label scan (reference: aeobrien/OpenNutriTracker "Phase 11").
 - AI recipe builder from text or a URL (reference: aeobrien "Phase 12": unmatched
   ingredients fall back to search, label scan or manual entry).
-- AI estimate for items the database can't match (Q3; reference: aeobrien "Phase 10").
 - Faster logging: recents ranked by time of day, re-log yesterday's meal in one tap.
 - Top contributors per nutrient.
 - Release checks like openGym-Hevier's D26/D38 (gitleaks, Trivy over `pubspec.lock`, APK
