@@ -102,26 +102,30 @@ Proposed, following openGym-Hevier's D20 (Q5): **no Drive client in the app.**
 Reference: Albert071/OpenNutriTracker's WorkManager auto-export (it uses a Drive service
 account, which is not the approach here).
 
-## 4. Phase 3 — The MacroFactor core
+## 4. Phase 3 — The MacroFactor core (D13)
 
-Pure Dart in `lib/fork/`, unit-tested in `test/fork/` (rule 3), checked on seeded data.
+Pure Dart in `lib/fork/`, unit-tested in `test/fork/` (rule 3), beside upstream's code, never
+replacing it. Design and sources: [research/phase3-macrofactor-algorithms.md](research/phase3-macrofactor-algorithms.md).
 
-1. **Trend weight.** Compare ONT's 7-day moving average with an exponentially smoothed trend
-   (MacroFactor's style: less lag, no jumps when a weigh-in is missing). Upstream PR if the
-   case is good.
-2. **Expenditure estimate.** Port SparkyFitness's `AdaptiveTdeeService.ts` (MIT): intake minus
-   the trend's weight change × energy density, over a 28-day window, with confidence levels,
-   a plausibility clamp against the formula TDEE, and handling of days not logged.
-3. **Weekly check-in.** Once a week, a screen that shows the past week (average intake, trend
-   change, expenditure) and proposes new calorie and macro targets for the goal and pace. The
-   user accepts or edits them. The proposal is adherence-neutral: it uses what was eaten, not
-   the old target.
-4. **Goal ETA** from the trend and the chosen pace.
+1. **Simulator first.** Synthetic users with a known expenditure: weights from energy balance,
+   daily water noise, missed weigh-ins, unlogged and under-logged days, step changes in
+   expenditure. It scores stability (kcal/day moved per day), responsiveness (days to follow a
+   step) and error against the truth, as MacroFactor reports. Everything below is tuned on it.
+2. **Smoothed trend.** Interpolate missing days, exponential smoothing (start at 10%/day). Shown
+   on the weight chart when the setting picks it; upstream's 7-day average stays the default.
+3. **Expenditure.** 20-day change, Forbes/Hall energy density (flat 6,000 fallback), blended
+   estimate from the IOM prior, data rules (4 of 7 days logged, a weigh-in a week, else carry).
+   Checked against the simulator and upstream's demo-seeded year (`SEED=1`).
+4. **Weekly check-in.** Past week (average intake, trend change, expenditure) and a proposed
+   target with a capped change; accept or edit. Adaptive mode stops adding logged activities.
+   Fork state in its own Hive box, included in backups (phase 2.4).
+5. **Settings switch** for trend and target, behind seams in the settings screen and in
+   `calorie_goal_calc.dart`'s caller.
+6. **Goal ETA** from the trend and the chosen pace.
 
-Upstream: open an issue first. The maintainer cites a source for every calculation (the
-in-app Sources screen) and lists a fixed calorie target (#671) and gram macro goals (#642) as
-priorities. An adaptive target with citations may fit; if not, it stays in the fork behind
-seams.
+Upstream: open an issue first, with the simulation results. The maintainer cites a source for
+every calculation; everything except the tuned weights has one, and those come with the
+simulation. If declined, it stays in the fork behind seams.
 
 ## 5. Backlog (after phases 1–3)
 
