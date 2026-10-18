@@ -80,3 +80,110 @@ The *Adaptive* target follows the MacroFactor structure above:
 
 Upstream angle: the maintainer cites a source for every calculation. Everything above except the
 blend and limit weights has one. Those come from the simulation, which can be published with the PR.
+
+## Details (researched 2026-10-18)
+
+### Fat share of a weight change — Forbes
+
+Forbes's relation, in its small-change form: the fat-free share of a weight change is
+`10.4 / (10.4 + F)`, and the fat share is `F / (10.4 + F)`, where F is current fat mass in kg.
+It depends only on fat mass. Hall 2007 extended it to large changes (a Lambert-W form). For
+modest changes his result is very close to Forbes's. Large losses such as after bariatric
+surgery differ, and those are not this app's case. A 20-day window is a small change, so the
+small-change form fits.
+[Hall 2007, Br J Nutr 97:1059](https://pubmed.ncbi.nlm.nih.gov/17367567/) ·
+[PMC2376748](https://pmc.ncbi.nlm.nih.gov/articles/PMC2376748) ·
+[Broyles et al. 2011](https://digitalcommons.lsu.edu/psychology_pubs/777) (states both fractions)
+
+Energy densities (Hall 2008): fat 39.5 MJ/kg ≈ 9,441 kcal/kg; lean change 7.6 MJ/kg ≈
+1,817 kcal/kg. So the energy in 1 kg of change is
+
+    ρ(F) = (9441·F + 1817·10.4) / (F + 10.4)    kcal/kg
+
+| Fat mass F | Fat share | ρ (kcal/kg) |
+|---|---|---|
+| 10 kg | 49% | ≈ 5,550 |
+| 20 kg | 66% | ≈ 6,830 |
+| 30 kg | 74% | ≈ 7,480 |
+| 50 kg | 83% | ≈ 8,130 |
+
+The table shows why one constant is wrong. 7,700 fits only around 35 kg of fat and up.
+SparkyFitness's 6,000 fits about 13 kg. Hall's worked example: F = 20 kg losing 15 kg averages
+24.7 MJ/kg ≈ 5,900 kcal/kg, because ρ falls as fat is lost. Recomputing F from the trend every
+day gives this for free.
+[Hall 2008 (PMC2376744)](https://pmc.ncbi.nlm.nih.gov/articles/PMC2376744)
+
+MacroFactor additionally assumes slower loss or faster gain is a larger fat share. Forbes has no
+rate term, and MF does not publish theirs. **Ours:** Forbes only. A rate term is a later
+experiment in the simulator, and only if it lowers error.
+
+### Fat mass when the user has not measured it — Deurenberg
+
+ONT stores height, weight, birthday, gender and a calories profile, and no body fat. Deurenberg,
+Weststrate and Seidell 1991 (Br J Nutr), adults:
+
+    body fat % = 1.20·BMI + 0.23·age − 10.8·sex − 5.4      (sex: 1 male, 0 female)
+
+R² 0.79, SEE 4.1 percentage points. It slightly overestimates in obesity. One external check in
+women 50+ found a 1.1-point underestimate (SEE 6.1). Ages 7–83; a separate formula applies at
+15 and under, which this feature does not serve.
+[PubMed 2043597](https://pubmed.ncbi.nlm.nih.gov/2043597) ·
+[30-year review, PMC8980724](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC8980724/)
+
+- **Ours:** non-binary users take `sex` from the calories profile, as upstream's TDEE does. The averaged profile uses 0.5.
+- **Ours:** an optional measured body-fat entry overrides the formula (a fork field, in the backup).
+- Sensitivity: a 4-point body-fat error at 80 kg is about 3 kg of fat. At F = 20 that moves ρ by about 4%, so about 20 kcal/day at a 0.5 kg/week loss. That is small next to the logging error.
+
+### Simulator inputs
+
+- **Day-to-day weight noise.** No clean published within-person SD was found.
+  - Khosla & Billewicz 1964: day-to-day changes over 0.5 kg were common and over 1 kg occasional in free-living adults.
+  - Turicchi 2020 (NoHoW, 1,421 adults): a weekly cycle of about 0.35% of body weight, up at weekends, down on weekdays.
+  - Orsama 2014: the same weekly pattern.
+  - Holiday gain of 1.35% over Christmas, not fully lost afterwards.
+
+  **Ours:** noise SD 0.5 kg (swept 0.3–1.0 kg), plus the 0.35% weekly cycle, plus occasional
+  multi-day water shifts (salt, carbs, creatine; MF names these as failure cases).
+
+  [Khosla & Billewicz 1964](https://www.cambridge.org/core/services/aop-cambridge-core/content/view/4E78A0DB251133BEF39D73EB50C2F8A2/S0007114564000228a.pdf/div-class-title-measurement-of-change-in-body-weight-div.pdf) ·
+  [Turicchi 2020, PLoS ONE](https://eprints.whiterose.ac.uk/162249) ·
+  [Orsama 2014, Obesity Facts](https://doaj.org/article/dfacb22f12a749e287f852dab247d361)
+- **Under-logging.** Against doubly labelled water, under-reporting is widespread and large. Food records ran 19–41% low in a classic study. A 2025 analysis of 6,497 DLW measurements estimated misreporting above 50% in national surveys.
+  The key point for the design: **a steady under-log does not hurt an adaptive estimate.** Expenditure becomes "expenditure in logged calories", and targets in the same currency still work. That is MacroFactor's argument too.
+  What hurts is *changing* under-logging (forgotten meals, holidays, a partly logged day). The simulator varies the logging fraction per day and per week rather than using a constant.
+  [Systematic review, PMC6928130](https://pmc.ncbi.nlm.nih.gov/articles/PMC6928130) ·
+  [Bajunaid et al. 2025, Nature Food](https://strathprints.strath.ac.uk/91881/7/Bajunaid-etal-NF-2025-Predictive-equation-derived-from-6497-doubly-labelled-water-measurements-enables-the-detection.pdf)
+- **Truth model.** Simulated users follow energy balance. Stored energy changes by intake − expenditure, split by Forbes, so the simulator and the estimator share the energy model; *ours*, as a known limitation.
+  Expenditure moves with body weight. Hall's model has a half time of about a year for the response to an intake change, and larger people lose more.
+  **Ours:** expenditure falls about 22 kcal/day per kg lost, plus an adaptive drop of a few percent during a deficit, as in MF's 4 × rate prior. Then step changes in activity test responsiveness.
+  Hall's `bw` R package and the NIDDK Body Weight Planner are the reference if the simple model proves too crude.
+  [Hall et al. 2011, Lancet](https://pmc.ncbi.nlm.nih.gov/articles/PMC3880593) ·
+  [Web appendix](https://www.niddk.nih.gov/-/media/Files/BWP/Hall_Lancet_Web_Appendix.pdf) ·
+  [Body Weight Planner](https://www.niddk.nih.gov/research-funding/at-niddk/labs-branches/laboratory-biological-modeling/integrative-physiology-section/research/body-weight-planner)
+
+### Trend smoothing
+
+An exponential trend with weight α on today's value lags by about (1 − α)/α days:
+
+| α | Lag |
+|---|---|
+| 0.10 (Walker) | ≈ 9 days |
+| 0.05 | ≈ 19 days |
+| 0.20 | ≈ 4 days |
+
+MacroFactor ignores blips of 1–4 days and reacts from day 4–5. That suggests α near 0.1–0.2 on
+interpolated daily values. Upstream's 7-day average lags 3 days, but it jumps when a weigh-in
+enters or leaves the window. **Ours:** sweep α in 0.05–0.25 in the simulator.
+
+### Partly logged days
+
+MacroFactor cannot detect them and says so. **Ours:**
+- Let the user mark a day "not fully logged" (fork data, in the backup). Marked days are left out of the intake mean, as unlogged days are.
+- Upstream's tracked-day record is the natural place to read "logged at all" from.
+- SparkyFitness's rule of skipping days under 200 kcal is kept as a safety net.
+
+### Still not published anywhere
+
+MacroFactor's filter weights, its expenditure blend and calibration schedule, its check-in cap,
+and its rate term in the fat share. All four are set by the simulator, and the results go with
+the upstream issue.
