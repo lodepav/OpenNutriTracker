@@ -54,9 +54,18 @@ Before phase 1, at the user's request.
 2. **Gemini.** Upstream PR #1257 fixes Gemini through the OpenAI-compatible client. Review it,
    then merge it into `fork/main` until upstream takes it, if Gemini is the model (Q1).
 3. **Estimate when nothing matches (D9):** covered by phase 1c.
-4. **Check on real meals.** Ten meal photos and descriptions through the chosen model. Note
-   what the grounding misses: dishes with no database match, portions the database lacks.
-   This decides Q3.
+4. **Photo test (D7).** `fork/eval/photos.json` holds 23 photos taken from recipe pages that
+   publish macros: Latvian and Baltic (5), Georgian (6), Slavic dishes common in Latvia (7),
+   pizza and everyday (5). Each entry records the words a correct answer contains, the pieces to
+   count where countable, and, where the photo shows a known amount, the servings shown.
+   `fork/tools/fetch_eval_photos.py` downloads the photos into `build/` (they are the sites',
+   not ours). `FORK_EVAL_OPENROUTER_KEY=... flutter test test/fork/eval` runs upstream's photo
+   path unchanged for each model (`FORK_EVAL_MODELS`, default Haiku 5.5, Haiku 4.5, luna) and
+   looks every name up in the bundled table. It writes `build/fork-eval/<time>/report.md`, with
+   the dish named, the count right, and names with no table match (phase 1c's job). Upstream's
+   photo path returns names and counts, not grams, so photos are scored on those. The recipe
+   macros score phase 1c's breakdown: its per-serving total against the page's. Then ten of the
+   user's own meals. This decides Q3 and which default leads.
 
 ## 2b. Phase 1b — Offline food tables (D11)
 
