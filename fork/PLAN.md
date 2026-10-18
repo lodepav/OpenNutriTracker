@@ -29,30 +29,86 @@ Checked on `develop` at 1bc934b1 (2026-10-17).
 
 ## 1c. Phase 1c — Dishes as recipes (D12, revised D9)
 
-Before phase 1, at the user's request.
+Before phase 1, at the user's request. Upstream code read 2026-10-18; findings first, then the steps.
 
-1. **Breakdown.** Find where the resolver gives up on an item (`resolve_parsed_meals_usecase.dart`).
-   For that item, ask the model for its ingredients with grams in a second, text-only call
-   (cheap; the photo isn't resent), then resolve each ingredient the usual way. Fork-only,
-   behind a seam. The first step is reading how upstream's three clients build their JSON schema,
-   so the breakdown reuses it.
-2. **Review screen.** The dish shows as a group of its ingredients, each editable, and is
-   marked as an AI breakdown. Ingredients that still match nothing carry the model's estimate,
-   marked as such (D9).
-3. **Save as recipe.** One action stores the breakdown through upstream's recipe builder. Check
-   that a saved recipe is found first next time, by search and by the AI resolver.
-4. **Starter recipes.** The four CC0 Latvian recipes, entered as recipes on first run (or via a
-   bundled recipe import file, if upstream's JSON recipe import fits).
-5. **Check:** khachapuri, pelmeni and grey peas with bacon, typed and photographed, give
-   plausible totals with every number traced to a table row or a marked estimate.
+**What upstream gives us:**
+- **The resolver never gives up loudly.** `ResolveParsedMealsUseCase._resolveOne` searches Open
+  Food Facts and the food table in parallel, merges with the user's own content in a tier above
+  remote results, and re-ranks. An item ends one of three ways:
+  - unresolved (no candidates)
+  - low confidence (top score under `kResolutionConfidenceFloor`)
+  - resolved
+
+  Its own doc comment names the unresolved item as "the seam where [a fallback] would attach".
+  A trap: a dish the tables lack can still resolve to a *branded* Open Food Facts product (a frozen
+  khachapuri), which looks resolved.
+- **The breakdown needs no client changes.** Every client implements
+  `MealItemsApi.requestItems(content, system)`, and `mealItemsToolSchema` already carries
+  `query`, `quantity` and `unit` (`g` included) with no nutrition fields. A breakdown is the
+  same call with `MealTextContent("one serving of <dish>")` and a breakdown system prompt.
+  - The reply is validated by the same `validateParsedMealItems`.
+  - The provenance rule holds: the model names ingredients and grams, the table supplies every
+    nutrient.
+  - Only the grams are the model's estimate. Upstream's photo path refuses gram estimates (#250),
+    so this is a fork-only, marked deviation (D12).
+- **Recipes already rank first, but match on exact text.** `SearchProductsUseCase` puts recipes
+  above cached and remote results, and the resolver keeps that tier. But
+  `_mealMatchesSearch` is `name.contains(query)`: a recipe "Khachapuri" is found by
+  `khachapuri`, not by `adjarian khachapuri` or `Georgian cheese bread`. The model's wording
+  varies, so this decides whether a saved dish is found next time.
+- **Recipes are self-contained.** `RecipeIngredientEntity` holds a full `MealEntity` snapshot plus
+  amount, unit and grams. A saved breakdown keeps its numbers even if the food table changes.
+- **The builder can open pre-filled.** `RecipeBuilderScreen` takes `existing: RecipeEntity` in its
+  route arguments, so an unsaved recipe built from a breakdown opens for review and saving
+  without a builder change. Still to check: save upserts by id.
+- **Import formats:**
+  - `user_recipes.json` in the export zip (full snapshots, `docs/export-format.md`).
+  - The QR/JSON share payload (`shared_recipe_payload.dart`, macros only, no micronutrients).
+- **Review screen.** `bulk_add_screen.dart` shows one row per item, with unresolved and
+  low-confidence rows marked (`_buildRow`). A breakdown replaces one row with a group.
+
+**Steps:**
+1. **Breakdown call.** In `lib/fork/`: a use case taking a dish name (and the photo's query, if
+   it came from one), calling the configured `MealItemsApi` with a text-only breakdown prompt.
+   - The prompt asks for ingredients of one serving in grams, each the nearest generic ingredient
+     (grey peas → dried split peas, sulguni → brined mozzarella-type cheese), plus the serving
+     weight.
+   - Each ingredient is resolved with the same `ResolveParsedMealsUseCase`. No photo is resent.
+2. **When it runs.**
+   - Automatically for an unresolved row.
+   - On demand ("Break into ingredients") for any row, which covers low-confidence matches and
+     the branded-product trap.
+   - One seam in `bulk_add_screen.dart`/its bloc, or a wrapper around the resolver if that is
+     smaller.
+3. **Review.** The dish shows as a group of its ingredient rows, marked "AI breakdown, grams
+   estimated". Each row is editable as today. A row that still matches nothing keeps the model's
+   name for the user to search (D9's estimate stays a last resort, marked).
+4. **Save as recipe.** One action builds an unsaved `RecipeEntity` (name = the dish, servings 1,
+   ingredients from the group) and opens `RecipeBuilderScreen` with it.
+5. **Finding it again.** Make the recipe tier match on words, not the whole string: every query
+   word in the name, using the same `wordsAgree` rule as the food table. Check that the model's
+   usual names for the user's dishes find the saved recipe, typed and photographed. This touches
+   upstream's `_mealMatchesSearch`, which is either an upstream PR (it helps every user) or a seam.
+6. **Starter recipes.** The four CC0 Latvian recipes (grey peas with bacon, pelmeni, sklandu rauši,
+   layered rye-bread dessert).
+   - Built on first run in `lib/fork/` from food-table rows chosen at build time (ids in a small
+     bundled list) and saved through the recipe repository.
+   - Not shipped as a `user_recipes.json`, whose snapshot shape would freeze today's table values
+     and tie us to upstream's export schema.
+   - Credit the Latvian Institute in the description.
+7. **Check.**
+   - Run the photo test set (`fork/eval/`) through photo → breakdown, scoring the per-serving
+     total against the recipe pages' macros (khachapuri adjaruli, khinkali, pelmeni, borscht,
+     cold beet soup, stuffed peppers).
+   - Then khachapuri, pelmeni and grey peas typed by the user.
 
 ## 2. Phase 1 — AI logging complete
 
 1. **Photo + note.** Send the user's typed text along with the photo, in all three clients
    (`anthropic_meal_items_api.dart`, `openai_meal_items_api.dart`,
    `openai_compatible_meal_items_api.dart`) and the add-meal screen. Upstream PR (rule 1).
-2. **Gemini.** Upstream PR #1257 fixes Gemini through the OpenAI-compatible client. Review it,
-   then merge it into `fork/main` until upstream takes it, if Gemini is the model (Q1).
+2. *Dropped 2026-10-18:* Gemini. Google is excluded (D7). If the user ever wants it, the
+   custom-server option covers it once upstream merges #1257.
 3. **Estimate when nothing matches (D9):** covered by phase 1c.
 4. **Photo test (D7).** `fork/eval/photos.json` holds 23 photos taken from recipe pages that
    publish macros: Latvian and Baltic (5), Georgian (6), Slavic dishes common in Latvia (7),
@@ -104,7 +160,9 @@ unlike openGym the automatic part has to be built.
    WorkManager and Android's background limits. A diary change logged and the app killed at once
    waits for the next pause.
 3. **What.** Upstream's JSON export zip: intakes, activities, tracked days, recipes, the weight
-   log, custom activity templates, goal settings (#1381). Fork-only data (phase 3's trend and
+   log, custom activity templates, goal settings (#1381). **Gap:** saved custom meals (the
+   user's own foods) are not in the bundle (`docs/export-format.md`), so a restore loses them.
+   That is an upstream fix worth proposing alongside #1356. Fork-only data (phase 3's trend and
    check-ins) must be added to it, or a restore loses it.
 4. **Sync.** A sync app mirrors the folder to Drive (Autosync for Google Drive, FolderSync, or a
    Syncthing fork; the official Syncthing Android app was discontinued in 2024). Not the app's
