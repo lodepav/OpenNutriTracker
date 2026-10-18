@@ -85,22 +85,33 @@ the same gap). Pelmeni and khachapuri are in no table and go to D9.
    photo resolve without D9's estimate. Gaps found here decide whether Livsmedelsverket is
    added.
 
-## 3. Phase 2 — Backup to Google Drive
+## 3. Phase 2 — Backup to Google Drive (D10)
 
-Proposed, following openGym-Hevier's D20 (Q5): **no Drive client in the app.**
+The app writes backup files; it syncs nothing itself (openGym-Hevier's D20). Upstream ONT has
+only a manual export (`export_data_usecase.dart`, a `FilePicker.saveFile` dialog each time), so
+unlike openGym the automatic part has to be built.
 
-1. **Automatic export.** After a diary change (debounced), write the export zip into a folder
-   the user picks with the system picker, one dated file a day, newest N kept. This is
-   upstream issue #1356 (Syncthing) and covers #585 (Drive/iCloud), so it is an upstream PR.
-2. **A sync app** on the phone (Autosync for Google Drive, FolderSync, Syncthing) mirrors the
-   folder to Drive. No Google sign-in, no OAuth client, no Play Services, nothing to carry
-   across merges.
-3. **Restore** is upstream's Import.
-4. Fork-only data (phase 3's check-ins) must be in the export, or a restore loses it: a seam
-   in the exporter, or upstream adopting the feature.
-
-Reference: Albert071/OpenNutriTracker's WorkManager auto-export (it uses a Drive service
-account, which is not the approach here).
+1. **Folder.** Settings → Auto-backup: pick a folder once with the system picker (Storage Access
+   Framework, `ACTION_OPEN_DOCUMENT_TREE`, persisted grant). A tree grant can also delete old
+   files and survives app updates; after a reinstall the user picks the folder again. Not
+   MediaStore: an app loses access to its own files there after a reinstall, so it could not
+   prune them. Writing through SAF needs either the `saf` package (MIT, Android only, 2.1.2) or a
+   small platform channel like openGym's `BackupFolderPlugin.java`. Decide when building:
+   upstream's view on a new dependency decides it.
+2. **When.** When the app goes to the background (`AppLifecycleState.paused`) and something
+   changed since the last file, write today's file. Today's file is overwritten, and older ones
+   beyond the newest 14 are deleted. Writing while the app is still in the foreground avoids
+   WorkManager and Android's background limits. A diary change logged and the app killed at once
+   waits for the next pause.
+3. **What.** Upstream's JSON export zip: intakes, activities, tracked days, recipes, the weight
+   log, custom activity templates, goal settings (#1381). Fork-only data (phase 3's trend and
+   check-ins) must be added to it, or a restore loses it.
+4. **Sync.** A sync app mirrors the folder to Drive (Autosync for Google Drive, FolderSync, or a
+   Syncthing fork; the official Syncthing Android app was discontinued in 2024). Not the app's
+   concern; the settings screen names the option.
+5. **Restore** is upstream's Import, which upserts by id since #1369.
+6. **Upstream.** This is #1356 (Syncthing) and covers #585 (Drive/iCloud). Ask on #1356 before
+   building whether a PR is welcome, and whether a dependency or a platform channel is preferred.
 
 ## 4. Phase 3 — The MacroFactor core (D13)
 
