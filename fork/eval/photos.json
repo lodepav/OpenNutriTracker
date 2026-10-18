@@ -1,0 +1,912 @@
+{
+ "about": "Photo test set for phase 1.4 (D7). Photos stay on their sites; fork/tools/fetch_eval_photos.py downloads them into build/. Macros are the recipe pages' own per-serving figures (site calculators, not lab values).",
+ "collected": "2026-10-18",
+ "photos": [
+  {
+   "id": "lv-sklandrausis",
+   "cuisine": "latvian",
+   "dish": "Sklandrausis: Latvian Vegetable Tart",
+   "recipe_url": "https://www.food.com/recipe/sklandrausis-latvian-vegetable-tart-498740",
+   "image_url": "https://img.sndimg.com/food/image/upload/q_92,fl_progressive,w_1200,c_scale/v1/img/recipes/49/87/40/picPqowf5.jpg",
+   "expect_any": [
+    "sklandrausis",
+    "sklandu",
+    "rausis",
+    "tart",
+    "pie"
+   ],
+   "count": [
+    6,
+    6
+   ],
+   "servings_shown": null,
+   "note": "six tarts; yield \"10 tarts\" is ambiguous per serving",
+   "recipe_yield": "10 tarts",
+   "per_serving": {
+    "kcal": 396.9,
+    "protein_g": 7.2,
+    "carbs_g": 53.7,
+    "fat_g": 18.5
+   },
+   "ingredients": [
+    "300 g rye flour",
+    "50 g lard (or sour cream butter)",
+    "1/2 glass water",
+    "1 tablespoon crushed caraway seed",
+    "1/4 teaspoon salt",
+    "500 g potatoes",
+    "1/2 glass milk (the fatter the better)",
+    "50 g sour cream butter",
+    "1/4 teaspoon salt",
+    "500 g carrots",
+    "2 eggs, from happy outdoor chicken",
+    "200 g sour cream",
+    "1/2 cup honey",
+    "200 g sour cream",
+    "1 tablespoon honey",
+    "1/4 teaspoon vanilla",
+    "1/4 teaspoon cinnamon"
+   ]
+  },
+  {
+   "id": "lv-piragi",
+   "cuisine": "latvian",
+   "dish": "Piragi Latvian Bacon Rolls",
+   "recipe_url": "https://www.food.com/recipe/piragi-latvian-bacon-rolls-466345",
+   "image_url": "https://img.sndimg.com/food/image/upload/q_92,fl_progressive,w_1200,c_scale/v1/img/recipes/46/63/45/pictsG2II.jpg",
+   "expect_any": [
+    "piragi",
+    "pīrāgi",
+    "pirag",
+    "bacon bun",
+    "bacon roll",
+    "bun",
+    "roll",
+    "pirozhki"
+   ],
+   "count": null,
+   "servings_shown": null,
+   "note": "a whole batch on racks",
+   "recipe_yield": "100 rolls, 50 serving(s)",
+   "per_serving": {
+    "kcal": 174.2,
+    "protein_g": 4.9,
+    "carbs_g": 13.0,
+    "fat_g": 11.3
+   },
+   "ingredients": [
+    "1/2 cup warm water",
+    "1 teaspoon sugar",
+    "2 tablespoons dry yeast",
+    "2 cups whole milk, scalded",
+    "1/2 cup oil",
+    "2 tablespoons sugar",
+    "1 teaspoon salt",
+    "2 egg yolks",
+    "1/2 cup butter",
+    "2 tablespoons sour cream",
+    "6 cups flour",
+    "1 egg, beaten",
+    "1 1/2 lbs bacon, finely diced",
+    "1/2 lb ham, finely diced",
+    "1 medium onion, chopped finely",
+    "salt & pepper"
+   ]
+  },
+  {
+   "id": "bal-herring-tomato",
+   "cuisine": "baltic",
+   "dish": "Lithuanian Herring Salad With Onion and Tomato (Silke Su Pomidor",
+   "recipe_url": "https://www.food.com/recipe/lithuanian-herring-salad-with-onion-and-tomato-silke-su-pomidor-349777",
+   "image_url": "https://img.sndimg.com/food/image/upload/q_92,fl_progressive,w_1200,c_scale/v1/img/recipes/34/97/77/NikN4xFTkgAz3iKTNwgB_20211217_075801.jpg",
+   "expect_any": [
+    "herring"
+   ],
+   "count": null,
+   "servings_shown": null,
+   "note": "plate with a slice of rye bread; the recipe has no bread and its per-serving figure looks low",
+   "recipe_yield": "10 serving(s)",
+   "per_serving": {
+    "kcal": 57.8,
+    "protein_g": 1.0,
+    "carbs_g": 8.0,
+    "fat_g": 2.9
+   },
+   "ingredients": [
+    "1 lb salt herring fillet",
+    "1 lb yellow onion",
+    "2 tablespoons vegetable oil",
+    "2 bay leaves",
+    "16 ounces tomato sauce"
+   ]
+  },
+  {
+   "id": "bal-cold-beet-soup",
+   "cuisine": "baltic",
+   "dish": "Cold Beet Soup",
+   "recipe_url": "https://veronikaskitchen.com/cold-beet-soup/",
+   "image_url": "https://veronikaskitchen.com/wp-content/uploads/2020/07/20200705-IMG_3634.jpg",
+   "expect_any": [
+    "beet",
+    "borscht",
+    "holodnik",
+    "svekolnik",
+    "saltibarsciai",
+    "šaltibarščiai"
+   ],
+   "count": null,
+   "servings_shown": 1,
+   "note": "one bowl",
+   "recipe_yield": [
+    "8",
+    "8 people"
+   ],
+   "per_serving": {
+    "kcal": 100.0,
+    "protein_g": 7.0,
+    "carbs_g": 9.0,
+    "fat_g": 4.0
+   },
+   "ingredients": [
+    "3 medium red beets (or 4 small beets)",
+    "14 cups water",
+    "1 cup kefir",
+    "4 small cucumbers (finely diced)",
+    "6 large eggs (diced)",
+    "3 bunches green onions (chopped)",
+    "1 bunch dill (chopped)",
+    "salt (to taste)"
+   ]
+  },
+  {
+   "id": "bal-chlodnik",
+   "cuisine": "baltic",
+   "dish": "Polish Cold Beet Soup (Chłodnik)",
+   "recipe_url": "https://www.whollytasteful.com/polish-cold-beet-soup-chlodnik/",
+   "image_url": "https://www.whollytasteful.com/wp-content/uploads/2021/07/1-2.jpg",
+   "expect_any": [
+    "beet",
+    "borscht",
+    "chlodnik",
+    "chłodnik",
+    "holodnik",
+    "svekolnik",
+    "saltibarsciai",
+    "šaltibarščiai"
+   ],
+   "count": null,
+   "servings_shown": 1,
+   "note": "one bowl, two egg halves",
+   "recipe_yield": [
+    "6",
+    "6 servings"
+   ],
+   "per_serving": {
+    "kcal": 132.0,
+    "protein_g": 7.0,
+    "carbs_g": 15.0,
+    "fat_g": 5.0
+   },
+   "ingredients": [
+    "2-4 beets (leaves and stems removed, or already cooked beets (see Note 1))",
+    "2 cups plain yogurt",
+    "2 cups plain kefir",
+    "1 English cucumber",
+    "6-8 radishes",
+    "¼ cup fresh dill (chopped)",
+    "2 tablespoons fresh chives (chopped)",
+    "1 ½ cups vegetable broth or plain water",
+    "½ lemon (juiced)",
+    "2 tablespoons apple cider vinegar (optional)",
+    "1/2 cup red borscht concentrate or fermented beet juice (optional, if you can find it)",
+    "1 garlic clove (minced)",
+    "1 tsp honey (or sugar)",
+    "Salt & pepper to taste"
+   ]
+  },
+  {
+   "id": "sl-pelmeni",
+   "cuisine": "slavic",
+   "dish": "Pelmeni (Russian Dumplings)",
+   "recipe_url": "https://momsdish.com/recipe/76/pelmeni",
+   "image_url": "https://cdn.momsdish.com/wp-content/uploads/2021/08/DSC_2700-scaled.jpg",
+   "expect_any": [
+    "pelmeni",
+    "dumpling"
+   ],
+   "count": [
+    12,
+    16
+   ],
+   "servings_shown": null,
+   "note": "about 14 pelmeni; servings not in pieces",
+   "recipe_yield": [
+    "14",
+    "14 servings"
+   ],
+   "per_serving": {
+    "kcal": 279.0,
+    "protein_g": 15.0,
+    "carbs_g": 21.0,
+    "fat_g": 14.0
+   },
+   "ingredients": [
+    "3 cup flour",
+    "2/3 cup lukewarm water",
+    "3 eggs",
+    "1 tsp salt",
+    "2 lb ground meat (pork, chicken, turkey, and/or ground beef)",
+    "1 large onion (grated)",
+    "1/2 tbsp salt (to taste)",
+    "1 tsp pepper (to taste)",
+    "sour cream",
+    "Unsalted Butter"
+   ]
+  },
+  {
+   "id": "sl-syrniki",
+   "cuisine": "slavic",
+   "dish": "Syrniki Recipe",
+   "recipe_url": "https://momsdish.com/syrniki",
+   "image_url": "https://cdn.momsdish.com/wp-content/uploads/2026/03/Syrniki-09-scaled.jpg",
+   "expect_any": [
+    "syrniki",
+    "cheese pancake",
+    "cottage cheese pancake",
+    "quark pancake",
+    "pancake",
+    "fritter"
+   ],
+   "count": [
+    6,
+    6
+   ],
+   "servings_shown": 6,
+   "note": "six syrniki; one serving = one syrnik; berries and sour cream extra",
+   "recipe_yield": [
+    "10",
+    "10 Syrniki"
+   ],
+   "per_serving": {
+    "kcal": 129.0,
+    "protein_g": 7.0,
+    "carbs_g": 6.0,
+    "fat_g": 8.0
+   },
+   "ingredients": [
+    "16 oz farmer’s cheese",
+    "1 egg",
+    "2 tbsp sugar",
+    "¼ tsp salt",
+    "1 tsp vanilla extract",
+    "⅓ cup flour ( + ½ cup flour for dredging)",
+    "3 tbsp oil (for frying)"
+   ]
+  },
+  {
+   "id": "sl-buckwheat-mushrooms",
+   "cuisine": "slavic",
+   "dish": "Buckwheat with Mushrooms",
+   "recipe_url": "https://momsdish.com/recipe/75/buckwheat-mushrooms",
+   "image_url": "https://cdn.momsdish.com/wp-content/uploads/2019/07/Buckwheat-with-Mushrooms-08-scaled.jpg",
+   "expect_any": [
+    "buckwheat",
+    "kasha",
+    "grechka"
+   ],
+   "count": null,
+   "servings_shown": 1,
+   "note": "one bowl",
+   "recipe_yield": [
+    "6",
+    "6 servings"
+   ],
+   "per_serving": {
+    "kcal": 168.0,
+    "protein_g": 7.0,
+    "carbs_g": 27.0,
+    "fat_g": 5.0
+   },
+   "ingredients": [
+    "1 cup uncooked buckwheat",
+    "2 cups water",
+    "3 tbsp unsalted butter",
+    "1 medium onion (chopped)",
+    "16 oz mushrooms (sliced)",
+    "1 cup green onions (chopped)",
+    "salt (to taste)",
+    "ground pepper (to taste)"
+   ]
+  },
+  {
+   "id": "sl-stuffed-peppers",
+   "cuisine": "slavic",
+   "dish": "Stuffed Bell Peppers (Classic Ukrainian Recipe)",
+   "recipe_url": "https://momsdish.com/recipe/253/stuffed-bell-peppers",
+   "image_url": "https://cdn.momsdish.com/wp-content/uploads/2019/11/Stuffed-Bell-Peppers-16-scaled.jpg",
+   "expect_any": [
+    "stuffed pepper",
+    "pepper"
+   ],
+   "count": null,
+   "servings_shown": 1,
+   "note": "one stuffed half in front (3 peppers halved = 6 servings)",
+   "recipe_yield": [
+    "6",
+    "6 People"
+   ],
+   "per_serving": {
+    "kcal": 329.0,
+    "protein_g": 16.0,
+    "carbs_g": 21.0,
+    "fat_g": 20.0
+   },
+   "ingredients": [
+    "1 lb thinly sliced beef",
+    "3 large bell peppers",
+    "1 lb mushrooms (sliced)",
+    "1 large onion",
+    "2 cup diced carrots",
+    "2 cups cooked buckwheat",
+    "2 tbsp olive oil",
+    "1 tsp pepper (adjust to taste)",
+    "1 tbsp salt (adjust to taste)"
+   ]
+  },
+  {
+   "id": "sl-potato-pancakes",
+   "cuisine": "slavic",
+   "dish": "Grandma’s Potato Pancakes Recipe (Eastern European)",
+   "recipe_url": "https://momsdish.com/potato-pancakes",
+   "image_url": "https://cdn.momsdish.com/wp-content/uploads/2019/08/Potato-Pancakes-Recipe-03-scaled.jpg",
+   "expect_any": [
+    "potato pancake",
+    "draniki",
+    "deruny",
+    "latke",
+    "potato fritter"
+   ],
+   "count": null,
+   "servings_shown": null,
+   "note": "three on the plate, more beside it; frying oil not in the nutrition",
+   "recipe_yield": [
+    "5",
+    "5 servings"
+   ],
+   "per_serving": {
+    "kcal": 159.0,
+    "protein_g": 8.0,
+    "carbs_g": 29.0,
+    "fat_g": 2.0
+   },
+   "ingredients": [
+    "5 large potatoes",
+    "1 medium onion",
+    "2 egg",
+    "1/2 tbsp salt ((to taste))",
+    "1 tsp pepper",
+    "Oil (for frying)"
+   ]
+  },
+  {
+   "id": "sl-borscht",
+   "cuisine": "slavic",
+   "dish": "Classic Borscht Recipe (Beet Soup)",
+   "recipe_url": "https://natashaskitchen.com/classic-russian-borscht-recipe/",
+   "image_url": "https://natashaskitchen.com/wp-content/uploads/2018/10/Borscht-Recipe-2.jpg",
+   "expect_any": [
+    "borscht",
+    "borsch",
+    "beet soup"
+   ],
+   "count": null,
+   "servings_shown": 1,
+   "note": "one bowl with sour cream",
+   "recipe_yield": [
+    "10"
+   ],
+   "per_serving": {
+    "kcal": 181.0,
+    "protein_g": 8.0,
+    "carbs_g": 25.0,
+    "fat_g": 7.0
+   },
+   "ingredients": [
+    "3 medium beets (peeled and grated)",
+    "4 Tbsp olive oil (divided)",
+    "8 cups chicken broth (+ 2 cups water)",
+    "3 medium yukon potatoes (peeled and sliced into bite-sized pieces)",
+    "2 carrots (peeled and thinly sliced)",
+    "2 celery ribs (trimmed and finely chopped)",
+    "1 small red bell pepper (finely chopped, optional)",
+    "1 medium onion (finely chopped)",
+    "4 Tbsp ketchup or 3 Tbsp tomato sauce",
+    "1 can white cannelini beans with their juice",
+    "2 bay leaves",
+    "2-3 Tbsp white vinegar (or to taste)",
+    "1 tsp sea salt (or to taste)",
+    "1/4 tsp black pepper (freshly ground)",
+    "1 large garlic clove (pressed)",
+    "3 Tbsp chopped dill"
+   ]
+  },
+  {
+   "id": "sl-beef-stroganoff",
+   "cuisine": "slavic",
+   "dish": "Beef Stroganoff Recipe",
+   "recipe_url": "https://natashaskitchen.com/beef-stroganoff/",
+   "image_url": "https://natashaskitchen.com/wp-content/uploads/2019/04/Beef-Stroganoff-6.jpg",
+   "expect_any": [
+    "stroganoff"
+   ],
+   "count": null,
+   "servings_shown": null,
+   "note": "a whole pan",
+   "recipe_yield": [
+    "4",
+    "4 as a main course"
+   ],
+   "per_serving": {
+    "kcal": 461.0,
+    "protein_g": 30.0,
+    "carbs_g": 9.0,
+    "fat_g": 34.0
+   },
+   "ingredients": [
+    "1 lb top sirloin steak (thinly sliced into strips*)",
+    "2 Tbsp olive oil",
+    "2 Tbsp unsalted butter",
+    "1/2 medium onion (finely chopped)",
+    "1/2 lb brown mushrooms (thickly sliced)",
+    "1 garlic cloves (minced)",
+    "1 Tbsp all-purpose flour",
+    "1 cup beef broth",
+    "3/4 cup heavy whipping cream",
+    "1/4 cup sour cream",
+    "1 Tbsp Worcestershire sauce",
+    "1/2 tsp dijon mustard",
+    "1/2 tsp salt",
+    "1/4 tsp black pepper",
+    "1 Tbsp green onion or parsley (to garnish)",
+    "8-12 oz egg noodles (optional, to serve)"
+   ]
+  },
+  {
+   "id": "ge-khachapuri-adjaruli",
+   "cuisine": "georgian",
+   "dish": "Khachapuri",
+   "recipe_url": "https://www.onceuponachef.com/recipes/khachapuri-georgian-cheese-bread.html",
+   "image_url": "https://www.onceuponachef.com/images/2024/09/Khachapuri-Hero-8.jpg",
+   "expect_any": [
+    "khachapuri",
+    "cheese bread"
+   ],
+   "count": [
+    1,
+    1
+   ],
+   "servings_shown": 1,
+   "note": "one adjaruli khachapuri = one serving",
+   "recipe_yield": [
+    "4",
+    "4 khachapuri"
+   ],
+   "per_serving": {
+    "kcal": 1123.0,
+    "protein_g": 49.0,
+    "carbs_g": 107.0,
+    "fat_g": 54.0
+   },
+   "ingredients": [
+    "4 cups all-purpose flour, (spooned into measuring cup and leveled-off, plus more for dusting)",
+    "1 tablespoon instant/rapid-rise yeast ((note: you'll need more than 1 packet))",
+    "2½ tablespoons sugar",
+    "2¼ teaspoons salt",
+    "1¼ cups water",
+    "4 tablespoons (¼ cup) unsalted butter, softened",
+    "6 oz (1½ cups) Gruyere cheese",
+    "6 oz (1½ cups) cheddar cheese",
+    "4 oz (1 cup) feta cheese",
+    "¼ cup Pecorino Romano or Parmigiano Reggiano cheese",
+    "1 large egg, (beaten (for egg wash))",
+    "4 large eggs, ((for topping))",
+    "Flaky sea salt ((kosher or table salt can be substituted))",
+    "2 tablespoons chopped fresh dill, (optional)"
+   ]
+  },
+  {
+   "id": "ge-khachapuri",
+   "cuisine": "georgian",
+   "dish": "Khachapuri (Georgian Cheese Bread)",
+   "recipe_url": "https://www.food.com/recipe/khachapuri-georgian-cheese-bread-452432",
+   "image_url": "https://img.sndimg.com/food/image/upload/q_92,fl_progressive,w_1200,c_scale/v1/img/recipes/45/24/32/picE3Biuf.jpg",
+   "expect_any": [
+    "khachapuri",
+    "cheese bread",
+    "cheese pie"
+   ],
+   "count": null,
+   "servings_shown": null,
+   "note": "cut open on foil, size unclear",
+   "recipe_yield": "8 serving(s)",
+   "per_serving": {
+    "kcal": 680.8,
+    "protein_g": 30.4,
+    "carbs_g": 49.4,
+    "fat_g": 40.0
+   },
+   "ingredients": [
+    "2 1/4 teaspoons active dry yeast",
+    "1 teaspoon sugar",
+    "1/4 cup warm water",
+    "3/4 cup milk, at room temperature",
+    "2 tablespoons sugar",
+    "1/2 cup melted butter",
+    "1 teaspoon table salt",
+    "3 1/2 cups bread flour",
+    "1/2 lb muenster cheese, shredded",
+    "1/2 lb jarlsberg cheese or 1/2 lb swiss cheese, shredded",
+    "1/2 lb white cheddar cheese, shredded",
+    "2 eggs, slightly beaten",
+    "2 tablespoons chopped parsley",
+    "1/4 teaspoon white pepper",
+    "1 egg white",
+    "1 tablespoon water"
+   ]
+  },
+  {
+   "id": "ge-chakhokhbili",
+   "cuisine": "georgian",
+   "dish": "Chakhokhbili  (Georgian Chicken With Herbs)",
+   "recipe_url": "https://www.food.com/recipe/chakhokhbili-georgian-chicken-with-herbs-467371",
+   "image_url": "https://img.sndimg.com/food/image/upload/q_92,fl_progressive,w_1200,c_scale/v1/img/recipes/46/73/71/picWs3JQo.jpg",
+   "expect_any": [
+    "chakhokhbili",
+    "chicken"
+   ],
+   "count": null,
+   "servings_shown": null,
+   "note": "plate with rice; the recipe excludes the rice",
+   "recipe_yield": "6 serving(s)",
+   "per_serving": {
+    "kcal": 582.7,
+    "protein_g": 44.6,
+    "carbs_g": 13.7,
+    "fat_g": 38.4
+   },
+   "ingredients": [
+    "2 tablespoons butter",
+    "1 (3 lb) chicken, cut into 8 pieces",
+    "4 medium onions, peeled and chopped",
+    "8 medium tomatoes, peeled and coarsely chopped",
+    "3 garlic cloves, peeled and minced",
+    "1/2 cup chopped mixed fresh herbs (parsley, cilantro, tarragon, basil, dill)",
+    "1/8 teaspoon hot red pepper flakes",
+    "salt",
+    "fresh ground black pepper"
+   ]
+  },
+  {
+   "id": "ge-khinkali",
+   "cuisine": "georgian",
+   "dish": "Khinkali Pork and Beef Soup Dumplings",
+   "recipe_url": "https://www.food.com/recipe/khinkali-pork-and-beef-soup-dumplings-534287",
+   "image_url": "https://img.sndimg.com/food/image/upload/q_92,fl_progressive,w_1200,c_scale/v1/img/submissions/recipe/2001781224/BFuLOaOT2eW484BLa0bh_Khinkali.jpg",
+   "expect_any": [
+    "khinkali",
+    "dumpling"
+   ],
+   "count": [
+    12,
+    16
+   ],
+   "servings_shown": 2.8,
+   "note": "about 14 of 25 dumplings in a 5-serving recipe",
+   "recipe_yield": "25 Dumplings, 5 serving(s)",
+   "per_serving": {
+    "kcal": 1156.9,
+    "protein_g": 60.5,
+    "carbs_g": 89.2,
+    "fat_g": 59.7
+   },
+   "ingredients": [
+    "1 1/2 lbs ground beef",
+    "1 1/2 lbs ground pork",
+    "4 tablespoons butter",
+    "1 1/4 cups water",
+    "2 small onions",
+    "3 garlic cloves",
+    "1/2 cup cilantro",
+    "1/2 teaspoon red pepper flakes",
+    "1 teaspoon salt",
+    "4 1/2 cups all-purpose flour",
+    "1 cup warm water",
+    "1 teaspoon kosher salt"
+   ]
+  },
+  {
+   "id": "ge-badrijani",
+   "cuisine": "georgian",
+   "dish": "Badrijani Nigvzit: Georgian Eggplant Rolls with Walnuts",
+   "recipe_url": "https://nofrillskitchen.com/badrijani-nigvzit-recipe/",
+   "image_url": "https://nofrillskitchen.com/wp-content/uploads/2021/01/DSC09533.jpg",
+   "expect_any": [
+    "eggplant",
+    "aubergine",
+    "badrijani"
+   ],
+   "count": [
+    6,
+    8
+   ],
+   "servings_shown": null,
+   "note": "seven rolls; recipe servings are not in rolls",
+   "recipe_yield": [
+    "6"
+   ],
+   "per_serving": {
+    "kcal": 263.0,
+    "protein_g": 7.0,
+    "carbs_g": 15.0,
+    "fat_g": 22.0
+   },
+   "ingredients": [
+    "2 medium eggplants (Italian or globe)",
+    "200 g walnut halves",
+    "4 cloves garlic",
+    "1 tbsp white wine vinegar",
+    "1 tsp blue fenugreek",
+    "1 tsp ground coriander seed",
+    "⅛ tsp cayenne pepper",
+    "Pomegranate seeds (for garnish)"
+   ]
+  },
+  {
+   "id": "ge-badrijani-2",
+   "cuisine": "georgian",
+   "dish": "Georgian eggplant rolls (badrijani nigvzit)",
+   "recipe_url": "https://electricbluefood.com/georgian-eggplant-rolls/",
+   "image_url": "https://electricbluefood.com/wp-content/uploads/2020/08/georgian-eggplants-08.jpg",
+   "expect_any": [
+    "eggplant",
+    "aubergine",
+    "badrijani"
+   ],
+   "count": null,
+   "servings_shown": null,
+   "note": "close-up of several rolls",
+   "recipe_yield": [
+    "6",
+    "6 people"
+   ],
+   "per_serving": {
+    "kcal": 488.0,
+    "protein_g": 5.0,
+    "carbs_g": 13.0,
+    "fat_g": 49.0
+   },
+   "ingredients": [
+    "2 eggplants (medium)",
+    "200 ml vegetable oil (for frying)",
+    "140 g walnuts",
+    "60 ml water",
+    "3 garlic cloves",
+    "1 tbsp fresh mint (minced)",
+    "1 tbsp fresh cilantro (minced)",
+    "1 tsp salt",
+    "1/2 tsp coriander seeds (crushed)",
+    "1/4 tsp fenugreek (ground)",
+    "2 tsp apple cider vinegar",
+    "1 pomegranate"
+   ]
+  },
+  {
+   "id": "pz-margherita",
+   "cuisine": "pizza",
+   "dish": "Pizza Margherita",
+   "recipe_url": "https://www.food.com/recipe/pizza-margherita-236789",
+   "image_url": "https://img.sndimg.com/food/image/upload/q_92,fl_progressive,w_1200,c_scale/v1/img/recipes/23/67/89/picvftUTn.jpg",
+   "expect_any": [
+    "pizza",
+    "margherita"
+   ],
+   "count": [
+    1,
+    1
+   ],
+   "servings_shown": null,
+   "note": "one whole pizza; the recipe nutrition leaves out the dough",
+   "recipe_yield": "1 14 inch pizza",
+   "per_serving": {
+    "kcal": 1269.9,
+    "protein_g": 62.3,
+    "carbs_g": 62.4,
+    "fat_g": 90.5
+   },
+   "ingredients": [
+    "1 lb plum tomato, peeled, seeded and chopped or",
+    "1 (28 ounce) can whole tomatoes, drained, seeded and chopped",
+    "1/4 teaspoon salt",
+    "3 tablespoons extra virgin olive oil",
+    "1 1/2 cups coarsely grated mozzarella cheese (about 6 oz.)",
+    "1/3 cup parmesan cheese, grated",
+    "1 basic pizza dough, recipe <a href=\"https://www.food.com/recipe/the-art-of-making-the-perfect-pizza-dough-236785\">The Art of Making the Perfect Pizza Dough</a>",
+    "1 -2 tablespoon cornmeal, for sprinkling on baker's peel",
+    "6 -8 fresh basil leaves, torn",
+    "1 garlic clove, split to rub on crust (optional)"
+   ]
+  },
+  {
+   "id": "ev-bolognese",
+   "cuisine": "everyday",
+   "dish": "Spaghetti Bolognese",
+   "recipe_url": "https://www.recipetineats.com/spaghetti-bolognese/",
+   "image_url": "https://www.recipetineats.com/tachyon/2018/07/Spaghetti-Bolognese.jpg",
+   "expect_any": [
+    "bolognese",
+    "spaghetti",
+    "pasta"
+   ],
+   "count": null,
+   "servings_shown": 1,
+   "note": "one plate; serving 396 g",
+   "recipe_yield": [
+    "5"
+   ],
+   "per_serving": {
+    "kcal": 510.0,
+    "protein_g": 40.9,
+    "carbs_g": 53.2,
+    "fat_g": 12.6
+   },
+   "ingredients": [
+    "1 1/2 tbsp olive oil",
+    "2 garlic cloves (, minced)",
+    "1 onion (, finely chopped (brown, yellow or white))",
+    "1 lb / 500g beef mince (ground beef) (OR half pork, half beef (Note 1))",
+    "1/2 cup (125 ml) dry red wine ((sub water or beef broth/stock))",
+    "2 beef bouillon cubes (, crumbled OR granulated beef bouillon (Note 2))",
+    "800g / 28 oz can crushed tomato ((or tomato passata))",
+    "2 tbsp tomato paste",
+    "2 tsp white sugar (, if needed (Note 3))",
+    "2 tsp Worcestershire sauce",
+    "2 dried bay leaves",
+    "2 sprigs fresh thyme ((or 1/2 tsp dried thyme or oregano))",
+    "3/4 tsp cooking salt (kosher salt)",
+    "1/2 tsp black pepper",
+    "400 g / 13 oz spaghetti (, dried)",
+    "Parmesan cheese (and finely chopped parsley (optional))"
+   ]
+  },
+  {
+   "id": "ev-caesar",
+   "cuisine": "everyday",
+   "dish": "Caesar Salad - with homemade Caesar Salad Dressing",
+   "recipe_url": "https://www.recipetineats.com/chicken-caesar-salad/",
+   "image_url": "https://www.recipetineats.com/tachyon/2016/05/Caesar-Salad_7-SQ.jpg",
+   "expect_any": [
+    "caesar"
+   ],
+   "count": null,
+   "servings_shown": null,
+   "note": "serving bowl, size unclear",
+   "recipe_yield": [
+    "5",
+    "5 - 6 as a side (2 - 3 as meal with chicken)"
+   ],
+   "per_serving": {
+    "kcal": 396.0,
+    "protein_g": 12.0,
+    "carbs_g": 10.0,
+    "fat_g": 35.0
+   },
+   "ingredients": [
+    "1 cup mayonnaise",
+    "1/2 tsp garlic (, finely minced (use garlic press, if you can))",
+    "2 anchovy fillets ( or 3/4 tsp Anchovy paste (Note 2))",
+    "2 tbsp fresh lemon juice",
+    "1 tsp Dijon mustard",
+    "1 tsp Worcestershire sauce",
+    "1/2 cup freshly grated parmesan cheese (, or 1/3 cup store bought grated parmesan cheese (Note 3))",
+    "3 - 4 tbsp milk ((to adjust consistency))",
+    "1/4 tsp cooking salt / kosher salt ((halve for table salt, +50% for flakes))",
+    "1/4 tsp Black pepper",
+    "2 - 3 slices white bread (, 2/3\" / 1.5cm thick (Note 4))",
+    "1 garlic (, cut in half)",
+    "1 tbsp olive oil",
+    "1/4 tsp cooking salt / kosher salt ((halve for table salt, +50% for flakes))",
+    "150g / 5oz streaky bacon (, cooked and chopped)",
+    "10 cups cos / romaine lettuce (, chopped, wash & dried (1 large, 2 medium, 3 small) (Note 5))",
+    "Freshly grated parmesan (, for garnish)",
+    "2 - 4 boiled eggs (, cooked to your taste (I like soft boiled), peeled and halved)",
+    "500g / 1lb chicken breast fillets ((2 pieces))",
+    "1/2 tsp EACH salt and pepper",
+    "1 tbsp olive oil"
+   ]
+  },
+  {
+   "id": "ev-potato-salad",
+   "cuisine": "everyday",
+   "dish": "The best Potato Salad",
+   "recipe_url": "https://www.recipetineats.com/potato-salad/",
+   "image_url": "https://www.recipetineats.com/tachyon/2023/06/Potato-salad_9-SQ.jpg",
+   "expect_any": [
+    "potato salad"
+   ],
+   "count": null,
+   "servings_shown": null,
+   "note": "serving bowl, size unclear",
+   "recipe_yield": [
+    "6",
+    "6 - 8"
+   ],
+   "per_serving": {
+    "kcal": 329.0,
+    "protein_g": 6.0,
+    "carbs_g": 25.0,
+    "fat_g": 23.0
+   },
+   "ingredients": [
+    "1 kg / 2 lb potatoes",
+    "2 tsp cooking / kosher salt (, for cooking potatoes)",
+    "250g / 8oz streaky bacon",
+    "1/2 cup French Dressing (- homemade (below) or store bought (Note 2))",
+    "3/4 cup cucumber, finely diced ((1 x 15cm/6\" cucumber, cut lengthwise and remove watery seeds first))",
+    "1 cups celery, finely sliced diagonally ((~ 2 ribs))",
+    "1/4 cup white onion, finely minced (, ~ 1/2 onion (Note 3))",
+    "1/3 cup mayonnaise (, preferably whole-egg or better yet, homemade)",
+    "1/3 cup sour cream (, full fat (sub yogurt))",
+    "1 tbsp horseradish cream ((or horseradish relish) (Note 4))",
+    "1/2 tsp cooking / kosher salt",
+    "1/4 tsp black pepper",
+    "1 tbsp dijon mustard",
+    "2 tbsp white wine vinegar ((sub apple cider vinegar))",
+    "1/4 cup extra virgin olive oil",
+    "1 tbsp water ((for volume, rather than more oil))",
+    "1/2 tsp white sugar",
+    "1/2 garlic clove (, finely grated or minced)",
+    "1/2 tsp salt",
+    "1/4 tsp black pepper"
+   ]
+  },
+  {
+   "id": "ev-stroganoff",
+   "cuisine": "everyday",
+   "dish": "Beef Stroganoff",
+   "recipe_url": "https://www.recipetineats.com/beef-stroganoff/",
+   "image_url": "https://www.recipetineats.com/tachyon/2018/01/Beef-Stroganoff_2-1-1.jpg",
+   "expect_any": [
+    "stroganoff"
+   ],
+   "count": null,
+   "servings_shown": null,
+   "note": "plate with noodles; the recipe excludes the noodles",
+   "recipe_yield": [
+    "4",
+    "4 - 5 people"
+   ],
+   "per_serving": {
+    "kcal": 586.0,
+    "protein_g": 37.0,
+    "carbs_g": 9.0,
+    "fat_g": 44.0
+   },
+   "ingredients": [
+    "600 g / 1.2 lb scotch fillet steak / boneless rib eye ((Note 1))",
+    "1/2 tsp cooking salt / kosher salt ((halve for table salt, +50% for flakes))",
+    "1/4 tsp black pepper",
+    "2 tbsp vegetable oil (, divided)",
+    "1 large onion ((or 2 small onions), sliced)",
+    "300 g / 10 oz mushrooms (, sliced (not too thin))",
+    "50 g / 3 tbsp butter",
+    "2 tbsp flour ((Note 2))",
+    "2 cups beef broth (, preferably salt reduced)",
+    "1 tbsp Dijon mustard",
+    "2/3 cup sour cream",
+    "Salt and pepper (, to taste)",
+    "250 - 300 g / 8 - 10 oz pasta or egg noodles of choice ((Note 3))",
+    "Chopped chives (, for garnish (optional))"
+   ]
+  }
+ ]
+}
