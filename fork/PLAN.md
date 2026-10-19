@@ -4,7 +4,7 @@ Started 2026-10-17. Decisions in [DECISIONS.md](DECISIONS.md) win over this file
 
 ## 0. What upstream already gives us
 
-Checked on `develop` at 1bc934b1 (2026-10-17).
+Checked on `develop` at 1bc934b1 (2026-10-17). Upstream merged into `fork/main` again at 8119b857 (2026-10-19).
 
 | MacroFactor feature | ONT today |
 |---|---|
@@ -23,7 +23,7 @@ Checked on `develop` at 1bc934b1 (2026-10-17).
 - [x] Fork on GitHub (`lodepav/OpenNutriTracker`), clone, `upstream` remote, `develop` and `fork/main` branches (D6).
 - [x] Build rig: Flutter 3.44.6 in `~/flutter`, OpenJDK 24, debug APK builds.
 - [x] `fork/tools/emulator.sh` (D5). `SEED=1` builds upstream's demo-data entry point, which gives a year of diary and weigh-ins, enough to exercise an expenditure estimate.
-- [ ] GitHub → Actions on the fork: disable the workflows that need upstream's secrets (store deploys, Weblate, project boards). Disable, don't delete: deleted files conflict on every upstream edit.
+- [x] GitHub Actions off on the fork (2026-10-19). Every upstream workflow needs upstream's secrets or acts on upstream's issues and Weblate, and none had ever run here, so Actions is switched off for the whole repo (Settings → Actions) rather than per workflow; that also covers workflows upstream adds later. The files stay: deleted files conflict on every upstream edit. Switch it back on, and disable workflows one by one, if the fork ever wants CI of its own.
 - [ ] Fork identity, if wanted (Q2): a `fork` flavour with its own app id and name, set in a fork-owned `android/app/fork.gradle` applied by one seam line, as openGym-Hevier's S7 does.
 - [ ] `.env`: placeholders stay; ONT's hosted backend isn't used (D11).
 
@@ -60,7 +60,8 @@ Before phase 1, at the user's request. Upstream code read 2026-10-18; findings f
   amount, unit and grams. A saved breakdown keeps its numbers even if the food table changes.
 - **The builder can open pre-filled.** `RecipeBuilderScreen` takes `existing: RecipeEntity` in its
   route arguments, so an unsaved recipe built from a breakdown opens for review and saving
-  without a builder change. Still to check: save upserts by id.
+  without a builder change. Save upserts by id (`recipe_data_source.dart` `saveRecipe`), and the
+  builder keeps the passed recipe's id, so a breakdown given a fresh id saves as a new recipe.
 - **Import formats:**
   - `user_recipes.json` in the export zip (full snapshots, `docs/export-format.md`).
   - The QR/JSON share payload (`shared_recipe_payload.dart`, macros only, no micronutrients).
@@ -122,6 +123,8 @@ Before phase 1, at the user's request. Upstream code read 2026-10-18; findings f
    photo path returns names and counts, not grams, so photos are scored on those. The recipe
    macros score phase 1c's breakdown: its per-serving total against the page's. Then ten of the
    user's own meals. This decides Q3 and which default leads.
+   *Status 2026-10-19:* harness built and the 23 photos downloaded; not run yet (needs an
+   OpenRouter key). Run it before phase 1c, so the breakdown has a baseline to beat.
 
 ## 2b. Phase 1b — Offline food tables (D11)
 
@@ -130,16 +133,16 @@ searched on the emulator: 20,687 foods, 13,006 with portions, a 1.4 MB asset. Fi
 (D11, D12). Only USDA rows carry portions; BLS has none (upstream's backend has
 the same gap). Pelmeni and khachapuri are in no table and go to D9.
 
-1. `fork/tools/build_food_db`: Fineli, BLS 4.0, USDA Foundation + SR Legacy, normalised to
-   per 100 g plus portions, with the source on every row, written to a SQLite asset. First
-   check: which tables have English names and portion sizes (USDA does; Fineli and BLS to
-   be checked). AI matching needs both.
-2. A local food data source beside OFF in search and in AI matching, behind a seam where
-   upstream's `sp_food_data_source.dart` is called. Local results rank first for generic foods.
-3. Credits on the Sources screen (CC BY: THL/Fineli, Max Rubner-Institut/BLS; USDA).
-4. Check: rye bread, biezpiens (quark), kefir, buckwheat, grey peas, "2 eggs" and a pizza
-   photo resolve without D9's estimate. Gaps found here decide whether Livsmedelsverket is
-   added.
+1. [x] `fork/tools/build_food_db.py`: BLS 4.0 and USDA (SR Legacy, Foundation, FNDDS survey),
+   normalised to per 100 g plus portions, with the source on every row, written to
+   `assets/fork/foods.json.gz`.
+2. [x] `LocalFoodDataSource` (`lib/fork/food/`) registered as the `SpFoodDataSource` (seam S1),
+   so search and AI matching use it in place of the hosted backend.
+3. [ ] Credits: Max Rubner-Institut/BLS (CC BY 4.0, required) and USDA FoodData Central.
+   Upstream's Sources screen lists calculation sources only, so find where upstream credits
+   its backend's tables and add BLS there.
+4. [ ] Check: rye bread, biezpiens (quark), kefir, buckwheat, grey peas, "2 eggs" and a pizza
+   photo resolve without D9's estimate. Gaps go to recipes (D12), not to a new table (D11).
 
 ## 3. Phase 2 — Backup to Google Drive (D10)
 
@@ -214,7 +217,7 @@ simulation. If declined, it stays in the fork behind seams.
 | Q1 | Which AI model or provider? | D7 |
 | Q2 | Install beside the official app? | D8 (name still open) |
 | Q3 | Grounded only, or estimate when nothing matches? | D9 |
-| Q4 | How to get generic foods (USDA/BLS) without ONT's backend key? | D11 (option b: USDA, Fineli, BLS) |
+| Q4 | How to get generic foods (USDA/BLS) without ONT's backend key? | D11 (option b: USDA and BLS bundled; Fineli dropped) |
 | Q5 | Drive backup through a sync app? | D10 |
 
 **Q4.** Open Food Facts is mostly packaged, branded products: searching "banana" or
