@@ -44,6 +44,12 @@ Agreed 2026-10-17 (PLAN.md §6, Q4).
 | D11 | **Generic foods come from open tables bundled into the app as an offline asset. No API key and no backend.** **USDA FoodData Central** (SR Legacy, Foundation, FNDDS survey; public domain; household portions such as "1 medium" or "1 slice") and **BLS 4.0** (Germany, Max Rubner-Institut, CC BY 4.0, ~7,100 foods, close to Latvian staples: rye bread, quark, kefir, herring, sauerkraut). Every row keeps its source. Packaged products keep coming from Open Food Facts live, as upstream does. `fork/tools/build_food_db.py` builds the asset. No more tables: dishes come from recipes (D12), and their ingredients are covered by these two. Fineli and Livsmedelsverket are dropped (2026-10-18). Not usable: NEVO (unchanged copies only) and NutriData (no stated licence). |
 | D12 | **Dishes come from recipes, and the AI writes the recipe.** No open recipe database covers Latvian or Georgian food with gram amounts (researched 2026-10-18; the large scraped datasets are research-only or of doubtful licence). So: (1) for a dish the tables lack, the model returns its ingredients with grams, naming the nearest generic ingredient where a local one is missing (grey peas → dried split peas, sulguni → brined mozzarella-type cheese); (2) the ingredients are matched in the tables (D11), so the numbers stay grounded; (3) the breakdown can be saved as a recipe with upstream's recipe builder, which makes the dish instant and offline next time and lets the user adjust it to how they cook it; (4) four CC0 Latvian recipes with gram amounts (grey peas with bacon, pelmeni, sklandu rauši, layered rye-bread dessert; *The Cuisine of Latvia*, Latvian Institute, data.gov.lv) ship as starter recipes. Agreed 2026-10-18. |
 
+## Logging
+
+| # | Decision |
+|---|---|
+| D14 | **Leftovers are subtracted from the logged meal, manually or by AI.** Agreed 2026-10-21. Manual: a "Leftovers" action on an entry or a group of entries logged together, as an amount or a fraction left. AI: a photo of what was left, sent with the group's current entries and, if still cached, the original photo (kept 24 hours in app-private storage, never backed up). The model returns only a count or fraction left per entry, never nutrients, so the numbers stay the logged entries'. Its answer is marked as an AI estimate and reviewed before saving. Estimating a fraction from a photo is a visual quantity estimate, which upstream's photo path avoids (#250), so the AI part is fork-only behind a seam; the manual part goes upstream. |
+
 ## Targets
 
 | # | Decision |

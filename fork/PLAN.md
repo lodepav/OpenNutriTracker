@@ -125,6 +125,30 @@ Before phase 1, at the user's request. Upstream code read 2026-10-18; findings f
    user's own meals. This decides Q3 and which default leads.
    *Status 2026-10-19:* harness built and the 23 photos downloaded; not run yet (needs an
    OpenRouter key). Run it before phase 1c, so the breakdown has a baseline to beat.
+5. **Leftovers (D14).** Subtract what was left uneaten from a meal already logged.
+   - **What upstream gives us:** a logged entry's amount can be edited
+     (`update_intake_usecase.dart`), so subtracting is an amount update. Nothing groups the
+     items of one AI log: bulk add writes each row as its own intake
+     (`bulk_add_screen.dart` `addIntake` loop), with no shared id. The photo is compressed,
+     sent and never kept (`meal_photo_encoder.dart`).
+   - **Manual.** A "Leftovers" action on a diary entry: enter the amount left, or tap ¼, ⅓, ½
+     or ¾ left. The new amount is shown before saving. On a group (below), one fraction
+     applies to every item, with per-item overrides. The single-entry action is an upstream
+     PR (rule 1).
+   - **Groups.** When bulk add saves, record a meal group in a fork Hive box: the intake ids,
+     the time, and the cached photo's path if any. Included in backups (phase 2.3), without
+     the photo.
+   - **AI.** Photo of the plate after eating. The model gets that photo, the cached original
+     photo if still there, and the group's entries *as they are now* (names, amounts, units;
+     the user may have edited them since). It returns, per entry, how much is left: a count
+     for countable items ("2 of 5 dumplings"), else a fraction. No nutrients and no new foods:
+     the numbers stay the logged entries' own. The same review screen as the manual action
+     shows each subtraction, marked "AI estimate", editable before saving. Without the
+     original photo it still works from the entries and the leftover photo alone.
+   - **Photo cache.** Keep each AI-logged photo in app-private storage for 24 hours, then
+     delete it. Never exported or backed up. Off by a setting for users who want no photo kept.
+   - **Check.** Before/after photo pairs of a few of the user's meals with known leftovers,
+     scoring the subtracted kcal against what was actually left.
 
 ## 2b. Phase 1b — Offline food tables (D11)
 
