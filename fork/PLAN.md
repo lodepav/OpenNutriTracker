@@ -206,6 +206,19 @@ simulation. If declined, it stays in the fork behind seams.
   ingredients fall back to search, label scan or manual entry).
 - Faster logging: recents ranked by time of day, re-log yesterday's meal in one tap.
 - Top contributors per nutrient.
+- **Contribute missing barcodes to Open Food Facts.** Today the app only reads OFF; upstream
+  just links to the official OFF apps (`import_custom_food_data_dialog.dart`). OFF is the only
+  source that takes contributions: USDA and BLS are fixed tables (D11).
+  - Entry point: a barcode scan that finds nothing, which already offers "create custom meal"
+    (#995). Add "also submit to Open Food Facts" there. Pairs with the AI label scan above.
+  - The user's own OFF account (free; username, email, password), stored like the AI keys. No
+    shared app account: OFF discourages anonymous edits.
+  - OFF's app rules: a User-Agent with app name, version and contact; ODbL credit; personal
+    volume only.
+  - Only real label data goes up: a hand-entered or label-scanned product with a barcode.
+    Never D9 estimates, D12 breakdowns or recipes.
+  - Upstream first (rule 1): it helps every ONT user. It adds a data-sharing path, so the
+    privacy policy and `docs/play-data-safety.md` change with it.
 - Release checks like openGym-Hevier's D26/D38 (gitleaks, Trivy over `pubspec.lock`, APK
   permissions and signing), before the first build for daily use.
 - Health Connect weight import: upstream PR #1296, take it when merged.
