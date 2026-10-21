@@ -181,13 +181,17 @@ replacing it. Design and sources: [research/phase3-macrofactor-algorithms.md](re
 
 1. **Simulator first.** Synthetic users with a known expenditure: weights from energy balance,
    daily water noise, missed weigh-ins, unlogged and under-logged days, step changes in
-   expenditure. It scores stability (kcal/day moved per day), responsiveness (days to follow a
+   expenditure, and for some users a menstrual water swing (about 1–2 kg over a ~28-day
+   cycle; upstream ignores the cycle). It scores stability (kcal/day moved per day), responsiveness (days to follow a
    step) and error against the truth, as MacroFactor reports. Everything below is tuned on it.
 2. **Smoothed trend.** Interpolate missing days, exponential smoothing (start at 10%/day). Shown
    on the weight chart when the setting picks it; upstream's 7-day average stays the default.
 3. **Expenditure.** 20-day change, Forbes/Hall energy density (flat 6,000 fallback), blended
    estimate from the IOM prior, data rules (4 of 7 days logged, a weigh-in a week, else carry).
    Checked against the simulator and upstream's demo-seeded year (`SEED=1`).
+   The 20-day window is shorter than a cycle, so a water swing can read as a real change:
+   measure how far the estimate and the proposed target wobble on the cycle users. If the
+   capped weekly change doesn't absorb it, try a window covering a full cycle for them.
 4. **Weekly check-in.** Past week (average intake, trend change, expenditure) and a proposed
    target with a capped change; accept or edit. Adaptive mode stops adding logged activities.
    Fork state in its own Hive box, included in backups (phase 2.4).
