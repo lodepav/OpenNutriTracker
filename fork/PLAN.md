@@ -179,6 +179,14 @@ Before phase 1, at the user's request. Upstream code read 2026-10-18; findings f
 1. **Photo + note.** Send the user's typed text along with the photo, in all three clients
    (`anthropic_meal_items_api.dart`, `openai_meal_items_api.dart`,
    `openai_compatible_meal_items_api.dart`) and the add-meal screen. Upstream PR (rule 1).
+   *Done 2026-10-22* on `feat/photo-note` (off `develop`, carried into the fork by cherry-pick;
+   PR not opened yet). What is typed in the box goes with the photo; the model may name and count
+   from it, and a measured amount survives only when the note states that same amount
+   ("200g rice" kept 200 g; an unstated or different amount is dropped as before). Emulator,
+   fake AI: photo + "200g rice, 2 eggs" gave khachapuri (broken down), brown rice 200 g and eggs ×2.
+   Seen, upstream's, not this change: "2 eggs" matched a branded product as "2 g/ml" (#1231).
+   Use `fork/tools/emulator.sh`: booting the shared AVD with `-no-snapshot-save` reloads the old
+   snapshot, so app data from the last run is gone.
 2. *Dropped 2026-10-18:* Gemini. Google is excluded (D7). If the user ever wants it, the
    custom-server option covers it once upstream merges #1257.
 3. **Estimate when nothing matches (D9):** covered by phase 1c.

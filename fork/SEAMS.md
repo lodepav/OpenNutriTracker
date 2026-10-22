@@ -23,3 +23,13 @@ because upstream merged the feature) gets removed, and so does its row.
 | S4 | `lib/features/add_meal/presentation/screens/bulk_add_screen.dart` | Runs `DishBreakdownController` (`lib/fork/dish/`): the "Ingredients" and "Save recipe" row actions, the in-progress and "AI estimate" row labels, its disposal. Five blocks. | active |
 | S5 | `lib/features/add_meal/domain/usecase/search_products_usecase.dart` | Custom meals and recipes also match when every search word is a word of the name, up to an ending (`nameHasQueryWords`, `lib/fork/dish/recipe_search.dart`), beside upstream's substring match. Upstream PR candidate. Three blocks: the import and the two filters. | active |
 | S6 | `lib/main.dart` | Saves the four Latvian starter recipes once per install (`StarterRecipeSeeder`, `lib/fork/dish/starter_recipes.dart`), unawaited after the cache prune; with `FORK_FAKE_AI` also sets a dummy Anthropic key. Two blocks: the imports and the calls. | active |
+
+## Carried upstream changes
+
+Upstream-bound work (rule 1) is built on a branch off `develop`, cherry-picked (`-x`) into a
+`fork/<topic>` branch, and carried without markers until upstream merges it; then the release
+merge brings it in and its row goes.
+
+| Branch | What it changes | Upstream |
+|---|---|---|
+| `feat/photo-note` | Text typed in the bulk-add box goes with a meal photo as a note, in all three clients; an amount survives only when the note states it. | PR not opened yet |

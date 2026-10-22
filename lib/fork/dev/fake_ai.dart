@@ -83,7 +83,7 @@ class FakeAiClient extends http.BaseClient {
       if (content is List) {
         for (final block in content) {
           if (block is Map && block['type'] == 'text') {
-            buffer.writeln(block['text']);
+            buffer.writeln(_withoutPhotoPrompt('${block['text']}'));
           }
           // A photo: the model "sees" a khachapuri.
           if (block is Map && block['type'] == 'image') {
@@ -93,6 +93,13 @@ class FakeAiClient extends http.BaseClient {
       }
     }
     return buffer.toString();
+  }
+
+  /// A photo's text part is the fixed prompt plus, maybe, the user's
+  /// note: only the note names food.
+  static String _withoutPhotoPrompt(String text) {
+    if (!text.startsWith('List the foods in this photo.')) return text;
+    return RegExp(r'''The user's note: "(.*)"$''').firstMatch(text)?[1] ?? '';
   }
 
   static List<Map<String, Object>> _breakdown(String text) {
