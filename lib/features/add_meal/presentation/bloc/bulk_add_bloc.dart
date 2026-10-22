@@ -470,6 +470,7 @@ class BulkAddBloc extends Bloc<BulkAddEvent, BulkAddState> {
     final reading = await _readMealPhotoUseCase.read(
       event.photo,
       localeCode: event.localeCode,
+      note: event.note,
     );
     if (emit.isDone || _superseded(attempt)) return;
 
