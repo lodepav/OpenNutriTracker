@@ -139,7 +139,10 @@ Before phase 1, at the user's request. Upstream code read 2026-10-18; findings f
    up to an ending ("khachapuri, adjarian" finds "Adjarian khachapuri", "pelmeni" finds
    "Pelmenis"), beside upstream's substring match so half a word still works. A test runs it
    through the resolver. Still to do: offer it upstream as a PR, and the typed/photographed
-   check with a real model (step 7).
+   check with a real model (step 7). Latvian letters fold to plain ones on both sides
+   ("sklandu rausi" finds "Sklandu rauši"). A model's one-word "sklandrausis" still misses the
+   two-word name: watch for it in step 7.
+   **Resume here:** step 7 needs an AI key and a device; the branch is not merged or pushed yet.
 6. **Starter recipes.** The four CC0 Latvian recipes (grey peas with bacon, pelmeni, sklandu rauši,
    layered rye-bread dessert).
    - Built on first run in `lib/fork/` from food-table rows chosen at build time (ids in a small

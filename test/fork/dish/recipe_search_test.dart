@@ -31,6 +31,11 @@ void main() {
       );
     });
 
+    test('Latvian letters match their plain forms, both ways', () {
+      expect(nameHasQueryWords('Sklandu rauši', 'sklandu rausi'), isTrue);
+      expect(nameHasQueryWords('Pelmeni ar skabo krejumu', 'krējumu'), isTrue);
+    });
+
     test('a word the name lacks, or a blank query, does not match', () {
       expect(nameHasQueryWords('Grey peas with bacon', 'green peas'), isFalse);
       expect(nameHasQueryWords('Pelmenis', 'pelmeni, fried'), isFalse);
