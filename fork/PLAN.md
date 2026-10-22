@@ -261,6 +261,9 @@ the same gap). Pelmeni and khachapuri are in no table and go to D9.
 
 ## 3. Phase 2 — Backup to Google Drive (D10)
 
+**Status 2026-10-22: waiting.** `v2.5.0` is not tagged yet (latest upstream release v2.4.0), and
+step 6 asks on #1356 first, which is the user's call. Phase 3 went ahead.
+
 The app writes backup files; it syncs nothing itself (openGym-Hevier's D20). Upstream ONT has
 only a manual export (`export_data_usecase.dart`, a `FilePicker.saveFile` dialog each time), so
 unlike openGym the automatic part has to be built.
@@ -316,6 +319,15 @@ replacing it. Design and sources: [research/phase3-macrofactor-algorithms.md](re
 5. **Settings switch** for trend and target, behind seams in the settings screen and in
    `calorie_goal_calc.dart`'s caller.
 6. **Goal ETA** from the trend and the chosen pace.
+
+**Status 2026-10-22: steps 1–6 done** (branch `fork/adaptive`, seams S12–S15). Simulator
+results in [research/phase3-simulation.md](research/phase3-simulation.md). On the emulator with
+the demo profile: the switch shows the check-in card at once; the check-in read 3,032 kcal
+expenditure and proposed 2,648 (moved the 200 kcal most from the formula's 2,848, 2 of 7 days
+logged); Accept hid the card and home went from 933 to 733 kcal left; the smoothed trend draws
+dashed on the weight chart. Not adaptive yet: the "How your goal is calculated" breakdown and
+onboarding still show the formula, and `lib/dev/main_dev.dart` skips seam S6, so the settings
+are not loaded there.
 
 Upstream: open an issue first, with the simulation results. The maintainer cites a source for
 every calculation; everything except the tuned weights has one, and those come with the
