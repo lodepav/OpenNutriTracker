@@ -142,7 +142,10 @@ Before phase 1, at the user's request. Upstream code read 2026-10-18; findings f
    check with a real model (step 7). Latvian letters fold to plain ones on both sides
    ("sklandu rausi" finds "Sklandu rauši"). A model's one-word "sklandrausis" still misses the
    two-word name: watch for it in step 7.
-   **Resume here:** step 7 needs an AI key and a device; the branch is not merged or pushed yet.
+   **Resume here (2026-10-22):** merged and pushed. Next: an emulator run with a fake AI that
+   recognises everything or most things (no real key, per the user): starters appear after
+   first start, "sklandu rausi"/"pelmeni" search, typed "khachapuri" → Ingredients → Save recipe.
+   Real-model check (step 7) later.
 6. **Starter recipes.** The four CC0 Latvian recipes (grey peas with bacon, pelmeni, sklandu rauši,
    layered rye-bread dessert).
    - Built on first run in `lib/fork/` from food-table rows chosen at build time (ids in a small
