@@ -115,9 +115,16 @@ Before phase 1, at the user's request. Upstream code read 2026-10-18; findings f
      the branded-product trap.
    - One seam in `bulk_add_screen.dart`/its bloc, or a wrapper around the resolver if that is
      smaller.
+   - *Done 2026-10-22:* `DishBreakdownController` runs it automatically for an unmatched row of
+     a model or photo read (not the parser's rows: the model was not used or failed there), and
+     on demand ("Ingredients") for an unmatched, low-confidence or Open Food Facts row. Seams S3
+     (bloc) and S4 (screen). Fork UI text is English only (`dish_strings.dart`), kept out of
+     upstream's ARB files and Weblate.
 3. **Review.** The dish shows as a group of its ingredient rows, marked "AI breakdown, grams
    estimated". Each row is editable as today. A row that still matches nothing keeps the model's
    name for the user to search (D9's estimate stays a last resort, marked).
+   *Done 2026-10-22:* each ingredient row carries its dish (`DishIngredientItem`, which survives
+   edits) and reads "Ingredient of <dish> · AI estimate, check the grams". No group header yet.
 4. **Save as recipe.** One action builds an unsaved `RecipeEntity` (name = the dish, servings 1,
    ingredients from the group) and opens `RecipeBuilderScreen` with it.
 5. **Finding it again.** Make the recipe tier match on words, not the whole string: every query
