@@ -1,6 +1,7 @@
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:get_it/get_it.dart';
 // [fork] S1 local-foods: the bundled food table (D11)
+import 'package:opennutritracker/fork/dev/fake_ai.dart';
 import 'package:opennutritracker/fork/food/food_table_licenses.dart';
 import 'package:opennutritracker/fork/food/local_food_data_source.dart';
 // [/fork]
@@ -606,6 +607,10 @@ Future<void> initLocator() async {
   // [fork] S1 local-foods: search the bundled open tables, not the hosted backend (D11)
   locator.registerLazySingleton<SpFoodDataSource>(() => LocalFoodDataSource());
   registerFoodTableLicenses();
+  if (forkFakeAi) {
+    locator.unregister<http.Client>();
+    locator.registerLazySingleton<http.Client>(() => FakeAiClient(http.Client()));
+  }
   // [/fork]
   locator.registerLazySingleton(() => TrackedDayDataSource(hiveDBProvider));
   locator.registerLazySingleton<WeightLogDataSource>(

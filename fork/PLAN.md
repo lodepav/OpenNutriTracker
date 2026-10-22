@@ -142,10 +142,16 @@ Before phase 1, at the user's request. Upstream code read 2026-10-18; findings f
    check with a real model (step 7). Latvian letters fold to plain ones on both sides
    ("sklandu rausi" finds "Sklandu rauši"). A model's one-word "sklandrausis" still misses the
    two-word name: watch for it in step 7.
-   **Resume here (2026-10-22):** merged and pushed. Next: an emulator run with a fake AI that
-   recognises everything or most things (no real key, per the user): starters appear after
-   first start, "sklandu rausi"/"pelmeni" search, typed "khachapuri" → Ingredients → Save recipe.
-   Real-model check (step 7) later.
+   *Emulator run 2026-10-22 (fake AI, `--dart-define=FORK_FAKE_AI=true`, `lib/fork/dev/fake_ai.dart`):*
+   the starters were saved on first start; "sklandu rausi" found "Sklandu rauši" (1620 g, 12 × 135 g,
+   240 kcal); "khachapuri, 200 ml kefir, grey peas" broke khachapuri into its four rows on its own,
+   matched grey peas to the starter at one serving (151 g, 462 kcal); "Save recipe" opened the
+   builder filled in and saved; typing "khachapuri" again then found the saved recipe (290 g,
+   969 kcal) without a breakdown.
+   **Found:** two ingredients resolved to Open Food Facts products, not table rows ("cheese,
+   mozzarella, whole milk" → a Kroger product, "butter, salted" → "Butter Salted"). A breakdown's
+   ingredients should prefer the generic table row; next fix.
+   **Resume here:** that fix, then the real-model check (step 7).
 6. **Starter recipes.** The four CC0 Latvian recipes (grey peas with bacon, pelmeni, sklandu rauši,
    layered rye-bread dessert).
    - Built on first run in `lib/fork/` from food-table rows chosen at build time (ids in a small

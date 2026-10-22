@@ -50,6 +50,8 @@ import 'package:opennutritracker/features/settings/presentation/widgets/health_s
 import 'package:opennutritracker/features/settings/settings_screen.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 // [fork] S6 starter-recipes: the Latvian starter recipes (phase 1c.6)
+import 'package:opennutritracker/core/utils/ai_credential_storage.dart';
+import 'package:opennutritracker/fork/dev/fake_ai.dart';
 import 'package:opennutritracker/fork/dish/starter_recipes.dart';
 // [/fork]
 import 'package:provider/provider.dart';
@@ -91,6 +93,7 @@ Future<void> _bootstrapApp() async {
   );
   // [fork] S6 starter-recipes: saved once per install, off the start path
   unawaited(StarterRecipeSeeder.fromLocator().run());
+  if (forkFakeAi) await enableFakeAi(locator<AiCredentialStorage>());
   // [/fork]
 
   final isUserInitialized = await locator<UserDataSource>().hasUserData();
