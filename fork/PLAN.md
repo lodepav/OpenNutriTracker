@@ -153,7 +153,11 @@ Before phase 1, at the user's request. Upstream code read 2026-10-18; findings f
    ingredients should prefer the generic table row. *Fixed 2026-10-22* (`preferTableRow` in
    `break_down_dish_usecase.dart`): a breakdown row that landed on a product takes the table's
    row when the search found one; not yet re-run on the emulator.
-   **Resume here:** re-run the emulator check; then phase 1c is done.
+   *Re-run 2026-10-22:* "khachapuri, mozzarella" broke khachapuri into table rows only ("Cheese,
+   mozzarella, whole milk", "Butter, salted"); the typed "mozzarella" matched a product and was
+   not offered "Ingredients", which is now offered only on an unmatched or weak row. A saved
+   recipe survived an app restart (one saved last run was lost to killing the emulator, not
+   the app). **Phase 1c done.**
 6. **Starter recipes.** The four CC0 Latvian recipes (grey peas with bacon, pelmeni, sklandu rauši,
    layered rye-bread dessert).
    - Built on first run in `lib/fork/` from food-table rows chosen at build time (ids in a small

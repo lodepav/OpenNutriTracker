@@ -12,7 +12,10 @@ import 'package:opennutritracker/fork/dish/dish_breakdown_controller.dart';
 import 'package:opennutritracker/fork/dish/dish_breakdown_rows.dart';
 import 'package:opennutritracker/fork/dish/dish_recipe.dart';
 
-MealEntity _meal(String name) => MealEntity(
+MealEntity _meal(
+  String name, [
+  MealSourceEntity source = MealSourceEntity.fdc,
+]) => MealEntity(
   code: name,
   name: name,
   url: null,
@@ -22,7 +25,7 @@ MealEntity _meal(String name) => MealEntity(
   servingUnit: 'g',
   servingSize: null,
   nutriments: MealNutrimentsEntity.empty(),
-  source: MealSourceEntity.fdc,
+  source: source,
 );
 
 /// Finds what the table holds: only the ingredients, never the dish.
@@ -173,6 +176,34 @@ void main() {
     final state = await settle();
 
     expect(state.rows.map(controller.canBreakDown), [true, false]);
+    controller.dispose();
+  });
+
+  test('a product matched with confidence is not offered; a weak match '
+      'is', () async {
+    final controller = DishBreakdownController(
+      bloc,
+      breakDown: (dish) async => null,
+      modelConfigured: () async => true,
+    );
+    await pumpEventQueue();
+    BulkAddRow row(double confidence) => BulkAddRow(
+      resolved: ResolvedMealItem(
+        parsed: const ParsedMealItem(query: 'mozzarella'),
+        candidates: [
+          _meal('whole milk mozzarella cheese', MealSourceEntity.off),
+        ],
+        selectedIndex: 0,
+        confidence: confidence,
+      ),
+      selectedIndex: 0,
+      amountText: '100',
+      unit: 'g',
+      fromPhoto: false,
+    );
+
+    expect(controller.canBreakDown(row(1)), isFalse);
+    expect(controller.canBreakDown(row(0.1)), isTrue);
     controller.dispose();
   });
 
