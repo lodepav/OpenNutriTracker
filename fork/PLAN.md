@@ -363,6 +363,11 @@ user's own meals. This decides Q3 and which default leads.
 *Status 2026-10-19:* harness built and the 23 photos downloaded; not run yet (needs an
 OpenRouter key).
 
+**Then upstream (user, 2026-10-23):** no upstream PRs, issues or #1356 questions until the
+app is tested live, after the real-model checks above. Queued: `feat/photo-note`,
+`feat/leftovers`, the word-search change, the phase 3 issue with the simulation results, and the
+#1356 question for phase 2.
+
 ## 5. Backlog (after phases 1–3)
 
 Not built anywhere yet:
