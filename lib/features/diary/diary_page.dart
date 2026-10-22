@@ -19,6 +19,9 @@ import 'package:opennutritracker/features/diary/presentation/widgets/diary_table
 import 'package:opennutritracker/features/diary/presentation/widgets/day_info_widget.dart';
 import 'package:opennutritracker/features/meal_detail/presentation/bloc/meal_detail_bloc.dart';
 import 'package:opennutritracker/generated/l10n.dart';
+// [fork] S9 meal-groups: leftovers of a whole meal (D14)
+import 'package:opennutritracker/fork/leftovers/group_leftovers.dart';
+// [/fork]
 
 class DiaryPage extends StatefulWidget {
   const DiaryPage({super.key});
@@ -292,6 +295,31 @@ class _DiaryPageState extends State<DiaryPage> with WidgetsBindingObserver {
     IntakeEntity intakeEntity,
     bool usesImperialUnits,
   ) async {
+    // [fork] S9 meal-groups
+    final day = _selectedDate;
+    var mealEdited = false;
+    final handled = await editMealGroupLeftovers(
+      context,
+      intakeEntity,
+      update: (id, amount) {
+        mealEdited = true;
+        return _calendarDayBloc.updateIntakeItem(id, {'amount': amount}, day);
+      },
+    );
+    if (handled) {
+      if (!mealEdited) return;
+      _diaryBloc.add(const LoadDiaryYearEvent());
+      _calendarDayBloc.add(LoadCalendarDayEvent(day));
+      _diaryBloc.updateHomePage();
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(S.of(context).itemUpdatedSnackbar)),
+        );
+      }
+      return;
+    }
+    if (!context.mounted) return;
+    // [/fork]
     final changeIntakeAmount = await showDialog<double>(
       context: context,
       builder: (context) => EditDialog(

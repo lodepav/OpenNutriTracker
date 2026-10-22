@@ -192,6 +192,21 @@ Before phase 1, at the user's request. Upstream code read 2026-10-18; findings f
 3. **Estimate when nothing matches (D9):** covered by phase 1c.
 4. **Photo test (D7):** moved to phase 4, last.
 5. **Leftovers (D14).** Subtract what was left uneaten from a meal already logged.
+   *Done 2026-10-22* on `fork/leftovers`. The single-entry dialog (amount left, ¼ ⅓ ½ ¾) is
+   `feat/leftovers` off `develop` (PR not opened yet). Fork-only, seams S7–S11: a bulk save
+   records its entries as a meal; tapping one in the diary or on home offers "Just this item" or
+   "Whole meal"; the whole-meal dialog takes one share off every item with per-item overrides,
+   and "Photo of what's left" sends the leftovers photo beside the kept meal photo (one image,
+   side by side, since upstream's clients carry one photo) with the entries as they are now,
+   through upstream's meal-items tool; the answer is the amount left per entry, shown as an AI
+   estimate. Meal photos are kept 24 h in app support storage (not documents, so not exported;
+   Android backup is off), pruned at start-up, off by "Keep meal photos for 24 hours" in
+   Privacy Settings, which deletes them; the photo sheet says a copy is kept while it is on.
+   Emulator, fake AI: photo + note logged 6 items with the photo kept; whole meal → photo of
+   what's left halved five items, curry adjusted by hand, lunch 3170 → 1914 kcal; "Just this
+   item" opens upstream's dialog; switching the setting off deleted the photo. Group records
+   and the setting are not in backups yet (phase 2). The real-model check below is phase 4.
+   The privacy switch saves as it is switched, so the dialog's Cancel does not undo it.
    - **What upstream gives us:** a logged entry's amount can be edited
      (`update_intake_usecase.dart`), so subtracting is an amount update. Nothing groups the
      items of one AI log: bulk add writes each row as its own intake

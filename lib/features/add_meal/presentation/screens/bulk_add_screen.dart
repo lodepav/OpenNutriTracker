@@ -36,6 +36,10 @@ import 'package:opennutritracker/fork/dish/dish_breakdown_rows.dart';
 import 'package:opennutritracker/fork/dish/dish_recipe.dart';
 import 'package:opennutritracker/fork/dish/dish_strings.dart';
 // [/fork]
+// [fork] S8 meal-groups: remember which entries one save wrote (D14)
+import 'package:opennutritracker/fork/leftovers/meal_groups.dart';
+import 'package:opennutritracker/fork/leftovers/meal_photo_cache.dart';
+// [/fork]
 
 class BulkAddScreenArguments {
   final IntakeTypeEntity intakeTypeEntity;
@@ -68,6 +72,9 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
   final _log = Logger('BulkAddScreen');
   final _bloc = locator<BulkAddBloc>();
   final _textController = TextEditingController();
+  // [fork] S8 meal-groups: the photo this batch was read from, kept with the meal
+  MealPhoto? _forkMealPhoto;
+  // [/fork]
 
   // [fork] S4 dish-breakdown: runs breakdowns and marks the rows (D12)
   late final _dishBreakdown = DishBreakdownController(_bloc)
@@ -1376,6 +1383,9 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
   void _onParsePressed() {
     FocusScope.of(context).unfocus();
     _resetAmountControllers();
+    // [fork] S8 meal-groups
+    _forkMealPhoto = null;
+    // [/fork]
     _bloc.add(
       ParseBulkTextEvent(
         text: _textController.text,
@@ -1393,6 +1403,10 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
     // is no honest sentence to put in the sheet, and the sheet is the last
     // moment the user can decline.
     if (destination == null) return;
+    // [fork] S8 meal-groups: say so when the photo is kept for leftovers
+    final keepsPhoto = await MealPhotoCache().keepsPhotos;
+    if (!mounted) return;
+    // [/fork]
     final disclosure = switch (destination.provider) {
       AiProvider.anthropic => S.of(context).bulkAddPhotoDisclosureAnthropic,
       AiProvider.openrouter =>
@@ -1420,7 +1434,9 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
               child: Text(
                 '$disclosure '
-                '${S.of(sheetContext).bulkAddPhotoDisclosureCommon}\n\n'
+                // [fork] S8 meal-groups
+                '${keepsPhoto ? keptPhotoDisclosure : S.of(sheetContext).bulkAddPhotoDisclosureCommon}\n\n'
+                // [/fork]
                 // The photo path has no deterministic fallback, so this is
                 // the only surface besides Settings where a user opts into a
                 // model. The stability note belongs on both.
@@ -1482,6 +1498,9 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
 
     // A photo replaces the previous batch, so the old controllers go with it.
     _resetAmountControllers();
+    // [fork] S8 meal-groups
+    _forkMealPhoto = photo;
+    // [/fork]
 
     _bloc.add(
       ReadMealPhotoEvent(
@@ -1644,8 +1663,13 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
       // Sequential, not concurrent. The tracked-day totals are accumulated
       // with a read-modify-write, so overlapping writes lose updates and
       // the day silently under-counts.
+      // [fork] S8 meal-groups
+      final intakeIds = <String>[];
+      // [/fork]
       for (final write in writes) {
-        await mealDetailBloc.addIntake(
+        // [fork] S8 meal-groups
+        final intake = await mealDetailBloc.addIntake(
+        // [/fork]
           context,
           // The suffix is a display device; the stored vocabulary stays
           // the closed set the export format and QR payload were written
@@ -1656,7 +1680,13 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
           write.row.meal!,
           _args.day,
         );
+        // [fork] S8 meal-groups
+        intakeIds.add(intake.id);
+        // [/fork]
       }
+      // [fork] S8 meal-groups
+      await recordMealGroup(intakeIds, photo: _forkMealPhoto);
+      // [/fork]
     } catch (e, stackTrace) {
       _log.severe('Bulk intake write failed', e, stackTrace);
       if (!mounted) return;

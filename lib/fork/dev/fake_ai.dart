@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 import 'package:opennutritracker/core/utils/ai_credential_storage.dart';
+import 'package:opennutritracker/fork/leftovers/ai_leftovers.dart';
 
 /// `--dart-define=FORK_FAKE_AI=true`: emulator runs without a model key.
 /// Off in every normal build, where none of this is reached.
@@ -53,7 +54,9 @@ class FakeAiClient extends http.BaseClient {
     final body = jsonDecode(request.body) as Map<String, dynamic>;
     final system = '${body['system'] ?? ''}';
     final text = _userText(body);
-    final items = system.contains('You break a dish into the ingredients')
+    final items = system.startsWith(leftoversPromptStart)
+        ? _leftovers(system)
+        : system.contains('You break a dish into the ingredients')
         ? _breakdown(text)
         : _read(text);
     await Future<void>.delayed(const Duration(milliseconds: 700));
@@ -109,6 +112,18 @@ class FakeAiClient extends http.BaseClient {
     return [
       for (final (query, grams) in _dishes[key] ?? const <(String, int)>[])
         {'query': query, 'quantity': grams, 'unit': 'g'},
+    ];
+  }
+
+  /// Half of every entry is left, except the last, which was all eaten.
+  static List<Map<String, Object>> _leftovers(String system) {
+    final entries = RegExp(
+      r'^\d+\. (.+): ([\d.]+) (\S+)$',
+      multiLine: true,
+    ).allMatches(system).toList();
+    return [
+      for (final m in entries.take(entries.length - 1))
+        {'query': m[1]!, 'quantity': double.parse(m[2]!) / 2, 'unit': m[3]!},
     ];
   }
 

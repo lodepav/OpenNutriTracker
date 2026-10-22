@@ -15,6 +15,9 @@ import 'package:opennutritracker/features/add_meal/domain/meal_text_interpreter.
 import 'package:opennutritracker/features/add_meal/domain/usecase/read_meal_text_usecase.dart';
 import 'package:get_it/get_it.dart';
 import 'package:provider/provider.dart';
+// [fork] S7 meal-groups
+import 'package:opennutritracker/core/domain/entity/intake_entity.dart';
+// [/fork]
 import 'package:opennutritracker/core/domain/entity/intake_type_entity.dart';
 import 'package:opennutritracker/core/utils/energy_unit_provider.dart';
 import 'package:opennutritracker/core/utils/navigation_options.dart';
@@ -58,7 +61,9 @@ class _FakeMealDetailBloc extends Fake implements MealDetailBloc {
   _FakeMealDetailBloc({this.failOnSecondWrite = false});
 
   @override
-  Future<void> addIntake(
+  // [fork] S7 meal-groups: addIntake returns the entry written
+  Future<IntakeEntity> addIntake(
+  // [/fork]
     BuildContext context,
     String unit,
     String amountText,
@@ -70,6 +75,16 @@ class _FakeMealDetailBloc extends Fake implements MealDetailBloc {
       throw StateError('write failed');
     }
     writes.add(_Write(unit, amountText, meal.name));
+    // [fork] S7 meal-groups
+    return IntakeEntity(
+      id: 'intake-${writes.length}',
+      unit: unit,
+      amount: double.parse(amountText),
+      type: intakeTypeEntity,
+      meal: meal,
+      dateTime: day,
+    );
+    // [/fork]
   }
 }
 

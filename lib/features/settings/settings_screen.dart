@@ -38,6 +38,9 @@ import 'package:opennutritracker/core/utils/ai_credential_storage.dart';
 import 'package:opennutritracker/features/add_meal/domain/usecase/run_ai_endpoint_probe_usecase.dart';
 import 'package:opennutritracker/features/settings/presentation/widgets/ai_assist_dialog.dart';
 import 'package:opennutritracker/generated/l10n.dart';
+// [fork] S11 meal-photo-cache
+import 'package:opennutritracker/fork/leftovers/meal_photo_cache.dart';
+// [/fork]
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
@@ -1391,6 +1394,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 });
                               },
                       ),
+                      // [fork] S11 meal-photo-cache: keep meal photos 24 h for leftovers (D14)
+                      const KeepMealPhotosSwitch(),
+                      // [/fork]
                       if (isDemoData) ...[
                         const SizedBox(height: 8),
                         Text(
