@@ -2700,7 +2700,13 @@ class _StubPhotoReader implements ReadMealPhotoUseCase {
   Future<MealPhotoReadResult> read(
     MealPhoto photo, {
     String? localeCode,
-  }) async => reading;
+    String? note,
+  }) async {
+    sawNote = note;
+    return reading;
+  }
+
+  String? sawNote;
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
