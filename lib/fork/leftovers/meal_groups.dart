@@ -1,5 +1,7 @@
 import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:logging/logging.dart';
+import 'package:opennutritracker/features/add_meal/domain/meal_photo_interpreter.dart';
+import 'package:opennutritracker/fork/leftovers/meal_photo_cache.dart';
 
 /// The entries one bulk-add save wrote together (D14): what the leftovers
 /// of "the whole meal" are taken from. Upstream writes each row as its own
@@ -8,16 +10,21 @@ class MealGroup {
   final List<String> intakeIds;
   final DateTime loggedAt;
 
-  const MealGroup(this.intakeIds, this.loggedAt);
+  /// The photo the meal was read from, while [MealPhotoCache] keeps it.
+  final String? photoPath;
+
+  const MealGroup(this.intakeIds, this.loggedAt, [this.photoPath]);
 
   Map<String, Object> toJson() => {
     'intakeIds': intakeIds,
     'loggedAt': loggedAt.toIso8601String(),
+    'photoPath': ?photoPath,
   };
 
   static MealGroup fromJson(Map<dynamic, dynamic> json) => MealGroup(
     (json['intakeIds'] as List).cast<String>(),
     DateTime.parse(json['loggedAt'] as String),
+    json['photoPath'] as String?,
   );
 }
 
@@ -34,9 +41,13 @@ class MealGroupStore {
 
   /// Records [intakeIds] as one meal. A single entry is not a group: its
   /// own edit already covers it.
-  Future<void> record(List<String> intakeIds, DateTime loggedAt) async {
+  Future<void> record(
+    List<String> intakeIds,
+    DateTime loggedAt, [
+    String? photoPath,
+  ]) async {
     if (intakeIds.length < 2) return;
-    final json = MealGroup(intakeIds, loggedAt).toJson();
+    final json = MealGroup(intakeIds, loggedAt, photoPath).toJson();
     await (await _box()).putAll({for (final id in intakeIds) id: json});
   }
 
@@ -46,15 +57,26 @@ class MealGroupStore {
   }
 }
 
-/// Seam S8: records one bulk-add save's entries as a meal. The entries are
-/// already written by then, so a failure here only loses the grouping and
-/// is logged rather than reported as a failed save.
+/// Seam S8: records one bulk-add save's entries as a meal, keeping the
+/// [photo] it was read from if there was one. The entries are already
+/// written by then, so a failure here only loses the grouping and is
+/// logged rather than reported as a failed save.
 Future<void> recordMealGroup(
   List<String> intakeIds, {
+  MealPhoto? photo,
   MealGroupStore? store,
+  MealPhotoCache? cache,
 }) async {
+  if (intakeIds.length < 2) return;
   try {
-    await (store ?? MealGroupStore()).record(intakeIds, DateTime.now());
+    final photoPath = photo == null
+        ? null
+        : await (cache ?? MealPhotoCache()).save(photo);
+    await (store ?? MealGroupStore()).record(
+      intakeIds,
+      DateTime.now(),
+      photoPath,
+    );
   } catch (e, stackTrace) {
     Logger(
       'MealGroups',

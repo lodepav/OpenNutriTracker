@@ -71,6 +71,9 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
   final _log = Logger('BulkAddScreen');
   final _bloc = locator<BulkAddBloc>();
   final _textController = TextEditingController();
+  // [fork] S8 meal-groups: the photo this batch was read from, kept with the meal
+  MealPhoto? _forkMealPhoto;
+  // [/fork]
 
   // [fork] S4 dish-breakdown: runs breakdowns and marks the rows (D12)
   late final _dishBreakdown = DishBreakdownController(_bloc)
@@ -1379,6 +1382,9 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
   void _onParsePressed() {
     FocusScope.of(context).unfocus();
     _resetAmountControllers();
+    // [fork] S8 meal-groups
+    _forkMealPhoto = null;
+    // [/fork]
     _bloc.add(
       ParseBulkTextEvent(
         text: _textController.text,
@@ -1485,6 +1491,9 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
 
     // A photo replaces the previous batch, so the old controllers go with it.
     _resetAmountControllers();
+    // [fork] S8 meal-groups
+    _forkMealPhoto = photo;
+    // [/fork]
 
     _bloc.add(
       ReadMealPhotoEvent(
@@ -1669,7 +1678,7 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
         // [/fork]
       }
       // [fork] S8 meal-groups
-      await recordMealGroup(intakeIds);
+      await recordMealGroup(intakeIds, photo: _forkMealPhoto);
       // [/fork]
     } catch (e, stackTrace) {
       _log.severe('Bulk intake write failed', e, stackTrace);

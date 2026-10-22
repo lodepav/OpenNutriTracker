@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -7,8 +8,13 @@ import 'package:opennutritracker/core/domain/entity/intake_entity.dart';
 import 'package:opennutritracker/core/domain/entity/intake_type_entity.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_nutriments_entity.dart';
+import 'package:opennutritracker/core/utils/ai_credential_storage.dart';
+import 'package:opennutritracker/features/add_meal/domain/meal_photo_interpreter.dart';
+import 'package:opennutritracker/features/add_meal/util/meal_text_parser.dart';
+import 'package:opennutritracker/fork/leftovers/ai_leftovers.dart';
 import 'package:opennutritracker/fork/leftovers/group_leftovers.dart';
 import 'package:opennutritracker/fork/leftovers/meal_groups.dart';
+import 'package:opennutritracker/fork/leftovers/meal_photo_cache.dart';
 
 IntakeEntity _intake(String id, String name, double amount) => IntakeEntity(
   id: id,
@@ -33,6 +39,33 @@ IntakeEntity _intake(String id, String name, double amount) => IntakeEntity(
 final _rice = _intake('rice', 'Rice', 200);
 final _curry = _intake('curry', 'Curry', 300);
 final _naan = _intake('naan', 'Naan', 90);
+
+final _photo = MealPhoto(
+  bytes: Uint8List.fromList([1, 2, 3]),
+  mediaType: 'image/webp',
+);
+
+/// A model that answers [answer], or none set up when [selected] is null.
+class _Reader implements ReadLeftoversUseCase {
+  final AiSelection? selected;
+  final Map<String, double>? answer;
+  MealPhoto? sawMeal;
+
+  _Reader({this.selected, this.answer});
+
+  @override
+  Future<AiSelection?> get selection async => selected;
+
+  @override
+  Future<Map<String, double>?> read(
+    List<IntakeEntity> entries,
+    MealPhoto leftovers, {
+    MealPhoto? meal,
+  }) async {
+    sawMeal = meal;
+    return answer;
+  }
+}
 
 void main() {
   late Directory dir;
@@ -103,8 +136,9 @@ void main() {
     /// the updates it made.
     Future<(Future<bool>, Map<String, double>)> tap(
       WidgetTester tester,
-      IntakeEntity intake,
-    ) async {
+      IntakeEntity intake, {
+      _Reader? reader,
+    }) async {
       final updates = <String, double>{};
       late Future<bool> handled;
       await tester.pumpWidget(
@@ -117,6 +151,9 @@ void main() {
                 store: store,
                 intakeById: (id) async => entries[id],
                 update: (id, amount) async => updates[id] = amount,
+                leftovers: reader ?? _Reader(),
+                photoCache: MealPhotoCache(dir: () async => dir),
+                takePhoto: (_) async => _photo,
               ),
               child: const Text('tap'),
             ),
@@ -173,6 +210,108 @@ void main() {
 
       expect(await handled, isTrue);
       expect(updates, isEmpty);
+    });
+
+    testWidgets('a photo of the leftovers fills in what is left', (
+      tester,
+    ) async {
+      final reader = _Reader(
+        selected: const AiSelection(provider: AiProvider.anthropic),
+        // The model left the naan out: all of it was eaten.
+        answer: {'rice': 50, 'curry': 100},
+      );
+      final (handled, updates) = await tap(tester, _rice, reader: reader);
+
+      await tester.tap(find.text(LeftoverStrings.wholeMeal(3)));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(LeftoverStrings.readPhoto));
+      await tester.runAsync(() => Future.delayed(Duration(milliseconds: 50)));
+      await tester.pumpAndSettle();
+
+      expect(find.text(LeftoverStrings.aiEstimate), findsOneWidget);
+      await tester.tap(find.text(LeftoverStrings.save));
+      await tester.pumpAndSettle();
+      expect(await handled, isTrue);
+      expect(updates, {'rice': 150, 'curry': 200});
+      // No photo was kept for this meal.
+      expect(reader.sawMeal, isNull);
+    });
+
+    testWidgets('without a model there is no photo button', (tester) async {
+      await tap(tester, _rice);
+
+      await tester.tap(find.text(LeftoverStrings.wholeMeal(3)));
+      await tester.pumpAndSettle();
+
+      expect(find.text(LeftoverStrings.readPhoto), findsNothing);
+    });
+  });
+
+  group('MealPhotoCache', () {
+    var now = DateTime(2026, 10, 22, 12);
+    MealPhotoCache cache() => MealPhotoCache(
+      dir: () async => Directory('${dir.path}/photos'),
+      now: () => now,
+    );
+
+    test('keeps a photo for 24 hours', () async {
+      now = DateTime(2026, 10, 22, 12);
+      final path = await cache().save(_photo);
+
+      now = DateTime(2026, 10, 23, 11);
+      expect((await cache().read(path))!.bytes, _photo.bytes);
+      now = DateTime(2026, 10, 23, 12);
+      expect(await cache().read(path), isNull);
+      await cache().prune();
+      expect(File(path!).existsSync(), isFalse);
+    });
+
+    test('turned off, keeps nothing and deletes what it kept', () async {
+      now = DateTime(2026, 10, 22, 12);
+      final kept = await cache().save(_photo);
+
+      await cache().setEnabled(false);
+
+      expect(File(kept!).existsSync(), isFalse);
+      expect(await cache().save(_photo), isNull);
+    });
+
+    test('a meal group keeps the path of its photo', () async {
+      await recordMealGroup(
+        ['rice', 'curry'],
+        photo: _photo,
+        store: store,
+        cache: cache(),
+      );
+
+      final group = await store.groupOf('rice');
+      expect(await cache().read(group!.photoPath), isNotNull);
+    });
+  });
+
+  group('AI leftovers', () {
+    test('the prompt lists every entry with its amount and unit', () {
+      final prompt = leftoversSystemPrompt([_rice, _naan], withMealPhoto: true);
+
+      expect(prompt, startsWith(leftoversPromptStart));
+      expect(prompt, contains('1. Rice: 200 g\n2. Naan: 90 g'));
+      expect(prompt, contains('on the left the meal as served'));
+    });
+
+    test('maps items to entries by name, in their own unit', () {
+      final left = leftoversFromItems(
+        [_rice, _curry, _naan],
+        const [
+          ParsedMealItem(query: 'rice', quantity: 40, unit: 'g'),
+          // More than was logged is all of it.
+          ParsedMealItem(query: 'Curry', quantity: 900),
+          // Another unit cannot be compared, a new food is not an entry.
+          ParsedMealItem(query: 'Naan', quantity: 1, unit: 'serving'),
+          ParsedMealItem(query: 'Chutney', quantity: 20, unit: 'g'),
+        ],
+      );
+
+      expect(left, {'rice': 40, 'curry': 300});
     });
   });
 }

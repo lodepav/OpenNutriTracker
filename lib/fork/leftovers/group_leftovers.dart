@@ -1,8 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:image_picker/image_picker.dart';
+import 'package:logging/logging.dart';
 import 'package:opennutritracker/core/domain/entity/intake_entity.dart';
 import 'package:opennutritracker/core/domain/usecase/get_intake_usecase.dart';
+import 'package:opennutritracker/core/utils/ai_credential_storage.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
+import 'package:opennutritracker/features/add_meal/domain/meal_photo_interpreter.dart';
+import 'package:opennutritracker/features/add_meal/util/meal_photo_encoder.dart';
+import 'package:opennutritracker/fork/leftovers/ai_leftovers.dart';
 import 'package:opennutritracker/fork/leftovers/meal_groups.dart';
+import 'package:opennutritracker/fork/leftovers/meal_photo_cache.dart';
 
 /// English only, like the rest of the fork's strings.
 abstract final class LeftoverStrings {
@@ -14,6 +22,10 @@ abstract final class LeftoverStrings {
   static const left = 'left';
   static const save = 'Save';
   static const cancel = 'Cancel';
+  static const readPhoto = "Photo of what's left";
+  static const aiEstimate = 'AI estimate: check each amount before saving.';
+  static const readFailed =
+      "Couldn't read the photo. Try again or set the amounts yourself.";
 }
 
 /// The fractions offered, as in upstream's single-entry dialog.
@@ -45,6 +57,9 @@ Future<bool> editMealGroupLeftovers(
   required Future<void> Function(String intakeId, double amount) update,
   MealGroupStore? store,
   Future<IntakeEntity?> Function(String id)? intakeById,
+  ReadLeftoversUseCase? leftovers,
+  MealPhotoCache? photoCache,
+  Future<MealPhoto?> Function(AiSelection selection)? takePhoto,
 }) async {
   final group = await (store ?? MealGroupStore()).groupOf(intake.id);
   if (group == null || !context.mounted) return false;
@@ -72,9 +87,28 @@ Future<bool> editMealGroupLeftovers(
   if (wholeMeal == null) return true;
   if (!wholeMeal || !context.mounted) return false;
 
+  final reader =
+      leftovers ?? ReadLeftoversUseCase(locator(), locator<http.Client>());
+  final selection = await reader.selection;
+  if (!context.mounted) return true;
   final amounts = await showDialog<Map<String, double>>(
     context: context,
-    builder: (_) => GroupLeftoversDialog(intakes: members),
+    builder: (_) => GroupLeftoversDialog(
+      intakes: members,
+      readLeftoverPhoto: selection == null
+          ? null
+          : () async {
+              final photo = await (takePhoto ?? _takePhoto)(selection);
+              if (photo == null) return null;
+              return reader.read(
+                members,
+                photo,
+                meal: await (photoCache ?? MealPhotoCache()).read(
+                  group.photoPath,
+                ),
+              );
+            },
+    ),
   );
   if (amounts == null) return true;
   for (final member in members) {
@@ -85,17 +119,40 @@ Future<bool> editMealGroupLeftovers(
   return true;
 }
 
+/// The camera, encoded as a meal photo is for the same destination; null
+/// when the user backs out.
+Future<MealPhoto?> _takePhoto(AiSelection selection) async {
+  final picked = await ImagePicker().pickImage(source: ImageSource.camera);
+  if (picked == null) return null;
+  return MealPhotoEncoder.encodeAndDiscardSource(
+    picked.path,
+    format: MealPhotoFormat.forProvider(selection.provider),
+  );
+}
+
 class GroupLeftoversDialog extends StatefulWidget {
   final List<IntakeEntity> intakes;
 
-  const GroupLeftoversDialog({super.key, required this.intakes});
+  /// Reads a photo of the leftovers into the amount left of each entry,
+  /// or null when none was taken. Absent when no model is set up.
+  final Future<Map<String, double>?> Function()? readLeftoverPhoto;
+
+  const GroupLeftoversDialog({
+    super.key,
+    required this.intakes,
+    this.readLeftoverPhoto,
+  });
 
   @override
   State<GroupLeftoversDialog> createState() => _GroupLeftoversDialogState();
 }
 
 class _GroupLeftoversDialogState extends State<GroupLeftoversDialog> {
+  static final _log = Logger('GroupLeftoversDialog');
+
   double _fraction = 0;
+  bool _reading = false;
+  String? _photoNote;
   final _overrides = <String, double>{};
   late final _controllers = {
     for (final intake in widget.intakes) intake.id: TextEditingController(),
@@ -123,6 +180,36 @@ class _GroupLeftoversDialogState extends State<GroupLeftoversDialog> {
     }
   });
 
+  Future<void> _readPhoto() async {
+    setState(() {
+      _reading = true;
+      _photoNote = null;
+    });
+    String? note;
+    try {
+      final left = await widget.readLeftoverPhoto!();
+      if (left != null) {
+        // An entry the model left out has nothing left.
+        _fraction = 0;
+        _overrides
+          ..clear()
+          ..addAll({for (final i in widget.intakes) i.id: left[i.id] ?? 0});
+        for (final intake in widget.intakes) {
+          _controllers[intake.id]!.text = _format(_overrides[intake.id]!);
+        }
+        note = LeftoverStrings.aiEstimate;
+      }
+    } catch (e, stackTrace) {
+      _log.warning('Reading a leftovers photo failed', e, stackTrace);
+      note = LeftoverStrings.readFailed;
+    }
+    if (!mounted) return;
+    setState(() {
+      _reading = false;
+      _photoNote = note;
+    });
+  }
+
   void _override(String id, String text) => setState(() {
     final left = double.tryParse(text.replaceAll(',', '.'));
     if (left == null) {
@@ -147,6 +234,29 @@ class _GroupLeftoversDialogState extends State<GroupLeftoversDialog> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(LeftoverStrings.hint),
+            if (widget.readLeftoverPhoto != null) ...[
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                onPressed: _reading ? null : _readPhoto,
+                icon: _reading
+                    ? const SizedBox.square(
+                        dimension: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.photo_camera_rounded),
+                label: const Text(LeftoverStrings.readPhoto),
+              ),
+            ],
+            if (_photoNote case final note?)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text(
+                  note,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.tertiary,
+                  ),
+                ),
+              ),
             const SizedBox(height: 8),
             Wrap(
               spacing: 8,
