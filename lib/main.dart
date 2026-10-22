@@ -49,6 +49,9 @@ import 'package:opennutritracker/features/settings/presentation/widgets/accent_c
 import 'package:opennutritracker/features/settings/presentation/widgets/health_sync_screen.dart';
 import 'package:opennutritracker/features/settings/settings_screen.dart';
 import 'package:opennutritracker/generated/l10n.dart';
+// [fork] S6 starter-recipes: the Latvian starter recipes (phase 1c.6)
+import 'package:opennutritracker/fork/dish/starter_recipes.dart';
+// [/fork]
 import 'package:provider/provider.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 
@@ -86,6 +89,9 @@ Future<void> _bootstrapApp() async {
   unawaited(
     locator<RemoteSearchCacheDataSource>().pruneStale(const Duration(days: 90)),
   );
+  // [fork] S6 starter-recipes: saved once per install, off the start path
+  unawaited(StarterRecipeSeeder.fromLocator().run());
+  // [/fork]
 
   final isUserInitialized = await locator<UserDataSource>().hasUserData();
   final configRepo = locator<ConfigRepository>();

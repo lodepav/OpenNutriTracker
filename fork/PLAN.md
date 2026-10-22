@@ -147,6 +147,12 @@ Before phase 1, at the user's request. Upstream code read 2026-10-18; findings f
    - Not shipped as a `user_recipes.json`, whose snapshot shape would freeze today's table values
      and tie us to upstream's export schema.
    - Credit the Latvian Institute in the description.
+   *Done 2026-10-22 as seam S6:* `starter_recipes.dart` holds the source's grams and the table
+   ids chosen for them (BLS where it has a European equivalent, USDA otherwise); a test checks
+   each id still names its food. On first start they are saved through upstream's
+   `SaveRecipeUseCase`, which computes the nutrition. A flag in the fork's own Hive box makes it
+   once per install, so a deleted starter stays deleted. Servings are ours (the source gives
+   none): peas 2, pelmeni 6, rauši 12 tarts, dessert 1.
 7. **Check.**
    - Run the photo test set (`fork/eval/`) through photo → breakdown, scoring the per-serving
      total against the recipe pages' macros (khachapuri adjaruli, khinkali, pelmeni, borscht,
