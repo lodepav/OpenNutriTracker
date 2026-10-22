@@ -139,9 +139,9 @@ Before phase 1, at the user's request. Upstream code read 2026-10-18; findings f
    up to an ending ("khachapuri, adjarian" finds "Adjarian khachapuri", "pelmeni" finds
    "Pelmenis"), beside upstream's substring match so half a word still works. A test runs it
    through the resolver. Still to do: offer it upstream as a PR, and the typed/photographed
-   check with a real model (step 7). Latvian letters fold to plain ones on both sides
+   check with a real model (phase 4). Latvian letters fold to plain ones on both sides
    ("sklandu rausi" finds "Sklandu rauši"). A model's one-word "sklandrausis" still misses the
-   two-word name: watch for it in step 7.
+   two-word name: watch for it in phase 4.
    *Emulator run 2026-10-22 (fake AI, `--dart-define=FORK_FAKE_AI=true`, `lib/fork/dev/fake_ai.dart`):*
    the starters were saved on first start; "sklandu rausi" found "Sklandu rauši" (1620 g, 12 × 135 g,
    240 kcal); "khachapuri, 200 ml kefir, grey peas" broke khachapuri into its four rows on its own,
@@ -153,7 +153,7 @@ Before phase 1, at the user's request. Upstream code read 2026-10-18; findings f
    ingredients should prefer the generic table row. *Fixed 2026-10-22* (`preferTableRow` in
    `break_down_dish_usecase.dart`): a breakdown row that landed on a product takes the table's
    row when the search found one; not yet re-run on the emulator.
-   **Resume here:** re-run the emulator check, then the real-model check (step 7).
+   **Resume here:** re-run the emulator check; then phase 1c is done.
 6. **Starter recipes.** The four CC0 Latvian recipes (grey peas with bacon, pelmeni, sklandu rauši,
    layered rye-bread dessert).
    - Built on first run in `lib/fork/` from food-table rows chosen at build time (ids in a small
@@ -167,11 +167,8 @@ Before phase 1, at the user's request. Upstream code read 2026-10-18; findings f
    `SaveRecipeUseCase`, which computes the nutrition. A flag in the fork's own Hive box makes it
    once per install, so a deleted starter stays deleted. Servings are ours (the source gives
    none): peas 2, pelmeni 6, rauši 12 tarts, dessert 1.
-7. **Check.**
-   - Run the photo test set (`fork/eval/`) through photo → breakdown, scoring the per-serving
-     total against the recipe pages' macros (khachapuri adjaruli, khinkali, pelmeni, borscht,
-     cold beet soup, stuffed peppers).
-   - Then khachapuri, pelmeni and grey peas typed by the user.
+7. **Check** with the fake AI on the emulator (above). Every check against a real model moved
+   to phase 4 on 2026-10-22.
 
 ## 2. Phase 1 — AI logging complete
 
@@ -315,6 +312,14 @@ the dish named, the count right, and names with no table match (phase 1c's job).
 photo path returns names and counts, not grams, so photos are scored on those. The recipe
 macros score phase 1c's breakdown: its per-serving total against the page's. Then ten of the
 user's own meals. This decides Q3 and which default leads.
+
+**Real-model checks moved here from phase 1c (2026-10-22):**
+- Photo → breakdown over the test set, scoring the per-serving total against the recipe
+  pages' macros (khachapuri adjaruli, khinkali, pelmeni, borscht, cold beet soup, stuffed
+  peppers).
+- Khachapuri, pelmeni and grey peas, typed and photographed by the user; check the model's
+  names find the saved recipes (a one-word "sklandrausis" misses "Sklandu rauši").
+- Until then, phase work is checked with the fake AI (`FORK_FAKE_AI`, `lib/fork/dev/fake_ai.dart`).
 
 *Status 2026-10-19:* harness built and the 23 photos downloaded; not run yet (needs an
 OpenRouter key).
