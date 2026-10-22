@@ -18,6 +18,32 @@ Checked on `develop` at 1bc934b1 (2026-10-17). `fork/main` is based on the `v2.4
 | Micronutrients, water, fasting | ✅ |
 | Backup | ⚠️ manual JSON/CSV zip export and import. Import onto a live install appends duplicates in 2.4.0; fixed on `develop` (#1369, #1398), not yet released. |
 
+## 0b. Built elsewhere already (checked 2026-10-22)
+
+Upstream `develop`, its open PRs, its roadmap (#1279) and the 70 forks pushed since mid-August,
+checked for anything in this plan. **Rule:** a plan item that someone has already built drops in
+priority, since we can port or wait for it, unless it is crucial. Crucial so far: backup (phase
+2), because without it a lost phone loses the diary. Both forks below are GPL-3.0 like ONT, so
+their code can be ported with credit.
+
+| Plan item | Where it exists | Effect |
+|---|---|---|
+| Phase 1b food tables | theoleuthardt `personal`: local BLS 4.0 and FDC search, with build scripts | Ours is done; compare its BLS credit placement for 1b.3 |
+| Phase 1c dish → recipe, word-based recipe search | Nowhere. Upstream #1231 (resolver tie-break) and #833 (a logged recipe ignores its serving amount) touch it | Unchanged |
+| Phase 1.1 photo + note | Nowhere. Upstream PR #587 lets an outside AI app share meal JSON into ONT | Unchanged |
+| Phase 1.5 leftovers | Nowhere | Unchanged |
+| Phase 2 backup | Upstream 2.5.0 (release PR #1439) carries the import fixes (#1369, #1398, #1381). theoleuthardt: custom meals, settings and every profile in the backup, a backup-age reminder, WebDAV auto-backup, backup into a Files-app folder, restore from onboarding. Upstream issues #1356 (Syncthing), #1355 (import from onboarding), #1395 (restore loses pace and taper) | Crucial, stays. Port the custom-meals export and onboarding restore rather than design them |
+| Phase 3 adaptive expenditure, check-in | Nowhere. Upstream #671 (fixed calorie target, top store-review request) is high priority there; theoleuthardt has a fixed kcal goal with gram macros and training-day goals | Unchanged; the target switch must leave room for #671's fixed mode |
+| Backlog: label scan | theoleuthardt (on-device OCR, iOS only), cattosmile/OpenNutriTrackerPlus (AI scan), aeobrien | Lowered |
+| Backlog: AI recipe builder | aeobrien "Phase 12" | Lowered |
+| Backlog: re-log yesterday | theoleuthardt: copy entries, meals or days to any date; upstream #842, #1265 | Lowered |
+| Backlog: OFF contributions | theoleuthardt: send scanned values and the label photo to OFF | Lowered |
+| Backlog: Health Connect weight | Upstream PR #1296 | Lowered: take it when merged |
+| Backlog: top contributors per nutrient | Upstream issue #1266, no code | Unchanged |
+
+Also seen: cattosmile identifies unpackaged food from a photo with a web-search fallback,
+worth a look when phase 1c's breakdown is designed.
+
 ## 1. Pre-work
 
 - [x] Fork on GitHub (`lodepav/OpenNutriTracker`), clone, `upstream` remote, `develop` and `fork/main` branches (D6).
@@ -161,6 +187,9 @@ The app writes backup files; it syncs nothing itself (openGym-Hevier's D20). Ups
 only a manual export (`export_data_usecase.dart`, a `FilePicker.saveFile` dialog each time), so
 unlike openGym the automatic part has to be built.
 
+Build after merging `v2.5.0` (D6), which carries the import fixes this phase relies on. Port from
+theoleuthardt `personal` where it fits (§0b): custom meals in the backup, restore from onboarding.
+
 1. **Folder.** Settings → Auto-backup: pick a folder once with the system picker (Storage Access
    Framework, `ACTION_OPEN_DOCUMENT_TREE`, persisted grant). A tree grant can also delete old
    files and survives app updates; after a reinstall the user picks the folder again. Not
@@ -238,14 +267,23 @@ OpenRouter key).
 
 ## 5. Backlog (after phases 1–3)
 
-- AI nutrition-label scan (reference: aeobrien/OpenNutriTracker "Phase 11").
+Not built anywhere yet:
+
+- Recents ranked by time of day.
+- Top contributors per nutrient (upstream issue #1266, no code yet).
+- Release checks like openGym-Hevier's D26/D38 (gitleaks, Trivy over `pubspec.lock`, APK
+  permissions and signing), before the first build for daily use.
+
+Lower: already built elsewhere (§0b), port or wait:
+
+- AI nutrition-label scan (aeobrien "Phase 11", cattosmile, theoleuthardt's on-device OCR).
 - AI recipe builder from text or a URL (reference: aeobrien "Phase 12": unmatched
   ingredients fall back to search, label scan or manual entry).
-- Faster logging: recents ranked by time of day, re-log yesterday's meal in one tap.
-- Top contributors per nutrient.
-- **Contribute missing barcodes to Open Food Facts.** Today the app only reads OFF; upstream
-  just links to the official OFF apps (`import_custom_food_data_dialog.dart`). OFF is the only
-  source that takes contributions: USDA and BLS are fixed tables (D11).
+- Re-log yesterday's meal in one tap (theoleuthardt copies entries, meals or days to any date).
+- **Contribute missing barcodes to Open Food Facts** (theoleuthardt sends scanned values and
+  the label photo). Today the app only reads OFF; upstream just links to the official OFF apps
+  (`import_custom_food_data_dialog.dart`). OFF is the only source that takes contributions: USDA
+  and BLS are fixed tables (D11).
   - Entry point: a barcode scan that finds nothing, which already offers "create custom meal"
     (#995). Add "also submit to Open Food Facts" there. Pairs with the AI label scan above.
   - The user's own OFF account (free; username, email, password), stored like the AI keys. No
@@ -256,8 +294,6 @@ OpenRouter key).
     Never D9 estimates, D12 breakdowns or recipes.
   - Upstream first (rule 1): it helps every ONT user. It adds a data-sharing path, so the
     privacy policy and `docs/play-data-safety.md` change with it.
-- Release checks like openGym-Hevier's D26/D38 (gitleaks, Trivy over `pubspec.lock`, APK
-  permissions and signing), before the first build for daily use.
 - Health Connect weight import: upstream PR #1296, take it when merged.
 
 ## 6. Open questions for the user
