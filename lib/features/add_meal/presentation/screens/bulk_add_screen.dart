@@ -36,6 +36,9 @@ import 'package:opennutritracker/fork/dish/dish_breakdown_rows.dart';
 import 'package:opennutritracker/fork/dish/dish_recipe.dart';
 import 'package:opennutritracker/fork/dish/dish_strings.dart';
 // [/fork]
+// [fork] S8 meal-groups: remember which entries one save wrote (D14)
+import 'package:opennutritracker/fork/leftovers/meal_groups.dart';
+// [/fork]
 
 class BulkAddScreenArguments {
   final IntakeTypeEntity intakeTypeEntity;
@@ -1644,8 +1647,13 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
       // Sequential, not concurrent. The tracked-day totals are accumulated
       // with a read-modify-write, so overlapping writes lose updates and
       // the day silently under-counts.
+      // [fork] S8 meal-groups
+      final intakeIds = <String>[];
+      // [/fork]
       for (final write in writes) {
-        await mealDetailBloc.addIntake(
+        // [fork] S8 meal-groups
+        final intake = await mealDetailBloc.addIntake(
+        // [/fork]
           context,
           // The suffix is a display device; the stored vocabulary stays
           // the closed set the export format and QR payload were written
@@ -1656,7 +1664,13 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
           write.row.meal!,
           _args.day,
         );
+        // [fork] S8 meal-groups
+        intakeIds.add(intake.id);
+        // [/fork]
       }
+      // [fork] S8 meal-groups
+      await recordMealGroup(intakeIds);
+      // [/fork]
     } catch (e, stackTrace) {
       _log.severe('Bulk intake write failed', e, stackTrace);
       if (!mounted) return;

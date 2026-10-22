@@ -31,6 +31,9 @@ import 'package:opennutritracker/features/home/presentation/widgets/quick_water_
 import 'package:opennutritracker/core/domain/entity/body_weight_unit_entity.dart';
 import 'package:opennutritracker/features/home/presentation/widgets/quick_weight_widget.dart';
 import 'package:opennutritracker/generated/l10n.dart';
+// [fork] S10 meal-groups: leftovers of a whole meal (D14)
+import 'package:opennutritracker/fork/leftovers/group_leftovers.dart';
+// [/fork]
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -448,6 +451,28 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     IntakeEntity intakeEntity,
     bool usesImperialUnits,
   ) async {
+    // [fork] S10 meal-groups
+    var mealEdited = false;
+    final handled = await editMealGroupLeftovers(
+      context,
+      intakeEntity,
+      update: (id, amount) {
+        mealEdited = true;
+        return _homeBloc.updateIntakeItem(id, {'amount': amount});
+      },
+    );
+    if (handled) {
+      if (!mealEdited) return;
+      _homeBloc.add(const LoadItemsEvent());
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(S.of(context).itemUpdatedSnackbar)),
+        );
+      }
+      return;
+    }
+    if (!context.mounted) return;
+    // [/fork]
     final changeIntakeAmount = await showDialog<double>(
       context: context,
       builder: (context) => EditDialog(

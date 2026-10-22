@@ -152,7 +152,9 @@ class MealDetailBloc extends Bloc<MealDetailEvent, MealDetailState> {
   /// read-modify-write (`TrackedDayDataSource.addDayCaloriesTracked`), so
   /// overlapping calls interleave their reads and silently lose updates —
   /// a batch logged concurrently under-counts the day.
-  Future<void> addIntake(
+  // [fork] S7 meal-groups: return the entry written, so a bulk save can group its entries (D14)
+  Future<IntakeEntity> addIntake(
+  // [/fork]
     BuildContext context,
     String unit,
     String amountText,
@@ -179,6 +181,9 @@ class MealDetailBloc extends Bloc<MealDetailEvent, MealDetailState> {
     await _addIntakeUseCase.addIntake(intakeEntity);
     await _updateTrackedDay(intakeEntity, day);
     unawaited(_refreshCacheForSelectedMeal(meal));
+    // [fork] S7 meal-groups
+    return intakeEntity;
+    // [/fork]
   }
 
   /// Best-effort cache refresh after the user logs a meal. For OFF items
