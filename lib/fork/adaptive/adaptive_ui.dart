@@ -35,7 +35,12 @@ class _AdaptiveCheckInCardState extends State<AdaptiveCheckInCard> {
     super.dispose();
   }
 
-  void _recheck() => setState(() => _due = _service.checkInDue());
+  void _recheck() {
+    final due = _service.checkInDue();
+    setState(() {
+      _due = due;
+    });
+  }
 
   @override
   Widget build(BuildContext context) => FutureBuilder<bool>(

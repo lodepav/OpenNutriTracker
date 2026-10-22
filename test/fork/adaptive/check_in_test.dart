@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:opennutritracker/core/domain/entity/tracked_day_entity.dart';
@@ -13,6 +14,7 @@ import 'package:opennutritracker/core/domain/usecase/get_user_usecase.dart';
 import 'package:opennutritracker/core/domain/usecase/get_weight_log_usecase.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
+import 'package:opennutritracker/fork/adaptive/adaptive_ui.dart';
 import 'package:opennutritracker/fork/adaptive/check_in.dart';
 import 'package:opennutritracker/fork/adaptive/expenditure.dart';
 import 'package:opennutritracker/fork/adaptive/trend_points.dart';
@@ -195,4 +197,48 @@ void main() {
     expect(points.first.weightKg, 90);
     expect(points.last.weightKg, lessThan(90));
   });
+
+  testWidgets('accepting the check-in hides the card and refreshes', (
+    tester,
+  ) async {
+    AdaptiveStore.settings.value = const AdaptiveSettings(adaptiveTarget: true);
+    final memory = _MemoryStore();
+    var refreshed = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: AdaptiveCheckInCard(
+            service: AdaptiveService(
+              _User(),
+              _Weights(),
+              _TrackedDays(),
+              memory,
+              () => _today.add(const Duration(hours: 9)),
+            ),
+            onAccepted: () => refreshed++,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Weekly check-in'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Accept'));
+    await tester.pumpAndSettle();
+
+    expect(refreshed, 1);
+    expect(find.text('Weekly check-in'), findsNothing);
+    expect(memory.records, hasLength(1));
+  });
+}
+
+/// Hive's file I/O does not finish in a widget test's fake time.
+class _MemoryStore extends AdaptiveStore {
+  final records = <CheckInRecord>[];
+
+  @override
+  Future<List<CheckInRecord>> history() async => records;
+
+  @override
+  Future<void> addCheckIn(CheckInRecord record) async => records.add(record);
 }
