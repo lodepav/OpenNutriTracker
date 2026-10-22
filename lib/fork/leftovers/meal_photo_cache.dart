@@ -36,6 +36,16 @@ class MealPhotoCache {
   Future<bool> get enabled async =>
       (await _flags()).get(_flag, defaultValue: true)!;
 
+  /// [enabled] for the photo sheet, false when the setting cannot be read:
+  /// then [save] cannot read it either, so no copy is kept.
+  Future<bool> get keepsPhotos async {
+    try {
+      return await enabled;
+    } catch (_) {
+      return false;
+    }
+  }
+
   Future<void> setEnabled(bool enabled) async {
     await (await _flags()).put(_flag, enabled);
     if (!enabled) await _delete((_) => true);
@@ -89,6 +99,13 @@ class MealPhotoCache {
     }
   }
 }
+
+/// Seam S8: replaces upstream's "keeps no copy" sentence in the photo
+/// sheet while photos are kept.
+const keptPhotoDisclosure =
+    'OpenNutriTracker keeps a copy on this phone for 24 hours, to compare '
+    'with a photo of the leftovers (Settings, Privacy turns this off). It is '
+    'never included in your exports.';
 
 /// Seam S11: the setting, in the privacy dialog beside crash reports. It
 /// saves as it is switched, since it only ever deletes.
