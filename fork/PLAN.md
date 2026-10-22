@@ -150,8 +150,10 @@ Before phase 1, at the user's request. Upstream code read 2026-10-18; findings f
    969 kcal) without a breakdown.
    **Found:** two ingredients resolved to Open Food Facts products, not table rows ("cheese,
    mozzarella, whole milk" → a Kroger product, "butter, salted" → "Butter Salted"). A breakdown's
-   ingredients should prefer the generic table row; next fix.
-   **Resume here:** that fix, then the real-model check (step 7).
+   ingredients should prefer the generic table row. *Fixed 2026-10-22* (`preferTableRow` in
+   `break_down_dish_usecase.dart`): a breakdown row that landed on a product takes the table's
+   row when the search found one; not yet re-run on the emulator.
+   **Resume here:** re-run the emulator check, then the real-model check (step 7).
 6. **Starter recipes.** The four CC0 Latvian recipes (grey peas with bacon, pelmeni, sklandu rauši,
    layered rye-bread dessert).
    - Built on first run in `lib/fork/` from food-table rows chosen at build time (ids in a small

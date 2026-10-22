@@ -1,5 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:opennutritracker/core/utils/ai_credential_storage.dart';
+import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dart';
+import 'package:opennutritracker/features/add_meal/domain/entity/meal_nutriments_entity.dart';
 import 'package:opennutritracker/features/add_meal/domain/meal_items_api.dart';
 import 'package:opennutritracker/features/add_meal/domain/usecase/resolve_parsed_meals_usecase.dart';
 import 'package:opennutritracker/features/add_meal/util/meal_text_parser.dart';
@@ -132,4 +134,39 @@ void main() {
       expect(useCase('khinkali'), throwsA(isA<MealInterpreterException>()));
     },
   );
+
+  group('preferTableRow', () {
+    MealEntity meal(String name, MealSourceEntity source) => MealEntity(
+      code: name,
+      name: name,
+      url: null,
+      mealQuantity: null,
+      mealUnit: 'g',
+      servingQuantity: null,
+      servingUnit: 'g',
+      servingSize: null,
+      nutriments: MealNutrimentsEntity.empty(),
+      source: source,
+    );
+    ResolvedMealItem item(List<MealEntity> candidates) => ResolvedMealItem(
+      parsed: const ParsedMealItem(query: 'cheese, mozzarella, whole milk'),
+      candidates: candidates,
+      selectedIndex: 0,
+      confidence: 0.9,
+    );
+    final product = meal('whole milk mozzarella cheese', MealSourceEntity.off);
+    final row = meal('Cheese, mozzarella, whole milk', MealSourceEntity.fdc);
+    final recipe = meal('Khachapuri', MealSourceEntity.recipe);
+
+    test('a product chosen over a table row gives way to the row', () {
+      expect(preferTableRow(item([product, row])).selected, row);
+    });
+
+    test('a recipe, a table row, or a product alone is kept', () {
+      expect(preferTableRow(item([recipe, row])).selected, recipe);
+      expect(preferTableRow(item([row, product])).selected, row);
+      expect(preferTableRow(item([product])).selected, product);
+      expect(preferTableRow(item([])).selected, isNull);
+    });
+  });
 }

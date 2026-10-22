@@ -2,6 +2,7 @@ import 'package:http/http.dart' as http;
 import 'package:opennutritracker/core/utils/ai_credential_storage.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/features/add_meal/data/meal_items_api_factory.dart';
+import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dart';
 import 'package:opennutritracker/features/add_meal/domain/meal_items_api.dart';
 import 'package:opennutritracker/features/add_meal/domain/usecase/resolve_parsed_meals_usecase.dart';
 
@@ -74,6 +75,30 @@ Rules:
       content: MealTextContent(contentFor(dish)),
       system: systemPrompt,
     );
-    return DishBreakdown(dish, await _resolver.resolve(reply.items));
+    final resolved = await _resolver.resolve(reply.items);
+    return DishBreakdown(dish, [
+      for (final item in resolved) preferTableRow(item),
+    ]);
   }
+}
+
+/// [item] with the food table's best row selected in place of a packaged
+/// product. The resolver merges Open Food Facts and the table, and for a
+/// generic name such as "cheese, mozzarella, whole milk" a product of that
+/// name can outscore the table row; an ingredient of an estimated dish
+/// wants the generic food, not a brand nobody named. Anything else the
+/// resolver chose (a recipe, a custom meal, a table row) is kept, and so is
+/// a product when the table has nothing.
+ResolvedMealItem preferTableRow(ResolvedMealItem item) {
+  if (item.selected?.source != MealSourceEntity.off) return item;
+  final table = item.candidates.indexWhere(
+    (m) => m.source == MealSourceEntity.fdc,
+  );
+  if (table < 0) return item;
+  return ResolvedMealItem(
+    parsed: item.parsed,
+    candidates: item.candidates,
+    selectedIndex: table,
+    confidence: item.confidence,
+  );
 }
