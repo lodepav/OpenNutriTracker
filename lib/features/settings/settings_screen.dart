@@ -41,6 +41,9 @@ import 'package:opennutritracker/generated/l10n.dart';
 // [fork] S11 meal-photo-cache
 import 'package:opennutritracker/fork/leftovers/meal_photo_cache.dart';
 // [/fork]
+// [fork] S14 adaptive-settings: the trend and target switches (D13)
+import 'package:opennutritracker/fork/adaptive/adaptive_ui.dart';
+// [/fork]
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
@@ -295,6 +298,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     title: S.of(context).settingsKcalAdjustmentLabel,
                     onTap: () => _showKcalAdjustmentDialog(context),
                   ),
+                  // [fork] S14 adaptive-settings
+                  const AdaptiveSettingsTile(),
+                  // [/fork]
                   _SettingsTile(
                     identifier: 'settings-macro-split',
                     palette: palette,

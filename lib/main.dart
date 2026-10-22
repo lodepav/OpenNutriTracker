@@ -54,6 +54,7 @@ import 'package:opennutritracker/core/utils/ai_credential_storage.dart';
 import 'package:opennutritracker/fork/dev/fake_ai.dart';
 import 'package:opennutritracker/fork/dish/starter_recipes.dart';
 import 'package:opennutritracker/fork/leftovers/meal_photo_cache.dart';
+import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 // [/fork]
 import 'package:provider/provider.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
@@ -95,6 +96,7 @@ Future<void> _bootstrapApp() async {
   // [fork] S6 starter-recipes: saved once per install, off the start path
   unawaited(StarterRecipeSeeder.fromLocator().run());
   unawaited(MealPhotoCache().prune());
+  await AdaptiveStore().load();
   if (forkFakeAi) await enableFakeAi(locator<AiCredentialStorage>());
   // [/fork]
 

@@ -5,6 +5,9 @@ import 'package:opennutritracker/core/data/repository/user_repository.dart';
 import 'package:opennutritracker/core/domain/entity/user_entity.dart';
 import 'package:opennutritracker/core/utils/calc/calorie_goal_calc.dart';
 import 'package:opennutritracker/core/utils/calc/day_boundary_calc.dart';
+// [fork] S12 adaptive-target: the check-in's target replaces the formula (D13)
+import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
+// [/fork]
 
 class GetKcalGoalUsecase {
   final UserRepository _userRepository;
@@ -22,6 +25,10 @@ class GetKcalGoalUsecase {
     double? totalKcalActivitiesParam,
     double? kcalUserAdjustment,
   }) async {
+    // [fork] S12 adaptive-target
+    final adaptive = await adaptiveTargetKcal();
+    if (adaptive != null) return adaptive;
+    // [/fork]
     final user = userEntity ?? await _userRepository.getUserData();
     final config = await _configRepository.getConfig();
     final totalKcalActivities =
