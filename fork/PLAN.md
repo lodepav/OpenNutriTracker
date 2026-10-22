@@ -135,6 +135,11 @@ Before phase 1, at the user's request. Upstream code read 2026-10-18; findings f
    word in the name, using the same `wordsAgree` rule as the food table. Check that the model's
    usual names for the user's dishes find the saved recipe, typed and photographed. This touches
    upstream's `_mealMatchesSearch`, which is either an upstream PR (it helps every user) or a seam.
+   *Done 2026-10-22 as seam S5:* custom meals and recipes match on every word, in any order,
+   up to an ending ("khachapuri, adjarian" finds "Adjarian khachapuri", "pelmeni" finds
+   "Pelmenis"), beside upstream's substring match so half a word still works. A test runs it
+   through the resolver. Still to do: offer it upstream as a PR, and the typed/photographed
+   check with a real model (step 7).
 6. **Starter recipes.** The four CC0 Latvian recipes (grey peas with bacon, pelmeni, sklandu rauši,
    layered rye-bread dessert).
    - Built on first run in `lib/fork/` from food-table rows chosen at build time (ids in a small
