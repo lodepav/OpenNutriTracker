@@ -33,6 +33,7 @@ import 'package:opennutritracker/generated/l10n.dart';
 // [fork] S4 dish-breakdown: break a row into a dish's ingredients (D12)
 import 'package:opennutritracker/fork/dish/dish_breakdown_controller.dart';
 import 'package:opennutritracker/fork/dish/dish_breakdown_rows.dart';
+import 'package:opennutritracker/fork/dish/dish_recipe.dart';
 import 'package:opennutritracker/fork/dish/dish_strings.dart';
 // [/fork]
 
@@ -90,6 +91,20 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
     }
     // Keyed by row index, which the swap moves.
     _quantityErrors.clear();
+  }
+
+  Future<void> _saveDishRecipe(Object group) async {
+    final state = _bloc.state;
+    final recipe = state is BulkAddLoadedState
+        ? recipeFromDishGroup(state.rows, group)
+        : null;
+    if (recipe == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text(DishStrings.nothingToSave)),
+      );
+      return;
+    }
+    await openDishRecipe(context, recipe);
   }
   // [/fork]
 
@@ -1079,9 +1094,16 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
   ) => [
     if (!row.isResolved)
       (label: S.of(context).quickAddCardLabel, onPressed: _showQuickAdd),
-    // [fork] S4 dish-breakdown: on demand, for a doubtful row
+    // [fork] S4 dish-breakdown: on demand, for a doubtful row; and once per
+    // breakdown, saving it as a recipe
     if (_dishBreakdown.canBreakDown(row))
       (label: DishStrings.breakDownAction, onPressed: () => _breakDown(row)),
+    if (_bloc.state case BulkAddLoadedState(:final rows)
+        when isFirstOfDishGroup(rows, index))
+      (
+        label: DishStrings.saveAsRecipe,
+        onPressed: () => _saveDishRecipe(row.dishIngredient!.group),
+      ),
     // [/fork]
     (
       label: row.skipped

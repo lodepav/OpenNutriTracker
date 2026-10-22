@@ -10,6 +10,7 @@ import 'package:opennutritracker/features/add_meal/util/meal_text_parser.dart';
 import 'package:opennutritracker/fork/dish/break_down_dish_usecase.dart';
 import 'package:opennutritracker/fork/dish/dish_breakdown_controller.dart';
 import 'package:opennutritracker/fork/dish/dish_breakdown_rows.dart';
+import 'package:opennutritracker/fork/dish/dish_recipe.dart';
 
 MealEntity _meal(String name) => MealEntity(
   code: name,
@@ -189,6 +190,54 @@ void main() {
       await controller.breakDown(state.rows.first),
       DishBreakdownOutcome.failed,
     );
+    controller.dispose();
+  });
+
+  test('the group saves as an unsaved one-serving recipe, as edited', () async {
+    final controller = DishBreakdownController(
+      bloc,
+      breakDown: breakDown,
+      modelConfigured: () async => true,
+    );
+    bloc.add(const ParseBulkTextEvent(text: 'x', usesImperialUnits: false));
+    var state = await settle();
+    expect(
+      [
+        for (var i = 0; i < state.rows.length; i++)
+          isFirstOfDishGroup(state.rows, i),
+      ],
+      [true, false, false],
+    );
+    final group = state.rows.first.dishIngredient!.group;
+
+    final recipe = recipeFromDishGroup(state.rows, group)!;
+    expect(recipe.id, isEmpty, reason: 'the builder saves it as new');
+    expect(recipe.name, 'Khachapuri');
+    expect(recipe.servingsCount, 1);
+    expect(
+      [
+        for (final i in recipe.ingredients)
+          (i.snapshotMeal.name, i.convertedAmountG),
+      ],
+      [('wheat flour, white', 120.0), ('cheese, sulguni', 80.5)],
+    );
+    expect(recipe.totalWeightG, 200.5);
+
+    bloc
+      ..add(const ChangeRowAmountEvent(0, '150'))
+      ..add(const ToggleRowSkippedEvent(1));
+    state = await settle();
+    expect(
+      [
+        for (final i in recipeFromDishGroup(state.rows, group)!.ingredients)
+          i.convertedAmountG,
+      ],
+      [150.0],
+    );
+
+    bloc.add(const ToggleRowSkippedEvent(0));
+    state = await settle();
+    expect(recipeFromDishGroup(state.rows, group), isNull);
     controller.dispose();
   });
 }

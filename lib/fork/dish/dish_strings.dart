@@ -9,4 +9,8 @@ abstract final class DishStrings {
   static const breakDownEmpty = 'The model found no ingredients for this.';
   static const breakDownNoModel = 'Set up an AI model to break a dish down.';
   static const breakDownFailed = 'The breakdown did not work. Try again later.';
+  static const saveAsRecipe = 'Save recipe';
+  static const recipeDescription =
+      'One serving, from an AI breakdown. The grams are estimates: check them.';
+  static const nothingToSave = 'No ingredient row is ready to save.';
 }

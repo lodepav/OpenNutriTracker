@@ -127,6 +127,10 @@ Before phase 1, at the user's request. Upstream code read 2026-10-18; findings f
    edits) and reads "Ingredient of <dish> · AI estimate, check the grams". No group header yet.
 4. **Save as recipe.** One action builds an unsaved `RecipeEntity` (name = the dish, servings 1,
    ingredients from the group) and opens `RecipeBuilderScreen` with it.
+   *Done 2026-10-22:* "Save recipe" on the first row of each group (`dish_recipe.dart`). The rows
+   as edited, each converted to grams like bulk add's own save; skipped and unmatched rows left
+   out. The id is empty, upstream's "copy" sentinel, so the builder gives it a new id and saves it
+   as a new recipe; a test runs upstream's builder bloc on it.
 5. **Finding it again.** Make the recipe tier match on words, not the whole string: every query
    word in the name, using the same `wordsAgree` rule as the food table. Check that the model's
    usual names for the user's dishes find the saved recipe, typed and photographed. This touches
