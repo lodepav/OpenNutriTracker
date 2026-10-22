@@ -17,5 +17,5 @@ because upstream merged the feature) gets removed, and so does its row.
 
 | Id | File | What the seam does | Status |
 |---|---|---|---|
-| S1 | `lib/core/utils/locator.dart` | Registers `LocalFoodDataSource` (`lib/fork/food/`) as the `SpFoodDataSource`, so search and AI matching use the bundled tables (D11). Two blocks: the import and the registration. | active |
+| S1 | `lib/core/utils/locator.dart` | Registers `LocalFoodDataSource` (`lib/fork/food/`) as the `SpFoodDataSource`, so search and AI matching use the bundled tables (D11), and registers the tables' licence credits. Two blocks: the imports and the registration. | active |
 | S2 | `pubspec.yaml` | Bundles `assets/fork/` (the food table from `fork/tools/build_food_db.py`). | active |

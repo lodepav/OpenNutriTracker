@@ -28,7 +28,7 @@ their code can be ported with credit.
 
 | Plan item | Where it exists | Effect |
 |---|---|---|
-| Phase 1b food tables | theoleuthardt `personal`: local BLS 4.0 and FDC search, with build scripts | Ours is done; compare its BLS credit placement for 1b.3 |
+| Phase 1b food tables | theoleuthardt `personal`: local BLS 4.0 and FDC search, with build scripts | Ours is done |
 | Phase 1c dish → recipe, word-based recipe search | Nowhere. Upstream #1231 (resolver tie-break) and #833 (a logged recipe ignores its serving amount) touch it | Unchanged |
 | Phase 1.1 photo + note | Nowhere. Upstream PR #587 lets an outside AI app share meal JSON into ONT | Unchanged |
 | Phase 1.5 leftovers | Nowhere | Unchanged |
@@ -175,11 +175,21 @@ the same gap). Pelmeni and khachapuri are in no table and go to D9.
    `assets/fork/foods.json.gz`.
 2. [x] `LocalFoodDataSource` (`lib/fork/food/`) registered as the `SpFoodDataSource` (seam S1),
    so search and AI matching use it in place of the hosted backend.
-3. [ ] Credits: Max Rubner-Institut/BLS (CC BY 4.0, required) and USDA FoodData Central.
-   Upstream's Sources screen lists calculation sources only, so find where upstream credits
-   its backend's tables and add BLS there.
-4. [ ] Check: rye bread, biezpiens (quark), kefir, buckwheat, grey peas, "2 eggs" and a pizza
-   photo resolve without D9's estimate. Gaps go to recipes (D12), not to a new table (D11).
+3. [x] Credits. Settings → Food databases already names BLS and FDC with links (upstream's
+   `SPConst`, same source codes as our rows). The rest of CC BY 4.0 (creator, licence, changes)
+   is in Settings → About → View licenses, registered by `lib/fork/food/food_table_licenses.dart`
+   from seam S1.
+4. [x] Check, 2026-10-22: `test/fork/staple_foods_test.dart` runs upstream's resolver over the
+   table alone, no Open Food Facts.
+   - Pass: rye bread, kefir, buckwheat, quark (biezpiens), cottage cheese.
+   - Gap: grey peas, in no table. That goes to recipes (D12): phase 1c's starter "grey peas
+     with bacon".
+   - Wrong sibling, not a gap: `egg` → *Egg, creamed*, `eggs` (typed "2 eggs") → a Foundation
+     yolk row, `pizza` → *Pizza, no cheese*, `pepperoni pizza` → *…with meat other than
+     pepperoni*. The right rows are in the table. Upstream's tie-break picks the shorter sibling,
+     the same on its backend: it pins egg as a known miss, and #1231 (open) is about it. Fix
+     upstream there (rule 1), not in the fork. Until then the review screen offers the siblings.
+   - Not run: the pizza photo, which needs an AI key.
 
 ## 3. Phase 2 — Backup to Google Drive (D10)
 
