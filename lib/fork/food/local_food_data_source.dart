@@ -160,8 +160,7 @@ class LocalFoodTable {
 /// `potato`/`potatoes`), or both share a stem of four letters or more and
 /// differ in at most two letters after it (`cheese`/`cheesy`), or `y` and
 /// `ies` (`berry`/`berries`). Three shared letters are not a stem:
-/// `grey` is not `green`.
-@visibleForTesting
+/// `grey` is not `green`. Recipe search uses it too (`recipe_search.dart`).
 bool wordsAgree(String q, String t) {
   if (q == t) return true;
   final (shorter, longer) = q.length <= t.length ? (q, t) : (t, q);

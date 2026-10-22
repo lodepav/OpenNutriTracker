@@ -101,21 +101,48 @@ Before phase 1, at the user's request. Upstream code read 2026-10-18; findings f
      (grey peas → dried split peas, sulguni → brined mozzarella-type cheese), plus the serving
      weight.
    - Each ingredient is resolved with the same `ResolveParsedMealsUseCase`. No photo is resent.
+   - *Done 2026-10-22:* `lib/fork/dish/break_down_dish_usecase.dart`, built from upstream's
+     locator registrations (no seam). The serving weight is the sum of the grams; the schema has
+     no field for it. Two findings:
+     - Every client drops a unit the text does not state (#977), so the text sent says "e.g.
+       100 g"; a test pins that it still counts as stating one.
+     - Bare ingredient names hit the resolver's tie-break (`carrot` → *Carrot, dehydrated*,
+       `bacon` → *Bacon, meatless*). The prompt asks for table-style names ("carrot, raw"),
+       which land on the raw rows; `test/fork/staple_foods_test.dart` pins eight of them.
 2. **When it runs.**
    - Automatically for an unresolved row.
    - On demand ("Break into ingredients") for any row, which covers low-confidence matches and
      the branded-product trap.
    - One seam in `bulk_add_screen.dart`/its bloc, or a wrapper around the resolver if that is
      smaller.
+   - *Done 2026-10-22:* `DishBreakdownController` runs it automatically for an unmatched row of
+     a model or photo read (not the parser's rows: the model was not used or failed there), and
+     on demand ("Ingredients") for an unmatched, low-confidence or Open Food Facts row. Seams S3
+     (bloc) and S4 (screen). Fork UI text is English only (`dish_strings.dart`), kept out of
+     upstream's ARB files and Weblate.
 3. **Review.** The dish shows as a group of its ingredient rows, marked "AI breakdown, grams
    estimated". Each row is editable as today. A row that still matches nothing keeps the model's
    name for the user to search (D9's estimate stays a last resort, marked).
+   *Done 2026-10-22:* each ingredient row carries its dish (`DishIngredientItem`, which survives
+   edits) and reads "Ingredient of <dish> · AI estimate, check the grams". No group header yet.
 4. **Save as recipe.** One action builds an unsaved `RecipeEntity` (name = the dish, servings 1,
    ingredients from the group) and opens `RecipeBuilderScreen` with it.
+   *Done 2026-10-22:* "Save recipe" on the first row of each group (`dish_recipe.dart`). The rows
+   as edited, each converted to grams like bulk add's own save; skipped and unmatched rows left
+   out. The id is empty, upstream's "copy" sentinel, so the builder gives it a new id and saves it
+   as a new recipe; a test runs upstream's builder bloc on it.
 5. **Finding it again.** Make the recipe tier match on words, not the whole string: every query
    word in the name, using the same `wordsAgree` rule as the food table. Check that the model's
    usual names for the user's dishes find the saved recipe, typed and photographed. This touches
    upstream's `_mealMatchesSearch`, which is either an upstream PR (it helps every user) or a seam.
+   *Done 2026-10-22 as seam S5:* custom meals and recipes match on every word, in any order,
+   up to an ending ("khachapuri, adjarian" finds "Adjarian khachapuri", "pelmeni" finds
+   "Pelmenis"), beside upstream's substring match so half a word still works. A test runs it
+   through the resolver. Still to do: offer it upstream as a PR, and the typed/photographed
+   check with a real model (step 7). Latvian letters fold to plain ones on both sides
+   ("sklandu rausi" finds "Sklandu rauši"). A model's one-word "sklandrausis" still misses the
+   two-word name: watch for it in step 7.
+   **Resume here:** step 7 needs an AI key and a device; the branch is not merged or pushed yet.
 6. **Starter recipes.** The four CC0 Latvian recipes (grey peas with bacon, pelmeni, sklandu rauši,
    layered rye-bread dessert).
    - Built on first run in `lib/fork/` from food-table rows chosen at build time (ids in a small
@@ -123,6 +150,12 @@ Before phase 1, at the user's request. Upstream code read 2026-10-18; findings f
    - Not shipped as a `user_recipes.json`, whose snapshot shape would freeze today's table values
      and tie us to upstream's export schema.
    - Credit the Latvian Institute in the description.
+   *Done 2026-10-22 as seam S6:* `starter_recipes.dart` holds the source's grams and the table
+   ids chosen for them (BLS where it has a European equivalent, USDA otherwise); a test checks
+   each id still names its food. On first start they are saved through upstream's
+   `SaveRecipeUseCase`, which computes the nutrition. A flag in the fork's own Hive box makes it
+   once per install, so a deleted starter stays deleted. Servings are ours (the source gives
+   none): peas 2, pelmeni 6, rauši 12 tarts, dessert 1.
 7. **Check.**
    - Run the photo test set (`fork/eval/`) through photo → breakdown, scoring the per-serving
      total against the recipe pages' macros (khachapuri adjaruli, khinkali, pelmeni, borscht,

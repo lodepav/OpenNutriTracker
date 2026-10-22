@@ -30,6 +30,12 @@ import 'package:opennutritracker/features/meal_detail/presentation/bloc/meal_det
 import 'package:opennutritracker/features/meal_detail/util/meal_quantity_converter.dart';
 import 'package:opennutritracker/features/settings/settings_screen.dart';
 import 'package:opennutritracker/generated/l10n.dart';
+// [fork] S4 dish-breakdown: break a row into a dish's ingredients (D12)
+import 'package:opennutritracker/fork/dish/dish_breakdown_controller.dart';
+import 'package:opennutritracker/fork/dish/dish_breakdown_rows.dart';
+import 'package:opennutritracker/fork/dish/dish_recipe.dart';
+import 'package:opennutritracker/fork/dish/dish_strings.dart';
+// [/fork]
 
 class BulkAddScreenArguments {
   final IntakeTypeEntity intakeTypeEntity;
@@ -62,6 +68,45 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
   final _log = Logger('BulkAddScreen');
   final _bloc = locator<BulkAddBloc>();
   final _textController = TextEditingController();
+
+  // [fork] S4 dish-breakdown: runs breakdowns and marks the rows (D12)
+  late final _dishBreakdown = DishBreakdownController(_bloc)
+    ..addListener(() {
+      if (mounted) setState(() {});
+    });
+
+  Future<void> _breakDown(BulkAddRow row) async {
+    final outcome = await _dishBreakdown.breakDown(row);
+    if (!mounted) return;
+    final message = switch (outcome) {
+      DishBreakdownOutcome.replaced => null,
+      DishBreakdownOutcome.empty => DishStrings.breakDownEmpty,
+      DishBreakdownOutcome.noModel => DishStrings.breakDownNoModel,
+      DishBreakdownOutcome.failed => DishStrings.breakDownFailed,
+    };
+    if (message != null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
+    }
+    // Keyed by row index, which the swap moves.
+    _quantityErrors.clear();
+  }
+
+  Future<void> _saveDishRecipe(Object group) async {
+    final state = _bloc.state;
+    final recipe = state is BulkAddLoadedState
+        ? recipeFromDishGroup(state.rows, group)
+        : null;
+    if (recipe == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text(DishStrings.nothingToSave)),
+      );
+      return;
+    }
+    await openDishRecipe(context, recipe);
+  }
+  // [/fork]
 
   /// One controller per row, keyed by row index and rebuilt whenever a new
   /// parse produces a different set of rows.
@@ -289,6 +334,9 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
   void dispose() {
     // registerFactory hands out a new instance per navigation, so this
     // screen owns it and has to close it.
+    // [fork] S4 dish-breakdown: before the bloc it listens to
+    _dishBreakdown.dispose();
+    // [/fork]
     _bloc.close();
     _textController.dispose();
     for (final controller in _amountControllers.values) {
@@ -948,6 +996,22 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
                   // used to hide, so it is now unconditional.
                   if (meal?.brands != null)
                     Text(meal!.brands!, style: theme.textTheme.bodySmall),
+                  // [fork] S4 dish-breakdown: in progress, or an AI ingredient
+                  if (_dishBreakdown.isPending(row))
+                    Text(
+                      DishStrings.breakingDown,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.tertiary,
+                      ),
+                    )
+                  else if (row.dishIngredient case final ingredient?)
+                    Text(
+                      DishStrings.ingredientOf(ingredient.dish),
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.tertiary,
+                      ),
+                    ),
+                  // [/fork]
                   if (!row.isResolved)
                     Text(
                       S.of(context).bulkAddNoMatchLabel,
@@ -1030,6 +1094,17 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
   ) => [
     if (!row.isResolved)
       (label: S.of(context).quickAddCardLabel, onPressed: _showQuickAdd),
+    // [fork] S4 dish-breakdown: on demand, for a doubtful row; and once per
+    // breakdown, saving it as a recipe
+    if (_dishBreakdown.canBreakDown(row))
+      (label: DishStrings.breakDownAction, onPressed: () => _breakDown(row)),
+    if (_bloc.state case BulkAddLoadedState(:final rows)
+        when isFirstOfDishGroup(rows, index))
+      (
+        label: DishStrings.saveAsRecipe,
+        onPressed: () => _saveDishRecipe(row.dishIngredient!.group),
+      ),
+    // [/fork]
     (
       label: row.skipped
           ? S.of(context).bulkAddIncludeLabel

@@ -11,6 +11,9 @@ import 'package:opennutritracker/features/add_meal/util/portion_match.dart';
 import 'package:opennutritracker/features/add_meal/util/portion_unit.dart';
 import 'package:opennutritracker/features/meal_detail/presentation/bloc/meal_detail_bloc.dart';
 import 'package:opennutritracker/features/meal_detail/util/meal_quantity_converter.dart';
+// [fork] S3 dish-breakdown: the ingredient-row swap (D12)
+import 'package:opennutritracker/fork/dish/dish_breakdown_rows.dart';
+// [/fork]
 
 part 'bulk_add_event.dart';
 part 'bulk_add_state.dart';
@@ -415,6 +418,14 @@ class BulkAddBloc extends Bloc<BulkAddEvent, BulkAddState> {
     on<ChangeRowAmountEvent>(_onChangeAmount);
     on<ChangeRowUnitEvent>(_onChangeUnit);
     on<ToggleRowSkippedEvent>(_onToggleSkipped);
+    // [fork] S3 dish-breakdown: swap a dish row for its ingredients (D12)
+    on<ReplaceRowWithBreakdownEvent>((event, emit) {
+      final current = state;
+      if (current is BulkAddLoadedState) {
+        emit(replaceRowWithBreakdown(current, event));
+      }
+    });
+    // [/fork]
   }
 
   Future<void> _onParse(

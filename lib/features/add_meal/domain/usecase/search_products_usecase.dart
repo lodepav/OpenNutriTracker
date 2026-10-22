@@ -8,6 +8,9 @@ import 'package:opennutritracker/core/domain/usecase/get_config_usecase.dart';
 import 'package:opennutritracker/core/domain/usecase/get_intake_usecase.dart';
 import 'package:opennutritracker/features/add_meal/data/repository/products_repository.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dart';
+// [fork] S5 recipe-words: find the user's dishes by word (phase 1c.5)
+import 'package:opennutritracker/fork/dish/recipe_search.dart';
+// [/fork]
 
 /// Output of a product/food search. [meals] is the deduplicated list shown
 /// to the user (custom-meal matches first, then remote results).
@@ -171,13 +174,25 @@ class SearchProductsUseCase {
     final fromCustomMealBox = _customMealDataSource
         .getAllCustomMeals()
         .map(MealEntity.fromMealDBO)
-        .where((meal) => _mealMatchesSearch(meal, normalizedSearchString))
+        // [fork] S5 recipe-words: or every word, in any order and ending
+        .where(
+          (meal) =>
+              _mealMatchesSearch(meal, normalizedSearchString) ||
+              nameHasQueryWords(meal.name, normalizedSearchString),
+        )
+        // [/fork]
         .toList();
 
     final fromRecipes = _recipeDataSource
         .getAllRecipes()
         .map((dbo) => RecipeEntity.fromDBO(dbo).toMealEntity())
-        .where((meal) => _mealMatchesSearch(meal, normalizedSearchString))
+        // [fork] S5 recipe-words: or every word, in any order and ending
+        .where(
+          (meal) =>
+              _mealMatchesSearch(meal, normalizedSearchString) ||
+              nameHasQueryWords(meal.name, normalizedSearchString),
+        )
+        // [/fork]
         .toList();
 
     final recentIntake = await _getIntakeUsecase.getRecentIntake();
