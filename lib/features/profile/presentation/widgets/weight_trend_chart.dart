@@ -6,6 +6,9 @@ import 'package:opennutritracker/core/domain/entity/weight_log_entity.dart';
 import 'package:opennutritracker/core/utils/calc/unit_calc.dart';
 import 'package:opennutritracker/core/utils/calc/weight_moving_average.dart';
 import 'package:opennutritracker/generated/l10n.dart';
+// [fork] S15 smoothed-trend: the smoothed trend in place of the 7-day average (D13)
+import 'package:opennutritracker/fork/adaptive/trend_points.dart';
+// [/fork]
 
 /// Smoothed weight trend line shared by the weight-history screen and the
 /// Trends view, so both render the same chart — dated axis, a dashed
@@ -100,11 +103,17 @@ class WeightTrendChart extends StatelessWidget {
     // Compute the moving average against the *full* log and clip to the
     // visible window, so the leftmost MA point is anchored on entries
     // predating the window rather than lagging one window-length behind.
+    // [fork] S15 smoothed-trend
+    final smoothed = smoothedTrendPoints(entries);
+    // [/fork]
     final maSpots = <FlSpot>[
       if (movingAverageWindowDays != null)
         for (final point
-            in WeightMovingAverage(windowDays: movingAverageWindowDays!)
-                .compute(entries)
+            // [fork] S15 smoothed-trend
+            in (smoothed ??
+                    WeightMovingAverage(windowDays: movingAverageWindowDays!)
+                        .compute(entries))
+                // [/fork]
                 .where((p) =>
                     !p.date.isBefore(windowStart) &&
                     !p.date.isAfter(today)))

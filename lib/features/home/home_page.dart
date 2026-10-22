@@ -34,6 +34,9 @@ import 'package:opennutritracker/generated/l10n.dart';
 // [fork] S10 meal-groups: leftovers of a whole meal (D14)
 import 'package:opennutritracker/fork/leftovers/group_leftovers.dart';
 // [/fork]
+// [fork] S13 adaptive-check-in: the weekly check-in card (D13)
+import 'package:opennutritracker/fork/adaptive/adaptive_ui.dart';
+// [/fork]
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -216,6 +219,11 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
               totalFatsGoal: totalFatsGoal,
               totalProteinsGoal: totalProteinsGoal,
             ),
+            // [fork] S13 adaptive-check-in
+            AdaptiveCheckInCard(
+              onAccepted: () => _homeBloc.add(const LoadItemsEvent()),
+            ),
+            // [/fork]
             // Day-one / empty-day guidance: when nothing is logged yet, point
             // the way to the centre + rather than leaving a silent dashboard.
             if (breakfastIntakeList.isEmpty &&
