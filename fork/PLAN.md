@@ -4,7 +4,7 @@ Started 2026-10-17. Decisions in [DECISIONS.md](DECISIONS.md) win over this file
 
 ## 0. What upstream already gives us
 
-Checked on `develop` at 1bc934b1 (2026-10-17). Upstream merged into `fork/main` again at 8119b857 (2026-10-19).
+Checked on `develop` at 1bc934b1 (2026-10-17). `fork/main` is based on the `v2.4.0` release since 2026-10-22 (D6); the phase 1c files read on `develop` are identical in 2.4.0.
 
 | MacroFactor feature | ONT today |
 |---|---|
@@ -16,7 +16,7 @@ Checked on `develop` at 1bc934b1 (2026-10-17). Upstream merged into `fork/main` 
 | Goal ETA | ⚠️ "weeks left" on Trends; calorie taper near the target |
 | Adaptive expenditure, weekly check-in | ❌ calorie target = formula TDEE (IOM 2005) ± a weekly-pace offset |
 | Micronutrients, water, fasting | ✅ |
-| Backup | ⚠️ manual JSON/CSV zip export and import. Import onto a live install was fixed on `develop` (#1369, #1398). |
+| Backup | ⚠️ manual JSON/CSV zip export and import. Import onto a live install appends duplicates in 2.4.0; fixed on `develop` (#1369, #1398), not yet released. |
 
 ## 1. Pre-work
 
@@ -174,14 +174,14 @@ unlike openGym the automatic part has to be built.
    WorkManager and Android's background limits. A diary change logged and the app killed at once
    waits for the next pause.
 3. **What.** Upstream's JSON export zip: intakes, activities, tracked days, recipes, the weight
-   log, custom activity templates, goal settings (#1381). **Gap:** saved custom meals (the
+   log, custom activity templates, and goal settings once #1381 is released (not in 2.4.0). **Gap:** saved custom meals (the
    user's own foods) are not in the bundle (`docs/export-format.md`), so a restore loses them.
    That is an upstream fix worth proposing alongside #1356. Fork-only data (phase 3's trend and
    check-ins) must be added to it, or a restore loses it.
 4. **Sync.** A sync app mirrors the folder to Drive (Autosync for Google Drive, FolderSync, or a
    Syncthing fork; the official Syncthing Android app was discontinued in 2024). Not the app's
    concern; the settings screen names the option.
-5. **Restore** is upstream's Import, which upserts by id since #1369.
+5. **Restore** is upstream's Import, which upserts by id since #1369. That fix is on `develop`, not in 2.4.0: build phase 2 after the release that carries it, or restore appends duplicates.
 6. **Upstream.** This is #1356 (Syncthing) and covers #585 (Drive/iCloud). Ask on #1356 before
    building whether a PR is welcome, and whether a dependency or a platform channel is preferred.
 
@@ -282,6 +282,6 @@ feature of its own; (c) run the backend ourselves, which is a server (D2 rules i
 
 ## 7. Risks
 
-- **Upstream speed:** 100+ commits in 90 days, mostly by the maintainer. Merge `develop` often and keep seams few.
+- **Upstream speed:** 100+ commits in 90 days, mostly by the maintainer. Merge each release and keep seams few.
 - **Storage:** the fork must not change upstream's Hive types. Fork data goes in its own box, and it needs to be included in backups (phase 2.4).
 - **Grounded AI** may disappoint on mixed home-cooked dishes; phase 1c's check measures it.

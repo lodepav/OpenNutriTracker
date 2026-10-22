@@ -22,7 +22,7 @@ Set up 2026-10-17 the way openGym-Hevier does it (its PLAN.md §1.1).
 
 | # | Decision |
 |---|---|
-| D6 | **Branches.** `develop` mirrors `upstream/develop` (fast-forward only, never a fork commit); upstream merges everything there and only cuts releases to `main`. `fork/main` is the fork's trunk. Feature work goes on `fork/<topic>`, and upstream-bound work on a branch off `develop`. Merge, never rebase; `rerere` and `zdiff3` are on. |
+| D6 | **Branches.** *Revised 2026-10-22:* `fork/main` is based on upstream's releases, not `develop`: rebuilt on `v2.4.0` (the fork's commits replayed; the develop-based history kept as `fork/main-on-develop`), and it merges each new release tag from `upstream/main`. `develop` mirrors `upstream/develop` (fast-forward only, never a fork commit) and is used only to branch upstream-bound work and to read what is coming. `fork/main` is the fork's trunk. Feature work goes on `fork/<topic>`, and upstream-bound work on a branch off `develop`. Merge, never rebase; `rerere` and `zdiff3` are on. |
 
 ## First answers
 
