@@ -111,20 +111,7 @@ Before phase 1, at the user's request. Upstream code read 2026-10-18; findings f
 2. *Dropped 2026-10-18:* Gemini. Google is excluded (D7). If the user ever wants it, the
    custom-server option covers it once upstream merges #1257.
 3. **Estimate when nothing matches (D9):** covered by phase 1c.
-4. **Photo test (D7).** `fork/eval/photos.json` holds 23 photos taken from recipe pages that
-   publish macros: Latvian and Baltic (5), Georgian (6), Slavic dishes common in Latvia (7),
-   pizza and everyday (5). Each entry records the words a correct answer contains, the pieces to
-   count where countable, and, where the photo shows a known amount, the servings shown.
-   `fork/tools/fetch_eval_photos.py` downloads the photos into `build/` (they are the sites',
-   not ours). `FORK_EVAL_OPENROUTER_KEY=... flutter test test/fork/eval` runs upstream's photo
-   path unchanged for each model (`FORK_EVAL_MODELS`, default Haiku 5.5, Haiku 4.5, luna) and
-   looks every name up in the bundled table. It writes `build/fork-eval/<time>/report.md`, with
-   the dish named, the count right, and names with no table match (phase 1c's job). Upstream's
-   photo path returns names and counts, not grams, so photos are scored on those. The recipe
-   macros score phase 1c's breakdown: its per-serving total against the page's. Then ten of the
-   user's own meals. This decides Q3 and which default leads.
-   *Status 2026-10-19:* harness built and the 23 photos downloaded; not run yet (needs an
-   OpenRouter key). Run it before phase 1c, so the breakdown has a baseline to beat.
+4. **Photo test (D7):** moved to phase 4, last.
 5. **Leftovers (D14).** Subtract what was left uneaten from a meal already logged.
    - **What upstream gives us:** a logged entry's amount can be edited
      (`update_intake_usecase.dart`), so subtracting is an amount update. Nothing groups the
@@ -227,6 +214,28 @@ Upstream: open an issue first, with the simulation results. The maintainer cites
 every calculation; everything except the tuned weights has one, and those come with the
 simulation. If declined, it stays in the fork behind seams.
 
+## 4b. Phase 4 — Model comparison (last)
+
+Moved last 2026-10-22 (D7): any capable vision model does the job, and every user brings their
+own key and model anyway, so the comparison only picks the suggested default. Until it runs,
+Haiku 4.5 and luna stay the defaults.
+
+`fork/eval/photos.json` holds 23 photos taken from recipe pages that
+publish macros: Latvian and Baltic (5), Georgian (6), Slavic dishes common in Latvia (7),
+pizza and everyday (5). Each entry records the words a correct answer contains, the pieces to
+count where countable, and, where the photo shows a known amount, the servings shown.
+`fork/tools/fetch_eval_photos.py` downloads the photos into `build/` (they are the sites',
+not ours). `FORK_EVAL_OPENROUTER_KEY=... flutter test test/fork/eval` runs upstream's photo
+path unchanged for each model (`FORK_EVAL_MODELS`, default Haiku 5.5, Haiku 4.5, luna) and
+looks every name up in the bundled table. It writes `build/fork-eval/<time>/report.md`, with
+the dish named, the count right, and names with no table match (phase 1c's job). Upstream's
+photo path returns names and counts, not grams, so photos are scored on those. The recipe
+macros score phase 1c's breakdown: its per-serving total against the page's. Then ten of the
+user's own meals. This decides Q3 and which default leads.
+
+*Status 2026-10-19:* harness built and the 23 photos downloaded; not run yet (needs an
+OpenRouter key).
+
 ## 5. Backlog (after phases 1–3)
 
 - AI nutrition-label scan (reference: aeobrien/OpenNutriTracker "Phase 11").
@@ -275,4 +284,4 @@ feature of its own; (c) run the backend ourselves, which is a server (D2 rules i
 
 - **Upstream speed:** 100+ commits in 90 days, mostly by the maintainer. Merge `develop` often and keep seams few.
 - **Storage:** the fork must not change upstream's Hive types. Fork data goes in its own box, and it needs to be included in backups (phase 2.4).
-- **Grounded AI** may disappoint on mixed home-cooked dishes; phase 1.3 measures it before we build on it.
+- **Grounded AI** may disappoint on mixed home-cooked dishes; phase 1c's check measures it.
