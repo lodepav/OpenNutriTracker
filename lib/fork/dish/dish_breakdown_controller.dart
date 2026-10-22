@@ -4,7 +4,6 @@ import 'package:flutter/foundation.dart';
 import 'package:logging/logging.dart';
 import 'package:opennutritracker/core/utils/ai_credential_storage.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
-import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dart';
 import 'package:opennutritracker/features/add_meal/domain/meal_items_api.dart';
 import 'package:opennutritracker/features/add_meal/domain/usecase/resolve_parsed_meals_usecase.dart';
 import 'package:opennutritracker/features/add_meal/presentation/bloc/bulk_add_bloc.dart';
@@ -56,15 +55,14 @@ class DishBreakdownController extends ChangeNotifier {
   bool isPending(BulkAddRow row) => _pending.contains(row.resolved);
 
   /// Whether to offer "Break into ingredients" on [row]: a model is set up,
-  /// the row is not an ingredient already, and its match is in doubt —
-  /// nothing, a weak match, or a branded product standing in for a dish.
+  /// the row is not an ingredient already, and nothing matched or only
+  /// weakly. A confident match stays one food, a product included: a
+  /// "mozzarella" that found a mozzarella is not a dish.
   bool canBreakDown(BulkAddRow row) =>
       _modelReady &&
       row.dishIngredient == null &&
       !isPending(row) &&
-      (!row.isResolved ||
-          row.isLowConfidence ||
-          row.meal?.source == MealSourceEntity.off);
+      (!row.isResolved || row.isLowConfidence);
 
   Future<DishBreakdownOutcome> breakDown(BulkAddRow row) async {
     final target = row.resolved;
