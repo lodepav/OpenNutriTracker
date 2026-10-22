@@ -101,6 +101,14 @@ Before phase 1, at the user's request. Upstream code read 2026-10-18; findings f
      (grey peas → dried split peas, sulguni → brined mozzarella-type cheese), plus the serving
      weight.
    - Each ingredient is resolved with the same `ResolveParsedMealsUseCase`. No photo is resent.
+   - *Done 2026-10-22:* `lib/fork/dish/break_down_dish_usecase.dart`, built from upstream's
+     locator registrations (no seam). The serving weight is the sum of the grams; the schema has
+     no field for it. Two findings:
+     - Every client drops a unit the text does not state (#977), so the text sent says "e.g.
+       100 g"; a test pins that it still counts as stating one.
+     - Bare ingredient names hit the resolver's tie-break (`carrot` → *Carrot, dehydrated*,
+       `bacon` → *Bacon, meatless*). The prompt asks for table-style names ("carrot, raw"),
+       which land on the raw rows; `test/fork/staple_foods_test.dart` pins eight of them.
 2. **When it runs.**
    - Automatically for an unresolved row.
    - On demand ("Break into ingredients") for any row, which covers low-confidence matches and

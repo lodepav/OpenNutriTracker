@@ -84,4 +84,28 @@ void main() {
   test('grey peas are in no table', () async {
     expect((await resolve('grey peas')).candidates, isEmpty);
   });
+
+  // Phase 1c: the ingredient names the breakdown prompt asks for
+  // (BreakDownDishUseCase.systemPrompt) land on the plain raw row. Bare
+  // names do not: `carrot` finds "Carrot, dehydrated", `bacon` "Bacon,
+  // meatless", the tie-break above.
+  for (final (query, expected) in [
+    ('egg, whole, raw', 'Egg, whole, raw'),
+    ('carrot, raw', 'Carrots, raw'),
+    (
+      'wheat flour, white, all-purpose',
+      'Wheat flour, white, all-purpose, unenriched',
+    ),
+    ('sour cream, regular', 'Sour cream, regular'),
+    ('beef, ground, raw', 'Beef, ground, raw'),
+    ('split peas, raw', 'Peas, green, split, mature seeds, raw'),
+    ('cheese, mozzarella, whole milk', 'Cheese, mozzarella, whole milk'),
+    ('pork bacon', 'Pork, cured, bacon, unprepared'),
+  ]) {
+    test('ingredient "$query" resolves to "$expected"', () async {
+      final item = await resolve(query);
+      expect(item.candidates[item.selectedIndex].name, expected);
+      expect(item.confidence, greaterThanOrEqualTo(kResolutionConfidenceFloor));
+    });
+  }
 }
