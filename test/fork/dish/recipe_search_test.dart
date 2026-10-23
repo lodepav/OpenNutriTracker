@@ -33,6 +33,10 @@ void main() {
 
     test('Latvian letters match their plain forms, both ways', () {
       expect(nameHasQueryWords('Sklandu rauši', 'sklandu rausi'), isTrue);
+      const starter = 'Sklandu rauši (sklandrausis)';
+      expect(nameHasQueryWords(starter, 'sklandrausis'), isTrue);
+      expect(nameHasQueryWords(starter, 'sklandrauši'), isTrue);
+      expect(nameHasQueryWords(starter, 'sklandu rausi'), isTrue);
       expect(nameHasQueryWords('Pelmeni ar skabo krejumu', 'krējumu'), isTrue);
     });
 

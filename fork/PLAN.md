@@ -585,6 +585,110 @@ user's own meals. This decides Q3 and which default leads.
 *Status 2026-10-19:* harness built and the 23 photos downloaded; not run yet (needs an
 OpenRouter key).
 
+**Order of the real-model checks (user, 2026-10-23):**
+1. **Haiku subagent replay** (`fork/eval/REPLAY.md`). A Claude Code subagent on Haiku plays
+   the model: the app (`FAKE_AI=replay fork/tools/emulator.sh`) or the harness
+   (`FORK_EVAL_REPLAY=<dir>`) saves each request, the subagent writes the tool call's input,
+   and the same request is answered with it (`ReplayAiClient`, `lib/fork/dev/replay_ai.dart`).
+   Covers the photo set, the typed and photographed dishes against the saved recipes, the
+   breakdowns and the leftovers, on our plan rather than a key. Close to the raw API, not
+   the same: the subagent runs under Claude Code's own instructions.
+2. **One live call per client** (Anthropic, OpenAI, OpenAI-compatible) with a real key:
+   the request the client builds and the reply it parses, which replay skips.
+3. **OpenRouter comparison** (optional): Haiku 4.5, luna and others, which a subagent cannot
+   be. Only this picks the default model (Q3).
+
+*First replay run 2026-10-23 (photo set, harness):* dish named 21/23, count right 3/7, 12
+dishes with no table match (phase 1c's breakdown takes those), no errors. Missed: the fish
+dish (named "fish in tomato sauce") and the stuffed pie. Not yet run in the app.
+
+*Dish checks 2026-10-23 (Haiku replay, `test/fork/eval/dish_eval_test.dart`):* the photo's
+dish name broken down by the fork's prompt, each ingredient's first table row, and the total
+against the page's per serving; and typed or photographed names against the saved recipes.
+- **Breakdown, the six one-serving photos:** khachapuri adjaruli 1054 kcal (page 1123),
+  stuffed peppers 357 (329), bolognese 630 (510), borscht 260 (181), cold beet soups 160
+  (100, 132), buckwheat with mushrooms 122 (168). Within about a third, except borscht and
+  the beet soups, which run high. Protein and carbs follow; fat runs low on the khachapuri.
+- **Found:** a qualifier missing from every table row drops the whole ingredient:
+  "buckwheat groats, raw" finds nothing, though "buckwheat groats" finds the row. (The
+  harness takes the table's first row; the app's resolver does better on some, e.g. a bare
+  "wheat flour" is all-purpose in the app and cake flour in the harness.)
+- **Typed:** khachapuri, pelmeni, grey peas and "sklandu rausi" find their recipes, inside a
+  longer line too. Misses: "sklandrausis" and "2 sklandrauši" (the one-word name, as feared)
+  and "adjaruli khachapuri" against a recipe saved as "Adjarian khachapuri".
+- **Photographed:** only the adjaruli photo found its recipe. The model names regional dishes
+  generically from a photo (pelmeni as "dumplings", sklandrausis as "pumpkin tartlet",
+  another khachapuri as "stuffed pie"), as the photo prompt tells it to when unsure; a note
+  ("pelmeni") is the user's way to name them.
+- **In the app 2026-10-23** (`SEED=1 FAKE_AI=replay`): "khachapuri, 200 ml kefir, grey peas"
+  read by the replayed model ("Read by AI"); "Ingredients" on khachapuri gave the harness's
+  recorded breakdown unchanged (same request, same key), all four rows on table foods.
+  "grey peas" matched a Grey Poupon Dijon mustard: the demo-data entry point
+  (`lib/dev/main_dev.dart`) does not save the starter recipes, so there was no recipe to
+  find. Also seen: the emulator snapshot's old app data opened on
+  `hive_wrong_key_or_corrupted` after a reinstall (cleared with `pm clear`); the onboarding
+  walker (`tools/adb/walk-onboarding.sh`) no longer fits the fork's onboarding (imperial
+  default, height left empty).
+
+*Fixed 2026-10-23:* (1) resolution drops comma qualifiers from the end when no table row has
+every word (`LocalFoodDataSource.fetchSearchWordResults`; a person's search stays exact):
+buckwheat with mushrooms now 217 kcal (page 168), nothing unmatched. (2) The starter is named
+"Sklandu rauši (sklandrausis)": "sklandrausis" and "2 sklandrauši" find it. An install that
+already saved the starters keeps the old name. Not fixed: "adjaruli" vs "Adjarian", which only
+a looser word rule would join, and that rule would also join "chickpea" and "chicken".
+
+*Tuning, Opus → Sonnet → Haiku replay, 2026-10-23:* the same photos and dishes answered by
+each model's subagent (`FORK_EVAL_REPLAY` takes several folders). The harness now matches
+ingredients through the resolver's own ranking, not the table's first row.
+- **Counts:** under upstream's photo prompt Opus counted 5/7, Sonnet 1/7, Haiku 3/7; they left
+  dumplings, pancakes and tarts uncounted. Two labels were wrong (sklandrausis and syrniki
+  show 5, not 6). The S60 count rule takes this to 7/7, 7/7 and 6/7. Dishes are named the
+  same as before: 22, 22 and 21 of 23.
+- **Count as servings:** bulk add reads a bare count as servings (#622). A recipe's serving
+  is a share of the batch, so "14 pelmeni" against the 6-serving starter would log about
+  3 kg. The typed path already does this, and S60 would add photos. S61 flags a count larger
+  than the batch's servings and holds that row back until the user picks a unit.
+- **Breakdowns:** no ingredient unmatched for any model. Opus estimates big, complete servings,
+  so its kcal runs well above the pages'. The pages' own serving sizes are arbitrary, so this
+  figure does not rank the models.
+- **Photo → saved recipe:** this stays the weak spot for all three (Opus 2/4, Sonnet 0/4,
+  Haiku 1/4, which moves between runs). Photos come back with generic names: "dumplings",
+  "sweet potato tart", "cheese bread", "khachapuri with egg". Candidate: list the user's saved
+  recipe names in the photo prompt (untested).
+- **Left alone:** "tomato sauce" ranks a steak sauce first (upstream's no-portion penalty,
+  about 40 kcal). "kefir, plain" goes to a branded kefir and canola to a branded oil.
+  "pomegranate seeds" has no row. The tool schema says quantity is "only if the user stated
+  an amount", against the photo prompt's counting. The models counted anyway, and rewording it
+  would change every request.
+
+*LIDO and Russian home dishes, 2026-10-23:* 23 more photos (46 in all).
+- **Sources:** 13 are LIDO's own dishes, photographed from its Wolt menus. These include
+  boiled buckwheat and a karbonāde. LIDO publishes no restaurant macros: Wolt's product info
+  lists ingredients and allergens only, and its catalogue has none either. The exception is the
+  karbonāde, whose packaged twin has a label on barbora.lv (105 g piece). The other 10 are the
+  same dishes from eda.ru recipes, which give macros per serving.
+- **Results:**
+  - Dishes named: Opus 43, Sonnet 39, Haiku 39 of 46.
+  - Counts right: 14, 12 and 11 of 16.
+  - Opus named all the regional dishes. Sonnet and Haiku did not:
+    - the karbonāde was "fried chicken fillet" and "fried stuffed flatbread";
+    - grey peas were "chickpeas" and "black beans";
+    - LIDO's French-style pork was chicken or a cottage-cheese casserole;
+    - eda's chops in batter were "stuffed pancakes" and "fried pastries".
+  - LIDO's bread soup is a layered dessert, and it finds the starter of that name.
+  - The Opus name for grey peas ("stewed peas with onion and bacon") does not find the saved
+    recipe, because it lacks "grey".
+- **Dry staples:** every model called the buckwheat "buckwheat", and the resolver gave it the
+  raw grain: 343 kcal per 100 g against 115 boiled. Bare "spaghetti", "macaroni", "lentils",
+  "pearl barley", "bulgur" and "couscous" did the same. The fix is in
+  `local_food_data_source.dart` and applies to resolution only. When the name has no
+  state ("raw", "dry", "boiled"…) and the table has the food cooked under its own name, rows
+  with more than twice the leanest cooked row's energy and over 50 g carbs are left out. A
+  37-name probe changed only those seven. Eggs, meat, raw bacon and oats kept their rows.
+
+Still needs the user: the leftovers photo check, typing and photographing their own
+khachapuri, pelmeni and grey peas, and ten of their own meals (photos we do not have).
+
 **Then upstream (user, 2026-10-23):** no upstream PRs, issues or #1356 questions until the
 app is tested live, after the real-model checks above. Queued: `feat/photo-note`,
 `feat/leftovers`, the word-search change, the phase 3 issue with the simulation results, and the

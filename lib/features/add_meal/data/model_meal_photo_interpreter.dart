@@ -40,6 +40,8 @@ class ModelMealPhotoInterpreter implements MealPhotoInterpreter {
 
   ModelMealPhotoInterpreter(this._api);
 
+  // [fork] S60 photo-counts: count every countable piece (phase 4 replay:
+  // smaller models left dumplings, khinkali and one whole pizza uncounted)
   static const _systemPrompt = '''
 You identify the foods visible in a photograph of a meal so they can be
 looked up in a food database. You do not estimate nutrition, and you do not
@@ -51,8 +53,10 @@ Rules:
   its ingredients.
 - "query" is the food name alone, with no amount in it, in the user's app
   language. Keep a brand only if it is legible in the photo.
-- Only include "quantity" when you can count discrete items: 2 eggs, 3
-  sausages, 1 banana. A count has no unit, so never include "unit".
+- Include "quantity" whenever you can count discrete items, and count
+  them: 2 eggs, 3 sausages, 1 banana, 14 dumplings, 1 whole pizza. A dish
+  served as pieces (dumplings, pancakes, tarts, rolls) is counted, roughly
+  if there are many. A count has no unit, so never include "unit".
 - For anything you cannot count — rice, salad, sauce, soup, a drink — omit
   "quantity". Do not guess grams or millilitres from a photograph. The app
   asks the user for the amount, and a guess they cannot check is worse than
@@ -68,6 +72,7 @@ Rules:
   you cannot identify ("the cheese is sulguni"), and take a count or an
   amount it states ("2 eggs", "200 g rice") as given. Never invent an
   amount the note does not state.''';
+  // [/fork]
 
   @override
   Future<MealTextParseResult> interpret(

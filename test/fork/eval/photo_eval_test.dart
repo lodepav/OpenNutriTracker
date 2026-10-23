@@ -9,27 +9,27 @@
 // FORK_EVAL_MODELS overrides the models, as `model@provider` separated by
 // commas (no `@provider` lets OpenRouter route). The report is written to
 // build/fork-eval/<time>/report.md, with the raw answers beside it.
+//
+// FORK_EVAL_REPLAY=build/fork-eval/replay/<name> runs it with no key and no
+// call out, on answers a subagent wrote (fork/eval/REPLAY.md): the first run
+// saves the requests, the run after the answers are in scores them.
 import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:opennutritracker/features/add_meal/data/model_meal_photo_interpreter.dart';
-import 'package:opennutritracker/features/add_meal/data/openai_compatible_meal_items_api.dart';
 import 'package:opennutritracker/features/add_meal/domain/meal_photo_interpreter.dart';
 import 'package:opennutritracker/fork/food/local_food_data_source.dart';
 
-const _defaultModels =
-    'anthropic/claude-haiku-5.5@anthropic,'
-    'anthropic/claude-haiku-4.5@anthropic,'
-    'openai/gpt-5.6-luna@openai';
+import 'eval_model.dart';
 
 const _photoDir = 'build/fork-eval/photos';
 
 void main() {
-  final key = Platform.environment['FORK_EVAL_OPENROUTER_KEY'] ?? '';
-  final skip = key.isEmpty
-      ? 'set FORK_EVAL_OPENROUTER_KEY to run the paid model comparison'
+  final models = EvalModels();
+  final skip = models.skip != false
+      ? models.skip
       : !Directory(_photoDir).existsSync()
       ? 'run fork/tools/fetch_eval_photos.py first'
       : false;
@@ -37,26 +37,11 @@ void main() {
   final manifest =
       jsonDecode(File('fork/eval/photos.json').readAsStringSync()) as Map;
   final photos = (manifest['photos'] as List).cast<Map<String, dynamic>>();
-  final models = (Platform.environment['FORK_EVAL_MODELS'] ?? _defaultModels)
-      .split(',')
-      .map((s) => s.trim())
-      .where((s) => s.isNotEmpty)
-      .toList();
-  final runDir = Directory(
-    'build/fork-eval/${DateTime.now().toIso8601String().replaceAll(':', '-')}',
-  );
+  final runDir = evalRunDir('');
   final report = <String, List<_PhotoResult>>{};
 
   late LocalFoodDataSource foods;
-  setUpAll(() async {
-    final table = LocalFoodTable.fromGzip(
-      await File(LocalFoodDataSource.assetPath).readAsBytes(),
-    );
-    foods = LocalFoodDataSource(
-      loadTable: () async => table,
-      readToggles: () async => null,
-    );
-  });
+  setUpAll(() async => foods = await loadFoodTable());
 
   tearDownAll(() {
     if (report.isEmpty) return;
@@ -74,22 +59,12 @@ void main() {
     print('report: ${runDir.path}/report.md');
   });
 
-  for (final spec in models) {
-    final [model, ...rest] = spec.split('@');
-    final providers = rest.isEmpty || rest.first.isEmpty ? null : [rest.first];
+  for (final spec in models.specs) {
     test(
       spec,
       () async {
         final client = http.Client();
-        final interpreter = ModelMealPhotoInterpreter(
-          OpenAiCompatibleMealItemsApi.openRouter(
-            client,
-            () => key,
-            model: model,
-            providers: providers,
-            timeout: const Duration(seconds: 90),
-          ),
-        );
+        final interpreter = ModelMealPhotoInterpreter(models.api(spec, client));
         final results = report[spec] = [];
         for (final photo in photos) {
           final file = File('$_photoDir/${photo['id']}.jpg');
@@ -102,12 +77,15 @@ void main() {
             );
             final items = <_Item>[];
             for (final item in parsed.items) {
-              final top = (await foods.fetchSearchWordResults(
-                item.query,
-                forResolution: true,
-              )).firstOrNull;
+              final top = await tableMatch(foods, item.query);
               items.add(
-                _Item(item.query, item.quantity, item.portion, top?.name),
+                _Item(
+                  item.query,
+                  item.quantity,
+                  item.portion,
+                  top?.name,
+                  top?.nutriments.energyKcal100,
+                ),
               );
             }
             results.add(
@@ -120,6 +98,10 @@ void main() {
           }
         }
         client.close();
+        models.reportWaiting(
+          spec,
+          results.where((r) => r.error != null).length,
+        );
       },
       timeout: const Timeout(Duration(minutes: 30)),
       skip: skip,
@@ -136,13 +118,17 @@ class _Item {
   /// the dish phase 1c breaks into ingredients.
   final String? match;
 
-  _Item(this.query, this.quantity, this.portion, this.match);
+  /// [match]'s energy per 100 g.
+  final double? matchKcal;
+
+  _Item(this.query, this.quantity, this.portion, this.match, this.matchKcal);
 
   Map<String, Object?> toJson() => {
     'query': query,
     'quantity': quantity,
     'portion': portion,
     'match': match,
+    'match_kcal_100g': matchKcal,
   };
 }
 
@@ -177,6 +163,17 @@ class _PhotoResult {
     return n != null && n >= (range[0] as num) && n <= (range[1] as num);
   }
 
+  /// Whether the dish landed on a table row of the right form, when the
+  /// photo says which: boiled buckwheat on a cooked row, not the raw grain
+  /// at four times the energy (`match_kcal_100g_max`). A name with no row
+  /// passes: the app breaks that dish down instead.
+  bool? get formOk {
+    final max = photo['match_kcal_100g_max'] as num?;
+    final dish = items.where(_isDish);
+    if (max == null || dish.isEmpty) return null;
+    return dish.every((i) => i.matchKcal == null || i.matchKcal! <= max);
+  }
+
   Map<String, Object?> toJson() => {
     'id': photo['id'],
     'error': error,
@@ -184,6 +181,7 @@ class _PhotoResult {
     'identified': identified,
     'counted': counted,
     'count_ok': countOk,
+    'form_ok': formOk,
     'items': [for (final item in items) item.toJson()],
   };
 }
@@ -194,12 +192,13 @@ String _markdown(
 ) {
   final out = StringBuffer('# Photo test, ${DateTime.now()}\n\n')
     ..writeln(
-      '| Model | Dish named | Count right | No table match | Errors '
-      '| Median s |',
+      '| Model | Dish named | Count right | Cooked row | No table match '
+      '| Errors | Median s |',
     )
-    ..writeln('|---|---|---|---|---|---|');
+    ..writeln('|---|---|---|---|---|---|---|');
   for (final MapEntry(:key, :value) in report.entries) {
     final counts = value.where((r) => r.countOk != null);
+    final forms = value.where((r) => r.formOk != null);
     final unmatched = value.where(
       (r) => r.items.any((i) => r._isDish(i) && i.match == null),
     );
@@ -207,6 +206,7 @@ String _markdown(
     out.writeln(
       '| $key | ${value.where((r) => r.identified).length}/${value.length} '
       '| ${counts.where((r) => r.countOk!).length}/${counts.length} '
+      '| ${forms.where((r) => r.formOk!).length}/${forms.length} '
       '| ${unmatched.length} '
       '| ${value.where((r) => r.error != null).length} '
       '| ${ms.isEmpty ? '-' : (ms[ms.length ~/ 2] / 1000).toStringAsFixed(1)} |',
@@ -228,7 +228,8 @@ String _markdown(
                 (i) =>
                     '${i.quantity == null ? '' : '${i.quantity!.toStringAsFixed(0)}× '}'
                     '${i.query}${i.portion == null ? '' : ' (${i.portion})'}'
-                    ' → ${i.match ?? '*no match*'}',
+                    ' → ${i.match ?? '*no match*'}'
+                    '${i.matchKcal == null ? '' : ' (${i.matchKcal!.round()} kcal/100 g)'}',
               )
               .join('; ');
       out.writeln('- **$key** ${r.identified ? '✓' : '✗'}: $items');

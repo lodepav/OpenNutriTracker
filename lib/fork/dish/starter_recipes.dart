@@ -72,7 +72,9 @@ const starterRecipes = <StarterRecipe>[
   ),
   StarterRecipe(
     'fork-starter-sklandu-rausi',
-    'Sklandu rauši',
+    // The one-word name too: a model writes "sklandrausis", which no word
+    // rule takes to "sklandu rauši".
+    'Sklandu rauši (sklandrausis)',
     '$_credit Rye pastry with potato and carrot filling. One serving is one '
         'tart. Weights are before baking.',
     12,

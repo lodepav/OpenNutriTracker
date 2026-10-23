@@ -1,13 +1,21 @@
 import 'dart:convert';
 
+import 'dart:io';
+
 import 'package:http/http.dart' as http;
 import 'package:opennutritracker/core/utils/ai_credential_storage.dart';
+import 'package:opennutritracker/fork/dev/replay_ai.dart';
 import 'package:opennutritracker/fork/label/label_scan.dart';
 import 'package:opennutritracker/fork/leftovers/ai_leftovers.dart';
+import 'package:path_provider/path_provider.dart';
 
 /// `--dart-define=FORK_FAKE_AI=true`: emulator runs without a model key.
+/// `FORK_FAKE_AI=replay` answers from a real model's saved replies instead
+/// ([ReplayAiClient], kept in app support storage under `ai-replay`).
 /// Off in every normal build, where none of this is reached.
-const forkFakeAi = bool.fromEnvironment('FORK_FAKE_AI');
+const _fakeAiMode = String.fromEnvironment('FORK_FAKE_AI');
+const forkFakeAi = _fakeAiMode != '' && _fakeAiMode != 'false';
+const forkReplayAi = _fakeAiMode == 'replay';
 
 /// Turns the AI features on with a dummy Anthropic key, as if the user had
 /// agreed to the terms and pasted one.
@@ -21,8 +29,17 @@ Future<void> enableFakeAi(AiCredentialStorage storage) async {
 /// most things would; every other request goes out as usual.
 class FakeAiClient extends http.BaseClient {
   final http.Client _inner;
+  final http.Client? _replay;
 
-  FakeAiClient(this._inner);
+  FakeAiClient(this._inner)
+    : _replay = forkReplayAi
+          ? ReplayAiClient(
+              _inner,
+              () async => Directory(
+                '${(await getApplicationSupportDirectory()).path}/ai-replay',
+              ),
+            )
+          : null;
 
   /// Ingredients of one serving, for the dishes the emulator check types.
   /// Anything else breaks down to nothing, like a dish the model does not
@@ -49,6 +66,7 @@ class FakeAiClient extends http.BaseClient {
 
   @override
   Future<http.StreamedResponse> send(http.BaseRequest request) async {
+    if (_replay != null) return _replay.send(request);
     if (request.url.host != 'api.anthropic.com' || request is! http.Request) {
       return _inner.send(request);
     }

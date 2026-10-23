@@ -6,6 +6,7 @@
 #   SEED=1 fork/tools/emulator.sh      # build the demo-data entry point (lib/dev/main_dev.dart):
 #                                      # wipes the profile, seeds a year of data, skips onboarding
 #   WINDOW=1 ...                       # show the emulator window (headless by default)
+#   FAKE_AI=true|replay ...            # no model key: canned answers, or replayed ones (fork/eval/REPLAY.md)
 #
 # One-time setup this expects (user-local, no sudo):
 #   Flutter 3.44.6  ~/flutter          (the version in .fvmrc)
@@ -31,6 +32,7 @@ if [[ "${1:-}" != "--no-build" ]]; then
   [[ -f lib/core/utils/env.g.dart ]] || dart run build_runner build --delete-conflicting-outputs
   target=()
   [[ -n "${SEED:-}" ]] && target=(-t lib/dev/main_dev.dart)
+  [[ -n "${FAKE_AI:-}" ]] && target+=(--dart-define=FORK_FAKE_AI="$FAKE_AI")
   flutter build apk --flavor develop --debug "${target[@]}"
 fi
 

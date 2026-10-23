@@ -76,7 +76,7 @@ void main() {
       expect(repository.saved.map((r) => r.name), [
         'Grey peas with bacon',
         'Pelmeni',
-        'Sklandu rauši',
+        'Sklandu rauši (sklandrausis)',
         'Layered rye bread dessert',
       ]);
       expect(seeded, isTrue);
