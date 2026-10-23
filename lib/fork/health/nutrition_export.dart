@@ -10,6 +10,7 @@ import 'package:opennutritracker/core/domain/entity/intake_type_entity.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/fork/dev/fake_health.dart';
+import 'package:opennutritracker/fork/history/history_file.dart';
 
 /// One diary entry as a Health Connect nutrition record, in grams.
 class NutritionRecord {
@@ -235,7 +236,9 @@ class NutritionExport {
     try {
       final records = {
         for (final intake in await _intakes(since))
-          intake.id: NutritionRecord.of(intake),
+          // An imported day's totals: the app they came from has likely
+          // written that day to Health Connect already.
+          if (!isImportedHistory(intake)) intake.id: NutritionRecord.of(intake),
       };
       for (final MapEntry(key: id, value: record) in records.entries) {
         if (written[id]?['sig'] == record.signature) continue;

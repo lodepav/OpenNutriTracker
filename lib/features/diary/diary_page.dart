@@ -23,6 +23,7 @@ import 'package:opennutritracker/generated/l10n.dart';
 import 'package:opennutritracker/fork/leftovers/group_leftovers.dart';
 // [/fork]
 // [fork] S52 undo-delete
+import 'package:opennutritracker/core/utils/tracked_day_lock.dart';
 import 'package:opennutritracker/fork/undo/undo_delete.dart';
 // [/fork]
 
@@ -223,12 +224,17 @@ class _DiaryPageState extends State<DiaryPage> with WidgetsBindingObserver {
     // another day (#1317). Not the current selection either, which moves
     // on with "today" if the boundary passes while the dialog is open
     // (#1360).
+    // [fork] S52 undo-delete: the profile it is taken from, for the undo
+    final stamp = ProfileStamp.now();
+    // [/fork]
     await _calendarDayBloc.deleteIntakeItem(context, intakeEntity, day);
     _diaryBloc.add(const LoadDiaryYearEvent());
     _calendarDayBloc.add(LoadCalendarDayEvent(_selectedDate));
     _diaryBloc.updateHomePage();
     // [fork] S52 undo-delete: Undo on the snackbar
-    if (mounted) DeletedEntries.show(context, intakeEntity, day);
+    if (mounted) {
+      DeletedEntries.show(context, intakeEntity, day, startedOn: stamp);
+    }
     // [/fork]
   }
 

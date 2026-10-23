@@ -143,7 +143,7 @@ List<List<String>> _sheetRows(String xml, List<String> shared) {
       final value = RegExp(r'<v>(.*?)</v>', dotAll: true).firstMatch(body);
       row.add(
         switch (type) {
-          's' => shared[int.parse(value!.group(1)!)],
+          's' => value == null ? '' : shared[int.parse(value.group(1)!)],
           'inlineStr' => _runs(body),
           _ => _unescape(value?.group(1) ?? ''),
         }.trim(),
