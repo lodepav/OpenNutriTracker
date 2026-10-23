@@ -518,6 +518,8 @@ offered and declined):
   so the explorer measured earlier days of a range against the reference. Now a day keeping no
   goal takes the latest set in the range, and the explorer's "Edit goals" opens upstream's
   screen and measures again when it closes. Energy and the macros keep their own day's goal.
+- *Already there:* planned meals were built in round 1 (S43, the meal plan). This round adds the
+  plan's protein, carbs and fat to its card's header, beside its energy.
 
 Upstream: open an issue first, with the simulation results. The maintainer cites a source for
 every calculation; everything except the tuned weights has one, and those come with the

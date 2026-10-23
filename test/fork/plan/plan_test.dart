@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:opennutritracker/core/domain/entity/intake_type_entity.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dart';
+import 'package:opennutritracker/features/add_meal/domain/entity/meal_nutriments_entity.dart';
 import 'package:opennutritracker/fork/plan/plan_store.dart';
 import 'package:opennutritracker/fork/plan/plan_ui.dart';
 
@@ -64,6 +65,36 @@ void main() {
     await store.remove(sunday.first.id);
     await store.merge(sunday);
     expect(await store.forDay(_sunday), hasLength(2));
+  });
+
+  test('the plan\'s macros, from each food\'s energy', () {
+    MealEntity meal(double? energy) => MealEntity(
+      code: 'oats',
+      name: 'Oats',
+      url: null,
+      mealQuantity: null,
+      mealUnit: 'g',
+      servingQuantity: null,
+      servingUnit: 'g',
+      servingSize: null,
+      nutriments: MealNutrimentsEntity(
+        energyKcal100: energy,
+        carbohydrates100: 60,
+        fat100: 8,
+        proteins100: 12,
+        sugars100: null,
+        saturatedFat100: null,
+        fiber100: null,
+      ),
+      source: MealSourceEntity.custom,
+    );
+    final m = plannedMacros([
+      _planned('a', meal(400), 600), // 150 g
+      _planned('b', meal(null), 100), // no energy figure: none
+    ]);
+    expect(m.protein, closeTo(18, 1e-9));
+    expect(m.carbs, closeTo(90, 1e-9));
+    expect(m.fat, closeTo(12, 1e-9));
   });
 
   testWidgets('a tick logs one, a cross drops one, "Log all" the rest', (

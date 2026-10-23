@@ -25,6 +25,24 @@ Future<void> _logWithMealDetail(BuildContext context, PlannedFood food) =>
       food.day,
     );
 
+/// Protein, carbs and fat of [foods] in grams: each food's planned energy
+/// split by its figures per 100 (both scale with the amount alike); a food
+/// without an energy figure counts none.
+({double protein, double carbs, double fat}) plannedMacros(
+  List<PlannedFood> foods,
+) {
+  var protein = 0.0, carbs = 0.0, fat = 0.0;
+  for (final f in foods) {
+    final n = f.meal.nutriments;
+    final energy = n.energyKcal100;
+    if (energy == null || energy <= 0) continue;
+    protein += f.kcal * (n.proteins100 ?? 0) / energy;
+    carbs += f.kcal * (n.carbohydrates100 ?? 0) / energy;
+    fat += f.kcal * (n.fat100 ?? 0) / energy;
+  }
+  return (protein: protein, carbs: carbs, fat: fat);
+}
+
 /// Seam S43: a day's planned foods on Home and in the Diary, each logged
 /// with a tick (on its planned day and meal) or dropped; "Log all" logs
 /// the lot. Nothing when the day has no plan.
@@ -106,6 +124,7 @@ class _PlannedFoodsCardState extends State<PlannedFoodsCard> {
         ..sort((a, b) => a.type.index.compareTo(b.type.index));
       if (foods.isEmpty) return const SizedBox.shrink();
       final total = foods.fold<double>(0, (sum, f) => sum + f.kcal);
+      final macros = plannedMacros(foods);
       return Card(
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         child: Padding(
@@ -118,9 +137,21 @@ class _PlannedFoodsCardState extends State<PlannedFoodsCard> {
                   const Icon(Icons.event_note_rounded),
                   const SizedBox(width: 8),
                   Expanded(
-                    child: Text(
-                      'Planned · ${energyText(context, total)}',
-                      style: Theme.of(context).textTheme.titleMedium,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Planned · ${energyText(context, total)}',
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        Text(
+                          'P ${macros.protein.round()} g · '
+                          'C ${macros.carbs.round()} g · '
+                          'F ${macros.fat.round()} g',
+                          key: const ValueKey('plan-macros'),
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ],
                     ),
                   ),
                   TextButton(
