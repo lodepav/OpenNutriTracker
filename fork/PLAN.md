@@ -426,6 +426,13 @@ and take kJ for kJ users (`lib/fork/units/energy_text.dart`).
   (9:00) or at the next time when it already is, with the adaptive target on. Planned again
   when the app opens or leaves, the profile switches, or the target's settings change (a
   check-in saves them). Per profile; the times are not in the backup.
+- *Done:* macro programs (S41), in the target's settings → Macros: protein per kg of body
+  weight (1.8 to start) or of lean mass (2.2; weight less the measured body fat of the past 90
+  days, else Deurenberg's estimate, which another profile always uses), and a style for the
+  rest: balanced (fat 30% of energy), low fat (20%), low carb (carbs 25%) or keto (carbs 30 g).
+  Protein is capped at 60% of the energy. Grams follow each day's target, so a weekday's
+  shift moves carbs and fat and leaves protein (MacroFactor's macros by weekday). The fixed
+  target's own grams win over it. In the backup with `fork_adaptive.json`.
 
 Upstream: open an issue first, with the simulation results. The maintainer cites a source for
 every calculation; everything except the tuned weights has one, and those come with the

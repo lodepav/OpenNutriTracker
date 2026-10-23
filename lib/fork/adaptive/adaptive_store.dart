@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:opennutritracker/core/utils/hive_db_provider.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
+import 'package:opennutritracker/fork/adaptive/macro_program.dart';
 
 /// Fixed daily macros in grams; their energy is the fixed target.
 class FixedMacros {
@@ -56,6 +57,10 @@ class AdaptiveSettings {
   /// kcal added to the target on each weekday, Monday first.
   final List<double> weekdayOffsets;
 
+  /// Macro goals from protein per kg and a diet style, in place of
+  /// upstream's percentages; the fixed target's own grams win over it.
+  final MacroProgram? macroProgram;
+
   static const noOffsets = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
 
   const AdaptiveSettings({
@@ -66,6 +71,7 @@ class AdaptiveSettings {
     this.fixedKcal = 2000,
     this.fixedMacros,
     this.weekdayOffsets = noOffsets,
+    this.macroProgram,
   });
 
   /// The fixed target's daily energy before the weekday shift.
@@ -79,6 +85,7 @@ class AdaptiveSettings {
     double? fixedKcal,
     FixedMacros? Function()? fixedMacros,
     List<double>? weekdayOffsets,
+    MacroProgram? Function()? macroProgram,
   }) => AdaptiveSettings(
     smoothedTrend: smoothedTrend ?? this.smoothedTrend,
     adaptiveTarget: adaptiveTarget ?? this.adaptiveTarget,
@@ -87,6 +94,7 @@ class AdaptiveSettings {
     fixedKcal: fixedKcal ?? this.fixedKcal,
     fixedMacros: fixedMacros == null ? this.fixedMacros : fixedMacros(),
     weekdayOffsets: weekdayOffsets ?? this.weekdayOffsets,
+    macroProgram: macroProgram == null ? this.macroProgram : macroProgram(),
   );
 
   /// As kept in the box and in `fork_adaptive.json`.
@@ -98,6 +106,7 @@ class AdaptiveSettings {
     'fixedKcal': fixedKcal,
     'fixedMacros': fixedMacros?.toJson(),
     'weekdayOffsets': weekdayOffsets,
+    'macroProgram': macroProgram?.toJson(),
   };
 
   /// Throws on a value of the wrong type; a missing key (an older box or
@@ -108,6 +117,7 @@ class AdaptiveSettings {
       throw const FormatException('weekdayOffsets needs 7 days');
     }
     final macros = json['fixedMacros'] as Map?;
+    final program = json['macroProgram'] as Map?;
     return AdaptiveSettings(
       smoothedTrend: json['smoothedTrend'] as bool? ?? false,
       adaptiveTarget: json['adaptiveTarget'] as bool? ?? false,
@@ -118,6 +128,7 @@ class AdaptiveSettings {
       weekdayOffsets: offsets == null
           ? noOffsets
           : [for (final o in offsets) (o as num).toDouble()],
+      macroProgram: program == null ? null : MacroProgram.fromJson(program),
     );
   }
 }

@@ -109,8 +109,9 @@ class SendIntakeToProfilesUsecase {
       );
       final getMacroGoal = GetMacroGoalUsecase(
         configRepository,
-        // [fork] S41 fixed-macros: that profile's fixed macros
+        // [fork] S41 fixed-macros: that profile's fixed macros or program
         AdaptiveStore.forProfile(_hiveDBProvider, suffix),
+        userRepository.getUserData,
         // [/fork]
       );
 
