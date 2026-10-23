@@ -462,6 +462,14 @@ database, Q4 (b), was offered and declined):
 - *Done:* Trends arranged (S47): "Arrange cards" at the end of Trends reorders (drag) and hides
   (switch) the cards below the range picker, upstream's and the fork's; Reset puts them back.
   Per profile, not in the backup. A card added later keeps its place after its neighbour.
+- *Done:* timeline (S26), the clock icon by the diary's date: the day's foods by the hour they
+  were eaten, each with its energy and the running total, those with no time (logged to a
+  day, not a moment) first. Tapping one moves it to another time of the same logical day (a
+  time before the day's start is the next date); "Add at a time" opens the food search for the
+  meal that time suggests, logged at that time. Upstream's meals stay as they are; the
+  timeline is a second view of the same entries, not MacroFactor's mealless diary. A move
+  swaps the stored entry for one with the same id, since upstream's update changes only the
+  amount; the day's totals stand.
 
 Upstream: open an issue first, with the simulation results. The maintainer cites a source for
 every calculation; everything except the tuned weights has one, and those come with the

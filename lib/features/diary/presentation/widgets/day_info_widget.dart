@@ -29,6 +29,7 @@ import 'package:opennutritracker/fork/plan/plan_ui.dart';
 // [fork] S24 copy-anywhere
 import 'package:opennutritracker/fork/copy/copy_ui.dart';
 import 'package:opennutritracker/fork/copy/select_entries_screen.dart';
+import 'package:opennutritracker/fork/timeline/timeline.dart';
 // [/fork]
 import 'package:opennutritracker/generated/l10n.dart';
 import 'package:provider/provider.dart';
@@ -206,7 +207,8 @@ class _DayInfoWidgetState extends State<DayInfoWidget> {
             Dimens.spacing20,
             Dimens.spacing4,
           ),
-          // [fork] S26 copy-day: "Select entries", "Copy day" by the date
+          // [fork] S26 copy-day: "Timeline", "Select entries", "Copy day"
+          // by the date
           child: Row(
             children: [
               Expanded(
@@ -217,6 +219,7 @@ class _DayInfoWidgetState extends State<DayInfoWidget> {
                   ),
                 ),
               ),
+              TimelineButton(day: widget.selectedDay),
               if (trackedDay != null) ...[
                 SelectEntriesButton(day: widget.selectedDay),
                 CopyDayButton(day: widget.selectedDay),
