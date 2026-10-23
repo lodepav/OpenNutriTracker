@@ -401,7 +401,7 @@ Not built anywhere yet:
   - Tapping carbs, fat or protein on Home lists the day's foods, most first, with grams and
     share. A food logged in two meals is one row.
   - Checked on the emulator.
-  - Not done: tapping a food to open its details, which the issue also asks for.
+  - Tapping a food opens its details (2026-10-23, `feat/nutrient-contributions` 551a9e9e).
 - *Done 2026-10-23:* release checks after openGym-Hevier's D26/D38.
   - `fork/tools/release-check.sh [--apk <file>]` runs the gates: secrets in history, working
     tree and APK; Trivy; `pubspec.lock` against a reviewed list; and the APK's signing,
