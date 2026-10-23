@@ -377,8 +377,16 @@ Not built anywhere yet:
 
 - Recents ranked by time of day.
 - Top contributors per nutrient (upstream issue #1266, no code yet).
-- Release checks like openGym-Hevier's D26/D38 (gitleaks, Trivy over `pubspec.lock`, APK
-  permissions and signing), before the first build for daily use.
+- *Done 2026-10-23:* release checks after openGym-Hevier's D26/D38.
+  - `fork/tools/release-check.sh [--apk <file>]` runs the gates: secrets in history, working
+    tree and APK; Trivy; `pubspec.lock` against a reviewed list; and the APK's signing,
+    scheme, debuggable flag, permissions, native libraries and exported components.
+  - Allow-lists live in `fork/security/`, each entry with its reason.
+  - A release APK signed with a throwaway key passes everything except the certificate pin.
+  - **Before daily use:** make the fork's release keystore, then pin its digest in
+    `~/.config/opennutritracker-fork/apk-cert.txt`.
+  - Seen: ML Kit's barcode scanner brings in Google's datatransport, which sends usage
+    metrics to Google. That's upstream's to decide.
 
 Lower: already built elsewhere (§0b), port or wait:
 

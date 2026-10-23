@@ -1,0 +1,11 @@
+# Permissions the release APK may ask for, each with what uses it (fork/tools/release-check.sh).
+# All upstream's or its plugins'; the fork adds none. $PKG is the app id.
+android.permission.INTERNET                         # Open Food Facts, the AI providers, Sentry (upstream's manifest)
+android.permission.CAMERA                           # barcode scanning and meal photos (mobile_scanner)
+android.permission.POST_NOTIFICATIONS               # meal and fasting reminders (upstream's manifest, flutter_local_notifications)
+android.permission.RECEIVE_BOOT_COMPLETED           # reschedules the reminders after a reboot (upstream's manifest)
+android.permission.VIBRATE                          # reminder notifications (flutter_local_notifications)
+android.permission.health.READ_EXERCISE             # Health Connect activity import (upstream's manifest)
+android.permission.health.READ_TOTAL_CALORIES_BURNED  # Health Connect activity import (upstream's manifest)
+android.permission.ACCESS_NETWORK_STATE             # Google datatransport, which ML Kit's barcode scanner (mobile_scanner) brings in to send usage metrics to Google; upstream's to decide
+$PKG.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION       # androidx.core's guard for its own unexported receivers

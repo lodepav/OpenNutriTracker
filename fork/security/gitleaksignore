@@ -1,0 +1,18 @@
+# Accepted gitleaks findings, by fingerprint, each with its reason (fork/tools/release-check.sh).
+
+# Upstream's F-Droid notes quote AllowedAPKSigningKeys: the SHA-256 digest of a signing
+# certificate, which is public by design (F-Droid compares it with the APK's).
+affd838d366a4fd40ace9663b111d786c8a9acd2:docs/fdroid-submission-feasibility.md:generic-api-key:239
+663688feb47dba66be9575856dcd2a49c5232e8f:docs/fdroid-submission-feasibility.md:generic-api-key:239
+9d6d0bb178f465eee6001577a66ee3a35bd7f8a5:docs/fdroid-submission-feasibility.md:generic-api-key:239
+
+# A copy of the Flutter SDK committed upstream in 1fd6eedc (2025-05-05) and later removed: its
+# test fixtures (a dummy TLS key, fake tokens), not keys of anything.
+1fd6eedce870547083c05c1e1e73b90a9a2bf365:flutter/dev/conductor/core/test/packages_autoroller_test.dart:generic-api-key:23
+1fd6eedce870547083c05c1e1e73b90a9a2bf365:flutter/examples/image_list/lib/main.dart:private-key:51
+1fd6eedce870547083c05c1e1e73b90a9a2bf365:flutter/packages/flutter_tools/test/data/asset_test/tls_cert/dummy-key.pem:private-key:1
+1fd6eedce870547083c05c1e1e73b90a9a2bf365:flutter/packages/flutter_tools/test/general.shard/build_system/targets/common_test.dart:generic-api-key:21
+
+# In the APK: Sentry's SDK verification token, published in every sentry-android-replay
+# build so a download can be checked; not a credential.
+META-INF/io/sentry/sentry-android-replay/verification.properties:generic-api-key:3

@@ -1,0 +1,9 @@
+# Native libraries the release APK may ship, by name in any ABI (fork/tools/release-check.sh).
+libapp.so                     # the app's own compiled Dart code
+libflutter.so                 # the Flutter engine
+libbarhopper_v3.so            # ML Kit's bundled barcode model (mobile_scanner); closed source, Google's
+libimage_processing_util_jni.so  # CameraX (mobile_scanner)
+libsurface_util_jni.so        # CameraX (mobile_scanner)
+libdartjni.so                 # package:jni, Dart-to-Java calls (sentry_flutter)
+libsentry.so                  # Sentry native crash reporting (opt-in crash reports)
+libsentry-android.so          # Sentry native crash reporting (opt-in crash reports)
