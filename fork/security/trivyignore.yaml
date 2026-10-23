@@ -1,0 +1,9 @@
+# Accepted Trivy findings (fork/tools/release-check.sh). Only where the vulnerable code can't
+# run in the shipped app, scoped to the version, with an expiry about three months out.
+vulnerabilities:
+  # rubyzip comes with fastlane (android/ and ios/Gemfile.lock), upstream's store-upload
+  # tooling. It is not in the app, and the fork does not run fastlane. Upstream's to bump.
+  - id: CVE-2026-85396
+    purls:
+      - pkg:gem/rubyzip@2.4.1
+    expired_at: 2027-01-31
