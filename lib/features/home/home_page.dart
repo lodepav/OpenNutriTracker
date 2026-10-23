@@ -40,6 +40,10 @@ import 'package:opennutritracker/fork/adaptive/adaptive_ui.dart';
 // [fork] S43 meal-plan
 import 'package:opennutritracker/fork/plan/plan_ui.dart';
 // [/fork]
+// [fork] S52 undo-delete
+import 'package:opennutritracker/fork/copy/copy_ui.dart';
+import 'package:opennutritracker/fork/undo/undo_delete.dart';
+// [/fork]
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -428,22 +432,11 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     BuildContext context,
     IntakeEntity intakeEntity,
   ) async {
-    final deleteIntake = await showDialog<bool>(
-      context: context,
-      builder: (context) => const DeleteDialog(),
-    );
-
-    if (deleteIntake != null) {
-      // The write can wait for the tracked-day lock (#1317), and Home
-      // reloads only once it is stored, so it does not show the old totals.
-      await _homeBloc.deleteIntakeItem(intakeEntity);
-      _homeBloc.add(const LoadItemsEvent());
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(S.of(context).itemDeletedSnackbar)),
-        );
-      }
-    }
+    // [fork] S52 undo-delete: deleted at once, with Undo on the snackbar,
+    // in place of upstream's confirmation dialog. The write can wait for the
+    // tracked-day lock (#1317), and Home reloads only once it is stored.
+    await onDeleteIntake(intakeEntity, null);
+    // [/fork]
   }
 
   void onIntakeItemDrag(bool isDragging) {
@@ -532,19 +525,21 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     IntakeEntity intake,
     TrackedDayEntity? trackedDayEntity,
   ) async {
+    // [fork] S52 undo-delete: the day it is taken from, for the undo
+    final day = await logicalToday();
+    // [/fork]
     await _homeBloc.deleteIntakeItem(intake);
     _homeBloc.add(const LoadItemsEvent());
+    // [fork] S52 undo-delete
+    if (mounted) DeletedEntries.show(context, intake, day);
+    // [/fork]
   }
 
   void _confirmDelete(BuildContext context, IntakeEntity intake) async {
-    bool? delete = await showDialog<bool>(
-      context: context,
-      builder: (context) => const DeleteDialog(),
-    );
-
-    if (delete == true) {
-      onDeleteIntake(intake, null);
-    }
+    // [fork] S52 undo-delete: deleted at once, with Undo on the snackbar,
+    // in place of upstream's confirmation dialog
+    onDeleteIntake(intake, null);
+    // [/fork]
     setState(() {
       _isIntakeDragging = false;
     });

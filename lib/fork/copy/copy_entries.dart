@@ -104,6 +104,16 @@ class CopyEntries {
     }
   }
 
+  /// Puts deleted [intakes] back as they were, ids and times included, on
+  /// the logical day [day] they were taken from (the delete's undo).
+  Future<void> restoreIntakes(List<IntakeEntity> intakes, DateTime day) async {
+    final target = _dateOf(day);
+    for (final intake in intakes) {
+      await _addIntake.addIntake(intake);
+      await _addToTrackedDay(intake, target);
+    }
+  }
+
   /// Every intake of the logical day [day], earliest first.
   Future<List<IntakeEntity>> intakesOf(DateTime day) async {
     final config = await _config.getConfig();

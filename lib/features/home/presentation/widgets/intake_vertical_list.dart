@@ -8,7 +8,9 @@ import 'package:opennutritracker/core/domain/usecase/get_profiles_usecase.dart';
 // import 'package:opennutritracker/core/presentation/widgets/copy_dialog.dart';
 // [/fork]
 import 'package:opennutritracker/core/presentation/widgets/copy_to_profile_sheet.dart';
-import 'package:opennutritracker/core/presentation/widgets/delete_all_dialog.dart';
+// [fork] S52 undo-delete: upstream's DeleteAllDialog import, unused since
+// import 'package:opennutritracker/core/presentation/widgets/delete_all_dialog.dart';
+// [/fork]
 import 'package:opennutritracker/core/presentation/widgets/intake_card.dart';
 import 'package:opennutritracker/core/presentation/widgets/placeholder_card.dart';
 import 'package:opennutritracker/core/presentation/widgets/share_qr_dialog.dart';
@@ -242,15 +244,13 @@ class _IntakeVerticalListState extends State<IntakeVerticalList> {
                           // [/fork]
                           break;
                         case VerticalListPopupMenuSelections.onDelete:
-                          final shouldDeleteIntakes = await showDialog<bool>(
-                              context: context,
-                              builder: (context) => const DeleteAllDialog());
-                          if (shouldDeleteIntakes != null) {
-                            for (IntakeEntity intake in intakes) {
-                              onDeleteIntake(intake, trackedDay);
-                            }
-                            break;
+                          // [fork] S52 undo-delete: deleted at once, in
+                          // place of upstream's DeleteAllDialog; each
+                          // delete's Undo bar gathers the meal into one
+                          for (IntakeEntity intake in intakes) {
+                            onDeleteIntake(intake, trackedDay);
                           }
+                          // [/fork]
                         case VerticalListPopupMenuSelections.onShare:
                           if (context.mounted) {
                             final code = SharedMealPayload.fromIntakeList(

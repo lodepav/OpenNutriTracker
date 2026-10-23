@@ -163,9 +163,9 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text(l10nEn.dialogDeleteLabel.toUpperCase()));
     await tester.pumpAndSettle();
-    expect(find.text(l10nEn.deleteTimeDialogTitle), findsOneWidget);
-    await tester.tap(find.text(l10nEn.dialogOKLabel));
-    await tester.pumpAndSettle();
+    // [fork] S52 undo-delete: no confirmation; Undo on the snackbar instead
+    expect(find.text(l10nEn.deleteTimeDialogTitle), findsNothing);
+    // [/fork]
 
     expect(deleted, [porridge]);
 
@@ -207,9 +207,9 @@ void main() {
       await tester.tap(find.text(l10nEn.dialogDeleteLabel.toUpperCase()));
       await tester.pumpAndSettle();
       // [/fork]
-      expect(find.text(l10nEn.deleteTimeDialogTitle), findsOneWidget);
-      await tester.tap(find.text(l10nEn.dialogOKLabel));
-      await tester.pumpAndSettle();
+      // [fork] S52 undo-delete: no confirmation; Undo on the snackbar instead
+      expect(find.text(l10nEn.deleteTimeDialogTitle), findsNothing);
+      // [/fork]
 
       expect(deleted, [DateTime(2026, 6, 15)]);
       expect(copied, isEmpty);

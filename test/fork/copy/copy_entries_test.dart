@@ -73,6 +73,17 @@ void main() {
     expect(days.kcal[DateTime(2026, 10, 23)], 2 * oats.totalKcal);
   });
 
+  test(
+    'a restore writes the entries back as they were, on their day',
+    () async {
+      final oats = at(intakeOf('oats', 50), DateTime(2026, 10, 22, 8, 30));
+      await copier().restoreIntakes([oats], DateTime(2026, 10, 22, 13));
+
+      expect(intakes.added, [oats]);
+      expect(days.kcal[DateTime(2026, 10, 22)], oats.totalKcal);
+    },
+  );
+
   test('with a 4 am day start, a 1 am entry stays after midnight of the '
       'target day', () async {
     config = _Config(4);
