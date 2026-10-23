@@ -288,8 +288,9 @@ the same gap). Pelmeni and khachapuri are in no table and go to D9.
   theoleuthardt #155, which restores from their WebDAV server; here it is upstream's Import of a
   backup file (an auto-backup zip from the folder works). Behind the policy checkbox, like "Try
   demo"; a backup with a profile records the policy and the crash-report choice and goes into
-  the app; one without keeps its data and the setup goes on. Not yet tried on the emulator;
-  theme and language from the backup may need a restart to show, as theoleuthardt notes.
+  the app (and out of demo mode); one without keeps its data and the setup goes on. Tried on the
+  emulator from a fresh install; the theme from the backup shows after a restart, as
+  theoleuthardt notes.
 - **Not done:** every profile in one backup (theoleuthardt #96; today each profile backs up
   when it is the active one), encrypting the zip.
 

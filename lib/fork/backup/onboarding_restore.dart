@@ -36,6 +36,9 @@ class OnboardingRestore {
     await config.setConfigHasAcceptedPolicy(true);
     await config.setConfigPolicyNoticeRevisionSeen(URLConst.policyRevision);
     await config.setConfigHasAcceptedAnonymousData(dataCollection);
+    // Left set when onboarding was reached from the demo's "Set up your
+    // profile"; restored data is the user's own.
+    await config.setConfigIsDemoData(false);
   }
 }
 
