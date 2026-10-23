@@ -41,4 +41,13 @@ void main() {
     expect(plan.daysToTarget, 700);
     expect(plan.projectedKg.length, maxPlanDays + 1);
   });
+
+  test('the trend moved over 7, 14 and 30 days, as far as it reaches', () {
+    final trend = [for (var i = 0; i < 20; i++) 90 - i * 0.1];
+    final changes = trendChanges(trend);
+    expect(changes.keys, [7, 14]);
+    expect(changes[7], closeTo(-0.7, 1e-9));
+    expect(changes[14], closeTo(-1.4, 1e-9));
+    expect(trendChanges(const [90]), isEmpty);
+  });
 }

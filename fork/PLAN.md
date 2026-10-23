@@ -444,6 +444,33 @@ and take kJ for kJ users (`lib/fork/units/energy_text.dart`).
   those days' goals. An empty day is not counted, so it does not read as a fast. Built from
   the days Trends already loads; nothing stored.
 
+**More from MacroFactor, round 3** (asked 2026-10-23, branch `fork/mf4`; a bundled generic-food
+database, Q4 (b), was offered and declined):
+- *Done:* suggestions by time of day (S19): a recent food's logs count in full within about
+  two hours of now's time of day, fading to 40% at the far side of the clock, on top of the
+  meal and the fading by age. A log at midnight (a day picked, no time) counts 70%.
+- *Done:* check-in history, in the target's settings with the adaptive target on: each
+  check-in newest first, with the target it set, the change from the one before, the
+  expenditure, and the proposal when it was edited. Read from the check-ins already kept.
+- *Done:* weight change in the goal planner (S40): how far the trend moved over the last 7, 14
+  and 30 days, and that as a pace a week; a span longer than the history is left out.
+- *Done:* nutrient explorer, "Nutrients" on the weekly report: over the Trends range, energy,
+  the macros and the diary panel's ten nutrients, each as a mean over the days logged against
+  those days' goals (else the panel's DRI for the profile), sugar, saturated fat and sodium as
+  limits. Each opens the foods it came from, the most first, and says how many foods had no
+  figure for it (Open Food Facts often has none), since the mean is then a floor.
+- *Done:* Trends arranged (S47): "Arrange cards" at the end of Trends reorders (drag) and hides
+  (switch) the cards below the range picker, upstream's and the fork's; Reset puts them back.
+  Per profile, not in the backup. A card added later keeps its place after its neighbour.
+- *Done:* timeline (S26), the clock icon by the diary's date: the day's foods by the hour they
+  were eaten, each with its energy and the running total, those with no time (logged to a
+  day, not a moment) first. Tapping one moves it to another time of the same logical day (a
+  time before the day's start is the next date); "Add at a time" opens the food search for the
+  meal that time suggests, logged at that time. Upstream's meals stay as they are; the
+  timeline is a second view of the same entries, not MacroFactor's mealless diary. A move
+  swaps the stored entry for one with the same id, since upstream's update changes only the
+  amount; the day's totals stand.
+
 Upstream: open an issue first, with the simulation results. The maintainer cites a source for
 every calculation; everything except the tuned weights has one, and those come with the
 simulation. If declined, it stays in the fork behind seams.

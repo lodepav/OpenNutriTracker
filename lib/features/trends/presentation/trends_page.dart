@@ -26,6 +26,7 @@ import 'package:opennutritracker/fork/health/steps_card.dart';
 import 'package:opennutritracker/fork/phases/phases_ui.dart';
 import 'package:opennutritracker/fork/photos/photo_card.dart';
 import 'package:opennutritracker/fork/report/weekly_report.dart';
+import 'package:opennutritracker/fork/report/trends_layout.dart';
 // [/fork]
 
 class TrendsPage extends StatefulWidget {
@@ -68,7 +69,11 @@ class _TrendsView extends StatelessWidget {
         if (state is! TrendsLoaded) {
           return const Center(child: CircularProgressIndicator());
         }
-        return ListView(
+        // [fork] S47 trends-layout: rebuilt when the cards are rearranged
+        return ValueListenableBuilder(
+          valueListenable: TrendsLayoutStore.current,
+          builder: (context, _, _) => ListView(
+        // [/fork]
           padding: const EdgeInsets.fromLTRB(
               Dimens.spacing16, Dimens.spacing8, Dimens.spacing16, Dimens.spacing32),
           children: [
@@ -80,47 +85,63 @@ class _TrendsView extends StatelessWidget {
             ),
             const SizedBox(height: Dimens.spacing16),
             _RangeSelector(rangeDays: state.rangeDays),
-            const SizedBox(height: Dimens.spacing16),
-            _CaloriesTrendCard(
-                days: state.days, rangeDays: state.windowDays, palette: palette),
-            const SizedBox(height: Dimens.spacing16),
-            _MacrosTrendCard(
-                days: state.days, rangeDays: state.windowDays, palette: palette),
-            const SizedBox(height: Dimens.spacing16),
-            _WaterTrendCard(
-              waterByDay: state.waterByDay,
-              goalMl: state.waterGoalMl,
-              rangeDays: state.windowDays,
-              palette: palette,
-            ),
-            const SizedBox(height: Dimens.spacing16),
-            _WeightCard(
-              entries: state.weight,
-              bodyWeightUnit: state.bodyWeightUnit,
-              targetWeightKg: state.targetWeightKg,
-              rangeDays: state.windowDays,
-              palette: palette,
-            ),
-            // [fork] S40 expenditure-card: estimated expenditure and balance,
-            // the weekly report, the goal planner, diet phases, body
+            // [fork] S47 trends-layout: the cards below in the user's order,
+            // less the hidden ones; upstream's each with its own gap above.
+            // After them S40's: estimated expenditure and balance, the
+            // weekly report, the goal planner, diet phases, body
             // measurements, steps and progress photos
-            ExpenditureTrendCard(rangeDays: state.windowDays, palette: palette),
-            WeeklyReportCard(
-              days: state.days,
-              rangeDays: state.windowDays,
-              palette: palette,
-            ),
-            GoalPlanCard(palette: palette, unit: state.bodyWeightUnit),
-            const DietPhasesCard(),
-            BodyMeasurementsCard(
-              rangeDays: state.windowDays,
-              palette: palette,
-              imperial: state.bodyWeightUnit != BodyWeightUnit.kg,
-            ),
-            StepsCard(rangeDays: state.windowDays, palette: palette),
-            const ProgressPhotosCard(),
+            ...arrangeTrendCards({
+              'calories': Padding(
+                padding: const EdgeInsets.only(top: Dimens.spacing16),
+                child: _CaloriesTrendCard(
+                    days: state.days, rangeDays: state.windowDays, palette: palette),
+              ),
+              'macros': Padding(
+                padding: const EdgeInsets.only(top: Dimens.spacing16),
+                child: _MacrosTrendCard(
+                    days: state.days, rangeDays: state.windowDays, palette: palette),
+              ),
+              'water': Padding(
+                padding: const EdgeInsets.only(top: Dimens.spacing16),
+                child: _WaterTrendCard(
+                  waterByDay: state.waterByDay,
+                  goalMl: state.waterGoalMl,
+                  rangeDays: state.windowDays,
+                  palette: palette,
+                ),
+              ),
+              'weight': Padding(
+                padding: const EdgeInsets.only(top: Dimens.spacing16),
+                child: _WeightCard(
+                  entries: state.weight,
+                  bodyWeightUnit: state.bodyWeightUnit,
+                  targetWeightKg: state.targetWeightKg,
+                  rangeDays: state.windowDays,
+                  palette: palette,
+                ),
+              ),
+              'expenditure':
+                  ExpenditureTrendCard(rangeDays: state.windowDays, palette: palette),
+              'weekly': WeeklyReportCard(
+                days: state.days,
+                rangeDays: state.windowDays,
+                palette: palette,
+              ),
+              'goalPlan': GoalPlanCard(palette: palette, unit: state.bodyWeightUnit),
+              'phases': const DietPhasesCard(),
+              'body': BodyMeasurementsCard(
+                rangeDays: state.windowDays,
+                palette: palette,
+                imperial: state.bodyWeightUnit != BodyWeightUnit.kg,
+              ),
+              'steps': StepsCard(rangeDays: state.windowDays, palette: palette),
+              'photos': const ProgressPhotosCard(),
+            }),
             // [/fork]
           ],
+        // [fork] S47 trends-layout
+        ),
+        // [/fork]
         );
       },
     );

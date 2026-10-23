@@ -307,6 +307,7 @@ void main() {
     expect(find.text('Goal planner'), findsOneWidget);
     expect(find.text('Pace: -0.50 kg a week'), findsOneWidget);
     expect(find.text('Use this pace'), findsNothing);
+    expect(find.text('Last 7 days'), findsOneWidget);
     final reached = find.byWidgetPredicate(
       (w) => w is Text && (w.data ?? '').contains('weeks)'),
     );

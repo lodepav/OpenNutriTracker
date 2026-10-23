@@ -77,6 +77,12 @@ class _GoalPlanCardState extends State<GoalPlanCard> {
     },
   };
 
+  String _change(double kg) {
+    final shown = widget.unit == BodyWeightUnit.kg ? kg : kg * 2.20462;
+    return '${shown > 0 ? '+' : ''}${shown.toStringAsFixed(1)} '
+        '${widget.unit == BodyWeightUnit.kg ? 'kg' : 'lb'}';
+  }
+
   String _paceText(double kgPerWeek) {
     final sign = kgPerWeek > 0 ? '+' : '';
     return switch (widget.unit) {
@@ -131,6 +137,13 @@ class _GoalPlanCardState extends State<GoalPlanCard> {
           Text('Goal planner', style: theme.textTheme.titleMedium),
           const SizedBox(height: Dimens.spacing8),
           _row('Trend weight', _weight(inputs.nowKg)),
+          for (final MapEntry(key: days, value: kg) in trendChanges(
+            past,
+          ).entries)
+            _row(
+              'Last $days days',
+              '${_change(kg)} (${_paceText(kg / days * 7)})',
+            ),
           _row('Target', target == null ? '—' : _weight(target)),
           const SizedBox(height: Dimens.spacing16),
           Semantics(

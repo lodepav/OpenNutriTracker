@@ -79,6 +79,54 @@ void main() {
     expect(_names(ranked), ['New', 'Old']);
   });
 
+  test('the foods usually logged near this time of day come first', () {
+    const snack = IntakeTypeEntity.snack;
+    IntakeEntity at(String food, int daysAgo, int hour) {
+      final log = _log(food, snack, daysAgo);
+      final day = log.dateTime;
+      return IntakeEntity(
+        id: '${log.id}-$hour',
+        unit: log.unit,
+        amount: log.amount,
+        type: snack,
+        meal: log.meal,
+        dateTime: DateTime(day.year, day.month, day.day, hour),
+      );
+    }
+
+    final history = [
+      for (var d = 1; d <= 5; d++) at('Apple', d, 10),
+      for (var d = 1; d <= 4; d++) at('Yoghurt', d, 21),
+    ];
+    final recents = [at('Apple', 1, 10), at('Yoghurt', 1, 21)];
+    List<String> rankedAt(int hour) => _names(
+      rankRecentsForMeal(
+        recents,
+        history,
+        snack,
+        DateTime(2026, 10, 23, hour, 30),
+      ),
+    );
+
+    expect(rankedAt(10), ['Apple', 'Yoghurt']);
+    expect(rankedAt(21), ['Yoghurt', 'Apple']);
+  });
+
+  test('time of day: full near now, fading to the far side of the clock', () {
+    final now = DateTime(2026, 10, 23, 23, 30);
+    expect(timeOfDayWeight(DateTime(2026, 10, 1, 23), now), closeTo(1, 0.02));
+    // Across midnight is near too.
+    expect(
+      timeOfDayWeight(DateTime(2026, 10, 1, 0, 30), now),
+      greaterThan(0.9),
+    );
+    expect(
+      timeOfDayWeight(DateTime(2026, 10, 1, 11, 30), now),
+      closeTo(0.4, 0.01),
+    );
+    expect(timeOfDayWeight(DateTime(2026, 10, 1), now), 0.7);
+  });
+
   test('with no meal the recents stay in upstream order', () async {
     expect(await recentsForMeal(recents, null), same(recents));
   });

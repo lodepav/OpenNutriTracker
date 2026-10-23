@@ -26,6 +26,18 @@ class GoalPlanInputs {
   double get nowKg => pastTrendKg.last;
 }
 
+/// The spans MacroFactor's weight insights compare, in days.
+const trendChangeDays = [7, 14, 30];
+
+/// How far the trend moved over each of [trendChangeDays], in kg, from
+/// [pastTrendKg] (oldest first, the last today); a span longer than the
+/// history is left out.
+Map<int, double> trendChanges(List<double> pastTrendKg) => {
+  for (final days in trendChangeDays)
+    if (pastTrendKg.length > days)
+      days: pastTrendKg.last - pastTrendKg[pastTrendKg.length - 1 - days],
+};
+
 /// The plan at one pace.
 class GoalPlan {
   /// From today on, one a day, at the pace until the target, then held.
