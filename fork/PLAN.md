@@ -368,6 +368,12 @@ loads the switches (S18). Emulator: two profiles kept their own goals (2,648 ada
 other on the formula) across switches both ways. *2026-10-23:* the check-in screens show
 and take kJ for kJ users (`lib/fork/units/energy_text.dart`).
 
+**More from MacroFactor** (asked 2026-10-23, branch `fork/mf2`):
+- *Done:* an Expenditure card on Trends (S40): the estimate each day over the picked range,
+  logged intake dashed beside it, and the mean balance of the logged days. It reads the
+  check-in's history and shows whether or not the adaptive target is on; nothing before the
+  first weigh-in.
+
 Upstream: open an issue first, with the simulation results. The maintainer cites a source for
 every calculation; everything except the tuned weights has one, and those come with the
 simulation. If declined, it stays in the fork behind seams.

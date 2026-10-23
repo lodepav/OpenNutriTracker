@@ -56,6 +56,7 @@ because upstream merged the feature) gets removed, and so does its row.
 | S37 | `lib/features/onboarding/presentation/onboarding_intro_page_body.dart` | "Restore a backup" (`RestoreBackupButton`, `lib/fork/backup/onboarding_restore.dart`) under "Try demo": upstream's JSON import from onboarding, behind the policy checkbox; a backup with a profile goes into the app. `test/features/onboarding/presentation/onboarding_intro_page_body_test.dart` taps the first `OutlinedButton` (seamed). | active |
 | S38 | `lib/features/settings/presentation/widgets/export_import_dialog.dart` | After an import, `applyRestoredSettings` (`lib/fork/backup/apply_restored_settings.dart`) shows the restored theme, accent, kilojoules and language without a restart; onboarding's restore (S37) calls it too. | active |
 | S39 | `lib/features/settings/presentation/bloc/export_import_bloc.dart` | The export zip is `openbite-export.zip`. | active |
+| S40 | `lib/features/trends/presentation/trends_page.dart` | The Expenditure card (`ExpenditureTrendCard`, `lib/fork/adaptive/expenditure_card.dart`) after the weight card. | active |
 
 ## Carried upstream changes
 

@@ -18,6 +18,9 @@ import 'package:opennutritracker/features/profile/presentation/widgets/weight_tr
 import 'package:opennutritracker/features/trends/presentation/bloc/trends_bloc.dart';
 import 'package:opennutritracker/features/trends/presentation/trends_calc.dart';
 import 'package:opennutritracker/generated/l10n.dart';
+// [fork] S40 expenditure-card
+import 'package:opennutritracker/fork/adaptive/expenditure_card.dart';
+// [/fork]
 
 class TrendsPage extends StatefulWidget {
   const TrendsPage({super.key});
@@ -92,6 +95,9 @@ class _TrendsView extends StatelessWidget {
               rangeDays: state.windowDays,
               palette: palette,
             ),
+            // [fork] S40 expenditure-card: estimated expenditure and balance
+            ExpenditureTrendCard(rangeDays: state.windowDays, palette: palette),
+            // [/fork]
           ],
         );
       },

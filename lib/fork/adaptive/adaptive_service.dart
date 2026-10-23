@@ -53,6 +53,80 @@ class AdaptiveService {
 
   Future<CheckIn> checkIn() async {
     final user = await _user.getUserData();
+    final days = (await _history()).days;
+    final rate = goalRateKgPerWeek(user);
+    final previous = await _store.lastCheckIn();
+    return computeCheckIn(
+      CheckInInputs(
+        days: days,
+        priorKcal: _priorKcal(user),
+        goalRateKgPerWeek: rate,
+        bodyFatPercent: bodyFatPercent(user),
+        targetWeightKg: user.targetWeightKg,
+        previousTargetKcal:
+            previous?.acceptedKcal ??
+            CalorieGoalCalc.getTotalKcalGoal(
+              user,
+              0,
+              caloriesTaperEnabled: user.caloriesTaperEnabled,
+            ),
+        taper: (adjustment, weight) => CalorieGoalCalc.applyTargetWeightTaper(
+          baseAdjustment: adjustment,
+          currentWeightKg: weight,
+          targetWeightKg: user.targetWeightKg,
+          goal: user.goal,
+          taperEnabled: user.caloriesTaperEnabled,
+        ),
+        settings: _settings(),
+      ),
+    );
+  }
+
+  /// Expenditure as estimated on each day since the first weigh-in in
+  /// the check-in's history, with what was logged; empty with no
+  /// weigh-in. The Trends card draws it whether or not the adaptive
+  /// target is on.
+  Future<List<ExpenditureDay>> expenditureHistory() async {
+    final user = await _user.getUserData();
+    final history = await _history();
+    if (history.days.every((d) => d.weightKg == null)) return const [];
+    final settings = _settings();
+    final estimates = estimateExpenditure(
+      history.days,
+      priorKcal: _priorKcal(user),
+      bodyFatPercent: bodyFatPercent(user),
+      settings: settings,
+    );
+    return [
+      for (final (i, day) in history.days.indexed)
+        ExpenditureDay(
+          date: DateTime(
+            history.first.year,
+            history.first.month,
+            history.first.day + i,
+          ),
+          expenditureKcal: estimates[i],
+          intakeKcal: (day.intakeKcal ?? 0) >= minLoggedKcal
+              ? day.intakeKcal
+              : null,
+          settled: i >= settings.warmupDays,
+        ),
+    ];
+  }
+
+  /// Upstream's formula expenditure × (1 + 4 × goal rate), MacroFactor's
+  /// prior.
+  static double _priorKcal(UserEntity user) =>
+      CalorieGoalCalc.getTdee(user) *
+      (1 + 4 * goalRateKgPerWeek(user) / user.weightKG);
+
+  static ExpenditureSettings _settings() => ExpenditureSettings(
+    window: AdaptiveStore.settings.value.cycleWindow ? 28 : 20,
+  );
+
+  /// The days a check-in reads, from the first weigh-in in the last
+  /// [_historyDays] (today when there is none) to today.
+  Future<({DateTime first, List<AdaptiveDay> days})> _history() async {
     final today = _today();
     final start = today.subtract(const Duration(days: _historyDays - 1));
     final weighIns = {
@@ -76,36 +150,7 @@ class AdaptiveService {
       )
         AdaptiveDay(intakeKcal: intakes[d], weightKg: weighIns[d]),
     ];
-
-    final rate = goalRateKgPerWeek(user);
-    final previous = await _store.lastCheckIn();
-    return computeCheckIn(
-      CheckInInputs(
-        days: days,
-        priorKcal:
-            CalorieGoalCalc.getTdee(user) * (1 + 4 * rate / user.weightKG),
-        goalRateKgPerWeek: rate,
-        bodyFatPercent: bodyFatPercent(user),
-        targetWeightKg: user.targetWeightKg,
-        previousTargetKcal:
-            previous?.acceptedKcal ??
-            CalorieGoalCalc.getTotalKcalGoal(
-              user,
-              0,
-              caloriesTaperEnabled: user.caloriesTaperEnabled,
-            ),
-        taper: (adjustment, weight) => CalorieGoalCalc.applyTargetWeightTaper(
-          baseAdjustment: adjustment,
-          currentWeightKg: weight,
-          targetWeightKg: user.targetWeightKg,
-          goal: user.goal,
-          taperEnabled: user.caloriesTaperEnabled,
-        ),
-        settings: ExpenditureSettings(
-          window: AdaptiveStore.settings.value.cycleWindow ? 28 : 20,
-        ),
-      ),
-    );
+    return (first: first, days: days);
   }
 
   Future<void> accept(CheckIn checkIn, double targetKcal) => _store.addCheckIn(
@@ -120,6 +165,26 @@ class AdaptiveService {
   DateTime _today() => _day(_now());
 
   static DateTime _day(DateTime t) => DateTime(t.year, t.month, t.day);
+}
+
+/// One day of [AdaptiveService.expenditureHistory].
+class ExpenditureDay {
+  final DateTime date;
+  final double expenditureKcal;
+
+  /// Null when the day was not logged (under [minLoggedKcal]).
+  final double? intakeKcal;
+
+  /// False in the first two weeks, while the estimate is still the
+  /// formula's prior.
+  final bool settled;
+
+  const ExpenditureDay({
+    required this.date,
+    required this.expenditureKcal,
+    this.intakeKcal,
+    required this.settled,
+  });
 }
 
 /// Seam S12: the last accepted target while the switch is on, else null

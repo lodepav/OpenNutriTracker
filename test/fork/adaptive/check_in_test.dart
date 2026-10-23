@@ -17,6 +17,8 @@ import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_ui.dart';
 import 'package:opennutritracker/fork/adaptive/check_in.dart';
 import 'package:opennutritracker/fork/adaptive/expenditure.dart';
+import 'package:opennutritracker/fork/adaptive/expenditure_card.dart';
+import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/fork/adaptive/trend_points.dart';
 import 'package:opennutritracker/core/utils/energy_unit_provider.dart';
 import 'package:provider/provider.dart';
@@ -49,6 +51,11 @@ class _Weights extends Fake implements GetWeightLogUsecase {
         weightKg: 90 - 0.5 * (59 - d) / 7,
       ),
   ];
+}
+
+class _NoWeights extends Fake implements GetWeightLogUsecase {
+  @override
+  Future<List<WeightLogEntity>> getAllEntries() async => [];
 }
 
 class _TrackedDays extends Fake implements GetTrackedDayUsecase {
@@ -272,6 +279,55 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(memory.records.single.acceptedKcal, closeTo(2000, 0.01));
+  });
+
+  group('expenditure history', () {
+    test(
+      'every day from the first weigh-in, settled after two weeks',
+      () async {
+        final days = await service.expenditureHistory();
+
+        expect(days.length, 60);
+        expect(days.last.date, _today);
+        expect(days.first.settled, isFalse);
+        expect(days.last.settled, isTrue);
+        expect(days.last.intakeKcal, 2000);
+        // Losing 0.5 kg a week on 2,000 kcal: expenditure is well above it.
+        expect(days.last.expenditureKcal, greaterThan(2300));
+      },
+    );
+
+    test('nothing without a weigh-in', () async {
+      final none = AdaptiveService(
+        _User(),
+        _NoWeights(),
+        _TrackedDays(),
+        store,
+        () => _today,
+      );
+      expect(await none.expenditureHistory(), isEmpty);
+    });
+
+    testWidgets('the Trends card shows expenditure and a deficit', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: ExpenditureTrendCard(
+              rangeDays: 30,
+              palette: AppPalette.light,
+              service: service,
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Expenditure'), findsOneWidget);
+      expect(find.text('Balance, logged days'), findsOneWidget);
+      expect(find.textContaining(RegExp(r'^-\d+ kcal a day$')), findsOneWidget);
+    });
   });
 }
 
