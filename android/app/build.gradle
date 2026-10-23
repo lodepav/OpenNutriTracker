@@ -156,3 +156,7 @@ dependencies {
     // channel from the main dispatcher.
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1'
 }
+
+// [fork] S20 identity: OpenBite's app id and launcher name (android/app/fork.gradle)
+apply from: 'fork.gradle'
+// [/fork]
