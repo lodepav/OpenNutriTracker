@@ -54,6 +54,9 @@ import 'package:opennutritracker/fork/reminders/reminders_ui.dart';
 // [fork] S23 auto-backup: the automatic backup's settings (phase 2)
 import 'package:opennutritracker/fork/backup/auto_backup_ui.dart';
 // [/fork]
+// [fork] S51 csv-export
+import 'package:opennutritracker/fork/export/csv_export.dart';
+// [/fork]
 // [fork] S32 off-contributions: the user's Open Food Facts account
 import 'package:opennutritracker/fork/off/off_contribution_ui.dart';
 // [/fork]
@@ -591,6 +594,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   // [fork] S23 auto-backup
                   const AutoBackupTile(),
+                  // [/fork]
+                  // [fork] S51 csv-export: the diary for a spreadsheet
+                  const CsvExportTile(),
                   // [/fork]
                   // [fork] S32 off-contributions
                   const OffAccountTile(),

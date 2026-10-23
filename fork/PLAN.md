@@ -502,6 +502,15 @@ database, Q4 (b), was offered and declined):
   until the app is opened. Native: `MacroWidgetProvider` (Kotlin, `RemoteViews`) and its
   resources in `android/app/src/fork`.
 
+**More from MacroFactor, round 5** (asked 2026-10-23, branch `fork/mf6`; quick tiles were
+offered and declined):
+- *Fixed:* the goal planner reloads when a pace is saved anywhere, a diet phase beginning
+  included (`paceChanges`), not only from its own button.
+- *Done:* diary as CSV (S51): "Export diary as CSV" in Settings' data section shares two files
+  for a spreadsheet: every food (logical date, time, meal, name, amount, energy, macros, fibre,
+  sugar, saturated fat, sodium) and every day (eaten against the goals, the weight logged, the
+  estimated expenditure). The full backup stays the way to move data; this is for reading it.
+
 Upstream: open an issue first, with the simulation results. The maintainer cites a source for
 every calculation; everything except the tuned weights has one, and those come with the
 simulation. If declined, it stays in the fork behind seams.
