@@ -20,6 +20,9 @@ import 'package:opennutritracker/features/home/presentation/bloc/home_bloc.dart'
 import 'package:opennutritracker/features/settings/presentation/bloc/settings_bloc.dart';
 import 'package:opennutritracker/features/settings/presentation/widgets/health_disclosure_dialog.dart';
 import 'package:opennutritracker/generated/l10n.dart';
+// [fork] S27 weight-import
+import 'package:opennutritracker/fork/health/weight_import_ui.dart';
+// [/fork]
 import 'package:url_launcher/url_launcher.dart';
 
 /// What the platform health store is called in front of the user. Both names
@@ -342,6 +345,9 @@ class _HealthSyncScreenState extends State<HealthSyncScreen> {
                   ),
                 ),
                 _buildMultiplierSection(context, s, textTheme, canEdit),
+                // [fork] S27 weight-import: its own switch and permission
+                WeightImportTile(available: _isAvailable && !_busy),
+                // [/fork]
                 Semantics(
                   identifier: 'health-sync-import-now',
                   child: ListTile(

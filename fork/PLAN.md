@@ -38,7 +38,7 @@ Both forks below are GPL-3.0 like ONT, so their code can be ported with credit.
 | Backlog: AI recipe builder | aeobrien "Phase 12" | Lowered |
 | Backlog: re-log yesterday | theoleuthardt: copy entries, meals or days to any date; upstream #842, #1265 | Lowered |
 | Backlog: OFF contributions | theoleuthardt: send scanned values and the label photo to OFF | Lowered |
-| Backlog: Health Connect weight | Upstream PR #1296 | Lowered: take it when merged |
+| Health Connect weight | Upstream PR #1296 | Done as our own take on it (S27); swap when upstream releases it |
 | Backlog: top contributors per nutrient | Upstream issue #1266, no code | Unchanged |
 
 Also seen: cattosmile identifies unpackaged food from a photo with a web-search fallback,
@@ -52,7 +52,7 @@ worth a look when phase 1c's breakdown is designed.
 - [x] GitHub Actions off on the fork (2026-10-19). Every upstream workflow needs upstream's secrets or acts on upstream's issues and Weblate, and none had ever run here, so Actions is switched off for the whole repo (Settings → Actions) rather than per workflow; that also covers workflows upstream adds later. The files stay: deleted files conflict on every upstream edit. Switch it back on, and disable workflows one by one, if the fork ever wants CI of its own.
 - [x] Fork identity (Q2, D8): **OpenBite**, app id `io.github.lodepav.openbite`, set in `android/app/fork.gradle` (S20). Launcher name only.
 - [ ] Release keystore and its pinned digest: the user makes it later (2026-10-23).
-- [ ] **Resume here (2026-10-23):** item 3, Health Connect weight. PR #1296 needs ~44 develop-only commits (tracked-day lock, #1419, #1383), so write a fork version on v2.4.0: `lib/fork/health/weight_import.dart` with a per-profile fork box recording what it filed per day (row changed = manual, row gone = deleted unless a newer reading); no new Hive fields; READ_WEIGHT seam in the manifest and `health_connect_permissions_test.dart`; switch in `health_sync_screen.dart`; fake readings for the emulator. Then #1266, 4, 5, 6, 8.
+- [x] Health Connect weight import (item 3, 2026-10-23): our own take on PR #1296 (`lib/fork/health/`, S27, S28). Each day gets its latest reading; a typed or edited weight is never replaced; a deleted day stays empty until a newer reading; the newest imported row becomes the current weight. Fake scale under `FORK_FAKE_AI`. Not done: the Play Health Connect declaration for READ_WEIGHT; real-device check in phase 4.
 - [ ] OpenBite in the app's own text (onboarding, About, share texts) and its own icon. Search the trademark registers before publishing under the name.
 - [ ] `.env`: placeholders stay; ONT's hosted backend isn't used (D11).
 
@@ -440,7 +440,7 @@ Lower: already built elsewhere (§0b), port or wait:
     Never D9 estimates, D12 breakdowns or recipes.
   - Upstream first (rule 1): it helps every ONT user. It adds a data-sharing path, so the
     privacy policy and `docs/play-data-safety.md` change with it.
-- Health Connect weight import: upstream PR #1296, take it when merged.
+- Health Connect weight import: done as our own take on PR #1296 (S27, S28); swap when upstream releases it.
 
 ## 6. Open questions for the user
 

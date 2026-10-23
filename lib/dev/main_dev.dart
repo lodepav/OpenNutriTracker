@@ -12,6 +12,8 @@ import 'package:opennutritracker/main.dart';
 // [fork] S18 dev-adaptive
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/fork/backup/auto_backup.dart';
+import 'package:opennutritracker/fork/health/weight_import.dart';
+import 'package:opennutritracker/fork/health/weight_import_ui.dart';
 // [/fork]
 
 /// Dev-only entry point: wipes the active profile and reseeds it with
@@ -37,6 +39,7 @@ Future<void> main() async {
   // [fork] S18 dev-adaptive: the trend and target switches, as main's S6
   await AdaptiveStore.start();
   await AutoBackup.start();
+  await WeightImport.start(refreshAfterWeightImport);
   // [/fork]
 
   final configRepo = locator<ConfigRepository>();
