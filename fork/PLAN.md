@@ -546,6 +546,10 @@ and declined):
   from the day, so importing twice adds nothing; they are left out of the recents and of the
   custom meals. The headers are checked against what MacroFactor, MyFitnessPal and Cronometer
   are known to write, which none documents: a real export of each is still to be tried.
+- *Checked live* (2026-10-23, emulator, fake AI): a drag to the bin, a meal's "Delete all" ("3
+  entries deleted") and a Diary delete each undo back to the same totals; a MacroFactor-style CSV
+  over June (already logged in the demo) keeps all 30 days and adds only the missing weigh-ins,
+  a copy dated a year earlier imports 30 days and 30 weigh-ins, and importing it again keeps all.
 
 Upstream: open an issue first, with the simulation results. The maintainer cites a source for
 every calculation; everything except the tuned weights has one, and those come with the

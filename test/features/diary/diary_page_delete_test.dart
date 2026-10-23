@@ -289,8 +289,10 @@ void main() {
     await settle(tester);
     await tester.tap(find.text(l10nEn.dialogDeleteLabel.toUpperCase()));
     await settle(tester);
-    await tester.tap(find.text(l10nEn.dialogOKLabel));
-    await settle(tester);
+    // [fork] S52 undo-delete: the delete happens without a confirmation
+    // await tester.tap(find.text(l10nEn.dialogOKLabel));
+    // await settle(tester);
+    // [/fork]
   }
 
   Future<void> deleteRide(WidgetTester tester) async {
@@ -384,13 +386,13 @@ void main() {
 
       await tester.longPress(find.text('Toast'));
       await settle(tester);
-      // [fork] S24 copy-anywhere: today's entries offer copy or delete
+      // [fork] S24 copy-anywhere: today's entries offer copy or delete;
+      // S52 undo-delete: no confirmation follows, so midnight passes while
+      // the choice is open
+      await passMidnight(tester);
       await tester.tap(find.text(l10nEn.dialogDeleteLabel.toUpperCase()));
       await settle(tester);
       // [/fork]
-      await passMidnight(tester);
-      await tester.tap(find.text(l10nEn.dialogOKLabel));
-      await settle(tester);
 
       expect(intakeBox.isEmpty, isTrue);
       expect(rowOf(today)!.caloriesTracked, 300, reason: 'was left at 500');

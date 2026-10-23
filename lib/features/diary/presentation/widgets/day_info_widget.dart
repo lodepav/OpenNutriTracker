@@ -476,6 +476,14 @@ class _DayInfoWidgetState extends State<DayInfoWidget> {
       builder: (context) => const CopyOrDeleteDialog(toPicker: true),
       // [/fork]
     );
+    // [fork] S52 undo-delete: the delete asks nothing more, so it goes ahead
+    // even when the day moved on while the choice was open and this day's
+    // view was rebuilt away (#1360); the Diary shows the Undo
+    if (copyOrDelete == false) {
+      widget.onDeleteIntake(intakeEntity, day);
+      return;
+    }
+    // [/fork]
     if (context.mounted) {
       if (copyOrDelete != null && !copyOrDelete) {
         showDeleteIntakeDialog(context, intakeEntity, day);
