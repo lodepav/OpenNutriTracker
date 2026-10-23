@@ -4,7 +4,9 @@ import 'package:opennutritracker/core/data/repository/recipe_repository.dart';
 import 'package:opennutritracker/core/domain/entity/intake_entity.dart';
 import 'package:opennutritracker/core/domain/entity/tracked_day_entity.dart';
 import 'package:opennutritracker/core/domain/usecase/get_profiles_usecase.dart';
-import 'package:opennutritracker/core/presentation/widgets/copy_dialog.dart';
+// [fork] S24-S25 copy-anywhere: upstream's CopyDialog import, unused since
+// import 'package:opennutritracker/core/presentation/widgets/copy_dialog.dart';
+// [/fork]
 import 'package:opennutritracker/core/presentation/widgets/copy_to_profile_sheet.dart';
 import 'package:opennutritracker/core/presentation/widgets/delete_all_dialog.dart';
 import 'package:opennutritracker/core/presentation/widgets/intake_card.dart';
@@ -25,6 +27,9 @@ import 'package:opennutritracker/features/home/domain/entity/shared_meal_payload
 import 'package:opennutritracker/features/home/presentation/bloc/home_bloc.dart';
 import 'package:opennutritracker/features/home/presentation/screens/import_meal_scanner_screen.dart';
 import 'package:opennutritracker/features/meal_detail/presentation/bloc/meal_detail_bloc.dart';
+// [fork] S25 copy-anywhere
+import 'package:opennutritracker/fork/copy/copy_ui.dart';
+// [/fork]
 import 'package:opennutritracker/generated/l10n.dart';
 
 class IntakeVerticalList extends StatefulWidget {
@@ -208,18 +213,14 @@ class _IntakeVerticalListState extends State<IntakeVerticalList> {
                         (VerticalListPopupMenuSelections selection) async {
                       switch (selection) {
                         case VerticalListPopupMenuSelections.onCopy:
-                          final copyDialog =
-                              CopyDialog(initialValue: widget.addMealType);
-                          final selectedMealType =
-                              await showDialog<AddMealType>(
-                                  context: context,
-                                  builder: (context) => copyDialog);
-                          if (selectedMealType != null) {
-                            for (IntakeEntity intake in widget.intakeList) {
-                              widget.onCopyIntakeCallback!(
-                                  intake, null, selectedMealType);
-                            }
-                          }
+                          // [fork] S25 copy-anywhere: any day and meal, one
+                          // entry after another (fork/copy)
+                          await copyIntakesWithDialog(
+                            context,
+                            widget.intakeList,
+                            widget.addMealType.getIntakeType(),
+                          );
+                          // [/fork]
                           break;
                         case VerticalListPopupMenuSelections.onDelete:
                           final shouldDeleteIntakes = await showDialog<bool>(
@@ -277,7 +278,9 @@ class _IntakeVerticalListState extends State<IntakeVerticalList> {
                               totalKcal > 0)
                             PopupMenuItem<VerticalListPopupMenuSelections>(
                                 value: VerticalListPopupMenuSelections.onCopy,
-                                child: Text(S.of(context).dialogCopyLabel)),
+                                // [fork] S25 copy-anywhere: it asks for the day
+                                child: const Text('Copy…')),
+                                // [/fork]
                           if (totalKcal > 0)
                             PopupMenuItem<VerticalListPopupMenuSelections>(
                                 value: VerticalListPopupMenuSelections.onDelete,

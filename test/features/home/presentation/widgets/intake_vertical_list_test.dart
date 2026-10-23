@@ -222,7 +222,9 @@ void main() {
       await tester.tap(find.byType(PopupMenuButton<VerticalListPopupMenuSelections>));
       await tester.pumpAndSettle();
 
-      expect(find.text(l10nEn.dialogCopyLabel), findsOneWidget);
+      // [fork] S25 copy-menu: the item reads Copy…, as it asks for the day
+      expect(find.text('Copy…'), findsOneWidget);
+      // [/fork]
       expect(find.text(l10nEn.deleteAllLabel), findsOneWidget);
       expect(find.text(l10nEn.shareMealLabel), findsOneWidget);
       expect(find.text(l10nEn.importMealLabel), findsOneWidget);
@@ -249,7 +251,7 @@ void main() {
 
       // Empty section: no Copy/Delete/Share — nothing to act on. Import is
       // always available so the user can scan a QR to populate the section.
-      expect(find.text(l10nEn.dialogCopyLabel), findsNothing);
+      expect(find.text('Copy…'), findsNothing); // [fork] S25 copy-menu
       expect(find.text(l10nEn.deleteAllLabel), findsNothing);
       expect(find.text(l10nEn.shareMealLabel), findsNothing);
       expect(find.text(l10nEn.importMealLabel), findsOneWidget);
