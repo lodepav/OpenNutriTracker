@@ -41,7 +41,7 @@ class FakeSteps implements StepSource {
   Future<int> stepsBetween(DateTime from, DateTime to) async {
     final day = DateTime(from.year, from.month, from.day);
     final full =
-        4000 + (day.year * 372 + day.month * 31 + day.day) * 7919 % 8000;
+        4000 + (day.year * 372 + day.month * 31 + day.day) * 2731 % 8000;
     final walked = (to.difference(day).inMinutes - 7 * 60).clamp(0, 15 * 60);
     return full * walked ~/ (15 * 60);
   }
