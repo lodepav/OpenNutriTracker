@@ -226,7 +226,9 @@ void main() {
 
     // Never reaches seedDemoData (which would need Hive); an unaccepted
     // policy routes the tap to the explanation instead.
-    await tester.tap(find.byType(OutlinedButton));
+    // [fork] S37 onboarding-restore: "Restore a backup" is outlined too
+    await tester.tap(find.byType(OutlinedButton).first);
+    // [/fork]
     await tester.pump();
 
     expect(

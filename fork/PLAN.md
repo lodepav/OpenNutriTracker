@@ -277,9 +277,21 @@ the same gap). Pelmeni and khachapuri are in no table and go to D9.
   upstream's Import.
 - Checked on the emulator: the zip carries the fork's files; importing it and backing up again
   gives the same counts (no duplicates).
+- *Done 2026-10-23:* the profile and the app settings in the backup (`user_profile.json`,
+  `app_settings.json` in `BackupExtras`), ported after review from theoleuthardt #95. Review:
+  sound (a whitelist of device-wide settings laid over the current config; consent, demo flag,
+  goals, health-import state and day boundary left out; enums by name; everything checked
+  before the first write). Changed here: the reminder switch stays out too (restored "on", the
+  reminder would not be scheduled on a new phone); no "also restore profile and settings"
+  switch, a restore restores them.
+- *Done 2026-10-23:* "Restore a backup" on onboarding's first page (S37, upstream #1355), after
+  theoleuthardt #155, which restores from their WebDAV server; here it is upstream's Import of a
+  backup file (an auto-backup zip from the folder works). Behind the policy checkbox, like "Try
+  demo"; a backup with a profile records the policy and the crash-report choice and goes into
+  the app; one without keeps its data and the setup goes on. Not yet tried on the emulator;
+  theme and language from the backup may need a restart to show, as theoleuthardt notes.
 - **Not done:** every profile in one backup (theoleuthardt #96; today each profile backs up
-  when it is the active one), the app settings (#95), restore from onboarding (#155, upstream
-  #1355), encrypting the zip.
+  when it is the active one), encrypting the zip.
 
 The app writes backup files; it syncs nothing itself (openGym-Hevier's D20). Upstream ONT has
 only a manual export (`export_data_usecase.dart`, a `FilePicker.saveFile` dialog each time), so

@@ -8,6 +8,9 @@ import 'package:opennutritracker/core/utils/demo/demo_seeder.dart';
 import 'package:opennutritracker/core/utils/navigation_options.dart';
 import 'package:opennutritracker/core/utils/url_const.dart';
 import 'package:opennutritracker/features/profile/presentation/utils/profile_switch_coordinator.dart';
+// [fork] S37 onboarding-restore
+import 'package:opennutritracker/fork/backup/onboarding_restore.dart';
+// [/fork]
 import 'package:opennutritracker/generated/l10n.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -153,6 +156,13 @@ class _OnboardingIntroPageBodyState extends State<OnboardingIntroPageBody> {
                   ),
                   textAlign: TextAlign.center,
                 ),
+                // [fork] S37 onboarding-restore: start from a backup (#1355)
+                const SizedBox(height: 12.0),
+                RestoreBackupButton(
+                  acceptedPolicy: _acceptedPolicy,
+                  acceptedDataCollection: _acceptedDataCollection,
+                ),
+                // [/fork]
                 const SizedBox(height: 8.0),
                 TextButton.icon(
                   onPressed: () => _openSources(context),

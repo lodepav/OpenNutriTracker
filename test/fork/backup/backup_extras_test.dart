@@ -4,9 +4,17 @@ import 'dart:io';
 import 'package:archive/archive.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
+import 'package:opennutritracker/core/data/data_source/config_data_source.dart';
 import 'package:opennutritracker/core/data/data_source/custom_meal_data_source.dart';
+import 'package:opennutritracker/core/data/data_source/user_data_source.dart';
+import 'package:opennutritracker/core/data/dbo/app_theme_dbo.dart';
+import 'package:opennutritracker/core/data/dbo/config_dbo.dart';
 import 'package:opennutritracker/core/data/dbo/fasting_session_dbo.dart';
 import 'package:opennutritracker/core/data/dbo/meal_dbo.dart';
+import 'package:opennutritracker/core/data/dbo/user_dbo.dart';
+import 'package:opennutritracker/core/data/dbo/user_gender_dbo.dart';
+import 'package:opennutritracker/core/data/dbo/user_pal_dbo.dart';
+import 'package:opennutritracker/core/data/dbo/user_weight_goal_dbo.dart';
 import 'package:opennutritracker/core/data/dbo/water_intake_dbo.dart';
 import 'package:opennutritracker/core/data/repository/water_intake_repository.dart';
 import 'package:opennutritracker/features/fasting/data/data_source/fasting_data_source.dart';
@@ -36,6 +44,8 @@ void main() {
     _Fasting fasting,
     _Meals meals,
     AdaptiveStore adaptive,
+    _User user,
+    _Config config,
   })
   device() {
     final name = 'adaptive${boxes++}';
@@ -43,12 +53,23 @@ void main() {
     final water = _Water();
     final fasting = _Fasting();
     final meals = _Meals();
+    final user = _User();
+    final config = _Config();
     return (
-      extras: BackupExtras(water, fasting, meals, adaptive: () => adaptive),
+      extras: BackupExtras(
+        water,
+        fasting,
+        meals,
+        adaptive: () => adaptive,
+        user: user,
+        config: config,
+      ),
       water: water,
       fasting: fasting,
       meals: meals,
       adaptive: adaptive,
+      user: user,
+      config: config,
     );
   }
 
@@ -105,6 +126,82 @@ void main() {
     },
   );
 
+  test('the profile and the app settings travel; consent, goals and the '
+      'reminder switch stay as they are', () async {
+    final from = device();
+    from.user.saved = UserDBO(
+      birthday: DateTime(1990, 5, 2),
+      heightCM: 180,
+      weightKG: 78.5,
+      gender: UserGenderDBO.nonBinary,
+      goal: UserWeightGoalDBO.loseWeight,
+      pal: UserPALDBO.active,
+      targetWeightKg: 72,
+      caloriesTaperEnabled: true,
+    );
+    from.config.saved
+      ..selectedAppTheme = AppThemeDBO.dark
+      ..usesKilojoules = true
+      ..selectedLocale = 'lv'
+      ..notificationsEnabled = true
+      ..dayStartOffsetHours = 4
+      ..userKcalAdjustment = -300;
+    final archive = Archive();
+    await from.extras.addTo(archive);
+    expect(BackupExtras.hasProfile(archive), isTrue);
+
+    final to = device();
+    to.config.saved
+      ..hasAcceptedPolicy = true
+      ..userKcalAdjustment = 100;
+    await to.extras.prepareRestore(archive)();
+
+    final user = to.user.saved!;
+    expect(user.birthday, DateTime(1990, 5, 2));
+    expect(user.weightKG, 78.5);
+    expect(user.gender, UserGenderDBO.nonBinary);
+    expect(user.pal, UserPALDBO.active);
+    expect(user.caloriesProfile, isNull);
+    expect(user.targetWeightKg, 72);
+    expect(user.caloriesTaperEnabled, isTrue);
+    final config = to.config.saved;
+    expect(config.selectedAppTheme, AppThemeDBO.dark);
+    expect(config.usesKilojoules, isTrue);
+    expect(config.selectedLocale, 'lv');
+    expect(config.hasAcceptedPolicy, isTrue);
+    expect(config.notificationsEnabled, isNull);
+    expect(config.dayStartOffsetHours, isNull);
+    expect(config.userKcalAdjustment, 100);
+  });
+
+  test('without a profile there is no profile file', () async {
+    final archive = Archive();
+    await device().extras.addTo(archive);
+    expect(BackupExtras.hasProfile(archive), isFalse);
+  });
+
+  test('an unknown gender or a setting of the wrong type fails before '
+      'anything is written', () {
+    for (final (name, json) in [
+      (
+        BackupExtras.profileFileName,
+        '{"birthday": "1990-05-02", "heightCM": 180, "weightKG": 78, '
+            '"gender": "robot", "goal": "loseWeight", "pal": "active"}',
+      ),
+      (BackupExtras.appSettingsFileName, '{"usesKilojoules": "yes"}'),
+      (BackupExtras.profileFileName, '{"heightCM": 1e400}'),
+    ]) {
+      final archive = Archive();
+      final bytes = utf8.encode(json);
+      archive.addFile(ArchiveFile(name, bytes.length, bytes));
+      expect(
+        () => device().extras.prepareRestore(archive),
+        throwsA(isA<ExportImportFailure>()),
+        reason: json,
+      );
+    }
+  });
+
   test('a malformed file fails before anything is written', () {
     final archive = Archive();
     final bytes = utf8.encode('{"not": "a list"}');
@@ -158,4 +255,27 @@ class _Meals extends Fake implements CustomMealDataSource {
       ..removeWhere((m) => (m.code ?? m.name) == (meal.code ?? meal.name))
       ..add(meal);
   }
+}
+
+class _User extends Fake implements UserDataSource {
+  UserDBO? saved;
+
+  @override
+  Future<bool> hasUserData() async => saved != null;
+
+  @override
+  Future<UserDBO> getUserData() async => saved!;
+
+  @override
+  Future<void> saveUserData(UserDBO user) async => saved = user;
+}
+
+class _Config extends Fake implements ConfigDataSource {
+  var saved = ConfigDBO.empty();
+
+  @override
+  Future<ConfigDBO> getConfig() async => ConfigDBO.fromJson(saved.toJson());
+
+  @override
+  Future<void> addConfig(ConfigDBO config) async => saved = config;
 }

@@ -573,7 +573,13 @@ Future<void> initLocator() async {
       locator(),
       locator(),
       // [fork] S21 backup
-      forkExtras: BackupExtras(locator(), locator(), locator()),
+      forkExtras: BackupExtras(
+        locator(),
+        locator(),
+        locator(),
+        user: locator(),
+        config: locator(),
+      ),
       // [/fork]
     ),
   );
@@ -602,7 +608,13 @@ Future<void> initLocator() async {
             keyedByOffsetMinutes: keyedByOffsetMinutes,
           ),
       // [fork] S21 backup
-      forkExtras: BackupExtras(locator(), locator(), locator()),
+      forkExtras: BackupExtras(
+        locator(),
+        locator(),
+        locator(),
+        user: locator(),
+        config: locator(),
+      ),
       // [/fork]
     ),
   );
