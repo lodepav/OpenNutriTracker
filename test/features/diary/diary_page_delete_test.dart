@@ -405,6 +405,10 @@ void main() {
       await tester.ensureVisible(find.byType(ActivityCard));
       await tester.longPress(find.byType(ActivityCard));
       await settle(tester);
+      // [fork] S24 copy-anywhere: today's activities offer copy or delete
+      await tester.tap(find.text(l10nEn.dialogDeleteLabel.toUpperCase()));
+      await settle(tester);
+      // [/fork]
       await passMidnight(tester);
       await tester.tap(find.text(l10nEn.dialogOKLabel));
       await settle(tester);
