@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 import 'package:opennutritracker/core/utils/ai_credential_storage.dart';
+import 'package:opennutritracker/fork/label/label_scan.dart';
 import 'package:opennutritracker/fork/leftovers/ai_leftovers.dart';
 
 /// `--dart-define=FORK_FAKE_AI=true`: emulator runs without a model key.
@@ -54,7 +55,9 @@ class FakeAiClient extends http.BaseClient {
     final body = jsonDecode(request.body) as Map<String, dynamic>;
     final system = '${body['system'] ?? ''}';
     final text = _userText(body);
-    final items = system.startsWith(leftoversPromptStart)
+    final items = system.startsWith(labelPromptStart)
+        ? _label
+        : system.startsWith(leftoversPromptStart)
         ? _leftovers(system)
         : system.contains('You break a dish into the ingredients')
         ? _breakdown(text)
@@ -114,6 +117,24 @@ class FakeAiClient extends http.BaseClient {
         {'query': query, 'quantity': grams, 'unit': 'g'},
     ];
   }
+
+  /// A photo of a label always reads as this crispbread's, with salt
+  /// already turned into sodium.
+  static const _label = [
+    {'query': 'name=Rye crispbread'},
+    {'query': 'brand=Finn Crisp'},
+    {'query': 'barcode=6410500090014'},
+    {'query': 'serving=10'},
+    {'query': 'energyKcal=350'},
+    {'query': 'fat=2.5'},
+    {'query': 'saturatedFat=0.3'},
+    {'query': 'carbs=58'},
+    {'query': 'sugars=1.2'},
+    {'query': 'fiber=19'},
+    {'query': 'protein=11'},
+    {'query': 'sodium=480'},
+    {'query': 'vitaminD=0'},
+  ];
 
   /// Half of every entry is left, except the last, which was all eaten.
   static List<Map<String, Object>> _leftovers(String system) {
