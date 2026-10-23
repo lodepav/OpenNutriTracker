@@ -359,8 +359,8 @@ dashed on the weight chart. *2026-10-23:* the adaptive state is per profile (an
 encrypted box per profile, seam S16), so a new profile and its onboarding start on the formula;
 "How your goal is calculated" says when the check-in's target is the goal (S17); the dev entry
 loads the switches (S18). Emulator: two profiles kept their own goals (2,648 adaptive, the
-other on the formula) across switches both ways. Not yet: energy shown in kJ for kJ users in
-the check-in screens.
+other on the formula) across switches both ways. *2026-10-23:* the check-in screens show
+and take kJ for kJ users (`lib/fork/units/energy_text.dart`).
 
 Upstream: open an issue first, with the simulation results. The maintainer cites a source for
 every calculation; everything except the tuned weights has one, and those come with the

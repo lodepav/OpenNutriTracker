@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/fork/adaptive/check_in.dart';
+import 'package:opennutritracker/fork/units/energy_text.dart';
 
 /// Seam S13: on home while a check-in is due; nothing otherwise.
 /// [onAccepted] refreshes what shows the target.
@@ -90,7 +91,7 @@ class _CheckInScreenState extends State<CheckInScreen> {
     super.dispose();
   }
 
-  static String _kcal(double value) => '${value.round()} kcal';
+  String _kcal(double value) => energyText(context, value);
 
   static String _kg(double value, {bool signed = false}) =>
       '${signed && value > 0 ? '+' : ''}${value.toStringAsFixed(1)} kg';
@@ -117,7 +118,7 @@ class _CheckInScreenState extends State<CheckInScreen> {
           return const Center(child: CircularProgressIndicator());
         }
         if (_target.text.isEmpty) {
-          _target.text = '${checkIn.proposedTargetKcal.round()}';
+          _target.text = '${energyValue(context, checkIn.proposedTargetKcal)}';
         }
         final theme = Theme.of(context);
         final capped =
@@ -153,7 +154,7 @@ class _CheckInScreenState extends State<CheckInScreen> {
             if (capped)
               Text(
                 'A check-in moves the target at most '
-                '${maxCheckInChangeKcal.round()} kcal; the full change '
+                '${_kcal(maxCheckInChangeKcal)}; the full change '
                 'would be ${_kcal(checkIn.uncappedTargetKcal)}.',
                 style: theme.textTheme.bodySmall,
               ),
@@ -172,16 +173,17 @@ class _CheckInScreenState extends State<CheckInScreen> {
               key: const ValueKey('check-in-target'),
               controller: _target,
               keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Daily target',
-                suffixText: 'kcal',
+                suffixText: energyUnit(context),
               ),
             ),
             const SizedBox(height: 16),
             FilledButton(
               onPressed: () async {
-                final target = double.tryParse(_target.text.trim());
-                if (target == null || target <= 0) return;
+                final typed = double.tryParse(_target.text.trim());
+                if (typed == null || typed <= 0) return;
+                final target = kcalFromInput(context, typed);
                 await widget.service.accept(checkIn, target);
                 if (context.mounted) Navigator.of(context).pop(true);
               },
@@ -308,11 +310,11 @@ class AdaptiveGoalNote extends StatelessWidget {
               last == null
                   ? 'Until the first weekly check-in, the formula below sets '
                         'your goal.'
-                  : 'Your goal is ${last.acceptedKcal.round()} kcal, set at '
+                  : 'Your goal is ${energyText(context, last.acceptedKcal)}, set at '
                         'the check-in on ${d!.year}-'
                         '${d.month.toString().padLeft(2, '0')}-'
                         '${d.day.toString().padLeft(2, '0')} from a measured '
-                        'expenditure of ${last.expenditureKcal.round()} kcal. '
+                        'expenditure of ${energyText(context, last.expenditureKcal)}. '
                         'The formula below is not used; logged activities '
                         'and the kcal adjustment are not added.',
             ),

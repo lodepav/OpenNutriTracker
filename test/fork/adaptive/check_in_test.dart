@@ -18,6 +18,8 @@ import 'package:opennutritracker/fork/adaptive/adaptive_ui.dart';
 import 'package:opennutritracker/fork/adaptive/check_in.dart';
 import 'package:opennutritracker/fork/adaptive/expenditure.dart';
 import 'package:opennutritracker/fork/adaptive/trend_points.dart';
+import 'package:opennutritracker/core/utils/energy_unit_provider.dart';
+import 'package:provider/provider.dart';
 
 final _today = DateTime(2026, 10, 22);
 
@@ -239,6 +241,37 @@ void main() {
     expect(refreshed, 1);
     expect(find.text('Weekly check-in'), findsNothing);
     expect(memory.records, hasLength(1));
+  });
+
+  testWidgets('a kilojoule user reads and types the target in kJ', (
+    tester,
+  ) async {
+    final memory = _MemoryStore();
+    final service = AdaptiveService(
+      _User(),
+      _Weights(),
+      _TrackedDays(),
+      memory,
+      () => _today.add(const Duration(hours: 9)),
+    );
+    await tester.pumpWidget(
+      ChangeNotifierProvider(
+        create: (_) => EnergyUnitProvider(usesKilojoules: true),
+        child: MaterialApp(home: CheckInScreen(service: service)),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining(' kJ'), findsWidgets);
+    expect(find.textContaining('kcal'), findsNothing);
+    await tester.enterText(
+      find.byKey(const ValueKey('check-in-target')),
+      '8368',
+    );
+    await tester.tap(find.text('Accept'));
+    await tester.pumpAndSettle();
+
+    expect(memory.records.single.acceptedKcal, closeTo(2000, 0.01));
   });
 }
 
