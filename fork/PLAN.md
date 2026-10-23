@@ -522,6 +522,12 @@ offered and declined):
   plan's protein, carbs and fat to its card's header, beside its energy.
 - *Already there:* recipe import from a link (S30, round 3): a link typed into bulk add is read
   from the page's schema.org Recipe data and saved with "Save all as a recipe". Nothing added.
+- *Found live and fixed:* a planned food was unreadable once the app restarted (Hive's nested
+  maps), so the plan card never showed after a restart; a fork box failing its checksum (an
+  emulator killed mid-write) hung the splash, and now opens upstream's recovery screen; the CSV
+  wrote 2472.98 as "2473.0". Confirmed on the emulator: both CSV files shared, "Edit goals" saved
+  and measured again, the plan card's macros, the trend weight widget placed and showing the
+  trend, and a cut beginning today moving the goal planner from -0.40 to -0.50 kg a week.
 
 Upstream: open an issue first, with the simulation results. The maintainer cites a source for
 every calculation; everything except the tuned weights has one, and those come with the
