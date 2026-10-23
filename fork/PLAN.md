@@ -452,6 +452,8 @@ database, Q4 (b), was offered and declined):
 - *Done:* check-in history, in the target's settings with the adaptive target on: each
   check-in newest first, with the target it set, the change from the one before, the
   expenditure, and the proposal when it was edited. Read from the check-ins already kept.
+- *Done:* weight change in the goal planner (S40): how far the trend moved over the last 7, 14
+  and 30 days, and that as a pace a week; a span longer than the history is left out.
 
 Upstream: open an issue first, with the simulation results. The maintainer cites a source for
 every calculation; everything except the tuned weights has one, and those come with the
