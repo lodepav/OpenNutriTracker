@@ -513,6 +513,11 @@ offered and declined):
 - *Done:* trend weight widget (S50): a second Android widget, "OpenBite trend weight", with
   the smoothed weight and its change over 7 days in the user's unit, written by Home beside the
   macros. Before the first weigh-in it asks for one.
+- *Done, mostly upstream's:* custom nutrient targets. Upstream's Settings → Nutrient goals
+  already sets the ten nutrients the explorer follows, but keeps each goal on the day it was set,
+  so the explorer measured earlier days of a range against the reference. Now a day keeping no
+  goal takes the latest set in the range, and the explorer's "Edit goals" opens upstream's
+  screen and measures again when it closes. Energy and the macros keep their own day's goal.
 
 Upstream: open an issue first, with the simulation results. The maintainer cites a source for
 every calculation; everything except the tuned weights has one, and those come with the
