@@ -14,6 +14,9 @@ import 'package:opennutritracker/features/meal_detail/util/meal_quantity_convert
 // [fork] S3 dish-breakdown: the ingredient-row swap (D12)
 import 'package:opennutritracker/fork/dish/dish_breakdown_rows.dart';
 // [/fork]
+// [fork] S61 recipe-count: a count past a recipe's batch is flagged
+import 'package:opennutritracker/fork/dish/recipe_count.dart';
+// [/fork]
 
 part 'bulk_add_event.dart';
 part 'bulk_add_state.dart';
@@ -169,7 +172,11 @@ class BulkAddRow extends Equatable {
           // Nothing stated, and nothing for the number to count — or a
           // portion named that the food's own rows do not hold, so the
           // count fell to the default row instead.
-          ? meal?.servingQuantity == null || portionKeyMissed
+          ? meal?.servingQuantity == null ||
+                portionKeyMissed ||
+                // [fork] S61 recipe-count: more servings than the batch makes
+                countExceedsRecipe(meal, resolved.parsed.quantity!)
+          // [/fork]
           // A unit *was* stated but this food cannot honour it, so
           // `effectiveUnit` quietly substituted another. Live probing found
           // a model answering "three slices of bread" as `3 serving`; on a
