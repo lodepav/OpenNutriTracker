@@ -3,19 +3,23 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
+import 'package:opennutritracker/fork/adaptive/check_in.dart';
 import 'package:opennutritracker/fork/reminders/reminders.dart';
 import 'package:opennutritracker/fork/reminders/reminders_ui.dart';
 
 class _Scheduler implements ReminderScheduler {
   final scheduled = <ReminderKind, PlannedReminder>{};
+  final bodies = <ReminderKind, String?>{};
   var granted = true;
 
   @override
   Future<bool> requestPermission() async => granted;
 
   @override
-  Future<void> schedule(PlannedReminder reminder) async =>
-      scheduled[reminder.kind] = reminder;
+  Future<void> schedule(PlannedReminder reminder, {String? body}) async {
+    scheduled[reminder.kind] = reminder;
+    bodies[reminder.kind] = body;
+  }
 
   @override
   Future<void> cancel(ReminderKind kind) async => scheduled.remove(kind);
@@ -106,11 +110,58 @@ void main() {
     });
   });
 
+  group('check-in message', () {
+    CheckIn checkIn({int logged = 6, double target = 2140}) => CheckIn(
+      averageIntakeKcal: 2100,
+      loggedDays: logged,
+      weighIns: 5,
+      trendKg: 80,
+      weekChangeKg: -0.4,
+      expenditureKcal: 2640.4,
+      uncappedTargetKcal: target,
+      proposedTargetKcal: target,
+      daysToTargetAtGoal: null,
+      daysToTargetAtTrend: null,
+    );
+
+    test('expenditure, the new target and its change', () {
+      expect(
+        checkInMessage(checkIn(), previousKcal: 2200),
+        'Expenditure 2,640 kcal, new target 2,140 kcal, \u221260. '
+        'Open OpenBite to confirm it.',
+      );
+      expect(
+        checkInMessage(checkIn(target: 2250), previousKcal: 2200),
+        startsWith('Expenditure 2,640 kcal, new target 2,250 kcal, +50.'),
+      );
+      expect(
+        checkInMessage(checkIn(), previousKcal: 2140),
+        contains('2,140 kcal, no change.'),
+      );
+    });
+
+    test('the first check-in has no change; kilojoules when chosen', () {
+      expect(
+        checkInMessage(checkIn()),
+        startsWith('Expenditure 2,640 kcal, new target 2,140 kcal. '),
+      );
+      expect(
+        checkInMessage(checkIn(), previousKcal: 2200, kilojoules: true),
+        startsWith('Expenditure 11,047 kJ, new target 8,954 kJ, \u2212251.'),
+      );
+    });
+
+    test('too little data gives no result', () {
+      expect(checkInMessage(checkIn(logged: 3), previousKcal: 2200), isNull);
+    });
+  });
+
   group('reminders', () {
     late Directory dir;
     late _Scheduler scheduler;
     var weighed = false;
     DateTime? due;
+    String? Function() result = () => null;
 
     setUp(() async {
       dir = await Directory.systemTemp.createTemp('reminders');
@@ -118,6 +169,7 @@ void main() {
       scheduler = _Scheduler();
       weighed = false;
       due = DateTime(2026, 10, 27);
+      result = () => null;
     });
 
     tearDown(() async {
@@ -130,8 +182,26 @@ void main() {
       box: () => Hive.openBox<dynamic>('reminders'),
       weighed: (_) async => weighed,
       checkInDueDay: () async => due,
+      checkInResult: () async => result(),
       clock: () => _now,
     );
+
+    test('the check-in tells its result; the weigh-in its own text; a failed '
+        'estimate leaves the check-in its own', () async {
+      result = () => 'Expenditure 2,640 kcal';
+      final r = reminders();
+      await r.set(ReminderKind.weighIn, _morning);
+      await r.set(ReminderKind.checkIn, _nine);
+      expect(scheduler.bodies, {
+        ReminderKind.weighIn: null,
+        ReminderKind.checkIn: 'Expenditure 2,640 kcal',
+      });
+
+      result = () => throw StateError('no profile');
+      await r.replan();
+      expect(scheduler.bodies[ReminderKind.checkIn], isNull);
+      expect(scheduler.scheduled.keys, contains(ReminderKind.checkIn));
+    });
 
     test('turned on, kept, scheduled; turned off, cancelled', () async {
       final r = reminders();

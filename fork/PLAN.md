@@ -478,6 +478,12 @@ database, Q4 (b), was offered and declined):
   reading, under the weight import's rules: a value typed by the user is never replaced, and a
   deleted day stays empty until a newer reading. The measured value then feeds the
   expenditure estimate and lean mass, as a typed one does.
+- *Done:* check-in result in the reminder: the check-in notification tells what the week's
+  data gives, "Expenditure 2,640 kcal, new target 2,140 kcal, −60", in the user's energy unit,
+  the change against the target the last check-in set. Worked out whenever the reminders are
+  planned again (the app opening or leaving), so it reads the data as of the last use; with
+  too little data (under 4 logged days or no weigh-in) or a failed estimate it keeps its own
+  text. Confirming still happens in the app.
 
 Upstream: open an issue first, with the simulation results. The maintainer cites a source for
 every calculation; everything except the tuned weights has one, and those come with the
