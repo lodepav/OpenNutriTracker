@@ -58,6 +58,7 @@ because upstream merged the feature) gets removed, and so does its row.
 | S39 | `lib/features/settings/presentation/bloc/export_import_bloc.dart` | The export zip is `openbite-export.zip`. | active |
 | S40 | `lib/features/trends/presentation/trends_page.dart` | The Expenditure card (`ExpenditureTrendCard`, `lib/fork/adaptive/expenditure_card.dart`) and the goal planner (`GoalPlanCard`, `goal_plan_card.dart`) after the weight card. | active |
 | S41 | `lib/core/domain/usecase/get_macro_goal_usecase.dart`, `lib/core/domain/usecase/send_intake_to_profiles_usecase.dart` | A fixed target set in grams gives the macro goals, scaled to the day's kcal goal so a weekday shift moves them too (`forkMacroGoal`); else upstream's percentages. Like S12, an optional constructor argument takes another profile's store, which the copy to other profiles passes. | active |
+| S42 | `lib/features/meal_detail/presentation/widgets/meal_detail_bottom_sheet.dart`, `lib/features/add_meal/presentation/add_meal_screen.dart` | The food basket (`lib/fork/basket/`): "Add to basket" under the meal detail's Add puts the food in at the chosen amount and goes back to search; the add screen's `bottomNavigationBar` shows the basket and opens its review, whose "Log all" writes each through upstream's `addIntake`. Two blocks in each: the import and the use. | active |
 
 ## Carried upstream changes
 

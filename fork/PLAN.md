@@ -385,6 +385,11 @@ and take kJ for kJ users (`lib/fork/units/energy_text.dart`).
   reached at that pace and at the trend's own, and the daily target the pace needs at the
   measured expenditure (before the check-in's cap and upstream's taper). "Use this pace" saves
   it to the profile through upstream's profile update, the goal following its sign.
+- *Done:* a food basket (MacroFactor's multi-add, S42): "Add to basket" on a food's page takes
+  it at the chosen amount and returns to search; a bar under the results counts the basket and
+  its energy, and its review removes foods or logs them all, each through upstream's add.
+  One meal of one day at a time: picking for another empties it. Upstream's own multi-food
+  path stays the typed bulk add.
 
 Upstream: open an issue first, with the simulation results. The maintainer cites a source for
 every calculation; everything except the tuned weights has one, and those come with the

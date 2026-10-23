@@ -26,6 +26,9 @@ import 'package:opennutritracker/features/edit_meal/presentation/edit_meal_scree
 import 'package:opennutritracker/features/scanner/scanner_screen.dart';
 import 'package:opennutritracker/features/scanner/util/barcode_check_digit.dart';
 import 'package:opennutritracker/generated/l10n.dart';
+// [fork] S42 food-basket
+import 'package:opennutritracker/fork/basket/basket_ui.dart';
+// [/fork]
 
 class AddMealScreen extends StatefulWidget {
   const AddMealScreen({super.key});
@@ -93,6 +96,12 @@ class _AddMealScreenState extends State<AddMealScreen> {
       // In landscape the space above the keyboard is shorter than the pinned
       // search bar + tab bar, which otherwise overflows (issue #165 testing).
       resizeToAvoidBottomInset: false,
+      // [fork] S42 food-basket: the foods picked so far, and "Log all"
+      bottomNavigationBar: BasketBar(
+        type: _mealType.getIntakeType(),
+        day: _day,
+      ),
+      // [/fork]
       appBar: AppBar(
         title: Text(_mealType.getTypeName(context)),
         actions: [
