@@ -93,11 +93,17 @@ class AdaptiveStore {
 
   /// Run at start-up (seam S6): loads [settings] and reloads them when the
   /// profile switches.
+  /// The box of the profile switched away from is closed, as upstream
+  /// closes that profile's own.
   static Future<void> start() async {
+    var suffix = _activeSuffix();
     await AdaptiveStore().load();
-    locator<HiveDBProvider>().addListener(
-      () => unawaited(AdaptiveStore().load()),
-    );
+    locator<HiveDBProvider>().addListener(() async {
+      final previous = HiveDBProvider.boxNameFor(boxName, suffix);
+      suffix = _activeSuffix();
+      if (Hive.isBoxOpen(previous)) await Hive.box<dynamic>(previous).close();
+      await AdaptiveStore().load();
+    });
   }
 
   /// Closes another profile's box once read, as upstream closes the rest
