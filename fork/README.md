@@ -21,7 +21,9 @@ Everything that belongs only to the fork lives in this `fork/` folder or in `lib
 
 1. **Upstream first.** A feature that any ONT user would want goes to upstream as a pull
    request from a branch off `develop`. The fork carries it only until upstream merges it.
-   Every merged PR is one less divergence to carry.
+   Every merged PR is one less divergence to carry. Nothing waits for upstream, though (D15):
+   the fork carries upstream's work before its release and swaps to the release when it lands,
+   and code from other forks is reviewed before it is ported.
 2. **Add, don't edit.** Fork-only behaviour goes in new files under `lib/fork/`. An upstream
    file is edited only at a *seam*: a short hook between `[fork]` markers, listed in
    [SEAMS.md](SEAMS.md).

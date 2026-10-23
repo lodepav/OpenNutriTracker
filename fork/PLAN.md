@@ -21,10 +21,10 @@ Checked on `develop` at 1bc934b1 (2026-10-17). `fork/main` is based on the `v2.4
 ## 0b. Built elsewhere already (checked 2026-10-22)
 
 Upstream `develop`, its open PRs, its roadmap (#1279) and the 70 forks pushed since mid-August,
-checked for anything in this plan. **Rule:** a plan item that someone has already built drops in
-priority, since we can port or wait for it, unless it is crucial. Crucial so far: backup (phase
-2), because without it a lost phone loses the diary. Both forks below are GPL-3.0 like ONT, so
-their code can be ported with credit.
+checked for anything in this plan. **Rule (D15, 2026-10-23, replaces "port or wait"):**
+nothing waits. Upstream's work is carried now and swapped for its release; another fork's is
+reviewed (sound, to standard, as simple as it can be), then ported and configured the fork's way.
+Both forks below are GPL-3.0 like ONT, so their code can be ported with credit.
 
 | Plan item | Where it exists | Effect |
 |---|---|---|
@@ -262,8 +262,9 @@ the same gap). Pelmeni and khachapuri are in no table and go to D9.
 
 ## 3. Phase 2 — Backup to Google Drive (D10)
 
-**Status 2026-10-22: waiting.** `v2.5.0` is not tagged yet (latest upstream release v2.4.0), and
-step 6 asks on #1356 first, which is the user's call. Phase 3 went ahead.
+**Status 2026-10-23: unblocked by D15.** Carry the import fixes (#1369, #1398, #1381) from
+`develop` now instead of waiting for `v2.5.0`, and build it without asking on #1356 first (the
+question goes upstream with the PRs, after the live tests).
 
 The app writes backup files; it syncs nothing itself (openGym-Hevier's D20). Upstream ONT has
 only a manual export (`export_data_usecase.dart`, a `FilePicker.saveFile` dialog each time), so
