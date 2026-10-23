@@ -401,6 +401,11 @@ and take kJ for kJ users (`lib/fork/units/energy_text.dart`).
   latest body fat % of the past 90 days replaces Deurenberg's estimate in the expenditure
   model and the goal planner (MacroFactor uses a measured one too). Per profile, in the
   backup as `fork_measurements.json`.
+- *Done:* progress photos on Trends (S40): taken or picked (scaled to 1440 px, JPEG 85), a
+  strip newest first, each opening to view or delete, and a compare of any two side by side,
+  the oldest and newest to start. The images stay in the app's documents folder
+  (`progress_photos/<id>.jpg`, private to the app), the index per profile in the fork's box;
+  the backup carries `fork_photos.json` and the images, another profile's inside its folder.
 
 Upstream: open an issue first, with the simulation results. The maintainer cites a source for
 every calculation; everything except the tuned weights has one, and those come with the

@@ -46,6 +46,7 @@ import 'package:opennutritracker/features/settings/domain/usecase/export_data_us
 import 'package:opennutritracker/features/settings/domain/usecase/import_data_usecase.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/fork/body/measurement_store.dart';
+import 'package:opennutritracker/fork/photos/photo_store.dart';
 import 'package:opennutritracker/fork/plan/plan_store.dart';
 import 'package:opennutritracker/fork/backup/backup_extras.dart';
 
@@ -92,6 +93,7 @@ class ProfilesBackup {
     BackupExtras.adaptiveFileName,
     BackupExtras.planFileName,
     BackupExtras.measurementsFileName,
+    BackupExtras.photosFileName,
     BackupExtras.profileFileName,
   };
 
@@ -139,7 +141,8 @@ class ProfilesBackup {
         );
         for (final file in folder.files) {
           final bytes = file.content as List<int>;
-          if (profileFileNames.contains(file.name)) {
+          if (profileFileNames.contains(file.name) ||
+              file.name.startsWith('${PhotoStore.dir}/')) {
             archive.addFile(
               ArchiveFile.bytes(
                 '$folderPrefix${profile.id}/${file.name}',
@@ -288,6 +291,9 @@ class ProfilesBackup {
       () => open<dynamic>(AdaptiveStore.boxName, profile.boxSuffix),
     ),
     measurements: () => MeasurementStore(
+      () => open<dynamic>(AdaptiveStore.boxName, profile.boxSuffix),
+    ),
+    photos: () => PhotoStore(
       () => open<dynamic>(AdaptiveStore.boxName, profile.boxSuffix),
     ),
     user: UserDataSource(scope),
