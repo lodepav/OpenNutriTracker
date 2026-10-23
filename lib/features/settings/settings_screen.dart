@@ -44,6 +44,9 @@ import 'package:opennutritracker/fork/leftovers/meal_photo_cache.dart';
 // [fork] S14 adaptive-settings: the trend and target switches (D13)
 import 'package:opennutritracker/fork/adaptive/adaptive_ui.dart';
 // [/fork]
+// [fork] S23 auto-backup: the automatic backup's settings (phase 2)
+import 'package:opennutritracker/fork/backup/auto_backup_ui.dart';
+// [/fork]
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
@@ -537,6 +540,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     title: S.of(context).exportImportAppDataLabel,
                     onTap: () => _showExportImportDialog(context),
                   ),
+                  // [fork] S23 auto-backup
+                  const AutoBackupTile(),
+                  // [/fork]
                   _SettingsTile(
                     palette: palette,
                     icon: Icons.cached_rounded,

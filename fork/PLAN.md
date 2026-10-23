@@ -262,9 +262,22 @@ the same gap). Pelmeni and khachapuri are in no table and go to D9.
 
 ## 3. Phase 2 — Backup to Google Drive (D10)
 
-**Status 2026-10-23: unblocked by D15.** Carry the import fixes (#1369, #1398, #1381) from
-`develop` now instead of waiting for `v2.5.0`, and build it without asking on #1356 first (the
-question goes upstream with the PRs, after the live tests).
+**Status 2026-10-23: done** (`fork/backup`), unblocked by D15.
+- Upstream's import fixes (#1369, #1381, #1398) cherry-picked from `develop`, to drop at v2.5.0.
+- **Ported after review** from theoleuthardt `personal` (#93, #94, #97): water, fasting sessions
+  and custom meals in the backup, as `BackupExtras` (S21), plus the adaptive switches and
+  check-ins. Review: sound (everything decoded before the first write, writes by id, every file
+  optional); dropped their profile and app-settings files (#95, #96: separate work) and their
+  `AutoBackupService`'s WebDAV and iOS targets, keeping its shape (one shared run, rotation by
+  name, errors stored). Their folder backup (#156) is iOS only; the Android one is ours (S22).
+- Settings → Automatic backup (S23): a folder picked once; on leaving the app, at most hourly,
+  `openbite-YYYY-MM-DD.zip` (another profile: `openbite-<tag>-…`), newest 14 kept. Restore is
+  upstream's Import.
+- Checked on the emulator: the zip carries the fork's files; importing it and backing up again
+  gives the same counts (no duplicates).
+- **Not done:** every profile in one backup (theoleuthardt #96; today each profile backs up
+  when it is the active one), the app settings (#95), restore from onboarding (#155, upstream
+  #1355), encrypting the zip.
 
 The app writes backup files; it syncs nothing itself (openGym-Hevier's D20). Upstream ONT has
 only a manual export (`export_data_usecase.dart`, a `FilePicker.saveFile` dialog each time), so

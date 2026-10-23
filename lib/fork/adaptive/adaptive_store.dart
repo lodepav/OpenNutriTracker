@@ -146,6 +146,17 @@ class AdaptiveStore {
     return all.isEmpty ? null : all.last;
   }
 
+  /// Adds [records] from a backup; one on a date already here replaces it.
+  Future<void> mergeCheckIns(List<CheckInRecord> records) async {
+    final byDate = {
+      for (final r in [...await history(), ...records])
+        r.date.toIso8601String(): r,
+    };
+    final merged = byDate.values.toList()
+      ..sort((a, b) => a.date.compareTo(b.date));
+    await (await _box()).put('checkIns', [for (final r in merged) r.toJson()]);
+  }
+
   Future<void> addCheckIn(CheckInRecord record) async {
     final box = await _box();
     await box.put('checkIns', [
