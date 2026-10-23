@@ -19,7 +19,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:opennutritracker/features/add_meal/data/model_meal_photo_interpreter.dart';
 import 'package:opennutritracker/features/add_meal/data/model_meal_text_interpreter.dart';
-import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_nutriments_entity.dart';
 import 'package:opennutritracker/features/add_meal/domain/meal_items_api.dart';
 import 'package:opennutritracker/features/add_meal/domain/meal_photo_interpreter.dart';
@@ -108,6 +107,7 @@ void main() {
         var waiting = 0;
         out.writeln('\n## $spec\n');
         var typedOk = 0, photoOk = 0, photoRecipes = 0, unmatchedAll = 0;
+        final rows = <String, String>{};
         final kcalOff = <double>[];
 
         out
@@ -196,13 +196,9 @@ void main() {
               system: BreakDownDishUseCase.systemPrompt,
             );
             for (final item in reply.items) {
-              final row = (await foods.fetchSearchWordResults(
-                item.query,
-                forResolution: true,
-              )).firstOrNull;
-              final n = row == null
-                  ? null
-                  : MealEntity.fromSpFood(row).nutriments;
+              final row = await tableMatch(foods, item.query);
+              final n = row?.nutriments;
+              rows[item.query] = row?.name ?? '*none*';
               if (n == null || item.quantity == null) {
                 unmatched.add(item.query);
                 continue;
@@ -228,6 +224,10 @@ void main() {
             '${(page['fat_g'] as num).round()}) '
             '| ${unmatched.join('; ')} |',
           );
+        }
+        out.writeln('\n### Ingredient → table row\n');
+        for (final MapEntry(:key, :value) in rows.entries) {
+          out.writeln('- $key → $value');
         }
         kcalOff.sort();
         summary.writeln(

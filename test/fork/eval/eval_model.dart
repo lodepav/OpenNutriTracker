@@ -3,7 +3,10 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:opennutritracker/features/add_meal/data/anthropic_meal_items_api.dart';
 import 'package:opennutritracker/features/add_meal/data/openai_compatible_meal_items_api.dart';
+import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dart';
 import 'package:opennutritracker/features/add_meal/domain/meal_items_api.dart';
+import 'package:opennutritracker/features/add_meal/util/meal_relevance_ranker.dart';
+import 'package:opennutritracker/features/add_meal/util/resolver_relevance.dart';
 import 'package:opennutritracker/fork/dev/replay_ai.dart';
 import 'package:opennutritracker/fork/food/local_food_data_source.dart';
 
@@ -75,6 +78,19 @@ Future<LocalFoodDataSource> loadFoodTable() async {
     loadTable: () async => table,
     readToggles: () async => null,
   );
+}
+
+/// The table row the app's resolver would pick for [query]: the same
+/// search, merge and ranking (`ResolveParsedMealsUseCase`), without Open
+/// Food Facts, which a breakdown passes over for a table row anyway
+/// (`preferTableRow`).
+Future<MealEntity?> tableMatch(LocalFoodDataSource foods, String query) async {
+  final rows = await foods.fetchSearchWordResults(query, forResolution: true);
+  final meals = [for (final row in rows) MealEntity.fromSpFood(row)];
+  return rankForResolution(
+    mergeAndRankMeals(const [], meals, query),
+    query,
+  ).firstOrNull;
 }
 
 Directory evalRunDir(String suffix) => Directory(

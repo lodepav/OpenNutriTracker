@@ -77,10 +77,7 @@ void main() {
             );
             final items = <_Item>[];
             for (final item in parsed.items) {
-              final top = (await foods.fetchSearchWordResults(
-                item.query,
-                forResolution: true,
-              )).firstOrNull;
+              final top = await tableMatch(foods, item.query);
               items.add(
                 _Item(item.query, item.quantity, item.portion, top?.name),
               );
