@@ -20,6 +20,9 @@ import 'package:opennutritracker/generated/l10n.dart';
 import 'package:opennutritracker/fork/basket/basket.dart';
 import 'package:opennutritracker/fork/basket/basket_ui.dart';
 // [/fork]
+// [fork] S45 remembered-amounts
+import 'package:opennutritracker/fork/amounts/remembered_amounts.dart';
+// [/fork]
 
 class MealDetailBottomSheet extends StatefulWidget {
   final MealEntity product;
@@ -291,6 +294,12 @@ class _MealDetailBottomSheetState extends State<MealDetailBottomSheet> {
                               return null;
                             }
                             final state = widget.mealDetailBloc.state;
+                            // S45: the amount picked is the one to remember
+                            RememberedAmounts.current.remember(
+                              widget.product,
+                              state.selectedUnit,
+                              widget.quantityTextController.text.trim(),
+                            );
                             return BasketItem(
                               meal: widget.product,
                               unit: state.selectedUnit,
@@ -386,6 +395,15 @@ class _MealDetailBottomSheetState extends State<MealDetailBottomSheet> {
       if (!context.mounted) return;
       if (shouldAdd != true) return;
     }
+
+    // [fork] S45 remembered-amounts: the food's page opens at this amount next
+    // time; not awaited, as it never fails and the log should not wait
+    RememberedAmounts.current.remember(
+      widget.product,
+      widget.mealDetailBloc.state.selectedUnit,
+      widget.quantityTextController.text.trim(),
+    );
+    // [/fork]
 
     // The refreshes below only see the intake once it is stored, which
     // can wait for the tracked-day lock (#1317).

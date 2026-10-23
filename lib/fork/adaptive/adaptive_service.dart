@@ -285,30 +285,44 @@ Future<ForkKcalGoal> forkKcalGoal(
   }
 }
 
-/// Seam S41: the fixed macros, scaled to [kcalGoal] (a weekday's shift
-/// moves the grams with it), while the fixed target has them; else null
-/// and upstream's percentages apply.
+/// Seam S41: the macro goals for a day's [kcalGoal], or null for
+/// upstream's percentages. The fixed target's grams, scaled to the goal (a
+/// weekday's shift moves them with it), while it has them; else the macro
+/// program's, from [user]'s weight and body fat (the measured one of the
+/// past 90 days for the active profile, Deurenberg's estimate for another
+/// or without one).
 Future<FixedMacros?> forkMacroGoal(
   double kcalGoal, [
   AdaptiveStore? store,
+  Future<UserEntity> Function()? user,
 ]) async {
   try {
     final settings = store == null
         ? AdaptiveStore.settings.value
         : await store.read();
     final macros = settings.fixedMacros;
-    if (!settings.fixedTarget || macros == null || macros.kcal <= 0) {
-      return null;
+    if (settings.fixedTarget && macros != null && macros.kcal > 0) {
+      final scale = kcalGoal / macros.kcal;
+      return FixedMacros(
+        proteinG: macros.proteinG * scale,
+        carbsG: macros.carbsG * scale,
+        fatG: macros.fatG * scale,
+      );
     }
-    final scale = kcalGoal / macros.kcal;
-    return FixedMacros(
-      proteinG: macros.proteinG * scale,
-      carbsG: macros.carbsG * scale,
-      fatG: macros.fatG * scale,
+    final program = settings.macroProgram;
+    if (program == null) return null;
+    final profile = await (user ?? locator<GetUserUsecase>().getUserData)();
+    final measured = store == null
+        ? await MeasurementStore().recentBodyFat(DateTime.now())
+        : null;
+    return program.macrosFor(
+      kcal: kcalGoal,
+      weightKg: profile.weightKG,
+      bodyFatPercent: measured ?? bodyFatPercent(profile),
     );
   } catch (e) {
     if (store == null) rethrow;
-    _log.warning('Fixed macros unreadable, using percentages: $e');
+    _log.warning('Macro goals unreadable, using percentages: $e');
     return null;
   } finally {
     await store?.release();

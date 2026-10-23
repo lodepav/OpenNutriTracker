@@ -18,13 +18,14 @@ import 'package:opennutritracker/features/fasting/data/data_source/fasting_data_
 import 'package:opennutritracker/features/settings/domain/export_import_failure.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/fork/body/measurement_store.dart';
+import 'package:opennutritracker/fork/phases/phases.dart';
 import 'package:opennutritracker/fork/photos/photo_store.dart';
 import 'package:opennutritracker/fork/plan/plan_store.dart';
 import 'package:opennutritracker/fork/backup/profiles_backup.dart';
 
 /// What the JSON backup leaves out and the fork adds (phase 2, seam S21):
 /// the water log, fasting sessions, saved custom meals, the adaptive
-/// target's settings and check-ins, the meal plan, body measurements,
+/// target's settings, check-ins and diet phases, the meal plan, body measurements,
 /// progress photos, the profile, the app settings, and every other profile ([ProfilesBackup]).
 ///
 /// Ported from theoleuthardt's `PersonalBackupExtras` (GPL-3.0, their #93,
@@ -78,6 +79,7 @@ class BackupExtras {
   final PlanStore Function() _plans;
   final MeasurementStore Function() _measurements;
   final PhotoStore Function() _photos;
+  final PhaseStore Function() _phases;
 
   /// Null leaves the profile, and the app settings, out of the backup.
   final UserDataSource? _user;
@@ -94,6 +96,7 @@ class BackupExtras {
     PlanStore Function()? plans,
     MeasurementStore Function()? measurements,
     PhotoStore Function()? photos,
+    PhaseStore Function()? phases,
     UserDataSource? user,
     ConfigDataSource? config,
     ProfilesBackup? profiles,
@@ -101,6 +104,7 @@ class BackupExtras {
        _plans = plans ?? PlanStore.new,
        _measurements = measurements ?? MeasurementStore.new,
        _photos = photos ?? PhotoStore.new,
+       _phases = phases ?? PhaseStore.new,
        _user = user,
        _config = config,
        _profiles = profiles;
@@ -120,6 +124,7 @@ class BackupExtras {
     _addJson(archive, adaptiveFileName, {
       ...settings.toJson(),
       'checkIns': [for (final c in await adaptive.history()) c.toJson()],
+      PhaseStore.planKey: (await _phases().plan())?.toJson(),
     });
     _addJson(archive, planFileName, [
       for (final food in await _plans().all()) food.toJson(),
@@ -176,11 +181,13 @@ class BackupExtras {
     );
     final adaptive = _decode(archive, adaptiveFileName, (json) {
       final map = json as Map<String, dynamic>;
+      final plan = map[PhaseStore.planKey] as Map?;
       return (
         settings: AdaptiveSettings.fromJson(map),
         checkIns: [
           for (final c in map['checkIns'] as List) CheckInRecord.fromJson(c),
         ],
+        plan: plan == null ? null : PhasePlan.fromJson(plan),
       );
     });
     final plans = _decode(
@@ -235,6 +242,7 @@ class BackupExtras {
         final store = _adaptive();
         await store.mergeCheckIns(adaptive.checkIns);
         await store.save(adaptive.settings);
+        if (adaptive.plan case final plan?) await _phases().save(plan);
       }
       if (plans != null) await _plans().merge(plans);
       if (measurements != null) {

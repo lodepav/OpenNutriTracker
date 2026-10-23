@@ -21,6 +21,7 @@ import 'package:opennutritracker/features/fasting/data/data_source/fasting_data_
 import 'package:opennutritracker/features/settings/domain/export_import_failure.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/fork/body/measurement_store.dart';
+import 'package:opennutritracker/fork/phases/phases.dart';
 import 'package:opennutritracker/fork/photos/photo_store.dart';
 import 'package:opennutritracker/fork/plan/plan_store.dart';
 import 'package:opennutritracker/core/domain/entity/intake_type_entity.dart';
@@ -51,6 +52,7 @@ void main() {
     PlanStore plans,
     MeasurementStore measurements,
     PhotoStore photos,
+    PhaseStore phases,
     _User user,
     _Config config,
   })
@@ -63,6 +65,7 @@ void main() {
       () => Hive.openBox<dynamic>(name),
       () async => Directory('${dir.path}/$name'),
     );
+    final phases = PhaseStore(() => Hive.openBox<dynamic>(name));
     final water = _Water();
     final fasting = _Fasting();
     final meals = _Meals();
@@ -77,6 +80,7 @@ void main() {
         plans: () => plans,
         measurements: () => measurements,
         photos: () => photos,
+        phases: () => phases,
         user: user,
         config: config,
       ),
@@ -87,6 +91,7 @@ void main() {
       plans: plans,
       measurements: measurements,
       photos: photos,
+      phases: phases,
       user: user,
       config: config,
     );
@@ -131,6 +136,11 @@ void main() {
       BodyMetric.waist: 84,
     });
     final photo = await from.photos.add(DateTime(2026, 10, 21), [1, 2, 3]);
+    final plan = PhasePlan(
+      start: DateTime(2026, 10, 19),
+      phases: const [DietPhase(kind: PhaseKind.cut, kgPerWeek: -0.5, weeks: 8)],
+    );
+    await from.phases.save(plan);
 
     final archive = Archive();
     await from.extras.addTo(archive);
@@ -156,6 +166,7 @@ void main() {
     expect((await to.measurements.all()).map((m) => (m.metric, m.value)), [
       (BodyMetric.waist, 84),
     ]);
+    expect((await to.phases.plan())?.toJson(), plan.toJson());
     final photos = await to.photos.all();
     expect(photos.map((p) => (p.id, p.date)), [
       (photo.id, DateTime(2026, 10, 21)),

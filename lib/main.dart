@@ -57,6 +57,8 @@ import 'package:opennutritracker/core/utils/ai_credential_storage.dart';
 import 'package:opennutritracker/fork/dev/fake_ai.dart';
 import 'package:opennutritracker/fork/backup/auto_backup.dart';
 import 'package:opennutritracker/fork/health/weight_import.dart';
+import 'package:opennutritracker/fork/reminders/reminders.dart';
+import 'package:opennutritracker/fork/phases/phases.dart';
 import 'package:opennutritracker/fork/health/weight_import_ui.dart';
 import 'package:opennutritracker/fork/dish/starter_recipes.dart';
 import 'package:opennutritracker/fork/leftovers/meal_photo_cache.dart';
@@ -110,6 +112,8 @@ Future<void> _bootstrapApp() async {
   await AdaptiveStore.start();
   await AutoBackup.start();
   await WeightImport.start(refreshAfterWeightImport);
+  await Reminders.start();
+  await PhaseRunner.start();
   if (forkFakeAi) await enableFakeAi(locator<AiCredentialStorage>());
   // [/fork]
 

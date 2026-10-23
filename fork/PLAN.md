@@ -416,6 +416,34 @@ and take kJ for kJ users (`lib/fork/units/energy_text.dart`).
   cache, and the permission does not travel. The fake health (`FORK_FAKE_HEALTH`) walks
   4,000 to 12,000 a day.
 
+**More from MacroFactor, round 2** (asked 2026-10-23, branch `fork/mf3`):
+- *Done:* remembered amounts (S45): a food's page opens at the number and unit it was last
+  logged (or put in the basket) at, ahead of upstream's 1 serving / 100 g, the raw-units
+  preference included. Kept per profile for the last 1,000 foods, by barcode or else name; not
+  in the backup.
+- *Done:* reminders (S46), in Settings → Goals: a daily weigh-in (7:30 to start), moved to
+  tomorrow once today's weight is in, and the weekly check-in, once on the day it falls due
+  (9:00) or at the next time when it already is, with the adaptive target on. Planned again
+  when the app opens or leaves, the profile switches, or the target's settings change (a
+  check-in saves them). Per profile; the times are not in the backup.
+- *Done:* macro programs (S41), in the target's settings → Macros: protein per kg of body
+  weight (1.8 to start) or of lean mass (2.2; weight less the measured body fat of the past 90
+  days, else Deurenberg's estimate, which another profile always uses), and a style for the
+  rest: balanced (fat 30% of energy), low fat (20%), low carb (carbs 25%) or keto (carbs 30 g).
+  Protein is capped at 60% of the energy. Grams follow each day's target, so a weekday's
+  shift moves carbs and fat and leaves protein (MacroFactor's macros by weekday). The fixed
+  target's own grams win over it. In the backup with `fork_adaptive.json`.
+- *Done:* diet phases (S40), a card on Trends: a plan of cuts, maintenance (a diet break) and
+  bulks, each a pace and a number of weeks, from a start day. As each phase begins its pace is
+  set into the goal once (`PhaseRunner`, at start-up, on resume, a profile switch or a saved
+  plan), so a pace changed by hand stands until the next phase; after the last, maintenance.
+  Per profile; in the backup with `fork_adaptive.json`.
+- *Done:* weekly report (S40), a card on Trends: each Monday-to-Sunday week of the range,
+  newest first, with the days logged (of the week's days in the range, so this week counts
+  only the days so far) and the mean energy, protein, carbs and fat of the logged days against
+  those days' goals. An empty day is not counted, so it does not read as a fast. Built from
+  the days Trends already loads; nothing stored.
+
 Upstream: open an issue first, with the simulation results. The maintainer cites a source for
 every calculation; everything except the tuned weights has one, and those come with the
 simulation. If declined, it stays in the fork behind seams.

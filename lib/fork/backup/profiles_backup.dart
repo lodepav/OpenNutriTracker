@@ -46,6 +46,7 @@ import 'package:opennutritracker/features/settings/domain/usecase/export_data_us
 import 'package:opennutritracker/features/settings/domain/usecase/import_data_usecase.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/fork/body/measurement_store.dart';
+import 'package:opennutritracker/fork/phases/phases.dart';
 import 'package:opennutritracker/fork/photos/photo_store.dart';
 import 'package:opennutritracker/fork/plan/plan_store.dart';
 import 'package:opennutritracker/fork/backup/backup_extras.dart';
@@ -294,6 +295,9 @@ class ProfilesBackup {
       () => open<dynamic>(AdaptiveStore.boxName, profile.boxSuffix),
     ),
     photos: () => PhotoStore(
+      () => open<dynamic>(AdaptiveStore.boxName, profile.boxSuffix),
+    ),
+    phases: () => PhaseStore(
       () => open<dynamic>(AdaptiveStore.boxName, profile.boxSuffix),
     ),
     user: UserDataSource(scope),
