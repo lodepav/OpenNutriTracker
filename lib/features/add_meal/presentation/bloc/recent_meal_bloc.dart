@@ -5,6 +5,10 @@ import 'package:opennutritracker/core/domain/entity/intake_entity.dart';
 import 'package:opennutritracker/core/domain/usecase/get_config_usecase.dart';
 import 'package:opennutritracker/core/domain/usecase/get_intake_usecase.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dart';
+// [fork] S19 recents-by-meal
+import 'package:opennutritracker/core/domain/entity/intake_type_entity.dart';
+import 'package:opennutritracker/fork/recents/recents_by_meal.dart';
+// [/fork]
 
 part 'recent_meal_event.dart';
 
@@ -16,13 +20,23 @@ class RecentMealBloc extends Bloc<RecentMealEvent, RecentMealState> {
   final GetIntakeUsecase _getIntakeUsecase;
   final GetConfigUsecase _getConfigUsecase;
 
+  // [fork] S19 recents-by-meal: the meal being added to, set by the
+  // add-meal screen; null leaves the recents in upstream's order
+  IntakeTypeEntity? forkMeal;
+  // [/fork]
+
   RecentMealBloc(this._getIntakeUsecase, this._getConfigUsecase)
       : super(RecentMealInitial()) {
     on<LoadRecentMealEvent>((event, emit) async {
       emit(RecentMealLoadingState());
       try {
         final config = await _getConfigUsecase.getConfig();
-        final recentIntake = await _getIntakeUsecase.getRecentIntake();
+        // [fork] S19 recents-by-meal
+        final recentIntake = await recentsForMeal(
+          await _getIntakeUsecase.getRecentIntake(),
+          forkMeal,
+        );
+        // [/fork]
         final searchString = (event.searchString).toLowerCase();
 
         if (searchString.isEmpty) {
