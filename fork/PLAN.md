@@ -633,6 +633,31 @@ ingredients through the resolver's own ranking, not the table's first row.
   an amount", against the photo prompt's counting. The models counted anyway, and rewording it
   would change every request.
 
+*LIDO and Russian home dishes, 2026-10-23:* 23 more photos (46 in all).
+- **Sources:** 13 are LIDO's own dishes, photographed from its Wolt menus. These include
+  boiled buckwheat and a karbonāde. LIDO publishes no restaurant macros: Wolt's product info
+  lists ingredients and allergens only, and its catalogue has none either. The exception is the
+  karbonāde, whose packaged twin has a label on barbora.lv (105 g piece). The other 10 are the
+  same dishes from eda.ru recipes, which give macros per serving.
+- **Results:**
+  - Dishes named: Opus 43, Sonnet 39, Haiku 39 of 46.
+  - Counts right: 14, 12 and 11 of 16.
+  - Opus named all the regional dishes. Sonnet and Haiku did not:
+    - the karbonāde was "fried chicken fillet" and "fried stuffed flatbread";
+    - grey peas were "chickpeas" and "black beans";
+    - LIDO's French-style pork was chicken or a cottage-cheese casserole;
+    - eda's chops in batter were "stuffed pancakes" and "fried pastries".
+  - LIDO's bread soup is a layered dessert, and it finds the starter of that name.
+  - The Opus name for grey peas ("stewed peas with onion and bacon") does not find the saved
+    recipe, because it lacks "grey".
+- **Dry staples:** every model called the buckwheat "buckwheat", and the resolver gave it the
+  raw grain: 343 kcal per 100 g against 115 boiled. Bare "spaghetti", "macaroni", "lentils",
+  "pearl barley", "bulgur" and "couscous" did the same. The fix is in
+  `local_food_data_source.dart` and applies to resolution only. When the name has no
+  state ("raw", "dry", "boiled"…) and the table has the food cooked under its own name, rows
+  with more than twice the leanest cooked row's energy and over 50 g carbs are left out. A
+  37-name probe changed only those seven. Eggs, meat, raw bacon and oats kept their rows.
+
 Still needs the user: the leftovers photo check, typing and photographing their own
 khachapuri, pelmeni and grey peas, and ten of their own meals (photos we do not have).
 
