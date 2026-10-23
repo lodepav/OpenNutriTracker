@@ -1,8 +1,9 @@
 import 'package:opennutritracker/fork/dev/fake_ai.dart';
+import 'package:opennutritracker/fork/health/steps.dart';
 import 'package:opennutritracker/fork/health/weight_import.dart';
 
 /// `--dart-define=FORK_FAKE_HEALTH=true`, on with the fake AI: the weight
-/// import reads made-up weigh-ins instead of Health Connect.
+/// import and the steps read made-up data instead of Health Connect.
 const forkFakeHealth = bool.fromEnvironment(
   'FORK_FAKE_HEALTH',
   defaultValue: forkFakeAi,
@@ -27,5 +28,21 @@ class FakeWeights implements WeightSource {
             ((820 - (30 - ago)) / 10),
           ),
     ];
+  }
+}
+
+/// A walker who does 4,000 to 12,000 steps a day, the same each run, and
+/// walks evenly from 7:00 to 22:00.
+class FakeSteps implements StepSource {
+  @override
+  Future<bool> requestPermission() async => true;
+
+  @override
+  Future<int> stepsBetween(DateTime from, DateTime to) async {
+    final day = DateTime(from.year, from.month, from.day);
+    final full =
+        4000 + (day.year * 372 + day.month * 31 + day.day) * 7919 % 8000;
+    final walked = (to.difference(day).inMinutes - 7 * 60).clamp(0, 15 * 60);
+    return full * walked ~/ (15 * 60);
   }
 }

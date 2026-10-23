@@ -406,6 +406,15 @@ and take kJ for kJ users (`lib/fork/units/energy_text.dart`).
   the oldest and newest to start. The images stay in the app's documents folder
   (`progress_photos/<id>.jpg`, private to the app), the index per profile in the fork's box;
   the backup carries `fork_photos.json` and the images, another profile's inside its folder.
+- *Done:* daily steps from Health Connect on Trends (S40, S44: `READ_STEPS`, which upstream
+  dropped for Play; OpenBite is not on Play): off until "Read steps" gets the permission;
+  then today's, the average and the days at a step goal (8,000, editable) over the range, and
+  a bar a day against the goal. Read only, changing no target, since the adaptive
+  expenditure already measures what walking burns (MacroFactor too). The last 30 days are
+  read (Health Connect's reach for a new app) and kept in the fork's per-profile box, so the
+  history grows past it; the last two days are read again each time. Not in the backup: a
+  cache, and the permission does not travel. The fake health (`FORK_FAKE_HEALTH`) walks
+  4,000 to 12,000 a day.
 
 Upstream: open an issue first, with the simulation results. The maintainer cites a source for
 every calculation; everything except the tuned weights has one, and those come with the

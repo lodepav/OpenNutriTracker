@@ -30,6 +30,11 @@
     <!-- [fork] S28 weight-import: body weight for the weight log -->
     <uses-permission android:name="android.permission.health.READ_WEIGHT"/>
     <!-- [/fork] -->
+    <!-- [fork] S44 steps: daily steps on Trends, read only. OpenBite is not
+         on Play (D8); a Play release would need the declaration to cover
+         it. -->
+    <uses-permission android:name="android.permission.health.READ_STEPS"/>
+    <!-- [/fork] -->
 
     <!-- Provide required visibility configuration for API level 30 and above -->
     <queries>
