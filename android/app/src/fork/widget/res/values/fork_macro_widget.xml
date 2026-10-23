@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="fork_macro_widget_description">Today\'s calories, protein, carbs and fat</string>
+    <color name="fork_widget_background">#F7F2EC</color>
+    <color name="fork_widget_text">#1F1B16</color>
+    <color name="fork_widget_muted">#6B6158</color>
+    <color name="fork_widget_energy">#E0663A</color>
+    <color name="fork_widget_protein">#C2477A</color>
+    <color name="fork_widget_carbs">#3C8D6B</color>
+    <color name="fork_widget_fat">#D9A021</color>
+</resources>

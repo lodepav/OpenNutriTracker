@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- [fork] S50 macro-widget: drawn by MacroWidgetProvider. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/fork_widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/fork_widget_background"
+    android:padding="14dp">
+
+    <LinearLayout
+        android:id="@+id/fork_widget_figures"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_vertical"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/fork_widget_energy"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="0dp"
+            android:textColor="@color/fork_widget_text"
+            android:textSize="15sp"
+            android:textStyle="bold"
+            android:maxLines="1"
+            android:text="Calories" />
+
+        <ProgressBar
+            android:id="@+id/fork_widget_energy_bar"
+            style="@android:style/Widget.ProgressBar.Horizontal"
+            android:layout_width="match_parent"
+            android:layout_height="6dp"
+            android:layout_marginTop="2dp"
+            android:max="100"
+            android:progress="0"
+            android:progressTint="@color/fork_widget_energy"
+            android:progressBackgroundTint="@color/fork_widget_muted" />
+
+        <TextView
+            android:id="@+id/fork_widget_protein"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:textColor="@color/fork_widget_text"
+            android:textSize="13sp"
+            
+            android:maxLines="1"
+            android:text="Protein" />
+
+        <ProgressBar
+            android:id="@+id/fork_widget_protein_bar"
+            style="@android:style/Widget.ProgressBar.Horizontal"
+            android:layout_width="match_parent"
+            android:layout_height="4dp"
+            android:layout_marginTop="2dp"
+            android:max="100"
+            android:progress="0"
+            android:progressTint="@color/fork_widget_protein"
+            android:progressBackgroundTint="@color/fork_widget_muted" />
+
+        <TextView
+            android:id="@+id/fork_widget_carbs"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:textColor="@color/fork_widget_text"
+            android:textSize="13sp"
+            
+            android:maxLines="1"
+            android:text="Carbs" />
+
+        <ProgressBar
+            android:id="@+id/fork_widget_carbs_bar"
+            style="@android:style/Widget.ProgressBar.Horizontal"
+            android:layout_width="match_parent"
+            android:layout_height="4dp"
+            android:layout_marginTop="2dp"
+            android:max="100"
+            android:progress="0"
+            android:progressTint="@color/fork_widget_carbs"
+            android:progressBackgroundTint="@color/fork_widget_muted" />
+
+        <TextView
+            android:id="@+id/fork_widget_fat"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:textColor="@color/fork_widget_text"
+            android:textSize="13sp"
+            
+            android:maxLines="1"
+            android:text="Fat" />
+
+        <ProgressBar
+            android:id="@+id/fork_widget_fat_bar"
+            style="@android:style/Widget.ProgressBar.Horizontal"
+            android:layout_width="match_parent"
+            android:layout_height="4dp"
+            android:layout_marginTop="2dp"
+            android:max="100"
+            android:progress="0"
+            android:progressTint="@color/fork_widget_fat"
+            android:progressBackgroundTint="@color/fork_widget_muted" />
+
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/fork_widget_empty"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:gravity="center"
+        android:textColor="@color/fork_widget_muted"
+        android:textSize="13sp"
+        android:visibility="gone"
+        android:text="Open OpenBite to show today\'s calories and macros" />
+</FrameLayout>

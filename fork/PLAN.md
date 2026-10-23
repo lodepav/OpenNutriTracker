@@ -493,6 +493,14 @@ database, Q4 (b), was offered and declined):
   changed (kept per profile); a failed write keeps what went out and tries the rest next time.
   Switched off, what was written stays. Android only in practice: HealthKit has no
   delete-by-client-id in the plugin.
+- *Done:* home-screen widget with the macros (S50): upstream's widget is iOS only (Android
+  only saves its calorie snapshot), so OpenBite has its own Android widget, "OpenBite macros":
+  today's energy (in the user's unit), protein, carbs and fat against their goals, each with a
+  bar, tapping opens the app. Home writes the figures beside upstream's snapshot each time it
+  loads and redraws the widget; with upstream's snapshot cleared (a profile wiped or switched
+  away) the widget asks to open the app, and after the logical day ends it shows nothing eaten
+  until the app is opened. Native: `MacroWidgetProvider` (Kotlin, `RemoteViews`) and its
+  resources in `android/app/src/fork`.
 
 Upstream: open an issue first, with the simulation results. The maintainer cites a source for
 every calculation; everything except the tuned weights has one, and those come with the

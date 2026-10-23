@@ -122,5 +122,19 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+        <!-- [fork] S50 macro-widget: today's calories and macros on the home
+             screen (android/app/src/fork) -->
+        <receiver
+            android:name=".fork.MacroWidgetProvider"
+            android:exported="false"
+            android:label="OpenBite macros">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/fork_macro_widget_info" />
+        </receiver>
+        <!-- [/fork] -->
     </application>
 </manifest>
