@@ -6,6 +6,7 @@ import 'package:opennutritracker/features/settings/presentation/bloc/settings_bl
 import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
 import 'package:opennutritracker/fork/adaptive/macro_program.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
+import 'package:opennutritracker/fork/adaptive/check_in_history.dart';
 import 'package:opennutritracker/fork/adaptive/check_in.dart';
 import 'package:opennutritracker/fork/units/energy_text.dart';
 
@@ -364,6 +365,20 @@ class _AdaptiveSettingsDialog extends StatelessWidget {
                   ),
                   value: settings.cycleWindow,
                   onChanged: (v) => _save(settings.copyWith(cycleWindow: v)),
+                ),
+              if (mode == _TargetMode.adaptive)
+                ListTile(
+                  key: const ValueKey('check-in-history'),
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Check-in history'),
+                  subtitle: const Text('Each target set, and from what'),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute<void>(
+                      builder: (_) => CheckInHistoryScreen(store: store),
+                    ),
+                  ),
                 ),
               ListTile(
                 key: const ValueKey('weekday-targets'),
