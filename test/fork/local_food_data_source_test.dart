@@ -75,6 +75,30 @@ void main() {
       expect(found.map((f) => f.source), ['fdc_sr_legacy']);
     });
 
+    test('resolution drops a qualifier no row has, from the end', () async {
+      final source = _source(json);
+      expect(
+        (await source.fetchSearchWordResults(
+          'bread, rye, toasted',
+          forResolution: true,
+        )).map((f) => f.name),
+        contains('Bread, rye'),
+      );
+      // A person's search stays exact, and a word before the first comma is
+      // never dropped.
+      expect(
+        await source.fetchSearchWordResults('bread, rye, toasted'),
+        isEmpty,
+      );
+      expect(
+        await source.fetchSearchWordResults(
+          'toasted bread, rye',
+          forResolution: true,
+        ),
+        isEmpty,
+      );
+    });
+
     test('"pea" does not find peanut butter', () async {
       expect(await _source(json).fetchSearchWordResults('pea'), isEmpty);
     });

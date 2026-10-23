@@ -602,6 +602,13 @@ against the page's per serving; and typed or photographed names against the save
   walker (`tools/adb/walk-onboarding.sh`) no longer fits the fork's onboarding (imperial
   default, height left empty).
 
+*Fixed 2026-10-23:* (1) resolution drops comma qualifiers from the end when no table row has
+every word (`LocalFoodDataSource.fetchSearchWordResults`; a person's search stays exact):
+buckwheat with mushrooms now 217 kcal (page 168), nothing unmatched. (2) The starter is named
+"Sklandu rauši (sklandrausis)": "sklandrausis" and "2 sklandrauši" find it. An install that
+already saved the starters keeps the old name. Not fixed: "adjaruli" vs "Adjarian", which only
+a looser word rule would join, and that rule would also join "chickpea" and "chicken".
+
 Still needs the user: the leftovers photo check, typing and photographing their own
 khachapuri, pelmeni and grey peas, and ten of their own meals (photos we do not have).
 

@@ -52,17 +52,26 @@ class LocalFoodDataSource extends SpFoodDataSource {
     bool forResolution = false,
   }) async {
     final toggles = await _readToggles();
-    final rows = (await table).search(
-      searchString,
-      isEnabled: (source) => toggles?[source] ?? true,
-    );
+    final foods = await table;
+    List<SpFoodDTO> search(String query) =>
+        foods.search(query, isEnabled: (source) => toggles?[source] ?? true);
+    var query = searchString;
+    var rows = search(query);
+    // A model names foods the table's way, then adds a qualifier the table
+    // may not use ("buckwheat groats, raw" against "Buckwheat groats"):
+    // when nothing has every word, drop the qualifiers from the end. Only
+    // for resolution; a person searching sees exactly what they typed.
+    while (forResolution && rows.isEmpty && query.contains(',')) {
+      query = query.substring(0, query.lastIndexOf(','));
+      rows = search(query);
+    }
     // The backend's own cut, reused so the resolver sees the twenty rows it
     // would see from the backend. Upstream exposes it for its tests only;
     // calling it beats a copy that drifts.
     // ignore: invalid_use_of_visible_for_testing_member
     return rankAndTruncateFoodsByName(
       rows,
-      searchString,
+      query,
       forResolution: forResolution,
     );
   }

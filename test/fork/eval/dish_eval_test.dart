@@ -41,9 +41,9 @@ const _typed = {
   '20 pelmeni with sour cream': 'Pelmeni',
   'grey peas': 'Grey peas with bacon',
   'grey peas with bacon and kefir': 'Grey peas with bacon',
-  'sklandu rausi': 'Sklandu rauši',
-  'sklandrausis': 'Sklandu rauši',
-  '2 sklandrauši': 'Sklandu rauši',
+  'sklandu rausi': 'Sklandu rauši (sklandrausis)',
+  'sklandrausis': 'Sklandu rauši (sklandrausis)',
+  '2 sklandrauši': 'Sklandu rauši (sklandrausis)',
 };
 
 /// Photos of dishes that have a saved recipe, by that recipe.
@@ -51,7 +51,7 @@ const _photographed = {
   'ge-khachapuri-adjaruli': 'Adjarian khachapuri',
   'ge-khachapuri': 'Adjarian khachapuri',
   'sl-pelmeni': 'Pelmeni',
-  'lv-sklandrausis': 'Sklandu rauši',
+  'lv-sklandrausis': 'Sklandu rauši (sklandrausis)',
 };
 
 void main() {
