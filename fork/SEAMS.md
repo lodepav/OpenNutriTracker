@@ -35,6 +35,7 @@ because upstream merged the feature) gets removed, and so does its row.
 | S16 | `lib/core/domain/usecase/send_intake_to_profiles_usecase.dart`, `lib/core/utils/hive_db_provider.dart` | The adaptive box (`AdaptiveStore.boxName`) is per-profile: a meal copied into another profile takes that profile's adaptive target, and deleting a profile deletes its check-ins (`perProfileBoxNames`). Two blocks in each: the import and the use. | active |
 | S17 | `lib/features/settings/presentation/widgets/kcal_goal_info_screen.dart` | Atop "How your goal is calculated", while the adaptive target is on, the check-in's target and expenditure, and that the formula below is not used (`AdaptiveGoalNote`, `lib/fork/adaptive/adaptive_ui.dart`). Not in onboarding. Two blocks. | active |
 | S18 | `lib/dev/main_dev.dart` | Loads the adaptive switches, as `main.dart`'s S6 does (`AdaptiveStore.start`). Two blocks. | active |
+| S19 | `lib/features/add_meal/presentation/bloc/recent_meal_bloc.dart`, `lib/features/add_meal/presentation/add_meal_screen.dart` | The recents put the foods usually logged in the meal being added to first, by how often and how lately (`recentsForMeal`, `lib/fork/recents/recents_by_meal.dart`). The bloc: the import, a `forkMeal` field, the ranking (three blocks). The screen: setting `forkMeal` (one block). | active |
 
 ## Carried upstream changes
 

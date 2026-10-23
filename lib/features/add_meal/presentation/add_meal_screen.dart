@@ -61,6 +61,9 @@ class _AddMealScreenState extends State<AddMealScreen> {
         ModalRoute.of(context)?.settings.arguments as AddMealScreenArguments;
     _mealType = args.mealType;
     _day = args.day;
+    // [fork] S19 recents-by-meal: the recents put this meal's usual foods first
+    _recentMealBloc.forkMeal = _mealType.getIntakeType();
+    // [/fork]
     super.didChangeDependencies();
   }
 
