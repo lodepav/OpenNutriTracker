@@ -471,6 +471,14 @@ database, Q4 (b), was offered and declined):
   swaps the stored entry for one with the same id, since upstream's update changes only the
   amount; the day's totals stand.
 
+**More from MacroFactor, round 4** (asked 2026-10-23, branch `fork/mf5`):
+- *Done:* body fat from Health Connect (S48): "Import body fat" beside "Import weight" on the
+  health sync screen reads a smart scale's body fat % (READ_BODY_FAT, which upstream dropped
+  for Play; OpenBite is not on Play, D8) into the body measurements, each day's latest
+  reading, under the weight import's rules: a value typed by the user is never replaced, and a
+  deleted day stays empty until a newer reading. The measured value then feeds the
+  expenditure estimate and lean mass, as a typed one does.
+
 Upstream: open an issue first, with the simulation results. The maintainer cites a source for
 every calculation; everything except the tuned weights has one, and those come with the
 simulation. If declined, it stays in the fork behind seams.

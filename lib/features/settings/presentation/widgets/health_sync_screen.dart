@@ -345,8 +345,9 @@ class _HealthSyncScreenState extends State<HealthSyncScreen> {
                   ),
                 ),
                 _buildMultiplierSection(context, s, textTheme, canEdit),
-                // [fork] S27 weight-import: its own switch and permission
+                // [fork] S27 weight-import: weight and body fat, each its own switch and permission
                 WeightImportTile(available: _isAvailable && !_busy),
+                BodyFatImportTile(available: _isAvailable && !_busy),
                 // [/fork]
                 Semantics(
                   identifier: 'health-sync-import-now',

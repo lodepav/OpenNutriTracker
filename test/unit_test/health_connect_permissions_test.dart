@@ -158,9 +158,9 @@ void main() {
     test('the three permissions Play refused are not declared', () {
       expect(
         declared.intersection({
-          'READ_BODY_FAT',
           'READ_DISTANCE',
-          // [fork] S44 steps: READ_STEPS is back, for the steps on Trends
+          // [fork] S44 steps: READ_STEPS is back, for the steps on Trends;
+          // S48 body-fat-import: READ_BODY_FAT, for the body measurements
           // [/fork]
         }),
         isEmpty,
@@ -179,12 +179,14 @@ void main() {
       expect(
         declared,
         // [fork] S28 weight-import: READ_WEIGHT for the weight log; S44
-        // steps: READ_STEPS for the steps on Trends
+        // steps: READ_STEPS for the steps on Trends; S48 body-fat-import:
+        // READ_BODY_FAT for the body measurements
         {
           'READ_EXERCISE',
           'READ_TOTAL_CALORIES_BURNED',
           'READ_WEIGHT',
           'READ_STEPS',
+          'READ_BODY_FAT',
         },
         // [/fork]
         reason:
@@ -279,12 +281,13 @@ void main() {
         // actually shipped is the last place to be picky about spelling.
         expect(
           healthIn(mergedManifest.readAsStringSync()).kept,
-          // [fork] S28 weight-import, S44 steps
+          // [fork] S28 weight-import, S44 steps, S48 body-fat-import
           {
             'READ_EXERCISE',
             'READ_TOTAL_CALORIES_BURNED',
             'READ_WEIGHT',
             'READ_STEPS',
+            'READ_BODY_FAT',
           },
           // [/fork]
           reason:
