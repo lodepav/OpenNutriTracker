@@ -12,6 +12,9 @@ import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/core/utils/url_const.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 import 'package:url_launcher/url_launcher.dart';
+// [fork] S17 adaptive-goal-note
+import 'package:opennutritracker/fork/adaptive/adaptive_ui.dart';
+// [/fork]
 
 /// Transparency screen: shows every variable and intermediate step behind
 /// today's kcal goal, so the number on the home screen is fully auditable
@@ -69,6 +72,11 @@ class _KcalGoalInfoScreenState extends State<KcalGoalInfoScreen> {
               vertical: Dimens.spacing16,
             ),
             children: [
+              // [fork] S17 adaptive-goal-note: says when the check-in's
+              // target, not this formula, is the goal (D13); not in
+              // onboarding, which passes its own breakdown
+              if (widget.breakdown == null) const AdaptiveGoalNote(),
+              // [/fork]
               Text(
                 l10n.kcalGoalInfoIntro,
                 style: Theme.of(context).textTheme.bodyMedium,

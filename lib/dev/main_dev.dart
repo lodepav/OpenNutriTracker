@@ -9,6 +9,9 @@ import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/core/utils/logger_config.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 import 'package:opennutritracker/main.dart';
+// [fork] S18 dev-adaptive
+import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
+// [/fork]
 
 /// Dev-only entry point: wipes the active profile and reseeds it with
 /// realistic demo data (user, a year of meals and activities, weight/water
@@ -30,6 +33,9 @@ Future<void> main() async {
   await initLocator();
 
   await seedDemoData(DemoSeedOptions.dev);
+  // [fork] S18 dev-adaptive: the trend and target switches, as main's S6
+  await AdaptiveStore.start();
+  // [/fork]
 
   final configRepo = locator<ConfigRepository>();
   final config = await configRepo.getConfig();

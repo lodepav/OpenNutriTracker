@@ -96,7 +96,7 @@ Future<void> _bootstrapApp() async {
   // [fork] S6 starter-recipes: saved once per install, off the start path
   unawaited(StarterRecipeSeeder.fromLocator().run());
   unawaited(MealPhotoCache().prune());
-  await AdaptiveStore().load();
+  await AdaptiveStore.start();
   if (forkFakeAi) await enableFakeAi(locator<AiCredentialStorage>());
   // [/fork]
 

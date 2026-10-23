@@ -325,9 +325,12 @@ results in [research/phase3-simulation.md](research/phase3-simulation.md). On th
 the demo profile: the switch shows the check-in card at once; the check-in read 3,032 kcal
 expenditure and proposed 2,648 (moved the 200 kcal most from the formula's 2,848, 2 of 7 days
 logged); Accept hid the card and home went from 933 to 733 kcal left; the smoothed trend draws
-dashed on the weight chart. Not adaptive yet: the "How your goal is calculated" breakdown and
-onboarding still show the formula, and `lib/dev/main_dev.dart` skips seam S6, so the settings
-are not loaded there.
+dashed on the weight chart. *2026-10-23:* the adaptive state is per profile (an
+encrypted box per profile, seam S16), so a new profile and its onboarding start on the formula;
+"How your goal is calculated" says when the check-in's target is the goal (S17); the dev entry
+loads the switches (S18). Emulator: two profiles kept their own goals (2,648 adaptive, the
+other on the formula) across switches both ways. Not yet: energy shown in kJ for kJ users in
+the check-in screens.
 
 Upstream: open an issue first, with the simulation results. The maintainer cites a source for
 every calculation; everything except the tuned weights has one, and those come with the

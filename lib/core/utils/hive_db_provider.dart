@@ -16,6 +16,9 @@ import 'package:opennutritracker/core/data/dbo/water_intake_dbo.dart';
 import 'package:opennutritracker/core/data/dbo/weight_log_dbo.dart';
 import 'package:opennutritracker/core/utils/hive_storage_integrity_exception.dart';
 import 'package:opennutritracker/hive_registrar.g.dart';
+// [fork] S16 adaptive-profiles
+import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
+// [/fork]
 
 /// Owns every Hive box the app uses.
 ///
@@ -83,6 +86,9 @@ class HiveDBProvider extends ChangeNotifier {
     weightLogBoxName,
     waterIntakeBoxName,
     fastingBoxName,
+    // [fork] S16 adaptive-profiles: check-ins are per-profile data (D13)
+    AdaptiveStore.boxName,
+    // [/fork]
   ];
 
   // Global boxes — opened once, never closed on a profile switch.

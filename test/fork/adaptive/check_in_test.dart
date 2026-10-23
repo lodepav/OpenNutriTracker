@@ -72,7 +72,7 @@ void main() {
   setUp(() async {
     dir = await Directory.systemTemp.createTemp('adaptive');
     Hive.init(dir.path);
-    store = AdaptiveStore();
+    store = AdaptiveStore(() => Hive.openBox<dynamic>(AdaptiveStore.boxName));
     service = AdaptiveService(
       _User(),
       _Weights(),
@@ -153,13 +153,23 @@ void main() {
         final checkIn = await service.checkIn();
         await service.accept(checkIn, 2100);
 
+        expect(await adaptiveTargetKcal(), isNull);
         expect(await adaptiveTargetKcal(store), isNull);
-        AdaptiveStore.settings.value = const AdaptiveSettings(
-          adaptiveTarget: true,
-        );
+        await store.save(const AdaptiveSettings(adaptiveTarget: true));
         expect(await adaptiveTargetKcal(store), 2100);
       },
     );
+
+    test('another profile answers with its own switch and target', () async {
+      await store.save(const AdaptiveSettings(adaptiveTarget: true));
+      await service.accept(await service.checkIn(), 2100);
+      final other = AdaptiveStore(() => Hive.openBox<dynamic>('other'));
+
+      expect(await adaptiveTargetKcal(other), isNull);
+      await other.save(const AdaptiveSettings(adaptiveTarget: true));
+      expect(await adaptiveTargetKcal(other), isNull);
+      expect(await adaptiveTargetKcal(store), 2100);
+    });
 
     test('a check-in is due a week after the last', () async {
       expect(await service.checkInDue(), isFalse);
