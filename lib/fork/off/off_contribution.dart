@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
@@ -123,6 +124,17 @@ class OffUpload {
 
   bool get isEmpty => name == null && brand == null && nutrients.isEmpty;
 
+  OffUpload copyWith({
+    String? Function()? name,
+    String? Function()? brand,
+    Map<String, (double, String)>? nutrients,
+  }) => OffUpload(
+    barcode: barcode,
+    name: name == null ? this.name : name(),
+    brand: brand == null ? this.brand : brand(),
+    nutrients: nutrients ?? this.nutrients,
+  );
+
   /// Only what Open Food Facts lacks: the name and the brand each when it
   /// has none, the nutrients only when it has no nutrient at all, so
   /// nothing someone else entered is overwritten.
@@ -159,11 +171,13 @@ class OffProduct {
   final bool hasName;
   final bool hasBrand;
   final bool hasNutrients;
+  final bool hasNutritionPhoto;
 
   const OffProduct({
     this.hasName = false,
     this.hasBrand = false,
     this.hasNutrients = false,
+    this.hasNutritionPhoto = false,
   });
 }
 
@@ -199,7 +213,7 @@ class OffContributionClient {
       http.Request(
         'GET',
         Uri.https(account.host, '/api/v2/product/$barcode', {
-          'fields': 'product_name,brands,nutriments',
+          'fields': 'product_name,brands,nutriments,image_nutrition_url',
         }),
       ),
       account,
@@ -217,7 +231,43 @@ class OffContributionClient {
       hasNutrients:
           nutriments is Map &&
           nutriments.keys.any((key) => '$key'.endsWith('_100g')),
+      hasNutritionPhoto: present(product['image_nutrition_url']),
     );
+  }
+
+  /// Adds [jpeg] as the product's nutrition-table photo for [language],
+  /// through OFF's image upload form.
+  Future<void> uploadNutritionPhoto(
+    OffAccount account,
+    String barcode,
+    Uint8List jpeg, {
+    String language = 'en',
+  }) async {
+    final field = 'nutrition_$language';
+    final request =
+        http.MultipartRequest(
+            'POST',
+            Uri.https(account.host, '/cgi/product_image_upload.pl'),
+          )
+          ..fields.addAll({
+            'user_id': account.userId,
+            'password': account.password,
+            'code': barcode,
+            'imagefield': field,
+          })
+          ..files.add(
+            http.MultipartFile.fromBytes(
+              'imgupload_$field',
+              jpeg,
+              filename: 'nutrition.jpg',
+            ),
+          );
+    final response = await _send(request, account);
+    _throwOnServerError(response);
+    final body = _decode(response);
+    if (body is! Map<String, dynamic> || body['status'] != 'status ok') {
+      throw const OffContributionException(OffFailure.rejected);
+    }
   }
 
   Future<void> upload(OffAccount account, OffUpload upload) async {

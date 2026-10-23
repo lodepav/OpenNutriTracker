@@ -2,6 +2,9 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'dart:io';
+// [fork] S29 label-scan
+import 'dart:typed_data';
+// [/fork]
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
@@ -66,6 +69,9 @@ class _EditMealScreenState extends State<EditMealScreen> {
   final _nameTextController = TextEditingController();
   final _brandsTextController = TextEditingController();
   final _barcodeTextController = TextEditingController();
+  // [fork] S29 label-scan: the label photo, in memory, for S33's offer
+  Uint8List? _forkLabelPhoto;
+  // [/fork]
   final _mealQuantityTextController = TextEditingController();
   final _servingQuantityTextController = TextEditingController();
   final _baseQuantityTextController = TextEditingController();
@@ -264,7 +270,12 @@ class _EditMealScreenState extends State<EditMealScreen> {
           ),
           actions: [
             // [fork] S29 label-scan: read a nutrition label into the form
-            LabelScanButton(onRead: (reading) => _fillFromLabel(reading, usesKj)),
+            LabelScanButton(
+              onRead: (reading, photo) {
+                _forkLabelPhoto = photo;
+                _fillFromLabel(reading, usesKj);
+              },
+            ),
             // [/fork]
             Padding(
               padding: const EdgeInsets.fromLTRB(Dimens.spacing16, 0, Dimens.spacing16, 0),
@@ -981,7 +992,7 @@ class _EditMealScreenState extends State<EditMealScreen> {
 
       // [fork] S33 off-contributions: offer the saved food to Open Food Facts
       if (newMealEntity.source == MealSourceEntity.custom && mounted) {
-        await offerOffUpload(context, newMealEntity);
+        await offerOffUpload(context, newMealEntity, labelPhoto: _forkLabelPhoto);
       }
       // [/fork]
 
