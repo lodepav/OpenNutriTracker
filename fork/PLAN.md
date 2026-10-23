@@ -289,8 +289,8 @@ the same gap). Pelmeni and khachapuri are in no table and go to D9.
   backup file (an auto-backup zip from the folder works). Behind the policy checkbox, like "Try
   demo"; a backup with a profile records the policy and the crash-report choice and goes into
   the app (and out of demo mode); one without keeps its data and the setup goes on. Tried on the
-  emulator from a fresh install; the theme from the backup shows after a restart, as
-  theoleuthardt notes.
+  emulator from a fresh install. The restored theme, accent, kilojoules and language show at
+  once, from onboarding and from Settings' import (S38).
 - **Not done:** every profile in one backup (theoleuthardt #96; today each profile backs up
   when it is the active one), encrypting the zip.
 

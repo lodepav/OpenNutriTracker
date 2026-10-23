@@ -463,7 +463,9 @@ class _DayInfoWidgetState extends State<DayInfoWidget> {
   ) async {
     final copyOrDelete = await showDialog<bool>(
       context: context,
-      builder: (context) => const CopyOrDeleteDialog(),
+      // [fork] S24 copy-anywhere: the copy opens a picker
+      builder: (context) => const CopyOrDeleteDialog(toPicker: true),
+      // [/fork]
     );
     if (context.mounted) {
       if (copyOrDelete != null && !copyOrDelete) {

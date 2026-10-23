@@ -200,7 +200,10 @@ void main() {
       await tester.longPress(find.text('Dinner Stew'));
       await tester.pumpAndSettle();
       // [fork] S24 copy-anywhere: today's entries copy too
-      expect(find.text(l10nEn.dialogCopyLabel.toUpperCase()), findsOneWidget);
+      expect(
+        find.text('${l10nEn.copyActionLabel}…'.toUpperCase()),
+        findsOneWidget,
+      );
       await tester.tap(find.text(l10nEn.dialogDeleteLabel.toUpperCase()));
       await tester.pumpAndSettle();
       // [/fork]

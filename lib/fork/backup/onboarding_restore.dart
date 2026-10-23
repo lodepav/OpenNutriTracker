@@ -7,6 +7,7 @@ import 'package:opennutritracker/core/utils/url_const.dart';
 import 'package:opennutritracker/features/profile/presentation/utils/profile_switch_coordinator.dart';
 import 'package:opennutritracker/features/settings/domain/usecase/export_data_usecase.dart';
 import 'package:opennutritracker/features/settings/presentation/bloc/export_import_bloc.dart';
+import 'package:opennutritracker/fork/backup/apply_restored_settings.dart';
 
 /// What a restore from onboarding does, apart from the screen.
 class OnboardingRestore {
@@ -96,6 +97,7 @@ class _RestoreBackupButtonState extends State<RestoreBackupButton> {
   }
 
   void _intoApp() {
+    applyRestoredSettings(context);
     ProfileSwitchCoordinator.reloadTabBlocs();
     Navigator.of(
       context,
