@@ -16,6 +16,7 @@ import 'package:opennutritracker/fork/backup/auto_backup.dart';
 import 'package:opennutritracker/fork/dev/fake_ai.dart';
 import 'package:opennutritracker/fork/health/weight_import.dart';
 import 'package:opennutritracker/fork/reminders/reminders.dart';
+import 'package:opennutritracker/fork/phases/phases.dart';
 import 'package:opennutritracker/fork/health/weight_import_ui.dart';
 // [/fork]
 
@@ -44,6 +45,7 @@ Future<void> main() async {
   await AutoBackup.start();
   await WeightImport.start(refreshAfterWeightImport);
   await Reminders.start();
+  await PhaseRunner.start();
   if (forkFakeAi) await enableFakeAi(locator<AiCredentialStorage>());
   // [/fork]
 

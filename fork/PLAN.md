@@ -433,6 +433,11 @@ and take kJ for kJ users (`lib/fork/units/energy_text.dart`).
   Protein is capped at 60% of the energy. Grams follow each day's target, so a weekday's
   shift moves carbs and fat and leaves protein (MacroFactor's macros by weekday). The fixed
   target's own grams win over it. In the backup with `fork_adaptive.json`.
+- *Done:* diet phases (S40), a card on Trends: a plan of cuts, maintenance (a diet break) and
+  bulks, each a pace and a number of weeks, from a start day. As each phase begins its pace is
+  set into the goal once (`PhaseRunner`, at start-up, on resume, a profile switch or a saved
+  plan), so a pace changed by hand stands until the next phase; after the last, maintenance.
+  Per profile; in the backup with `fork_adaptive.json`.
 
 Upstream: open an issue first, with the simulation results. The maintainer cites a source for
 every calculation; everything except the tuned weights has one, and those come with the
