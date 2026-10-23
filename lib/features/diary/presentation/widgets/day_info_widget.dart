@@ -25,6 +25,7 @@ import 'package:opennutritracker/features/diary/presentation/widgets/diary_sort_
 import 'package:opennutritracker/features/home/presentation/widgets/intake_vertical_list.dart';
 // [fork] S24 copy-anywhere
 import 'package:opennutritracker/fork/copy/copy_ui.dart';
+import 'package:opennutritracker/fork/copy/select_entries_screen.dart';
 // [/fork]
 import 'package:opennutritracker/generated/l10n.dart';
 import 'package:provider/provider.dart';
@@ -202,7 +203,7 @@ class _DayInfoWidgetState extends State<DayInfoWidget> {
             Dimens.spacing20,
             Dimens.spacing4,
           ),
-          // [fork] S26 copy-day: "Copy day" beside the date
+          // [fork] S26 copy-day: "Select entries", "Copy day" by the date
           child: Row(
             children: [
               Expanded(
@@ -213,7 +214,10 @@ class _DayInfoWidgetState extends State<DayInfoWidget> {
                   ),
                 ),
               ),
-              if (trackedDay != null) CopyDayButton(day: widget.selectedDay),
+              if (trackedDay != null) ...[
+                SelectEntriesButton(day: widget.selectedDay),
+                CopyDayButton(day: widget.selectedDay),
+              ],
             ],
           ),
           // [/fork]
@@ -326,10 +330,9 @@ class _DayInfoWidgetState extends State<DayInfoWidget> {
                 onDeleteIntakeCallback: _deleteIntakeOnShownDay,
                 onItemLongPressedCallback: onIntakeItemLongPressed,
                 onItemTappedCallback: widget.onEditIntake,
-                onCopyIntakeCallback:
-                    _showsCurrentDay
-                        ? null
-                        : widget.onCopyIntake,
+                // [fork] S24 copy-anywhere: today's entries copy too
+                onCopyIntakeCallback: widget.onCopyIntake,
+                // [/fork]
                 usesImperialUnits: widget.usesImperialUnits,
                 showMealMacros: widget.showMealMacros,
                 trackedDayEntity: trackedDay,
@@ -354,10 +357,9 @@ class _DayInfoWidgetState extends State<DayInfoWidget> {
                 onItemTappedCallback: widget.onEditIntake,
                 usesImperialUnits: widget.usesImperialUnits,
                 showMealMacros: widget.showMealMacros,
-                onCopyIntakeCallback:
-                    _showsCurrentDay
-                        ? null
-                        : widget.onCopyIntake,
+                // [fork] S24 copy-anywhere: today's entries copy too
+                onCopyIntakeCallback: widget.onCopyIntake,
+                // [/fork]
                 trackedDayEntity: trackedDay,
                 mealKcalTarget: widget.lunchKcalTarget,
                 sortType: _sortByMeal[IntakeTypeEntity.lunch],
@@ -378,10 +380,9 @@ class _DayInfoWidgetState extends State<DayInfoWidget> {
                 onDeleteIntakeCallback: _deleteIntakeOnShownDay,
                 onItemLongPressedCallback: onIntakeItemLongPressed,
                 onItemTappedCallback: widget.onEditIntake,
-                onCopyIntakeCallback:
-                    _showsCurrentDay
-                        ? null
-                        : widget.onCopyIntake,
+                // [fork] S24 copy-anywhere: today's entries copy too
+                onCopyIntakeCallback: widget.onCopyIntake,
+                // [/fork]
                 usesImperialUnits: widget.usesImperialUnits,
                 showMealMacros: widget.showMealMacros,
                 mealKcalTarget: widget.dinnerKcalTarget,
@@ -405,10 +406,9 @@ class _DayInfoWidgetState extends State<DayInfoWidget> {
                 onItemTappedCallback: widget.onEditIntake,
                 usesImperialUnits: widget.usesImperialUnits,
                 showMealMacros: widget.showMealMacros,
-                onCopyIntakeCallback:
-                    _showsCurrentDay
-                        ? null
-                        : widget.onCopyIntake,
+                // [fork] S24 copy-anywhere: today's entries copy too
+                onCopyIntakeCallback: widget.onCopyIntake,
+                // [/fork]
                 trackedDayEntity: trackedDay,
                 mealKcalTarget: widget.snackKcalTarget,
                 sortType: _sortByMeal[IntakeTypeEntity.snack],
@@ -499,11 +499,9 @@ class _DayInfoWidgetState extends State<DayInfoWidget> {
     IntakeEntity intakeEntity,
   ) async {
     final day = widget.selectedDay;
-    if (DateUtils.isSameDay(day, widget.currentDay)) {
-      showDeleteIntakeDialog(context, intakeEntity, day);
-    } else {
-      showCopyOrDeleteIntakeDialog(context, intakeEntity, day);
-    }
+    // [fork] S24 copy-anywhere: today's entries copy too
+    showCopyOrDeleteIntakeDialog(context, intakeEntity, day);
+    // [/fork]
   }
 
   void onActivityItemLongPressed(

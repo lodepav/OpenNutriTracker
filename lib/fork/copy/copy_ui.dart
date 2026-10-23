@@ -13,22 +13,23 @@ import 'package:opennutritracker/generated/l10n.dart';
 /// Where a copy goes: a day, and for entries a meal (null: each its own).
 typedef CopyTarget = ({DateTime day, IntakeTypeEntity? meal, bool activities});
 
-String _mealLabel(BuildContext context, IntakeTypeEntity meal) =>
-    switch (meal) {
-      IntakeTypeEntity.breakfast => S.of(context).breakfastLabel,
-      IntakeTypeEntity.lunch => S.of(context).lunchLabel,
-      IntakeTypeEntity.dinner => S.of(context).dinnerLabel,
-      IntakeTypeEntity.snack => S.of(context).snackLabel,
-    };
+String mealLabel(BuildContext context, IntakeTypeEntity meal) => switch (meal) {
+  IntakeTypeEntity.breakfast => S.of(context).breakfastLabel,
+  IntakeTypeEntity.lunch => S.of(context).lunchLabel,
+  IntakeTypeEntity.dinner => S.of(context).dinnerLabel,
+  IntakeTypeEntity.snack => S.of(context).snackLabel,
+};
 
-Future<DateTime> _logicalToday() async {
+Future<DateTime> logicalToday() async {
   final config = await locator<GetConfigUsecase>().getConfig();
   return DayBoundaryCalc.currentLogicalDayMinutes(
     config.dayStartOffsetTotalMinutes,
   );
 }
 
-void _refresh() {
+void refreshAfterCopy() {
+  // Widget tests copy without the diary's blocs.
+  if (!locator.isRegistered<DiaryBloc>()) return;
   locator<DiaryBloc>()
     ..add(const LoadDiaryYearEvent())
     ..updateHomePage();
@@ -43,7 +44,7 @@ Future<void> copyIntakesWithDialog(
   List<IntakeEntity> intakes,
   IntakeTypeEntity meal,
 ) async {
-  final today = await _logicalToday();
+  final today = await logicalToday();
   if (!context.mounted) return;
   final target = await showDialog<CopyTarget>(
     context: context,
@@ -55,7 +56,7 @@ Future<void> copyIntakesWithDialog(
     target.day,
     type: target.meal,
   );
-  _refresh();
+  refreshAfterCopy();
   if (context.mounted) _copied(context, target.day);
 }
 
@@ -72,7 +73,7 @@ class CopyDayButton extends StatelessWidget {
   const CopyDayButton({super.key, required this.day});
 
   Future<void> _copy(BuildContext context) async {
-    final today = await _logicalToday();
+    final today = await logicalToday();
     if (!context.mounted) return;
     final target = await showDialog<CopyTarget>(
       context: context,
@@ -84,7 +85,7 @@ class CopyDayButton extends StatelessWidget {
       target.day,
       activities: target.activities,
     );
-    _refresh();
+    refreshAfterCopy();
     if (context.mounted) _copied(context, target.day);
   }
 
@@ -155,7 +156,7 @@ class _CopyTargetDialogState extends State<CopyTargetDialog> {
               for (final meal in IntakeTypeEntity.values)
                 DropdownMenuItem(
                   value: meal,
-                  child: Text(_mealLabel(context, meal)),
+                  child: Text(mealLabel(context, meal)),
                 ),
             ],
           )
