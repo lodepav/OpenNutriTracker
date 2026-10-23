@@ -444,6 +444,12 @@ and take kJ for kJ users (`lib/fork/units/energy_text.dart`).
   those days' goals. An empty day is not counted, so it does not read as a fast. Built from
   the days Trends already loads; nothing stored.
 
+**More from MacroFactor, round 3** (asked 2026-10-23, branch `fork/mf4`; a bundled generic-food
+database, Q4 (b), was offered and declined):
+- *Done:* suggestions by time of day (S19): a recent food's logs count in full within about
+  two hours of now's time of day, fading to 40% at the far side of the clock, on top of the
+  meal and the fading by age. A log at midnight (a day picked, no time) counts 70%.
+
 Upstream: open an issue first, with the simulation results. The maintainer cites a source for
 every calculation; everything except the tuned weights has one, and those come with the
 simulation. If declined, it stays in the fork behind seams.

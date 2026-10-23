@@ -14,6 +14,27 @@ const otherMealWeight = 0.25;
 /// A log's weight halves every this many days.
 const recentsHalfLifeDays = 30;
 
+/// How many hours from now's time of day a log may be and still count
+/// in full; further off it fades towards [otherTimeWeight].
+const sameTimeHours = 2.0;
+
+/// A log at the opposite time of day counts this much of one logged now.
+const otherTimeWeight = 0.4;
+
+/// A log's weight by how near its time of day is to [now]'s (MacroFactor's
+/// suggestions by time): oats logged at 7:00 lead at 7:30, not at 19:00.
+/// A log at midnight was added to a day with no time picked, and counts
+/// as halfway.
+double timeOfDayWeight(DateTime log, DateTime now) {
+  if (log.hour == 0 && log.minute == 0 && log.second == 0) {
+    return (1 + otherTimeWeight) / 2;
+  }
+  final minutes = (log.hour * 60 + log.minute) - (now.hour * 60 + now.minute);
+  final apart = min(minutes.abs(), 24 * 60 - minutes.abs()) / 60;
+  final fade = exp(-pow(apart / (2 * sameTimeHours), 2));
+  return otherTimeWeight + (1 - otherTimeWeight) * fade;
+}
+
 /// Upstream's key for one food in the recents (`getRecentlyAddedIntake`).
 String recentKey(IntakeEntity intake) =>
     intake.meal.code ?? intake.meal.name ?? '';
@@ -21,9 +42,9 @@ String recentKey(IntakeEntity intake) =>
 /// [recents] (upstream's unique foods: custom meals, then newest) ranked
 /// for [meal]: a food scores its logs in [history] over the last
 /// [recentsWindowDays], each halving every [recentsHalfLifeDays], a log in
-/// another meal counting [otherMealWeight]. So breakfast's oats come first
-/// at breakfast, and a food not logged in the window keeps upstream's order
-/// below the rest.
+/// another meal counting [otherMealWeight], and each weighed by
+/// [timeOfDayWeight]. So breakfast's oats come first at breakfast, and a
+/// food not logged in the window keeps upstream's order below the rest.
 List<IntakeEntity> rankRecentsForMeal(
   List<IntakeEntity> recents,
   List<IntakeEntity> history,
@@ -36,6 +57,7 @@ List<IntakeEntity> rankRecentsForMeal(
     if (ageDays < 0 || ageDays > recentsWindowDays) continue;
     final weight =
         (log.type == meal ? 1.0 : otherMealWeight) *
+        timeOfDayWeight(log.dateTime, now) *
         pow(0.5, ageDays / recentsHalfLifeDays);
     scores.update(recentKey(log), (s) => s + weight, ifAbsent: () => weight);
   }
