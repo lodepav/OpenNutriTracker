@@ -34,6 +34,8 @@ Future<void> offerOffUpload(
   OffAccountStore? store,
   OffContributionClient? client,
 }) async {
+  // No client to send with: the app's is missing in widget tests.
+  if (client == null && !locator.isRegistered<http.Client>()) return;
   final upload = OffUpload.fromMeal(meal);
   if (!isBarcodeFormatValid(upload.barcode) || upload.isEmpty) return;
   final account = await (store ?? OffAccountStore()).load();

@@ -61,7 +61,16 @@ Future<bool> editMealGroupLeftovers(
   MealPhotoCache? photoCache,
   Future<MealPhoto?> Function(AiSelection selection)? takePhoto,
 }) async {
-  final group = await (store ?? MealGroupStore()).groupOf(intake.id);
+  final group = await (store ?? MealGroupStore()).groupOf(intake.id).catchError(
+    (Object e, StackTrace stackTrace) {
+      // Like S8: a failed lookup only loses the grouping, and the entry is
+      // still edited on its own.
+      Logger(
+        'MealGroups',
+      ).warning('Reading a meal group failed', e, stackTrace);
+      return null;
+    },
+  );
   if (group == null || !context.mounted) return false;
   final byId = intakeById ?? locator<GetIntakeUsecase>().getIntakeById;
   final members = [for (final id in group.intakeIds) ?await byId(id)];

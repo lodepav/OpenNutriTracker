@@ -153,7 +153,7 @@ class _Meals extends Fake implements CustomMealDataSource {
   List<MealDBO> getAllCustomMeals() => saved;
 
   @override
-  Future<void> saveCustomMeal(MealDBO meal) async {
+  Future<void> saveCustomMeal(MealDBO meal, {MealDBO? previous}) async {
     saved
       ..removeWhere((m) => (m.code ?? m.name) == (meal.code ?? meal.name))
       ..add(meal);

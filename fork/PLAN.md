@@ -4,7 +4,7 @@ Started 2026-10-17. Decisions in [DECISIONS.md](DECISIONS.md) win over this file
 
 ## 0. What upstream already gives us
 
-Checked on `develop` at 1bc934b1 (2026-10-17). `fork/main` is based on the `v2.4.0` release since 2026-10-22 (D6); the phase 1c files read on `develop` are identical in 2.4.0.
+Checked on `develop` at 1bc934b1 (2026-10-17). `fork/main` is based on upstream's releases since 2026-10-22 (D6): `v2.4.0`, then `v2.5.0` merged 2026-10-23; the phase 1c files read on `develop` are identical in 2.4.0.
 
 | MacroFactor feature | ONT today |
 |---|---|
@@ -16,7 +16,7 @@ Checked on `develop` at 1bc934b1 (2026-10-17). `fork/main` is based on the `v2.4
 | Goal ETA | ⚠️ "weeks left" on Trends; calorie taper near the target |
 | Adaptive expenditure, weekly check-in | ❌ calorie target = formula TDEE (IOM 2005) ± a weekly-pace offset |
 | Micronutrients, water, fasting | ✅ |
-| Backup | ⚠️ manual JSON/CSV zip export and import. Import onto a live install appends duplicates in 2.4.0; fixed on `develop` (#1369, #1398), not yet released. |
+| Backup | ⚠️ manual JSON/CSV zip export and import. Import onto a live install appended duplicates in 2.4.0; fixed in 2.5.0 (#1369, #1398). |
 
 ## 0b. Built elsewhere already (checked 2026-10-22)
 
@@ -265,7 +265,7 @@ the same gap). Pelmeni and khachapuri are in no table and go to D9.
 ## 3. Phase 2 — Backup to Google Drive (D10)
 
 **Status 2026-10-23: done** (`fork/backup`), unblocked by D15.
-- Upstream's import fixes (#1369, #1381, #1398) cherry-picked from `develop`, to drop at v2.5.0.
+- Upstream's import fixes (#1369, #1381, #1398) cherry-picked from `develop`; released in v2.5.0, whose merge (2026-10-23) replaced them.
 - **Ported after review** from theoleuthardt `personal` (#93, #94, #97): water, fasting sessions
   and custom meals in the backup, as `BackupExtras` (S21), plus the adaptive switches and
   check-ins. Review: sound (everything decoded before the first write, writes by id, every file
