@@ -278,7 +278,9 @@ class _IntakeVerticalListState extends State<IntakeVerticalList> {
                               totalKcal > 0)
                             PopupMenuItem<VerticalListPopupMenuSelections>(
                                 value: VerticalListPopupMenuSelections.onCopy,
-                                child: Text(S.of(context).dialogCopyLabel)),
+                                // [fork] S25 copy-anywhere: it asks for the day
+                                child: const Text('Copy…')),
+                                // [/fork]
                           if (totalKcal > 0)
                             PopupMenuItem<VerticalListPopupMenuSelections>(
                                 value: VerticalListPopupMenuSelections.onDelete,
