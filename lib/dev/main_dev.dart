@@ -11,7 +11,9 @@ import 'package:opennutritracker/generated/l10n.dart';
 import 'package:opennutritracker/main.dart';
 // [fork] S18 dev-adaptive
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
+import 'package:opennutritracker/core/utils/ai_credential_storage.dart';
 import 'package:opennutritracker/fork/backup/auto_backup.dart';
+import 'package:opennutritracker/fork/dev/fake_ai.dart';
 import 'package:opennutritracker/fork/health/weight_import.dart';
 import 'package:opennutritracker/fork/health/weight_import_ui.dart';
 // [/fork]
@@ -40,6 +42,7 @@ Future<void> main() async {
   await AdaptiveStore.start();
   await AutoBackup.start();
   await WeightImport.start(refreshAfterWeightImport);
+  if (forkFakeAi) await enableFakeAi(locator<AiCredentialStorage>());
   // [/fork]
 
   final configRepo = locator<ConfigRepository>();
