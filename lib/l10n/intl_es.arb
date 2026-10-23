@@ -123,9 +123,9 @@
   "ageLabel": "Edad",
   "allItemsLabel": "Todos",
   "alphaVersionName": "[Alfa]",
-  "appDescription": "OpenNutriTracker es un contador gratuito y de código abierto de calorías y nutrientes que respeta tu privacidad.",
+  "appDescription": "OpenBite es un contador gratuito y de código abierto de calorías y nutrientes que respeta tu privacidad.",
   "appLicenseLabel": "Licencia GPL-3.0",
-  "appTitle": "OpenNutriTracker",
+  "appTitle": "OpenBite",
   "appVersionName": "Versión {versionNumber}",
   "@appVersionName": {
     "placeholders": {
@@ -308,7 +308,7 @@
   "discardChangesConfirmLabel": "Descartar",
   "discardChangesContent": "Tus cambios no guardados se perderán.",
   "discardChangesTitle": "¿Descartar cambios?",
-  "disclaimerText": "OpenNutriTracker no es una aplicación médica. Todos los datos proporcionados no están validados y deben usarse con precaución. Mantén un estilo de vida saludable y consulta a un profesional si tienes algún problema. No se recomienda su uso durante enfermedades, embarazo o lactancia. Para consultar las fuentes revisadas por pares que respaldan cada cálculo, toca el icono de información en la pantalla de Inicio o Perfil.",
+  "disclaimerText": "OpenBite no es una aplicación médica. Todos los datos proporcionados no están validados y deben usarse con precaución. Mantén un estilo de vida saludable y consulta a un profesional si tienes algún problema. No se recomienda su uso durante enfermedades, embarazo o lactancia. Para consultar las fuentes revisadas por pares que respaldan cada cálculo, toca el icono de información en la pantalla de Inicio o Perfil.",
   "downloadSampleCsvAction": "Comidas de ejemplo (csv)",
   "downloadSampleJsonAction": "Comidas de ejemplo (json)",
   "downloadSampleRecipesCsvAction": "Recetas de ejemplo (csv)",
@@ -415,7 +415,7 @@
     }
   },
   "disclaimerAcknowledgeLabel": "Entiendo",
-  "exportImportErrorUnreadableLabel": "No se pudo leer el archivo seleccionado. Elige la copia de seguridad .zip que exportó OpenNutriTracker.",
+  "exportImportErrorUnreadableLabel": "No se pudo leer el archivo seleccionado. Elige la copia de seguridad .zip que exportó OpenBite.",
   "exportImportErrorWriteFailedLabel": "No se pudo guardar el archivo en la ubicación elegida. Prueba con otra carpeta.",
   "importActivityConfirmTitle": "¿Importar {count} actividades?",
   "@importActivityConfirmTitle": {
@@ -561,7 +561,7 @@
   "notificationsDailyReminderBody": "¡No olvides registrar tus comidas hoy!",
   "notificationsDailyReminderChannelName": "Recordatorios diarios",
   "notificationsDailyReminderChannelDescription": "Recordatorio diario para registrar las comidas",
-  "notificationsDailyReminderTitle": "OpenNutriTracker",
+  "notificationsDailyReminderTitle": "OpenBite",
   "notificationsPermissionDeniedSnack": "Permiso de notificaciones denegado.",
   "nutrientPanelAllHiddenLabel": "Todos los nutrientes están ocultos — activa alguno en Ajustes → Nutrientes.",
   "nutrientPanelLimitLabel": "límite",
@@ -1174,12 +1174,12 @@
   "sourcesIconTooltip": "Ver fuentes",
   "sourcesMacrosDescription": "El reparto por defecto de 60 % hidratos, 25 % grasas y 15 % proteínas entra dentro de los rangos de ingesta de nutrientes para la población publicados por la OMS. Puedes ajustarlo en Ajustes → Cálculos. Fuente: WHO Technical Report Series 916 (2003), Diet, Nutrition and the Prevention of Chronic Diseases.",
   "sourcesMacrosTitle": "Distribución de macronutrientes",
-  "sourcesNonBinaryDescription": "La investigación sobre el gasto energético ha usado históricamente categorías binarias de sexo, por lo que no existe una única fórmula validada de TDEE para personas no binarias. Por eso OpenNutriTracker permite elegir entre una referencia promediada, una de tipo estrogénico o una de tipo testosterónico en Ajustes → Cálculos. Si un número preciso es realmente importante para tu atención, consulta a un profesional sanitario familiarizado con tu situación hormonal.",
+  "sourcesNonBinaryDescription": "La investigación sobre el gasto energético ha usado históricamente categorías binarias de sexo, por lo que no existe una única fórmula validada de TDEE para personas no binarias. Por eso OpenBite permite elegir entre una referencia promediada, una de tipo estrogénico o una de tipo testosterónico en Ajustes → Cálculos. Si un número preciso es realmente importante para tu atención, consulta a un profesional sanitario familiarizado con tu situación hormonal.",
   "sourcesNutrientReferenceTitle": "Ingestas de referencia de nutrientes",
   "sourcesNutrientReferenceDescription": "Las cantidades de referencia diarias que muestra el panel de nutrientes del diario provienen del resumen de Dietary Reference Intakes del Institute of Medicine, que recoge los objetivos por nutriente para adultos.",
   "sourcesNonBinaryTitle": "Estimación calórica no binaria",
   "sourcesOpenSourceLabel": "Ver código fuente",
-  "sourcesScreenIntro": "OpenNutriTracker usa metodologías consolidadas y revisadas por pares en todos sus cálculos. Las citas siguientes enlazan a las fuentes originales para que puedas verificar cualquier número.",
+  "sourcesScreenIntro": "OpenBite usa metodologías consolidadas y revisadas por pares en todos sus cálculos. Las citas siguientes enlazan a las fuentes originales para que puedas verificar cualquier número.",
   "sugarLabel": "azúcar",
   "suggestedLabel": "Sugerido",
   "suppliedLabel": "consumidas",
@@ -1427,7 +1427,7 @@
   "aiConsentChangeProviderNote": "Puedes cambiar de proveedor más adelante. Los términos de cada proveedor se muestran en Ajustes, y no se envía nada de lo que escribas ni fotografíes hasta que uses la función.",
   "aiConsentOwnServerCheckNote": "Al guardar la dirección de tu servidor, también se le pregunta qué modelos ofrece y se ejecuta una comprobación de configuración — una línea de ejemplo fija y una fotografía de muestra nuestra, nunca nada tuyo.",
   "aiConsentAgreeLabel": "LO ENTIENDO",
-  "aiAssistDisclosureCommon": "Tu diario y tu perfil nunca se envían. Los valores nutricionales provienen siempre de las bases de datos de alimentos, nunca del modelo. La clave se guarda únicamente en este dispositivo: OpenNutriTracker nunca la ve y no paga por su uso.",
+  "aiAssistDisclosureCommon": "Tu diario y tu perfil nunca se envían. Los valores nutricionales provienen siempre de las bases de datos de alimentos, nunca del modelo. La clave se guarda únicamente en este dispositivo: OpenBite nunca la ve y no paga por su uso.",
   "aiAssistDisclosureAnthropic": "Con una clave guardada, el texto que escribas en la pantalla de agregar varios elementos — y cualquier foto que elijas leer allí — se envía a Anthropic. Las fotos se envían para esa única solicitud y nunca se guardan.",
   "aiAssistDisclosureOpenRouter": "Con una clave guardada, el texto que escribas en la pantalla de agregar varios elementos — y cualquier foto que elijas leer allí — se envía a OpenRouter, que lo reenvía al proveedor que sirve el modelo que hayas elegido. OpenRouter también reenvía una identidad a nivel de cuenta a ese proveedor en cada solicitud, y esto no se puede desactivar. No conserva tu contenido más allá de enrutar la solicitud, salvo cuando lo exijan la detección de abusos, la seguridad, la facturación o el cumplimiento legal. El proveedor que sirve tu modelo conserva lo que reciba conforme a su propia política.",
   "aiAssistDisclosureOpenAI": "Con una clave guardada, el texto que escribas en la pantalla de agregar varios elementos — y cualquier foto que elijas leer allí — se envía a OpenAI. OpenAI conserva lo que envíes durante un máximo de 30 días para supervisar posibles abusos, y más tiempo si la ley lo exige o si es razonablemente necesario para proteger sus servicios o a un tercero de daños.",
@@ -1539,7 +1539,7 @@
   "bulkAddWaitModelLoadingLabel": "Tu servidor puede estar cargando su modelo. La primera solicitud tras un rato puede tardar un minuto o dos — es normal.",
   "bulkAddWaitCancelLabel": "Cancelar",
   "bulkAddPhotoLabel": "Leer una foto",
-  "bulkAddPhotoDisclosureCommon": "OpenNutriTracker no guarda ninguna copia propia, y nunca se incluye en tus exportaciones.",
+  "bulkAddPhotoDisclosureCommon": "OpenBite no guarda ninguna copia propia, y nunca se incluye en tus exportaciones.",
   "bulkAddPhotoDisclosureAnthropic": "La foto se envía a Anthropic para identificar los alimentos que contiene.",
   "bulkAddPhotoDisclosureOpenRouter": "La foto se envía a OpenRouter, que la reenvía a {provider} para identificar los alimentos que contiene.",
   "@bulkAddPhotoDisclosureOpenRouter": {
@@ -1612,7 +1612,7 @@
       }
     }
   },
-  "healthSyncPermissionDeniedLabel": "No se concedió acceso a {platform}. Permite que OpenNutriTracker lea entrenamientos y porcentaje de grasa corporal para importarlos.",
+  "healthSyncPermissionDeniedLabel": "No se concedió acceso a {platform}. Permite que OpenBite lea entrenamientos y porcentaje de grasa corporal para importarlos.",
   "@healthSyncPermissionDeniedLabel": {
     "placeholders": {
       "platform": {
@@ -1628,7 +1628,7 @@
       }
     }
   },
-  "healthSyncDisclosureBody": "OpenNutriTracker leerá tus entrenamientos terminados de {platform} — su tipo, cuándo ocurrieron, cuánto duraron y la energía que reportan.\n\nLos entrenamientos se registran en tu diario como actividades que puedes editar o eliminar, y la energía que reportan aumenta el objetivo calórico de ese día en la proporción que elijas.",
+  "healthSyncDisclosureBody": "OpenBite leerá tus entrenamientos terminados de {platform} — su tipo, cuándo ocurrieron, cuánto duraron y la energía que reportan.\n\nLos entrenamientos se registran en tu diario como actividades que puedes editar o eliminar, y la energía que reportan aumenta el objetivo calórico de ese día en la proporción que elijas.",
   "@healthSyncDisclosureBody": {
     "placeholders": {
       "platform": {
@@ -1636,7 +1636,7 @@
       }
     }
   },
-  "healthSyncDisclosureBodyFatAddendum": "OpenNutriTracker también leerá el porcentaje de grasa corporal más reciente que tenga {platform}. La lectura de grasa corporal se usa para sugerir cuál debería ser esa proporción.",
+  "healthSyncDisclosureBodyFatAddendum": "OpenBite también leerá el porcentaje de grasa corporal más reciente que tenga {platform}. La lectura de grasa corporal se usa para sugerir cuál debería ser esa proporción.",
   "@healthSyncDisclosureBodyFatAddendum": {
     "placeholders": {
       "platform": {

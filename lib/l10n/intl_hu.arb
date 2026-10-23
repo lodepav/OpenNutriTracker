@@ -123,9 +123,9 @@
   "ageLabel": "Kor",
   "allItemsLabel": "Mind",
   "alphaVersionName": "[Alfa]",
-  "appDescription": "Az OpenNutriTracker egy ingyenes, nyílt forráskódú kalória- és tápanyag-nyomkövető alkalmazás, amely tiszteletben tartja a felhasználók magánéletét.",
+  "appDescription": "Az OpenBite egy ingyenes, nyílt forráskódú kalória- és tápanyag-nyomkövető alkalmazás, amely tiszteletben tartja a felhasználók magánéletét.",
   "appLicenseLabel": "GPL-3.0 licenc",
-  "appTitle": "OpenNutriTracker",
+  "appTitle": "OpenBite",
   "appVersionName": "{versionNumber} verzió",
   "@appVersionName": {
     "placeholders": {
@@ -319,7 +319,7 @@
   "discardChangesConfirmLabel": "Elvetés",
   "discardChangesContent": "A nem mentett módosítások elvesznek.",
   "discardChangesTitle": "Elveti a módosításokat?",
-  "disclaimerText": "Az OpenNutriTracker nem orvosi alkalmazás. A megadott adatok nem kerültek ellenőrzésre, ezért azok használatakor körültekintéssel kell eljárni. Kérjük, tartson fenn egészséges életmódot, és ha bármilyen problémája van, forduljon szakemberhez. Betegség, terhesség vagy szoptatás idején nem ajánlott a használata. Az egyes számítások alapjául szolgáló, szakértői értékelésen átesett források megtekintéséhez érintse meg az információs ikont a Főoldalon vagy a Profil képernyőn.",
+  "disclaimerText": "Az OpenBite nem orvosi alkalmazás. A megadott adatok nem kerültek ellenőrzésre, ezért azok használatakor körültekintéssel kell eljárni. Kérjük, tartson fenn egészséges életmódot, és ha bármilyen problémája van, forduljon szakemberhez. Betegség, terhesség vagy szoptatás idején nem ajánlott a használata. Az egyes számítások alapjául szolgáló, szakértői értékelésen átesett források megtekintéséhez érintse meg az információs ikont a Főoldalon vagy a Profil képernyőn.",
   "downloadSampleCsvAction": "Mintaételek (csv)",
   "downloadSampleJsonAction": "Mintaételek (json)",
   "downloadSampleRecipesCsvAction": "Receptminta (csv)",
@@ -549,7 +549,7 @@
   "notificationsDailyReminderBody": "Ne felejtse el rögzíteni a mai étkezéseit!",
   "notificationsDailyReminderChannelName": "Napi emlékeztetők",
   "notificationsDailyReminderChannelDescription": "Napi étkezés-naplózási emlékeztető",
-  "notificationsDailyReminderTitle": "OpenNutriTracker",
+  "notificationsDailyReminderTitle": "OpenBite",
   "notificationsPermissionDeniedSnack": "Az értesítési engedély elutasítva.",
   "nutrientPanelAllHiddenLabel": "Minden tápanyag el van rejtve — a Beállítások → Tápanyagok menüpontban néhányat bekapcsolhat.",
   "nutrientPanelLimitLabel": "korlát",
@@ -1090,12 +1090,12 @@
   "sourcesIconTooltip": "Források megtekintése",
   "sourcesMacrosDescription": "Az alapértelmezett arány – 60% szénhidrát, 25% zsír és 15% fehérje – a WHO által közzétett, a lakosságra vonatkozó tápanyag-beviteli tartományokba esik. Ezt a Beállítások → Számítások menüpontban állíthatja be. Forrás: WHO Technical Report Series 916 (2003), „Diet, Nutrition and the Prevention of Chronic Diseases” (Étrend, táplálkozás és a krónikus betegségek megelőzése).",
   "sourcesMacrosTitle": "Makrotápanyag eloszlás",
-  "sourcesNonBinaryDescription": "Az energiafelhasználással kapcsolatos kutatások eddig mindig bináris nemi kategóriákat alkalmaztak, ezért a nem bináris emberek számára nincs egyetlen validált TDEE-képlet sem. Az OpenNutriTracker ezért a Beállítások → Számítások menüpont alatt lehetővé teszi, hogy átlagos referenciaérték, ösztrogén-jellegű referenciaérték vagy tesztoszteron-jellegű referenciaérték közül válasszon. Ha az egészségügyi ellátása szempontjából valóban fontos a pontos érték, kérjük, forduljon egy olyan orvoshoz, aki ismeri a hormonális állapotát.",
+  "sourcesNonBinaryDescription": "Az energiafelhasználással kapcsolatos kutatások eddig mindig bináris nemi kategóriákat alkalmaztak, ezért a nem bináris emberek számára nincs egyetlen validált TDEE-képlet sem. Az OpenBite ezért a Beállítások → Számítások menüpont alatt lehetővé teszi, hogy átlagos referenciaérték, ösztrogén-jellegű referenciaérték vagy tesztoszteron-jellegű referenciaérték közül válasszon. Ha az egészségügyi ellátása szempontjából valóban fontos a pontos érték, kérjük, forduljon egy olyan orvoshoz, aki ismeri a hormonális állapotát.",
   "sourcesNutrientReferenceTitle": "Tápanyag-referencia beviteli értékek",
   "sourcesNutrientReferenceDescription": "A napló tápérték-táblázatában feltüntetett napi referenciaértékek az Orvostudományi Intézet (Institute of Medicine) „Dietary Reference Intakes” című összefoglalójából származnak, amely a felnőttekre vonatkozó, tápanyagonkénti célértékeket tartalmazza.",
   "sourcesNonBinaryTitle": "Nem bináris kalóriabecslés",
   "sourcesOpenSourceLabel": "Forrás megtekintése",
-  "sourcesScreenIntro": "Az OpenNutriTracker minden feltüntetett számításához elismert, szakértői értékelésen átesett módszereket alkalmaz. Az alábbi hivatkozások az eredeti forrásokra mutatnak, így bármelyik adatot saját maga is ellenőrizheti.",
+  "sourcesScreenIntro": "Az OpenBite minden feltüntetett számításához elismert, szakértői értékelésen átesett módszereket alkalmaz. Az alábbi hivatkozások az eredeti forrásokra mutatnak, így bármelyik adatot saját maga is ellenőrizheti.",
   "sugarLabel": "cukor",
   "suppliedLabel": "bevitt",
   "transFatLabel": "transzzsír",
@@ -1279,7 +1279,7 @@
   "policyChangeNoticeReadAction": "Szabályzat elolvasása",
   "policyChangeNoticeDismissAction": "Értettem",
   "disclaimerAcknowledgeLabel": "Értem",
-  "exportImportErrorUnreadableLabel": "A kiválasztott fájlt nem sikerült beolvasni. Válassza ki az OpenNutriTracker által exportált .zip biztonsági mentést.",
+  "exportImportErrorUnreadableLabel": "A kiválasztott fájlt nem sikerült beolvasni. Válassza ki az OpenBite által exportált .zip biztonsági mentést.",
   "exportImportErrorWriteFailedLabel": "A fájl nem menthető el a kiválasztott helyre. Próbálkozzon egy másik mappával!",
   "noResultsSubtitle": "A kereséshez nem találtunk megfelelő élelmiszert. Próbálkozzon egy másik névvel, olvassa be a vonalkódot, vagy hozzon létre saját terméket.",
   "noResultsScanBarcode": "Vonalkód beolvasása",
@@ -1410,7 +1410,7 @@
   "aiConsentChangeProviderNote": "Később szolgáltatót válthat. Az egyes szolgáltatók feltételei a Beállításokban láthatók, és semmi sem kerül továbbításra a beírt vagy lefényképezett adatok közül, amíg nem használja a funkciót.",
   "aiConsentOwnServerCheckNote": "A szervercím elmentésekor a rendszer lekérdezi a kínált modelleket, és elvégez egyetlen ellenőrző tesztet: ehhez egy rögzített példamondatot és egy saját mintafényképünket használja – az Ön anyagait soha sem.",
   "aiConsentAgreeLabel": "ÉRTEM",
-  "aiAssistDisclosureCommon": "A naplója és a profilja soha nem kerül elküldésre. A tápértékadatok mindig az élelmiszer-adatbázisokból származnak, soha nem a modellből. A kulcs kizárólag ezen az eszközön van tárolva: az OpenNutriTracker soha nem látja, és nem fizet a használatáért.",
+  "aiAssistDisclosureCommon": "A naplója és a profilja soha nem kerül elküldésre. A tápértékadatok mindig az élelmiszer-adatbázisokból származnak, soha nem a modellből. A kulcs kizárólag ezen az eszközön van tárolva: az OpenBite soha nem látja, és nem fizet a használatáért.",
   "aiAssistDisclosureAnthropic": "A kulcs mentése után a többelemes hozzáadási képernyőn beírt szöveg – valamint az ott beolvasni kívánt fotók – továbbításra kerülnek az Anthropicnak. A fotók kizárólag az adott kéréshez kerülnek elküldésre, és soha nem kerülnek mentésre.",
   "aiAssistDisclosureOpenRouter": "A kulcs elmentése után a többelemű hozzáadási képernyőn beírt szöveg – valamint az ott beolvasni kívánt fotók – az OpenRouterhez kerülnek, amely továbbítja azokat a választott modellt kiszolgáló szolgáltatónak. Az OpenRouter minden kérésnél továbbít egy fiók szintű azonosítót is az adott szolgáltatónak, és ezt nem lehet kikapcsolni. A rendszer a kérés továbbításán túl nem tárolja a tartalmadat, kivéve, ha ez visszaélések felderítéséhez, biztonsági okokból, számlázáshoz vagy jogi előírások betartásához szükséges. Az Ön modelljét kiszolgáló szolgáltató a saját irányelvei szerint kezeli a kapott adatokat.",
   "aiAssistDisclosureOpenAI": "Ha a jelszót elmentette, a többelemű hozzáadási képernyőn beírt szöveg – valamint az ott beolvasásra kiválasztott fotók – továbbításra kerülnek az OpenAI-nak. Az OpenAI az elküldött adatokat legfeljebb 30 napig tárolja a visszaélések felderítése céljából, illetve ennél hosszabb ideig, ha ezt a törvény előírja, vagy ha ez ésszerűen szükséges a szolgáltatásai vagy harmadik felek védelme érdekében.",
@@ -1514,7 +1514,7 @@
   "bulkAddWaitModelLoadingLabel": "Lehet, hogy a szerver éppen betölti a modelljét. Az első kérés egy kis várakozás után akár egy-két percet is igénybe vehet – ez teljesen normális.",
   "bulkAddWaitCancelLabel": "Mégse",
   "bulkAddPhotoLabel": "Fotó beolvasása",
-  "bulkAddPhotoDisclosureCommon": "Az OpenNutriTracker nem készít saját másolatot, és az adatok soha nem kerülnek bele az exportált fájlokba.",
+  "bulkAddPhotoDisclosureCommon": "Az OpenBite nem készít saját másolatot, és az adatok soha nem kerülnek bele az exportált fájlokba.",
   "bulkAddPhotoDisclosureAnthropic": "A fényképet elküldik az Anthropicnak, hogy azonosítsák a rajta látható ételeket.",
   "bulkAddPhotoDisclosureOpenRouter": "A fotót az OpenRouternek küldik el, amely továbbítja azt a(z) {provider} szolgáltatónak, hogy az azonosítsa a képen látható ételeket.",
   "@bulkAddPhotoDisclosureOpenRouter": {
@@ -1579,7 +1579,7 @@
     }
   },
   "healthSyncNeverImportedLabel": "Még nem importált edzéseket",
-  "healthSyncPermissionDeniedLabel": "A(z) {platform} elérése nem biztosított. Engedélyezze az OpenNutriTracker számára az edzések olvasását az importáláshoz.",
+  "healthSyncPermissionDeniedLabel": "A(z) {platform} elérése nem biztosított. Engedélyezze az OpenBite számára az edzések olvasását az importáláshoz.",
   "@healthSyncPermissionDeniedLabel": {
     "placeholders": {
       "platform": {
@@ -1595,7 +1595,7 @@
       }
     }
   },
-  "healthSyncDisclosureBody": "Az OpenNutriTracker beolvassa a(z) {platform} alkalmazásból a befejezett edzéseidet — azok típusát, időpontját, időtartamát és az általuk jelzett energiaértéket.\n\nAz edzések tevékenységként kerülnek rögzítésre a naplóba, ahol szerkesztheti vagy törölheti őket, és az általuk jelzett energiaérték az Ön által választott arányban növeli az adott nap kalóriacélját.",
+  "healthSyncDisclosureBody": "Az OpenBite beolvassa a(z) {platform} alkalmazásból a befejezett edzéseidet — azok típusát, időpontját, időtartamát és az általuk jelzett energiaértéket.\n\nAz edzések tevékenységként kerülnek rögzítésre a naplóba, ahol szerkesztheti vagy törölheti őket, és az általuk jelzett energiaérték az Ön által választott arányban növeli az adott nap kalóriacélját.",
   "@healthSyncDisclosureBody": {
     "placeholders": {
       "platform": {
@@ -1603,7 +1603,7 @@
       }
     }
   },
-  "healthSyncDisclosureBodyFatAddendum": "Az OpenNutriTracker beolvassa a(z) {platform} által tárolt legfrissebb testzsírszázalék-adatot is. A testzsírszázalék-adatot arra használja, hogy javaslatot tegyen arra, milyennek kellene lennie ennek az aránynak.",
+  "healthSyncDisclosureBodyFatAddendum": "Az OpenBite beolvassa a(z) {platform} által tárolt legfrissebb testzsírszázalék-adatot is. A testzsírszázalék-adatot arra használja, hogy javaslatot tegyen arra, milyennek kellene lennie ennek az aránynak.",
   "@healthSyncDisclosureBodyFatAddendum": {
     "placeholders": {
       "platform": {
