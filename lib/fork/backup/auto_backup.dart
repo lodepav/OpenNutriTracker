@@ -171,11 +171,15 @@ class AutoBackup {
     try {
       final now = _clock();
       final bytes = ZipEncoder().encode(await _assemble());
-      await _folder.write(uri, _fileName(now), Uint8List.fromList(bytes));
+      final written = _fileName(now);
+      await _folder.write(uri, written, Uint8List.fromList(bytes));
       final ours = (await _folder.list(
         uri,
       )).where(_profileFiles.hasMatch).toList()..sort((a, b) => b.compareTo(a));
-      for (final old in ours.skip(keep)) {
+      // The file just written stays even if a clock set back makes it
+      // sort among the oldest (after openGym's pruneAutoBackups).
+      ours.remove(written);
+      for (final old in ours.skip(keep - 1)) {
         await _folder.delete(uri, old);
       }
       await _put({

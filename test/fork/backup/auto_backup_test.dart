@@ -82,6 +82,19 @@ void main() {
     },
   );
 
+  test('a clock set back never prunes the file just written', () async {
+    final b = backup();
+    await b.chooseFolder();
+    for (var i = 1; i <= 20; i++) {
+      now = now.add(const Duration(days: 1));
+      await b.runNow();
+    }
+    now = DateTime(2026, 1, 1, 12);
+    await b.runNow();
+    expect(folder.files, contains('openbite-2026-01-01.zip'));
+    expect(folder.files.length, AutoBackup.keep);
+  });
+
   test('a second profile writes its own files', () async {
     final b = backup();
     await b.chooseFolder();
