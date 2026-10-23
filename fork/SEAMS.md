@@ -46,3 +46,4 @@ merge brings it in and its row goes.
 |---|---|---|
 | `feat/photo-note` | Text typed in the bulk-add box goes with a meal photo as a note, in all three clients; an amount survives only when the note states it. | PR not opened yet |
 | `feat/leftovers` | The entry edit dialog takes an amount left over, or ¼ ⅓ ½ ¾ of it, off the logged amount. | PR not opened yet |
+| `feat/nutrient-contributions` | Tapping carbs, fat or protein on Home lists the day's foods by how much of it each gave (#1266). | PR not opened yet |
