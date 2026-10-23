@@ -224,6 +224,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                 ...dinnerIntakeList,
                 ...snackIntakeList,
               ],
+              usesImperialUnits: usesImperialUnits,
             ),
             // [fork] S13 adaptive-check-in
             AdaptiveCheckInCard(
