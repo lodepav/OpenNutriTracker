@@ -103,7 +103,7 @@ class MealPhotoCache {
 /// Seam S8: replaces upstream's "keeps no copy" sentence in the photo
 /// sheet while photos are kept.
 const keptPhotoDisclosure =
-    'OpenNutriTracker keeps a copy on this phone for 24 hours, to compare '
+    'OpenBite keeps a copy on this phone for 24 hours, to compare '
     'with a photo of the leftovers (Settings, Privacy turns this off). It is '
     'never included in your exports.';
 

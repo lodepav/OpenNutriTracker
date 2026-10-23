@@ -37,7 +37,7 @@ Both forks below are GPL-3.0 like ONT, so their code can be ported with credit.
 | Backlog: label scan | theoleuthardt (on-device OCR, iOS only), cattosmile/OpenNutriTrackerPlus (AI scan), aeobrien | Done: cattosmile's label rules, without its research and estimating merge (S29) |
 | Backlog: AI recipe builder | aeobrien "Phase 12" | Done our way (S30): bulk add's rows saved as a recipe; a link read from its schema.org data, not sent to a model |
 | Backlog: re-log yesterday | theoleuthardt: copy entries, meals or days to any date; upstream #842, #1265 | Lowered |
-| Backlog: OFF contributions | theoleuthardt: send scanned values and the label photo to OFF | Lowered |
+| Backlog: OFF contributions | theoleuthardt: send scanned values and the label photo to OFF | Done without the photo (S32, S33) |
 | Health Connect weight | Upstream PR #1296 | Done as our own take on it (S27); swap when upstream releases it |
 | Backlog: top contributors per nutrient | Upstream issue #1266, no code | Unchanged |
 
@@ -53,7 +53,7 @@ worth a look when phase 1c's breakdown is designed.
 - [x] Fork identity (Q2, D8): **OpenBite**, app id `io.github.lodepav.openbite`, set in `android/app/fork.gradle` (S20). Launcher name only.
 - [ ] Release keystore and its pinned digest: the user makes it later (2026-10-23).
 - [x] Health Connect weight import (item 3, 2026-10-23): our own take on PR #1296 (`lib/fork/health/`, S27, S28). Each day gets its latest reading; a typed or edited weight is never replaced; a deleted day stays empty until a newer reading; the newest imported row becomes the current weight. Fake scale under `FORK_FAKE_AI`. Not done: the Play Health Connect declaration for READ_WEIGHT; real-device check in phase 4.
-- [ ] OpenBite in the app's own text (onboarding, About, share texts) and its own icon. Search the trademark registers before publishing under the name.
+- [x] OpenBite in the app's own text (2026-10-23, `fork/tools/rebrand.sh`, S31) and its own icon, a diary page with a bite, themed-icon layer included (`fork/tools/launcher_icon.py`, S34). Not done: the splash logo, still upstream's; searching the trademark registers before publishing under the name.
 - [ ] `.env`: placeholders stay; ONT's hosted backend isn't used (D11).
 
 ## 1c. Phase 1c — Dishes as recipes (D12, revised D9)
@@ -430,6 +430,11 @@ Lower: already built elsewhere (§0b), port or wait:
   goal lookups; upstream's `CopyDialog` swapped at its two call sites instead of their rewrite of
   four upstream files. On the emulator, a copied day's totals match the source's.
   Not done: copying from today (upstream offers copy only on other days; "Copy day" works on any).
+- *Done 2026-10-23:* contribute to Open Food Facts (`lib/fork/off/`, S32, S33), ported after
+  review from theoleuthardt `personal` (#81): the user's own account in the keychain, the test
+  server until switched off, a preview of exactly what goes out, and only what OFF lacks (name,
+  brand, or nutrients when it has none). Offered after saving a custom food with a barcode.
+  Not done: the label photo (the label scan discards it), and a live run against OFF (phase 4).
 - **Contribute missing barcodes to Open Food Facts** (theoleuthardt sends scanned values and
   the label photo). Today the app only reads OFF; upstream just links to the official OFF apps
   (`import_custom_food_data_dialog.dart`). OFF is the only source that takes contributions: USDA

@@ -4,16 +4,16 @@ android {
     defaultConfig {
         applicationId "io.github.lodepav.openbite"
     }
-    // The launcher name. Variant source sets outrank upstream's flavour ones, so these
+    // The launcher name and icon (S34). Variant source sets outrank upstream's flavour ones, so these
     // override src/main's and src/develop's app_name without editing them.
     sourceSets {
         // The fork's own Android code: the backup folder's channel (S22).
         main.java.srcDirs += 'src/fork/kotlin'
-        fullDebug.res.srcDirs += 'src/fork/full/res'
-        fullProfile.res.srcDirs += 'src/fork/full/res'
-        fullRelease.res.srcDirs += 'src/fork/full/res'
-        developDebug.res.srcDirs += 'src/fork/develop/res'
-        developProfile.res.srcDirs += 'src/fork/develop/res'
-        developRelease.res.srcDirs += 'src/fork/develop/res'
+        fullDebug.res.srcDirs += ['src/fork/full/res', 'src/fork/icon/res']
+        fullProfile.res.srcDirs += ['src/fork/full/res', 'src/fork/icon/res']
+        fullRelease.res.srcDirs += ['src/fork/full/res', 'src/fork/icon/res']
+        developDebug.res.srcDirs += ['src/fork/develop/res', 'src/fork/icon/res']
+        developProfile.res.srcDirs += ['src/fork/develop/res', 'src/fork/icon/res']
+        developRelease.res.srcDirs += ['src/fork/develop/res', 'src/fork/icon/res']
     }
 }

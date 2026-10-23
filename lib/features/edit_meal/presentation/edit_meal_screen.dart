@@ -33,6 +33,9 @@ import 'package:opennutritracker/features/meal_detail/meal_detail_screen.dart';
 import 'package:opennutritracker/fork/label/label_scan.dart';
 import 'package:opennutritracker/fork/label/label_scan_button.dart';
 // [/fork]
+// [fork] S33 off-contributions
+import 'package:opennutritracker/fork/off/off_contribution_ui.dart';
+// [/fork]
 import 'package:opennutritracker/generated/l10n.dart';
 import 'package:provider/provider.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
@@ -956,6 +959,12 @@ class _EditMealScreenState extends State<EditMealScreen> {
           shouldPersistTemplate) {
         await _editMealBloc.saveCustomMeal(newMealEntity);
       }
+
+      // [fork] S33 off-contributions: offer the saved food to Open Food Facts
+      if (newMealEntity.source == MealSourceEntity.custom && mounted) {
+        await offerOffUpload(context, newMealEntity);
+      }
+      // [/fork]
 
       if (!mounted) return;
       if (_editOnly) {
