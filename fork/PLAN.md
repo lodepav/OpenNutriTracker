@@ -471,6 +471,37 @@ database, Q4 (b), was offered and declined):
   swaps the stored entry for one with the same id, since upstream's update changes only the
   amount; the day's totals stand.
 
+**More from MacroFactor, round 4** (asked 2026-10-23, branch `fork/mf5`):
+- *Done:* body fat from Health Connect (S48): "Import body fat" beside "Import weight" on the
+  health sync screen reads a smart scale's body fat % (READ_BODY_FAT, which upstream dropped
+  for Play; OpenBite is not on Play, D8) into the body measurements, each day's latest
+  reading, under the weight import's rules: a value typed by the user is never replaced, and a
+  deleted day stays empty until a newer reading. The measured value then feeds the
+  expenditure estimate and lean mass, as a typed one does.
+- *Done:* check-in result in the reminder: the check-in notification tells what the week's
+  data gives, "Expenditure 2,640 kcal, new target 2,140 kcal, −60", in the user's energy unit,
+  the change against the target the last check-in set. Worked out whenever the reminders are
+  planned again (the app opening or leaving), so it reads the data as of the last use; with
+  too little data (under 4 logged days or no weigh-in) or a failed estimate it keeps its own
+  text. Confirming still happens in the app.
+- *Done:* nutrition to Health Connect (S49): "Write nutrition" on the health sync screen
+  (WRITE_NUTRITION, asked for when switched on) writes each diary entry of the past 14 days as
+  a nutrition record: its meal, time, name, calories, carbs, protein, fat, and fibre, sugar,
+  saturated fat and sodium where the food has them. The record's client id is the entry's, so
+  an edit (amount, a timeline move) is written over it at a higher version, and a deleted entry
+  has its record removed. It runs when the app opens and when it is left, writing only what
+  changed (kept per profile); a failed write keeps what went out and tries the rest next time.
+  Switched off, what was written stays. Android only in practice: HealthKit has no
+  delete-by-client-id in the plugin.
+- *Done:* home-screen widget with the macros (S50): upstream's widget is iOS only (Android
+  only saves its calorie snapshot), so OpenBite has its own Android widget, "OpenBite macros":
+  today's energy (in the user's unit), protein, carbs and fat against their goals, each with a
+  bar, tapping opens the app. Home writes the figures beside upstream's snapshot each time it
+  loads and redraws the widget; with upstream's snapshot cleared (a profile wiped or switched
+  away) the widget asks to open the app, and after the logical day ends it shows nothing eaten
+  until the app is opened. Native: `MacroWidgetProvider` (Kotlin, `RemoteViews`) and its
+  resources in `android/app/src/fork`.
+
 Upstream: open an issue first, with the simulation results. The maintainer cites a source for
 every calculation; everything except the tuned weights has one, and those come with the
 simulation. If declined, it stays in the fork behind seams.

@@ -1,4 +1,6 @@
 import 'package:opennutritracker/fork/dev/fake_ai.dart';
+import 'package:opennutritracker/fork/health/body_fat_import.dart';
+import 'package:opennutritracker/fork/health/nutrition_export.dart';
 import 'package:opennutritracker/fork/health/steps.dart';
 import 'package:opennutritracker/fork/health/weight_import.dart';
 
@@ -29,6 +31,43 @@ class FakeWeights implements WeightSource {
           ),
     ];
   }
+}
+
+/// The same scale's body fat, every third morning, from 24% a month ago
+/// down 0.1 points a reading.
+class FakeBodyFat implements BodyFatSource {
+  @override
+  Future<bool> requestPermission() async => true;
+
+  @override
+  Future<List<HealthBodyFat>> read(DateTime from, DateTime to) async {
+    final today = DateTime(to.year, to.month, to.day);
+    return [
+      for (var ago = 30; ago >= 0; ago -= 3)
+        if (DateTime(today.year, today.month, today.day - ago, 7) case final at
+            when !at.isBefore(from) && !at.isAfter(to))
+          HealthBodyFat(
+            'fake-fat-${at.toIso8601String()}',
+            at,
+            24 - (30 - ago) / 30,
+          ),
+    ];
+  }
+}
+
+/// A health store that keeps what is written, by client id.
+class FakeNutrition implements NutritionSink {
+  final records = <String, NutritionRecord>{};
+
+  @override
+  Future<bool> requestPermission() async => true;
+
+  @override
+  Future<void> write(NutritionRecord record, int version) async =>
+      records[record.clientId] = record;
+
+  @override
+  Future<void> delete(String clientId) async => records.remove(clientId);
 }
 
 /// A walker who does 4,000 to 12,000 steps a day, the same each run, and

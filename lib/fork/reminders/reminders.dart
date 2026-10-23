@@ -3,13 +3,17 @@ import 'dart:async';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
+import 'package:intl/intl.dart';
 import 'package:logging/logging.dart';
 import 'package:opennutritracker/core/data/repository/weight_log_repository.dart';
+import 'package:opennutritracker/core/domain/usecase/get_config_usecase.dart';
+import 'package:opennutritracker/core/utils/calc/unit_calc.dart';
 import 'package:opennutritracker/core/utils/hive_db_provider.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/core/utils/notification_service.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
+import 'package:opennutritracker/fork/adaptive/check_in.dart';
 import 'package:timezone/timezone.dart' as tz;
 
 /// A time of day a reminder goes off.
@@ -89,10 +93,43 @@ List<PlannedReminder> planReminders({
   ];
 }
 
+/// The check-in reminder's text when the week's data gives a result:
+/// MacroFactor tells the outcome in the notification. [previousKcal] is
+/// the target the last check-in set, null before the first.
+String? checkInMessage(
+  CheckIn checkIn, {
+  double? previousKcal,
+  bool kilojoules = false,
+}) {
+  if (!checkIn.enoughData) return null;
+  final number = NumberFormat.decimalPattern();
+  String energy(double kcal) =>
+      number.format((kilojoules ? UnitCalc.kcalToKj(kcal) : kcal).round());
+  final unit = kilojoules ? 'kJ' : 'kcal';
+  final change = previousKcal == null
+      ? null
+      : (kilojoules
+                ? UnitCalc.kcalToKj(checkIn.proposedTargetKcal) -
+                      UnitCalc.kcalToKj(previousKcal)
+                : checkIn.proposedTargetKcal - previousKcal)
+            .round();
+  final changeText = switch (change) {
+    null => '',
+    0 => ', no change',
+    > 0 => ', +${number.format(change)}',
+    _ => ', −${number.format(-change)}',
+  };
+  return 'Expenditure ${energy(checkIn.expenditureKcal)} $unit, new target '
+      '${energy(checkIn.proposedTargetKcal)} $unit$changeText. '
+      'Open OpenBite to confirm it.';
+}
+
 /// Puts reminders in the OS.
 abstract class ReminderScheduler {
   Future<bool> requestPermission();
-  Future<void> schedule(PlannedReminder reminder);
+
+  /// [body] in place of the kind's own text.
+  Future<void> schedule(PlannedReminder reminder, {String? body});
   Future<void> cancel(ReminderKind kind);
 }
 
@@ -106,13 +143,13 @@ class LocalNotificationScheduler implements ReminderScheduler {
       locator<NotificationService>().requestPermission();
 
   @override
-  Future<void> schedule(PlannedReminder reminder) async {
+  Future<void> schedule(PlannedReminder reminder, {String? body}) async {
     // Upstream's initialize sets the local time zone the times use.
     await locator<NotificationService>().initialize();
     await FlutterLocalNotificationsPlugin().zonedSchedule(
       id: reminder.kind.id,
       title: reminder.kind.title,
-      body: reminder.kind.body,
+      body: body ?? reminder.kind.body,
       scheduledDate: tz.TZDateTime.from(reminder.at, tz.local),
       notificationDetails: const NotificationDetails(
         android: AndroidNotificationDetails(
@@ -140,7 +177,8 @@ class LocalNotificationScheduler implements ReminderScheduler {
 /// profile, in the fork's box; the schedule is planned again whenever the
 /// app opens or leaves, the profile switches, or the target settings
 /// change (a check-in saves them), so a weigh-in already logged moves the
-/// next reminder to tomorrow.
+/// next reminder to tomorrow. The check-in's tells the result the data so
+/// far gives, worked out each time it is planned again.
 class Reminders {
   static final _log = Logger('Reminders');
 
@@ -151,6 +189,7 @@ class Reminders {
   final Future<Box<dynamic>> Function() _box;
   final Future<bool> Function(DateTime day) _weighed;
   final Future<DateTime?> Function() _checkInDueDay;
+  final Future<String?> Function() _checkInResult;
   final DateTime Function() _clock;
 
   Reminders({
@@ -158,11 +197,13 @@ class Reminders {
     Future<Box<dynamic>> Function()? box,
     Future<bool> Function(DateTime day)? weighed,
     Future<DateTime?> Function()? checkInDueDay,
+    Future<String?> Function()? checkInResult,
     DateTime Function()? clock,
   }) : _scheduler = scheduler,
        _box = box ?? AdaptiveStore.openActiveBox,
        _weighed = weighed ?? _weighedInLog,
        _checkInDueDay = checkInDueDay ?? _dueFromStore,
+       _checkInResult = checkInResult ?? _resultFromStore,
        _clock = clock ?? DateTime.now;
 
   static Future<bool> _weighedInLog(DateTime day) async =>
@@ -175,6 +216,16 @@ class Reminders {
     if (last == null) return DateTime(2000);
     final d = last.date;
     return DateTime(d.year, d.month, d.day + checkInEveryDays);
+  }
+
+  static Future<String?> _resultFromStore() async {
+    final last = await AdaptiveStore().lastCheckIn();
+    return checkInMessage(
+      await AdaptiveService.fromLocator().checkIn(),
+      previousKcal: last?.acceptedKcal,
+      kilojoules:
+          (await locator<GetConfigUsecase>().getConfig()).usesKilojoules,
+    );
   }
 
   Future<ReminderTime?> timeOf(ReminderKind kind) async {
@@ -216,10 +267,25 @@ class Reminders {
         await _scheduler.cancel(kind);
       }
       for (final reminder in planned) {
-        await _scheduler.schedule(reminder);
+        await _scheduler.schedule(
+          reminder,
+          body: reminder.kind == ReminderKind.checkIn
+              ? await _resultOrNull()
+              : null,
+        );
       }
     } catch (error, stack) {
       _log.warning('Could not schedule the reminders', error, stack);
+    }
+  }
+
+  /// A failed estimate leaves the reminder's own text.
+  Future<String?> _resultOrNull() async {
+    try {
+      return await _checkInResult();
+    } catch (error, stack) {
+      _log.warning('Could not work out the check-in', error, stack);
+      return null;
     }
   }
 

@@ -28,6 +28,9 @@ import 'package:opennutritracker/core/utils/calc/day_boundary_calc.dart';
 import 'package:opennutritracker/core/utils/widget/calorie_widget_labels.dart';
 import 'package:opennutritracker/core/utils/widget/calorie_widget_snapshot.dart';
 import 'package:opennutritracker/core/utils/widget/calorie_widget_writer.dart';
+// [fork] S50 macro-widget
+import 'package:opennutritracker/fork/widget/macro_widget.dart';
+// [/fork]
 import 'package:opennutritracker/core/utils/calc/macro_calc.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/core/utils/tracked_day_lock.dart';
@@ -263,6 +266,24 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
         logicalDay: loadDay,
         generation: widgetGeneration,
       );
+      // [fork] S50 macro-widget: the macros too, for OpenBite's Android widget
+      await publishMacroWidget(
+        MacroWidgetFigures.fromHome(
+          logicalDay: loadDay,
+          offsetMinutes: configData.dayStartOffsetTotalMinutes,
+          kilojoules: configData.usesKilojoules,
+          kcal: totalKcalIntake,
+          kcalGoal: totalKcalGoal,
+          protein: totalProteinsIntake,
+          proteinGoal: totalProteinsGoal,
+          carbs: totalCarbsIntake,
+          carbsGoal: totalCarbsGoal,
+          fat: totalFatsIntake,
+          fatGoal: totalFatsGoal,
+        ),
+        stillCurrent: () => _calorieWidgetStore.generation == widgetGeneration,
+      );
+      // [/fork]
     });
   }
 

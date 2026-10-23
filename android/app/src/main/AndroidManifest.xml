@@ -35,6 +35,15 @@
          it. -->
     <uses-permission android:name="android.permission.health.READ_STEPS"/>
     <!-- [/fork] -->
+    <!-- [fork] S48 body-fat-import: a smart scale's body fat % for the body
+         measurements. Upstream dropped it after Play called it excessive;
+         OpenBite is not on Play (D8). -->
+    <uses-permission android:name="android.permission.health.READ_BODY_FAT"/>
+    <!-- [/fork] -->
+    <!-- [fork] S49 nutrition-export: the diary's calories and macros
+         written to Health Connect, when switched on. -->
+    <uses-permission android:name="android.permission.health.WRITE_NUTRITION"/>
+    <!-- [/fork] -->
 
     <!-- Provide required visibility configuration for API level 30 and above -->
     <queries>
@@ -113,5 +122,19 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+        <!-- [fork] S50 macro-widget: today's calories and macros on the home
+             screen (android/app/src/fork) -->
+        <receiver
+            android:name=".fork.MacroWidgetProvider"
+            android:exported="false"
+            android:label="OpenBite macros">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/fork_macro_widget_info" />
+        </receiver>
+        <!-- [/fork] -->
     </application>
 </manifest>

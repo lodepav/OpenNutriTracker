@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="fork_widget_background">#25211D</color>
+    <color name="fork_widget_text">#EDE0D6</color>
+    <color name="fork_widget_muted">#B3A79C</color>
+</resources>

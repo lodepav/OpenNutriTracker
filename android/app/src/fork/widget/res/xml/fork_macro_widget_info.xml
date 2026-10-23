@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- [fork] S50 macro-widget. Redrawn by the app; every 30 minutes too, so a
+     new day shows nothing eaten. -->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:minWidth="180dp"
+    android:minHeight="110dp"
+    android:targetCellWidth="3"
+    android:targetCellHeight="2"
+    android:resizeMode="horizontal|vertical"
+    android:widgetCategory="home_screen"
+    android:updatePeriodMillis="1800000"
+    android:initialLayout="@layout/fork_macro_widget"
+    android:previewLayout="@layout/fork_macro_widget"
+    android:description="@string/fork_macro_widget_description" />
