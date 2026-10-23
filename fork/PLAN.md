@@ -373,6 +373,13 @@ and take kJ for kJ users (`lib/fork/units/energy_text.dart`).
   logged intake dashed beside it, and the mean balance of the logged days. It reads the
   check-in's history and shows whether or not the adaptive target is on; nothing before the
   first weigh-in.
+- *Done:* a fixed target (upstream #671), in kcal or as protein, carbs and fat in grams, and
+  targets by weekday (calorie shifting), in Settings → Trend and calorie target (S12, S14,
+  S41). The target is formula, adaptive or fixed; the weekday shift adds to any of them and the
+  dialog shows the week's net. Fixed grams scale with a shifted day. In the backup with the
+  rest of `fork_adaptive.json`. Not ported: theoleuthardt's training-day goals (a shift by
+  weekday covers a set schedule). Limit: a goal is the logical today's, so an entry copied to
+  another weekday's empty day takes today's shift, as it already takes today's activities.
 
 Upstream: open an issue first, with the simulation results. The maintainer cites a source for
 every calculation; everything except the tuned weights has one, and those come with the

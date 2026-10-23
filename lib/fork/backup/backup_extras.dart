@@ -103,9 +103,7 @@ class BackupExtras {
     final adaptive = _adaptive();
     final settings = await adaptive.read();
     _addJson(archive, adaptiveFileName, {
-      'smoothedTrend': settings.smoothedTrend,
-      'adaptiveTarget': settings.adaptiveTarget,
-      'cycleWindow': settings.cycleWindow,
+      ...settings.toJson(),
       'checkIns': [for (final c in await adaptive.history()) c.toJson()],
     });
     if (_user case final user? when await user.hasUserData()) {
@@ -149,11 +147,7 @@ class BackupExtras {
     final adaptive = _decode(archive, adaptiveFileName, (json) {
       final map = json as Map<String, dynamic>;
       return (
-        settings: AdaptiveSettings(
-          smoothedTrend: map['smoothedTrend'] as bool,
-          adaptiveTarget: map['adaptiveTarget'] as bool,
-          cycleWindow: map['cycleWindow'] as bool,
-        ),
+        settings: AdaptiveSettings.fromJson(map),
         checkIns: [
           for (final c in map['checkIns'] as List) CheckInRecord.fromJson(c),
         ],

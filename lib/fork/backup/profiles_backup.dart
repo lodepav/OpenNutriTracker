@@ -277,7 +277,7 @@ class ProfilesBackup {
     WaterIntakeRepository(WaterIntakeDataSource(scope)),
     FastingDataSource(scope),
     CustomMealDataSource(scope),
-    adaptive: () => AdaptiveStore(
+    adaptive: () => AdaptiveStore.otherProfile(
       () => open<dynamic>(AdaptiveStore.boxName, profile.boxSuffix),
     ),
     user: UserDataSource(scope),

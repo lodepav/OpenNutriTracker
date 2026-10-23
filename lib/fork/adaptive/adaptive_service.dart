@@ -45,7 +45,8 @@ class AdaptiveService {
   /// True when the switch is on and a week has passed since the last
   /// check-in, or there has been none.
   Future<bool> checkInDue() async {
-    if (!AdaptiveStore.settings.value.adaptiveTarget) return false;
+    final settings = AdaptiveStore.settings.value;
+    if (!settings.adaptiveTarget || settings.fixedTarget) return false;
     final last = await _store.lastCheckIn();
     return last == null ||
         _today().difference(_day(last.date)).inDays >= checkInEveryDays;
@@ -187,26 +188,78 @@ class ExpenditureDay {
   });
 }
 
-/// Seam S12: the last accepted target while the switch is on, else null
-/// and upstream's formula applies. Logged activities are not added to it,
-/// since measured expenditure already holds them, nor the kcal adjustment,
-/// since the user sets the target itself at each check-in. [store] is
-/// another profile's, whose switch is read from its box; the active
-/// profile's is [AdaptiveStore.settings].
-Future<double?> adaptiveTargetKcal([AdaptiveStore? store]) async {
-  if (store == null) {
-    if (!AdaptiveStore.settings.value.adaptiveTarget) return null;
-    return (await AdaptiveStore().lastCheckIn())?.acceptedKcal;
-  }
+/// What seam S12 makes of the kcal goal: [target] replaces upstream's
+/// formula when set; otherwise the formula applies, plus
+/// [weekdayOffsetKcal].
+class ForkKcalGoal {
+  final double? target;
+  final double weekdayOffsetKcal;
+
+  const ForkKcalGoal({this.target, this.weekdayOffsetKcal = 0});
+}
+
+/// Seam S12: the fixed target, or the last accepted check-in's while the
+/// adaptive switch is on, shifted for [logicalToday]'s weekday; null
+/// target leaves upstream's formula. Logged activities are not added to
+/// either, since measured expenditure already holds them and a fixed
+/// target is meant fixed, nor the kcal adjustment, since the user sets
+/// the target itself. [store] is another profile's, read from its box;
+/// the active profile's is [AdaptiveStore.settings].
+Future<ForkKcalGoal> forkKcalGoal(
+  DateTime logicalToday, [
+  AdaptiveStore? store,
+]) async {
   try {
-    if (!(await store.read()).adaptiveTarget) return null;
-    return (await store.lastCheckIn())?.acceptedKcal;
+    final settings = store == null
+        ? AdaptiveStore.settings.value
+        : await store.read();
+    final offset = settings.weekdayOffsets[logicalToday.weekday - 1];
+    final base = settings.fixedTarget
+        ? settings.fixedTargetKcal
+        : settings.adaptiveTarget
+        ? (await (store ?? AdaptiveStore()).lastCheckIn())?.acceptedKcal
+        : null;
+    return ForkKcalGoal(
+      target: base == null ? null : base + offset,
+      weekdayOffsetKcal: offset,
+    );
   } catch (e) {
+    if (store == null) rethrow;
     // Another profile's box: the formula is a safe goal for a copied meal.
     _log.warning('Adaptive target unreadable, using the formula: $e');
+    return const ForkKcalGoal();
+  } finally {
+    await store?.release();
+  }
+}
+
+/// Seam S41: the fixed macros, scaled to [kcalGoal] (a weekday's shift
+/// moves the grams with it), while the fixed target has them; else null
+/// and upstream's percentages apply.
+Future<FixedMacros?> forkMacroGoal(
+  double kcalGoal, [
+  AdaptiveStore? store,
+]) async {
+  try {
+    final settings = store == null
+        ? AdaptiveStore.settings.value
+        : await store.read();
+    final macros = settings.fixedMacros;
+    if (!settings.fixedTarget || macros == null || macros.kcal <= 0) {
+      return null;
+    }
+    final scale = kcalGoal / macros.kcal;
+    return FixedMacros(
+      proteinG: macros.proteinG * scale,
+      carbsG: macros.carbsG * scale,
+      fatG: macros.fatG * scale,
+    );
+  } catch (e) {
+    if (store == null) rethrow;
+    _log.warning('Fixed macros unreadable, using percentages: $e');
     return null;
   } finally {
-    await store.release();
+    await store?.release();
   }
 }
 

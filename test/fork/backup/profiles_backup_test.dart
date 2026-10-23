@@ -151,10 +151,9 @@ void main() {
             )
             as Map<String, dynamic>;
     expect(listed['mainProfileId'], 'me');
-    expect(
-      [for (final p in listed['profiles'] as List) p['id']],
-      unorderedEquals(['me', 'kid']),
-    );
+    expect([
+      for (final p in listed['profiles'] as List) p['id'],
+    ], unorderedEquals(['me', 'kid']));
     final weights = archive.findFile('profiles/kid/weight_log.json')!;
     expect(utf8.decode(weights.content as List<int>), contains('31'));
     expect(archive.findFile('profiles/me/weight_log.json'), isNull);

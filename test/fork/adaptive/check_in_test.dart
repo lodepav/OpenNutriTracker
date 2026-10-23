@@ -162,10 +162,10 @@ void main() {
         final checkIn = await service.checkIn();
         await service.accept(checkIn, 2100);
 
-        expect(await adaptiveTargetKcal(), isNull);
-        expect(await adaptiveTargetKcal(store), isNull);
+        expect((await forkKcalGoal(_today)).target, isNull);
+        expect((await forkKcalGoal(_today, store)).target, isNull);
         await store.save(const AdaptiveSettings(adaptiveTarget: true));
-        expect(await adaptiveTargetKcal(store), 2100);
+        expect((await forkKcalGoal(_today, store)).target, 2100);
       },
     );
 
@@ -174,10 +174,10 @@ void main() {
       await service.accept(await service.checkIn(), 2100);
       final other = AdaptiveStore(() => Hive.openBox<dynamic>('other'));
 
-      expect(await adaptiveTargetKcal(other), isNull);
+      expect((await forkKcalGoal(_today, other)).target, isNull);
       await other.save(const AdaptiveSettings(adaptiveTarget: true));
-      expect(await adaptiveTargetKcal(other), isNull);
-      expect(await adaptiveTargetKcal(store), 2100);
+      expect((await forkKcalGoal(_today, other)).target, isNull);
+      expect((await forkKcalGoal(_today, store)).target, 2100);
     });
 
     test('a check-in is due a week after the last', () async {
