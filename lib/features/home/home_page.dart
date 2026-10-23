@@ -37,6 +37,9 @@ import 'package:opennutritracker/fork/leftovers/group_leftovers.dart';
 // [fork] S13 adaptive-check-in: the weekly check-in card (D13)
 import 'package:opennutritracker/fork/adaptive/adaptive_ui.dart';
 // [/fork]
+// [fork] S43 meal-plan
+import 'package:opennutritracker/fork/plan/plan_ui.dart';
+// [/fork]
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -230,6 +233,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
             AdaptiveCheckInCard(
               onAccepted: () => _homeBloc.add(const LoadItemsEvent()),
             ),
+            // [/fork]
+            // [fork] S43 meal-plan: today's planned foods, to tick off
+            PlannedFoodsCard(day: _homeBloc.currentDay),
             // [/fork]
             // Day-one / empty-day guidance: when nothing is logged yet, point
             // the way to the centre + rather than leaving a silent dashboard.

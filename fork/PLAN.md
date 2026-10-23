@@ -291,8 +291,14 @@ the same gap). Pelmeni and khachapuri are in no table and go to D9.
   the app (and out of demo mode); one without keeps its data and the setup goes on. Tried on the
   emulator from a fresh install. The restored theme, accent, kilojoules and language show at
   once, from onboarding and from Settings' import (S38).
-- **Not done:** every profile in one backup (theoleuthardt #96; today each profile backs up
-  when it is the active one), encrypting the zip.
+- *Done 2026-10-23:* every profile in one backup (`ProfilesBackup`, S21), ported after review
+  from theoleuthardt #96. The zip keeps upstream's layout for the active profile and adds
+  `profiles.json` and a `profiles/<id>/` folder per other profile, written and read by upstream's
+  own export and import run on that profile's boxes. Review: sound (folders checked before the
+  first write, profiles matched by id, the suffix kept unless taken); changed here: no "replace
+  everything" mode and the active profile is not renamed; a backup made in another profile is
+  refused rather than restored over this one, since its main data would land in the wrong place.
+- **Not done:** encrypting the zip.
 
 The app writes backup files; it syncs nothing itself (openGym-Hevier's D20). Upstream ONT has
 only a manual export (`export_data_usecase.dart`, a `FilePicker.saveFile` dialog each time), so
@@ -359,8 +365,56 @@ dashed on the weight chart. *2026-10-23:* the adaptive state is per profile (an
 encrypted box per profile, seam S16), so a new profile and its onboarding start on the formula;
 "How your goal is calculated" says when the check-in's target is the goal (S17); the dev entry
 loads the switches (S18). Emulator: two profiles kept their own goals (2,648 adaptive, the
-other on the formula) across switches both ways. Not yet: energy shown in kJ for kJ users in
-the check-in screens.
+other on the formula) across switches both ways. *2026-10-23:* the check-in screens show
+and take kJ for kJ users (`lib/fork/units/energy_text.dart`).
+
+**More from MacroFactor** (asked 2026-10-23, branch `fork/mf2`):
+- *Done:* an Expenditure card on Trends (S40): the estimate each day over the picked range,
+  logged intake dashed beside it, and the mean balance of the logged days. It reads the
+  check-in's history and shows whether or not the adaptive target is on; nothing before the
+  first weigh-in.
+- *Done:* a fixed target (upstream #671), in kcal or as protein, carbs and fat in grams, and
+  targets by weekday (calorie shifting), in Settings → Trend and calorie target (S12, S14,
+  S41). The target is formula, adaptive or fixed; the weekday shift adds to any of them and the
+  dialog shows the week's net. Fixed grams scale with a shifted day. In the backup with the
+  rest of `fork_adaptive.json`. Not ported: theoleuthardt's training-day goals (a shift by
+  weekday covers a set schedule). Limit: a goal is the logical today's, so an entry copied to
+  another weekday's empty day takes today's shift, as it already takes today's activities.
+- *Done:* a goal planner on Trends (S40): the trend of the past 60 days, the weight curve
+  projected at a pace picked on a slider (−1 to +1 kg a week), the date the target weight is
+  reached at that pace and at the trend's own, and the daily target the pace needs at the
+  measured expenditure (before the check-in's cap and upstream's taper). "Use this pace" saves
+  it to the profile through upstream's profile update, the goal following its sign.
+- *Done:* a food basket (MacroFactor's multi-add, S42): "Add to basket" on a food's page takes
+  it at the chosen amount and returns to search; a bar under the results counts the basket and
+  its energy, and its review removes foods or logs them all, each through upstream's add.
+  One meal of one day at a time: picking for another empties it. Upstream's own multi-food
+  path stays the typed bulk add.
+- *Done:* meals planned ahead (S43): the basket's "Plan, don't log" puts its foods on that
+  day's meal (a future day is opened from the Diary's calendar); Home and the Diary show the
+  day's plan, counted nowhere until a tick logs a food on its planned day and meal ("Log all"
+  for the lot). Kept in the fork's per-profile box beside the adaptive state, and in the
+  backup as `fork_plan.json`, every profile's included.
+- *Done:* body measurements on Trends (S40): body fat %, waist, hips, chest, neck, arm and
+  thigh, any of them on a day (a second entry that day replaces it), one charted over the
+  range with its latest value and change, entries deletable; inches for lb and st users. The
+  latest body fat % of the past 90 days replaces Deurenberg's estimate in the expenditure
+  model and the goal planner (MacroFactor uses a measured one too). Per profile, in the
+  backup as `fork_measurements.json`.
+- *Done:* progress photos on Trends (S40): taken or picked (scaled to 1440 px, JPEG 85), a
+  strip newest first, each opening to view or delete, and a compare of any two side by side,
+  the oldest and newest to start. The images stay in the app's documents folder
+  (`progress_photos/<id>.jpg`, private to the app), the index per profile in the fork's box;
+  the backup carries `fork_photos.json` and the images, another profile's inside its folder.
+- *Done:* daily steps from Health Connect on Trends (S40, S44: `READ_STEPS`, which upstream
+  dropped for Play; OpenBite is not on Play): off until "Read steps" gets the permission;
+  then today's, the average and the days at a step goal (8,000, editable) over the range, and
+  a bar a day against the goal. Read only, changing no target, since the adaptive
+  expenditure already measures what walking burns (MacroFactor too). The last 30 days are
+  read (Health Connect's reach for a new app) and kept in the fork's per-profile box, so the
+  history grows past it; the last two days are read again each time. Not in the backup: a
+  cache, and the permission does not travel. The fake health (`FORK_FAKE_HEALTH`) walks
+  4,000 to 12,000 a day.
 
 Upstream: open an issue first, with the simulation results. The maintainer cites a source for
 every calculation; everything except the tuned weights has one, and those come with the
@@ -445,8 +499,9 @@ Lower: already built elsewhere (§0b), port or wait:
   Since 2026-10-23 today's entries and meals copy too, and "Select entries" beside "Copy day"
   picks entries one by one, by meal or by the hour, as MacroFactor does, and copies them to now,
   to today at the same times, or to a picked day (same times, or all at a picked time), into
-  their own meals or one meal (`lib/fork/copy/select_entries_screen.dart`). Activities still
-  copy only from other days (upstream's activity copy goes to today).
+  their own meals or one meal (`lib/fork/copy/select_entries_screen.dart`). A long-pressed
+  activity, today's included, copies to a picked day (2026-10-23, `copyActivitiesWithDialog`);
+  the activity section's menu still copies other days' to today, as upstream does.
 - *Done 2026-10-23:* contribute to Open Food Facts (`lib/fork/off/`, S32, S33), ported after
   review from theoleuthardt `personal` (#81): the user's own account in the keychain, the test
   server until switched off, a preview of exactly what goes out, and only what OFF lacks (name,

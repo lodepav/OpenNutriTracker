@@ -111,6 +111,35 @@ class ImportDataUsecase {
   }) async {
     final startedOn = ProfileStamp.now();
     final archive = await _pickAndDecodeArchive();
+    // [fork] S21 backup: the rest runs on a decoded archive, which the
+    // all-profiles backup also hands it for each profile's folder
+    return importArchive(
+      archive,
+      userActivityJsonFileName,
+      userIntakeJsonFileName,
+      trackedDayJsonFileName,
+      recipeJsonFileName,
+      weightLogJsonFileName,
+      customActivityTemplateJsonFileName,
+      goalSettingsJsonFileName: goalSettingsJsonFileName,
+      favouriteJsonFileName: favouriteJsonFileName,
+      startedOn: startedOn,
+    );
+  }
+
+  Future<bool> importArchive(
+    Archive archive,
+    String userActivityJsonFileName,
+    String userIntakeJsonFileName,
+    String trackedDayJsonFileName,
+    String recipeJsonFileName,
+    String weightLogJsonFileName,
+    String customActivityTemplateJsonFileName, {
+    String goalSettingsJsonFileName = 'goal_settings.json',
+    String favouriteJsonFileName = 'user_favourites.json',
+    ProfileStamp? startedOn,
+  }) async {
+    // [/fork]
 
     // Decode every entry before writing anything (#1357): the upserts
     // below replace and delete rows on the device, so an archive with a

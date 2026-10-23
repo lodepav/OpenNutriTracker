@@ -107,7 +107,12 @@ class SendIntakeToProfilesUsecase {
         AdaptiveStore.forProfile(_hiveDBProvider, suffix),
         // [/fork]
       );
-      final getMacroGoal = GetMacroGoalUsecase(configRepository);
+      final getMacroGoal = GetMacroGoalUsecase(
+        configRepository,
+        // [fork] S41 fixed-macros: that profile's fixed macros
+        AdaptiveStore.forProfile(_hiveDBProvider, suffix),
+        // [/fork]
+      );
 
       // The target's rows may still be keyed by the boundary of its last
       // activation, while the rows written below go by the current one.

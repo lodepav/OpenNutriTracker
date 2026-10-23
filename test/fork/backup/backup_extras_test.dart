@@ -20,6 +20,10 @@ import 'package:opennutritracker/core/data/repository/water_intake_repository.da
 import 'package:opennutritracker/features/fasting/data/data_source/fasting_data_source.dart';
 import 'package:opennutritracker/features/settings/domain/export_import_failure.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
+import 'package:opennutritracker/fork/body/measurement_store.dart';
+import 'package:opennutritracker/fork/photos/photo_store.dart';
+import 'package:opennutritracker/fork/plan/plan_store.dart';
+import 'package:opennutritracker/core/domain/entity/intake_type_entity.dart';
 import 'package:opennutritracker/fork/backup/backup_extras.dart';
 
 import '../../fixture/meal_entity_fixtures.dart';
@@ -44,12 +48,21 @@ void main() {
     _Fasting fasting,
     _Meals meals,
     AdaptiveStore adaptive,
+    PlanStore plans,
+    MeasurementStore measurements,
+    PhotoStore photos,
     _User user,
     _Config config,
   })
   device() {
     final name = 'adaptive${boxes++}';
     final adaptive = AdaptiveStore(() => Hive.openBox<dynamic>(name));
+    final plans = PlanStore(() => Hive.openBox<dynamic>(name));
+    final measurements = MeasurementStore(() => Hive.openBox<dynamic>(name));
+    final photos = PhotoStore(
+      () => Hive.openBox<dynamic>(name),
+      () async => Directory('${dir.path}/$name'),
+    );
     final water = _Water();
     final fasting = _Fasting();
     final meals = _Meals();
@@ -61,6 +74,9 @@ void main() {
         fasting,
         meals,
         adaptive: () => adaptive,
+        plans: () => plans,
+        measurements: () => measurements,
+        photos: () => photos,
         user: user,
         config: config,
       ),
@@ -68,6 +84,9 @@ void main() {
       fasting: fasting,
       meals: meals,
       adaptive: adaptive,
+      plans: plans,
+      measurements: measurements,
+      photos: photos,
       user: user,
       config: config,
     );
@@ -96,6 +115,22 @@ void main() {
       const AdaptiveSettings(smoothedTrend: true, adaptiveTarget: true),
     );
     await from.adaptive.addCheckIn(checkIn);
+    await from.plans.add(
+      [
+        (
+          meal: MealEntityFixtures.mealTwo,
+          unit: 'g',
+          amountText: '120.0',
+          kcal: 210,
+        ),
+      ],
+      IntakeTypeEntity.dinner,
+      DateTime(2026, 10, 25),
+    );
+    await from.measurements.addDay(DateTime(2026, 10, 20), {
+      BodyMetric.waist: 84,
+    });
+    final photo = await from.photos.add(DateTime(2026, 10, 21), [1, 2, 3]);
 
     final archive = Archive();
     await from.extras.addTo(archive);
@@ -114,6 +149,38 @@ void main() {
     expect(settings.smoothedTrend, isTrue);
     expect(settings.cycleWindow, isFalse);
     expect((await to.adaptive.history()).map((c) => c.acceptedKcal), [2100]);
+    final planned = await to.plans.forDay(DateTime(2026, 10, 25));
+    expect(planned.map((f) => (f.meal.name, f.type, f.kcal)), [
+      (MealEntityFixtures.mealTwo.name, IntakeTypeEntity.dinner, 210),
+    ]);
+    expect((await to.measurements.all()).map((m) => (m.metric, m.value)), [
+      (BodyMetric.waist, 84),
+    ]);
+    final photos = await to.photos.all();
+    expect(photos.map((p) => (p.id, p.date)), [
+      (photo.id, DateTime(2026, 10, 21)),
+    ]);
+    expect(await (await to.photos.file(photos.single)).readAsBytes(), [
+      1,
+      2,
+      3,
+    ]);
+  });
+
+  test('a photo id that would leave its folder is refused', () async {
+    final archive = Archive();
+    final bytes = utf8.encode(
+      jsonEncode([
+        {'id': '../x', 'date': '2026-10-21T00:00:00.000'},
+      ]),
+    );
+    archive.addFile(
+      ArchiveFile(BackupExtras.photosFileName, bytes.length, bytes),
+    );
+    expect(
+      () => device().extras.prepareRestore(archive),
+      throwsA(isA<ExportImportFailure>()),
+    );
   });
 
   test(

@@ -5,8 +5,37 @@ import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:opennutritracker/core/utils/hive_db_provider.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 
-/// The two D13 switches, plus the 28-day window for users with a
-/// menstrual cycle (fork/research/phase3-simulation.md).
+/// Fixed daily macros in grams; their energy is the fixed target.
+class FixedMacros {
+  final double proteinG;
+  final double carbsG;
+  final double fatG;
+
+  const FixedMacros({
+    required this.proteinG,
+    required this.carbsG,
+    required this.fatG,
+  });
+
+  /// Atwater's 4, 4 and 9 kcal per gram.
+  double get kcal => 4 * proteinG + 4 * carbsG + 9 * fatG;
+
+  Map<String, double> toJson() => {
+    'proteinG': proteinG,
+    'carbsG': carbsG,
+    'fatG': fatG,
+  };
+
+  static FixedMacros fromJson(Map<dynamic, dynamic> json) => FixedMacros(
+    proteinG: (json['proteinG'] as num).toDouble(),
+    carbsG: (json['carbsG'] as num).toDouble(),
+    fatG: (json['fatG'] as num).toDouble(),
+  );
+}
+
+/// The two D13 switches, the 28-day window for users with a menstrual
+/// cycle (fork/research/phase3-simulation.md), the fixed target (upstream
+/// #671) and the per-weekday shift of the target.
 class AdaptiveSettings {
   /// Smoothed trend on the weight chart instead of the 7-day average.
   final bool smoothedTrend;
@@ -15,21 +44,82 @@ class AdaptiveSettings {
   final bool adaptiveTarget;
   final bool cycleWindow;
 
+  /// A target typed by the user instead of either; it wins over
+  /// [adaptiveTarget] (the settings dialog keeps one of them on).
+  final bool fixedTarget;
+  final double fixedKcal;
+
+  /// When set, the fixed target is their energy and the macro goals are
+  /// these grams rather than upstream's percentages.
+  final FixedMacros? fixedMacros;
+
+  /// kcal added to the target on each weekday, Monday first.
+  final List<double> weekdayOffsets;
+
+  static const noOffsets = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
+
   const AdaptiveSettings({
     this.smoothedTrend = false,
     this.adaptiveTarget = false,
     this.cycleWindow = false,
+    this.fixedTarget = false,
+    this.fixedKcal = 2000,
+    this.fixedMacros,
+    this.weekdayOffsets = noOffsets,
   });
+
+  /// The fixed target's daily energy before the weekday shift.
+  double get fixedTargetKcal => fixedMacros?.kcal ?? fixedKcal;
 
   AdaptiveSettings copyWith({
     bool? smoothedTrend,
     bool? adaptiveTarget,
     bool? cycleWindow,
+    bool? fixedTarget,
+    double? fixedKcal,
+    FixedMacros? Function()? fixedMacros,
+    List<double>? weekdayOffsets,
   }) => AdaptiveSettings(
     smoothedTrend: smoothedTrend ?? this.smoothedTrend,
     adaptiveTarget: adaptiveTarget ?? this.adaptiveTarget,
     cycleWindow: cycleWindow ?? this.cycleWindow,
+    fixedTarget: fixedTarget ?? this.fixedTarget,
+    fixedKcal: fixedKcal ?? this.fixedKcal,
+    fixedMacros: fixedMacros == null ? this.fixedMacros : fixedMacros(),
+    weekdayOffsets: weekdayOffsets ?? this.weekdayOffsets,
   );
+
+  /// As kept in the box and in `fork_adaptive.json`.
+  Map<String, Object?> toJson() => {
+    'smoothedTrend': smoothedTrend,
+    'adaptiveTarget': adaptiveTarget,
+    'cycleWindow': cycleWindow,
+    'fixedTarget': fixedTarget,
+    'fixedKcal': fixedKcal,
+    'fixedMacros': fixedMacros?.toJson(),
+    'weekdayOffsets': weekdayOffsets,
+  };
+
+  /// Throws on a value of the wrong type; a missing key (an older box or
+  /// backup) takes the default.
+  static AdaptiveSettings fromJson(Map<dynamic, dynamic> json) {
+    final offsets = json['weekdayOffsets'] as List?;
+    if (offsets != null && offsets.length != 7) {
+      throw const FormatException('weekdayOffsets needs 7 days');
+    }
+    final macros = json['fixedMacros'] as Map?;
+    return AdaptiveSettings(
+      smoothedTrend: json['smoothedTrend'] as bool? ?? false,
+      adaptiveTarget: json['adaptiveTarget'] as bool? ?? false,
+      cycleWindow: json['cycleWindow'] as bool? ?? false,
+      fixedTarget: json['fixedTarget'] as bool? ?? false,
+      fixedKcal: (json['fixedKcal'] as num?)?.toDouble() ?? 2000,
+      fixedMacros: macros == null ? null : FixedMacros.fromJson(macros),
+      weekdayOffsets: offsets == null
+          ? noOffsets
+          : [for (final o in offsets) (o as num).toDouble()],
+    );
+  }
 }
 
 /// One check-in as accepted: kept so the next one knows where the target
@@ -73,15 +163,30 @@ class AdaptiveStore {
   final Future<Box<dynamic>> Function() _box;
   final String? _otherProfileSuffix;
 
+  /// False for another profile's store, whose [save] leaves [settings].
+  final bool _active;
+
   /// The active profile's store, or one over [box] in tests.
   AdaptiveStore([Future<Box<dynamic>> Function()? box])
     : _box = box ?? (() => _open(_activeSuffix())),
-      _otherProfileSuffix = null;
+      _otherProfileSuffix = null,
+      _active = true;
 
   /// Another profile's store, for a meal copied into it.
   AdaptiveStore.forProfile(HiveDBProvider db, String boxSuffix)
     : _box = (() => db.openScopedBox<dynamic>(boxName, boxSuffix)),
-      _otherProfileSuffix = boxSuffix;
+      _otherProfileSuffix = boxSuffix,
+      _active = false;
+
+  /// Another profile's store over [box], opened and closed by the caller
+  /// (a backup of every profile).
+  AdaptiveStore.otherProfile(this._box)
+    : _otherProfileSuffix = null,
+      _active = false;
+
+  /// The active profile's box, which also holds the meal plan
+  /// (`PlanStore`).
+  static Future<Box<dynamic>> openActiveBox() => _open(_activeSuffix());
 
   static Future<Box<dynamic>> _open(String suffix) =>
       locator<HiveDBProvider>().openScopedBox<dynamic>(boxName, suffix);
@@ -117,23 +222,13 @@ class AdaptiveStore {
 
   Future<void> load() async => settings.value = await read();
 
-  Future<AdaptiveSettings> read() async {
-    final box = await _box();
-    return AdaptiveSettings(
-      smoothedTrend: box.get('smoothedTrend', defaultValue: false) as bool,
-      adaptiveTarget: box.get('adaptiveTarget', defaultValue: false) as bool,
-      cycleWindow: box.get('cycleWindow', defaultValue: false) as bool,
-    );
-  }
+  Future<AdaptiveSettings> read() async =>
+      AdaptiveSettings.fromJson((await _box()).toMap());
 
   Future<void> save(AdaptiveSettings value) async {
     final box = await _box();
-    await box.putAll({
-      'smoothedTrend': value.smoothedTrend,
-      'adaptiveTarget': value.adaptiveTarget,
-      'cycleWindow': value.cycleWindow,
-    });
-    settings.value = value;
+    await box.putAll(value.toJson());
+    if (_active) settings.value = value;
   }
 
   Future<List<CheckInRecord>> history() async => [

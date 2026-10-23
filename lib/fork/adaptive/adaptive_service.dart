@@ -12,6 +12,9 @@ import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/fork/adaptive/check_in.dart';
 import 'package:opennutritracker/fork/adaptive/energy.dart';
 import 'package:opennutritracker/fork/adaptive/expenditure.dart';
+import 'package:opennutritracker/fork/adaptive/goal_plan.dart';
+import 'package:opennutritracker/fork/adaptive/trend.dart';
+import 'package:opennutritracker/fork/body/measurement_store.dart';
 
 final _log = Logger('AdaptiveService');
 
@@ -31,21 +34,38 @@ class AdaptiveService {
   final AdaptiveStore _store;
   final DateTime Function() _now;
 
+  /// A measured body fat % replaces Deurenberg's estimate; null uses the
+  /// estimate only.
+  final MeasurementStore? _measurements;
+
   AdaptiveService(
     this._user,
     this._weights,
     this._trackedDays,
     this._store, [
     DateTime Function()? now,
+    this._measurements,
   ]) : _now = now ?? DateTime.now;
 
-  factory AdaptiveService.fromLocator() =>
-      AdaptiveService(locator(), locator(), locator(), AdaptiveStore());
+  factory AdaptiveService.fromLocator() => AdaptiveService(
+    locator(),
+    locator(),
+    locator(),
+    AdaptiveStore(),
+    null,
+    MeasurementStore(),
+  );
+
+  /// The latest measured body fat % of the past 90 days, else the
+  /// profile's estimate.
+  Future<double> _bodyFat(UserEntity user) async =>
+      await _measurements?.recentBodyFat(_now()) ?? bodyFatPercent(user);
 
   /// True when the switch is on and a week has passed since the last
   /// check-in, or there has been none.
   Future<bool> checkInDue() async {
-    if (!AdaptiveStore.settings.value.adaptiveTarget) return false;
+    final settings = AdaptiveStore.settings.value;
+    if (!settings.adaptiveTarget || settings.fixedTarget) return false;
     final last = await _store.lastCheckIn();
     return last == null ||
         _today().difference(_day(last.date)).inDays >= checkInEveryDays;
@@ -53,6 +73,113 @@ class AdaptiveService {
 
   Future<CheckIn> checkIn() async {
     final user = await _user.getUserData();
+    final days = (await _history()).days;
+    final rate = goalRateKgPerWeek(user);
+    final previous = await _store.lastCheckIn();
+    return computeCheckIn(
+      CheckInInputs(
+        days: days,
+        priorKcal: _priorKcal(user),
+        goalRateKgPerWeek: rate,
+        bodyFatPercent: await _bodyFat(user),
+        targetWeightKg: user.targetWeightKg,
+        previousTargetKcal:
+            previous?.acceptedKcal ??
+            CalorieGoalCalc.getTotalKcalGoal(
+              user,
+              0,
+              caloriesTaperEnabled: user.caloriesTaperEnabled,
+            ),
+        taper: (adjustment, weight) => CalorieGoalCalc.applyTargetWeightTaper(
+          baseAdjustment: adjustment,
+          currentWeightKg: weight,
+          targetWeightKg: user.targetWeightKg,
+          goal: user.goal,
+          taperEnabled: user.caloriesTaperEnabled,
+        ),
+        settings: _settings(),
+      ),
+    );
+  }
+
+  /// Expenditure as estimated on each day since the first weigh-in in
+  /// the check-in's history, with what was logged; empty with no
+  /// weigh-in. The Trends card draws it whether or not the adaptive
+  /// target is on.
+  Future<List<ExpenditureDay>> expenditureHistory() async {
+    final user = await _user.getUserData();
+    final history = await _history();
+    if (history.days.every((d) => d.weightKg == null)) return const [];
+    final settings = _settings();
+    final estimates = estimateExpenditure(
+      history.days,
+      priorKcal: _priorKcal(user),
+      bodyFatPercent: await _bodyFat(user),
+      settings: settings,
+    );
+    return [
+      for (final (i, day) in history.days.indexed)
+        ExpenditureDay(
+          date: DateTime(
+            history.first.year,
+            history.first.month,
+            history.first.day + i,
+          ),
+          expenditureKcal: estimates[i],
+          intakeKcal: (day.intakeKcal ?? 0) >= minLoggedKcal
+              ? day.intakeKcal
+              : null,
+          settled: i >= settings.warmupDays,
+        ),
+    ];
+  }
+
+  /// What the goal planner needs; null with no weigh-in yet. The past
+  /// trend covers at most [pastDays].
+  Future<GoalPlanInputs?> goalPlan({int pastDays = 60}) async {
+    final user = await _user.getUserData();
+    final days = (await _history()).days;
+    final settings = _settings();
+    final trend = smoothedTrend(
+      dailyWeights({
+        for (final (i, d) in days.indexed)
+          if (d.weightKg != null) i: d.weightKg!,
+      }, days.length),
+      alpha: settings.alpha,
+    ).whereType<double>().toList();
+    if (trend.isEmpty) return null;
+    return GoalPlanInputs(
+      pastTrendKg: trend.length > pastDays
+          ? trend.sublist(trend.length - pastDays)
+          : trend,
+      trendKgPerDay: trend.length > 20
+          ? (trend.last - trend[trend.length - 21]) / 20
+          : null,
+      expenditureKcal: estimateExpenditure(
+        days,
+        priorKcal: _priorKcal(user),
+        bodyFatPercent: await _bodyFat(user),
+        settings: settings,
+      ).last,
+      bodyFatPercent: await _bodyFat(user),
+      targetWeightKg: user.targetWeightKg,
+      paceKgPerWeek: goalRateKgPerWeek(user),
+    );
+  }
+
+  /// Upstream's formula expenditure × (1 + 4 × goal rate), MacroFactor's
+  /// prior.
+  static double _priorKcal(UserEntity user) =>
+      CalorieGoalCalc.getTdee(user) *
+      (1 + 4 * goalRateKgPerWeek(user) / user.weightKG);
+
+  static ExpenditureSettings _settings() => ExpenditureSettings(
+    window: AdaptiveStore.settings.value.cycleWindow ? 28 : 20,
+  );
+
+  /// The days a check-in reads, from the first weigh-in in the last
+  /// [_historyDays] (today when there is none) to today.
+  Future<({DateTime first, List<AdaptiveDay> days})> _history() async {
     final today = _today();
     final start = today.subtract(const Duration(days: _historyDays - 1));
     final weighIns = {
@@ -76,36 +203,7 @@ class AdaptiveService {
       )
         AdaptiveDay(intakeKcal: intakes[d], weightKg: weighIns[d]),
     ];
-
-    final rate = goalRateKgPerWeek(user);
-    final previous = await _store.lastCheckIn();
-    return computeCheckIn(
-      CheckInInputs(
-        days: days,
-        priorKcal:
-            CalorieGoalCalc.getTdee(user) * (1 + 4 * rate / user.weightKG),
-        goalRateKgPerWeek: rate,
-        bodyFatPercent: bodyFatPercent(user),
-        targetWeightKg: user.targetWeightKg,
-        previousTargetKcal:
-            previous?.acceptedKcal ??
-            CalorieGoalCalc.getTotalKcalGoal(
-              user,
-              0,
-              caloriesTaperEnabled: user.caloriesTaperEnabled,
-            ),
-        taper: (adjustment, weight) => CalorieGoalCalc.applyTargetWeightTaper(
-          baseAdjustment: adjustment,
-          currentWeightKg: weight,
-          targetWeightKg: user.targetWeightKg,
-          goal: user.goal,
-          taperEnabled: user.caloriesTaperEnabled,
-        ),
-        settings: ExpenditureSettings(
-          window: AdaptiveStore.settings.value.cycleWindow ? 28 : 20,
-        ),
-      ),
-    );
+    return (first: first, days: days);
   }
 
   Future<void> accept(CheckIn checkIn, double targetKcal) => _store.addCheckIn(
@@ -122,26 +220,98 @@ class AdaptiveService {
   static DateTime _day(DateTime t) => DateTime(t.year, t.month, t.day);
 }
 
-/// Seam S12: the last accepted target while the switch is on, else null
-/// and upstream's formula applies. Logged activities are not added to it,
-/// since measured expenditure already holds them, nor the kcal adjustment,
-/// since the user sets the target itself at each check-in. [store] is
-/// another profile's, whose switch is read from its box; the active
-/// profile's is [AdaptiveStore.settings].
-Future<double?> adaptiveTargetKcal([AdaptiveStore? store]) async {
-  if (store == null) {
-    if (!AdaptiveStore.settings.value.adaptiveTarget) return null;
-    return (await AdaptiveStore().lastCheckIn())?.acceptedKcal;
-  }
+/// One day of [AdaptiveService.expenditureHistory].
+class ExpenditureDay {
+  final DateTime date;
+  final double expenditureKcal;
+
+  /// Null when the day was not logged (under [minLoggedKcal]).
+  final double? intakeKcal;
+
+  /// False in the first two weeks, while the estimate is still the
+  /// formula's prior.
+  final bool settled;
+
+  const ExpenditureDay({
+    required this.date,
+    required this.expenditureKcal,
+    this.intakeKcal,
+    required this.settled,
+  });
+}
+
+/// What seam S12 makes of the kcal goal: [target] replaces upstream's
+/// formula when set; otherwise the formula applies, plus
+/// [weekdayOffsetKcal].
+class ForkKcalGoal {
+  final double? target;
+  final double weekdayOffsetKcal;
+
+  const ForkKcalGoal({this.target, this.weekdayOffsetKcal = 0});
+}
+
+/// Seam S12: the fixed target, or the last accepted check-in's while the
+/// adaptive switch is on, shifted for [logicalToday]'s weekday; null
+/// target leaves upstream's formula. Logged activities are not added to
+/// either, since measured expenditure already holds them and a fixed
+/// target is meant fixed, nor the kcal adjustment, since the user sets
+/// the target itself. [store] is another profile's, read from its box;
+/// the active profile's is [AdaptiveStore.settings].
+Future<ForkKcalGoal> forkKcalGoal(
+  DateTime logicalToday, [
+  AdaptiveStore? store,
+]) async {
   try {
-    if (!(await store.read()).adaptiveTarget) return null;
-    return (await store.lastCheckIn())?.acceptedKcal;
+    final settings = store == null
+        ? AdaptiveStore.settings.value
+        : await store.read();
+    final offset = settings.weekdayOffsets[logicalToday.weekday - 1];
+    final base = settings.fixedTarget
+        ? settings.fixedTargetKcal
+        : settings.adaptiveTarget
+        ? (await (store ?? AdaptiveStore()).lastCheckIn())?.acceptedKcal
+        : null;
+    return ForkKcalGoal(
+      target: base == null ? null : base + offset,
+      weekdayOffsetKcal: offset,
+    );
   } catch (e) {
+    if (store == null) rethrow;
     // Another profile's box: the formula is a safe goal for a copied meal.
     _log.warning('Adaptive target unreadable, using the formula: $e');
+    return const ForkKcalGoal();
+  } finally {
+    await store?.release();
+  }
+}
+
+/// Seam S41: the fixed macros, scaled to [kcalGoal] (a weekday's shift
+/// moves the grams with it), while the fixed target has them; else null
+/// and upstream's percentages apply.
+Future<FixedMacros?> forkMacroGoal(
+  double kcalGoal, [
+  AdaptiveStore? store,
+]) async {
+  try {
+    final settings = store == null
+        ? AdaptiveStore.settings.value
+        : await store.read();
+    final macros = settings.fixedMacros;
+    if (!settings.fixedTarget || macros == null || macros.kcal <= 0) {
+      return null;
+    }
+    final scale = kcalGoal / macros.kcal;
+    return FixedMacros(
+      proteinG: macros.proteinG * scale,
+      carbsG: macros.carbsG * scale,
+      fatG: macros.fatG * scale,
+    );
+  } catch (e) {
+    if (store == null) rethrow;
+    _log.warning('Fixed macros unreadable, using percentages: $e');
     return null;
   } finally {
-    await store.release();
+    await store?.release();
   }
 }
 

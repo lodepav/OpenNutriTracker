@@ -23,6 +23,9 @@ import 'package:opennutritracker/features/diary/presentation/bloc/calendar_day_b
 import 'package:opennutritracker/features/diary/presentation/widgets/daily_nutrient_panel.dart';
 import 'package:opennutritracker/features/diary/presentation/widgets/diary_sort_type.dart';
 import 'package:opennutritracker/features/home/presentation/widgets/intake_vertical_list.dart';
+// [fork] S43 meal-plan
+import 'package:opennutritracker/fork/plan/plan_ui.dart';
+// [/fork]
 // [fork] S24 copy-anywhere
 import 'package:opennutritracker/fork/copy/copy_ui.dart';
 import 'package:opennutritracker/fork/copy/select_entries_screen.dart';
@@ -223,6 +226,9 @@ class _DayInfoWidgetState extends State<DayInfoWidget> {
           // [/fork]
         ),
         const SizedBox(height: Dimens.spacing8),
+        // [fork] S43 meal-plan: the day's planned foods, to tick off
+        PlannedFoodsCard(day: widget.selectedDay),
+        // [/fork]
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -511,26 +517,25 @@ class _DayInfoWidgetState extends State<DayInfoWidget> {
     UserActivityEntity activityEntity,
   ) async {
     final day = widget.selectedDay;
-    if (DateUtils.isSameDay(day, widget.currentDay)) {
-      final shouldDelete = await showDialog<bool>(
-        context: context,
-        builder: (context) => const DeleteDialog(),
-      );
-      if (shouldDelete != null) {
-        widget.onDeleteActivity(activityEntity, day);
+    // [fork] S24 copy-anywhere: an activity copies to a picked day, from
+    // any day; deleting today's still asks first
+    final copyOrDelete = await showDialog<bool>(
+      context: context,
+      builder: (context) => const CopyOrDeleteDialog(toPicker: true),
+    );
+    if (!context.mounted) return;
+    if (copyOrDelete == true) {
+      await copyActivitiesWithDialog(context, [activityEntity]);
+    } else if (copyOrDelete == false) {
+      if (DateUtils.isSameDay(day, widget.currentDay)) {
+        final shouldDelete = await showDialog<bool>(
+          context: context,
+          builder: (context) => const DeleteDialog(),
+        );
+        if (shouldDelete == null) return;
       }
-    } else {
-      final copyOrDelete = await showDialog<bool>(
-        context: context,
-        builder: (context) => const CopyOrDeleteDialog(),
-      );
-      if (context.mounted) {
-        if (copyOrDelete == false) {
-          widget.onDeleteActivity(activityEntity, day);
-        } else if (copyOrDelete == true) {
-          widget.onCopyActivity(activityEntity, widget.trackedDayEntity);
-        }
-      }
+      widget.onDeleteActivity(activityEntity, day);
     }
+    // [/fork]
   }
 }

@@ -17,10 +17,15 @@ import 'package:opennutritracker/core/data/repository/water_intake_repository.da
 import 'package:opennutritracker/features/fasting/data/data_source/fasting_data_source.dart';
 import 'package:opennutritracker/features/settings/domain/export_import_failure.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
+import 'package:opennutritracker/fork/body/measurement_store.dart';
+import 'package:opennutritracker/fork/photos/photo_store.dart';
+import 'package:opennutritracker/fork/plan/plan_store.dart';
+import 'package:opennutritracker/fork/backup/profiles_backup.dart';
 
 /// What the JSON backup leaves out and the fork adds (phase 2, seam S21):
 /// the water log, fasting sessions, saved custom meals, the adaptive
-/// target's switches and check-ins, the profile and the app settings.
+/// target's settings and check-ins, the meal plan, body measurements,
+/// progress photos, the profile, the app settings, and every other profile ([ProfilesBackup]).
 ///
 /// Ported from theoleuthardt's `PersonalBackupExtras` (GPL-3.0, their #93,
 /// #94, #95, #97). Every file is optional on restore, so upstream's zips and
@@ -30,6 +35,9 @@ class BackupExtras {
   static const fastingFileName = 'fasting_sessions.json';
   static const customMealsFileName = 'custom_meals.json';
   static const adaptiveFileName = 'fork_adaptive.json';
+  static const planFileName = 'fork_plan.json';
+  static const measurementsFileName = 'fork_measurements.json';
+  static const photosFileName = 'fork_photos.json';
   static const profileFileName = 'user_profile.json';
   static const appSettingsFileName = 'app_settings.json';
 
@@ -67,21 +75,35 @@ class BackupExtras {
   final FastingDataSource _fasting;
   final CustomMealDataSource _customMeals;
   final AdaptiveStore Function() _adaptive;
+  final PlanStore Function() _plans;
+  final MeasurementStore Function() _measurements;
+  final PhotoStore Function() _photos;
 
   /// Null leaves the profile, and the app settings, out of the backup.
   final UserDataSource? _user;
   final ConfigDataSource? _config;
+
+  /// The other profiles' folders; null in a folder's own extras.
+  final ProfilesBackup? _profiles;
 
   BackupExtras(
     this._water,
     this._fasting,
     this._customMeals, {
     AdaptiveStore Function()? adaptive,
+    PlanStore Function()? plans,
+    MeasurementStore Function()? measurements,
+    PhotoStore Function()? photos,
     UserDataSource? user,
     ConfigDataSource? config,
+    ProfilesBackup? profiles,
   }) : _adaptive = adaptive ?? AdaptiveStore.new,
+       _plans = plans ?? PlanStore.new,
+       _measurements = measurements ?? MeasurementStore.new,
+       _photos = photos ?? PhotoStore.new,
        _user = user,
-       _config = config;
+       _config = config,
+       _profiles = profiles;
 
   Future<void> addTo(Archive archive) async {
     _addJson(archive, waterFileName, [
@@ -96,11 +118,24 @@ class BackupExtras {
     final adaptive = _adaptive();
     final settings = await adaptive.read();
     _addJson(archive, adaptiveFileName, {
-      'smoothedTrend': settings.smoothedTrend,
-      'adaptiveTarget': settings.adaptiveTarget,
-      'cycleWindow': settings.cycleWindow,
+      ...settings.toJson(),
       'checkIns': [for (final c in await adaptive.history()) c.toJson()],
     });
+    _addJson(archive, planFileName, [
+      for (final food in await _plans().all()) food.toJson(),
+    ]);
+    _addJson(archive, measurementsFileName, [
+      for (final m in await _measurements().all()) m.toJson(),
+    ]);
+    final photos = _photos();
+    final photoIndex = await photos.all();
+    _addJson(archive, photosFileName, [for (final p in photoIndex) p.toJson()]);
+    for (final p in photoIndex) {
+      final image = await photos.file(p);
+      if (!await image.exists()) continue;
+      final bytes = await image.readAsBytes();
+      archive.addFile(ArchiveFile(p.relativePath, bytes.length, bytes));
+    }
     if (_user case final user? when await user.hasUserData()) {
       _addJson(archive, profileFileName, _userToJson(await user.getUserData()));
     }
@@ -111,6 +146,7 @@ class BackupExtras {
           if (settings[key] != null) key: settings[key],
       });
     }
+    await _profiles?.addTo(archive);
   }
 
   /// Whether [archive] holds a profile, so a restore can stand in for
@@ -141,14 +177,33 @@ class BackupExtras {
     final adaptive = _decode(archive, adaptiveFileName, (json) {
       final map = json as Map<String, dynamic>;
       return (
-        settings: AdaptiveSettings(
-          smoothedTrend: map['smoothedTrend'] as bool,
-          adaptiveTarget: map['adaptiveTarget'] as bool,
-          cycleWindow: map['cycleWindow'] as bool,
-        ),
+        settings: AdaptiveSettings.fromJson(map),
         checkIns: [
           for (final c in map['checkIns'] as List) CheckInRecord.fromJson(c),
         ],
+      );
+    });
+    final plans = _decode(
+      archive,
+      planFileName,
+      (json) => [for (final f in json as List) PlannedFood.fromJson(f)],
+    );
+    final measurements = _decode(
+      archive,
+      measurementsFileName,
+      (json) => [for (final m in json as List) Measurement.fromJson(m)],
+    );
+    final photos = _decode(archive, photosFileName, (json) {
+      final index = [
+        for (final p in json as List) ProgressPhoto.fromJson(p as Map),
+      ];
+      return (
+        index: index,
+        images: {
+          for (final p in index)
+            if (archive.findFile(p.relativePath) case final file?)
+              p.id: file.content as List<int>,
+        },
       );
     });
     final profile = _decode(
@@ -166,6 +221,7 @@ class BackupExtras {
       ConfigDBO.fromJson({...ConfigDBO.empty().toJson(), ...picked});
       return picked;
     });
+    final otherProfiles = _profiles?.prepareRestore(archive);
 
     return () async {
       if (water != null) await _water.addAllEntries(water);
@@ -180,11 +236,17 @@ class BackupExtras {
         await store.mergeCheckIns(adaptive.checkIns);
         await store.save(adaptive.settings);
       }
+      if (plans != null) await _plans().merge(plans);
+      if (measurements != null) {
+        await _measurements().merge(measurements);
+      }
+      if (photos != null) await _photos().merge(photos.index, photos.images);
       if (profile != null) await _user?.saveUserData(profile);
       if ((_config, settings) case (final config?, final settings?)) {
         final current = (await config.getConfig()).toJson();
         await config.addConfig(ConfigDBO.fromJson({...current, ...settings}));
       }
+      await otherProfiles?.call();
     };
   }
 

@@ -33,9 +33,16 @@ class GetKcalGoalUsecase {
     double? totalKcalActivitiesParam,
     double? kcalUserAdjustment,
   }) async {
-    // [fork] S12 adaptive-target
-    final adaptive = await adaptiveTargetKcal(_forkAdaptive);
-    if (adaptive != null) return adaptive;
+    // [fork] S12 adaptive-target: also the fixed target and weekday shift
+    final forkConfig = await _configRepository.getConfig();
+    final fork = await forkKcalGoal(
+      DayBoundaryCalc.currentLogicalDayLabel(
+        forkConfig.dayStartOffsetHours,
+        forkConfig.dayStartOffsetMinutes,
+      ),
+      _forkAdaptive,
+    );
+    if (fork.target != null) return fork.target!;
     // [/fork]
     final user = userEntity ?? await _userRepository.getUserData();
     final config = await _configRepository.getConfig();
@@ -55,7 +62,9 @@ class GetKcalGoalUsecase {
           dayStartOffsetHours: config.dayStartOffsetHours,
           dayStartOffsetMinutes: config.dayStartOffsetMinutes,
         )).map((activity) => activity.burnedKcal).toList().sum;
-    return CalorieGoalCalc.getTotalKcalGoal(
+    // [fork] S12 weekday-targets: was `return CalorieGoalCalc...(`
+    return fork.weekdayOffsetKcal + CalorieGoalCalc.getTotalKcalGoal(
+    // [/fork]
       user,
       totalKcalActivities,
       kcalUserAdjustment: config.userKcalAdjustment,

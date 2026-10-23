@@ -16,6 +16,10 @@ import 'package:opennutritracker/features/home/presentation/bloc/home_bloc.dart'
 import 'package:opennutritracker/features/meal_detail/presentation/bloc/meal_detail_bloc.dart';
 import 'package:opennutritracker/features/meal_detail/util/quick_serving_option.dart';
 import 'package:opennutritracker/generated/l10n.dart';
+// [fork] S42 food-basket
+import 'package:opennutritracker/fork/basket/basket.dart';
+import 'package:opennutritracker/fork/basket/basket_ui.dart';
+// [/fork]
 
 class MealDetailBottomSheet extends StatefulWidget {
   final MealEntity product;
@@ -267,6 +271,36 @@ class _MealDetailBottomSheetState extends State<MealDetailBottomSheet> {
                           ),
                         ),
                       ),
+                      // [fork] S42 food-basket: pick several foods, log them together
+                      if (!productMissingRequiredInfo) ...[
+                        const SizedBox(height: Dimens.spacing8),
+                        AddToBasketButton(
+                          meal: widget.product,
+                          type: widget.intakeTypeEntity,
+                          day: widget.day,
+                          current: () {
+                            final quantity = double.tryParse(
+                              widget.quantityTextController.text.replaceAll(
+                                ',',
+                                '.',
+                              ),
+                            );
+                            if (quantity == null ||
+                                quantity <= 0 ||
+                                quantity > 10000) {
+                              return null;
+                            }
+                            final state = widget.mealDetailBloc.state;
+                            return BasketItem(
+                              meal: widget.product,
+                              unit: state.selectedUnit,
+                              amountText: state.totalQuantityConverted,
+                              kcal: state.totalKcal,
+                            );
+                          },
+                        ),
+                      ],
+                      // [/fork]
                       productMissingRequiredInfo
                           ? Text(
                               S.of(context).missingProductInfo,

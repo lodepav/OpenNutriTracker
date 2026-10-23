@@ -17,7 +17,14 @@ import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_ui.dart';
 import 'package:opennutritracker/fork/adaptive/check_in.dart';
 import 'package:opennutritracker/fork/adaptive/expenditure.dart';
+import 'package:opennutritracker/fork/adaptive/expenditure_card.dart';
+import 'package:opennutritracker/fork/adaptive/goal_plan_card.dart';
+import 'package:opennutritracker/fork/body/measurement_store.dart';
+import 'package:opennutritracker/core/domain/entity/body_weight_unit_entity.dart';
+import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/fork/adaptive/trend_points.dart';
+import 'package:opennutritracker/core/utils/energy_unit_provider.dart';
+import 'package:provider/provider.dart';
 
 final _today = DateTime(2026, 10, 22);
 
@@ -47,6 +54,11 @@ class _Weights extends Fake implements GetWeightLogUsecase {
         weightKg: 90 - 0.5 * (59 - d) / 7,
       ),
   ];
+}
+
+class _NoWeights extends Fake implements GetWeightLogUsecase {
+  @override
+  Future<List<WeightLogEntity>> getAllEntries() async => [];
 }
 
 class _TrackedDays extends Fake implements GetTrackedDayUsecase {
@@ -153,10 +165,10 @@ void main() {
         final checkIn = await service.checkIn();
         await service.accept(checkIn, 2100);
 
-        expect(await adaptiveTargetKcal(), isNull);
-        expect(await adaptiveTargetKcal(store), isNull);
+        expect((await forkKcalGoal(_today)).target, isNull);
+        expect((await forkKcalGoal(_today, store)).target, isNull);
         await store.save(const AdaptiveSettings(adaptiveTarget: true));
-        expect(await adaptiveTargetKcal(store), 2100);
+        expect((await forkKcalGoal(_today, store)).target, 2100);
       },
     );
 
@@ -165,10 +177,10 @@ void main() {
       await service.accept(await service.checkIn(), 2100);
       final other = AdaptiveStore(() => Hive.openBox<dynamic>('other'));
 
-      expect(await adaptiveTargetKcal(other), isNull);
+      expect((await forkKcalGoal(_today, other)).target, isNull);
       await other.save(const AdaptiveSettings(adaptiveTarget: true));
-      expect(await adaptiveTargetKcal(other), isNull);
-      expect(await adaptiveTargetKcal(store), 2100);
+      expect((await forkKcalGoal(_today, other)).target, isNull);
+      expect((await forkKcalGoal(_today, store)).target, 2100);
     });
 
     test('a check-in is due a week after the last', () async {
@@ -239,6 +251,148 @@ void main() {
     expect(refreshed, 1);
     expect(find.text('Weekly check-in'), findsNothing);
     expect(memory.records, hasLength(1));
+  });
+
+  testWidgets('a kilojoule user reads and types the target in kJ', (
+    tester,
+  ) async {
+    final memory = _MemoryStore();
+    final service = AdaptiveService(
+      _User(),
+      _Weights(),
+      _TrackedDays(),
+      memory,
+      () => _today.add(const Duration(hours: 9)),
+    );
+    await tester.pumpWidget(
+      ChangeNotifierProvider(
+        create: (_) => EnergyUnitProvider(usesKilojoules: true),
+        child: MaterialApp(home: CheckInScreen(service: service)),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining(' kJ'), findsWidgets);
+    expect(find.textContaining('kcal'), findsNothing);
+    await tester.enterText(
+      find.byKey(const ValueKey('check-in-target')),
+      '8368',
+    );
+    await tester.tap(find.text('Accept'));
+    await tester.pumpAndSettle();
+
+    expect(memory.records.single.acceptedKcal, closeTo(2000, 0.01));
+  });
+
+  testWidgets('the planner moves the date with the pace and saves it', (
+    tester,
+  ) async {
+    final saved = <double>[];
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: GoalPlanCard(
+              palette: AppPalette.light,
+              unit: BodyWeightUnit.kg,
+              service: service,
+              onUsePace: (pace) async => saved.add(pace),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Goal planner'), findsOneWidget);
+    expect(find.text('Pace: -0.50 kg a week'), findsOneWidget);
+    expect(find.text('Use this pace'), findsNothing);
+    final reached = find.byWidgetPredicate(
+      (w) => w is Text && (w.data ?? '').contains('weeks)'),
+    );
+    final before = (tester.widget(reached.first) as Text).data;
+
+    await tester.drag(
+      find.byKey(const ValueKey('plan-pace')),
+      const Offset(-60, 0),
+    );
+    await tester.pumpAndSettle();
+    expect((tester.widget(reached.first) as Text).data, isNot(before));
+
+    await tester.tap(find.text('Use this pace'));
+    await tester.pumpAndSettle();
+    expect(saved.single, isNot(closeTo(-0.5, 0.01)));
+  });
+
+  test('a measured body fat % changes the expenditure read', () async {
+    final measurements = MeasurementStore(
+      () => Hive.openBox<dynamic>('measurements'),
+    );
+    await measurements.addDay(_today, {BodyMetric.bodyFat: 10});
+    final lean = AdaptiveService(
+      _User(),
+      _Weights(),
+      _TrackedDays(),
+      store,
+      () => _today.add(const Duration(hours: 9)),
+      measurements,
+    );
+
+    // Leaner: more of a loss is lean tissue, worth less energy, so the
+    // same loss on the same intake reads as a lower expenditure.
+    expect(
+      (await lean.checkIn()).expenditureKcal,
+      lessThan((await service.checkIn()).expenditureKcal),
+    );
+  });
+
+  group('expenditure history', () {
+    test(
+      'every day from the first weigh-in, settled after two weeks',
+      () async {
+        final days = await service.expenditureHistory();
+
+        expect(days.length, 60);
+        expect(days.last.date, _today);
+        expect(days.first.settled, isFalse);
+        expect(days.last.settled, isTrue);
+        expect(days.last.intakeKcal, 2000);
+        // Losing 0.5 kg a week on 2,000 kcal: expenditure is well above it.
+        expect(days.last.expenditureKcal, greaterThan(2300));
+      },
+    );
+
+    test('nothing without a weigh-in', () async {
+      final none = AdaptiveService(
+        _User(),
+        _NoWeights(),
+        _TrackedDays(),
+        store,
+        () => _today,
+      );
+      expect(await none.expenditureHistory(), isEmpty);
+    });
+
+    testWidgets('the Trends card shows expenditure and a deficit', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: ExpenditureTrendCard(
+              rangeDays: 30,
+              palette: AppPalette.light,
+              service: service,
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Expenditure'), findsOneWidget);
+      expect(find.text('Balance, logged days'), findsOneWidget);
+      expect(find.textContaining(RegExp(r'^-\d+ kcal a day$')), findsOneWidget);
+    });
   });
 }
 
