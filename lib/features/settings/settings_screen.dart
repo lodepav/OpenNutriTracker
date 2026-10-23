@@ -47,6 +47,9 @@ import 'package:opennutritracker/fork/adaptive/adaptive_ui.dart';
 // [fork] S23 auto-backup: the automatic backup's settings (phase 2)
 import 'package:opennutritracker/fork/backup/auto_backup_ui.dart';
 // [/fork]
+// [fork] S32 off-contributions: the user's Open Food Facts account
+import 'package:opennutritracker/fork/off/off_contribution_ui.dart';
+// [/fork]
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
@@ -542,6 +545,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   // [fork] S23 auto-backup
                   const AutoBackupTile(),
+                  // [/fork]
+                  // [fork] S32 off-contributions
+                  const OffAccountTile(),
                   // [/fork]
                   _SettingsTile(
                     palette: palette,
