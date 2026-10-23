@@ -21,6 +21,9 @@ import 'package:opennutritracker/core/utils/off_micronutrient_repair.dart';
 import 'package:opennutritracker/core/utils/user_image_storage.dart';
 import 'package:opennutritracker/features/settings/domain/export_import_failure.dart';
 import 'package:opennutritracker/features/settings/domain/goal_settings_backup.dart';
+// [fork] S21 backup: the fork's own files in the JSON backup (BackupExtras)
+import 'package:opennutritracker/fork/backup/backup_extras.dart';
+// [/fork]
 
 /// Opens the system file picker for a single file of any type and resolves
 /// to the pick, or to null when the user dismissed the picker.
@@ -41,6 +44,9 @@ class ImportDataUsecase {
   /// channel, so the picker outcomes (#1103: cancel, a pick without a
   /// path, a pick of the wrong file) can only be driven from here.
   final PickImportFile _pickFile;
+  // [fork] S21 backup
+  final BackupExtras? _forkExtras;
+  // [/fork]
 
   ImportDataUsecase(
     this._userActivityRepository,
@@ -51,7 +57,11 @@ class ImportDataUsecase {
     this._customActivityTemplateRepository,
     this._configRepository, {
     PickImportFile pickFile = _pickAnyFile,
-  }) : _pickFile = pickFile;
+    // [fork] S21 backup
+    BackupExtras? forkExtras,
+  }) : _pickFile = pickFile,
+       _forkExtras = forkExtras;
+  // [/fork]
 
   /// Imports user activity, intake, tracked day, and (optionally) recipe,
   /// weight log, Custom activity template and goal settings data from a
@@ -134,6 +144,10 @@ class ImportDataUsecase {
             ),
           );
 
+    // [fork] S21 backup: decoded with the rest, before any write
+    final forkRestore = _forkExtras?.prepareRestore(archive);
+    // [/fork]
+
     await _userActivityRepository.upsertAllUserActivityDBOs(userActivityDBOs);
     await _intakeRepository.upsertAllIntakeDBOs(intakeDBOs);
     await _trackedDayRepository.addAllTrackedDays(trackedDayDBOs);
@@ -160,6 +174,9 @@ class ImportDataUsecase {
         dailyWaterGoalMl: goalSettings.dailyWaterGoalMl,
       );
     }
+    // [fork] S21 backup
+    await forkRestore?.call();
+    // [/fork]
 
     // Restore any user-attached photos — recipes under `recipe_images/`
     // and custom meals under `meal_images/`. Each archive entry's name

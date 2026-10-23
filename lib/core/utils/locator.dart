@@ -5,6 +5,9 @@ import 'package:opennutritracker/fork/dev/fake_ai.dart';
 import 'package:opennutritracker/fork/food/food_table_licenses.dart';
 import 'package:opennutritracker/fork/food/local_food_data_source.dart';
 // [/fork]
+// [fork] S21 backup: the fork's own files in the JSON backup
+import 'package:opennutritracker/fork/backup/backup_extras.dart';
+// [/fork]
 import 'package:opennutritracker/core/data/data_source/config_data_source.dart';
 import 'package:opennutritracker/core/data/data_source/custom_activity_template_data_source.dart';
 import 'package:opennutritracker/core/data/data_source/health/health_service.dart';
@@ -502,6 +505,9 @@ Future<void> initLocator() async {
       locator(),
       locator(),
       locator(),
+      // [fork] S21 backup
+      forkExtras: BackupExtras(locator(), locator(), locator()),
+      // [/fork]
     ),
   );
   locator.registerLazySingleton(
@@ -513,6 +519,9 @@ Future<void> initLocator() async {
       locator(),
       locator(),
       locator(),
+      // [fork] S21 backup
+      forkExtras: BackupExtras(locator(), locator(), locator()),
+      // [/fork]
     ),
   );
   locator.registerLazySingleton(() => ImportMealsCsvUsecase(locator()));
