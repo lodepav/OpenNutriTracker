@@ -180,13 +180,15 @@ void main() {
         declared,
         // [fork] S28 weight-import: READ_WEIGHT for the weight log; S44
         // steps: READ_STEPS for the steps on Trends; S48 body-fat-import:
-        // READ_BODY_FAT for the body measurements
+        // READ_BODY_FAT for the body measurements; S49 nutrition-export:
+        // WRITE_NUTRITION, the diary to Health Connect
         {
           'READ_EXERCISE',
           'READ_TOTAL_CALORIES_BURNED',
           'READ_WEIGHT',
           'READ_STEPS',
           'READ_BODY_FAT',
+          'WRITE_NUTRITION',
         },
         // [/fork]
         reason:
@@ -234,7 +236,9 @@ void main() {
     test('nothing is ever written back', () {
       expect(
         declared.where((permission) => permission.startsWith('WRITE_')),
-        isEmpty,
+        // [fork] S49 nutrition-export: the diary, when switched on
+        {'WRITE_NUTRITION'},
+        // [/fork]
       );
     });
   });
@@ -281,13 +285,15 @@ void main() {
         // actually shipped is the last place to be picky about spelling.
         expect(
           healthIn(mergedManifest.readAsStringSync()).kept,
-          // [fork] S28 weight-import, S44 steps, S48 body-fat-import
+          // [fork] S28 weight-import, S44 steps, S48 body-fat-import, S49
+          // nutrition-export
           {
             'READ_EXERCISE',
             'READ_TOTAL_CALORIES_BURNED',
             'READ_WEIGHT',
             'READ_STEPS',
             'READ_BODY_FAT',
+            'WRITE_NUTRITION',
           },
           // [/fork]
           reason:

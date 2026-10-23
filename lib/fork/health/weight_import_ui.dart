@@ -4,6 +4,7 @@ import 'package:opennutritracker/features/diary/presentation/bloc/diary_bloc.dar
 import 'package:opennutritracker/features/profile/presentation/bloc/profile_bloc.dart';
 import 'package:opennutritracker/fork/dev/fake_health.dart';
 import 'package:opennutritracker/fork/health/body_fat_import.dart';
+import 'package:opennutritracker/fork/health/nutrition_export.dart';
 import 'package:opennutritracker/fork/health/weight_import.dart';
 
 /// After an import filed something: the weight chart, BMI and the goals.
@@ -36,7 +37,9 @@ class WeightImportTile extends StatelessWidget {
                 'A weight you enter or edit is never replaced.',
             what: 'weight',
             offMessage: 'Weight import off; imported weights stay in the log',
-            noneMessage: 'Weight import on; no new weigh-ins',
+            done: (days) => days == 0
+                ? 'Weight import on; no new weigh-ins'
+                : 'Imported $days ${days == 1 ? 'day' : 'days'} of weight',
             isOn: import.isOn,
             turnOn: () async {
               final days = await import.turnOn();
@@ -70,10 +73,44 @@ class BodyFatImportTile extends StatelessWidget {
                 'one a day. A value you enter is never replaced.',
             what: 'body fat',
             offMessage: 'Body fat import off; imported values stay',
-            noneMessage: 'Body fat import on; no new readings',
+            done: (days) => days == 0
+                ? 'Body fat import on; no new readings'
+                : 'Imported $days ${days == 1 ? 'day' : 'days'} of body fat',
             isOn: import.isOn,
             turnOn: import.turnOn,
             turnOff: import.turnOff,
+          );
+  }
+}
+
+/// "Write nutrition": the diary's calories and macros to Health Connect.
+class NutritionExportTile extends StatelessWidget {
+  final bool available;
+
+  const NutritionExportTile({super.key, required this.available});
+
+  @override
+  Widget build(BuildContext context) {
+    final export = NutritionExport.current;
+    return export == null
+        ? const SizedBox.shrink()
+        : HealthImportTile(
+            key: const Key('fork-nutrition-export'),
+            available: available,
+            icon: Icons.restaurant_rounded,
+            title: 'Write nutrition',
+            subtitle:
+                'Calories and macros of each food you log go to the health '
+                'store; an edit or a delete follows when you leave the app.',
+            what: 'nutrition',
+            verb: 'write',
+            offMessage: 'Nutrition writing off; what was written stays',
+            done: (n) => n == 0
+                ? 'Nutrition writing on; nothing new to write'
+                : 'Wrote $n ${n == 1 ? 'food' : 'foods'} to the health store',
+            isOn: export.isOn,
+            turnOn: export.turnOn,
+            turnOff: export.turnOff,
           );
   }
 }
@@ -88,8 +125,13 @@ class HealthImportTile extends StatefulWidget {
 
   /// What is read, in "Could not read [what]".
   final String what;
+
+  /// "read", or "write" for an export.
+  final String verb;
   final String offMessage;
-  final String noneMessage;
+
+  /// The message once on, given what [turnOn] returned.
+  final String Function(int count) done;
   final Future<bool> Function() isOn;
 
   /// The days filed, or null when the permission was refused.
@@ -103,8 +145,9 @@ class HealthImportTile extends StatefulWidget {
     required this.title,
     required this.subtitle,
     required this.what,
+    this.verb = 'read',
     required this.offMessage,
-    required this.noneMessage,
+    required this.done,
     required this.isOn,
     required this.turnOn,
     required this.turnOff,
@@ -134,15 +177,15 @@ class _HealthImportTileState extends State<HealthImportTile> {
         await widget.turnOff();
         message = widget.offMessage;
       } else {
-        final days = await widget.turnOn();
-        message = switch (days) {
-          null => 'Permission to read ${widget.what} was not given',
-          0 => widget.noneMessage,
-          _ => 'Imported $days ${days == 1 ? 'day' : 'days'} of ${widget.what}',
-        };
+        final count = await widget.turnOn();
+        message = count == null
+            ? 'Permission to ${widget.verb} ${widget.what} was not given'
+            : widget.done(count);
       }
     } catch (_) {
-      message = 'Could not read ${widget.what} from the health store';
+      message = widget.verb == 'read'
+          ? 'Could not read ${widget.what} from the health store'
+          : 'Could not write ${widget.what} to the health store';
     }
     final now = await widget.isOn();
     if (!mounted) return;

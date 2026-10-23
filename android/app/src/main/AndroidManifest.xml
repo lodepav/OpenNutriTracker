@@ -40,6 +40,10 @@
          OpenBite is not on Play (D8). -->
     <uses-permission android:name="android.permission.health.READ_BODY_FAT"/>
     <!-- [/fork] -->
+    <!-- [fork] S49 nutrition-export: the diary's calories and macros
+         written to Health Connect, when switched on. -->
+    <uses-permission android:name="android.permission.health.WRITE_NUTRITION"/>
+    <!-- [/fork] -->
 
     <!-- Provide required visibility configuration for API level 30 and above -->
     <queries>

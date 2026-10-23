@@ -484,6 +484,15 @@ database, Q4 (b), was offered and declined):
   planned again (the app opening or leaving), so it reads the data as of the last use; with
   too little data (under 4 logged days or no weigh-in) or a failed estimate it keeps its own
   text. Confirming still happens in the app.
+- *Done:* nutrition to Health Connect (S49): "Write nutrition" on the health sync screen
+  (WRITE_NUTRITION, asked for when switched on) writes each diary entry of the past 14 days as
+  a nutrition record: its meal, time, name, calories, carbs, protein, fat, and fibre, sugar,
+  saturated fat and sodium where the food has them. The record's client id is the entry's, so
+  an edit (amount, a timeline move) is written over it at a higher version, and a deleted entry
+  has its record removed. It runs when the app opens and when it is left, writing only what
+  changed (kept per profile); a failed write keeps what went out and tries the rest next time.
+  Switched off, what was written stays. Android only in practice: HealthKit has no
+  delete-by-client-id in the plugin.
 
 Upstream: open an issue first, with the simulation results. The maintainer cites a source for
 every calculation; everything except the tuned weights has one, and those come with the

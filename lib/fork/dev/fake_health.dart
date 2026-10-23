@@ -1,5 +1,6 @@
 import 'package:opennutritracker/fork/dev/fake_ai.dart';
 import 'package:opennutritracker/fork/health/body_fat_import.dart';
+import 'package:opennutritracker/fork/health/nutrition_export.dart';
 import 'package:opennutritracker/fork/health/steps.dart';
 import 'package:opennutritracker/fork/health/weight_import.dart';
 
@@ -52,6 +53,21 @@ class FakeBodyFat implements BodyFatSource {
           ),
     ];
   }
+}
+
+/// A health store that keeps what is written, by client id.
+class FakeNutrition implements NutritionSink {
+  final records = <String, NutritionRecord>{};
+
+  @override
+  Future<bool> requestPermission() async => true;
+
+  @override
+  Future<void> write(NutritionRecord record, int version) async =>
+      records[record.clientId] = record;
+
+  @override
+  Future<void> delete(String clientId) async => records.remove(clientId);
 }
 
 /// A walker who does 4,000 to 12,000 steps a day, the same each run, and
