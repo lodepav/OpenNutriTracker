@@ -52,6 +52,7 @@ worth a look when phase 1c's breakdown is designed.
 - [x] GitHub Actions off on the fork (2026-10-19). Every upstream workflow needs upstream's secrets or acts on upstream's issues and Weblate, and none had ever run here, so Actions is switched off for the whole repo (Settings → Actions) rather than per workflow; that also covers workflows upstream adds later. The files stay: deleted files conflict on every upstream edit. Switch it back on, and disable workflows one by one, if the fork ever wants CI of its own.
 - [x] Fork identity (Q2, D8): **OpenBite**, app id `io.github.lodepav.openbite`, set in `android/app/fork.gradle` (S20). Launcher name only.
 - [ ] Release keystore and its pinned digest: the user makes it later (2026-10-23).
+- [ ] **Resume here (2026-10-23):** item 3, Health Connect weight. PR #1296 needs ~44 develop-only commits (tracked-day lock, #1419, #1383), so write a fork version on v2.4.0: `lib/fork/health/weight_import.dart` with a per-profile fork box recording what it filed per day (row changed = manual, row gone = deleted unless a newer reading); no new Hive fields; READ_WEIGHT seam in the manifest and `health_connect_permissions_test.dart`; switch in `health_sync_screen.dart`; fake readings for the emulator. Then #1266, 4, 5, 6, 8.
 - [ ] OpenBite in the app's own text (onboarding, About, share texts) and its own icon. Search the trademark registers before publishing under the name.
 - [ ] `.env`: placeholders stay; ONT's hosted backend isn't used (D11).
 
