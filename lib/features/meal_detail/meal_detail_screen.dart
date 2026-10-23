@@ -26,6 +26,9 @@ import 'package:opennutritracker/features/meal_detail/presentation/widgets/meal_
 import 'package:opennutritracker/features/meal_detail/presentation/widgets/meal_title_expanded.dart';
 import 'package:opennutritracker/features/meal_detail/presentation/widgets/off_disclaimer.dart';
 import 'package:opennutritracker/generated/l10n.dart';
+// [fork] S45 remembered-amounts
+import 'package:opennutritracker/fork/amounts/remembered_amounts.dart';
+// [/fork]
 
 class MealDetailScreen extends StatefulWidget {
   const MealDetailScreen({super.key});
@@ -59,6 +62,33 @@ class _MealDetailScreenState extends State<MealDetailScreen> {
 
   String _initialUnit = "";
   String _initialQuantity = "";
+
+  // [fork] S45 remembered-amounts: the amount this food was last logged at
+  RememberedAmount? _forkRemembered;
+
+  Future<void> _forkLoadRemembered() async {
+    final remembered = await RememberedAmounts.current.of(meal);
+    if (remembered == null || !mounted || _userChangedSelection) return;
+    _forkRemembered = remembered;
+    _initialUnit = "";
+    _initialQuantity = "";
+    _applyInitialSelection();
+  }
+
+  /// The remembered amount when this food can take its unit: a serving
+  /// only once the record has a scalable one (a thin search hit gets it
+  /// with hydration, which re-picks).
+  RememberedAmount? get _forkUsableRemembered {
+    final remembered = _forkRemembered;
+    if (remembered == null) return null;
+    if (remembered.unit == UnitDropdownItem.serving.toString() &&
+        meal.scalableServingQuantity == null) {
+      return null;
+    }
+    final quantity = double.tryParse(remembered.quantity.replaceAll(',', '.'));
+    return quantity == null || quantity <= 0 ? null : remembered;
+  }
+  // [/fork]
 
   // Set on the first didChangeDependencies pass, which is the only one that
   // reads the route arguments and requests hydration (see there).
@@ -151,6 +181,9 @@ class _MealDetailScreenState extends State<MealDetailScreen> {
       // (serving fields + micronutrients) once, in the background; the
       // listener in build() swaps the displayed meal in when it arrives.
       _mealDetailBloc.add(HydrateMealEvent(meal));
+      // [fork] S45 remembered-amounts
+      _forkLoadRemembered();
+      // [/fork]
     }
 
     _mealDetailBloc.add(LoadDailyTotalsEvent(_day));
@@ -172,9 +205,31 @@ class _MealDetailScreenState extends State<MealDetailScreen> {
     // falls through to weight/volume the same way it always did.
     final preferServing =
         meal.scalableServingQuantity != null && !_defaultToRawFoodUnits;
+    // [fork] S45 remembered-amounts
+    final remembered = _forkUsableRemembered;
+    // [/fork]
 
     _applyingInitialSelection = true;
     try {
+      // [fork] S45 remembered-amounts
+      if (_initialUnit == "" && remembered != null) {
+        _initialUnit = remembered.unit;
+        _mealDetailBloc.add(
+          UpdateKcalEvent(meal: meal, selectedUnit: _initialUnit),
+        );
+      }
+      if (_initialQuantity == "" && remembered != null) {
+        _initialQuantity = remembered.quantity;
+        quantityTextController.text = remembered.quantity;
+        _mealDetailBloc.add(
+          UpdateKcalEvent(
+            meal: meal,
+            totalQuantity: quantityTextController.text,
+            selectedUnit: _initialUnit,
+          ),
+        );
+      }
+      // [/fork]
       if (_initialUnit == "") {
         // `scalableServingQuantity`, not `hasServingValues` (#629): the latter
         // is true for a record whose serving is unparseable text, and nothing

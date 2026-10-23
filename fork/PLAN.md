@@ -416,6 +416,12 @@ and take kJ for kJ users (`lib/fork/units/energy_text.dart`).
   cache, and the permission does not travel. The fake health (`FORK_FAKE_HEALTH`) walks
   4,000 to 12,000 a day.
 
+**More from MacroFactor, round 2** (asked 2026-10-23, branch `fork/mf3`):
+- *Done:* remembered amounts (S45): a food's page opens at the number and unit it was last
+  logged (or put in the basket) at, ahead of upstream's 1 serving / 100 g, the raw-units
+  preference included. Kept per profile for the last 1,000 foods, by barcode or else name; not
+  in the backup.
+
 Upstream: open an issue first, with the simulation results. The maintainer cites a source for
 every calculation; everything except the tuned weights has one, and those come with the
 simulation. If declined, it stays in the fork behind seams.
