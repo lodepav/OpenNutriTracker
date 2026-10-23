@@ -390,6 +390,11 @@ and take kJ for kJ users (`lib/fork/units/energy_text.dart`).
   its energy, and its review removes foods or logs them all, each through upstream's add.
   One meal of one day at a time: picking for another empties it. Upstream's own multi-food
   path stays the typed bulk add.
+- *Done:* meals planned ahead (S43): the basket's "Plan, don't log" puts its foods on that
+  day's meal (a future day is opened from the Diary's calendar); Home and the Diary show the
+  day's plan, counted nowhere until a tick logs a food on its planned day and meal ("Log all"
+  for the lot). Kept in the fork's per-profile box beside the adaptive state, and in the
+  backup as `fork_plan.json`, every profile's included.
 
 Upstream: open an issue first, with the simulation results. The maintainer cites a source for
 every calculation; everything except the tuned weights has one, and those come with the

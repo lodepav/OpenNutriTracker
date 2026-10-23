@@ -23,6 +23,9 @@ import 'package:opennutritracker/features/diary/presentation/bloc/calendar_day_b
 import 'package:opennutritracker/features/diary/presentation/widgets/daily_nutrient_panel.dart';
 import 'package:opennutritracker/features/diary/presentation/widgets/diary_sort_type.dart';
 import 'package:opennutritracker/features/home/presentation/widgets/intake_vertical_list.dart';
+// [fork] S43 meal-plan
+import 'package:opennutritracker/fork/plan/plan_ui.dart';
+// [/fork]
 // [fork] S24 copy-anywhere
 import 'package:opennutritracker/fork/copy/copy_ui.dart';
 import 'package:opennutritracker/fork/copy/select_entries_screen.dart';
@@ -223,6 +226,9 @@ class _DayInfoWidgetState extends State<DayInfoWidget> {
           // [/fork]
         ),
         const SizedBox(height: Dimens.spacing8),
+        // [fork] S43 meal-plan: the day's planned foods, to tick off
+        PlannedFoodsCard(day: widget.selectedDay),
+        // [/fork]
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

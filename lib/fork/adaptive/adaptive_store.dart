@@ -184,6 +184,10 @@ class AdaptiveStore {
     : _otherProfileSuffix = null,
       _active = false;
 
+  /// The active profile's box, which also holds the meal plan
+  /// (`PlanStore`).
+  static Future<Box<dynamic>> openActiveBox() => _open(_activeSuffix());
+
   static Future<Box<dynamic>> _open(String suffix) =>
       locator<HiveDBProvider>().openScopedBox<dynamic>(boxName, suffix);
 

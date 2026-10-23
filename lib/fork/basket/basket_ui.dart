@@ -9,6 +9,7 @@ import 'package:opennutritracker/features/diary/presentation/bloc/diary_bloc.dar
 import 'package:opennutritracker/features/home/presentation/bloc/home_bloc.dart';
 import 'package:opennutritracker/features/meal_detail/presentation/bloc/meal_detail_bloc.dart';
 import 'package:opennutritracker/fork/basket/basket.dart';
+import 'package:opennutritracker/fork/plan/plan_store.dart';
 import 'package:opennutritracker/fork/units/energy_text.dart';
 
 /// Writes one basket item; upstream's meal detail add in the app.
@@ -33,6 +34,15 @@ Future<void> _logWithMealDetail(
   item.meal,
   day,
 );
+
+/// Home and the Diary, after entries were written outside upstream's
+/// screens; skipped where the app's blocs are not registered (tests).
+void refreshAfterLogging() {
+  if (!locator.isRegistered<HomeBloc>()) return;
+  locator<HomeBloc>().add(const LoadItemsEvent());
+  locator<DiaryBloc>().add(const LoadDiaryYearEvent());
+  locator<CalendarDayBloc>().add(const RefreshCalendarDayEvent());
+}
 
 /// Seam S42: beside the meal detail's Add. Puts the food in the basket at
 /// the amount chosen and goes back to search for the next one.
@@ -88,6 +98,7 @@ class BasketBar extends StatelessWidget {
   final DateTime day;
   final FoodBasket? basket;
   final LogBasketItem log;
+  final PlanStore? plans;
 
   const BasketBar({
     super.key,
@@ -95,6 +106,7 @@ class BasketBar extends StatelessWidget {
     required this.day,
     this.basket,
     this.log = _logWithMealDetail,
+    this.plans,
   });
 
   @override
@@ -120,8 +132,13 @@ class BasketBar extends StatelessWidget {
               onTap: () => showModalBottomSheet<void>(
                 context: context,
                 isScrollControlled: true,
-                builder: (_) =>
-                    BasketSheet(type: type, day: day, basket: target, log: log),
+                builder: (_) => BasketSheet(
+                  type: type,
+                  day: day,
+                  basket: target,
+                  log: log,
+                  plans: plans,
+                ),
               ),
             ),
           ),
@@ -138,6 +155,7 @@ class BasketSheet extends StatefulWidget {
   final DateTime day;
   final FoodBasket basket;
   final LogBasketItem log;
+  final PlanStore? plans;
 
   const BasketSheet({
     super.key,
@@ -145,6 +163,7 @@ class BasketSheet extends StatefulWidget {
     required this.day,
     required this.basket,
     required this.log,
+    this.plans,
   });
 
   @override
@@ -154,6 +173,28 @@ class BasketSheet extends StatefulWidget {
 class _BasketSheetState extends State<BasketSheet> {
   bool _logging = false;
 
+  /// Puts the foods on the day's plan (`PlanStore`) instead of the diary.
+  Future<void> _plan() async {
+    setState(() => _logging = true);
+    final items = widget.basket.itemsFor(widget.type, widget.day);
+    await (widget.plans ?? PlanStore()).add(
+      [
+        for (final i in items)
+          (meal: i.meal, unit: i.unit, amountText: i.amountText, kcal: i.kcal),
+      ],
+      widget.type,
+      widget.day,
+    );
+    widget.basket.clear();
+    if (!mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('Planned ${items.length} foods.')));
+    Navigator.of(
+      context,
+    ).popUntil(namedRouteOrFirst(NavigationOptions.mainRoute));
+  }
+
   Future<void> _logAll() async {
     setState(() => _logging = true);
     final items = widget.basket.itemsFor(widget.type, widget.day);
@@ -162,11 +203,7 @@ class _BasketSheetState extends State<BasketSheet> {
       await widget.log(context, item, widget.type, widget.day);
     }
     widget.basket.clear();
-    if (locator.isRegistered<HomeBloc>()) {
-      locator<HomeBloc>().add(const LoadItemsEvent());
-      locator<DiaryBloc>().add(const LoadDiaryYearEvent());
-      locator<CalendarDayBloc>().add(const RefreshCalendarDayEvent());
-    }
+    refreshAfterLogging();
     if (!mounted) return;
     ScaffoldMessenger.of(
       context,
@@ -198,7 +235,7 @@ class _BasketSheetState extends State<BasketSheet> {
                         contentPadding: EdgeInsets.zero,
                         title: Text(item.meal.name ?? ''),
                         subtitle: Text(
-                          '${_amount(item.amountText)} ${item.unit} · '
+                          '${amountLabel(item.amountText)} ${item.unit} · '
                           '${energyText(context, item.kcal)}',
                         ),
                         trailing: IconButton(
@@ -228,6 +265,11 @@ class _BasketSheetState extends State<BasketSheet> {
                 onPressed: _logging || items.isEmpty ? null : _logAll,
                 child: Text('Log all ${items.length}'),
               ),
+              OutlinedButton(
+                key: const ValueKey('basket-plan'),
+                onPressed: _logging || items.isEmpty ? null : _plan,
+                child: const Text('Plan, don\'t log'),
+              ),
               TextButton(
                 onPressed: _logging
                     ? null
@@ -243,12 +285,4 @@ class _BasketSheetState extends State<BasketSheet> {
       );
     },
   );
-
-  static String _amount(String text) {
-    final value = double.tryParse(text);
-    if (value == null) return text;
-    return value == value.roundToDouble()
-        ? value.round().toString()
-        : value.toStringAsFixed(1);
-  }
 }

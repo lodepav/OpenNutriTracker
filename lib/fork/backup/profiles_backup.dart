@@ -45,6 +45,7 @@ import 'package:opennutritracker/features/settings/domain/tracked_day_boundary_r
 import 'package:opennutritracker/features/settings/domain/usecase/export_data_usecase.dart';
 import 'package:opennutritracker/features/settings/domain/usecase/import_data_usecase.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
+import 'package:opennutritracker/fork/plan/plan_store.dart';
 import 'package:opennutritracker/fork/backup/backup_extras.dart';
 
 typedef OpenProfileBox =
@@ -88,6 +89,7 @@ class ProfilesBackup {
     BackupExtras.waterFileName,
     BackupExtras.fastingFileName,
     BackupExtras.adaptiveFileName,
+    BackupExtras.planFileName,
     BackupExtras.profileFileName,
   };
 
@@ -278,6 +280,9 @@ class ProfilesBackup {
     FastingDataSource(scope),
     CustomMealDataSource(scope),
     adaptive: () => AdaptiveStore.otherProfile(
+      () => open<dynamic>(AdaptiveStore.boxName, profile.boxSuffix),
+    ),
+    plans: () => PlanStore(
       () => open<dynamic>(AdaptiveStore.boxName, profile.boxSuffix),
     ),
     user: UserDataSource(scope),

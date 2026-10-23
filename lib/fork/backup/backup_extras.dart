@@ -17,12 +17,13 @@ import 'package:opennutritracker/core/data/repository/water_intake_repository.da
 import 'package:opennutritracker/features/fasting/data/data_source/fasting_data_source.dart';
 import 'package:opennutritracker/features/settings/domain/export_import_failure.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
+import 'package:opennutritracker/fork/plan/plan_store.dart';
 import 'package:opennutritracker/fork/backup/profiles_backup.dart';
 
 /// What the JSON backup leaves out and the fork adds (phase 2, seam S21):
 /// the water log, fasting sessions, saved custom meals, the adaptive
-/// target's switches and check-ins, the profile, the app settings, and
-/// every other profile ([ProfilesBackup]).
+/// target's settings and check-ins, the meal plan, the profile, the app
+/// settings, and every other profile ([ProfilesBackup]).
 ///
 /// Ported from theoleuthardt's `PersonalBackupExtras` (GPL-3.0, their #93,
 /// #94, #95, #97). Every file is optional on restore, so upstream's zips and
@@ -32,6 +33,7 @@ class BackupExtras {
   static const fastingFileName = 'fasting_sessions.json';
   static const customMealsFileName = 'custom_meals.json';
   static const adaptiveFileName = 'fork_adaptive.json';
+  static const planFileName = 'fork_plan.json';
   static const profileFileName = 'user_profile.json';
   static const appSettingsFileName = 'app_settings.json';
 
@@ -69,6 +71,7 @@ class BackupExtras {
   final FastingDataSource _fasting;
   final CustomMealDataSource _customMeals;
   final AdaptiveStore Function() _adaptive;
+  final PlanStore Function() _plans;
 
   /// Null leaves the profile, and the app settings, out of the backup.
   final UserDataSource? _user;
@@ -82,10 +85,12 @@ class BackupExtras {
     this._fasting,
     this._customMeals, {
     AdaptiveStore Function()? adaptive,
+    PlanStore Function()? plans,
     UserDataSource? user,
     ConfigDataSource? config,
     ProfilesBackup? profiles,
   }) : _adaptive = adaptive ?? AdaptiveStore.new,
+       _plans = plans ?? PlanStore.new,
        _user = user,
        _config = config,
        _profiles = profiles;
@@ -106,6 +111,9 @@ class BackupExtras {
       ...settings.toJson(),
       'checkIns': [for (final c in await adaptive.history()) c.toJson()],
     });
+    _addJson(archive, planFileName, [
+      for (final food in await _plans().all()) food.toJson(),
+    ]);
     if (_user case final user? when await user.hasUserData()) {
       _addJson(archive, profileFileName, _userToJson(await user.getUserData()));
     }
@@ -153,6 +161,11 @@ class BackupExtras {
         ],
       );
     });
+    final plans = _decode(
+      archive,
+      planFileName,
+      (json) => [for (final f in json as List) PlannedFood.fromJson(f)],
+    );
     final profile = _decode(
       archive,
       profileFileName,
@@ -183,6 +196,7 @@ class BackupExtras {
         await store.mergeCheckIns(adaptive.checkIns);
         await store.save(adaptive.settings);
       }
+      if (plans != null) await _plans().merge(plans);
       if (profile != null) await _user?.saveUserData(profile);
       if ((_config, settings) case (final config?, final settings?)) {
         final current = (await config.getConfig()).toJson();

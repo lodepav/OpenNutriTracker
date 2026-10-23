@@ -3,6 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:opennutritracker/core/domain/entity/intake_type_entity.dart';
 import 'package:opennutritracker/fork/basket/basket.dart';
 import 'package:opennutritracker/fork/basket/basket_ui.dart';
+import 'package:opennutritracker/fork/plan/plan_store.dart';
+import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dart';
 
 import '../../fixture/meal_entity_fixtures.dart';
 
@@ -14,6 +16,22 @@ BasketItem _item(double kcal) => BasketItem(
   amountText: '150.0',
   kcal: kcal,
 );
+
+class _Plans extends Fake implements PlanStore {
+  final planned = <(String?, IntakeTypeEntity, DateTime)>[];
+
+  @override
+  Future<void> add(
+    Iterable<({MealEntity meal, String unit, String amountText, double kcal})>
+    foods,
+    IntakeTypeEntity type,
+    DateTime day,
+  ) async {
+    for (final f in foods) {
+      planned.add((f.meal.name, type, day));
+    }
+  }
+}
 
 void main() {
   test('the basket holds one meal of one day', () {
@@ -74,6 +92,35 @@ void main() {
     expect(logged, [100, 250]);
     expect(basket.items, isEmpty);
     expect(find.text('home'), findsOneWidget);
+  });
+
+  testWidgets('"Plan, don\'t log" puts the basket on the plan', (tester) async {
+    final basket = FoodBasket()..add(_item(100), IntakeTypeEntity.dinner, _day);
+    final plans = _Plans();
+    var logged = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          bottomNavigationBar: BasketBar(
+            type: IntakeTypeEntity.dinner,
+            day: _day,
+            basket: basket,
+            plans: plans,
+            log: (_, _, _, _) async => logged++,
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.byKey(const ValueKey('basket-bar')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('basket-plan')));
+    await tester.pumpAndSettle();
+
+    expect(logged, 0);
+    expect(plans.planned, [
+      (MealEntityFixtures.mealOne.name, IntakeTypeEntity.dinner, _day),
+    ]);
+    expect(basket.items, isEmpty);
   });
 
   testWidgets('"Add to basket" takes a valid amount and goes back', (
