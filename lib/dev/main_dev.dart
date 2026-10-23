@@ -20,6 +20,8 @@ import 'package:opennutritracker/fork/health/weight_import.dart';
 import 'package:opennutritracker/fork/reminders/reminders.dart';
 import 'package:opennutritracker/fork/phases/phases.dart';
 import 'package:opennutritracker/fork/health/weight_import_ui.dart';
+import 'package:opennutritracker/core/presentation/storage_recovery_app.dart';
+import 'package:opennutritracker/core/utils/hive_storage_integrity_exception.dart';
 // [/fork]
 
 /// Dev-only entry point: wipes the active profile and reseeds it with
@@ -43,13 +45,18 @@ Future<void> main() async {
 
   await seedDemoData(DemoSeedOptions.dev);
   // [fork] S18 dev-adaptive: the trend and target switches, as main's S6
-  await AdaptiveStore.start();
-  await AutoBackup.start();
-  await WeightImport.start(refreshAfterWeightImport);
-  BodyFatImport.start();
-  NutritionExport.start();
-  await Reminders.start();
-  await PhaseRunner.start();
+  try {
+    await AdaptiveStore.start();
+    await AutoBackup.start();
+    await WeightImport.start(refreshAfterWeightImport);
+    BodyFatImport.start();
+    NutritionExport.start();
+    await Reminders.start();
+    await PhaseRunner.start();
+  } on HiveStorageIntegrityException catch (error) {
+    runApp(StorageRecoveryApp(errorCode: error.code, onRetry: main));
+    return;
+  }
   if (forkFakeAi) await enableFakeAi(locator<AiCredentialStorage>());
   // [/fork]
 

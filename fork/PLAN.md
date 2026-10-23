@@ -520,6 +520,8 @@ offered and declined):
   screen and measures again when it closes. Energy and the macros keep their own day's goal.
 - *Already there:* planned meals were built in round 1 (S43, the meal plan). This round adds the
   plan's protein, carbs and fat to its card's header, beside its energy.
+- *Already there:* recipe import from a link (S30, round 3): a link typed into bulk add is read
+  from the page's schema.org Recipe data and saved with "Save all as a recipe". Nothing added.
 
 Upstream: open an issue first, with the simulation results. The maintainer cites a source for
 every calculation; everything except the tuned weights has one, and those come with the

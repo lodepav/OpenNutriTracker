@@ -47,6 +47,7 @@ void main() {
     expect(csvField(null), '');
     expect(csvField(570.0), '570');
     expect(csvField(19.54), '19.5');
+    expect(csvField(2472.98), '2473');
   });
 
   test('foods: each entry on its logical day, oldest first', () {

@@ -19,7 +19,8 @@ import 'package:share_plus/share_plus.dart';
 String csvField(Object? value) {
   final text = switch (value) {
     null => '',
-    double v => v.toStringAsFixed(v == v.roundToDouble() ? 0 : 1),
+    // One decimal, none when it rounds to a whole number (2472.98 -> 2473).
+    double v => v.toStringAsFixed(1).replaceFirst(RegExp(r'\.0$'), ''),
     _ => '$value',
   };
   return text.contains(RegExp('[",\r\n]'))

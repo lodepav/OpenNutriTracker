@@ -111,13 +111,25 @@ Future<void> _bootstrapApp() async {
   // [fork] S6 starter-recipes: saved once per install, off the start path
   unawaited(StarterRecipeSeeder.fromLocator().run());
   unawaited(MealPhotoCache().prune());
-  await AdaptiveStore.start();
-  await AutoBackup.start();
-  await WeightImport.start(refreshAfterWeightImport);
-  BodyFatImport.start();
-  NutritionExport.start();
-  await Reminders.start();
-  await PhaseRunner.start();
+  try {
+    await AdaptiveStore.start();
+    await AutoBackup.start();
+    await WeightImport.start(refreshAfterWeightImport);
+    BodyFatImport.start();
+    NutritionExport.start();
+    await Reminders.start();
+    await PhaseRunner.start();
+  } on HiveStorageIntegrityException catch (error, stackTrace) {
+    // The fork's per-profile box opens here, after upstream's: a box that
+    // fails its checksum gets upstream's recovery screen, not a hung splash.
+    log.severe(
+      'Fork database integrity failure (code=${error.code})',
+      error,
+      stackTrace,
+    );
+    runApp(StorageRecoveryApp(errorCode: error.code, onRetry: _bootstrapApp));
+    return;
+  }
   if (forkFakeAi) await enableFakeAi(locator<AiCredentialStorage>());
   // [/fork]
 
