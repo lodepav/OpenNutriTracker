@@ -139,17 +139,19 @@ class WeightImport {
 
   static WeightImport? _instance;
 
-  static WeightImport get instance => _instance ??= WeightImport(
-    forkFakeHealth ? FakeWeights() : const HealthStoreWeights(),
-    locator(),
-    locator(),
-  );
+  /// The import [start] made; null where it was not started (tests).
+  static WeightImport? get current => _instance;
 
   /// Run at start-up (seam S6): imports now and on every resume, at most
   /// every [interval]; [onChanged] refreshes the screens.
   static Future<void> start(void Function() onChanged) async {
+    final import = _instance = WeightImport(
+      forkFakeHealth ? FakeWeights() : const HealthStoreWeights(),
+      locator(),
+      locator(),
+    );
     Future<void> run() async {
-      if (await instance.runIfDue() > 0) onChanged();
+      if (await import.runIfDue() > 0) onChanged();
     }
 
     unawaited(run());
