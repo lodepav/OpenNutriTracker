@@ -51,6 +51,7 @@ const _photographed = {
   'ge-khachapuri': 'Adjarian khachapuri',
   'sl-pelmeni': 'Pelmeni',
   'lv-sklandrausis': 'Sklandu rauši (sklandrausis)',
+  'lv-lido-grey-peas': 'Grey peas with bacon',
 };
 
 void main() {
@@ -209,19 +210,21 @@ void main() {
             waiting++;
             continue;
           }
-          final page = photo['per_serving'] as Map;
+          // LIDO's restaurant dishes come with no macros (photos.json).
+          final page = photo['per_serving'] as Map?;
+          String pageOf(String key) =>
+              page == null ? '-' : '${(page[key] as num).round()}';
           unmatchedAll += unmatched.length;
-          if (photo['servings_shown'] == 1) {
+          if (page != null && photo['servings_shown'] == 1) {
             kcalOff.add((total.kcal / (page['kcal'] as num) - 1).abs());
           }
           out.writeln(
             '| ${photo['id']} | ${photo['servings_shown'] ?? '-'} | $dish '
             '| $recipeCell '
-            '| ${total.kcal.round()} (${(page['kcal'] as num).round()}) '
+            '| ${total.kcal.round()} (${pageOf('kcal')}) '
             '| ${total.protein.round()} / ${total.carbs.round()} / '
-            '${total.fat.round()} (${(page['protein_g'] as num).round()} / '
-            '${(page['carbs_g'] as num).round()} / '
-            '${(page['fat_g'] as num).round()}) '
+            '${total.fat.round()} (${pageOf('protein_g')} / '
+            '${pageOf('carbs_g')} / ${pageOf('fat_g')}) '
             '| ${unmatched.join('; ')} |',
           );
         }

@@ -79,7 +79,13 @@ void main() {
             for (final item in parsed.items) {
               final top = await tableMatch(foods, item.query);
               items.add(
-                _Item(item.query, item.quantity, item.portion, top?.name),
+                _Item(
+                  item.query,
+                  item.quantity,
+                  item.portion,
+                  top?.name,
+                  top?.nutriments.energyKcal100,
+                ),
               );
             }
             results.add(
@@ -112,13 +118,17 @@ class _Item {
   /// the dish phase 1c breaks into ingredients.
   final String? match;
 
-  _Item(this.query, this.quantity, this.portion, this.match);
+  /// [match]'s energy per 100 g.
+  final double? matchKcal;
+
+  _Item(this.query, this.quantity, this.portion, this.match, this.matchKcal);
 
   Map<String, Object?> toJson() => {
     'query': query,
     'quantity': quantity,
     'portion': portion,
     'match': match,
+    'match_kcal_100g': matchKcal,
   };
 }
 
@@ -153,6 +163,16 @@ class _PhotoResult {
     return n != null && n >= (range[0] as num) && n <= (range[1] as num);
   }
 
+  /// Whether the dish landed on a table row of the right form, when the
+  /// photo says which: boiled buckwheat on a cooked row, not the raw grain
+  /// at four times the energy (`match_kcal_100g_max`).
+  bool? get formOk {
+    final max = photo['match_kcal_100g_max'] as num?;
+    final dish = items.where(_isDish);
+    if (max == null || dish.isEmpty) return null;
+    return dish.every((i) => i.matchKcal != null && i.matchKcal! <= max);
+  }
+
   Map<String, Object?> toJson() => {
     'id': photo['id'],
     'error': error,
@@ -160,6 +180,7 @@ class _PhotoResult {
     'identified': identified,
     'counted': counted,
     'count_ok': countOk,
+    'form_ok': formOk,
     'items': [for (final item in items) item.toJson()],
   };
 }
@@ -170,12 +191,13 @@ String _markdown(
 ) {
   final out = StringBuffer('# Photo test, ${DateTime.now()}\n\n')
     ..writeln(
-      '| Model | Dish named | Count right | No table match | Errors '
-      '| Median s |',
+      '| Model | Dish named | Count right | Cooked row | No table match '
+      '| Errors | Median s |',
     )
-    ..writeln('|---|---|---|---|---|---|');
+    ..writeln('|---|---|---|---|---|---|---|');
   for (final MapEntry(:key, :value) in report.entries) {
     final counts = value.where((r) => r.countOk != null);
+    final forms = value.where((r) => r.formOk != null);
     final unmatched = value.where(
       (r) => r.items.any((i) => r._isDish(i) && i.match == null),
     );
@@ -183,6 +205,7 @@ String _markdown(
     out.writeln(
       '| $key | ${value.where((r) => r.identified).length}/${value.length} '
       '| ${counts.where((r) => r.countOk!).length}/${counts.length} '
+      '| ${forms.where((r) => r.formOk!).length}/${forms.length} '
       '| ${unmatched.length} '
       '| ${value.where((r) => r.error != null).length} '
       '| ${ms.isEmpty ? '-' : (ms[ms.length ~/ 2] / 1000).toStringAsFixed(1)} |',
@@ -204,7 +227,8 @@ String _markdown(
                 (i) =>
                     '${i.quantity == null ? '' : '${i.quantity!.toStringAsFixed(0)}× '}'
                     '${i.query}${i.portion == null ? '' : ' (${i.portion})'}'
-                    ' → ${i.match ?? '*no match*'}',
+                    ' → ${i.match ?? '*no match*'}'
+                    '${i.matchKcal == null ? '' : ' (${i.matchKcal!.round()} kcal/100 g)'}',
               )
               .join('; ');
       out.writeln('- **$key** ${r.identified ? '✓' : '✗'}: $items');

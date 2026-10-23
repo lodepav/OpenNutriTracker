@@ -1,6 +1,6 @@
 {
- "about": "Photo test set for phase 1.4 (D7). Photos stay on their sites; fork/tools/fetch_eval_photos.py downloads them into build/. Macros are the recipe pages' own per-serving figures (site calculators, not lab values).",
- "collected": "2026-10-18",
+ "about": "Photo test set for phase 1.4 (D7). Photos stay on their sites; fork/tools/fetch_eval_photos.py downloads them into build/. Macros are the recipe pages' own per-serving figures (site calculators, not lab values). LIDO photos (lv-lido-*) are the chain's own Wolt menu photos; LIDO publishes no macros for restaurant dishes, so per_serving is null there except where LIDO's packaged label gives them. match_kcal_100g_max: the dish's table row must be at most this energy (a cooked row, not the raw grain).",
+ "collected": "2026-10-18, LIDO and eda.ru 2026-10-23",
  "photos": [
   {
    "id": "lv-sklandrausis",
@@ -906,6 +906,659 @@
     "Salt and pepper (, to taste)",
     "250 - 300 g / 8 - 10 oz pasta or egg noodles of choice ((Note 3))",
     "Chopped chives (, for garnish (optional))"
+   ]
+  },
+  {
+   "id": "lv-lido-grey-peas",
+   "cuisine": "latvian",
+   "dish": "LIDO: Pelēkie zirņi ar speķi un sīpoliem",
+   "recipe_url": "https://wolt.com/lv/lva/riga/restaurant/lido-alus-sta",
+   "image_url": "https://wolt-menu-images-cdn.wolt.com/menu-images/5e674fffa46594b8b43ec55f/c026ec40-3ee7-11f1-ab09-a23a23305009_zir_c5_86i_20ar_20spe_c4_b7i_20un_20s_c4_abpoliem.jpg",
+   "expect_any": [
+    "grey pea",
+    "gray pea",
+    "pea",
+    "zirņi"
+   ],
+   "count": null,
+   "servings_shown": null,
+   "note": "a bowl at LIDO; no macros published",
+   "recipe_yield": null,
+   "per_serving": null,
+   "ingredients": [
+    "Zirņi pelēkie vārīti (71%) (pelēkie zirņi /Latvija/, ūdens, sāls), speķis ar sīpoliem (28.6%) (sīpoli, cūkgaļas vaigi karsti kūpināti, rapšu eļļa, sāls, melnie pipari)."
+   ]
+  },
+  {
+   "id": "lv-lido-buckwheat",
+   "cuisine": "latvian",
+   "dish": "LIDO: Griķi vārīti",
+   "recipe_url": "https://wolt.com/lv/lva/riga/restaurant/lido-atputas-centrs",
+   "image_url": "https://wolt-menu-images-cdn.wolt.com/menu-images/5da70af5d866c7d815d1584f/e8754fd4-3ee2-11f1-ab34-deaa9e199d79_gri_c4_b7i.jpg",
+   "expect_any": [
+    "buckwheat",
+    "griķi",
+    "kasha"
+   ],
+   "count": null,
+   "servings_shown": null,
+   "note": "boiled buckwheat at LIDO; no macros published. The dish row must be a cooked one (match_kcal_100g_max)",
+   "recipe_yield": null,
+   "per_serving": null,
+   "ingredients": [
+    "Griķi, sviests, garšvielas."
+   ],
+   "match_kcal_100g_max": 150
+  },
+  {
+   "id": "lv-lido-karbonade",
+   "cuisine": "latvian",
+   "dish": "LIDO: Cepta cūkgaļas karbonāde (1gab. atdzesēta)",
+   "recipe_url": "https://wolt.com/lv/lva/riga/restaurant/lido-alfa",
+   "image_url": "https://wolt-menu-images-cdn.wolt.com/menu-images/5da70af5d866c7d815d1584f/f1721b94-3ee2-11f1-90f9-8ae6f5840099_c_c5_abkga_c4_bcas_20karbon_c4_81de_20cepta.jpg",
+   "expect_any": [
+    "pork",
+    "karbon",
+    "schnitzel",
+    "cutlet",
+    "chop"
+   ],
+   "count": [
+    1,
+    1
+   ],
+   "servings_shown": 1,
+   "note": "one fried karbonāde, cropped to the plate (the pack beside it names it); macros are LIDO's own label for the 105 g piece (barbora.lv)",
+   "recipe_yield": "1 piece, 105 g",
+   "per_serving": {
+    "kcal": 261.5,
+    "protein_g": 16.8,
+    "carbs_g": 6.3,
+    "fat_g": 18.9
+   },
+   "ingredients": [
+    "UZSILDI MĀJĀS! cūkgaļas karbonāde (57%)/ES/, rapšu eļļa, OLAS, KVIEŠU MILTI, sāls, pipari"
+   ],
+   "crop": [
+    0.45,
+    0.48,
+    0.9,
+    0.99
+   ]
+  },
+  {
+   "id": "lv-lido-sauerkraut",
+   "cuisine": "latvian",
+   "dish": "LIDO: Sautēti skābie kāposti",
+   "recipe_url": "https://wolt.com/lv/lva/riga/restaurant/alfa",
+   "image_url": "https://wolt-menu-images-cdn.wolt.com/menu-images/5fb76debc349a1ccda6a9742/fa33b29c-3ed8-11f1-bdfa-a23a23305009_saut_c4_93ti_20sk_c4_81bie_20k_c4_81posti.jpg",
+   "expect_any": [
+    "sauerkraut",
+    "cabbage",
+    "kāposti"
+   ],
+   "count": null,
+   "servings_shown": null,
+   "note": "stewed sauerkraut at LIDO; no macros published",
+   "recipe_yield": null,
+   "per_serving": null,
+   "ingredients": [
+    "Skābēti kāposti (73%)/Lietuva/ (kāposti, sāls), sīpoli, cūkgaļas vaigi (vaigi cūkgaļas (cūkgaļas vaigi (87%)/ES/, ūdens, sāls, dekstroze, garšvielu ekstrakti, citronu eļļa, maisījums garšvielu (tomātu koncentrāts, dabīgais tomātu aromatizētājs, maltodekstrīns, sāls), cukurs, ķiploki, konservants: nātrija nitrīts)), kečups (ūdens, tomātu pasta, cukurs, modificēta kukurūzas ciete, sāls, skābuma regulētājs (citronskābe un etiķskābe), aromatizētāji, garšvielas), burkāni, cukurs, rapšu eļļa, sāls"
+   ]
+  },
+  {
+   "id": "lv-lido-herring-fur",
+   "cuisine": "latvian",
+   "dish": "LIDO: Siļķe kažokā (165g)",
+   "recipe_url": "https://wolt.com/lv/lva/riga/restaurant/lido-alus-sta",
+   "image_url": "https://wolt-menu-images-cdn.wolt.com/menu-images/5fb76debc349a1ccda6a9742/f52ee76c-3ed8-11f1-af2c-66ba6c04d85c_silke_20kazoka.jpg",
+   "expect_any": [
+    "herring",
+    "fur coat",
+    "shuba",
+    "siļķe"
+   ],
+   "count": null,
+   "servings_shown": 1,
+   "note": "one 165 g portion at LIDO; no macros published",
+   "recipe_yield": null,
+   "per_serving": null,
+   "ingredients": [
+    "Sastāvdaļas: bietes, kartupeļi, SIĻĶES fileja mazsālīta (19,7%) (SIĻĶE (Clupea harengus) (95%), sāls, nogatavinātājs (garšvielas, sausais glikozes sīrups, dekstroze, sāls, skābuma regulētāji: citronskābe, E331, E575, fermenti: proteāze), ūdens), majonēze (satur OLAS, LAKTOZI), burkāni vārīti, OLAS vārītas, sīpoli, lociņi, sāls, melnie pipari."
+   ]
+  },
+  {
+   "id": "lv-lido-cabbage-rolls",
+   "cuisine": "latvian",
+   "dish": "LIDO: Kāpostu tītenis ar mērci (1 gab)",
+   "recipe_url": "https://wolt.com/lv/lva/riga/restaurant/lido-atputas-centrs",
+   "image_url": "https://wolt-menu-images-cdn.wolt.com/menu-images/5fb76debc349a1ccda6a9742/fa4d1340-3ed8-11f1-bdfa-a23a23305009_k_c4_81postu_20t_c4_abtenis.jpg",
+   "expect_any": [
+    "cabbage roll",
+    "golub",
+    "stuffed cabbage",
+    "tītenis"
+   ],
+   "count": [
+    2,
+    2
+   ],
+   "servings_shown": null,
+   "note": "cabbage rolls in sauce at LIDO; no macros published",
+   "recipe_yield": null,
+   "per_serving": null,
+   "ingredients": [
+    "Cūkgaļas masa (cūkgaļa (35%), ūdens, rīsi, sīpoli, sāls, pipari, ķiploki), kāposti, rapšu eļļa, mērce (ūdens, SALDAIS KRĒJUMS, kečups (tomātu biezenis, ūdens, cukurs, modificēta kartupeļu ciete, sāls, skābuma regulētāji: etiķskābe, citronskābe, garšvielas, tomātu aromatizētājs), sīpoli, burkāni, KVIEŠU milti, rapšu eļļa, sāls, melnie pipari)"
+   ]
+  },
+  {
+   "id": "lv-lido-solyanka",
+   "cuisine": "latvian",
+   "dish": "LIDO: Soļanka",
+   "recipe_url": "https://wolt.com/lv/lva/riga/restaurant/alfa",
+   "image_url": "https://wolt-menu-images-cdn.wolt.com/menu-images/5da70af5d866c7d815d1584f/e87fc234-3ee2-11f1-ab34-deaa9e199d79_so_c4_bcanka_20280g.jpeg",
+   "expect_any": [
+    "solyanka",
+    "soljanka",
+    "soļanka",
+    "selyanka"
+   ],
+   "count": null,
+   "servings_shown": 1,
+   "note": "a bowl at LIDO; no macros published",
+   "recipe_yield": null,
+   "per_serving": null,
+   "ingredients": [
+    "Kartupeļi, cūkgaļas k/k, desa p/ž, desa vārīta, liellopu gaļa, liellopu nieres, gurķi marinēti, tomātu pasta, sīpoli, sāls, ķiploki, cukurs, garšvielas, pipari asie čili malti"
+   ]
+  },
+  {
+   "id": "lv-lido-plov",
+   "cuisine": "latvian",
+   "dish": "LIDO: Vistas gaļas plovs",
+   "recipe_url": "https://wolt.com/lv/lva/riga/restaurant/lido-origo",
+   "image_url": "https://wolt-menu-images-cdn.wolt.com/menu-images/65e06b88-389c-11ea-b422-0a586468f4d1_Cala_galas_plovs.jpeg",
+   "expect_any": [
+    "plov",
+    "pilaf",
+    "pilau"
+   ],
+   "count": null,
+   "servings_shown": null,
+   "note": "chicken plov at LIDO; no macros published",
+   "recipe_yield": null,
+   "per_serving": null,
+   "ingredients": [
+    "Cāļa gaļa, rīsi, sīpoli, burkāni, kečups, garšvielas, ķiploki, citronu sula, rapšu eļļa"
+   ]
+  },
+  {
+   "id": "lv-lido-bread-soup",
+   "cuisine": "latvian",
+   "dish": "LIDO: Maizes zupa",
+   "recipe_url": "https://wolt.com/lv/lva/riga/restaurant/lido-alus-sta",
+   "image_url": "https://wolt-menu-images-cdn.wolt.com/menu-images/5da70af5d866c7d815d1584f/edb1d27e-3ee2-11f1-90f9-8ae6f5840099_maizes_20zupa_20140g.jpg",
+   "expect_any": [
+    "bread soup",
+    "maizes",
+    "bread pudding",
+    "rye bread"
+   ],
+   "count": [
+    2,
+    2
+   ],
+   "servings_shown": null,
+   "note": "Latvian rye bread soup, a dessert with whipped cream, two glasses; no macros published",
+   "recipe_yield": null,
+   "per_serving": null,
+   "ingredients": [
+    "Maizes zupa (81%) (ūdens, cukurs, RĪVMAIZE MELNĀ (9.43%) (rupja maluma RUDZU MILTI, dabīgais ieraugs (RUDZU MILTI, ūdens), cukurs, RUDZU IESALS, ķimenes, pārtikas vārāmā sāls, kartupeļu ciete)), dzērvenes, žāvētas aprikozes (žāvētas aprikozes, konservants E220), rozīnes, plūmes žāvētas (plūmes, glicerīns, konservants: kālija sorbāts), sula citronu, kanēlis), krēms (SALDAIS KRĒJUMS, Siers Philadelphia (PILNPIENS, saldais KRĒJUMS, sūkalu olbaltumvielu koncentrāts (no PIENA), pārtikas sāls, stabilizētājs (ceratoniju augļu sveķi), skābe (citronskābe), pienskābes kultūras), cukurs, vanilīna cukurs (cukurs, aromatizētājs - vanilīns))"
+   ]
+  },
+  {
+   "id": "lv-lido-mash",
+   "cuisine": "latvian",
+   "dish": "LIDO: Kartupelu biezenis",
+   "recipe_url": "https://wolt.com/lv/lva/riga/restaurant/alfa",
+   "image_url": "https://wolt-menu-images-cdn.wolt.com/menu-images/5da70af5d866c7d815d1584f/e873f9b8-3ee2-11f1-ab34-deaa9e199d79_kartupe_c4_bcu_20biezenis.jpg",
+   "expect_any": [
+    "mash",
+    "potato puree",
+    "purée",
+    "puree"
+   ],
+   "count": null,
+   "servings_shown": null,
+   "note": "mashed potatoes at LIDO; no macros published",
+   "recipe_yield": null,
+   "per_serving": null,
+   "ingredients": [
+    "Kartupeļi (45.1%), ūdens, PIENS, SALDAIS KRĒJUMS, sāls, sviests"
+   ]
+  },
+  {
+   "id": "lv-lido-lyulya",
+   "cuisine": "latvian",
+   "dish": "LIDO: Ļuļa kebabs pikantajā mērcē (1 gab)",
+   "recipe_url": "https://wolt.com/lv/lva/riga/restaurant/lido-atputas-centrs",
+   "image_url": "https://wolt-menu-images-cdn.wolt.com/menu-images/5da70af5d866c7d815d1584f/e858caa8-3ee2-11f1-ab34-deaa9e199d79__c4_bbu_c4_bca_20kebabs.jpg",
+   "expect_any": [
+    "kebab",
+    "lula",
+    "lyulya",
+    "ļuļa",
+    "kofta"
+   ],
+   "count": [
+    3,
+    3
+   ],
+   "servings_shown": null,
+   "note": "lula kebabs in sauce at LIDO; no macros published",
+   "recipe_yield": null,
+   "per_serving": null,
+   "ingredients": [
+    "Cūkgaļas ļuļa kebabs (58%) (cūkgaļa (73%), sīpoli, cūkgaļas speķis (6,29%), kinza, sāls, melnie pipari), mērce 41.7%) (kečups (tomātu biezenis (65%), ūdens, cukurs, modificēta kartupeļu ciete, pārtikas sāls, skābuma regulētāji: etiķskābe, citronskābe, garšvielas, tomātu aromatizētājs), ūdens, adžika klasiskā (ķiploki, SELERIJAS, pētersiļu saknes, burkāni, saldā paprika, garšvielu maisījums, sāls, cukurs, etiķskābe, citronskābe, konservants: E211), pētersīļi, sāls)"
+   ]
+  },
+  {
+   "id": "lv-lido-pancakes-meat",
+   "cuisine": "latvian",
+   "dish": "LIDO: Pankūka ar gaļu (1 gab)",
+   "recipe_url": "https://wolt.com/lv/lva/riga/restaurant/lido-dzirnavas",
+   "image_url": "https://wolt-menu-images-cdn.wolt.com/menu-images/5fb76debc349a1ccda6a9742/fa58a688-3ed8-11f1-bdfa-a23a23305009_ga_c4_bcas_20pank_c5_abka.jpg",
+   "expect_any": [
+    "pancake",
+    "crepe",
+    "blin",
+    "pankūk"
+   ],
+   "count": [
+    2,
+    2
+   ],
+   "servings_shown": null,
+   "note": "meat-filled pancakes at LIDO; no macros per piece",
+   "recipe_yield": null,
+   "per_serving": null,
+   "ingredients": [
+    "pankūka (61%) (PIENS, OLU MASA, KVIEŠU MILTI, eļļa rapšu, cukurs, sāls), pildījums (39%) (cūkgaļas šķiņķis, buljons (ūdens, cūkgaļa), sīpoli, rapšu eļļa, sāls, sāls pipari"
+   ]
+  },
+  {
+   "id": "lv-lido-french-pork",
+   "cuisine": "latvian",
+   "dish": "LIDO: Cūkgaļa franču gaumē",
+   "recipe_url": "https://wolt.com/lv/lva/riga/restaurant/lido-origo",
+   "image_url": "https://wolt-menu-images-cdn.wolt.com/menu-images/179acb80-389c-11ea-9596-0a586471f910_Cukgala_francu_gaume.jpeg",
+   "expect_any": [
+    "pork",
+    "french",
+    "gratin"
+   ],
+   "count": null,
+   "servings_shown": null,
+   "note": "pork baked with cheese at LIDO; no macros published",
+   "recipe_yield": null,
+   "per_serving": null,
+   "ingredients": [
+    "Cūkgaļas karbonāde, majonēze, siers, olas, tomāti, sīpoli, garšvielas, rapēsu eļļa"
+   ]
+  },
+  {
+   "id": "ru-otbivnye-batter",
+   "cuisine": "russian",
+   "dish": "Отбивная из свинины в кляре из лука",
+   "recipe_url": "https://eda.rambler.ru/recepty/osnovnye-blyuda/svinye-otbivnye-v-lukovom-klyare-190206",
+   "image_url": "https://img02.rl0.ru/29cfdba8ea80dc286509438447550957/c1280x960i/s1.eda.ru/StaticContent/Photos/4/4f/44f3aee2e2594270b2cf6df6f86702d2.jpg",
+   "expect_any": [
+    "pork",
+    "chop",
+    "schnitzel",
+    "cutlet",
+    "karbon"
+   ],
+   "count": [
+    3,
+    3
+   ],
+   "servings_shown": null,
+   "note": "pork chops in batter, like karbonāde",
+   "recipe_yield": "8 servings",
+   "per_serving": {
+    "kcal": 302.0,
+    "protein_g": 23.0,
+    "carbs_g": 9.0,
+    "fat_g": 20.0
+   },
+   "ingredients": [
+    "Свинина, 800 г",
+    "Соль,  по вкусу",
+    "Молотый черный перец,  по вкусу",
+    "Сметана, 1 столовая ложка",
+    "Репчатый лук, 300 г",
+    "Пшеничная мука, 3 столовые ложки",
+    "Куриное яйцо, 3 штуки",
+    "Растительное масло, 75 мл"
+   ]
+  },
+  {
+   "id": "ru-herring-fur",
+   "cuisine": "russian",
+   "dish": "Селедка под шубой слоями",
+   "recipe_url": "https://eda.rambler.ru/recepty/salaty/seledka-pod-shuboy-sloyami-187807",
+   "image_url": "https://img02.rl0.ru/44a2c68c6237495f7953d37664f646c4/c1280x960i/s1.eda.ru/StaticContent/Photos/c/ae/caea4979efbf49d594d296f97ffd02ac.jpg",
+   "expect_any": [
+    "herring",
+    "fur coat",
+    "shuba"
+   ],
+   "count": null,
+   "servings_shown": null,
+   "note": "a whole tray",
+   "recipe_yield": "8 servings",
+   "per_serving": {
+    "kcal": 405.0,
+    "protein_g": 15.0,
+    "carbs_g": 18.0,
+    "fat_g": 31.0
+   },
+   "ingredients": [
+    "Слабосоленая сельдь, 400 г",
+    "Картофель, 300 г",
+    "Куриное яйцо, 4 штуки",
+    "Морковь, 200 г",
+    "Свекла, 300 г",
+    "Красный лук, 100 г",
+    "Яблоко, 150 г",
+    "Майонез, 250 г",
+    "Укроп,  по вкусу",
+    "Соль,  по вкусу"
+   ]
+  },
+  {
+   "id": "ru-golubtsy",
+   "cuisine": "russian",
+   "dish": "Голубцы",
+   "recipe_url": "https://eda.rambler.ru/recepty/osnovnye-blyuda/golubcy-114527",
+   "image_url": "https://img02.rl0.ru/b1551e13d0d484945a47f6f1641a5b3b/c1280x960i/s1.eda.ru/StaticContent/Photos/120131090615/180208132916/p_O.jpg",
+   "expect_any": [
+    "cabbage roll",
+    "golub",
+    "stuffed cabbage"
+   ],
+   "count": [
+    2,
+    2
+   ],
+   "servings_shown": null,
+   "note": "cabbage rolls on a plate",
+   "recipe_yield": "4 servings",
+   "per_serving": {
+    "kcal": 541.0,
+    "protein_g": 20.0,
+    "carbs_g": 37.0,
+    "fat_g": 35.0
+   },
+   "ingredients": [
+    "Свиной фарш, 300 г",
+    "Белокочанная капуста, 800 г",
+    "Рис, 90 г",
+    "Репчатый лук, 1 штука",
+    "Пшеничная мука, 10 г",
+    "Томатная паста , 90 г",
+    "Растительное масло, 60 мл",
+    "Сметана, 90 г",
+    "Молотый черный перец,  по вкусу",
+    "Соль,  по вкусу"
+   ]
+  },
+  {
+   "id": "ru-solyanka",
+   "cuisine": "russian",
+   "dish": "Солянка",
+   "recipe_url": "https://eda.rambler.ru/recepty/supy/solyanka-189184",
+   "image_url": "https://img02.rl0.ru/54a677b03fe5a7b4a5e152398a5884c3/c1280x960i/s1.eda.ru/StaticContent/Photos/a/af/aaf8b139091c4e2ea3fd8d10d0a11c69.jpg",
+   "expect_any": [
+    "solyanka",
+    "soljanka",
+    "selyanka"
+   ],
+   "count": null,
+   "servings_shown": 1,
+   "note": "one bowl",
+   "recipe_yield": "7 servings",
+   "per_serving": {
+    "kcal": 354.0,
+    "protein_g": 18.0,
+    "carbs_g": 10.0,
+    "fat_g": 27.0
+   },
+   "ingredients": [
+    "Варено-копченая свиная грудинка, 100 г",
+    "Филе бедра индейки, 400 г",
+    "Краковская колбаса, 150 г",
+    "Вода, 1.5 л",
+    "Репчатый лук, 1 головка",
+    "Квашеная капуста, 500 г",
+    "Маринованные огурцы, 2 штуки",
+    "Маринованная черемша, 35 г",
+    "Маринованные помидоры, 3 штуки",
+    "Оливки, 100 г",
+    "Маслины, 200 г",
+    "Томатная паста , 1 столовая ложка",
+    "Сацебели, 2 столовые ложки",
+    "Соль,  по вкусу",
+    "Черный перец горошком,  по вкусу",
+    "Сметана,  по вкусу"
+   ]
+  },
+  {
+   "id": "ru-plov",
+   "cuisine": "russian",
+   "dish": "Плов с курицей",
+   "recipe_url": "https://eda.rambler.ru/recepty/osnovnye-blyuda/plov-s-kuricey-190145",
+   "image_url": "https://img02.rl0.ru/9b45e50452f1cd33ba129fa694a5a8cd/c1280x960i/s1.eda.ru/StaticContent/Photos/8/69/8699e9d83f70487eadb72b470cd7b90b.jpg",
+   "expect_any": [
+    "plov",
+    "pilaf",
+    "pilau"
+   ],
+   "count": null,
+   "servings_shown": 1,
+   "note": "one plate",
+   "recipe_yield": "4 servings",
+   "per_serving": {
+    "kcal": 753.0,
+    "protein_g": 49.0,
+    "carbs_g": 67.0,
+    "fat_g": 34.0
+   },
+   "ingredients": [
+    "Куриные бедра, 1 кг",
+    "Рис, 1.5 стаканов",
+    "Репчатый лук, 2 штуки",
+    "Морковь, 2 штуки",
+    "Приправа для плова, 1 чайная ложка",
+    "Соль, 1 чайная ложка",
+    "Зира, 0.5 чайных ложек",
+    "Чеснок, 1 штука",
+    "Растительное масло, 30 мл"
+   ]
+  },
+  {
+   "id": "ru-bread-soup",
+   "cuisine": "russian",
+   "dish": "Хлебный суп с яблоками",
+   "recipe_url": "https://eda.rambler.ru/recepty/supy/hlebnyy-sup-s-yablokami-153048",
+   "image_url": "https://img02.rl0.ru/dd8bb10c510447c9d391b788010c833e/c1280x960i/s1.eda.ru/StaticContent/Photos/Upscaled/3/23/323a7d3515e04f96a53792961de4c604.png",
+   "expect_any": [
+    "bread soup",
+    "bread",
+    "apple soup"
+   ],
+   "count": null,
+   "servings_shown": 1,
+   "note": "rye bread soup with apples, one bowl",
+   "recipe_yield": "3 servings",
+   "per_serving": {
+    "kcal": 399.0,
+    "protein_g": 9.0,
+    "carbs_g": 72.0,
+    "fat_g": 10.0
+   },
+   "ingredients": [
+    "Яблоко, 1 штука",
+    "Вода, 1 л",
+    "Изюм без косточек, 120 г",
+    "Черствый ржаной хлеб, 8 кусков",
+    "Сахар, 2 столовые ложки",
+    "Яичный желток, 2 штуки",
+    "Сметана, 0.5 стаканов"
+   ]
+  },
+  {
+   "id": "ru-mash",
+   "cuisine": "russian",
+   "dish": "Картофельное пюре",
+   "recipe_url": "https://eda.rambler.ru/recepty/osnovnye-blyuda/kartofelnoe-pyure-189797",
+   "image_url": "https://img02.rl0.ru/910dc48111e146471be9b4669d214458/c1280x960i/s1.eda.ru/StaticContent/Photos/4/61/4617117c81da431b84063eedee0af7ee.jpg",
+   "expect_any": [
+    "mash",
+    "potato puree",
+    "purée",
+    "puree"
+   ],
+   "count": null,
+   "servings_shown": 1,
+   "note": "one plate",
+   "recipe_yield": "4 servings",
+   "per_serving": {
+    "kcal": 229.0,
+    "protein_g": 4.0,
+    "carbs_g": 26.0,
+    "fat_g": 13.0
+   },
+   "ingredients": [
+    "Картофель, 5 штук",
+    "Молоко, 200 мл",
+    "Сливочное масло, 50 г",
+    "Черный душистый перец,  по вкусу",
+    "Соль,  по вкусу",
+    "Чеснок, 1 зубчик"
+   ]
+  },
+  {
+   "id": "ru-lyulya",
+   "cuisine": "russian",
+   "dish": "Люля-кебаб по-домашнему",
+   "recipe_url": "https://eda.rambler.ru/recepty/osnovnye-blyuda/ljulja-kebab-po-domashnemu-16813",
+   "image_url": "https://img02.rl0.ru/38fe687f4442bed67a187f9be050f515/c1280x960i/s1.eda.ru/StaticContent/Photos/Upscaled/120213175531/1202131756232/p_O.jpg",
+   "expect_any": [
+    "kebab",
+    "lula",
+    "lyulya",
+    "kofta"
+   ],
+   "count": [
+    2,
+    2
+   ],
+   "servings_shown": null,
+   "note": "kebabs on a plate",
+   "recipe_yield": "4 servings",
+   "per_serving": {
+    "kcal": 266.0,
+    "protein_g": 18.0,
+    "carbs_g": 3.0,
+    "fat_g": 20.0
+   },
+   "ingredients": [
+    "Мясной фарш, 400 г",
+    "Молотый кумин (зира) ,  по вкусу",
+    "Хмели-сунели,  по вкусу",
+    "Молотый черный перец,  по вкусу",
+    "Петрушка,  по вкусу",
+    "Имбирь,  по вкусу",
+    "Мускатный орех,  по вкусу",
+    "Паприка,  по вкусу",
+    "Укроп,  по вкусу",
+    "Репчатый лук, 1 головка",
+    "Базилик,  по вкусу",
+    "Соль,  по вкусу"
+   ]
+  },
+  {
+   "id": "ru-blini-meat",
+   "cuisine": "russian",
+   "dish": "Блинчики с мясом",
+   "recipe_url": "https://eda.rambler.ru/recepty/osnovnye-blyuda/blinchiki-s-myasom-188761",
+   "image_url": "https://img02.rl0.ru/c04cdb0b793c781e25d7a13a63d6db37/c1280x960i/s1.eda.ru/StaticContent/Photos/6/ee/6ee7bd3682cb4283b30621741d660e76.jpg",
+   "expect_any": [
+    "pancake",
+    "crepe",
+    "blin"
+   ],
+   "count": [
+    3,
+    3
+   ],
+   "servings_shown": null,
+   "note": "meat-filled pancakes with sour cream",
+   "recipe_yield": "4 servings",
+   "per_serving": {
+    "kcal": 716.0,
+    "protein_g": 35.0,
+    "carbs_g": 51.0,
+    "fat_g": 41.0
+   },
+   "ingredients": [
+    "Молоко, 500 мл",
+    "Куриное яйцо, 2 штуки",
+    "Пшеничная мука, 200 г",
+    "Сахар, 1 столовая ложка",
+    "Соль, 1 чайная ложка",
+    "Растительное масло, 3 столовые ложки",
+    "Фарш, 500 г",
+    "Лук, 1 головка",
+    "Паприка,  по вкусу",
+    "Приправы,  по вкусу",
+    "Сметана,  по вкусу"
+   ]
+  },
+  {
+   "id": "ru-french-pork",
+   "cuisine": "russian",
+   "dish": "Мясо по-французски",
+   "recipe_url": "https://eda.rambler.ru/recepty/osnovnye-blyuda/myaso-po-francuzski-175692",
+   "image_url": "https://img02.rl0.ru/864c3263dad3818cba8a72b52a0d6321/c1280x960i/s1.eda.ru/StaticContent/Photos/b/72/b727bc0577324e00bdfddcbeb2ed7379.jpg",
+   "expect_any": [
+    "pork",
+    "french",
+    "gratin",
+    "cheese"
+   ],
+   "count": null,
+   "servings_shown": 1,
+   "note": "one plate",
+   "recipe_yield": "8 servings",
+   "per_serving": {
+    "kcal": 506.0,
+    "protein_g": 29.0,
+    "carbs_g": 21.0,
+    "fat_g": 34.0
+   },
+   "ingredients": [
+    "Свинина, 700 г",
+    "Помидоры, 3 штуки",
+    "Сыр, 300 г",
+    "Майонез, 200 г",
+    "Картофель, 7 штук",
+    "Лук, 2 головки",
+    "Хмели-сунели,  по вкусу",
+    "Соль,  по вкусу",
+    "Молотый черный перец,  по вкусу"
    ]
   }
  ]
