@@ -35,7 +35,7 @@ Both forks below are GPL-3.0 like ONT, so their code can be ported with credit.
 | Phase 2 backup | Upstream 2.5.0 (release PR #1439) carries the import fixes (#1369, #1398, #1381). theoleuthardt: custom meals, settings and every profile in the backup, a backup-age reminder, WebDAV auto-backup, backup into a Files-app folder, restore from onboarding. Upstream issues #1356 (Syncthing), #1355 (import from onboarding), #1395 (restore loses pace and taper) | Crucial, stays. Port the custom-meals export and onboarding restore rather than design them |
 | Phase 3 adaptive expenditure, check-in | Nowhere. Upstream #671 (fixed calorie target, top store-review request) is high priority there; theoleuthardt has a fixed kcal goal with gram macros and training-day goals | Unchanged; the target switch must leave room for #671's fixed mode |
 | Backlog: label scan | theoleuthardt (on-device OCR, iOS only), cattosmile/OpenNutriTrackerPlus (AI scan), aeobrien | Done: cattosmile's label rules, without its research and estimating merge (S29) |
-| Backlog: AI recipe builder | aeobrien "Phase 12" | Lowered |
+| Backlog: AI recipe builder | aeobrien "Phase 12" | Done our way (S30): bulk add's rows saved as a recipe; a link read from its schema.org data, not sent to a model |
 | Backlog: re-log yesterday | theoleuthardt: copy entries, meals or days to any date; upstream #842, #1265 | Lowered |
 | Backlog: OFF contributions | theoleuthardt: send scanned values and the label photo to OFF | Lowered |
 | Health Connect weight | Upstream PR #1296 | Done as our own take on it (S27); swap when upstream releases it |
@@ -417,8 +417,11 @@ Lower: already built elsewhere (§0b), port or wait:
 
 - AI nutrition-label scan: done (2026-10-23, `lib/fork/label/`, S29). Ported cattosmile's label-reading
   rules only; its OFF/web research and estimate merge were left out, so only printed values fill the form.
-- AI recipe builder from text or a URL (reference: aeobrien "Phase 12": unmatched
-  ingredients fall back to search, label scan or manual entry).
+- AI recipe builder from text or a URL: done (2026-10-23, `lib/fork/recipe/`, S30). Ingredient
+  lines (typed, or read from a recipe link's schema.org data) go through bulk add's normal read;
+  "Save all as a recipe" opens upstream's builder with the ready rows and the page's servings.
+  aeobrien's "Phase 12" was reviewed and not ported: a separate recipes rewrite, Claude-only,
+  and it sends a page's whole stripped text to the model. Not done: pages without Recipe data.
 - *Done 2026-10-23:* copy an entry, a meal or a whole day to any date (`fork/copy`, S24–S26).
   Ported after review from theoleuthardt `personal` #127 (`CopyEntriesUsecase`). Review: sound
   (new ids, the logged food kept, the same time of the target logical day, totals added); it
