@@ -14,6 +14,7 @@ import 'package:opennutritracker/fork/adaptive/energy.dart';
 import 'package:opennutritracker/fork/adaptive/expenditure.dart';
 import 'package:opennutritracker/fork/adaptive/goal_plan.dart';
 import 'package:opennutritracker/fork/adaptive/trend.dart';
+import 'package:opennutritracker/fork/body/measurement_store.dart';
 
 final _log = Logger('AdaptiveService');
 
@@ -33,16 +34,32 @@ class AdaptiveService {
   final AdaptiveStore _store;
   final DateTime Function() _now;
 
+  /// A measured body fat % replaces Deurenberg's estimate; null uses the
+  /// estimate only.
+  final MeasurementStore? _measurements;
+
   AdaptiveService(
     this._user,
     this._weights,
     this._trackedDays,
     this._store, [
     DateTime Function()? now,
+    this._measurements,
   ]) : _now = now ?? DateTime.now;
 
-  factory AdaptiveService.fromLocator() =>
-      AdaptiveService(locator(), locator(), locator(), AdaptiveStore());
+  factory AdaptiveService.fromLocator() => AdaptiveService(
+    locator(),
+    locator(),
+    locator(),
+    AdaptiveStore(),
+    null,
+    MeasurementStore(),
+  );
+
+  /// The latest measured body fat % of the past 90 days, else the
+  /// profile's estimate.
+  Future<double> _bodyFat(UserEntity user) async =>
+      await _measurements?.recentBodyFat(_now()) ?? bodyFatPercent(user);
 
   /// True when the switch is on and a week has passed since the last
   /// check-in, or there has been none.
@@ -64,7 +81,7 @@ class AdaptiveService {
         days: days,
         priorKcal: _priorKcal(user),
         goalRateKgPerWeek: rate,
-        bodyFatPercent: bodyFatPercent(user),
+        bodyFatPercent: await _bodyFat(user),
         targetWeightKg: user.targetWeightKg,
         previousTargetKcal:
             previous?.acceptedKcal ??
@@ -97,7 +114,7 @@ class AdaptiveService {
     final estimates = estimateExpenditure(
       history.days,
       priorKcal: _priorKcal(user),
-      bodyFatPercent: bodyFatPercent(user),
+      bodyFatPercent: await _bodyFat(user),
       settings: settings,
     );
     return [
@@ -141,10 +158,10 @@ class AdaptiveService {
       expenditureKcal: estimateExpenditure(
         days,
         priorKcal: _priorKcal(user),
-        bodyFatPercent: bodyFatPercent(user),
+        bodyFatPercent: await _bodyFat(user),
         settings: settings,
       ).last,
-      bodyFatPercent: bodyFatPercent(user),
+      bodyFatPercent: await _bodyFat(user),
       targetWeightKg: user.targetWeightKg,
       paceKgPerWeek: goalRateKgPerWeek(user),
     );

@@ -20,6 +20,7 @@ import 'package:opennutritracker/core/data/repository/water_intake_repository.da
 import 'package:opennutritracker/features/fasting/data/data_source/fasting_data_source.dart';
 import 'package:opennutritracker/features/settings/domain/export_import_failure.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
+import 'package:opennutritracker/fork/body/measurement_store.dart';
 import 'package:opennutritracker/fork/plan/plan_store.dart';
 import 'package:opennutritracker/core/domain/entity/intake_type_entity.dart';
 import 'package:opennutritracker/fork/backup/backup_extras.dart';
@@ -47,6 +48,7 @@ void main() {
     _Meals meals,
     AdaptiveStore adaptive,
     PlanStore plans,
+    MeasurementStore measurements,
     _User user,
     _Config config,
   })
@@ -54,6 +56,7 @@ void main() {
     final name = 'adaptive${boxes++}';
     final adaptive = AdaptiveStore(() => Hive.openBox<dynamic>(name));
     final plans = PlanStore(() => Hive.openBox<dynamic>(name));
+    final measurements = MeasurementStore(() => Hive.openBox<dynamic>(name));
     final water = _Water();
     final fasting = _Fasting();
     final meals = _Meals();
@@ -66,6 +69,7 @@ void main() {
         meals,
         adaptive: () => adaptive,
         plans: () => plans,
+        measurements: () => measurements,
         user: user,
         config: config,
       ),
@@ -74,6 +78,7 @@ void main() {
       meals: meals,
       adaptive: adaptive,
       plans: plans,
+      measurements: measurements,
       user: user,
       config: config,
     );
@@ -114,6 +119,9 @@ void main() {
       IntakeTypeEntity.dinner,
       DateTime(2026, 10, 25),
     );
+    await from.measurements.addDay(DateTime(2026, 10, 20), {
+      BodyMetric.waist: 84,
+    });
 
     final archive = Archive();
     await from.extras.addTo(archive);
@@ -135,6 +143,9 @@ void main() {
     final planned = await to.plans.forDay(DateTime(2026, 10, 25));
     expect(planned.map((f) => (f.meal.name, f.type, f.kcal)), [
       (MealEntityFixtures.mealTwo.name, IntakeTypeEntity.dinner, 210),
+    ]);
+    expect((await to.measurements.all()).map((m) => (m.metric, m.value)), [
+      (BodyMetric.waist, 84),
     ]);
   });
 

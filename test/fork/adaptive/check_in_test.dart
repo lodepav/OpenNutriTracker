@@ -19,6 +19,7 @@ import 'package:opennutritracker/fork/adaptive/check_in.dart';
 import 'package:opennutritracker/fork/adaptive/expenditure.dart';
 import 'package:opennutritracker/fork/adaptive/expenditure_card.dart';
 import 'package:opennutritracker/fork/adaptive/goal_plan_card.dart';
+import 'package:opennutritracker/fork/body/measurement_store.dart';
 import 'package:opennutritracker/core/domain/entity/body_weight_unit_entity.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/fork/adaptive/trend_points.dart';
@@ -321,6 +322,28 @@ void main() {
     await tester.tap(find.text('Use this pace'));
     await tester.pumpAndSettle();
     expect(saved.single, isNot(closeTo(-0.5, 0.01)));
+  });
+
+  test('a measured body fat % changes the expenditure read', () async {
+    final measurements = MeasurementStore(
+      () => Hive.openBox<dynamic>('measurements'),
+    );
+    await measurements.addDay(_today, {BodyMetric.bodyFat: 10});
+    final lean = AdaptiveService(
+      _User(),
+      _Weights(),
+      _TrackedDays(),
+      store,
+      () => _today.add(const Duration(hours: 9)),
+      measurements,
+    );
+
+    // Leaner: more of a loss is lean tissue, worth less energy, so the
+    // same loss on the same intake reads as a lower expenditure.
+    expect(
+      (await lean.checkIn()).expenditureKcal,
+      lessThan((await service.checkIn()).expenditureKcal),
+    );
   });
 
   group('expenditure history', () {
