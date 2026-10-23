@@ -421,6 +421,11 @@ and take kJ for kJ users (`lib/fork/units/energy_text.dart`).
   logged (or put in the basket) at, ahead of upstream's 1 serving / 100 g, the raw-units
   preference included. Kept per profile for the last 1,000 foods, by barcode or else name; not
   in the backup.
+- *Done:* reminders (S46), in Settings → Goals: a daily weigh-in (7:30 to start), moved to
+  tomorrow once today's weight is in, and the weekly check-in, once on the day it falls due
+  (9:00) or at the next time when it already is, with the adaptive target on. Planned again
+  when the app opens or leaves, the profile switches, or the target's settings change (a
+  check-in saves them). Per profile; the times are not in the backup.
 
 Upstream: open an issue first, with the simulation results. The maintainer cites a source for
 every calculation; everything except the tuned weights has one, and those come with the

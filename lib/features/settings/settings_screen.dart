@@ -48,6 +48,9 @@ import 'package:opennutritracker/fork/leftovers/meal_photo_cache.dart';
 // [fork] S14 adaptive-settings: the trend and target switches (D13)
 import 'package:opennutritracker/fork/adaptive/adaptive_ui.dart';
 // [/fork]
+// [fork] S46 reminders
+import 'package:opennutritracker/fork/reminders/reminders_ui.dart';
+// [/fork]
 // [fork] S23 auto-backup: the automatic backup's settings (phase 2)
 import 'package:opennutritracker/fork/backup/auto_backup_ui.dart';
 // [/fork]
@@ -341,6 +344,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   // [fork] S14 adaptive-settings
                   const AdaptiveSettingsTile(),
+                  // [/fork]
+                  // [fork] S46 reminders: weigh-in and check-in
+                  const RemindersTile(),
                   // [/fork]
                   _SettingsTile(
                     identifier: 'settings-macro-split',
