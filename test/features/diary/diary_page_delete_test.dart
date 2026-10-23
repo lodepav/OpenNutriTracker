@@ -384,6 +384,10 @@ void main() {
 
       await tester.longPress(find.text('Toast'));
       await settle(tester);
+      // [fork] S24 copy-anywhere: today's entries offer copy or delete
+      await tester.tap(find.text(l10nEn.dialogDeleteLabel.toUpperCase()));
+      await settle(tester);
+      // [/fork]
       await passMidnight(tester);
       await tester.tap(find.text(l10nEn.dialogOKLabel));
       await settle(tester);

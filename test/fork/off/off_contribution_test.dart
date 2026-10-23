@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -135,5 +136,30 @@ void main() {
         ),
       ),
     );
+  });
+
+  test('the label photo goes up as the nutrition picture', () async {
+    late http.Request sent;
+    final client = OffContributionClient(
+      MockClient((request) async {
+        sent = request;
+        return http.Response(jsonEncode({'status': 'status ok'}), 200);
+      }),
+      version: () async => '1.0',
+    );
+
+    await client.uploadNutritionPhoto(
+      _account,
+      '6410500090014',
+      Uint8List.fromList([0xFF, 0xD8, 0xFF]),
+      language: 'lv',
+    );
+
+    expect(sent.url.path, '/cgi/product_image_upload.pl');
+    expect(sent.headers['Content-Type'], startsWith('multipart/form-data'));
+    final body = latin1.decode(sent.bodyBytes);
+    expect(body, contains('name="imagefield"\r\n\r\nnutrition_lv'));
+    expect(body, contains('name="imgupload_nutrition_lv"'));
+    expect(body, contains('name="user_id"\r\n\r\nme'));
   });
 }

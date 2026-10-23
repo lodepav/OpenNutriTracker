@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:opennutritracker/core/domain/entity/app_theme_entity.dart';
 import 'package:opennutritracker/core/domain/entity/config_entity.dart';
@@ -13,6 +14,8 @@ import 'package:opennutritracker/core/domain/usecase/get_macro_goal_usecase.dart
 import 'package:opennutritracker/core/domain/usecase/get_user_activity_usecase.dart';
 import 'package:opennutritracker/core/domain/usecase/log_user_activity_usecase.dart';
 import 'package:opennutritracker/fork/copy/copy_entries.dart';
+import 'package:opennutritracker/fork/copy/select_entries_screen.dart';
+import 'package:opennutritracker/generated/l10n.dart';
 
 import '../../fixture/intake_entity_fixtures.dart';
 
@@ -80,6 +83,34 @@ void main() {
     expect(intakes.added.single.type, lateSnack.type);
   });
 
+  test(
+    'copied to a moment, all go at it, on the logical day it falls in',
+    () async {
+      config = _Config(4);
+      final oats = at(intakeOf('oats', 50), DateTime(2026, 10, 20, 8));
+      final rice = at(intakeOf('rice', 150), DateTime(2026, 10, 20, 19));
+      final now = DateTime(2026, 10, 23, 1, 15);
+
+      await copier().copyIntakesAt(
+        [oats, rice],
+        now,
+        type: IntakeTypeEntity.snack,
+      );
+
+      expect(intakes.added.map((i) => i.dateTime), [now, now]);
+      expect(
+        intakes.added.map((i) => i.type),
+        everyElement(IntakeTypeEntity.snack),
+      );
+      // 1:15 am with a 4 am day start is still the 22nd.
+      expect(days.created, [DateTime(2026, 10, 22)]);
+      expect(
+        days.kcal[DateTime(2026, 10, 22)],
+        oats.totalKcal + rice.totalKcal,
+      );
+    },
+  );
+
   test('a day copies all four meals, each in its own, oldest first', () async {
     intakes.byMeal = {
       IntakeTypeEntity.breakfast: [
@@ -107,6 +138,81 @@ void main() {
       ('apple', IntakeTypeEntity.snack),
       ('rice', IntakeTypeEntity.dinner),
     ]);
+  });
+
+  testWidgets('entries picked by meal and by hour are copied to now', (
+    tester,
+  ) async {
+    final oats = at(
+      intakeOf('oats', 50, type: IntakeTypeEntity.breakfast),
+      DateTime(2026, 10, 22, 8, 10),
+    );
+    final coffee = at(
+      intakeOf('coffee', 200, type: IntakeTypeEntity.breakfast),
+      DateTime(2026, 10, 22, 8, 40),
+    );
+    final apple = at(
+      intakeOf('apple', 100, type: IntakeTypeEntity.snack),
+      DateTime(2026, 10, 22, 11),
+    );
+    final rice = at(
+      intakeOf('rice', 150, type: IntakeTypeEntity.dinner),
+      DateTime(2026, 10, 22, 19),
+    );
+    intakes.byMeal = {
+      IntakeTypeEntity.breakfast: [oats, coffee],
+      IntakeTypeEntity.snack: [apple],
+      IntakeTypeEntity.dinner: [rice],
+    };
+    final now = DateTime(2026, 10, 23, 12, 30);
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: const [S.delegate],
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: TextButton(
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => SelectEntriesScreen(
+                    day: DateTime(2026, 10, 22),
+                    copier: copier(),
+                    now: () => now,
+                  ),
+                ),
+              ),
+              child: const Text('open'),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+
+    // The 8 o'clock hour, then dinner by its chip; apple stays out.
+    await tester.tap(find.byKey(const Key('fork-select-hour-8')));
+    await tester.tap(find.byKey(const Key('fork-select-meal-dinner')));
+    await tester.pump();
+    expect(find.text('3 selected'), findsOneWidget);
+    // Unticking coffee leaves its hour half ticked.
+    await tester.tap(find.byKey(Key('fork-select-${coffee.id}')));
+    await tester.pump();
+    final hour = tester.widget<CheckboxListTile>(
+      find.byKey(const Key('fork-select-hour-8')),
+    );
+    expect(hour.value, isNull);
+
+    await tester.tap(find.byKey(const Key('fork-copy-selected')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('fork-copy-now')));
+    await tester.pumpAndSettle();
+
+    expect(intakes.added.map((i) => (i.meal.name, i.dateTime, i.type)), [
+      ('oats', now, IntakeTypeEntity.breakfast),
+      ('rice', now, IntakeTypeEntity.dinner),
+    ]);
+    expect(find.text('open'), findsOneWidget);
+    expect(find.text('Copied 2 entries to Fri, Oct 23'), findsOneWidget);
   });
 }
 

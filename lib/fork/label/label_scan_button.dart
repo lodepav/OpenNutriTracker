@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
@@ -9,8 +11,10 @@ import 'package:opennutritracker/fork/label/label_scan.dart';
 
 /// "Read label" in the custom-meal form's app bar (seam S29): a photo of
 /// the nutrition label fills the form. Hidden when no model is set up.
+/// [onRead] also gets the photo as a JPEG, kept in memory only, which
+/// Open Food Facts may get as the nutrition picture if the user agrees (S33).
 class LabelScanButton extends StatefulWidget {
-  final void Function(LabelReading reading) onRead;
+  final void Function(LabelReading reading, Uint8List? photoJpeg) onRead;
   final ReadLabelUseCase? useCase;
 
   const LabelScanButton({super.key, required this.onRead, this.useCase});
@@ -46,6 +50,10 @@ class _LabelScanButtonState extends State<LabelScanButton> {
     setState(() => _busy = true);
     String? message;
     try {
+      final jpeg = await MealPhotoEncoder.encode(
+        picked.path,
+        format: MealPhotoFormat.jpeg,
+      );
       final photo = await MealPhotoEncoder.encodeAndDiscardSource(
         picked.path,
         format: MealPhotoFormat.forProvider(selection.provider),
@@ -54,7 +62,7 @@ class _LabelScanButtonState extends State<LabelScanButton> {
       if (reading == null || reading.isEmpty) {
         message = 'No nutrition label could be read in the photo';
       } else {
-        widget.onRead(reading);
+        widget.onRead(reading, jpeg?.bytes);
       }
     } on MealInterpreterException {
       message = 'Could not read the label; try again';

@@ -80,6 +80,49 @@ class CopyEntries {
     }
   }
 
+  /// Copies [intakes] to the moment [at], all of them, on the logical day
+  /// [at] falls in: "copy to now", or to a time the user picked. Into meal
+  /// [type] (null keeps each entry's own).
+  Future<void> copyIntakesAt(
+    List<IntakeEntity> intakes,
+    DateTime at, {
+    IntakeTypeEntity? type,
+  }) async {
+    final offset = (await _config.getConfig()).dayStartOffsetTotalMinutes;
+    final target = _dateOf(DayBoundaryCalc.logicalDayOfMinutes(at, offset));
+    for (final intake in intakes) {
+      final copy = IntakeEntity(
+        id: _newId(),
+        unit: intake.unit,
+        amount: intake.amount,
+        type: type ?? intake.type,
+        meal: intake.meal,
+        dateTime: at,
+      );
+      await _addIntake.addIntake(copy);
+      await _addToTrackedDay(copy, target);
+    }
+  }
+
+  /// Every intake of the logical day [day], earliest first.
+  Future<List<IntakeEntity>> intakesOf(DateTime day) async {
+    final config = await _config.getConfig();
+    final source = _dateOf(day);
+    return [
+      for (final get in [
+        _intakes.getBreakfastIntakeByDay,
+        _intakes.getLunchIntakeByDay,
+        _intakes.getDinnerIntakeByDay,
+        _intakes.getSnackIntakeByDay,
+      ])
+        ...await get(
+          source,
+          dayStartOffsetHours: config.dayStartOffsetHours,
+          dayStartOffsetMinutes: config.dayStartOffsetMinutes,
+        ),
+    ]..sort((a, b) => a.dateTime.compareTo(b.dateTime));
+  }
+
   Future<void> copyActivities(
     List<UserActivityEntity> activities,
     DateTime day,
@@ -112,19 +155,7 @@ class CopyEntries {
     final hours = config.dayStartOffsetHours;
     final minutes = config.dayStartOffsetMinutes;
     final source = _dateOf(from);
-    final intakes = [
-      for (final get in [
-        _intakes.getBreakfastIntakeByDay,
-        _intakes.getLunchIntakeByDay,
-        _intakes.getDinnerIntakeByDay,
-        _intakes.getSnackIntakeByDay,
-      ])
-        ...await get(
-          source,
-          dayStartOffsetHours: hours,
-          dayStartOffsetMinutes: minutes,
-        ),
-    ]..sort((a, b) => a.dateTime.compareTo(b.dateTime));
+    final intakes = await intakesOf(from);
     await copyIntakes(intakes, to);
     if (activities) {
       await copyActivities(

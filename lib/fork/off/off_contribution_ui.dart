@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -25,95 +26,208 @@ const _nutrientLabels = {
 };
 
 /// After a custom food with a barcode is saved (seam S33): offers to add it
-/// to Open Food Facts as the user, once they saw what goes out. Only what
-/// OFF lacks is sent. Returns once the user decided; the upload carries on
-/// and reports through the app's snackbar, with a retry.
+/// to Open Food Facts as the user. Asks Open Food Facts what it has first,
+/// then shows only what it lacks, editable, with the label photo when the
+/// form was filled from one (S29), and sends nothing until the user does.
+/// Returns once the user decided; the upload carries on and reports through
+/// the app's snackbar, with a retry.
 Future<void> offerOffUpload(
   BuildContext context,
   MealEntity meal, {
+  Uint8List? labelPhoto,
   OffAccountStore? store,
   OffContributionClient? client,
 }) async {
   // No client to send with: the app's is missing in widget tests.
   if (client == null && !locator.isRegistered<http.Client>()) return;
-  final upload = OffUpload.fromMeal(meal);
-  if (!isBarcodeFormatValid(upload.barcode) || upload.isEmpty) return;
+  final full = OffUpload.fromMeal(meal);
+  if (!isBarcodeFormatValid(full.barcode) || full.isEmpty) return;
   final account = await (store ?? OffAccountStore()).load();
   if (!account.isReady || !context.mounted) return;
-  final send = await showDialog<bool>(
+  final offClient = client ?? OffContributionClient(locator<http.Client>());
+  final messenger = ScaffoldMessenger.of(context);
+
+  final OffProduct there;
+  try {
+    there = await _whileChecking(
+      context,
+      offClient.product(account, full.barcode),
+    );
+  } on OffContributionException catch (error) {
+    messenger.showSnackBar(SnackBar(content: Text(_failureText(error))));
+    return;
+  }
+  final missing = full.without(there);
+  final photo = there.hasNutritionPhoto ? null : labelPhoto;
+  if (missing.isEmpty && photo == null) {
+    messenger.showSnackBar(
+      const SnackBar(content: Text('Open Food Facts already has this product')),
+    );
+    return;
+  }
+  if (!context.mounted) return;
+  final review = await showDialog<_Review>(
     context: context,
-    builder: (_) => _PreviewDialog(upload: upload, account: account),
+    builder: (_) =>
+        _ReviewDialog(upload: missing, account: account, labelPhoto: photo),
   );
-  if (send != true || !context.mounted) return;
+  if (review == null || !context.mounted) return;
+  final language = Localizations.localeOf(context).languageCode;
+  unawaited(_send(messenger, account, review, offClient, language));
+}
+
+/// Runs [check] behind a small "Checking" dialog.
+Future<T> _whileChecking<T>(BuildContext context, Future<T> check) async {
+  final navigator = Navigator.of(context);
+  var open = true;
   unawaited(
-    _send(
-      ScaffoldMessenger.of(context),
-      account,
-      upload,
-      client ?? OffContributionClient(locator<http.Client>()),
-    ),
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const AlertDialog(
+        content: Row(
+          children: [
+            SizedBox.square(
+              dimension: 24,
+              child: CircularProgressIndicator(strokeWidth: 3),
+            ),
+            SizedBox(width: 16),
+            Expanded(child: Text('Checking Open Food Facts…')),
+          ],
+        ),
+      ),
+    ).whenComplete(() => open = false),
   );
+  try {
+    return await check;
+  } finally {
+    if (open) navigator.pop();
+  }
+}
+
+String _failureText(OffContributionException error) => switch (error.failure) {
+  OffFailure.offline => 'Open Food Facts could not be reached',
+  OffFailure.rejected =>
+    'Open Food Facts refused it. Check your account in Settings',
+  OffFailure.busy => 'Open Food Facts is busy. Try again later',
+};
+
+/// What the user confirmed: the values, as edited, and the photo if kept.
+class _Review {
+  final OffUpload upload;
+  final Uint8List? photo;
+
+  const _Review(this.upload, this.photo);
 }
 
 Future<void> _send(
   ScaffoldMessengerState messenger,
   OffAccount account,
-  OffUpload upload,
+  _Review review,
   OffContributionClient client,
+  String language,
 ) async {
   String message;
   SnackBarAction? retry;
   try {
-    final missing = upload.without(
-      await client.product(account, upload.barcode),
-    );
-    if (missing.isEmpty) {
-      message = 'Open Food Facts already has this product';
-    } else {
-      await client.upload(account, missing);
-      message = 'Added to Open Food Facts. Thank you!';
+    if (!review.upload.isEmpty) {
+      await client.upload(account, review.upload);
     }
+    if (review.photo case final photo?) {
+      await client.uploadNutritionPhoto(
+        account,
+        review.upload.barcode,
+        photo,
+        language: language,
+      );
+    }
+    message = 'Added to Open Food Facts. Thank you!';
   } on OffContributionException catch (error) {
-    message = switch (error.failure) {
-      OffFailure.offline => 'Open Food Facts could not be reached',
-      OffFailure.rejected =>
-        'Open Food Facts refused it. Check your account in Settings',
-      OffFailure.busy => 'Open Food Facts is busy. Try again later',
-    };
+    message = _failureText(error);
     retry = SnackBarAction(
       label: 'Retry',
-      onPressed: () => unawaited(_send(messenger, account, upload, client)),
+      onPressed: () =>
+          unawaited(_send(messenger, account, review, client, language)),
     );
   }
   messenger.showSnackBar(SnackBar(content: Text(message), action: retry));
 }
 
-class _PreviewDialog extends StatelessWidget {
+class _ReviewDialog extends StatefulWidget {
   final OffUpload upload;
   final OffAccount account;
+  final Uint8List? labelPhoto;
 
-  const _PreviewDialog({required this.upload, required this.account});
+  const _ReviewDialog({
+    required this.upload,
+    required this.account,
+    this.labelPhoto,
+  });
+
+  @override
+  State<_ReviewDialog> createState() => _ReviewDialogState();
+}
+
+class _ReviewDialogState extends State<_ReviewDialog> {
+  late final _name = TextEditingController(text: widget.upload.name);
+  late final _brand = TextEditingController(text: widget.upload.brand);
+  late final _values = {
+    for (final MapEntry(key: nutrient, value: (value, _))
+        in widget.upload.nutrients.entries)
+      nutrient: TextEditingController(text: formatOffValue(value)),
+  };
+  late bool _withPhoto = widget.labelPhoto != null;
+
+  @override
+  void dispose() {
+    _name.dispose();
+    _brand.dispose();
+    for (final controller in _values.values) {
+      controller.dispose();
+    }
+    super.dispose();
+  }
+
+  /// The values as the fields hold them; a cleared field is left out.
+  _Review get _review {
+    String? text(TextEditingController controller) =>
+        controller.text.trim().isEmpty ? null : controller.text.trim();
+    final nutrients = <String, (double, String)>{};
+    for (final MapEntry(key: nutrient, value: controller) in _values.entries) {
+      final value = double.tryParse(controller.text.replaceAll(',', '.'));
+      if (value != null && value >= 0) {
+        nutrients[nutrient] = (value, widget.upload.nutrients[nutrient]!.$2);
+      }
+    }
+    return _Review(
+      widget.upload.copyWith(
+        name: () => widget.upload.name == null ? null : text(_name),
+        brand: () => widget.upload.brand == null ? null : text(_brand),
+        nutrients: nutrients,
+      ),
+      _withPhoto ? widget.labelPhoto : null,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-    Widget row(String label, String value) => Padding(
-      padding: const EdgeInsets.symmetric(vertical: 3),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(child: Text(label)),
-          const SizedBox(width: 12),
-          Flexible(
-            child: Text(
-              value,
-              textAlign: TextAlign.end,
-              style: textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
+    final upload = widget.upload;
+    Widget field(
+      TextEditingController controller,
+      String label, {
+      String? unit,
+      Key? key,
+    }) => TextField(
+      key: key,
+      controller: controller,
+      keyboardType: unit == null
+          ? TextInputType.text
+          : const TextInputType.numberWithOptions(decimal: true),
+      decoration: InputDecoration(
+        labelText: label,
+        suffixText: unit,
+        isDense: true,
       ),
     );
     return AlertDialog(
@@ -124,23 +238,50 @@ class _PreviewDialog extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'As ${account.userId}, to ${account.host}, for barcode '
-              '${upload.barcode}. Only what Open Food Facts does not have yet '
-              'is sent; nothing there is overwritten.',
+              'As ${widget.account.userId}, to ${widget.account.host}, for '
+              'barcode ${upload.barcode}. This is what Open Food Facts does '
+              'not have yet; check it against the package and correct it. '
+              'Clear a value to leave it out.',
             ),
-            const SizedBox(height: 8),
-            if (upload.name case final name?) row('Name', name),
-            if (upload.brand case final brand?) row('Brand', brand),
-            for (final MapEntry(key: nutrient, value: (value, unit))
-                in upload.nutrients.entries)
-              row(
-                '${_nutrientLabels[nutrient] ?? nutrient} per 100 g',
-                '${formatOffValue(value)} $unit',
+            if (upload.name != null)
+              field(_name, 'Name', key: const Key('fork-off-name')),
+            if (upload.brand != null) field(_brand, 'Brand'),
+            if (_values.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Text('Per 100 g', style: textTheme.titleSmall),
+            ],
+            for (final MapEntry(key: nutrient, value: controller)
+                in _values.entries)
+              field(
+                controller,
+                _nutrientLabels[nutrient] ?? nutrient,
+                unit: upload.nutrients[nutrient]!.$2,
+                key: Key('fork-off-$nutrient'),
               ),
+            if (widget.labelPhoto case final photo?) ...[
+              const SizedBox(height: 12),
+              CheckboxListTile(
+                key: const Key('fork-off-photo'),
+                contentPadding: EdgeInsets.zero,
+                value: _withPhoto,
+                onChanged: (on) => setState(() => _withPhoto = on ?? false),
+                title: const Text('Add the label photo'),
+                subtitle: const Text('As the nutrition table picture'),
+                secondary: ClipRRect(
+                  borderRadius: BorderRadius.circular(6),
+                  child: Image.memory(
+                    photo,
+                    width: 56,
+                    height: 56,
+                    fit: BoxFit.cover,
+                  ),
+                ),
+              ),
+            ],
             const SizedBox(height: 12),
             Text(
-              'Send only values printed on the package. Open Food Facts '
-              'publishes them under the Open Database License.',
+              'Send only what is printed on the package. Open Food Facts '
+              'publishes it under the Open Database License.',
               style: textTheme.bodySmall,
             ),
           ],
@@ -148,12 +289,19 @@ class _PreviewDialog extends StatelessWidget {
       ),
       actions: [
         TextButton(
-          onPressed: () => Navigator.of(context).pop(false),
+          onPressed: () => Navigator.of(context).pop(),
           child: const Text('Not now'),
         ),
         FilledButton(
           key: const Key('fork-off-send'),
-          onPressed: () => Navigator.of(context).pop(true),
+          onPressed: () {
+            final review = _review;
+            if (review.upload.isEmpty && review.photo == null) {
+              Navigator.of(context).pop();
+            } else {
+              Navigator.of(context).pop(review);
+            }
+          },
           child: const Text('Send'),
         ),
       ],

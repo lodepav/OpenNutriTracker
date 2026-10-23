@@ -182,7 +182,9 @@ void main() {
   // yesterday's date. Copying goes to that day, so it must not be offered
   // there, whatever DateTime.now() says.
   group('on the Diary\'s today', () {
-    testWidgets('a long-press asks to delete, without offering a copy', (
+    // [fork] S24 copy-anywhere: today's entries copy too
+    testWidgets('a long-press offers copy or delete, deleting on today', (
+    // [/fork]
       WidgetTester tester,
     ) async {
       final deleted = <DateTime>[];
@@ -197,7 +199,11 @@ void main() {
 
       await tester.longPress(find.text('Dinner Stew'));
       await tester.pumpAndSettle();
-      expect(find.text(l10nEn.dialogCopyLabel.toUpperCase()), findsNothing);
+      // [fork] S24 copy-anywhere: today's entries copy too
+      expect(find.text(l10nEn.dialogCopyLabel.toUpperCase()), findsOneWidget);
+      await tester.tap(find.text(l10nEn.dialogDeleteLabel.toUpperCase()));
+      await tester.pumpAndSettle();
+      // [/fork]
       expect(find.text(l10nEn.deleteTimeDialogTitle), findsOneWidget);
       await tester.tap(find.text(l10nEn.dialogOKLabel));
       await tester.pumpAndSettle();
@@ -206,7 +212,9 @@ void main() {
       expect(copied, isEmpty);
     });
 
-    testWidgets('the section menu has no Copy', (WidgetTester tester) async {
+    // [fork] S25 copy-anywhere: today's sections copy too
+    testWidgets('the section menu offers Copy', (WidgetTester tester) async {
+    // [/fork]
       await _pumpOmadDay(
         tester,
         breakfastIntake: const [],
@@ -215,7 +223,9 @@ void main() {
 
       await tester.tap(find.bySemanticsIdentifier('intake-section-menu'));
       await tester.pumpAndSettle();
-      expect(find.text(l10nEn.dialogCopyLabel), findsNothing);
+      // [fork] S25 copy-anywhere: today's sections copy too
+      expect(find.text('Copy…'), findsOneWidget);
+      // [/fork]
     });
   });
 

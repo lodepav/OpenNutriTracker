@@ -53,7 +53,7 @@ worth a look when phase 1c's breakdown is designed.
 - [x] Fork identity (Q2, D8): **OpenBite**, app id `io.github.lodepav.openbite`, set in `android/app/fork.gradle` (S20). Launcher name only.
 - [ ] Release keystore and its pinned digest: the user makes it later (2026-10-23).
 - [x] Health Connect weight import (item 3, 2026-10-23): our own take on PR #1296 (`lib/fork/health/`, S27, S28). Each day gets its latest reading; a typed or edited weight is never replaced; a deleted day stays empty until a newer reading; the newest imported row becomes the current weight. Fake scale under `FORK_FAKE_AI`. Not done: the Play Health Connect declaration for READ_WEIGHT; real-device check in phase 4.
-- [x] OpenBite in the app's own text (2026-10-23, `fork/tools/rebrand.sh`, S31) and its own icon, a diary page with a bite, themed-icon layer included (`fork/tools/launcher_icon.py`, S34). Not done: the splash logo, still upstream's; searching the trademark registers before publishing under the name.
+- [x] OpenBite in the app's own text (2026-10-23, `fork/tools/rebrand.sh`, S31) and its own icon, a diary page with a bite, themed-icon layer included (`fork/tools/launcher_icon.py`, S34). The splash and the in-app logo too (2026-10-23, S35): Android 12's launch screen shows the page whole and the Flutter splash takes the bite. Not done: searching the trademark registers before publishing under the name.
 - [ ] `.env`: placeholders stay; ONT's hosted backend isn't used (D11).
 
 ## 1c. Phase 1c — Dishes as recipes (D12, revised D9)
@@ -277,9 +277,22 @@ the same gap). Pelmeni and khachapuri are in no table and go to D9.
   upstream's Import.
 - Checked on the emulator: the zip carries the fork's files; importing it and backing up again
   gives the same counts (no duplicates).
+- *Done 2026-10-23:* the profile and the app settings in the backup (`user_profile.json`,
+  `app_settings.json` in `BackupExtras`), ported after review from theoleuthardt #95. Review:
+  sound (a whitelist of device-wide settings laid over the current config; consent, demo flag,
+  goals, health-import state and day boundary left out; enums by name; everything checked
+  before the first write). Changed here: the reminder switch stays out too (restored "on", the
+  reminder would not be scheduled on a new phone); no "also restore profile and settings"
+  switch, a restore restores them.
+- *Done 2026-10-23:* "Restore a backup" on onboarding's first page (S37, upstream #1355), after
+  theoleuthardt #155, which restores from their WebDAV server; here it is upstream's Import of a
+  backup file (an auto-backup zip from the folder works). Behind the policy checkbox, like "Try
+  demo"; a backup with a profile records the policy and the crash-report choice and goes into
+  the app (and out of demo mode); one without keeps its data and the setup goes on. Tried on the
+  emulator from a fresh install; the theme from the backup shows after a restart, as
+  theoleuthardt notes.
 - **Not done:** every profile in one backup (theoleuthardt #96; today each profile backs up
-  when it is the active one), the app settings (#95), restore from onboarding (#155, upstream
-  #1355), encrypting the zip.
+  when it is the active one), encrypting the zip.
 
 The app writes backup files; it syncs nothing itself (openGym-Hevier's D20). Upstream ONT has
 only a manual export (`export_data_usecase.dart`, a `FilePicker.saveFile` dialog each time), so
@@ -429,13 +442,21 @@ Lower: already built elsewhere (§0b), port or wait:
   once and under-counts the day (worth an upstream PR). Simpler here: no water copy; upstream's
   goal lookups; upstream's `CopyDialog` swapped at its two call sites instead of their rewrite of
   four upstream files. On the emulator, a copied day's totals match the source's.
-  Not done: copying from today (upstream offers copy only on other days; "Copy day" works on any).
+  Since 2026-10-23 today's entries and meals copy too, and "Select entries" beside "Copy day"
+  picks entries one by one, by meal or by the hour, as MacroFactor does, and copies them to now,
+  to today at the same times, or to a picked day (same times, or all at a picked time), into
+  their own meals or one meal (`lib/fork/copy/select_entries_screen.dart`). Activities still
+  copy only from other days (upstream's activity copy goes to today).
 - *Done 2026-10-23:* contribute to Open Food Facts (`lib/fork/off/`, S32, S33), ported after
   review from theoleuthardt `personal` (#81): the user's own account in the keychain, the test
   server until switched off, a preview of exactly what goes out, and only what OFF lacks (name,
   brand, or nutrients when it has none). Offered after saving a custom food with a barcode.
-  Not done: the label photo (the label scan discards it), and a live run against OFF (phase 4).
-- **Contribute missing barcodes to Open Food Facts** (theoleuthardt sends scanned values and
+  *2026-10-23:* the offer asks OFF first, then shows only what it lacks as editable fields
+  (clear one to leave it out) with the label photo as an optional nutrition picture (kept in
+  memory from the label scan, `/cgi/product_image_upload.pl`), and a barcode the scanner can't
+  find offers "Add it from its label" (S36), which leads through the label scan to the offer.
+  Not done: a live run against OFF (phase 4).
+- *Done 2026-10-23 (above, S33, S36):* **Contribute missing barcodes to Open Food Facts** (theoleuthardt sends scanned values and
   the label photo). Today the app only reads OFF; upstream just links to the official OFF apps
   (`import_custom_food_data_dialog.dart`). OFF is the only source that takes contributions: USDA
   and BLS are fixed tables (D11).
