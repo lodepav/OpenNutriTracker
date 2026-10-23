@@ -7,7 +7,9 @@ import 'package:opennutritracker/core/domain/entity/user_activity_entity.dart';
 import 'package:opennutritracker/core/presentation/widgets/activity_vertial_list.dart';
 import 'package:opennutritracker/core/presentation/widgets/copy_or_delete_dialog.dart';
 import 'package:opennutritracker/core/presentation/widgets/macro_nutriments_widget.dart';
-import 'package:opennutritracker/core/presentation/widgets/copy_dialog.dart';
+// [fork] S24-S25 copy-anywhere: upstream's CopyDialog import, unused since
+// import 'package:opennutritracker/core/presentation/widgets/copy_dialog.dart';
+// [/fork]
 import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
 import 'package:opennutritracker/core/presentation/widgets/empty_hint.dart';
 import 'package:opennutritracker/core/presentation/widgets/delete_dialog.dart';
@@ -21,6 +23,9 @@ import 'package:opennutritracker/features/diary/presentation/bloc/calendar_day_b
 import 'package:opennutritracker/features/diary/presentation/widgets/daily_nutrient_panel.dart';
 import 'package:opennutritracker/features/diary/presentation/widgets/diary_sort_type.dart';
 import 'package:opennutritracker/features/home/presentation/widgets/intake_vertical_list.dart';
+// [fork] S24 copy-anywhere
+import 'package:opennutritracker/fork/copy/copy_ui.dart';
+// [/fork]
 import 'package:opennutritracker/generated/l10n.dart';
 import 'package:provider/provider.dart';
 
@@ -188,10 +193,21 @@ class _DayInfoWidgetState extends State<DayInfoWidget> {
             Dimens.spacing20,
             Dimens.spacing4,
           ),
-          child: Text(
-            DateFormat.yMMMMEEEEd().format(widget.selectedDay),
-            style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+          // [fork] S26 copy-day: "Copy day" beside the date
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  DateFormat.yMMMMEEEEd().format(widget.selectedDay),
+                  style: textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              if (trackedDay != null) CopyDayButton(day: widget.selectedDay),
+            ],
           ),
+          // [/fork]
         ),
         const SizedBox(height: Dimens.spacing8),
         Column(
@@ -427,23 +443,9 @@ class _DayInfoWidgetState extends State<DayInfoWidget> {
   }
 
   void showCopyDialog(BuildContext context, IntakeEntity intakeEntity) async {
-    final defaultMealType = switch (intakeEntity.type) {
-      IntakeTypeEntity.breakfast => AddMealType.breakfastType,
-      IntakeTypeEntity.lunch => AddMealType.lunchType,
-      IntakeTypeEntity.dinner => AddMealType.dinnerType,
-      IntakeTypeEntity.snack => AddMealType.snackType,
-    };
-
-    final copyDialog = CopyDialog(
-      initialValue: defaultMealType,
-    );
-    final selectedMealType = await showDialog<AddMealType>(
-      context: context,
-      builder: (context) => copyDialog,
-    );
-    if (selectedMealType != null) {
-      widget.onCopyIntake(intakeEntity, null, selectedMealType);
-    }
+    // [fork] S24 copy-anywhere: any day and meal, not only today's (fork/copy)
+    await copyIntakesWithDialog(context, [intakeEntity], intakeEntity.type);
+    // [/fork]
   }
 
   void showDeleteIntakeDialog(
