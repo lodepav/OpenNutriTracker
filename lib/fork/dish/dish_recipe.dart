@@ -31,22 +31,37 @@ RecipeEntity? recipeFromDishGroup(List<BulkAddRow> rows, Object group) {
       if (identical(row.dishIngredient?.group, group)) row,
   ];
   if (members.isEmpty) return null;
+  return recipeFromRows(
+    members,
+    name: _capitalized(members.first.dishIngredient!.dish),
+    description: DishStrings.recipeDescription,
+  );
+}
+
+/// An unsaved recipe of [servings] from [rows], on the same terms as
+/// [recipeFromDishGroup]. Null when no row is ready.
+RecipeEntity? recipeFromRows(
+  List<BulkAddRow> rows, {
+  required String name,
+  required String description,
+  int servings = 1,
+}) {
   final ingredients = [
-    for (final row in members)
+    for (final row in rows)
       if (row.willBeLogged && row.quantityError == null) _ingredient(row),
   ];
   if (ingredients.isEmpty) return null;
   final now = DateTime.now();
   return RecipeEntity(
     id: '',
-    name: _capitalized(members.first.dishIngredient!.dish),
-    description: DishStrings.recipeDescription,
+    name: name,
+    description: description,
     ingredients: ingredients,
     totalWeightG: ingredients.fold(0, (sum, i) => sum + i.convertedAmountG),
     aggregatedNutrimentsPer100: MealNutrimentsEntity.empty(),
     createdAt: now,
     updatedAt: now,
-    servingsCount: 1,
+    servingsCount: servings,
   );
 }
 

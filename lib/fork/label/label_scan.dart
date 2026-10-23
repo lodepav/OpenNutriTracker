@@ -128,7 +128,7 @@ class LabelReading {
   }
 }
 
-/// Reads a label photo with the chosen model (backlog item 4). Ported after
+/// Reads a label photo with the chosen model. Ported after
 /// review from the label step of cattosmile/OpenNutriTrackerPlus's AI meal
 /// scan (its prompt rules), without its research, web search and estimating
 /// merge: only what the label prints reaches the form, which is also all

@@ -40,6 +40,10 @@ import 'package:opennutritracker/fork/dish/dish_strings.dart';
 import 'package:opennutritracker/fork/leftovers/meal_groups.dart';
 import 'package:opennutritracker/fork/leftovers/meal_photo_cache.dart';
 // [/fork]
+// [fork] S30 recipe-import: a recipe from typed lines or a recipe link
+import 'package:http/http.dart' as http;
+import 'package:opennutritracker/fork/recipe/recipe_link.dart';
+// [/fork]
 
 class BulkAddScreenArguments {
   final IntakeTypeEntity intakeTypeEntity;
@@ -74,6 +78,53 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
   final _textController = TextEditingController();
   // [fork] S8 meal-groups: the photo this batch was read from, kept with the meal
   MealPhoto? _forkMealPhoto;
+  // [/fork]
+  // [fork] S30 recipe-import: the page the text was read from, if any
+  LinkedRecipe? _forkLinkedRecipe;
+  String? _forkLink;
+
+  Future<void> _readRecipeLink(Uri link) async {
+    final messenger = ScaffoldMessenger.of(context)
+      ..showSnackBar(const SnackBar(content: Text(DishStrings.readingLink)));
+    LinkedRecipe? recipe;
+    String? failure;
+    try {
+      recipe = await RecipeLinkReader(locator<http.Client>()).read(link);
+      if (recipe == null) failure = DishStrings.linkHasNoRecipe;
+    } catch (e) {
+      _log.info('Recipe link not read: $e');
+      failure = DishStrings.linkFailed;
+    }
+    if (!mounted) return;
+    messenger.hideCurrentSnackBar();
+    if (recipe == null) {
+      messenger.showSnackBar(SnackBar(content: Text(failure!)));
+      return;
+    }
+    _textController.text = recipe.ingredients.join('\n');
+    _forkLinkedRecipe = recipe;
+    _forkLink = link.host;
+    _onParsePressed();
+  }
+
+  Future<void> _saveAllAsRecipe(BulkAddLoadedState state) async {
+    final linked = _forkLinkedRecipe;
+    final recipe = recipeFromRows(
+      state.rows,
+      name: linked?.name ?? '',
+      description: linked == null
+          ? DishStrings.typedRecipeDescription
+          : DishStrings.linkedRecipeDescription(_forkLink!),
+      servings: linked?.servings ?? 1,
+    );
+    if (recipe == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text(DishStrings.nothingToSave)),
+      );
+      return;
+    }
+    await openDishRecipe(context, recipe);
+  }
   // [/fork]
 
   // [fork] S4 dish-breakdown: runs breakdowns and marks the rows (D12)
@@ -358,6 +409,20 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
       appBar: AppBar(
         title: Text(S.of(context).bulkAddTitle),
         actions: [
+          // [fork] S30 recipe-import: every ready row as one recipe
+          BlocBuilder<BulkAddBloc, BulkAddState>(
+            bloc: _bloc,
+            builder: (context, state) =>
+                state is BulkAddLoadedState && state.rows.isNotEmpty
+                ? IconButton(
+                    key: const Key('fork-save-all-as-recipe'),
+                    onPressed: () => _saveAllAsRecipe(state),
+                    icon: const Icon(Icons.menu_book_outlined),
+                    tooltip: DishStrings.saveAllAsRecipe,
+                  )
+                : const SizedBox.shrink(),
+          ),
+          // [/fork]
           // Only offered when the user has a key enabled. There is no
           // offline way to read a photo, so showing the action to everyone
           // would advertise a button that can only ever apologise.
@@ -1382,6 +1447,15 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
 
   void _onParsePressed() {
     FocusScope.of(context).unfocus();
+    // [fork] S30 recipe-import: a recipe link reads as its ingredient lines
+    if (recipeLinkIn(_textController.text) case final link?) {
+      _readRecipeLink(link);
+      return;
+    }
+    if (_textController.text != _forkLinkedRecipe?.ingredients.join('\n')) {
+      _forkLinkedRecipe = null;
+    }
+    // [/fork]
     _resetAmountControllers();
     // [fork] S8 meal-groups
     _forkMealPhoto = null;

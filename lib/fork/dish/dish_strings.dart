@@ -13,4 +13,13 @@ abstract final class DishStrings {
   static const recipeDescription =
       'One serving, from an AI breakdown. The grams are estimates: check them.';
   static const nothingToSave = 'No ingredient row is ready to save.';
+  static const saveAllAsRecipe = 'Save all as a recipe';
+  static const typedRecipeDescription =
+      'From typed ingredients. Check each match and amount.';
+  static String linkedRecipeDescription(String site) =>
+      'From $site. Check each match and amount.';
+  static const readingLink = 'Reading the recipe page…';
+  static const linkHasNoRecipe =
+      'That page has no recipe data. Paste its ingredient lines instead.';
+  static const linkFailed = 'The page could not be loaded.';
 }
