@@ -68,7 +68,7 @@ void main() {
   for (final (query, expected) in [
     ('rye bread', 'Bread, rye'),
     ('kefir', 'Kefir'),
-    ('buckwheat', 'Buckwheat'),
+    ('buckwheat', 'Buckwheat, boiled'),
     // biezpiens: the model's usual English for it.
     ('quark', 'Quark, < 10 % fat in dry matter'),
     ('cottage cheese', 'Cheese, cottage, NFS'),

@@ -65,6 +65,7 @@ class LocalFoodDataSource extends SpFoodDataSource {
       query = query.substring(0, query.lastIndexOf(','));
       rows = search(query);
     }
+    if (forResolution) rows = _servedNotDry(rows, query, asked: searchString);
     // The backend's own cut, reused so the resolver sees the twenty rows it
     // would see from the backend. Upstream exposes it for its tests only;
     // calling it beats a copy that drifts.
@@ -88,6 +89,55 @@ class LocalFoodDataSource extends SpFoodDataSource {
     final portions = (await table).portions;
     return {for (final id in foodIds) id: ?portions[id]};
   }
+}
+
+final _stateWords = RegExp(
+  r'\b(raw|dry|dried|uncooked|cooked|boiled|steamed|stewed|fried|baked)\b',
+  caseSensitive: false,
+);
+final _cookedWords = RegExp(
+  r'\b(cooked|boiled|steamed)\b',
+  caseSensitive: false,
+);
+
+/// [rows] without the dry grains and pulses when [query] names the food
+/// with no state and the table also has it cooked. A plate holds the
+/// cooked food, but the bare name finds the dry one first: "buckwheat"
+/// was 343 kcal per 100 g against 92 boiled, and "lentils", "spaghetti",
+/// "bulgur" and "couscous" did the same (phase 4, a LIDO photo of boiled
+/// buckwheat). A row is dry by what it holds, more than twice the energy
+/// of the leanest cooked row and mostly starch, because the table does not
+/// always say so ("Buckwheat"); the starch keeps raw bacon and egg yolk,
+/// dense for fat. Only a cooked row named for the food itself counts
+/// ("Buckwheat, boiled"), not one that holds it ("Cereals, oats, ...
+/// cooked" left "oats" on a yogurt). A query that says "dry" or "raw"
+/// keeps every row, even once that qualifier was dropped ([asked]).
+List<SpFoodDTO> _servedNotDry(
+  List<SpFoodDTO> rows,
+  String query, {
+  required String asked,
+}) {
+  if (_stateWords.hasMatch(asked)) return rows;
+  final food = query.trim().toLowerCase();
+  double? leanest;
+  for (final row in rows) {
+    final name = row.name ?? '';
+    final kcal = row.energyKcal100;
+    if (kcal == null ||
+        !name.toLowerCase().startsWith(food) ||
+        !_cookedWords.hasMatch(name)) {
+      continue;
+    }
+    if (leanest == null || kcal < leanest) leanest = kcal;
+  }
+  if (leanest == null) return rows;
+  final limit = 2 * leanest;
+  bool dry(SpFoodDTO row) =>
+      (row.energyKcal100 ?? 0) > limit && (row.carbohydrates100 ?? 0) > 50;
+  return [
+    for (final row in rows)
+      if (!dry(row)) row,
+  ];
 }
 
 /// The decoded asset: rows and their portions by food id.

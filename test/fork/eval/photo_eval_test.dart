@@ -165,12 +165,13 @@ class _PhotoResult {
 
   /// Whether the dish landed on a table row of the right form, when the
   /// photo says which: boiled buckwheat on a cooked row, not the raw grain
-  /// at four times the energy (`match_kcal_100g_max`).
+  /// at four times the energy (`match_kcal_100g_max`). A name with no row
+  /// passes: the app breaks that dish down instead.
   bool? get formOk {
     final max = photo['match_kcal_100g_max'] as num?;
     final dish = items.where(_isDish);
     if (max == null || dish.isEmpty) return null;
-    return dish.every((i) => i.matchKcal != null && i.matchKcal! <= max);
+    return dish.every((i) => i.matchKcal == null || i.matchKcal! <= max);
   }
 
   Map<String, Object?> toJson() => {
