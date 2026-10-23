@@ -27,6 +27,9 @@
          Android now uses; iOS still reads body fat from HealthKit. -->
     <uses-permission android:name="android.permission.health.READ_EXERCISE"/>
     <uses-permission android:name="android.permission.health.READ_TOTAL_CALORIES_BURNED"/>
+    <!-- [fork] S28 weight-import: body weight for the weight log -->
+    <uses-permission android:name="android.permission.health.READ_WEIGHT"/>
+    <!-- [/fork] -->
 
     <!-- Provide required visibility configuration for API level 30 and above -->
     <queries>

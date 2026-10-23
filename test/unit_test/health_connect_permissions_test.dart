@@ -174,7 +174,9 @@ void main() {
       // that is the separate plugin test below.
       expect(
         declared,
-        {'READ_EXERCISE', 'READ_TOTAL_CALORIES_BURNED'},
+        // [fork] S28 weight-import: READ_WEIGHT for the weight log
+        {'READ_EXERCISE', 'READ_TOTAL_CALORIES_BURNED', 'READ_WEIGHT'},
+        // [/fork]
         reason:
             'Every declared Health Connect permission has to be justified by '
             'a feature in the Play Console declaration form. Adding one here '
@@ -266,7 +268,9 @@ void main() {
         // actually shipped is the last place to be picky about spelling.
         expect(
           healthIn(mergedManifest.readAsStringSync()).kept,
-          {'READ_EXERCISE', 'READ_TOTAL_CALORIES_BURNED'},
+          // [fork] S28 weight-import
+          {'READ_EXERCISE', 'READ_TOTAL_CALORIES_BURNED', 'READ_WEIGHT'},
+          // [/fork]
           reason:
               '${mergedManifest.path} ships a health permission set the '
               'repo did not declare, and one the plugin check did not '
