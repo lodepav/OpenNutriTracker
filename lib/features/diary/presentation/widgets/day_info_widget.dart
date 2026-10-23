@@ -496,13 +496,10 @@ class _DayInfoWidgetState extends State<DayInfoWidget> {
     IntakeEntity intakeEntity,
     DateTime day,
   ) async {
-    final shouldDeleteIntake = await showDialog<bool>(
-      context: context,
-      builder: (context) => const DeleteDialog(),
-    );
-    if (shouldDeleteIntake != null) {
-      widget.onDeleteIntake(intakeEntity, day);
-    }
+    // [fork] S52 undo-delete: deleted at once, with Undo on the snackbar,
+    // in place of upstream's confirmation dialog
+    widget.onDeleteIntake(intakeEntity, day);
+    // [/fork]
   }
 
   void onIntakeItemLongPressed(

@@ -529,6 +529,14 @@ offered and declined):
   and measured again, the plan card's macros, the trend weight widget placed and showing the
   trend, and a cut beginning today moving the goal planner from -0.40 to -0.50 kg a week.
 
+**More from MacroFactor, round 6** (asked 2026-10-23, branch `fork/mf7`; sharing into the app,
+voice logging, scanning in a row and AI reading of recipe pages without recipe data were offered
+and declined):
+- *Done:* undo after a delete (S52): an entry deleted on Home or the Diary, or a meal's "Delete
+  all", goes at once with "Entry deleted · Undo" in place of the confirmation dialog; deletes of
+  one day in a row gather into one bar ("3 entries deleted"), and Undo writes them back with their
+  ids, so meal groups and the Health Connect export see them unchanged.
+
 Upstream: open an issue first, with the simulation results. The maintainer cites a source for
 every calculation; everything except the tuned weights has one, and those come with the
 simulation. If declined, it stays in the fork behind seams.

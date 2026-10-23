@@ -22,6 +22,9 @@ import 'package:opennutritracker/generated/l10n.dart';
 // [fork] S9 meal-groups: leftovers of a whole meal (D14)
 import 'package:opennutritracker/fork/leftovers/group_leftovers.dart';
 // [/fork]
+// [fork] S52 undo-delete
+import 'package:opennutritracker/fork/undo/undo_delete.dart';
+// [/fork]
 
 class DiaryPage extends StatefulWidget {
   const DiaryPage({super.key});
@@ -224,11 +227,9 @@ class _DiaryPageState extends State<DiaryPage> with WidgetsBindingObserver {
     _diaryBloc.add(const LoadDiaryYearEvent());
     _calendarDayBloc.add(LoadCalendarDayEvent(_selectedDate));
     _diaryBloc.updateHomePage();
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(S.of(context).itemDeletedSnackbar)),
-      );
-    }
+    // [fork] S52 undo-delete: Undo on the snackbar
+    if (mounted) DeletedEntries.show(context, intakeEntity, day);
+    // [/fork]
   }
 
   void _onDeleteActivityItem(
