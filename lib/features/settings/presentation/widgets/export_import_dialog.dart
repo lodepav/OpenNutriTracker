@@ -10,6 +10,9 @@ import 'package:opennutritracker/features/settings/presentation/bloc/export_impo
 import 'package:opennutritracker/features/settings/presentation/bloc/settings_bloc.dart';
 import 'package:opennutritracker/features/settings/presentation/widgets/export_import_error_text.dart';
 import 'package:opennutritracker/features/trends/presentation/bloc/trends_bloc.dart';
+// [fork] S38 restore-settings-live: import
+import 'package:opennutritracker/fork/backup/apply_restored_settings.dart';
+// [/fork]
 import 'package:opennutritracker/generated/l10n.dart';
 
 /// Export / Import App Data dialog. A SegmentedButton at the top picks
@@ -174,5 +177,8 @@ class _ExportImportDialogState extends State<ExportImportDialog> {
     if (trendsState is TrendsLoaded) {
       trendsBloc.add(LoadTrendsEvent(rangeDays: trendsState.rangeDays));
     }
+    // [fork] S38 restore-settings-live: theme, units and language now
+    applyRestoredSettings(context);
+    // [/fork]
   }
 }
