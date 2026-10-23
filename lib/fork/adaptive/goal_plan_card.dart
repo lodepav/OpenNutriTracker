@@ -13,6 +13,10 @@ import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
 import 'package:opennutritracker/fork/adaptive/goal_plan.dart';
 import 'package:opennutritracker/fork/units/energy_text.dart';
 
+/// Bumped when [savePace] saved a pace (by hand or a diet phase), so the
+/// goal planner reloads.
+final paceChanges = ValueNotifier(0);
+
 /// Saves [kgPerWeek] as the profile's pace, the goal following its sign,
 /// through upstream's profile update (which rewrites today's goal).
 Future<void> savePace(double kgPerWeek) async {
@@ -25,6 +29,7 @@ Future<void> savePace(double kgPerWeek) async {
         ? UserWeightGoalEntity.gainWeight
         : UserWeightGoalEntity.maintainWeight;
   await locator<ProfileBloc>().updateUser(user);
+  paceChanges.value++;
 }
 
 /// Seam S40: MacroFactor's goal planner on Trends. A pace slider shows the
@@ -55,6 +60,26 @@ class _GoalPlanCardState extends State<GoalPlanCard> {
 
   Future<GoalPlanInputs?> _load() =>
       (widget.service ?? AdaptiveService.fromLocator()).goalPlan();
+
+  void _reload() {
+    if (!mounted) return;
+    setState(() {
+      _pace = null;
+      _inputs = _load();
+    });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    paceChanges.addListener(_reload);
+  }
+
+  @override
+  void dispose() {
+    paceChanges.removeListener(_reload);
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) => FutureBuilder<GoalPlanInputs?>(
@@ -242,11 +267,7 @@ class _GoalPlanCardState extends State<GoalPlanCard> {
               child: TextButton(
                 onPressed: () async {
                   await widget.onUsePace(pace);
-                  if (!mounted) return;
-                  setState(() {
-                    _pace = null;
-                    _inputs = _load();
-                  });
+                  _reload();
                 },
                 child: const Text('Use this pace'),
               ),
