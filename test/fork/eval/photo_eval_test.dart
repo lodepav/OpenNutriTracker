@@ -95,7 +95,10 @@ void main() {
           }
         }
         client.close();
-        models.reportWaiting(results.where((r) => r.error != null).length);
+        models.reportWaiting(
+          spec,
+          results.where((r) => r.error != null).length,
+        );
       },
       timeout: const Timeout(Duration(minutes: 30)),
       skip: skip,

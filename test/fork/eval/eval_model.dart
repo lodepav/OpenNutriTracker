@@ -7,8 +7,9 @@ import 'package:opennutritracker/features/add_meal/domain/meal_items_api.dart';
 import 'package:opennutritracker/fork/dev/replay_ai.dart';
 import 'package:opennutritracker/fork/food/local_food_data_source.dart';
 
-/// The models the eval tests run, from the environment: a replay folder
-/// (fork/eval/REPLAY.md) or an OpenRouter key with `model@provider` specs.
+/// The models the eval tests run, from the environment: replay folders,
+/// comma-separated, one model each (fork/eval/REPLAY.md), or an OpenRouter
+/// key with `model@provider` specs.
 class EvalModels {
   static const _defaultModels =
       'anthropic/claude-haiku-5.5@anthropic,'
@@ -16,16 +17,20 @@ class EvalModels {
       'openai/gpt-5.6-luna@openai';
 
   final String key = Platform.environment['FORK_EVAL_OPENROUTER_KEY'] ?? '';
-  final String replay = Platform.environment['FORK_EVAL_REPLAY'] ?? '';
+  final List<String> replays = (Platform.environment['FORK_EVAL_REPLAY'] ?? '')
+      .split(',')
+      .map((s) => s.trim())
+      .where((s) => s.isNotEmpty)
+      .toList();
 
   /// Why the tests are skipped, or false when they run.
-  Object get skip => key.isEmpty && replay.isEmpty
+  Object get skip => key.isEmpty && replays.isEmpty
       ? 'set FORK_EVAL_OPENROUTER_KEY (or FORK_EVAL_REPLAY) to run the '
             'model comparison'
       : false;
 
-  List<String> get specs => replay.isNotEmpty
-      ? ['replay:${replay.split('/').last}']
+  List<String> get specs => replays.isNotEmpty
+      ? [for (final dir in replays) 'replay:${dir.split('/').last}']
       : (Platform.environment['FORK_EVAL_MODELS'] ?? _defaultModels)
             .split(',')
             .map((s) => s.trim())
@@ -33,9 +38,12 @@ class EvalModels {
             .toList();
 
   MealItemsApi api(String spec, http.Client client) {
-    if (replay.isNotEmpty) {
+    if (spec.startsWith('replay:')) {
+      final dir = replays.firstWhere(
+        (d) => spec == 'replay:${d.split('/').last}',
+      );
       return AnthropicMealItemsApi(
-        ReplayAiClient(client, () async => Directory(replay)),
+        ReplayAiClient(client, () async => Directory(dir)),
         () => 'replay',
       );
     }
@@ -51,10 +59,10 @@ class EvalModels {
   }
 
   /// Says how many requests still wait for the subagent, in replay mode.
-  void reportWaiting(int waiting) {
-    if (replay.isEmpty || waiting == 0) return;
+  void reportWaiting(String spec, int waiting) {
+    if (!spec.startsWith('replay:') || waiting == 0) return;
     // ignore: avoid_print
-    print('$waiting requests have no answer: see $replay/requests');
+    print('$spec: $waiting requests have no answer yet');
   }
 }
 

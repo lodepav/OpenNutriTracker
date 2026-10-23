@@ -64,7 +64,12 @@ void main() {
     'Adjarian khachapuri',
   ];
   final runDir = evalRunDir('-dishes');
-  final out = StringBuffer('# Dish checks, ${DateTime.now()}\n');
+  final out = StringBuffer();
+  final summary = StringBuffer(
+    '| Model | Typed finds recipe | Photo finds recipe '
+    '| kcal off, one-serving photos (median) | Ingredients unmatched |\n'
+    '|---|---|---|---|---|\n',
+  );
 
   late LocalFoodDataSource foods;
   setUpAll(() async => foods = await loadFoodTable());
@@ -72,7 +77,9 @@ void main() {
   tearDownAll(() {
     if (out.length < 40) return;
     runDir.createSync(recursive: true);
-    File('${runDir.path}/report.md').writeAsStringSync(out.toString());
+    File(
+      '${runDir.path}/report.md',
+    ).writeAsStringSync('# Dish checks, ${DateTime.now()}\n\n$summary$out');
     // ignore: avoid_print
     print('report: ${runDir.path}/report.md');
   });
@@ -100,6 +107,8 @@ void main() {
         final textReader = ModelMealTextInterpreter(api);
         var waiting = 0;
         out.writeln('\n## $spec\n');
+        var typedOk = 0, photoOk = 0, photoRecipes = 0, unmatchedAll = 0;
+        final kcalOff = <double>[];
 
         out
           ..writeln('### Typed names find the saved recipe\n')
@@ -120,6 +129,7 @@ void main() {
             continue;
           }
           final found = names.map(recipeFor).nonNulls.firstOrNull;
+          if (found == expected) typedOk++;
           out.writeln(
             '| $typed | ${names.join('; ')} | ${found ?? '—'} '
             '| ${found == expected ? '✓' : '✗ $expected'} |',
@@ -168,6 +178,10 @@ void main() {
           if (dish == null) continue;
           final recipe = _photographed[photo['id']];
           final found = recipeFor(dish);
+          if (recipe != null) {
+            photoRecipes++;
+            if (found == recipe) photoOk++;
+          }
           final recipeCell = recipe == null
               ? (found ?? '')
               : found == recipe
@@ -200,6 +214,10 @@ void main() {
             continue;
           }
           final page = photo['per_serving'] as Map;
+          unmatchedAll += unmatched.length;
+          if (photo['servings_shown'] == 1) {
+            kcalOff.add((total.kcal / (page['kcal'] as num) - 1).abs());
+          }
           out.writeln(
             '| ${photo['id']} | ${photo['servings_shown'] ?? '-'} | $dish '
             '| $recipeCell '
@@ -211,8 +229,14 @@ void main() {
             '| ${unmatched.join('; ')} |',
           );
         }
+        kcalOff.sort();
+        summary.writeln(
+          '| $spec | $typedOk/${_typed.length} | $photoOk/$photoRecipes '
+          '| ${kcalOff.isEmpty ? '-' : '${(kcalOff[kcalOff.length ~/ 2] * 100).round()}%'} '
+          '| $unmatchedAll |',
+        );
         client.close();
-        models.reportWaiting(waiting);
+        models.reportWaiting(spec, waiting);
       },
       timeout: const Timeout(Duration(minutes: 30)),
       skip: models.skip != false
