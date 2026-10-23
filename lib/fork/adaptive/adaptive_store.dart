@@ -1,5 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
+import 'package:opennutritracker/core/utils/hive_db_provider.dart';
+import 'package:opennutritracker/core/utils/locator.dart';
 
 /// The two D13 switches, plus the 28-day window for users with a
 /// menstrual cycle (fork/research/phase3-simulation.md).
@@ -58,22 +62,58 @@ class CheckInRecord {
   );
 }
 
-/// The fork's adaptive state, in a box of its own. [settings] is also held
+/// The fork's adaptive state, in an encrypted box per profile like
+/// upstream's own per-profile boxes. [settings] holds the active profile's
 /// in memory so the weight chart, which builds synchronously, can read it.
 class AdaptiveStore {
-  static const boxName = 'fork_adaptive';
+  static const boxName = 'ForkAdaptiveBox';
 
   static final settings = ValueNotifier(const AdaptiveSettings());
 
   final Future<Box<dynamic>> Function() _box;
+  final String? _otherProfileSuffix;
 
+  /// The active profile's store, or one over [box] in tests.
   AdaptiveStore([Future<Box<dynamic>> Function()? box])
-    : _box = box ?? (() => Hive.openBox<dynamic>(boxName));
+    : _box = box ?? (() => _open(_activeSuffix())),
+      _otherProfileSuffix = null;
 
-  /// Run at start-up (seam S6), before anything reads [settings].
-  Future<void> load() async {
+  /// Another profile's store, for a meal copied into it.
+  AdaptiveStore.forProfile(HiveDBProvider db, String boxSuffix)
+    : _box = (() => db.openScopedBox<dynamic>(boxName, boxSuffix)),
+      _otherProfileSuffix = boxSuffix;
+
+  static Future<Box<dynamic>> _open(String suffix) =>
+      locator<HiveDBProvider>().openScopedBox<dynamic>(boxName, suffix);
+
+  static String _activeSuffix() {
+    final db = locator<HiveDBProvider>();
+    return db.profileBox.get(db.activeProfileId)?.boxSuffix ?? '';
+  }
+
+  /// Run at start-up (seam S6): loads [settings] and reloads them when the
+  /// profile switches.
+  static Future<void> start() async {
+    await AdaptiveStore().load();
+    locator<HiveDBProvider>().addListener(
+      () => unawaited(AdaptiveStore().load()),
+    );
+  }
+
+  /// Closes another profile's box once read, as upstream closes the rest
+  /// of that profile's boxes after a copy; the active profile's stays open.
+  Future<void> release() async {
+    final suffix = _otherProfileSuffix;
+    if (suffix == null) return;
+    final name = HiveDBProvider.boxNameFor(boxName, suffix);
+    if (Hive.isBoxOpen(name)) await Hive.box<dynamic>(name).close();
+  }
+
+  Future<void> load() async => settings.value = await read();
+
+  Future<AdaptiveSettings> read() async {
     final box = await _box();
-    settings.value = AdaptiveSettings(
+    return AdaptiveSettings(
       smoothedTrend: box.get('smoothedTrend', defaultValue: false) as bool,
       adaptiveTarget: box.get('adaptiveTarget', defaultValue: false) as bool,
       cycleWindow: box.get('cycleWindow', defaultValue: false) as bool,

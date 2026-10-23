@@ -281,3 +281,44 @@ class _AdaptiveSettingsDialog extends StatelessWidget {
     ],
   );
 }
+
+/// Seam S17: atop "How your goal is calculated" while the adaptive target
+/// is on, since the formula below it is then not the goal.
+class AdaptiveGoalNote extends StatelessWidget {
+  final AdaptiveStore? store;
+
+  const AdaptiveGoalNote({super.key, this.store});
+
+  @override
+  Widget build(BuildContext context) {
+    if (!AdaptiveStore.settings.value.adaptiveTarget) {
+      return const SizedBox.shrink();
+    }
+    return FutureBuilder<CheckInRecord?>(
+      future: (store ?? AdaptiveStore()).lastCheckIn(),
+      builder: (context, snapshot) {
+        final last = snapshot.data;
+        final d = last?.date;
+        return Card(
+          margin: const EdgeInsets.only(bottom: 16),
+          child: ListTile(
+            leading: const Icon(Icons.insights_rounded),
+            title: const Text('Adaptive target is on'),
+            subtitle: Text(
+              last == null
+                  ? 'Until the first weekly check-in, the formula below sets '
+                        'your goal.'
+                  : 'Your goal is ${last.acceptedKcal.round()} kcal, set at '
+                        'the check-in on ${d!.year}-'
+                        '${d.month.toString().padLeft(2, '0')}-'
+                        '${d.day.toString().padLeft(2, '0')} from a measured '
+                        'expenditure of ${last.expenditureKcal.round()} kcal. '
+                        'The formula below is not used; logged activities '
+                        'and the kcal adjustment are not added.',
+            ),
+          ),
+        );
+      },
+    );
+  }
+}

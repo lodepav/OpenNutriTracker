@@ -7,18 +7,26 @@ import 'package:opennutritracker/core/utils/calc/calorie_goal_calc.dart';
 import 'package:opennutritracker/core/utils/calc/day_boundary_calc.dart';
 // [fork] S12 adaptive-target: the check-in's target replaces the formula (D13)
 import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
+import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 // [/fork]
 
 class GetKcalGoalUsecase {
   final UserRepository _userRepository;
   final ConfigRepository _configRepository;
   final UserActivityRepository _userActivityRepository;
+  // [fork] S12 adaptive-target: another profile's store, for a meal copied
+  // into it; null reads the active profile's
+  final AdaptiveStore? _forkAdaptive;
+  // [/fork]
 
   GetKcalGoalUsecase(
     this._userRepository,
     this._configRepository,
-    this._userActivityRepository,
-  );
+    this._userActivityRepository, [
+    // [fork] S12 adaptive-target
+    this._forkAdaptive,
+    // [/fork]
+  ]);
 
   Future<double> getKcalGoal({
     UserEntity? userEntity,
@@ -26,7 +34,7 @@ class GetKcalGoalUsecase {
     double? kcalUserAdjustment,
   }) async {
     // [fork] S12 adaptive-target
-    final adaptive = await adaptiveTargetKcal();
+    final adaptive = await adaptiveTargetKcal(_forkAdaptive);
     if (adaptive != null) return adaptive;
     // [/fork]
     final user = userEntity ?? await _userRepository.getUserData();

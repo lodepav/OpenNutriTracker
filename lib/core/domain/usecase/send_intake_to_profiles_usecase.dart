@@ -21,6 +21,9 @@ import 'package:opennutritracker/core/domain/usecase/get_macro_goal_usecase.dart
 import 'package:opennutritracker/core/utils/hive_db_provider.dart';
 import 'package:opennutritracker/core/utils/id_generator.dart';
 import 'package:opennutritracker/core/utils/scoped_hive_db_provider.dart';
+// [fork] S16 adaptive-profiles
+import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
+// [/fork]
 
 /// Copies logged intakes into one or more *other* profiles.
 ///
@@ -98,6 +101,9 @@ class SendIntakeToProfilesUsecase {
         userRepository,
         configRepository,
         UserActivityRepository(UserActivityDataSource(scoped)),
+        // [fork] S16 adaptive-profiles: that profile's adaptive target (D13)
+        AdaptiveStore.forProfile(_hiveDBProvider, suffix),
+        // [/fork]
       );
       final getMacroGoal = GetMacroGoalUsecase(configRepository);
 

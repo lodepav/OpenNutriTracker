@@ -1,3 +1,4 @@
+import 'package:logging/logging.dart';
 import 'package:opennutritracker/core/domain/entity/calories_profile_entity.dart';
 import 'package:opennutritracker/core/domain/entity/user_entity.dart';
 import 'package:opennutritracker/core/domain/entity/user_gender_entity.dart';
@@ -11,6 +12,8 @@ import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/fork/adaptive/check_in.dart';
 import 'package:opennutritracker/fork/adaptive/energy.dart';
 import 'package:opennutritracker/fork/adaptive/expenditure.dart';
+
+final _log = Logger('AdaptiveService');
 
 /// How far back a check-in reads: long enough for the estimate to settle
 /// from the prior (fork/research/phase3-simulation.md).
@@ -122,10 +125,24 @@ class AdaptiveService {
 /// Seam S12: the last accepted target while the switch is on, else null
 /// and upstream's formula applies. Logged activities are not added to it,
 /// since measured expenditure already holds them, nor the kcal adjustment,
-/// since the user sets the target itself at each check-in.
+/// since the user sets the target itself at each check-in. [store] is
+/// another profile's, whose switch is read from its box; the active
+/// profile's is [AdaptiveStore.settings].
 Future<double?> adaptiveTargetKcal([AdaptiveStore? store]) async {
-  if (!AdaptiveStore.settings.value.adaptiveTarget) return null;
-  return (await (store ?? AdaptiveStore()).lastCheckIn())?.acceptedKcal;
+  if (store == null) {
+    if (!AdaptiveStore.settings.value.adaptiveTarget) return null;
+    return (await AdaptiveStore().lastCheckIn())?.acceptedKcal;
+  }
+  try {
+    if (!(await store.read()).adaptiveTarget) return null;
+    return (await store.lastCheckIn())?.acceptedKcal;
+  } catch (e) {
+    // Another profile's box: the formula is a safe goal for a copied meal.
+    _log.warning('Adaptive target unreadable, using the formula: $e');
+    return null;
+  } finally {
+    await store.release();
+  }
 }
 
 /// The chosen pace in kg/week, negative to lose; upstream's ±500 kcal
