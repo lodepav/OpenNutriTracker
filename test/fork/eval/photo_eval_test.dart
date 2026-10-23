@@ -9,14 +9,21 @@
 // FORK_EVAL_MODELS overrides the models, as `model@provider` separated by
 // commas (no `@provider` lets OpenRouter route). The report is written to
 // build/fork-eval/<time>/report.md, with the raw answers beside it.
+//
+// FORK_EVAL_REPLAY=build/fork-eval/replay/<name> runs it with no key and no
+// call out, on answers a subagent wrote (fork/eval/REPLAY.md): the first run
+// saves the requests, the run after the answers are in scores them.
 import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
+import 'package:opennutritracker/features/add_meal/data/anthropic_meal_items_api.dart';
 import 'package:opennutritracker/features/add_meal/data/model_meal_photo_interpreter.dart';
 import 'package:opennutritracker/features/add_meal/data/openai_compatible_meal_items_api.dart';
 import 'package:opennutritracker/features/add_meal/domain/meal_photo_interpreter.dart';
+import 'package:opennutritracker/features/add_meal/domain/meal_items_api.dart';
+import 'package:opennutritracker/fork/dev/replay_ai.dart';
 import 'package:opennutritracker/fork/food/local_food_data_source.dart';
 
 const _defaultModels =
@@ -28,8 +35,10 @@ const _photoDir = 'build/fork-eval/photos';
 
 void main() {
   final key = Platform.environment['FORK_EVAL_OPENROUTER_KEY'] ?? '';
-  final skip = key.isEmpty
-      ? 'set FORK_EVAL_OPENROUTER_KEY to run the paid model comparison'
+  final replay = Platform.environment['FORK_EVAL_REPLAY'] ?? '';
+  final skip = key.isEmpty && replay.isEmpty
+      ? 'set FORK_EVAL_OPENROUTER_KEY (or FORK_EVAL_REPLAY) to run the '
+            'model comparison'
       : !Directory(_photoDir).existsSync()
       ? 'run fork/tools/fetch_eval_photos.py first'
       : false;
@@ -37,11 +46,13 @@ void main() {
   final manifest =
       jsonDecode(File('fork/eval/photos.json').readAsStringSync()) as Map;
   final photos = (manifest['photos'] as List).cast<Map<String, dynamic>>();
-  final models = (Platform.environment['FORK_EVAL_MODELS'] ?? _defaultModels)
-      .split(',')
-      .map((s) => s.trim())
-      .where((s) => s.isNotEmpty)
-      .toList();
+  final models = replay.isNotEmpty
+      ? ['replay:${replay.split('/').last}']
+      : (Platform.environment['FORK_EVAL_MODELS'] ?? _defaultModels)
+            .split(',')
+            .map((s) => s.trim())
+            .where((s) => s.isNotEmpty)
+            .toList();
   final runDir = Directory(
     'build/fork-eval/${DateTime.now().toIso8601String().replaceAll(':', '-')}',
   );
@@ -81,15 +92,19 @@ void main() {
       spec,
       () async {
         final client = http.Client();
-        final interpreter = ModelMealPhotoInterpreter(
-          OpenAiCompatibleMealItemsApi.openRouter(
-            client,
-            () => key,
-            model: model,
-            providers: providers,
-            timeout: const Duration(seconds: 90),
-          ),
-        );
+        final MealItemsApi api = replay.isNotEmpty
+            ? AnthropicMealItemsApi(
+                ReplayAiClient(client, () async => Directory(replay)),
+                () => 'replay',
+              )
+            : OpenAiCompatibleMealItemsApi.openRouter(
+                client,
+                () => key,
+                model: model,
+                providers: providers,
+                timeout: const Duration(seconds: 90),
+              );
+        final interpreter = ModelMealPhotoInterpreter(api);
         final results = report[spec] = [];
         for (final photo in photos) {
           final file = File('$_photoDir/${photo['id']}.jpg');
@@ -120,6 +135,11 @@ void main() {
           }
         }
         client.close();
+        final waiting = results.where((r) => r.error != null).length;
+        if (replay.isNotEmpty && waiting > 0) {
+          // ignore: avoid_print
+          print('$waiting requests have no answer: see $replay/requests');
+        }
       },
       timeout: const Timeout(Duration(minutes: 30)),
       skip: skip,

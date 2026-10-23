@@ -557,6 +557,26 @@ user's own meals. This decides Q3 and which default leads.
 *Status 2026-10-19:* harness built and the 23 photos downloaded; not run yet (needs an
 OpenRouter key).
 
+**Order of the real-model checks (user, 2026-10-23):**
+1. **Haiku subagent replay** (`fork/eval/REPLAY.md`). A Claude Code subagent on Haiku plays
+   the model: the app (`FAKE_AI=replay fork/tools/emulator.sh`) or the harness
+   (`FORK_EVAL_REPLAY=<dir>`) saves each request, the subagent writes the tool call's input,
+   and the same request is answered with it (`ReplayAiClient`, `lib/fork/dev/replay_ai.dart`).
+   Covers the photo set, the typed and photographed dishes against the saved recipes, the
+   breakdowns and the leftovers, on our plan rather than a key. Close to the raw API, not
+   the same: the subagent runs under Claude Code's own instructions.
+2. **One live call per client** (Anthropic, OpenAI, OpenAI-compatible) with a real key:
+   the request the client builds and the reply it parses, which replay skips.
+3. **OpenRouter comparison** (optional): Haiku 4.5, luna and others, which a subagent cannot
+   be. Only this picks the default model (Q3).
+
+*First replay run 2026-10-23 (photo set, harness):* dish named 21/23, count right 3/7, 12
+dishes with no table match (phase 1c's breakdown takes those), no errors. Missed: the fish
+dish (named "fish in tomato sauce") and the stuffed pie. Not yet run in the app.
+
+Not built: scoring the breakdown's per-serving total against the recipe pages' macros; the
+harness scores names and counts only.
+
 **Then upstream (user, 2026-10-23):** no upstream PRs, issues or #1356 questions until the
 app is tested live, after the real-model checks above. Queued: `feat/photo-note`,
 `feat/leftovers`, the word-search change, the phase 3 issue with the simulation results, and the
