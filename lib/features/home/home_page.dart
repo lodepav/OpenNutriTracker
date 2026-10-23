@@ -42,6 +42,7 @@ import 'package:opennutritracker/fork/plan/plan_ui.dart';
 // [/fork]
 // [fork] S52 undo-delete
 import 'package:opennutritracker/fork/copy/copy_ui.dart';
+import 'package:opennutritracker/core/utils/tracked_day_lock.dart';
 import 'package:opennutritracker/fork/undo/undo_delete.dart';
 // [/fork]
 
@@ -525,13 +526,15 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     IntakeEntity intake,
     TrackedDayEntity? trackedDayEntity,
   ) async {
-    // [fork] S52 undo-delete: the day it is taken from, for the undo
+    // [fork] S52 undo-delete: the profile and day it is taken from, for the
+    // undo
+    final stamp = ProfileStamp.now();
     final day = await logicalToday();
     // [/fork]
     await _homeBloc.deleteIntakeItem(intake);
     _homeBloc.add(const LoadItemsEvent());
     // [fork] S52 undo-delete
-    if (mounted) DeletedEntries.show(context, intake, day);
+    if (mounted) DeletedEntries.show(context, intake, day, startedOn: stamp);
     // [/fork]
   }
 

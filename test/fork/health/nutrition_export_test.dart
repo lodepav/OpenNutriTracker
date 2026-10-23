@@ -14,13 +14,14 @@ IntakeEntity _intake(
   DateTime at, {
   double amount = 150,
   IntakeTypeEntity type = IntakeTypeEntity.breakfast,
+  String code = 'oats',
 }) => IntakeEntity(
   id: id,
   unit: 'g',
   amount: amount,
   type: type,
   meal: MealEntity(
-    code: 'oats',
+    code: code,
     name: 'Oats',
     url: null,
     mealQuantity: null,
@@ -82,6 +83,19 @@ void main() {
     expect(r.fiber, closeTo(15, 1e-9));
     expect(r.sodium, closeTo(0.009, 1e-12));
     expect(r.sugar, isNull);
+  });
+
+  test('an imported day is not written', () async {
+    diary = [
+      _intake('a', DateTime(2026, 10, 23, 8)),
+      _intake(
+        'history-2026-10-22-day',
+        DateTime(2026, 10, 22, 12),
+        code: 'history-2026-10-22-day',
+      ),
+    ];
+    expect(await export().turnOn(), 1);
+    expect(sink.records.keys, {'openbite-a'});
   });
 
   test('off until turned on; then the window is written once', () async {
