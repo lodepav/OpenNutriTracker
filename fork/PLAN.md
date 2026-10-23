@@ -609,6 +609,30 @@ buckwheat with mushrooms now 217 kcal (page 168), nothing unmatched. (2) The sta
 already saved the starters keeps the old name. Not fixed: "adjaruli" vs "Adjarian", which only
 a looser word rule would join, and that rule would also join "chickpea" and "chicken".
 
+*Tuning, Opus → Sonnet → Haiku replay, 2026-10-23:* the same photos and dishes answered by
+each model's subagent (`FORK_EVAL_REPLAY` takes several folders). The harness now matches
+ingredients through the resolver's own ranking, not the table's first row.
+- **Counts:** under upstream's photo prompt Opus counted 5/7, Sonnet 1/7, Haiku 3/7; they left
+  dumplings, pancakes and tarts uncounted. Two labels were wrong (sklandrausis and syrniki
+  show 5, not 6). The S60 count rule takes this to 7/7, 7/7 and 6/7. Dishes are named the
+  same as before: 22, 22 and 21 of 23.
+- **Count as servings:** bulk add reads a bare count as servings (#622). A recipe's serving
+  is a share of the batch, so "14 pelmeni" against the 6-serving starter would log about
+  3 kg. The typed path already does this, and S60 would add photos. S61 flags a count larger
+  than the batch's servings and holds that row back until the user picks a unit.
+- **Breakdowns:** no ingredient unmatched for any model. Opus estimates big, complete servings,
+  so its kcal runs well above the pages'. The pages' own serving sizes are arbitrary, so this
+  figure does not rank the models.
+- **Photo → saved recipe:** this stays the weak spot for all three (Opus 2/4, Sonnet 0/4,
+  Haiku 1/4, which moves between runs). Photos come back with generic names: "dumplings",
+  "sweet potato tart", "cheese bread", "khachapuri with egg". Candidate: list the user's saved
+  recipe names in the photo prompt (untested).
+- **Left alone:** "tomato sauce" ranks a steak sauce first (upstream's no-portion penalty,
+  about 40 kcal). "kefir, plain" goes to a branded kefir and canola to a branded oil.
+  "pomegranate seeds" has no row. The tool schema says quantity is "only if the user stated
+  an amount", against the photo prompt's counting. The models counted anyway, and rewording it
+  would change every request.
+
 Still needs the user: the leftovers photo check, typing and photographing their own
 khachapuri, pelmeni and grey peas, and ten of their own meals (photos we do not have).
 
