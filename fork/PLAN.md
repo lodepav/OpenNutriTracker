@@ -438,6 +438,11 @@ and take kJ for kJ users (`lib/fork/units/energy_text.dart`).
   set into the goal once (`PhaseRunner`, at start-up, on resume, a profile switch or a saved
   plan), so a pace changed by hand stands until the next phase; after the last, maintenance.
   Per profile; in the backup with `fork_adaptive.json`.
+- *Done:* weekly report (S40), a card on Trends: each Monday-to-Sunday week of the range,
+  newest first, with the days logged (of the week's days in the range, so this week counts
+  only the days so far) and the mean energy, protein, carbs and fat of the logged days against
+  those days' goals. An empty day is not counted, so it does not read as a fast. Built from
+  the days Trends already loads; nothing stored.
 
 Upstream: open an issue first, with the simulation results. The maintainer cites a source for
 every calculation; everything except the tuned weights has one, and those come with the

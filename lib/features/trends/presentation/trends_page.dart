@@ -25,6 +25,7 @@ import 'package:opennutritracker/fork/body/body_card.dart';
 import 'package:opennutritracker/fork/health/steps_card.dart';
 import 'package:opennutritracker/fork/phases/phases_ui.dart';
 import 'package:opennutritracker/fork/photos/photo_card.dart';
+import 'package:opennutritracker/fork/report/weekly_report.dart';
 // [/fork]
 
 class TrendsPage extends StatefulWidget {
@@ -101,9 +102,14 @@ class _TrendsView extends StatelessWidget {
               palette: palette,
             ),
             // [fork] S40 expenditure-card: estimated expenditure and balance,
-            // the goal planner, diet phases, body measurements, steps and
-            // progress photos
+            // the weekly report, the goal planner, diet phases, body
+            // measurements, steps and progress photos
             ExpenditureTrendCard(rangeDays: state.windowDays, palette: palette),
+            WeeklyReportCard(
+              days: state.days,
+              rangeDays: state.windowDays,
+              palette: palette,
+            ),
             GoalPlanCard(palette: palette, unit: state.bodyWeightUnit),
             const DietPhasesCard(),
             BodyMeasurementsCard(
