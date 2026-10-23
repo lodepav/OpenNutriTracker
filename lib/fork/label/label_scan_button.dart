@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
+import 'package:opennutritracker/core/utils/ai_credential_storage.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/features/add_meal/domain/meal_photo_interpreter.dart';
 import 'package:opennutritracker/features/add_meal/util/meal_photo_encoder.dart';
@@ -19,21 +20,26 @@ class LabelScanButton extends StatefulWidget {
 }
 
 class _LabelScanButtonState extends State<LabelScanButton> {
+  // None where the app's services are not set up, as in widget tests.
   late final _useCase =
-      widget.useCase ?? ReadLabelUseCase(locator(), locator<http.Client>());
+      widget.useCase ??
+      (locator.isRegistered<AiCredentialStorage>()
+          ? ReadLabelUseCase(locator(), locator<http.Client>())
+          : null);
   bool _available = false;
   bool _busy = false;
 
   @override
   void initState() {
     super.initState();
-    _useCase.selection.then((selection) {
+    _useCase?.selection.then((selection) {
       if (mounted) setState(() => _available = selection != null);
     });
   }
 
   Future<void> _scan() async {
-    final selection = await _useCase.selection;
+    final useCase = _useCase!;
+    final selection = await useCase.selection;
     if (selection == null) return;
     final picked = await ImagePicker().pickImage(source: ImageSource.camera);
     if (picked == null || !mounted) return;
@@ -44,7 +50,7 @@ class _LabelScanButtonState extends State<LabelScanButton> {
         picked.path,
         format: MealPhotoFormat.forProvider(selection.provider),
       );
-      final reading = photo == null ? null : await _useCase.read(photo);
+      final reading = photo == null ? null : await useCase.read(photo);
       if (reading == null || reading.isEmpty) {
         message = 'No nutrition label could be read in the photo';
       } else {
