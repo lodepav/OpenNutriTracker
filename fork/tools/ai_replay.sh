@@ -18,7 +18,10 @@ case "$mode" in
     ls "$dir/requests" | grep -c '\.json$' | xargs echo "requests:"
     ;;
   push)
-    tar c -C "$dir" answers | adb exec-out run-as "$APP_ID" sh -c 'mkdir -p files/ai-replay && tar x -C files/ai-replay'
+    # adb passes no stdin to run-as, so stage the answers where it can read them.
+    adb push "$dir/answers" /data/local/tmp/ai-replay-answers >/dev/null
+    adb shell run-as "$APP_ID" sh -c "'mkdir -p files/ai-replay/answers && cp /data/local/tmp/ai-replay-answers/* files/ai-replay/answers/'"
+    adb shell rm -r /data/local/tmp/ai-replay-answers
     echo "answers pushed: $(ls "$dir/answers" | wc -l)"
     ;;
   *) echo "pull or push" >&2; exit 1 ;;

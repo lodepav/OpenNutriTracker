@@ -574,8 +574,36 @@ OpenRouter key).
 dishes with no table match (phase 1c's breakdown takes those), no errors. Missed: the fish
 dish (named "fish in tomato sauce") and the stuffed pie. Not yet run in the app.
 
-Not built: scoring the breakdown's per-serving total against the recipe pages' macros; the
-harness scores names and counts only.
+*Dish checks 2026-10-23 (Haiku replay, `test/fork/eval/dish_eval_test.dart`):* the photo's
+dish name broken down by the fork's prompt, each ingredient's first table row, and the total
+against the page's per serving; and typed or photographed names against the saved recipes.
+- **Breakdown, the six one-serving photos:** khachapuri adjaruli 1054 kcal (page 1123),
+  stuffed peppers 357 (329), bolognese 630 (510), borscht 260 (181), cold beet soups 160
+  (100, 132), buckwheat with mushrooms 122 (168). Within about a third, except borscht and
+  the beet soups, which run high. Protein and carbs follow; fat runs low on the khachapuri.
+- **Found:** a qualifier missing from every table row drops the whole ingredient:
+  "buckwheat groats, raw" finds nothing, though "buckwheat groats" finds the row. (The
+  harness takes the table's first row; the app's resolver does better on some, e.g. a bare
+  "wheat flour" is all-purpose in the app and cake flour in the harness.)
+- **Typed:** khachapuri, pelmeni, grey peas and "sklandu rausi" find their recipes, inside a
+  longer line too. Misses: "sklandrausis" and "2 sklandrauši" (the one-word name, as feared)
+  and "adjaruli khachapuri" against a recipe saved as "Adjarian khachapuri".
+- **Photographed:** only the adjaruli photo found its recipe. The model names regional dishes
+  generically from a photo (pelmeni as "dumplings", sklandrausis as "pumpkin tartlet",
+  another khachapuri as "stuffed pie"), as the photo prompt tells it to when unsure; a note
+  ("pelmeni") is the user's way to name them.
+- **In the app 2026-10-23** (`SEED=1 FAKE_AI=replay`): "khachapuri, 200 ml kefir, grey peas"
+  read by the replayed model ("Read by AI"); "Ingredients" on khachapuri gave the harness's
+  recorded breakdown unchanged (same request, same key), all four rows on table foods.
+  "grey peas" matched a Grey Poupon Dijon mustard: the demo-data entry point
+  (`lib/dev/main_dev.dart`) does not save the starter recipes, so there was no recipe to
+  find. Also seen: the emulator snapshot's old app data opened on
+  `hive_wrong_key_or_corrupted` after a reinstall (cleared with `pm clear`); the onboarding
+  walker (`tools/adb/walk-onboarding.sh`) no longer fits the fork's onboarding (imperial
+  default, height left empty).
+
+Still needs the user: the leftovers photo check, typing and photographing their own
+khachapuri, pelmeni and grey peas, and ten of their own meals (photos we do not have).
 
 **Then upstream (user, 2026-10-23):** no upstream PRs, issues or #1356 questions until the
 app is tested live, after the real-model checks above. Queued: `feat/photo-note`,

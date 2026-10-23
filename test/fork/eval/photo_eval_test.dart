@@ -18,27 +18,18 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
-import 'package:opennutritracker/features/add_meal/data/anthropic_meal_items_api.dart';
 import 'package:opennutritracker/features/add_meal/data/model_meal_photo_interpreter.dart';
-import 'package:opennutritracker/features/add_meal/data/openai_compatible_meal_items_api.dart';
 import 'package:opennutritracker/features/add_meal/domain/meal_photo_interpreter.dart';
-import 'package:opennutritracker/features/add_meal/domain/meal_items_api.dart';
-import 'package:opennutritracker/fork/dev/replay_ai.dart';
 import 'package:opennutritracker/fork/food/local_food_data_source.dart';
 
-const _defaultModels =
-    'anthropic/claude-haiku-5.5@anthropic,'
-    'anthropic/claude-haiku-4.5@anthropic,'
-    'openai/gpt-5.6-luna@openai';
+import 'eval_model.dart';
 
 const _photoDir = 'build/fork-eval/photos';
 
 void main() {
-  final key = Platform.environment['FORK_EVAL_OPENROUTER_KEY'] ?? '';
-  final replay = Platform.environment['FORK_EVAL_REPLAY'] ?? '';
-  final skip = key.isEmpty && replay.isEmpty
-      ? 'set FORK_EVAL_OPENROUTER_KEY (or FORK_EVAL_REPLAY) to run the '
-            'model comparison'
+  final models = EvalModels();
+  final skip = models.skip != false
+      ? models.skip
       : !Directory(_photoDir).existsSync()
       ? 'run fork/tools/fetch_eval_photos.py first'
       : false;
@@ -46,28 +37,11 @@ void main() {
   final manifest =
       jsonDecode(File('fork/eval/photos.json').readAsStringSync()) as Map;
   final photos = (manifest['photos'] as List).cast<Map<String, dynamic>>();
-  final models = replay.isNotEmpty
-      ? ['replay:${replay.split('/').last}']
-      : (Platform.environment['FORK_EVAL_MODELS'] ?? _defaultModels)
-            .split(',')
-            .map((s) => s.trim())
-            .where((s) => s.isNotEmpty)
-            .toList();
-  final runDir = Directory(
-    'build/fork-eval/${DateTime.now().toIso8601String().replaceAll(':', '-')}',
-  );
+  final runDir = evalRunDir('');
   final report = <String, List<_PhotoResult>>{};
 
   late LocalFoodDataSource foods;
-  setUpAll(() async {
-    final table = LocalFoodTable.fromGzip(
-      await File(LocalFoodDataSource.assetPath).readAsBytes(),
-    );
-    foods = LocalFoodDataSource(
-      loadTable: () async => table,
-      readToggles: () async => null,
-    );
-  });
+  setUpAll(() async => foods = await loadFoodTable());
 
   tearDownAll(() {
     if (report.isEmpty) return;
@@ -85,26 +59,12 @@ void main() {
     print('report: ${runDir.path}/report.md');
   });
 
-  for (final spec in models) {
-    final [model, ...rest] = spec.split('@');
-    final providers = rest.isEmpty || rest.first.isEmpty ? null : [rest.first];
+  for (final spec in models.specs) {
     test(
       spec,
       () async {
         final client = http.Client();
-        final MealItemsApi api = replay.isNotEmpty
-            ? AnthropicMealItemsApi(
-                ReplayAiClient(client, () async => Directory(replay)),
-                () => 'replay',
-              )
-            : OpenAiCompatibleMealItemsApi.openRouter(
-                client,
-                () => key,
-                model: model,
-                providers: providers,
-                timeout: const Duration(seconds: 90),
-              );
-        final interpreter = ModelMealPhotoInterpreter(api);
+        final interpreter = ModelMealPhotoInterpreter(models.api(spec, client));
         final results = report[spec] = [];
         for (final photo in photos) {
           final file = File('$_photoDir/${photo['id']}.jpg');
@@ -135,11 +95,7 @@ void main() {
           }
         }
         client.close();
-        final waiting = results.where((r) => r.error != null).length;
-        if (replay.isNotEmpty && waiting > 0) {
-          // ignore: avoid_print
-          print('$waiting requests have no answer: see $replay/requests');
-        }
+        models.reportWaiting(results.where((r) => r.error != null).length);
       },
       timeout: const Timeout(Duration(minutes: 30)),
       skip: skip,
