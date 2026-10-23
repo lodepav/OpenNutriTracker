@@ -445,8 +445,9 @@ Lower: already built elsewhere (§0b), port or wait:
   Since 2026-10-23 today's entries and meals copy too, and "Select entries" beside "Copy day"
   picks entries one by one, by meal or by the hour, as MacroFactor does, and copies them to now,
   to today at the same times, or to a picked day (same times, or all at a picked time), into
-  their own meals or one meal (`lib/fork/copy/select_entries_screen.dart`). Activities still
-  copy only from other days (upstream's activity copy goes to today).
+  their own meals or one meal (`lib/fork/copy/select_entries_screen.dart`). A long-pressed
+  activity, today's included, copies to a picked day (2026-10-23, `copyActivitiesWithDialog`);
+  the activity section's menu still copies other days' to today, as upstream does.
 - *Done 2026-10-23:* contribute to Open Food Facts (`lib/fork/off/`, S32, S33), ported after
   review from theoleuthardt `personal` (#81): the user's own account in the keychain, the test
   server until switched off, a preview of exactly what goes out, and only what OFF lacks (name,

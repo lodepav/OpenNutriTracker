@@ -511,26 +511,25 @@ class _DayInfoWidgetState extends State<DayInfoWidget> {
     UserActivityEntity activityEntity,
   ) async {
     final day = widget.selectedDay;
-    if (DateUtils.isSameDay(day, widget.currentDay)) {
-      final shouldDelete = await showDialog<bool>(
-        context: context,
-        builder: (context) => const DeleteDialog(),
-      );
-      if (shouldDelete != null) {
-        widget.onDeleteActivity(activityEntity, day);
+    // [fork] S24 copy-anywhere: an activity copies to a picked day, from
+    // any day; deleting today's still asks first
+    final copyOrDelete = await showDialog<bool>(
+      context: context,
+      builder: (context) => const CopyOrDeleteDialog(toPicker: true),
+    );
+    if (!context.mounted) return;
+    if (copyOrDelete == true) {
+      await copyActivitiesWithDialog(context, [activityEntity]);
+    } else if (copyOrDelete == false) {
+      if (DateUtils.isSameDay(day, widget.currentDay)) {
+        final shouldDelete = await showDialog<bool>(
+          context: context,
+          builder: (context) => const DeleteDialog(),
+        );
+        if (shouldDelete == null) return;
       }
-    } else {
-      final copyOrDelete = await showDialog<bool>(
-        context: context,
-        builder: (context) => const CopyOrDeleteDialog(),
-      );
-      if (context.mounted) {
-        if (copyOrDelete == false) {
-          widget.onDeleteActivity(activityEntity, day);
-        } else if (copyOrDelete == true) {
-          widget.onCopyActivity(activityEntity, widget.trackedDayEntity);
-        }
-      }
+      widget.onDeleteActivity(activityEntity, day);
     }
+    // [/fork]
   }
 }

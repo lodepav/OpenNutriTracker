@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:opennutritracker/core/domain/entity/intake_entity.dart';
 import 'package:opennutritracker/core/domain/entity/intake_type_entity.dart';
+import 'package:opennutritracker/core/domain/entity/user_activity_entity.dart';
 import 'package:opennutritracker/core/domain/usecase/get_config_usecase.dart';
 import 'package:opennutritracker/core/utils/calc/day_boundary_calc.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
@@ -60,6 +61,24 @@ Future<void> copyIntakesWithDialog(
   if (context.mounted) _copied(context, target.day);
 }
 
+/// Copies [activities] to a day the user picks (seam S24's activity
+/// long-press), from any day, today's included.
+Future<void> copyActivitiesWithDialog(
+  BuildContext context,
+  List<UserActivityEntity> activities,
+) async {
+  final today = await logicalToday();
+  if (!context.mounted) return;
+  final target = await showDialog<CopyTarget>(
+    context: context,
+    builder: (_) => CopyTargetDialog(initialDay: today, activitiesOnly: true),
+  );
+  if (target == null) return;
+  await CopyEntries.fromLocator().copyActivities(activities, target.day);
+  refreshAfterCopy();
+  if (context.mounted) _copied(context, target.day);
+}
+
 void _copied(BuildContext context, DateTime day) =>
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('Copied to ${DateFormat.MMMEd().format(day)}')),
@@ -106,11 +125,15 @@ class CopyTargetDialog extends StatefulWidget {
   final IntakeTypeEntity? initialMeal;
   final bool wholeDay;
 
+  /// Only the day: for activities, which have no meal.
+  final bool activitiesOnly;
+
   const CopyTargetDialog({
     super.key,
     required this.initialDay,
     this.initialMeal,
     this.wholeDay = false,
+    this.activitiesOnly = false,
   });
 
   @override
@@ -147,7 +170,9 @@ class _CopyTargetDialogState extends State<CopyTargetDialog> {
           subtitle: const Text('Tap to change'),
           onTap: _pickDay,
         ),
-        if (!widget.wholeDay)
+        if (widget.activitiesOnly)
+          const SizedBox.shrink()
+        else if (!widget.wholeDay)
           DropdownButton<IntakeTypeEntity>(
             value: _meal,
             isExpanded: true,
