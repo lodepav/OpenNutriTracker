@@ -454,6 +454,11 @@ database, Q4 (b), was offered and declined):
   expenditure, and the proposal when it was edited. Read from the check-ins already kept.
 - *Done:* weight change in the goal planner (S40): how far the trend moved over the last 7, 14
   and 30 days, and that as a pace a week; a span longer than the history is left out.
+- *Done:* nutrient explorer, "Nutrients" on the weekly report: over the Trends range, energy,
+  the macros and the diary panel's ten nutrients, each as a mean over the days logged against
+  those days' goals (else the panel's DRI for the profile), sugar, saturated fat and sodium as
+  limits. Each opens the foods it came from, the most first, and says how many foods had no
+  figure for it (Open Food Facts often has none), since the mean is then a floor.
 
 Upstream: open an issue first, with the simulation results. The maintainer cites a source for
 every calculation; everything except the tuned weights has one, and those come with the

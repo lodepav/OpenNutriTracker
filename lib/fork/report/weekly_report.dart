@@ -4,6 +4,7 @@ import 'package:opennutritracker/core/domain/entity/tracked_day_entity.dart';
 import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
+import 'package:opennutritracker/fork/report/nutrient_explorer.dart';
 import 'package:opennutritracker/fork/units/energy_text.dart';
 
 /// Eaten against the goal, each a mean over a week's logged days.
@@ -102,22 +103,23 @@ class WeeklyReportCard extends StatelessWidget {
   final AppPalette palette;
   final DateTime Function() clock;
 
+  /// The explorer's intakes; the intake box in the app.
+  final IntakeLoader? load;
+
   const WeeklyReportCard({
     super.key,
     required this.days,
     required this.rangeDays,
     required this.palette,
     this.clock = DateTime.now,
+    this.load,
   });
 
   @override
   Widget build(BuildContext context) {
     final today = clock();
-    final weeks = weeklyReports(
-      days,
-      DateTime(today.year, today.month, today.day - rangeDays + 1),
-      today,
-    );
+    final first = DateTime(today.year, today.month, today.day - rangeDays + 1);
+    final weeks = weeklyReports(days, first, today);
     if (weeks.isEmpty) return const SizedBox.shrink();
     final theme = Theme.of(context);
     return Padding(
@@ -127,7 +129,31 @@ class WeeklyReportCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Weekly report', style: theme.textTheme.titleMedium),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Weekly report',
+                    style: theme.textTheme.titleMedium,
+                  ),
+                ),
+                TextButton(
+                  key: const ValueKey('nutrient-explorer'),
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute<void>(
+                      builder: (_) => NutrientExplorerScreen(
+                        days: days,
+                        first: first,
+                        last: today,
+                        load: load,
+                      ),
+                    ),
+                  ),
+                  child: const Text('Nutrients'),
+                ),
+              ],
+            ),
             Text(
               'Means of the logged days, against their goals',
               style: theme.textTheme.bodySmall?.copyWith(
