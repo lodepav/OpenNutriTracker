@@ -151,7 +151,10 @@ class ExportDataUsecase {
   ///
   /// Extracted from @AzazelSensei's #1083, which had the seam and the test
   /// this exists for.
-  @visibleForTesting
+  // [fork] S21 backup: the all-profiles backup assembles each profile's
+  // folder with it, so it is not only for tests
+  // @visibleForTesting
+  // [/fork]
   Future<Archive> assembleArchive({
     required ExportFormat format,
     required String userActivityJsonFileName,

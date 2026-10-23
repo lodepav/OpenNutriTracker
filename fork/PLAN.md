@@ -291,8 +291,14 @@ the same gap). Pelmeni and khachapuri are in no table and go to D9.
   the app (and out of demo mode); one without keeps its data and the setup goes on. Tried on the
   emulator from a fresh install. The restored theme, accent, kilojoules and language show at
   once, from onboarding and from Settings' import (S38).
-- **Not done:** every profile in one backup (theoleuthardt #96; today each profile backs up
-  when it is the active one), encrypting the zip.
+- *Done 2026-10-23:* every profile in one backup (`ProfilesBackup`, S21), ported after review
+  from theoleuthardt #96. The zip keeps upstream's layout for the active profile and adds
+  `profiles.json` and a `profiles/<id>/` folder per other profile, written and read by upstream's
+  own export and import run on that profile's boxes. Review: sound (folders checked before the
+  first write, profiles matched by id, the suffix kept unless taken); changed here: no "replace
+  everything" mode and the active profile is not renamed; a backup made in another profile is
+  refused rather than restored over this one, since its main data would land in the wrong place.
+- **Not done:** encrypting the zip.
 
 The app writes backup files; it syncs nothing itself (openGym-Hevier's D20). Upstream ONT has
 only a manual export (`export_data_usecase.dart`, a `FilePicker.saveFile` dialog each time), so

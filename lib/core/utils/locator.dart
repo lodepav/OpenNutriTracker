@@ -7,6 +7,7 @@ import 'package:opennutritracker/fork/food/local_food_data_source.dart';
 // [/fork]
 // [fork] S21 backup: the fork's own files in the JSON backup
 import 'package:opennutritracker/fork/backup/backup_extras.dart';
+import 'package:opennutritracker/fork/backup/profiles_backup.dart';
 // [/fork]
 import 'package:opennutritracker/core/data/data_source/config_data_source.dart';
 import 'package:opennutritracker/core/data/data_source/custom_activity_template_data_source.dart';
@@ -579,6 +580,7 @@ Future<void> initLocator() async {
         locator(),
         user: locator(),
         config: locator(),
+        profiles: ProfilesBackup(hiveDBProvider),
       ),
       // [/fork]
     ),
@@ -614,6 +616,7 @@ Future<void> initLocator() async {
         locator(),
         user: locator(),
         config: locator(),
+        profiles: ProfilesBackup(hiveDBProvider),
       ),
       // [/fork]
     ),

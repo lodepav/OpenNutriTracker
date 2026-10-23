@@ -17,10 +17,12 @@ import 'package:opennutritracker/core/data/repository/water_intake_repository.da
 import 'package:opennutritracker/features/fasting/data/data_source/fasting_data_source.dart';
 import 'package:opennutritracker/features/settings/domain/export_import_failure.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
+import 'package:opennutritracker/fork/backup/profiles_backup.dart';
 
 /// What the JSON backup leaves out and the fork adds (phase 2, seam S21):
 /// the water log, fasting sessions, saved custom meals, the adaptive
-/// target's switches and check-ins, the profile and the app settings.
+/// target's switches and check-ins, the profile, the app settings, and
+/// every other profile ([ProfilesBackup]).
 ///
 /// Ported from theoleuthardt's `PersonalBackupExtras` (GPL-3.0, their #93,
 /// #94, #95, #97). Every file is optional on restore, so upstream's zips and
@@ -72,6 +74,9 @@ class BackupExtras {
   final UserDataSource? _user;
   final ConfigDataSource? _config;
 
+  /// The other profiles' folders; null in a folder's own extras.
+  final ProfilesBackup? _profiles;
+
   BackupExtras(
     this._water,
     this._fasting,
@@ -79,9 +84,11 @@ class BackupExtras {
     AdaptiveStore Function()? adaptive,
     UserDataSource? user,
     ConfigDataSource? config,
+    ProfilesBackup? profiles,
   }) : _adaptive = adaptive ?? AdaptiveStore.new,
        _user = user,
-       _config = config;
+       _config = config,
+       _profiles = profiles;
 
   Future<void> addTo(Archive archive) async {
     _addJson(archive, waterFileName, [
@@ -111,6 +118,7 @@ class BackupExtras {
           if (settings[key] != null) key: settings[key],
       });
     }
+    await _profiles?.addTo(archive);
   }
 
   /// Whether [archive] holds a profile, so a restore can stand in for
@@ -166,6 +174,7 @@ class BackupExtras {
       ConfigDBO.fromJson({...ConfigDBO.empty().toJson(), ...picked});
       return picked;
     });
+    final otherProfiles = _profiles?.prepareRestore(archive);
 
     return () async {
       if (water != null) await _water.addAllEntries(water);
@@ -185,6 +194,7 @@ class BackupExtras {
         final current = (await config.getConfig()).toJson();
         await config.addConfig(ConfigDBO.fromJson({...current, ...settings}));
       }
+      await otherProfiles?.call();
     };
   }
 
