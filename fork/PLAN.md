@@ -50,7 +50,8 @@ worth a look when phase 1c's breakdown is designed.
 - [x] Build rig: Flutter 3.44.6 in `~/flutter`, OpenJDK 24, debug APK builds.
 - [x] `fork/tools/emulator.sh` (D5). `SEED=1` builds upstream's demo-data entry point, which gives a year of diary and weigh-ins, enough to exercise an expenditure estimate.
 - [x] GitHub Actions off on the fork (2026-10-19). Every upstream workflow needs upstream's secrets or acts on upstream's issues and Weblate, and none had ever run here, so Actions is switched off for the whole repo (Settings → Actions) rather than per workflow; that also covers workflows upstream adds later. The files stay: deleted files conflict on every upstream edit. Switch it back on, and disable workflows one by one, if the fork ever wants CI of its own.
-- [ ] Fork identity, if wanted (Q2): a `fork` flavour with its own app id and name, set in a fork-owned `android/app/fork.gradle` applied by one seam line, as openGym-Hevier's S7 does.
+- [x] Fork identity (Q2, D8): **OpenBite**, app id `io.github.lodepav.openbite`, set in `android/app/fork.gradle` (S20). Launcher name only.
+- [ ] OpenBite in the app's own text (onboarding, About, share texts) and its own icon. Search the trademark registers before publishing under the name.
 - [ ] `.env`: placeholders stay; ONT's hosted backend isn't used (D11).
 
 ## 1c. Phase 1c — Dishes as recipes (D12, revised D9)
@@ -423,7 +424,7 @@ Lower: already built elsewhere (§0b), port or wait:
 | # | Question | Answer |
 |---|---|---|
 | Q1 | Which AI model or provider? | D7 |
-| Q2 | Install beside the official app? | D8 (name still open) |
+| Q2 | Install beside the official app? | D8: yes, as OpenBite |
 | Q3 | Grounded only, or estimate when nothing matches? | D9 |
 | Q4 | How to get generic foods (USDA/BLS) without ONT's backend key? | D11 (option b: USDA and BLS bundled; Fineli dropped) |
 | Q5 | Drive backup through a sync app? | D10 |

@@ -22,7 +22,7 @@ export PATH="$HOME/flutter/bin:$JAVA_HOME/bin:$ANDROID_HOME/platform-tools:$PATH
 # Keep Gradle off the system JRE, which has no compiler.
 export GRADLE_OPTS="-Dorg.gradle.java.installations.auto-detect=false -Dorg.gradle.java.installations.paths=$JAVA_HOME"
 AVD="${AVD:-xperia1vi_api36}"
-APP_ID="${APP_ID:-com.opennutritracker.ont.opennutritracker.develop}"
+APP_ID="${APP_ID:-io.github.lodepav.openbite.develop}"
 APK="$ROOT/build/app/outputs/flutter-apk/app-develop-debug.apk"
 
 if [[ "${1:-}" != "--no-build" ]]; then

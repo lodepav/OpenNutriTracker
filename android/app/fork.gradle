@@ -1,0 +1,17 @@
+// The fork's own identity (D8): OpenBite, with its own app id, so it installs beside the
+// official app. Applied by seam S20, the last line of build.gradle.
+android {
+    defaultConfig {
+        applicationId "io.github.lodepav.openbite"
+    }
+    // The launcher name. Variant source sets outrank upstream's flavour ones, so these
+    // override src/main's and src/develop's app_name without editing them.
+    sourceSets {
+        fullDebug.res.srcDirs += 'src/fork/full/res'
+        fullProfile.res.srcDirs += 'src/fork/full/res'
+        fullRelease.res.srcDirs += 'src/fork/full/res'
+        developDebug.res.srcDirs += 'src/fork/develop/res'
+        developProfile.res.srcDirs += 'src/fork/develop/res'
+        developRelease.res.srcDirs += 'src/fork/develop/res'
+    }
+}

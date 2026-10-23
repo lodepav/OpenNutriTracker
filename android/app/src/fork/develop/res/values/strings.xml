@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The fork's launcher name (fork.gradle, D8). -->
+    <string name="app_name">OpenBite Dev</string>
+</resources>

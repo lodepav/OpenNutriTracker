@@ -36,6 +36,7 @@ because upstream merged the feature) gets removed, and so does its row.
 | S17 | `lib/features/settings/presentation/widgets/kcal_goal_info_screen.dart` | Atop "How your goal is calculated", while the adaptive target is on, the check-in's target and expenditure, and that the formula below is not used (`AdaptiveGoalNote`, `lib/fork/adaptive/adaptive_ui.dart`). Not in onboarding. Two blocks. | active |
 | S18 | `lib/dev/main_dev.dart` | Loads the adaptive switches, as `main.dart`'s S6 does (`AdaptiveStore.start`). Two blocks. | active |
 | S19 | `lib/features/add_meal/presentation/bloc/recent_meal_bloc.dart`, `lib/features/add_meal/presentation/add_meal_screen.dart` | The recents put the foods usually logged in the meal being added to first, by how often and how lately (`recentsForMeal`, `lib/fork/recents/recents_by_meal.dart`). The bloc: the import, a `forkMeal` field, the ranking (three blocks). The screen: setting `forkMeal` (one block). | active |
+| S20 | `android/app/build.gradle` | `apply from: 'fork.gradle'` at the end (D8). The fork-owned `android/app/fork.gradle` sets the app id `io.github.lodepav.openbite` (develop: `.develop`, upstream's suffix) and adds `src/fork/{full,develop}/res` to the variant source sets, whose `app_name` (OpenBite, OpenBite Dev) outranks `src/main`'s and `src/develop`'s. If upstream adds variant source sets or renames its flavours, follow them. `fork/tools/emulator.sh` and `release-check.sh` use the same id. | active |
 
 ## Carried upstream changes
 
