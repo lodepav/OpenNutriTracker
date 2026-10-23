@@ -16,11 +16,11 @@
     "pie"
    ],
    "count": [
-    6,
-    6
+    5,
+    5
    ],
    "servings_shown": null,
-   "note": "six tarts; yield \"10 tarts\" is ambiguous per serving",
+   "note": "five tarts (recounted 2026-10-23); yield \"10 tarts\" is ambiguous per serving",
    "recipe_yield": "10 tarts",
    "per_serving": {
     "kcal": 396.9,
@@ -258,11 +258,11 @@
     "fritter"
    ],
    "count": [
-    6,
-    6
+    5,
+    5
    ],
    "servings_shown": 6,
-   "note": "six syrniki; one serving = one syrnik; berries and sour cream extra",
+   "note": "five syrniki (recounted 2026-10-23); one serving = one syrnik; berries and sour cream extra",
    "recipe_yield": [
     "10",
     "10 Syrniki"
