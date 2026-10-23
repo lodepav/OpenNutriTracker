@@ -375,8 +375,16 @@ app is tested live, after the real-model checks above. Queued: `feat/photo-note`
 
 Not built anywhere yet:
 
-- Recents ranked by time of day.
-- Top contributors per nutrient (upstream issue #1266, no code yet).
+- *Done 2026-10-23:* recents ranked by the meal being added to (seam S19,
+  `lib/fork/recents/`). A food's place sums its logs over 90 days, each halving every 30 days,
+  and a log in another meal counts a quarter. On the emulator, breakfast and dinner list the
+  demo foods in different orders.
+- *Done 2026-10-23:* top contributors per nutrient (#1266), on `feat/nutrient-contributions` off
+  `develop`, carried by cherry-pick (PR not opened yet).
+  - Tapping carbs, fat or protein on Home lists the day's foods, most first, with grams and
+    share. A food logged in two meals is one row.
+  - Checked on the emulator.
+  - Not done: tapping a food to open its details, which the issue also asks for.
 - *Done 2026-10-23:* release checks after openGym-Hevier's D26/D38.
   - `fork/tools/release-check.sh [--apk <file>]` runs the gates: secrets in history, working
     tree and APK; Trivy; `pubspec.lock` against a reviewed list; and the APK's signing,
