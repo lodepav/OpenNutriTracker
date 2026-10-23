@@ -67,6 +67,20 @@ void main() {
     expect(await store.forDay(_sunday), hasLength(2));
   });
 
+  test('a plan reads back once the box is reopened', () async {
+    // Hive hands nested maps back as Map<dynamic, dynamic> after a reopen;
+    // before it, the very objects written.
+    await planTwo();
+    await Hive.close();
+
+    final sunday = await store.forDay(_sunday);
+    expect(sunday, hasLength(2));
+    expect(
+      sunday.first.meal.nutriments.energyKcal100,
+      MealEntityFixtures.mealOne.nutriments.energyKcal100,
+    );
+  });
+
   test('the plan\'s macros, from each food\'s energy', () {
     MealEntity meal(double? energy) => MealEntity(
       code: 'oats',
