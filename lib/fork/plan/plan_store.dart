@@ -43,8 +43,12 @@ class PlannedFood {
     id: json['id'] as String,
     day: DateTime.parse(json['day'] as String),
     type: IntakeTypeEntity.values.byName(json['type'] as String),
+    // Deep: after a reopen Hive gives nested maps back as Map<dynamic,
+    // dynamic>, which MealDBO's generated fromJson casts to String keys.
     meal: MealEntity.fromMealDBO(
-      MealDBO.fromJson(Map<String, dynamic>.from(json['meal'] as Map)),
+      MealDBO.fromJson(
+        jsonDecode(jsonEncode(json['meal'])) as Map<String, dynamic>,
+      ),
     ),
     unit: json['unit'] as String,
     amountText: json['amountText'] as String,

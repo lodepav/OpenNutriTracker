@@ -502,6 +502,33 @@ database, Q4 (b), was offered and declined):
   until the app is opened. Native: `MacroWidgetProvider` (Kotlin, `RemoteViews`) and its
   resources in `android/app/src/fork`.
 
+**More from MacroFactor, round 5** (asked 2026-10-23, branch `fork/mf6`; quick tiles were
+offered and declined):
+- *Fixed:* the goal planner reloads when a pace is saved anywhere, a diet phase beginning
+  included (`paceChanges`), not only from its own button.
+- *Done:* diary as CSV (S51): "Export diary as CSV" in Settings' data section shares two files
+  for a spreadsheet: every food (logical date, time, meal, name, amount, energy, macros, fibre,
+  sugar, saturated fat, sodium) and every day (eaten against the goals, the weight logged, the
+  estimated expenditure). The full backup stays the way to move data; this is for reading it.
+- *Done:* trend weight widget (S50): a second Android widget, "OpenBite trend weight", with
+  the smoothed weight and its change over 7 days in the user's unit, written by Home beside the
+  macros. Before the first weigh-in it asks for one.
+- *Done, mostly upstream's:* custom nutrient targets. Upstream's Settings → Nutrient goals
+  already sets the ten nutrients the explorer follows, but keeps each goal on the day it was set,
+  so the explorer measured earlier days of a range against the reference. Now a day keeping no
+  goal takes the latest set in the range, and the explorer's "Edit goals" opens upstream's
+  screen and measures again when it closes. Energy and the macros keep their own day's goal.
+- *Already there:* planned meals were built in round 1 (S43, the meal plan). This round adds the
+  plan's protein, carbs and fat to its card's header, beside its energy.
+- *Already there:* recipe import from a link (S30, round 3): a link typed into bulk add is read
+  from the page's schema.org Recipe data and saved with "Save all as a recipe". Nothing added.
+- *Found live and fixed:* a planned food was unreadable once the app restarted (Hive's nested
+  maps), so the plan card never showed after a restart; a fork box failing its checksum (an
+  emulator killed mid-write) hung the splash, and now opens upstream's recovery screen; the CSV
+  wrote 2472.98 as "2473.0". Confirmed on the emulator: both CSV files shared, "Edit goals" saved
+  and measured again, the plan card's macros, the trend weight widget placed and showing the
+  trend, and a cut beginning today moving the goal planner from -0.40 to -0.50 kg a week.
+
 Upstream: open an issue first, with the simulation results. The maintainer cites a source for
 every calculation; everything except the tuned weights has one, and those come with the
 simulation. If declined, it stays in the fork behind seams.

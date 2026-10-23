@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:opennutritracker/core/data/data_source/intake_data_source.dart';
+import 'package:opennutritracker/core/data/repository/tracked_day_repository.dart';
 import 'package:opennutritracker/core/domain/entity/intake_entity.dart';
 import 'package:opennutritracker/core/domain/entity/tracked_day_entity.dart';
 import 'package:opennutritracker/core/domain/entity/user_entity.dart';
@@ -7,6 +8,7 @@ import 'package:opennutritracker/core/domain/usecase/get_user_usecase.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_nutriments_entity.dart';
 import 'package:opennutritracker/features/diary/presentation/widgets/daily_nutrient_panel.dart';
+import 'package:opennutritracker/features/settings/presentation/widgets/nutrient_goals_screen.dart';
 import 'package:opennutritracker/fork/units/energy_text.dart';
 
 /// One nutrient the explorer follows.
@@ -176,8 +178,9 @@ String _foodKey(IntakeEntity i) => i.meal.code ?? i.meal.name ?? '';
 
 /// Each of [explorerNutrients] over [intakes]: a mean over the days with
 /// something logged (an empty day is not a day of eating nothing), against
-/// those days' goals in [days], or the DRI for [user] where a day keeps
-/// none.
+/// those days' goals in [days]. Upstream's Nutrient goals keeps a goal on
+/// the day it was set, so a day keeping none takes the latest goal set in
+/// [days], else the DRI for [user].
 List<NutrientSummary> summarizeNutrients(
   List<IntakeEntity> intakes,
   List<TrackedDayEntity> days,
@@ -206,7 +209,13 @@ List<NutrientSummary> summarizeNutrients(
     without.removeAll(byFood.keys);
     final total = byFood.values.fold<double>(0, (s, f) => s + f.amount);
 
-    double? fallback() => nutrient.fallbackGoal == null
+    final latestSet = [
+      for (final d in [...days]..sort((a, b) => b.day.compareTo(a.day)))
+        nutrient.dayGoal(d),
+    ].whereType<double>().firstOrNull;
+    double? fallback() => latestSet != null && nutrient.marksMiss
+        ? latestSet
+        : nutrient.fallbackGoal == null
         ? null
         : nutrient.driKey == null
         ? nutrient.fallbackGoal
@@ -263,12 +272,21 @@ Future<UserEntity?> _user() async {
 /// MacroFactor's nutrient explorer, from the weekly report: each nutrient's
 /// mean a logged day over the Trends range against its goal; a nutrient
 /// opens the foods it came from.
-class NutrientExplorerScreen extends StatelessWidget {
+class NutrientExplorerScreen extends StatefulWidget {
   final List<TrackedDayEntity> days;
   final DateTime first;
   final DateTime last;
   final IntakeLoader? load;
   final Future<UserEntity?> Function() user;
+
+  /// Opens upstream's Nutrient goals and returns the range's tracked days
+  /// read again after it closes.
+  final Future<List<TrackedDayEntity>?> Function(
+    BuildContext context,
+    DateTime first,
+    DateTime last,
+  )
+  editGoals;
 
   const NutrientExplorerScreen({
     super.key,
@@ -277,19 +295,66 @@ class NutrientExplorerScreen extends StatelessWidget {
     required this.last,
     this.load,
     this.user = _user,
+    this.editGoals = _openNutrientGoals,
   });
 
-  Future<List<NutrientSummary>> _summaries() async => summarizeNutrients(
-    await (load ?? _intakesBetween)(first, last),
-    days,
-    await user(),
+  static Future<List<TrackedDayEntity>?> _openNutrientGoals(
+    BuildContext context,
+    DateTime first,
+    DateTime last,
+  ) async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute<void>(
+        builder: (_) => NutrientGoalsScreen(
+          settingsBloc: locator(),
+          profileBloc: locator(),
+          diaryBloc: locator(),
+          calendarDayBloc: locator(),
+          homeBloc: locator(),
+        ),
+      ),
+    );
+    return locator<TrackedDayRepository>().getTrackedDayByRange(first, last);
+  }
+
+  @override
+  State<NutrientExplorerScreen> createState() => _NutrientExplorerScreenState();
+}
+
+class _NutrientExplorerScreenState extends State<NutrientExplorerScreen> {
+  late List<TrackedDayEntity> _days = widget.days;
+  late Future<List<NutrientSummary>> _summaries = _summarize();
+
+  Future<List<NutrientSummary>> _summarize() async => summarizeNutrients(
+    await (widget.load ?? _intakesBetween)(widget.first, widget.last),
+    _days,
+    await widget.user(),
   );
+
+  Future<void> _editGoals() async {
+    final days = await widget.editGoals(context, widget.first, widget.last);
+    if (days == null || !mounted) return;
+    setState(() {
+      _days = days;
+      _summaries = _summarize();
+    });
+  }
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Nutrients')),
+    appBar: AppBar(
+      title: const Text('Nutrients'),
+      actions: [
+        TextButton(
+          key: const ValueKey('nutrient-goals'),
+          onPressed: _editGoals,
+          child: const Text('Edit goals'),
+        ),
+      ],
+    ),
     body: FutureBuilder<List<NutrientSummary>>(
-      future: _summaries(),
+      future: _summaries,
       builder: (context, snapshot) {
         final all = snapshot.data;
         if (all == null) {

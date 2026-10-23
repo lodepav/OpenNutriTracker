@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:opennutritracker/core/domain/entity/body_weight_unit_entity.dart';
 import 'package:opennutritracker/fork/widget/macro_widget.dart';
 
 void main() {
@@ -44,6 +45,30 @@ void main() {
     expect(
       MacroWidgetFigures.androidProvider,
       endsWith('.fork.MacroWidgetProvider'),
+    );
+  });
+
+  test('the trend weight and its week, in the user\'s unit', () {
+    final trend = [for (var d = 0; d < 10; d++) 81.0 - 0.06 * d];
+    final kg = WeightWidgetFigures.fromTrend(trend, BodyWeightUnit.kg)!;
+    expect(kg.trend, '80.5 kg');
+    expect(kg.change, '-0.4 kg in 7 days');
+    final lb = WeightWidgetFigures.fromTrend(trend, BodyWeightUnit.lb)!;
+    expect(lb.trend, '177.4 lb');
+    expect(lb.change, '-0.9 lb in 7 days');
+  });
+
+  test('a short trend has no change; none has no figures', () {
+    expect(
+      WeightWidgetFigures.fromTrend([80, 79.9], BodyWeightUnit.kg)!.change,
+      isNull,
+    );
+    expect(WeightWidgetFigures.fromTrend([], BodyWeightUnit.kg), isNull);
+    expect(
+      jsonDecode(
+        WeightWidgetFigures.fromTrend([80], BodyWeightUnit.kg)!.encode(),
+      ),
+      {'trend': '80.0 kg', 'change': null},
     );
   });
 }

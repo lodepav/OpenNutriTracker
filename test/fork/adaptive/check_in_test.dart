@@ -18,6 +18,7 @@ import 'package:opennutritracker/fork/adaptive/adaptive_ui.dart';
 import 'package:opennutritracker/fork/adaptive/check_in.dart';
 import 'package:opennutritracker/fork/adaptive/expenditure.dart';
 import 'package:opennutritracker/fork/adaptive/expenditure_card.dart';
+import 'package:opennutritracker/fork/adaptive/goal_plan.dart';
 import 'package:opennutritracker/fork/adaptive/goal_plan_card.dart';
 import 'package:opennutritracker/fork/body/measurement_store.dart';
 import 'package:opennutritracker/core/domain/entity/body_weight_unit_entity.dart';
@@ -325,6 +326,33 @@ void main() {
     expect(saved.single, isNot(closeTo(-0.5, 0.01)));
   });
 
+  testWidgets('the planner reloads when a pace is saved elsewhere', (
+    tester,
+  ) async {
+    final paced = _PacedService(service);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: GoalPlanCard(
+              palette: AppPalette.light,
+              unit: BodyWeightUnit.kg,
+              service: paced,
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Pace: -0.50 kg a week'), findsOneWidget);
+
+    // A diet phase beginning saves its pace through savePace.
+    paced.pace = -0.25;
+    paceChanges.value++;
+    await tester.pumpAndSettle();
+    expect(find.text('Pace: -0.25 kg a week'), findsOneWidget);
+  });
+
   test('a measured body fat % changes the expenditure read', () async {
     final measurements = MeasurementStore(
       () => Hive.openBox<dynamic>('measurements'),
@@ -406,4 +434,25 @@ class _MemoryStore extends AdaptiveStore {
 
   @override
   Future<void> addCheckIn(CheckInRecord record) async => records.add(record);
+}
+
+/// [inner]'s plan at a pace set by the test.
+class _PacedService extends Fake implements AdaptiveService {
+  final AdaptiveService inner;
+  double pace = -0.5;
+
+  _PacedService(this.inner);
+
+  @override
+  Future<GoalPlanInputs?> goalPlan({int pastDays = 60}) async {
+    final plan = (await inner.goalPlan(pastDays: pastDays))!;
+    return GoalPlanInputs(
+      pastTrendKg: plan.pastTrendKg,
+      trendKgPerDay: plan.trendKgPerDay,
+      expenditureKcal: plan.expenditureKcal,
+      bodyFatPercent: plan.bodyFatPercent,
+      targetWeightKg: plan.targetWeightKg,
+      paceKgPerWeek: pace,
+    );
+  }
 }

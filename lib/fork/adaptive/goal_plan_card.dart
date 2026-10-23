@@ -6,12 +6,16 @@ import 'package:opennutritracker/core/domain/usecase/get_user_usecase.dart';
 import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
-import 'package:opennutritracker/core/utils/calc/unit_calc.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/features/profile/presentation/bloc/profile_bloc.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
 import 'package:opennutritracker/fork/adaptive/goal_plan.dart';
 import 'package:opennutritracker/fork/units/energy_text.dart';
+import 'package:opennutritracker/fork/units/weight_text.dart';
+
+/// Bumped when [savePace] saved a pace (by hand or a diet phase), so the
+/// goal planner reloads.
+final paceChanges = ValueNotifier(0);
 
 /// Saves [kgPerWeek] as the profile's pace, the goal following its sign,
 /// through upstream's profile update (which rewrites today's goal).
@@ -25,6 +29,7 @@ Future<void> savePace(double kgPerWeek) async {
         ? UserWeightGoalEntity.gainWeight
         : UserWeightGoalEntity.maintainWeight;
   await locator<ProfileBloc>().updateUser(user);
+  paceChanges.value++;
 }
 
 /// Seam S40: MacroFactor's goal planner on Trends. A pace slider shows the
@@ -56,6 +61,26 @@ class _GoalPlanCardState extends State<GoalPlanCard> {
   Future<GoalPlanInputs?> _load() =>
       (widget.service ?? AdaptiveService.fromLocator()).goalPlan();
 
+  void _reload() {
+    if (!mounted) return;
+    setState(() {
+      _pace = null;
+      _inputs = _load();
+    });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    paceChanges.addListener(_reload);
+  }
+
+  @override
+  void dispose() {
+    paceChanges.removeListener(_reload);
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) => FutureBuilder<GoalPlanInputs?>(
     future: _inputs,
@@ -69,19 +94,9 @@ class _GoalPlanCardState extends State<GoalPlanCard> {
     },
   );
 
-  String _weight(double kg) => switch (widget.unit) {
-    BodyWeightUnit.kg => '${kg.toStringAsFixed(1)} kg',
-    BodyWeightUnit.lb => '${UnitCalc.kgToLbs(kg).toStringAsFixed(1)} lb',
-    BodyWeightUnit.st => switch (UnitCalc.kgToStLb(kg, poundsDecimals: 1)) {
-      (final st, final lb) => '$st st ${lb.toStringAsFixed(1)} lb',
-    },
-  };
+  String _weight(double kg) => weightText(kg, widget.unit);
 
-  String _change(double kg) {
-    final shown = widget.unit == BodyWeightUnit.kg ? kg : kg * 2.20462;
-    return '${shown > 0 ? '+' : ''}${shown.toStringAsFixed(1)} '
-        '${widget.unit == BodyWeightUnit.kg ? 'kg' : 'lb'}';
-  }
+  String _change(double kg) => weightChangeText(kg, widget.unit);
 
   String _paceText(double kgPerWeek) {
     final sign = kgPerWeek > 0 ? '+' : '';
@@ -242,11 +257,7 @@ class _GoalPlanCardState extends State<GoalPlanCard> {
               child: TextButton(
                 onPressed: () async {
                   await widget.onUsePace(pace);
-                  if (!mounted) return;
-                  setState(() {
-                    _pace = null;
-                    _inputs = _load();
-                  });
+                  _reload();
                 },
                 child: const Text('Use this pace'),
               ),

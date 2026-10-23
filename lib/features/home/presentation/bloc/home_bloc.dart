@@ -266,7 +266,8 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
         logicalDay: loadDay,
         generation: widgetGeneration,
       );
-      // [fork] S50 macro-widget: the macros too, for OpenBite's Android widget
+      // [fork] S50 macro-widget: the macros and the trend weight too, for
+      // OpenBite's Android widgets
       await publishMacroWidget(
         MacroWidgetFigures.fromHome(
           logicalDay: loadDay,
@@ -281,6 +282,10 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
           fat: totalFatsIntake,
           fatGoal: totalFatsGoal,
         ),
+        stillCurrent: () => _calorieWidgetStore.generation == widgetGeneration,
+      );
+      await publishWeightWidget(
+        bodyWeightUnit,
         stillCurrent: () => _calorieWidgetStore.generation == widgetGeneration,
       );
       // [/fork]

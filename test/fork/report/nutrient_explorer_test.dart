@@ -67,8 +67,9 @@ void main() {
 
     final fibre = all.firstWhere((s) => s.nutrient.label == 'Fibre');
     expect(fibre.perDay, (15 + 16) / 2);
-    // The 20th's own goal and the panel's 30 g for the 21st, unset.
-    expect(fibre.goal, 35);
+    // The 20th's own goal, and the 21st, keeping none, takes it too: the
+    // latest set (upstream keeps a goal on the day it was set).
+    expect(fibre.goal, 40);
     expect(
       [for (final f in fibre.foods) (f.name, f.amount)],
       [('Lentils', 16), ('Oats', 15)],
@@ -79,6 +80,37 @@ void main() {
     expect(protein.goal, 100);
     expect(energy.nutrient.marksMiss, isFalse);
     expect(fibre.nutrient.marksMiss, isTrue);
+  });
+
+  test('with no goal set, the panel\'s reference', () {
+    final all = summarizeNutrients(_intakes, [_day(20), _day(21)], null);
+    expect(all.firstWhere((s) => s.nutrient.label == 'Fibre').goal, 30);
+  });
+
+  testWidgets('Edit goals measures against the goals set there', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: NutrientExplorerScreen(
+          days: [_day(20), _day(21)],
+          first: DateTime(2026, 10, 20),
+          last: DateTime(2026, 10, 21),
+          load: (first, last) async => _intakes,
+          user: () async => null,
+          editGoals: (context, first, last) async => [
+            _day(20),
+            _day(21, fibreGoal: 31),
+          ],
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.textContaining('goal 30 g'), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('nutrient-goals')));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('goal 31 g'), findsOneWidget);
   });
 
   testWidgets('opened from the weekly report, a nutrient lists its foods', (
