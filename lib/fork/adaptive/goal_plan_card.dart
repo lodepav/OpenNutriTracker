@@ -6,12 +6,12 @@ import 'package:opennutritracker/core/domain/usecase/get_user_usecase.dart';
 import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
-import 'package:opennutritracker/core/utils/calc/unit_calc.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/features/profile/presentation/bloc/profile_bloc.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
 import 'package:opennutritracker/fork/adaptive/goal_plan.dart';
 import 'package:opennutritracker/fork/units/energy_text.dart';
+import 'package:opennutritracker/fork/units/weight_text.dart';
 
 /// Bumped when [savePace] saved a pace (by hand or a diet phase), so the
 /// goal planner reloads.
@@ -94,19 +94,9 @@ class _GoalPlanCardState extends State<GoalPlanCard> {
     },
   );
 
-  String _weight(double kg) => switch (widget.unit) {
-    BodyWeightUnit.kg => '${kg.toStringAsFixed(1)} kg',
-    BodyWeightUnit.lb => '${UnitCalc.kgToLbs(kg).toStringAsFixed(1)} lb',
-    BodyWeightUnit.st => switch (UnitCalc.kgToStLb(kg, poundsDecimals: 1)) {
-      (final st, final lb) => '$st st ${lb.toStringAsFixed(1)} lb',
-    },
-  };
+  String _weight(double kg) => weightText(kg, widget.unit);
 
-  String _change(double kg) {
-    final shown = widget.unit == BodyWeightUnit.kg ? kg : kg * 2.20462;
-    return '${shown > 0 ? '+' : ''}${shown.toStringAsFixed(1)} '
-        '${widget.unit == BodyWeightUnit.kg ? 'kg' : 'lb'}';
-  }
+  String _change(double kg) => weightChangeText(kg, widget.unit);
 
   String _paceText(double kgPerWeek) {
     final sign = kgPerWeek > 0 ? '+' : '';

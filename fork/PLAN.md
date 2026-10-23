@@ -510,6 +510,9 @@ offered and declined):
   for a spreadsheet: every food (logical date, time, meal, name, amount, energy, macros, fibre,
   sugar, saturated fat, sodium) and every day (eaten against the goals, the weight logged, the
   estimated expenditure). The full backup stays the way to move data; this is for reading it.
+- *Done:* trend weight widget (S50): a second Android widget, "OpenBite trend weight", with
+  the smoothed weight and its change over 7 days in the user's unit, written by Home beside the
+  macros. Before the first weigh-in it asks for one.
 
 Upstream: open an issue first, with the simulation results. The maintainer cites a source for
 every calculation; everything except the tuned weights has one, and those come with the

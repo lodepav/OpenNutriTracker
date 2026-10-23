@@ -122,8 +122,8 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
-        <!-- [fork] S50 macro-widget: today's calories and macros on the home
-             screen (android/app/src/fork) -->
+        <!-- [fork] S50 macro-widget: today's calories and macros, and the trend
+             weight, on the home screen (android/app/src/fork) -->
         <receiver
             android:name=".fork.MacroWidgetProvider"
             android:exported="false"
@@ -134,6 +134,17 @@
             <meta-data
                 android:name="android.appwidget.provider"
                 android:resource="@xml/fork_macro_widget_info" />
+        </receiver>
+        <receiver
+            android:name=".fork.WeightWidgetProvider"
+            android:exported="false"
+            android:label="OpenBite trend weight">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/fork_weight_widget_info" />
         </receiver>
         <!-- [/fork] -->
     </application>

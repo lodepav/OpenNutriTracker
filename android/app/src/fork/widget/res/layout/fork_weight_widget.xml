@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- [fork] S50 weight widget: drawn by WeightWidgetProvider. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/fork_weight_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/fork_widget_background"
+    android:gravity="center_vertical"
+    android:orientation="vertical"
+    android:padding="14dp">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:maxLines="1"
+        android:text="Trend weight"
+        android:textColor="@color/fork_widget_muted"
+        android:textSize="12sp" />
+
+    <TextView
+        android:id="@+id/fork_weight_trend"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:maxLines="1"
+        android:text="80.0 kg"
+        android:textColor="@color/fork_widget_text"
+        android:textSize="24sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/fork_weight_change"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:maxLines="2"
+        android:text="-0.4 kg in 7 days"
+        android:textColor="@color/fork_widget_muted"
+        android:textSize="13sp" />
+</LinearLayout>
