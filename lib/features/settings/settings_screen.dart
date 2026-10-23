@@ -54,6 +54,9 @@ import 'package:opennutritracker/fork/backup/auto_backup_ui.dart';
 // [fork] S32 off-contributions: the user's Open Food Facts account
 import 'package:opennutritracker/fork/off/off_contribution_ui.dart';
 // [/fork]
+// [fork] S35 brand
+import 'package:opennutritracker/fork/brand/openbite_logo.dart';
+// [/fork]
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
@@ -1508,14 +1511,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
       showAboutDialog(
         context: context,
         applicationName: S.of(context).appTitle,
-        applicationIcon: SizedBox(
-          width: 40,
-          child: Image.asset(
-            Theme.of(context).brightness == Brightness.dark
-                ? 'assets/icon/ont_logo_square_color_white_1024x1024.png'
-                : 'assets/icon/ont_logo_square_color_back_1024x1024.png',
-          ),
-        ),
+        // [fork] S35 brand: OpenBite's logo
+        applicationIcon: const OpenBiteLogo(size: 40),
+        // [/fork]
         applicationVersion: packageInfo.version,
         applicationLegalese: S.of(context).appLicenseLabel,
         children: [

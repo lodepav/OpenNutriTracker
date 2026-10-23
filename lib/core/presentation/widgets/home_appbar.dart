@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:opennutritracker/core/presentation/widgets/dynamic_ont_logo.dart';
+// [fork] S35 brand: OpenBite's logo instead of upstream's
+// import 'package:opennutritracker/core/presentation/widgets/dynamic_ont_logo.dart';
+import 'package:opennutritracker/fork/brand/openbite_logo.dart';
+// [/fork]
 import 'package:opennutritracker/generated/l10n.dart';
 
 class HomeAppbar extends StatelessWidget implements PreferredSizeWidget {
@@ -10,7 +13,7 @@ class HomeAppbar extends StatelessWidget implements PreferredSizeWidget {
     return AppBar(
       title: Row(
         children: [
-          const SizedBox(width: 40, child: DynamicOntLogo()),
+          const SizedBox(width: 40, child: OpenBiteLogo() /* [fork] S35 */),
           Expanded(
             child: RichText(
               text: TextSpan(

@@ -1,8 +1,13 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
+// [fork] S35 brand: upstream's logo import, unused since
+// import 'package:flutter_svg/flutter_svg.dart';
+// [/fork]
 import 'package:opennutritracker/core/utils/navigation_options.dart';
+// [fork] S35 brand
+import 'package:opennutritracker/fork/brand/openbite_logo.dart';
+// [/fork]
 
 /// First screen shown on launch: the OpenNutriTracker logo with the spoon
 /// making a single accelerating-then-settling spin, after which it routes on
@@ -78,31 +83,16 @@ class _SplashScreenState extends State<SplashScreen>
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    // The spoon follows the theme, matching the app's own white/dark logo
-    // variants: black on the light canvas, white on the dark canvas.
-    final spoonColor = isDark ? Colors.white : Colors.black;
-
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: Center(
         child: SizedBox(
           width: _logoSize,
           height: _logoSize,
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              SvgPicture.asset('assets/icon/ont_splash_rings.svg',
-                  width: _logoSize, height: _logoSize),
-              RotationTransition(
-                turns: _spin,
-                child: SvgPicture.asset('assets/icon/ont_splash_spoon.svg',
-                    width: _logoSize,
-                    height: _logoSize,
-                    theme: SvgTheme(currentColor: spoonColor)),
-              ),
-            ],
-          ),
+          // [fork] S35 brand: OpenBite's page, bitten as the splash plays
+          // (was the rings with the spinning spoon)
+          child: OpenBiteLogo(bite: _spin),
+          // [/fork]
         ),
       ),
     );
