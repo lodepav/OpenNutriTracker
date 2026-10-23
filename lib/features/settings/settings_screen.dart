@@ -55,6 +55,7 @@ import 'package:opennutritracker/fork/reminders/reminders_ui.dart';
 import 'package:opennutritracker/fork/backup/auto_backup_ui.dart';
 // [/fork]
 // [fork] S51 csv-export
+import 'package:opennutritracker/fork/history/history_import.dart';
 import 'package:opennutritracker/fork/export/csv_export.dart';
 // [/fork]
 // [fork] S32 off-contributions: the user's Open Food Facts account
@@ -595,8 +596,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   // [fork] S23 auto-backup
                   const AutoBackupTile(),
                   // [/fork]
-                  // [fork] S51 csv-export: the diary for a spreadsheet
+                  // [fork] S51 csv-export: the diary for a spreadsheet, and
+                  // another app's history in
                   const CsvExportTile(),
+                  const HistoryImportTile(),
                   // [/fork]
                   // [fork] S32 off-contributions
                   const OffAccountTile(),

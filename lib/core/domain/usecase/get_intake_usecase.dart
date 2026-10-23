@@ -4,6 +4,9 @@ import 'package:opennutritracker/core/domain/entity/intake_entity.dart';
 import 'package:opennutritracker/core/domain/entity/intake_type_entity.dart';
 import 'package:opennutritracker/core/utils/calc/day_boundary_calc.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dart';
+// [fork] S53 history-import
+import 'package:opennutritracker/fork/history/history_file.dart';
+// [/fork]
 
 class GetIntakeUsecase {
   final IntakeRepository _intakeRepository;
@@ -115,6 +118,10 @@ class GetIntakeUsecase {
   /// its last snapshot, and the intakes themselves are never rewritten.
   Future<List<IntakeEntity>> getRecentIntake() async {
     final recent = await _intakeRepository.getRecentIntake();
+    // [fork] S53 history-import: an imported day's totals are no food to
+    // log again
+    recent.removeWhere(isImportedHistory);
+    // [/fork]
     return recent.map((intake) {
       final meal = intake.meal;
       if (meal.source != MealSourceEntity.recipe || meal.code == null) {

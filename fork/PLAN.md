@@ -536,6 +536,16 @@ and declined):
   all", goes at once with "Entry deleted · Undo" in place of the confirmation dialog; deletes of
   one day in a row gather into one bar ("3 entries deleted"), and Undo writes them back with their
   ids, so meal groups and the Health Connect export see them unchanged.
+- *Done:* history import (S51, S53): "Import history" in Settings' data section reads another
+  app's export (CSV, XLSX, or a ZIP of them) by its headers rather than one app's layout: a date,
+  calories or energy (kcal or kJ), protein, carbs, fat, a meal where there is one, and a weight
+  (lb or kg from the header, or Cronometer's metric rows; asked when no header says). Targets,
+  expenditure and trend weights are never taken for what was eaten or weighed. The preview says
+  what was found where; days already logged here and weigh-ins already here are kept. Each day
+  comes in as quick-add style totals (one entry a meal, or one for the day) at noon, under ids
+  from the day, so importing twice adds nothing; they are left out of the recents and of the
+  custom meals. The headers are checked against what MacroFactor, MyFitnessPal and Cronometer
+  are known to write, which none documents: a real export of each is still to be tried.
 
 Upstream: open an issue first, with the simulation results. The maintainer cites a source for
 every calculation; everything except the tuned weights has one, and those come with the
