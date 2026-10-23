@@ -20,6 +20,7 @@ import 'package:opennutritracker/features/trends/presentation/trends_calc.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 // [fork] S40 expenditure-card
 import 'package:opennutritracker/fork/adaptive/expenditure_card.dart';
+import 'package:opennutritracker/fork/adaptive/goal_plan_card.dart';
 // [/fork]
 
 class TrendsPage extends StatefulWidget {
@@ -95,8 +96,10 @@ class _TrendsView extends StatelessWidget {
               rangeDays: state.windowDays,
               palette: palette,
             ),
-            // [fork] S40 expenditure-card: estimated expenditure and balance
+            // [fork] S40 expenditure-card: estimated expenditure and balance,
+            // and the goal planner
             ExpenditureTrendCard(rangeDays: state.windowDays, palette: palette),
+            GoalPlanCard(palette: palette, unit: state.bodyWeightUnit),
             // [/fork]
           ],
         );

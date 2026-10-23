@@ -12,6 +12,8 @@ import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/fork/adaptive/check_in.dart';
 import 'package:opennutritracker/fork/adaptive/energy.dart';
 import 'package:opennutritracker/fork/adaptive/expenditure.dart';
+import 'package:opennutritracker/fork/adaptive/goal_plan.dart';
+import 'package:opennutritracker/fork/adaptive/trend.dart';
 
 final _log = Logger('AdaptiveService');
 
@@ -113,6 +115,39 @@ class AdaptiveService {
           settled: i >= settings.warmupDays,
         ),
     ];
+  }
+
+  /// What the goal planner needs; null with no weigh-in yet. The past
+  /// trend covers at most [pastDays].
+  Future<GoalPlanInputs?> goalPlan({int pastDays = 60}) async {
+    final user = await _user.getUserData();
+    final days = (await _history()).days;
+    final settings = _settings();
+    final trend = smoothedTrend(
+      dailyWeights({
+        for (final (i, d) in days.indexed)
+          if (d.weightKg != null) i: d.weightKg!,
+      }, days.length),
+      alpha: settings.alpha,
+    ).whereType<double>().toList();
+    if (trend.isEmpty) return null;
+    return GoalPlanInputs(
+      pastTrendKg: trend.length > pastDays
+          ? trend.sublist(trend.length - pastDays)
+          : trend,
+      trendKgPerDay: trend.length > 20
+          ? (trend.last - trend[trend.length - 21]) / 20
+          : null,
+      expenditureKcal: estimateExpenditure(
+        days,
+        priorKcal: _priorKcal(user),
+        bodyFatPercent: bodyFatPercent(user),
+        settings: settings,
+      ).last,
+      bodyFatPercent: bodyFatPercent(user),
+      targetWeightKg: user.targetWeightKg,
+      paceKgPerWeek: goalRateKgPerWeek(user),
+    );
   }
 
   /// Upstream's formula expenditure × (1 + 4 × goal rate), MacroFactor's

@@ -380,6 +380,11 @@ and take kJ for kJ users (`lib/fork/units/energy_text.dart`).
   rest of `fork_adaptive.json`. Not ported: theoleuthardt's training-day goals (a shift by
   weekday covers a set schedule). Limit: a goal is the logical today's, so an entry copied to
   another weekday's empty day takes today's shift, as it already takes today's activities.
+- *Done:* a goal planner on Trends (S40): the trend of the past 60 days, the weight curve
+  projected at a pace picked on a slider (−1 to +1 kg a week), the date the target weight is
+  reached at that pace and at the trend's own, and the daily target the pace needs at the
+  measured expenditure (before the check-in's cap and upstream's taper). "Use this pace" saves
+  it to the profile through upstream's profile update, the goal following its sign.
 
 Upstream: open an issue first, with the simulation results. The maintainer cites a source for
 every calculation; everything except the tuned weights has one, and those come with the

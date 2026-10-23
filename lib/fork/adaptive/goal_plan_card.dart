@@ -1,0 +1,255 @@
+import 'package:fl_chart/fl_chart.dart';
+import 'package:flutter/material.dart';
+import 'package:opennutritracker/core/domain/entity/body_weight_unit_entity.dart';
+import 'package:opennutritracker/core/domain/entity/user_weight_goal_entity.dart';
+import 'package:opennutritracker/core/domain/usecase/get_user_usecase.dart';
+import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
+import 'package:opennutritracker/core/styles/app_palette.dart';
+import 'package:opennutritracker/core/styles/dimens.dart';
+import 'package:opennutritracker/core/utils/calc/unit_calc.dart';
+import 'package:opennutritracker/core/utils/locator.dart';
+import 'package:opennutritracker/features/profile/presentation/bloc/profile_bloc.dart';
+import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
+import 'package:opennutritracker/fork/adaptive/goal_plan.dart';
+import 'package:opennutritracker/fork/units/energy_text.dart';
+
+/// Saves [kgPerWeek] as the profile's pace, the goal following its sign,
+/// through upstream's profile update (which rewrites today's goal).
+Future<void> savePace(double kgPerWeek) async {
+  final user = await locator<GetUserUsecase>().getUserData();
+  user
+    ..weeklyWeightGoalKg = kgPerWeek
+    ..goal = kgPerWeek < 0
+        ? UserWeightGoalEntity.loseWeight
+        : kgPerWeek > 0
+        ? UserWeightGoalEntity.gainWeight
+        : UserWeightGoalEntity.maintainWeight;
+  await locator<ProfileBloc>().updateUser(user);
+}
+
+/// Seam S40: MacroFactor's goal planner on Trends. A pace slider shows the
+/// projected weight curve to the target, when it is reached, and the
+/// daily target that pace needs at the measured expenditure; "Use this
+/// pace" saves it to the profile. Nothing before the first weigh-in.
+class GoalPlanCard extends StatefulWidget {
+  final AppPalette palette;
+  final BodyWeightUnit unit;
+  final AdaptiveService? service;
+  final Future<void> Function(double kgPerWeek) onUsePace;
+
+  const GoalPlanCard({
+    super.key,
+    required this.palette,
+    required this.unit,
+    this.service,
+    this.onUsePace = savePace,
+  });
+
+  @override
+  State<GoalPlanCard> createState() => _GoalPlanCardState();
+}
+
+class _GoalPlanCardState extends State<GoalPlanCard> {
+  late Future<GoalPlanInputs?> _inputs = _load();
+  double? _pace;
+
+  Future<GoalPlanInputs?> _load() =>
+      (widget.service ?? AdaptiveService.fromLocator()).goalPlan();
+
+  @override
+  Widget build(BuildContext context) => FutureBuilder<GoalPlanInputs?>(
+    future: _inputs,
+    builder: (context, snapshot) {
+      final inputs = snapshot.data;
+      if (inputs == null) return const SizedBox.shrink();
+      return Padding(
+        padding: const EdgeInsets.only(top: Dimens.spacing16),
+        child: _card(context, inputs),
+      );
+    },
+  );
+
+  String _weight(double kg) => switch (widget.unit) {
+    BodyWeightUnit.kg => '${kg.toStringAsFixed(1)} kg',
+    BodyWeightUnit.lb => '${UnitCalc.kgToLbs(kg).toStringAsFixed(1)} lb',
+    BodyWeightUnit.st => switch (UnitCalc.kgToStLb(kg, poundsDecimals: 1)) {
+      (final st, final lb) => '$st st ${lb.toStringAsFixed(1)} lb',
+    },
+  };
+
+  String _paceText(double kgPerWeek) {
+    final sign = kgPerWeek > 0 ? '+' : '';
+    return switch (widget.unit) {
+      BodyWeightUnit.kg => '$sign${kgPerWeek.toStringAsFixed(2)} kg a week',
+      _ => '$sign${(kgPerWeek * 2.20462).toStringAsFixed(2)} lb a week',
+    };
+  }
+
+  static String _date(int days) {
+    final d = DateTime.now().add(Duration(days: days));
+    final weeks = (days / 7).round();
+    return '${d.year}-${d.month.toString().padLeft(2, '0')}-'
+        '${d.day.toString().padLeft(2, '0')} '
+        '($weeks week${weeks == 1 ? '' : 's'})';
+  }
+
+  String _eta(int? days, double kgPerDay, double nowKg, double? target) {
+    if (target == null) return 'No target weight set';
+    if (days == null) {
+      return kgPerDay == 0 || (target - nowKg).abs() < 0.1
+          ? 'At the target'
+          : 'Moving away from the target';
+    }
+    return days > maxPlanDays ? 'Over a year' : _date(days);
+  }
+
+  Widget _card(BuildContext context, GoalPlanInputs inputs) {
+    final theme = Theme.of(context);
+    final accent = theme.colorScheme.primary;
+    final pace = _pace ?? inputs.paceKgPerWeek;
+    final plan = planAt(inputs, pace);
+    final target = inputs.targetWeightKg;
+    final trendPerDay = inputs.trendKgPerDay;
+
+    final past = inputs.pastTrendKg;
+    final offset = past.length - 1;
+    final pastSpots = [
+      for (final (i, kg) in past.indexed) FlSpot(i - offset.toDouble(), kg),
+    ];
+    final planSpots = [
+      for (final (i, kg) in plan.projectedKg.indexed) FlSpot(i.toDouble(), kg),
+    ];
+    final ys = [...past, ...plan.projectedKg, ?target];
+    final minY = ys.reduce((a, b) => a < b ? a : b) - 1;
+    final maxY = ys.reduce((a, b) => a > b ? a : b) + 1;
+
+    return AppCard(
+      padding: const EdgeInsets.all(Dimens.spacing20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Goal planner', style: theme.textTheme.titleMedium),
+          const SizedBox(height: Dimens.spacing8),
+          _row('Trend weight', _weight(inputs.nowKg)),
+          _row('Target', target == null ? '—' : _weight(target)),
+          const SizedBox(height: Dimens.spacing16),
+          Semantics(
+            label: 'Projected weight',
+            child: SizedBox(
+              height: 140,
+              child: LineChart(
+                LineChartData(
+                  minX: -offset.toDouble(),
+                  maxX: (plan.projectedKg.length - 1).toDouble(),
+                  minY: minY,
+                  maxY: maxY,
+                  gridData: const FlGridData(show: false),
+                  borderData: FlBorderData(show: false),
+                  titlesData: const FlTitlesData(show: false),
+                  lineTouchData: const LineTouchData(enabled: false),
+                  extraLinesData: ExtraLinesData(
+                    horizontalLines: [
+                      if (target != null)
+                        HorizontalLine(
+                          y: target,
+                          color: widget.palette.textMuted,
+                          strokeWidth: 1,
+                          dashArray: const [6, 4],
+                        ),
+                    ],
+                    verticalLines: [
+                      VerticalLine(
+                        x: 0,
+                        color: widget.palette.textMuted.withValues(alpha: 0.4),
+                        strokeWidth: 1,
+                      ),
+                    ],
+                  ),
+                  lineBarsData: [
+                    LineChartBarData(
+                      spots: pastSpots,
+                      color: accent,
+                      barWidth: 3,
+                      dotData: const FlDotData(show: false),
+                    ),
+                    LineChartBarData(
+                      spots: planSpots,
+                      color: accent,
+                      barWidth: 2,
+                      dashArray: const [5, 4],
+                      dotData: const FlDotData(show: false),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: Dimens.spacing8),
+          Text(
+            'Solid: your trend. Dashed: at the pace below.',
+            style: theme.textTheme.bodySmall,
+          ),
+          const SizedBox(height: Dimens.spacing8),
+          Text('Pace: ${_paceText(pace)}'),
+          Slider(
+            key: const ValueKey('plan-pace'),
+            min: -1,
+            max: 1,
+            divisions: 40,
+            value: pace.clamp(-1.0, 1.0),
+            label: _paceText(pace),
+            onChanged: (v) => setState(() => _pace = v),
+          ),
+          _row(
+            'Reached',
+            _eta(plan.daysToTarget, pace / 7, inputs.nowKg, target),
+          ),
+          if (trendPerDay != null)
+            _row(
+              'At your trend (${_paceText(trendPerDay * 7)})',
+              _eta(
+                daysToTarget(inputs.nowKg, target, trendPerDay),
+                trendPerDay,
+                inputs.nowKg,
+                target,
+              ),
+            ),
+          _row(
+            'Daily target at this pace',
+            energyText(context, plan.dailyTargetKcal),
+          ),
+          Text(
+            'From an expenditure of '
+            '${energyText(context, inputs.expenditureKcal)}.',
+            style: theme.textTheme.bodySmall,
+          ),
+          if ((pace - inputs.paceKgPerWeek).abs() > 0.001)
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: () async {
+                  await widget.onUsePace(pace);
+                  if (!mounted) return;
+                  setState(() {
+                    _pace = null;
+                    _inputs = _load();
+                  });
+                },
+                child: const Text('Use this pace'),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _row(String label, String value) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 2),
+    child: Row(
+      children: [
+        Expanded(child: Text(label)),
+        Text(value, style: const TextStyle(fontWeight: FontWeight.w600)),
+      ],
+    ),
+  );
+}

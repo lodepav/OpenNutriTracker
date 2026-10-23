@@ -18,6 +18,8 @@ import 'package:opennutritracker/fork/adaptive/adaptive_ui.dart';
 import 'package:opennutritracker/fork/adaptive/check_in.dart';
 import 'package:opennutritracker/fork/adaptive/expenditure.dart';
 import 'package:opennutritracker/fork/adaptive/expenditure_card.dart';
+import 'package:opennutritracker/fork/adaptive/goal_plan_card.dart';
+import 'package:opennutritracker/core/domain/entity/body_weight_unit_entity.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/fork/adaptive/trend_points.dart';
 import 'package:opennutritracker/core/utils/energy_unit_provider.dart';
@@ -279,6 +281,46 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(memory.records.single.acceptedKcal, closeTo(2000, 0.01));
+  });
+
+  testWidgets('the planner moves the date with the pace and saves it', (
+    tester,
+  ) async {
+    final saved = <double>[];
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: GoalPlanCard(
+              palette: AppPalette.light,
+              unit: BodyWeightUnit.kg,
+              service: service,
+              onUsePace: (pace) async => saved.add(pace),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Goal planner'), findsOneWidget);
+    expect(find.text('Pace: -0.50 kg a week'), findsOneWidget);
+    expect(find.text('Use this pace'), findsNothing);
+    final reached = find.byWidgetPredicate(
+      (w) => w is Text && (w.data ?? '').contains('weeks)'),
+    );
+    final before = (tester.widget(reached.first) as Text).data;
+
+    await tester.drag(
+      find.byKey(const ValueKey('plan-pace')),
+      const Offset(-60, 0),
+    );
+    await tester.pumpAndSettle();
+    expect((tester.widget(reached.first) as Text).data, isNot(before));
+
+    await tester.tap(find.text('Use this pace'));
+    await tester.pumpAndSettle();
+    expect(saved.single, isNot(closeTo(-0.5, 0.01)));
   });
 
   group('expenditure history', () {
