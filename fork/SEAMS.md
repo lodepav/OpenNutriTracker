@@ -45,6 +45,7 @@ because upstream merged the feature) gets removed, and so does its row.
 | S26 | `lib/features/diary/presentation/widgets/day_info_widget.dart` | "Copy day" (`CopyDayButton`) beside the diary's date on a day with entries: every entry in its own meal, and the activities if ticked. The date `Text` is wrapped in a `Row`. | active |
 | S27 | `lib/features/settings/presentation/widgets/health_sync_screen.dart` | "Import weight" (`WeightImportTile`, `lib/fork/health/weight_import_ui.dart`) under the workout switch: its own switch and READ_WEIGHT request. Our own take on upstream PR #1296's rules, without its Hive fields (the fork box `ForkHealthWeightBox` records what it filed per day). Swap for upstream's when released: rows imported here look typed to upstream's import, so they are kept, never replaced. | active |
 | S28 | `android/app/src/main/AndroidManifest.xml`, `test/unit_test/health_connect_permissions_test.dart` | Declares `READ_WEIGHT` for S27; the permission guard's two expected sets include it. A Play release needs the Health Connect declaration to cover it. | active |
+| S29 | `lib/features/edit_meal/presentation/edit_meal_screen.dart` | "Read nutrition label" (`LabelScanButton`, `lib/fork/label/`) in the custom-food app bar: a label photo goes to the chosen model through upstream's meal-items tool and fills name, brand, barcode, serving and the per-100 values, switching the form to advanced with base 100. Only printed values; nothing is estimated. | active |
 
 ## Carried upstream changes
 

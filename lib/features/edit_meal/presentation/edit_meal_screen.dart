@@ -29,6 +29,10 @@ import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dar
 import 'package:opennutritracker/features/edit_meal/presentation/bloc/edit_meal_bloc.dart';
 import 'package:opennutritracker/features/edit_meal/presentation/widgets/default_meal_image.dart';
 import 'package:opennutritracker/features/meal_detail/meal_detail_screen.dart';
+// [fork] S29 label-scan
+import 'package:opennutritracker/fork/label/label_scan.dart';
+import 'package:opennutritracker/fork/label/label_scan_button.dart';
+// [/fork]
 import 'package:opennutritracker/generated/l10n.dart';
 import 'package:provider/provider.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
@@ -256,6 +260,9 @@ class _EditMealScreenState extends State<EditMealScreen> {
             style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
           ),
           actions: [
+            // [fork] S29 label-scan: read a nutrition label into the form
+            LabelScanButton(onRead: (reading) => _fillFromLabel(reading, usesKj)),
+            // [/fork]
             Padding(
               padding: const EdgeInsets.fromLTRB(Dimens.spacing16, 0, Dimens.spacing16, 0),
               child: Semantics(
@@ -314,6 +321,52 @@ class _EditMealScreenState extends State<EditMealScreen> {
   /// Convert a stored kcal value into the string the user should see in
   /// the energy field, given the active unit. One decimal place is
   /// plenty for an input field; saving rounds back to kcal anyway.
+  // [fork] S29 label-scan: what the label printed replaces the field; the
+  // rest is left as typed. Label values are per 100, so the form goes to
+  // advanced with base 100.
+  void _fillFromLabel(LabelReading reading, bool usesKj) {
+    void put(TextEditingController controller, String? text) {
+      if (text != null) controller.text = text;
+    }
+
+    final per100 = reading.per100;
+    setState(() {
+      put(_nameTextController, reading.name);
+      put(_brandsTextController, reading.brand);
+      put(_barcodeTextController, reading.barcode);
+      put(_servingQuantityTextController, reading.servingGrams?.toStringOrEmpty());
+      if (per100['energyKcal'] case final kcal?) {
+        _kcalTextController.text = _formatStoredKcalForDisplay(kcal, usesKj);
+      }
+      for (final (key, controller) in [
+        ('carbs', _carbsTextController),
+        ('fat', _fatTextController),
+        ('protein', _proteinTextController),
+        ('fiber', _fiberTextController),
+        ('saturatedFat', _saturatedFatTextController),
+        ('sugars', _sugarsTextController),
+        ('sodium', _sodiumTextController),
+        ('calcium', _calciumTextController),
+        ('iron', _ironTextController),
+        ('potassium', _potassiumTextController),
+        ('magnesium', _magnesiumTextController),
+        ('vitaminD', _vitaminDTextController),
+        ('vitaminB12', _vitaminB12TextController),
+      ]) {
+        put(controller, per100[key]?.toStringOrEmpty());
+      }
+      if (per100.isNotEmpty) {
+        _baseQuantityTextController.text = '100';
+        _formMode = CustomMealFormMode.advanced;
+      }
+    });
+    if (per100.isNotEmpty) _editMealBloc.setFormMode(CustomMealFormMode.advanced);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Filled ${per100.length} values from the label; check them before saving')),
+    );
+  }
+  // [/fork]
+
   String _formatStoredKcalForDisplay(double? storedKcal, bool usesKj) {
     if (storedKcal == null) return "";
     final display = usesKj ? UnitCalc.kcalToKj(storedKcal) : storedKcal;
