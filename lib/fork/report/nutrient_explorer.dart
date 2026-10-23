@@ -28,6 +28,10 @@ class ExplorerNutrient {
   /// A limit rather than a target: above it is the miss.
   final bool isLimit;
 
+  /// Energy and the macros follow a plan that may be under or over on
+  /// purpose, so their bars are not marked as missed.
+  bool get marksMiss => fallbackGoal != null;
+
   const ExplorerNutrient(
     this.label,
     this.unit,
@@ -328,7 +332,8 @@ class _NutrientTile extends StatelessWidget {
     final goal = s.goal;
     final share = goal == null || goal == 0 ? null : s.perDay / goal;
     final scheme = Theme.of(context).colorScheme;
-    final missed = share != null && (n.isLimit ? share > 1 : share < 0.9);
+    final missed =
+        n.marksMiss && share != null && (n.isLimit ? share > 1 : share < 0.9);
     return ListTile(
       key: ValueKey('nutrient-${n.label}'),
       title: Text(n.label),

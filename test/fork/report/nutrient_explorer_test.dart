@@ -77,6 +77,8 @@ void main() {
 
     final protein = all.firstWhere((s) => s.nutrient.label == 'Protein');
     expect(protein.goal, 100);
+    expect(energy.nutrient.marksMiss, isFalse);
+    expect(fibre.nutrient.marksMiss, isTrue);
   });
 
   testWidgets('opened from the weekly report, a nutrient lists its foods', (
