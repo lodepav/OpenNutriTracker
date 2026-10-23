@@ -11,6 +11,7 @@ import 'package:opennutritracker/generated/l10n.dart';
 import 'package:opennutritracker/main.dart';
 // [fork] S18 dev-adaptive
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
+import 'package:opennutritracker/fork/backup/auto_backup.dart';
 // [/fork]
 
 /// Dev-only entry point: wipes the active profile and reseeds it with
@@ -35,6 +36,7 @@ Future<void> main() async {
   await seedDemoData(DemoSeedOptions.dev);
   // [fork] S18 dev-adaptive: the trend and target switches, as main's S6
   await AdaptiveStore.start();
+  await AutoBackup.start();
   // [/fork]
 
   final configRepo = locator<ConfigRepository>();

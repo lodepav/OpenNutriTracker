@@ -46,6 +46,9 @@ class MainActivity : FlutterFragmentActivity() {
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        // [fork] S22 backup-folder: the automatic backup's folder (fork phase 2)
+        com.opennutritracker.ont.opennutritracker.fork.BackupFolderChannel(this, flutterEngine)
+        // [/fork]
 
         // A cold start: the launching intent is the one held by the activity.
         // Or-ing rather than assigning so an intent that arrived through
