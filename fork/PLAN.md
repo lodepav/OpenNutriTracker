@@ -51,6 +51,7 @@ worth a look when phase 1c's breakdown is designed.
 - [x] `fork/tools/emulator.sh` (D5). `SEED=1` builds upstream's demo-data entry point, which gives a year of diary and weigh-ins, enough to exercise an expenditure estimate.
 - [x] GitHub Actions off on the fork (2026-10-19). Every upstream workflow needs upstream's secrets or acts on upstream's issues and Weblate, and none had ever run here, so Actions is switched off for the whole repo (Settings → Actions) rather than per workflow; that also covers workflows upstream adds later. The files stay: deleted files conflict on every upstream edit. Switch it back on, and disable workflows one by one, if the fork ever wants CI of its own.
 - [x] Fork identity (Q2, D8): **OpenBite**, app id `io.github.lodepav.openbite`, set in `android/app/fork.gradle` (S20). Launcher name only.
+- [ ] Release keystore and its pinned digest: the user makes it later (2026-10-23).
 - [ ] OpenBite in the app's own text (onboarding, About, share texts) and its own icon. Search the trademark registers before publishing under the name.
 - [ ] `.env`: placeholders stay; ONT's hosted backend isn't used (D11).
 
@@ -416,7 +417,14 @@ Lower: already built elsewhere (§0b), port or wait:
 - AI nutrition-label scan (aeobrien "Phase 11", cattosmile, theoleuthardt's on-device OCR).
 - AI recipe builder from text or a URL (reference: aeobrien "Phase 12": unmatched
   ingredients fall back to search, label scan or manual entry).
-- Re-log yesterday's meal in one tap (theoleuthardt copies entries, meals or days to any date).
+- *Done 2026-10-23:* copy an entry, a meal or a whole day to any date (`fork/copy`, S24–S26).
+  Ported after review from theoleuthardt `personal` #127 (`CopyEntriesUsecase`). Review: sound
+  (new ids, the logged food kept, the same time of the target logical day, totals added); it
+  writes one entry after another, which fixes upstream's meal-section copy that fires them all at
+  once and under-counts the day (worth an upstream PR). Simpler here: no water copy; upstream's
+  goal lookups; upstream's `CopyDialog` swapped at its two call sites instead of their rewrite of
+  four upstream files. On the emulator, a copied day's totals match the source's.
+  Not done: copying from today (upstream offers copy only on other days; "Copy day" works on any).
 - **Contribute missing barcodes to Open Food Facts** (theoleuthardt sends scanned values and
   the label photo). Today the app only reads OFF; upstream just links to the official OFF apps
   (`import_custom_food_data_dialog.dart`). OFF is the only source that takes contributions: USDA
