@@ -258,8 +258,10 @@ the same gap). Pelmeni and khachapuri are in no table and go to D9.
    - Wrong sibling, not a gap: `egg` → *Egg, creamed*, `eggs` (typed "2 eggs") → a Foundation
      yolk row, `pizza` → *Pizza, no cheese*, `pepperoni pizza` → *…with meat other than
      pepperoni*. The right rows are in the table. Upstream's tie-break picks the shorter sibling,
-     the same on its backend: it pins egg as a known miss, and #1231 (open) is about it. Fix
-     upstream there (rule 1), not in the fork. Until then the review screen offers the siblings.
+     the same on its backend: it pins egg as a known miss, and #1231 (open) is about it. The
+     fork fixed them on the user's ask (2026-10-24): `pepperoni pizza` by S70, `egg`, `eggs`
+     and `pizza` by S75, a short list of the row a bare name means; #1231 still wants the
+     upstream fix.
    - Not run: the pizza photo, which needs an AI key.
 
 ## 3. Phase 2 — Backup to Google Drive (D10)
@@ -919,6 +921,7 @@ and with a Latvian note, in English.
   - Resolver 114/131 (93%), AI describe 114/131 foods and 25/45 dishes for each model.
 - **What still misses:**
   - `egg` "Egg, creamed" and `pizza` "Pizza, no cheese", the shorter siblings, as upstream.
+    Fixed since by S75: the whole raw egg and the restaurant cheese pizza.
   - The rest are gaps in the table: psyllium, kvass, creatine, casein, burrata.
 
 *The user's dishes in photos, 2026-10-24* (`test/fork/eval/macrofactor_photo_test.dart`): 20 Wikimedia

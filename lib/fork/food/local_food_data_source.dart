@@ -11,6 +11,7 @@ import 'package:opennutritracker/features/add_meal/data/dto/sp/sp_food_dto.dart'
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_portion_entity.dart';
 import 'package:opennutritracker/features/add_meal/util/backend_title.dart';
 import 'package:opennutritracker/features/add_meal/util/soft_text_score.dart';
+import 'package:opennutritracker/fork/food/everyday_row.dart';
 import 'package:opennutritracker/fork/food/unasked_variant.dart';
 import 'package:opennutritracker/fork/food/unspecified_row.dart';
 
@@ -113,10 +114,11 @@ class LocalFoodDataSource extends SpFoodDataSource {
     ];
   }
 
-  /// The unspecified rows (NFS, "NS as to") the cut left out, most
-  /// unspecified first, for the resolver to weigh (S73). The cut keeps the
-  /// shortest twenty of a tie, and on "chicken" all twenty are short
-  /// parts: "Chicken, back", "Chicken, tail".
+  /// The row a bare name means (S75) and the unspecified rows (NFS, "NS as
+  /// to", S73) the cut left out, for the resolver to weigh. The cut keeps
+  /// the shortest twenty of a tie, and on "chicken" all twenty are short
+  /// parts: "Chicken, back", "Chicken, tail"; on "pizza", none is the
+  /// restaurant cheese pizza.
   static Iterable<SpFoodDTO> _unspecifiedCut(
     List<SpFoodDTO> rows,
     List<SpFoodDTO> ranked,
@@ -125,15 +127,16 @@ class LocalFoodDataSource extends SpFoodDataSource {
     final kept = Set<SpFoodDTO>.identity()..addAll(ranked);
     final left = [
       for (final row in rows)
-        if (unspecifiedMarks(row.name, query) > 0 && !kept.contains(row)) row,
+        if ((unspecifiedMarks(row.name, query) > 0 ||
+                isEverydayRow(row.name, query)) &&
+            !kept.contains(row))
+          row,
     ];
-    mergeSort(
-      left,
-      compare: (a, b) => unspecifiedMarks(
-        b.name,
-        query,
-      ).compareTo(unspecifiedMarks(a.name, query)),
-    );
+    // The row a bare name means (S75) first, then the most unspecified.
+    int rank(SpFoodDTO row) => isEverydayRow(row.name, query)
+        ? 1 << 20
+        : unspecifiedMarks(row.name, query);
+    mergeSort(left, compare: (a, b) => rank(b).compareTo(rank(a)));
     return left.take(5);
   }
 
@@ -337,7 +340,13 @@ class LocalFoodTable {
     }
     if (best.$1 < 2 && !best.$2) return const [];
     _sort(matches, searchString.trim().toLowerCase());
-    return matches.take(LocalFoodDataSource.candidatePoolSize).toList();
+    const size = LocalFoodDataSource.candidatePoolSize;
+    return [
+      ...matches.take(size),
+      // The row a bare name means (S75), long enough to sort past the cut.
+      for (final food in matches.skip(size))
+        if (isEverydayRow(food.name, searchString)) food,
+    ];
   }
 
   /// The backend's order: a portion first, then the title equal to [term],
