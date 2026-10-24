@@ -14,8 +14,9 @@ set -uo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 SEC="$ROOT/fork/security"
-# The release key's pinned certificate lives beside the keystore, never in the repo.
-CERT="${FORK_CERT:-$HOME/.config/opennutritracker-fork/apk-cert.txt}"
+# The release key's pinned certificate lives beside the keystore, never in the repo. OpenBite
+# shares Go Hevier's key (D16).
+CERT="${FORK_CERT:-$HOME/.config/hevier/apk-cert.txt}"
 # The fork's own id (D8, android/app/fork.gradle).
 APP_ID="${FORK_APP_ID:-io.github.lodepav.openbite}"
 export PATH="$HOME/.local/opt/gitleaks:$HOME/.local/opt/trivy:$PATH"

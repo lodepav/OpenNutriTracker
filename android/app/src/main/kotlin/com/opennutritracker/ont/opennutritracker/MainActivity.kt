@@ -49,6 +49,9 @@ class MainActivity : FlutterFragmentActivity() {
         // [fork] S22 backup-folder: the automatic backup's folder (fork phase 2)
         com.opennutritracker.ont.opennutritracker.fork.BackupFolderChannel(this, flutterEngine)
         // [/fork]
+        // [fork] S76 updater: hands a checked release APK to the installer (D16)
+        com.opennutritracker.ont.opennutritracker.fork.UpdateInstallChannel(this, flutterEngine)
+        // [/fork]
 
         // A cold start: the launching intent is the one held by the activity.
         // Or-ing rather than assigning so an intent that arrived through

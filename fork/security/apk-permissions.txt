@@ -1,5 +1,5 @@
 # Permissions the release APK may ask for, each with what uses it (fork/tools/release-check.sh).
-# All upstream's or its plugins'; the fork adds none. $PKG is the app id.
+# Upstream's, its plugins', or the fork's (each names its seam). $PKG is the app id.
 android.permission.INTERNET                         # Open Food Facts, the AI providers, Sentry (upstream's manifest)
 android.permission.CAMERA                           # barcode scanning and meal photos (mobile_scanner)
 android.permission.POST_NOTIFICATIONS               # meal and fasting reminders (upstream's manifest, flutter_local_notifications)
@@ -7,5 +7,12 @@ android.permission.RECEIVE_BOOT_COMPLETED           # reschedules the reminders 
 android.permission.VIBRATE                          # reminder notifications (flutter_local_notifications)
 android.permission.health.READ_EXERCISE             # Health Connect activity import (upstream's manifest)
 android.permission.health.READ_TOTAL_CALORIES_BURNED  # Health Connect activity import (upstream's manifest)
+android.permission.REQUEST_INSTALL_PACKAGES             # the in-app updater opens Android's installer for a release APK (S76, D16; release build only)
 android.permission.ACCESS_NETWORK_STATE             # Google datatransport, which ML Kit's barcode scanner (mobile_scanner) brings in to send usage metrics to Google; upstream's to decide
 $PKG.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION       # androidx.core's guard for its own unexported receivers
+android.permission.health.READ_WEIGHT                # Health Connect weight import (S28)
+android.permission.health.READ_STEPS                 # daily steps on Trends (S44)
+android.permission.health.READ_BODY_FAT              # a smart scale's body fat % (S48)
+android.permission.health.WRITE_NUTRITION            # the diary's calories and macros to Health Connect (S49)
+android.permission.WAKE_LOCK                         # androidx.work (home_widget → glance-appwidget): the widgets' updates
+android.permission.FOREGROUND_SERVICE                # androidx.work (home_widget → glance-appwidget): long-running work; no foreground service type is declared
