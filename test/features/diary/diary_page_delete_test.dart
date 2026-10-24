@@ -357,7 +357,16 @@ void main() {
           DateTime(tomorrow.year, tomorrow.month, tomorrow.day, 0, 30);
       locator<DiaryBloc>().add(const LoadDiaryYearEvent());
       await settle(tester);
-      expect(find.text('Toast'), findsNothing, reason: 'followed today');
+      // [fork] S83: the open edit dialog is titled with the food; the list
+      // is what moved on
+      expect(
+        find.text('Toast').evaluate().where(
+          (e) => e.findAncestorWidgetOfExactType<AlertDialog>() == null,
+        ),
+        isEmpty,
+        reason: 'followed today',
+      );
+      // [/fork]
     }
 
     testWidgets('an edit adjusts the row of the day the entry is on', (
