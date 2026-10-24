@@ -921,6 +921,23 @@ and with a Latvian note, in English.
   - `egg` "Egg, creamed" and `pizza` "Pizza, no cheese", the shorter siblings, as upstream.
   - The rest are gaps in the table: psyllium, kvass, creatine, casein, burrata.
 
+*The user's dishes in photos, 2026-10-24* (`test/fork/eval/macrofactor_photo_test.dart`): 20 Wikimedia
+Commons photos of dishes from the user's log, the manifest kept with the labels in `build/`.
+
+| Model | Named, photo alone | Named, with the logged name | A right table row |
+|---|---|---|---|
+| Opus | 17/20 | 20/20 | 11/20 |
+| Sonnet | 17/20 | 20/20 | 11/20 |
+| Haiku | 16/20 | 20/20 | 11/20 |
+
+- Alone, the models miss syrniki ("fried croquettes"), kharcho ("spicy tomato soup") and kofta in
+  sauce ("beef patties"); the note fixes all three.
+- The right-row misses are dishes the table lacks: plov, khachapuri, syrniki, kharcho, kofta,
+  odzhakhuri, poke bowl, beet salad, chicken schnitzel. The app breaks those down (D9); the
+  test does not. They are the next candidates for fork dishes.
+- Side rows that land wrong: "lingonberry jam" on a turkey dish served with it, "walnuts" on
+  honey-roasted ones.
+
 Still needs the user: the leftovers photo check, typing and photographing their own
 khachapuri, pelmeni and grey peas, and ten of their own meals (photos we do not have).
 
