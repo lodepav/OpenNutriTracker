@@ -25,6 +25,9 @@ library;
 import 'package:collection/collection.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dart';
 import 'package:opennutritracker/features/add_meal/util/soft_text_score.dart';
+// [fork] S70 unasked-variant: meatless, vegan and baby-food rows trail
+import 'package:opennutritracker/fork/food/unasked_variant.dart';
+// [/fork]
 
 /// Quality tie-breakers, matching the shared ranker so that near-equal text
 /// matches resolve the same way in both places.
@@ -130,6 +133,9 @@ double scoreMealForResolution(MealEntity meal, String query) {
 
   if (meal.detailed) score += _detailedBonus;
   if (meal.machineTranslatedName) score -= _machineTranslatedPenalty;
+  // [fork] S70 unasked-variant: a variant the query did not name trails
+  score -= unaskedVariant(meal.name, query);
+  // [/fork]
 
   // Backend records only. `MealEntity.portions` is filled from the
   // backend's portion lookup and from nowhere else, so an Open Food Facts

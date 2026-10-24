@@ -88,7 +88,7 @@ void main() {
   // Phase 1c: the ingredient names the breakdown prompt asks for
   // (BreakDownDishUseCase.systemPrompt) land on the plain raw row. Bare
   // names do not: `carrot` finds "Carrot, dehydrated", `bacon` "Bacon,
-  // meatless", the tie-break above.
+  // turkey, microwaved", the tie-break above.
   for (final (query, expected) in [
     ('egg, whole, raw', 'Egg, whole, raw'),
     ('carrot, raw', 'Carrots, raw'),
