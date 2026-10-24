@@ -932,9 +932,13 @@ Commons photos of dishes from the user's log, the manifest kept with the labels 
 
 - Alone, the models miss syrniki ("fried croquettes"), kharcho ("spicy tomato soup") and kofta in
   sauce ("beef patties"); the note fixes all three.
-- The right-row misses are dishes the table lacks: plov, khachapuri, syrniki, kharcho, kofta,
-  odzhakhuri, poke bowl, beet salad, chicken schnitzel. The app breaks those down (D9); the
-  test does not. They are the next candidates for fork dishes.
+- The right-row misses were dishes the table lacked: plov, khachapuri, syrniki, kharcho, kofta,
+  odzhakhuri, poke bowl, beet salad, chicken schnitzel. They are fork dishes now
+  (`fork/data/dishes.json`). With the name noted, every model lands on a right row for all 20;
+  photo alone, Opus 16/20 and Sonnet and Haiku 13/20, the rest named too vaguely ("meat
+  curry", "breaded cutlet", "spicy soup"). Typed, the log's dishes went from 25/45 to 34/45
+  right for each model. Bare "schnitzel" now logs the chicken one, which has a portion, over
+  BLS's pork.
 - Side rows that land wrong: "lingonberry jam" on a turkey dish served with it, "walnuts" on
   honey-roasted ones.
 

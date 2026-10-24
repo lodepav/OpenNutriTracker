@@ -345,6 +345,16 @@ void main() {
           ('Salmon soup', ['salmon soup', 'lohikeitto', 'laša zupa']),
           ('Grey peas', ['grey peas with bacon', 'pelēkie zirņi ar speķi']),
           ('Potato balls', ['potato balls', 'roasted potato balls']),
+          ('Plov', ['plov', 'chicken plov']),
+          ('Khachapuri', ['khachapuri', 'adjarian khachapuri']),
+          ('Syrniki', ['syrniki', 'syrnyky']),
+          ('Kharcho', ['kharcho', 'kharcho soup']),
+          ('Kofta', ['kofta', 'beef kofta', 'kofte']),
+          ('Odzhakhuri', ['odzhakhuri', 'ojakhuri']),
+          ('Poke bowl', ['poke bowl', 'chicken poke bowl']),
+          ('Beet salad', ['beet salad', 'grated beet salad', 'beetroot salad']),
+          ('Chicken schnitzel', ['chicken schnitzel']),
+          ('Salad, green', ['salad', 'garden salad']),
         ]) {
           for (final query in queries) {
             final row = (await source.fetchSearchWordResults(
@@ -359,7 +369,7 @@ void main() {
       });
 
       test('dishes no table has find nothing, for D9 to estimate', () async {
-        expect(await top('khachapuri'), isNull);
+        expect(await top('chakhokhbili'), isNull);
       });
     },
     skip: File(LocalFoodDataSource.assetPath).existsSync()
