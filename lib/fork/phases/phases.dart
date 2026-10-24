@@ -21,22 +21,32 @@ enum PhaseKind {
 }
 
 /// One phase of a diet plan: [weeks] long at [kgPerWeek] (negative while
-/// cutting, 0 at maintenance, which a diet break is).
+/// cutting, 0 at maintenance, which a diet break is). A phase set to end
+/// at a weight keeps it in [untilKg]; its [weeks] are worked out from it
+/// ([weeksTo]) as it is edited, and run as any phase's.
 class DietPhase {
   final PhaseKind kind;
   final double kgPerWeek;
   final int weeks;
+  final double? untilKg;
 
   const DietPhase({
     required this.kind,
     required this.kgPerWeek,
     required this.weeks,
+    this.untilKg,
   });
+
+  /// Whole weeks from [fromKg] to [untilKg] at [kgPerWeek], 1 to 52: a
+  /// rough estimate, as the weight never follows a pace exactly.
+  static int weeksTo(double fromKg, double untilKg, double kgPerWeek) =>
+      kgPerWeek == 0 ? 1 : ((untilKg - fromKg) / kgPerWeek).ceil().clamp(1, 52);
 
   Map<String, Object> toJson() => {
     'kind': kind.name,
     'kgPerWeek': kgPerWeek,
     'weeks': weeks,
+    'untilKg': ?untilKg,
   };
 
   static DietPhase fromJson(Map<dynamic, dynamic> json) {
@@ -46,6 +56,7 @@ class DietPhase {
       kind: PhaseKind.values.byName(json['kind'] as String),
       kgPerWeek: (json['kgPerWeek'] as num).toDouble(),
       weeks: weeks,
+      untilKg: (json['untilKg'] as num?)?.toDouble(),
     );
   }
 }
@@ -56,7 +67,30 @@ class PhasePlan {
   final DateTime start;
   final List<DietPhase> phases;
 
-  const PhasePlan({required this.start, required this.phases});
+  /// The trend weight when the plan was made; null in a plan from before
+  /// weights were kept, which estimates none.
+  final double? startKg;
+
+  const PhasePlan({required this.start, required this.phases, this.startKg});
+
+  /// The rough weight phase [index] starts at, the end weight for
+  /// `phases.length`: [startKg] moved by each phase's pace and weeks, a
+  /// phase to a weight stopping there.
+  double? weightAt(int index) {
+    final from = startKg;
+    if (from == null) return null;
+    var kg = from;
+    for (final p in phases.take(index)) {
+      final moved = kg + p.kgPerWeek * p.weeks;
+      final until = p.untilKg;
+      kg = until == null || (until - kg) * p.kgPerWeek <= 0
+          ? moved
+          : p.kgPerWeek < 0
+          ? (moved < until ? until : moved)
+          : (moved > until ? until : moved);
+    }
+    return kg;
+  }
 
   /// The day phase [index] starts, the day after the last for
   /// `phases.length`.
@@ -92,10 +126,12 @@ class PhasePlan {
   Map<String, Object> toJson() => {
     'start': start.toIso8601String(),
     'phases': [for (final p in phases) p.toJson()],
+    'startKg': ?startKg,
   };
 
   static PhasePlan fromJson(Map<dynamic, dynamic> json) => PhasePlan(
     start: DateTime.parse(json['start'] as String),
+    startKg: (json['startKg'] as num?)?.toDouble(),
     phases: [
       for (final p in json['phases'] as List) DietPhase.fromJson(p as Map),
     ],
@@ -107,6 +143,10 @@ class PhasePlan {
 class PhaseStore {
   static const planKey = 'phasePlan';
   static const _appliedKey = 'phaseApplied';
+
+  /// The goal planner's milestone step: its place in the unit's list
+  /// (`milestoneStepsKg`, `milestoneStepsLb`) from 1, 0 for none.
+  static const milestoneKey = 'milestoneStep';
 
   /// Bumped when the plan changes, so the Trends card reloads.
   static final changes = ValueNotifier(0);
@@ -133,6 +173,12 @@ class PhaseStore {
     await box.delete(_appliedKey);
     changes.value++;
   }
+
+  Future<int> milestoneStep() async =>
+      (await _box()).get(milestoneKey, defaultValue: 0) as int;
+
+  Future<void> saveMilestoneStep(int step) async =>
+      (await _box()).put(milestoneKey, step);
 
   Future<String?> applied() async => (await _box()).get(_appliedKey) as String?;
 

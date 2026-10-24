@@ -173,6 +173,7 @@ void main() {
       phases: const [DietPhase(kind: PhaseKind.cut, kgPerWeek: -0.5, weeks: 8)],
     );
     await from.phases.save(plan);
+    await from.phases.saveMilestoneStep(2);
 
     final archive = Archive();
     await from.extras.addTo(archive);
@@ -205,6 +206,7 @@ void main() {
       (BodyMetric.waist, 84),
     ]);
     expect((await to.phases.plan())?.toJson(), plan.toJson());
+    expect(await to.phases.milestoneStep(), 2);
     final photos = await to.photos.all();
     expect(photos.map((p) => (p.id, p.date)), [
       (photo.id, DateTime(2026, 10, 21)),

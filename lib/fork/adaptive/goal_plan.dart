@@ -98,3 +98,34 @@ GoalPlan planAt(GoalPlanInputs inputs, double paceKgPerWeek) {
                 energyDensity(fatMassKg(now, inputs.bodyFatPercent))),
   );
 }
+
+/// The milestone steps offered, in the unit's own numbers: kg for kg, lb
+/// for lb and st. The planner stores the chosen one's place, 0 for none.
+const milestoneStepsKg = [1, 2, 5];
+const milestoneStepsLb = [2, 5, 10];
+
+/// Round weights every [step] (in a unit [perKg] times a kg) strictly
+/// between [nowKg] and [targetKg], nearest first, at most [max], in kg.
+List<double> milestonesKg(
+  double nowKg,
+  double targetKg,
+  num step, {
+  double perKg = 1,
+  int max = 5,
+}) {
+  final now = nowKg * perKg, target = targetKg * perKg;
+  final down = target < now;
+  var m = down
+      ? (now / step).floor() * step.toDouble()
+      : (now / step).ceil() * step.toDouble();
+  // Not the weight already reached.
+  if ((m - now).abs() < 0.1) m += down ? -step : step;
+  return [
+    for (
+      var i = 0;
+      i < max && (down ? m > target + 0.1 : m < target - 0.1);
+      i++, m += down ? -step : step
+    )
+      m / perKg,
+  ];
+}

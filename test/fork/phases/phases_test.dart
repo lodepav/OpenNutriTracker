@@ -1,9 +1,13 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
+import 'package:opennutritracker/core/domain/entity/body_weight_unit_entity.dart';
 import 'package:opennutritracker/core/utils/tracked_day_lock.dart';
+import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
+import 'package:opennutritracker/fork/adaptive/goal_plan.dart';
 import 'package:opennutritracker/fork/phases/phases.dart';
 import 'package:opennutritracker/fork/phases/phases_ui.dart';
 
@@ -35,6 +39,20 @@ class _MemoryPhases extends PhaseStore {
   }
 }
 
+/// A trend weight of 90.4 kg today.
+class _Trend extends Fake implements AdaptiveService {
+  @override
+  Future<GoalPlanInputs?> goalPlan({int pastDays = 60}) async =>
+      const GoalPlanInputs(
+        pastTrendKg: [91, 90.4],
+        trendKgPerDay: -0.05,
+        expenditureKcal: 2500,
+        bodyFatPercent: 25,
+        targetWeightKg: 80,
+        paceKgPerWeek: -0.5,
+      );
+}
+
 void main() {
   group('the plan', () {
     test('phases follow each other by calendar day', () {
@@ -51,6 +69,39 @@ void main() {
       expect(_plan.paceOn(DateTime(2026, 11, 9)), 0.25);
       expect(_plan.paceOn(DateTime(2026, 12, 1)), 0);
       expect(_plan.indexOn(DateTime(2026, 12, 1)), 3);
+    });
+
+    test('weights: each phase moves it, one to a weight stops there', () {
+      final plan = PhasePlan(
+        start: _start,
+        startKg: 90,
+        phases: const [
+          DietPhase(kind: PhaseKind.cut, kgPerWeek: -0.5, weeks: 2),
+          DietPhase(
+            kind: PhaseKind.cut,
+            kgPerWeek: -0.5,
+            weeks: 5,
+            untilKg: 87,
+          ),
+          DietPhase(kind: PhaseKind.bulk, kgPerWeek: 0.25, weeks: 4),
+        ],
+      );
+      expect(plan.weightAt(0), 90);
+      expect(plan.weightAt(1), 89);
+      expect(plan.weightAt(2), 87); // not 86.5: it stops at 87
+      expect(plan.weightAt(3), 88);
+      expect(_plan.weightAt(1), isNull); // a plan with no weights
+      expect(DietPhase.weeksTo(89, 87, -0.5), 4);
+      expect(DietPhase.weeksTo(89, 86.9, -0.5), 5); // rounded up
+      expect(DietPhase.weeksTo(89, 91, -0.5), 1); // the wrong way
+      expect(DietPhase.weeksTo(89, 40, -0.5), 52);
+
+      final copy = PhasePlan.fromJson(jsonDecode(jsonEncode(plan.toJson())));
+      expect(copy.startKg, 90);
+      expect(copy.phases[1].untilKg, 87);
+      expect(copy.phases[0].untilKg, isNull);
+      expect(_plan.toJson().containsKey('startKg'), isFalse);
+      expect(PhasePlan.fromJson(_plan.toJson()).startKg, isNull);
     });
 
     test('round-trips, and a phase of no weeks is refused', () {
@@ -164,7 +215,11 @@ void main() {
   });
 
   group('the card', () {
-    Future<void> pump(WidgetTester tester, _MemoryPhases store) async {
+    Future<void> pump(
+      WidgetTester tester,
+      _MemoryPhases store, {
+      AdaptiveService? service,
+    }) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -172,6 +227,8 @@ void main() {
               child: DietPhasesCard(
                 store: store,
                 clock: () => DateTime(2026, 10, 27, 10),
+                unit: BodyWeightUnit.kg,
+                service: service,
               ),
             ),
           ),
@@ -211,6 +268,68 @@ void main() {
         [(PhaseKind.cut, -0.5, 11), (PhaseKind.maintain, 0, 2)],
       );
       expect(find.text('Now: Cut, 11 weeks -0.50 kg a week'), findsOneWidget);
+    });
+
+    testWidgets('a phase until a weight: weeks from the pace', (tester) async {
+      final store = _MemoryPhases();
+      await pump(tester, store, service: _Trend());
+      Future<void> tap(String key) async {
+        await tester.ensureVisible(find.byKey(ValueKey(key)));
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(ValueKey(key)));
+        await tester.pumpAndSettle();
+      }
+
+      String ends(int i) =>
+          tester.widget<Text>(find.byKey(ValueKey('phase-$i-ends'))).data!;
+
+      await tap('phases-edit');
+      // 12 weeks at -0.5 from 90.4.
+      expect(ends(0), 'Ends about 2027-01-19, ~84.4 kg');
+      await tap('phase-0-until');
+      expect(find.text('Until 84.5 kg: about 12 weeks'), findsOneWidget);
+      await tap('phase-0-lighter');
+      await tap('phase-0-lighter');
+      expect(find.text('Until 83.5 kg: about 14 weeks'), findsOneWidget);
+      expect(ends(0), 'Ends about 2027-02-02, ~83.5 kg');
+
+      // A later phase to a weight starts where this one ends.
+      await tap('phase-0-for-time');
+      await tap('phases-add');
+      await tap('phase-1-cut');
+      await tap('phase-1-until');
+      // From ~83.4 after 14 weeks: to 82.5, two weeks.
+      expect(find.text('Until 82.5 kg: about 2 weeks'), findsOneWidget);
+      await tap('phase-0-shorter');
+      // A week less before it: half a kilo more to lose.
+      expect(find.text('Until 82.5 kg: about 3 weeks'), findsOneWidget);
+      expect(ends(1), 'Ends about 2027-02-16, ~82.5 kg');
+
+      await tap('phases-save');
+      final plan = store.saved!;
+      expect(plan.startKg, 90.4);
+      expect(
+        [for (final p in plan.phases) (p.weeks, p.untilKg)],
+        [(13, null), (3, 82.5)],
+      );
+      expect(
+        find.text(
+          '2027-01-26: Cut to 82.5 kg, about 3 weeks -0.50 kg a week, '
+          '~82.5 kg',
+        ),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('without a weight, phases are by time only', (tester) async {
+      await pump(tester, _MemoryPhases());
+      await tester.tap(find.byKey(const ValueKey('phases-edit')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('phase-0-until')), findsNothing);
+      expect(
+        tester.widget<Text>(find.byKey(const ValueKey('phase-0-ends'))).data,
+        'Ends 2027-01-19',
+      );
     });
 
     testWidgets('a plan is deleted', (tester) async {

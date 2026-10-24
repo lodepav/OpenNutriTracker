@@ -422,6 +422,7 @@ void main() {
     await tester.pumpAndSettle();
     expect((tester.widget(reached.first) as Text).data, isNot(before));
 
+    await tester.ensureVisible(find.text('Use this pace'));
     await tester.tap(find.text('Use this pace'));
     await tester.pumpAndSettle();
     expect(saved.single, isNot(closeTo(-0.5, 0.01)));
