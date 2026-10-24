@@ -132,6 +132,23 @@ ThemeData buildAppTheme(AppPalette p) {
       ),
     ),
     // [/fork]
+    // [fork] S83 segment-contrast: the chosen segment in the accent with
+    // its on-colour, so the choice shows without the check mark (WCAG
+    // 1.4.11); it took `secondaryContainer`, about 1.1:1 against the rest
+    segmentedButtonTheme: SegmentedButtonThemeData(
+      style: ButtonStyle(
+        backgroundColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.selected) ? scheme.primary : null,
+        ),
+        foregroundColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.selected) ? scheme.onPrimary : null,
+        ),
+        iconColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.selected) ? scheme.onPrimary : null,
+        ),
+      ),
+    ),
+    // [/fork]
     listTileTheme: const ListTileThemeData(shape: RoundedRectangleBorder(borderRadius: Dimens.borderRadiusM)),
     bottomSheetTheme: BottomSheetThemeData(
       backgroundColor: p.surface,
