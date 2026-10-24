@@ -11,6 +11,7 @@ import 'package:opennutritracker/core/utils/calc/calorie_goal_calc.dart';
 import 'package:opennutritracker/core/domain/usecase/get_config_usecase.dart';
 import 'package:opennutritracker/core/utils/calc/day_boundary_calc.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
+import 'package:opennutritracker/fork/adaptive/activity.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/fork/adaptive/check_in.dart';
 import 'package:opennutritracker/fork/adaptive/energy.dart';
@@ -28,6 +29,21 @@ const _historyDays = 120;
 /// Days between check-ins.
 const checkInEveryDays = 7;
 
+/// Whether a check-in is due [today], the last made on [last] (null for
+/// none): a week after it, or on [weekday] (Monday 1) when one is chosen,
+/// once the last falls before that weekday's latest date. A missed
+/// weekday stays due until done.
+bool checkInDueOn(DateTime today, DateTime? last, int? weekday) {
+  if (last == null) return true;
+  final lastDay = DateTime(last.year, last.month, last.day);
+  if (weekday == null) {
+    return today.difference(lastDay).inDays >= checkInEveryDays;
+  }
+  final back = (today.weekday - weekday) % 7;
+  final latest = DateTime(today.year, today.month, today.day - back);
+  return lastDay.isBefore(latest);
+}
+
 /// Reads upstream's profile, weight log and tracked days into a check-in,
 /// and gives seam S12 the target while the adaptive switch is on.
 class AdaptiveService {
@@ -41,6 +57,9 @@ class AdaptiveService {
   /// estimate only.
   final MeasurementStore? _measurements;
 
+  /// The activity the expenditure settings count (D17); null counts none.
+  final ActivityCounter? _activity;
+
   AdaptiveService(
     this._user,
     this._weights,
@@ -48,6 +67,7 @@ class AdaptiveService {
     this._store, [
     DateTime Function()? now,
     this._measurements,
+    this._activity,
   ]) : _now = now ?? DateTime.now;
 
   factory AdaptiveService.fromLocator() => AdaptiveService(
@@ -57,6 +77,7 @@ class AdaptiveService {
     AdaptiveStore(),
     null,
     MeasurementStore(),
+    ActivityCounter.fromLocator(),
   );
 
   /// The latest measured body fat % of the past 90 days, else the
@@ -64,14 +85,15 @@ class AdaptiveService {
   Future<double> _bodyFat(UserEntity user) async =>
       await _measurements?.recentBodyFat(_now()) ?? bodyFatPercent(user);
 
-  /// True when the switch is on and a week has passed since the last
-  /// check-in, or there has been none.
+  /// True when the switch is on and a check-in is due ([checkInDueOn]).
   Future<bool> checkInDue() async {
     final settings = AdaptiveStore.settings.value;
     if (!settings.adaptiveTarget || settings.fixedTarget) return false;
-    final last = await _store.lastCheckIn();
-    return last == null ||
-        _today().difference(_day(last.date)).inDays >= checkInEveryDays;
+    return checkInDueOn(
+      _today(),
+      (await _store.lastCheckIn())?.date,
+      settings.checkInWeekday,
+    );
   }
 
   Future<CheckIn> checkIn() async {
@@ -79,20 +101,23 @@ class AdaptiveService {
     final days = (await _history()).days;
     final rate = goalRateKgPerWeek(user);
     final previous = await _store.lastCheckIn();
+    final settings = AdaptiveStore.settings.value;
     return computeCheckIn(
       CheckInInputs(
         days: days,
-        priorKcal: _priorKcal(user),
+        priorKcal: _priorKcal(user, days),
         goalRateKgPerWeek: rate,
         bodyFatPercent: await _bodyFat(user),
         targetWeightKg: user.targetWeightKg,
-        previousTargetKcal:
-            previous?.acceptedKcal ??
-            CalorieGoalCalc.getTotalKcalGoal(
-              user,
-              0,
-              caloriesTaperEnabled: user.caloriesTaperEnabled,
-            ),
+        previousTargetKcal: previous == null
+            ? CalorieGoalCalc.getTotalKcalGoal(
+                user,
+                0,
+                caloriesTaperEnabled: user.caloriesTaperEnabled,
+              )
+            : previous.acceptedKcal - previous.activityKcal,
+        maxChangeKcal: settings.maxCheckInChangeKcal,
+        activityMode: settings.activityMode,
         taper: (adjustment, weight) => CalorieGoalCalc.applyTargetWeightTaper(
           baseAdjustment: adjustment,
           currentWeightKg: weight,
@@ -103,6 +128,16 @@ class AdaptiveService {
         settings: _settings(),
       ),
     );
+  }
+
+  /// Accepts a due check-in as proposed when the settings say so; the
+  /// check-in accepted, or null when none was due or it is asked.
+  Future<CheckIn?> autoAcceptIfDue() async {
+    if (!AdaptiveStore.settings.value.autoAcceptCheckIn) return null;
+    if (!await checkInDue()) return null;
+    final due = await checkIn();
+    await accept(due, due.proposedTargetKcal);
+    return due;
   }
 
   /// Expenditure as estimated on each day since the first weigh-in in
@@ -116,19 +151,22 @@ class AdaptiveService {
     final settings = _settings();
     final estimates = estimateExpenditure(
       history.days,
-      priorKcal: _priorKcal(user),
+      priorKcal: _priorKcal(user, history.days),
       bodyFatPercent: await _bodyFat(user),
       settings: settings,
     );
+    final days = history.days;
     return [
-      for (final (i, day) in history.days.indexed)
+      for (final (i, day) in days.indexed)
         ExpenditureDay(
           date: DateTime(
             history.first.year,
             history.first.month,
             history.first.day + i,
           ),
-          expenditureKcal: estimates[i],
+          expenditureKcal:
+              estimates[i] +
+              (meanActivity(days.sublist((i - 6).clamp(0, i), i + 1)) ?? 0),
           intakeKcal: (day.intakeKcal ?? 0) >= minLoggedKcal
               ? day.intakeKcal
               : null,
@@ -158,12 +196,17 @@ class AdaptiveService {
       trendKgPerDay: trend.length > 20
           ? (trend.last - trend[trend.length - 21]) / 20
           : null,
-      expenditureKcal: estimateExpenditure(
-        days,
-        priorKcal: _priorKcal(user),
-        bodyFatPercent: await _bodyFat(user),
-        settings: settings,
-      ).last,
+      expenditureKcal:
+          estimateExpenditure(
+            days,
+            priorKcal: _priorKcal(user, days),
+            bodyFatPercent: await _bodyFat(user),
+            settings: settings,
+          ).last +
+          (meanActivity(
+                days.sublist((days.length - 7).clamp(0, days.length)),
+              ) ??
+              0),
       bodyFatPercent: await _bodyFat(user),
       targetWeightKg: user.targetWeightKg,
       paceKgPerWeek: goalRateKgPerWeek(user),
@@ -171,14 +214,15 @@ class AdaptiveService {
   }
 
   /// Upstream's formula expenditure × (1 + 4 × goal rate), MacroFactor's
-  /// prior.
-  static double _priorKcal(UserEntity user) =>
+  /// prior; less the first two weeks' counted activity when activity is
+  /// counted (D17), as the formula's activity level holds it already.
+  static double _priorKcal(UserEntity user, List<AdaptiveDay> days) =>
       CalorieGoalCalc.getTdee(user) *
-      (1 + 4 * goalRateKgPerWeek(user) / user.weightKG);
+          (1 + 4 * goalRateKgPerWeek(user) / user.weightKG) -
+      (meanActivity(days.take(14)) ?? 0);
 
-  static ExpenditureSettings _settings() => ExpenditureSettings(
-    window: AdaptiveStore.settings.value.cycleWindow ? 28 : 20,
-  );
+  static ExpenditureSettings _settings() =>
+      AdaptiveStore.settings.value.expenditure;
 
   /// The days a check-in reads, from the first weigh-in in the last
   /// [_historyDays] (today when there is none) to today.
@@ -193,24 +237,76 @@ class AdaptiveService {
       for (final entry in await _weights.getAllEntries())
         _day(entry.date): entry.weightKg,
     };
+    final skipped = AdaptiveStore.skipped.value;
     final intakes = {
       for (final day in await _trackedDays.getTrackedDaysByRange(start, today))
-        _day(day.day): day.caloriesTracked,
+        if (!skipped.contains(_day(day.day)))
+          _day(day.day): day.caloriesTracked,
     };
     // Start at the first weigh-in in range, so a new user's prior is not
     // pulled by empty months.
     final first = weighIns.keys
         .where((d) => !d.isBefore(start))
         .fold(today, (a, b) => b.isBefore(a) ? b : a);
+    final activity = await _countedActivity(first, today);
     final days = [
       for (
         var d = first;
         !d.isAfter(today);
         d = DateTime(d.year, d.month, d.day + 1)
       )
-        AdaptiveDay(intakeKcal: intakes[d], weightKg: weighIns[d]),
+        AdaptiveDay(
+          intakeKcal: intakes[d],
+          weightKg: weighIns[d],
+          activityKcal: activity?[d],
+        ),
     ];
     return (first: first, days: days);
+  }
+
+  /// Counted activity per day, or null when none is counted (D17). A
+  /// health store that will not answer counts none rather than failing the
+  /// check-in.
+  Future<Map<DateTime, double>?> _countedActivity(
+    DateTime first,
+    DateTime today,
+  ) async {
+    final settings = AdaptiveStore.settings.value;
+    final counter = _activity;
+    if (counter == null || settings.activityMode == ActivityMode.off) {
+      return null;
+    }
+    try {
+      final user = await _user.getUserData();
+      return await counter.daily(
+        first: first,
+        today: today,
+        settings: settings,
+        user: user,
+        bodyFatPercent: await _measurements?.recentBodyFat(_now()),
+      );
+    } catch (e) {
+      _log.warning('Activity unreadable, none counted: $e');
+      return null;
+    }
+  }
+
+  /// The counted activity of [day] alone, from the steps already read;
+  /// 0 when none is counted. For the daily mode's goal.
+  Future<double> activityOn(DateTime day, {bool readHealth = false}) async {
+    final counter = _activity;
+    if (counter == null) return 0;
+    final user = await _user.getUserData();
+    final d = _day(day);
+    return (await counter.daily(
+          first: d,
+          today: d,
+          settings: AdaptiveStore.settings.value,
+          user: user,
+          bodyFatPercent: await _measurements?.recentBodyFat(_now()),
+          readHealth: readHealth,
+        ))[d] ??
+        0;
   }
 
   Future<void> accept(CheckIn checkIn, double targetKcal) => _store.addCheckIn(
@@ -219,6 +315,9 @@ class AdaptiveService {
       expenditureKcal: checkIn.expenditureKcal,
       proposedKcal: checkIn.proposedTargetKcal,
       acceptedKcal: targetKcal,
+      activityKcal: checkIn.activityInTarget(
+        AdaptiveStore.settings.value.activityMode,
+      ),
     ),
   );
 
@@ -260,9 +359,10 @@ class ForkKcalGoal {
 /// Seam S12: the fixed target, or the last accepted check-in's while the
 /// adaptive switch is on, shifted for [logicalToday]'s weekday; null
 /// target leaves upstream's formula. Logged activities are not added to
-/// either, since measured expenditure already holds them and a fixed
-/// target is meant fixed, nor the kcal adjustment, since the user sets
-/// the target itself. [store] is another profile's, read from its box;
+/// either through upstream's path, since measured expenditure already
+/// holds them and a fixed target is meant fixed, nor the kcal adjustment,
+/// since the user sets the target itself; in D17's daily mode the
+/// adaptive one adds the day's counted activity itself. [store] is another profile's, read from its box;
 /// the active profile's is [AdaptiveStore.settings].
 Future<ForkKcalGoal> forkKcalGoal(
   DateTime logicalToday, [
@@ -278,8 +378,15 @@ Future<ForkKcalGoal> forkKcalGoal(
         : settings.adaptiveTarget
         ? (await (store ?? AdaptiveStore()).lastCheckIn())?.acceptedKcal
         : null;
+    final activity =
+        base != null &&
+            store == null &&
+            !settings.fixedTarget &&
+            settings.activityMode == ActivityMode.daily
+        ? await _todayActivity(logicalToday)
+        : 0.0;
     return ForkKcalGoal(
-      target: base == null ? null : base + offset,
+      target: base == null ? null : base + offset + activity,
       weekdayOffsetKcal: offset,
     );
   } catch (e) {
@@ -289,6 +396,18 @@ Future<ForkKcalGoal> forkKcalGoal(
     return const ForkKcalGoal();
   } finally {
     await store?.release();
+  }
+}
+
+/// The daily mode's activity for the active profile's [day] (D17), from
+/// the steps already read; 0 when it cannot be read, so the goal is the
+/// check-in's alone rather than none.
+Future<double> _todayActivity(DateTime day) async {
+  try {
+    return await AdaptiveService.fromLocator().activityOn(day);
+  } catch (e) {
+    _log.warning('Activity unreadable, none added to the goal: $e');
+    return 0;
   }
 }
 

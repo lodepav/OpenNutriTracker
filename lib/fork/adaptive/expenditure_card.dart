@@ -5,6 +5,7 @@ import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/core/utils/calc/unit_calc.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
+import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/fork/units/energy_text.dart';
 
 /// Seam S40: on Trends, the estimated expenditure over the picked range
@@ -27,8 +28,29 @@ class ExpenditureTrendCard extends StatefulWidget {
 }
 
 class _ExpenditureTrendCardState extends State<ExpenditureTrendCard> {
-  late final Future<List<ExpenditureDay>> _history =
-      (widget.service ?? AdaptiveService.fromLocator()).expenditureHistory();
+  late final _service = widget.service ?? AdaptiveService.fromLocator();
+  late Future<List<ExpenditureDay>> _history = _service.expenditureHistory();
+
+  /// The estimate moves with the expenditure settings and the days left
+  /// out (D17).
+  late final _changes = Listenable.merge([
+    AdaptiveStore.settings,
+    AdaptiveStore.skipped,
+  ]);
+
+  @override
+  void initState() {
+    super.initState();
+    _changes.addListener(_reload);
+  }
+
+  @override
+  void dispose() {
+    _changes.removeListener(_reload);
+    super.dispose();
+  }
+
+  void _reload() => setState(() => _history = _service.expenditureHistory());
 
   @override
   Widget build(BuildContext context) => FutureBuilder<List<ExpenditureDay>>(

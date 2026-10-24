@@ -75,6 +75,29 @@ MacroFactor publishes these figures for its own estimate:
 
 Our simulated users are kinder than real ones, so a lower error here is no claim of beating it.
 
+## Responsiveness
+
+2026-10-24 (D17). Settings offers three presets. Only the blend weight differs between them,
+since the sweep found it trades response for stability at the least cost in error:
+
+| Preset | Blend | Error | Stability | Response |
+|---|---|---|---|---|
+| Steady | 0.03 | 71 | 3.1 | 51 |
+| Standard (the chosen one above) | 0.05 | 73 | 4.7 | 42 |
+| Responsive | 0.1 | 84 | 8.2 | 36 |
+
+A faster trend (α 0.12–0.2) or a 14-day window responded no faster for the error it cost.
+Responsive's stability is close to MacroFactor's published ~7.
+
+## Counted activity
+
+D17 lets steps and workouts count. The estimate takes the window's mean counted activity off the
+energy balance, and the target adds activity back: the past week's mean at the check-in, or each
+day's own. When activity is steady, base plus activity equals what the energy balance measured,
+whatever share of the counted activity is real (`expenditure_settings_test.dart`). So a watch
+that overstates moves the average target little. The share counted only sets how far one active
+day or week moves it. The simulator has no counted activity yet.
+
 ## Findings
 
 - **Forbes beats the flat 6,000 kcal/kg:** error 73 against 86. The lean and the heavy users

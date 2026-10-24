@@ -41,6 +41,12 @@ void main(List<String> args) {
     print('${user.name} | ${_row(scoreAll(chosen, users: [user]))}');
   }
   print('all | ${_row(scoreAll(chosen))}');
+  for (final preset in Responsiveness.values) {
+    print(
+      'all, ${preset.label.toLowerCase()} | '
+      '${_row(scoreAll(ExpenditureSettings.of(preset)))}',
+    );
+  }
   print('all, flat 6,000 kcal/kg | ${_row(scoreAll(chosen, forbes: false))}');
   for (final priorError in [-0.2, 0.0, 0.2]) {
     print(

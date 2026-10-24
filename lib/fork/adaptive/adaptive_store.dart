@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:opennutritracker/core/utils/hive_db_provider.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
+import 'package:opennutritracker/fork/adaptive/expenditure.dart';
 import 'package:opennutritracker/fork/adaptive/macro_program.dart';
 
 /// Fixed daily macros in grams; their energy is the fixed target.
@@ -34,9 +35,22 @@ class FixedMacros {
   );
 }
 
+/// How counted activity reaches the adaptive target (D17): not at all,
+/// as the past week's mean at each check-in, or each day as it happens.
+enum ActivityMode {
+  off('Off'),
+  weekly('Weekly'),
+  daily('Each day');
+
+  final String label;
+
+  const ActivityMode(this.label);
+}
+
 /// The two D13 switches, the 28-day window for users with a menstrual
 /// cycle (fork/research/phase3-simulation.md), the fixed target (upstream
-/// #671) and the per-weekday shift of the target.
+/// #671), the per-weekday shift of the target, and the expenditure and
+/// check-in settings (D17).
 class AdaptiveSettings {
   /// Smoothed trend on the weight chart instead of the 7-day average.
   final bool smoothedTrend;
@@ -61,6 +75,27 @@ class AdaptiveSettings {
   /// upstream's percentages; the fixed target's own grams win over it.
   final MacroProgram? macroProgram;
 
+  final Responsiveness responsiveness;
+
+  /// Activity counted into the estimate and the target: steps from the
+  /// health store, logged workouts (imported ones too) at
+  /// [workoutSharePct] of their calories, null for the share suggested
+  /// from body composition.
+  final ActivityMode activityMode;
+  final bool countSteps;
+  final bool countWorkouts;
+  final double? workoutSharePct;
+
+  /// The weekday check-ins fall on, Monday 1; null for a week after the
+  /// last.
+  final int? checkInWeekday;
+
+  /// The most a check-in moves the target, kcal/day; null for no limit.
+  final double? maxCheckInChangeKcal;
+
+  /// A due check-in is accepted as proposed, without asking.
+  final bool autoAcceptCheckIn;
+
   static const noOffsets = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
 
   const AdaptiveSettings({
@@ -72,7 +107,22 @@ class AdaptiveSettings {
     this.fixedMacros,
     this.weekdayOffsets = noOffsets,
     this.macroProgram,
+    this.responsiveness = Responsiveness.standard,
+    this.activityMode = ActivityMode.off,
+    this.countSteps = true,
+    this.countWorkouts = true,
+    this.workoutSharePct,
+    this.checkInWeekday,
+    this.maxCheckInChangeKcal = defaultMaxCheckInChangeKcal,
+    this.autoAcceptCheckIn = false,
   });
+
+  /// Ours, after MacroFactor's "a stall worth −500 gives −200 to −300".
+  static const defaultMaxCheckInChangeKcal = 200.0;
+
+  /// The estimator's weights for the chosen responsiveness and window.
+  ExpenditureSettings get expenditure =>
+      ExpenditureSettings.of(responsiveness, cycleWindow: cycleWindow);
 
   /// The fixed target's daily energy before the weekday shift.
   double get fixedTargetKcal => switch (fixedMacros) {
@@ -89,6 +139,14 @@ class AdaptiveSettings {
     FixedMacros? Function()? fixedMacros,
     List<double>? weekdayOffsets,
     MacroProgram? Function()? macroProgram,
+    Responsiveness? responsiveness,
+    ActivityMode? activityMode,
+    bool? countSteps,
+    bool? countWorkouts,
+    double? Function()? workoutSharePct,
+    int? Function()? checkInWeekday,
+    double? Function()? maxCheckInChangeKcal,
+    bool? autoAcceptCheckIn,
   }) => AdaptiveSettings(
     smoothedTrend: smoothedTrend ?? this.smoothedTrend,
     adaptiveTarget: adaptiveTarget ?? this.adaptiveTarget,
@@ -98,6 +156,20 @@ class AdaptiveSettings {
     fixedMacros: fixedMacros == null ? this.fixedMacros : fixedMacros(),
     weekdayOffsets: weekdayOffsets ?? this.weekdayOffsets,
     macroProgram: macroProgram == null ? this.macroProgram : macroProgram(),
+    responsiveness: responsiveness ?? this.responsiveness,
+    activityMode: activityMode ?? this.activityMode,
+    countSteps: countSteps ?? this.countSteps,
+    countWorkouts: countWorkouts ?? this.countWorkouts,
+    workoutSharePct: workoutSharePct == null
+        ? this.workoutSharePct
+        : workoutSharePct(),
+    checkInWeekday: checkInWeekday == null
+        ? this.checkInWeekday
+        : checkInWeekday(),
+    maxCheckInChangeKcal: maxCheckInChangeKcal == null
+        ? this.maxCheckInChangeKcal
+        : maxCheckInChangeKcal(),
+    autoAcceptCheckIn: autoAcceptCheckIn ?? this.autoAcceptCheckIn,
   );
 
   /// As kept in the box and in `fork_adaptive.json`.
@@ -110,6 +182,14 @@ class AdaptiveSettings {
     'fixedMacros': fixedMacros?.toJson(),
     'weekdayOffsets': weekdayOffsets,
     'macroProgram': macroProgram?.toJson(),
+    'responsiveness': responsiveness.name,
+    'activityMode': activityMode.name,
+    'countSteps': countSteps,
+    'countWorkouts': countWorkouts,
+    'workoutSharePct': workoutSharePct,
+    'checkInWeekday': checkInWeekday,
+    'maxCheckInChangeKcal': maxCheckInChangeKcal,
+    'autoAcceptCheckIn': autoAcceptCheckIn,
   };
 
   /// Throws on a value of the wrong type; a missing key (an older box or
@@ -121,6 +201,10 @@ class AdaptiveSettings {
     }
     final macros = json['fixedMacros'] as Map?;
     final program = json['macroProgram'] as Map?;
+    final weekday = json['checkInWeekday'] as int?;
+    if (weekday != null && (weekday < 1 || weekday > 7)) {
+      throw FormatException('checkInWeekday out of range', weekday);
+    }
     return AdaptiveSettings(
       smoothedTrend: json['smoothedTrend'] as bool? ?? false,
       adaptiveTarget: json['adaptiveTarget'] as bool? ?? false,
@@ -132,6 +216,21 @@ class AdaptiveSettings {
           ? noOffsets
           : [for (final o in offsets) (o as num).toDouble()],
       macroProgram: program == null ? null : MacroProgram.fromJson(program),
+      responsiveness: Responsiveness.values.byName(
+        json['responsiveness'] as String? ?? Responsiveness.standard.name,
+      ),
+      activityMode: ActivityMode.values.byName(
+        json['activityMode'] as String? ?? ActivityMode.off.name,
+      ),
+      countSteps: json['countSteps'] as bool? ?? true,
+      countWorkouts: json['countWorkouts'] as bool? ?? true,
+      workoutSharePct: (json['workoutSharePct'] as num?)?.toDouble(),
+      checkInWeekday: weekday,
+      // A key kept as null is "no limit"; a missing one is the default.
+      maxCheckInChangeKcal: json.containsKey('maxCheckInChangeKcal')
+          ? (json['maxCheckInChangeKcal'] as num?)?.toDouble()
+          : defaultMaxCheckInChangeKcal,
+      autoAcceptCheckIn: json['autoAcceptCheckIn'] as bool? ?? false,
     );
   }
 }
@@ -144,11 +243,16 @@ class CheckInRecord {
   final double proposedKcal;
   final double acceptedKcal;
 
+  /// The week's counted activity in [acceptedKcal] (D17's weekly mode), so
+  /// the next check-in caps the change of the rest alone; 0 otherwise.
+  final double activityKcal;
+
   const CheckInRecord({
     required this.date,
     required this.expenditureKcal,
     required this.proposedKcal,
     required this.acceptedKcal,
+    this.activityKcal = 0,
   });
 
   Map<String, Object> toJson() => {
@@ -156,6 +260,7 @@ class CheckInRecord {
     'expenditureKcal': expenditureKcal,
     'proposedKcal': proposedKcal,
     'acceptedKcal': acceptedKcal,
+    'activityKcal': activityKcal,
   };
 
   static CheckInRecord fromJson(Map<dynamic, dynamic> json) => CheckInRecord(
@@ -163,6 +268,7 @@ class CheckInRecord {
     expenditureKcal: (json['expenditureKcal'] as num).toDouble(),
     proposedKcal: (json['proposedKcal'] as num).toDouble(),
     acceptedKcal: (json['acceptedKcal'] as num).toDouble(),
+    activityKcal: (json['activityKcal'] as num?)?.toDouble() ?? 0,
   );
 }
 
@@ -234,7 +340,10 @@ class AdaptiveStore {
     if (Hive.isBoxOpen(name)) await Hive.box<dynamic>(name).close();
   }
 
-  Future<void> load() async => settings.value = await read();
+  Future<void> load() async {
+    settings.value = await read();
+    skipped.value = await skippedDays();
+  }
 
   Future<AdaptiveSettings> read() async =>
       AdaptiveSettings.fromJson((await _box()).toMap());
@@ -273,4 +382,39 @@ class AdaptiveStore {
       record.toJson(),
     ]);
   }
+
+  /// Days left out of the estimate (D17): their intake is taken as not
+  /// logged, their weigh-in still counts. Kept as `yyyy-MM-dd`.
+  Future<Set<DateTime>> skippedDays() async => {
+    for (final key in (await _box()).get(skippedKey, defaultValue: []) as List)
+      DateTime.parse(key as String),
+  };
+
+  Future<void> setSkipped(DateTime day, bool skipped) async {
+    final days = await skippedDays();
+    final key = DateTime(day.year, day.month, day.day);
+    skipped ? days.add(key) : days.remove(key);
+    await _saveSkipped(days);
+  }
+
+  /// Adds [days] from a backup to those here.
+  Future<void> mergeSkippedDays(Iterable<DateTime> days) async =>
+      _saveSkipped({...await skippedDays(), ...days});
+
+  Future<void> _saveSkipped(Set<DateTime> days) async {
+    final sorted = days.toList()..sort();
+    await (await _box()).put(skippedKey, [for (final d in sorted) _dayKey(d)]);
+    if (_active) skipped.value = Set.unmodifiable(days);
+  }
+
+  static String _dayKey(DateTime d) =>
+      '${d.year.toString().padLeft(4, '0')}-'
+      '${d.month.toString().padLeft(2, '0')}-'
+      '${d.day.toString().padLeft(2, '0')}';
+
+  static const skippedKey = 'skippedDays';
+
+  /// The active profile's [skippedDays] in memory, as [settings], for the
+  /// estimate, the Diary's switch and the Trends card.
+  static final skipped = ValueNotifier<Set<DateTime>>(const {});
 }

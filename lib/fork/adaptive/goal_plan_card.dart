@@ -9,6 +9,7 @@ import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/core/utils/tracked_day_lock.dart';
 import 'package:opennutritracker/features/profile/presentation/bloc/profile_bloc.dart';
+import 'package:opennutritracker/features/profile/presentation/widgets/set_target_weight_dialog.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
 import 'package:opennutritracker/fork/adaptive/goal_plan.dart';
 import 'package:opennutritracker/fork/units/energy_text.dart';
@@ -42,6 +43,36 @@ Future<bool> savePace(double kgPerWeek, [ProfileStamp? startedOn]) async {
   return true;
 }
 
+/// Asks for a target weight with upstream's dialog, seeded from [nowKg],
+/// and saves it to the profile as the Profile page does. False when
+/// cancelled, or a profile switch dropped the update.
+Future<bool> setTargetWeight(
+  BuildContext context,
+  BodyWeightUnit unit,
+  double nowKg,
+) async {
+  final startedOn = ProfileStamp.now();
+  final result = await showDialog<TargetWeightDialogResult>(
+    context: context,
+    builder: (_) => SetTargetWeightDialog(
+      initialKg: nowKg,
+      hasExistingTarget: false,
+      unit: unit,
+    ),
+  );
+  final kg = result?.value;
+  if (kg == null) return false;
+  final saved = await withTrackedDayLockOnProfile(() async {
+    final user = await locator<GetUserUsecase>().getUserData();
+    user.targetWeightKg = kg;
+    await locator<ProfileBloc>().updateUser(user);
+    return true;
+  }, startedOn: startedOn);
+  if (saved == null) return false;
+  paceChanges.value++;
+  return true;
+}
+
 /// Seam S40: MacroFactor's goal planner on Trends. A pace slider shows the
 /// projected weight curve to the target, when it is reached, and the
 /// daily target that pace needs at the measured expenditure; "Use this
@@ -51,6 +82,12 @@ class GoalPlanCard extends StatefulWidget {
   final BodyWeightUnit unit;
   final AdaptiveService? service;
   final Future<void> Function(double kgPerWeek) onUsePace;
+  final Future<bool> Function(
+    BuildContext context,
+    BodyWeightUnit unit,
+    double nowKg,
+  )
+  onSetTarget;
 
   const GoalPlanCard({
     super.key,
@@ -58,6 +95,7 @@ class GoalPlanCard extends StatefulWidget {
     required this.unit,
     this.service,
     this.onUsePace = savePace,
+    this.onSetTarget = setTargetWeight,
   });
 
   @override
@@ -124,8 +162,7 @@ class _GoalPlanCardState extends State<GoalPlanCard> {
         '($weeks week${weeks == 1 ? '' : 's'})';
   }
 
-  String _eta(int? days, double kgPerDay, double nowKg, double? target) {
-    if (target == null) return 'No target weight set';
+  String _eta(int? days, double kgPerDay, double nowKg, double target) {
     if (days == null) {
       return kgPerDay == 0 || (target - nowKg).abs() < 0.1
           ? 'At the target'
@@ -169,7 +206,30 @@ class _GoalPlanCardState extends State<GoalPlanCard> {
               'Last $days days',
               '${_change(kg)} (${_paceText(kg / days * 7)})',
             ),
-          _row('Target', target == null ? '—' : _weight(target)),
+          if (target != null)
+            _row('Target', _weight(target))
+          else
+            Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 12,
+              children: [
+                const Text('No target weight, so no date to reach it.'),
+                TextButton(
+                  key: const ValueKey('plan-set-target'),
+                  onPressed: () async {
+                    if (await widget.onSetTarget(
+                      context,
+                      widget.unit,
+                      inputs.nowKg,
+                    )) {
+                      _reload();
+                    }
+                  },
+                  child: const Text('Set target weight'),
+                ),
+              ],
+            ),
           const SizedBox(height: Dimens.spacing16),
           Semantics(
             label: 'Projected weight',
@@ -239,11 +299,12 @@ class _GoalPlanCardState extends State<GoalPlanCard> {
             semanticFormatterCallback: _paceText,
             onChanged: (v) => setState(() => _pace = v),
           ),
-          _row(
-            'Reached',
-            _eta(plan.daysToTarget, pace / 7, inputs.nowKg, target),
-          ),
-          if (trendPerDay != null)
+          if (target != null)
+            _row(
+              'Reached',
+              _eta(plan.daysToTarget, pace / 7, inputs.nowKg, target),
+            ),
+          if (target != null && trendPerDay != null)
             _row(
               'At your trend (${_paceText(trendPerDay * 7)})',
               _eta(

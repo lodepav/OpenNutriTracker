@@ -353,6 +353,41 @@ void main() {
     expect(find.text('Pace: -0.25 kg a week'), findsOneWidget);
   });
 
+  testWidgets('without a target the planner offers to set one', (
+    tester,
+  ) async {
+    final paced = _PacedService(service)..noTarget = true;
+    var asked = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: GoalPlanCard(
+              palette: AppPalette.light,
+              unit: BodyWeightUnit.kg,
+              service: paced,
+              onSetTarget: (_, _, _) async {
+                asked++;
+                paced.noTarget = false;
+                return true;
+              },
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.textContaining('No target weight'), findsOneWidget);
+    expect(find.text('Reached'), findsNothing);
+    expect(find.text('Target'), findsNothing);
+
+    await tester.tap(find.byKey(const ValueKey('plan-set-target')));
+    await tester.pumpAndSettle();
+    expect(asked, 1);
+    expect(find.text('Reached'), findsOneWidget);
+    expect(find.textContaining('No target weight'), findsNothing);
+  });
+
   test('a measured body fat % changes the expenditure read', () async {
     final measurements = MeasurementStore(
       () => Hive.openBox<dynamic>('measurements'),
@@ -440,6 +475,7 @@ class _MemoryStore extends AdaptiveStore {
 class _PacedService extends Fake implements AdaptiveService {
   final AdaptiveService inner;
   double pace = -0.5;
+  bool noTarget = false;
 
   _PacedService(this.inner);
 
@@ -451,7 +487,7 @@ class _PacedService extends Fake implements AdaptiveService {
       trendKgPerDay: plan.trendKgPerDay,
       expenditureKcal: plan.expenditureKcal,
       bodyFatPercent: plan.bodyFatPercent,
-      targetWeightKg: plan.targetWeightKg,
+      targetWeightKg: noTarget ? null : plan.targetWeightKg,
       paceKgPerWeek: pace,
     );
   }

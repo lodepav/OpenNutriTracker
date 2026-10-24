@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_ui.dart';
+import 'package:opennutritracker/fork/adaptive/check_in_history.dart';
 
 class _Store extends Fake implements AdaptiveStore {
   final List<CheckInRecord> records;
@@ -36,7 +37,12 @@ void main() {
     );
     await tester.tap(find.byType(ListTile));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('check-in-history')));
+    await tester.tap(find.byKey(const ValueKey('expenditure-settings')));
+    await tester.pumpAndSettle();
+    final history = find.byKey(const ValueKey('check-in-history'));
+    await tester.ensureVisible(history);
+    await tester.pumpAndSettle();
+    await tester.tap(history);
     await tester.pumpAndSettle();
   }
 
@@ -53,7 +59,12 @@ void main() {
     );
 
     final rows = tester
-        .widgetList<ListTile>(find.byType(ListTile))
+        .widgetList<ListTile>(
+          find.descendant(
+            of: find.byType(CheckInHistoryScreen),
+            matching: find.byType(ListTile),
+          ),
+        )
         .map((t) => (t.key as ValueKey<String>).value)
         .toList();
     expect(rows, [
