@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:opennutritracker/core/utils/calc/calendar_day_calc.dart';
 import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/fork/photos/photo_store.dart';
@@ -247,10 +248,10 @@ class _ComparePhotosScreenState extends State<ComparePhotosScreen> {
   @override
   Widget build(BuildContext context) {
     final photos = widget.photos;
-    final days = photos[_right].photo.date
-        .difference(photos[_left].photo.date)
-        .inDays
-        .abs();
+    final days = CalendarDayCalc.daysBetween(
+      photos[_left].photo.date,
+      photos[_right].photo.date,
+    ).abs();
     return Scaffold(
       appBar: AppBar(title: const Text('Compare photos')),
       body: SafeArea(

@@ -247,7 +247,8 @@ class _CheckInScreenState extends State<CheckInScreen> {
       '${signed && value > 0 ? '+' : ''}${value.toStringAsFixed(1)} kg';
 
   static String _eta(int days) {
-    final date = DateTime.now().add(Duration(days: days));
+    final now = DateTime.now();
+    final date = DateTime(now.year, now.month, now.day + days);
     final weeks = (days / 7).round();
     return 'about $weeks week${weeks == 1 ? '' : 's'} '
         '(${date.year}-${date.month.toString().padLeft(2, '0')}-'

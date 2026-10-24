@@ -1,4 +1,5 @@
 import 'package:opennutritracker/core/domain/entity/weight_log_entity.dart';
+import 'package:opennutritracker/core/utils/calc/calendar_day_calc.dart';
 import 'package:opennutritracker/core/utils/calc/weight_moving_average.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/fork/adaptive/expenditure.dart';
@@ -20,10 +21,12 @@ List<WeightMovingAveragePoint>? smoothedTrendPoints(
   final last = entries
       .map((e) => day(e.date))
       .reduce((a, b) => a.isAfter(b) ? a : b);
-  final count = last.difference(first).inDays + 1;
+  // Calendar days: across a spring-forward local midnights are 23 h apart.
+  final count = CalendarDayCalc.daysBetween(first, last) + 1;
   final trend = smoothedTrend(
     dailyWeights({
-      for (final e in entries) day(e.date).difference(first).inDays: e.weightKg,
+      for (final e in entries)
+        CalendarDayCalc.daysBetween(first, e.date): e.weightKg,
     }, count),
     alpha: const ExpenditureSettings().alpha,
   );

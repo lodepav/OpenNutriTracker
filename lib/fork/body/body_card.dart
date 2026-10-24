@@ -105,11 +105,12 @@ class _BodyMeasurementsCardState extends State<BodyMeasurementsCard> {
           orElse: () => BodyMetric.bodyFat,
         );
     final now = DateTime.now();
+    // Not a Duration: across a clock change it lands an hour off midnight.
     final from = DateTime(
       now.year,
       now.month,
-      now.day,
-    ).subtract(Duration(days: widget.rangeDays - 1));
+      now.day - (widget.rangeDays - 1),
+    );
     final series = [
       for (final m in all)
         if (m.metric == metric) m,

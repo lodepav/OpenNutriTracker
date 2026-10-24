@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:logging/logging.dart';
+import 'package:opennutritracker/core/utils/calc/calendar_day_calc.dart';
 import 'package:opennutritracker/core/domain/entity/config_entity.dart';
 import 'package:opennutritracker/core/domain/entity/calories_profile_entity.dart';
 import 'package:opennutritracker/core/domain/entity/user_entity.dart';
@@ -39,7 +40,8 @@ bool checkInDueOn(DateTime today, DateTime? last, int? weekday) {
   if (last == null) return true;
   final lastDay = DateTime(last.year, last.month, last.day);
   if (weekday == null) {
-    return today.difference(lastDay).inDays >= checkInEveryDays;
+    // Calendar days: a week across a spring-forward is 6 days 23 hours.
+    return CalendarDayCalc.daysBetween(lastDay, today) >= checkInEveryDays;
   }
   final back = (today.weekday - weekday) % 7;
   final latest = DateTime(today.year, today.month, today.day - back);
