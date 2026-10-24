@@ -92,7 +92,9 @@ void main() {
 
   // A bare family name lands on the everyday row, not the shortest sibling:
   // the user's log typed these, and "chicken" logged "Chicken, back",
-  // "tomato" "Tomato, green, pickled", "salad" "Salmon salad".
+  // "tomato" "Tomato, green, pickled", "salad" "Salmon salad". A fork dish
+  // wins a tie with the table's odd forms (S74): "lasagna" logged "Lasagna,
+  // Vegetable, frozen, baked"; a form the query names keeps its row.
   for (final (query, expected) in [
     ('chicken', 'Chicken, NS as to part'),
     ('bacon', 'Bacon, NS as to type of meat, cooked'),
@@ -100,6 +102,8 @@ void main() {
     ('salad', 'Salad, green, without dressing'),
     ('pepperoni pizza', 'Pizza, with pepperoni'),
     ('coffee', 'Coffee, NS as to type'),
+    ('lasagna', 'Lasagna, beef, homemade'),
+    ('vegetable lasagna', 'Lasagna, Vegetable'),
   ]) {
     test('bare "$query" resolves to "$expected..."', () async {
       final item = await resolve(query);

@@ -383,6 +383,7 @@ void main() {
           ('Bulgogi, pork', ['pork bulgogi', 'jeyuk bokkeum']),
           ('Korean fried chicken', ['korean fried chicken', 'yangnyeom chicken']),
           ('Chili con carne', ['chili con carne', 'chilli con carne']),
+          ('Lasagna, beef', ['beef lasagna', 'lasagna bolognese']),
         ]) {
           for (final query in queries) {
             final row = (await source.fetchSearchWordResults(
