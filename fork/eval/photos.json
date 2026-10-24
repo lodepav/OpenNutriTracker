@@ -2313,6 +2313,126 @@
     1.0,
     1.0
    ]
+  },
+  {
+   "id": "lv-lido-pork-cutlets",
+   "cuisine": "latvian",
+   "dish": "LIDO: Cepta cūkgaļas kotlete (2gab.atdzesēta)",
+   "recipe_url": "https://wolt.com/lv/lva/riga/restaurant/lido-atputas-centrs",
+   "image_url": "https://wolt-menu-images-cdn.wolt.com/menu-images/5da70af5d866c7d815d1584f/f1709e9a-3ee2-11f1-90f9-8ae6f5840099_cg_20kot_202gab.jpg",
+   "expect_any": [
+    "pork",
+    "cutlet",
+    "patty",
+    "patties",
+    "kotlet",
+    "burger"
+   ],
+   "count": [
+    2,
+    2
+   ],
+   "servings_shown": 1,
+   "note": "two fried pork cutlets in their tray, cropped away from the pack; macros are LIDO's own label for the 180 g pack (barbora.lv/produkti/ceptas-cukgalas-kotletes-lido-180-g)",
+   "user_note": "2 cūkgaļas kotletes",
+   "recipe_yield": "180 g",
+   "per_serving": {
+    "kcal": 658.8,
+    "protein_g": 45.0,
+    "carbs_g": 25.2,
+    "fat_g": 41.4
+   },
+   "crop": [
+    0.2,
+    0.42,
+    0.7,
+    0.97
+   ]
+  },
+  {
+   "id": "lv-lido-chicken-cutlets",
+   "cuisine": "latvian",
+   "dish": "LIDO: Cepta cāļa gaļas kotlete (2gab. atdzesēta)",
+   "recipe_url": "https://wolt.com/lv/lva/riga/restaurant/lido-atputas-centrs",
+   "image_url": "https://wolt-menu-images-cdn.wolt.com/menu-images/5da70af5d866c7d815d1584f/f17452c4-3ee2-11f1-90f9-8ae6f5840099_c_c4_81_c4_bca_20kotlets_202gab.jpg",
+   "expect_any": [
+    "chicken",
+    "cutlet",
+    "patty",
+    "patties",
+    "kotlet",
+    "burger"
+   ],
+   "count": [
+    2,
+    2
+   ],
+   "servings_shown": 1,
+   "note": "two fried chicken cutlets in their tray, cropped away from the pack; macros are LIDO's own label for the 180 g pack (barbora.lv/produkti/ceptas-cala-galas-kotletes-lido-180-g)",
+   "user_note": "2 cāļa kotletes",
+   "recipe_yield": "180 g",
+   "per_serving": {
+    "kcal": 417.6,
+    "protein_g": 21.6,
+    "carbs_g": 14.4,
+    "fat_g": 27.0
+   },
+   "crop": [
+    0.08,
+    0.42,
+    0.68,
+    0.98
+   ]
+  },
+  {
+   "id": "lv-lido-dill-sauce",
+   "cuisine": "latvian",
+   "dish": "LIDO: Diļļu mērce (50g)",
+   "recipe_url": "https://wolt.com/lv/lva/riga/restaurant/lido-alus-sta",
+   "image_url": "https://wolt-menu-images-cdn.wolt.com/menu-images/5fb76debc349a1ccda6a9742/f54f4eee-3ed8-11f1-af2c-66ba6c04d85c_di_c4_bc_c4_bcu_20m_c4_93rce.jpg",
+   "expect_any": [
+    "dill",
+    "sauce",
+    "dressing",
+    "dip"
+   ],
+   "count": null,
+   "servings_shown": 1,
+   "note": "LIDO's 50 g dill sauce in a gravy boat; macros are LIDO's own label for the 50 g pack (barbora.lv/produkti/merce-dillu-lido-200-g)",
+   "user_note": "diļļu mērce",
+   "recipe_yield": "50 g",
+   "per_serving": {
+    "kcal": 238.5,
+    "protein_g": 0.6,
+    "carbs_g": 5.5,
+    "fat_g": 24.0
+   }
+  },
+  {
+   "id": "lv-lido-garlic-sauce",
+   "cuisine": "latvian",
+   "dish": "LIDO: Ķiploku mērce (50g)",
+   "recipe_url": "https://wolt.com/lv/lva/riga/restaurant/lido-alus-sta",
+   "image_url": "https://wolt-menu-images-cdn.wolt.com/menu-images/5fb76debc349a1ccda6a9742/f54e0d9a-3ed8-11f1-af2c-66ba6c04d85c__c4_b6iploku_20m_c4_93rce.jpg",
+   "expect_any": [
+    "garlic",
+    "sauce",
+    "dressing",
+    "dip",
+    "mayo",
+    "aioli"
+   ],
+   "count": null,
+   "servings_shown": 1,
+   "note": "LIDO's 50 g garlic sauce in a gravy boat; macros are LIDO's own label for the 50 g pack (barbora.lv/produkti/merce-kiploku-lido-200-g)",
+   "user_note": "ķiploku mērce",
+   "recipe_yield": "50 g",
+   "per_serving": {
+    "kcal": 247.5,
+    "protein_g": 0.5,
+    "carbs_g": 3.1,
+    "fat_g": 26.0
+   }
   }
  ]
 }

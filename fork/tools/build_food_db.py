@@ -11,7 +11,8 @@
 
 Downloads (all free):
   USDA FoodData Central (public domain): https://fdc.nal.usda.gov/download-datasets
-    SR Legacy, Foundation and FNDDS Survey, CSV.
+    SR Legacy, Foundation and FNDDS Survey, CSV. The asset is built from SR
+    Legacy 2018-04, Foundation 2025-12-18 and Survey 2024-10-31.
   BLS 4.0 (CC BY 4.0, Max Rubner-Institut): https://www.blsdb.de/download
   Fineli (CC BY 4.0, THL): https://fineli.fi/fineli/en/avoin-data (browser only;
     the site challenges scripts)
@@ -152,11 +153,13 @@ def fdc_foods(directory, source, id_file):
 
     units = {row['id']: row['name']
              for row in read_csv(find(directory, 'measure_unit.csv'))}
-    portions = {}
+    portions, unspecified = {}, {}
     for row in read_csv(find(directory, 'food_portion.csv')):
         if row['fdc_id'] not in names:
             continue
         grams = num(row['gram_weight'])
+        if grams and is_unspecified(row):
+            unspecified[row['fdc_id']] = rounded(grams)
         label = portion_label(row, units)
         if not grams or grams <= 0 or not label:
             continue
@@ -172,14 +175,25 @@ def fdc_foods(directory, source, id_file):
                 (values[i] for i in preferred if values.get(i) is not None), None)
         food_portions = [(label, grams) for _, label, grams in
                          sorted(portions.get(fdc_id, []), key=lambda p: p[0])]
-        yield int(fdc_id), source, fdc_id, name, nutrients, food_portions
+        serving = (('1 serving', unspecified[fdc_id]) if fdc_id in unspecified
+                   else food_portions[0] if food_portions else None)
+        yield int(fdc_id), source, fdc_id, name, nutrients, food_portions, serving
+
+
+def is_unspecified(row):
+    """FNDDS's "Quantity not specified": what the survey counts for a food
+    eaten in an amount nobody gave. It is the default serving, the amount a
+    row starts at when the user or the model named none, where the first
+    portion was "1 cup" of butter (224 g) or "1 raisin" (0.5 g)."""
+    return (row.get('portion_description') or '').strip().lower() \
+        .startswith('quantity not')
 
 
 def portion_label(row, units):
     description = (row.get('portion_description') or '').strip()
     if description:
         # FNDDS: "1 cup", "1 slice"; "Quantity not specified" is no portion.
-        return None if description.lower().startswith('quantity not') else description
+        return None if is_unspecified(row) else description
     amount = num(row.get('amount')) or 1
     unit = units.get(row.get('measure_unit_id') or '', '')
     if unit in ('undetermined', ''):
@@ -249,7 +263,7 @@ def bls_foods(path):
             value = num(row[column_of[bls_code]]) if bls_code in column_of else None
             nutrients[column] = value * factor if value is not None else None
         nutrients['trans_fat_100'] = None
-        yield BLS_ID_BASE + n, 'bls', code, bls_name(name), nutrients, []
+        yield BLS_ID_BASE + n, 'bls', code, bls_name(name), nutrients, [], None
 
 
 # BLS writes "Herring smoked", "Kefir min. 3.5 % fat": the food, then its
@@ -304,12 +318,12 @@ def main():
 
     foods, portions, counts, skipped = [], {}, {}, 0
     for source in sources:
-        for food_id, src, code, name, nutrients, food_portions in source:
+        for food_id, src, code, name, nutrients, food_portions, serving in source:
             if nutrients.get('energy_kcal_100') is None:
                 skipped += 1
                 continue
-            first = food_portions[0] if food_portions else (None, None)
-            foods.append([food_id, src, code, name, first[0], first[1],
+            serving = serving or (None, None)
+            foods.append([food_id, src, code, name, serving[0], serving[1],
                           bool(food_portions)]
                          + [rounded(nutrients.get(c)) for c in NUTRIENTS])
             if food_portions:
