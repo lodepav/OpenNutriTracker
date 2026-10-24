@@ -4,6 +4,9 @@ import 'package:opennutritracker/features/add_meal/domain/usecase/search_product
 import 'package:opennutritracker/features/add_meal/util/meal_relevance_ranker.dart';
 import 'package:opennutritracker/features/add_meal/util/meal_text_parser.dart';
 import 'package:opennutritracker/features/add_meal/util/resolver_relevance.dart';
+// [fork] S75 everyday-row
+import 'package:opennutritracker/fork/food/everyday_row.dart';
+// [/fork]
 
 /// Below this the top candidate is a guess rather than an answer, and the
 /// review screen (#602) should say so instead of presenting it as settled.
@@ -151,7 +154,11 @@ class ResolveParsedMealsUseCase {
       parsed: item,
       candidates: ranked,
       selectedIndex: 0,
-      confidence: scoreMealForResolution(ranked.first, query),
+      // [fork] S75 everyday-row: the fork named that row for this name
+      confidence: isEverydayRow(ranked.first.name, query)
+          ? 1.0
+          : scoreMealForResolution(ranked.first, query),
+      // [/fork]
     );
   }
 }

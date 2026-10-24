@@ -14,6 +14,9 @@ import 'package:opennutritracker/features/add_meal/util/backend_title.dart';
 import 'package:opennutritracker/features/add_meal/util/resolver_relevance.dart'
     show noPortionsPenalty;
 import 'package:opennutritracker/features/add_meal/util/soft_text_score.dart';
+// [fork] S75 everyday-row
+import 'package:opennutritracker/fork/food/everyday_row.dart';
+// [/fork]
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -582,9 +585,16 @@ List<T> _rankAndTruncate<T>(
         score: _backendScore(describe(item), queryTokens, hasPortion(item)),
         length: describe(item)?.length ?? 0,
         portioned: hasPortion(item) == true ? 1 : 0,
+        // [fork] S75 everyday-row
+        everyday: isEverydayRow(describe(item), searchString) ? 1 : 0,
+        // [/fork]
       ),
   ];
   mergeSort(decorated, compare: (a, b) {
+    // [fork] S75 everyday-row: first, as the resolver ranks it
+    final byEveryday = b.everyday.compareTo(a.everyday);
+    if (byEveryday != 0) return byEveryday;
+    // [/fork]
     final byScore = b.score.compareTo(a.score);
     if (byScore != 0) return byScore;
     final byLength = a.length.compareTo(b.length);

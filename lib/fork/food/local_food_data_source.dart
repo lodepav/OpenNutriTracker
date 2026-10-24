@@ -100,25 +100,40 @@ class LocalFoodDataSource extends SpFoodDataSource {
       query,
       forResolution: forResolution,
     );
+    // The row the name means, whether or not the search found it (S75).
+    final everydayName = everydayRowName(searchString);
+    final everyday = everydayName == null
+        ? null
+        : foods.named(
+            everydayName,
+            isEnabled: (source) => toggles?[source] ?? true,
+          );
     if (forResolution) {
-      return [...ranked, ..._unspecifiedCut(rows, ranked, query)];
+      return [
+        ...ranked,
+        ..._unspecifiedCut(rows, ranked, query),
+        if (everyday != null && !ranked.any((row) => identical(row, everyday)))
+          everyday,
+      ];
     }
     // The Food tab lists a variant the person did not name ("Bacon,
     // meatless" for "bacon") after the plain rows, as the resolver scores
-    // it (S70).
+    // it (S70), and the row the name means first.
     return [
+      ?everyday,
       for (final row in ranked)
-        if (unaskedVariant(row.name, query) == 0) row,
+        if (unaskedVariant(row.name, query) == 0 && !identical(row, everyday))
+          row,
       for (final row in ranked)
-        if (unaskedVariant(row.name, query) > 0) row,
+        if (unaskedVariant(row.name, query) > 0 && !identical(row, everyday))
+          row,
     ];
   }
 
-  /// The row a bare name means (S75) and the unspecified rows (NFS, "NS as
-  /// to", S73) the cut left out, for the resolver to weigh. The cut keeps
-  /// the shortest twenty of a tie, and on "chicken" all twenty are short
-  /// parts: "Chicken, back", "Chicken, tail"; on "pizza", none is the
-  /// restaurant cheese pizza.
+  /// The unspecified rows (NFS, "NS as to") the cut left out, most
+  /// unspecified first, for the resolver to weigh (S73). The cut keeps the
+  /// shortest twenty of a tie, and on "chicken" all twenty are short
+  /// parts: "Chicken, back", "Chicken, tail".
   static Iterable<SpFoodDTO> _unspecifiedCut(
     List<SpFoodDTO> rows,
     List<SpFoodDTO> ranked,
@@ -127,16 +142,15 @@ class LocalFoodDataSource extends SpFoodDataSource {
     final kept = Set<SpFoodDTO>.identity()..addAll(ranked);
     final left = [
       for (final row in rows)
-        if ((unspecifiedMarks(row.name, query) > 0 ||
-                isEverydayRow(row.name, query)) &&
-            !kept.contains(row))
-          row,
+        if (unspecifiedMarks(row.name, query) > 0 && !kept.contains(row)) row,
     ];
-    // The row a bare name means (S75) first, then the most unspecified.
-    int rank(SpFoodDTO row) => isEverydayRow(row.name, query)
-        ? 1 << 20
-        : unspecifiedMarks(row.name, query);
-    mergeSort(left, compare: (a, b) => rank(b).compareTo(rank(a)));
+    mergeSort(
+      left,
+      compare: (a, b) => unspecifiedMarks(
+        b.name,
+        query,
+      ).compareTo(unspecifiedMarks(a.name, query)),
+    );
     return left.take(5);
   }
 
@@ -256,6 +270,17 @@ class LocalFoodTable {
       ...words,
       for (var i = 0; i + 1 < words.length; i++) '${words[i]}${words[i + 1]}',
     };
+  }
+
+  /// The first enabled row named exactly [name].
+  SpFoodDTO? named(
+    String name, {
+    required bool Function(String? source) isEnabled,
+  }) {
+    for (final food in foods) {
+      if (food.name == name && isEnabled(food.source)) return food;
+    }
+    return null;
   }
 
   static LocalFoodTable fromGzip(Uint8List bytes) =>

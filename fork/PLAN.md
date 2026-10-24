@@ -762,6 +762,12 @@ are skipped, each with what it logs now.
   salt". The typed meals added: "cola" → a 0 kcal ZEVIA diet cola, "coke" → nothing,
   "eggs" → egg yolk, "greek yogurt" → with oats, "granola" → a cookie, "coffee" → a latte.
   S71 would fix the yogurt and the coffee.
+  *Fixed 2026-10-24* (S75, the row a bare name means): fries, tomato sauce, tomato paste,
+  potatoes (boiled), porridge (oatmeal), bread soup (the sweet rye one), unsalted butter,
+  cola, coke, diet coke, greek yogurt (plain), granola, egg, eggs and pizza. "salad",
+  "coffee" and "meat dumplings" were fixed before. Left: "adjaruli khachapuri" against a
+  recipe saved as "Adjarian khachapuri", and bare "potato" stays "Potato, NFS" (S73), the
+  survey's average with fat, against "potatoes" boiled.
 
 *Hard notes and the Latvian locale, 2026-10-24* (`test/fork/eval/hard_note_eval_test.dart`,
 all three models):

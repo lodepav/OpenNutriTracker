@@ -1,18 +1,62 @@
-/// The row a bare family name means where the family has no unspecified
-/// row to say so (S75). Every "Egg" and "Pizza" row ties on the title, and
-/// the shortest-name key picked the odd ones: "egg" logged "Egg, creamed",
-/// "eggs" a yolk, "pizza" "Pizza, no cheese, thin crust" and "cheese pizza"
-/// a stuffed crust. The plain whole egg and the restaurant cheese pizza are
-/// what the name means when nothing else is said.
+/// The row a bare name means where the table's own order misses it (S75).
+/// Every "Egg" and "Pizza" row ties on the title, and the shortest-name key
+/// picked the odd ones: "egg" logged "Egg, creamed", "eggs" a yolk,
+/// "pizza" "Pizza, no cheese, thin crust". Other names find the row a
+/// word holds rather than the food: "fries" logged "Yuca fries", "tomato
+/// sauce" a steak sauce, "granola" a cookie. Some name the food in words
+/// its row does not use: "coke" found nothing, "unsalted butter" a pretzel
+/// ("Butter, without salt"), "porridge" a savoury BLS one (oatmeal). The
+/// data source adds the row by its name, and the resolver takes it as the
+/// match.
+String? everydayRowName(String query) => _everyday[query.trim().toLowerCase()];
+
+/// Whether [name] is the row [query] means (see [everydayRowName]).
 bool isEverydayRow(String? name, String query) =>
-    name != null && _everyday[query.trim().toLowerCase()] == name;
+    name != null && everydayRowName(query) == name;
 
 const _everyday = {
   'egg': 'Egg, whole, raw, fresh',
   'eggs': 'Eggs, Grade A, Large, egg whole',
   'pizza': _cheesePizza,
   'cheese pizza': _cheesePizza,
+  'fries': _fries,
+  'french fries': _fries,
+  'chips': _fries,
+  'tomato sauce': 'Tomato products, canned, sauce',
+  'tomato paste': _tomatoPaste,
+  'potatoes': _boiledPotato,
+  'boiled potatoes': _boiledPotato,
+  'porridge': _oatmeal,
+  'oatmeal': _oatmeal,
+  'oat porridge': _oatmeal,
+  // Latvian maizes zupa: rye bread soup with raisins and apple, served with
+  // cream.
+  'bread soup': 'Bread soup (brown bread), with raisins, apple and sour cream',
+  'butter, unsalted': _unsaltedButter,
+  'unsalted butter': _unsaltedButter,
+  'cola': _cola,
+  'coke': _cola,
+  'coca cola': _cola,
+  'coca-cola': _cola,
+  'diet coke': _dietCola,
+  'coke zero': _dietCola,
+  'diet cola': _dietCola,
+  'pepsi max': _dietCola,
+  'greek yogurt': _greekYogurt,
+  'greek yoghurt': _greekYogurt,
+  'granola': 'Cereal, granola',
 };
 
 const _cheesePizza =
     'Pizza, cheese, from restaurant or fast food, NS as to type of crust';
+const _fries = 'Potato, french fries, NFS';
+const _tomatoPaste =
+    'Tomato products, canned, paste, without salt added (Includes foods for '
+    "USDA's Food Distribution Program)";
+const _boiledPotato =
+    'Potatoes, boiled, cooked without skin, flesh, without salt';
+const _oatmeal = 'Oatmeal, regular or quick, made with water, no added fat';
+const _unsaltedButter = 'Butter, without salt';
+const _cola = 'Soft drink, cola';
+const _dietCola = 'Soft drink, cola, diet';
+const _greekYogurt = 'Yogurt, Greek, NS as to type of milk, plain';
