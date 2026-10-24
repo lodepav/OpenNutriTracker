@@ -7,6 +7,7 @@ import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
+import 'package:opennutritracker/core/utils/tracked_day_lock.dart';
 import 'package:opennutritracker/features/profile/presentation/bloc/profile_bloc.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
 import 'package:opennutritracker/fork/adaptive/goal_plan.dart';
@@ -18,18 +19,27 @@ import 'package:opennutritracker/fork/units/weight_text.dart';
 final paceChanges = ValueNotifier(0);
 
 /// Saves [kgPerWeek] as the profile's pace, the goal following its sign,
-/// through upstream's profile update (which rewrites today's goal).
-Future<void> savePace(double kgPerWeek) async {
-  final user = await locator<GetUserUsecase>().getUserData();
-  user
-    ..weeklyWeightGoalKg = kgPerWeek
-    ..goal = kgPerWeek < 0
-        ? UserWeightGoalEntity.loseWeight
-        : kgPerWeek > 0
-        ? UserWeightGoalEntity.gainWeight
-        : UserWeightGoalEntity.maintainWeight;
-  await locator<ProfileBloc>().updateUser(user);
+/// through upstream's profile update (which rewrites today's goal). False
+/// when a profile switch dropped the update: the user is read and written
+/// for the profile current at [startedOn] (by default, as it begins).
+Future<bool> savePace(double kgPerWeek, [ProfileStamp? startedOn]) async {
+  // Read and updated under the tracked-day lock, which a switch takes too:
+  // the update, under the same (reentrant) lock, writes to this profile.
+  final saved = await withTrackedDayLockOnProfile(() async {
+    final user = await locator<GetUserUsecase>().getUserData();
+    user
+      ..weeklyWeightGoalKg = kgPerWeek
+      ..goal = kgPerWeek < 0
+          ? UserWeightGoalEntity.loseWeight
+          : kgPerWeek > 0
+          ? UserWeightGoalEntity.gainWeight
+          : UserWeightGoalEntity.maintainWeight;
+    await locator<ProfileBloc>().updateUser(user);
+    return true;
+  }, startedOn: startedOn);
+  if (saved == null) return false;
   paceChanges.value++;
+  return true;
 }
 
 /// Seam S40: MacroFactor's goal planner on Trends. A pace slider shows the

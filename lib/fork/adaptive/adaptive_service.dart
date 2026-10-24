@@ -1,4 +1,5 @@
 import 'package:logging/logging.dart';
+import 'package:opennutritracker/core/domain/entity/config_entity.dart';
 import 'package:opennutritracker/core/domain/entity/calories_profile_entity.dart';
 import 'package:opennutritracker/core/domain/entity/user_entity.dart';
 import 'package:opennutritracker/core/domain/entity/user_gender_entity.dart';
@@ -7,6 +8,8 @@ import 'package:opennutritracker/core/domain/usecase/get_tracked_day_usecase.dar
 import 'package:opennutritracker/core/domain/usecase/get_user_usecase.dart';
 import 'package:opennutritracker/core/domain/usecase/get_weight_log_usecase.dart';
 import 'package:opennutritracker/core/utils/calc/calorie_goal_calc.dart';
+import 'package:opennutritracker/core/domain/usecase/get_config_usecase.dart';
+import 'package:opennutritracker/core/utils/calc/day_boundary_calc.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/fork/adaptive/check_in.dart';
@@ -181,7 +184,11 @@ class AdaptiveService {
   /// [_historyDays] (today when there is none) to today.
   Future<({DateTime first, List<AdaptiveDay> days})> _history() async {
     final today = _today();
-    final start = today.subtract(const Duration(days: _historyDays - 1));
+    final start = DateTime(
+      today.year,
+      today.month,
+      today.day - (_historyDays - 1),
+    );
     final weighIns = {
       for (final entry in await _weights.getAllEntries())
         _day(entry.date): entry.weightKg,
@@ -284,6 +291,49 @@ Future<ForkKcalGoal> forkKcalGoal(
     await store?.release();
   }
 }
+
+/// Seams S63–S67 and S69: [goal], which carries logical today's weekday
+/// shift, moved to [day]'s, for a row made for another day (a copy, a past
+/// day's log). [store] and [config] are another profile's (S69); its
+/// settings, unreadable, leave [goal] as it is.
+Future<double> forkGoalOnDay(
+  double goal,
+  DateTime day, {
+  AdaptiveStore? store,
+  Future<ConfigEntity> Function()? config,
+}) async {
+  final List<double> offsets;
+  try {
+    offsets =
+        (store == null ? AdaptiveStore.settings.value : await store.read())
+            .weekdayOffsets;
+  } catch (e) {
+    _log.warning('Adaptive settings unreadable, no weekday shift: $e');
+    return goal;
+  } finally {
+    await store?.release();
+  }
+  if (offsets.every((o) => o == 0)) return goal;
+  final read = await (config ?? locator<GetConfigUsecase>().getConfig)();
+  final offset = read.dayStartOffsetTotalMinutes;
+  final today = DayBoundaryCalc.currentLogicalDayMinutes(offset);
+  final label = DayBoundaryCalc.dayLabelOf(day, offset);
+  return goal - offsets[today.weekday - 1] + offsets[label.weekday - 1];
+}
+
+/// Seam S62: whether [day]'s goal leaves logged activities out (a fixed
+/// target, or an accepted adaptive one), so logging, editing or deleting
+/// an activity does not move the goal stored for that day either.
+Future<bool> forkGoalIgnoresActivities(DateTime day) async =>
+    (await forkKcalGoal(day)).target != null;
+
+/// Seam S68: whether the target of [store]'s profile (the active one's by
+/// default) leaves activities out, read from its box: the settings in
+/// memory may not be loaded yet (start-up) or be another profile's. False
+/// when unreadable.
+Future<bool> forkTargetIgnoresActivities([AdaptiveStore? store]) async =>
+    (await forkKcalGoal(DateTime.now(), store ?? AdaptiveStore())).target !=
+    null;
 
 /// Seam S41: the macro goals for a day's [kcalGoal], or null for
 /// upstream's percentages. The fixed target's grams, scaled to the goal (a

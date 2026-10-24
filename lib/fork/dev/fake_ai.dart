@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:opennutritracker/core/utils/ai_credential_storage.dart';
 import 'package:opennutritracker/fork/dev/replay_ai.dart';
@@ -12,9 +13,10 @@ import 'package:path_provider/path_provider.dart';
 /// `--dart-define=FORK_FAKE_AI=true`: emulator runs without a model key.
 /// `FORK_FAKE_AI=replay` answers from a real model's saved replies instead
 /// ([ReplayAiClient], kept in app support storage under `ai-replay`).
-/// Off in every normal build, where none of this is reached.
+/// Debug builds only; off in every other build, where none of this is
+/// reached.
 const _fakeAiMode = String.fromEnvironment('FORK_FAKE_AI');
-const forkFakeAi = _fakeAiMode != '' && _fakeAiMode != 'false';
+const forkFakeAi = kDebugMode && _fakeAiMode != '' && _fakeAiMode != 'false';
 const forkReplayAi = _fakeAiMode == 'replay';
 
 /// Turns the AI features on with a dummy Anthropic key, as if the user had

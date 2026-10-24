@@ -46,8 +46,8 @@ class HistoryPlan {
 
 /// The plan for [file]: its days not logged here ([loggedDays]) and its
 /// weigh-ins on days with none ([weighedDays]), up to [today]. Entries are
-/// quick-add style (the totals as per 100 g of a 100 g entry), at noon so a
-/// later day start keeps them on their day, under ids made from the day and
+/// quick-add style (the totals as per 100 g of a 100 g entry), date-only so
+/// any day start keeps them on their day, under ids made from the day and
 /// meal, so a second import of the same file adds nothing.
 HistoryPlan planImport(
   HistoryFile file, {
@@ -121,7 +121,8 @@ IntakeEntity _intake(
       // merge and edit would rewrite the history.
       source: MealSourceEntity.unknown,
     ),
-    dateTime: DateTime(day.year, day.month, day.day, 12),
+    // Date-only, as an import's entry is: its day under any day start.
+    dateTime: DateTime(day.year, day.month, day.day),
   );
 }
 
@@ -137,7 +138,7 @@ Future<({Set<DateTime> logged, Set<DateTime> weighed})> _existing() async {
           in await locator<TrackedDayRepository>().getAllTrackedDaysDBO())
         if (t.caloriesTracked > 0) date(t.day),
       for (final i in await locator<IntakeRepository>().getAllIntakesDBO())
-        date(DayBoundaryCalc.logicalDayOfMinutes(i.dateTime, offset)),
+        date(DayBoundaryCalc.dayLabelOf(i.dateTime, offset)),
     },
     weighed: {
       for (final w in await locator<WeightLogRepository>().getAllEntries())
@@ -147,20 +148,28 @@ Future<({Set<DateTime> logged, Set<DateTime> weighed})> _existing() async {
 }
 
 /// Writes [plan] under the tracked-day lock: each day's entries and their
-/// totals as a logged entry adds them, then the weigh-ins.
-Future<void> writeHistory(HistoryPlan plan) async {
-  await withTrackedDayLockOnProfile(() async {
-    final writer = CopyEntries.fromLocator();
-    for (final MapEntry(key: day, value: intakes) in plan.intakes.entries) {
-      await writer.restoreIntakes(intakes, day);
-    }
-    final weights = locator<WeightLogRepository>();
-    for (final weight in plan.weights) {
-      await weights.addEntry(weight);
-    }
-  });
+/// totals as a logged entry adds them, then the weigh-ins. Only into the
+/// profile [startedOn] names, which [plan] was made against: false, and
+/// nothing written, after a profile switch.
+Future<bool> writeHistory(HistoryPlan plan, ProfileStamp startedOn) async {
+  final written = await withTrackedDayLockOnProfile(
+    startedOn: startedOn,
+    () async {
+      final writer = CopyEntries.fromLocator();
+      for (final MapEntry(key: day, value: intakes) in plan.intakes.entries) {
+        await writer.restoreIntakes(intakes, day);
+      }
+      final weights = locator<WeightLogRepository>();
+      for (final weight in plan.weights) {
+        await weights.addEntry(weight);
+      }
+      return true;
+    },
+  );
+  if (written == null) return false;
   refreshAfterLogging();
   if (plan.weights.isNotEmpty) refreshAfterWeightImport();
+  return true;
 }
 
 /// "Import history" in Settings' data section (seam S51): food totals and
@@ -195,6 +204,9 @@ class HistoryImportTile extends StatelessWidget {
       say('Could not read ${picked!.name}');
       return;
     }
+    // What is already here is read from this profile: the plan is written
+    // only into it.
+    final startedOn = ProfileStamp.now();
     final config = await locator<GetConfigUsecase>().getConfig();
     final existing = await _existing();
     final now = DateTime.now();
@@ -225,7 +237,10 @@ class HistoryImportTile extends StatelessWidget {
     );
     if (chosen == null) return;
     try {
-      await writeHistory(chosen);
+      if (!await writeHistory(chosen, startedOn)) {
+        say('Nothing was imported: the profile changed.');
+        return;
+      }
       say(
         'Imported ${chosen.intakes.length} days of food and '
         '${chosen.weights.length} weigh-ins.',

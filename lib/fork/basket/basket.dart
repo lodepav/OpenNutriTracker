@@ -58,6 +58,10 @@ class FoodBasket extends ChangeNotifier {
     notifyListeners();
   }
 
+  void remove(BasketItem item) {
+    if (_items.remove(item)) notifyListeners();
+  }
+
   void clear() {
     _items.clear();
     notifyListeners();

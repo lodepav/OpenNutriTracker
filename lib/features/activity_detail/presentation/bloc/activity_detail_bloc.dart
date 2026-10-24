@@ -15,6 +15,9 @@ import 'package:opennutritracker/core/utils/calc/macro_calc.dart';
 import 'package:opennutritracker/core/utils/calc/met_calc.dart';
 import 'package:opennutritracker/core/utils/id_generator.dart';
 import 'package:opennutritracker/core/utils/tracked_day_lock.dart';
+// [fork] S66 weekday-targets: a row made for another day
+import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
+// [/fork]
 
 part 'activity_detail_event.dart';
 
@@ -141,9 +144,12 @@ class ActivityDetailBloc
     final hasTrackedDay = await _addTrackedDayUsecase.hasTrackedDay(day);
     if (!hasTrackedDay) {
       // If the tracked day does not exist, create a new one
-      final totalKcalGoal = await _getKcalGoalUsecase.getKcalGoal(
-        totalKcalActivitiesParam: 0,
+      // [fork] S66 weekday-targets: the weekday of the activity's day
+      final totalKcalGoal = await forkGoalOnDay(
+        await _getKcalGoalUsecase.getKcalGoal(totalKcalActivitiesParam: 0),
+        day,
       ); // Exclude persisted activities
+      // [/fork]
       final totalCarbsGoal = await _getMacroGoalUsecase.getCarbsGoal(
         totalKcalGoal,
       );

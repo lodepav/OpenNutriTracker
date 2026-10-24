@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_nutriments_entity.dart';
@@ -132,6 +134,30 @@ void main() {
       same(state.rows[1].dishIngredient?.group),
     );
     expect(state.rows[2].dishIngredient, isNull);
+    controller.dispose();
+  });
+
+  test('a row skipped while it is broken down stays one skipped row', () async {
+    final gate = Completer<void>();
+    final controller = DishBreakdownController(
+      bloc,
+      breakDown: (dish) async {
+        await gate.future;
+        return breakDown(dish);
+      },
+      modelConfigured: () async => true,
+    );
+    bloc.add(const ParseBulkTextEvent(text: 'x', usesImperialUnits: false));
+    await settle();
+    bloc.add(const ToggleRowSkippedEvent(0));
+    await settle();
+    gate.complete();
+    final state = await settle();
+
+    expect(state.rows, hasLength(2));
+    expect(state.rows[0].skipped, isTrue);
+    expect(state.rows[0].dishIngredient, isNull);
+    expect(state.rows[0].willBeLogged, isFalse);
     controller.dispose();
   });
 

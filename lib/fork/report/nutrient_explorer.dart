@@ -4,7 +4,9 @@ import 'package:opennutritracker/core/data/repository/tracked_day_repository.dar
 import 'package:opennutritracker/core/domain/entity/intake_entity.dart';
 import 'package:opennutritracker/core/domain/entity/tracked_day_entity.dart';
 import 'package:opennutritracker/core/domain/entity/user_entity.dart';
+import 'package:opennutritracker/core/domain/usecase/get_config_usecase.dart';
 import 'package:opennutritracker/core/domain/usecase/get_user_usecase.dart';
+import 'package:opennutritracker/core/utils/calc/day_boundary_calc.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_nutriments_entity.dart';
 import 'package:opennutritracker/features/diary/presentation/widgets/daily_nutrient_panel.dart';
@@ -180,17 +182,22 @@ String _foodKey(IntakeEntity i) => i.meal.code ?? i.meal.name ?? '';
 /// something logged (an empty day is not a day of eating nothing), against
 /// those days' goals in [days]. Upstream's Nutrient goals keeps a goal on
 /// the day it was set, so a day keeping none takes the latest goal set in
-/// [days], else the DRI for [user].
+/// [days], else the DRI for [user]. Each intake counts on the logical day
+/// the Diary lists it under, for a day starting [dayStartMinutes] after
+/// midnight.
 List<NutrientSummary> summarizeNutrients(
   List<IntakeEntity> intakes,
   List<TrackedDayEntity> days,
-  UserEntity? user,
-) {
-  int dayKey(DateTime d) => d.year * 10000 + d.month * 100 + d.day;
-  final logged = {for (final i in intakes) dayKey(i.dateTime)};
+  UserEntity? user, {
+  int dayStartMinutes = 0,
+}) {
+  final logged = {
+    for (final i in intakes)
+      DayBoundaryCalc.dayKeyOf(i.dateTime, dayStartMinutes),
+  };
   final goalDays = [
     for (final d in days)
-      if (logged.contains(dayKey(d.day))) d,
+      if (logged.contains(DayBoundaryCalc.dayKeyOf(d.day, dayStartMinutes))) d,
   ];
 
   NutrientSummary summarize(ExplorerNutrient nutrient) {
@@ -244,7 +251,7 @@ List<NutrientSummary> summarizeNutrients(
   return [for (final n in explorerNutrients) summarize(n)];
 }
 
-/// The intakes from [first] to [last], both whole days.
+/// The intakes from [first] to [last], both whole logical days.
 typedef IntakeLoader =
     Future<List<IntakeEntity>> Function(DateTime first, DateTime last);
 
@@ -252,14 +259,22 @@ Future<List<IntakeEntity>> _intakesBetween(
   DateTime first,
   DateTime last,
 ) async {
-  final from = DateTime(first.year, first.month, first.day);
-  final to = DateTime(last.year, last.month, last.day + 1);
+  final offset = await _dayStartMinutes();
+  String key(DateTime d) =>
+      DayBoundaryCalc.dayKeyOf(DateTime(d.year, d.month, d.day), offset);
+  final from = key(first);
+  final to = key(last);
   return [
     for (final dbo in await locator<IntakeDataSource>().getAllIntakes())
-      if (!dbo.dateTime.isBefore(from) && dbo.dateTime.isBefore(to))
+      if (DayBoundaryCalc.dayKeyOf(dbo.dateTime, offset) case final day
+          when day.compareTo(from) >= 0 && day.compareTo(to) <= 0)
         IntakeEntity.fromIntakeDBO(dbo),
   ];
 }
+
+Future<int> _dayStartMinutes() async => locator.isRegistered<GetConfigUsecase>()
+    ? (await locator<GetConfigUsecase>().getConfig()).dayStartOffsetTotalMinutes
+    : 0;
 
 Future<UserEntity?> _user() async {
   try {
@@ -330,6 +345,7 @@ class _NutrientExplorerScreenState extends State<NutrientExplorerScreen> {
     await (widget.load ?? _intakesBetween)(widget.first, widget.last),
     _days,
     await widget.user(),
+    dayStartMinutes: await _dayStartMinutes(),
   );
 
   Future<void> _editGoals() async {

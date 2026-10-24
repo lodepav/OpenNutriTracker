@@ -159,7 +159,8 @@ class BodyFatImport {
       _running ??= _run().whenComplete(() => _running = null);
 
   Future<int> _run() async {
-    // One profile's box for the whole run, even across a profile switch.
+    // One profile's box for the run; a profile switch closes it, and the
+    // run then fails and is logged, writing nothing to the new profile.
     final box = await _box();
     final measurements = MeasurementStore(() async => box);
     final state = await _state(box);

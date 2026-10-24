@@ -6,6 +6,7 @@ import 'package:logging/logging.dart';
 import 'package:opennutritracker/core/domain/usecase/get_user_usecase.dart';
 import 'package:opennutritracker/core/utils/hive_db_provider.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
+import 'package:opennutritracker/core/utils/tracked_day_lock.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/fork/adaptive/goal_plan_card.dart';
 
@@ -147,24 +148,32 @@ class PhaseRunner {
   static final _log = Logger('PhaseRunner');
 
   final PhaseStore _store;
-  final Future<void> Function(double kgPerWeek) _setPace;
+
+  /// False when the pace was not saved, or not for the profile current at
+  /// the stamp.
+  final Future<bool> Function(double kgPerWeek, ProfileStamp startedOn)
+  _setPace;
   final DateTime Function() _clock;
 
   PhaseRunner({
     PhaseStore? store,
-    Future<void> Function(double kgPerWeek)? setPace,
+    Future<bool> Function(double kgPerWeek, ProfileStamp startedOn)? setPace,
     DateTime Function()? clock,
   }) : _store = store ?? PhaseStore(),
        _setPace = setPace ?? _savePaceIfProfile,
        _clock = clock ?? DateTime.now;
 
-  static Future<void> _savePaceIfProfile(double kgPerWeek) async {
-    if (!await locator<GetUserUsecase>().hasUserData()) return;
-    await savePace(kgPerWeek);
-  }
+  static Future<bool> _savePaceIfProfile(
+    double kgPerWeek,
+    ProfileStamp startedOn,
+  ) async =>
+      await locator<GetUserUsecase>().hasUserData() &&
+      await savePace(kgPerWeek, startedOn);
 
   /// Returns whether a pace was set; failures are logged.
   Future<bool> run() async {
+    // The plan and the pace of one profile.
+    final startedOn = ProfileStamp.now();
     try {
       final plan = await _store.plan();
       if (plan == null) return false;
@@ -173,7 +182,9 @@ class PhaseRunner {
       if (pace == null) return false;
       final key = '${plan.start.toIso8601String()}#${plan.indexOn(now)}';
       if (await _store.applied() == key) return false;
-      await _setPace(pace);
+      // Unsaved (no profile yet, or a profile switch dropped it), it is
+      // tried again on the next resume.
+      if (!await _setPace(pace, startedOn)) return false;
       await _store.markApplied(key);
       return true;
     } catch (error, stack) {

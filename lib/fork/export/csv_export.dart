@@ -16,11 +16,16 @@ import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
 /// One CSV field: quoted when it holds a comma, a quote or a line break.
+/// Text that a spreadsheet would run as a formula (a food name from Open
+/// Food Facts starting with `=`, `+`, `-` or `@`) is kept as text.
 String csvField(Object? value) {
   final text = switch (value) {
     null => '',
     // One decimal, none when it rounds to a whole number (2472.98 -> 2473).
     double v => v.toStringAsFixed(1).replaceFirst(RegExp(r'\.0$'), ''),
+    // A number written as text ("-1") is no formula.
+    String s when s.startsWith(RegExp('[=+\\-@]')) && num.tryParse(s) == null =>
+      "'$s",
     _ => '$value',
   };
   return text.contains(RegExp('[",\r\n]'))
@@ -61,13 +66,14 @@ String foodsCsv(List<IntakeEntity> intakes, int offsetMinutes) {
         double? total(double? per100) =>
             per100 == null ? null : i.amount * per100 / 100;
         final at = i.dateTime;
-        final noTime = at.hour == 0 && at.minute == 0 && at.second == 0;
+        final noTime = DayBoundaryCalc.isDayLabel(at);
         return [
-          _date.format(DayBoundaryCalc.logicalDayOfMinutes(at, offsetMinutes)),
+          _date.format(DayBoundaryCalc.dayLabelOf(at, offsetMinutes)),
           noTime ? null : _time.format(at),
           i.type.name,
           i.meal.name,
-          i.amount,
+          // A serving's fraction (0.25, 1/3) is kept: three decimals.
+          i.amount.toStringAsFixed(3).replaceFirst(RegExp(r'\.?0+$'), ''),
           i.unit,
           i.totalKcal,
           i.totalProteinsGram,

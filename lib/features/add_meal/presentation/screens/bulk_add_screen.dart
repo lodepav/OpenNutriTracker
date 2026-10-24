@@ -1754,8 +1754,8 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
           write.row.meal!,
           _args.day,
         );
-        // [fork] S8 meal-groups
-        intakeIds.add(intake.id);
+        // [fork] S8 meal-groups: none when a profile switch dropped it
+        if (intake != null) intakeIds.add(intake.id);
         // [/fork]
       }
       // [fork] S8 meal-groups

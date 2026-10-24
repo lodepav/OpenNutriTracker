@@ -126,7 +126,10 @@ void main() {
           body: PlannedFoodsCard(
             day: _sunday,
             store: memory,
-            log: (_, food) async => logged.add(food.id),
+            log: (_, food) async {
+              logged.add(food.id);
+              return true;
+            },
           ),
         ),
       ),
@@ -149,6 +152,34 @@ void main() {
     expect(logged, ['c', 'a']);
     expect(memory.foods, isEmpty);
     expect(find.textContaining('Planned'), findsNothing);
+  });
+
+  testWidgets('a food a profile switch dropped stays planned', (tester) async {
+    final memory = _MemoryPlan([
+      _planned('a', MealEntityFixtures.mealOne, 300),
+      _planned('b', MealEntityFixtures.mealTwo, 120),
+    ]);
+    final logged = <String>[];
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: PlannedFoodsCard(
+            day: _sunday,
+            store: memory,
+            log: (_, food) async {
+              logged.add(food.id);
+              return false;
+            },
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('plan-log-all')));
+    await tester.pumpAndSettle();
+
+    expect(logged, hasLength(1));
+    expect(memory.foods.map((f) => f.id), ['a', 'b']);
   });
 }
 

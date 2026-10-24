@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:opennutritracker/core/domain/entity/intake_type_entity.dart';
+import 'package:opennutritracker/core/domain/usecase/get_config_usecase.dart';
+import 'package:opennutritracker/core/utils/calc/day_boundary_calc.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/core/utils/navigation_options.dart';
 import 'package:opennutritracker/core/utils/navigation_predicates.dart';
@@ -12,28 +14,31 @@ import 'package:opennutritracker/fork/basket/basket.dart';
 import 'package:opennutritracker/fork/plan/plan_store.dart';
 import 'package:opennutritracker/fork/units/energy_text.dart';
 
-/// Writes one basket item; upstream's meal detail add in the app.
+/// Writes one basket item; upstream's meal detail add in the app. False
+/// when it was not written (a profile switch).
 typedef LogBasketItem =
-    Future<void> Function(
+    Future<bool> Function(
       BuildContext context,
       BasketItem item,
       IntakeTypeEntity type,
       DateTime day,
     );
 
-Future<void> _logWithMealDetail(
+Future<bool> _logWithMealDetail(
   BuildContext context,
   BasketItem item,
   IntakeTypeEntity type,
   DateTime day,
-) => locator<MealDetailBloc>().addIntake(
-  context,
-  item.unit,
-  item.amountText,
-  type,
-  item.meal,
-  day,
-);
+) async =>
+    await locator<MealDetailBloc>().addIntake(
+      context,
+      item.unit,
+      item.amountText,
+      type,
+      item.meal,
+      day,
+    ) !=
+    null;
 
 /// Home and the Diary, after entries were written outside upstream's
 /// screens; skipped where the app's blocs are not registered (tests).
@@ -177,13 +182,17 @@ class _BasketSheetState extends State<BasketSheet> {
   Future<void> _plan() async {
     setState(() => _logging = true);
     final items = widget.basket.itemsFor(widget.type, widget.day);
+    // Home passes the moment: after midnight but before the day starts it
+    // is still the previous day's plan.
+    final offset = (await locator<GetConfigUsecase>().getConfig())
+        .dayStartOffsetTotalMinutes;
     await (widget.plans ?? PlanStore()).add(
       [
         for (final i in items)
           (meal: i.meal, unit: i.unit, amountText: i.amountText, kcal: i.kcal),
       ],
       widget.type,
-      widget.day,
+      DayBoundaryCalc.dayLabelOf(widget.day, offset),
     );
     widget.basket.clear();
     if (!mounted) return;
@@ -198,16 +207,21 @@ class _BasketSheetState extends State<BasketSheet> {
   Future<void> _logAll() async {
     setState(() => _logging = true);
     final items = widget.basket.itemsFor(widget.type, widget.day);
+    var logged = 0;
     for (final item in items) {
-      if (!mounted) return;
-      await widget.log(context, item, widget.type, widget.day);
+      if (!mounted) break;
+      // Not written (a profile switch): it and the rest stay in the basket.
+      if (!await widget.log(context, item, widget.type, widget.day)) break;
+      // Out of the basket once logged: a sheet closed partway leaves only
+      // what was not, so logging again adds nothing twice.
+      widget.basket.remove(item);
+      logged++;
     }
-    widget.basket.clear();
     refreshAfterLogging();
     if (!mounted) return;
     ScaffoldMessenger.of(
       context,
-    ).showSnackBar(SnackBar(content: Text('Logged ${items.length} foods.')));
+    ).showSnackBar(SnackBar(content: Text('Logged $logged foods.')));
     Navigator.of(
       context,
     ).popUntil(namedRouteOrFirst(NavigationOptions.mainRoute));

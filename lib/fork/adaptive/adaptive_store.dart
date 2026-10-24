@@ -75,7 +75,10 @@ class AdaptiveSettings {
   });
 
   /// The fixed target's daily energy before the weekday shift.
-  double get fixedTargetKcal => fixedMacros?.kcal ?? fixedKcal;
+  double get fixedTargetKcal => switch (fixedMacros) {
+    final macros? when macros.kcal > 0 => macros.kcal,
+    _ => fixedKcal,
+  };
 
   AdaptiveSettings copyWith({
     bool? smoothedTrend,

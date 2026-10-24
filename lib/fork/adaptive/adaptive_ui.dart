@@ -6,6 +6,7 @@ import 'package:opennutritracker/features/settings/presentation/bloc/settings_bl
 import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
 import 'package:opennutritracker/fork/adaptive/macro_program.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
+import 'package:opennutritracker/fork/copy/copy_ui.dart';
 import 'package:opennutritracker/fork/adaptive/check_in_history.dart';
 import 'package:opennutritracker/fork/adaptive/check_in.dart';
 import 'package:opennutritracker/fork/units/energy_text.dart';
@@ -69,6 +70,7 @@ class _AdaptiveCheckInCardState extends State<AdaptiveCheckInCard> {
             );
             if (accepted == true) {
               _recheck();
+              await _refreshGoals();
               widget.onAccepted();
             }
           },
@@ -684,44 +686,63 @@ class AdaptiveGoalNote extends StatelessWidget {
 
   const AdaptiveGoalNote({super.key, this.store});
 
+  /// The logical today, and the last check-in while the adaptive target
+  /// sets the goal.
+  Future<(DateTime, CheckInRecord?)> _read(AdaptiveSettings settings) async => (
+    await logicalToday(),
+    settings.adaptiveTarget && !settings.fixedTarget
+        ? await (store ?? AdaptiveStore()).lastCheckIn()
+        : null,
+  );
+
   @override
   Widget build(BuildContext context) {
     final settings = AdaptiveStore.settings.value;
-    if (settings.fixedTarget) {
-      return Card(
-        margin: const EdgeInsets.only(bottom: 16),
-        child: ListTile(
-          leading: const Icon(Icons.lock_outline_rounded),
-          title: const Text('Fixed target is on'),
-          subtitle: Text(
-            'Your goal is ${energyText(context, settings.fixedTargetKcal)}'
-            '${settings.fixedMacros == null ? '' : ' (${_macroText(settings.fixedMacros!)})'}, '
-            'as set in Settings. The formula below is not used; logged '
-            'activities and the kcal adjustment are not added.',
-          ),
-        ),
-      );
+    if (!settings.fixedTarget &&
+        !settings.adaptiveTarget &&
+        settings.weekdayOffsets.every((o) => o == 0)) {
+      return const SizedBox.shrink();
     }
-    if (!settings.adaptiveTarget) {
-      final now = DateTime.now();
-      final shift = settings.weekdayOffsets[now.weekday - 1];
-      if (shift == 0) return const SizedBox.shrink();
-      return Card(
-        margin: const EdgeInsets.only(bottom: 16),
-        child: ListTile(
-          leading: const Icon(Icons.calendar_view_week_rounded),
-          title: const Text('Targets by weekday'),
-          subtitle: Text(
-            'Today ${energyText(context, shift, signed: true)} is added to '
-            'the total below.',
-          ),
-        ),
-      );
-    }
-    return FutureBuilder<CheckInRecord?>(
-      future: (store ?? AdaptiveStore()).lastCheckIn(),
+    return FutureBuilder<(DateTime, CheckInRecord?)>(
+      future: _read(settings),
       builder: (context, snapshot) {
-        final last = snapshot.data;
+        final data = snapshot.data;
+        if (data == null) return const SizedBox.shrink();
+        final (today, last) = data;
+        // Today's shift, as the goal on Home carries it.
+        final shift = settings.weekdayOffsets[today.weekday - 1];
+        String goal(double kcal) =>
+            'Your goal today is ${energyText(context, kcal + shift)}'
+            '${shift == 0 ? '' : ' (${energyText(context, shift, signed: true)} for the weekday)'}';
+        if (settings.fixedTarget) {
+          return Card(
+            margin: const EdgeInsets.only(bottom: 16),
+            child: ListTile(
+              leading: const Icon(Icons.lock_outline_rounded),
+              title: const Text('Fixed target is on'),
+              subtitle: Text(
+                '${goal(settings.fixedTargetKcal)}'
+                '${settings.fixedMacros == null ? '' : ', from ${_macroText(settings.fixedMacros!)}'}, '
+                'as set in Settings. The formula below is not used; logged '
+                'activities and the kcal adjustment are not added.',
+              ),
+            ),
+          );
+        }
+        if (!settings.adaptiveTarget) {
+          if (shift == 0) return const SizedBox.shrink();
+          return Card(
+            margin: const EdgeInsets.only(bottom: 16),
+            child: ListTile(
+              leading: const Icon(Icons.calendar_view_week_rounded),
+              title: const Text('Targets by weekday'),
+              subtitle: Text(
+                'Today ${energyText(context, shift, signed: true)} is added to '
+                'the total below.',
+              ),
+            ),
+          );
+        }
         final d = last?.date;
         return Card(
           margin: const EdgeInsets.only(bottom: 16),
@@ -732,7 +753,7 @@ class AdaptiveGoalNote extends StatelessWidget {
               last == null
                   ? 'Until the first weekly check-in, the formula below sets '
                         'your goal.'
-                  : 'Your goal is ${energyText(context, last.acceptedKcal)}, set at '
+                  : '${goal(last.acceptedKcal)}, set at '
                         'the check-in on ${d!.year}-'
                         '${d.month.toString().padLeft(2, '0')}-'
                         '${d.day.toString().padLeft(2, '0')} from a measured '

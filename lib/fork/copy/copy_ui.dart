@@ -52,13 +52,13 @@ Future<void> copyIntakesWithDialog(
     builder: (_) => CopyTargetDialog(initialDay: today, initialMeal: meal),
   );
   if (target == null) return;
-  await CopyEntries.fromLocator().copyIntakes(
+  final copied = await CopyEntries.fromLocator().copyIntakes(
     intakes,
     target.day,
     type: target.meal,
   );
   refreshAfterCopy();
-  if (context.mounted) _copied(context, target.day);
+  if (context.mounted) _copied(context, copied ? target.day : null);
 }
 
 /// Copies [activities] to a day the user picks (seam S24's activity
@@ -74,14 +74,24 @@ Future<void> copyActivitiesWithDialog(
     builder: (_) => CopyTargetDialog(initialDay: today, activitiesOnly: true),
   );
   if (target == null) return;
-  await CopyEntries.fromLocator().copyActivities(activities, target.day);
+  final copied = await CopyEntries.fromLocator().copyActivities(
+    activities,
+    target.day,
+  );
   refreshAfterCopy();
-  if (context.mounted) _copied(context, target.day);
+  if (context.mounted) _copied(context, copied ? target.day : null);
 }
 
-void _copied(BuildContext context, DateTime day) =>
+/// "Copied to [day]", or, null, that a profile switch stopped the copy.
+void _copied(BuildContext context, DateTime? day) =>
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Copied to ${DateFormat.MMMEd().format(day)}')),
+      SnackBar(
+        content: Text(
+          day == null
+              ? 'Nothing copied: the profile changed.'
+              : 'Copied to ${DateFormat.MMMEd().format(day)}',
+        ),
+      ),
     );
 
 /// "Copy day" beside the diary's date (seam S26): every entry of [day],
@@ -99,13 +109,13 @@ class CopyDayButton extends StatelessWidget {
       builder: (_) => CopyTargetDialog(initialDay: today, wholeDay: true),
     );
     if (target == null) return;
-    await CopyEntries.fromLocator().copyDay(
+    final copied = await CopyEntries.fromLocator().copyDay(
       day,
       target.day,
       activities: target.activities,
     );
     refreshAfterCopy();
-    if (context.mounted) _copied(context, target.day);
+    if (context.mounted) _copied(context, copied ? target.day : null);
   }
 
   @override

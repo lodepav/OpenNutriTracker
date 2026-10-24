@@ -85,6 +85,13 @@ void main() {
     expect(r.sugar, isNull);
   });
 
+  test('a date-only entry goes out at noon of its date', () {
+    expect(
+      NutritionRecord.of(_intake('a', DateTime.utc(2026, 10, 22))).at,
+      DateTime(2026, 10, 22, 12),
+    );
+  });
+
   test('an imported day is not written', () async {
     diary = [
       _intake('a', DateTime(2026, 10, 23, 8)),

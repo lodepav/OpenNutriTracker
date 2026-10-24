@@ -7,6 +7,7 @@ import 'package:logging/logging.dart';
 import 'package:opennutritracker/core/data/repository/intake_repository.dart';
 import 'package:opennutritracker/core/domain/entity/intake_entity.dart';
 import 'package:opennutritracker/core/domain/entity/intake_type_entity.dart';
+import 'package:opennutritracker/core/utils/calc/day_boundary_calc.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/fork/dev/fake_health.dart';
@@ -52,7 +53,16 @@ class NutritionRecord {
     return NutritionRecord(
       clientId: clientIdOf(intake.id),
       meal: intake.type,
-      at: intake.dateTime,
+      // A date-only entry (a UTC midnight from the Diary, or an import's)
+      // at noon of its date, so other apps file it on that day in any zone.
+      at: DayBoundaryCalc.isDayLabel(intake.dateTime)
+          ? DateTime(
+              intake.dateTime.year,
+              intake.dateTime.month,
+              intake.dateTime.day,
+              12,
+            )
+          : intake.dateTime,
       name: intake.meal.name ?? '',
       kcal: intake.totalKcal,
       carbs: intake.totalCarbsGram,

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:opennutritracker/core/domain/entity/app_theme_entity.dart';
@@ -13,6 +15,7 @@ import 'package:opennutritracker/core/domain/usecase/get_kcal_goal_usecase.dart'
 import 'package:opennutritracker/core/domain/usecase/get_macro_goal_usecase.dart';
 import 'package:opennutritracker/core/domain/usecase/get_user_activity_usecase.dart';
 import 'package:opennutritracker/core/domain/usecase/log_user_activity_usecase.dart';
+import 'package:opennutritracker/core/utils/tracked_day_lock.dart';
 import 'package:opennutritracker/fork/copy/copy_entries.dart';
 import 'package:opennutritracker/fork/copy/select_entries_screen.dart';
 import 'package:opennutritracker/generated/l10n.dart';
@@ -92,6 +95,45 @@ void main() {
     await copier().copyIntakes([lateSnack], DateTime(2026, 10, 23));
     expect(intakes.added.single.dateTime, DateTime(2026, 10, 24, 1));
     expect(intakes.added.single.type, lateSnack.type);
+  });
+
+  test('with a 4 am day start, a date-only entry (an import\'s) stays a '
+      'date-only entry of the target day', () async {
+    config = _Config(4);
+    final imported = at(intakeOf('soup', 300), DateTime(2026, 10, 20));
+    await copier().copyIntakes([imported], DateTime(2026, 10, 23));
+    expect(intakes.added.single.dateTime, DateTime(2026, 10, 23));
+    expect(days.created, [DateTime(2026, 10, 23)]);
+  });
+
+  test('copied to a picked time before the day starts, they go on the '
+      'night of the day picked', () async {
+    config = _Config(4);
+    final oats = at(intakeOf('oats', 50), DateTime(2026, 10, 20, 8));
+    final day = await copier().copyIntakesAt(
+      [oats],
+      DateTime(2026, 10, 23),
+      time: const TimeOfDay(hour: 2, minute: 0),
+    );
+
+    expect(day, DateTime(2026, 10, 23));
+    expect(intakes.added.single.dateTime, DateTime(2026, 10, 24, 2));
+    expect(days.created, [DateTime(2026, 10, 23)]);
+  });
+
+  test('a profile switch stops a copy before it reads or writes', () async {
+    final oats = at(intakeOf('oats', 50), DateTime(2026, 10, 22, 8));
+    final switched = Completer<void>();
+    final switching = withProfileSwitchLock(() => switched.future);
+    final copies = [
+      copier().copyIntakes([oats], DateTime(2026, 10, 23)),
+      copier().copyDay(DateTime(2026, 10, 22), DateTime(2026, 10, 23)),
+    ];
+    switched.complete();
+    await switching;
+
+    expect(await Future.wait(copies), [false, false]);
+    expect(intakes.added, isEmpty);
   });
 
   test(

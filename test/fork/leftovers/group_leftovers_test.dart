@@ -313,5 +313,17 @@ void main() {
 
       expect(left, {'rice': 40, 'curry': 300});
     });
+
+    test('two entries of one food each take one item', () {
+      final left = leftoversFromItems(
+        [_intake('bread1', 'Bread', 60), _intake('bread2', 'Bread', 30)],
+        const [
+          ParsedMealItem(query: 'Bread', quantity: 20, unit: 'g'),
+          ParsedMealItem(query: 'Bread', quantity: 10, unit: 'g'),
+        ],
+      );
+
+      expect(left, {'bread1': 20, 'bread2': 10});
+    });
   });
 }
