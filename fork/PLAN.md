@@ -903,12 +903,22 @@ and with a Latvian note, in English.
   prompt asks: the name as written, split on "and" or "with". So for one typed food, AI
   describe is the resolver. The models differ only in splitting "X and Y salad", and
   never on the first row.
-- **What still misses:**
-  - A bare family name picks an odd sibling on the shorter-name tie-break: "chicken" picks
+- **Bare names, the second round:**
+  - A bare family name picked an odd sibling on the shorter-name tie-break: "chicken" picked
     "Chicken, back", "tomato" "Tomato, green, pickled", "salad" "Salmon salad", and "bacon"
-    "Bacon, turkey". This matters most after a split ("chicken with cheese and
-    pineapple").
-  - "pepperoni pizza" picks "Pizza, with meat other than pepperoni".
+    "Bacon, turkey". This matters most after a split ("chicken with cheese and pineapple").
+  - Now a one-word name's tie goes to the family's unspecified row (S73): "Chicken, NS as to
+    part…", "Bacon, NS as to type of meat, cooked", "Bread, NS as to major flour", "Coffee,
+    NS as to type". It counts only when NFS or "NS as to" comes first after the title, and not
+    "NS as to form", which names a cooked form, so carrots and tomatoes stay raw. The cut of
+    twenty keeps those rows for the resolver.
+  - A pickled or turkey row, or one named for lacking what the query names ("Pizza, with meat
+    other than pepperoni"), trails like a meatless one (S70). The penalty is now 0.3, more than
+    a plural costs, so "tomato" picks "Tomatoes, raw" over the singular pickle.
+  - The table had no plain salad; a green side salad is a fork dish now.
+  - Resolver 114/131 (93%), AI describe 114/131 foods and 25/45 dishes for each model.
+- **What still misses:**
+  - `egg` "Egg, creamed" and `pizza` "Pizza, no cheese", the shorter siblings, as upstream.
   - The rest are gaps in the table: psyllium, kvass, creatine, casein, burrata.
 
 Still needs the user: the leftovers photo check, typing and photographing their own

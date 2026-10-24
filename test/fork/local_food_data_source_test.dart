@@ -195,6 +195,42 @@ void main() {
       expect((await names('bacon')).first, 'Pork, cured, bacon, unprepared');
     });
 
+    test('resolution keeps the unspecified row the cut of twenty left out '
+        '(S73)', () async {
+      final source = _source(
+        _table([
+          for (var i = 0; i < 25; i++)
+            [
+              100 + i,
+              'fdc_survey',
+              '${100 + i}',
+              'Chicken, part $i',
+              true,
+              200,
+            ],
+          [
+            200,
+            'fdc_survey',
+            '200',
+            'Chicken, NS as to part and cooking method, NS as to skin eaten',
+            true,
+            230,
+          ],
+        ]),
+      );
+      Future<List<String?>> names({required bool resolve}) async =>
+          (await source.fetchSearchWordResults(
+            'chicken',
+            forResolution: resolve,
+          )).map((f) => f.name).toList();
+
+      expect(await names(resolve: true), contains(startsWith('Chicken, NS')));
+      expect(
+        await names(resolve: false),
+        isNot(contains(startsWith('Chicken, NS'))),
+      );
+    });
+
     test('"pea" does not find peanut butter', () async {
       expect(await _source(json).fetchSearchWordResults('pea'), isEmpty);
     });

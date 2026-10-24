@@ -12,6 +12,7 @@ import 'package:opennutritracker/features/add_meal/domain/entity/meal_portion_en
 import 'package:opennutritracker/features/add_meal/util/backend_title.dart';
 import 'package:opennutritracker/features/add_meal/util/soft_text_score.dart';
 import 'package:opennutritracker/fork/food/unasked_variant.dart';
+import 'package:opennutritracker/fork/food/unspecified_row.dart';
 
 /// The fork's offline food table (D11): the open USDA and BLS tables bundled
 /// as an asset, answering the three questions upstream asks its Supabase
@@ -98,7 +99,9 @@ class LocalFoodDataSource extends SpFoodDataSource {
       query,
       forResolution: forResolution,
     );
-    if (forResolution) return ranked;
+    if (forResolution) {
+      return [...ranked, ..._unspecifiedCut(rows, ranked, query)];
+    }
     // The Food tab lists a variant the person did not name ("Bacon,
     // meatless" for "bacon") after the plain rows, as the resolver scores
     // it (S70).
@@ -108,6 +111,30 @@ class LocalFoodDataSource extends SpFoodDataSource {
       for (final row in ranked)
         if (unaskedVariant(row.name, query) > 0) row,
     ];
+  }
+
+  /// The unspecified rows (NFS, "NS as to") the cut left out, most
+  /// unspecified first, for the resolver to weigh (S73). The cut keeps the
+  /// shortest twenty of a tie, and on "chicken" all twenty are short
+  /// parts: "Chicken, back", "Chicken, tail".
+  static Iterable<SpFoodDTO> _unspecifiedCut(
+    List<SpFoodDTO> rows,
+    List<SpFoodDTO> ranked,
+    String query,
+  ) {
+    final kept = Set<SpFoodDTO>.identity()..addAll(ranked);
+    final left = [
+      for (final row in rows)
+        if (unspecifiedMarks(row.name, query) > 0 && !kept.contains(row)) row,
+    ];
+    mergeSort(
+      left,
+      compare: (a, b) => unspecifiedMarks(
+        b.name,
+        query,
+      ).compareTo(unspecifiedMarks(a.name, query)),
+    );
+    return left.take(5);
   }
 
   /// Every name in the table is English, so there is no label to localize.

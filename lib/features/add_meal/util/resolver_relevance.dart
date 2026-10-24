@@ -28,6 +28,9 @@ import 'package:opennutritracker/features/add_meal/util/soft_text_score.dart';
 // [fork] S70 unasked-variant: meatless, vegan and baby-food rows trail
 import 'package:opennutritracker/fork/food/unasked_variant.dart';
 // [/fork]
+// [fork] S73 unspecified-first: a tie goes to the NFS / "NS as to" row
+import 'package:opennutritracker/fork/food/unspecified_row.dart';
+// [/fork]
 
 /// Quality tie-breakers, matching the shared ranker so that near-equal text
 /// matches resolve the same way in both places.
@@ -279,6 +282,13 @@ List<MealEntity> _sorted(List<MealEntity> meals, String query) {
   mergeSort(decorated, compare: (a, b) {
     final byScore = b.score.compareTo(a.score);
     if (byScore != 0) return byScore;
+    // [fork] S73 unspecified-first: the everyday row before odd siblings
+    final byUnspecified = unspecifiedMarks(
+      b.meal.name,
+      query,
+    ).compareTo(unspecifiedMarks(a.meal.name, query));
+    if (byUnspecified != 0) return byUnspecified;
+    // [/fork]
     // The name, not the title that was scored. Siblings that reach this key
     // share a title — every "Milk" is "Milk" — so its length says nothing;
     // the description is where they differ, and the shorter one is the

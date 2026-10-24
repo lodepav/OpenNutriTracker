@@ -73,6 +73,19 @@
         ["fdc_sr_legacy", "Bread, crumbs, dry, grated, plain", 7],
         ["fdc_sr_legacy", "Oil, sunflower, linoleic (less than 60%)", 8]
       ]
+    },
+    {
+      "code": "green-salad",
+      "name": "Salad, green, without dressing (garden salad, tossed salad, side salad)",
+      "basis": "A plain side salad as common recipes make it: leaf lettuce, tomato, cucumber and sweet pepper, undressed. The survey tables have salads named for what is in them (pea, crab, chicken) and dressings, but no plain one, so \"salad\" logged \"Salmon salad\".",
+      "yield_g": 230,
+      "serving": ["1 bowl", 150],
+      "ingredients": [
+        ["fdc_sr_legacy", "Lettuce, green leaf, raw", 100],
+        ["fdc_sr_legacy", "Tomatoes, red, ripe, raw, year round average", 60],
+        ["fdc_sr_legacy", "Cucumber, with peel, raw", 50],
+        ["fdc_sr_legacy", "Peppers, sweet, red, raw", 20]
+      ]
     }
   ]
 }
