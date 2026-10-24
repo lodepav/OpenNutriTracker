@@ -318,7 +318,7 @@ class LocalFoodTable {
     String searchString, {
     required bool Function(String? source) isEnabled,
   }) {
-    final query = _words(searchString).map(_spelling).toSet();
+    final query = _words(searchString).map(spelling).toSet();
     if (query.isEmpty) return const [];
     final matches = <SpFoodDTO>[];
     for (var i = 0; i < foods.length; i++) {
@@ -341,7 +341,7 @@ class LocalFoodTable {
     String searchString, {
     required bool Function(String? source) isEnabled,
   }) {
-    final words = _words(searchString).map(_spelling).toList();
+    final words = _words(searchString).map(spelling).toList();
     if (words.toSet().length < 2) return const [];
     final last = words.last;
     var best = (0, false);
@@ -402,10 +402,14 @@ List<String> _words(String? text) => (text ?? '')
     .where((w) => w.isNotEmpty)
     .toList();
 
-/// The table's word for a query word people spell another way.
-String _spelling(String word) => switch (word) {
+/// The table's word for a query word people spell another way. Recipe
+/// search folds both sides through it too (`recipe_search.dart`): a model
+/// names the Georgian boat "adjaruli" or "acharuli", a recipe saved from a
+/// web page "Adjarian".
+String spelling(String word) => switch (word) {
   'bbq' || 'barbeque' => 'barbecue',
   'tater' => 'potato',
+  'adjaruli' || 'acharuli' || 'adjaran' || 'ajarian' || 'ajaruli' => 'adjarian',
   _ => word,
 };
 

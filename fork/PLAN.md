@@ -636,8 +636,9 @@ against the page's per serving; and typed or photographed names against the save
 every word (`LocalFoodDataSource.fetchSearchWordResults`; a person's search stays exact):
 buckwheat with mushrooms now 217 kcal (page 168), nothing unmatched. (2) The starter is named
 "Sklandu rauši (sklandrausis)": "sklandrausis" and "2 sklandrauši" find it. An install that
-already saved the starters keeps the old name. Not fixed: "adjaruli" vs "Adjarian", which only
-a looser word rule would join, and that rule would also join "chickpea" and "chicken".
+already saved the starters keeps the old name. "adjaruli" vs "Adjarian", which only a looser
+word rule would join (and it would join "chickpea" and "chicken" too), is fixed since by a
+spelling list (2026-10-24, `spelling` in `local_food_data_source.dart`).
 
 *Tuning, Opus → Sonnet → Haiku replay, 2026-10-23:* the same photos and dishes answered by
 each model's subagent (`FORK_EVAL_REPLAY` takes several folders). The harness now matches
@@ -765,9 +766,9 @@ are skipped, each with what it logs now.
   *Fixed 2026-10-24* (S75, the row a bare name means): fries, tomato sauce, tomato paste,
   potatoes (boiled), porridge (oatmeal), bread soup (the sweet rye one), unsalted butter,
   cola, coke, diet coke, greek yogurt (plain), granola, egg, eggs and pizza. "salad",
-  "coffee" and "meat dumplings" were fixed before. Left: "adjaruli khachapuri" against a
-  recipe saved as "Adjarian khachapuri", and bare "potato" stays "Potato, NFS" (S73), the
-  survey's average with fat, against "potatoes" boiled.
+  "coffee" and "meat dumplings" were fixed before. "adjaruli" and "acharuli" are spelled
+  "adjarian" in the table's and recipe search's shared spelling list. Left: bare "potato"
+  stays "Potato, NFS" (S73), the survey's average with fat, against "potatoes" boiled.
 
 *Hard notes and the Latvian locale, 2026-10-24* (`test/fork/eval/hard_note_eval_test.dart`,
 all three models):

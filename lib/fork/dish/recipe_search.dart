@@ -10,9 +10,9 @@ import 'package:opennutritracker/fork/food/local_food_data_source.dart';
 /// Used beside upstream's match, never instead of it, so a half-typed word
 /// ("khach") still finds the recipe.
 bool nameHasQueryWords(String? name, String query) {
-  final queryWords = tokenize(_fold(query));
+  final queryWords = tokenize(_fold(query)).map(spelling);
   if (queryWords.isEmpty) return false;
-  final nameWords = tokenize(_fold(name ?? ''));
+  final nameWords = tokenize(_fold(name ?? '')).map(spelling);
   return queryWords.every((q) => nameWords.any((t) => wordsAgree(q, t)));
 }
 
