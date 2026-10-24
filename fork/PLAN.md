@@ -686,6 +686,28 @@ ingredients through the resolver's own ranking, not the table's first row.
   with more than twice the leanest cooked row's energy and over 50 g carbs are left out. A
   37-name probe changed only those seven. Eggs, meat, raw bacon and oats kept their rows.
 
+*Photo alone against photo with a note, 2026-10-24:* 15 LIDO set meals were added (61 photos
+in all). Each plate has two to four parts, which LIDO's menu text lists. The 28 LIDO photos
+carry a `user_note` written the way a person would type it, for example "karbonāde, potatoes,
+mushroom sauce" or "soļanka, 2 pankūkas with meat, sour cream, beet salad". Some notes leave
+out a part the photo shows. Each of those photos runs once alone and once with its note.
+- **Dishes named:**
+  - alone: Opus 26/28, Sonnet 23/28, Haiku 21/28;
+  - with the note: 28/28 for all three. The note also fixes every count (7/7).
+- **Set-meal parts named (of 55):**
+  - alone: Opus 54, Sonnet 53, Haiku 46;
+  - with the note: Opus 55, Sonnet 52, Haiku 54.
+
+  Sonnet with a note sometimes logs only what the note names and drops a dill sauce it can
+  see; Opus and Haiku add it.
+- **Matching against the table still goes wrong after a right name:**
+  - a note's bare "salad" is logged as "salad", which ranks "Salmon salad" first (213 kcal);
+  - "pancakes with meat" goes to an egg sandwich on a griddle pancake;
+  - "bread soup" goes to a savoury soup at 43 kcal, against LIDO's dessert.
+- **Replay slip:** one Haiku subagent wrote four answers under the wrong keys, so two plates
+  swapped answers. A fresh subagent answering one request at a time fixed it. The answers
+  are worth a spot check against their photos.
+
 Still needs the user: the leftovers photo check, typing and photographing their own
 khachapuri, pelmeni and grey peas, and ten of their own meals (photos we do not have).
 

@@ -13,6 +13,10 @@
 // FORK_EVAL_REPLAY=build/fork-eval/replay/<name> runs it with no key and no
 // call out, on answers a subagent wrote (fork/eval/REPLAY.md): the first run
 // saves the requests, the run after the answers are in scores them.
+//
+// A photo with a `user_note` runs twice, as sent alone and with the note a
+// person would type ("karbonāde, potatoes, salad"); the report sets the two
+// side by side. A set meal's `parts` are scored one by one.
 import 'dart:convert';
 import 'dart:io';
 
@@ -65,8 +69,15 @@ void main() {
       () async {
         final client = http.Client();
         final interpreter = ModelMealPhotoInterpreter(models.api(spec, client));
-        final results = report[spec] = [];
-        for (final photo in photos) {
+        final alone = report[spec] = [];
+        final noted = report['$spec$_withNote'] = [];
+        final runs = [
+          for (final photo in photos) (photo, null, alone),
+          for (final photo in photos)
+            if (photo['user_note'] != null)
+              (photo, photo['user_note'] as String, noted),
+        ];
+        for (final (photo, note, results) in runs) {
           final file = File('$_photoDir/${photo['id']}.jpg');
           if (!file.existsSync()) continue;
           final watch = Stopwatch()..start();
@@ -74,6 +85,7 @@ void main() {
             final parsed = await interpreter.interpret(
               MealPhoto(bytes: file.readAsBytesSync(), mediaType: 'image/jpeg'),
               localeCode: 'en',
+              note: note,
             );
             final items = <_Item>[];
             for (final item in parsed.items) {
@@ -100,7 +112,7 @@ void main() {
         client.close();
         models.reportWaiting(
           spec,
-          results.where((r) => r.error != null).length,
+          [...alone, ...noted].where((r) => r.error != null).length,
         );
       },
       timeout: const Timeout(Duration(minutes: 30)),
@@ -148,6 +160,19 @@ class _PhotoResult {
   /// Some returned name holds one of the words the dish goes by.
   bool get identified => items.any(_isDish);
 
+  List<Map<String, dynamic>> get _parts =>
+      ((photo['parts'] as List?) ?? const []).cast<Map<String, dynamic>>();
+
+  bool _names(Map<String, dynamic> part, _Item item) =>
+      (part['expect_any'] as List).cast<String>().any(
+        (word) => item.query.toLowerCase().contains(word),
+      );
+
+  /// The set meal's parts some returned name holds, or null for one dish.
+  int? get partsNamed => _parts.isEmpty
+      ? null
+      : _parts.where((p) => items.any((i) => _names(p, i))).length;
+
   /// Pieces of the dish counted, when the photo has a countable dish.
   double? get counted {
     if (photo['count'] == null) return null;
@@ -182,41 +207,61 @@ class _PhotoResult {
     'counted': counted,
     'count_ok': countOk,
     'form_ok': formOk,
+    'parts_named': partsNamed,
     'items': [for (final item in items) item.toJson()],
   };
 }
+
+/// The report key for a model's runs with the photos' notes.
+const _withNote = ' + note';
 
 String _markdown(
   Map<String, List<_PhotoResult>> report,
   List<Map<String, dynamic>> photos,
 ) {
-  final out = StringBuffer('# Photo test, ${DateTime.now()}\n\n')
-    ..writeln(
-      '| Model | Dish named | Count right | Cooked row | No table match '
-      '| Errors | Median s |',
-    )
-    ..writeln('|---|---|---|---|---|---|---|');
-  for (final MapEntry(:key, :value) in report.entries) {
+  const header =
+      '| Model | Dish named | Set-meal parts named | Count right '
+      '| Cooked row | No table match | Errors | Median s |\n'
+      '|---|---|---|---|---|---|---|---|';
+  String row(String key, Iterable<_PhotoResult> value) {
     final counts = value.where((r) => r.countOk != null);
     final forms = value.where((r) => r.formOk != null);
+    final sets = value.where((r) => r.partsNamed != null);
     final unmatched = value.where(
       (r) => r.items.any((i) => r._isDish(i) && i.match == null),
     );
     final ms = [for (final r in value) r.ms]..sort();
-    out.writeln(
-      '| $key | ${value.where((r) => r.identified).length}/${value.length} '
-      '| ${counts.where((r) => r.countOk!).length}/${counts.length} '
-      '| ${forms.where((r) => r.formOk!).length}/${forms.length} '
-      '| ${unmatched.length} '
-      '| ${value.where((r) => r.error != null).length} '
-      '| ${ms.isEmpty ? '-' : (ms[ms.length ~/ 2] / 1000).toStringAsFixed(1)} |',
-    );
+    return '| $key | ${value.where((r) => r.identified).length}/${value.length} '
+        '| ${sets.fold(0, (n, r) => n + r.partsNamed!)}/'
+        '${sets.fold(0, (n, r) => n + r._parts.length)} '
+        '| ${counts.where((r) => r.countOk!).length}/${counts.length} '
+        '| ${forms.where((r) => r.formOk!).length}/${forms.length} '
+        '| ${unmatched.length} '
+        '| ${value.where((r) => r.error != null).length} '
+        '| ${ms.isEmpty ? '-' : (ms[ms.length ~/ 2] / 1000).toStringAsFixed(1)} |';
+  }
+
+  final out = StringBuffer('# Photo test, ${DateTime.now()}\n\n')
+    ..writeln(header);
+  for (final MapEntry(:key, :value) in report.entries) {
+    if (!key.endsWith(_withNote)) out.writeln(row(key, value));
+  }
+  out
+    ..writeln('\n## The photos with a note, sent alone and with it\n')
+    ..writeln(header);
+  for (final MapEntry(:key, :value) in report.entries) {
+    if (key.endsWith(_withNote)) continue;
+    final noted = {for (final r in report['$key$_withNote']!) r.photo['id']};
+    out
+      ..writeln(row(key, value.where((r) => noted.contains(r.photo['id']))))
+      ..writeln(row('$key$_withNote', report['$key$_withNote']!));
   }
   out.writeln('\n## Per photo\n');
   for (final photo in photos) {
     out.writeln('### ${photo['id']} — ${photo['dish']}\n');
     out.writeln(
-      '${photo['note']}. Expected count: ${photo['count'] ?? '-'}.\n',
+      '${photo['note']}. Expected count: ${photo['count'] ?? '-'}.'
+      '${photo['user_note'] == null ? '' : ' Note: "${photo['user_note']}".'}\n',
     );
     for (final MapEntry(:key, :value) in report.entries) {
       final r = value.where((r) => r.photo['id'] == photo['id']).firstOrNull;
@@ -232,7 +277,10 @@ String _markdown(
                     '${i.matchKcal == null ? '' : ' (${i.matchKcal!.round()} kcal/100 g)'}',
               )
               .join('; ');
-      out.writeln('- **$key** ${r.identified ? '✓' : '✗'}: $items');
+      final parts = r.partsNamed == null
+          ? ''
+          : ' (${r.partsNamed}/${r._parts.length} parts)';
+      out.writeln('- **$key** ${r.identified ? '✓' : '✗'}$parts: $items');
     }
     out.writeln();
   }

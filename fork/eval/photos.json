@@ -1,6 +1,6 @@
 {
- "about": "Photo test set for phase 1.4 (D7). Photos stay on their sites; fork/tools/fetch_eval_photos.py downloads them into build/. Macros are the recipe pages' own per-serving figures (site calculators, not lab values). LIDO photos (lv-lido-*) are the chain's own Wolt menu photos; LIDO publishes no macros for restaurant dishes, so per_serving is null there except where LIDO's packaged label gives them. match_kcal_100g_max: the dish's table row must be at most this energy (a cooked row, not the raw grain).",
- "collected": "2026-10-18, LIDO and eda.ru 2026-10-23",
+ "about": "Photo test set for phase 1.4 (D7). Photos stay on their sites; fork/tools/fetch_eval_photos.py downloads them into build/. Macros are the recipe pages' own per-serving figures (site calculators, not lab values). LIDO photos (lv-lido-*) are the chain's own Wolt menu photos; LIDO publishes no macros for restaurant dishes, so per_serving is null there except where LIDO's packaged label gives them. match_kcal_100g_max: the dish's table row must be at most this energy (a cooked row, not the raw grain). user_note: what a person would type with the photo; the test runs each such photo with and without it. parts: the things on a set-meal plate, each named by any of its words.",
+ "collected": "2026-10-18, LIDO and eda.ru 2026-10-23, LIDO set meals 2026-10-24",
  "photos": [
   {
    "id": "lv-sklandrausis",
@@ -929,7 +929,8 @@
    "per_serving": null,
    "ingredients": [
     "Zirņi pelēkie vārīti (71%) (pelēkie zirņi /Latvija/, ūdens, sāls), speķis ar sīpoliem (28.6%) (sīpoli, cūkgaļas vaigi karsti kūpināti, rapšu eļļa, sāls, melnie pipari)."
-   ]
+   ],
+   "user_note": "pelēkie zirņi ar speķi"
   },
   {
    "id": "lv-lido-buckwheat",
@@ -950,7 +951,8 @@
    "ingredients": [
     "Griķi, sviests, garšvielas."
    ],
-   "match_kcal_100g_max": 150
+   "match_kcal_100g_max": 150,
+   "user_note": "griķi"
   },
   {
    "id": "lv-lido-karbonade",
@@ -986,7 +988,8 @@
     0.48,
     0.9,
     0.99
-   ]
+   ],
+   "user_note": "karbonāde"
   },
   {
    "id": "lv-lido-sauerkraut",
@@ -1006,7 +1009,8 @@
    "per_serving": null,
    "ingredients": [
     "Skābēti kāposti (73%)/Lietuva/ (kāposti, sāls), sīpoli, cūkgaļas vaigi (vaigi cūkgaļas (cūkgaļas vaigi (87%)/ES/, ūdens, sāls, dekstroze, garšvielu ekstrakti, citronu eļļa, maisījums garšvielu (tomātu koncentrāts, dabīgais tomātu aromatizētājs, maltodekstrīns, sāls), cukurs, ķiploki, konservants: nātrija nitrīts)), kečups (ūdens, tomātu pasta, cukurs, modificēta kukurūzas ciete, sāls, skābuma regulētājs (citronskābe un etiķskābe), aromatizētāji, garšvielas), burkāni, cukurs, rapšu eļļa, sāls"
-   ]
+   ],
+   "user_note": "sautēti skābie kāposti"
   },
   {
    "id": "lv-lido-herring-fur",
@@ -1027,7 +1031,8 @@
    "per_serving": null,
    "ingredients": [
     "Sastāvdaļas: bietes, kartupeļi, SIĻĶES fileja mazsālīta (19,7%) (SIĻĶE (Clupea harengus) (95%), sāls, nogatavinātājs (garšvielas, sausais glikozes sīrups, dekstroze, sāls, skābuma regulētāji: citronskābe, E331, E575, fermenti: proteāze), ūdens), majonēze (satur OLAS, LAKTOZI), burkāni vārīti, OLAS vārītas, sīpoli, lociņi, sāls, melnie pipari."
-   ]
+   ],
+   "user_note": "siļķe kažokā"
   },
   {
    "id": "lv-lido-cabbage-rolls",
@@ -1051,7 +1056,8 @@
    "per_serving": null,
    "ingredients": [
     "Cūkgaļas masa (cūkgaļa (35%), ūdens, rīsi, sīpoli, sāls, pipari, ķiploki), kāposti, rapšu eļļa, mērce (ūdens, SALDAIS KRĒJUMS, kečups (tomātu biezenis, ūdens, cukurs, modificēta kartupeļu ciete, sāls, skābuma regulētāji: etiķskābe, citronskābe, garšvielas, tomātu aromatizētājs), sīpoli, burkāni, KVIEŠU milti, rapšu eļļa, sāls, melnie pipari)"
-   ]
+   ],
+   "user_note": "2 kāpostu tītenīši"
   },
   {
    "id": "lv-lido-solyanka",
@@ -1072,7 +1078,8 @@
    "per_serving": null,
    "ingredients": [
     "Kartupeļi, cūkgaļas k/k, desa p/ž, desa vārīta, liellopu gaļa, liellopu nieres, gurķi marinēti, tomātu pasta, sīpoli, sāls, ķiploki, cukurs, garšvielas, pipari asie čili malti"
-   ]
+   ],
+   "user_note": "soļanka"
   },
   {
    "id": "lv-lido-plov",
@@ -1092,7 +1099,8 @@
    "per_serving": null,
    "ingredients": [
     "Cāļa gaļa, rīsi, sīpoli, burkāni, kečups, garšvielas, ķiploki, citronu sula, rapšu eļļa"
-   ]
+   ],
+   "user_note": "plovs"
   },
   {
    "id": "lv-lido-bread-soup",
@@ -1116,7 +1124,8 @@
    "per_serving": null,
    "ingredients": [
     "Maizes zupa (81%) (ūdens, cukurs, RĪVMAIZE MELNĀ (9.43%) (rupja maluma RUDZU MILTI, dabīgais ieraugs (RUDZU MILTI, ūdens), cukurs, RUDZU IESALS, ķimenes, pārtikas vārāmā sāls, kartupeļu ciete)), dzērvenes, žāvētas aprikozes (žāvētas aprikozes, konservants E220), rozīnes, plūmes žāvētas (plūmes, glicerīns, konservants: kālija sorbāts), sula citronu, kanēlis), krēms (SALDAIS KRĒJUMS, Siers Philadelphia (PILNPIENS, saldais KRĒJUMS, sūkalu olbaltumvielu koncentrāts (no PIENA), pārtikas sāls, stabilizētājs (ceratoniju augļu sveķi), skābe (citronskābe), pienskābes kultūras), cukurs, vanilīna cukurs (cukurs, aromatizētājs - vanilīns))"
-   ]
+   ],
+   "user_note": "maizes zupa"
   },
   {
    "id": "lv-lido-mash",
@@ -1137,7 +1146,8 @@
    "per_serving": null,
    "ingredients": [
     "Kartupeļi (45.1%), ūdens, PIENS, SALDAIS KRĒJUMS, sāls, sviests"
-   ]
+   ],
+   "user_note": "kartupeļu biezenis"
   },
   {
    "id": "lv-lido-lyulya",
@@ -1162,7 +1172,8 @@
    "per_serving": null,
    "ingredients": [
     "Cūkgaļas ļuļa kebabs (58%) (cūkgaļa (73%), sīpoli, cūkgaļas speķis (6,29%), kinza, sāls, melnie pipari), mērce 41.7%) (kečups (tomātu biezenis (65%), ūdens, cukurs, modificēta kartupeļu ciete, pārtikas sāls, skābuma regulētāji: etiķskābe, citronskābe, garšvielas, tomātu aromatizētājs), ūdens, adžika klasiskā (ķiploki, SELERIJAS, pētersiļu saknes, burkāni, saldā paprika, garšvielu maisījums, sāls, cukurs, etiķskābe, citronskābe, konservants: E211), pētersīļi, sāls)"
-   ]
+   ],
+   "user_note": "3 ļuļa kebabi"
   },
   {
    "id": "lv-lido-pancakes-meat",
@@ -1186,7 +1197,8 @@
    "per_serving": null,
    "ingredients": [
     "pankūka (61%) (PIENS, OLU MASA, KVIEŠU MILTI, eļļa rapšu, cukurs, sāls), pildījums (39%) (cūkgaļas šķiņķis, buljons (ūdens, cūkgaļa), sīpoli, rapšu eļļa, sāls, sāls pipari"
-   ]
+   ],
+   "user_note": "2 pankūkas ar gaļu"
   },
   {
    "id": "lv-lido-french-pork",
@@ -1206,7 +1218,8 @@
    "per_serving": null,
    "ingredients": [
     "Cūkgaļas karbonāde, majonēze, siers, olas, tomāti, sīpoli, garšvielas, rapēsu eļļa"
-   ]
+   ],
+   "user_note": "cūkgaļa franču gaumē"
   },
   {
    "id": "ru-otbivnye-batter",
@@ -1561,6 +1574,744 @@
     "Хмели-сунели,  по вкусу",
     "Соль,  по вкусу",
     "Молотый черный перец,  по вкусу"
+   ]
+  },
+  {
+   "id": "lv-lido-set-tradicionalais",
+   "cuisine": "latvian",
+   "dish": "LIDO: Komplekts TRADICIONĀLAIS",
+   "recipe_url": "https://wolt.com/lv/lva/riga/restaurant/lido-alus-sta",
+   "image_url": "https://wolt-menu-images-cdn.wolt.com/menu-images/5f52614f2c5507a5c85b9c31/d3f4f882-9182-11f1-9376-664adee4eff7_komp._20tradicion_c4_81lais.jpg",
+   "expect_any": [
+    "cutlet",
+    "patty",
+    "kotlete",
+    "meatball"
+   ],
+   "count": null,
+   "servings_shown": null,
+   "note": "a LIDO set meal, several parts on one plate or beside it (Kāpostu salāti , Cāļa gaļas kotlete, Kartupeļu biezenis, Šampinjonu mērce); no macros published",
+   "user_note": "chicken kotlete, mash, mushroom sauce, cabbage salad",
+   "parts": [
+    {
+     "name": "chicken cutlet",
+     "expect_any": [
+      "cutlet",
+      "patty",
+      "kotlete",
+      "meatball"
+     ]
+    },
+    {
+     "name": "mashed potatoes",
+     "expect_any": [
+      "mash",
+      "pur"
+     ]
+    },
+    {
+     "name": "mushroom sauce",
+     "expect_any": [
+      "mushroom"
+     ]
+    },
+    {
+     "name": "cabbage salad",
+     "expect_any": [
+      "cabbage",
+      "coleslaw",
+      "slaw"
+     ]
+    }
+   ],
+   "recipe_yield": null,
+   "per_serving": null
+  },
+  {
+   "id": "lv-lido-set-iecienitais",
+   "cuisine": "latvian",
+   "dish": "LIDO: Komplekts IECIENĪTAIS",
+   "recipe_url": "https://wolt.com/lv/lva/riga/restaurant/lido-vermanitis",
+   "image_url": "https://wolt-menu-images-cdn.wolt.com/menu-images/5da70af5d866c7d815d1584f/e83e0c5e-3ee2-11f1-ab34-deaa9e199d79_kompl._20iecien_c4_abtais.jpg",
+   "expect_any": [
+    "pork",
+    "franču",
+    "meat"
+   ],
+   "count": null,
+   "servings_shown": null,
+   "note": "a LIDO set meal, several parts on one plate or beside it (Burkānu salāti ar saulespuķu sēklām, Cūkgaļa franču gaumē, Kartupeļu salmiņi, Diļļu mērce); no macros published",
+   "user_note": "cūkgaļa franču gaumē, potato straws, carrot salad",
+   "parts": [
+    {
+     "name": "French-style pork",
+     "expect_any": [
+      "pork",
+      "franču",
+      "meat"
+     ]
+    },
+    {
+     "name": "fried potato straws",
+     "expect_any": [
+      "potato",
+      "fries",
+      "chips"
+     ]
+    },
+    {
+     "name": "carrot salad",
+     "expect_any": [
+      "carrot"
+     ]
+    },
+    {
+     "name": "dill sauce",
+     "expect_any": [
+      "dill",
+      "sauce",
+      "dressing"
+     ]
+    }
+   ],
+   "recipe_yield": null,
+   "per_serving": null
+  },
+  {
+   "id": "lv-lido-set-brangais-calis",
+   "cuisine": "latvian",
+   "dish": "LIDO: Komplekts BRANGAIS CĀLIS",
+   "recipe_url": "https://wolt.com/lv/lva/riga/restaurant/lido-vermanitis",
+   "image_url": "https://wolt-menu-images-cdn.wolt.com/menu-images/5b8f7fb6136ba1000c71f23c/e9de4ae8-915c-11f1-929f-8240fdf427c0_komplekts_20brangais_20c_c4_81lis.jpg",
+   "expect_any": [
+    "chicken"
+   ],
+   "count": null,
+   "servings_shown": null,
+   "note": "a LIDO set meal, several parts on one plate or beside it (Svaigu kāpostu salāti, Cāļa fileja ar sieru un ananāsiem, Kartupeļu salmiņi,  Diļļu mērce); no macros published",
+   "user_note": "chicken with cheese and pineapple, fries, cabbage salad, dill sauce",
+   "parts": [
+    {
+     "name": "chicken with cheese and pineapple",
+     "expect_any": [
+      "chicken"
+     ]
+    },
+    {
+     "name": "fried potato straws",
+     "expect_any": [
+      "potato",
+      "fries",
+      "chips"
+     ]
+    },
+    {
+     "name": "cabbage salad",
+     "expect_any": [
+      "cabbage",
+      "coleslaw",
+      "slaw"
+     ]
+    },
+    {
+     "name": "dill sauce",
+     "expect_any": [
+      "dill",
+      "sauce",
+      "dressing"
+     ]
+    }
+   ],
+   "recipe_yield": null,
+   "per_serving": null
+  },
+  {
+   "id": "lv-lido-set-kardinosais",
+   "cuisine": "latvian",
+   "dish": "LIDO: Komplekts KĀRDINOŠAIS",
+   "recipe_url": "https://wolt.com/lv/lva/riga/restaurant/lido-alus-sta",
+   "image_url": "https://wolt-menu-images-cdn.wolt.com/menu-images/5f52614f2c5507a5c85b9c31/d3f9be9e-9182-11f1-9376-664adee4eff7_komp._20k_c4_81rdino_c5_a1ais.jpg",
+   "expect_any": [
+    "beef",
+    "steak",
+    "bifšteks",
+    "patty",
+    "cutlet"
+   ],
+   "count": null,
+   "servings_shown": null,
+   "note": "a LIDO set meal, several parts on one plate or beside it (Kāpostu salāti , Bifšteks vīna mērcē, Kartupeļu biezenis); no macros published",
+   "user_note": "bifšteks in wine sauce, mash, cabbage salad",
+   "parts": [
+    {
+     "name": "beefsteak",
+     "expect_any": [
+      "beef",
+      "steak",
+      "bifšteks",
+      "patty",
+      "cutlet"
+     ]
+    },
+    {
+     "name": "mashed potatoes",
+     "expect_any": [
+      "mash",
+      "pur"
+     ]
+    },
+    {
+     "name": "cabbage salad",
+     "expect_any": [
+      "cabbage",
+      "coleslaw",
+      "slaw"
+     ]
+    }
+   ],
+   "recipe_yield": null,
+   "per_serving": null
+  },
+  {
+   "id": "lv-lido-set-gimenes-hits",
+   "cuisine": "latvian",
+   "dish": "LIDO: Komplekts ĢIMENES HĪTS",
+   "recipe_url": "https://wolt.com/lv/lva/riga/restaurant/lido-dzirnavas",
+   "image_url": "https://wolt-menu-images-cdn.wolt.com/menu-images/5bb33cbda6a2df000c2a3604/faf8933e-915b-11f1-88bf-1aa810c80902_komplekts_20_c4_a2imenes_20h_c4_abts.jpg",
+   "expect_any": [
+    "turkey",
+    "cutlet",
+    "kotlete",
+    "patty"
+   ],
+   "count": null,
+   "servings_shown": null,
+   "note": "a LIDO set meal, several parts on one plate or beside it (Svaigo kāpostu salāti, Tītara gaļas kotlete ar burkānu tomātu mērci, Kartupeļu biezenis); no macros published",
+   "user_note": "turkey kotlete, mash, salad",
+   "parts": [
+    {
+     "name": "turkey cutlet",
+     "expect_any": [
+      "turkey",
+      "cutlet",
+      "kotlete",
+      "patty"
+     ]
+    },
+    {
+     "name": "mashed potatoes",
+     "expect_any": [
+      "mash",
+      "pur"
+     ]
+    },
+    {
+     "name": "cabbage salad",
+     "expect_any": [
+      "cabbage",
+      "coleslaw",
+      "slaw"
+     ]
+    }
+   ],
+   "recipe_yield": null,
+   "per_serving": null
+  },
+  {
+   "id": "lv-lido-set-klasiskais",
+   "cuisine": "latvian",
+   "dish": "LIDO: Komplekts KLASISKAIS",
+   "recipe_url": "https://wolt.com/lv/lva/riga/restaurant/lido-dzirnavas",
+   "image_url": "https://wolt-menu-images-cdn.wolt.com/menu-images/5da70af5d866c7d815d1584f/e83b7bec-3ee2-11f1-ab34-deaa9e199d79_kompl._20klasiskais.jpg",
+   "expect_any": [
+    "chicken",
+    "skewer",
+    "šašliks",
+    "shashlik",
+    "kebab"
+   ],
+   "count": null,
+   "servings_shown": null,
+   "note": "a LIDO set meal, several parts on one plate or beside it (Burkānu salāti ar saulespuķu sēklām, Cāļa gaļas šašliks, Kartupeļu salmiņi, Ķiploku mērce); no macros published",
+   "user_note": "chicken šašliks, potato straws, carrot salad, garlic sauce",
+   "parts": [
+    {
+     "name": "chicken shashlik",
+     "expect_any": [
+      "chicken",
+      "skewer",
+      "šašliks",
+      "shashlik",
+      "kebab"
+     ]
+    },
+    {
+     "name": "fried potato straws",
+     "expect_any": [
+      "potato",
+      "fries",
+      "chips"
+     ]
+    },
+    {
+     "name": "carrot salad",
+     "expect_any": [
+      "carrot"
+     ]
+    },
+    {
+     "name": "garlic sauce",
+     "expect_any": [
+      "garlic",
+      "sauce",
+      "dressing"
+     ]
+    }
+   ],
+   "recipe_yield": null,
+   "per_serving": null
+  },
+  {
+   "id": "lv-lido-set-elegantais",
+   "cuisine": "latvian",
+   "dish": "LIDO: Komplekts ELEGANTAIS",
+   "recipe_url": "https://wolt.com/lv/lva/riga/restaurant/lido-atputas-centrs",
+   "image_url": "https://wolt-menu-images-cdn.wolt.com/menu-images/5b27d0c7140a67000bda1adf/2da1cf10-a798-11f1-8d81-9acc90f103b3_kompl._20elegantais.jpg",
+   "expect_any": [
+    "fish",
+    "pollock",
+    "mintai",
+    "cod"
+   ],
+   "count": null,
+   "servings_shown": null,
+   "note": "a LIDO set meal, several parts on one plate or beside it (Biešu salāti ar marinētiem gurķiem \r\nMintaja fileja ar tomātiem un sieru \r\nRīsi ar dārzeņiem un sēnēm \r\nDiļļu mērce); no macros published",
+   "user_note": "fish with tomato and cheese, rice with vegetables, beet salad",
+   "parts": [
+    {
+     "name": "pollock with tomato and cheese",
+     "expect_any": [
+      "fish",
+      "pollock",
+      "mintai",
+      "cod"
+     ]
+    },
+    {
+     "name": "rice with vegetables",
+     "expect_any": [
+      "rice"
+     ]
+    },
+    {
+     "name": "beet salad",
+     "expect_any": [
+      "beet"
+     ]
+    },
+    {
+     "name": "dill sauce",
+     "expect_any": [
+      "dill",
+      "sauce",
+      "dressing"
+     ]
+    }
+   ],
+   "recipe_yield": null,
+   "per_serving": null
+  },
+  {
+   "id": "lv-lido-set-bernibas-garsa",
+   "cuisine": "latvian",
+   "dish": "LIDO: Komplekts BĒRNĪBAS GARŠA",
+   "recipe_url": "https://wolt.com/lv/lva/riga/restaurant/lido-dzirnavas",
+   "image_url": "https://wolt-menu-images-cdn.wolt.com/menu-images/5da70af5d866c7d815d1584f/e841e95a-3ee2-11f1-ab34-deaa9e199d79_komplekts_20b_c4_93rn_c4_abbas_20gar_c5_a1.jpg",
+   "expect_any": [
+    "fish",
+    "pike",
+    "cutlet",
+    "kotlete",
+    "patty"
+   ],
+   "count": null,
+   "servings_shown": null,
+   "note": "a LIDO set meal, several parts on one plate or beside it (Burkānu salāti ar saulespuķu sēklām Līdakas kotlete Kartupeļu biezenis Šampinjonu mērce); no macros published",
+   "user_note": "fish kotlete, mash, mushroom sauce, carrot salad",
+   "parts": [
+    {
+     "name": "pike cutlet",
+     "expect_any": [
+      "fish",
+      "pike",
+      "cutlet",
+      "kotlete",
+      "patty"
+     ]
+    },
+    {
+     "name": "mashed potatoes",
+     "expect_any": [
+      "mash",
+      "pur"
+     ]
+    },
+    {
+     "name": "mushroom sauce",
+     "expect_any": [
+      "mushroom"
+     ]
+    },
+    {
+     "name": "carrot salad",
+     "expect_any": [
+      "carrot"
+     ]
+    }
+   ],
+   "recipe_yield": null,
+   "per_serving": null
+  },
+  {
+   "id": "lv-lido-set-legendarais",
+   "cuisine": "latvian",
+   "dish": "LIDO: Komplekts LEĢENDĀRAIS",
+   "recipe_url": "https://wolt.com/lv/lva/riga/restaurant/lido-dzirnavas",
+   "image_url": "https://wolt-menu-images-cdn.wolt.com/menu-images/5da70af5d866c7d815d1584f/e83a3e08-3ee2-11f1-ab34-deaa9e199d79_kompl._20le_c4_a3end_c4_81rais.jpg",
+   "expect_any": [
+    "chicken"
+   ],
+   "count": null,
+   "servings_shown": null,
+   "note": "a LIDO set meal, several parts on one plate or beside it (Burkānu salāti ar saules puķu sēklām, Grilēta cāļa fileja, Kartupeļu salmiņi cepti, Ķiploku mērce); no macros published",
+   "user_note": "grilled chicken, fried potatoes, carrot salad, garlic sauce",
+   "parts": [
+    {
+     "name": "grilled chicken fillet",
+     "expect_any": [
+      "chicken"
+     ]
+    },
+    {
+     "name": "fried potato straws",
+     "expect_any": [
+      "potato",
+      "fries",
+      "chips"
+     ]
+    },
+    {
+     "name": "carrot salad",
+     "expect_any": [
+      "carrot"
+     ]
+    },
+    {
+     "name": "garlic sauce",
+     "expect_any": [
+      "garlic",
+      "sauce",
+      "dressing"
+     ]
+    }
+   ],
+   "recipe_yield": null,
+   "per_serving": null
+  },
+  {
+   "id": "lv-lido-set-speka-mix",
+   "cuisine": "latvian",
+   "dish": "LIDO: Komplekts SPĒKA MIX",
+   "recipe_url": "https://wolt.com/lv/lva/riga/restaurant/lido-alus-sta",
+   "image_url": "https://wolt-menu-images-cdn.wolt.com/menu-images/5c5a96107c31e2000be7be35/a41e309c-a794-11f1-a42d-0e35ceeb1f9c_komplekts_20sp_c4_92ka_20mix.jpg",
+   "expect_any": [
+    "bean",
+    "chickpea"
+   ],
+   "count": null,
+   "servings_shown": null,
+   "note": "a LIDO set meal, several parts on one plate or beside it (Salāti burkānu ar saulespuķu sēklām,Pikantās pupiņas ar turku zirņiem, rīsi ar dārzeņiem un sēnēm); no macros published",
+   "user_note": "spicy beans with chickpeas, rice with vegetables, carrot salad",
+   "parts": [
+    {
+     "name": "spicy beans with chickpeas",
+     "expect_any": [
+      "bean",
+      "chickpea"
+     ]
+    },
+    {
+     "name": "rice with vegetables",
+     "expect_any": [
+      "rice"
+     ]
+    },
+    {
+     "name": "carrot salad",
+     "expect_any": [
+      "carrot"
+     ]
+    }
+   ],
+   "recipe_yield": null,
+   "per_serving": null
+  },
+  {
+   "id": "lv-lido-set-saimnieks",
+   "cuisine": "latvian",
+   "dish": "LIDO: Komplekts SAIMNIEKS",
+   "recipe_url": "https://wolt.com/lv/lva/riga/restaurant/lido-dzirnavas",
+   "image_url": "https://wolt-menu-images-cdn.wolt.com/menu-images/5da70af5d866c7d815d1584f/288fbc6e-752d-11f1-921e-fa3b7811e34d_komplekts_20saimnieks.jpg",
+   "expect_any": [
+    "pancake",
+    "crepe",
+    "blin",
+    "pankūk"
+   ],
+   "count": [
+    2,
+    2
+   ],
+   "servings_shown": null,
+   "note": "a LIDO set meal, several parts on one plate or beside it (Soļanka, pankūka ar gaļas pildījumu 2gb, krējums, Salāti biešu ar marinētiem gurķiem); no macros published",
+   "user_note": "soļanka, 2 pankūkas with meat, sour cream, beet salad",
+   "parts": [
+    {
+     "name": "solyanka",
+     "expect_any": [
+      "solyanka",
+      "soljanka",
+      "soup"
+     ]
+    },
+    {
+     "name": "pancakes with meat",
+     "expect_any": [
+      "pancake",
+      "crepe",
+      "blin",
+      "pankūk"
+     ]
+    },
+    {
+     "name": "sour cream",
+     "expect_any": [
+      "sour cream",
+      "smetana",
+      "krējum"
+     ]
+    },
+    {
+     "name": "beet salad",
+     "expect_any": [
+      "beet"
+     ]
+    }
+   ],
+   "recipe_yield": null,
+   "per_serving": null
+  },
+  {
+   "id": "lv-lido-set-maiznieks",
+   "cuisine": "latvian",
+   "dish": "LIDO: Komplekts MAIZNIEKS",
+   "recipe_url": "https://wolt.com/lv/lva/riga/restaurant/lido-dzirnavas",
+   "image_url": "https://wolt-menu-images-cdn.wolt.com/menu-images/5f52614f2c5507a5c85b9c31/82591b98-7530-11f1-9483-5a71ec44a19a_komplekts_20maiznieks.jpg",
+   "expect_any": [
+    "pancake",
+    "crepe",
+    "blin",
+    "pankūk"
+   ],
+   "count": [
+    2,
+    2
+   ],
+   "servings_shown": null,
+   "note": "a LIDO set meal, several parts on one plate or beside it (Soļanka, pankūkas ar siera, šķiņķa pildījumu 2gb, krējums, Auzu pārslu deserts ar ķīseli); no macros published",
+   "user_note": "soļanka, pancakes with ham and cheese, sour cream, oat dessert",
+   "parts": [
+    {
+     "name": "solyanka",
+     "expect_any": [
+      "solyanka",
+      "soljanka",
+      "soup"
+     ]
+    },
+    {
+     "name": "pancakes with ham and cheese",
+     "expect_any": [
+      "pancake",
+      "crepe",
+      "blin",
+      "pankūk"
+     ]
+    },
+    {
+     "name": "sour cream",
+     "expect_any": [
+      "sour cream",
+      "smetana",
+      "krējum"
+     ]
+    },
+    {
+     "name": "oat dessert with kissel",
+     "expect_any": [
+      "oat",
+      "kissel",
+      "ķīsel",
+      "dessert",
+      "parfait"
+     ]
+    }
+   ],
+   "recipe_yield": null,
+   "per_serving": null
+  },
+  {
+   "id": "lv-lido-set-vieglais",
+   "cuisine": "latvian",
+   "dish": "LIDO: Komplekts VIEGLAIS",
+   "recipe_url": "https://wolt.com/lv/lva/riga/restaurant/lido-origo",
+   "image_url": "https://wolt-menu-images-cdn.wolt.com/menu-images/5f96ded80f514c2587e0f8fc/626ed980-ade4-11eb-95fe-bafda0f98e85_kompl._vieglais.jpeg",
+   "expect_any": [
+    "salmon",
+    "fish"
+   ],
+   "count": null,
+   "servings_shown": null,
+   "note": "a LIDO set meal, several parts on one plate or beside it (Grilēta laša fileja\nSautēti dārzeņi\nDiļļu mērce); no macros published",
+   "user_note": "grilled salmon, stewed vegetables, dill sauce",
+   "parts": [
+    {
+     "name": "grilled salmon",
+     "expect_any": [
+      "salmon",
+      "fish"
+     ]
+    },
+    {
+     "name": "stewed vegetables",
+     "expect_any": [
+      "vegetable",
+      "cauliflower",
+      "broccoli",
+      "carrot"
+     ]
+    },
+    {
+     "name": "dill sauce",
+     "expect_any": [
+      "dill",
+      "sauce",
+      "dressing"
+     ]
+    }
+   ],
+   "recipe_yield": null,
+   "per_serving": null
+  },
+  {
+   "id": "lv-lido-set-meistars",
+   "cuisine": "latvian",
+   "dish": "LIDO: Komplekts MEISTARS",
+   "recipe_url": "https://wolt.com/lv/lva/riga/restaurant/lido-alus-sta",
+   "image_url": "https://wolt-menu-images-cdn.wolt.com/menu-images/5abe0bd2511dcd000b34aa59/c3ed7a2a-7532-11f1-b11f-72c113973127_komplekts_20meistars.jpg",
+   "expect_any": [
+    "solyanka",
+    "soljanka",
+    "soup"
+   ],
+   "count": null,
+   "servings_shown": null,
+   "note": "a LIDO set meal, several parts on one plate or beside it (Soļanka, plovs cāļa gaļas, gurķis marinēts, kečups); no macros published",
+   "user_note": "soļanka, plovs, pickle, ketchup",
+   "parts": [
+    {
+     "name": "solyanka",
+     "expect_any": [
+      "solyanka",
+      "soljanka",
+      "soup"
+     ]
+    },
+    {
+     "name": "chicken plov",
+     "expect_any": [
+      "plov",
+      "pilaf",
+      "rice"
+     ]
+    },
+    {
+     "name": "pickled cucumber",
+     "expect_any": [
+      "cucumber",
+      "pickle",
+      "gherkin"
+     ]
+    },
+    {
+     "name": "ketchup",
+     "expect_any": [
+      "ketchup",
+      "tomato sauce"
+     ]
+    }
+   ],
+   "recipe_yield": null,
+   "per_serving": null
+  },
+  {
+   "id": "lv-lido-set-karbonade-potatoes",
+   "cuisine": "latvian",
+   "dish": "LIDO: Cepta cūkgaļas karbonāde, kartupeļi cepti ar mizu un šampinjonu mērci (110g/150g/60g)",
+   "recipe_url": "https://wolt.com/lv/lva/riga/restaurant/lido-spice",
+   "image_url": "https://wolt-menu-images-cdn.wolt.com/menu-images/5fb76debc349a1ccda6a9742/fa46942a-3ed8-11f1-bdfa-a23a23305009_cepta_20c_c5_abkga_c4_bcas_20karbon_c4_81de__20kartupe_c4_bci_20cepti_20ar_20mizu_20un_20_c5_a1ampinjonu_20m_c4_93rci.jpg",
+   "expect_any": [
+    "pork",
+    "karbon",
+    "schnitzel",
+    "cutlet",
+    "chop"
+   ],
+   "count": null,
+   "servings_shown": null,
+   "note": "a LIDO set meal, several parts on one plate or beside it (cropped off the pack; cepti kartupeļi ar mizu (46.9%) (kartupeļi /Lietuva/, eļļa (ūdens, sauespuķu eļļa, aromatizētāji, stabilizatori: ksantāna sveķi, emulgatori: polisorbāts 60, krāsvielas: karotīni), ķiploki, rapšu eļļa, sāls, timiāns), cūkgaļa4 eļļa, sāls, timiāns, cūkgaļa4. karbonāde, rapšu eļļa, OLAS, KVIEŠU MILTI, sāls, pipari), mērce šampinjonu (18,7%) (PIENS, šampinjoni (14,8%), SALDAIS KRĒJUMS, sīpoli, rapšu eļļa, SKĀBAIS KRĒJUMS, ūdens, SVIESTS, MILTI, rapšu eļļa, baravikas, sāls)); no macros published",
+   "user_note": "karbonāde, potatoes, mushroom sauce",
+   "parts": [
+    {
+     "name": "pork karbonāde",
+     "expect_any": [
+      "pork",
+      "karbon",
+      "schnitzel",
+      "cutlet",
+      "chop"
+     ]
+    },
+    {
+     "name": "roast skin-on potatoes",
+     "expect_any": [
+      "potato"
+     ]
+    },
+    {
+     "name": "mushroom sauce",
+     "expect_any": [
+      "mushroom"
+     ]
+    }
+   ],
+   "recipe_yield": null,
+   "per_serving": null,
+   "crop": [
+    0.36,
+    0.12,
+    1.0,
+    1.0
    ]
   }
  ]
