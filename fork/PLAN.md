@@ -708,6 +708,34 @@ out a part the photo shows. Each of those photos runs once alone and once with i
   swapped answers. A fresh subagent answering one request at a time fixed it. The answers
   are worth a spot check against their photos.
 
+*Photo to logged kcal, 2026-10-24* (`calorie_eval_test.dart`): every one-serving photo with
+known macros goes through the bulk-add screen's own logic (BulkAddBloc, the resolver, D9
+breakdowns). Each row is taken at the amount the screen starts it at, as a user who just
+accepts would log it. There are 17 photos: the recipe pages and four LIDO packs whose macros
+come from their Barbora labels (pork and chicken cutlets, dill and garlic sauce).
+- **Before the fix,** butter logged at 224 g (1,664 kcal) and raisins at 0.5 g. The table's
+  default serving was FNDDS's first portion, "1 cup" or "1 raisin". Survey foods now take
+  FNDDS's own "Quantity not specified" amount (butter 14 g, raisins 40 g, coffee 360 ml), in
+  `build_food_db.py`. That changes 3,807 rows. Portions are unchanged, and a count still
+  matches a named portion first.
+- **After it, alone / with the note:**
+  | Model | Within 25% | Median off | Logged / label, total |
+  |---|---|---|---|
+  | Opus | 5/17 / 2/5 | 45% / 27% | 97% / 64% |
+  | Sonnet | 5/17 / 3/5 | 45% / 12% | 105% / 103% |
+  | Haiku | 9/17 / 4/5 | 23% / 12% | 91% / 102% |
+- **Totals land near 100%, but single photos still miss widely.** The causes:
+  - a dish found in the table starts at 100 g, flagged, since the photo path gives no weight
+    (plov: 152 kcal against 753);
+  - "meat patty" picks a 97%-lean beef patty, 107 kcal a piece against 330;
+  - a note's "2 pork patties" lands on a raw patty row with no serving, so it logs 2 g,
+    flagged;
+  - "porridge" picks a roasted porridge with vegetable stock.
+- **A breakdown is one serving, whatever count the model gave the dish.** That is closer
+  than multiplying by the count, since the model's serving of "2 cutlets" is about the
+  tray. The breakdown's grams decide the rest: Haiku's chicken cutlet is a 150 g breaded
+  fillet, while LIDO's kotlete is a 90 g minced patty.
+
 Still needs the user: the leftovers photo check, typing and photographing their own
 khachapuri, pelmeni and grey peas, and ten of their own meals (photos we do not have).
 
