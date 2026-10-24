@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
+import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/fork/health/steps.dart';
 
 typedef _Read = ({bool on, int goal, Map<DateTime, int>? days, bool failed});
@@ -115,6 +116,9 @@ class _StepsCardState extends State<StepsCard> {
   Widget _card(BuildContext context, _Read read) {
     final theme = Theme.of(context);
     final days = read.days;
+    final settings = AdaptiveStore.settings.value;
+    final counted =
+        settings.activityMode != ActivityMode.off && settings.countSteps;
     return AppCard(
       padding: const EdgeInsets.all(Dimens.spacing20),
       child: Column(
@@ -135,9 +139,12 @@ class _StepsCardState extends State<StepsCard> {
           ),
           if (!read.on) ...[
             Text(
-              'Daily steps from Health Connect, read only. They change no '
-              'target: the expenditure estimate already counts what you '
-              'walk.',
+              counted
+                  ? 'Daily steps from Health Connect, read only. Expenditure '
+                        'counts them as activity once they are read.'
+                  : 'Daily steps from Health Connect, read only. They change '
+                        'no target: the expenditure estimate already counts '
+                        'what you walk.',
               style: theme.textTheme.bodySmall,
             ),
             Align(
@@ -163,6 +170,15 @@ class _StepsCardState extends State<StepsCard> {
             ),
           ] else
             ..._summary(context, days, read.goal),
+          if (read.on && counted)
+            Padding(
+              padding: const EdgeInsets.only(top: Dimens.spacing8),
+              child: Text(
+                'Expenditure counts these steps as activity. Stopping also '
+                'stops counting them.',
+                style: theme.textTheme.bodySmall,
+              ),
+            ),
           if (read.on)
             Align(
               alignment: Alignment.centerRight,

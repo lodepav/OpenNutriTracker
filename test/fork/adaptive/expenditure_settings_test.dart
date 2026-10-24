@@ -359,7 +359,7 @@ void main() {
       await tester.tap(find.byType(Switch));
       await tester.pump();
       expect(AdaptiveStore.skipped.value, {DateTime(2026, 10, 20)});
-      expect(find.textContaining('not counted'), findsOneWidget);
+      expect(find.textContaining('Not used in the expenditure'), findsOneWidget);
     });
 
     testWidgets('three groups; activity rows only while it counts', (
@@ -402,7 +402,96 @@ void main() {
       await tester.pumpAndSettle();
       expect(AdaptiveStore.settings.value.maxCheckInChangeKcal, isNull);
     });
+
+    testWidgets('the Steps switch connects, and turns off and on', (
+      tester,
+    ) async {
+      AdaptiveStore.settings.value = const AdaptiveSettings(
+        activityMode: ActivityMode.weekly,
+      );
+      final steps = _SwitchSteps();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ExpenditureSettingsScreen(store: _MemoryStore(), steps: steps),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final tile = find.byKey(const ValueKey('count-steps'));
+      bool shown() => tester.widget<SwitchListTile>(tile).value;
+      expect(shown(), isFalse);
+
+      await tester.tap(tile);
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      expect(steps.on, isTrue);
+      expect(shown(), isTrue);
+
+      await tester.tap(tile);
+      await tester.pumpAndSettle();
+      expect(AdaptiveStore.settings.value.countSteps, isFalse);
+      expect(shown(), isFalse);
+
+      await tester.tap(tile);
+      await tester.pumpAndSettle();
+      expect(AdaptiveStore.settings.value.countSteps, isTrue);
+      expect(shown(), isTrue);
+    });
+
+    testWidgets('a refused permission leaves Steps off', (tester) async {
+      AdaptiveStore.settings.value = const AdaptiveSettings(
+        activityMode: ActivityMode.weekly,
+      );
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ExpenditureSettingsScreen(
+            store: _MemoryStore(),
+            steps: _SwitchSteps(grants: false),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final tile = find.byKey(const ValueKey('count-steps'));
+      await tester.tap(tile);
+      await tester.pumpAndSettle();
+      expect(tester.widget<SwitchListTile>(tile).value, isFalse);
+      expect(find.textContaining('Health Connect permission'), findsOneWidget);
+    });
+
+    testWidgets('choices stack as rows at large text', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: MediaQuery(
+            data: const MediaQueryData(textScaler: TextScaler.linear(2)),
+            child: ExpenditureSettingsScreen(
+              store: _MemoryStore(),
+              steps: _SwitchSteps(),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(SegmentedButton<Responsiveness>), findsNothing);
+      await tester.tap(find.text('Responsive'));
+      await tester.pumpAndSettle();
+      expect(
+        AdaptiveStore.settings.value.responsiveness,
+        Responsiveness.responsive,
+      );
+    });
   });
+}
+
+class _SwitchSteps extends Fake implements StepCounts {
+  final bool grants;
+  bool on = false;
+
+  _SwitchSteps({this.grants = true});
+
+  @override
+  Future<bool> isOn() async => on;
+
+  @override
+  Future<bool> turnOn() async => on = grants;
 }
 
 /// Hive's file I/O does not finish in a widget test's fake time.

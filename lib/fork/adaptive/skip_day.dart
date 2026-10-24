@@ -26,8 +26,9 @@ class SkipDayTile extends StatelessWidget {
             title: const Text('Leave out of expenditure'),
             subtitle: Text(
               skipped
-                  ? "This day's food is not counted; its weigh-in is."
-                  : 'For a day logged only in part.',
+                  ? 'Not used in the expenditure estimate; its weigh-in is.'
+                  : "Logged only in part? Its food won't shape your target; "
+                        'its weigh-in still counts.',
             ),
             value: skipped,
             onChanged: (v) => store.setSkipped(key, v),

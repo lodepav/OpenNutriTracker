@@ -15,10 +15,75 @@ import 'package:opennutritracker/fork/units/energy_text.dart';
 /// The row's subtitle in "Trend and calorie target".
 String expenditureSummary(AdaptiveSettings s) => [
   s.responsiveness.label,
-  if (s.activityMode != ActivityMode.off)
-    'activity ${s.activityMode.label.toLowerCase()}',
-  if (s.autoAcceptCheckIn) 'automatic check-ins',
+  s.activityMode == ActivityMode.off
+      ? 'activity off'
+      : 'activity ${s.activityMode.label.toLowerCase()}',
+  s.autoAcceptCheckIn ? 'automatic check-ins' : 'check-ins by hand',
 ].join(' · ');
+
+/// Above this text scale the choices stack as a list: segments break
+/// mid-word at 200%.
+const _stackedTextScale = 1.3;
+
+/// One of [values], as segments, or a list of checked rows at large text.
+class _Choice<T> extends StatelessWidget {
+  final String identifier;
+  final List<T> values;
+  final String Function(T) label;
+  final T selected;
+  final ValueChanged<T>? onChanged;
+
+  const _Choice({
+    required this.identifier,
+    required this.values,
+    required this.label,
+    required this.selected,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final stacked =
+        MediaQuery.textScalerOf(context).scale(10) / 10 > _stackedTextScale;
+    if (stacked) {
+      return Semantics(
+        identifier: identifier,
+        container: true,
+        child: Column(
+          children: [
+            for (final v in values)
+              ListTile(
+                enabled: onChanged != null,
+                selected: v == selected,
+                title: Text(label(v)),
+                trailing: v == selected
+                    ? const Icon(Icons.check_rounded)
+                    : null,
+                onTap: onChanged == null ? null : () => onChanged!(v),
+              ),
+          ],
+        ),
+      );
+    }
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Semantics(
+        identifier: identifier,
+        child: SegmentedButton<T>(
+          showSelectedIcon: false,
+          segments: [
+            for (final v in values)
+              ButtonSegment(value: v, label: Text(label(v))),
+          ],
+          selected: {selected},
+          onSelectionChanged: onChanged == null
+              ? null
+              : (picked) => onChanged!(picked.single),
+        ),
+      ),
+    );
+  }
+}
 
 /// D17: how expenditure is estimated, what activity it counts, and how
 /// check-ins set the target; three groups on one screen.
@@ -32,7 +97,7 @@ class ExpenditureSettingsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Expenditure and check-ins')),
+    appBar: AppBar(title: const Text('Expenditure')),
     body: ValueListenableBuilder(
       valueListenable: AdaptiveStore.settings,
       builder: (context, settings, _) => ListView(
@@ -64,6 +129,7 @@ class _Heading extends StatelessWidget {
     padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
     child: Semantics(
       header: true,
+      container: true,
       child: Text(
         text,
         style: Theme.of(context).textTheme.titleMedium?.copyWith(
@@ -82,7 +148,10 @@ class _Note extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-    child: Text(text, style: Theme.of(context).textTheme.bodySmall),
+    child: Semantics(
+      container: true,
+      child: Text(text, style: Theme.of(context).textTheme.bodySmall),
+    ),
   );
 }
 
@@ -97,21 +166,12 @@ class _EstimateSection extends StatelessWidget {
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
       const _Heading('Estimate'),
-      Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: Semantics(
-          identifier: 'expenditure-responsiveness',
-          child: SegmentedButton<Responsiveness>(
-            showSelectedIcon: false,
-            segments: [
-              for (final r in Responsiveness.values)
-                ButtonSegment(value: r, label: Text(r.label)),
-            ],
-            selected: {settings.responsiveness},
-            onSelectionChanged: (picked) =>
-                _save(store, settings.copyWith(responsiveness: picked.single)),
-          ),
-        ),
+      _Choice<Responsiveness>(
+        identifier: 'expenditure-responsiveness',
+        values: Responsiveness.values,
+        label: (r) => r.label,
+        selected: settings.responsiveness,
+        onChanged: (r) => _save(store, settings.copyWith(responsiveness: r)),
       ),
       _Note(switch (settings.responsiveness) {
         Responsiveness.steady =>
@@ -145,23 +205,26 @@ class _SkippedDaysTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) => ValueListenableBuilder(
     valueListenable: AdaptiveStore.skipped,
-    builder: (context, days, _) => ListTile(
-      key: const ValueKey('skipped-days'),
-      title: const Text('Days left out'),
-      subtitle: Text(
-        days.isEmpty
-            ? 'None. Leave out a day logged only in part from its page in '
-                  'the Diary.'
-            : '${days.length} day${days.length == 1 ? '' : 's'}: what was '
-                  'logged is not counted, the weigh-in is.',
+    builder: (context, days, _) => Semantics(
+      container: true,
+      child: ListTile(
+        key: const ValueKey('skipped-days'),
+        title: const Text('Days left out'),
+        subtitle: Text(
+          days.isEmpty
+              ? 'None. Leave out a day logged only in part from its page in '
+                    'the Diary.'
+              : '${days.length} day${days.length == 1 ? '' : 's'}: what was '
+                    'logged is not counted, the weigh-in is.',
+        ),
+        trailing: days.isEmpty ? null : const Icon(Icons.chevron_right_rounded),
+        onTap: days.isEmpty
+            ? null
+            : () => showDialog<void>(
+                context: context,
+                builder: (_) => _SkippedDaysDialog(store),
+              ),
       ),
-      trailing: days.isEmpty ? null : const Icon(Icons.chevron_right_rounded),
-      onTap: days.isEmpty
-          ? null
-          : () => showDialog<void>(
-              context: context,
-              builder: (_) => _SkippedDaysDialog(store),
-            ),
     ),
   );
 }
@@ -219,7 +282,20 @@ class _ActivitySection extends StatefulWidget {
 }
 
 class _ActivitySectionState extends State<_ActivitySection> {
-  late Future<bool> _stepsOn = widget.steps.isOn();
+  /// Whether Health Connect steps are connected; false until read.
+  bool _stepsOn = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _readStepsOn();
+  }
+
+  /// A box that cannot be read (tests) leaves the switch off.
+  Future<void> _readStepsOn() async {
+    final on = await widget.steps.isOn().catchError((Object _) => false);
+    if (mounted) setState(() => _stepsOn = on);
+  }
 
   /// The share suggested from body composition, in percent; null until
   /// read, or where the profile cannot be read (tests).
@@ -253,7 +329,7 @@ class _ActivitySectionState extends State<_ActivitySection> {
         return;
       }
     }
-    setState(() => _stepsOn = widget.steps.isOn());
+    await _readStepsOn();
     await _save(widget.store, settings.copyWith(countSteps: on));
   }
 
@@ -266,21 +342,12 @@ class _ActivitySectionState extends State<_ActivitySection> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const _Heading('Activity'),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Semantics(
-            identifier: 'expenditure-activity-mode',
-            child: SegmentedButton<ActivityMode>(
-              showSelectedIcon: false,
-              segments: [
-                for (final m in ActivityMode.values)
-                  ButtonSegment(value: m, label: Text(m.label)),
-              ],
-              selected: {settings.activityMode},
-              onSelectionChanged: (picked) =>
-                  _save(store, settings.copyWith(activityMode: picked.single)),
-            ),
-          ),
+        _Choice<ActivityMode>(
+          identifier: 'expenditure-activity-mode',
+          values: ActivityMode.values,
+          label: (m) => m.label,
+          selected: settings.activityMode,
+          onChanged: (m) => _save(store, settings.copyWith(activityMode: m)),
         ),
         _Note(switch (settings.activityMode) {
           ActivityMode.off =>
@@ -295,25 +362,22 @@ class _ActivitySectionState extends State<_ActivitySection> {
                 'comes in, so active days get more and rest days less.',
         }),
         if (counting) ...[
-          FutureBuilder<bool>(
-            future: _stepsOn,
-            builder: (context, snapshot) => SwitchListTile(
-              key: const ValueKey('count-steps'),
-              title: const Text('Steps'),
-              subtitle: const Text(
-                'From Health Connect, at what walking costs for your weight '
-                'and height. Steps within an imported workout count once.',
-              ),
-              value: settings.countSteps && snapshot.data == true,
-              onChanged: _countSteps,
+          SwitchListTile(
+            key: const ValueKey('count-steps'),
+            title: const Text('Steps'),
+            subtitle: const Text(
+              'From Health Connect, at what walking costs for your weight '
+              'and height. Steps within an imported workout count once.',
             ),
+            value: settings.countSteps && _stepsOn,
+            onChanged: _countSteps,
           ),
           SwitchListTile(
             key: const ValueKey('count-workouts'),
             title: const Text('Workouts'),
             subtitle: const Text(
-              'Logged ones, and those Health sync imports from Health '
-              'Connect, at the calories the device reported.',
+              'Logged ones, and those imported from Health Connect, at the '
+              'calories the device reported.',
             ),
             value: settings.countWorkouts,
             onChanged: (v) => _save(store, settings.copyWith(countWorkouts: v)),
@@ -369,12 +433,15 @@ class _WorkoutShare extends StatelessWidget {
           Text('Workout calories counted: ${pct.round()}%'),
           Semantics(
             identifier: 'workout-share',
+            label: 'Workout calories counted',
             child: Slider(
               value: pct,
               min: 30,
               max: 100,
               divisions: 14,
               label: '${pct.round()}%',
+              showValueIndicator: ShowValueIndicator.onDrag,
+              semanticFormatterCallback: (v) => '${v.round()}%',
               onChanged: (v) => onChanged(v.roundToDouble()),
             ),
           ),
@@ -460,39 +527,28 @@ class _CheckInSection extends StatelessWidget {
             }
           },
         ),
-        ListTile(
-          enabled: adaptive,
-          title: const Text('Largest change per check-in'),
-          subtitle: const Text(
-            'A limit keeps one odd week from moving the target far.',
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+          child: Text(
+            'Largest change per check-in',
+            style: Theme.of(context).textTheme.bodyLarge,
           ),
         ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Semantics(
-            identifier: 'check-in-cap',
-            child: SegmentedButton<int>(
-              showSelectedIcon: false,
-              segments: [
-                for (final kcal in [100, 200, 300])
-                  ButtonSegment(
-                    value: kcal,
-                    label: Text(energyText(context, kcal.toDouble())),
+        const _Note('A limit keeps one odd week from moving the target far.'),
+        _Choice<int>(
+          identifier: 'check-in-cap',
+          values: const [100, 200, 300, 0],
+          label: (kcal) =>
+              kcal == 0 ? 'No limit' : energyText(context, kcal.toDouble()),
+          selected: cap?.round() ?? 0,
+          onChanged: adaptive
+              ? (kcal) => _save(
+                  store,
+                  settings.copyWith(
+                    maxCheckInChangeKcal: () => kcal == 0 ? null : kcal * 1.0,
                   ),
-                const ButtonSegment(value: 0, label: Text('No limit')),
-              ],
-              selected: {cap?.round() ?? 0},
-              onSelectionChanged: adaptive
-                  ? (picked) => _save(
-                      store,
-                      settings.copyWith(
-                        maxCheckInChangeKcal: () =>
-                            picked.single == 0 ? null : picked.single * 1.0,
-                      ),
-                    )
-                  : null,
-            ),
-          ),
+                )
+              : null,
         ),
         SwitchListTile(
           key: const ValueKey('auto-accept-check-in'),
