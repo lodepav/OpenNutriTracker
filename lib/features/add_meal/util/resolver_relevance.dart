@@ -282,6 +282,11 @@ List<MealEntity> _sorted(List<MealEntity> meals, String query) {
   mergeSort(decorated, compare: (a, b) {
     final byScore = b.score.compareTo(a.score);
     if (byScore != 0) return byScore;
+    // [fork] S74 fork-dish-first: a dish the fork added for its name wins
+    // the tie with the table's odd forms ("Lasagna, Vegetable, frozen")
+    final byDish = _forkDish(b.meal).compareTo(_forkDish(a.meal));
+    if (byDish != 0) return byDish;
+    // [/fork]
     // [fork] S73 unspecified-first: the everyday row before odd siblings
     final byUnspecified = unspecifiedMarks(
       b.meal.name,
@@ -301,3 +306,7 @@ List<MealEntity> _sorted(List<MealEntity> meals, String query) {
   });
   return [for (final entry in decorated) entry.meal];
 }
+
+// [fork] S74 fork-dish-first
+int _forkDish(MealEntity meal) => meal.backendSource == 'fork_dishes' ? 1 : 0;
+// [/fork]

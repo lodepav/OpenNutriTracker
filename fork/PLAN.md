@@ -949,6 +949,9 @@ Commons photos of dishes from the user's log, the manifest kept with the labels 
   in `local_food_data_source_test.dart`. The table lacks gochujang and curry paste, so
   sriracha and fresh chili stand in, as each dish's basis says. "Fish cakes" keeps its survey
   row.
+- Bare "lasagna" logged "Lasagna, Vegetable, frozen, baked": the table has no plain meat
+  lasagna, and the frozen forms tie on the title. A homemade beef lasagna is a fork dish now,
+  and a tie on score goes to a fork dish (S74); "vegetable lasagna" keeps its row.
 
 Still needs the user: the leftovers photo check, typing and photographing their own
 khachapuri, pelmeni and grey peas, and ten of their own meals (photos we do not have).

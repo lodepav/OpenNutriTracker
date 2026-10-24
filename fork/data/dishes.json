@@ -547,6 +547,27 @@
         ["fdc_sr_legacy", "Spices, chili powder", 10],
         ["fdc_sr_legacy", "Garlic, raw", 10]
       ]
+    },
+    {
+      "code": "beef-lasagna",
+      "name": "Lasagna, beef, homemade (lasagne, lasagna bolognese, beef lasagna, meat lasagna)",
+      "basis": "Lasagne alla bolognese as common home recipes make it: dry sheets layered with a beef, tomato, onion and carrot ragù and a béchamel of butter, flour and milk, under mozzarella and parmesan; the sheets take up the sauce's liquid, and simmering and baking lose about a seventh of the weight.",
+      "yield_g": 1950,
+      "serving": ["1 piece", 300],
+      "ingredients": [
+        ["fdc_sr_legacy", "Pasta, dry, enriched", 250],
+        ["fdc_sr_legacy", "Beef, ground, 80% lean meat / 20% fat, raw", 500],
+        ["fdc_sr_legacy", "Tomatoes, red, ripe, canned, packed in tomato juice", 400],
+        ["fdc_sr_legacy", "Onions, raw", 150],
+        ["fdc_sr_legacy", "Carrots, raw", 100],
+        ["fdc_sr_legacy", "Oil, olive, salad or cooking", 15],
+        ["fdc_sr_legacy", "Garlic, raw", 10],
+        ["fdc_sr_legacy", "Butter, salted", 50],
+        ["fdc_sr_legacy", "Wheat flour, white, all-purpose, enriched, unbleached", 50],
+        ["fdc_sr_legacy", "Milk, whole, 3.25% milkfat, with added vitamin D", 600],
+        ["fdc_sr_legacy", "Cheese, mozzarella, whole milk", 100],
+        ["fdc_sr_legacy", "Cheese, parmesan, grated", 50]
+      ]
     }
   ]
 }
