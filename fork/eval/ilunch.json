@@ -1,0 +1,346 @@
+{
+  "about": "iLunch Gustavs BC, Riga: the chain's own Wolt menu photos (2026-10-24), for recognition only. iLunch publishes no nutrition, so there is no per_serving. A plate shows its main with the free sides; expect_any names the main, in English or Latvian. user_note is what a person would type with the photo. Photos stay on Wolt; fetch them with fork/tools/fetch_eval_photos.py --manifest fork/eval/ilunch.json.",
+  "collected": "2026-10-24",
+  "photos": [
+    {
+      "id": "lv-ilunch-blueberry-cheesecake",
+      "cuisine": "latvian",
+      "dish": "iLunch: Melleņu siera kūka",
+      "recipe_url": "https://wolt.com/lv/lva/riga/restaurant/ilunch-gustavs-bc",
+      "image_url": "https://imageproxy.wolt.com/assets/6a217a1e3496700bf22e4c35",
+      "expect_any": [
+        "cheesecake",
+        "cheese cake",
+        "siera kūk"
+      ],
+      "user_note": "melleņu siera kūka"
+    },
+    {
+      "id": "lv-ilunch-cabbage-salad",
+      "cuisine": "latvian",
+      "dish": "iLunch: Kāpostu salāti ar burkāniem, gurķiem un eļļu",
+      "recipe_url": "https://wolt.com/lv/lva/riga/restaurant/ilunch-gustavs-bc",
+      "image_url": "https://imageproxy.wolt.com/assets/6a1d217c81fc0334f252e905",
+      "expect_any": [
+        "cabbage",
+        "slaw",
+        "kāpost"
+      ],
+      "user_note": "kāpostu salāti"
+    },
+    {
+      "id": "lv-ilunch-solyanka",
+      "cuisine": "latvian",
+      "dish": "iLunch: Soļanka",
+      "recipe_url": "https://wolt.com/lv/lva/riga/restaurant/ilunch-gustavs-bc",
+      "image_url": "https://imageproxy.wolt.com/assets/6a2bfb299d6d52890c1e5042",
+      "expect_any": [
+        "solyanka",
+        "soljanka",
+        "soļank"
+      ],
+      "user_note": "soļanka"
+    },
+    {
+      "id": "lv-ilunch-teriyaki-chicken",
+      "cuisine": "latvian",
+      "dish": "iLunch: Vista Terijaki gaumē",
+      "recipe_url": "https://wolt.com/lv/lva/riga/restaurant/ilunch-gustavs-bc",
+      "image_url": "https://imageproxy.wolt.com/assets/698b3b7f4fe07fe9e18a3318",
+      "expect_any": [
+        "teriyaki",
+        "terijaki",
+        "chicken",
+        "vist"
+      ],
+      "user_note": "vista terijaki"
+    },
+    {
+      "id": "lv-ilunch-cepelini",
+      "cuisine": "latvian",
+      "dish": "iLunch: Cepelīni ar gaļu (Žāvētas gaļas-krējuma mērce)",
+      "recipe_url": "https://wolt.com/lv/lva/riga/restaurant/ilunch-gustavs-bc",
+      "image_url": "https://imageproxy.wolt.com/assets/6a2b93c50f9929aad098c594",
+      "expect_any": [
+        "cepelin",
+        "zeppelin",
+        "dumpling"
+      ],
+      "user_note": "cepelīni ar gaļu"
+    },
+    {
+      "id": "lv-ilunch-burrata-salad",
+      "cuisine": "latvian",
+      "dish": "iLunch: Salāti ar burratu un dārza mellenēm (Pesto)",
+      "recipe_url": "https://wolt.com/lv/lva/riga/restaurant/ilunch-gustavs-bc",
+      "image_url": "https://imageproxy.wolt.com/assets/69f03f9ffe9dd4335f73d286",
+      "expect_any": [
+        "burrata"
+      ],
+      "user_note": "salāti ar burratu"
+    },
+    {
+      "id": "lv-ilunch-rice",
+      "cuisine": "latvian",
+      "dish": "iLunch: Rīsi",
+      "recipe_url": "https://wolt.com/lv/lva/riga/restaurant/ilunch-gustavs-bc",
+      "image_url": "https://imageproxy.wolt.com/assets/6a13deca508522294be49bb1",
+      "expect_any": [
+        "rice",
+        "rīs"
+      ],
+      "user_note": "rīsi"
+    },
+    {
+      "id": "lv-ilunch-green-salad",
+      "cuisine": "latvian",
+      "dish": "iLunch: Svaigu lapu salāti ar cukīni (Provansas zaļumu mērce)",
+      "recipe_url": "https://wolt.com/lv/lva/riga/restaurant/ilunch-gustavs-bc",
+      "image_url": "https://imageproxy.wolt.com/assets/6a152b4fa15f76a9aa33a438",
+      "expect_any": [
+        "salad",
+        "lettuce",
+        "salāt"
+      ],
+      "user_note": "lapu salāti"
+    },
+    {
+      "id": "lv-ilunch-salmon-bowl",
+      "cuisine": "latvian",
+      "dish": "iLunch: Austrumu bļoda ar mazsālītu lasi (Austrumu mērce)",
+      "recipe_url": "https://wolt.com/lv/lva/riga/restaurant/ilunch-gustavs-bc",
+      "image_url": "https://imageproxy.wolt.com/assets/6ad06b486be149c1b1e56e04",
+      "expect_any": [
+        "salmon",
+        "poke",
+        "lasi",
+        "lasis"
+      ],
+      "user_note": "austrumu bļoda ar lasi"
+    },
+    {
+      "id": "lv-ilunch-almond-cake",
+      "cuisine": "latvian",
+      "dish": "iLunch: Mandeļu kūka (Daim šokolādi)",
+      "recipe_url": "https://wolt.com/lv/lva/riga/restaurant/ilunch-gustavs-bc",
+      "image_url": "https://imageproxy.wolt.com/assets/6a217a2187b81eabc9407894",
+      "expect_any": [
+        "cake",
+        "torte",
+        "tart",
+        "kūk"
+      ],
+      "user_note": "mandeļu kūka"
+    },
+    {
+      "id": "lv-ilunch-beef-stroganoff",
+      "cuisine": "latvian",
+      "dish": "iLunch: Liellopa gaļas stroganovs",
+      "recipe_url": "https://wolt.com/lv/lva/riga/restaurant/ilunch-gustavs-bc",
+      "image_url": "https://imageproxy.wolt.com/assets/6a2a46e17e51ea53c24707ed",
+      "expect_any": [
+        "stroganoff",
+        "stroganov",
+        "strogan"
+      ],
+      "user_note": "liellopa stroganovs"
+    },
+    {
+      "id": "lv-ilunch-chicken-schnitzel",
+      "cuisine": "latvian",
+      "dish": "iLunch: Kraukšķīga vistas šnicele (Tūkstoš Salu mērce)",
+      "recipe_url": "https://wolt.com/lv/lva/riga/restaurant/ilunch-gustavs-bc",
+      "image_url": "https://imageproxy.wolt.com/assets/6a28f6626eede65951da3990",
+      "expect_any": [
+        "schnitzel",
+        "šnicel",
+        "cutlet"
+      ],
+      "user_note": "vistas šnicele"
+    },
+    {
+      "id": "lv-ilunch-salmon-soup",
+      "cuisine": "latvian",
+      "dish": "iLunch: Aromātiska laša zupa",
+      "recipe_url": "https://wolt.com/lv/lva/riga/restaurant/ilunch-gustavs-bc",
+      "image_url": "https://imageproxy.wolt.com/assets/6a33832a1cb0d18b27653d3c",
+      "expect_any": [
+        "salmon",
+        "fish",
+        "laš",
+        "zivju"
+      ],
+      "user_note": "laša zupa"
+    },
+    {
+      "id": "lv-ilunch-pumpkin-soup",
+      "cuisine": "latvian",
+      "dish": "iLunch: Tom Yum krēmīga ķirbju zupa",
+      "recipe_url": "https://wolt.com/lv/lva/riga/restaurant/ilunch-gustavs-bc",
+      "image_url": "https://imageproxy.wolt.com/assets/6a589c42c52e9ed968c04156",
+      "expect_any": [
+        "pumpkin",
+        "squash",
+        "tom yum",
+        "ķirb"
+      ],
+      "user_note": "ķirbju zupa"
+    },
+    {
+      "id": "lv-ilunch-chicken-noodle-soup",
+      "cuisine": "latvian",
+      "dish": "iLunch: Aromātiska vistas zupa ar makaroniem",
+      "recipe_url": "https://wolt.com/lv/lva/riga/restaurant/ilunch-gustavs-bc",
+      "image_url": "https://imageproxy.wolt.com/assets/6a4b7a093f8fcc0ffc18a170",
+      "expect_any": [
+        "chicken",
+        "vist"
+      ],
+      "user_note": "vistas zupa ar makaroniem"
+    },
+    {
+      "id": "lv-ilunch-penne",
+      "cuisine": "latvian",
+      "dish": "iLunch: Penne pasta (Četru sieru mērce un kaltētie tomāti)",
+      "recipe_url": "https://wolt.com/lv/lva/riga/restaurant/ilunch-gustavs-bc",
+      "image_url": "https://imageproxy.wolt.com/assets/6a3536552c2e82d967f0b3fd",
+      "expect_any": [
+        "penne",
+        "pasta"
+      ],
+      "user_note": "penne ar četru sieru mērci"
+    },
+    {
+      "id": "lv-ilunch-chicken-strips",
+      "cuisine": "latvian",
+      "dish": "iLunch: Kraukšķīgas vistas strēmelītes (Ar pikanto mērci)",
+      "recipe_url": "https://wolt.com/lv/lva/riga/restaurant/ilunch-gustavs-bc",
+      "image_url": "https://imageproxy.wolt.com/assets/6ab66ac827d6dfbebf01ae88",
+      "expect_any": [
+        "chicken",
+        "strip",
+        "tender",
+        "nugget",
+        "strēmel"
+      ],
+      "user_note": "vistas strēmelītes"
+    },
+    {
+      "id": "lv-ilunch-raspberry-cheesecake",
+      "cuisine": "latvian",
+      "dish": "iLunch: Aveņu siera kūka",
+      "recipe_url": "https://wolt.com/lv/lva/riga/restaurant/ilunch-gustavs-bc",
+      "image_url": "https://imageproxy.wolt.com/assets/6a39173b3dc1f2a76521c098",
+      "expect_any": [
+        "cheesecake",
+        "cheese cake",
+        "siera kūk"
+      ],
+      "user_note": "aveņu siera kūka"
+    },
+    {
+      "id": "lv-ilunch-couscous",
+      "cuisine": "latvian",
+      "dish": "iLunch: Kuskuss ar dārzeņiem",
+      "recipe_url": "https://wolt.com/lv/lva/riga/restaurant/ilunch-gustavs-bc",
+      "image_url": "https://imageproxy.wolt.com/assets/6a17e4d551c841a7c32b498a",
+      "expect_any": [
+        "couscous",
+        "kuskus"
+      ],
+      "user_note": "kuskuss"
+    },
+    {
+      "id": "lv-ilunch-mash",
+      "cuisine": "latvian",
+      "dish": "iLunch: Kartupeļu biezenis",
+      "recipe_url": "https://wolt.com/lv/lva/riga/restaurant/ilunch-gustavs-bc",
+      "image_url": "https://imageproxy.wolt.com/assets/6a13deaaf5b142ccaa4d8b4a",
+      "expect_any": [
+        "mashed",
+        "mash",
+        "puree",
+        "purée",
+        "biezen"
+      ],
+      "user_note": "kartupeļu biezenis"
+    },
+    {
+      "id": "lv-ilunch-caramel-cake",
+      "cuisine": "latvian",
+      "dish": "iLunch: Karameļu kūka (Šokolādes gabaliņiem)",
+      "recipe_url": "https://wolt.com/lv/lva/riga/restaurant/ilunch-gustavs-bc",
+      "image_url": "https://imageproxy.wolt.com/assets/6a217a203496700bf22e4c37",
+      "expect_any": [
+        "cake",
+        "cheesecake",
+        "kūk"
+      ],
+      "user_note": "karameļu kūka"
+    },
+    {
+      "id": "lv-ilunch-grilled-chicken",
+      "cuisine": "latvian",
+      "dish": "iLunch: Grilēts vistas cepetis",
+      "recipe_url": "https://wolt.com/lv/lva/riga/restaurant/ilunch-gustavs-bc",
+      "image_url": "https://imageproxy.wolt.com/assets/6a28f65f26323b0bf39ee9a0",
+      "expect_any": [
+        "chicken",
+        "vist"
+      ],
+      "user_note": "grilēta vista"
+    },
+    {
+      "id": "lv-ilunch-chicken-strips-bowl",
+      "cuisine": "latvian",
+      "dish": "iLunch: Austrumu bļoda ar vistas stremelītiem (Austrumu mērce)",
+      "recipe_url": "https://wolt.com/lv/lva/riga/restaurant/ilunch-gustavs-bc",
+      "image_url": "https://imageproxy.wolt.com/assets/6a546a9e13b9d669673fdf93",
+      "expect_any": [
+        "chicken",
+        "vist"
+      ],
+      "user_note": "austrumu bļoda ar vistas strēmelītēm"
+    },
+    {
+      "id": "lv-ilunch-fries",
+      "cuisine": "latvian",
+      "dish": "iLunch: Frī kartupeļi",
+      "recipe_url": "https://wolt.com/lv/lva/riga/restaurant/ilunch-gustavs-bc",
+      "image_url": "https://imageproxy.wolt.com/assets/6a13de78f5b142ccaa4d8b43",
+      "expect_any": [
+        "fries",
+        "chips",
+        "frī"
+      ],
+      "user_note": "frī kartupeļi"
+    },
+    {
+      "id": "lv-ilunch-potato-pancakes",
+      "cuisine": "latvian",
+      "dish": "iLunch: Kartupeļu pankūkas (Skābais krējums)",
+      "recipe_url": "https://wolt.com/lv/lva/riga/restaurant/ilunch-gustavs-bc",
+      "image_url": "https://imageproxy.wolt.com/assets/6a27bf82d6e709bcf1a6f738",
+      "expect_any": [
+        "potato pancake",
+        "latke",
+        "draniki",
+        "rösti",
+        "pankūk"
+      ],
+      "user_note": "kartupeļu pankūkas"
+    },
+    {
+      "id": "lv-ilunch-grilled-chicken-bowl",
+      "cuisine": "latvian",
+      "dish": "iLunch: Austrumu bļoda ar griletu vistu (Austrumu mērce)",
+      "recipe_url": "https://wolt.com/lv/lva/riga/restaurant/ilunch-gustavs-bc",
+      "image_url": "https://imageproxy.wolt.com/assets/6a562c0f3ac18ce4969e3fcf",
+      "expect_any": [
+        "chicken",
+        "vist"
+      ],
+      "user_note": "austrumu bļoda ar grilētu vistu"
+    }
+  ]
+}

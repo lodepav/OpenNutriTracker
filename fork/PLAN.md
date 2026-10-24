@@ -822,6 +822,29 @@ time by fresh subagents (`replay/{opus2,sonnet2,haiku2}`), breakdowns included.
   (#622): the row is flagged for checking, not silently wrong. But BLS rows carry no
   serving, so it comes up in 3 of 22 meals in run 2.
 
+*iLunch, recognition only, 2026-10-24* (`fork/eval/ilunch.json`,
+`test/fork/eval/ilunch_eval_test.dart`): 26 dishes from iLunch Gustavs BC's Wolt menu in
+Riga. iLunch publishes no nutrition, so there is no kcal score. Each photo is read alone
+and with a Latvian note, in English.
+
+| Model | Dish named, no note | With note | Rows with a table row |
+|---|---|---|---|
+| Opus | 25/26 | 26/26 | 17/39, 19/39 |
+| Sonnet | 23/26 | 26/26 | 12/39, 16/39 |
+| Haiku | 22/26 | 25/26 | 16/39, 17/38 |
+
+- **Misses without a note:**
+  - Solyanka is read as "tomato soup with sausage and olives" by every model. Haiku keeps
+    that name even with the note "soļanka".
+  - Beef stroganoff on a plate with mash and pickles becomes "beef in gravy" or "meat stew".
+  - Chicken strips become "breaded fish fillet" or "meat cutlets".
+  - The mash close-up becomes "creamy pale dish".
+- **Most rows miss the table, so they are broken down.** iLunch's standard side, the
+  roasted potato balls, finds no row on 22 of 39 plates. Every word of a name must match,
+  so a qualified name misses where the bare one hits: "blueberry cheesecake", "salmon
+  soup", "rice with herbs", "chicken schnitzel". "cheesecake" finds "Cheesecake, plain".
+  The table has no solyanka, salmon soup or cepelinai at all.
+
 Still needs the user: the leftovers photo check, typing and photographing their own
 khachapuri, pelmeni and grey peas, and ten of their own meals (photos we do not have).
 
