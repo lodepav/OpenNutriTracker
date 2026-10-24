@@ -135,6 +135,18 @@ class AdaptiveSettings {
     kcalPerKg: flatEnergy ? commonKcalPerKg : null,
   );
 
+  /// The settings an accepted target is built under, beyond the goal:
+  /// what activity it holds and the kcal per kg. A target accepted under
+  /// others no longer fits, so a change makes a check-in due (D20).
+  String get targetBasis => [
+    'activity=${activityMode.name}',
+    if (activityMode != ActivityMode.off) ...[
+      'steps=$countSteps',
+      'workouts=$countWorkouts',
+    ],
+    'flat=$flatEnergy',
+  ].join(';');
+
   /// The fixed target's daily energy before the weekday shift.
   double get fixedTargetKcal => switch (fixedMacros) {
     final macros? when macros.kcal > 0 => macros.kcal,
@@ -271,6 +283,10 @@ class CheckInRecord {
   final double? goalRateKgPerWeek;
   final double? targetWeightKg;
 
+  /// [AdaptiveSettings.targetBasis] when accepted; null for an older
+  /// record, which no settings change makes due.
+  final String? basis;
+
   const CheckInRecord({
     required this.date,
     required this.expenditureKcal,
@@ -280,7 +296,12 @@ class CheckInRecord {
     double? baseKcal,
     this.goalRateKgPerWeek,
     this.targetWeightKg,
+    this.basis,
   }) : baseKcal = baseKcal ?? expenditureKcal - activityKcal;
+
+  /// Whether a target accepted under [settings] would be built otherwise.
+  bool basisChanged(AdaptiveSettings settings) =>
+      basis != null && basis != settings.targetBasis;
 
   /// Whether a goal of [rateKgPerWeek] and [targetKg] differs from the one
   /// this target was set for.
@@ -302,6 +323,7 @@ class CheckInRecord {
     'baseKcal': baseKcal,
     'goalRateKgPerWeek': ?goalRateKgPerWeek,
     'targetWeightKg': ?targetWeightKg,
+    'basis': ?basis,
   };
 
   static CheckInRecord fromJson(Map<dynamic, dynamic> json) => CheckInRecord(
@@ -313,6 +335,7 @@ class CheckInRecord {
     baseKcal: (json['baseKcal'] as num?)?.toDouble(),
     goalRateKgPerWeek: (json['goalRateKgPerWeek'] as num?)?.toDouble(),
     targetWeightKg: (json['targetWeightKg'] as num?)?.toDouble(),
+    basis: json['basis'] as String?,
   );
 }
 

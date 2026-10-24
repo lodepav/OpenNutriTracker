@@ -35,7 +35,7 @@ class AdaptiveCheckInCard extends StatefulWidget {
 }
 
 /// Why a check-in is due: the week is up, or the goal changed (D18).
-enum _Due { weekly, goal }
+enum _Due { weekly, goal, settings }
 
 class _AdaptiveCheckInCardState extends State<AdaptiveCheckInCard> {
   late final _service = widget.service ?? AdaptiveService.fromLocator();
@@ -47,8 +47,14 @@ class _AdaptiveCheckInCardState extends State<AdaptiveCheckInCard> {
 
   Future<_Due?> _readDue() async {
     if (!await _service.checkInDue()) return null;
-    return await _service.goalChanged() ? _Due.goal : _Due.weekly;
+    return _reason();
   }
+
+  Future<_Due> _reason() async => await _service.goalChanged()
+      ? _Due.goal
+      : await _service.basisChanged()
+      ? _Due.settings
+      : _Due.weekly;
 
   @override
   void initState() {
@@ -103,7 +109,7 @@ class _AdaptiveCheckInCardState extends State<AdaptiveCheckInCard> {
     final CheckIn? accepted;
     final _Due reason;
     try {
-      reason = await _service.goalChanged() ? _Due.goal : _Due.weekly;
+      reason = await _reason();
       accepted = await _service.autoAcceptIfDue();
     } catch (_) {
       return; // The card stays, to be done by hand.
@@ -155,11 +161,11 @@ class _AdaptiveCheckInCardState extends State<AdaptiveCheckInCard> {
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         child: ListTile(
           leading: const Icon(Icons.insights_rounded),
-          title: Text(
-            _autoAcceptedFor == _Due.goal
-                ? 'Target set for your new goal'
-                : 'Weekly check-in done',
-          ),
+          title: Text(switch (_autoAcceptedFor) {
+            _Due.goal => 'Target set for your new goal',
+            _Due.settings => 'Target set for your new settings',
+            _Due.weekly => 'Weekly check-in done',
+          }),
           subtitle: Text(
             'New target: ${energyText(context, accepted.proposedTargetKcal)}'
             '${AdaptiveStore.settings.value.activityMode == ActivityMode.daily ? ' before activity' : ''}.',
@@ -186,14 +192,16 @@ class _AdaptiveCheckInCardState extends State<AdaptiveCheckInCard> {
           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: ListTile(
             leading: const Icon(Icons.insights_rounded),
-            title: Text(
-              due == _Due.goal ? 'Your goal changed' : 'Weekly check-in',
-            ),
-            subtitle: Text(
-              due == _Due.goal
-                  ? 'A target for it is ready to check.'
-                  : 'Your expenditure and next target are ready.',
-            ),
+            title: Text(switch (due) {
+              _Due.goal => 'Your goal changed',
+              _Due.settings => 'Your target settings changed',
+              _Due.weekly => 'Weekly check-in',
+            }),
+            subtitle: Text(switch (due) {
+              _Due.goal => 'A target for it is ready to check.',
+              _Due.settings => 'A target built under them is ready to check.',
+              _Due.weekly => 'Your expenditure and next target are ready.',
+            }),
             trailing: const Icon(Icons.chevron_right_rounded),
             onTap: () async {
               final accepted = await Navigator.of(context).push<bool>(

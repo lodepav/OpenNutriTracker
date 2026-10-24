@@ -241,6 +241,42 @@ void main() {
       expect(await maintain.checkInDue(), isFalse);
     });
 
+    test('settings the target is built under are due a check-in', () async {
+      AdaptiveStore.settings.value = const AdaptiveSettings(
+        adaptiveTarget: true,
+      );
+      await service.accept(await service.checkIn(), 2100);
+      expect(await service.checkInDue(), isFalse);
+
+      // Responsiveness leaves the target as it is; activity counted or a
+      // flat kcal per kg does not.
+      AdaptiveStore.settings.value = AdaptiveStore.settings.value.copyWith(
+        responsiveness: Responsiveness.responsive,
+      );
+      expect(await service.checkInDue(), isFalse);
+      for (final changed in [
+        const AdaptiveSettings(
+          adaptiveTarget: true,
+          activityMode: ActivityMode.daily,
+        ),
+        const AdaptiveSettings(adaptiveTarget: true, flatEnergy: true),
+      ]) {
+        AdaptiveStore.settings.value = changed;
+        expect(await service.basisChanged(), isTrue, reason: '$changed');
+        expect(await service.checkInDue(), isTrue);
+      }
+      await service.accept(await service.checkIn(), 2100);
+      expect(await service.checkInDue(), isFalse);
+
+      final record = (await store.lastCheckIn())!;
+      expect(CheckInRecord.fromJson(record.toJson()).basis, record.basis);
+      // An older record, without one, is not due for it.
+      final older = CheckInRecord.fromJson(
+        {...record.toJson()}..remove('basis'),
+      );
+      expect(older.basisChanged(const AdaptiveSettings()), isFalse);
+    });
+
     test('the settings are saved and loaded', () async {
       await store.save(
         const AdaptiveSettings(smoothedTrend: true, cycleWindow: true),

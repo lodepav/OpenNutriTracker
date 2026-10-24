@@ -88,14 +88,24 @@ class AdaptiveService {
       await _measurements?.recentBodyFat(_now()) ?? bodyFatPercent(user);
 
   /// True when the switch is on and a check-in is due ([checkInDueOn]),
-  /// or the goal changed since the last one (D18).
+  /// or the goal (D18) or the settings the target is built under (D20)
+  /// changed since the last one.
   Future<bool> checkInDue() async {
     final settings = AdaptiveStore.settings.value;
     if (!settings.adaptiveTarget || settings.fixedTarget) return false;
     final last = await _store.lastCheckIn();
     return checkInDueOn(_today(), last?.date, settings.checkInWeekday) ||
-        await goalChanged();
+        await goalChanged() ||
+        await basisChanged();
   }
+
+  /// Whether the last check-in's target was accepted under other settings
+  /// than these (D20).
+  Future<bool> basisChanged() async =>
+      (await _store.lastCheckIn())?.basisChanged(
+        AdaptiveStore.settings.value,
+      ) ??
+      false;
 
   /// Whether the profile's pace or target weight differs from the one the
   /// last check-in set the target for (D18).
@@ -119,7 +129,11 @@ class AdaptiveService {
         goalRateKgPerWeek: rate,
         bodyFatPercent: await _bodyFat(user),
         targetWeightKg: user.targetWeightKg,
-        previousBaseKcal: previous?.baseKcal,
+        // A base built under other settings (one holding activity, say)
+        // is no mark to cap against (D20).
+        previousBaseKcal: previous?.basisChanged(settings) ?? false
+            ? null
+            : previous?.baseKcal,
         previousActivityKcal: previous?.activityKcal,
         maxChangeKcal: settings.maxCheckInChangeKcal,
         activityMode: settings.activityMode,
@@ -327,6 +341,7 @@ class AdaptiveService {
       baseKcal: checkIn.baseKcal,
       goalRateKgPerWeek: checkIn.goalRateKgPerWeek,
       targetWeightKg: checkIn.targetWeightKg,
+      basis: AdaptiveStore.settings.value.targetBasis,
     ),
   );
 
