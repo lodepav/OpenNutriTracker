@@ -767,8 +767,8 @@ are skipped, each with what it logs now.
   potatoes (boiled), porridge (oatmeal), bread soup (the sweet rye one), unsalted butter,
   cola, coke, diet coke, greek yogurt (plain), granola, egg, eggs and pizza. "salad",
   "coffee" and "meat dumplings" were fixed before. "adjaruli" and "acharuli" are spelled
-  "adjarian" in the table's and recipe search's shared spelling list. Left: bare "potato"
-  stays "Potato, NFS" (S73), the survey's average with fat, against "potatoes" boiled.
+  "adjarian" in the table's and recipe search's shared spelling list. Bare "potato" is boiled
+  too (the user's call), not S73's "Potato, NFS", the survey's average with fat.
 
 *Hard notes and the Latvian locale, 2026-10-24* (`test/fork/eval/hard_note_eval_test.dart`,
 all three models):
