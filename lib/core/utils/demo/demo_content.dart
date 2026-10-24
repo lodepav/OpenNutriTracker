@@ -155,7 +155,10 @@ Future<MealEntity> _meal(
   // A curated Unsplash photo id (see unsplash_attribution.dart) — every
   // demo food gets one, so this isn't optional the way a real OFF/FDC
   // search result's photo would be.
-  required String photoId,
+  // [fork] S82 demo-photos: null for a food whose photo showed another
+  // food; it shows the plain food icon instead
+  required String? photoId,
+  // [/fork]
 }) async {
   final code = IdGenerator.getUniqueID();
   return MealEntity(
@@ -167,7 +170,11 @@ Future<MealEntity> _meal(
     // render time. MealEntity prefers localImagePath when it is set.
     thumbnailImageUrl: null,
     mainImageUrl: null,
-    localImagePath: await _importMealPhoto(photoId, code),
+    // [fork] S82 demo-photos
+    localImagePath: photoId == null
+        ? null
+        : await _importMealPhoto(photoId, code),
+    // [/fork]
     mealQuantity: null,
     mealUnit: 'g',
     servingQuantity: null,
@@ -229,7 +236,9 @@ Future<DemoFoods> buildDemoFoods() async {
   );
   final brownRice = await _meal(
     'Brown rice',
-    photoId: '1593357849627-cbbc9fda6b05',
+    // [fork] S82 demo-photos: the photo was a tempura bowl
+    photoId: null,
+    // [/fork]
     kcal100: 123,
     carbs100: 26,
     fat100: 1,
@@ -252,7 +261,9 @@ Future<DemoFoods> buildDemoFoods() async {
   // unrealistically large gram amount (900g+ was showing up in testing).
   final wholegrainBread = await _meal(
     'Wholegrain bread',
-    photoId: '1552056413-b8b5eed0170b',
+    // [fork] S82 demo-photos: the photo was a brioche
+    photoId: null,
+    // [/fork]
     kcal100: 265,
     carbs100: 49,
     fat100: 3.5,
@@ -347,7 +358,9 @@ Future<DemoFoods> buildDemoFoods() async {
   );
   final almonds = await _meal(
     'Almonds',
-    photoId: '1627820752174-acae1b399128',
+    // [fork] S82 demo-photos: the photo was cashews
+    photoId: null,
+    // [/fork]
     kcal100: 579,
     carbs100: 22,
     fat100: 50,
@@ -404,7 +417,9 @@ Future<DemoFoods> buildDemoFoods() async {
   );
   final broccoli = await _meal(
     'Broccoli',
-    photoId: '1646161762904-043f71f256f1',
+    // [fork] S82 demo-photos: the photo was a savoy cabbage
+    photoId: null,
+    // [/fork]
     kcal100: 35,
     carbs100: 7,
     fat100: 0.4,

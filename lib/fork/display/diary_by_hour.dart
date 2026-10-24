@@ -3,7 +3,9 @@ import 'package:intl/intl.dart';
 import 'package:opennutritracker/core/domain/entity/intake_entity.dart';
 import 'package:opennutritracker/core/domain/entity/intake_type_entity.dart';
 import 'package:opennutritracker/core/domain/usecase/get_config_usecase.dart';
-import 'package:opennutritracker/core/presentation/widgets/placeholder_card.dart';
+import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
+import 'package:opennutritracker/core/styles/app_palette.dart';
+import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/core/utils/meal_type_suggester.dart';
 import 'package:opennutritracker/core/utils/navigation_options.dart';
@@ -72,15 +74,49 @@ class HourAddCard extends StatelessWidget {
     );
   }
 
+  /// Upstream's add row (PlaceholderCard), with its plus beside words:
+  /// a bare plus here would not say a time is asked first.
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(top: 8),
-    child: PlaceholderCard(
-      day: day,
-      onTap: () => _add(context),
-      firstListElement: true,
-      semanticIdentifier: 'diary-hour-add',
-      label: 'Add food at a time',
-    ),
-  );
+  Widget build(BuildContext context) {
+    final palette = Theme.of(context).brightness == Brightness.dark
+        ? AppPalette.dark
+        : AppPalette.light;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        Dimens.spacing16,
+        Dimens.spacing12,
+        Dimens.spacing16,
+        Dimens.spacing4,
+      ),
+      child: Semantics(
+        identifier: 'diary-hour-add',
+        button: true,
+        child: AppCard(
+          color: palette.surfaceMuted,
+          bordered: false,
+          borderRadius: Dimens.radiusM,
+          onTap: () => _add(context),
+          padding: const EdgeInsets.symmetric(
+            horizontal: Dimens.spacing16,
+            vertical: Dimens.spacing12,
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.add_rounded, size: 26, color: palette.textMuted),
+              const SizedBox(width: Dimens.spacing8),
+              Flexible(
+                child: Text(
+                  'Add food at a time…',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleSmall?.copyWith(color: palette.textMuted),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }

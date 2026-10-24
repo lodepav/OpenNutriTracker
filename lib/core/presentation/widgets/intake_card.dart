@@ -15,6 +15,9 @@ import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/core/utils/user_image_storage.dart';
 import 'package:opennutritracker/features/diary/presentation/widgets/diary_sort_type.dart';
 import 'package:opennutritracker/generated/l10n.dart';
+// [fork] S80 diary-by-hour
+import 'package:opennutritracker/fork/timeline/timeline.dart';
+// [/fork]
 
 /// A logged intake, rendered as a full-width row: a rounded thumbnail, the meal
 /// name and amount, and the energy on the trailing edge. Replaces the old
@@ -29,6 +32,11 @@ class IntakeCard extends StatelessWidget {
   final bool usesImperialUnits;
   final DiarySortType? sortType;
 
+  // [fork] S80 diary-by-hour: the time eaten beside the amount, in an
+  // hour's section where foods of one hour are listed together
+  final bool showTime;
+  // [/fork]
+
   const IntakeCard({
     required super.key,
     required this.intake,
@@ -37,6 +45,9 @@ class IntakeCard extends StatelessWidget {
     required this.firstListElement,
     required this.usesImperialUnits,
     this.sortType,
+    // [fork] S80 diary-by-hour
+    this.showTime = false,
+    // [/fork]
   });
 
   @override
@@ -93,12 +104,25 @@ class IntakeCard extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 2),
-                      MealValueUnitText(
-                        value: intake.amount,
-                        meal: intake.meal,
-                        usesImperialUnits: usesImperialUnits,
-                        textStyle: textTheme.bodySmall?.copyWith(color: palette.textMuted),
+                      // [fork] S80 diary-by-hour
+                      Row(
+                        children: [
+                          Flexible(
+                            child: MealValueUnitText(
+                              value: intake.amount,
+                              meal: intake.meal,
+                              usesImperialUnits: usesImperialUnits,
+                              textStyle: textTheme.bodySmall?.copyWith(color: palette.textMuted),
+                            ),
+                          ),
+                          if (showTime && !hasNoTime(intake))
+                            Text(
+                              ' · ${DateFormat.Hm().format(intake.dateTime)}',
+                              style: textTheme.bodySmall?.copyWith(color: palette.textMuted),
+                            ),
+                        ],
                       ),
+                      // [/fork]
                     ],
                   ),
                 ),

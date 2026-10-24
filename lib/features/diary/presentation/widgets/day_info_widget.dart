@@ -343,7 +343,7 @@ class _DayInfoWidgetState extends State<DayInfoWidget> {
                   usesImperialUnits: widget.usesImperialUnits,
                   showMealMacros: widget.showMealMacros,
                   trackedDayEntity: trackedDay,
-                  showAddCard: false,
+                  hourSection: true,
                 ),
             if (DisplayPrefs.diaryByHour.value)
               HourAddCard(day: widget.selectedDay),

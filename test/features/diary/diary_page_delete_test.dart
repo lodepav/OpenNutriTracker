@@ -287,7 +287,7 @@ void main() {
     await tester.ensureVisible(find.text('Toast'));
     await tester.longPress(find.text('Toast'));
     await settle(tester);
-    await tester.tap(find.text(l10nEn.dialogDeleteLabel.toUpperCase()));
+    await tester.tap(find.text(l10nEn.dialogDeleteLabel)); // [fork] S81
     await settle(tester);
     // [fork] S52 undo-delete: the delete happens without a confirmation
     // await tester.tap(find.text(l10nEn.dialogOKLabel));
@@ -299,7 +299,7 @@ void main() {
     await tester.ensureVisible(find.byType(ActivityCard));
     await tester.longPress(find.byType(ActivityCard));
     await settle(tester);
-    await tester.tap(find.text(l10nEn.dialogDeleteLabel.toUpperCase()));
+    await tester.tap(find.text(l10nEn.dialogDeleteLabel)); // [fork] S81
     await settle(tester);
   }
 
@@ -390,7 +390,7 @@ void main() {
       // S52 undo-delete: no confirmation follows, so midnight passes while
       // the choice is open
       await passMidnight(tester);
-      await tester.tap(find.text(l10nEn.dialogDeleteLabel.toUpperCase()));
+      await tester.tap(find.text(l10nEn.dialogDeleteLabel)); // [fork] S81
       await settle(tester);
       // [/fork]
 
@@ -408,7 +408,7 @@ void main() {
       await tester.longPress(find.byType(ActivityCard));
       await settle(tester);
       // [fork] S24 copy-anywhere: today's activities offer copy or delete
-      await tester.tap(find.text(l10nEn.dialogDeleteLabel.toUpperCase()));
+      await tester.tap(find.text(l10nEn.dialogDeleteLabel)); // [fork] S81
       await settle(tester);
       // [/fork]
       await passMidnight(tester);

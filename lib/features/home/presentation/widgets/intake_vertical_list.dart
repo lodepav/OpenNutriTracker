@@ -73,8 +73,9 @@ class IntakeVerticalList extends StatefulWidget {
   /// When null, the sort menu is hidden.
   final ValueChanged<DiarySortType>? onSortTypeChanged;
 
-  // [fork] S80 diary-by-hour: an hour's section has no add row of its own
-  final bool showAddCard;
+  // [fork] S80 diary-by-hour: an hour's section has no add row of its own,
+  // and shows each food's time
+  final bool hourSection;
   // [/fork]
 
   const IntakeVerticalList({
@@ -96,7 +97,7 @@ class IntakeVerticalList extends StatefulWidget {
     this.sortType,
     this.onSortTypeChanged,
     // [fork] S80 diary-by-hour
-    this.showAddCard = true,
+    this.hourSection = false,
     // [/fork]
   });
 
@@ -223,16 +224,21 @@ class _IntakeVerticalListState extends State<IntakeVerticalList> {
               ),
               const SizedBox(width: Dimens.spacing12),
               Expanded(
-                child: AutoSizeText(
-                  widget.title,
-                  maxLines: 1,
-                  minFontSize: 14,
-                  overflow: TextOverflow.ellipsis,
-                  style: textTheme.titleLarge?.copyWith(
-                    color: palette.textStrong,
-                    fontWeight: FontWeight.w700,
+                // [fork] S81 a11y-labels: a heading TalkBack can jump between
+                child: Semantics(
+                  header: true,
+                  child: AutoSizeText(
+                    widget.title,
+                    maxLines: 1,
+                    minFontSize: 14,
+                    overflow: TextOverflow.ellipsis,
+                    style: textTheme.titleLarge?.copyWith(
+                      color: palette.textStrong,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
+                // [/fork]
               ),
               const SizedBox(width: Dimens.spacing8),
               if (_shouldShowHeaderSummary)
@@ -436,10 +442,13 @@ class _IntakeVerticalListState extends State<IntakeVerticalList> {
                       firstListElement: false,
                       usesImperialUnits: widget.usesImperialUnits,
                       sortType: widget.sortType,
+                      // [fork] S80 diary-by-hour
+                      showTime: widget.hourSection,
+                      // [/fork]
                     ),
                   ),
                 // [fork] S80 diary-by-hour
-                if (widget.showAddCard)
+                if (!widget.hourSection)
                 // [/fork]
                 PlaceholderCard(
                   day: widget.day,

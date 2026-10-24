@@ -54,13 +54,18 @@ class _ActivityVerticalListState extends State<ActivityVerticalList> {
               ),
               const SizedBox(width: Dimens.spacing8),
               Expanded(
-                child: AutoSizeText(
-                  widget.title,
-                  maxLines: 1,
-                  minFontSize: 14,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.titleLarge,
+                // [fork] S81 a11y-labels: a heading TalkBack can jump between
+                child: Semantics(
+                  header: true,
+                  child: AutoSizeText(
+                    widget.title,
+                    maxLines: 1,
+                    minFontSize: 14,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
                 ),
+                // [/fork]
               ),
               const SizedBox(width: Dimens.spacing8),
               PopupMenuButton<_ActivityPopupMenuSelection>(

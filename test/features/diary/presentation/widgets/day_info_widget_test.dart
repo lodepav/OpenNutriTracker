@@ -161,7 +161,7 @@ void main() {
     // A past day, so the long-press asks copy-or-delete before confirming.
     await tester.longPress(find.text('Hidden Porridge'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text(l10nEn.dialogDeleteLabel.toUpperCase()));
+    await tester.tap(find.text(l10nEn.dialogDeleteLabel)); // [fork] S81
     await tester.pumpAndSettle();
     // [fork] S52 undo-delete: no confirmation; Undo on the snackbar instead
     expect(find.text(l10nEn.deleteTimeDialogTitle), findsNothing);
@@ -201,10 +201,10 @@ void main() {
       await tester.pumpAndSettle();
       // [fork] S24 copy-anywhere: today's entries copy too
       expect(
-        find.text('${l10nEn.copyActionLabel}…'.toUpperCase()),
+        find.text('${l10nEn.copyActionLabel}…'), // [fork] S81
         findsOneWidget,
       );
-      await tester.tap(find.text(l10nEn.dialogDeleteLabel.toUpperCase()));
+      await tester.tap(find.text(l10nEn.dialogDeleteLabel)); // [fork] S81
       await tester.pumpAndSettle();
       // [/fork]
       // [fork] S52 undo-delete: no confirmation; Undo on the snackbar instead
