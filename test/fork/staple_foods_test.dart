@@ -110,6 +110,7 @@ void main() {
     ('fries', 'Potato, french fries, NFS'),
     ('tomato sauce', 'Tomato products, canned, sauce'),
     ('tomato paste', 'Tomato products, canned, paste'),
+    ('potato', 'Potatoes, boiled, cooked without skin'),
     ('potatoes', 'Potatoes, boiled, cooked without skin'),
     ('porridge', 'Oatmeal, regular or quick, made with water'),
     ('bread soup', 'Bread soup (brown bread), with raisins'),
