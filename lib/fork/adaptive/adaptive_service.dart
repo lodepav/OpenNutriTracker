@@ -101,6 +101,9 @@ class AdaptiveService {
         await basisChanged();
   }
 
+  /// Whether no check-in has been accepted yet.
+  Future<bool> firstCheckIn() async => await _store.lastCheckIn() == null;
+
   /// Whether the last check-in's target was accepted under other settings
   /// than these (D20).
   Future<bool> basisChanged() async =>

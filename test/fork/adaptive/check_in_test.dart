@@ -380,13 +380,15 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Weekly check-in'));
+    // None accepted yet: the first, not a weekly one.
+    expect(find.text('Weekly check-in'), findsNothing);
+    await tester.tap(find.text('Your first target'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Accept'));
     await tester.pumpAndSettle();
 
     expect(refreshed, 1);
-    expect(find.text('Weekly check-in'), findsNothing);
+    expect(find.text('Your first target'), findsNothing);
     expect(memory.records, hasLength(1));
   });
 

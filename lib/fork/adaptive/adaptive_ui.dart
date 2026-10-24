@@ -34,8 +34,9 @@ class AdaptiveCheckInCard extends StatefulWidget {
   State<AdaptiveCheckInCard> createState() => _AdaptiveCheckInCardState();
 }
 
-/// Why a check-in is due: the week is up, or the goal changed (D18).
-enum _Due { weekly, goal, settings }
+/// Why a check-in is due: the first, the week is up, or the goal (D18)
+/// or the target's settings (D20) changed.
+enum _Due { first, weekly, goal, settings }
 
 class _AdaptiveCheckInCardState extends State<AdaptiveCheckInCard> {
   late final _service = widget.service ?? AdaptiveService.fromLocator();
@@ -50,7 +51,9 @@ class _AdaptiveCheckInCardState extends State<AdaptiveCheckInCard> {
     return _reason();
   }
 
-  Future<_Due> _reason() async => await _service.goalChanged()
+  Future<_Due> _reason() async => await _service.firstCheckIn()
+      ? _Due.first
+      : await _service.goalChanged()
       ? _Due.goal
       : await _service.basisChanged()
       ? _Due.settings
@@ -162,6 +165,7 @@ class _AdaptiveCheckInCardState extends State<AdaptiveCheckInCard> {
         child: ListTile(
           leading: const Icon(Icons.insights_rounded),
           title: Text(switch (_autoAcceptedFor) {
+            _Due.first => 'Your first target is set',
             _Due.goal => 'Target set for your new goal',
             _Due.settings => 'Target set for your new settings',
             _Due.weekly => 'Weekly check-in done',
@@ -193,11 +197,15 @@ class _AdaptiveCheckInCardState extends State<AdaptiveCheckInCard> {
           child: ListTile(
             leading: const Icon(Icons.insights_rounded),
             title: Text(switch (due) {
+              _Due.first => 'Your first target',
               _Due.goal => 'Your goal changed',
               _Due.settings => 'Your target settings changed',
               _Due.weekly => 'Weekly check-in',
             }),
             subtitle: Text(switch (due) {
+              _Due.first =>
+                'It is ready to check. From then on it follows your '
+                    'weigh-ins and what you log.',
               _Due.goal => 'A target for it is ready to check.',
               _Due.settings => 'A target built under them is ready to check.',
               _Due.weekly => 'Your expenditure and next target are ready.',
