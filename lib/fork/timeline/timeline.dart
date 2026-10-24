@@ -40,19 +40,6 @@ List<(DateTime? hour, List<IntakeEntity> intakes)> timelineHours(
   return groups;
 }
 
-/// [time] on the logical [day] that starts [offsetMinutes] after midnight:
-/// a time before the start is the next calendar date's.
-DateTime momentOn(DateTime day, TimeOfDay time, int offsetMinutes) {
-  final minutes = time.hour * 60 + time.minute;
-  return DateTime(
-    day.year,
-    day.month,
-    day.day + (minutes < offsetMinutes ? 1 : 0),
-    time.hour,
-    time.minute,
-  );
-}
-
 /// The intake store under the timeline, swapped out in tests.
 class TimelineEntries {
   final Future<List<IntakeEntity>> Function(DateTime day) of;

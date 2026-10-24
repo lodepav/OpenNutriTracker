@@ -20,6 +20,9 @@ import 'package:opennutritracker/features/add_meal/data/repository/products_repo
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dart';
 import 'package:opennutritracker/features/meal_detail/util/meal_quantity_converter.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
+// [fork] S63 weekday-targets: a row made for another day
+import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
+// [/fork]
 
 part 'meal_detail_event.dart';
 
@@ -160,8 +163,8 @@ class MealDetailBloc extends Bloc<MealDetailEvent, MealDetailState> {
   /// read-modify-write (`TrackedDayDataSource.addDayCaloriesTracked`), so
   /// overlapping calls interleave their reads and silently lose updates —
   /// a batch logged concurrently under-counts the day.
-  // [fork] S7 meal-groups: return the entry written, so a bulk save can group its entries (D14)
-  Future<IntakeEntity> addIntake(
+  // [fork] S7 meal-groups: return the entry written, so a bulk save can group its entries (D14); null when a profile switch dropped it
+  Future<IntakeEntity?> addIntake(
   // [/fork]
     BuildContext context,
     String unit,
@@ -188,13 +191,16 @@ class MealDetailBloc extends Bloc<MealDetailEvent, MealDetailState> {
     // the cache update means the next search shows the freshest data.
     // The entry and its row together, so no reconciliation counts the
     // entry before the row has it (#1317).
-    await withTrackedDayLockOnProfile(() async {
+    // [fork] S7 meal-groups: whether it was written
+    final written = await withTrackedDayLockOnProfile(() async {
       await _addIntakeUseCase.addIntake(intakeEntity);
       await _updateTrackedDay(intakeEntity, day);
+      return true;
     });
+    // [/fork]
     unawaited(_refreshCacheForSelectedMeal(meal));
     // [fork] S7 meal-groups
-    return intakeEntity;
+    return written == null ? null : intakeEntity;
     // [/fork]
   }
 
@@ -240,7 +246,12 @@ class MealDetailBloc extends Bloc<MealDetailEvent, MealDetailState> {
   ) async {
     final hasTrackedDay = await _addTrackedDayUsecase.hasTrackedDay(day);
     if (!hasTrackedDay) {
-      final totalKcalGoal = await _getKcalGoalUsecase.getKcalGoal();
+      // [fork] S63 weekday-targets: the weekday of the day logged into
+      final totalKcalGoal = await forkGoalOnDay(
+        await _getKcalGoalUsecase.getKcalGoal(),
+        day,
+      );
+      // [/fork]
       final totalCarbsGoal = await _getMacroGoalUsecase.getCarbsGoal(
         totalKcalGoal,
       );

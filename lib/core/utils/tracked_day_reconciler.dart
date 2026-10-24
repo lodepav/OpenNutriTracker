@@ -10,6 +10,10 @@ import 'package:opennutritracker/core/utils/calc/macro_calc.dart';
 import 'package:opennutritracker/core/utils/hive_db_provider.dart';
 import 'package:opennutritracker/core/utils/tracked_day_lock.dart';
 import 'package:opennutritracker/core/utils/tracked_day_total_repair.dart';
+// [fork] S68 adaptive-target: a fork target leaves activities out (D13)
+import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
+import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
+// [/fork]
 
 final _log = Logger('TrackedDayReconciler');
 
@@ -182,6 +186,9 @@ Future<int> reconcileTrackedDays(
   Set<String>? previousKeys,
   Map<String, double>? creditedBurned,
   TrackedDayGoals? currentGoals,
+  // [fork] S68 adaptive-target: set under a fork target
+  bool ignoreBurned = false,
+  // [/fork]
 }) {
   final rows = db.trackedDayBox;
   final listed = _listedDays(db, offsetMinutes);
@@ -196,6 +203,15 @@ Future<int> reconcileTrackedDays(
           previousOffsetMinutes,
           importOffsetMinutes: previousImports,
         );
+  // [fork] S68 adaptive-target: a fixed or adaptive target's rows hold no
+  // activity credit, so none is moved or added
+  if (ignoreBurned) {
+    for (final day in [...listed.values, ...?listedBefore?.values]) {
+      day.burned = 0;
+    }
+    creditedBurned = null;
+  }
+  // [/fork]
   // What each row was keyed by: the previous boundary, or for a row
   // outside [previousKeys] the current one.
   Map<String, _ListedDay>? before(Object? key) =>
@@ -379,6 +395,9 @@ Future<int> ensureTrackedDaysMatchEntries(
   HiveDBProvider db,
   ConfigDataSource configDataSource, {
   Future<TrackedDayGoals> Function()? currentGoals,
+  // [fork] S68 adaptive-target: [db]'s profile's store, when not the active
+  AdaptiveStore? adaptiveStore,
+  // [/fork]
 }) async {
   TrackedDayGoals? goals;
   if (currentGoals != null &&
@@ -390,6 +409,9 @@ Future<int> ensureTrackedDaysMatchEntries(
       _log.warning('Could not compute the current goals', e, stack);
     }
   }
+  // [fork] S68 adaptive-target: read before the lock's synchronous pass
+  final ignoreBurned = await forkTargetIgnoresActivities(adaptiveStore);
+  // [/fork]
   final changed = await withTrackedDayLock(() async {
     final offset = _offsetMinutesNow(configDataSource);
     final recordedBy = configDataSource.getConfigNow().trackedDaysOffsetMinutes;
@@ -400,6 +422,9 @@ Future<int> ensureTrackedDaysMatchEntries(
       previousOffsetMinutes: keyedBy,
       previousImportOffsetMinutes: recordedBy == null ? offset : null,
       currentGoals: goals,
+      // [fork] S68 adaptive-target
+      ignoreBurned: ignoreBurned,
+      // [/fork]
     );
     final recorded = recordedBy == offset
         ? null
@@ -485,7 +510,15 @@ Future<int> restoreTrackedDays(
   required Set<String> importedDayKeys,
   required Iterable<UserActivityDBO> importedActivities,
   required int? keyedByOffsetMinutes,
+  // [fork] S68 adaptive-target: [db]'s profile's store, when not the active
+  AdaptiveStore? adaptiveStore,
+  // [/fork]
 }) => withTrackedDayLock(() async {
+  // [fork] S68 adaptive-target: read before the synchronous pass; a
+  // restore writes the profile's adaptive settings after its rows, so
+  // these are the ones it had before
+  final ignoreBurned = await forkTargetIgnoresActivities(adaptiveStore);
+  // [/fork]
   final offset = _offsetMinutesNow(configDataSource);
   final deviceCredit = _burnedByDay(db.userActivityBox.values, offset);
   await write();
@@ -513,6 +546,9 @@ Future<int> restoreTrackedDays(
         if (!importedDayKeys.contains(key)) key: value,
       for (final key in importedDayKeys) key: archiveCredit[key] ?? 0,
     },
+    // [fork] S68 adaptive-target
+    ignoreBurned: ignoreBurned,
+    // [/fork]
   );
   final recorded = configDataSource.setConfigTrackedDaysOffsetMinutes(offset);
   final changed = await rowsWritten;
@@ -536,18 +572,26 @@ Future<void> moveDayBoundary(
   ConfigDataSource configDataSource,
   int hours,
   int minutes,
-) => withTrackedDayLock(() {
-  final before = _offsetMinutesNow(configDataSource);
-  final configWritten = configDataSource.setConfigDayStartOffset(
-    hours,
-    minutes,
-  );
-  final after = _offsetMinutesNow(configDataSource);
-  final rowsWritten = reconcileTrackedDays(
-    db,
-    offsetMinutes: after,
-    previousOffsetMinutes: before,
-  );
-  final recorded = configDataSource.setConfigTrackedDaysOffsetMinutes(after);
-  return Future.wait([configWritten, rowsWritten, recorded]);
-});
+) async {
+  // [fork] S68 adaptive-target: read before the synchronous step
+  final ignoreBurned = await forkTargetIgnoresActivities();
+  // [/fork]
+  return withTrackedDayLock(() {
+    final before = _offsetMinutesNow(configDataSource);
+    final configWritten = configDataSource.setConfigDayStartOffset(
+      hours,
+      minutes,
+    );
+    final after = _offsetMinutesNow(configDataSource);
+    final rowsWritten = reconcileTrackedDays(
+      db,
+      offsetMinutes: after,
+      previousOffsetMinutes: before,
+      // [fork] S68 adaptive-target
+      ignoreBurned: ignoreBurned,
+      // [/fork]
+    );
+    final recorded = configDataSource.setConfigTrackedDaysOffsetMinutes(after);
+    return Future.wait([configWritten, rowsWritten, recorded]);
+  });
+}

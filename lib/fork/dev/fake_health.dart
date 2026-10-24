@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:opennutritracker/fork/dev/fake_ai.dart';
 import 'package:opennutritracker/fork/health/body_fat_import.dart';
 import 'package:opennutritracker/fork/health/nutrition_export.dart';
@@ -5,11 +6,11 @@ import 'package:opennutritracker/fork/health/steps.dart';
 import 'package:opennutritracker/fork/health/weight_import.dart';
 
 /// `--dart-define=FORK_FAKE_HEALTH=true`, on with the fake AI: the weight
-/// import and the steps read made-up data instead of Health Connect.
-const forkFakeHealth = bool.fromEnvironment(
-  'FORK_FAKE_HEALTH',
-  defaultValue: forkFakeAi,
-);
+/// import and the steps read made-up data instead of Health Connect. Debug
+/// builds only, so a release never imports made-up data.
+const forkFakeHealth =
+    kDebugMode &&
+    bool.fromEnvironment('FORK_FAKE_HEALTH', defaultValue: forkFakeAi);
 
 /// A smart scale stepped on at 7:00 every day, drifting down 0.1 kg a day
 /// from 82 kg a month ago.

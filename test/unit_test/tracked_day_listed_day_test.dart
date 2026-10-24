@@ -40,6 +40,7 @@ import 'package:opennutritracker/features/meal_detail/presentation/bloc/meal_det
 import '../fixture/physical_activity_entity_fixtures.dart';
 import '../helpers/fake_hive_db_provider.dart';
 import '../helpers/hive_test_setup.dart';
+import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 
 /// #1317: the Diary shows "Nothing added" for a day whose entries it lists.
 ///
@@ -552,6 +553,36 @@ void main() {
       expect(recordedOffset(), 240);
       expect(await reconcile(), 0);
     });
+  });
+
+  test('under a fixed target, moving the boundary moves no activity '
+      'credit', () async {
+    const fixed = AdaptiveSettings(fixedTarget: true, fixedKcal: 2000);
+    // The active profile's settings, as logging reads them, and its box,
+    // which the reconciler reads.
+    AdaptiveStore.settings.value = fixed;
+    addTearDown(() => AdaptiveStore.settings.value = const AdaptiveSettings());
+    final box = await Hive.openBox<dynamic>('listed_day_adaptive');
+    addTearDown(box.deleteFromDisk);
+    final adaptive = AdaptiveStore.otherProfile(() async => box);
+    await adaptive.save(fixed);
+    Future<int> reconcileFixed() => ensureTrackedDaysMatchEntries(
+      db,
+      ConfigDataSource(db),
+      adaptiveStore: adaptive,
+    );
+    await reconcileFixed();
+    final at = DateTime(2026, 10, 5, 2);
+    await addFood(DateTime(2026, 10, 4, 12));
+    await logActivity.logActivity(activityAt(at), day: at);
+    final goal = (await diaryDay(DateTime.utc(2026, 10, 4))).row!.calorieGoal;
+    await setBoundary(4);
+
+    await reconcileFixed();
+
+    final day = await diaryDay(DateTime.utc(2026, 10, 4), boundaryHours: 4);
+    expect(day.activities, 1);
+    expect(day.row!.calorieGoal, goal);
   });
 
   group('a day that lists entries but has no row', () {

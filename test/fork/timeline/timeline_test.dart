@@ -4,8 +4,10 @@ import 'package:opennutritracker/core/domain/entity/app_theme_entity.dart';
 import 'package:opennutritracker/core/domain/entity/config_entity.dart';
 import 'package:opennutritracker/core/domain/entity/intake_entity.dart';
 import 'package:opennutritracker/core/domain/entity/intake_type_entity.dart';
+import 'package:opennutritracker/core/utils/calc/day_boundary_calc.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_nutriments_entity.dart';
+import 'package:opennutritracker/fork/copy/copy_entries.dart';
 import 'package:opennutritracker/fork/timeline/timeline.dart';
 
 final _day = DateTime(2026, 10, 23);
@@ -65,6 +67,9 @@ void main() {
       momentOn(_day, const TimeOfDay(hour: 9, minute: 0), 4 * 60),
       DateTime(2026, 10, 23, 9),
     );
+    // 00:00 is the night of the 23rd, not a date-only entry of the 24th.
+    final midnight = momentOn(_day, const TimeOfDay(hour: 0, minute: 0), 240);
+    expect(DayBoundaryCalc.dayLabelOf(midnight, 240), DateTime(2026, 10, 23));
   });
 
   testWidgets('a running total; an entry moved; a food added at a time', (

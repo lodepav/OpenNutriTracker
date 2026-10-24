@@ -21,6 +21,9 @@ import 'package:opennutritracker/features/home/presentation/bloc/home_bloc.dart'
 import 'package:opennutritracker/generated/l10n.dart';
 import 'package:provider/provider.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
+// [fork] S64 weekday-targets: a row made for another day
+import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
+// [/fork]
 
 class QuickAddBottomSheet extends StatefulWidget {
   final IntakeTypeEntity intakeType;
@@ -186,7 +189,12 @@ class _QuickAddBottomSheetState extends State<QuickAddBottomSheet> {
     final addTrackedDay = locator<AddTrackedDayUsecase>();
     final hasTrackedDay = await addTrackedDay.hasTrackedDay(widget.day);
     if (!hasTrackedDay) {
-      final kcalGoal = await locator<GetKcalGoalUsecase>().getKcalGoal();
+      // [fork] S64 weekday-targets: the weekday of the day added to
+      final kcalGoal = await forkGoalOnDay(
+        await locator<GetKcalGoalUsecase>().getKcalGoal(),
+        widget.day,
+      );
+      // [/fork]
       final macroGoal = locator<GetMacroGoalUsecase>();
       await addTrackedDay.addNewTrackedDayIfAbsent(
         widget.day,

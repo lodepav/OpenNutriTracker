@@ -50,6 +50,26 @@ void main() {
     expect(csvField(2472.98), '2473');
   });
 
+  test('text a spreadsheet would run as a formula stays text', () {
+    expect(csvField('=HYPERLINK("x")'), '"\'=HYPERLINK(""x"")"');
+    expect(csvField('+1 bar'), "'+1 bar");
+    expect(csvField('-'), "'-");
+    expect(csvField('@home'), "'@home");
+    expect(csvField(-2.5), '-2.5');
+    // An amount, written as text, stays a number.
+    expect(csvField('-1.5'), '-1.5');
+    expect(csvField('-1+2'), "'-1+2");
+  });
+
+  test('a serving\'s fraction is kept in the amount', () {
+    final rows = foodsCsv([
+      _intake('Pie', DateTime(2026, 10, 22, 8), amount: 1 / 3),
+      _intake('Tea', DateTime(2026, 10, 22, 9), amount: 0.25),
+    ], 0).split('\r\n');
+    expect(rows[1].split(',')[4], '0.333');
+    expect(rows[2].split(',')[4], '0.25');
+  });
+
   test('foods: each entry on its logical day, oldest first', () {
     final csv = foodsCsv([
       _intake('Late snack', DateTime(2026, 10, 23, 1, 30)),
@@ -59,8 +79,8 @@ void main() {
     expect(csv.split('\r\n'), [
       'date,time,meal,food,amount,unit,kcal,protein_g,carbs_g,fat_g,'
           'fibre_g,sugar_g,saturated_fat_g,sodium_mg',
-      // Midnight is before the 03:00 start, so the 21st; and no time.
-      '2026-10-21,,breakfast,Soup,150,g,570,19.5,90,10.5,15,,,9',
+      // Midnight is a date-only entry: its own day, as the Diary lists it.
+      '2026-10-22,,breakfast,Soup,150,g,570,19.5,90,10.5,15,,,9',
       '2026-10-22,08:05,breakfast,"Oats, rolled",150,g,570,19.5,90,10.5,15,,,9',
       '2026-10-22,01:30,breakfast,Late snack,150,g,570,19.5,90,10.5,15,,,9',
       '',

@@ -42,7 +42,8 @@ String leftoversSystemPrompt(
 
 /// How much is left of each entry, by id, from the model's items. An item
 /// naming no entry, in another unit, or with no amount is dropped; an
-/// amount over what was logged is capped at it.
+/// amount over what was logged is capped at it. Two entries of one food
+/// take the model's items for it in order.
 Map<String, double> leftoversFromItems(
   List<IntakeEntity> entries,
   List<ParsedMealItem> items,
@@ -54,12 +55,13 @@ Map<String, double> leftoversFromItems(
     final entry = entries
         .where(
           (e) =>
+              !left.containsKey(e.id) &&
+              (item.unit == null || item.unit == e.unit) &&
               (e.meal.name ?? '').trim().toLowerCase() ==
-              item.query.trim().toLowerCase(),
+                  item.query.trim().toLowerCase(),
         )
         .firstOrNull;
     if (entry == null) continue;
-    if (item.unit != null && item.unit != entry.unit) continue;
     left[entry.id] = quantity.clamp(0, entry.amount).toDouble();
   }
   return left;

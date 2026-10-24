@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
+import 'package:opennutritracker/core/utils/tracked_day_lock.dart';
 import 'package:opennutritracker/fork/phases/phases.dart';
 import 'package:opennutritracker/fork/phases/phases_ui.dart';
 
@@ -80,11 +81,45 @@ void main() {
       await dir.delete(recursive: true);
     });
 
+    var saves = true;
     PhaseRunner runner() => PhaseRunner(
       store: store,
-      setPace: (kg) async => paces.add(kg),
+      setPace: (kg, startedOn) async {
+        paces.add(kg);
+        return saves && startedOn.isCurrent;
+      },
       clock: () => now,
     );
+
+    test('a pace a profile switch dropped is tried again', () async {
+      await store.save(_plan);
+      saves = false;
+      expect(await runner().run(), isFalse);
+      saves = true;
+      expect(await runner().run(), isTrue);
+      expect(paces, [-0.5, -0.5]);
+    });
+
+    test('a profile switch while the plan is read sets no pace', () async {
+      await store.save(_plan);
+      var switched = false;
+      final switching = PhaseStore(() async {
+        // The switch lands as the run reads the plan.
+        if (!switched) {
+          switched = true;
+          await withProfileSwitchLock(() async {});
+        }
+        return Hive.openBox<dynamic>('phases');
+      });
+      final run = PhaseRunner(
+        store: switching,
+        setPace: (kg, startedOn) async => startedOn.isCurrent,
+        clock: () => now,
+      );
+
+      expect(await run.run(), isFalse);
+      expect(await store.applied(), isNull);
+    });
 
     test('a phase sets its pace once, as it begins', () async {
       expect(await runner().run(), isFalse);

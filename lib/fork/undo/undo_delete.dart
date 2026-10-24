@@ -81,6 +81,15 @@ class DeletedEntries {
           onPressed: () {
             // Restored: a delete during the bar's exit must not gather them.
             close();
+            if (!startedOn.isCurrent) {
+              // They belong to the profile left since: nothing is restored.
+              messenger.showSnackBar(
+                const SnackBar(
+                  content: Text('Not restored: the profile changed.'),
+                ),
+              );
+              return;
+            }
             unawaited(restore(entries, day, startedOn));
           },
         ),

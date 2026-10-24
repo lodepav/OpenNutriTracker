@@ -265,7 +265,6 @@ bool _isWeight(String header) =>
       'average',
       'avg',
       'smooth',
-      'scale',
     ]);
 
 /// lb or kg where [text] names one; null where it names none.

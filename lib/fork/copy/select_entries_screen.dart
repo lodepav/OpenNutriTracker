@@ -10,11 +10,12 @@ sealed class CopyMoment {
   const CopyMoment();
 }
 
-/// All at one moment: "now", or a day and time the user picked.
+/// All at one moment: "now", or [time] on the logical day [at].
 class CopyAt extends CopyMoment {
   final DateTime at;
+  final TimeOfDay? time;
 
-  const CopyAt(this.at);
+  const CopyAt(this.at, {this.time});
 }
 
 /// To a logical day, each entry at its own time of day.
@@ -81,23 +82,27 @@ class _SelectEntriesScreenState extends State<SelectEntriesScreen> {
     );
     if (target == null || !mounted) return;
     final (moment, meal) = target;
-    final DateTime day;
-    switch (moment) {
-      case CopyAt(:final at):
-        await _copier.copyIntakesAt(chosen, at, type: meal);
-        day = at;
-      case CopySameTimes(day: final to):
-        await _copier.copyIntakes(chosen, to, type: meal);
-        day = to;
-    }
+    // The logical day written to; null when a profile switch stopped it.
+    final DateTime? day = switch (moment) {
+      CopyAt(:final at, :final time) => await _copier.copyIntakesAt(
+        chosen,
+        at,
+        time: time,
+        type: meal,
+      ),
+      CopySameTimes(day: final to) =>
+        await _copier.copyIntakes(chosen, to, type: meal) ? to : null,
+    };
     refreshAfterCopy();
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          'Copied ${chosen.length} '
-          '${chosen.length == 1 ? 'entry' : 'entries'} to '
-          '${DateFormat.MMMEd().format(day)}',
+          day == null
+              ? 'Nothing copied: the profile changed.'
+              : 'Copied ${chosen.length} '
+                    '${chosen.length == 1 ? 'entry' : 'entries'} to '
+                    '${DateFormat.MMMEd().format(day)}',
         ),
       ),
     );
@@ -263,9 +268,7 @@ class _TargetSheetState extends State<_TargetSheet> {
       initialTime: TimeOfDay.fromDateTime(now),
     );
     if (time == null || !mounted) return;
-    _done(
-      CopyAt(DateTime(day.year, day.month, day.day, time.hour, time.minute)),
-    );
+    _done(CopyAt(DateTime(day.year, day.month, day.day), time: time));
   }
 
   @override

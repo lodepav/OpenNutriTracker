@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:opennutritracker/core/data/repository/config_repository.dart';
+import 'package:opennutritracker/core/data/repository/tracked_day_repository.dart';
 import 'package:opennutritracker/core/data/repository/user_activity_repository.dart';
 import 'package:opennutritracker/core/data/repository/user_repository.dart';
 import 'package:opennutritracker/core/domain/entity/app_theme_entity.dart';
@@ -13,9 +14,12 @@ import 'package:opennutritracker/core/domain/entity/user_entity.dart';
 import 'package:opennutritracker/core/domain/entity/user_gender_entity.dart';
 import 'package:opennutritracker/core/domain/entity/user_pal_entity.dart';
 import 'package:opennutritracker/core/domain/entity/user_weight_goal_entity.dart';
+import 'package:opennutritracker/core/domain/usecase/add_tracked_day_usecase.dart';
+import 'package:opennutritracker/core/domain/usecase/get_config_usecase.dart';
 import 'package:opennutritracker/core/domain/usecase/get_kcal_goal_usecase.dart';
 import 'package:opennutritracker/core/domain/usecase/get_macro_goal_usecase.dart';
 import 'package:opennutritracker/core/utils/calc/day_boundary_calc.dart';
+import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_ui.dart';
@@ -38,9 +42,18 @@ class _Users extends Fake implements UserRepository {
 }
 
 class _Config extends Fake implements ConfigRepository {
+  final int dayStartHours;
+
+  _Config({this.dayStartHours = 0});
+
   @override
-  Future<ConfigEntity> getConfig() async =>
-      const ConfigEntity(false, false, false, AppThemeEntity.system);
+  Future<ConfigEntity> getConfig() async => ConfigEntity(
+    false,
+    false,
+    false,
+    AppThemeEntity.system,
+    dayStartOffsetHours: dayStartHours,
+  );
 }
 
 class _Activities extends Fake implements UserActivityRepository {
@@ -50,6 +63,35 @@ class _Activities extends Fake implements UserActivityRepository {
     int dayStartOffsetHours = 0,
     int dayStartOffsetMinutes = 0,
   }) async => [];
+}
+
+/// Records the goal moves an activity makes.
+class _Rows extends Fake implements TrackedDayRepository {
+  final moves = <String>[];
+
+  @override
+  Future<void> increaseDayCalorieGoal(DateTime day, double amount) async =>
+      moves.add('+$amount');
+
+  @override
+  Future<void> reduceDayCalorieGoal(DateTime day, double amount) async =>
+      moves.add('-$amount');
+
+  @override
+  Future<void> increaseDayMacroGoal(
+    DateTime day, {
+    double? carbGoal,
+    double? fatGoal,
+    double? proteinGoal,
+  }) async => moves.add('+macros');
+
+  @override
+  Future<void> reduceDayMacroGoal(
+    DateTime day, {
+    double? carbGoal,
+    double? fatGoal,
+    double? proteinGoal,
+  }) async => moves.add('-macros');
 }
 
 void main() {
@@ -201,6 +243,115 @@ void main() {
     await tester.pumpAndSettle();
     expect(memory.saved.weekdayOffsets, [0, 0, 0, 0, 0, 300, 0]);
     expect(find.text('Sat +300 kcal'), findsOneWidget);
+  });
+
+  testWidgets('the goal note shows today\'s goal with its weekday shift', (
+    tester,
+  ) async {
+    locator.registerSingleton<GetConfigUsecase>(GetConfigUsecase(_Config()));
+    addTearDown(() => locator.unregister<GetConfigUsecase>());
+    DayBoundaryCalc.clock = () => _saturday.add(const Duration(hours: 9));
+    AdaptiveStore.settings.value = const AdaptiveSettings(
+      fixedTarget: true,
+      fixedKcal: 2000,
+      weekdayOffsets: _weekendUp,
+    );
+    await tester.pumpWidget(
+      const MaterialApp(home: Scaffold(body: AdaptiveGoalNote())),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.textContaining('Your goal today is 2250 kcal (+250 kcal'),
+      findsOneWidget,
+    );
+  });
+
+  group('a day\'s stored goal', () {
+    Future<List<String>> logRunAndDeleteIt() async {
+      final rows = _Rows();
+      final usecase = AddTrackedDayUsecase(rows);
+      await usecase.increaseDayCalorieGoal(_saturday, 400);
+      await usecase.increaseDayMacroGoals(_saturday, carbsAmount: 50);
+      await usecase.reduceDayCalorieGoal(_saturday, 400);
+      await usecase.reduceDayMacroGoals(_saturday, carbsAmount: 50);
+      return rows.moves;
+    }
+
+    test('an activity moves it under the formula', () async {
+      expect(await logRunAndDeleteIt(), [
+        '+400.0',
+        '+macros',
+        '-400.0',
+        '-macros',
+      ]);
+    });
+
+    test('an activity leaves a fixed target\'s alone', () async {
+      AdaptiveStore.settings.value = const AdaptiveSettings(
+        fixedTarget: true,
+        fixedKcal: 1800,
+      );
+      expect(await logRunAndDeleteIt(), isEmpty);
+    });
+
+    test('a row made for another day takes that day\'s weekday shift', () async {
+      locator.registerSingleton<GetConfigUsecase>(GetConfigUsecase(_Config()));
+      addTearDown(() => locator.unregister<GetConfigUsecase>());
+      AdaptiveStore.settings.value = const AdaptiveSettings(
+        weekdayOffsets: _weekendUp,
+      );
+      // Friday, writing Saturday's row: Friday's -100 out, Saturday's +250 in.
+      DayBoundaryCalc.clock = () => DateTime(2026, 10, 23, 12);
+      expect(await forkGoalOnDay(2000, _saturday), 2350);
+      expect(await forkGoalOnDay(2000, DateTime(2026, 10, 22)), 2000);
+    });
+
+    test(
+      'a moment before the day starts takes its logical day\'s shift',
+      () async {
+        locator.registerSingleton<GetConfigUsecase>(
+          GetConfigUsecase(_Config(dayStartHours: 4)),
+        );
+        addTearDown(() => locator.unregister<GetConfigUsecase>());
+        AdaptiveStore.settings.value = const AdaptiveSettings(
+          weekdayOffsets: _weekendUp,
+        );
+        // 01:30 on Saturday is still Friday: Friday's row keeps Friday's goal.
+        final early = DateTime(2026, 10, 24, 1, 30);
+        DayBoundaryCalc.clock = () => early;
+        expect(await forkGoalOnDay(2000, early), 2000);
+      },
+    );
+
+    test('a row made in another profile takes that profile\'s shift', () async {
+      final other = AdaptiveStore.otherProfile(
+        () => Hive.openBox<dynamic>('other'),
+      );
+      await other.save(const AdaptiveSettings(weekdayOffsets: _weekendUp));
+      DayBoundaryCalc.clock = () => DateTime(2026, 10, 23, 12);
+
+      // This profile shifts nothing; the other's Friday -100 out, Saturday
+      // +250 in.
+      expect(
+        await forkGoalOnDay(
+          2000,
+          _saturday,
+          store: other,
+          config: () => _Config().getConfig(),
+        ),
+        2350,
+      );
+    });
+
+    test('fixed grams that add up to nothing leave the typed target', () async {
+      AdaptiveStore.settings.value = const AdaptiveSettings(
+        fixedTarget: true,
+        fixedKcal: 1800,
+        fixedMacros: FixedMacros(proteinG: 0, carbsG: 0, fatG: 0),
+      );
+      expect((await forkKcalGoal(_saturday)).target, 1800);
+    });
   });
 }
 

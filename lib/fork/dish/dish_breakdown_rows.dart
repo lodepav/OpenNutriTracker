@@ -54,7 +54,12 @@ BulkAddLoadedState replaceRowWithBreakdown(
   ReplaceRowWithBreakdownEvent event,
 ) {
   final index = state.rows.indexWhere((r) => identical(r.resolved, event.row));
-  if (index < 0 || event.breakdown.ingredients.isEmpty) return state;
+  // A row skipped while its breakdown ran stays skipped, as one row.
+  if (index < 0 ||
+      state.rows[index].skipped ||
+      event.breakdown.ingredients.isEmpty) {
+    return state;
+  }
 
   final group = Object();
   final ingredients = [

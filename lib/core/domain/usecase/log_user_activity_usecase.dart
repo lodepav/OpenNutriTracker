@@ -5,6 +5,9 @@ import 'package:opennutritracker/core/domain/usecase/get_kcal_goal_usecase.dart'
 import 'package:opennutritracker/core/domain/usecase/get_macro_goal_usecase.dart';
 import 'package:opennutritracker/core/utils/calc/macro_calc.dart';
 import 'package:opennutritracker/core/utils/tracked_day_lock.dart';
+// [fork] S65 weekday-targets: a row made for another day
+import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
+// [/fork]
 
 /// Writes an activity and raises the day's budget by what it burned — the
 /// two halves that always have to happen together.
@@ -48,9 +51,12 @@ class LogUserActivityUsecase {
   Future<void> _increaseDayGoals(DateTime day, double caloriesBurned) async {
     final hasTrackedDay = await _addTrackedDayUsecase.hasTrackedDay(day);
     if (!hasTrackedDay) {
-      final kcalGoal = await _getKcalGoalUsecase.getKcalGoal(
-        totalKcalActivitiesParam: 0,
+      // [fork] S65 weekday-targets: the weekday of the activity's day
+      final kcalGoal = await forkGoalOnDay(
+        await _getKcalGoalUsecase.getKcalGoal(totalKcalActivitiesParam: 0),
+        day,
       );
+      // [/fork]
       await _addTrackedDayUsecase.addNewTrackedDayIfAbsent(
         day,
         kcalGoal,

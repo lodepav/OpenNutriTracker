@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:opennutritracker/core/domain/entity/intake_entity.dart';
 import 'package:opennutritracker/core/domain/entity/intake_type_entity.dart';
 import 'package:opennutritracker/core/domain/entity/user_activity_entity.dart';
@@ -12,6 +13,25 @@ import 'package:opennutritracker/core/domain/usecase/log_user_activity_usecase.d
 import 'package:opennutritracker/core/utils/calc/day_boundary_calc.dart';
 import 'package:opennutritracker/core/utils/id_generator.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
+import 'package:opennutritracker/core/utils/tracked_day_lock.dart';
+import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
+
+/// [time] on the logical [day] that starts [offsetMinutes] after midnight:
+/// a time before the start is the next calendar date's. Never a bare
+/// midnight, which would read as a date-only entry of that date.
+DateTime momentOn(DateTime day, TimeOfDay time, int offsetMinutes) {
+  final minutes = time.hour * 60 + time.minute;
+  return DateTime(
+    day.year,
+    day.month,
+    day.day + (minutes < offsetMinutes ? 1 : 0),
+    time.hour,
+    time.minute,
+    0,
+    0,
+    minutes == 0 ? 1 : 0,
+  );
+}
 
 /// Copies diary entries to any day: one entry, a meal, or a whole day with
 /// its activities. A copy gets a new id and keeps the logged food, amount and
@@ -58,51 +78,61 @@ class CopyEntries {
       );
 
   /// Copies [intakes] to the logical day [day], into meal [type] (null keeps
-  /// each entry's own).
-  Future<void> copyIntakes(
+  /// each entry's own). False when a profile switch stopped it.
+  Future<bool> copyIntakes(
     List<IntakeEntity> intakes,
     DateTime day, {
     IntakeTypeEntity? type,
-  }) async {
-    final offset = (await _config.getConfig()).dayStartOffsetTotalMinutes;
-    final target = _dateOf(day);
-    for (final intake in intakes) {
-      final copy = IntakeEntity(
-        id: _newId(),
-        unit: intake.unit,
-        amount: intake.amount,
-        type: type ?? intake.type,
-        meal: intake.meal,
-        dateTime: _moveTo(intake.dateTime, target, offset),
-      );
-      await _addIntake.addIntake(copy);
-      await _addToTrackedDay(copy, target);
-    }
-  }
+  }) async =>
+      // Each entry and its row together, in the profile it began in (#1317).
+      await withTrackedDayLockOnProfile(() async {
+        final offset = (await _config.getConfig()).dayStartOffsetTotalMinutes;
+        final target = _dateOf(day);
+        for (final intake in intakes) {
+          final copy = IntakeEntity(
+            id: _newId(),
+            unit: intake.unit,
+            amount: intake.amount,
+            type: type ?? intake.type,
+            meal: intake.meal,
+            dateTime: _moveTo(intake.dateTime, target, offset),
+          );
+          await _addIntake.addIntake(copy);
+          await _addToTrackedDay(copy, target);
+        }
+        return true;
+      }) ??
+      false;
 
   /// Copies [intakes] to the moment [at], all of them, on the logical day
-  /// [at] falls in: "copy to now", or to a time the user picked. Into meal
-  /// [type] (null keeps each entry's own).
-  Future<void> copyIntakesAt(
+  /// [at] is listed under ("copy to now"), or to [time] on the logical day
+  /// [at] when [time] is set. Into meal [type] (null keeps each entry's own).
+  /// The logical day written to, or null when a profile switch stopped it.
+  Future<DateTime?> copyIntakesAt(
     List<IntakeEntity> intakes,
     DateTime at, {
+    TimeOfDay? time,
     IntakeTypeEntity? type,
-  }) async {
-    final offset = (await _config.getConfig()).dayStartOffsetTotalMinutes;
-    final target = _dateOf(DayBoundaryCalc.logicalDayOfMinutes(at, offset));
-    for (final intake in intakes) {
-      final copy = IntakeEntity(
-        id: _newId(),
-        unit: intake.unit,
-        amount: intake.amount,
-        type: type ?? intake.type,
-        meal: intake.meal,
-        dateTime: at,
-      );
-      await _addIntake.addIntake(copy);
-      await _addToTrackedDay(copy, target);
-    }
-  }
+  }) =>
+      // Each entry and its row together, in the profile it began in (#1317).
+      withTrackedDayLockOnProfile(() async {
+        final offset = (await _config.getConfig()).dayStartOffsetTotalMinutes;
+        if (time != null) at = momentOn(at, time, offset);
+        final target = _dateOf(DayBoundaryCalc.dayLabelOf(at, offset));
+        for (final intake in intakes) {
+          final copy = IntakeEntity(
+            id: _newId(),
+            unit: intake.unit,
+            amount: intake.amount,
+            type: type ?? intake.type,
+            meal: intake.meal,
+            dateTime: at,
+          );
+          await _addIntake.addIntake(copy);
+          await _addToTrackedDay(copy, target);
+        }
+        return target;
+      });
 
   /// Puts deleted [intakes] back as they were, ids and times included, on
   /// the logical day [day] they were taken from (the delete's undo).
@@ -133,67 +163,88 @@ class CopyEntries {
     ]..sort((a, b) => a.dateTime.compareTo(b.dateTime));
   }
 
-  Future<void> copyActivities(
+  /// False when a profile switch stopped it.
+  Future<bool> copyActivities(
     List<UserActivityEntity> activities,
     DateTime day,
-  ) async {
-    final offset = (await _config.getConfig()).dayStartOffsetTotalMinutes;
-    final target = _dateOf(day);
-    for (final activity in activities) {
-      await _logActivity.logActivity(
-        UserActivityEntity(
-          _newId(),
-          activity.duration,
-          activity.burnedKcal,
-          _moveTo(activity.date, target, offset),
-          activity.physicalActivityEntity,
-          userKcal: activity.userKcal,
-        ),
-        day: target,
-      );
-    }
-  }
+  ) async =>
+      await withTrackedDayLockOnProfile(() async {
+        final offset = (await _config.getConfig()).dayStartOffsetTotalMinutes;
+        final target = _dateOf(day);
+        for (final activity in activities) {
+          await _logActivity.logActivity(
+            UserActivityEntity(
+              _newId(),
+              activity.duration,
+              activity.burnedKcal,
+              _moveTo(activity.date, target, offset),
+              activity.physicalActivityEntity,
+              userKcal: activity.userKcal,
+            ),
+            day: target,
+          );
+        }
+        return true;
+      }) ??
+      false;
 
   /// Copies every intake of the logical day [from] to [to], each in its own
-  /// meal, and the day's activities when [activities] is set.
-  Future<void> copyDay(
+  /// meal, and the day's activities when [activities] is set. Read and
+  /// written in one profile: false when a profile switch stopped it.
+  Future<bool> copyDay(
     DateTime from,
     DateTime to, {
     bool activities = false,
-  }) async {
-    final config = await _config.getConfig();
-    final hours = config.dayStartOffsetHours;
-    final minutes = config.dayStartOffsetMinutes;
-    final source = _dateOf(from);
-    final intakes = await intakesOf(from);
-    await copyIntakes(intakes, to);
-    if (activities) {
-      await copyActivities(
-        await _activities.getUserActivityByDay(
-          source,
-          dayStartOffsetHours: hours,
-          dayStartOffsetMinutes: minutes,
-        ),
-        to,
-      );
-    }
-  }
+  }) async =>
+      await withTrackedDayLockOnProfile(() async {
+        final config = await _config.getConfig();
+        final hours = config.dayStartOffsetHours;
+        final minutes = config.dayStartOffsetMinutes;
+        final source = _dateOf(from);
+        final intakes = await intakesOf(from);
+        await copyIntakes(intakes, to);
+        if (activities) {
+          await copyActivities(
+            await _activities.getUserActivityByDay(
+              source,
+              dayStartOffsetHours: hours,
+              dayStartOffsetMinutes: minutes,
+            ),
+            to,
+          );
+        }
+        return true;
+      }) ??
+      false;
 
   static DateTime _dateOf(DateTime day) =>
       DateTime(day.year, day.month, day.day);
 
-  /// [moment] at the same point of the logical day labelled [target].
+  /// [moment] at the same clock time of the logical day labelled [target],
+  /// on the next calendar date when it fell after midnight; by its fields,
+  /// so a DST change between the days does not move it.
   static DateTime _moveTo(DateTime moment, DateTime target, int offset) {
-    final sourceDay = DayBoundaryCalc.logicalDayOfMinutes(moment, offset);
-    final sourceStart = _dateOf(sourceDay).add(Duration(minutes: offset));
-    final targetStart = target.add(Duration(minutes: offset));
-    return targetStart.add(moment.difference(sourceStart));
+    // A date-only entry (an import's) names its day: it moves as a label.
+    if (DayBoundaryCalc.isDayLabel(moment)) return target;
+    final local = moment.toLocal();
+    final sourceDay = DayBoundaryCalc.logicalDayOfMinutes(local, offset);
+    final afterMidnight = !DateUtils.isSameDay(local, sourceDay);
+    return DateTime(
+      target.year,
+      target.month,
+      target.day + (afterMidnight ? 1 : 0),
+      local.hour,
+      local.minute,
+      local.second,
+      local.millisecond,
+      local.microsecond,
+    );
   }
 
   /// As upstream's meal detail does after logging an entry.
   Future<void> _addToTrackedDay(IntakeEntity intake, DateTime day) async {
     if (!await _trackedDay.hasTrackedDay(day)) {
-      final kcal = await _kcalGoal.getKcalGoal();
+      final kcal = await forkGoalOnDay(await _kcalGoal.getKcalGoal(), day);
       await _trackedDay.addNewTrackedDay(
         day,
         kcal,

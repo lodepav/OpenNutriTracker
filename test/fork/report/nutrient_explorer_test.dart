@@ -9,34 +9,39 @@ import 'package:opennutritracker/features/add_meal/domain/entity/meal_nutriments
 import 'package:opennutritracker/fork/report/nutrient_explorer.dart';
 import 'package:opennutritracker/fork/report/weekly_report.dart';
 
-IntakeEntity _eat(String food, int day, double grams, {double? fiber}) =>
-    IntakeEntity(
-      id: '$food-$day-$grams',
-      unit: 'g',
-      amount: grams,
-      type: IntakeTypeEntity.lunch,
-      meal: MealEntity(
-        code: food,
-        name: food,
-        url: null,
-        mealQuantity: null,
-        mealUnit: 'g',
-        servingQuantity: null,
-        servingUnit: 'g',
-        servingSize: null,
-        nutriments: MealNutrimentsEntity(
-          energyKcal100: 200,
-          carbohydrates100: 30,
-          fat100: 5,
-          proteins100: 10,
-          sugars100: null,
-          saturatedFat100: null,
-          fiber100: fiber,
-        ),
-        source: MealSourceEntity.custom,
-      ),
-      dateTime: DateTime(2026, 10, day, 12),
-    );
+IntakeEntity _eat(
+  String food,
+  int day,
+  double grams, {
+  double? fiber,
+  int hour = 12,
+}) => IntakeEntity(
+  id: '$food-$day-$grams',
+  unit: 'g',
+  amount: grams,
+  type: IntakeTypeEntity.lunch,
+  meal: MealEntity(
+    code: food,
+    name: food,
+    url: null,
+    mealQuantity: null,
+    mealUnit: 'g',
+    servingQuantity: null,
+    servingUnit: 'g',
+    servingSize: null,
+    nutriments: MealNutrimentsEntity(
+      energyKcal100: 200,
+      carbohydrates100: 30,
+      fat100: 5,
+      proteins100: 10,
+      sugars100: null,
+      saturatedFat100: null,
+      fiber100: fiber,
+    ),
+    source: MealSourceEntity.custom,
+  ),
+  dateTime: DateTime(2026, 10, day, hour),
+);
 
 TrackedDayEntity _day(int day, {double? fibreGoal}) => TrackedDayEntity(
   day: DateTime(2026, 10, day),
@@ -81,6 +86,20 @@ void main() {
     expect(energy.nutrient.marksMiss, isFalse);
     expect(fibre.nutrient.marksMiss, isTrue);
   });
+
+  test(
+    'a snack after midnight, before the day starts, is the day before\'s',
+    () {
+      final all = summarizeNutrients(
+        [_eat('Oats', 20, 100), _eat('Chips', 21, 50, hour: 2)],
+        [_day(20), _day(21)],
+        null,
+        dayStartMinutes: 4 * 60,
+      );
+      // One logical day, the 20th, with 150 g at 200 kcal per 100 g.
+      expect(all.firstWhere((s) => s.nutrient.label == 'Energy').perDay, 300);
+    },
+  );
 
   test('with no goal set, the panel\'s reference', () {
     final all = summarizeNutrients(_intakes, [_day(20), _day(21)], null);

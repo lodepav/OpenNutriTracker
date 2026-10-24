@@ -177,6 +177,49 @@ void main() {
     expect([for (final w in await _kidWeights()) w.weightKg], [31]);
   });
 
+  test("a restored profile never takes another profile's boxes", () async {
+    final db = await _device();
+    final exported = await exportWithKid(db);
+    await db.profileBox.delete('kid');
+    await Hive.deleteBoxFromDisk(
+      HiveDBProvider.boxNameFor(HiveDBProvider.weightLogBoxName, 'kid'),
+    );
+    // The device's own profile now has the boxes "kid" names; the file
+    // claims them in another case, which Hive folds together.
+    await db.profileBox.put(
+      'pal',
+      ProfileDBO(
+        id: 'pal',
+        name: 'Pal',
+        createdAt: DateTime(2026),
+        boxSuffix: 'kid',
+      ),
+    );
+    final listed =
+        jsonDecode(
+              utf8.decode(
+                exported.findFile('profiles.json')!.content as List<int>,
+              ),
+            )
+            as Map<String, dynamic>;
+    for (final p in listed['profiles'] as List) {
+      if (p['id'] == 'kid') p['boxSuffix'] = 'KID';
+    }
+    final archive = Archive();
+    for (final f in exported.files) {
+      if (f.name != 'profiles.json') archive.addFile(f);
+    }
+    final json = utf8.encode(jsonEncode(listed));
+    archive.addFile(ArchiveFile('profiles.json', json.length, json));
+
+    await ProfilesBackup(db, openBox: _plain).prepareRestore(archive)!();
+
+    final suffix = db.profileBox.get('kid')!.boxSuffix;
+    expect(suffix.toLowerCase(), isNot('kid'));
+    expect(suffix, matches(RegExp(r'^[a-z0-9]+$')));
+    expect(await _kidWeights(), isEmpty);
+  });
+
   test('a backup made in another profile is refused there', () async {
     final archive = await exportWithKid(await _device());
     await Hive.close();

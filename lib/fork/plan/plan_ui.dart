@@ -11,19 +11,20 @@ import 'package:opennutritracker/fork/units/energy_text.dart';
 final _log = Logger('PlannedFoodsCard');
 
 /// Writes one planned food to the diary; upstream's meal detail add in
-/// the app.
+/// the app. False when it was not written (a profile switch).
 typedef LogPlannedFood =
-    Future<void> Function(BuildContext context, PlannedFood food);
+    Future<bool> Function(BuildContext context, PlannedFood food);
 
-Future<void> _logWithMealDetail(BuildContext context, PlannedFood food) =>
-    locator<MealDetailBloc>().addIntake(
+Future<bool> _logWithMealDetail(BuildContext context, PlannedFood food) async =>
+    await locator<MealDetailBloc>().addIntake(
       context,
       food.unit,
       food.amountText,
       food.type,
       food.meal,
       food.day,
-    );
+    ) !=
+    null;
 
 /// Protein, carbs and fat of [foods] in grams: each food's planned energy
 /// split by its figures per 100 (both scale with the amount alike); a food
@@ -104,7 +105,8 @@ class _PlannedFoodsCardState extends State<PlannedFoodsCard> {
     try {
       for (final food in foods) {
         if (!mounted) return;
-        await widget.log(context, food);
+        // Not written (a profile switch): it and the rest stay planned.
+        if (!await widget.log(context, food)) break;
         await _store.remove(food.id);
       }
       refreshAfterLogging();

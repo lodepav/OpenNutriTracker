@@ -10,6 +10,9 @@ import 'package:opennutritracker/core/domain/usecase/get_kcal_goal_usecase.dart'
 import 'package:opennutritracker/core/domain/usecase/get_macro_goal_usecase.dart';
 import 'package:opennutritracker/core/utils/json_meal_importer.dart';
 import 'package:opennutritracker/core/utils/tracked_day_lock.dart';
+// [fork] S67 weekday-targets: a row made for another day
+import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
+// [/fork]
 
 /// Outcome of a JSON-paste import. [imported] is the number of entries
 /// written to the diary; [savedAsCustomMeals] is how many of those entries
@@ -144,7 +147,12 @@ class ImportMealsJsonUsecase {
   Future<void> _ensureTrackedDay(DateTime day) async {
     final hasTrackedDay = await _addTrackedDayUsecase.hasTrackedDay(day);
     if (hasTrackedDay) return;
-    final totalKcalGoal = await _getKcalGoalUsecase.getKcalGoal();
+    // [fork] S67 weekday-targets: the weekday of the imported day
+    final totalKcalGoal = await forkGoalOnDay(
+      await _getKcalGoalUsecase.getKcalGoal(),
+      day,
+    );
+    // [/fork]
     final totalCarbsGoal = await _getMacroGoalUsecase.getCarbsGoal(
       totalKcalGoal,
     );

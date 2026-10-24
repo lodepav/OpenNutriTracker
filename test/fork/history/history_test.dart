@@ -155,6 +155,16 @@ void main() {
     expect(file.weightsKg, isEmpty); // "Gewicht" is no weight header
   });
 
+  test('a scale weight column is the weight', () {
+    final file = readHistory(
+      readTables(
+        'scale.csv',
+        _bytes('Date,Calories,Scale Weight (kg)\n2024-01-01,2000,80.4\n'),
+      ),
+    );
+    expect(file.weightsKg, {DateTime(2024, 1, 1): 80.4});
+  });
+
   test('nothing to read gives an empty history', () {
     expect(
       readHistory(readTables('x.csv', _bytes('Name,Value\nA,1\n'))).isEmpty,
@@ -194,7 +204,7 @@ void main() {
       expect(entry.id, 'history-2026-10-20-day');
       expect(entry.totalKcal, 2000);
       expect(entry.totalProteinsGram, 150);
-      expect(entry.dateTime, DateTime(2026, 10, 20, 12));
+      expect(entry.dateTime, DateTime(2026, 10, 20));
       expect(entry.meal.name, 'Day logged in MacroFactor');
       expect(plan.weights.map((w) => w.date), [
         DateTime(2026, 10, 20),

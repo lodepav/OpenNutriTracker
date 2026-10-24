@@ -332,9 +332,6 @@ class _EditMealScreenState extends State<EditMealScreen> {
     _lastRenderedUsesKj = usesKj;
   }
 
-  /// Convert a stored kcal value into the string the user should see in
-  /// the energy field, given the active unit. One decimal place is
-  /// plenty for an input field; saving rounds back to kcal anyway.
   // [fork] S29 label-scan: what the label printed replaces the field; the
   // rest is left as typed. Label values are per 100, so the form goes to
   // advanced with base 100.
@@ -347,8 +344,18 @@ class _EditMealScreenState extends State<EditMealScreen> {
     setState(() {
       put(_nameTextController, reading.name);
       put(_brandsTextController, reading.brand);
-      put(_barcodeTextController, reading.barcode);
-      put(_servingQuantityTextController, reading.servingGrams?.toStringOrEmpty());
+      // A barcode the scanner read is kept over the model's reading of it.
+      if (_barcodeTextController.text.trim().isEmpty) {
+        put(_barcodeTextController, reading.barcode);
+      }
+      // The serving field is edited in oz or fl oz with imperial units.
+      final servingGrams = reading.servingGrams?.toStringOrEmpty();
+      put(
+        _servingQuantityTextController,
+        servingGrams == null || !_usesImperialUnits
+            ? servingGrams
+            : _convertToImperial(servingGrams, selectedUnit ?? 'g'),
+      );
       if (per100['energyKcal'] case final kcal?) {
         _kcalTextController.text = _formatStoredKcalForDisplay(kcal, usesKj);
       }
@@ -370,6 +377,8 @@ class _EditMealScreenState extends State<EditMealScreen> {
         put(controller, per100[key]?.toStringOrEmpty());
       }
       if (per100.isNotEmpty) {
+        // Per 100, not totals for the meal size.
+        _isTotal = false;
         _baseQuantityTextController.text = '100';
         _formMode = CustomMealFormMode.advanced;
       }
@@ -381,6 +390,9 @@ class _EditMealScreenState extends State<EditMealScreen> {
   }
   // [/fork]
 
+  /// Convert a stored kcal value into the string the user should see in
+  /// the energy field, given the active unit. One decimal place is
+  /// plenty for an input field; saving rounds back to kcal anyway.
   String _formatStoredKcalForDisplay(double? storedKcal, bool usesKj) {
     if (storedKcal == null) return "";
     final display = usesKj ? UnitCalc.kcalToKj(storedKcal) : storedKcal;

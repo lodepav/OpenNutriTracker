@@ -24,6 +24,9 @@ import 'package:opennutritracker/core/utils/scoped_hive_db_provider.dart';
 // [fork] S16 adaptive-profiles
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 // [/fork]
+// [fork] S69 weekday-targets
+import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
+// [/fork]
 import 'package:opennutritracker/core/utils/tracked_day_lock.dart';
 import 'package:opennutritracker/core/utils/tracked_day_reconciler.dart';
 
@@ -123,13 +126,27 @@ class SendIntakeToProfilesUsecase {
       // already in its goal, and counts it twice (#1317). Held across the
       // copies too, so no boundary move lands in between.
       await withTrackedDayLock(() async {
-        await ensureTrackedDaysMatchEntries(scoped, ConfigDataSource(scoped));
+        await ensureTrackedDaysMatchEntries(
+          scoped,
+          ConfigDataSource(scoped),
+          // [fork] S68 adaptive-target: that profile's target
+          adaptiveStore: AdaptiveStore.forProfile(_hiveDBProvider, suffix),
+          // [/fork]
+        );
         await _copyIntakes(
           intakes,
           intakeRepository,
           addTrackedDay,
           getKcalGoal,
           getMacroGoal,
+          // [fork] S69 weekday-targets: that profile's shift, for the copy's day
+          (goal, day) => forkGoalOnDay(
+            goal,
+            day,
+            store: AdaptiveStore.forProfile(_hiveDBProvider, suffix),
+            config: configRepository.getConfig,
+          ),
+          // [/fork]
         );
       });
     } finally {
@@ -147,6 +164,9 @@ class SendIntakeToProfilesUsecase {
     AddTrackedDayUsecase addTrackedDay,
     GetKcalGoalUsecase getKcalGoal,
     GetMacroGoalUsecase getMacroGoal,
+    // [fork] S69 weekday-targets
+    Future<double> Function(double goal, DateTime day) goalOnDay,
+    // [/fork]
   ) async {
     for (final intake in intakes) {
       final copy = IntakeEntity(
@@ -161,7 +181,9 @@ class SendIntakeToProfilesUsecase {
 
       final day = copy.dateTime;
       if (!await addTrackedDay.hasTrackedDay(day)) {
-        final kcalGoal = await getKcalGoal.getKcalGoal();
+        // [fork] S69 weekday-targets: a row for another day
+        final kcalGoal = await goalOnDay(await getKcalGoal.getKcalGoal(), day);
+        // [/fork]
         await addTrackedDay.addNewTrackedDayIfAbsent(
           day,
           kcalGoal,

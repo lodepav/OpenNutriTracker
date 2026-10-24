@@ -37,6 +37,7 @@ import 'package:opennutritracker/core/data/repository/user_activity_repository.d
 import 'package:opennutritracker/core/data/repository/water_intake_repository.dart';
 import 'package:opennutritracker/core/data/repository/weight_log_repository.dart';
 import 'package:opennutritracker/core/utils/hive_db_provider.dart';
+import 'package:opennutritracker/core/utils/id_generator.dart';
 import 'package:opennutritracker/core/utils/tracked_day_reconciler.dart';
 import 'package:opennutritracker/core/utils/user_image_storage.dart';
 import 'package:opennutritracker/features/fasting/data/data_source/fasting_data_source.dart';
@@ -207,18 +208,26 @@ class ProfilesBackup {
 
   /// The device's profile for [backup]: the one with its id, or a new one
   /// under that id, keeping its box suffix unless it is empty (the device's
-  /// first profile owns that) or taken.
+  /// first profile owns that), taken, or not the form the app makes.
   Future<ProfileDBO> _ensureProfile(ProfileDBO backup) async {
     final existing = _profiles.getProfile(backup.id);
     if (existing != null) return existing;
-    final taken = {for (final p in _profiles.getAllProfiles()) p.boxSuffix};
+    // Hive lowercases box names: a suffix differing only in case is taken.
+    final taken = {
+      for (final p in _profiles.getAllProfiles()) p.boxSuffix.toLowerCase(),
+    };
+    bool usable(String suffix) =>
+        RegExp(r'^[a-z0-9]{1,64}$').hasMatch(suffix) && !taken.contains(suffix);
+    final fromId = backup.id.replaceAll('-', '').toLowerCase();
     final created = ProfileDBO(
       id: backup.id,
       name: backup.name,
       createdAt: backup.createdAt,
-      boxSuffix: backup.boxSuffix.isEmpty || taken.contains(backup.boxSuffix)
-          ? backup.id.replaceAll('-', '')
-          : backup.boxSuffix,
+      boxSuffix: usable(backup.boxSuffix)
+          ? backup.boxSuffix
+          : usable(fromId)
+          ? fromId
+          : IdGenerator.getUniqueID().replaceAll('-', ''),
     );
     await _profiles.saveProfile(created);
     return created;
@@ -348,6 +357,9 @@ class ProfilesBackup {
             importedDayKeys: importedDayKeys,
             importedActivities: importedActivities,
             keyedByOffsetMinutes: keyedByOffsetMinutes,
+            adaptiveStore: AdaptiveStore.otherProfile(
+              () => open<dynamic>(AdaptiveStore.boxName, profile.boxSuffix),
+            ),
           ),
       forkExtras: _extras(scope, profile, open),
     );

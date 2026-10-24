@@ -127,8 +127,10 @@ void main() {
     expect(find.text('Entry deleted'), findsOneWidget);
     await tester.tap(find.text('Undo'));
     await tester.pumpAndSettle();
-    expect(restored.single.$1, [oats], reason: 'no bar for the overtaken');
-    restored.clear();
+    // The bar up is the old profile's oats: no bar for the overtaken milk,
+    // and the oats are not restored into the new profile.
+    expect(restored, isEmpty);
+    expect(find.text('Not restored: the profile changed.'), findsOneWidget);
 
     final after = ProfileStamp.now();
     DeletedEntries.show(

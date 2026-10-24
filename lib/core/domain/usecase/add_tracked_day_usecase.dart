@@ -1,4 +1,7 @@
 import 'package:opennutritracker/core/data/repository/tracked_day_repository.dart';
+// [fork] S62 adaptive-target: activities leave a fork target's goal alone
+import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
+// [/fork]
 
 class AddTrackedDayUsecase {
   final TrackedDayRepository _trackedDayRepository;
@@ -10,10 +13,16 @@ class AddTrackedDayUsecase {
   }
 
   Future<void> increaseDayCalorieGoal(DateTime day, double amount) async {
+    // [fork] S62 adaptive-target: the target leaves activities out (D13)
+    if (await forkGoalIgnoresActivities(day)) return;
+    // [/fork]
     await _trackedDayRepository.increaseDayCalorieGoal(day, amount);
   }
 
   Future<void> reduceDayCalorieGoal(DateTime day, double amount) async {
+    // [fork] S62 adaptive-target: the target leaves activities out (D13)
+    if (await forkGoalIgnoresActivities(day)) return;
+    // [/fork]
     await _trackedDayRepository.reduceDayCalorieGoal(day, amount);
   }
 
@@ -91,6 +100,9 @@ class AddTrackedDayUsecase {
     double? fatAmount,
     double? proteinAmount,
   }) async {
+    // [fork] S62 adaptive-target: the target leaves activities out (D13)
+    if (await forkGoalIgnoresActivities(day)) return;
+    // [/fork]
     await _trackedDayRepository.increaseDayMacroGoal(
       day,
       carbGoal: carbsAmount,
@@ -105,6 +117,9 @@ class AddTrackedDayUsecase {
     double? fatAmount,
     double? proteinAmount,
   }) async {
+    // [fork] S62 adaptive-target: the target leaves activities out (D13)
+    if (await forkGoalIgnoresActivities(day)) return;
+    // [/fork]
     await _trackedDayRepository.reduceDayMacroGoal(
       day,
       carbGoal: carbsAmount,
