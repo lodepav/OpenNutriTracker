@@ -220,6 +220,333 @@
         ["fdc_sr_legacy", "Bread, crumbs, dry, grated, plain", 25],
         ["fdc_sr_legacy", "Oil, sunflower, linoleic (less than 60%)", 15]
       ]
+    },
+    {
+      "code": "pork-chop-cheese",
+      "name": "Pork chop with cheese, baked (karbonāde ar sieru, pork cutlet with melted cheese, pork with cheese and tomato)",
+      "basis": "A Latvian canteen favourite: a pork loin chop baked under tomato, onion, mayonnaise and a cheese cap; cooking loses about a quarter of the meat's weight.",
+      "yield_g": 195,
+      "serving": ["1 chop", 195],
+      "ingredients": [
+        ["fdc_sr_legacy", "Pork, fresh, loin, center loin (chops), boneless, separable lean and fat, raw", 150],
+        ["fdc_sr_legacy", "Cheese, edam", 30],
+        ["fdc_sr_legacy", "Tomatoes, red, ripe, raw, year round average", 30],
+        ["fdc_sr_legacy", "Onions, raw", 20],
+        ["fdc_sr_legacy", "Salad dressing, mayonnaise, regular", 10],
+        ["fdc_sr_legacy", "Oil, sunflower, linoleic (less than 60%)", 5]
+      ]
+    },
+    {
+      "code": "chicken-teriyaki",
+      "name": "Chicken teriyaki (teriyaki chicken)",
+      "basis": "Chicken thigh pan-fried and glazed in teriyaki sauce with ginger and garlic, as common recipes make it; without the rice.",
+      "yield_g": 460,
+      "serving": ["1 plate", 200],
+      "ingredients": [
+        ["fdc_sr_legacy", "Chicken, broilers or fryers, dark meat, thigh, meat only, raw", 500],
+        ["fdc_sr_legacy", "Sauce, teriyaki, ready-to-serve", 80],
+        ["fdc_sr_legacy", "Sugars, granulated", 10],
+        ["fdc_sr_legacy", "Oil, sunflower, linoleic (less than 60%)", 10],
+        ["fdc_sr_legacy", "Ginger root, raw", 5],
+        ["fdc_sr_legacy", "Garlic, raw", 5]
+      ]
+    },
+    {
+      "code": "chicken-shawarma",
+      "name": "Shawarma, chicken, wrap (chicken shawarma, chicken gyros, shawarma wrap)",
+      "basis": "One wrap as the kebab shops make it: grilled chicken thigh in flatbread with cabbage, tomato, cucumber and a garlic sauce of mayonnaise and yogurt.",
+      "yield_g": 315,
+      "serving": ["1 wrap", 315],
+      "ingredients": [
+        ["fdc_sr_legacy", "Bread, pita, white, enriched", 80],
+        ["fdc_sr_legacy", "Chicken, broilers or fryers, dark meat, thigh, meat only, raw", 150],
+        ["fdc_sr_legacy", "Cabbage, raw", 30],
+        ["fdc_sr_legacy", "Tomatoes, red, ripe, raw, year round average", 30],
+        ["fdc_sr_legacy", "Cucumber, with peel, raw", 20],
+        ["fdc_sr_legacy", "Salad dressing, mayonnaise, regular", 20],
+        ["fdc_sr_legacy", "Yogurt, plain, whole milk", 20],
+        ["fdc_sr_legacy", "Oil, sunflower, linoleic (less than 60%)", 5]
+      ]
+    },
+    {
+      "code": "pork-shashlik",
+      "name": "Shashlik, pork (šašliks, pork kebab, pork skewers)",
+      "basis": "Pork shoulder marinated with onion and vinegar and grilled on skewers, as common Latvian and Russian recipes make it; grilling loses about a quarter of the meat's weight, and half the onion is eaten.",
+      "yield_g": 850,
+      "serving": ["1 skewer", 200],
+      "ingredients": [
+        ["fdc_sr_legacy", "Pork, fresh, shoulder, whole, separable lean and fat, raw", 1000],
+        ["fdc_sr_legacy", "Onions, raw", 100],
+        ["fdc_sr_legacy", "Vinegar, distilled", 30],
+        ["fdc_sr_legacy", "Oil, sunflower, linoleic (less than 60%)", 20]
+      ]
+    },
+    {
+      "code": "butter-chicken",
+      "name": "Butter chicken (murgh makhani, chicken makhani, chicken tikka masala)",
+      "basis": "Chicken thigh marinated in yogurt, simmered in tomato with butter, cream, onion, garlic, ginger and spices, as common recipes make it; without the rice. Tikka masala is close enough to answer to it.",
+      "yield_g": 1100,
+      "serving": ["1 plate", 250],
+      "ingredients": [
+        ["fdc_sr_legacy", "Chicken, broilers or fryers, dark meat, thigh, meat only, raw", 600],
+        ["fdc_sr_legacy", "Yogurt, plain, whole milk", 100],
+        ["fdc_sr_legacy", "Butter, salted", 50],
+        ["fdc_sr_legacy", "Cream, fluid, heavy whipping", 100],
+        ["fdc_sr_legacy", "Tomatoes, red, ripe, canned, packed in tomato juice", 400],
+        ["fdc_sr_legacy", "Onions, raw", 100],
+        ["fdc_sr_legacy", "Garlic, raw", 15],
+        ["fdc_sr_legacy", "Ginger root, raw", 15],
+        ["fdc_sr_legacy", "Spices, curry powder", 10],
+        ["fdc_sr_legacy", "Sugars, granulated", 10]
+      ]
+    },
+    {
+      "code": "thai-green-curry",
+      "name": "Thai green curry, chicken (gaeng keow wan, green curry, thai curry)",
+      "basis": "Chicken in coconut milk with eggplant, bamboo shoots and basil, seasoned with fish sauce and sugar, as common recipes make it; fresh chili, garlic and ginger stand in for the paste. Without the rice.",
+      "yield_g": 1100,
+      "serving": ["1 bowl", 300],
+      "ingredients": [
+        ["fdc_sr_legacy", "Chicken, broiler or fryers, breast, skinless, boneless, meat only, raw", 400],
+        ["fdc_sr_legacy", "Nuts, coconut milk, canned (liquid expressed from grated meat and water)", 400],
+        ["fdc_sr_legacy", "Eggplant, raw", 150],
+        ["fdc_sr_legacy", "Bamboo shoots, canned, drained solids", 100],
+        ["fdc_sr_legacy", "Peppers, hot chili, red, raw", 20],
+        ["fdc_sr_legacy", "Garlic, raw", 10],
+        ["fdc_sr_legacy", "Ginger root, raw", 10],
+        ["fdc_sr_legacy", "Basil, fresh", 10],
+        ["fdc_sr_legacy", "Sauce, fish, ready-to-serve", 20],
+        ["fdc_sr_legacy", "Sugars, granulated", 10],
+        ["fdc_sr_legacy", "Oil, sunflower, linoleic (less than 60%)", 15]
+      ]
+    },
+    {
+      "code": "liver-patties",
+      "name": "Liver patties, beef (aknu pankūkas, liver pancakes, liver fritters)",
+      "basis": "Minced beef liver with onion, egg and flour, fried by the spoonful, as common Latvian and Russian recipes make them; frying loses about a sixth of the weight.",
+      "yield_g": 630,
+      "serving": ["1 patty", 60],
+      "ingredients": [
+        ["fdc_sr_legacy", "Beef, variety meats and by-products, liver, raw", 500],
+        ["fdc_sr_legacy", "Onions, raw", 100],
+        ["fdc_sr_legacy", "Egg, whole, raw, fresh", 50],
+        ["fdc_sr_legacy", "Wheat flour, white, all-purpose, enriched, unbleached", 50],
+        ["fdc_sr_legacy", "Oil, sunflower, linoleic (less than 60%)", 40]
+      ]
+    },
+    {
+      "code": "kimchi-pancake",
+      "name": "Kimchi pancake (kimchijeon, kimchi jeon)",
+      "basis": "Chopped kimchi in a flour and egg batter with scallions, pan-fried, as common recipes make it; the batter's water makes up the weight, less a tenth in frying.",
+      "yield_g": 470,
+      "serving": ["1 pancake", 235],
+      "ingredients": [
+        ["fdc_sr_legacy", "Cabbage, kimchi", 200],
+        ["fdc_sr_legacy", "Wheat flour, white, all-purpose, enriched, unbleached", 100],
+        ["fdc_sr_legacy", "Egg, whole, raw, fresh", 50],
+        ["fdc_sr_legacy", "Onions, spring or scallions (includes tops and bulb), raw", 20],
+        ["fdc_sr_legacy", "Oil, sunflower, linoleic (less than 60%)", 30]
+      ]
+    },
+    {
+      "code": "fish-cutlets",
+      "name": "Fish cutlets, fried (zivju kotletes, fish patties, fish cakes)",
+      "basis": "Minced white fish with onion, egg and breadcrumbs, fried, as common Latvian and Russian recipes make them; frying loses about a sixth of the weight.",
+      "yield_g": 640,
+      "serving": ["1 cutlet", 80],
+      "ingredients": [
+        ["fdc_sr_legacy", "Fish, pollock, Alaska, raw", 500],
+        ["fdc_sr_legacy", "Onions, raw", 100],
+        ["fdc_sr_legacy", "Egg, whole, raw, fresh", 50],
+        ["fdc_sr_legacy", "Bread, crumbs, dry, grated, plain", 60],
+        ["fdc_sr_legacy", "Oil, sunflower, linoleic (less than 60%)", 40]
+      ]
+    },
+    {
+      "code": "caesar-wrap",
+      "name": "Caesar wrap, chicken (chicken caesar wrap)",
+      "basis": "One wrap: a flour tortilla with roast chicken, romaine, parmesan and caesar dressing, as the cafés make it.",
+      "yield_g": 255,
+      "serving": ["1 wrap", 255],
+      "ingredients": [
+        ["fdc_sr_legacy", "Tortillas, ready-to-bake or -fry, flour, refrigerated", 70],
+        ["fdc_sr_legacy", "Chicken, broilers or fryers, breast, meat only, cooked, roasted", 100],
+        ["fdc_sr_legacy", "Lettuce, cos or romaine, raw", 50],
+        ["fdc_sr_legacy", "Cheese, parmesan, grated", 10],
+        ["fdc_sr_legacy", "Salad dressing, caesar dressing, regular", 25]
+      ]
+    },
+    {
+      "code": "rassolnik",
+      "name": "Rassolnik, pickle soup with barley (rasolnik, rasoļņiks)",
+      "basis": "Russian rassolnik: https://en.wikipedia.org/wiki/Rassolnik and common recipes: beef broth with pearl barley, pickled cucumbers, potato, carrot and onion, about 1.8 l of water.",
+      "yield_g": 2400,
+      "serving": ["1 bowl", 350],
+      "ingredients": [
+        ["fdc_sr_legacy", "Beef, chuck eye Country-Style ribs, boneless, separable lean and fat, trimmed to 0\" fat, all grades, raw", 300],
+        ["fdc_sr_legacy", "Barley, pearled, raw", 80],
+        ["fdc_sr_legacy", "Pickles, cucumber, dill or kosher dill", 200],
+        ["fdc_sr_legacy", "Potatoes, flesh and skin, raw", 300],
+        ["fdc_sr_legacy", "Carrots, raw", 80],
+        ["fdc_sr_legacy", "Onions, raw", 80],
+        ["fdc_sr_legacy", "Oil, sunflower, linoleic (less than 60%)", 15]
+      ]
+    },
+    {
+      "code": "olivier-salad",
+      "name": "Olivier salad (Russian salad, salat olivye, rasols)",
+      "basis": "Olivier salad: https://en.wikipedia.org/wiki/Olivier_salad and common recipes: boiled potato, carrot and egg with pickles, peas, boiled sausage and onion in mayonnaise. Latvian rasols is the same salad.",
+      "yield_g": 1180,
+      "serving": ["1 bowl", 150],
+      "ingredients": [
+        ["fdc_sr_legacy", "Potatoes, boiled, cooked without skin, flesh, without salt", 300],
+        ["fdc_sr_legacy", "Carrots, cooked, boiled, drained, without salt", 100],
+        ["fdc_sr_legacy", "Egg, whole, cooked, hard-boiled", 150],
+        ["fdc_sr_legacy", "Pickles, cucumber, dill or kosher dill", 150],
+        ["fdc_sr_legacy", "Peas, green, canned, drained solids, rinsed in tap water", 100],
+        ["fdc_sr_legacy", "Bologna, beef and pork", 200],
+        ["fdc_sr_legacy", "Salad dressing, mayonnaise, regular", 150],
+        ["fdc_sr_legacy", "Onions, raw", 30]
+      ]
+    },
+    {
+      "code": "japchae",
+      "name": "Japchae, glass noodles with beef and vegetables (chapchae)",
+      "basis": "Korean japchae: https://en.wikipedia.org/wiki/Japchae and common recipes: sweet potato glass noodles (mung bean ones stand in) with beef, spinach, carrot, onion and mushrooms in soy sauce, sesame oil and sugar; the noodles take up twice their weight in water.",
+      "yield_g": 960,
+      "serving": ["1 plate", 250],
+      "ingredients": [
+        ["fdc_sr_legacy", "Noodles, chinese, cellophane or long rice (mung beans), dehydrated", 150],
+        ["fdc_sr_legacy", "Beef, round, top round, steak, separable lean only, trimmed to 1/8\" fat, all grades, raw", 150],
+        ["fdc_sr_legacy", "Spinach, raw", 150],
+        ["fdc_sr_legacy", "Carrots, raw", 70],
+        ["fdc_sr_legacy", "Onions, raw", 80],
+        ["fdc_sr_legacy", "Mushrooms, white, raw", 100],
+        ["fdc_sr_legacy", "Soy sauce made from soy and wheat (shoyu)", 40],
+        ["fdc_sr_legacy", "Oil, sesame, salad or cooking", 20],
+        ["fdc_sr_legacy", "Sugars, granulated", 15],
+        ["fdc_sr_legacy", "Oil, sunflower, linoleic (less than 60%)", 10]
+      ]
+    },
+    {
+      "code": "chicken-saganaki",
+      "name": "Chicken saganaki, with tomato and feta",
+      "basis": "Chicken breast baked in tomato with onion, garlic and olive oil under feta, as Greek recipes make it; the sauce reduces by about a quarter.",
+      "yield_g": 800,
+      "serving": ["1 plate", 300],
+      "ingredients": [
+        ["fdc_sr_legacy", "Chicken, broiler or fryers, breast, skinless, boneless, meat only, raw", 400],
+        ["fdc_sr_legacy", "Tomatoes, red, ripe, canned, packed in tomato juice", 400],
+        ["fdc_sr_legacy", "Cheese, feta", 100],
+        ["fdc_sr_legacy", "Onions, raw", 80],
+        ["fdc_sr_legacy", "Oil, olive, salad or cooking", 20],
+        ["fdc_sr_legacy", "Garlic, raw", 10]
+      ]
+    },
+    {
+      "code": "okroshka",
+      "name": "Okroshka, cold kefir soup (okroška)",
+      "basis": "Okroshka: https://en.wikipedia.org/wiki/Okroshka made with kefir, as common recipes make it: boiled potato and egg, cucumber, radish, boiled sausage, dill and scallions, with sour cream.",
+      "yield_g": 1835,
+      "serving": ["1 bowl", 350],
+      "ingredients": [
+        ["bls", "Kefir, min. 3.5 % fat", 1000],
+        ["fdc_sr_legacy", "Potatoes, boiled, cooked without skin, flesh, without salt", 200],
+        ["fdc_sr_legacy", "Cucumber, with peel, raw", 200],
+        ["fdc_sr_legacy", "Radishes, raw", 100],
+        ["fdc_sr_legacy", "Egg, whole, cooked, hard-boiled", 100],
+        ["fdc_sr_legacy", "Bologna, beef and pork", 150],
+        ["fdc_sr_legacy", "Dill weed, fresh", 15],
+        ["fdc_sr_legacy", "Onions, spring or scallions (includes tops and bulb), raw", 20],
+        ["fdc_sr_legacy", "Sour cream, reduced fat", 50]
+      ]
+    },
+    {
+      "code": "lamb-biryani",
+      "name": "Biryani, lamb (lamb biryani)",
+      "basis": "Lamb marinated in yogurt and spices, layered with basmati rice and fried onion, as common recipes make it; rice takes up twice its weight in water.",
+      "yield_g": 1550,
+      "serving": ["1 plate", 350],
+      "ingredients": [
+        ["fdc_sr_legacy", "Lamb, shoulder, whole (arm and blade), separable lean and fat, trimmed to 1/4\" fat, choice, raw", 500],
+        ["fdc_sr_legacy", "Rice, white, long-grain, regular, raw, enriched", 300],
+        ["fdc_sr_legacy", "Yogurt, plain, whole milk", 150],
+        ["fdc_sr_legacy", "Onions, raw", 200],
+        ["fdc_sr_legacy", "Oil, sunflower, linoleic (less than 60%)", 50],
+        ["fdc_sr_legacy", "Butter, salted", 20],
+        ["fdc_sr_legacy", "Ginger root, raw", 10],
+        ["fdc_sr_legacy", "Garlic, raw", 10],
+        ["fdc_sr_legacy", "Spices, curry powder", 10]
+      ]
+    },
+    {
+      "code": "honey-cake",
+      "name": "Honey cake, layered (medovik, medus kūka)",
+      "basis": "Medovik: https://en.wikipedia.org/wiki/Medovik and common recipes: thin honey sponge layers with a sour cream and sugar filling; baking loses about a tenth of the dough.",
+      "yield_g": 1805,
+      "serving": ["1 slice", 120],
+      "ingredients": [
+        ["fdc_sr_legacy", "Wheat flour, white, all-purpose, enriched, unbleached", 450],
+        ["fdc_sr_legacy", "Honey", 100],
+        ["fdc_sr_legacy", "Sugars, granulated", 300],
+        ["fdc_sr_legacy", "Butter, salted", 100],
+        ["fdc_sr_legacy", "Egg, whole, raw, fresh", 150],
+        ["fdc_sr_legacy", "Sour cream, reduced fat", 800],
+        ["fdc_sr_legacy", "Leavening agents, baking soda", 5]
+      ]
+    },
+    {
+      "code": "pork-bulgogi",
+      "name": "Bulgogi, pork, spicy (jeyuk bokkeum, dwaeji bulgogi, pork bulgogi)",
+      "basis": "Korean spicy pork: pork shoulder stir-fried with onion in a chili, soy, sugar, garlic and sesame sauce, as common recipes make it; sriracha stands in for gochujang. Without the rice.",
+      "yield_g": 600,
+      "serving": ["1 plate", 200],
+      "ingredients": [
+        ["fdc_sr_legacy", "Pork, fresh, shoulder, whole, separable lean and fat, raw", 500],
+        ["fdc_sr_legacy", "Onions, raw", 150],
+        ["fdc_sr_legacy", "Sauce, hot chile, sriracha", 40],
+        ["fdc_sr_legacy", "Soy sauce made from soy and wheat (shoyu)", 30],
+        ["fdc_sr_legacy", "Sugars, granulated", 20],
+        ["fdc_sr_legacy", "Garlic, raw", 10],
+        ["fdc_sr_legacy", "Ginger root, raw", 5],
+        ["fdc_sr_legacy", "Oil, sesame, salad or cooking", 10],
+        ["fdc_sr_legacy", "Oil, sunflower, linoleic (less than 60%)", 10]
+      ]
+    },
+    {
+      "code": "korean-fried-chicken",
+      "name": "Korean fried chicken, glazed wings (yangnyeom chicken)",
+      "basis": "Chicken wings in cornstarch, double-fried and glazed in a sweet chili sauce of ketchup, sriracha (for gochujang), sugar, soy sauce, honey and garlic, as common recipes make them; oil is what they take up.",
+      "yield_g": 1080,
+      "serving": ["1 wing", 45],
+      "ingredients": [
+        ["fdc_sr_legacy", "Chicken, broilers or fryers, wing, meat and skin, raw", 1000],
+        ["fdc_sr_legacy", "Cornstarch", 60],
+        ["fdc_sr_legacy", "Oil, sunflower, linoleic (less than 60%)", 80],
+        ["fdc_sr_legacy", "Catsup", 60],
+        ["fdc_sr_legacy", "Sauce, hot chile, sriracha", 30],
+        ["fdc_sr_legacy", "Sugars, granulated", 40],
+        ["fdc_sr_legacy", "Soy sauce made from soy and wheat (shoyu)", 20],
+        ["fdc_sr_legacy", "Honey", 30],
+        ["fdc_sr_legacy", "Garlic, raw", 10]
+      ]
+    },
+    {
+      "code": "chili-con-carne",
+      "name": "Chili con carne, homemade (chilli con carne)",
+      "basis": "Ground beef with kidney beans, tomatoes, onion and sweet pepper, spiced with chili, as common recipes make it; simmering reduces it by about a tenth. Without the rice.",
+      "yield_g": 1300,
+      "serving": ["1 bowl", 300],
+      "ingredients": [
+        ["fdc_sr_legacy", "Beef, ground, 80% lean meat / 20% fat, raw", 500],
+        ["fdc_sr_legacy", "Beans, kidney, red, mature seeds, canned, drained solids", 400],
+        ["fdc_sr_legacy", "Tomatoes, red, ripe, canned, packed in tomato juice", 400],
+        ["fdc_sr_legacy", "Onions, raw", 150],
+        ["fdc_sr_legacy", "Peppers, sweet, red, raw", 100],
+        ["fdc_sr_legacy", "Oil, sunflower, linoleic (less than 60%)", 15],
+        ["fdc_sr_legacy", "Spices, chili powder", 10],
+        ["fdc_sr_legacy", "Garlic, raw", 10]
+      ]
     }
   ]
 }
