@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
+import 'package:opennutritracker/fork/units/energy_text.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 
 class DailyKcalOverview extends StatelessWidget {
@@ -68,10 +69,12 @@ class DailyKcalOverview extends StatelessWidget {
           ),
           const SizedBox(height: Dimens.spacing8),
           Text(
+            // [fork] S83 truncated, as every other screen, in kcal or kJ
             S.of(context).mealDetailDayTotalLabel(
-                  projected.toInt().toString(), // [fork] S83 truncated, as every other screen
-                  dayKcalGoal.toInt().toString(), // [fork] S83 truncated, as every other screen
+                  energyValue(context, projected).toString(),
+                  energyText(context, dayKcalGoal),
                 ),
+            // [/fork]
             style: textTheme.labelLarge?.copyWith(
               color: accent,
               fontWeight: FontWeight.w700,
@@ -81,9 +84,14 @@ class DailyKcalOverview extends StatelessWidget {
           if (hasLiveSelection) ...[
             const SizedBox(height: Dimens.spacing4),
             Text(
-              S.of(context).mealDetailCurrentSelectionLabel(
-                    currentSelectionKcal.toInt().toString(), // [fork] S83 truncated, as every other screen
-                  ),
+              // [fork] S83 truncated, as every other screen, in kcal or kJ
+              inEnergyUnit(
+                context,
+                S.of(context).mealDetailCurrentSelectionLabel(
+                  energyValue(context, currentSelectionKcal).toString(),
+                ),
+              ),
+              // [/fork]
               style: textTheme.labelSmall?.copyWith(color: palette.textMuted),
               textAlign: TextAlign.center,
             ),
