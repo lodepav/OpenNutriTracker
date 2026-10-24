@@ -50,4 +50,26 @@ void main() {
     expect(changes[14], closeTo(-1.4, 1e-9));
     expect(trendChanges(const [90]), isEmpty);
   });
+
+  group('milestones', () {
+    test('round weights every step, nearest first, not the one reached', () {
+      expect(milestonesKg(90.4, 80, 2), [90, 88, 86, 84, 82]);
+      expect(milestonesKg(90.05, 84, 2), [88, 86]);
+      expect(milestonesKg(90, 80, 5), [85]);
+      expect(milestonesKg(60.2, 66, 2), [62, 64]);
+    });
+
+    test('in pounds, round pounds', () {
+      final lb = milestonesKg(90, 80, 5, perKg: 2.20462);
+      expect(
+        [for (final kg in lb) (kg * 2.20462).round()],
+        [195, 190, 185, 180],
+      );
+    });
+
+    test('none at the target or past it', () {
+      expect(milestonesKg(80.05, 80, 1), isEmpty);
+      expect(milestonesKg(79, 80, 5), isEmpty);
+    });
+  });
 }

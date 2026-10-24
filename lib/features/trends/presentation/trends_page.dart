@@ -134,7 +134,7 @@ class _TrendsView extends StatelessWidget {
                 palette: palette,
               ),
               'goalPlan': GoalPlanCard(palette: palette, unit: state.bodyWeightUnit),
-              'phases': const DietPhasesCard(),
+              'phases': DietPhasesCard(unit: state.bodyWeightUnit),
               'body': BodyMeasurementsCard(
                 rangeDays: state.windowDays,
                 palette: palette,

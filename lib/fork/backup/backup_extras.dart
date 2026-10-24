@@ -128,6 +128,7 @@ class BackupExtras {
         for (final d in await adaptive.skippedDays()) d.toIso8601String(),
       ],
       PhaseStore.planKey: (await _phases().plan())?.toJson(),
+      PhaseStore.milestoneKey: await _phases().milestoneStep(),
     });
     _addJson(archive, planFileName, [
       for (final food in await _plans().all()) food.toJson(),
@@ -182,6 +183,7 @@ class BackupExtras {
     List<CheckInRecord> checkIns,
     List<DateTime> skippedDays,
     PhasePlan? plan,
+    int? milestoneStep,
   })?
   _decodeAdaptive(Archive archive) =>
       _decode(archive, adaptiveFileName, (json) {
@@ -197,6 +199,7 @@ class BackupExtras {
               DateTime.parse(d as String),
           ],
           plan: plan == null ? null : PhasePlan.fromJson(plan),
+          milestoneStep: map[PhaseStore.milestoneKey] as int?,
         );
       });
 
@@ -270,6 +273,9 @@ class BackupExtras {
         await _customMeals.saveCustomMeal(meal);
       }
       if (adaptive?.plan case final plan?) await _phases().save(plan);
+      if (adaptive?.milestoneStep case final step?) {
+        await _phases().saveMilestoneStep(step);
+      }
       if (plans != null) await _plans().merge(plans);
       if (measurements != null) {
         await _measurements().merge(measurements);

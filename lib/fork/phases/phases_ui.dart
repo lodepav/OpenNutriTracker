@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:opennutritracker/core/domain/entity/body_weight_unit_entity.dart';
 import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
+import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
 import 'package:opennutritracker/fork/phases/phases.dart';
+import 'package:opennutritracker/fork/units/weight_text.dart';
 
 String _date(DateTime d) =>
     '${d.year}-${d.month.toString().padLeft(2, '0')}-'
@@ -18,17 +21,35 @@ int _daysBetween(DateTime from, DateTime to) => DateTime.utc(
   to.day,
 ).difference(DateTime.utc(from.year, from.month, from.day)).inDays;
 
-String _phaseText(DietPhase p) =>
-    '${p.kind.label}, ${p.weeks} week${p.weeks == 1 ? '' : 's'} '
-    '${_pace(p.kgPerWeek)}';
+String _weeks(int weeks) => '$weeks week${weeks == 1 ? '' : 's'}';
+
+String _phaseText(DietPhase p, BodyWeightUnit unit) => switch (p.untilKg) {
+  null => '${p.kind.label}, ${_weeks(p.weeks)} ${_pace(p.kgPerWeek)}',
+  final kg =>
+    '${p.kind.label} to ${weightText(kg, unit)}, about ${_weeks(p.weeks)} '
+        '${_pace(p.kgPerWeek)}',
+};
+
+/// ", ~80.0 kg" for a plan that knows the weights, nothing otherwise.
+String _about(double? kg, BodyWeightUnit unit) =>
+    kg == null ? '' : ', ~${weightText(kg, unit)}';
 
 /// Seam S40: diet phases on Trends, the running one and what follows,
-/// and the editor.
+/// and the editor. A new plan starts from the trend weight, read from
+/// [service], so each phase shows the weight it ends at about.
 class DietPhasesCard extends StatefulWidget {
   final PhaseStore? store;
   final DateTime Function() clock;
+  final BodyWeightUnit unit;
+  final AdaptiveService? service;
 
-  const DietPhasesCard({super.key, this.store, this.clock = DateTime.now});
+  const DietPhasesCard({
+    super.key,
+    this.store,
+    this.clock = DateTime.now,
+    this.unit = BodyWeightUnit.kg,
+    this.service,
+  });
 
   @override
   State<DietPhasesCard> createState() => _DietPhasesCardState();
@@ -66,10 +87,27 @@ class _DietPhasesCardState extends State<DietPhasesCard> {
     });
   }
 
+  Future<double?> _nowKg() async {
+    try {
+      return (await (widget.service ?? AdaptiveService.fromLocator())
+              .goalPlan())
+          ?.nowKg;
+    } catch (_) {
+      return null; // No weights: phases by time only.
+    }
+  }
+
   Future<void> _edit(PhasePlan? plan) async {
+    final nowKg = await _nowKg();
+    if (!mounted) return;
     final edited = await Navigator.of(context).push<({PhasePlan? plan})>(
       MaterialPageRoute(
-        builder: (_) => PhasePlanScreen(plan: plan, today: widget.clock()),
+        builder: (_) => PhasePlanScreen(
+          plan: plan,
+          today: widget.clock(),
+          nowKg: nowKg,
+          unit: widget.unit,
+        ),
       ),
     );
     if (edited != null) await _store.save(edited.plan);
@@ -90,6 +128,7 @@ class _DietPhasesCardState extends State<DietPhasesCard> {
 
   Widget _card(BuildContext context, PhasePlan? plan) {
     final theme = Theme.of(context);
+    final unit = widget.unit;
     final now = widget.clock();
     final index = plan?.indexOn(now);
     return AppCard(
@@ -119,23 +158,29 @@ class _DietPhasesCardState extends State<DietPhasesCard> {
             if (index < 0)
               Text('Starts ${_date(plan.start)}')
             else if (index >= plan.phases.length)
-              Text('Ended ${_date(plan.end)}; at maintenance since.')
+              Text(
+                'Ended ${_date(plan.end)}'
+                '${_about(plan.weightAt(plan.phases.length), unit)}; '
+                'at maintenance since.',
+              )
             else ...[
               Text(
-                'Now: ${_phaseText(plan.phases[index])}',
+                'Now: ${_phaseText(plan.phases[index], unit)}',
                 style: const TextStyle(fontWeight: FontWeight.w600),
               ),
               Text(
                 'Week ${_daysBetween(plan.startOf(index), now) ~/ 7 + 1} '
                 'of ${plan.phases[index].weeks}, until '
-                '${_date(plan.startOf(index + 1))}',
+                '${_date(plan.startOf(index + 1))}'
+                '${_about(plan.weightAt(index + 1), unit)}',
               ),
             ],
             const SizedBox(height: Dimens.spacing8),
             for (final (i, p) in plan.phases.indexed)
               if (i > index)
                 Text(
-                  '${_date(plan.startOf(i))}: ${_phaseText(p)}',
+                  '${_date(plan.startOf(i))}: ${_phaseText(p, unit)}'
+                  '${_about(plan.weightAt(i + 1), unit)}',
                   style: theme.textTheme.bodySmall,
                 ),
           ],
@@ -151,7 +196,17 @@ class PhasePlanScreen extends StatefulWidget {
   final PhasePlan? plan;
   final DateTime today;
 
-  const PhasePlanScreen({super.key, this.plan, required this.today});
+  /// The trend weight a new plan starts from; null leaves phases by time.
+  final double? nowKg;
+  final BodyWeightUnit unit;
+
+  const PhasePlanScreen({
+    super.key,
+    this.plan,
+    required this.today,
+    this.nowKg,
+    this.unit = BodyWeightUnit.kg,
+  });
 
   @override
   State<PhasePlanScreen> createState() => _PhasePlanScreenState();
@@ -173,10 +228,68 @@ class _PhasePlanScreenState extends State<PhasePlanScreen> {
     PhaseKind.bulk => 0.25,
   };
 
-  void _set(int i, DietPhase phase) => setState(() => _phases[i] = phase);
+  /// The weight the plan starts from: its own, kept from when it was
+  /// made, or today's trend for a new one.
+  late final double? _startKg = switch (widget.plan) {
+    null => widget.nowKg,
+    // A plan from before weights were kept takes today's, until it runs.
+    final plan when plan.startKg == null && !plan.start.isBefore(_today) =>
+      widget.nowKg,
+    final plan => plan.startKg,
+  };
+
+  DateTime get _today =>
+      DateTime(widget.today.year, widget.today.month, widget.today.day);
+
+  PhasePlan get _plan =>
+      PhasePlan(start: _start, phases: List.of(_phases), startKg: _startKg);
+
+  /// A step of the target weight: half a kilo, or a pound.
+  double get _stepKg => widget.unit == BodyWeightUnit.kg ? 0.5 : 1 / 2.20462;
+
+  double _round(double kg) => (kg / _stepKg).round() * _stepKg;
+
+  String _weight(double kg) => weightText(kg, widget.unit);
+
+  /// Works out again the weeks of each phase to a weight, from the weight
+  /// it now starts at.
+  void _reflow() {
+    for (var i = 0; i < _phases.length; i++) {
+      final p = _phases[i];
+      final until = p.untilKg;
+      final from = _plan.weightAt(i);
+      if (until == null || from == null) continue;
+      _phases[i] = DietPhase(
+        kind: p.kind,
+        kgPerWeek: p.kgPerWeek,
+        weeks: DietPhase.weeksTo(from, until, p.kgPerWeek),
+        untilKg: until,
+      );
+    }
+  }
+
+  void _set(int i, DietPhase phase) => setState(() {
+    _phases[i] = phase;
+    _reflow();
+  });
+
+  void _until(int i, double kg) {
+    final p = _phases[i];
+    _set(
+      i,
+      DietPhase(
+        kind: p.kind,
+        kgPerWeek: p.kgPerWeek,
+        weeks: p.weeks,
+        untilKg: kg,
+      ),
+    );
+  }
 
   Widget _phase(int i) {
     final p = _phases[i];
+    final from = _plan.weightAt(i);
+    final until = p.untilKg;
     return Card(
       key: ValueKey('phase-$i'),
       child: Padding(
@@ -201,6 +314,7 @@ class _PhasePlanScreenState extends State<PhasePlanScreen> {
                               kind: kind,
                               kgPerWeek: _defaultPace(kind),
                               weeks: p.weeks,
+                              untilKg: kind == p.kind ? p.untilKg : null,
                             ),
                           ),
                         ),
@@ -213,7 +327,10 @@ class _PhasePlanScreenState extends State<PhasePlanScreen> {
                   icon: const Icon(Icons.delete_outline_rounded),
                   onPressed: _phases.length == 1
                       ? null
-                      : () => setState(() => _phases.removeAt(i)),
+                      : () => setState(() {
+                          _phases.removeAt(i);
+                          _reflow();
+                        }),
                 ),
               ],
             ),
@@ -232,42 +349,110 @@ class _PhasePlanScreenState extends State<PhasePlanScreen> {
                     kind: p.kind,
                     kgPerWeek: (p.kind == PhaseKind.cut ? -v : v),
                     weeks: p.weeks,
+                    untilKg: p.untilKg,
                   ),
                 ),
               ),
             ],
-            Row(
-              children: [
-                Expanded(child: Text('${p.weeks} weeks')),
-                IconButton(
-                  key: ValueKey('phase-$i-shorter'),
-                  icon: const Icon(Icons.remove_rounded),
-                  onPressed: p.weeks <= 1
-                      ? null
-                      : () => _set(
-                          i,
-                          DietPhase(
-                            kind: p.kind,
-                            kgPerWeek: p.kgPerWeek,
-                            weeks: p.weeks - 1,
+            if (from != null && p.kind != PhaseKind.maintain)
+              Wrap(
+                spacing: 6,
+                children: [
+                  ChoiceChip(
+                    key: ValueKey('phase-$i-for-time'),
+                    label: const Text('For a time'),
+                    selected: until == null,
+                    onSelected: (_) => _set(
+                      i,
+                      DietPhase(
+                        kind: p.kind,
+                        kgPerWeek: p.kgPerWeek,
+                        weeks: p.weeks,
+                      ),
+                    ),
+                  ),
+                  ChoiceChip(
+                    key: ValueKey('phase-$i-until'),
+                    label: const Text('Until a weight'),
+                    selected: until != null,
+                    onSelected: (_) => _set(
+                      i,
+                      DietPhase(
+                        kind: p.kind,
+                        kgPerWeek: p.kgPerWeek,
+                        weeks: p.weeks,
+                        untilKg: _round(from + p.kgPerWeek * p.weeks),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            if (until != null && from != null)
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Until ${_weight(until)}: about ${_weeks(p.weeks)}',
+                    ),
+                  ),
+                  IconButton(
+                    key: ValueKey('phase-$i-lighter'),
+                    tooltip: 'Lighter',
+                    icon: const Icon(Icons.remove_rounded),
+                    onPressed: p.kgPerWeek > 0 && until - _stepKg <= from
+                        ? null
+                        : () => _until(i, _round(until) - _stepKg),
+                  ),
+                  IconButton(
+                    key: ValueKey('phase-$i-heavier'),
+                    tooltip: 'Heavier',
+                    icon: const Icon(Icons.add_rounded),
+                    onPressed: p.kgPerWeek < 0 && until + _stepKg >= from
+                        ? null
+                        : () => _until(i, _round(until) + _stepKg),
+                  ),
+                ],
+              )
+            else
+              Row(
+                children: [
+                  Expanded(child: Text(_weeks(p.weeks))),
+                  IconButton(
+                    key: ValueKey('phase-$i-shorter'),
+                    icon: const Icon(Icons.remove_rounded),
+                    onPressed: p.weeks <= 1
+                        ? null
+                        : () => _set(
+                            i,
+                            DietPhase(
+                              kind: p.kind,
+                              kgPerWeek: p.kgPerWeek,
+                              weeks: p.weeks - 1,
+                            ),
                           ),
-                        ),
-                ),
-                IconButton(
-                  key: ValueKey('phase-$i-longer'),
-                  icon: const Icon(Icons.add_rounded),
-                  onPressed: p.weeks >= 52
-                      ? null
-                      : () => _set(
-                          i,
-                          DietPhase(
-                            kind: p.kind,
-                            kgPerWeek: p.kgPerWeek,
-                            weeks: p.weeks + 1,
+                  ),
+                  IconButton(
+                    key: ValueKey('phase-$i-longer'),
+                    icon: const Icon(Icons.add_rounded),
+                    onPressed: p.weeks >= 52
+                        ? null
+                        : () => _set(
+                            i,
+                            DietPhase(
+                              kind: p.kind,
+                              kgPerWeek: p.kgPerWeek,
+                              weeks: p.weeks + 1,
+                            ),
                           ),
-                        ),
-                ),
-              ],
+                  ),
+                ],
+              ),
+            Text(
+              'Ends ${from == null ? '' : 'about '}'
+              '${_date(_plan.startOf(i + 1))}'
+              '${_about(_plan.weightAt(i + 1), widget.unit)}',
+              key: ValueKey('phase-$i-ends'),
+              style: Theme.of(context).textTheme.bodySmall,
             ),
           ],
         ),
@@ -288,9 +473,7 @@ class _PhasePlanScreenState extends State<PhasePlanScreen> {
           ),
         TextButton(
           key: const ValueKey('phases-save'),
-          onPressed: () => Navigator.pop(context, (
-            plan: PhasePlan(start: _start, phases: List.of(_phases)),
-          )),
+          onPressed: () => Navigator.pop(context, (plan: _plan)),
           child: const Text('Save'),
         ),
       ],
@@ -303,7 +486,8 @@ class _PhasePlanScreenState extends State<PhasePlanScreen> {
           leading: const Icon(Icons.event_rounded),
           title: Text('Starts ${_date(_start)}'),
           subtitle: Text(
-            'Ends ${_date(PhasePlan(start: _start, phases: _phases).end)}, '
+            'Ends ${_date(_plan.end)}'
+            '${_about(_plan.weightAt(_phases.length), widget.unit)}, '
             'then maintenance',
           ),
           onTap: () async {

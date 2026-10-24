@@ -12,6 +12,7 @@ import 'package:opennutritracker/features/profile/presentation/bloc/profile_bloc
 import 'package:opennutritracker/features/profile/presentation/widgets/set_target_weight_dialog.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
 import 'package:opennutritracker/fork/adaptive/goal_plan.dart';
+import 'package:opennutritracker/fork/phases/phases.dart';
 import 'package:opennutritracker/fork/units/energy_text.dart';
 import 'package:opennutritracker/fork/units/weight_text.dart';
 
@@ -81,6 +82,9 @@ class GoalPlanCard extends StatefulWidget {
   final AppPalette palette;
   final BodyWeightUnit unit;
   final AdaptiveService? service;
+
+  /// Where the milestone step is kept; the active profile's by default.
+  final PhaseStore? phases;
   final Future<void> Function(double kgPerWeek) onUsePace;
   final Future<bool> Function(
     BuildContext context,
@@ -94,6 +98,7 @@ class GoalPlanCard extends StatefulWidget {
     required this.palette,
     required this.unit,
     this.service,
+    this.phases,
     this.onUsePace = savePace,
     this.onSetTarget = setTargetWeight,
   });
@@ -105,6 +110,29 @@ class GoalPlanCard extends StatefulWidget {
 class _GoalPlanCardState extends State<GoalPlanCard> {
   late Future<GoalPlanInputs?> _inputs = _load();
   double? _pace;
+  late final _phases = widget.phases ?? PhaseStore();
+
+  /// The milestone step's place in [_steps] from 1; 0 for none.
+  int _milestoneStep = 0;
+
+  List<int> get _steps =>
+      widget.unit == BodyWeightUnit.kg ? milestoneStepsKg : milestoneStepsLb;
+
+  String get _stepUnit => widget.unit == BodyWeightUnit.kg ? 'kg' : 'lb';
+
+  Future<void> _loadMilestoneStep() async {
+    try {
+      final step = await _phases.milestoneStep();
+      if (mounted) setState(() => _milestoneStep = step);
+    } catch (_) {
+      // Unreadable: no milestones, as before there were any.
+    }
+  }
+
+  Future<void> _setMilestoneStep(int step) async {
+    setState(() => _milestoneStep = step);
+    await _phases.saveMilestoneStep(step);
+  }
 
   Future<GoalPlanInputs?> _load() =>
       (widget.service ?? AdaptiveService.fromLocator()).goalPlan();
@@ -121,6 +149,7 @@ class _GoalPlanCardState extends State<GoalPlanCard> {
   void initState() {
     super.initState();
     paceChanges.addListener(_reload);
+    _loadMilestoneStep();
   }
 
   @override
@@ -155,7 +184,10 @@ class _GoalPlanCardState extends State<GoalPlanCard> {
   }
 
   static String _date(int days) {
-    final d = DateTime.now().add(Duration(days: days));
+    // By the calendar: adding hours across a clock change can land on
+    // the day before.
+    final now = DateTime.now();
+    final d = DateTime(now.year, now.month, now.day + days);
     final weeks = (days / 7).round();
     return '${d.year}-${d.month.toString().padLeft(2, '0')}-'
         '${d.day.toString().padLeft(2, '0')} '
@@ -187,6 +219,14 @@ class _GoalPlanCardState extends State<GoalPlanCard> {
     final planSpots = [
       for (final (i, kg) in plan.projectedKg.indexed) FlSpot(i.toDouble(), kg),
     ];
+    final milestones = target == null || _milestoneStep == 0
+        ? const <double>[]
+        : milestonesKg(
+            inputs.nowKg,
+            target,
+            _steps[_milestoneStep - 1],
+            perKg: widget.unit == BodyWeightUnit.kg ? 1 : 2.20462,
+          );
     final ys = [...past, ...plan.projectedKg, ?target];
     final minY = ys.reduce((a, b) => a < b ? a : b) - 1;
     final maxY = ys.reduce((a, b) => a > b ? a : b) + 1;
@@ -252,6 +292,15 @@ class _GoalPlanCardState extends State<GoalPlanCard> {
                   lineTouchData: const LineTouchData(enabled: false),
                   extraLinesData: ExtraLinesData(
                     horizontalLines: [
+                      for (final m in milestones)
+                        HorizontalLine(
+                          y: m,
+                          color: widget.palette.textMuted.withValues(
+                            alpha: 0.35,
+                          ),
+                          strokeWidth: 1,
+                          dashArray: const [2, 4],
+                        ),
                       if (target != null)
                         HorizontalLine(
                           y: target,
@@ -324,6 +373,7 @@ class _GoalPlanCardState extends State<GoalPlanCard> {
                 target,
               ),
             ),
+          if (target != null) ..._milestoneRows(milestones, pace, inputs),
           _row(
             'Daily target at this pace',
             energyText(context, plan.dailyTargetKcal),
@@ -348,6 +398,39 @@ class _GoalPlanCardState extends State<GoalPlanCard> {
       ),
     );
   }
+
+  /// The step choice, then each milestone and when the pace reaches it.
+  List<Widget> _milestoneRows(
+    List<double> milestones,
+    double pace,
+    GoalPlanInputs inputs,
+  ) => [
+    const SizedBox(height: Dimens.spacing8),
+    Wrap(
+      spacing: 8,
+      runSpacing: 4,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        const Text('Milestones'),
+        for (var i = 0; i <= _steps.length; i++)
+          ChoiceChip(
+            key: ValueKey('plan-milestones-$i'),
+            label: Text(i == 0 ? 'Off' : 'Every ${_steps[i - 1]} $_stepUnit'),
+            selected: _milestoneStep == i,
+            onSelected: (_) => _setMilestoneStep(i),
+          ),
+      ],
+    ),
+    for (final m in milestones)
+      switch (daysToTarget(inputs.nowKg, m, pace / 7)) {
+        null => _row(_weight(m), 'Not at this pace'),
+        final days => _row(
+          _weight(m),
+          days > maxPlanDays ? 'Over a year' : _date(days),
+        ),
+      },
+    const SizedBox(height: Dimens.spacing8),
+  ];
 
   Widget _row(String label, String value) => Padding(
     padding: const EdgeInsets.symmetric(vertical: 2),
