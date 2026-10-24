@@ -71,7 +71,7 @@ void main() {
     await tester.tap(find.text('⅓'));
     await tester.pump();
 
-    expect(_amountShown(tester), '200.00');
+    expect(_amountShown(tester), '200'); // [fork] S83
     await tester.tap(find.text('OK'));
     await tester.pumpAndSettle();
     expect(await result, 200);
@@ -85,7 +85,7 @@ void main() {
     await tester.enterText(find.byType(TextFormField).last, '120');
     await tester.pump();
 
-    expect(_amountShown(tester), '180.00');
+    expect(_amountShown(tester), '180'); // [fork] S83
     await tester.tap(find.text('OK'));
     await tester.pumpAndSettle();
     expect(await result, 180);
@@ -97,6 +97,6 @@ void main() {
     await tester.enterText(find.byType(TextFormField).last, '400');
     await tester.pump();
 
-    expect(_amountShown(tester), '300.00');
+    expect(_amountShown(tester), '300'); // [fork] S83
   });
 }

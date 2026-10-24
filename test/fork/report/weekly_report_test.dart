@@ -85,7 +85,7 @@ void main() {
 
     await pump([_day(10, 17, 1800), _day(10, 19, 1900), _day(10, 22, 2300)]);
     expect(find.byKey(const ValueKey('week-2026-10-19')), findsOneWidget);
-    expect(find.text('19 Oct – 25 Oct'), findsOneWidget);
+    expect(find.text('Oct 19 – Oct 25'), findsOneWidget);
     expect(find.text('2/5 days'), findsOneWidget);
     expect(find.text('2100 kcal of 2000 kcal (+100 kcal)'), findsOneWidget);
     expect(

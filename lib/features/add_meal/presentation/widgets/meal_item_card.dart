@@ -16,6 +16,9 @@ import 'package:opennutritracker/features/add_meal/presentation/widgets/favourit
 import 'package:opennutritracker/features/add_meal/util/food_emoji_resolver.dart';
 import 'package:opennutritracker/features/meal_detail/meal_detail_screen.dart';
 import 'package:opennutritracker/generated/l10n.dart';
+// [fork] S83 search-macros
+import 'package:opennutritracker/fork/display/meal_macros_line.dart';
+// [/fork]
 
 class MealItemCard extends StatelessWidget {
   final DateTime day;
@@ -81,6 +84,10 @@ class MealItemCard extends StatelessWidget {
                   ),
                   const SizedBox(height: Dimens.spacing4),
                   _buildSubtitle(context, palette, accent, isRecipe),
+                  // [fork] S83 search-macros: energy and macros per 100 g
+                  const SizedBox(height: Dimens.spacing4),
+                  MealMacrosLine(meal: mealEntity),
+                  // [/fork]
                 ],
               ),
             ),

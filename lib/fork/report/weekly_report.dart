@@ -170,7 +170,10 @@ class WeeklyReportCard extends StatelessWidget {
 
   Widget _week(BuildContext context, WeekReport week) {
     final theme = Theme.of(context);
-    final format = DateFormat('d MMM');
+    // The locale's short date, as the weight chart's axis writes it.
+    final format = DateFormat.MMMd(
+      Localizations.localeOf(context).toLanguageTag(),
+    );
     final sunday = DateTime(
       week.monday.year,
       week.monday.month,

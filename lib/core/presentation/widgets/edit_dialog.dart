@@ -42,7 +42,7 @@ class _EditDialogState extends State<EditDialog> {
     );
     _loggedAmount = initialAmount;
     amountEditingController = TextEditingController(
-      text: initialAmount.toStringAsFixed(2),
+      text: _amountText(initialAmount), // [fork] S83
     );
   }
 
@@ -59,20 +59,27 @@ class _EditDialogState extends State<EditDialog> {
   void _onLeftoverChanged(String text) {
     final left = double.tryParse(text.replaceAll(',', '.'));
     if (left == null || left < 0 || left > _loggedAmount) return;
-    amountEditingController.text = (_loggedAmount - left).toStringAsFixed(2);
+    amountEditingController.text = _amountText(_loggedAmount - left); // [fork] S83
   }
 
   void _onLeftoverFraction(double fraction) {
-    leftoverEditingController.text = (_loggedAmount * fraction).toStringAsFixed(
-      2,
-    );
+    leftoverEditingController.text = _amountText(_loggedAmount * fraction); // [fork] S83
     _onLeftoverChanged(leftoverEditingController.text);
   }
+
+  // [fork] S83 amount-text: "100" rather than "100.00", at most two
+  // decimals and no trailing zeros
+  static String _amountText(double value) => value
+      .toStringAsFixed(2)
+      .replaceFirst(RegExp(r'\.?0+$'), '');
+  // [/fork]
 
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: Text(S.of(context).editItemDialogTitle),
+      // [fork] S83: the dialog names the food it edits
+      title: Text(widget.intakeEntity.meal.name ?? S.of(context).editItemDialogTitle),
+      // [/fork]
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -93,6 +100,7 @@ class _EditDialogState extends State<EditDialog> {
             onChanged: _onLeftoverChanged,
             decoration: InputDecoration(
               labelText: S.of(context).leftoverLabel,
+              helperText: S.of(context).leftoverHelperLabel, // [fork] S83
               suffixText: _convertUnit(widget.intakeEntity.meal.mealUnit ?? ''),
             ),
           ),
