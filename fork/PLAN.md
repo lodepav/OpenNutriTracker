@@ -757,7 +757,27 @@ are skipped, each with what it logs now.
   "potatoes" → the skin alone; "porridge" and "bread soup" → savoury BLS rows; "meat
   dumplings" → "Dumpling, no meat", the only row with every word; "butter, unsalted" →
   a pretzel ("unsalted, no butter"), since every word must match and butter says "without
-  salt".
+  salt". The typed meals added: "cola" → a 0 kcal ZEVIA diet cola, "coke" → nothing,
+  "eggs" → egg yolk, "greek yogurt" → with oats, "granola" → a cookie, "coffee" → a latte.
+  S71 would fix the yogurt and the coffee.
+
+*Hard notes and the Latvian locale, 2026-10-24* (`test/fork/eval/hard_note_eval_test.dart`,
+all three models):
+- **Notes are followed.** A note that contradicts the photo wins ("vistas fileja" on a
+  karbonāde gives chicken, "rīsi" on buckwheat gives rice). So do a lower count ("2 ļuļa
+  kebabi" over three in the photo), grams (150 g karbonāde, 200 g potatoes, the sauce left
+  unweighed), and a food the photo does not show ("kafija ar pienu"). Six of eight cases
+  pass for every model.
+- **Fractions are dropped.** "puse karbonādes" and "1.5 kāpostu tītenīši" come back with no
+  quantity: the models give 0.5 and 1.5, and S60's `_countsOnly` drops a count that is not
+  whole unless the note states the same amount with a unit. A bare "1.5" is not exempt, and
+  "puse" is a word. The row then starts at one serving.
+- **The Latvian locale finds no table row.** Upstream's photo prompt (#650) asks for names
+  "in the user's app language". That suits OFF but not the fork's English table. With
+  `localeCode: 'lv'` every model named the food in Latvian ("karbonāde", "soļanka",
+  "kartupeļu biezenis"), and 0 of about 30 rows per model matched. In English, 13 to 21 of
+  28 to 37 did. The dishes are still recognised (15 to 20 of 20). The eval searches the table
+  alone. The app's OFF search may catch a few, but every miss is broken down (D9).
 
 Still needs the user: the leftovers photo check, typing and photographing their own
 khachapuri, pelmeni and grey peas, and ten of their own meals (photos we do not have).

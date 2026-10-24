@@ -1,7 +1,8 @@
 // Phase 4: names the models gave for photographed and typed food, and the
 // ingredient names of their dish breakdowns, each pinned to the table row it
 // should log. Collected from the Opus, Sonnet and Haiku replays (233 dish
-// names, 162 ingredients); these are the ones a person would check first.
+// names, 162 ingredients, and the typed meals' foods); these are the ones a
+// person would check first.
 // Runs the app's resolver over the bundled table (eval_model.dart's
 // `tableMatch`), as staple_foods_test.dart does.
 //
@@ -47,6 +48,9 @@ const _right = {
   'black olives': 'Olives, black',
   'ketchup': 'Ketchup',
   'butter': 'Butter, NFS',
+  'beer': 'Beer',
+  'soft drink, cola': 'Soft drink, cola',
+  'jams and preserves': 'Jams and preserves',
   // Breakdown ingredients, in the table's own words as the prompt asks.
   'salt, table': 'Salt, table',
   'onion, raw': 'Onions, raw',
@@ -84,7 +88,14 @@ const _knownMisses = {
     'Chicken breast, grilled without sauce, skin not eaten',
     'with sauce, skin eaten',
   ),
+  'eggs': ('Egg, whole, raw', 'Eggs, Grade A, Large, egg yolk'),
+  'greek yogurt': ('a plain Greek yogurt', 'Yogurt, Greek, with oats'),
+  'coffee': ('a brewed coffee', 'Coffee, Latte'),
+  // A brand row or a diet row wins on the shortest name.
+  'cola': ('Soft drink, cola', 'Beverages, ZEVIA, cola, 0 kcal'),
+  'coke': ('Soft drink, cola', 'nothing'),
   // A bare word ranks a dish that holds it.
+  'granola': ('a granola cereal', 'Cookie, granola'),
   'salad': ('Salad, NFS', 'Salmon salad'),
   'fries': ('Potato, french fries, NFS', 'Yuca fries'),
   'tomato sauce': ('Tomato sauce, for use with vegetables', 'steak sauce'),
