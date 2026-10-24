@@ -123,9 +123,15 @@ void main() {
       expect(copy.weekdays, {DateTime.sunday, DateTime.tuesday});
       expect(copy.doneDays, {DateTime(2026, 10, 27)});
 
-      // Stopping drops it everywhere, from any of its days.
+      // A backup from before that log keeps it logged.
+      final json = copy.toJson()..['doneDays'] = <String>[];
+      await store.merge([PlannedFood.fromJson(json)]);
+      expect(await store.forDay(DateTime(2026, 10, 27)), isEmpty);
+
+      // Stopping keeps it on the day it was stopped from, and only there.
       await store.setRepeat('${oats.id}@2026-11-03', {});
-      expect(await store.forDay(DateTime(2026, 11, 3)), isEmpty);
+      expect(names(await store.forDay(DateTime(2026, 11, 3))), [one]);
+      expect(await store.forDay(DateTime(2026, 11, 1)), isEmpty);
       expect(names(await store.forDay(_sunday)), [
         MealEntityFixtures.mealTwo.name,
       ]);
@@ -253,7 +259,9 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('repeat-stop')));
     await tester.pumpAndSettle();
     expect(memory.repeats['a'], isEmpty);
-    expect(memory.foods, isEmpty);
+    expect(find.textContaining('Repeats'), findsNothing);
+    // Still planned today, as a one-day food.
+    expect(find.byKey(const ValueKey('plan-log-a')), findsOneWidget);
   });
 
   test('repeat days read as words', () async {
@@ -322,21 +330,17 @@ class _MemoryPlan extends Fake implements PlanStore {
   Future<void> setRepeat(String id, Set<int> weekdays) async {
     repeats[id] = weekdays;
     final at = foods.indexWhere((f) => f.id == id);
-    if (weekdays.isEmpty) {
-      foods.removeAt(at);
-    } else {
-      final f = foods[at];
-      foods[at] = PlannedFood(
-        id: f.id,
-        day: f.day,
-        type: f.type,
-        meal: f.meal,
-        unit: f.unit,
-        amountText: f.amountText,
-        kcal: f.kcal,
-        weekdays: weekdays,
-      );
-    }
+    final f = foods[at];
+    foods[at] = PlannedFood(
+      id: f.id,
+      day: f.day,
+      type: f.type,
+      meal: f.meal,
+      unit: f.unit,
+      amountText: f.amountText,
+      kcal: f.kcal,
+      weekdays: weekdays,
+    );
     PlanStore.changes.value++;
   }
 }
