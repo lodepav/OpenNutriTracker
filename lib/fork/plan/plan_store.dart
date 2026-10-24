@@ -26,7 +26,9 @@ class PlannedFood {
   /// Days a repeating food was logged or dropped on.
   final Set<DateTime> doneDays;
 
-  /// For one day of a repeating food, the repeating food's id.
+  /// For one day of a repeating food, the repeating food's id. That
+  /// day's [id] is `<repeating food's id>@yyyy-mm-dd`, so ids (uuid v4)
+  /// must never hold an '@'.
   final String? repeatOf;
 
   const PlannedFood({
@@ -188,22 +190,32 @@ class PlanStore {
 
   /// Makes the food [id] (planned, or one day of a repeating one) repeat
   /// on [weekdays] from its day on; empty [weekdays] stops it repeating
-  /// and drops it.
+  /// and keeps it planned on the day shown, as a one-day food.
   Future<void> setRepeat(String id, Set<int> weekdays) async {
-    final ruleId = id.contains('@') ? id.substring(0, id.indexOf('@')) : id;
+    final at = id.indexOf('@');
+    final ruleId = at < 0 ? id : id.substring(0, at);
+    final shown = at < 0 ? null : DateTime.parse(id.substring(at + 1));
     await _write([
       for (final f in await all())
         if (f.id != ruleId)
           f
         else if (weekdays.isNotEmpty)
-          f._copy(weekdays: weekdays),
+          f._copy(weekdays: weekdays)
+        else
+          f._copy(weekdays: const {}, doneDays: const {}, day: shown),
     ]);
   }
 
   /// Adds [foods] from a backup; one with an id already here replaces it.
+  /// A repeating food keeps the days logged here since the backup.
   Future<void> merge(List<PlannedFood> foods) async {
+    final here = {for (final f in await all()) f.id: f};
     final byId = {
-      for (final f in [...await all(), ...foods]) f.id: f,
+      ...here,
+      for (final f in foods)
+        f.id: f.repeats && here[f.id] != null
+            ? f._copy(doneDays: {...f.doneDays, ...here[f.id]!.doneDays})
+            : f,
     };
     await _write(byId.values.toList());
   }
