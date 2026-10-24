@@ -162,7 +162,7 @@ class BackupExtras {
   /// The target settings and check-ins only, for the import to write before
   /// its rows: the rows are reconciled under the target they were made
   /// under (seam S68), not the one the device had. [prepareRestore] writes
-  /// them again, replacing by date.
+  /// the rest of the adaptive state.
   Future<void> Function() prepareTargetRestore(Archive archive) {
     final adaptive = _decodeAdaptive(archive);
     return () async {
@@ -189,8 +189,8 @@ class BackupExtras {
 
   /// Decodes everything first and returns the writes, so a malformed file
   /// throws an [ExportImportFailure] before the import has written anything.
-  /// Each write replaces by id (custom meals: by barcode, else name;
-  /// check-ins: by date), so a second restore adds nothing.
+  /// Each write replaces by id (custom meals: by barcode, else name), so
+  /// a second restore adds nothing.
   Future<void> Function() prepareRestore(Archive archive) {
     final water = _decode(
       archive,
@@ -256,12 +256,7 @@ class BackupExtras {
       for (final meal in customMeals ?? const <MealDBO>[]) {
         await _customMeals.saveCustomMeal(meal);
       }
-      if (adaptive != null) {
-        final store = _adaptive();
-        await store.mergeCheckIns(adaptive.checkIns);
-        await store.save(adaptive.settings);
-        if (adaptive.plan case final plan?) await _phases().save(plan);
-      }
+      if (adaptive?.plan case final plan?) await _phases().save(plan);
       if (plans != null) await _plans().merge(plans);
       if (measurements != null) {
         await _measurements().merge(measurements);

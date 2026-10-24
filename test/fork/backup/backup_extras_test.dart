@@ -171,8 +171,10 @@ void main() {
     await from.extras.addTo(archive);
 
     final to = device();
-    await to.extras.prepareRestore(archive)();
-    await to.extras.prepareRestore(archive)();
+    for (var i = 0; i < 2; i++) {
+      await to.extras.prepareTargetRestore(archive)();
+      await to.extras.prepareRestore(archive)();
+    }
 
     expect(to.water.entries.map((e) => e.id), ['w1']);
     expect(to.fasting.sessions.keys, ['f1']);

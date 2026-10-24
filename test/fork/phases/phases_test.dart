@@ -150,6 +150,17 @@ void main() {
       expect(await runner().run(), isFalse);
       expect(paces, isEmpty);
     });
+
+    test('a profile switch runs it once the switch is through', () async {
+      final stamps = <bool>[];
+      await withProfileSwitchLock(() async {
+        PhaseRunner.afterSwitch(() => stamps.add(ProfileStamp.now().isCurrent));
+        await Future<void>.delayed(Duration.zero);
+        expect(stamps, isEmpty);
+      });
+      await Future<void>.delayed(Duration.zero);
+      expect(stamps, [isTrue]);
+    });
   });
 
   group('the card', () {
