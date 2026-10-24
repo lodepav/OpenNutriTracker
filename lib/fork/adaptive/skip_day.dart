@@ -14,10 +14,17 @@ class SkipDayTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final store = this.store ?? AdaptiveStore();
     final key = DateTime(day.year, day.month, day.day);
-    return ValueListenableBuilder(
-      valueListenable: AdaptiveStore.skipped,
-      builder: (context, days, _) {
-        final skipped = days.contains(key);
+    return ListenableBuilder(
+      listenable: Listenable.merge([
+        AdaptiveStore.skipped,
+        AdaptiveStore.settings,
+      ]),
+      builder: (context, _) {
+        final skipped = AdaptiveStore.skipped.value.contains(key);
+        // Only the adaptive target follows the estimate.
+        final shapes = AdaptiveStore.settings.value.adaptiveTarget
+            ? "won't shape your target"
+            : "won't shape your expenditure estimate";
         return Semantics(
           identifier: 'skip-day',
           container: true,
@@ -27,8 +34,8 @@ class SkipDayTile extends StatelessWidget {
             subtitle: Text(
               skipped
                   ? 'Not used in the expenditure estimate; its weigh-in is.'
-                  : "Logged only in part? Its food won't shape your target; "
-                        'its weigh-in still counts.',
+                  : 'Logged only in part? Its food $shapes; its weigh-in '
+                        'still counts.',
             ),
             value: skipped,
             onChanged: (v) => store.setSkipped(key, v),

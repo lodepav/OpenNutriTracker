@@ -236,10 +236,7 @@ void main() {
 
       final checkIn = await maintain.checkIn();
       // The 500 kcal of the loss goal is all gone in this one check-in.
-      expect(
-        checkIn.proposedTargetKcal,
-        closeTo(checkIn.expenditureKcal, 1),
-      );
+      expect(checkIn.proposedTargetKcal, closeTo(checkIn.expenditureKcal, 1));
       await maintain.accept(checkIn, checkIn.proposedTargetKcal);
       expect(await maintain.checkInDue(), isFalse);
     });
@@ -402,9 +399,7 @@ void main() {
     expect(find.text('Pace: -0.25 kg a week'), findsOneWidget);
   });
 
-  testWidgets('without a target the planner offers to set one', (
-    tester,
-  ) async {
+  testWidgets('without a target the planner offers to set one', (tester) async {
     final paced = _PacedService(service)..noTarget = true;
     var asked = 0;
     await tester.pumpWidget(

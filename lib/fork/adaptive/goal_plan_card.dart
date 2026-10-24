@@ -196,7 +196,10 @@ class _GoalPlanCardState extends State<GoalPlanCard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Goal planner', style: theme.textTheme.titleMedium),
+          Semantics(
+            header: true,
+            child: Text('Goal planner', style: theme.textTheme.titleMedium),
+          ),
           const SizedBox(height: Dimens.spacing8),
           _row('Trend weight', _weight(inputs.nowKg)),
           for (final MapEntry(key: days, value: kg) in trendChanges(
@@ -288,16 +291,21 @@ class _GoalPlanCardState extends State<GoalPlanCard> {
             style: theme.textTheme.bodySmall,
           ),
           const SizedBox(height: Dimens.spacing8),
-          Text('Pace: ${_paceText(pace)}'),
-          Slider(
-            key: const ValueKey('plan-pace'),
-            min: -1,
-            max: 1,
-            divisions: 40,
-            value: pace.clamp(-1.0, 1.0),
-            label: _paceText(pace),
-            semanticFormatterCallback: _paceText,
-            onChanged: (v) => setState(() => _pace = v),
+          // The slider reads its own name and value.
+          ExcludeSemantics(child: Text('Pace: ${_paceText(pace)}')),
+          MergeSemantics(
+            child: Semantics(
+              label: 'Pace',
+              child: Slider(
+                key: const ValueKey('plan-pace'),
+                min: -1,
+                max: 1,
+                divisions: 40,
+                value: pace.clamp(-1.0, 1.0),
+                semanticFormatterCallback: _paceText,
+                onChanged: (v) => setState(() => _pace = v),
+              ),
+            ),
           ),
           if (target != null)
             _row(

@@ -27,17 +27,23 @@ double kcalPerStep(double weightKg, double heightCm) =>
 
 /// The share of a workout's calories counted (D17): the one set, else the
 /// one upstream's Health sync suggests from body composition (Careau 2021's
-/// compensation); [bodyFatPercent] is the measured one, if any.
+/// compensation), to the slider's 5% step so the share counted is the one
+/// shown; [bodyFatPercent] is the measured one, if any.
 double workoutShare(
   AdaptiveSettings settings,
   UserEntity user,
   double? bodyFatPercent,
 ) => settings.workoutSharePct == null
-    ? WorkoutCompensationCalc.suggestedMultiplier(
-        bodyFatPercent: bodyFatPercent,
-        user: user,
+    ? toShareStep(
+        WorkoutCompensationCalc.suggestedMultiplier(
+          bodyFatPercent: bodyFatPercent,
+          user: user,
+        ),
       )
     : settings.workoutSharePct! / 100;
+
+/// [share] to the nearest 5%.
+double toShareStep(double share) => (share * 20).round() / 20;
 
 /// The activity counted on each day (D17): logged workouts, imported ones
 /// at the calories the device reported, times [workoutShare]; and steps at

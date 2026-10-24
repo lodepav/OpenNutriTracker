@@ -9,6 +9,7 @@ import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/fork/copy/copy_ui.dart';
 import 'package:opennutritracker/fork/adaptive/check_in_history.dart';
 import 'package:opennutritracker/fork/adaptive/check_in.dart';
+import 'package:opennutritracker/fork/adaptive/choice.dart';
 import 'package:opennutritracker/fork/adaptive/expenditure_settings_ui.dart';
 import 'package:opennutritracker/fork/units/energy_text.dart';
 import 'package:opennutritracker/fork/display/display_prefs.dart';
@@ -444,30 +445,30 @@ class _AdaptiveSettingsDialog extends StatelessWidget {
                 onChanged: (v) => _save(settings.copyWith(smoothedTrend: v)),
               ),
               const SizedBox(height: 8),
-              Text(
-                'Calorie target',
-                style: Theme.of(context).textTheme.titleSmall,
+              // The choice below carries it as its group's name.
+              ExcludeSemantics(
+                child: Text(
+                  'Calorie target',
+                  style: Theme.of(context).textTheme.titleSmall,
+                ),
               ),
               const SizedBox(height: 8),
-              SegmentedButton<_TargetMode>(
+              StackingChoice<_TargetMode>(
                 key: const ValueKey('target-mode'),
-                showSelectedIcon: false,
-                segments: const [
-                  ButtonSegment(
-                    value: _TargetMode.formula,
-                    label: Text('Formula'),
-                  ),
-                  ButtonSegment(
-                    value: _TargetMode.adaptive,
-                    label: Text('Adaptive'),
-                  ),
-                  ButtonSegment(value: _TargetMode.fixed, label: Text('Fixed')),
-                ],
-                selected: {mode},
-                onSelectionChanged: (picked) => _save(
+                identifier: 'target-mode',
+                groupLabel: 'Calorie target',
+                padding: EdgeInsets.zero,
+                values: _TargetMode.values,
+                label: (m) => switch (m) {
+                  _TargetMode.formula => 'Formula',
+                  _TargetMode.adaptive => 'Adaptive',
+                  _TargetMode.fixed => 'Fixed',
+                },
+                selected: mode,
+                onChanged: (picked) => _save(
                   settings.copyWith(
-                    adaptiveTarget: picked.single == _TargetMode.adaptive,
-                    fixedTarget: picked.single == _TargetMode.fixed,
+                    adaptiveTarget: picked == _TargetMode.adaptive,
+                    fixedTarget: picked == _TargetMode.fixed,
                   ),
                 ),
               ),
@@ -508,20 +509,20 @@ class _AdaptiveSettingsDialog extends StatelessWidget {
                     if (edited != null) await _save(edited);
                   },
                 ),
-              if (mode == _TargetMode.adaptive)
-                ListTile(
-                  key: const ValueKey('expenditure-settings'),
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('Expenditure and check-ins'),
-                  subtitle: Text(expenditureSummary(settings)),
-                  trailing: const Icon(Icons.chevron_right_rounded),
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute<void>(
-                      builder: (_) => ExpenditureSettingsScreen(store: store),
-                    ),
+              // Every mode: the estimate runs whichever target is on.
+              ListTile(
+                key: const ValueKey('expenditure-settings'),
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Expenditure and check-ins'),
+                subtitle: Text(expenditureSummary(settings)),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute<void>(
+                    builder: (_) => ExpenditureSettingsScreen(store: store),
                   ),
                 ),
+              ),
               ListTile(
                 key: const ValueKey('weekday-targets'),
                 contentPadding: EdgeInsets.zero,

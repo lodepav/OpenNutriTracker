@@ -383,6 +383,16 @@ void main() {
       expect(workoutsOnly[yesterday], closeTo(500 * share, 0.01));
     });
 
+    test('the suggested workout share is the 5% step the slider shows', () {
+      expect(toShareStep(0.7249), 0.7);
+      expect(toShareStep(0.7251), 0.75);
+      for (final bodyFat in [null, 12.0, 23.0, 31.0]) {
+        final pct =
+            workoutShare(const AdaptiveSettings(), _user(), bodyFat) * 100;
+        expect(pct, closeTo((pct / 5).round() * 5, 1e-9), reason: '$bodyFat');
+      }
+    });
+
     test('a day left out counts its weigh-in, not its food', () async {
       final part = _today.subtract(const Duration(days: 3));
       final service = AdaptiveService(
@@ -426,7 +436,10 @@ void main() {
       await tester.tap(find.byType(Switch));
       await tester.pump();
       expect(AdaptiveStore.skipped.value, {DateTime(2026, 10, 20)});
-      expect(find.textContaining('Not used in the expenditure'), findsOneWidget);
+      expect(
+        find.textContaining('Not used in the expenditure'),
+        findsOneWidget,
+      );
     });
 
     testWidgets('three groups; activity rows only while it counts', (

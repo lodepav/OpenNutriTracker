@@ -100,10 +100,7 @@ void main() {
 
     await tester.longPress(find.byType(ActivityCard));
     await tester.pumpAndSettle();
-    expect(
-      find.text('${l10nEn.copyActionLabel}…'),
-      findsOneWidget,
-    );
+    expect(find.text('${l10nEn.copyActionLabel}…'), findsOneWidget);
     await tester.tap(find.text(l10nEn.dialogDeleteLabel));
     await tester.pumpAndSettle();
     await tester.tap(find.text(l10nEn.dialogOKLabel));

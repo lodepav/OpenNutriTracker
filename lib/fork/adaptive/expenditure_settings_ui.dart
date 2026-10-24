@@ -4,9 +4,11 @@ import 'package:opennutritracker/core/domain/entity/user_entity.dart';
 import 'package:opennutritracker/core/domain/usecase/get_user_usecase.dart';
 import 'package:opennutritracker/core/utils/calc/workout_compensation_calc.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
+import 'package:opennutritracker/fork/adaptive/activity.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_ui.dart';
 import 'package:opennutritracker/fork/adaptive/check_in_history.dart';
+import 'package:opennutritracker/fork/adaptive/choice.dart';
 import 'package:opennutritracker/fork/adaptive/expenditure.dart';
 import 'package:opennutritracker/fork/body/measurement_store.dart';
 import 'package:opennutritracker/fork/health/steps.dart';
@@ -20,70 +22,6 @@ String expenditureSummary(AdaptiveSettings s) => [
       : 'activity ${s.activityMode.label.toLowerCase()}',
   s.autoAcceptCheckIn ? 'automatic check-ins' : 'check-ins by hand',
 ].join(' · ');
-
-/// Above this text scale the choices stack as a list: segments break
-/// mid-word at 200%.
-const _stackedTextScale = 1.3;
-
-/// One of [values], as segments, or a list of checked rows at large text.
-class _Choice<T> extends StatelessWidget {
-  final String identifier;
-  final List<T> values;
-  final String Function(T) label;
-  final T selected;
-  final ValueChanged<T>? onChanged;
-
-  const _Choice({
-    required this.identifier,
-    required this.values,
-    required this.label,
-    required this.selected,
-    required this.onChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final stacked =
-        MediaQuery.textScalerOf(context).scale(10) / 10 > _stackedTextScale;
-    if (stacked) {
-      return Semantics(
-        identifier: identifier,
-        container: true,
-        child: Column(
-          children: [
-            for (final v in values)
-              ListTile(
-                enabled: onChanged != null,
-                selected: v == selected,
-                title: Text(label(v)),
-                trailing: v == selected
-                    ? const Icon(Icons.check_rounded)
-                    : null,
-                onTap: onChanged == null ? null : () => onChanged!(v),
-              ),
-          ],
-        ),
-      );
-    }
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Semantics(
-        identifier: identifier,
-        child: SegmentedButton<T>(
-          showSelectedIcon: false,
-          segments: [
-            for (final v in values)
-              ButtonSegment(value: v, label: Text(label(v))),
-          ],
-          selected: {selected},
-          onSelectionChanged: onChanged == null
-              ? null
-              : (picked) => onChanged!(picked.single),
-        ),
-      ),
-    );
-  }
-}
 
 /// D17: how expenditure is estimated, what activity it counts, and how
 /// check-ins set the target; three groups on one screen.
@@ -166,7 +104,7 @@ class _EstimateSection extends StatelessWidget {
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
       const _Heading('Estimate'),
-      _Choice<Responsiveness>(
+      StackingChoice<Responsiveness>(
         identifier: 'expenditure-responsiveness',
         values: Responsiveness.values,
         label: (r) => r.label,
@@ -251,9 +189,14 @@ class _SkippedDaysDialog extends StatelessWidget {
                 ListTile(
                   contentPadding: EdgeInsets.zero,
                   title: Text(DateFormat.yMMMEd().format(day)),
-                  trailing: TextButton(
-                    onPressed: () => store.setSkipped(day, false),
-                    child: const Text('Count again'),
+                  trailing: Semantics(
+                    label: 'Count ${DateFormat.yMMMEd().format(day)} again',
+                    excludeSemantics: true,
+                    button: true,
+                    child: TextButton(
+                      onPressed: () => store.setSkipped(day, false),
+                      child: const Text('Count again'),
+                    ),
                   ),
                 ),
             ],
@@ -305,9 +248,11 @@ class _ActivitySectionState extends State<_ActivitySection> {
     if (!locator.isRegistered<GetUserUsecase>()) return null;
     final UserEntity user = await locator<GetUserUsecase>().getUserData();
     final bodyFat = await MeasurementStore().recentBodyFat(DateTime.now());
-    return WorkoutCompensationCalc.suggestedMultiplier(
-          bodyFatPercent: bodyFat,
-          user: user,
+    return toShareStep(
+          WorkoutCompensationCalc.suggestedMultiplier(
+            bodyFatPercent: bodyFat,
+            user: user,
+          ),
         ) *
         100;
   }
@@ -342,7 +287,7 @@ class _ActivitySectionState extends State<_ActivitySection> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const _Heading('Activity'),
-        _Choice<ActivityMode>(
+        StackingChoice<ActivityMode>(
           identifier: 'expenditure-activity-mode',
           values: ActivityMode.values,
           label: (m) => m.label,
@@ -422,7 +367,7 @@ class _WorkoutShare extends StatelessWidget {
     final pct =
         (set ??
                 suggestedPct ??
-                WorkoutCompensationCalc.fallbackMultiplier * 100)
+                toShareStep(WorkoutCompensationCalc.fallbackMultiplier) * 100)
             .clamp(30.0, 100.0);
     final suggested = suggestedPct?.round();
     return Padding(
@@ -430,27 +375,34 @@ class _WorkoutShare extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Workout calories counted: ${pct.round()}%'),
-          Semantics(
-            identifier: 'workout-share',
-            label: 'Workout calories counted',
-            child: Slider(
-              value: pct,
-              min: 30,
-              max: 100,
-              divisions: 14,
-              label: '${pct.round()}%',
-              showValueIndicator: ShowValueIndicator.onDrag,
-              semanticFormatterCallback: (v) => '${v.round()}%',
-              onChanged: (v) => onChanged(v.roundToDouble()),
+          // The slider reads its own name and value; the text is for the
+          // eye, and its own node so it does not take in the heading.
+          ExcludeSemantics(
+            child: Text('Workout calories counted: ${pct.round()}%'),
+          ),
+          MergeSemantics(
+            child: Semantics(
+              identifier: 'workout-share',
+              label: 'Workout calories counted',
+              child: Slider(
+                value: pct,
+                min: 30,
+                max: 100,
+                divisions: 14,
+                semanticFormatterCallback: (v) => '${v.round()}%',
+                onChanged: (v) => onChanged(v.roundToDouble()),
+              ),
             ),
           ),
-          Text(
-            'Watches tend to overstate a workout, and the body makes up part '
-            'of it by moving less afterwards. '
-            '${suggested == null ? '' : 'Suggested for your body: $suggested%. '}'
-            'Lower it if workout days leave you over.',
-            style: Theme.of(context).textTheme.bodySmall,
+          Semantics(
+            container: true,
+            child: Text(
+              'Watches tend to overstate a workout, and the body makes up part '
+              'of it by moving less afterwards. '
+              '${suggested == null ? '' : 'Suggested for your body: $suggested%. '}'
+              'Lower it if workout days leave you over.',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
           ),
           if (set != null && suggested != null && set.round() != suggested)
             TextButton(
@@ -516,6 +468,16 @@ class _CheckInSection extends StatelessWidget {
                       ),
                       onTap: () => Navigator.pop(context, (weekday: day)),
                     ),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: Padding(
+                      padding: const EdgeInsets.only(right: 16),
+                      child: TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('Cancel'),
+                      ),
+                    ),
+                  ),
                 ],
               ),
             );
@@ -529,17 +491,21 @@ class _CheckInSection extends StatelessWidget {
         ),
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-          child: Text(
-            'Largest change per check-in',
-            style: Theme.of(context).textTheme.bodyLarge,
+          // The segments below carry it as their group's name.
+          child: ExcludeSemantics(
+            child: Text(
+              'Largest change per check-in',
+              style: Theme.of(context).textTheme.bodyLarge,
+            ),
           ),
         ),
         const _Note(
           'A limit keeps one odd week from moving the expenditure under the '
           'target far. A goal you change applies in full at once.',
         ),
-        _Choice<int>(
+        StackingChoice<int>(
           identifier: 'check-in-cap',
+          groupLabel: 'Largest change per check-in',
           values: const [100, 200, 300, 0],
           label: (kcal) =>
               kcal == 0 ? 'No limit' : energyText(context, kcal.toDouble()),
