@@ -65,6 +65,20 @@ class LocalFoodDataSource extends SpFoodDataSource {
       query = query.substring(0, query.lastIndexOf(','));
       rows = search(query);
     }
+    // Then a dish name with words the table does not use ("blueberry
+    // cheesecake", "rice with herbs"): the nearest food it names.
+    if (forResolution && rows.isEmpty) {
+      for (final shorter in fewerWords(query)) {
+        rows = [
+          for (final row in search(shorter))
+            if (_namedFor(row, shorter)) row,
+        ];
+        if (rows.isNotEmpty) {
+          query = shorter;
+          break;
+        }
+      }
+    }
     if (forResolution) rows = _servedNotDry(rows, query, asked: searchString);
     // The backend's own cut, reused so the resolver sees the twenty rows it
     // would see from the backend. Upstream exposes it for its tests only;
@@ -89,6 +103,42 @@ class LocalFoodDataSource extends SpFoodDataSource {
     final portions = (await table).portions;
     return {for (final id in foodIds) id: ?portions[id]};
   }
+}
+
+final _joiner = RegExp(r'\s+(with|in|and|on|ar)\s+', caseSensitive: false);
+
+/// Shorter forms of [query] to try, nearest first: without what follows
+/// "with", "in", "and" or "on" (Latvian "ar"), then without its first
+/// words one at a time. An English or Latvian dish name puts the food last
+/// and its kind before it: "Caesar salad with bacon" is a Caesar salad,
+/// "chicken rice pilaf" a rice pilaf. Each keeps two words at least: one
+/// word alone is too broad to stand for the dish ("salad", "rice",
+/// "chicken"), and a dish the table cannot name is broken down instead (D9).
+List<String> fewerWords(String query) {
+  final shorter = <String>[];
+  var words = query.trim().split(RegExp(r'\s+'));
+  final joined = _joiner.firstMatch(query.trim());
+  if (joined != null) {
+    words = query.trim().substring(0, joined.start).split(RegExp(r'\s+'));
+    if (words.length >= 2) shorter.add(words.join(' '));
+  }
+  for (var i = 1; i < words.length - 1; i++) {
+    shorter.add(words.sublist(i).join(' '));
+  }
+  return shorter;
+}
+
+/// Whether [row] is named for [food] itself, its name starting with the
+/// words of [food] ("Cheesecake, plain" for "cheesecake"), rather than
+/// merely holding them ("Melon balls" for "balls").
+bool _namedFor(SpFoodDTO row, String food) {
+  final name = (row.name ?? '').toLowerCase().split(RegExp(r'[^a-z]+'));
+  final words = food.toLowerCase().split(RegExp(r'\s+'));
+  if (name.length < words.length) return false;
+  for (var i = 0; i < words.length; i++) {
+    if (!wordsAgree(words[i], name[i])) return false;
+  }
+  return true;
 }
 
 final _stateWords = RegExp(

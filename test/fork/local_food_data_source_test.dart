@@ -44,6 +44,24 @@ void main() {
     });
   });
 
+  group('fewerWords', () {
+    test('cuts what follows "with", then the first words, to two', () {
+      expect(fewerWords('Caesar salad with bacon'), ['Caesar salad']);
+      expect(fewerWords('chicken rice pilaf'), ['rice pilaf']);
+      expect(fewerWords('asian rice bowl with breaded chicken'), [
+        'asian rice bowl',
+        'rice bowl',
+      ]);
+      expect(fewerWords('cūkgaļa ar kartupeļiem'), isEmpty);
+    });
+
+    test('never leaves one word, too broad to stand for a dish', () {
+      expect(fewerWords('potato balls'), isEmpty);
+      expect(fewerWords('salad with burrata'), isEmpty);
+      expect(fewerWords('rice with herbs'), isEmpty);
+    });
+  });
+
   group('search', () {
     final json = _table(
       [
@@ -97,6 +115,40 @@ void main() {
         ),
         isEmpty,
       );
+    });
+
+    test('resolution finds the dish a longer name is named for', () async {
+      final source = _source(
+        _table([
+          [20, 'fdc_survey', '20', 'Caesar salad, with romaine', true, 77.0],
+          [21, 'fdc_sr_legacy', '21', 'Melon balls, frozen', true, 33.0],
+          [22, 'fdc_survey', '22', 'Rice pilaf', true, 137.0],
+          [
+            23,
+            'fdc_survey',
+            '23',
+            'Brown rice, with pilaf spices',
+            true,
+            120.0,
+          ],
+        ]),
+      );
+      Future<List<String?>> names(String query, {bool resolve = true}) async =>
+          (await source.fetchSearchWordResults(
+            query,
+            forResolution: resolve,
+          )).map((f) => f.name).toList();
+
+      expect(await names('caesar salad with bacon'), [
+        'Caesar salad, with romaine',
+      ]);
+      // A row named for the shorter name, not one that only holds it.
+      expect(await names('chicken rice pilaf'), ['Rice pilaf']);
+      // "Melon balls" holds "balls" but is no potato ball: nothing, so the
+      // dish is broken down (D9).
+      expect(await names('potato balls'), isEmpty);
+      // A person's search stays exact.
+      expect(await names('caesar salad with bacon', resolve: false), isEmpty);
     });
 
     test('"pea" does not find peanut butter', () async {
@@ -204,6 +256,26 @@ void main() {
         ]))![egg.foodId];
         expect(portions, isNotNull);
         expect(portions!.map((p) => p.label).join(' '), contains('egg'));
+      });
+
+      test('the fork\'s dishes answer to their other spellings', () async {
+        for (final (dish, queries) in [
+          ('Solyanka', ['solyanka', 'solanka', 'soljanka', 'soļanka']),
+          ('Cepelinai', ['cepelinai', 'cepelīni', 'zeppelins']),
+          ('Salmon soup', ['salmon soup', 'lohikeitto', 'laša zupa']),
+          ('Grey peas', ['grey peas with bacon', 'pelēkie zirņi ar speķi']),
+          ('Potato balls', ['potato balls', 'roasted potato balls']),
+        ]) {
+          for (final query in queries) {
+            final row = (await source.fetchSearchWordResults(
+              query,
+              forResolution: true,
+            )).first;
+            expect(row.name, startsWith(dish), reason: query);
+            expect(row.source, 'fork_dishes', reason: query);
+            expect(row.hasPortion, isTrue, reason: query);
+          }
+        }
       });
 
       test('dishes no table has find nothing, for D9 to estimate', () async {
