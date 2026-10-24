@@ -7,6 +7,7 @@ import 'package:opennutritracker/fork/basket/basket.dart';
 import 'package:opennutritracker/fork/basket/basket_ui.dart';
 import 'package:opennutritracker/fork/plan/plan_store.dart';
 import 'package:opennutritracker/fork/units/energy_text.dart';
+import 'package:opennutritracker/fork/display/display_prefs.dart';
 
 final _log = Logger('PlannedFoodsCard');
 
@@ -147,9 +148,11 @@ class _PlannedFoodsCardState extends State<PlannedFoodsCard> {
                           style: Theme.of(context).textTheme.titleMedium,
                         ),
                         Text(
-                          'P ${macros.protein.round()} g · '
-                          'C ${macros.carbs.round()} g · '
-                          'F ${macros.fat.round()} g',
+                          inMacroOrder(
+                            protein: 'P ${macros.protein.round()} g',
+                            carbs: 'C ${macros.carbs.round()} g',
+                            fat: 'F ${macros.fat.round()} g',
+                          ).join(' · '),
                           key: const ValueKey('plan-macros'),
                           style: Theme.of(context).textTheme.bodySmall,
                         ),

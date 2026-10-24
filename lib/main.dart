@@ -65,6 +65,7 @@ import 'package:opennutritracker/fork/health/weight_import_ui.dart';
 import 'package:opennutritracker/fork/dish/starter_recipes.dart';
 import 'package:opennutritracker/fork/leftovers/meal_photo_cache.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
+import 'package:opennutritracker/fork/display/display_prefs.dart';
 // [/fork]
 import 'package:provider/provider.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
@@ -113,6 +114,7 @@ Future<void> _bootstrapApp() async {
   unawaited(MealPhotoCache().prune());
   try {
     await AdaptiveStore.start();
+    await DisplayPrefs.start();
     await AutoBackup.start();
     await WeightImport.start(refreshAfterWeightImport);
     BodyFatImport.start();

@@ -11,6 +11,9 @@ import 'package:opennutritracker/features/home/presentation/screens/nutrient_con
 import 'package:opennutritracker/features/settings/presentation/widgets/kcal_goal_info_screen.dart';
 import 'package:percent_indicator/circular_percent_indicator.dart';
 import 'package:opennutritracker/generated/l10n.dart';
+// [fork] S79 macro-order
+import 'package:opennutritracker/fork/display/display_prefs.dart';
+// [/fork]
 import 'package:provider/provider.dart';
 
 class DashboardWidget extends StatefulWidget {
@@ -207,45 +210,64 @@ class _DashboardWidgetState extends State<DashboardWidget> {
             ),
           ),
           const SizedBox(height: Dimens.spacing12),
-          Row(
-            children: [
-              Expanded(
-                child: _MacroTile(
-                  label: S.of(context).carbsLabel,
-                  intake: widget.totalCarbsIntake,
-                  goal: widget.totalCarbsGoal,
-                  color: palette.carbs,
-                  palette: palette,
-                  identifier: 'home-macro-carbs',
-                  onTap: () => _openNutrientContributions(MacroNutrient.carbs, widget.totalCarbsIntake, widget.totalCarbsGoal),
-                ),
-              ),
-              const SizedBox(width: Dimens.spacing12),
-              Expanded(
-                child: _MacroTile(
-                  label: S.of(context).fatLabel,
-                  intake: widget.totalFatsIntake,
-                  goal: widget.totalFatsGoal,
-                  color: palette.fat,
-                  palette: palette,
-                  identifier: 'home-macro-fat',
-                  onTap: () => _openNutrientContributions(MacroNutrient.fat, widget.totalFatsIntake, widget.totalFatsGoal),
-                ),
-              ),
-              const SizedBox(width: Dimens.spacing12),
-              Expanded(
-                child: _MacroTile(
-                  label: S.of(context).proteinLabel,
-                  intake: widget.totalProteinsIntake,
-                  goal: widget.totalProteinsGoal,
-                  color: palette.protein,
-                  palette: palette,
-                  identifier: 'home-macro-protein',
-                  onTap: () => _openNutrientContributions(MacroNutrient.protein, widget.totalProteinsIntake, widget.totalProteinsGoal),
-                ),
-              ),
-            ],
+          // [fork] S79 macro-order: the tiles in the user's macro order
+          MacroOrderBuilder(
+            builder: (context) => Row(
+              children: [
+                for (final (i, tile) in inMacroOrder(
+                  carbs: Expanded(
+                    child: _MacroTile(
+                      label: S.of(context).carbsLabel,
+                      intake: widget.totalCarbsIntake,
+                      goal: widget.totalCarbsGoal,
+                      color: palette.carbs,
+                      palette: palette,
+                      identifier: 'home-macro-carbs',
+                      onTap: () => _openNutrientContributions(
+                        MacroNutrient.carbs,
+                        widget.totalCarbsIntake,
+                        widget.totalCarbsGoal,
+                      ),
+                    ),
+                  ),
+                  fat: Expanded(
+                    child: _MacroTile(
+                      label: S.of(context).fatLabel,
+                      intake: widget.totalFatsIntake,
+                      goal: widget.totalFatsGoal,
+                      color: palette.fat,
+                      palette: palette,
+                      identifier: 'home-macro-fat',
+                      onTap: () => _openNutrientContributions(
+                        MacroNutrient.fat,
+                        widget.totalFatsIntake,
+                        widget.totalFatsGoal,
+                      ),
+                    ),
+                  ),
+                  protein: Expanded(
+                    child: _MacroTile(
+                      label: S.of(context).proteinLabel,
+                      intake: widget.totalProteinsIntake,
+                      goal: widget.totalProteinsGoal,
+                      color: palette.protein,
+                      palette: palette,
+                      identifier: 'home-macro-protein',
+                      onTap: () => _openNutrientContributions(
+                        MacroNutrient.protein,
+                        widget.totalProteinsIntake,
+                        widget.totalProteinsGoal,
+                      ),
+                    ),
+                  ),
+                ).indexed) ...[
+                  if (i > 0) const SizedBox(width: Dimens.spacing12),
+                  tile,
+                ],
+              ],
+            ),
           ),
+          // [/fork]
         ],
       ),
     );

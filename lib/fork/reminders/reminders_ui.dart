@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:opennutritracker/fork/reminders/reminders.dart';
+import 'package:opennutritracker/fork/display/settings_tile.dart';
 
 String _time(BuildContext context, ReminderTime time) =>
     TimeOfDay(hour: time.hour, minute: time.minute).format(context);
@@ -61,10 +62,10 @@ class _RemindersTileState extends State<RemindersTile> {
                 '${key == ReminderKind.weighIn ? 'Weigh-in' : 'Check-in'} '
                     '${_time(context, value)}',
           ];
-          return ListTile(
+          return ForkSettingsTile(
             key: const ValueKey('reminders-tile'),
-            leading: const Icon(Icons.notifications_active_outlined),
-            title: const Text('Weigh-in and check-in reminders'),
+            icon: Icons.notifications_active_rounded,
+            title: 'Weigh-in and check-in reminders',
             subtitle: Text(on.isEmpty ? 'Off' : on.join(' · ')),
             onTap: () => showDialog<void>(
               context: context,

@@ -61,6 +61,9 @@ import 'package:opennutritracker/fork/export/csv_export.dart';
 // [fork] S32 off-contributions: the user's Open Food Facts account
 import 'package:opennutritracker/fork/off/off_contribution_ui.dart';
 // [/fork]
+// [fork] S79 macro-order
+import 'package:opennutritracker/fork/display/display_prefs.dart';
+// [/fork]
 // [fork] S35 brand
 import 'package:opennutritracker/fork/brand/openbite_logo.dart';
 // [/fork]
@@ -450,6 +453,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     subtitle: S.of(context).settingsNutrientsSubtitle,
                     onTap: () => _openNutrientVisibilityScreen(context),
                   ),
+                  // [fork] S79 macro-order: the macros' order everywhere, and
+                  // the Diary by the hour
+                  const MacroOrderTile(),
+                  const DiaryByHourTile(),
+                  // [/fork]
                 ],
               ),
               const SizedBox(height: Dimens.spacing20),
@@ -584,26 +592,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     badge: S.of(context).aiAssistExperimentalLabel,
                     onTap: () => _openAiAssistDialog(context),
                   ),
-                  _SettingsTile(
-                    identifier: 'settings-import-custom-food',
-                    palette: palette,
-                    icon: Icons.restaurant_menu_rounded,
-                    title: S.of(context).importCustomFoodDataLabel,
-                    onTap: () => _showImportCustomFoodDataDialog(context),
-                  ),
-                  _SettingsTile(
-                    palette: palette,
-                    icon: Icons.import_export_rounded,
-                    title: S.of(context).exportImportAppDataLabel,
-                    onTap: () => _showExportImportDialog(context),
-                  ),
-                  // [fork] S23 auto-backup
-                  const AutoBackupTile(),
-                  // [/fork]
-                  // [fork] S51 csv-export: the diary for a spreadsheet, and
-                  // another app's history in
-                  const CsvExportTile(),
-                  const HistoryImportTile(),
+                  // [fork] S78 import-group: the file imports and exports
+                  // moved to their own group below
                   // [/fork]
                   // [fork] S32 off-contributions
                   const OffAccountTile(),
@@ -633,6 +623,39 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                 ],
               ),
+              // [fork] S78 import-group: every file import and export in
+              // one group
+              const SizedBox(height: Dimens.spacing20),
+              _categoryHeader(context, palette, 'Import and export'),
+              _SettingsGroup(
+                palette: palette,
+                tiles: [
+                  // [fork] S51 csv-export: another app's history in, and
+                  // the diary for a spreadsheet
+                  const HistoryImportTile(),
+                  // [/fork]
+                  _SettingsTile(
+                    identifier: 'settings-import-custom-food',
+                    palette: palette,
+                    icon: Icons.restaurant_menu_rounded,
+                    title: S.of(context).importCustomFoodDataLabel,
+                    onTap: () => _showImportCustomFoodDataDialog(context),
+                  ),
+                  _SettingsTile(
+                    palette: palette,
+                    icon: Icons.import_export_rounded,
+                    title: S.of(context).exportImportAppDataLabel,
+                    onTap: () => _showExportImportDialog(context),
+                  ),
+                  // [fork] S23 auto-backup
+                  const AutoBackupTile(),
+                  // [/fork]
+                  // [fork] S51 csv-export
+                  const CsvExportTile(),
+                  // [/fork]
+                ],
+              ),
+              // [/fork]
               const SizedBox(height: Dimens.spacing20),
               _categoryHeader(
                 context,

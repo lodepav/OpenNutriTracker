@@ -89,7 +89,7 @@ void main() {
     expect(find.text('2/5 days'), findsOneWidget);
     expect(find.text('2100 kcal of 2000 kcal (+100 kcal)'), findsOneWidget);
     expect(
-      find.text('P 150/140 g · C 180/200 g · F 60/70 g'),
+      find.text('C 180/200 g · F 60/70 g · P 150/140 g'),
       findsNWidgets(2),
     );
     // The range starts on Saturday the 17th.

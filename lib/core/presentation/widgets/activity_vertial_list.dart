@@ -129,6 +129,9 @@ class _ActivityVerticalListState extends State<ActivityVerticalList> {
               onTap: () => _onPlaceholderCardTapped(context),
               firstListElement: true,
               semanticIdentifier: 'add-activity-placeholder',
+              // [fork] S81 a11y-labels
+              label: S.of(context).addToSectionLabel(widget.title),
+              // [/fork]
             ),
           ],
         ),

@@ -6,6 +6,7 @@ import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/fork/report/nutrient_explorer.dart';
 import 'package:opennutritracker/fork/units/energy_text.dart';
+import 'package:opennutritracker/fork/display/display_prefs.dart';
 
 /// Eaten against the goal, each a mean over a week's logged days.
 typedef Versus = ({double eaten, double goal});
@@ -177,11 +178,11 @@ class WeeklyReportCard extends StatelessWidget {
     );
     String grams(String name, Versus? v) =>
         v == null ? '' : '$name ${v.eaten.round()}/${v.goal.round()} g';
-    final macros = [
-      grams('P', week.protein),
-      grams('C', week.carbs),
-      grams('F', week.fat),
-    ].where((m) => m.isNotEmpty).join(' · ');
+    final macros = inMacroOrder(
+      protein: grams('P', week.protein),
+      carbs: grams('C', week.carbs),
+      fat: grams('F', week.fat),
+    ).where((m) => m.isNotEmpty).join(' · ');
     final off = week.kcal.eaten - week.kcal.goal;
     return Padding(
       key: ValueKey('week-${DateFormat('yyyy-MM-dd').format(week.monday)}'),

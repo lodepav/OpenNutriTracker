@@ -3,6 +3,9 @@ import 'package:percent_indicator/circular_percent_indicator.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/generated/l10n.dart';
+// [fork] S79 macro-order
+import 'package:opennutritracker/fork/display/display_prefs.dart';
+// [/fork]
 
 class MacroNutrientsView extends StatefulWidget {
   final double totalCarbsIntake;
@@ -31,38 +34,42 @@ class _MacroNutrientsViewState extends State<MacroNutrientsView> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final palette = isDark ? AppPalette.dark : AppPalette.light;
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceAround,
-      children: [
-        Expanded(
-          child: _MacroRing(
-            intake: widget.totalCarbsIntake,
-            goal: widget.totalCarbsGoal,
-            label: S.of(context).carbsLabel,
-            color: palette.carbs,
-            palette: palette,
+    // [fork] S79 macro-order: the rings in the user's macro order
+    return MacroOrderBuilder(
+      builder: (context) => Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: inMacroOrder(
+          carbs: Expanded(
+            child: _MacroRing(
+              intake: widget.totalCarbsIntake,
+              goal: widget.totalCarbsGoal,
+              label: S.of(context).carbsLabel,
+              color: palette.carbs,
+              palette: palette,
+            ),
+          ),
+          fat: Expanded(
+            child: _MacroRing(
+              intake: widget.totalFatsIntake,
+              goal: widget.totalFatsGoal,
+              label: S.of(context).fatLabel,
+              color: palette.fat,
+              palette: palette,
+            ),
+          ),
+          protein: Expanded(
+            child: _MacroRing(
+              intake: widget.totalProteinsIntake,
+              goal: widget.totalProteinsGoal,
+              label: S.of(context).proteinLabel,
+              color: palette.protein,
+              palette: palette,
+            ),
           ),
         ),
-        Expanded(
-          child: _MacroRing(
-            intake: widget.totalFatsIntake,
-            goal: widget.totalFatsGoal,
-            label: S.of(context).fatLabel,
-            color: palette.fat,
-            palette: palette,
-          ),
-        ),
-        Expanded(
-          child: _MacroRing(
-            intake: widget.totalProteinsIntake,
-            goal: widget.totalProteinsGoal,
-            label: S.of(context).proteinLabel,
-            color: palette.protein,
-            palette: palette,
-          ),
-        ),
-      ],
+      ),
     );
+    // [/fork]
   }
 }
 

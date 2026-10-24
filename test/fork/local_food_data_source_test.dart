@@ -346,11 +346,10 @@ void main() {
           ('Grey peas', ['grey peas with bacon', 'pelēkie zirņi ar speķi']),
           ('Potato balls', ['potato balls', 'roasted potato balls']),
           ('Plov', ['plov', 'chicken plov']),
-          ('Khachapuri', [
-            'khachapuri',
-            'adjarian khachapuri',
-            'adjaruli khachapuri',
-          ]),
+          (
+            'Khachapuri',
+            ['khachapuri', 'adjarian khachapuri', 'adjaruli khachapuri'],
+          ),
           ('Syrniki', ['syrniki', 'syrnyky']),
           ('Kharcho', ['kharcho', 'kharcho soup']),
           ('Kofta', ['kofta', 'beef kofta', 'kofte']),
@@ -359,19 +358,21 @@ void main() {
           ('Beet salad', ['beet salad', 'grated beet salad', 'beetroot salad']),
           ('Chicken schnitzel', ['chicken schnitzel']),
           ('Salad, green', ['salad', 'garden salad']),
-          ('Pork chop with cheese', [
-            'pork chop with cheese',
-            'karbonāde ar sieru',
-            'pork cutlet with melted cheese',
-          ]),
+          (
+            'Pork chop with cheese',
+            [
+              'pork chop with cheese',
+              'karbonāde ar sieru',
+              'pork cutlet with melted cheese',
+            ],
+          ),
           ('Chicken teriyaki', ['chicken teriyaki', 'teriyaki chicken']),
           ('Shawarma, chicken', ['chicken shawarma', 'shawarma', 'gyros']),
           ('Shashlik, pork', ['shashlik', 'šašliks', 'pork skewers']),
-          ('Butter chicken', [
-            'butter chicken',
-            'chicken tikka masala',
-            'chicken makhani',
-          ]),
+          (
+            'Butter chicken',
+            ['butter chicken', 'chicken tikka masala', 'chicken makhani'],
+          ),
           ('Thai green curry', ['green curry', 'thai curry']),
           ('Liver patties', ['liver patties', 'aknu pankūkas']),
           ('Kimchi pancake', ['kimchi pancake', 'kimchijeon']),
@@ -385,7 +386,10 @@ void main() {
           ('Biryani, lamb', ['lamb biryani']),
           ('Honey cake', ['honey cake', 'medovik']),
           ('Bulgogi, pork', ['pork bulgogi', 'jeyuk bokkeum']),
-          ('Korean fried chicken', ['korean fried chicken', 'yangnyeom chicken']),
+          (
+            'Korean fried chicken',
+            ['korean fried chicken', 'yangnyeom chicken'],
+          ),
           ('Chili con carne', ['chili con carne', 'chilli con carne']),
           ('Lasagna, beef', ['beef lasagna', 'lasagna bolognese']),
         ]) {

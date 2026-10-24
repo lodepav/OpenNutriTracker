@@ -40,14 +40,14 @@ void main() {
       // the photo sheet had named the old one — it interpolates `servedBy`.
       // #688 refused a smaller version of this.
       final unchosen = AiModelCatalogue.resolve(AiProvider.openrouter, null)!;
-      expect(unchosen.id, 'anthropic/claude-sonnet-5');
+      expect(unchosen.id, 'anthropic/claude-sonnet-5.5');
       expect(unchosen.servedBy, 'Anthropic');
     });
 
     test('a retired id falls back rather than 404ing forever', () {
       expect(
         AiModelCatalogue.resolve(AiProvider.openrouter, 'anthropic/gone')!.id,
-        'anthropic/claude-sonnet-5',
+        'anthropic/claude-sonnet-5.5',
       );
     });
   });
@@ -85,8 +85,9 @@ void main() {
       }
     });
 
-    test('only the OpenRouter list claims a cheapest, and luna holds it', () {
-      // The superlative is safe because luna sits below every sibling on both
+    test('only the OpenRouter list claims a cheapest, and Haiku 5.5 holds it', () {
+      // The superlative is safe because Haiku 5.5 ($0.10/$0.50) sits below
+      // luna ($0.20/$1.20) and every other sibling on both
       // the prompt and the completion axis. It is only meaningful among
       // siblings, so it must not appear on a list where there is nothing to
       // be cheapest *than*.
@@ -94,7 +95,7 @@ void main() {
         final models = AiModelCatalogue.forProvider(provider);
         final cheapest = models.where((m) => m.note == AiModelNote.cheapest);
         if (provider == AiProvider.openrouter) {
-          expect(cheapest.single.id, 'openai/gpt-5.6-luna');
+          expect(cheapest.single.id, 'anthropic/claude-haiku-5.5');
           expect(models.length, greaterThan(1));
         } else {
           expect(cheapest, isEmpty, reason: provider.name);

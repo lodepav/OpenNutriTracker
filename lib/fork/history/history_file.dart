@@ -2,14 +2,84 @@ import 'package:opennutritracker/core/domain/entity/body_weight_unit_entity.dart
 import 'package:opennutritracker/core/domain/entity/intake_entity.dart';
 import 'package:opennutritracker/core/domain/entity/intake_type_entity.dart';
 import 'package:opennutritracker/core/utils/calc/unit_calc.dart';
+import 'package:opennutritracker/fork/body/measurement_store.dart';
 import 'package:opennutritracker/fork/history/table_reader.dart';
 
-/// An entry an import wrote: a day's or a meal's totals, never a food to
-/// offer again among the recents.
+/// An entry an import wrote as a day's or a meal's totals, never a food to
+/// offer again among the recents. A food an import wrote food by food is a
+/// real food and is offered.
 bool isImportedHistory(IntakeEntity intake) =>
+    wasImported(intake) && !intake.meal.code!.startsWith(historyFoodCodePrefix);
+
+/// Any entry an import wrote, totals or food: another app logged it, so it
+/// is not written to the health store again.
+bool wasImported(IntakeEntity intake) =>
     intake.meal.code?.startsWith(historyCodePrefix) ?? false;
 
 const historyCodePrefix = 'history-';
+const historyFoodCodePrefix = 'history-food-';
+
+/// One food of a food-by-food log (MacroFactor's): when it was eaten, what,
+/// how much, and what it held.
+class FoodRow {
+  /// The file's date, and the minutes after its midnight (null with no
+  /// time column, or an empty one). No date for a custom food.
+  final DateTime? day;
+  final int? minute;
+  final String name;
+
+  /// From a meal column; null where the file has none, and the time picks.
+  final IntakeTypeEntity? meal;
+
+  /// Grams eaten, null where the file does not say.
+  final double? grams;
+  final double kcal;
+  final double? protein;
+  final double? carbs;
+  final double? fat;
+
+  /// The amounts eaten of the other nutrients, by [nutrientColumns] key.
+  final Map<String, double> nutrients;
+
+  const FoodRow({
+    this.day,
+    this.minute,
+    required this.name,
+    this.meal,
+    this.grams,
+    required this.kcal,
+    this.protein,
+    this.carbs,
+    this.fat,
+    this.nutrients = const {},
+  });
+}
+
+/// The nutrients a food log's columns may hold beyond energy and macros,
+/// by header start, in the units the app keeps them in (g, mg, µg as the
+/// headers MacroFactor and Cronometer write say).
+const nutrientColumns = <String, List<String>>{
+  'fiber': ['fiber', 'fibre'],
+  'sugars': ['sugars', 'sugar'],
+  'saturatedFat': ['saturated fat', 'saturated'],
+  'monounsaturatedFat': ['monounsaturated'],
+  'polyunsaturatedFat': ['polyunsaturated'],
+  'transFat': ['trans fat'],
+  'cholesterol': ['cholesterol'],
+  'sodium': ['sodium'],
+  'potassium': ['potassium'],
+  'magnesium': ['magnesium'],
+  'calcium': ['calcium'],
+  'iron': ['iron'],
+  'zinc': ['zinc'],
+  'phosphorus': ['phosphorus'],
+  'vitaminA': ['vitamin a'],
+  'vitaminC': ['vitamin c'],
+  'vitaminD': ['vitamin d'],
+  'vitaminB6': ['b6', 'vitamin b6'],
+  'vitaminB12': ['b12', 'vitamin b12'],
+  'niacin': ['b3', 'niacin', 'vitamin b3'],
+};
 
 /// What was eaten in a meal of a day, or the whole day where the file has
 /// no meals.
@@ -33,8 +103,33 @@ class HistoryFile {
   final Map<DateTime, Map<IntakeTypeEntity?, FoodTotals>> food;
   final Map<DateTime, double> weightsKg;
 
-  /// The table each was read from; null when none had it.
-  final String? foodTable;
+  /// Food by food, where the food table names each food; empty where it
+  /// holds only totals. [food] sums the same rows.
+  final List<FoodRow> foods;
+
+  /// The weigh-ins an earlier import misread from a food log's serving
+  /// weights, by day: each a reading in kg and in lb taken for kg, so the
+  /// ones still in the log can be found and removed.
+  final Map<DateTime, Set<double>> misreadKg;
+
+  /// A file of day totals: the day's other nutrients, by [nutrientColumns]
+  /// key (MacroFactor's "Micronutrients" sheet).
+  final Map<DateTime, Map<String, double>> dayNutrients;
+
+  /// Body fat % and body measurements in cm, by day.
+  final Map<DateTime, Map<BodyMetric, double>> measurements;
+
+  /// The user's own foods, each as one serving (MacroFactor's "Custom
+  /// Foods"), only those the file gives calories for.
+  final List<FoodRow> customFoods;
+
+  /// The tables food was read from, in order; none when none had it.
+  final List<String> foodTables;
+
+  /// The first of [foodTables]; null when none had food.
+  String? get foodTable => foodTables.firstOrNull;
+
+  /// The table weights were read from; null when none had them.
   final String? weightTable;
 
   /// The unit the weights were read in, and whether a header stated it.
@@ -44,22 +139,33 @@ class HistoryFile {
   const HistoryFile({
     required this.food,
     required this.weightsKg,
-    this.foodTable,
+    this.foods = const [],
+    this.misreadKg = const {},
+    this.dayNutrients = const {},
+    this.measurements = const {},
+    this.customFoods = const [],
+    this.foodTables = const [],
     this.weightTable,
     required this.weightUnit,
     required this.weightUnitStated,
   });
 
-  bool get isEmpty => food.isEmpty && weightsKg.isEmpty;
+  bool get isEmpty =>
+      food.isEmpty &&
+      weightsKg.isEmpty &&
+      measurements.isEmpty &&
+      customFoods.isEmpty;
 }
 
 /// Reads food and weight history from an export's [tables] by their
 /// headers, not by any one app's layout: a date column, then calories (or
 /// energy, kcal or kJ), protein, carbs and fat, a meal, and a weight. A
 /// target, goal, budget or expenditure column is never taken for what was
-/// eaten, nor a trend weight for a weigh-in. Food comes from the first
-/// table with calories, summed by day and meal, so a workbook holding both
-/// a daily summary and a food log is not counted twice; weight from the
+/// eaten, nor a trend weight for a weigh-in. Food comes from every food
+/// log (a table naming each food), each day from the first log holding it,
+/// so two exports of overlapping spans are not counted twice; with no food
+/// log, from the first table with calories, summed by day and meal. A
+/// daily summary beside a food log is never added to it. Weight from the
 /// first with a weight, or with Cronometer's metric and amount columns.
 /// A weight header that states no unit is read in [unit].
 ///
@@ -71,37 +177,120 @@ HistoryFile readHistory(
   BodyWeightUnit unit = BodyWeightUnit.kg,
 }) {
   final food = <DateTime, Map<IntakeTypeEntity?, FoodTotals>>{};
+  final foods = <FoodRow>[];
+  final misread = <DateTime, Set<double>>{};
+  final dayNutrients = <DateTime, Map<String, double>>{};
+  final measurements = <DateTime, Map<BodyMetric, double>>{};
+  final customFoods = <FoodRow>[];
   final weights = <DateTime, double>{};
-  String? foodTable;
+  final foodTables = <String>[];
   String? weightTable;
   var weightUnit = unit;
   var stated = false;
+  final hasFoodLog = tables.any((t) {
+    final layout = _Layout.find(t.rows);
+    return layout?.kcal != null && layout?.name != null;
+  });
 
   for (final table in tables) {
+    if (customFoods.isEmpty) customFoods.addAll(_customFoods(table.rows));
     final layout = _Layout.find(table.rows);
     if (layout == null) continue;
     final rows = table.rows.sublist(layout.headerRow + 1);
     final dates = _DateColumn([for (final r in rows) _at(r, layout.date)]);
 
-    if (foodTable == null && layout.kcal != null) {
+    final takesFood =
+        layout.kcal != null &&
+        (hasFoodLog ? layout.name != null : foodTables.isEmpty);
+    if (takesFood) {
+      // Days an earlier table already gave.
+      final earlier = {...food.keys, for (final f in foods) f.day};
+      var added = false;
       for (final row in rows) {
         final day = dates.parse(_at(row, layout.date));
         final kcal = _number(_at(row, layout.kcal));
-        if (day == null || kcal == null || kcal <= 0) continue;
+        if (day == null || kcal == null || kcal < 0) continue;
+        if (earlier.contains(day)) continue;
+        added = true;
+        // A food of no calories (water, black coffee) is still a food; a
+        // day's total of none is no day.
+        if (kcal == 0 && _at(row, layout.name).trim().isEmpty) continue;
         final meal = layout.meal == null
             ? null
             : _mealOf(_at(row, layout.meal));
-        food
-            .putIfAbsent(day, () => {})
-            .putIfAbsent(meal, FoodTotals.new)
-            .add(
-              kcal * layout.kcalFactor,
-              _number(_at(row, layout.protein)),
-              _number(_at(row, layout.carbs)),
-              _number(_at(row, layout.fat)),
-            );
+        final protein = _number(_at(row, layout.protein));
+        final carbs = _number(_at(row, layout.carbs));
+        final fat = _number(_at(row, layout.fat));
+        if (kcal > 0) {
+          food
+              .putIfAbsent(day, () => {})
+              .putIfAbsent(meal, FoodTotals.new)
+              .add(kcal * layout.kcalFactor, protein, carbs, fat);
+        }
+        final name = _at(row, layout.name).trim();
+        if (layout.name == null || name.isEmpty) continue;
+        final serving = _number(_at(row, layout.servingGrams));
+        final count = layout.servings == null
+            ? 1.0
+            : _number(_at(row, layout.servings));
+        foods.add(
+          FoodRow(
+            day: day,
+            minute: _minuteOf(_at(row, layout.time)),
+            name: name,
+            meal: meal,
+            grams: serving != null && serving > 0 && count != null && count > 0
+                ? serving * count
+                : null,
+            kcal: kcal * layout.kcalFactor,
+            protein: protein,
+            carbs: carbs,
+            fat: fat,
+            nutrients: {
+              for (final MapEntry(key: key, value: column)
+                  in layout.nutrients.entries)
+                if (_number(_at(row, column)) case final v? when v > 0) key: v,
+            },
+          ),
+        );
+        // What an earlier import read as the day's weigh-in: the serving
+        // weight of the day's last food, taken for kg or lb.
+        if (serving != null) {
+          final candidates = {
+            for (final unit in BodyWeightUnit.values) _kg(serving, unit),
+          }.where((kg) => kg >= 20 && kg <= 400).toSet();
+          if (candidates.isNotEmpty) misread[day] = candidates;
+        }
       }
-      if (food.isNotEmpty) foodTable = table.name;
+      if (added) foodTables.add(table.name);
+    }
+
+    // A sheet of the day's nutrients beside one of its calories.
+    if (dayNutrients.isEmpty &&
+        layout.kcal == null &&
+        layout.nutrients.length >= 3) {
+      for (final row in rows) {
+        final day = dates.parse(_at(row, layout.date));
+        if (day == null) continue;
+        final values = {
+          for (final MapEntry(key: key, value: column)
+              in layout.nutrients.entries)
+            if (_number(_at(row, column)) case final v? when v > 0) key: v,
+        };
+        if (values.isNotEmpty) dayNutrients[day] = values;
+      }
+    }
+
+    for (final row in rows) {
+      final day = dates.parse(_at(row, layout.date));
+      if (day == null) continue;
+      for (final MapEntry(key: metric, value: (column, factor))
+          in layout.measures.entries) {
+        final value = _number(_at(row, column));
+        if (value == null || value <= 0) continue;
+        if (metric == BodyMetric.bodyFat && value >= 70) continue;
+        measurements.putIfAbsent(day, () => {})[metric] ??= value * factor;
+      }
     }
 
     if (weightTable == null && layout.weight != null) {
@@ -132,7 +321,12 @@ HistoryFile readHistory(
   return HistoryFile(
     food: food,
     weightsKg: weights,
-    foodTable: foodTable,
+    foods: foods,
+    misreadKg: misread,
+    dayNutrients: dayNutrients,
+    measurements: measurements,
+    customFoods: customFoods,
+    foodTables: foodTables,
     weightTable: weightTable,
     weightUnit: stated ? weightUnit : unit,
     weightUnitStated: stated,
@@ -144,6 +338,24 @@ double _kg(double value, BodyWeightUnit unit) =>
 
 String _at(List<String> row, int? i) =>
     i == null || i >= row.length ? '' : row[i];
+
+/// "08:00", "8:05 PM" or "20:05:00" as minutes after midnight.
+int? _minuteOf(String raw) {
+  final m = RegExp(
+    r'^(\d{1,2}):(\d{2})(?::\d{2})?\s*([ap]\.?m\.?)?$',
+    caseSensitive: false,
+  ).firstMatch(raw.trim());
+  if (m == null) return null;
+  var hour = int.parse(m.group(1)!);
+  final minute = int.parse(m.group(2)!);
+  final half = m.group(3)?.toLowerCase();
+  if (half != null) {
+    if (hour < 1 || hour > 12) return null;
+    hour = hour % 12 + (half.startsWith('p') ? 12 : 0);
+  }
+  if (hour > 23 || minute > 59) return null;
+  return hour * 60 + minute;
+}
 
 /// Where a table keeps what the import reads: its header row and columns.
 class _Layout {
@@ -157,6 +369,18 @@ class _Layout {
   final int? meal;
   final int? weight;
   final BodyWeightUnit? weightUnit;
+
+  /// A food log's: the food's name, the time it was eaten, the grams of a
+  /// serving and the servings eaten, and the other nutrients by
+  /// [nutrientColumns] key.
+  final int? name;
+  final int? time;
+  final int? servingGrams;
+  final int? servings;
+  final Map<String, int> nutrients;
+
+  /// Body fat % and body measurements: the column, and the factor to cm.
+  final Map<BodyMetric, (int, double)> measures;
 
   /// Cronometer's biometrics: one row per reading, its metric and unit in
   /// columns of their own.
@@ -174,6 +398,12 @@ class _Layout {
     this.meal,
     this.weight,
     this.weightUnit,
+    this.name,
+    this.time,
+    this.servingGrams,
+    this.servings,
+    this.nutrients = const {},
+    this.measures = const {},
     this.metric,
     this.unit,
   });
@@ -226,6 +456,33 @@ class _Layout {
               !_any(c, ['saturated', 'trans', 'mono', 'poly', ..._notEaten]),
         ),
         meal: first((c) => c == 'meal' || c == 'meal type' || c == 'group'),
+        name: first(
+          (c) =>
+              c == 'food name' ||
+              c == 'food' ||
+              c == 'name' ||
+              c == 'food item' ||
+              c == 'description',
+        ),
+        time: first((c) => c == 'time'),
+        servingGrams: first(
+          (c) =>
+              c.contains('serving weight') ||
+              c == 'weight (g)' ||
+              c == 'grams' ||
+              c == 'amount (g)',
+        ),
+        servings: first(
+          (c) => c == 'serving qty' || c == 'servings' || c == 'quantity',
+        ),
+        nutrients: {
+          for (final MapEntry(key: key, value: starts)
+              in nutrientColumns.entries)
+            key: ?first(
+              (c) => starts.any((s) => _names(c, s)) && !c.contains('added'),
+            ),
+        },
+        measures: _measures(h),
         weight: weight,
         weightUnit: weight == null || metric != null
             ? null
@@ -238,6 +495,103 @@ class _Layout {
     }
     return null;
   }
+}
+
+/// Body fat % and the body measurements among [headers] (MacroFactor's
+/// "Scale Weight" fat percent and "Body Metrics"), each with its factor to
+/// cm; an arm or thigh is the right one where both are measured.
+Map<BodyMetric, (int, double)> _measures(List<String> headers) {
+  final found = <BodyMetric, (int, double)>{};
+  void take(BodyMetric metric, bool Function(String) test) {
+    if (found.containsKey(metric)) return;
+    final i = headers.indexWhere(test);
+    if (i < 0) return;
+    final h = headers[i];
+    final factor = metric == BodyMetric.bodyFat
+        ? 1.0
+        : RegExp(r'\b(in|inch|inches)\b').hasMatch(h)
+        ? 2.54
+        : 1.0;
+    found[metric] = (i, factor);
+  }
+
+  take(
+    BodyMetric.bodyFat,
+    (c) =>
+        c == 'fat percent' ||
+        c.startsWith('body fat') ||
+        c == 'fat %' ||
+        c == 'fat mass (%)',
+  );
+  for (final (metric, word) in [
+    (BodyMetric.waist, 'waist'),
+    (BodyMetric.hips, 'hips'),
+    (BodyMetric.chest, 'chest'),
+    (BodyMetric.neck, 'neck'),
+  ]) {
+    take(metric, (c) => _names(c, word));
+  }
+  for (final (metric, words) in [
+    (BodyMetric.arm, ['right bicep', 'left bicep', 'bicep', 'arm']),
+    (BodyMetric.thigh, ['right thigh', 'left thigh', 'thigh']),
+  ]) {
+    for (final word in words) {
+      take(metric, (c) => _names(c, word));
+    }
+  }
+  return found;
+}
+
+/// The custom foods of a sheet that names foods and their calories but no
+/// date: one serving each, with its grams where the sheet gives them.
+List<FoodRow> _customFoods(List<List<String>> rows) {
+  if (rows.isEmpty) return const [];
+  final h = [for (final c in rows.first) c.toLowerCase().trim()];
+  if (h.any((c) => c == 'date' || c == 'day' || c.startsWith('date '))) {
+    return const [];
+  }
+  final name = h.indexWhere((c) => c == 'food name' || c == 'food');
+  final kcal = h.indexWhere(
+    (c) => _names(c, 'calories') || c == 'kcal' || c.startsWith('energy'),
+  );
+  if (name < 0 || kcal < 0) return const [];
+  int? col(bool Function(String) test) {
+    final i = h.indexWhere(test);
+    return i < 0 ? null : i;
+  }
+
+  final grams = col((c) => c.contains('serving weight'));
+  final servings = col((c) => c == 'serving qty');
+  final protein = col((c) => _names(c, 'protein'));
+  final carbs = col((c) => _names(c, 'carbs') || _names(c, 'carbohydrates'));
+  final fat = col((c) => _names(c, 'fat'));
+  final nutrients = {
+    for (final MapEntry(key: key, value: starts) in nutrientColumns.entries)
+      key: ?col((c) => starts.any((s) => _names(c, s)) && !c.contains('added')),
+  };
+  return [
+    for (final row in rows.skip(1))
+      if (_at(row, name).trim() case final n when n.isNotEmpty)
+        if (_number(_at(row, kcal)) case final k? when k >= 0)
+          FoodRow(
+            name: n,
+            grams: switch ((
+              _number(_at(row, grams)),
+              servings == null ? 1.0 : _number(_at(row, servings)),
+            )) {
+              (final g?, final q?) when g > 0 && q > 0 => g * q,
+              _ => null,
+            },
+            kcal: k,
+            protein: _number(_at(row, protein)),
+            carbs: _number(_at(row, carbs)),
+            fat: _number(_at(row, fat)),
+            nutrients: {
+              for (final MapEntry(key: key, value: column) in nutrients.entries)
+                if (_number(_at(row, column)) case final v? when v > 0) key: v,
+            },
+          ),
+  ];
 }
 
 const _notEaten = [
@@ -254,9 +608,22 @@ const _notEaten = [
 
 bool _any(String text, List<String> words) => words.any(text.contains);
 
+/// Whether [header] starts with the word or words [name]: "iron (mg)" and
+/// "b6, pyridoxine (mg)" name iron and b6, "isoleucine (g)" not iron.
+bool _names(String header, String name) =>
+    header.startsWith(name) &&
+    (header.length == name.length ||
+        !RegExp('[a-z0-9]').hasMatch(header[name.length]));
+
 bool _isWeight(String header) =>
     (header.contains('weight') || header == 'body mass') &&
     !_any(header, [
+      // A food log's serving weight (MacroFactor's "Serving Weight (g)"),
+      // which an earlier reading took for a weigh-in.
+      'serving',
+      'portion',
+      'food',
+      '(g)',
       'trend',
       'target',
       'goal',

@@ -18,6 +18,9 @@ import 'package:opennutritracker/features/profile/presentation/widgets/weight_tr
 import 'package:opennutritracker/features/trends/presentation/bloc/trends_bloc.dart';
 import 'package:opennutritracker/features/trends/presentation/trends_calc.dart';
 import 'package:opennutritracker/generated/l10n.dart';
+// [fork] S79 macro-order
+import 'package:opennutritracker/fork/display/display_prefs.dart';
+// [/fork]
 // [fork] S40 expenditure-card
 import 'package:opennutritracker/fork/adaptive/expenditure_card.dart';
 import 'package:opennutritracker/fork/adaptive/goal_plan_card.dart';
@@ -538,7 +541,13 @@ class _MacrosTrendCard extends StatelessWidget {
           // Average intake vs goal over the window — daily-average macros.
           Text(S.of(context).trendsDailyAverageLabel, style: text.titleMedium),
           const SizedBox(height: Dimens.spacing16),
-          for (final (label, intake, goal, color) in rows) ...[
+          // [fork] S79 macro-order
+          for (final (label, intake, goal, color) in inMacroOrder(
+            carbs: rows[0],
+            fat: rows[1],
+            protein: rows[2],
+          )) ...[
+          // [/fork]
             Row(
               children: [
                 Expanded(
