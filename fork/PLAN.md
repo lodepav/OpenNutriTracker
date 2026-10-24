@@ -941,6 +941,14 @@ Commons photos of dishes from the user's log, the manifest kept with the labels 
   BLS's pork.
 - Side rows that land wrong: "lingonberry jam" on a turkey dish served with it, "walnuts" on
   honey-roasted ones.
+- Less frequent dishes from the log (1–23 times each) are fork dishes too: pork chop with
+  cheese (karbonāde), chicken teriyaki, chicken shawarma, pork shashlik, butter chicken (tikka
+  masala), Thai green curry, liver patties, kimchi pancake, fish cutlets, Caesar wrap,
+  rassolnik, Olivier salad, japchae, chicken saganaki, okroshka, lamb biryani, honey cake,
+  pork bulgogi, Korean fried chicken and homemade chili con carne. Their spellings are pinned
+  in `local_food_data_source_test.dart`. The table lacks gochujang and curry paste, so
+  sriracha and fresh chili stand in, as each dish's basis says. "Fish cakes" keeps its survey
+  row.
 
 Still needs the user: the leftovers photo check, typing and photographing their own
 khachapuri, pelmeni and grey peas, and ten of their own meals (photos we do not have).
