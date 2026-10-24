@@ -23,12 +23,12 @@ class CopyOrDeleteDialog extends StatelessWidget {
           onPressed: () {
             Navigator.of(context).pop(true);
           },
-          // [fork] S24 copy-anywhere
+          // [fork] S24 copy-anywhere; S81 a11y-labels: sentence case, as
+          // every other dialog
           child: Text(
-            (toPicker
-                    ? '${S.of(context).copyActionLabel}…'
-                    : S.of(context).dialogCopyLabel)
-                .toUpperCase(),
+            toPicker
+                ? '${S.of(context).copyActionLabel}…'
+                : S.of(context).dialogCopyLabel,
           ),
           // [/fork]
         ),
@@ -36,7 +36,9 @@ class CopyOrDeleteDialog extends StatelessWidget {
           onPressed: () {
             Navigator.of(context).pop(false);
           },
-          child: Text(S.of(context).dialogDeleteLabel.toUpperCase()),
+          // [fork] S81 a11y-labels
+          child: Text(S.of(context).dialogDeleteLabel),
+          // [/fork]
         ),
       ],
     );

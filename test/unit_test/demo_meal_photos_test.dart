@@ -57,6 +57,9 @@ void main() {
         ('broccoli', foods.broccoli),
       ];
 
+      // [fork] S82 demo-photos: these four had another food's photo
+      const noPhoto = {'brownRice', 'wholegrainBread', 'almonds', 'broccoli'};
+      // [/fork]
       for (final (label, meal) in all) {
         // The whole point of bundling: a seeded demo meal must never carry
         // a CDN URL, because CachedNetworkImage would fetch it at render
@@ -66,6 +69,12 @@ void main() {
         expect(meal.mainImageUrl, isNull,
             reason: '$label must not hotlink a main image');
 
+        // [fork] S82 demo-photos
+        if (noPhoto.contains(label)) {
+          expect(meal.localImagePath, isNull, reason: '$label has no photo');
+          continue;
+        }
+        // [/fork]
         expect(meal.localImagePath, isNotNull,
             reason: '$label lost its bundled photo — check that its photoId '
                 'has a matching file in assets/demo/meals/');

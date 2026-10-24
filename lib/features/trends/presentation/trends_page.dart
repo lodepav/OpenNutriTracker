@@ -21,6 +21,9 @@ import 'package:opennutritracker/generated/l10n.dart';
 // [fork] S79 macro-order
 import 'package:opennutritracker/fork/display/display_prefs.dart';
 // [/fork]
+// [fork] S81 a11y-labels
+import 'package:intl/intl.dart' show toBeginningOfSentenceCase;
+// [/fork]
 // [fork] S40 expenditure-card
 import 'package:opennutritracker/fork/adaptive/expenditure_card.dart';
 import 'package:opennutritracker/fork/adaptive/goal_plan_card.dart';
@@ -541,12 +544,13 @@ class _MacrosTrendCard extends StatelessWidget {
           // Average intake vs goal over the window — daily-average macros.
           Text(S.of(context).trendsDailyAverageLabel, style: text.titleMedium),
           const SizedBox(height: Dimens.spacing16),
-          // [fork] S79 macro-order
+          // [fork] S79 macro-order; S81 a11y-labels: "Protein", as a
+          // label starting a row, not "protein"
           for (final (label, intake, goal, color) in inMacroOrder(
             carbs: rows[0],
             fat: rows[1],
             protein: rows[2],
-          )) ...[
+          ).map((r) => (toBeginningOfSentenceCase(r.$1), r.$2, r.$3, r.$4))) ...[
           // [/fork]
             Row(
               children: [

@@ -464,8 +464,8 @@ class HistoryImportTile extends StatelessWidget {
     icon: Icons.history_rounded,
     title: 'Import history',
     subtitle: const Text(
-      'Daily food and weigh-ins from MacroFactor, MyFitnessPal, Cronometer '
-      'or a spreadsheet (CSV, XLSX or ZIP; pick several at once)',
+      'From MacroFactor, MyFitnessPal, Cronometer or a spreadsheet; '
+      'several files at once',
     ),
     onTap: () => _run(context),
   );
@@ -587,7 +587,7 @@ class _HistoryImportDialogState extends State<HistoryImportDialog> {
           children: [
             if (plan.isEmpty) ...[
               Text(
-                'Nothing new to import: what the file has is already here.',
+                'Nothing new to import: it is all already here.',
                 key: const ValueKey('history-nothing-new'),
                 style: Theme.of(context).textTheme.titleSmall,
               ),
@@ -665,8 +665,7 @@ class _HistoryImportDialogState extends State<HistoryImportDialog> {
             if (plan.keptDays > 0 || plan.keptWeighIns > 0) ...[
               const SizedBox(height: 8),
               Text(
-                'Kept as they are here: ${plan.keptDays} days already '
-                'logged, ${plan.keptWeighIns} weigh-ins already entered.',
+                'Kept as they are here: ${[if (plan.keptDays > 0) '${plan.keptDays} days already logged', if (plan.keptWeighIns > 0) '${plan.keptWeighIns} weigh-ins already entered'].join(', ')}.',
               ),
             ],
             const SizedBox(height: 8),

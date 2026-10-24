@@ -101,10 +101,10 @@ void main() {
     await tester.longPress(find.byType(ActivityCard));
     await tester.pumpAndSettle();
     expect(
-      find.text('${l10nEn.copyActionLabel}…'.toUpperCase()),
+      find.text('${l10nEn.copyActionLabel}…'),
       findsOneWidget,
     );
-    await tester.tap(find.text(l10nEn.dialogDeleteLabel.toUpperCase()));
+    await tester.tap(find.text(l10nEn.dialogDeleteLabel));
     await tester.pumpAndSettle();
     await tester.tap(find.text(l10nEn.dialogOKLabel));
     await tester.pumpAndSettle();
