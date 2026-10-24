@@ -736,6 +736,29 @@ come from their Barbora labels (pork and chicken cutlets, dill and garlic sauce)
   tray. The breakdown's grams decide the rest: Haiku's chicken cutlet is a 150 g breaded
   fillet, while LIDO's kotlete is a 90 g minced patty.
 
+*Model names pinned to table rows, 2026-10-24* (`test/fork/model_names_test.dart`): the
+replays gave 233 dish names and 162 breakdown ingredient names. Each ran through the app's
+own resolver; the eval's `tableMatch` now runs it too, portions and all, where it used to
+rank rows without their portions. 51 names are pinned to the right row and 20 known misses
+are skipped, each with what it logs now.
+- **Fixed (S70):** a variant the query did not name scores 0.2 lower: meatless, vegan,
+  imitation, baby food. "bacon" logged "Bacon, meatless" and "schnitzel" "Vegan schnitzel".
+  USDA's "unprepared" is left alone: it means as sold, the raw row a recipe wants.
+- **Tried and backed out (S71, the patch is kept outside the repo):** a tie key ahead of
+  upstream's shortest name, counting the words a row adds past the query. It skips FNDDS's
+  "NFS" and "NS as to …" segments and plain words (whole, cooked, raw, regular). It fixed 12
+  names: rice → "Rice, cooked, NFS" (was fried rice), egg noodles → cooked (was dry, 384
+  kcal), bread → "Bread, NS as to major flour", white rice, pork chop, sour cream →
+  regular, mayonnaise → regular. But upstream declined exactly this rule (its comment in
+  `resolver_relevance.dart`), and it breaks 13 upstream resolver tests whose fixtures pin
+  the old order. That is for the user to decide.
+- **Known misses left:** a bare word ranks a dish that holds it ("salad" → Salmon salad,
+  "fries" → Yuca fries, "tomato sauce" → steak sauce, "tomato paste" → a pasta dish);
+  "potatoes" → the skin alone; "porridge" and "bread soup" → savoury BLS rows; "meat
+  dumplings" → "Dumpling, no meat", the only row with every word; "butter, unsalted" →
+  a pretzel ("unsalted, no butter"), since every word must match and butter says "without
+  salt".
+
 Still needs the user: the leftovers photo check, typing and photographing their own
 khachapuri, pelmeni and grey peas, and ten of their own meals (photos we do not have).
 
