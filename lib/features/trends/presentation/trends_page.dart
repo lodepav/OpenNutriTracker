@@ -338,12 +338,17 @@ class _CaloriesTrendCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(S.of(context).trendsCaloriesLabel, style: text.titleMedium),
+          // [fork] S83 chart-summary: the chart's numbers in words, shown
+          // (and so spoken) under its title
+          if (_caloriesSummary(context, spots, avgGoal).isNotEmpty)
+            Text(
+              _caloriesSummary(context, spots, avgGoal),
+              style: text.bodySmall?.copyWith(color: palette.textMuted),
+            ),
+          // [/fork]
           const SizedBox(height: Dimens.spacing20),
           Semantics(
             label: S.of(context).trendsCaloriesLabel,
-            // [fork] S83 a11y-labels: the chart's numbers, spoken
-            value: _caloriesSummary(context, spots, avgGoal),
-            // [/fork]
             child: SizedBox(
             height: 140,
             child: LineChart(
@@ -719,7 +724,7 @@ class _WeightCard extends StatelessWidget {
   }
 }
 
-// [fork] S83 a11y-labels: the calorie chart read aloud: the average of the
+// [fork] S83 chart-summary: the calorie chart in words: the average of the
 // days logged and the average goal.
 String _caloriesSummary(BuildContext context, List<FlSpot> spots, double avgGoal) {
   final logged = [for (final s in spots) if (s.y > 0) s.y];
