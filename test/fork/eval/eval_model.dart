@@ -3,10 +3,13 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:opennutritracker/features/add_meal/data/anthropic_meal_items_api.dart';
 import 'package:opennutritracker/features/add_meal/data/openai_compatible_meal_items_api.dart';
+import 'package:opennutritracker/features/add_meal/data/data_sources/off_data_source.dart';
+import 'package:opennutritracker/features/add_meal/data/repository/products_repository.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dart';
 import 'package:opennutritracker/features/add_meal/domain/meal_items_api.dart';
-import 'package:opennutritracker/features/add_meal/util/meal_relevance_ranker.dart';
-import 'package:opennutritracker/features/add_meal/util/resolver_relevance.dart';
+import 'package:opennutritracker/features/add_meal/domain/usecase/resolve_parsed_meals_usecase.dart';
+import 'package:opennutritracker/features/add_meal/domain/usecase/search_products_usecase.dart';
+import 'package:opennutritracker/features/add_meal/util/meal_text_parser.dart';
 import 'package:opennutritracker/fork/dev/replay_ai.dart';
 import 'package:opennutritracker/fork/food/local_food_data_source.dart';
 
@@ -80,17 +83,47 @@ Future<LocalFoodDataSource> loadFoodTable() async {
   );
 }
 
-/// The table row the app's resolver would pick for [query]: the same
-/// search, merge and ranking (`ResolveParsedMealsUseCase`), without Open
-/// Food Facts, which a breakdown passes over for a table row anyway
+/// The table row the app's resolver picks for [query], or null when none
+/// clears its confidence floor: `ResolveParsedMealsUseCase` itself, over
+/// the table with its portions as `ProductsRepository` serves it, without
+/// Open Food Facts, which a breakdown passes over for a table row anyway
 /// (`preferTableRow`).
 Future<MealEntity?> tableMatch(LocalFoodDataSource foods, String query) async {
-  final rows = await foods.fetchSearchWordResults(query, forResolution: true);
-  final meals = [for (final row in rows) MealEntity.fromSpFood(row)];
-  return rankForResolution(
-    mergeAndRankMeals(const [], meals, query),
-    query,
-  ).firstOrNull;
+  final resolver = ResolveParsedMealsUseCase(
+    TableOnlySearch(ProductsRepository(OFFDataSource(), foods)),
+  );
+  final resolved = await resolver.resolve([ParsedMealItem(query: query)]);
+  return resolved.single.selected;
+}
+
+/// Upstream's search over the bundled table alone, as phase 1b's staple
+/// check runs it (staple_foods_test.dart).
+class TableOnlySearch implements SearchProductsUseCase {
+  final ProductsRepository repository;
+
+  TableOnlySearch(this.repository);
+
+  @override
+  Future<SearchProductsResult> searchOFFProductsByString(
+    String searchString, {
+    bool skipRemote = false,
+  }) async => SearchProductsResult(meals: const [], remoteSourceEmpty: true);
+
+  @override
+  Future<SearchProductsResult> searchFDCFoodByString(
+    String searchString, {
+    bool skipRemote = false,
+    bool forResolution = false,
+  }) async => SearchProductsResult(
+    meals: await repository.getSupabaseFoodsByString(
+      searchString,
+      forResolution: forResolution,
+    ),
+    remoteSourceEmpty: false,
+  );
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
 Directory evalRunDir(String suffix) => Directory(

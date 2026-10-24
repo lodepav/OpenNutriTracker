@@ -686,6 +686,142 @@ ingredients through the resolver's own ranking, not the table's first row.
   with more than twice the leanest cooked row's energy and over 50 g carbs are left out. A
   37-name probe changed only those seven. Eggs, meat, raw bacon and oats kept their rows.
 
+*Photo alone against photo with a note, 2026-10-24:* 15 LIDO set meals were added (61 photos
+in all). Each plate has two to four parts, which LIDO's menu text lists. The 28 LIDO photos
+carry a `user_note` written the way a person would type it, for example "karbonāde, potatoes,
+mushroom sauce" or "soļanka, 2 pankūkas with meat, sour cream, beet salad". Some notes leave
+out a part the photo shows. Each of those photos runs once alone and once with its note.
+- **Dishes named:**
+  - alone: Opus 26/28, Sonnet 23/28, Haiku 21/28;
+  - with the note: 28/28 for all three. The note also fixes every count (7/7).
+- **Set-meal parts named (of 55):**
+  - alone: Opus 54, Sonnet 53, Haiku 46;
+  - with the note: Opus 55, Sonnet 52, Haiku 54.
+
+  Sonnet with a note sometimes logs only what the note names and drops a dill sauce it can
+  see; Opus and Haiku add it.
+- **Matching against the table still goes wrong after a right name:**
+  - a note's bare "salad" is logged as "salad", which ranks "Salmon salad" first (213 kcal);
+  - "pancakes with meat" goes to an egg sandwich on a griddle pancake;
+  - "bread soup" goes to a savoury soup at 43 kcal, against LIDO's dessert.
+- **Replay slip:** one Haiku subagent wrote four answers under the wrong keys, so two plates
+  swapped answers. A fresh subagent answering one request at a time fixed it. The answers
+  are worth a spot check against their photos.
+
+*Photo to logged kcal, 2026-10-24* (`calorie_eval_test.dart`): every one-serving photo with
+known macros goes through the bulk-add screen's own logic (BulkAddBloc, the resolver, D9
+breakdowns). Each row is taken at the amount the screen starts it at, as a user who just
+accepts would log it. There are 17 photos: the recipe pages and four LIDO packs whose macros
+come from their Barbora labels (pork and chicken cutlets, dill and garlic sauce).
+- **Before the fix,** butter logged at 224 g (1,664 kcal) and raisins at 0.5 g. The table's
+  default serving was FNDDS's first portion, "1 cup" or "1 raisin". Survey foods now take
+  FNDDS's own "Quantity not specified" amount (butter 14 g, raisins 40 g, coffee 360 ml), in
+  `build_food_db.py`. That changes 3,807 rows. Portions are unchanged, and a count still
+  matches a named portion first.
+- **After it, alone / with the note:**
+  | Model | Within 25% | Median off | Logged / label, total |
+  |---|---|---|---|
+  | Opus | 5/17 / 2/5 | 45% / 27% | 97% / 64% |
+  | Sonnet | 5/17 / 3/5 | 45% / 12% | 105% / 103% |
+  | Haiku | 9/17 / 4/5 | 23% / 12% | 91% / 102% |
+- **Totals land near 100%, but single photos still miss widely.** The causes:
+  - a dish found in the table starts at 100 g, flagged, since the photo path gives no weight
+    (plov: 152 kcal against 753);
+  - "meat patty" picks a 97%-lean beef patty, 107 kcal a piece against 330;
+  - a note's "2 pork patties" lands on a raw patty row with no serving, so it logs 2 g,
+    flagged;
+  - "porridge" picks a roasted porridge with vegetable stock.
+- **A breakdown is one serving, whatever count the model gave the dish.** That is closer
+  than multiplying by the count, since the model's serving of "2 cutlets" is about the
+  tray. The breakdown's grams decide the rest: Haiku's chicken cutlet is a 150 g breaded
+  fillet, while LIDO's kotlete is a 90 g minced patty.
+
+*Model names pinned to table rows, 2026-10-24* (`test/fork/model_names_test.dart`): the
+replays gave 233 dish names and 162 breakdown ingredient names. Each ran through the app's
+own resolver; the eval's `tableMatch` now runs it too, portions and all, where it used to
+rank rows without their portions. 51 names are pinned to the right row and 20 known misses
+are skipped, each with what it logs now.
+- **Fixed (S70):** a variant the query did not name scores 0.2 lower: meatless, vegan,
+  imitation, baby food. "bacon" logged "Bacon, meatless" and "schnitzel" "Vegan schnitzel".
+  USDA's "unprepared" is left alone: it means as sold, the raw row a recipe wants.
+- **Tried and backed out (S71, the patch is kept outside the repo):** a tie key ahead of
+  upstream's shortest name, counting the words a row adds past the query. It skips FNDDS's
+  "NFS" and "NS as to …" segments and plain words (whole, cooked, raw, regular). It fixed 12
+  names: rice → "Rice, cooked, NFS" (was fried rice), egg noodles → cooked (was dry, 384
+  kcal), bread → "Bread, NS as to major flour", white rice, pork chop, sour cream →
+  regular, mayonnaise → regular. But upstream declined exactly this rule (its comment in
+  `resolver_relevance.dart`), and it breaks 13 upstream resolver tests whose fixtures pin
+  the old order. That is for the user to decide.
+- **Known misses left:** a bare word ranks a dish that holds it ("salad" → Salmon salad,
+  "fries" → Yuca fries, "tomato sauce" → steak sauce, "tomato paste" → a pasta dish);
+  "potatoes" → the skin alone; "porridge" and "bread soup" → savoury BLS rows; "meat
+  dumplings" → "Dumpling, no meat", the only row with every word; "butter, unsalted" →
+  a pretzel ("unsalted, no butter"), since every word must match and butter says "without
+  salt". The typed meals added: "cola" → a 0 kcal ZEVIA diet cola, "coke" → nothing,
+  "eggs" → egg yolk, "greek yogurt" → with oats, "granola" → a cookie, "coffee" → a latte.
+  S71 would fix the yogurt and the coffee.
+
+*Hard notes and the Latvian locale, 2026-10-24* (`test/fork/eval/hard_note_eval_test.dart`,
+all three models):
+- **Notes are followed.** A note that contradicts the photo wins ("vistas fileja" on a
+  karbonāde gives chicken, "rīsi" on buckwheat gives rice). So do a lower count ("2 ļuļa
+  kebabi" over three in the photo), grams (150 g karbonāde, 200 g potatoes, the sauce left
+  unweighed), and a food the photo does not show ("kafija ar pienu"). Six of eight cases
+  pass for every model.
+- **Fractions are dropped.** "puse karbonādes" and "1.5 kāpostu tītenīši" come back with no
+  quantity: the models give 0.5 and 1.5, and S60's `_countsOnly` drops a count that is not
+  whole unless the note states the same amount with a unit. A bare "1.5" is not exempt, and
+  "puse" is a word. The row then starts at one serving.
+- **The Latvian locale finds no table row.** Upstream's photo prompt (#650) asks for names
+  "in the user's app language". That suits OFF but not the fork's English table. With
+  `localeCode: 'lv'` every model named the food in Latvian ("karbonāde", "soļanka",
+  "kartupeļu biezenis"), and 0 of about 30 rows per model matched. In English, 13 to 21 of
+  28 to 37 did. The dishes are still recognised (15 to 20 of 20). The eval searches the table
+  alone. The app's OFF search may catch a few, but every miss is broken down (D9).
+
+*Typed meals to logged kcal, 2026-10-24* (`test/fork/eval/text_eval_test.dart`, 24 meals, 13
+of them Latvian; references worked out from USDA and pack figures beside each meal):
+
+| Model | English (en) | Latvian (en and lv) |
+|---|---|---|
+| Opus | 14/22 within 25%, median 19%, total 97% | 7/11, 23%, 85% |
+| Sonnet | 14/22, 19%, 97% | 6/11, 25%, 85% |
+| Haiku | 15/23, 19%, 91% | 6/12, 34%, 70% |
+
+- **English meals go well.** The misses are names: "greek yogurt" → with oats (+50%),
+  "eggs" → egg yolk, "coffee" plus "milk" → a latte and a glass of milk, "fries" → yuca
+  fries, a bowl of borscht at a 100 g serving.
+- **Latvian names never reach the table.** The text prompt (upstream's) keeps the user's
+  words, so "kefīrs", "griķi", "biezpiens", "olas" all miss and are broken down, in either
+  locale. Where Haiku translated on its own ("kefir 500 ml", "beer 0.5 l") the row was
+  exact.
+- **A breakdown throws the typed amount away.** It is always one typical serving: "kefīrs
+  500 ml" logs 250 ml (108 kcal of 280), "200 g biezpiena" 150 g, "3 olas" one 100 g egg
+  serving. The totals look fair only because the misses cancel.
+- **Breakdowns of a bare Latvian word can be wrong.** Haiku read "lasis" (salmon) as yogurt
+  and "olas" (eggs) as olives. Opus and Sonnet did not.
+
+*Run to run, 2026-10-24:* the photo-to-kcal set (17 photos, 5 with notes) answered a second
+time by fresh subagents (`replay/{opus2,sonnet2,haiku2}`), breakdowns included.
+
+| Model | Run 1 within 25% | Run 2 | Same photo, median gap between runs | Gap over 25% |
+|---|---|---|---|---|
+| Opus | 5/17, notes 2/5 | 4/17, notes 2/5 | 9% | 8 of 22 |
+| Sonnet | 4/17, notes 3/5 | 9/16, notes 2/5 | 26% | 11 of 21 |
+| Haiku | 10/17, notes 4/5 | 7/17, notes 3/5 | 19% | 10 of 22 |
+
+- **The model ranking is noise.** Sonnet went from 4 to 9 meals within 25% and Haiku from 10
+  to 7. On a set this size no model reads photos better than another; earlier "Haiku is
+  closest" findings do not hold.
+- **Most of the gap is naming, not counting.** One run names "chicken pilaf" (a 100 g
+  guess at 152 kcal), the next "chicken rice pilaf" (broken down, 676). "creamy sauce"
+  logs 53 kcal, "creamy garlic sauce" 245. A name that finds a row with no serving is
+  the costliest.
+- **A count on a row with no serving logs grams.** "1× breaded pork chop" → "Pork chop
+  breaded, fried" at 1 g (3 kcal), and "2 pork patties" at 2 g. This is upstream's fallback
+  (#622): the row is flagged for checking, not silently wrong. But BLS rows carry no
+  serving, so it comes up in 3 of 22 meals in run 2.
+
 Still needs the user: the leftovers photo check, typing and photographing their own
 khachapuri, pelmeni and grey peas, and ten of their own meals (photos we do not have).
 

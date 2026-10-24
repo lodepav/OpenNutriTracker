@@ -53,5 +53,11 @@ fork/tools/ai_replay.sh push build/fork-eval/replay/app
 > tool call's input to `<dir>/answers/<key>.json`: one JSON object matching
 > `tool.input_schema`, nothing else. Answer each request on its own, from its own photo and
 > text; do not look at other requests' answers, the app's code, or anything else in the
-> repository. Write no other files. End with one line per request: the key and the items
-> you named.
+> repository. Write no other files. Do them one at a time: read one request and its photo,
+> check that its answer does not exist yet, write it under that same key, then move to the
+> next. End with one line per request: the key and the items you named.
+
+A Haiku subagent once wrote answers under the wrong keys, and once re-answered requests that
+already had answers. For Haiku, list the keys to answer in the prompt
+(`for f in <dir>/requests/*.json; do k=$(basename $f .json); [ -f <dir>/answers/$k.json ] ||
+echo $k; done`), and check the answers' timestamps afterwards.

@@ -151,7 +151,8 @@ void main() {
           ..writeln('|---|---|---|---|---|---|---|');
         for (final photo in photos) {
           final file = File('$_photoDir/${photo['id']}.jpg');
-          if (!file.existsSync()) continue;
+          // A set meal is several dishes, not one to break down.
+          if (!file.existsSync() || photo['parts'] != null) continue;
           final List<String> names;
           try {
             names = [
