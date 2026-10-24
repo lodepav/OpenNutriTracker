@@ -779,6 +779,28 @@ all three models):
   28 to 37 did. The dishes are still recognised (15 to 20 of 20). The eval searches the table
   alone. The app's OFF search may catch a few, but every miss is broken down (D9).
 
+*Typed meals to logged kcal, 2026-10-24* (`test/fork/eval/text_eval_test.dart`, 24 meals, 13
+of them Latvian; references worked out from USDA and pack figures beside each meal):
+
+| Model | English (en) | Latvian (en and lv) |
+|---|---|---|
+| Opus | 14/22 within 25%, median 19%, total 97% | 7/11, 23%, 85% |
+| Sonnet | 14/22, 19%, 97% | 6/11, 25%, 85% |
+| Haiku | 15/23, 19%, 91% | 6/12, 34%, 70% |
+
+- **English meals go well.** The misses are names: "greek yogurt" → with oats (+50%),
+  "eggs" → egg yolk, "coffee" plus "milk" → a latte and a glass of milk, "fries" → yuca
+  fries, a bowl of borscht at a 100 g serving.
+- **Latvian names never reach the table.** The text prompt (upstream's) keeps the user's
+  words, so "kefīrs", "griķi", "biezpiens", "olas" all miss and are broken down, in either
+  locale. Where Haiku translated on its own ("kefir 500 ml", "beer 0.5 l") the row was
+  exact.
+- **A breakdown throws the typed amount away.** It is always one typical serving: "kefīrs
+  500 ml" logs 250 ml (108 kcal of 280), "200 g biezpiena" 150 g, "3 olas" one 100 g egg
+  serving. The totals look fair only because the misses cancel.
+- **Breakdowns of a bare Latvian word can be wrong.** Haiku read "lasis" (salmon) as yogurt
+  and "olas" (eggs) as olives. Opus and Sonnet did not.
+
 Still needs the user: the leftovers photo check, typing and photographing their own
 khachapuri, pelmeni and grey peas, and ten of their own meals (photos we do not have).
 
