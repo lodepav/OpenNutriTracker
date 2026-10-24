@@ -108,6 +108,9 @@ class SPConst {
     'bls': 'Bundeslebensmittelschlüssel (BLS)',
     'indb': 'Indian Nutrient Databank (INDB)',
     'tbca': 'Tabela Brasileira de Composição de Alimentos (TBCA)',
+    // [fork] S72: the fork's dishes, recipes over the rows above
+    'fork_dishes': 'OpenBite dishes (recipes over FDC and BLS)',
+    // [/fork]
   };
 
   /// Compact source labels for chips on list items, where the full
@@ -120,6 +123,9 @@ class SPConst {
     'bls': 'BLS',
     'indb': 'INDB',
     'tbca': 'TBCA',
+    // [fork] S72
+    'fork_dishes': 'OpenBite',
+    // [/fork]
   };
 
   /// Sources offered in Settings → Food databases. INDB and TBCA exist in
@@ -144,6 +150,10 @@ class SPConst {
     'bls': 'https://www.blsdb.de',
     'indb': 'https://www.anuvaad.org.in',
     'tbca': 'https://www.tbca.net.br',
+    // [fork] S72
+    'fork_dishes':
+        'https://github.com/lodepav/OpenNutriTracker/blob/fork/main/fork/data/dishes.json',
+    // [/fork]
   };
 
   /// BCP 47 locale used in food_translation for [language], or null when

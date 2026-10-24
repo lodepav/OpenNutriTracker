@@ -1,0 +1,78 @@
+{
+  "_about": "Dishes the open tables lack, worked out from recipes over rows the table already has (fork/tools/build_food_db.py --dishes). Each ingredient is [source, exact row name, grams as weighed into the pot]; the row's nutrients per 100 g are their sum over yield_g, the dish's weight once cooked. A name carries its other spellings after a comma, in brackets, because the table search wants every word the person types (`solanka` is not `soļanka`).",
+  "dishes": [
+    {
+      "code": "solyanka",
+      "name": "Solyanka, meat soup (soljanka, solanka, soļanka, seļanka)",
+      "basis": "Mixed-meat solyanka: https://en.wikipedia.org/wiki/Solyanka and common recipes (about 400 g of meats to 2 l): beef, smoked sausage, ham and frankfurters in a broth soured with pickles, tomato paste, olives and lemon.",
+      "yield_g": 1100,
+      "serving": ["1 bowl", 300],
+      "ingredients": [
+        ["bls", "Beef, stewed (with fat and salt)", 120],
+        ["fdc_sr_legacy", "Sausage, smoked link sausage, pork and beef", 60],
+        ["fdc_sr_legacy", "Ham, sliced, regular (approximately 11% fat)", 60],
+        ["fdc_sr_legacy", "Frankfurter, beef, unheated", 60],
+        ["fdc_sr_legacy", "Pickles, cucumber, dill or kosher dill", 100],
+        ["fdc_sr_legacy", "Onions, raw", 80],
+        ["bls", "Tomato paste", 30],
+        ["fdc_sr_legacy", "Olives, pickled, canned or bottled, green", 30],
+        ["fdc_sr_legacy", "Oil, sunflower, linoleic (less than 60%)", 15],
+        ["fdc_sr_legacy", "Lemons, raw, without peel", 20]
+      ]
+    },
+    {
+      "code": "cepelinai",
+      "name": "Cepelinai, potato dumplings with meat (cepelīni, zeppelins)",
+      "basis": "One dumpling: https://en.wikipedia.org/wiki/Cepelinai, BBC Good Food Middle East (400 g potatoes and 250 g pork mince make 4) and LRT (15 to 20 g of meat a dumpling, grated raw and boiled potato bound with potato starch). Without the sour cream or bacon sauce served on it.",
+      "yield_g": 210,
+      "serving": ["1 dumpling", 210],
+      "ingredients": [
+        ["fdc_sr_legacy", "Potatoes, flesh and skin, raw", 170],
+        ["fdc_sr_legacy", "Pork, fresh, ground, raw", 35],
+        ["bls", "Potato starch (potato flour)", 5],
+        ["fdc_sr_legacy", "Onions, raw", 5]
+      ]
+    },
+    {
+      "code": "salmon-soup",
+      "name": "Salmon soup, creamy (lohikeitto, laša zupa, zivju zupa ar lasi)",
+      "basis": "Finnish lohikeitto: https://en.wikipedia.org/wiki/Lohikeitto and common recipes: salmon, potatoes, carrot and leek in water with cream and butter.",
+      "yield_g": 1000,
+      "serving": ["1 bowl", 300],
+      "ingredients": [
+        ["fdc_sr_legacy", "Fish, salmon, Atlantic, farmed, raw", 200],
+        ["fdc_sr_legacy", "Potatoes, flesh and skin, raw", 250],
+        ["fdc_sr_legacy", "Carrots, raw", 80],
+        ["fdc_sr_legacy", "Leeks, (bulb and lower leaf-portion), raw", 60],
+        ["fdc_sr_legacy", "Cream, fluid, light (coffee cream or table cream)", 100],
+        ["fdc_sr_legacy", "Butter, salted", 10]
+      ]
+    },
+    {
+      "code": "grey-peas",
+      "name": "Grey peas with bacon, Latvian (pelēkie zirņi ar speķi)",
+      "basis": "Boiled grey peas with fried bacon and onion, as common Latvian recipes make them. The table has no grey pea; dry split peas stand in, close in energy and protein.",
+      "yield_g": 300,
+      "serving": ["1 plate", 250],
+      "ingredients": [
+        ["fdc_sr_legacy", "Peas, green, split, mature seeds, raw", 100],
+        ["fdc_sr_legacy", "Pork, cured, bacon, unprepared", 50],
+        ["fdc_sr_legacy", "Onions, raw", 40]
+      ]
+    },
+    {
+      "code": "potato-balls",
+      "name": "Potato balls, fried (kartupeļu bumbiņas, potato puffs)",
+      "basis": "Mashed boiled potato bound with flour and egg, rolled in breadcrumbs and fried, as common recipes make them; oil is what the balls take up (about 8 %), and frying loses about a tenth of the weight.",
+      "yield_g": 90,
+      "serving": ["1 ball", 15],
+      "ingredients": [
+        ["fdc_sr_legacy", "Potatoes, boiled, cooked without skin, flesh, without salt", 70],
+        ["fdc_sr_legacy", "Wheat flour, white, all-purpose, enriched, unbleached", 8],
+        ["fdc_sr_legacy", "Egg, whole, raw, fresh", 5],
+        ["fdc_sr_legacy", "Bread, crumbs, dry, grated, plain", 7],
+        ["fdc_sr_legacy", "Oil, sunflower, linoleic (less than 60%)", 8]
+      ]
+    }
+  ]
+}

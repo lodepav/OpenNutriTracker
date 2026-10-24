@@ -80,9 +80,13 @@ void main() {
     });
   }
 
-  // A gap, so a recipe (D12): phase 1c's starter "grey peas with bacon".
-  test('grey peas are in no table', () async {
-    expect((await resolve('grey peas')).candidates, isEmpty);
+  // No open table has them; the fork's own dish row does (S72), beside
+  // phase 1c's starter recipe "grey peas with bacon" (D12).
+  test('grey peas resolve to the fork\'s dish', () async {
+    final item = await resolve('grey peas');
+    expect(item.candidates.map((c) => c.backendSource).toSet(), {
+      'fork_dishes',
+    });
   });
 
   // Phase 1c: the ingredient names the breakdown prompt asks for

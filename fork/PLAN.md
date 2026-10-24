@@ -844,6 +844,29 @@ and with a Latvian note, in English.
   so a qualified name misses where the bare one hits: "blueberry cheesecake", "salmon
   soup", "rice with herbs", "chicken schnitzel". "cheesecake" finds "Cheesecake, plain".
   The table has no solyanka, salmon soup or cepelinai at all.
+- **Fixed on the table side (S72).**
+  - *Five dishes:* `fork/data/dishes.json` adds solyanka, cepelinai, salmon soup, grey peas
+    with bacon and potato balls. Each is a recipe over rows the table already has, with its
+    source, under the source `fork_dishes`. A name carries its other spellings, so
+    "solanka", "soljanka" and "soļanka" all find solyanka.
+  - *Shorter names:* when resolving, a name that misses tries shorter forms. It first drops
+    what follows "with", "in", "and" or "ar", then its first words. A shorter form must keep
+    two words, and only rows named for it count. So "Caesar salad with bacon" finds
+    "Caesar salad" and "chicken rice pilaf" finds "Rice pilaf". The first, broad version took
+    any shorter form and logged melon balls for "potato balls", ham for "baguette slice" and
+    "Salad dressing" for a burrata salad, where a breakdown (D9) does better. Over the 665
+    names the models gave in every replay, it changes 36 of them, from no row to a row.
+  - *Replayed again:*
+
+    | Model | Rows with a table row, no note / with note |
+    |---|---|
+    | Opus | 30/39, 28/39 (was 17, 19) |
+    | Sonnet | 24/39, 25/39 (was 12, 16) |
+    | Haiku | 24/39, 26/38 (was 16, 17) |
+
+  - *What still misses:* solyanka read as a tomato soup and chicken strips read as fish
+    are recognition misses, so a row cannot fix them. "chicken schnitzel" and "breaded
+    cutlet" still find nothing and are broken down.
 
 Still needs the user: the leftovers photo check, typing and photographing their own
 khachapuri, pelmeni and grey peas, and ten of their own meals (photos we do not have).

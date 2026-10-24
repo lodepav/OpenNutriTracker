@@ -7,6 +7,7 @@
         --survey     <dir of FoodData_Central_survey_food_csv_*> \
         --bls        <BLS_4_0_Daten_*.xlsx> \
         [--fineli    <dir of the unzipped Fineli open-data package>] \
+        [--dishes fork/data/dishes.json] \
         [--out assets/fork/foods.json.gz]
 
 Downloads (all free):
@@ -16,6 +17,9 @@ Downloads (all free):
   BLS 4.0 (CC BY 4.0, Max Rubner-Institut): https://www.blsdb.de/download
   Fineli (CC BY 4.0, THL): https://fineli.fi/fineli/en/avoin-data (browser only;
     the site challenges scripts)
+
+The fork's own dishes (fork/data/dishes.json) are recipes over rows of those
+tables, for dishes they lack (solyanka, cepelinai); they are worked out last.
 
 The output is gzipped JSON in the shape of the ONT backend's `food_summary` rows
 (SPConst column names), so `SpFoodDTO.fromJson` reads it unchanged:
@@ -94,6 +98,7 @@ BLS_CODES = {
 # tables get their own ranges so ids never collide.
 BLS_ID_BASE = 10_000_000
 FINELI_ID_BASE = 20_000_000
+DISH_ID_BASE = 30_000_000
 
 
 def num(text):
@@ -294,6 +299,33 @@ def fineli_foods(directory):
     sys.exit('Fineli: parser not written yet; run without --fineli')
 
 
+# --- The fork's dishes ------------------------------------------------------
+
+def dish_foods(path, rows):
+    """Each dish of [path] as a row: its ingredients' nutrients summed and
+    put over the cooked weight. [rows] are the built rows by (source, name);
+    a nutrient any ingredient lacks is unknown for the dish."""
+    with open(path, encoding='utf-8') as f:
+        dishes = json.load(f)['dishes']
+    for n, dish in enumerate(dishes):
+        nutrients = {}
+        for column in NUTRIENTS:
+            total = 0.0
+            for source, name, grams in dish['ingredients']:
+                if (source, name) not in rows:
+                    sys.exit(f'{dish["code"]}: no {source} row "{name}"')
+                value = rows[source, name][column]
+                if value is None:
+                    total = None
+                    break
+                total += value * grams / 100
+            nutrients[column] = (None if total is None
+                                 else total * 100 / dish['yield_g'])
+        serving = tuple(dish['serving'])
+        yield (DISH_ID_BASE + n, 'fork_dishes', dish['code'], dish['name'],
+               nutrients, [serving], serving)
+
+
 # --- Output ------------------------------------------------------------------
 
 def main():
@@ -304,6 +336,7 @@ def main():
     parser.add_argument('--survey', required=True)
     parser.add_argument('--bls', required=True)
     parser.add_argument('--fineli')
+    parser.add_argument('--dishes', default='fork/data/dishes.json')
     parser.add_argument('--out', default='assets/fork/foods.json.gz')
     args = parser.parse_args()
 
@@ -317,7 +350,12 @@ def main():
         sources.append(fineli_foods(args.fineli))
 
     foods, portions, counts, skipped = [], {}, {}, 0
-    for source in sources:
+    by_name = {}
+
+    def dishes():
+        yield from dish_foods(args.dishes, by_name)
+
+    for source in sources + [dishes()]:
         for food_id, src, code, name, nutrients, food_portions, serving in source:
             if nutrients.get('energy_kcal_100') is None:
                 skipped += 1
@@ -329,6 +367,7 @@ def main():
             if food_portions:
                 portions[str(food_id)] = [list(p) for p in food_portions]
             counts[src] = counts.get(src, 0) + 1
+            by_name.setdefault((src, name), nutrients)
 
     os.makedirs(os.path.dirname(args.out) or '.', exist_ok=True)
     payload = json.dumps({'columns': COLUMNS, 'foods': foods, 'portions': portions},
