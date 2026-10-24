@@ -3,12 +3,11 @@
 // with the fork's seams, over the table; Open Food Facts is left out, so a
 // pass here does not lean on a branded product.
 //
-// Known misses, not pinned here: `egg` lands on "Egg, creamed", `eggs` on a
-// Foundation yolk row and `pizza` on "Pizza, no cheese, thin crust". The
-// right rows are in the table; upstream's tie-break picks the shorter
-// sibling, the same on its backend (resolver_relevance.dart, upstream
-// #1231). The fork's tie-break (S73) and variant rule (S70) fixed
-// `pepperoni pizza` and the bare names below.
+// Upstream's tie-break picks the shorter sibling, the same on its backend
+// (resolver_relevance.dart, upstream #1231): `egg` landed on "Egg,
+// creamed", `eggs` on a Foundation yolk row and `pizza` on "Pizza, no
+// cheese, thin crust". The fork's tie-breaks (S73, S74, S75) and variant
+// rule (S70) fixed those, `pepperoni pizza` and the bare names below.
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -103,6 +102,10 @@ void main() {
     ('pepperoni pizza', 'Pizza, with pepperoni'),
     ('coffee', 'Coffee, NS as to type'),
     ('lasagna', 'Lasagna, beef, homemade'),
+    ('egg', 'Egg, whole, raw, fresh'),
+    ('eggs', 'Eggs, Grade A, Large, egg whole'),
+    ('pizza', 'Pizza, cheese, from restaurant or fast food, NS as to'),
+    ('cheese pizza', 'Pizza, cheese, from restaurant or fast food, NS as to'),
     ('vegetable lasagna', 'Lasagna, Vegetable'),
   ]) {
     test('bare "$query" resolves to "$expected..."', () async {
