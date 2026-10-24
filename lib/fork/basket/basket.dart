@@ -43,15 +43,23 @@ class FoodBasket extends ChangeNotifier {
 
   /// The items when they are for [type] on [day], else none.
   List<BasketItem> itemsFor(IntakeTypeEntity type, DateTime day) =>
-      _type == type && _day == day ? items : const [];
+      _isFor(type, day) ? items : const [];
 
   void add(BasketItem item, IntakeTypeEntity type, DateTime day) {
-    if (_type != type || _day != day) _items.clear();
+    if (!_isFor(type, day)) _items.clear();
     _type = type;
     _day = day;
     _items.add(item);
     notifyListeners();
   }
+
+  /// The same meal on the same calendar day: a day from the add button
+  /// carries the time it was opened at, and is still the same day later.
+  bool _isFor(IntakeTypeEntity type, DateTime day) =>
+      _type == type &&
+      _day?.year == day.year &&
+      _day?.month == day.month &&
+      _day?.day == day.day;
 
   void removeAt(int index) {
     _items.removeAt(index);

@@ -509,6 +509,12 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         usesImperialUnits: usesImperialUnits,
       ),
     );
+    // [fork] S83 tap-delete
+    if (changeIntakeAmount == EditDialog.deleteResult) {
+      await onDeleteIntake(intakeEntity, null);
+      return;
+    }
+    // [/fork]
     if (changeIntakeAmount != null) {
       await _homeBloc.updateIntakeItem(intakeEntity.id, {
         'amount': changeIntakeAmount,

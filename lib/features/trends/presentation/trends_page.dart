@@ -341,6 +341,9 @@ class _CaloriesTrendCard extends StatelessWidget {
           const SizedBox(height: Dimens.spacing20),
           Semantics(
             label: S.of(context).trendsCaloriesLabel,
+            // [fork] S83 a11y-labels: the chart's numbers, spoken
+            value: _caloriesSummary(context, spots, avgGoal),
+            // [/fork]
             child: SizedBox(
             height: 140,
             child: LineChart(
@@ -715,3 +718,15 @@ class _WeightCard extends StatelessWidget {
     }
   }
 }
+
+// [fork] S83 a11y-labels: the calorie chart read aloud: the average of the
+// days logged and the average goal.
+String _caloriesSummary(BuildContext context, List<FlSpot> spots, double avgGoal) {
+  final logged = [for (final s in spots) if (s.y > 0) s.y];
+  if (logged.isEmpty) return '';
+  final avg = logged.reduce((a, b) => a + b) / logged.length;
+  final days = logged.length == 1 ? '1 day' : '${logged.length} days';
+  final goal = avgGoal > 0 ? ', goal ${EnergyDisplay.formatWithUnit(context, avgGoal)}' : '';
+  return 'Average ${EnergyDisplay.formatWithUnit(context, avg)} over $days logged$goal';
+}
+// [/fork]

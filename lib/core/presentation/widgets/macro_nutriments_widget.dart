@@ -35,12 +35,19 @@ class _MacroNutrientsViewState extends State<MacroNutrientsView> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final palette = isDark ? AppPalette.dark : AppPalette.light;
     // [fork] S79 macro-order: the rings in the user's macro order
+    // [fork] S83 large-text: at large font sizes the rings stack, so the
+    // values are not cut off
+    final stack = MediaQuery.textScalerOf(context).scale(10) > 13;
+    Widget fit(Widget ring) => stack ? ring : Expanded(child: ring);
     return MacroOrderBuilder(
-      builder: (context) => Row(
+      builder: (context) => Flex(
+        direction: stack ? Axis.vertical : Axis.horizontal,
+        crossAxisAlignment:
+            stack ? CrossAxisAlignment.start : CrossAxisAlignment.center,
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: inMacroOrder(
-          carbs: Expanded(
-            child: _MacroRing(
+          carbs: fit(
+            _MacroRing(
               intake: widget.totalCarbsIntake,
               goal: widget.totalCarbsGoal,
               label: S.of(context).carbsLabel,
@@ -48,8 +55,8 @@ class _MacroNutrientsViewState extends State<MacroNutrientsView> {
               palette: palette,
             ),
           ),
-          fat: Expanded(
-            child: _MacroRing(
+          fat: fit(
+            _MacroRing(
               intake: widget.totalFatsIntake,
               goal: widget.totalFatsGoal,
               label: S.of(context).fatLabel,
@@ -57,8 +64,8 @@ class _MacroNutrientsViewState extends State<MacroNutrientsView> {
               palette: palette,
             ),
           ),
-          protein: Expanded(
-            child: _MacroRing(
+          protein: fit(
+            _MacroRing(
               intake: widget.totalProteinsIntake,
               goal: widget.totalProteinsGoal,
               label: S.of(context).proteinLabel,

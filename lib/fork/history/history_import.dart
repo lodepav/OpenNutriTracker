@@ -532,12 +532,26 @@ class HistoryImportTile extends StatelessWidget {
         say('Nothing was imported: the profile changed.');
         return;
       }
+      // Zero counts are left out, and each count agrees with its noun.
+      String n(int count, String one, String many) =>
+          '$count ${count == 1 ? one : many}';
+      final parts = [
+        if (chosen.intakes.isNotEmpty)
+          n(chosen.intakes.length, 'day of food', 'days of food'),
+        if (chosen.weights.isNotEmpty)
+          n(chosen.weights.length, 'weigh-in', 'weigh-ins'),
+        if (chosen.measurements.isNotEmpty)
+          n(
+            chosen.measurements.length,
+            'day of body measurements',
+            'days of body measurements',
+          ),
+        if (chosen.customFoods.isNotEmpty)
+          n(chosen.customFoods.length, 'custom food', 'custom foods'),
+      ];
       say(
-        'Imported ${chosen.intakes.length} days of food and '
-        '${chosen.weights.length} weigh-ins'
-        '${chosen.measurements.isEmpty ? '' : ', ${chosen.measurements.length} days of body measurements'}'
-        '${chosen.customFoods.isEmpty ? '' : ', ${chosen.customFoods.length} custom foods'}'
-        '${chosen.misread.isEmpty ? '' : '; removed ${chosen.misread.length} misread weigh-ins'}.',
+        '${parts.isEmpty ? 'Imported nothing new' : 'Imported ${parts.join(', ')}'}'
+        '${chosen.misread.isEmpty ? '' : '; removed ${n(chosen.misread.length, 'misread weigh-in', 'misread weigh-ins')}'}.',
       );
     } catch (_) {
       say('The import stopped partway; what was written stays.');

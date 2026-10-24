@@ -246,11 +246,11 @@ class _IntakeVerticalListState extends State<IntakeVerticalList> {
                   child: Text(
                     _buildHeaderSummary(context),
                     // [fork] S81 a11y-labels: read as words; at a large font
-                    // the macros wrap to a third line rather than cut off
+                    // the macros wrap as far as they need rather than cut off
                     semanticsLabel: _headerSummaryLabel(context),
-                    maxLines: 3,
+                    // (no ellipsis: with no line limit it cuts to one line)
+                    maxLines: null,
                     // [/fork]
-                    overflow: TextOverflow.ellipsis,
                     style: textTheme.labelMedium?.copyWith(
                       color: palette.textMuted,
                       fontWeight: FontWeight.w700,
@@ -267,6 +267,7 @@ class _IntakeVerticalListState extends State<IntakeVerticalList> {
                   // Row's full-width box and coordinate taps miss the button.
                   container: true,
                   child: PopupMenuButton<VerticalListPopupMenuSelections>(
+                    tooltip: S.of(context).sectionOptionsLabel(widget.title), // [fork] S83
                     icon: Icon(Icons.more_vert_rounded, color: palette.textMuted),
                     shape: Dimens.shapeM,
                     onSelected:

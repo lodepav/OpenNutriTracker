@@ -354,6 +354,12 @@ class _DiaryPageState extends State<DiaryPage> with WidgetsBindingObserver {
         usesImperialUnits: usesImperialUnits,
       ),
     );
+    // [fork] S83 tap-delete
+    if (changeIntakeAmount == EditDialog.deleteResult) {
+      if (context.mounted) _onDeleteIntakeItem(intakeEntity, day);
+      return;
+    }
+    // [/fork]
     if (changeIntakeAmount != null) {
       await _calendarDayBloc.updateIntakeItem(
         intakeEntity.id,

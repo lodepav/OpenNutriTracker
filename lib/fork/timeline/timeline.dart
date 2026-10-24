@@ -72,7 +72,7 @@ class TimelineEntries {
 /// The diary's "Timeline" (seam S26): MacroFactor's day by the clock. The
 /// day's foods by the hour they were eaten, each with its energy and the
 /// running total; tapping one moves it to another time of the same day,
-/// and "Add at a time" logs a food at the time picked, into the meal that
+/// and "Add food at a time" logs a food at the time picked, into the meal that
 /// time suggests.
 class TimelineButton extends StatelessWidget {
   final DateTime day;
@@ -194,7 +194,7 @@ class _TimelineScreenState extends State<TimelineScreen> {
       key: const ValueKey('timeline-add'),
       onPressed: _add,
       icon: const Icon(Icons.add_rounded),
-      label: const Text('Add at a time'),
+      label: const Text('Add food at a time'),
     ),
     body: FutureBuilder<List<IntakeEntity>>(
       future: _day,
@@ -218,10 +218,13 @@ class _TimelineScreenState extends State<TimelineScreen> {
             for (final (hour, group) in hours) ...[
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
-                child: Text(
-                  hour == null ? 'No time' : DateFormat.Hm().format(hour),
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    color: theme.colorScheme.primary,
+                child: Semantics(
+                  header: true,
+                  child: Text(
+                    hour == null ? 'No time' : DateFormat.Hm().format(hour),
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      color: theme.colorScheme.primary,
+                    ),
                   ),
                 ),
               ),
@@ -238,9 +241,17 @@ class _TimelineScreenState extends State<TimelineScreen> {
                     '${intake.amount.round()} ${intake.unit} · '
                     '${energyText(context, intake.totalKcal)}',
                   ),
-                  trailing: Text(
-                    energyText(context, total),
-                    style: theme.textTheme.bodySmall,
+                  // The day's total up to this entry, said so on screen.
+                  trailing: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        energyText(context, total),
+                        style: theme.textTheme.bodySmall,
+                      ),
+                      Text('so far', style: theme.textTheme.labelSmall),
+                    ],
                   ),
                   onTap: () => _move(intake),
                 ),

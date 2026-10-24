@@ -116,6 +116,22 @@ ThemeData buildAppTheme(AppPalette p) {
       surfaceTintColor: Colors.transparent,
       shape: const RoundedRectangleBorder(borderRadius: Dimens.borderRadiusL),
     ),
+    // [fork] S83 switch-contrast: an off switch's thumb and outline in the
+    // muted text colour, 3:1 against the card (WCAG 1.4.11); the hairline
+    // `outline` it took before was about 1.2:1
+    switchTheme: SwitchThemeData(
+      thumbColor: WidgetStateProperty.resolveWith(
+        (states) => states.contains(WidgetState.selected) || states.contains(WidgetState.disabled)
+            ? null
+            : p.textMuted,
+      ),
+      trackOutlineColor: WidgetStateProperty.resolveWith(
+        (states) => states.contains(WidgetState.selected) || states.contains(WidgetState.disabled)
+            ? null
+            : p.textMuted,
+      ),
+    ),
+    // [/fork]
     listTileTheme: const ListTileThemeData(shape: RoundedRectangleBorder(borderRadius: Dimens.borderRadiusM)),
     bottomSheetTheme: BottomSheetThemeData(
       backgroundColor: p.surface,

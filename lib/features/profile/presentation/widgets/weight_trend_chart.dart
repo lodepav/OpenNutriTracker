@@ -191,12 +191,22 @@ class WeightTrendChart extends StatelessWidget {
                 sideTitles: SideTitles(
                   showTitles: true,
                   reservedSize: 40,
-                  getTitlesWidget: (value, meta) => Text(
+                  // [fork] S83 axis-labels: the padded edges are not ticks,
+                  // and a half-step shows its decimal, so no two labels
+                  // read the same ("88, 88, 87").
+                  getTitlesWidget: (value, meta) =>
+                      value == meta.min || value == meta.max
+                      ? const SizedBox.shrink()
+                      : Text(
                     value.toStringAsFixed(
-                      bodyWeightUnit == BodyWeightUnit.st ? 1 : 0,
+                      bodyWeightUnit == BodyWeightUnit.st ||
+                              value != value.roundToDouble()
+                          ? 1
+                          : 0,
                     ),
                     style: theme.textTheme.labelSmall,
                   ),
+                  // [/fork]
                 ),
               ),
               bottomTitles: AxisTitles(

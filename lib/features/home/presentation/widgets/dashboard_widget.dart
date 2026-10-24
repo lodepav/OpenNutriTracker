@@ -212,11 +212,15 @@ class _DashboardWidgetState extends State<DashboardWidget> {
           const SizedBox(height: Dimens.spacing12),
           // [fork] S79 macro-order: the tiles in the user's macro order
           MacroOrderBuilder(
-            builder: (context) => Row(
+            // [fork] S83 large-text: at large font sizes the three tiles
+            // stack, so labels and values are not broken mid-word.
+            builder: (context) => Flex(
+              direction: _stackMacros(context) ? Axis.vertical : Axis.horizontal,
+              crossAxisAlignment:
+                  _stackMacros(context) ? CrossAxisAlignment.stretch : CrossAxisAlignment.center,
               children: [
                 for (final (i, tile) in inMacroOrder(
-                  carbs: Expanded(
-                    child: _MacroTile(
+                  carbs: _MacroTile(
                       label: S.of(context).carbsLabel,
                       intake: widget.totalCarbsIntake,
                       goal: widget.totalCarbsGoal,
@@ -228,10 +232,8 @@ class _DashboardWidgetState extends State<DashboardWidget> {
                         widget.totalCarbsIntake,
                         widget.totalCarbsGoal,
                       ),
-                    ),
                   ),
-                  fat: Expanded(
-                    child: _MacroTile(
+                  fat: _MacroTile(
                       label: S.of(context).fatLabel,
                       intake: widget.totalFatsIntake,
                       goal: widget.totalFatsGoal,
@@ -243,10 +245,8 @@ class _DashboardWidgetState extends State<DashboardWidget> {
                         widget.totalFatsIntake,
                         widget.totalFatsGoal,
                       ),
-                    ),
                   ),
-                  protein: Expanded(
-                    child: _MacroTile(
+                  protein: _MacroTile(
                       label: S.of(context).proteinLabel,
                       intake: widget.totalProteinsIntake,
                       goal: widget.totalProteinsGoal,
@@ -258,11 +258,10 @@ class _DashboardWidgetState extends State<DashboardWidget> {
                         widget.totalProteinsIntake,
                         widget.totalProteinsGoal,
                       ),
-                    ),
                   ),
                 ).indexed) ...[
-                  if (i > 0) const SizedBox(width: Dimens.spacing12),
-                  tile,
+                  if (i > 0) const SizedBox(width: Dimens.spacing12, height: Dimens.spacing12),
+                  if (_stackMacros(context)) tile else Expanded(child: tile),
                 ],
               ],
             ),
@@ -273,6 +272,10 @@ class _DashboardWidgetState extends State<DashboardWidget> {
     );
   }
 }
+
+// [fork] S83 large-text: true when text is scaled past 1.3×.
+bool _stackMacros(BuildContext context) => MediaQuery.textScalerOf(context).scale(10) > 13;
+// [/fork]
 
 class _MiniStat extends StatelessWidget {
   final IconData icon;
