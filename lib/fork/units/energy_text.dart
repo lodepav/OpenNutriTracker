@@ -12,9 +12,10 @@ bool usesKj(BuildContext context, {bool listen = true}) =>
 
 String energyUnit(BuildContext context) => usesKj(context) ? 'kJ' : 'kcal';
 
-/// [kcal] in the display unit, rounded.
+/// [kcal] in the display unit, truncated as upstream's EnergyDisplay does,
+/// so one value reads the same on every screen.
 int energyValue(BuildContext context, double kcal) =>
-    (usesKj(context) ? UnitCalc.kcalToKj(kcal) : kcal).round();
+    (usesKj(context) ? UnitCalc.kcalToKj(kcal) : kcal).toInt();
 
 String energyText(BuildContext context, double kcal, {bool signed = false}) {
   final value = energyValue(context, kcal);

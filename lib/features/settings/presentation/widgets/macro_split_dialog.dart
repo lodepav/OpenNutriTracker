@@ -513,6 +513,7 @@ class _MacroRow extends StatelessWidget {
                 _MacroSplitDialogState._maxMacroPct,
               ),
               divisions: macroRange.toInt(),
+              semanticFormatterCallback: (v) => '${v.round()}%', // [fork] S83
               onChanged: (v) {
                 final rounded = v.round().toDouble();
                 if (100 - rounded >= 10) {

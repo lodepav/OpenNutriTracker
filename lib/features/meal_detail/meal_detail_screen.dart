@@ -40,6 +40,10 @@ class MealDetailScreen extends StatefulWidget {
   State<MealDetailScreen> createState() => _MealDetailScreenState();
 }
 
+// [fork] S83 large-text: the font scale, 1 to 2.
+double _textGrow(BuildContext context) => MediaQuery.textScalerOf(context).scale(1).clamp(1.0, 2.0);
+// [/fork]
+
 class _MealDetailScreenState extends State<MealDetailScreen> {
   static const _containerSize = 350.0;
 
@@ -382,7 +386,10 @@ class _MealDetailScreenState extends State<MealDetailScreen> {
           pinned: true,
           backgroundColor: palette.surface,
           surfaceTintColor: Colors.transparent,
-          expandedHeight: dayKcalGoal > 0 ? 268 : 200,
+          // [fork] S83 large-text: the header and the day total grow with
+          // the font, so the title is not hidden under the day total.
+          expandedHeight: (dayKcalGoal > 0 ? 268 : 200) + (_textGrow(context) - 1) * (dayKcalGoal > 0 ? 132 : 64),
+          // [/fork]
           // The real toolbar title slot, not FlexibleSpaceBar.title: that
           // widget bottom-anchors itself within the whole flexible-space
           // stack (which includes the `bottom` bar's height), so with the
@@ -401,7 +408,7 @@ class _MealDetailScreenState extends State<MealDetailScreen> {
             ),
           ),
           bottom: PreferredSize(
-            preferredSize: Size.fromHeight(dayKcalGoal > 0 ? 68 : 0),
+            preferredSize: Size.fromHeight(dayKcalGoal > 0 ? 68 * _textGrow(context) : 0), // [fork] S83
             child: DailyKcalOverview(
               dayKcalConsumed: dayKcalConsumed,
               dayKcalGoal: dayKcalGoal,
@@ -411,7 +418,7 @@ class _MealDetailScreenState extends State<MealDetailScreen> {
           flexibleSpace: FlexibleSpaceBar(
             background: Padding(
               padding: EdgeInsets.only(
-                bottom: dayKcalGoal > 0 ? 68 : 0,
+                bottom: dayKcalGoal > 0 ? 68 * _textGrow(context) : 0, // [fork] S83
               ),
               child: MealTitleExpanded(
                 meal: meal,
@@ -439,6 +446,7 @@ class _MealDetailScreenState extends State<MealDetailScreen> {
                   );
                 },
                 icon: const Icon(Icons.edit_rounded),
+                tooltip: S.of(context).editMealLabel, // [fork] S83
               ),
             ),
           ],

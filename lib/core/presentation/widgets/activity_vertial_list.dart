@@ -69,6 +69,7 @@ class _ActivityVerticalListState extends State<ActivityVerticalList> {
               ),
               const SizedBox(width: Dimens.spacing8),
               PopupMenuButton<_ActivityPopupMenuSelection>(
+                tooltip: S.of(context).sectionOptionsLabel(widget.title), // [fork] S83
                 onSelected: (_ActivityPopupMenuSelection selection) async {
                   switch (selection) {
                     case _ActivityPopupMenuSelection.onCopy:

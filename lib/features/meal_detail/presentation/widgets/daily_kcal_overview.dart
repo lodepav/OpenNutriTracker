@@ -69,8 +69,8 @@ class DailyKcalOverview extends StatelessWidget {
           const SizedBox(height: Dimens.spacing8),
           Text(
             S.of(context).mealDetailDayTotalLabel(
-                  projected.toStringAsFixed(0),
-                  dayKcalGoal.toStringAsFixed(0),
+                  projected.toInt().toString(), // [fork] S83 truncated, as every other screen
+                  dayKcalGoal.toInt().toString(), // [fork] S83 truncated, as every other screen
                 ),
             style: textTheme.labelLarge?.copyWith(
               color: accent,
@@ -82,7 +82,7 @@ class DailyKcalOverview extends StatelessWidget {
             const SizedBox(height: Dimens.spacing4),
             Text(
               S.of(context).mealDetailCurrentSelectionLabel(
-                    currentSelectionKcal.toStringAsFixed(0),
+                    currentSelectionKcal.toInt().toString(), // [fork] S83 truncated, as every other screen
                   ),
               style: textTheme.labelSmall?.copyWith(color: palette.textMuted),
               textAlign: TextAlign.center,

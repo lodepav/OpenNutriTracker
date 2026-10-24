@@ -5,6 +5,10 @@ import 'package:opennutritracker/core/utils/custom_text_input_formatter.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 
 class EditDialog extends StatefulWidget {
+  // [fork] S83 tap-delete: what the dialog returns for Delete, a plain tap
+  // path beside the long-press drag (WCAG 2.5.7)
+  static const deleteResult = -1.0;
+  // [/fork]
   final IntakeEntity intakeEntity;
   final bool usesImperialUnits;
 
@@ -107,12 +111,23 @@ class _EditDialogState extends State<EditDialog> {
         ],
       ),
       actions: [
+        // [fork] S83 tap-delete; Material order: Delete, then Cancel, then
+        // the confirming OK on the right
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(EditDialog.deleteResult),
+          child: Text(S.of(context).dialogDeleteLabel),
+        ),
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(S.of(context).dialogCancelLabel),
+        ),
+        // [/fork]
         TextButton(
           onPressed: () {
             final newAmount = double.tryParse(
               amountEditingController.text.replaceAll(',', '.'),
             );
-            if (newAmount == null) return;
+            if (newAmount == null || newAmount <= 0) return; // [fork] S83
             Navigator.of(context).pop(
               _convertBackToMetricValue(
                 newAmount,
@@ -121,12 +136,6 @@ class _EditDialogState extends State<EditDialog> {
             );
           },
           child: Text(S.of(context).dialogOKLabel),
-        ),
-        TextButton(
-          onPressed: () {
-            Navigator.of(context).pop();
-          },
-          child: Text(S.of(context).dialogCancelLabel),
         ),
       ],
     );

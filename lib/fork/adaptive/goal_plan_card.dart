@@ -236,6 +236,7 @@ class _GoalPlanCardState extends State<GoalPlanCard> {
             divisions: 40,
             value: pace.clamp(-1.0, 1.0),
             label: _paceText(pace),
+            semanticFormatterCallback: _paceText,
             onChanged: (v) => setState(() => _pace = v),
           ),
           _row(
@@ -279,9 +280,13 @@ class _GoalPlanCardState extends State<GoalPlanCard> {
 
   Widget _row(String label, String value) => Padding(
     padding: const EdgeInsets.symmetric(vertical: 2),
-    child: Row(
+    // A Wrap: at a large font the value moves under its label rather than
+    // squeezing both into broken words.
+    child: Wrap(
+      alignment: WrapAlignment.spaceBetween,
+      spacing: 12,
       children: [
-        Expanded(child: Text(label)),
+        Text(label),
         Text(value, style: const TextStyle(fontWeight: FontWeight.w600)),
       ],
     ),

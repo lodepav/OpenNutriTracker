@@ -107,7 +107,7 @@ void main() {
       expect(find.text('180 cm'), findsOneWidget);
       expect(find.text('80.0 kg'), findsOneWidget);
       expect(find.text('Active'), findsWidgets);
-      expect(find.text('Lose Weight'), findsOneWidget);
+      expect(find.text('Lose weight'), findsOneWidget);
     });
 
     testWidgets('shows PAL and PA values from the IOM tables', (tester) async {
