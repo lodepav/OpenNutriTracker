@@ -128,7 +128,9 @@ class _StepsCardState extends State<StepsCard> {
           Row(
             children: [
               Expanded(
+                // Its own node, so the heading is the title, not the card.
                 child: Semantics(
+                  container: true,
                   header: true,
                   child: Text('Steps', style: theme.textTheme.titleMedium),
                 ),

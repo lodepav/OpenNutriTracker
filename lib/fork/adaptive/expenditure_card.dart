@@ -104,7 +104,9 @@ class _ExpenditureTrendCardState extends State<ExpenditureTrendCard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Its own node, so the heading is the title, not the card.
           Semantics(
+            container: true,
             header: true,
             child: Text('Expenditure', style: theme.textTheme.titleMedium),
           ),

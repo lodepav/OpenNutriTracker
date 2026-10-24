@@ -110,6 +110,13 @@ and a logging gap priced at the logged days' intake. The goal's kcal per kg diff
 Forbes's (about 6,000–6,400 kcal/kg at 15–20% body fat) against MacroFactor's 7,700, so cuts ask for a smaller
 deficit than MacroFactor's at the same pace.
 
+The runs after D18 (D19): with the window starting at the first logged day and a 7-day
+warm-up, the first estimate came a week sooner on the journey and its largest weekly move fell
+from 278 to 185 kcal; the synthetic users' error rose from 74 to 76 (the sloppy logger 106 to
+113). The 7,700 kcal/kg switch cut the drift run's end shift from 7.0 to 4.3 kg. A blend of
+0.07 for Standard followed a −300 kcal step about 6 days sooner to 80% for a third more
+wobble, so the presets stay as they are.
+
 ## Findings
 
 - **Forbes beats the flat 6,000 kcal/kg:** error 73 against 86. The lean and the heavy users

@@ -96,6 +96,13 @@ class AdaptiveSettings {
   /// A due check-in is accepted as proposed, without asking.
   final bool autoAcceptCheckIn;
 
+  /// Every kg of change counted at [commonKcalPerKg], as most apps do,
+  /// instead of from body composition (D19).
+  final bool flatEnergy;
+
+  /// The flat energy's kcal per kg.
+  static const commonKcalPerKg = 7700.0;
+
   static const noOffsets = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
 
   const AdaptiveSettings({
@@ -115,14 +122,18 @@ class AdaptiveSettings {
     this.checkInWeekday,
     this.maxCheckInChangeKcal = defaultMaxCheckInChangeKcal,
     this.autoAcceptCheckIn = false,
+    this.flatEnergy = false,
   });
 
   /// Ours, after MacroFactor's "a stall worth −500 gives −200 to −300".
   static const defaultMaxCheckInChangeKcal = 200.0;
 
   /// The estimator's weights for the chosen responsiveness and window.
-  ExpenditureSettings get expenditure =>
-      ExpenditureSettings.of(responsiveness, cycleWindow: cycleWindow);
+  ExpenditureSettings get expenditure => ExpenditureSettings.of(
+    responsiveness,
+    cycleWindow: cycleWindow,
+    kcalPerKg: flatEnergy ? commonKcalPerKg : null,
+  );
 
   /// The fixed target's daily energy before the weekday shift.
   double get fixedTargetKcal => switch (fixedMacros) {
@@ -147,6 +158,7 @@ class AdaptiveSettings {
     int? Function()? checkInWeekday,
     double? Function()? maxCheckInChangeKcal,
     bool? autoAcceptCheckIn,
+    bool? flatEnergy,
   }) => AdaptiveSettings(
     smoothedTrend: smoothedTrend ?? this.smoothedTrend,
     adaptiveTarget: adaptiveTarget ?? this.adaptiveTarget,
@@ -170,6 +182,7 @@ class AdaptiveSettings {
         ? this.maxCheckInChangeKcal
         : maxCheckInChangeKcal(),
     autoAcceptCheckIn: autoAcceptCheckIn ?? this.autoAcceptCheckIn,
+    flatEnergy: flatEnergy ?? this.flatEnergy,
   );
 
   /// As kept in the box and in `fork_adaptive.json`.
@@ -190,6 +203,7 @@ class AdaptiveSettings {
     'checkInWeekday': checkInWeekday,
     'maxCheckInChangeKcal': maxCheckInChangeKcal,
     'autoAcceptCheckIn': autoAcceptCheckIn,
+    'flatEnergy': flatEnergy,
   };
 
   /// Throws on a value of the wrong type; a missing key (an older box or
@@ -231,6 +245,7 @@ class AdaptiveSettings {
           ? (json['maxCheckInChangeKcal'] as num?)?.toDouble()
           : defaultMaxCheckInChangeKcal,
       autoAcceptCheckIn: json['autoAcceptCheckIn'] as bool? ?? false,
+      flatEnergy: json['flatEnergy'] as bool? ?? false,
     );
   }
 }

@@ -42,6 +42,11 @@ double workoutShare(
       )
     : settings.workoutSharePct! / 100;
 
+/// The most a day's counted activity adds to the daily mode's target: a
+/// device's reading of one long workout can be off by hundreds, and the
+/// estimate measures what the rest was worth anyway.
+const maxDailyActivityKcal = 800.0;
+
 /// [share] to the nearest 5%.
 double toShareStep(double share) => (share * 20).round() / 20;
 

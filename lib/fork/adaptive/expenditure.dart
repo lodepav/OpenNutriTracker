@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:opennutritracker/fork/adaptive/energy.dart';
 import 'package:opennutritracker/fork/adaptive/trend.dart';
 
@@ -38,8 +40,13 @@ class ExpenditureSettings {
   final double blend;
   final int calibrationDays;
 
-  /// Days of data before the first update, so the trend has settled.
+  /// Days from the first logged day to the first update, so the window
+  /// has enough of them.
   final int warmupDays;
+
+  /// kcal per kg of weight change; null follows body composition
+  /// (Forbes via Hall), a flat 7,700 is how most apps count (D19).
+  final double? kcalPerKg;
 
   /// Share of the window's days that must be logged for an update: the
   /// weight's change spans the whole window, the intake only its logged
@@ -53,11 +60,21 @@ class ExpenditureSettings {
     this.calibrationBlend = 0.2,
     this.blend = 0.05,
     this.calibrationDays = 30,
-    this.warmupDays = 14,
+    this.warmupDays = defaultWarmupDays,
     this.minLoggedShare = defaultMinLoggedShare,
+    this.kcalPerKg,
   });
 
   static const defaultMinLoggedShare = 0.6;
+  static const defaultWarmupDays = 7;
+
+  /// kcal in a kg of weight change at [weightKg]; [bodyFatPercent] null
+  /// uses the flat 6,000 kcal/kg.
+  double kcalPerKgAt(double weightKg, double? bodyFatPercent) =>
+      kcalPerKg ??
+      (bodyFatPercent == null
+          ? flatKcalPerKg
+          : energyDensity(fatMassKg(weightKg, bodyFatPercent)));
 
   /// Updates taken at [calibrationBlend]: as many as a user logging from
   /// the first weigh-in gets before day [calibrationDays].
@@ -70,9 +87,13 @@ class ExpenditureSettings {
     Responsiveness responsiveness, {
     bool cycleWindow = false,
     double minLoggedShare = defaultMinLoggedShare,
+    int warmupDays = defaultWarmupDays,
+    double? kcalPerKg,
   }) => ExpenditureSettings(
     window: cycleWindow ? 28 : 20,
     minLoggedShare: minLoggedShare,
+    warmupDays: warmupDays,
+    kcalPerKg: kcalPerKg,
     blend: switch (responsiveness) {
       Responsiveness.steady => 0.03,
       Responsiveness.standard => 0.05,
@@ -94,7 +115,10 @@ const minLoggedKcal = 200.0;
 ///
 /// With activity counted (D17) the window's mean counted activity is
 /// taken off too, so the estimate is the base that activity is added
-/// back to; without, it is the whole expenditure.
+/// back to; without, it is the whole expenditure. The estimate before
+/// activity is first counted holds that activity, so its first two weeks'
+/// mean is taken off once, on the day it starts: the prior on day 0, the
+/// running estimate when steps are switched on later.
 List<double> estimateExpenditure(
   List<AdaptiveDay> days, {
   required double priorKcal,
@@ -107,9 +131,11 @@ List<double> estimateExpenditure(
   settings: settings,
 ).estimates;
 
-/// [estimateExpenditure], with how many days updated the estimate: under
-/// [ExpenditureSettings.calibrationUpdates] it is still calibrating.
-({List<double> estimates, int updates}) estimateExpenditureRun(
+/// [estimateExpenditure], with how many days updated the estimate (under
+/// [ExpenditureSettings.calibrationUpdates] it is still calibrating) and
+/// the first that did, null for none.
+({List<double> estimates, int updates, int? firstUpdate})
+estimateExpenditureRun(
   List<AdaptiveDay> days, {
   required double priorKcal,
   double? bodyFatPercent,
@@ -128,14 +154,24 @@ List<double> estimateExpenditure(
   // Calibration counts updates, not days: weigh-ins before logging began
   // would otherwise use it up before the first update.
   var updates = 0;
+  int? firstUpdate;
+  final firstActive = days.indexWhere((d) => d.activityKcal != null);
+  // The window reaches back no further than logging does: before it, the
+  // weight moved on food that was never logged.
+  final firstLogged = days.indexWhere(logged);
   final out = <double>[];
   for (var day = 0; day < days.length; day++) {
+    if (day == firstActive) {
+      estimate -=
+          meanActivity(days.sublist(day, min(day + 14, days.length))) ?? 0;
+    }
     final week = days.sublist((day - 6).clamp(0, day), day + 1);
     final enoughData =
-        day >= settings.warmupDays &&
+        firstLogged >= 0 &&
+        day - firstLogged + 1 >= settings.warmupDays &&
         week.where(logged).length >= 4 &&
         week.any((d) => d.weightKg != null);
-    final start = (day - settings.window).clamp(0, day);
+    final start = max(day - settings.window, firstLogged - 1).clamp(0, day);
     final from = trend[start], to = trend[day];
     final window = days.sublist(start + 1, day + 1);
     final intakes = [
@@ -148,20 +184,19 @@ List<double> estimateExpenditure(
         day > start &&
         intakes.length >= settings.minLoggedShare * window.length) {
       final meanIntake = intakes.reduce((a, b) => a + b) / intakes.length;
-      final density = bodyFatPercent == null
-          ? flatKcalPerKg
-          : energyDensity(fatMassKg((from + to) / 2, bodyFatPercent));
+      final density = settings.kcalPerKgAt((from + to) / 2, bodyFatPercent);
       final stored = (to - from) * density / (day - start);
       final raw = meanIntake - stored - (meanActivity(window) ?? 0);
       final weight = updates < settings.calibrationUpdates
           ? settings.calibrationBlend
           : settings.blend;
       estimate += weight * (raw - estimate);
+      firstUpdate ??= day;
       updates++;
     }
     out.add(estimate);
   }
-  return (estimates: out, updates: updates);
+  return (estimates: out, updates: updates, firstUpdate: firstUpdate);
 }
 
 /// Mean counted activity of the [days] that have it; null when none do.

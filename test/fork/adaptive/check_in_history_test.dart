@@ -40,7 +40,12 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('expenditure-settings')));
     await tester.pumpAndSettle();
     final history = find.byKey(const ValueKey('check-in-history'));
-    await tester.ensureVisible(history);
+    // Far down a lazy list: built only once scrolled to.
+    await tester.scrollUntilVisible(
+      history,
+      200,
+      scrollable: find.byType(Scrollable).last,
+    );
     await tester.pumpAndSettle();
     await tester.tap(history);
     await tester.pumpAndSettle();

@@ -14,6 +14,9 @@ class GoalPlanInputs {
   /// The pace saved in the profile, kg a week.
   final double paceKgPerWeek;
 
+  /// A flat kcal per kg of change in place of body composition's (D19).
+  final double? kcalPerKg;
+
   const GoalPlanInputs({
     required this.pastTrendKg,
     required this.trendKgPerDay,
@@ -21,6 +24,7 @@ class GoalPlanInputs {
     required this.bodyFatPercent,
     required this.targetWeightKg,
     required this.paceKgPerWeek,
+    this.kcalPerKg,
   });
 
   double get nowKg => pastTrendKg.last;
@@ -89,6 +93,8 @@ GoalPlan planAt(GoalPlanInputs inputs, double paceKgPerWeek) {
     daysToTarget: days,
     dailyTargetKcal:
         inputs.expenditureKcal +
-        perDay * energyDensity(fatMassKg(now, inputs.bodyFatPercent)),
+        perDay *
+            (inputs.kcalPerKg ??
+                energyDensity(fatMassKg(now, inputs.bodyFatPercent))),
   );
 }

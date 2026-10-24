@@ -196,7 +196,9 @@ class _GoalPlanCardState extends State<GoalPlanCard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Its own node, so the heading is the title, not the card.
           Semantics(
+            container: true,
             header: true,
             child: Text('Goal planner', style: theme.textTheme.titleMedium),
           ),

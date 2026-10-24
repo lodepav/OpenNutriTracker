@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:logging/logging.dart';
 import 'package:opennutritracker/core/domain/entity/config_entity.dart';
 import 'package:opennutritracker/core/domain/entity/calories_profile_entity.dart';
@@ -113,11 +115,12 @@ class AdaptiveService {
     return computeCheckIn(
       CheckInInputs(
         days: days,
-        priorKcal: _priorKcal(user, days),
+        priorKcal: _priorKcal(user),
         goalRateKgPerWeek: rate,
         bodyFatPercent: await _bodyFat(user),
         targetWeightKg: user.targetWeightKg,
         previousBaseKcal: previous?.baseKcal,
+        previousActivityKcal: previous?.activityKcal,
         maxChangeKcal: settings.maxCheckInChangeKcal,
         activityMode: settings.activityMode,
         taper: (adjustment, weight) => CalorieGoalCalc.applyTargetWeightTaper(
@@ -151,12 +154,13 @@ class AdaptiveService {
     final history = await _history();
     if (history.days.every((d) => d.weightKg == null)) return const [];
     final settings = _settings();
-    final estimates = estimateExpenditure(
+    final run = estimateExpenditureRun(
       history.days,
-      priorKcal: _priorKcal(user, history.days),
+      priorKcal: _priorKcal(user),
       bodyFatPercent: await _bodyFat(user),
       settings: settings,
     );
+    final estimates = run.estimates;
     final days = history.days;
     return [
       for (final (i, day) in days.indexed)
@@ -172,7 +176,7 @@ class AdaptiveService {
           intakeKcal: (day.intakeKcal ?? 0) >= minLoggedKcal
               ? day.intakeKcal
               : null,
-          settled: i >= settings.warmupDays,
+          settled: run.firstUpdate != null && i >= run.firstUpdate!,
         ),
     ];
   }
@@ -201,7 +205,7 @@ class AdaptiveService {
       expenditureKcal:
           estimateExpenditure(
             days,
-            priorKcal: _priorKcal(user, days),
+            priorKcal: _priorKcal(user),
             bodyFatPercent: await _bodyFat(user),
             settings: settings,
           ).last +
@@ -212,16 +216,16 @@ class AdaptiveService {
       bodyFatPercent: await _bodyFat(user),
       targetWeightKg: user.targetWeightKg,
       paceKgPerWeek: goalRateKgPerWeek(user),
+      kcalPerKg: settings.kcalPerKg,
     );
   }
 
   /// Upstream's formula expenditure × (1 + 4 × goal rate), MacroFactor's
-  /// prior; less the first two weeks' counted activity when activity is
-  /// counted (D17), as the formula's activity level holds it already.
-  static double _priorKcal(UserEntity user, List<AdaptiveDay> days) =>
+  /// prior. Its activity level holds activity already: the estimator
+  /// takes counted activity off when it starts (D17).
+  static double _priorKcal(UserEntity user) =>
       CalorieGoalCalc.getTdee(user) *
-          (1 + 4 * goalRateKgPerWeek(user) / user.weightKG) -
-      (meanActivity(days.take(14)) ?? 0);
+      (1 + 4 * goalRateKgPerWeek(user) / user.weightKG);
 
   static ExpenditureSettings _settings() =>
       AdaptiveStore.settings.value.expenditure;
@@ -339,8 +343,8 @@ class ExpenditureDay {
   /// Null when the day was not logged (under [minLoggedKcal]).
   final double? intakeKcal;
 
-  /// False in the first two weeks, while the estimate is still the
-  /// formula's prior.
+  /// False until the estimate first updates, while it is the formula's
+  /// prior.
   final bool settled;
 
   const ExpenditureDay({
@@ -358,7 +362,15 @@ class ForkKcalGoal {
   final double? target;
   final double weekdayOffsetKcal;
 
-  const ForkKcalGoal({this.target, this.weekdayOffsetKcal = 0});
+  /// The daily mode's activity in [target], at most
+  /// [maxDailyActivityKcal].
+  final double activityKcal;
+
+  const ForkKcalGoal({
+    this.target,
+    this.weekdayOffsetKcal = 0,
+    this.activityKcal = 0,
+  });
 }
 
 /// Seam S12: the fixed target, or the last accepted check-in's while the
@@ -367,8 +379,9 @@ class ForkKcalGoal {
 /// either through upstream's path, since measured expenditure already
 /// holds them and a fixed target is meant fixed, nor the kcal adjustment,
 /// since the user sets the target itself; in D17's daily mode the
-/// adaptive one adds the day's counted activity itself. [store] is another profile's, read from its box;
-/// the active profile's is [AdaptiveStore.settings].
+/// adaptive one adds the day's counted activity itself, up to
+/// [maxDailyActivityKcal]. [store] is another profile's, read from its
+/// box; the active profile's is [AdaptiveStore.settings].
 Future<ForkKcalGoal> forkKcalGoal(
   DateTime logicalToday, [
   AdaptiveStore? store,
@@ -388,11 +401,12 @@ Future<ForkKcalGoal> forkKcalGoal(
             store == null &&
             !settings.fixedTarget &&
             settings.activityMode == ActivityMode.daily
-        ? await _todayActivity(logicalToday)
+        ? min(await _todayActivity(logicalToday), maxDailyActivityKcal)
         : 0.0;
     return ForkKcalGoal(
       target: base == null ? null : base + offset + activity,
       weekdayOffsetKcal: offset,
+      activityKcal: activity,
     );
   } catch (e) {
     if (store == null) rethrow;

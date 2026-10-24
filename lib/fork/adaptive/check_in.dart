@@ -1,7 +1,6 @@
 import 'dart:math';
 
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
-import 'package:opennutritracker/fork/adaptive/energy.dart';
 import 'package:opennutritracker/fork/adaptive/expenditure.dart';
 import 'package:opennutritracker/fork/adaptive/trend.dart';
 
@@ -24,6 +23,11 @@ class CheckInInputs {
   /// [CheckIn.baseKcal]); null before the first.
   final double? previousBaseKcal;
 
+  /// The activity the last check-in's target carried (weekly mode), so
+  /// the check-in can say what the past week's moved; null before the
+  /// first.
+  final double? previousActivityKcal;
+
   /// The most the estimate under the target moves in a check-in, null for
   /// no limit. The goal's energy is not held back: a goal changed is
   /// meant at once (D18).
@@ -43,6 +47,7 @@ class CheckInInputs {
     required this.goalRateKgPerWeek,
     required this.bodyFatPercent,
     required this.previousBaseKcal,
+    this.previousActivityKcal,
     required this.taper,
     this.targetWeightKg,
     this.settings = const ExpenditureSettings(),
@@ -92,6 +97,11 @@ class CheckIn {
   final double goalRateKgPerWeek;
   final double? targetWeightKg;
 
+  /// In the weekly mode, how far the past week's activity moves the
+  /// target from the last check-in's, outside the cap; null otherwise or
+  /// before the first.
+  final double? activityChangeKcal;
+
   const CheckIn({
     required this.averageIntakeKcal,
     required this.loggedDays,
@@ -107,6 +117,7 @@ class CheckIn {
     required this.daysToTargetAtTrend,
     this.goalRateKgPerWeek = 0,
     this.targetWeightKg,
+    this.activityChangeKcal,
   });
 
   /// MacroFactor's data rule for the week: 4 logged days and a weigh-in.
@@ -149,7 +160,7 @@ CheckIn computeCheckIn(CheckInInputs inputs) {
   final weight = now ?? 70.0;
   final goalKcal =
       inputs.goalRateKgPerWeek *
-      energyDensity(fatMassKg(weight, inputs.bodyFatPercent)) /
+      inputs.settings.kcalPerKgAt(weight, inputs.bodyFatPercent) /
       7;
   final goalEnergy = inputs.taper(goalKcal, weight);
   final previous = inputs.previousBaseKcal;
@@ -193,5 +204,10 @@ CheckIn computeCheckIn(CheckInInputs inputs) {
     ),
     goalRateKgPerWeek: inputs.goalRateKgPerWeek,
     targetWeightKg: inputs.targetWeightKg,
+    activityChangeKcal:
+        inputs.activityMode == ActivityMode.weekly &&
+            inputs.previousActivityKcal != null
+        ? weekly - inputs.previousActivityKcal!
+        : null,
   );
 }

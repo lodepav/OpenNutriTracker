@@ -96,6 +96,11 @@ class _Run {
   /// program.
   final bool weekly;
   final double minLoggedShare;
+  final int warmupDays;
+  final double? kcalPerKg;
+
+  /// In place of the preset's.
+  final double? blend;
 
   const _Run(
     this.name, {
@@ -107,6 +112,9 @@ class _Run {
     this.morningKcal,
     this.weekly = false,
     this.minLoggedShare = ExpenditureSettings.defaultMinLoggedShare,
+    this.warmupDays = ExpenditureSettings.defaultWarmupDays,
+    this.kcalPerKg,
+    this.blend,
   });
 }
 
@@ -256,10 +264,19 @@ List<_Row> _replay(
           goal: user.goal,
           taperEnabled: user.caloriesTaperEnabled,
         ),
-        settings: ExpenditureSettings.of(
-          run.responsiveness,
-          minLoggedShare: run.minLoggedShare,
-        ),
+        settings: run.blend == null
+            ? ExpenditureSettings.of(
+                run.responsiveness,
+                minLoggedShare: run.minLoggedShare,
+                warmupDays: run.warmupDays,
+                kcalPerKg: run.kcalPerKg,
+              )
+            : ExpenditureSettings(
+                blend: run.blend!,
+                minLoggedShare: run.minLoggedShare,
+                warmupDays: run.warmupDays,
+                kcalPerKg: run.kcalPerKg,
+              ),
       ),
     );
     ourTarget = checkIn.proposedTargetKcal;
@@ -421,6 +438,11 @@ void main() {
         responsiveness: Responsiveness.responsive,
       ),
       _Run('weekly-drift', weekly: true, drift: true),
+      _Run('warmup-14', weekly: true, warmupDays: 14),
+      _Run('flat-7700', kcalPerKg: 7700),
+      _Run('flat-7700-drift', drift: true, kcalPerKg: 7700),
+      _Run('blend-0.07', blend: 0.07),
+      _Run('blend-0.07-weekly', weekly: true, blend: 0.07),
     ]) {
       _write(out, run, _replay(run, days, goals, program, profile));
     }

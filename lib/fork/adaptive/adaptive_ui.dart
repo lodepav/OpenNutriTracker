@@ -3,6 +3,7 @@ import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/core/utils/reload_diary_and_trends.dart';
 import 'package:opennutritracker/features/home/presentation/bloc/home_bloc.dart';
 import 'package:opennutritracker/features/settings/presentation/bloc/settings_bloc.dart';
+import 'package:opennutritracker/fork/adaptive/activity.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
 import 'package:opennutritracker/fork/adaptive/macro_program.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
@@ -302,7 +303,16 @@ class _CheckInScreenState extends State<CheckInScreen> {
             ),
             if (daily)
               Text(
-                "Each day's counted activity is added to it.",
+                "Each day's counted activity is added to it, at most "
+                '${_kcal(maxDailyActivityKcal)}.',
+                style: theme.textTheme.bodySmall,
+              ),
+            if (checkIn.activityChangeKcal case final change?
+                when change.abs() >= 1)
+              Text(
+                "The past week's activity moves the target "
+                '${energyText(context, change, signed: true)} from the last '
+                "check-in's. The limit above leaves it out.",
                 style: theme.textTheme.bodySmall,
               ),
             if (capped && cap != null)
@@ -835,14 +845,21 @@ class AdaptiveGoalNote extends StatelessWidget {
 
   const AdaptiveGoalNote({super.key, this.store});
 
-  /// The logical today, and the last check-in while the adaptive target
-  /// sets the goal.
-  Future<(DateTime, CheckInRecord?)> _read(AdaptiveSettings settings) async => (
-    await logicalToday(),
-    settings.adaptiveTarget && !settings.fixedTarget
-        ? await (store ?? AdaptiveStore()).lastCheckIn()
-        : null,
-  );
+  /// The logical today, the last check-in while the adaptive target sets
+  /// the goal, and the activity the daily mode adds to it today.
+  Future<(DateTime, CheckInRecord?, double)> _read(
+    AdaptiveSettings settings,
+  ) async {
+    final today = await logicalToday();
+    final adaptive = settings.adaptiveTarget && !settings.fixedTarget;
+    return (
+      today,
+      adaptive ? await (store ?? AdaptiveStore()).lastCheckIn() : null,
+      adaptive && store == null && settings.activityMode == ActivityMode.daily
+          ? (await forkKcalGoal(today)).activityKcal
+          : 0.0,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -852,12 +869,12 @@ class AdaptiveGoalNote extends StatelessWidget {
         settings.weekdayOffsets.every((o) => o == 0)) {
       return const SizedBox.shrink();
     }
-    return FutureBuilder<(DateTime, CheckInRecord?)>(
+    return FutureBuilder<(DateTime, CheckInRecord?, double)>(
       future: _read(settings),
       builder: (context, snapshot) {
         final data = snapshot.data;
         if (data == null) return const SizedBox.shrink();
-        final (today, last) = data;
+        final (today, last, activity) = data;
         // Today's shift, as the goal on Home carries it.
         final shift = settings.weekdayOffsets[today.weekday - 1];
         String goal(double kcal) =>
@@ -902,13 +919,12 @@ class AdaptiveGoalNote extends StatelessWidget {
               last == null
                   ? 'Until the first weekly check-in, the formula below sets '
                         'your goal.'
-                  : '${goal(last.acceptedKcal)}, set at '
+                  : '${goal(last.acceptedKcal + activity)}, set at '
                         'the check-in on ${d!.year}-'
                         '${d.month.toString().padLeft(2, '0')}-'
                         '${d.day.toString().padLeft(2, '0')} from a measured '
                         'expenditure of ${energyText(context, last.expenditureKcal)}. '
-                        'The formula below is not used; logged activities '
-                        'and the kcal adjustment are not added.',
+                        '${settings.activityMode == ActivityMode.daily ? "It includes ${energyText(context, activity)} of today's counted activity, at most ${energyText(context, maxDailyActivityKcal)}. The formula below and the kcal adjustment are not used." : 'The formula below is not used; logged activities and the kcal adjustment are not added.'}',
             ),
           ),
         );

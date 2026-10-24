@@ -108,6 +108,74 @@ void main() {
     AdaptiveStore.skipped.value = const {};
   });
 
+  group('D19', () {
+    test('activity counted from partway through is not counted twice', () {
+      // 2,500 kcal at a steady 80 kg; from day 40 steps count 300 a day.
+      // The estimate before held that walking, so it drops by it at once
+      // rather than over weeks while the target adds it back.
+      final days = [
+        for (var d = 0; d < 80; d++)
+          AdaptiveDay(
+            intakeKcal: 2500,
+            weightKg: 80,
+            activityKcal: d < 40 ? null : 300,
+          ),
+      ];
+      final estimates = estimateExpenditure(days, priorKcal: 2500);
+      expect(estimates[39], closeTo(2500, 5));
+      expect(estimates[40], closeTo(2200, 5));
+      expect(estimates.last, closeTo(2200, 5));
+    });
+
+    test('the window starts at the first logged day', () {
+      // Weigh-ins for 30 days before logging: the first update comes a
+      // warm-up after logging began, not once the window is 60% logged.
+      final days = [
+        for (var d = 0; d < 30; d++) const AdaptiveDay(weightKg: 80),
+        for (var d = 0; d < 20; d++)
+          const AdaptiveDay(intakeKcal: 2500, weightKg: 80),
+      ];
+      final run = estimateExpenditureRun(days, priorKcal: 3000);
+      expect(run.firstUpdate, 30 + ExpenditureSettings.defaultWarmupDays - 1);
+      expect(run.estimates.last, lessThan(2700));
+    });
+
+    test('a flat 7,700 kcal per kg, kept in the settings', () {
+      const flat = AdaptiveSettings(flatEnergy: true);
+      expect(flat.expenditure.kcalPerKgAt(90, 25), 7700);
+      expect(
+        const AdaptiveSettings().expenditure.kcalPerKgAt(90, 25),
+        lessThan(7700),
+      );
+      expect(AdaptiveSettings.fromJson(flat.toJson()).flatEnergy, isTrue);
+      expect(AdaptiveSettings.fromJson(const {}).flatEnergy, isFalse);
+    });
+
+    test('a weekly check-in says what the past week\'s activity moved', () {
+      CheckIn at(double? previousActivity) => computeCheckIn(
+        CheckInInputs(
+          days: [
+            for (var d = 0; d < 40; d++)
+              const AdaptiveDay(
+                intakeKcal: 2500,
+                weightKg: 80,
+                activityKcal: 300,
+              ),
+          ],
+          priorKcal: 2500,
+          goalRateKgPerWeek: 0,
+          bodyFatPercent: 20,
+          previousBaseKcal: 2200,
+          previousActivityKcal: previousActivity,
+          activityMode: ActivityMode.weekly,
+          taper: (adjustment, _) => adjustment,
+        ),
+      );
+      expect(at(100).activityChangeKcal, closeTo(200, 0.01));
+      expect(at(null).activityChangeKcal, isNull);
+    });
+  });
+
   group('D18', () {
     test('a gap while not logging leaves the estimate where it was', () {
       // 60 days at 2,500 kcal holding 80 kg, then 14 unlogged days gaining
@@ -424,6 +492,29 @@ void main() {
   });
 
   group('screens', () {
+    testWidgets('Count again works from TalkBack', (tester) async {
+      final handle = tester.ensureSemantics();
+      final store = _MemoryStore();
+      final day = DateTime(2026, 10, 20);
+      await store.setSkipped(day, true);
+      await tester.pumpWidget(
+        MaterialApp(home: ExpenditureSettingsScreen(store: store)),
+      );
+      await tester.pumpAndSettle();
+      final tile = find.byKey(const ValueKey('skipped-days'));
+      await tester.ensureVisible(tile);
+      await tester.pumpAndSettle();
+      await tester.tap(tile);
+      await tester.pumpAndSettle();
+
+      // A double-tap sends the node's tap action; a wrapper that drops it
+      // leaves nothing to send.
+      tester.semantics.tap(find.semantics.byLabel(RegExp('Count again')));
+      await tester.pumpAndSettle();
+      expect(store.keptSkipped, isEmpty);
+      handle.dispose();
+    });
+
     testWidgets('the Diary switch leaves the day out', (tester) async {
       final store = _MemoryStore();
       await tester.pumpWidget(
@@ -497,6 +588,8 @@ void main() {
       );
       await tester.pumpAndSettle();
       final tile = find.byKey(const ValueKey('count-steps'));
+      await tester.ensureVisible(tile);
+      await tester.pumpAndSettle();
       bool shown() => tester.widget<SwitchListTile>(tile).value;
       expect(shown(), isFalse);
 
@@ -531,6 +624,8 @@ void main() {
       );
       await tester.pumpAndSettle();
       final tile = find.byKey(const ValueKey('count-steps'));
+      await tester.ensureVisible(tile);
+      await tester.pumpAndSettle();
       await tester.tap(tile);
       await tester.pumpAndSettle();
       expect(tester.widget<SwitchListTile>(tile).value, isFalse);

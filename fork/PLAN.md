@@ -977,16 +977,10 @@ app is tested live, after the real-model checks above. Queued: `feat/photo-note`
 
 Not built anywhere yet:
 
-- *To do (asked 2026-10-24):* a switch in Expenditure and check-ins for the energy in a kg
-  of weight change.
-  - Off (default): the energy follows body composition (Forbes, via Hall), about
-    6,200 kcal per kg at a typical build, as the loss is partly lean tissue.
-  - On: a flat 7,700 kcal per kg, as MacroFactor and most apps count. It sets a larger
-    deficit for the same pace and reads the scale's change as more energy.
-  - Note under it: "Counts every kg as 7,700 kcal, as most apps do. Your target moves
-    further for the same pace."
-  - Why: a journey replay found the two drift by about 7 kg over 17 months of the same
-    pace goals.
+- *Done 2026-10-24 (D19):* "Count every kg as 7,700 kcal" in Expenditure and check-ins, off
+  by default. Off, a kg follows body composition (Forbes via Hall, about 6,200 kcal at a typical
+  build, as part of a change is lean tissue); on, the same pace takes a larger deficit or
+  surplus. The journey's drift against MacroFactor's targets fell from 7.0 to 4.3 kg.
 
 - *Done 2026-10-23:* recents ranked by the meal being added to (seam S19,
   `lib/fork/recents/`). A food's place sums its logs over 90 days, each halving every 30 days,

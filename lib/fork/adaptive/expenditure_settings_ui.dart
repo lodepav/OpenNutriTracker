@@ -129,6 +129,20 @@ class _EstimateSection extends StatelessWidget {
         value: settings.cycleWindow,
         onChanged: (v) => _save(store, settings.copyWith(cycleWindow: v)),
       ),
+      SwitchListTile(
+        key: const ValueKey('flat-energy'),
+        title: Text(
+          'Count every kg as '
+          '${energyText(context, AdaptiveSettings.commonKcalPerKg)}',
+        ),
+        subtitle: const Text(
+          'As most apps do. Off, a kg follows your body composition: part '
+          'of a change is lean tissue, which holds less. On, the same pace '
+          'takes a larger deficit or surplus.',
+        ),
+        value: settings.flatEnergy,
+        onChanged: (v) => _save(store, settings.copyWith(flatEnergy: v)),
+      ),
       _SkippedDaysTile(store),
     ],
   );
@@ -189,14 +203,10 @@ class _SkippedDaysDialog extends StatelessWidget {
                 ListTile(
                   contentPadding: EdgeInsets.zero,
                   title: Text(DateFormat.yMMMEd().format(day)),
-                  trailing: Semantics(
-                    label: 'Count ${DateFormat.yMMMEd().format(day)} again',
-                    excludeSemantics: true,
-                    button: true,
-                    child: TextButton(
-                      onPressed: () => store.setSkipped(day, false),
-                      child: const Text('Count again'),
-                    ),
+                  // The row reads as one: the date, then the button.
+                  trailing: TextButton(
+                    onPressed: () => store.setSkipped(day, false),
+                    child: const Text('Count again'),
                   ),
                 ),
             ],
