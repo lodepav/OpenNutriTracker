@@ -327,13 +327,39 @@ Future<double> forkGoalOnDay(
 Future<bool> forkGoalIgnoresActivities(DateTime day) async =>
     (await forkKcalGoal(day)).target != null;
 
-/// Seam S68: whether the target of [store]'s profile (the active one's by
-/// default) leaves activities out, read from its box: the settings in
-/// memory may not be loaded yet (start-up) or be another profile's. False
-/// when unreadable.
-Future<bool> forkTargetIgnoresActivities([AdaptiveStore? store]) async =>
-    (await forkKcalGoal(DateTime.now(), store ?? AdaptiveStore())).target !=
-    null;
+/// Seam S68: what the reconciler needs of the target of [store]'s profile
+/// (the active one's by default), read from its box: the settings in
+/// memory may not be loaded yet (start-up) or be another profile's.
+/// Whether it leaves activities out (false when unreadable), the weekday
+/// shifts its rows carry (none when unreadable), and whether their macro
+/// goals follow the energy: not under a macro program, whose protein
+/// follows the body ([forkMacroGoal]).
+Future<({bool ignoreBurned, List<double> offsets, bool scaleMacros})>
+forkReconcileTarget([AdaptiveStore? store]) async {
+  store ??= AdaptiveStore();
+  final ignoreBurned =
+      (await forkKcalGoal(DateTime.now(), store)).target != null;
+  try {
+    final settings = await store.read();
+    final fixedMacros = settings.fixedMacros;
+    return (
+      ignoreBurned: ignoreBurned,
+      offsets: settings.weekdayOffsets,
+      scaleMacros:
+          settings.macroProgram == null ||
+          (settings.fixedTarget && fixedMacros != null && fixedMacros.kcal > 0),
+    );
+  } catch (e) {
+    _log.warning('Adaptive settings unreadable, no weekday shift: $e');
+    return (
+      ignoreBurned: ignoreBurned,
+      offsets: const <double>[],
+      scaleMacros: true,
+    );
+  } finally {
+    await store.release();
+  }
+}
 
 /// Seam S41: the macro goals for a day's [kcalGoal], or null for
 /// upstream's percentages. The fixed target's grams, scaled to the goal (a

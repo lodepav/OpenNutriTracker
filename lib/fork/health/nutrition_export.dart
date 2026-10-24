@@ -174,9 +174,13 @@ class NutritionExport {
        _box = box ?? AdaptiveStore.openActiveBox,
        _clock = clock ?? DateTime.now;
 
+  /// A day early: west of UTC a date-only entry's UTC midnight is before
+  /// the local midnight its date starts at. The run cuts the window on
+  /// each record's own time.
   static Future<List<IntakeEntity>> _fromRepository(DateTime since) async => [
     for (final dbo in await locator<IntakeRepository>().getAllIntakesDBO())
-      if (!dbo.dateTime.isBefore(since)) IntakeEntity.fromIntakeDBO(dbo),
+      if (!dbo.dateTime.isBefore(since.subtract(const Duration(days: 1))))
+        IntakeEntity.fromIntakeDBO(dbo),
   ];
 
   static NutritionExport? _instance;
@@ -249,7 +253,7 @@ class NutritionExport {
           // An imported day's totals: the app they came from has likely
           // written that day to Health Connect already.
           if (!isImportedHistory(intake)) intake.id: NutritionRecord.of(intake),
-      };
+      }..removeWhere((_, record) => record.at.isBefore(since));
       for (final MapEntry(key: id, value: record) in records.entries) {
         if (written[id]?['sig'] == record.signature) continue;
         await _sink.write(record, now.millisecondsSinceEpoch);

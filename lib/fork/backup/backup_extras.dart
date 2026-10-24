@@ -159,6 +159,34 @@ class BackupExtras {
   static bool hasProfile(Archive archive) =>
       archive.findFile(profileFileName) != null;
 
+  /// The target settings and check-ins only, for the import to write before
+  /// its rows: the rows are reconciled under the target they were made
+  /// under (seam S68), not the one the device had. [prepareRestore] writes
+  /// them again, replacing by date.
+  Future<void> Function() prepareTargetRestore(Archive archive) {
+    final adaptive = _decodeAdaptive(archive);
+    return () async {
+      if (adaptive == null) return;
+      final store = _adaptive();
+      await store.mergeCheckIns(adaptive.checkIns);
+      await store.save(adaptive.settings);
+    };
+  }
+
+  ({AdaptiveSettings settings, List<CheckInRecord> checkIns, PhasePlan? plan})?
+  _decodeAdaptive(Archive archive) =>
+      _decode(archive, adaptiveFileName, (json) {
+        final map = json as Map<String, dynamic>;
+        final plan = map[PhaseStore.planKey] as Map?;
+        return (
+          settings: AdaptiveSettings.fromJson(map),
+          checkIns: [
+            for (final c in map['checkIns'] as List) CheckInRecord.fromJson(c),
+          ],
+          plan: plan == null ? null : PhasePlan.fromJson(plan),
+        );
+      });
+
   /// Decodes everything first and returns the writes, so a malformed file
   /// throws an [ExportImportFailure] before the import has written anything.
   /// Each write replaces by id (custom meals: by barcode, else name;
@@ -179,17 +207,7 @@ class BackupExtras {
       customMealsFileName,
       (json) => [for (final e in json as List) MealDBO.fromJson(e)],
     );
-    final adaptive = _decode(archive, adaptiveFileName, (json) {
-      final map = json as Map<String, dynamic>;
-      final plan = map[PhaseStore.planKey] as Map?;
-      return (
-        settings: AdaptiveSettings.fromJson(map),
-        checkIns: [
-          for (final c in map['checkIns'] as List) CheckInRecord.fromJson(c),
-        ],
-        plan: plan == null ? null : PhasePlan.fromJson(plan),
-      );
-    });
+    final adaptive = _decodeAdaptive(archive);
     final plans = _decode(
       archive,
       planFileName,

@@ -22,6 +22,7 @@ import 'package:opennutritracker/core/utils/calc/day_boundary_calc.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
+import 'package:opennutritracker/fork/adaptive/macro_program.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_ui.dart';
 
 /// A Saturday.
@@ -169,6 +170,31 @@ void main() {
     });
   });
 
+  test('a macro program keeps a reconciled row\'s macros', () async {
+    final other = AdaptiveStore.otherProfile(
+      () => Hive.openBox<dynamic>('shifts'),
+    );
+    await other.save(
+      const AdaptiveSettings(
+        weekdayOffsets: _weekendUp,
+        macroProgram: MacroProgram(),
+      ),
+    );
+    final shifts = await forkReconcileTarget(other);
+    expect(shifts.offsets, _weekendUp);
+    expect(shifts.scaleMacros, isFalse);
+
+    // Fixed grams win over the program, and they scale.
+    await other.save(
+      const AdaptiveSettings(
+        fixedTarget: true,
+        fixedMacros: FixedMacros(proteinG: 100, carbsG: 250, fatG: 100),
+        macroProgram: MacroProgram(),
+      ),
+    );
+    expect((await forkReconcileTarget(other)).scaleMacros, isTrue);
+  });
+
   test('fixed grams scale with a shifted day', () async {
     AdaptiveStore.settings.value = const AdaptiveSettings(
       fixedTarget: true,
@@ -225,6 +251,14 @@ void main() {
 
     await tester.tap(find.byKey(const ValueKey('fixed-target')));
     await tester.pumpAndSettle();
+    // A pasted "Infinity" would break every later backup's JSON.
+    for (final bad in ['Infinity', 'NaN']) {
+      await tester.enterText(find.byKey(const ValueKey('fixed-kcal')), bad);
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+      expect(memory.saved.fixedKcal.isFinite, isTrue, reason: bad);
+      expect(find.byKey(const ValueKey('fixed-kcal')), findsOneWidget);
+    }
     await tester.enterText(find.byKey(const ValueKey('fixed-kcal')), '1800');
     await tester.tap(find.text('Save'));
     await tester.pumpAndSettle();

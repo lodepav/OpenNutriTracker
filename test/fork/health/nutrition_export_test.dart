@@ -140,6 +140,22 @@ void main() {
     expect(sink.records, isEmpty);
   });
 
+  test('the window is cut on the time a record goes out at', () async {
+    // The store hands over a day early, for a date-only entry west of UTC.
+    final e = NutritionExport(
+      sink,
+      intakes: (since) async => diary,
+      box: () => Hive.openBox<dynamic>('fork'),
+      clock: () => now,
+    );
+    diary = [
+      _intake('a', DateTime(2026, 10, 9, 8)),
+      _intake('before', DateTime(2026, 10, 8, 23)),
+    ];
+    expect(await e.turnOn(), 1);
+    expect(sink.records.keys, ['openbite-a']);
+  });
+
   test('an entry ageing out of the window is forgotten, not deleted', () async {
     diary = [_intake('a', DateTime(2026, 10, 10, 8))];
     final e = export();

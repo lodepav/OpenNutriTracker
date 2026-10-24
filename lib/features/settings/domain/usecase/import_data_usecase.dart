@@ -215,9 +215,13 @@ class ImportDataUsecase {
 
     // [fork] S21 backup: decoded with the rest, before any write
     final forkRestore = _forkExtras?.prepareRestore(archive);
+    final forkTarget = _forkExtras?.prepareTargetRestore(archive);
     // [/fork]
 
     final imported = await withTrackedDayLockOnProfile(() async {
+      // [fork] S21 backup: the target the rows were made under, before them
+      await forkTarget?.call();
+      // [/fork]
       await _writeEntriesAndRows(
         userActivityDBOs,
         intakeDBOs,

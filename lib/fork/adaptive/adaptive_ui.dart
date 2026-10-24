@@ -190,7 +190,7 @@ class _CheckInScreenState extends State<CheckInScreen> {
             FilledButton(
               onPressed: () async {
                 final typed = double.tryParse(_target.text.trim());
-                if (typed == null || typed <= 0) return;
+                if (typed == null || !typed.isFinite || typed <= 0) return;
                 final target = kcalFromInput(context, typed);
                 await widget.service.accept(checkIn, target);
                 if (context.mounted) Navigator.of(context).pop(true);
@@ -489,7 +489,13 @@ class _FixedTargetDialogState extends State<_FixedTargetDialog> {
     final p = double.tryParse(_protein.text.trim());
     final c = double.tryParse(_carbs.text.trim());
     final f = double.tryParse(_fat.text.trim());
-    if (p == null || c == null || f == null || p < 0 || c < 0 || f < 0) {
+    if (p == null ||
+        c == null ||
+        f == null ||
+        !(p + c + f).isFinite ||
+        p < 0 ||
+        c < 0 ||
+        f < 0) {
       return null;
     }
     final macros = FixedMacros(proteinG: p, carbsG: c, fatG: f);
@@ -563,7 +569,7 @@ class _FixedTargetDialogState extends State<_FixedTargetDialog> {
               return;
             }
             final typed = double.tryParse(_kcal.text.trim());
-            if (typed == null || typed <= 0) return;
+            if (typed == null || !typed.isFinite || typed <= 0) return;
             Navigator.pop(
               context,
               widget.settings.copyWith(
@@ -616,7 +622,7 @@ class _WeekdayTargetsDialogState extends State<_WeekdayTargetsDialog> {
     for (final f in _fields) {
       final text = f.text.trim();
       final typed = text.isEmpty ? 0.0 : double.tryParse(text);
-      if (typed == null) return null;
+      if (typed == null || !typed.isFinite) return null;
       out.add(kcalFromInput(context, typed));
     }
     return out;

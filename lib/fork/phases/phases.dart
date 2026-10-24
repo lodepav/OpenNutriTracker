@@ -200,7 +200,14 @@ class PhaseRunner {
     void run() => unawaited(runner.run());
     run();
     PhaseStore.changes.addListener(run);
-    locator<HiveDBProvider>().addListener(run);
+    // A switch notifies while it holds the lock, where a stamp names no
+    // profile: run once it is through (from outside its zone, so the lock
+    // waits for it rather than letting this in).
+    locator<HiveDBProvider>().addListener(
+      () => Zone.root.run(
+        () => unawaited(withTrackedDayLock(() async {}).then((_) => run())),
+      ),
+    );
     WidgetsBinding.instance.addObserver(_Lifecycle(run));
   }
 }

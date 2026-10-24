@@ -104,6 +104,31 @@ void main() {
     acceptedKcal: 2100,
   );
 
+  test(
+    'the target alone goes first, for the rows to be reconciled under',
+    () async {
+      final from = device();
+      from.water.entries.add(
+        WaterIntakeDBO(
+          id: 'w1',
+          dateTime: DateTime(2026, 10, 20),
+          amountMl: 250,
+        ),
+      );
+      await from.adaptive.save(const AdaptiveSettings(adaptiveTarget: true));
+      await from.adaptive.addCheckIn(checkIn);
+      final archive = Archive();
+      await from.extras.addTo(archive);
+
+      final to = device();
+      await to.extras.prepareTargetRestore(archive)();
+
+      expect((await to.adaptive.read()).adaptiveTarget, isTrue);
+      expect((await to.adaptive.lastCheckIn())?.acceptedKcal, 2100);
+      expect(to.water.entries, isEmpty);
+    },
+  );
+
   test('what one device backs up, another restores, twice without '
       'duplicates', () async {
     final from = device();
