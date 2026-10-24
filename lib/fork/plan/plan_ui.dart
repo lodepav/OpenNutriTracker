@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:logging/logging.dart';
 import 'package:opennutritracker/core/domain/entity/intake_type_entity.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
@@ -116,6 +117,14 @@ class _PlannedFoodsCardState extends State<PlannedFoodsCard> {
     }
   }
 
+  Future<void> _repeat(PlannedFood food) async {
+    final weekdays = await showDialog<Set<int>>(
+      context: context,
+      builder: (_) => RepeatDialog(food: food),
+    );
+    if (weekdays != null) await _store.setRepeat(food.id, weekdays);
+  }
+
   static String _typeName(IntakeTypeEntity type) =>
       '${type.name[0].toUpperCase()}${type.name.substring(1)}';
 
@@ -173,11 +182,25 @@ class _PlannedFoodsCardState extends State<PlannedFoodsCard> {
                   title: Text(food.meal.name ?? ''),
                   subtitle: Text(
                     '${_typeName(food.type)} · ${amountLabel(food.amountText)} '
-                    '${food.unit} · ${energyText(context, food.kcal)}',
+                    '${food.unit} · ${energyText(context, food.kcal)}'
+                    '${food.repeats ? '\n${repeatText(context, food.weekdays)}' : ''}',
                   ),
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
+                      IconButton(
+                        key: ValueKey('plan-repeat-${food.id}'),
+                        tooltip: food.repeats
+                            ? 'Change how it repeats'
+                            : 'Repeat it',
+                        icon: Icon(
+                          Icons.repeat_rounded,
+                          color: food.repeats
+                              ? Theme.of(context).colorScheme.primary
+                              : null,
+                        ),
+                        onPressed: _busy ? null : () => _repeat(food),
+                      ),
                       IconButton(
                         key: ValueKey('plan-log-${food.id}'),
                         tooltip: 'Log it',
@@ -186,7 +209,7 @@ class _PlannedFoodsCardState extends State<PlannedFoodsCard> {
                       ),
                       IconButton(
                         key: ValueKey('plan-drop-${food.id}'),
-                        tooltip: 'Drop it',
+                        tooltip: food.repeats ? 'Drop it today' : 'Drop it',
                         icon: const Icon(Icons.close_rounded),
                         onPressed: _busy ? null : () => _store.remove(food.id),
                       ),
@@ -199,4 +222,103 @@ class _PlannedFoodsCardState extends State<PlannedFoodsCard> {
       );
     },
   );
+}
+
+/// "Every day", "Weekdays", or the days by name: "Mon, Wed, Fri".
+String repeatText(BuildContext context, Set<int> weekdays) =>
+    repeatTextFor(Localizations.localeOf(context).toString(), weekdays);
+
+String repeatTextFor(String locale, Set<int> weekdays) {
+  if (weekdays.length == 7) return 'Repeats every day';
+  if (weekdays.length == 5 && !weekdays.contains(6) && !weekdays.contains(7)) {
+    return 'Repeats on weekdays';
+  }
+  // 2024-01-01 was a Monday: day d of that week is weekday d.
+  final names = [
+    for (final d in weekdays.toList()..sort())
+      DateFormat.E(locale).format(DateTime(2024, 1, d)),
+  ];
+  return 'Repeats ${names.join(', ')}';
+}
+
+/// Picks the weekdays [food] repeats on, from its planned day on. Pops
+/// the days, an empty set to stop it repeating, or nothing on Cancel.
+class RepeatDialog extends StatefulWidget {
+  final PlannedFood food;
+
+  const RepeatDialog({super.key, required this.food});
+
+  @override
+  State<RepeatDialog> createState() => _RepeatDialogState();
+}
+
+class _RepeatDialogState extends State<RepeatDialog> {
+  late final Set<int> _days = widget.food.repeats
+      ? {...widget.food.weekdays}
+      : {widget.food.day.weekday};
+
+  @override
+  Widget build(BuildContext context) {
+    final locale = Localizations.localeOf(context).toString();
+    return AlertDialog(
+      title: Text('Repeat ${widget.food.meal.name ?? ''}'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Planned on these days until you log or drop it. Each day is '
+            'logged on its own.',
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: [
+              for (var d = 1; d <= 7; d++)
+                FilterChip(
+                  key: ValueKey('repeat-day-$d'),
+                  label: Text(
+                    DateFormat.E(locale).format(DateTime(2024, 1, d)),
+                  ),
+                  selected: _days.contains(d),
+                  onSelected: (on) =>
+                      setState(() => on ? _days.add(d) : _days.remove(d)),
+                ),
+            ],
+          ),
+          Wrap(
+            spacing: 8,
+            children: [
+              TextButton(
+                key: const ValueKey('repeat-every-day'),
+                onPressed: () =>
+                    setState(() => _days.addAll([1, 2, 3, 4, 5, 6, 7])),
+                child: const Text('Every day'),
+              ),
+              if (widget.food.repeats)
+                TextButton(
+                  key: const ValueKey('repeat-stop'),
+                  onPressed: () => Navigator.pop(context, <int>{}),
+                  child: const Text('Stop repeating'),
+                ),
+            ],
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        TextButton(
+          key: const ValueKey('repeat-save'),
+          onPressed: _days.isEmpty
+              ? null
+              : () => Navigator.pop(context, {..._days}),
+          child: const Text('Repeat'),
+        ),
+      ],
+    );
+  }
 }

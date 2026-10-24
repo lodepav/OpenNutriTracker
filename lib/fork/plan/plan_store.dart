@@ -8,7 +8,9 @@ import 'package:opennutritracker/core/utils/id_generator.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 
-/// A food planned for a meal of a day, not yet logged.
+/// A food planned for a meal of a day, not yet logged; or, with
+/// [weekdays], one planned on those days from [day] on (a usual
+/// breakfast), each day's until it is logged or dropped.
 class PlannedFood {
   final String id;
   final DateTime day;
@@ -18,6 +20,15 @@ class PlannedFood {
   final String amountText;
   final double kcal;
 
+  /// [DateTime.weekday]s it repeats on; empty for one day only.
+  final Set<int> weekdays;
+
+  /// Days a repeating food was logged or dropped on.
+  final Set<DateTime> doneDays;
+
+  /// For one day of a repeating food, the repeating food's id.
+  final String? repeatOf;
+
   const PlannedFood({
     required this.id,
     required this.day,
@@ -26,7 +37,31 @@ class PlannedFood {
     required this.unit,
     required this.amountText,
     required this.kcal,
+    this.weekdays = const {},
+    this.doneDays = const {},
+    this.repeatOf,
   });
+
+  bool get repeats => weekdays.isNotEmpty;
+
+  PlannedFood _copy({
+    String? id,
+    DateTime? day,
+    Set<int>? weekdays,
+    Set<DateTime>? doneDays,
+    String? repeatOf,
+  }) => PlannedFood(
+    id: id ?? this.id,
+    day: day ?? this.day,
+    type: type,
+    meal: meal,
+    unit: unit,
+    amountText: amountText,
+    kcal: kcal,
+    weekdays: weekdays ?? this.weekdays,
+    doneDays: doneDays ?? this.doneDays,
+    repeatOf: repeatOf ?? this.repeatOf,
+  );
 
   Map<String, Object?> toJson() => {
     'id': id,
@@ -37,6 +72,8 @@ class PlannedFood {
     'unit': unit,
     'amountText': amountText,
     'kcal': kcal,
+    if (repeats) 'weekdays': weekdays.toList()..sort(),
+    if (repeats) 'doneDays': [for (final d in doneDays) d.toIso8601String()],
   };
 
   static PlannedFood fromJson(Map<dynamic, dynamic> json) => PlannedFood(
@@ -53,6 +90,11 @@ class PlannedFood {
     unit: json['unit'] as String,
     amountText: json['amountText'] as String,
     kcal: (json['kcal'] as num).toDouble(),
+    weekdays: {for (final d in json['weekdays'] as List? ?? const []) d as int},
+    doneDays: {
+      for (final d in json['doneDays'] as List? ?? const [])
+        DateTime.parse(d as String),
+    },
   );
 }
 
@@ -75,10 +117,26 @@ class PlanStore {
       PlannedFood.fromJson(json as Map),
   ];
 
-  Future<List<PlannedFood>> forDay(DateTime day) async => [
-    for (final food in await all())
-      if (_sameDay(food.day, day)) food,
-  ];
+  /// [day]'s foods: those planned on it, and a repeating food's day
+  /// when it falls on one of its weekdays and is not yet logged or
+  /// dropped.
+  Future<List<PlannedFood>> forDay(DateTime day) async {
+    final date = _date(day);
+    return [
+      for (final food in await all())
+        if (!food.repeats && _sameDay(food.day, date))
+          food
+        else if (food.repeats &&
+            !date.isBefore(_date(food.day)) &&
+            food.weekdays.contains(date.weekday) &&
+            !food.doneDays.contains(date))
+          food._copy(
+            id: '${food.id}@${_dayKey(date)}',
+            day: date,
+            repeatOf: food.id,
+          ),
+    ];
+  }
 
   Future<void> add(
     Iterable<({MealEntity meal, String unit, String amountText, double kcal})>
@@ -99,10 +157,48 @@ class PlanStore {
       ),
   ]);
 
-  Future<void> remove(String id) async => _write([
-    for (final f in await all())
-      if (f.id != id) f,
-  ]);
+  /// Drops one planned food (logged, or not wanted); for a repeating
+  /// food's day, that day only.
+  Future<void> remove(String id) async {
+    final at = id.indexOf('@');
+    if (at < 0) {
+      return _write([
+        for (final f in await all())
+          if (f.id != id) f,
+      ]);
+    }
+    final ruleId = id.substring(0, at);
+    final day = DateTime.parse(id.substring(at + 1));
+    // Days long past are forgotten, so the list stays short.
+    final keepFrom = _date(DateTime.now()).subtract(const Duration(days: 60));
+    await _write([
+      for (final f in await all())
+        if (f.id == ruleId)
+          f._copy(
+            doneDays: {
+              for (final d in f.doneDays)
+                if (!d.isBefore(keepFrom)) d,
+              day,
+            },
+          )
+        else
+          f,
+    ]);
+  }
+
+  /// Makes the food [id] (planned, or one day of a repeating one) repeat
+  /// on [weekdays] from its day on; empty [weekdays] stops it repeating
+  /// and drops it.
+  Future<void> setRepeat(String id, Set<int> weekdays) async {
+    final ruleId = id.contains('@') ? id.substring(0, id.indexOf('@')) : id;
+    await _write([
+      for (final f in await all())
+        if (f.id != ruleId)
+          f
+        else if (weekdays.isNotEmpty)
+          f._copy(weekdays: weekdays),
+    ]);
+  }
 
   /// Adds [foods] from a backup; one with an id already here replaces it.
   Future<void> merge(List<PlannedFood> foods) async {
@@ -116,6 +212,12 @@ class PlanStore {
     await (await _box()).put(_key, [for (final f in foods) f.toJson()]);
     changes.value++;
   }
+
+  static DateTime _date(DateTime d) => DateTime(d.year, d.month, d.day);
+
+  static String _dayKey(DateTime d) =>
+      '${d.year}-${d.month.toString().padLeft(2, '0')}-'
+      '${d.day.toString().padLeft(2, '0')}';
 
   static bool _sameDay(DateTime a, DateTime b) =>
       a.year == b.year && a.month == b.month && a.day == b.day;
