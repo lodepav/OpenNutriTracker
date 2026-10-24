@@ -1,13 +1,14 @@
 // Phase 1b.4: the foods the user eats most resolve from the bundled table
-// alone, without D9's estimate. Runs upstream's resolver and repository
-// unchanged over the table; Open Food Facts is left out, so a pass here does
-// not lean on a branded product.
+// alone, without D9's estimate. Runs upstream's resolver and repository,
+// with the fork's seams, over the table; Open Food Facts is left out, so a
+// pass here does not lean on a branded product.
 //
 // Known misses, not pinned here: `egg` lands on "Egg, creamed", `eggs` on a
-// Foundation yolk row, `pizza` on "Pizza, no cheese, thin crust" and
-// `pepperoni pizza` on "...with meat other than pepperoni". The right rows
-// are in the table; upstream's tie-break picks the shorter sibling, the same
-// on its backend (resolver_relevance.dart, upstream #1231).
+// Foundation yolk row and `pizza` on "Pizza, no cheese, thin crust". The
+// right rows are in the table; upstream's tie-break picks the shorter
+// sibling, the same on its backend (resolver_relevance.dart, upstream
+// #1231). The fork's tie-break (S73) and variant rule (S70) fixed
+// `pepperoni pizza` and the bare names below.
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -89,10 +90,26 @@ void main() {
     });
   });
 
+  // A bare family name lands on the everyday row, not the shortest sibling:
+  // the user's log typed these, and "chicken" logged "Chicken, back",
+  // "tomato" "Tomato, green, pickled", "salad" "Salmon salad".
+  for (final (query, expected) in [
+    ('chicken', 'Chicken, NS as to part'),
+    ('bacon', 'Bacon, NS as to type of meat, cooked'),
+    ('tomato', 'Tomatoes, '),
+    ('salad', 'Salad, green, without dressing'),
+    ('pepperoni pizza', 'Pizza, with pepperoni'),
+    ('coffee', 'Coffee, NS as to type'),
+  ]) {
+    test('bare "$query" resolves to "$expected..."', () async {
+      final item = await resolve(query);
+      expect(item.candidates[item.selectedIndex].name, startsWith(expected));
+      expect(item.confidence, greaterThanOrEqualTo(kResolutionConfidenceFloor));
+    });
+  }
+
   // Phase 1c: the ingredient names the breakdown prompt asks for
-  // (BreakDownDishUseCase.systemPrompt) land on the plain raw row. Bare
-  // names do not: `carrot` finds "Carrot, dehydrated", `bacon` "Bacon,
-  // turkey, microwaved", the tie-break above.
+  // (BreakDownDishUseCase.systemPrompt) land on the plain raw row.
   for (final (query, expected) in [
     ('egg, whole, raw', 'Egg, whole, raw'),
     ('carrot, raw', 'Carrots, raw'),

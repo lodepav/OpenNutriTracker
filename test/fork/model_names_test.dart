@@ -39,7 +39,9 @@ const _right = {
   'fried egg': 'Egg, whole, cooked, fried',
   'grilled salmon': 'Salmon, grilled',
   'chicken stew': 'Stew, chicken',
-  'schnitzel': 'Pork schnitzel, fried',
+  // The fork's chicken schnitzel, with a portion, over the BLS pork one.
+  'schnitzel':
+      'Chicken schnitzel, breaded, fried (chicken escalope, breaded chicken breast)',
   'cold apple soup': 'Cold apple soup',
   'cucumber': 'Cucumber, raw',
   'red onion': 'Onions, red, raw',

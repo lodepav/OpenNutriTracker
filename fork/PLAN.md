@@ -868,6 +868,80 @@ and with a Latvian note, in English.
     are recognition misses, so a row cannot fix them. "chicken schnitzel" and "breaded
     cutlet" still find nothing and are broken down.
 
+*The user's own foods, titles only, 2026-10-24* (`test/fork/eval/macrofactor_search_test.dart`):
+- **The set:** the user's MacroFactor export, 7,017 entries over 489 days, stays out of the
+  repo. Its labels are built locally into `build/fork-eval/macrofactor/labels.json`:
+  - the names logged 3 times or more, without branded products;
+  - 131 single foods and 45 dishes, covering 3,346 entries;
+  - each as a person would type it, with the title words a right row holds and the words it
+    must not.
+- **Scored:** the Food tab's search on single foods, the resolver alone, and the typed AI
+  path on everything. Rows weighted by how often the food is logged.
+
+  | | Before | After |
+  |---|---|---|
+  | Search, top row right | 108/131, 92% | 117/131, 96% |
+  | Search, right in the first 5 | 109, 92% | 121, 97% |
+  | Resolver on the typed name | 109, 92% | 113, 93% |
+  | AI describe, single foods (each model) | 109/131 | 113/131 |
+  | AI describe, dishes (each model) | 24/45, 20 broken down | same |
+
+- **The fixes:**
+  - A search with a word no row has ("cherry tomatoes", "cooked basmati rice", "uht milk",
+    "red pesto") now shows the rows with the most of its words, those with its last word
+    first, instead of nothing. A single word that is not the last is no match ("turkish
+    delight" is no Turkish coffee). Resolution keeps every word, so a dish it cannot find
+    is still broken down (D9).
+  - "kitkat" finds "KIT KAT" (run-together neighbour words), and "bbq" and "tater" read as
+    "barbecue" and "potato".
+  - A three-letter word takes one more letter, not two: "fanta" logged "Ostrich, fan".
+  - A row that is only a skin ("Potatoes, boiled, cooked in skin, skin") trails like a
+    meatless one (S70): "boiled potatoes" logged the peel.
+  - The Food tab lists a variant the person did not name after the plain rows: "bacon"
+    listed "Bacon, meatless" first.
+- **The models agree.** Every model wrote the typed name back as its query. That is what the
+  prompt asks: the name as written, split on "and" or "with". So for one typed food, AI
+  describe is the resolver. The models differ only in splitting "X and Y salad", and
+  never on the first row.
+- **Bare names, the second round:**
+  - A bare family name picked an odd sibling on the shorter-name tie-break: "chicken" picked
+    "Chicken, back", "tomato" "Tomato, green, pickled", "salad" "Salmon salad", and "bacon"
+    "Bacon, turkey". This matters most after a split ("chicken with cheese and pineapple").
+  - Now a one-word name's tie goes to the family's unspecified row (S73): "Chicken, NS as to
+    part…", "Bacon, NS as to type of meat, cooked", "Bread, NS as to major flour", "Coffee,
+    NS as to type". It counts only when NFS or "NS as to" comes first after the title, and not
+    "NS as to form", which names a cooked form, so carrots and tomatoes stay raw. The cut of
+    twenty keeps those rows for the resolver.
+  - A pickled or turkey row, or one named for lacking what the query names ("Pizza, with meat
+    other than pepperoni"), trails like a meatless one (S70). The penalty is now 0.3, more than
+    a plural costs, so "tomato" picks "Tomatoes, raw" over the singular pickle.
+  - The table had no plain salad; a green side salad is a fork dish now.
+  - Resolver 114/131 (93%), AI describe 114/131 foods and 25/45 dishes for each model.
+- **What still misses:**
+  - `egg` "Egg, creamed" and `pizza` "Pizza, no cheese", the shorter siblings, as upstream.
+  - The rest are gaps in the table: psyllium, kvass, creatine, casein, burrata.
+
+*The user's dishes in photos, 2026-10-24* (`test/fork/eval/macrofactor_photo_test.dart`): 20 Wikimedia
+Commons photos of dishes from the user's log, the manifest kept with the labels in `build/`.
+
+| Model | Named, photo alone | Named, with the logged name | A right table row |
+|---|---|---|---|
+| Opus | 17/20 | 20/20 | 11/20 |
+| Sonnet | 17/20 | 20/20 | 11/20 |
+| Haiku | 16/20 | 20/20 | 11/20 |
+
+- Alone, the models miss syrniki ("fried croquettes"), kharcho ("spicy tomato soup") and kofta in
+  sauce ("beef patties"); the note fixes all three.
+- The right-row misses were dishes the table lacked: plov, khachapuri, syrniki, kharcho, kofta,
+  odzhakhuri, poke bowl, beet salad, chicken schnitzel. They are fork dishes now
+  (`fork/data/dishes.json`). With the name noted, every model lands on a right row for all 20;
+  photo alone, Opus 16/20 and Sonnet and Haiku 13/20, the rest named too vaguely ("meat
+  curry", "breaded cutlet", "spicy soup"). Typed, the log's dishes went from 25/45 to 34/45
+  right for each model. Bare "schnitzel" now logs the chicken one, which has a portion, over
+  BLS's pork.
+- Side rows that land wrong: "lingonberry jam" on a turkey dish served with it, "walnuts" on
+  honey-roasted ones.
+
 Still needs the user: the leftovers photo check, typing and photographing their own
 khachapuri, pelmeni and grey peas, and ten of their own meals (photos we do not have).
 

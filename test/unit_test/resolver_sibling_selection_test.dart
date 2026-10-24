@@ -808,13 +808,19 @@ void main() {
       // last key — the backend's order, which is id order — is what puts
       // rye ahead of soy. Before Backend#10 rye was rank 157 and never
       // arrived, and the app landed on "Bread, pita".
-      expectPick(
+      // [fork] S73 unspecified-first: the whole hundred hold the
+      // unspecified "Bread, NS as to major flour", which the fork's tie-break
+      // puts first; the backend's cut of twenty leaves it out, so the page
+      // still picks rye. The fork's table keeps it past the cut
+      // (`LocalFoodDataSource`), and has no backend.
+      final picked = pick(
         'bread',
         BackendPoolFixtures.bread,
         BackendPoolFixtures.breadPortions,
-        name: 'Bread, rye',
-        id: BackendPoolFixtures.breadRye,
       );
+      expect(picked.fromPage.code, '${BackendPoolFixtures.breadRye}');
+      expect(picked.fromPool.name, 'Bread, NS as to major flour');
+      // [/fork]
       final ranked = resolve(
         'bread',
         backend: BackendPoolFixtures.freshAll(

@@ -73,6 +73,153 @@
         ["fdc_sr_legacy", "Bread, crumbs, dry, grated, plain", 7],
         ["fdc_sr_legacy", "Oil, sunflower, linoleic (less than 60%)", 8]
       ]
+    },
+    {
+      "code": "green-salad",
+      "name": "Salad, green, without dressing (garden salad, tossed salad, side salad)",
+      "basis": "A plain side salad as common recipes make it: leaf lettuce, tomato, cucumber and sweet pepper, undressed. The survey tables have salads named for what is in them (pea, crab, chicken) and dressings, but no plain one, so \"salad\" logged \"Salmon salad\".",
+      "yield_g": 230,
+      "serving": ["1 bowl", 150],
+      "ingredients": [
+        ["fdc_sr_legacy", "Lettuce, green leaf, raw", 100],
+        ["fdc_sr_legacy", "Tomatoes, red, ripe, raw, year round average", 60],
+        ["fdc_sr_legacy", "Cucumber, with peel, raw", 50],
+        ["fdc_sr_legacy", "Peppers, sweet, red, raw", 20]
+      ]
+    },
+    {
+      "code": "chicken-plov",
+      "name": "Plov, chicken (chicken pilaf, pilau, palov)",
+      "basis": "Central Asian plov as common recipes make it with chicken: rice cooked in the fat with chicken thigh, a lot of carrot, onion and garlic. Rice takes up about one and a half times its weight in water.",
+      "yield_g": 1450,
+      "serving": ["1 plate", 300],
+      "ingredients": [
+        ["fdc_sr_legacy", "Rice, white, long-grain, regular, raw, unenriched", 300],
+        ["fdc_sr_legacy", "Chicken, broilers or fryers, dark meat, thigh, meat only, raw", 400],
+        ["fdc_sr_legacy", "Carrots, raw", 300],
+        ["fdc_sr_legacy", "Onions, raw", 150],
+        ["fdc_sr_legacy", "Oil, sunflower, linoleic (less than 60%)", 60],
+        ["fdc_sr_legacy", "Garlic, raw", 20]
+      ]
+    },
+    {
+      "code": "khachapuri",
+      "name": "Khachapuri, Adjarian, cheese bread with egg (adjaruli, hachapuri)",
+      "basis": "One Adjarian khachapuri: https://en.wikipedia.org/wiki/Khachapuri and common recipes: a yeast dough boat filled with sulguni and imeruli cheese, an egg and butter. Mozzarella and feta stand in for the Georgian cheeses; the dough's water and a tenth lost in baking make up the weight.",
+      "yield_g": 380,
+      "serving": ["1 khachapuri", 380],
+      "ingredients": [
+        ["fdc_sr_legacy", "Wheat flour, white, all-purpose, enriched, unbleached", 120],
+        ["fdc_sr_legacy", "Cheese, mozzarella, whole milk", 80],
+        ["fdc_sr_legacy", "Cheese, feta", 60],
+        ["fdc_sr_legacy", "Egg, whole, raw, fresh", 50],
+        ["fdc_sr_legacy", "Egg, yolk, raw, fresh", 17],
+        ["fdc_sr_legacy", "Butter, salted", 15],
+        ["fdc_sr_legacy", "Oil, sunflower, linoleic (less than 60%)", 5]
+      ]
+    },
+    {
+      "code": "syrniki",
+      "name": "Syrniki, fried quark pancakes (syrnyky, cottage cheese pancakes, biezpiena plācenīši)",
+      "basis": "Quark bound with egg, flour and sugar, shaped and fried, as common recipes make them; oil is what they take up, and frying loses about a tenth of the weight.",
+      "yield_g": 610,
+      "serving": ["1 syrnik", 50],
+      "ingredients": [
+        ["bls", "Quark 20 % fat, in dry matter", 500],
+        ["fdc_sr_legacy", "Egg, whole, raw, fresh", 50],
+        ["fdc_sr_legacy", "Wheat flour, white, all-purpose, enriched, unbleached", 60],
+        ["fdc_sr_legacy", "Sugars, granulated", 40],
+        ["fdc_sr_legacy", "Oil, sunflower, linoleic (less than 60%)", 30]
+      ]
+    },
+    {
+      "code": "kharcho",
+      "name": "Kharcho, beef and rice soup (harcho, kharcho soup)",
+      "basis": "Georgian kharcho: https://en.wikipedia.org/wiki/Kharcho and common recipes: beef, rice, onion, tomato paste, walnuts and garlic in about 2 l of water, with coriander.",
+      "yield_g": 2200,
+      "serving": ["1 bowl", 350],
+      "ingredients": [
+        ["fdc_sr_legacy", "Beef, chuck eye Country-Style ribs, boneless, separable lean and fat, trimmed to 0\" fat, all grades, raw", 400],
+        ["fdc_sr_legacy", "Rice, white, short-grain, raw, unenriched", 80],
+        ["fdc_sr_legacy", "Onions, raw", 150],
+        ["bls", "Tomato paste", 60],
+        ["fdc_sr_legacy", "Nuts, walnuts, english", 60],
+        ["fdc_sr_legacy", "Garlic, raw", 15],
+        ["fdc_sr_legacy", "Oil, sunflower, linoleic (less than 60%)", 15],
+        ["fdc_sr_legacy", "Coriander (cilantro) leaves, raw", 10]
+      ]
+    },
+    {
+      "code": "beef-kofta",
+      "name": "Kofta, beef, grilled (kofte, kefta, köfte, beef kofta kebab)",
+      "basis": "Ground beef with onion, parsley and spices, shaped on skewers and grilled, as common recipes make it; grilling loses about a quarter of the weight.",
+      "yield_g": 470,
+      "serving": ["1 kofta", 60],
+      "ingredients": [
+        ["fdc_sr_legacy", "Beef, ground, 80% lean meat / 20% fat, raw", 500],
+        ["fdc_sr_legacy", "Onions, raw", 100],
+        ["fdc_sr_legacy", "Parsley, fresh", 20],
+        ["fdc_sr_legacy", "Spices, cumin seed", 3],
+        ["fdc_sr_legacy", "Spices, paprika", 3]
+      ]
+    },
+    {
+      "code": "odzhakhuri",
+      "name": "Odzhakhuri, pork with fried potatoes (ojakhuri, odjakhuri)",
+      "basis": "Georgian ojakhuri: https://en.wikipedia.org/wiki/Ojakhuri and common recipes: pork and potatoes fried with onion and garlic, finished with coriander; frying loses about a quarter of the meat's and the potatoes' weight.",
+      "yield_g": 1050,
+      "serving": ["1 plate", 350],
+      "ingredients": [
+        ["fdc_sr_legacy", "Pork, fresh, shoulder, whole, separable lean and fat, raw", 500],
+        ["fdc_sr_legacy", "Potatoes, flesh and skin, raw", 700],
+        ["fdc_sr_legacy", "Onions, raw", 150],
+        ["fdc_sr_legacy", "Oil, sunflower, linoleic (less than 60%)", 60],
+        ["fdc_sr_legacy", "Garlic, raw", 10],
+        ["fdc_sr_legacy", "Coriander (cilantro) leaves, raw", 10]
+      ]
+    },
+    {
+      "code": "chicken-poke-bowl",
+      "name": "Poke bowl, chicken (chicken poke)",
+      "basis": "A chicken poke bowl as the chains serve it: sushi rice with roast chicken, avocado, cucumber, edamame, carrot and red cabbage, with soy sauce. Cooked weights.",
+      "yield_g": 495,
+      "serving": ["1 bowl", 495],
+      "ingredients": [
+        ["fdc_sr_legacy", "Rice, white, short-grain, cooked, unenriched", 180],
+        ["fdc_sr_legacy", "Chicken, broilers or fryers, breast, meat only, cooked, roasted", 100],
+        ["fdc_sr_legacy", "Avocados, raw, all commercial varieties", 50],
+        ["fdc_sr_legacy", "Cucumber, with peel, raw", 50],
+        ["fdc_sr_legacy", "Edamame, frozen, prepared", 40],
+        ["fdc_sr_legacy", "Carrots, raw", 30],
+        ["fdc_sr_legacy", "Cabbage, red, raw", 30],
+        ["fdc_sr_legacy", "Soy sauce made from soy and wheat (shoyu)", 15]
+      ]
+    },
+    {
+      "code": "beet-salad",
+      "name": "Beet salad, grated, with garlic and mayonnaise (beetroot salad, grated beet salad, biešu salāti)",
+      "basis": "Boiled beet, grated, with garlic and mayonnaise, as common Latvian and Russian recipes make it.",
+      "yield_g": 345,
+      "serving": ["1 bowl", 150],
+      "ingredients": [
+        ["fdc_sr_legacy", "Beets, cooked, boiled, drained", 300],
+        ["fdc_sr_legacy", "Salad dressing, mayonnaise, regular", 40],
+        ["fdc_sr_legacy", "Garlic, raw", 5]
+      ]
+    },
+    {
+      "code": "chicken-schnitzel",
+      "name": "Chicken schnitzel, breaded, fried (chicken escalope, breaded chicken breast)",
+      "basis": "Flattened chicken breast in flour, egg and breadcrumbs, pan-fried, as common recipes make it; oil is what the crumb takes up, and frying loses about a fifth of the meat's weight.",
+      "yield_g": 185,
+      "serving": ["1 schnitzel", 185],
+      "ingredients": [
+        ["fdc_sr_legacy", "Chicken, broiler or fryers, breast, skinless, boneless, meat only, raw", 150],
+        ["fdc_sr_legacy", "Wheat flour, white, all-purpose, enriched, unbleached", 10],
+        ["fdc_sr_legacy", "Egg, whole, raw, fresh", 15],
+        ["fdc_sr_legacy", "Bread, crumbs, dry, grated, plain", 25],
+        ["fdc_sr_legacy", "Oil, sunflower, linoleic (less than 60%)", 15]
+      ]
     }
   ]
 }
