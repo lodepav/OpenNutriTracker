@@ -29,6 +29,9 @@ import 'package:opennutritracker/generated/l10n.dart';
 // [fork] S42 food-basket
 import 'package:opennutritracker/fork/basket/basket_ui.dart';
 // [/fork]
+// [fork] S85 fits-left
+import 'package:opennutritracker/fork/suggest/fits_left.dart';
+// [/fork]
 
 class AddMealScreen extends StatefulWidget {
   const AddMealScreen({super.key});
@@ -643,7 +646,8 @@ class _AddMealScreenState extends State<AddMealScreen> {
       case _SearchSource.favourites:
         return _buildFavouriteResults(context, query);
       case _SearchSource.recent:
-        return BlocBuilder<RecentMealBloc, RecentMealState>(
+        // [fork] S85 fits-left: a chip over the unfiltered recents
+        final recents = BlocBuilder<RecentMealBloc, RecentMealState>(
           bloc: _recentMealBloc,
           builder: (context, state) {
             if (state is RecentMealInitial) {
@@ -698,6 +702,18 @@ class _AddMealScreenState extends State<AddMealScreen> {
             return const SizedBox();
           },
         );
+        final recentState = _recentMealBloc.state;
+        return query.trim().isNotEmpty
+            ? recents
+            : FitsLeftSwitch(
+                day: _day,
+                addMealType: _mealType,
+                usesImperialUnits:
+                    recentState is RecentMealLoadedState &&
+                    recentState.usesImperialUnits,
+                recents: recents,
+              );
+        // [/fork]
     }
   }
 
