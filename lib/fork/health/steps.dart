@@ -58,11 +58,16 @@ class StepCounts {
 
   final StepSource _source;
   final Future<Box<dynamic>> Function() _box;
+  final DateTime Function() _now;
 
-  StepCounts([StepSource? source, Future<Box<dynamic>> Function()? box])
-    : _source =
-          source ?? (forkFakeHealth ? FakeSteps() : const HealthStoreSteps()),
-      _box = box ?? AdaptiveStore.openActiveBox;
+  StepCounts([
+    StepSource? source,
+    Future<Box<dynamic>> Function()? box,
+    DateTime Function()? now,
+  ]) : _source =
+           source ?? (forkFakeHealth ? FakeSteps() : const HealthStoreSteps()),
+       _box = box ?? AdaptiveStore.openActiveBox,
+       _now = now ?? DateTime.now;
 
   Future<bool> isOn() async =>
       (await _box()).get(_on, defaultValue: false) as bool;
@@ -89,7 +94,8 @@ class StepCounts {
   }
 
   /// Steps of the [days] days to [today], oldest first; a day without a
-  /// count is missing. Reads the days of the last [backfill] the cache
+  /// count is missing. [today] is read up to its time; a day's midnight
+  /// (a day label) reads it so far. Reads the days of the last [backfill] the cache
   /// lacks, and always the last two (today is still going, and a phone
   /// syncs a watch late); older days come from the cache only.
   Future<Map<DateTime, int>> daily(DateTime today, int days) async {
@@ -106,7 +112,8 @@ class StepCounts {
       final day = dayAt(ago);
       final key = day.toParsedDay();
       if (ago > 1 && cached.containsKey(key)) continue;
-      final end = ago == 0 ? today : DateTime(day.year, day.month, day.day + 1);
+      final next = DateTime(day.year, day.month, day.day + 1);
+      final end = ago > 0 ? next : _soFar(today, next);
       cached[key] = await _source.stepsBetween(day, end);
     }
     await box.put(_days, cached);
@@ -114,6 +121,14 @@ class StepCounts {
       for (var ago = days - 1; ago >= 0; ago--)
         dayAt(ago): ?cached[dayAt(ago).toParsedDay()],
     };
+  }
+
+  /// [today] if it holds a time; for a day label, now if it falls in
+  /// that day, else the day's end. Midnight to midnight would read 0.
+  DateTime _soFar(DateTime today, DateTime next) {
+    if (today != DateTime(today.year, today.month, today.day)) return today;
+    final now = _now();
+    return !now.isBefore(today) && now.isBefore(next) ? now : next;
   }
 
   /// The counts read so far, without asking the health store: for the

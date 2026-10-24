@@ -10,6 +10,7 @@ import 'package:opennutritracker/fork/health/steps_card.dart';
 /// 1,000 steps a day times the day of the month; counts the reads.
 class _Source implements StepSource {
   final reads = <DateTime>[];
+  final ends = <DateTime>[];
   var granted = true;
   var refused = false;
 
@@ -20,6 +21,7 @@ class _Source implements StepSource {
   Future<int> stepsBetween(DateTime from, DateTime to) async {
     if (refused) throw StateError('No permission');
     reads.add(from);
+    ends.add(to);
     return from.day * 1000;
   }
 }
@@ -108,6 +110,27 @@ void main() {
       source.reads.clear();
       await steps.daily(_now, 7);
       expect(source.reads, [DateTime(2026, 10, 22), DateTime(2026, 10, 23)]);
+    });
+
+    test("a day label reads today so far, not midnight to midnight", () async {
+      final today = DateTime(2026, 10, 23);
+      final atNow = StepCounts(
+        source,
+        () => Hive.openBox<dynamic>('steps'),
+        () => _now,
+      );
+      expect((await atNow.daily(today, 1))[today], 23000);
+      expect(source.ends.last, _now);
+
+      // A past day's label, as the clock has moved on: its whole day.
+      source.ends.clear();
+      final later = StepCounts(
+        source,
+        () => Hive.openBox<dynamic>('steps'),
+        () => DateTime(2026, 10, 25, 9),
+      );
+      await later.daily(today, 1);
+      expect(source.ends.last, DateTime(2026, 10, 24));
     });
 
     test('days before the read reach are missing until cached', () async {
