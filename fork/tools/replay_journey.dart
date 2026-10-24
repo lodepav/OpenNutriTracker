@@ -102,6 +102,9 @@ class _Run {
   /// In place of the preset's.
   final double? blend;
 
+  /// Changes a day of the journey before the replay, for the stress runs.
+  final Map<String, dynamic> Function(Map<String, dynamic> day)? perturb;
+
   const _Run(
     this.name, {
     this.responsiveness = Responsiveness.standard,
@@ -115,6 +118,7 @@ class _Run {
     this.warmupDays = ExpenditureSettings.defaultWarmupDays,
     this.kcalPerKg,
     this.blend,
+    this.perturb,
   });
 }
 
@@ -399,6 +403,69 @@ void _write(String out, _Run run, List<_Row> rows) {
   );
 }
 
+/// The stress runs' events start in a fully logged stretch of one goal.
+final _event = DateTime(2025, 12, 22);
+
+/// Days from [_event] to [day]'s date.
+int _since(Map<String, dynamic> day) =>
+    DateTime.parse(day['date'] as String).difference(_event).inDays;
+
+Map<String, dynamic> _with(
+  Map<String, dynamic> day, {
+  Object? intake = _keep,
+  Object? weight = _keep,
+}) => {
+  ...day,
+  if (intake != _keep) 'intake': intake,
+  if (intake != _keep && intake == null) 'partial': false,
+  if (weight != _keep) 'weight': weight,
+};
+
+const _keep = Object();
+
+double? _plus(Object? v, double by) => v == null ? null : (v as num) + by;
+
+/// A weigh-in typed 3 kg high, or low.
+Map<String, dynamic> _outlierHigh(Map<String, dynamic> d) =>
+    _since(d) == 0 ? _with(d, weight: _plus(d['weight'], 3)) : d;
+Map<String, dynamic> _outlierLow(Map<String, dynamic> d) =>
+    _since(d) == 0 ? _with(d, weight: _plus(d['weight'], -3)) : d;
+
+/// Two weeks without weighing.
+Map<String, dynamic> _weighGap(Map<String, dynamic> d) =>
+    _since(d) >= 0 && _since(d) < 14 ? _with(d, weight: null) : d;
+
+/// Ten days away: nothing logged, nothing weighed.
+Map<String, dynamic> _travel(Map<String, dynamic> d) =>
+    _since(d) >= 0 && _since(d) < 10 ? _with(d, intake: null, weight: null) : d;
+
+/// Five days 1,500 kcal over: the energy stays as weight, with a kg of
+/// water that comes on over the five days and leaves over the next seven.
+/// [logged] says how the extra reaches the log: in full, not at all (the
+/// days unlogged), or hidden (the usual intake logged).
+Map<String, dynamic> Function(Map<String, dynamic>) _binge(String logged) =>
+    (d) {
+      final t = _since(d);
+      if (t < 0) return d;
+      final fat = min(t + 1, 5) * 1500 / 7700;
+      final water = t < 5
+          ? (t + 1) / 5
+          : t < 12
+          ? 1 - (t - 4) / 7
+          : 0.0;
+      final weight = _plus(d['weight'], fat + water);
+      if (t >= 5) return _with(d, weight: weight);
+      return _with(
+        d,
+        weight: weight,
+        intake: switch (logged) {
+          'full' => _plus(d['intake'], 1500),
+          'none' => null,
+          _ => d['intake'],
+        },
+      );
+    };
+
 void main() {
   test('replay', () {
     final path = Platform.environment['JOURNEY']!;
@@ -406,9 +473,10 @@ void main() {
     Directory(out).createSync(recursive: true);
     final json =
         jsonDecode(File(path).readAsStringSync()) as Map<String, dynamic>;
-    final days = [
-      for (final d in json['days'] as List) _Day(d as Map<String, dynamic>),
+    final raw = [
+      for (final d in json['days'] as List) d as Map<String, dynamic>,
     ];
+    final days = [for (final d in raw) _Day(d)];
     final goals = [
       for (final g in json['goals'] as List) _Goal(g as Map<String, dynamic>),
     ];
@@ -443,8 +511,25 @@ void main() {
       _Run('flat-7700-drift', drift: true, kcalPerKg: 7700),
       _Run('blend-0.07', blend: 0.07),
       _Run('blend-0.07-weekly', weekly: true, blend: 0.07),
+      _Run('stress-outlier-high', weekly: true, perturb: _outlierHigh),
+      _Run('stress-outlier-low', weekly: true, perturb: _outlierLow),
+      _Run('stress-weigh-gap', weekly: true, perturb: _weighGap),
+      _Run('stress-travel', weekly: true, perturb: _travel),
     ]) {
-      _write(out, run, _replay(run, days, goals, program, profile));
+      final perturbed = run.perturb == null
+          ? days
+          : [for (final d in raw) _Day(run.perturb!(d))];
+      _write(out, run, _replay(run, perturbed, goals, program, profile));
+    }
+    // Not const: the binge's closures.
+    for (final logged in ['full', 'none', 'hidden']) {
+      final run = _Run(
+        'stress-binge-$logged',
+        weekly: true,
+        perturb: _binge(logged),
+      );
+      final perturbed = [for (final d in raw) _Day(run.perturb!(d))];
+      _write(out, run, _replay(run, perturbed, goals, program, profile));
     }
   });
 }

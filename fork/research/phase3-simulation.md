@@ -117,6 +117,15 @@ from 278 to 185 kcal; the synthetic users' error rose from 74 to 76 (the sloppy 
 0.07 for Standard followed a −300 kcal step about 6 days sooner to 80% for a third more
 wobble, so the presets stay as they are.
 
+Stress runs on the same journey (weekly check-ins, each event in a fully logged stretch of one
+goal, set against the unchanged run): a weigh-in typed 3 kg high or low moved the target at
+most 24 kcal; two weeks without weighing, 41; ten days away with nothing logged or weighed, 66.
+Five days 1,500 kcal over moved it +108 when logged in full (the replay put the surplus on at
+7,700 kcal/kg, the estimate reads it at body composition's), −110 with the days unlogged (5 of
+20 missing passes the 60% rule, and the gain is priced at the other days' intake) and −169 with
+the usual intake logged, which is what the log says. Each faded within about five weeks, and
+none reached the cap.
+
 ## Findings
 
 - **Forbes beats the flat 6,000 kcal/kg:** error 73 against 86. The lean and the heavy users
