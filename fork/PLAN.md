@@ -51,7 +51,9 @@ worth a look when phase 1c's breakdown is designed.
 - [x] `fork/tools/emulator.sh` (D5). `SEED=1` builds upstream's demo-data entry point, which gives a year of diary and weigh-ins, enough to exercise an expenditure estimate.
 - [x] GitHub Actions off on the fork (2026-10-19). Every upstream workflow needs upstream's secrets or acts on upstream's issues and Weblate, and none had ever run here, so Actions is switched off for the whole repo (Settings → Actions) rather than per workflow; that also covers workflows upstream adds later. The files stay: deleted files conflict on every upstream edit. Switch it back on, and disable workflows one by one, if the fork ever wants CI of its own.
 - [x] Fork identity (Q2, D8): **OpenBite**, app id `io.github.lodepav.openbite`, set in `android/app/fork.gradle` (S20). Launcher name only.
-- [ ] Release keystore and its pinned digest: the user makes it later (2026-10-23).
+- [x] Release keystore and its pinned digest (2026-10-24, D16): OpenBite shares Go Hevier's key (`~/.config/hevier/release.keystore`, alias `hevier`) and its pin (`~/.config/hevier/apk-cert.txt`).
+- [x] Releases and the in-app updater (2026-10-24, D16, S76): `fork/tools/release-apk.sh` after openGym-Hevier's; `lib/fork/update/` after its `lib/update.js` and UpdateNotice (D77). Not done: the first release (`fork/tools/release-apk.sh`, the user: it asks for the key's password), after the trademark search below.
+  - Review of openGym's updater (D15), fixed in the port: its native download did not check the HTTP status (here a non-200 is refused before anything is written); its FileProvider shared the whole cache directory (here only `openbite-update/`), under androidx's own provider class, which merges with a plugin's (here a subclass of its own). Left out: the APK variants (OpenBite ships one APK) and the "workout open" wait (no such state here).
 - [x] Health Connect weight import (item 3, 2026-10-23): our own take on PR #1296 (`lib/fork/health/`, S27, S28). Each day gets its latest reading; a typed or edited weight is never replaced; a deleted day stays empty until a newer reading; the newest imported row becomes the current weight. Fake scale under `FORK_FAKE_AI`. Not done: the Play Health Connect declaration for READ_WEIGHT; real-device check in phase 4.
 - [x] OpenBite in the app's own text (2026-10-23, `fork/tools/rebrand.sh`, S31) and its own icon, a diary page with a bite, themed-icon layer included (`fork/tools/launcher_icon.py`, S34). The splash and the in-app logo too (2026-10-23, S35): Android 12's launch screen shows the page whole and the Flutter splash takes the bite. Not done: searching the trademark registers before publishing under the name.
 - [ ] `.env`: placeholders stay; ONT's hosted backend isn't used (D11).
@@ -991,8 +993,7 @@ Not built anywhere yet:
     scheme, debuggable flag, permissions, native libraries and exported components.
   - Allow-lists live in `fork/security/`, each entry with its reason.
   - A release APK signed with a throwaway key passes everything except the certificate pin.
-  - **Before daily use:** make the fork's release keystore, then pin its digest in
-    `~/.config/opennutritracker-fork/apk-cert.txt`.
+  - The release key and its pin are Go Hevier's (D16): `~/.config/hevier/apk-cert.txt`.
   - Seen: ML Kit's barcode scanner brings in Google's datatransport, which sends usage
     metrics to Google. That's upstream's to decide.
 

@@ -14,6 +14,9 @@ import 'package:opennutritracker/core/presentation/widgets/main_appbar.dart';
 import 'package:opennutritracker/features/profile/profile_page.dart';
 import 'package:opennutritracker/features/trends/presentation/trends_page.dart';
 import 'package:opennutritracker/generated/l10n.dart';
+// [fork] S76 releases: a new OpenBite offers itself (D16)
+import 'package:opennutritracker/fork/update/update_notice.dart';
+// [/fork]
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -120,6 +123,12 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final palette = isDark ? AppPalette.dark : AppPalette.light;
+    // [fork] S76 releases
+    return UpdateNotice(child: _scaffold(context, palette));
+  }
+
+  Widget _scaffold(BuildContext context, AppPalette palette) {
+    // [/fork]
     return Scaffold(
       appBar: _appbarPages[_selectedPageIndex],
       body: Column(

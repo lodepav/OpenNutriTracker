@@ -3,3 +3,6 @@ activity com.opennutritracker.ont.opennutritracker.MainActivity  # the launcher 
 activity-alias com.opennutritracker.ont.opennutritracker.ViewPermissionUsageActivity [android.permission.START_VIEW_PERMISSION_USAGE]  # Health Connect's "why this app reads your data" link; only the system can start it
 receiver androidx.profileinstaller.ProfileInstallReceiver [android.permission.DUMP]  # androidx: installs the baseline profile; only adb/system hold DUMP
 service androidx.health.platform.client.impl.sdkservice.HealthDataSdkService  # Health Connect client (connect-client 1.2.0-alpha02): the Health Connect app binds it; the library checks the caller
+receiver androidx.work.impl.diagnostics.DiagnosticsReceiver [android.permission.DUMP]  # androidx.work (home_widget → glance): diagnostics; only adb/system hold DUMP
+service androidx.glance.appwidget.GlanceRemoteViewsService [android.permission.BIND_REMOTEVIEWS]  # glance-appwidget (home_widget): the launcher binds it for list widgets; system-held permission
+service androidx.work.impl.background.systemjob.SystemJobService [android.permission.BIND_JOB_SERVICE]  # androidx.work: the job scheduler binds it; system-held permission
