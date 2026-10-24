@@ -243,9 +243,18 @@ class CheckInRecord {
   final double proposedKcal;
   final double acceptedKcal;
 
-  /// The week's counted activity in [acceptedKcal] (D17's weekly mode), so
-  /// the next check-in caps the change of the rest alone; 0 otherwise.
+  /// The week's counted activity in [acceptedKcal] (D17's weekly mode); 0
+  /// otherwise.
   final double activityKcal;
+
+  /// The estimate the target was built on, which the next check-in's cap
+  /// holds to (D18); for an older record, the expenditure less activity.
+  final double baseKcal;
+
+  /// The goal the target was set for; null pace for an older record, which
+  /// no goal change makes due.
+  final double? goalRateKgPerWeek;
+  final double? targetWeightKg;
 
   const CheckInRecord({
     required this.date,
@@ -253,7 +262,21 @@ class CheckInRecord {
     required this.proposedKcal,
     required this.acceptedKcal,
     this.activityKcal = 0,
-  });
+    double? baseKcal,
+    this.goalRateKgPerWeek,
+    this.targetWeightKg,
+  }) : baseKcal = baseKcal ?? expenditureKcal - activityKcal;
+
+  /// Whether a goal of [rateKgPerWeek] and [targetKg] differs from the one
+  /// this target was set for.
+  bool goalChanged(double rateKgPerWeek, double? targetKg) {
+    final rate = goalRateKgPerWeek;
+    if (rate == null) return false;
+    final target = targetWeightKg;
+    return (rate - rateKgPerWeek).abs() > 0.001 ||
+        (target == null) != (targetKg == null) ||
+        target != null && (target - targetKg!).abs() > 0.05;
+  }
 
   Map<String, Object> toJson() => {
     'date': date.toIso8601String(),
@@ -261,6 +284,9 @@ class CheckInRecord {
     'proposedKcal': proposedKcal,
     'acceptedKcal': acceptedKcal,
     'activityKcal': activityKcal,
+    'baseKcal': baseKcal,
+    'goalRateKgPerWeek': ?goalRateKgPerWeek,
+    'targetWeightKg': ?targetWeightKg,
   };
 
   static CheckInRecord fromJson(Map<dynamic, dynamic> json) => CheckInRecord(
@@ -269,6 +295,9 @@ class CheckInRecord {
     proposedKcal: (json['proposedKcal'] as num).toDouble(),
     acceptedKcal: (json['acceptedKcal'] as num).toDouble(),
     activityKcal: (json['activityKcal'] as num?)?.toDouble() ?? 0,
+    baseKcal: (json['baseKcal'] as num?)?.toDouble(),
+    goalRateKgPerWeek: (json['goalRateKgPerWeek'] as num?)?.toDouble(),
+    targetWeightKg: (json['targetWeightKg'] as num?)?.toDouble(),
   );
 }
 

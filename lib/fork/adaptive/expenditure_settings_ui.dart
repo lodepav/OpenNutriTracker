@@ -534,7 +534,10 @@ class _CheckInSection extends StatelessWidget {
             style: Theme.of(context).textTheme.bodyLarge,
           ),
         ),
-        const _Note('A limit keeps one odd week from moving the target far.'),
+        const _Note(
+          'A limit keeps one odd week from moving the expenditure under the '
+          'target far. A goal you change applies in full at once.',
+        ),
         _Choice<int>(
           identifier: 'check-in-cap',
           values: const [100, 200, 300, 0],

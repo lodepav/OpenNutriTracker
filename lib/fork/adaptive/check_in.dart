@@ -20,11 +20,13 @@ class CheckInInputs {
   final double bodyFatPercent;
   final double? targetWeightKg;
 
-  /// The target the last check-in set, or upstream's formula target
-  /// before the first, less the week's activity it carried.
-  final double previousTargetKcal;
+  /// The estimate the last check-in's target was built on (its
+  /// [CheckIn.baseKcal]); null before the first.
+  final double? previousBaseKcal;
 
-  /// The most the target moves, null for no limit.
+  /// The most the estimate under the target moves in a check-in, null for
+  /// no limit. The goal's energy is not held back: a goal changed is
+  /// meant at once (D18).
   final double? maxChangeKcal;
 
   /// How counted activity reaches the target (D17).
@@ -40,7 +42,7 @@ class CheckInInputs {
     required this.priorKcal,
     required this.goalRateKgPerWeek,
     required this.bodyFatPercent,
-    required this.previousTargetKcal,
+    required this.previousBaseKcal,
     required this.taper,
     this.targetWeightKg,
     this.settings = const ExpenditureSettings(),
@@ -67,7 +69,11 @@ class CheckIn {
   /// The past week's mean counted activity, null when none is counted.
   final double? activityKcal;
 
-  /// Expenditure plus the goal's energy, tapered, before the cap.
+  /// The estimate the target is built on, before activity: moved at most
+  /// the cap from the last check-in's, except while it calibrates.
+  final double baseKcal;
+
+  /// The target were the estimate not capped.
   final double uncappedTargetKcal;
 
   /// The target to accept: in the weekly mode it carries [activityKcal],
@@ -81,6 +87,11 @@ class CheckIn {
   final int? daysToTargetAtGoal;
   final int? daysToTargetAtTrend;
 
+  /// The goal the target was set for, so a changed one is due a check-in
+  /// (D18).
+  final double goalRateKgPerWeek;
+  final double? targetWeightKg;
+
   const CheckIn({
     required this.averageIntakeKcal,
     required this.loggedDays,
@@ -89,10 +100,13 @@ class CheckIn {
     required this.weekChangeKg,
     required this.expenditureKcal,
     this.activityKcal,
+    required this.baseKcal,
     required this.uncappedTargetKcal,
     required this.proposedTargetKcal,
     required this.daysToTargetAtGoal,
     required this.daysToTargetAtTrend,
+    this.goalRateKgPerWeek = 0,
+    this.targetWeightKg,
   });
 
   /// MacroFactor's data rule for the week: 4 logged days and a weigh-in.
@@ -106,12 +120,13 @@ class CheckIn {
 
 CheckIn computeCheckIn(CheckInInputs inputs) {
   final days = inputs.days;
-  final base = estimateExpenditure(
+  final run = estimateExpenditureRun(
     days,
     priorKcal: inputs.priorKcal,
     bodyFatPercent: inputs.bodyFatPercent,
     settings: inputs.settings,
-  ).last;
+  );
+  final base = run.estimates.last;
   final trend = smoothedTrend(
     dailyWeights({
       for (final (i, d) in days.indexed)
@@ -136,12 +151,17 @@ CheckIn computeCheckIn(CheckInInputs inputs) {
       inputs.goalRateKgPerWeek *
       energyDensity(fatMassKg(weight, inputs.bodyFatPercent)) /
       7;
-  final baseTarget = base + inputs.taper(goalKcal, weight);
-  final previous = inputs.previousTargetKcal;
+  final goalEnergy = inputs.taper(goalKcal, weight);
+  final previous = inputs.previousBaseKcal;
   final cap = inputs.maxChangeKcal;
-  final capped = cap == null
-      ? baseTarget
-      : baseTarget.clamp(previous - cap, previous + cap);
+  // While calibrating the estimate leaves the formula's prior fast, as it
+  // should; the cap is for a settled one's odd week (D18).
+  final cappedBase =
+      cap == null ||
+          previous == null ||
+          run.updates < inputs.settings.calibrationUpdates
+      ? base
+      : base.clamp(previous - cap, previous + cap);
   final weekly = inputs.activityMode == ActivityMode.weekly ? activity ?? 0 : 0;
 
   int? daysAt(double? kgPerDay) {
@@ -164,11 +184,14 @@ CheckIn computeCheckIn(CheckInInputs inputs) {
     weekChangeKg: now == null || weekAgo == null ? null : now - weekAgo,
     expenditureKcal: base + (activity ?? 0),
     activityKcal: activity,
-    uncappedTargetKcal: baseTarget + weekly,
-    proposedTargetKcal: capped + weekly,
+    baseKcal: cappedBase,
+    uncappedTargetKcal: base + goalEnergy + weekly,
+    proposedTargetKcal: cappedBase + goalEnergy + weekly,
     daysToTargetAtGoal: daysAt(inputs.goalRateKgPerWeek / 7),
     daysToTargetAtTrend: daysAt(
       now == null || windowAgo == null ? null : (now - windowAgo) / 20,
     ),
+    goalRateKgPerWeek: inputs.goalRateKgPerWeek,
+    targetWeightKg: inputs.targetWeightKg,
   );
 }

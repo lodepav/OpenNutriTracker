@@ -108,6 +108,73 @@ void main() {
     AdaptiveStore.skipped.value = const {};
   });
 
+  group('D18', () {
+    test('a gap while not logging leaves the estimate where it was', () {
+      // 60 days at 2,500 kcal holding 80 kg, then 14 unlogged days gaining
+      // 1 kg, then 6 days back on 2,500 kcal: under 60% of the window is
+      // logged, so the gain is not priced at the logged intake.
+      final days = [
+        for (var d = 0; d < 60; d++)
+          const AdaptiveDay(intakeKcal: 2500, weightKg: 80),
+        for (var d = 1; d <= 14; d++) AdaptiveDay(weightKg: 80 + d / 14),
+        for (var d = 0; d < 6; d++)
+          const AdaptiveDay(intakeKcal: 2500, weightKg: 81),
+      ];
+      final guarded = estimateExpenditure(days, priorKcal: 2500);
+      final unguarded = estimateExpenditure(
+        days,
+        priorKcal: 2500,
+        settings: const ExpenditureSettings(minLoggedShare: 0),
+      );
+      expect(guarded.last, closeTo(2500, 5));
+      expect(unguarded.last, lessThan(guarded.last - 20));
+    });
+
+    test('calibration counts updates, not days before logging began', () {
+      // 40 days of weigh-ins alone, then logging: the fast blend is still
+      // there when updates begin.
+      final days = [
+        for (var d = 0; d < 40; d++) const AdaptiveDay(weightKg: 80),
+        for (var d = 0; d < 30; d++)
+          const AdaptiveDay(intakeKcal: 2500, weightKg: 80),
+      ];
+      final run = estimateExpenditureRun(days, priorKcal: 3200);
+      expect(run.updates, greaterThan(0));
+      expect(run.estimates.last, closeTo(2500, 30));
+    });
+
+    test('a record keeps its base and goal; an older one falls back', () {
+      final record = CheckInRecord(
+        date: DateTime(2026, 10, 1),
+        expenditureKcal: 2800,
+        proposedKcal: 2500,
+        acceptedKcal: 2500,
+        activityKcal: 300,
+        baseKcal: 2450,
+        goalRateKgPerWeek: -0.5,
+        targetWeightKg: 80,
+      );
+      final back = CheckInRecord.fromJson(record.toJson());
+      expect(back.baseKcal, 2450);
+      expect(back.goalRateKgPerWeek, -0.5);
+      expect(back.targetWeightKg, 80);
+      expect(back.goalChanged(-0.5, 80), isFalse);
+      expect(back.goalChanged(0, 80), isTrue);
+      expect(back.goalChanged(-0.5, 78), isTrue);
+      expect(back.goalChanged(-0.5, null), isTrue);
+
+      final older = CheckInRecord.fromJson({
+        'date': '2026-10-01T09:00:00.000',
+        'expenditureKcal': 2800,
+        'proposedKcal': 2500,
+        'acceptedKcal': 2500,
+        'activityKcal': 300,
+      });
+      expect(older.baseKcal, 2500);
+      expect(older.goalChanged(0, null), isFalse);
+    });
+  });
+
   group('responsiveness', () {
     test('the presets move only the blend, and the cycle the window', () {
       final steady = ExpenditureSettings.of(Responsiveness.steady);
@@ -173,7 +240,7 @@ void main() {
         priorKcal: mode == ActivityMode.off ? 2500 : 2500 - activity,
         goalRateKgPerWeek: 0,
         bodyFatPercent: 20,
-        previousTargetKcal: previous,
+        previousBaseKcal: previous,
         taper: (adjustment, _) => adjustment,
         maxChangeKcal: cap,
         activityMode: mode,

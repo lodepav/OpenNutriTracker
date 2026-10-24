@@ -85,15 +85,23 @@ class AdaptiveService {
   Future<double> _bodyFat(UserEntity user) async =>
       await _measurements?.recentBodyFat(_now()) ?? bodyFatPercent(user);
 
-  /// True when the switch is on and a check-in is due ([checkInDueOn]).
+  /// True when the switch is on and a check-in is due ([checkInDueOn]),
+  /// or the goal changed since the last one (D18).
   Future<bool> checkInDue() async {
     final settings = AdaptiveStore.settings.value;
     if (!settings.adaptiveTarget || settings.fixedTarget) return false;
-    return checkInDueOn(
-      _today(),
-      (await _store.lastCheckIn())?.date,
-      settings.checkInWeekday,
-    );
+    final last = await _store.lastCheckIn();
+    return checkInDueOn(_today(), last?.date, settings.checkInWeekday) ||
+        await goalChanged();
+  }
+
+  /// Whether the profile's pace or target weight differs from the one the
+  /// last check-in set the target for (D18).
+  Future<bool> goalChanged() async {
+    final last = await _store.lastCheckIn();
+    if (last == null) return false;
+    final user = await _user.getUserData();
+    return last.goalChanged(goalRateKgPerWeek(user), user.targetWeightKg);
   }
 
   Future<CheckIn> checkIn() async {
@@ -109,13 +117,7 @@ class AdaptiveService {
         goalRateKgPerWeek: rate,
         bodyFatPercent: await _bodyFat(user),
         targetWeightKg: user.targetWeightKg,
-        previousTargetKcal: previous == null
-            ? CalorieGoalCalc.getTotalKcalGoal(
-                user,
-                0,
-                caloriesTaperEnabled: user.caloriesTaperEnabled,
-              )
-            : previous.acceptedKcal - previous.activityKcal,
+        previousBaseKcal: previous?.baseKcal,
         maxChangeKcal: settings.maxCheckInChangeKcal,
         activityMode: settings.activityMode,
         taper: (adjustment, weight) => CalorieGoalCalc.applyTargetWeightTaper(
@@ -318,6 +320,9 @@ class AdaptiveService {
       activityKcal: checkIn.activityInTarget(
         AdaptiveStore.settings.value.activityMode,
       ),
+      baseKcal: checkIn.baseKcal,
+      goalRateKgPerWeek: checkIn.goalRateKgPerWeek,
+      targetWeightKg: checkIn.targetWeightKg,
     ),
   );
 

@@ -32,12 +32,21 @@ class AdaptiveCheckInCard extends StatefulWidget {
   State<AdaptiveCheckInCard> createState() => _AdaptiveCheckInCardState();
 }
 
+/// Why a check-in is due: the week is up, or the goal changed (D18).
+enum _Due { weekly, goal }
+
 class _AdaptiveCheckInCardState extends State<AdaptiveCheckInCard> {
   late final _service = widget.service ?? AdaptiveService.fromLocator();
-  late Future<bool> _due = _service.checkInDue();
+  late Future<_Due?> _due = _readDue();
 
-  /// A check-in accepted on its own, shown until dismissed.
+  /// A check-in accepted on its own, and why, shown until dismissed.
   CheckIn? _autoAccepted;
+  _Due _autoAcceptedFor = _Due.weekly;
+
+  Future<_Due?> _readDue() async {
+    if (!await _service.checkInDue()) return null;
+    return await _service.goalChanged() ? _Due.goal : _Due.weekly;
+  }
 
   @override
   void initState() {
@@ -50,8 +59,13 @@ class _AdaptiveCheckInCardState extends State<AdaptiveCheckInCard> {
   @override
   void didUpdateWidget(AdaptiveCheckInCard oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // Home rebuilds after an activity is logged or the app resumes.
+    // Home rebuilds after an activity is logged, the app resumes or the
+    // profile (its goal) changes.
     _syncDailyGoal();
+    if (_autoAccepted == null) {
+      _due = _readDue();
+      _autoAccept();
+    }
   }
 
   @override
@@ -61,16 +75,33 @@ class _AdaptiveCheckInCardState extends State<AdaptiveCheckInCard> {
   }
 
   void _recheck() {
-    final due = _service.checkInDue();
+    final due = _readDue();
     setState(() {
       _due = due;
     });
     _autoAccept();
   }
 
+  /// True while [_autoAccept] runs: Home rebuilding meanwhile must not
+  /// accept the same check-in twice.
+  bool _accepting = false;
+
   Future<void> _autoAccept() async {
-    final CheckIn? accepted;
+    if (_accepting) return;
+    _accepting = true;
     try {
+      await _autoAcceptOnce();
+    } finally {
+      _accepting = false;
+    }
+  }
+
+  Future<void> _autoAcceptOnce() async {
+    if (!AdaptiveStore.settings.value.autoAcceptCheckIn) return;
+    final CheckIn? accepted;
+    final _Due reason;
+    try {
+      reason = await _service.goalChanged() ? _Due.goal : _Due.weekly;
       accepted = await _service.autoAcceptIfDue();
     } catch (_) {
       return; // The card stays, to be done by hand.
@@ -78,7 +109,8 @@ class _AdaptiveCheckInCardState extends State<AdaptiveCheckInCard> {
     if (accepted == null || !mounted) return;
     setState(() {
       _autoAccepted = accepted;
-      _due = Future.value(false);
+      _autoAcceptedFor = reason;
+      _due = Future.value(null);
     });
     await _refreshGoals();
     widget.onAccepted();
@@ -121,7 +153,11 @@ class _AdaptiveCheckInCardState extends State<AdaptiveCheckInCard> {
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         child: ListTile(
           leading: const Icon(Icons.insights_rounded),
-          title: const Text('Weekly check-in done'),
+          title: Text(
+            _autoAcceptedFor == _Due.goal
+                ? 'Target set for your new goal'
+                : 'Weekly check-in done',
+          ),
           subtitle: Text(
             'New target: ${energyText(context, accepted.proposedTargetKcal)}'
             '${AdaptiveStore.settings.value.activityMode == ActivityMode.daily ? ' before activity' : ''}.',
@@ -139,16 +175,23 @@ class _AdaptiveCheckInCardState extends State<AdaptiveCheckInCard> {
         ),
       );
     }
-    return FutureBuilder<bool>(
+    return FutureBuilder<_Due?>(
       future: _due,
       builder: (context, snapshot) {
-        if (snapshot.data != true) return const SizedBox.shrink();
+        final due = snapshot.data;
+        if (due == null) return const SizedBox.shrink();
         return Card(
           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: ListTile(
             leading: const Icon(Icons.insights_rounded),
-            title: const Text('Weekly check-in'),
-            subtitle: const Text('Your expenditure and next target are ready.'),
+            title: Text(
+              due == _Due.goal ? 'Your goal changed' : 'Weekly check-in',
+            ),
+            subtitle: Text(
+              due == _Due.goal
+                  ? 'A target for it is ready to check.'
+                  : 'Your expenditure and next target are ready.',
+            ),
             trailing: const Icon(Icons.chevron_right_rounded),
             onTap: () async {
               final accepted = await Navigator.of(context).push<bool>(
@@ -263,9 +306,9 @@ class _CheckInScreenState extends State<CheckInScreen> {
               ),
             if (capped && cap != null)
               Text(
-                'A check-in moves the target at most '
-                '${_kcal(cap)}; the full change '
-                'would be ${_kcal(checkIn.uncappedTargetKcal)}.',
+                'A check-in moves the expenditure under the target at most '
+                '${_kcal(cap)}; the full change would put the target at '
+                '${_kcal(checkIn.uncappedTargetKcal)}.',
                 style: theme.textTheme.bodySmall,
               ),
             if (checkIn.daysToTargetAtGoal != null)

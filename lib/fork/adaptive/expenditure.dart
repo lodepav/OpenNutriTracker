@@ -33,13 +33,19 @@ class ExpenditureSettings {
   final int window;
 
   /// Share of the gap to the day's raw estimate taken, during the first
-  /// [calibrationDays] and after.
+  /// [calibrationUpdates] and after.
   final double calibrationBlend;
   final double blend;
   final int calibrationDays;
 
   /// Days of data before the first update, so the trend has settled.
   final int warmupDays;
+
+  /// Share of the window's days that must be logged for an update: the
+  /// weight's change spans the whole window, the intake only its logged
+  /// days, so after a gap a change while not logging would be priced at
+  /// the logged days' intake (D18).
+  final double minLoggedShare;
 
   const ExpenditureSettings({
     this.alpha = 0.1,
@@ -48,7 +54,14 @@ class ExpenditureSettings {
     this.blend = 0.05,
     this.calibrationDays = 30,
     this.warmupDays = 14,
+    this.minLoggedShare = defaultMinLoggedShare,
   });
+
+  static const defaultMinLoggedShare = 0.6;
+
+  /// Updates taken at [calibrationBlend]: as many as a user logging from
+  /// the first weigh-in gets before day [calibrationDays].
+  int get calibrationUpdates => calibrationDays - warmupDays;
 
   /// The preset's weights: only the blend moves, which the sweep found
   /// trades response for wobble at the least cost in error. [cycleWindow]
@@ -56,8 +69,10 @@ class ExpenditureSettings {
   factory ExpenditureSettings.of(
     Responsiveness responsiveness, {
     bool cycleWindow = false,
+    double minLoggedShare = defaultMinLoggedShare,
   }) => ExpenditureSettings(
     window: cycleWindow ? 28 : 20,
+    minLoggedShare: minLoggedShare,
     blend: switch (responsiveness) {
       Responsiveness.steady => 0.03,
       Responsiveness.standard => 0.05,
@@ -85,6 +100,20 @@ List<double> estimateExpenditure(
   required double priorKcal,
   double? bodyFatPercent,
   ExpenditureSettings settings = const ExpenditureSettings(),
+}) => estimateExpenditureRun(
+  days,
+  priorKcal: priorKcal,
+  bodyFatPercent: bodyFatPercent,
+  settings: settings,
+).estimates;
+
+/// [estimateExpenditure], with how many days updated the estimate: under
+/// [ExpenditureSettings.calibrationUpdates] it is still calibrating.
+({List<double> estimates, int updates}) estimateExpenditureRun(
+  List<AdaptiveDay> days, {
+  required double priorKcal,
+  double? bodyFatPercent,
+  ExpenditureSettings settings = const ExpenditureSettings(),
 }) {
   final trend = smoothedTrend(
     dailyWeights({
@@ -96,6 +125,9 @@ List<double> estimateExpenditure(
   bool logged(AdaptiveDay d) => (d.intakeKcal ?? 0) >= minLoggedKcal;
 
   var estimate = priorKcal;
+  // Calibration counts updates, not days: weigh-ins before logging began
+  // would otherwise use it up before the first update.
+  var updates = 0;
   final out = <double>[];
   for (var day = 0; day < days.length; day++) {
     final week = days.sublist((day - 6).clamp(0, day), day + 1);
@@ -105,26 +137,31 @@ List<double> estimateExpenditure(
         week.any((d) => d.weightKg != null);
     final start = (day - settings.window).clamp(0, day);
     final from = trend[start], to = trend[day];
-    if (enoughData && from != null && to != null && day > start) {
-      final window = days.sublist(start + 1, day + 1);
-      final intakes = [
-        for (final d in window)
-          if (logged(d)) d.intakeKcal!,
-      ];
+    final window = days.sublist(start + 1, day + 1);
+    final intakes = [
+      for (final d in window)
+        if (logged(d)) d.intakeKcal!,
+    ];
+    if (enoughData &&
+        from != null &&
+        to != null &&
+        day > start &&
+        intakes.length >= settings.minLoggedShare * window.length) {
       final meanIntake = intakes.reduce((a, b) => a + b) / intakes.length;
       final density = bodyFatPercent == null
           ? flatKcalPerKg
           : energyDensity(fatMassKg((from + to) / 2, bodyFatPercent));
       final stored = (to - from) * density / (day - start);
       final raw = meanIntake - stored - (meanActivity(window) ?? 0);
-      final weight = day < settings.calibrationDays
+      final weight = updates < settings.calibrationUpdates
           ? settings.calibrationBlend
           : settings.blend;
       estimate += weight * (raw - estimate);
+      updates++;
     }
     out.add(estimate);
   }
-  return out;
+  return (estimates: out, updates: updates);
 }
 
 /// Mean counted activity of the [days] that have it; null when none do.

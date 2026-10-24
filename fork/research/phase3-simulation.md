@@ -98,6 +98,18 @@ whatever share of the counted activity is real (`expenditure_settings_test.dart`
 that overstates moves the average target little. The share counted only sets how far one active
 day or week moves it. The simulator has no counted activity yet.
 
+## A real journey (D18)
+
+`fork/tools/replay_journey.dart` replays a MacroFactor export (made into a journey file kept
+outside the repo) through the check-in: its daily intake and weigh-ins, its goals and their
+paces, partly logged days left out, every proposal accepted. A drift run moves the intake by how
+far our target differs from the one followed, and the weight by that energy. Against 17 months
+of one user, the estimate stayed close to MacroFactor's and the trend matched it. It found the
+three faults D18 fixes: goal changes held back by the cap, a high formula prior let down slowly,
+and a logging gap priced at the logged days' intake. The goal's kcal per kg differs by design:
+Forbes's (about 6,000–6,400 kcal/kg at 15–20% body fat) against MacroFactor's 7,700, so cuts ask for a smaller
+deficit than MacroFactor's at the same pace.
+
 ## Findings
 
 - **Forbes beats the flat 6,000 kcal/kg:** error 73 against 86. The lean and the heavy users
