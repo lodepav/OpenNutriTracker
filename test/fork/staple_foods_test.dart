@@ -6,8 +6,9 @@
 // Upstream's tie-break picks the shorter sibling, the same on its backend
 // (resolver_relevance.dart, upstream #1231): `egg` landed on "Egg,
 // creamed", `eggs` on a Foundation yolk row and `pizza` on "Pizza, no
-// cheese, thin crust". The fork's tie-breaks (S73, S74, S75) and variant
-// rule (S70) fixed those, `pepperoni pizza` and the bare names below.
+// cheese, thin crust". The fork's tie-breaks (S73, S74), its list of the
+// row a name means (S75) and variant rule (S70) fixed those, `pepperoni
+// pizza` and the bare names below.
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -106,6 +107,19 @@ void main() {
     ('eggs', 'Eggs, Grade A, Large, egg whole'),
     ('pizza', 'Pizza, cheese, from restaurant or fast food, NS as to'),
     ('cheese pizza', 'Pizza, cheese, from restaurant or fast food, NS as to'),
+    ('fries', 'Potato, french fries, NFS'),
+    ('tomato sauce', 'Tomato products, canned, sauce'),
+    ('tomato paste', 'Tomato products, canned, paste'),
+    ('potatoes', 'Potatoes, boiled, cooked without skin'),
+    ('porridge', 'Oatmeal, regular or quick, made with water'),
+    ('bread soup', 'Bread soup (brown bread), with raisins'),
+    ('butter, unsalted', 'Butter, without salt'),
+    ('unsalted butter', 'Butter, without salt'),
+    ('cola', 'Soft drink, cola'),
+    ('coke', 'Soft drink, cola'),
+    ('diet coke', 'Soft drink, cola, diet'),
+    ('greek yogurt', 'Yogurt, Greek, NS as to type of milk, plain'),
+    ('granola', 'Cereal, granola'),
     ('vegetable lasagna', 'Lasagna, Vegetable'),
   ]) {
     test('bare "$query" resolves to "$expected..."', () async {

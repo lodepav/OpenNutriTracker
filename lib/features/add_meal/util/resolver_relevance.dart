@@ -28,7 +28,7 @@ import 'package:opennutritracker/features/add_meal/util/soft_text_score.dart';
 // [fork] S70 unasked-variant: meatless, vegan and baby-food rows trail
 import 'package:opennutritracker/fork/food/unasked_variant.dart';
 // [/fork]
-// [fork] S75 everyday-row: a tie goes to the row a bare name means
+// [fork] S75 everyday-row: the row a bare name means goes first
 import 'package:opennutritracker/fork/food/everyday_row.dart';
 // [/fork]
 // [fork] S73 unspecified-first: a tie goes to the NFS / "NS as to" row
@@ -283,15 +283,15 @@ List<MealEntity> _sorted(List<MealEntity> meals, String query) {
       (meal: meal, score: scoreMealForResolution(meal, query)),
   ];
   mergeSort(decorated, compare: (a, b) {
-    final byScore = b.score.compareTo(a.score);
-    if (byScore != 0) return byScore;
-    // [fork] S75 everyday-row: the row a bare family name means
+    // [fork] S75 everyday-row: the row a bare name means, first
     final byEveryday = _everyday(
       b.meal,
       query,
     ).compareTo(_everyday(a.meal, query));
     if (byEveryday != 0) return byEveryday;
     // [/fork]
+    final byScore = b.score.compareTo(a.score);
+    if (byScore != 0) return byScore;
     // [fork] S74 fork-dish-first: a dish the fork added for its name wins
     // the tie with the table's odd forms ("Lasagna, Vegetable, frozen")
     final byDish = _forkDish(b.meal).compareTo(_forkDish(a.meal));

@@ -346,7 +346,11 @@ void main() {
           ('Grey peas', ['grey peas with bacon', 'pelēkie zirņi ar speķi']),
           ('Potato balls', ['potato balls', 'roasted potato balls']),
           ('Plov', ['plov', 'chicken plov']),
-          ('Khachapuri', ['khachapuri', 'adjarian khachapuri']),
+          ('Khachapuri', [
+            'khachapuri',
+            'adjarian khachapuri',
+            'adjaruli khachapuri',
+          ]),
           ('Syrniki', ['syrniki', 'syrnyky']),
           ('Kharcho', ['kharcho', 'kharcho soup']),
           ('Kofta', ['kofta', 'beef kofta', 'kofte']),

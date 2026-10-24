@@ -31,6 +31,16 @@ void main() {
       );
     });
 
+    test('a dish spelled another way (`spelling`)', () {
+      for (final query in ['adjaruli khachapuri', 'khachapuri acharuli']) {
+        expect(
+          nameHasQueryWords('Adjarian khachapuri', query),
+          isTrue,
+          reason: query,
+        );
+      }
+    });
+
     test('Latvian letters match their plain forms, both ways', () {
       expect(nameHasQueryWords('Sklandu rauši', 'sklandu rausi'), isTrue);
       const starter = 'Sklandu rauši (sklandrausis)';
