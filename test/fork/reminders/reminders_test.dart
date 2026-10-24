@@ -118,6 +118,7 @@ void main() {
       trendKg: 80,
       weekChangeKg: -0.4,
       expenditureKcal: 2640.4,
+      baseKcal: 2640.4,
       uncappedTargetKcal: target,
       proposedTargetKcal: target,
       daysToTargetAtGoal: null,

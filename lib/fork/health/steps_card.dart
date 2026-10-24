@@ -1,6 +1,7 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
 import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
@@ -127,7 +128,10 @@ class _StepsCardState extends State<StepsCard> {
           Row(
             children: [
               Expanded(
-                child: Text('Steps', style: theme.textTheme.titleMedium),
+                child: Semantics(
+                  header: true,
+                  child: Text('Steps', style: theme.textTheme.titleMedium),
+                ),
               ),
               if (read.on)
                 TextButton(
@@ -209,11 +213,11 @@ class _StepsCardState extends State<StepsCard> {
       _row('Today', _count(days[today] ?? 0)),
       if (past.isNotEmpty) ...[
         _row(
-          'Daily average',
+          'Daily average, past days',
           _count((past.reduce((a, b) => a + b) / past.length).round()),
         ),
         _row(
-          'Days at the goal',
+          'Past days at the goal',
           '${past.where((s) => s >= goal).length} of ${past.length}',
         ),
       ],
@@ -267,9 +271,9 @@ class _StepsCardState extends State<StepsCard> {
                   barRods: [
                     BarChartRodData(
                       toY: steps.toDouble(),
-                      color: steps >= goal
-                          ? accent
-                          : accent.withValues(alpha: 0.45),
+                      // Muted, not a faded accent: that fell under 3:1
+                      // on the light card.
+                      color: steps >= goal ? accent : widget.palette.textMuted,
                       width: widget.rangeDays > 31 ? 2 : 6,
                     ),
                   ],
@@ -281,15 +285,8 @@ class _StepsCardState extends State<StepsCard> {
     );
   }
 
-  static String _count(int steps) {
-    final text = '$steps';
-    final grouped = StringBuffer();
-    for (var i = 0; i < text.length; i++) {
-      if (i > 0 && (text.length - i) % 3 == 0) grouped.write(',');
-      grouped.write(text[i]);
-    }
-    return grouped.toString();
-  }
+  static String _count(int steps) =>
+      NumberFormat.decimalPattern().format(steps);
 
   Widget _row(String label, String value) => Padding(
     padding: const EdgeInsets.symmetric(vertical: 2),

@@ -265,6 +265,9 @@ void main() {
     expect(memory.saved.fixedKcal, 1800);
     expect(find.text('Fixed target: 1800 kcal'), findsOneWidget);
 
+    // Below the fold now that every mode shows the expenditure row.
+    await tester.ensureVisible(find.byKey(const ValueKey('weekday-targets')));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('weekday-targets')));
     await tester.pumpAndSettle();
     await tester.enterText(find.byKey(const ValueKey('weekday-5')), '300');

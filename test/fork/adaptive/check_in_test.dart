@@ -41,8 +41,16 @@ UserEntity _user() => UserEntity(
 );
 
 class _User extends Fake implements GetUserUsecase {
+  final double rate;
+
+  _User({this.rate = -0.5});
+
   @override
-  Future<UserEntity> getUserData() async => _user();
+  Future<UserEntity> getUserData() async => _user()
+    ..weeklyWeightGoalKg = rate
+    ..goal = rate == 0
+        ? UserWeightGoalEntity.maintainWeight
+        : UserWeightGoalEntity.loseWeight;
 }
 
 /// 60 days of losing 0.5 kg a week on 2,000 kcal, weighed every other day.
@@ -103,17 +111,17 @@ void main() {
   });
 
   group('computeCheckIn', () {
-    CheckIn run({double previous = 2000}) => computeCheckIn(
+    CheckIn run({double? previous, int days = 60}) => computeCheckIn(
       CheckInInputs(
         days: [
-          for (var d = 0; d < 60; d++)
+          for (var d = 0; d < days; d++)
             AdaptiveDay(intakeKcal: 2000, weightKg: 90 - 0.5 * d / 7),
         ],
         priorKcal: 2500,
         goalRateKgPerWeek: -0.5,
         bodyFatPercent: 25,
         targetWeightKg: 80,
-        previousTargetKcal: previous,
+        previousBaseKcal: previous,
         taper: (adjustment, _) => adjustment,
       ),
     );
@@ -131,8 +139,25 @@ void main() {
       expect(checkIn.weekChangeKg, closeTo(-0.5, 0.05));
     });
 
-    test('a check-in moves the target at most 200 kcal', () {
-      expect(run(previous: 1500).proposedTargetKcal, 1700);
+    test('a check-in moves the expenditure under the target at most '
+        '200 kcal, and the goal in full', () {
+      final c = run(previous: 2000);
+      expect(c.baseKcal, 2200);
+      expect(
+        c.proposedTargetKcal,
+        closeTo(c.uncappedTargetKcal - (c.expenditureKcal - 2200), 0.01),
+      );
+      // The goal's energy is the whole of the gap below the base.
+      expect(c.proposedTargetKcal, closeTo(2200 - 500, 30));
+    });
+
+    test('nothing holds the estimate back before the first check-in or '
+        'while it calibrates', () {
+      final first = run();
+      expect(first.proposedTargetKcal, first.uncappedTargetKcal);
+      // 20 days: 6 updates past the warm-up, under the 16 calibrating.
+      final calibrating = run(previous: 1000, days: 20);
+      expect(calibrating.baseKcal, calibrating.expenditureKcal);
     });
 
     test('the target weight is about 13 weeks off at either pace', () {
@@ -151,13 +176,11 @@ void main() {
       expect(checkIn.loggedDays, 7);
       expect(checkIn.weighIns, inInclusiveRange(3, 4));
       expect(checkIn.expenditureKcal, greaterThan(2200));
-      // Upstream's formula target is above what this user burns, so the
-      // first check-in moves the most it may down from it.
-      expect(
-        checkIn.proposedTargetKcal,
-        greaterThan(checkIn.uncappedTargetKcal),
-      );
+      // The first check-in has no estimate before it to hold to.
+      expect(checkIn.proposedTargetKcal, checkIn.uncappedTargetKcal);
       expect(checkIn.uncappedTargetKcal, lessThan(checkIn.expenditureKcal));
+      expect(checkIn.goalRateKgPerWeek, -0.5);
+      expect(checkIn.targetWeightKg, 80);
     });
 
     test(
@@ -193,6 +216,29 @@ void main() {
 
       await service.accept(await service.checkIn(), 2100);
       expect(await service.checkInDue(), isFalse);
+    });
+
+    test('a changed goal is due a check-in at once', () async {
+      AdaptiveStore.settings.value = const AdaptiveSettings(
+        adaptiveTarget: true,
+      );
+      await service.accept(await service.checkIn(), 2100);
+      final maintain = AdaptiveService(
+        _User(rate: 0),
+        _Weights(),
+        _TrackedDays(),
+        store,
+        () => _today.add(const Duration(hours: 9)),
+      );
+      expect(await service.goalChanged(), isFalse);
+      expect(await maintain.goalChanged(), isTrue);
+      expect(await maintain.checkInDue(), isTrue);
+
+      final checkIn = await maintain.checkIn();
+      // The 500 kcal of the loss goal is all gone in this one check-in.
+      expect(checkIn.proposedTargetKcal, closeTo(checkIn.expenditureKcal, 1));
+      await maintain.accept(checkIn, checkIn.proposedTargetKcal);
+      expect(await maintain.checkInDue(), isFalse);
     });
 
     test('the settings are saved and loaded', () async {
@@ -353,9 +399,7 @@ void main() {
     expect(find.text('Pace: -0.25 kg a week'), findsOneWidget);
   });
 
-  testWidgets('without a target the planner offers to set one', (
-    tester,
-  ) async {
+  testWidgets('without a target the planner offers to set one', (tester) async {
     final paced = _PacedService(service)..noTarget = true;
     var asked = 0;
     await tester.pumpWidget(

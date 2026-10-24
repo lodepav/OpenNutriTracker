@@ -104,7 +104,10 @@ class _ExpenditureTrendCardState extends State<ExpenditureTrendCard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Expenditure', style: theme.textTheme.titleMedium),
+          Semantics(
+            header: true,
+            child: Text('Expenditure', style: theme.textTheme.titleMedium),
+          ),
           const SizedBox(height: Dimens.spacing8),
           _row(context, 'Now', energyText(context, days.last.expenditureKcal)),
           if (balance != null)
@@ -115,7 +118,7 @@ class _ExpenditureTrendCardState extends State<ExpenditureTrendCard> {
             ),
           const SizedBox(height: Dimens.spacing16),
           Semantics(
-            label: 'Expenditure',
+            label: 'Expenditure chart',
             child: SizedBox(
               height: 140,
               child: LineChart(
