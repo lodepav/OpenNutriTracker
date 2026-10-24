@@ -11,6 +11,7 @@ import 'package:opennutritracker/features/add_meal/data/dto/sp/sp_food_dto.dart'
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_portion_entity.dart';
 import 'package:opennutritracker/features/add_meal/util/backend_title.dart';
 import 'package:opennutritracker/features/add_meal/util/soft_text_score.dart';
+import 'package:opennutritracker/fork/food/unasked_variant.dart';
 
 /// The fork's offline food table (D11): the open USDA and BLS tables bundled
 /// as an asset, answering the three questions upstream asks its Supabase
@@ -79,16 +80,34 @@ class LocalFoodDataSource extends SpFoodDataSource {
         }
       }
     }
+    // A person's search with a word no row has ("cherry tomatoes", "uht
+    // milk") showed nothing; it shows the rows with the most of its words.
+    if (!forResolution && rows.isEmpty) {
+      rows = foods.searchMostWords(
+        query,
+        isEnabled: (source) => toggles?[source] ?? true,
+      );
+    }
     if (forResolution) rows = _servedNotDry(rows, query, asked: searchString);
     // The backend's own cut, reused so the resolver sees the twenty rows it
     // would see from the backend. Upstream exposes it for its tests only;
     // calling it beats a copy that drifts.
     // ignore: invalid_use_of_visible_for_testing_member
-    return rankAndTruncateFoodsByName(
+    final ranked = rankAndTruncateFoodsByName(
       rows,
       query,
       forResolution: forResolution,
     );
+    if (forResolution) return ranked;
+    // The Food tab lists a variant the person did not name ("Bacon,
+    // meatless" for "bacon") after the plain rows, as the resolver scores
+    // it (S70).
+    return [
+      for (final row in ranked)
+        if (unaskedVariant(row.name, query) == 0) row,
+      for (final row in ranked)
+        if (unaskedVariant(row.name, query) > 0) row,
+    ];
   }
 
   /// Every name in the table is English, so there is no label to localize.
@@ -197,7 +216,17 @@ class LocalFoodTable {
   final List<Set<String>> _tokens;
 
   LocalFoodTable(this.foods, this.portions)
-    : _tokens = [for (final food in foods) tokenize(food.name)];
+    : _tokens = [for (final food in foods) _nameTokens(food.name)];
+
+  /// [name]'s words, and each pair of neighbours run together: "KIT KAT"
+  /// is found by `kitkat`, as a person types it.
+  static Set<String> _nameTokens(String? name) {
+    final words = _words(name);
+    return {
+      ...words,
+      for (var i = 0; i + 1 < words.length; i++) '${words[i]}${words[i + 1]}',
+    };
+  }
 
   static LocalFoodTable fromGzip(Uint8List bytes) =>
       fromJson(jsonDecode(utf8.decode(gzip.decode(bytes))) as Map);
@@ -234,9 +263,8 @@ class LocalFoodTable {
     String searchString, {
     required bool Function(String? source) isEnabled,
   }) {
-    final query = tokenize(searchString);
+    final query = _words(searchString).map(_spelling).toSet();
     if (query.isEmpty) return const [];
-    final term = searchString.trim().toLowerCase();
     final matches = <SpFoodDTO>[];
     for (var i = 0; i < foods.length; i++) {
       final food = foods[i];
@@ -245,6 +273,49 @@ class LocalFoodTable {
         matches.add(food);
       }
     }
+    _sort(matches, searchString.trim().toLowerCase());
+    return matches.take(LocalFoodDataSource.candidatePoolSize).toList();
+  }
+
+  /// The pool for [searchString] when no row has every word: the rows with
+  /// the most of them, and among those the ones with its last word, the
+  /// food a name puts last ("cherry tomatoes" are tomatoes). One word that
+  /// is not the last is no match: "turkish delight" is no Turkish coffee.
+  /// Nothing for a one-word search, which [search] answered already.
+  List<SpFoodDTO> searchMostWords(
+    String searchString, {
+    required bool Function(String? source) isEnabled,
+  }) {
+    final words = _words(searchString).map(_spelling).toList();
+    if (words.toSet().length < 2) return const [];
+    final last = words.last;
+    var best = (0, false);
+    var matches = <SpFoodDTO>[];
+    for (var i = 0; i < foods.length; i++) {
+      final food = foods[i];
+      if (!isEnabled(food.source)) continue;
+      bool has(String q) => _tokens[i].any((t) => wordsAgree(q, t));
+      final count = words.toSet().where(has).length;
+      if (count == 0) continue;
+      final score = (count, has(last));
+      final cmp = score.$1 != best.$1
+          ? score.$1.compareTo(best.$1)
+          : (score.$2 ? 1 : 0) - (best.$2 ? 1 : 0);
+      if (cmp > 0) {
+        best = score;
+        matches = [food];
+      } else if (cmp == 0) {
+        matches.add(food);
+      }
+    }
+    if (best.$1 < 2 && !best.$2) return const [];
+    _sort(matches, searchString.trim().toLowerCase());
+    return matches.take(LocalFoodDataSource.candidatePoolSize).toList();
+  }
+
+  /// The backend's order: a portion first, then the title equal to [term],
+  /// then the shorter name, then the id.
+  static void _sort(List<SpFoodDTO> matches, String term) {
     int key(bool flag) => flag ? 0 : 1;
     matches.sort((a, b) {
       final byPortion = key(
@@ -257,19 +328,33 @@ class LocalFoodTable {
       if (byLength != 0) return byLength;
       return (a.foodId ?? 0).compareTo(b.foodId ?? 0);
     });
-    return matches.take(LocalFoodDataSource.candidatePoolSize).toList();
   }
 
   static bool _titleIs(SpFoodDTO food, String term) =>
       deriveTitle(food.name ?? '').toLowerCase() == term;
 }
 
+/// [text]'s words in order, lower-cased, as [tokenize] splits them.
+List<String> _words(String? text) => (text ?? '')
+    .toLowerCase()
+    .split(RegExp(r'[^\p{L}\p{N}]+', unicode: true))
+    .where((w) => w.isNotEmpty)
+    .toList();
+
+/// The table's word for a query word people spell another way.
+String _spelling(String word) => switch (word) {
+  'bbq' || 'barbeque' => 'barbecue',
+  'tater' => 'potato',
+  _ => word,
+};
+
 /// Whether query word [q] and name word [t] are the same word up to an
 /// ending: one is the other plus at most two letters (`egg`/`eggs`,
-/// `potato`/`potatoes`), or both share a stem of four letters or more and
-/// differ in at most two letters after it (`cheese`/`cheesy`), or `y` and
-/// `ies` (`berry`/`berries`). Three shared letters are not a stem:
-/// `grey` is not `green`. Recipe search uses it too (`recipe_search.dart`).
+/// `potato`/`potatoes`; one letter for a three-letter word, so `fan` is not
+/// `fanta`), or both share a stem of four letters or more and differ in at
+/// most two letters after it (`cheese`/`cheesy`), or `y` and `ies`
+/// (`berry`/`berries`). Three shared letters are not a stem: `grey` is not
+/// `green`. Recipe search uses it too (`recipe_search.dart`).
 bool wordsAgree(String q, String t) {
   if (q == t) return true;
   final (shorter, longer) = q.length <= t.length ? (q, t) : (t, q);
@@ -279,7 +364,10 @@ bool wordsAgree(String q, String t) {
     shared++;
   }
   if (shared == shorter.length) {
-    return shorter.length >= 3 && longer.length - shorter.length <= 2;
+    // A three-letter word takes one letter (`egg`/`eggs`), not two: `fan`
+    // is not `fanta`.
+    final ending = shorter.length == 3 ? 1 : 2;
+    return shorter.length >= 3 && longer.length - shorter.length <= ending;
   }
   if (shorter.endsWith('y') &&
       longer == '${shorter.substring(0, shorter.length - 1)}ies') {

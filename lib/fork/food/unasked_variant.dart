@@ -17,11 +17,24 @@ final _variantWords = RegExp(
   caseSensitive: false,
 );
 
-/// [unaskedVariantPenalty] when [name] carries one of the variant words and
-/// [query] does not, else 0.
+/// A row that is only a food's skin: USDA names it as a part of its own
+/// ("Potatoes, raw, skin", "Potatoes, boiled, cooked in skin, skin, with
+/// salt"). "boiled potatoes" logged the boiled peel, and "potatoes" the raw
+/// one. Not "skin eaten" or "skin removed", which say how the food was had.
+final _skinOnly = RegExp(
+  r',\s*skin\b(?!\s+(eaten|not eaten|removed))',
+  caseSensitive: false,
+);
+
+/// [unaskedVariantPenalty] when [name] carries one of the variant words, or
+/// is only a skin, and [query] does not say so, else 0.
 double unaskedVariant(String? name, String query) {
+  final asked = query.toLowerCase();
+  if (_skinOnly.hasMatch(name ?? '') && !asked.contains('skin')) {
+    return unaskedVariantPenalty;
+  }
   final match = _variantWords.firstMatch(name ?? '');
   if (match == null) return 0;
   final word = match[0]!.toLowerCase();
-  return query.toLowerCase().contains(word) ? 0 : unaskedVariantPenalty;
+  return asked.contains(word) ? 0 : unaskedVariantPenalty;
 }

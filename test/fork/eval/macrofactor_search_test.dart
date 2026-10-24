@@ -147,7 +147,7 @@ void main() {
         final api = models.api(spec, client);
         var waiting = 0;
         final right = {false: 0, true: 0}, total = {false: 0, true: 0};
-        var brokenDown = 0;
+        final brokenDown = {false: 0, true: 0};
         rows
           ..writeln('## AI describe, $spec\n')
           ..writeln('| Typed | Kind | Right | Rows |')
@@ -173,7 +173,7 @@ void main() {
           final ok = !broken && _right(food, first?.meal?.name);
           total[food.dish] = total[food.dish]! + 1;
           if (ok) right[food.dish] = right[food.dish]! + 1;
-          if (broken) brokenDown++;
+          if (broken) brokenDown[food.dish] = brokenDown[food.dish]! + 1;
           final cells = [
             for (final row in state.rows)
               '${row.resolved.parsed.query} → '
@@ -196,9 +196,10 @@ void main() {
               ..writeln('|---|---|---|');
           }
           summary.writeln(
-            '| $spec | foods ${right[false]}/${total[false]} '
-            '| dishes ${right[true]}/${total[true]}, '
-            '$brokenDown broken down |',
+            '| $spec | ${right[false]}/${total[false]} right, '
+            '${brokenDown[false]} broken down '
+            '| ${right[true]}/${total[true]} right, '
+            '${brokenDown[true]} broken down |',
           );
         }
         client.close();

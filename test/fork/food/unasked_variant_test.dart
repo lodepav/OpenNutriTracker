@@ -21,4 +21,23 @@ void main() {
     expect(unaskedVariant('Pork, cured, bacon, unprepared', 'pork bacon'), 0);
     expect(unaskedVariant(null, 'bacon'), 0);
   });
+
+  test('a row that is only the skin trails, unless the query says skin', () {
+    for (final name in [
+      'Potatoes, raw, skin',
+      'Potatoes, boiled, cooked in skin, skin, with salt',
+      'Chicken, skin (drumsticks and thighs), raw',
+    ]) {
+      expect(unaskedVariant(name, 'potatoes'), unaskedVariantPenalty);
+    }
+    expect(unaskedVariant('Potatoes, raw, skin', 'potato skin'), 0);
+    for (final name in [
+      'Potatoes, boiled, cooked in skin, flesh, with salt',
+      'Chicken thigh, grilled, skin eaten',
+      'Chicken thigh, skin removed before cooking',
+      'Potatoes, flesh and skin, raw',
+    ]) {
+      expect(unaskedVariant(name, 'potatoes'), 0, reason: name);
+    }
+  });
 }

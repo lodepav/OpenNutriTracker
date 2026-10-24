@@ -41,6 +41,7 @@ void main() {
       expect(wordsAgree('rye', 'ryegrass'), isFalse);
       expect(wordsAgree('ham', 'hamburger'), isFalse);
       expect(wordsAgree('grey', 'green'), isFalse);
+      expect(wordsAgree('fanta', 'fan'), isFalse);
     });
   });
 
@@ -102,11 +103,13 @@ void main() {
         )).map((f) => f.name),
         contains('Bread, rye'),
       );
-      // A person's search stays exact, and a word before the first comma is
-      // never dropped.
+      // A person's search shows the rows with the most of its words, and
+      // resolution never drops a word before the first comma.
       expect(
-        await source.fetchSearchWordResults('bread, rye, toasted'),
-        isEmpty,
+        (await source.fetchSearchWordResults(
+          'bread, rye, toasted',
+        )).map((f) => f.name),
+        contains('Bread, rye'),
       );
       expect(
         await source.fetchSearchWordResults(
@@ -147,8 +150,49 @@ void main() {
       // "Melon balls" holds "balls" but is no potato ball: nothing, so the
       // dish is broken down (D9).
       expect(await names('potato balls'), isEmpty);
-      // A person's search stays exact.
-      expect(await names('caesar salad with bacon', resolve: false), isEmpty);
+      // A person's search does not cut the name, it shows the most words.
+      expect(
+        await names('caesar salad with bacon', resolve: false),
+        contains('Caesar salad, with romaine'),
+      );
+    });
+
+    test('a person\'s search with a word no row has shows the most words, '
+        'the last one first', () async {
+      final source = _source(
+        _table([
+          [30, 'fdc_sr_legacy', '30', 'Tomatoes, raw', true, 18.0],
+          [31, 'fdc_sr_legacy', '31', 'Cherries, sweet, raw', true, 63.0],
+          [32, 'fdc_survey', '32', 'Coffee, Turkish', true, 2.0],
+          [33, 'fdc_sr_legacy', '33', 'Candies, KIT KAT Wafer Bar', true, 518],
+          [34, 'fdc_sr_legacy', '34', 'Sauce, barbecue', true, 172.0],
+          [35, 'fdc_sr_legacy', '35', 'Bacon, meatless', true, 309.0],
+          [
+            36,
+            'fdc_sr_legacy',
+            '36',
+            'Pork, cured, bacon, unprepared',
+            false,
+            393,
+          ],
+        ]),
+      );
+      Future<List<String?>> names(String query, {bool resolve = false}) async =>
+          (await source.fetchSearchWordResults(
+            query,
+            forResolution: resolve,
+          )).map((f) => f.name).toList();
+
+      expect(await names('cherry tomatoes'), ['Tomatoes, raw']);
+      // One word that is not the food is no match.
+      expect(await names('turkish delight'), isEmpty);
+      // The resolver keeps every word, and breaks the dish down (D9).
+      expect(await names('cherry tomatoes', resolve: true), isEmpty);
+      // Run-together words and other spellings.
+      expect(await names('kitkat'), ['Candies, KIT KAT Wafer Bar']);
+      expect(await names('bbq sauce'), ['Sauce, barbecue']);
+      // A variant the person did not name comes after the plain row.
+      expect((await names('bacon')).first, 'Pork, cured, bacon, unprepared');
     });
 
     test('"pea" does not find peanut butter', () async {
