@@ -85,6 +85,41 @@ class _TrackedDays extends Fake implements GetTrackedDayUsecase {
   ];
 }
 
+/// A new user: the weigh-in from onboarding, nothing logged.
+class _OneWeighIn extends Fake implements GetWeightLogUsecase {
+  @override
+  Future<List<WeightLogEntity>> getAllEntries() async => [
+    WeightLogEntity(date: _today, weightKg: 90),
+  ];
+}
+
+class _NoLogs extends Fake implements GetTrackedDayUsecase {
+  @override
+  Future<List<TrackedDayEntity>> getTrackedDaysByRange(
+    DateTime start,
+    DateTime end,
+  ) async => [];
+}
+
+/// The check-in on a phone's width at 200% text.
+Future<void> _pumpLarge(WidgetTester tester, AdaptiveService service) async {
+  tester.view.physicalSize = const Size(1080, 2400);
+  tester.view.devicePixelRatio = 3;
+  addTearDown(tester.view.reset);
+  await tester.pumpWidget(
+    MaterialApp(
+      builder: (context, child) => MediaQuery(
+        data: MediaQuery.of(
+          context,
+        ).copyWith(textScaler: const TextScaler.linear(2)),
+        child: child!,
+      ),
+      home: CheckInScreen(service: service),
+    ),
+  );
+  await tester.pumpAndSettle();
+}
+
 void main() {
   late Directory dir;
   late AdaptiveStore store;
@@ -384,6 +419,46 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(memory.records.single.acceptedKcal, closeTo(2000, 0.01));
+  });
+
+  testWidgets("a new user's first check-in says it is from the profile", (
+    tester,
+  ) async {
+    final service = AdaptiveService(
+      _User(),
+      _OneWeighIn(),
+      _NoLogs(),
+      _MemoryStore(),
+      () => _today.add(const Duration(hours: 9)),
+    );
+    await _pumpLarge(tester, service);
+
+    expect(find.textContaining('Your first target'), findsOneWidget);
+    expect(find.textContaining('under the formula'), findsOneWidget);
+    // No week before it to report, nor to carry the expenditure from.
+    expect(find.text('Past week'), findsNothing);
+    expect(find.textContaining('Not enough data'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('a row at 200% text wraps its value below the label', (
+    tester,
+  ) async {
+    final service = AdaptiveService(
+      _User(),
+      _Weights(),
+      _TrackedDays(),
+      _MemoryStore(),
+      () => _today.add(const Duration(hours: 9)),
+    );
+    await _pumpLarge(tester, service);
+
+    final label = find.text('Target weight, chosen pace');
+    await tester.scrollUntilVisible(label, 200);
+    // Squeezed beside its value it took a letter a line.
+    expect(tester.getSize(label).height, lessThan(150));
+    expect(find.textContaining('Your first target'), findsNothing);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('the planner moves the date with the pace and saves it', (
