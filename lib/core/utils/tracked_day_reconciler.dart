@@ -186,8 +186,11 @@ Future<int> reconcileTrackedDays(
   Set<String>? previousKeys,
   Map<String, double>? creditedBurned,
   TrackedDayGoals? currentGoals,
-  // [fork] S68 adaptive-target: set under a fork target
+  // [fork] S68 adaptive-target: set under a fork target; the weekday
+  // shifts the rows carry (none: empty)
   bool ignoreBurned = false,
+  List<double> weekdayOffsets = const [],
+  bool scaleMacros = true,
   // [/fork]
 }) {
   final rows = db.trackedDayBox;
@@ -235,6 +238,10 @@ Future<int> reconcileTrackedDays(
       existing,
       burnedOn,
       currentGoals,
+      // [fork] S68 adaptive-target
+      weekdayOffsets,
+      scaleMacros,
+      // [/fork]
     );
     if (row == null) {
       _log.warning('No goal to create the tracked day of $key from');
@@ -292,6 +299,10 @@ TrackedDayDBO? _newRow(
   Map<dynamic, TrackedDayDBO> rows,
   double Function(String key) burnedOn,
   TrackedDayGoals? currentGoals,
+  // [fork] S68 adaptive-target
+  List<double> weekdayOffsets,
+  bool scaleMacros,
+  // [/fork]
 ) {
   // Counted in calendar days, not hours: the keys parse to local
   // midnights, and across a daylight-saving change two of those are 23 or
@@ -331,6 +342,35 @@ TrackedDayDBO? _newRow(
         MacroCalc.getTotalProteinsGoal(burned),
       ),
     );
+    // [fork] S68 adaptive-target: the nearest row's weekday shift out, this
+    // day's in; the macros scale with the energy where they were set from
+    // it; under a macro program protein follows the body, so the shift goes
+    // to carbs and fat
+    if (weekdayOffsets.length == 7 && base.kcal > 0) {
+      final kcal =
+          base.kcal -
+          weekdayOffsets[DateTime.parse(nearestKey).weekday - 1] +
+          weekdayOffsets[date.weekday - 1];
+      final rest =
+          (base.carbs ?? 0) * MacroCalc.carbsKcalPerGram +
+          (base.fat ?? 0) * MacroCalc.fatKcalPerGram;
+      final restAfter = rest + kcal - base.kcal;
+      final factor = scaleMacros
+          ? kcal / base.kcal
+          : rest <= 0
+          ? 1.0
+          : restAfter > 0
+          ? restAfter / rest
+          : 0.0;
+      double? scaled(double? goal) => goal == null ? null : goal * factor;
+      base = (
+        kcal: kcal,
+        carbs: scaled(base.carbs),
+        fat: scaled(base.fat),
+        protein: scaleMacros ? scaled(base.protein) : base.protein,
+      );
+    }
+    // [/fork]
   }
   if (base == null) return null;
 
@@ -410,7 +450,7 @@ Future<int> ensureTrackedDaysMatchEntries(
     }
   }
   // [fork] S68 adaptive-target: read before the lock's synchronous pass
-  final ignoreBurned = await forkTargetIgnoresActivities(adaptiveStore);
+  final target = await forkReconcileTarget(adaptiveStore);
   // [/fork]
   final changed = await withTrackedDayLock(() async {
     final offset = _offsetMinutesNow(configDataSource);
@@ -423,7 +463,9 @@ Future<int> ensureTrackedDaysMatchEntries(
       previousImportOffsetMinutes: recordedBy == null ? offset : null,
       currentGoals: goals,
       // [fork] S68 adaptive-target
-      ignoreBurned: ignoreBurned,
+      ignoreBurned: target.ignoreBurned,
+      weekdayOffsets: target.offsets,
+      scaleMacros: target.scaleMacros,
       // [/fork]
     );
     final recorded = recordedBy == offset
@@ -515,9 +557,9 @@ Future<int> restoreTrackedDays(
   // [/fork]
 }) => withTrackedDayLock(() async {
   // [fork] S68 adaptive-target: read before the synchronous pass; a
-  // restore writes the profile's adaptive settings after its rows, so
-  // these are the ones it had before
-  final ignoreBurned = await forkTargetIgnoresActivities(adaptiveStore);
+  // restore writes the archive's target first (S21), so this is the one
+  // its rows were made under
+  final target = await forkReconcileTarget(adaptiveStore);
   // [/fork]
   final offset = _offsetMinutesNow(configDataSource);
   final deviceCredit = _burnedByDay(db.userActivityBox.values, offset);
@@ -547,7 +589,9 @@ Future<int> restoreTrackedDays(
       for (final key in importedDayKeys) key: archiveCredit[key] ?? 0,
     },
     // [fork] S68 adaptive-target
-    ignoreBurned: ignoreBurned,
+    ignoreBurned: target.ignoreBurned,
+    weekdayOffsets: target.offsets,
+    scaleMacros: target.scaleMacros,
     // [/fork]
   );
   final recorded = configDataSource.setConfigTrackedDaysOffsetMinutes(offset);
@@ -574,7 +618,7 @@ Future<void> moveDayBoundary(
   int minutes,
 ) async {
   // [fork] S68 adaptive-target: read before the synchronous step
-  final ignoreBurned = await forkTargetIgnoresActivities();
+  final target = await forkReconcileTarget();
   // [/fork]
   return withTrackedDayLock(() {
     final before = _offsetMinutesNow(configDataSource);
@@ -588,7 +632,9 @@ Future<void> moveDayBoundary(
       offsetMinutes: after,
       previousOffsetMinutes: before,
       // [fork] S68 adaptive-target
-      ignoreBurned: ignoreBurned,
+      ignoreBurned: target.ignoreBurned,
+      weekdayOffsets: target.offsets,
+      scaleMacros: target.scaleMacros,
       // [/fork]
     );
     final recorded = configDataSource.setConfigTrackedDaysOffsetMinutes(after);

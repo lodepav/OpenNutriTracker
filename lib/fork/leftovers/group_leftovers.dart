@@ -221,7 +221,7 @@ class _GroupLeftoversDialogState extends State<GroupLeftoversDialog> {
 
   void _override(String id, String text) => setState(() {
     final left = double.tryParse(text.replaceAll(',', '.'));
-    if (left == null) {
+    if (left == null || !left.isFinite) {
       _overrides.remove(id);
     } else {
       _overrides[id] = left;

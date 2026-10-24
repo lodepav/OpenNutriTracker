@@ -699,6 +699,59 @@ void main() {
       expect(row.calorieGoal, 2000, reason: 'the writer\'s goal stays');
     });
 
+    // [fork] S68 adaptive-target
+    test(
+      'a new row takes its own weekday shift, not the nearest row\'s',
+      () async {
+        await setBoundary(4);
+        await addLoggedIntake('toast', DateTime(2026, 10, 5, 2));
+        // Monday's row, its goal shifted +300 for the weekday.
+        await trackedDayBox.put(
+          '2026-10-05',
+          legacyRow(DateTime(2026, 10, 5, 2)),
+        );
+
+        await reconcileTrackedDays(
+          db,
+          offsetMinutes: 4 * 60,
+          weekdayOffsets: const [300, 0, 0, 0, 0, 0, 0],
+        );
+
+        // Sunday the 4th, unshifted, its macros scaled with the energy.
+        final row = trackedDayBox.get('2026-10-04')!;
+        expect(row.calorieGoal, 1500);
+        expect(row.carbsGoal, closeTo(187.5, 1e-9));
+        expect(row.proteinGoal, closeTo(75, 1e-9));
+      },
+    );
+
+    test(
+      'under a macro program a new row moves only carbs and fat',
+      () async {
+        await setBoundary(4);
+        await addLoggedIntake('toast', DateTime(2026, 10, 5, 2));
+        await trackedDayBox.put(
+          '2026-10-05',
+          legacyRow(DateTime(2026, 10, 5, 2)),
+        );
+
+        await reconcileTrackedDays(
+          db,
+          offsetMinutes: 4 * 60,
+          weekdayOffsets: const [300, 0, 0, 0, 0, 0, 0],
+          scaleMacros: false,
+        );
+
+        final row = trackedDayBox.get('2026-10-04')!;
+        expect(row.calorieGoal, 1500);
+        // Protein follows the body; the shift comes off carbs and fat.
+        expect(row.proteinGoal, 90);
+        expect(row.carbsGoal, closeTo(225 * 1140 / 1440, 1e-9));
+        expect(row.fatGoal, closeTo(60 * 1140 / 1440, 1e-9));
+      },
+    );
+    // [/fork]
+
     test('reads and rewrites the rows before it first yields', () async {
       await setBoundary(4);
       await addLoggedIntake('toast', DateTime(2026, 10, 5, 2));

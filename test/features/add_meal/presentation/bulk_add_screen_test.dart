@@ -57,12 +57,20 @@ class _Write {
 class _FakeMealDetailBloc extends Fake implements MealDetailBloc {
   final writes = <_Write>[];
   final bool failOnSecondWrite;
+  // [fork] S8 meal-groups: a profile switch drops the second write
+  final bool dropSecondWrite;
+  // [/fork]
 
-  _FakeMealDetailBloc({this.failOnSecondWrite = false});
+  _FakeMealDetailBloc({
+    this.failOnSecondWrite = false,
+    // [fork] S8 meal-groups
+    this.dropSecondWrite = false,
+    // [/fork]
+  });
 
   @override
   // [fork] S7 meal-groups: addIntake returns the entry written
-  Future<IntakeEntity> addIntake(
+  Future<IntakeEntity?> addIntake(
   // [/fork]
     BuildContext context,
     String unit,
@@ -76,6 +84,7 @@ class _FakeMealDetailBloc extends Fake implements MealDetailBloc {
     }
     writes.add(_Write(unit, amountText, meal.name));
     // [fork] S7 meal-groups
+    if (dropSecondWrite && writes.length == 2) return null;
     return IntakeEntity(
       id: 'intake-${writes.length}',
       unit: unit,
@@ -172,9 +181,17 @@ late _FakeHomeBloc _homeBloc;
 Future<void> _register(
   Map<String, List<MealEntity>> results, {
   bool failOnSecondWrite = false,
+  // [fork] S8 meal-groups
+  bool dropSecondWrite = false,
+  // [/fork]
 }) async {
   await getIt.reset();
-  _mealDetailBloc = _FakeMealDetailBloc(failOnSecondWrite: failOnSecondWrite);
+  _mealDetailBloc = _FakeMealDetailBloc(
+    failOnSecondWrite: failOnSecondWrite,
+    // [fork] S8 meal-groups
+    dropSecondWrite: dropSecondWrite,
+    // [/fork]
+  );
   _homeBloc = _FakeHomeBloc();
   // The screen asks this directly, to decide whether to offer the camera at
   // all. Empty storage means no key, so the action stays hidden.
@@ -1967,6 +1984,27 @@ void main() {
     // shown the error and left on the screen to sort it out.
     expect(_mealDetailBloc.writes, hasLength(1));
   });
+
+  // [fork] S8 meal-groups
+  testWidgets('a write a profile switch dropped stops the save', (
+    tester,
+  ) async {
+    await _register({
+      'toast': [_meal('Toast')],
+      'eggs': [_meal('Egg', servingQuantity: 50)],
+      'rice': [_meal('Rice')],
+    }, dropSecondWrite: true);
+    await tester.pumpWidget(_app());
+    await _parse(tester, '100g toast, 2 eggs, 100g rice');
+
+    await tester.tap(_submitButton());
+    await tester.pumpAndSettle();
+
+    // The rice would have gone to the profile switched to.
+    expect(_mealDetailBloc.writes, hasLength(2));
+    expect(find.text('Not all added: the profile changed.'), findsOneWidget);
+  });
+  // [/fork]
 
   testWidgets('picking a different candidate updates the row', (tester) async {
     await _register({

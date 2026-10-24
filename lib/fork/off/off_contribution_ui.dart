@@ -195,7 +195,7 @@ class _ReviewDialogState extends State<_ReviewDialog> {
     final nutrients = <String, (double, String)>{};
     for (final MapEntry(key: nutrient, value: controller) in _values.entries) {
       final value = double.tryParse(controller.text.replaceAll(',', '.'));
-      if (value != null && value >= 0) {
+      if (value != null && value.isFinite && value >= 0) {
         nutrients[nutrient] = (value, widget.upload.nutrients[nutrient]!.$2);
       }
     }

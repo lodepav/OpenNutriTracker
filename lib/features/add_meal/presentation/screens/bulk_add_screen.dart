@@ -1733,6 +1733,9 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
     });
 
     final mealDetailBloc = locator<MealDetailBloc>();
+    // [fork] S8 meal-groups: set when a profile switch dropped a write
+    var dropped = false;
+    // [/fork]
     try {
       // Sequential, not concurrent. The tracked-day totals are accumulated
       // with a read-modify-write, so overlapping writes lose updates and
@@ -1754,12 +1757,17 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
           write.row.meal!,
           _args.day,
         );
-        // [fork] S8 meal-groups: none when a profile switch dropped it
-        if (intake != null) intakeIds.add(intake.id);
+        // [fork] S8 meal-groups: none when a profile switch dropped it; the
+        // rest would go to the profile switched to
+        if (intake == null) {
+          dropped = true;
+          break;
+        }
+        intakeIds.add(intake.id);
         // [/fork]
       }
-      // [fork] S8 meal-groups
-      await recordMealGroup(intakeIds, photo: _forkMealPhoto);
+      // [fork] S8 meal-groups: a group in the profile its entries are in
+      if (!dropped) await recordMealGroup(intakeIds, photo: _forkMealPhoto);
       // [/fork]
     } catch (e, stackTrace) {
       _log.severe('Bulk intake write failed', e, stackTrace);
@@ -1777,9 +1785,18 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
     locator<DiaryBloc>().add(const LoadDiaryYearEvent());
     locator<CalendarDayBloc>().add(const RefreshCalendarDayEvent());
 
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(S.of(context).infoAddedIntakeLabel)));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          // [fork] S8 meal-groups
+          dropped
+              ? 'Not all added: the profile changed.'
+              :
+              // [/fork]
+              S.of(context).infoAddedIntakeLabel,
+        ),
+      ),
+    );
     Navigator.of(
       context,
     ).popUntil(ModalRoute.withName(NavigationOptions.mainRoute));
