@@ -1207,10 +1207,18 @@ class _AiAssistDialogState extends State<AiAssistDialog> {
   /// per-provider string reached `openai/gpt-5.6-terra` claiming it was
   /// cheaper — it matches `claude-sonnet-5` on input and is dearer on output.
   /// #726.
+  // [fork] S77 ai-models-5-5: an OpenRouter id without its vendor
+  static String _shownId(String id) => id.substring(id.indexOf('/') + 1);
+  // [/fork]
+
   String _noteLabel(S s, AiModelNote note) => switch (note) {
     AiModelNote.cheaper => s.aiAssistModelCheaperLabel,
     AiModelNote.moreItems => s.aiAssistModelMoreItemsLabel,
     AiModelNote.cheapest => s.aiAssistModelCheapestLabel,
+    // [fork] S77 ai-models-5-5
+    AiModelNote.cheaperThanRecommended =>
+      s.aiAssistModelCheaperThanRecommendedLabel,
+    // [/fork]
   };
 
   /// What to say about the last ask, or null when there is nothing to say —
@@ -1607,10 +1615,18 @@ class _AiAssistDialogState extends State<AiAssistDialog> {
                 // like this, is not available: it builds a `LayoutBuilder`,
                 // the dialog asks this row for an intrinsic height, and
                 // `LayoutBuilder` throws rather than answering one.
+                // [fork] S77 ai-models-5-5: `anthropic/claude-sonnet-5.5`
+                // outgrew two lines on a Pixel 6, so a break is also allowed
+                // after each `-`, and a third line. With those breaks the
+                // vendor prefix is no longer needed for wrapping, and the
+                // subtitle's *Served by* already names the vendor, so the
+                // title drops it.
                 title: Text(
-                  model.id,
+                  _shownId(model.id).replaceAll('-', '-\u200B'),
+                  semanticsLabel: _shownId(model.id),
                   style: theme.textTheme.bodyMedium,
-                  maxLines: 2,
+                  maxLines: 3,
+                  // [/fork]
                   overflow: TextOverflow.ellipsis,
                 ),
                 subtitle: Text(

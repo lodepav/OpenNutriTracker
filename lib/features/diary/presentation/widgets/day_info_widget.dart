@@ -31,6 +31,10 @@ import 'package:opennutritracker/fork/copy/copy_ui.dart';
 import 'package:opennutritracker/fork/copy/select_entries_screen.dart';
 import 'package:opennutritracker/fork/timeline/timeline.dart';
 // [/fork]
+// [fork] S80 diary-by-hour
+import 'package:opennutritracker/fork/display/diary_by_hour.dart';
+import 'package:opennutritracker/fork/display/display_prefs.dart';
+// [/fork]
 import 'package:opennutritracker/generated/l10n.dart';
 import 'package:provider/provider.dart';
 
@@ -321,11 +325,35 @@ class _DayInfoWidgetState extends State<DayInfoWidget> {
                             widget.onCopyActivity(activity, widget.trackedDayEntity),
               ),
             ],
+            // [fork] S80 diary-by-hour: the day's foods by the hour eaten, in
+            // place of the four meals
+            if (DisplayPrefs.diaryByHour.value)
+              for (final section in hourSections(_allIntakes))
+                IntakeVerticalList(
+                  key: ValueKey('diary-hour-${section.title}'),
+                  day: widget.selectedDay,
+                  title: section.title,
+                  listIcon: Icons.schedule_rounded,
+                  addMealType: section.addMealType,
+                  intakeList: section.intakes,
+                  onDeleteIntakeCallback: _deleteIntakeOnShownDay,
+                  onItemLongPressedCallback: onIntakeItemLongPressed,
+                  onItemTappedCallback: widget.onEditIntake,
+                  onCopyIntakeCallback: widget.onCopyIntake,
+                  usesImperialUnits: widget.usesImperialUnits,
+                  showMealMacros: widget.showMealMacros,
+                  trackedDayEntity: trackedDay,
+                  showAddCard: false,
+                ),
+            if (DisplayPrefs.diaryByHour.value)
+              HourAddCard(day: widget.selectedDay),
+            // [/fork]
             // #150 follow-up: a 0% share hides an empty section so OMAD users
             // (and anyone else who's set a meal slot to 0%) don't see a meal
             // type they explicitly opted out of. A section that holds intakes
             // always shows, so they stay editable and deletable (#1305).
-            if (IntakeVerticalList.isShown(
+            if (!DisplayPrefs.diaryByHour.value && // [fork] S80
+                IntakeVerticalList.isShown(
               sharePct: widget.breakfastSharePct,
               intakes: widget.breakfastIntake,
             ))
@@ -350,7 +378,8 @@ class _DayInfoWidgetState extends State<DayInfoWidget> {
                 onSortTypeChanged: (sort) =>
                     _setSortFor(IntakeTypeEntity.breakfast, sort),
               ),
-            if (IntakeVerticalList.isShown(
+            if (!DisplayPrefs.diaryByHour.value && // [fork] S80
+                IntakeVerticalList.isShown(
               sharePct: widget.lunchSharePct,
               intakes: widget.lunchIntake,
             ))
@@ -375,7 +404,8 @@ class _DayInfoWidgetState extends State<DayInfoWidget> {
                 onSortTypeChanged: (sort) =>
                     _setSortFor(IntakeTypeEntity.lunch, sort),
               ),
-            if (IntakeVerticalList.isShown(
+            if (!DisplayPrefs.diaryByHour.value && // [fork] S80
+                IntakeVerticalList.isShown(
               sharePct: widget.dinnerSharePct,
               intakes: widget.dinnerIntake,
             ))
@@ -399,7 +429,8 @@ class _DayInfoWidgetState extends State<DayInfoWidget> {
                 onSortTypeChanged: (sort) =>
                     _setSortFor(IntakeTypeEntity.dinner, sort),
               ),
-            if (IntakeVerticalList.isShown(
+            if (!DisplayPrefs.diaryByHour.value && // [fork] S80
+                IntakeVerticalList.isShown(
               sharePct: widget.snackSharePct,
               intakes: widget.snackIntake,
             ))

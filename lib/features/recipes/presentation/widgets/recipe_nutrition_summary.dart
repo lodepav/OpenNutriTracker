@@ -6,6 +6,9 @@ import 'package:opennutritracker/core/utils/calc/unit_calc.dart';
 import 'package:opennutritracker/core/utils/energy_unit_provider.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_nutriments_entity.dart';
 import 'package:opennutritracker/generated/l10n.dart';
+// [fork] S79 macro-order
+import 'package:opennutritracker/fork/display/display_prefs.dart';
+// [/fork]
 import 'package:provider/provider.dart';
 
 class RecipeNutritionSummary extends StatelessWidget {
@@ -61,7 +64,9 @@ class RecipeNutritionSummary extends StatelessWidget {
                   palette: palette,
                 ),
               ),
-              Expanded(
+              // [fork] S79 macro-order
+              ...inMacroOrder(
+              carbs: Expanded(
                 child: _NutrientCell(
                   value: _total(nutrimentsPer100.carbohydrates100),
                   label: '${s.carbsLabel} g',
@@ -69,7 +74,7 @@ class RecipeNutritionSummary extends StatelessWidget {
                   palette: palette,
                 ),
               ),
-              Expanded(
+              fat: Expanded(
                 child: _NutrientCell(
                   value: _total(nutrimentsPer100.fat100),
                   label: '${s.fatLabel} g',
@@ -77,7 +82,7 @@ class RecipeNutritionSummary extends StatelessWidget {
                   palette: palette,
                 ),
               ),
-              Expanded(
+              protein: Expanded(
                 child: _NutrientCell(
                   value: _total(nutrimentsPer100.proteins100),
                   label: '${s.proteinLabel} g',
@@ -85,15 +90,21 @@ class RecipeNutritionSummary extends StatelessWidget {
                   palette: palette,
                 ),
               ),
+              ),
+              // [/fork]
             ],
           ),
           Divider(height: Dimens.spacing24 + Dimens.spacing8, color: palette.border),
           Text(
             '${s.recipeNutritionPer100Label} · '
             '${energyPer100Display.toStringAsFixed(0)} $energyLabel · '
-            '${s.carbsLabelShort.toUpperCase()} ${(nutrimentsPer100.carbohydrates100 ?? 0).toStringAsFixed(1)}g · '
-            '${s.fatLabelShort.toUpperCase()} ${(nutrimentsPer100.fat100 ?? 0).toStringAsFixed(1)}g · '
-            '${s.proteinLabelShort.toUpperCase()} ${(nutrimentsPer100.proteins100 ?? 0).toStringAsFixed(1)}g',
+            // [fork] S79 macro-order
+            '${inMacroOrder(
+              carbs: '${s.carbsLabelShort.toUpperCase()} ${(nutrimentsPer100.carbohydrates100 ?? 0).toStringAsFixed(1)}g',
+              fat: '${s.fatLabelShort.toUpperCase()} ${(nutrimentsPer100.fat100 ?? 0).toStringAsFixed(1)}g',
+              protein: '${s.proteinLabelShort.toUpperCase()} ${(nutrimentsPer100.proteins100 ?? 0).toStringAsFixed(1)}g',
+            ).join(' · ')}',
+            // [/fork]
             style: theme.textTheme.bodySmall?.copyWith(color: palette.textMuted),
           ),
         ],

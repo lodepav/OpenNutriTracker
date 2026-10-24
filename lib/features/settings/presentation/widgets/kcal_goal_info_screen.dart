@@ -14,6 +14,9 @@ import 'package:opennutritracker/generated/l10n.dart';
 import 'package:url_launcher/url_launcher.dart';
 // [fork] S17 adaptive-goal-note
 import 'package:opennutritracker/fork/adaptive/adaptive_ui.dart';
+// [fork] S79 macro-order
+import 'package:opennutritracker/fork/display/display_prefs.dart';
+// [/fork]
 // [/fork]
 
 /// Transparency screen: shows every variable and intermediate step behind
@@ -454,30 +457,36 @@ class _MacroCard extends StatelessWidget {
           style: Theme.of(context).textTheme.bodyMedium,
         ),
         const SizedBox(height: Dimens.spacing12),
+        // [fork] S79 macro-order
         _FormulaText.raw(
-          text: '${l10n.carbsLabel}: '
-              '${_macroLine(goalKcal, breakdown.carbsFractionGoal, MacroCalc.carbsKcalPerGram, breakdown.carbsGoalGrams)}\n'
-              '${l10n.fatLabel}: '
-              '${_macroLine(goalKcal, breakdown.fatsFractionGoal, MacroCalc.fatKcalPerGram, breakdown.fatsGoalGrams)}\n'
-              '${l10n.proteinLabel}: '
-              '${_macroLine(goalKcal, breakdown.proteinsFractionGoal, MacroCalc.proteinKcalPerGram, breakdown.proteinsGoalGrams)}',
+          text: inMacroOrder(
+            carbs: '${l10n.carbsLabel}: '
+                '${_macroLine(goalKcal, breakdown.carbsFractionGoal, MacroCalc.carbsKcalPerGram, breakdown.carbsGoalGrams)}',
+            fat: '${l10n.fatLabel}: '
+                '${_macroLine(goalKcal, breakdown.fatsFractionGoal, MacroCalc.fatKcalPerGram, breakdown.fatsGoalGrams)}',
+            protein: '${l10n.proteinLabel}: '
+                '${_macroLine(goalKcal, breakdown.proteinsFractionGoal, MacroCalc.proteinKcalPerGram, breakdown.proteinsGoalGrams)}',
+          ).join('\n'),
         ),
         const Divider(height: Dimens.spacing20),
-        _ValueRow(
-          label: l10n.carbsLabel,
-          value: '${breakdown.carbsGoalGrams.toInt()} g',
-          emphasized: true,
+        ...inMacroOrder(
+          carbs: _ValueRow(
+            label: l10n.carbsLabel,
+            value: '${breakdown.carbsGoalGrams.toInt()} g',
+            emphasized: true,
+          ),
+          fat: _ValueRow(
+            label: l10n.fatLabel,
+            value: '${breakdown.fatsGoalGrams.toInt()} g',
+            emphasized: true,
+          ),
+          protein: _ValueRow(
+            label: l10n.proteinLabel,
+            value: '${breakdown.proteinsGoalGrams.toInt()} g',
+            emphasized: true,
+          ),
         ),
-        _ValueRow(
-          label: l10n.fatLabel,
-          value: '${breakdown.fatsGoalGrams.toInt()} g',
-          emphasized: true,
-        ),
-        _ValueRow(
-          label: l10n.proteinLabel,
-          value: '${breakdown.proteinsGoalGrams.toInt()} g',
-          emphasized: true,
-        ),
+        // [/fork]
       ],
     );
   }

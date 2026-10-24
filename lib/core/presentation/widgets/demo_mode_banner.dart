@@ -59,7 +59,10 @@ class DemoModeBanner extends StatelessWidget {
                   Expanded(
                     child: Text(
                       S.of(context).homeDemoBannerLabel,
-                      maxLines: 1,
+                      // [fork] S81 a11y-labels: wraps beside the action
+                      // rather than cut off
+                      maxLines: 2,
+                      // [/fork]
                       overflow: TextOverflow.ellipsis,
                       style: textTheme.labelLarge?.copyWith(
                         color: palette.textStrong,

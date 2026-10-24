@@ -26,6 +26,9 @@ import 'package:opennutritracker/features/meal_detail/presentation/widgets/meal_
 import 'package:opennutritracker/features/meal_detail/presentation/widgets/meal_title_expanded.dart';
 import 'package:opennutritracker/features/meal_detail/presentation/widgets/off_disclaimer.dart';
 import 'package:opennutritracker/generated/l10n.dart';
+// [fork] S79 macro-order
+import 'package:opennutritracker/fork/display/display_prefs.dart';
+// [/fork]
 // [fork] S45 remembered-amounts
 import 'package:opennutritracker/fork/amounts/remembered_amounts.dart';
 // [/fork]
@@ -501,23 +504,25 @@ class _MealDetailScreenState extends State<MealDetailScreen> {
                   const SizedBox(height: Dimens.spacing16),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      MealDetailMacroNutrients(
+                    // [fork] S79 macro-order
+                    children: inMacroOrder(
+                      carbs: MealDetailMacroNutrients(
                         typeString: S.of(context).carbsLabel,
                         value: totalCarbs,
                         color: palette.carbs,
                       ),
-                      MealDetailMacroNutrients(
+                      fat: MealDetailMacroNutrients(
                         typeString: S.of(context).fatLabel,
                         value: totalFat,
                         color: palette.fat,
                       ),
-                      MealDetailMacroNutrients(
+                      protein: MealDetailMacroNutrients(
                         typeString: S.of(context).proteinLabel,
                         value: totalProtein,
                         color: palette.protein,
                       ),
-                    ],
+                    ),
+                    // [/fork]
                   ),
                   const SizedBox(height: Dimens.spacing24),
                   Divider(color: palette.border, height: Dimens.hairline),

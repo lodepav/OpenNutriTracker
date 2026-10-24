@@ -36,8 +36,7 @@ void main() {
         weightUnit: BodyWeightUnit.kg,
         weightUnitStated: false,
       ),
-      loggedDays: const {},
-      weighedDays: const {},
+      existing: const HistoryExisting(),
       today: day,
       source: 'MacroFactor',
     );

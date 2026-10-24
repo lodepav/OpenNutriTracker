@@ -81,6 +81,9 @@ MealItemsApi mealItemsApiFor(
       key,
       model: modelId,
       timeout: timeout ?? AnthropicMealItemsApi.defaultTimeout,
+      // [fork] S77 ai-models-5-5
+      toolCall: model?.toolCall ?? AiToolCall.forced,
+      // [/fork]
     ),
     AiProvider.openrouter => OpenAiCompatibleMealItemsApi.openRouter(
       client,
@@ -92,6 +95,9 @@ MealItemsApi mealItemsApiFor(
       // Amazon Bedrock on every attempt of a three-run probe.
       providers: model?.providers,
       timeout: timeout ?? OpenAiCompatibleMealItemsApi.defaultTimeout,
+      // [fork] S77 ai-models-5-5
+      toolCall: model?.toolCall ?? AiToolCall.forced,
+      // [/fork]
     ),
     // No pin and no metadata header: reached directly, so there is no broker
     // to constrain and nobody in between to name.

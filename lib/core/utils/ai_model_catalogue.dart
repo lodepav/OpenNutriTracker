@@ -31,7 +31,26 @@ enum AiModelNote {
   /// it" rule below is intact. It does go stale silently if OpenRouter
   /// reprices, and nothing in the app checks.
   cheapest,
+
+  // [fork] S77 ai-models-5-5: a price fact, no quality claim
+  /// Below the list's head on both the prompt and the completion price, read
+  /// off the provider's own endpoint data like [cheapest]. Says nothing of
+  /// quality: [cheaper]'s "weaker on poor-quality photos" was measured on
+  /// Haiku 4.5, and nothing measured luna's.
+  cheaperThanRecommended,
+  // [/fork]
 }
+
+// [fork] S77 ai-models-5-5: how a model is asked for the tool call
+/// How a request asks [AiModel] for its one tool call.
+///
+/// The Claude 5.5 generation changed what a forced call may carry: Haiku 5.5
+/// thinks by default, and a forced tool call with thinking on is refused, so
+/// it is sent with thinking off; Sonnet 5.5 and Opus 5.5 refuse a forced
+/// call outright (400), so they are asked with `auto`, a reply without the
+/// call landing as the existing *no tool call* failure.
+enum AiToolCall { forced, forcedThinkingOff, auto }
+// [/fork]
 
 /// One model the app is willing to send a meal to.
 class AiModel {
@@ -57,11 +76,18 @@ class AiModel {
   /// by position, and on a list of one, which has nothing to compare to.
   final AiModelNote? note;
 
+  // [fork] S77 ai-models-5-5
+  final AiToolCall toolCall;
+  // [/fork]
+
   const AiModel({
     required this.id,
     required this.servedBy,
     this.providers = const [],
     this.note,
+    // [fork] S77 ai-models-5-5
+    this.toolCall = AiToolCall.forced,
+    // [/fork]
   });
 }
 
@@ -99,9 +125,18 @@ abstract final class AiModelCatalogue {
   /// The direct path has never offered a choice, and this does not add one.
   /// Changing which model an existing user's requests go to is exactly the
   /// silent behaviour change pinning exists to prevent.
+  // [fork] S77 ai-models-5-5: the 5.5 generation (asked 2026-10-24), not
+  // re-screened against the photo corpus; phase 4's live checks cover it.
+  // A stored id no longer listed resolves to the first, so a user on Haiku
+  // 4.5 moves to Haiku 5.5 and stays with Anthropic.
   static const anthropic = <AiModel>[
-    AiModel(id: 'claude-haiku-4-5', servedBy: 'Anthropic'),
+    AiModel(
+      id: 'claude-haiku-5-5',
+      servedBy: 'Anthropic',
+      toolCall: AiToolCall.forcedThinkingOff,
+    ),
   ];
+  // [/fork]
 
   /// Ordered: the default is first.
   ///
@@ -134,24 +169,31 @@ abstract final class AiModelCatalogue {
   /// from the direct API. 22 live calls, no invariant violations, and a
   /// withdrawn `openai/*` id answered 404 rather than OpenAI's native 400 —
   /// so the loud-failure promise above needs no `error.code` reader here.
+  // [fork] S77 ai-models-5-5: Sonnet 5.5 and Haiku 5.5 for Sonnet 5 and
+  // Haiku 4.5. Haiku 5.5 ($0.10/$0.50) is now the cheapest row, below luna
+  // ($0.20/$1.20): it takes the cheapest note, and luna one that claims
+  // only its price, since the cheaper note's quality claim was Haiku 4.5's.
   static const openrouter = <AiModel>[
     AiModel(
-      id: 'anthropic/claude-sonnet-5',
+      id: 'anthropic/claude-sonnet-5.5',
       servedBy: 'Anthropic',
       providers: ['anthropic'],
+      toolCall: AiToolCall.auto,
     ),
     AiModel(
-      id: 'anthropic/claude-haiku-4.5',
+      id: 'anthropic/claude-haiku-5.5',
       servedBy: 'Anthropic',
       providers: ['anthropic'],
-      note: AiModelNote.cheaper,
+      note: AiModelNote.cheapest,
+      toolCall: AiToolCall.forcedThinkingOff,
     ),
     AiModel(
       id: 'openai/gpt-5.6-luna',
       servedBy: 'OpenAI',
       providers: ['openai'],
-      note: AiModelNote.cheapest,
+      note: AiModelNote.cheaperThanRecommended,
     ),
+    // [/fork]
     AiModel(
       id: 'openai/gpt-5.6-terra',
       servedBy: 'OpenAI',

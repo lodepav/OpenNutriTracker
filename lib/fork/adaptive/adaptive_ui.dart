@@ -10,6 +10,8 @@ import 'package:opennutritracker/fork/copy/copy_ui.dart';
 import 'package:opennutritracker/fork/adaptive/check_in_history.dart';
 import 'package:opennutritracker/fork/adaptive/check_in.dart';
 import 'package:opennutritracker/fork/units/energy_text.dart';
+import 'package:opennutritracker/fork/display/display_prefs.dart';
+import 'package:opennutritracker/fork/display/settings_tile.dart';
 
 /// Seam S13: on home while a check-in is due; nothing otherwise.
 /// [onAccepted] refreshes what shows the target.
@@ -243,9 +245,9 @@ class AdaptiveSettingsTile extends StatelessWidget {
   const AdaptiveSettingsTile({super.key, this.store});
 
   @override
-  Widget build(BuildContext context) => ListTile(
-    leading: const Icon(Icons.insights_rounded),
-    title: const Text('Trend and calorie target'),
+  Widget build(BuildContext context) => ForkSettingsTile(
+    icon: Icons.insights_rounded,
+    title: 'Trend and calorie target',
     subtitle: ValueListenableBuilder(
       valueListenable: AdaptiveStore.settings,
       builder: (context, settings, _) => Text(
@@ -444,9 +446,11 @@ class _AdaptiveSettingsDialog extends StatelessWidget {
   }
 }
 
-String _macroText(FixedMacros m) =>
-    'Protein ${m.proteinG.round()} g · Carbs ${m.carbsG.round()} g · '
-    'Fat ${m.fatG.round()} g';
+String _macroText(FixedMacros m) => inMacroOrder(
+  protein: 'Protein ${m.proteinG.round()} g',
+  carbs: 'Carbs ${m.carbsG.round()} g',
+  fat: 'Fat ${m.fatG.round()} g',
+).join(' · ');
 
 /// The fixed target's energy, or its macros in grams, whose energy it
 /// then is.
@@ -528,11 +532,11 @@ class _FixedTargetDialogState extends State<_FixedTargetDialog> {
                 ),
               )
             else ...[
-              for (final (label, controller, key) in [
-                ('Protein', _protein, 'fixed-protein'),
-                ('Carbs', _carbs, 'fixed-carbs'),
-                ('Fat', _fat, 'fixed-fat'),
-              ])
+              for (final (label, controller, key) in inMacroOrder(
+                protein: ('Protein', _protein, 'fixed-protein'),
+                carbs: ('Carbs', _carbs, 'fixed-carbs'),
+                fat: ('Fat', _fat, 'fixed-fat'),
+              ))
                 TextField(
                   key: ValueKey(key),
                   controller: controller,

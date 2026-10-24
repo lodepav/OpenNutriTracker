@@ -146,7 +146,7 @@ void main() {
       );
 
       expect(client.body!['model'], AiModelCatalogue.openrouter.first.id);
-      expect(client.body!['model'], 'anthropic/claude-sonnet-5');
+      expect(client.body!['model'], 'anthropic/claude-sonnet-5.5');
     });
 
     test('OpenAI defaults to the screened conservative reader', () async {
@@ -166,11 +166,11 @@ void main() {
         const AiSelection(
           provider: AiProvider.openrouter,
           apiKey: 'sk-or',
-          modelId: 'anthropic/claude-haiku-4.5',
+          modelId: 'anthropic/claude-haiku-5.5',
         ),
       );
 
-      expect(client.body!['model'], 'anthropic/claude-haiku-4.5');
+      expect(client.body!['model'], 'anthropic/claude-haiku-5.5');
     });
 
     test('falls back when the stored model has been retired', () async {

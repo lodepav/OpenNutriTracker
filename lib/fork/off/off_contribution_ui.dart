@@ -7,6 +7,7 @@ import 'package:opennutritracker/core/utils/barcode_validator.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dart';
 import 'package:opennutritracker/fork/off/off_contribution.dart';
+import 'package:opennutritracker/fork/display/settings_tile.dart';
 
 const _nutrientLabels = {
   'energy-kcal': 'Energy',
@@ -351,10 +352,10 @@ class _OffAccountTileState extends State<OffAccountTile> {
   }
 
   @override
-  Widget build(BuildContext context) => ListTile(
+  Widget build(BuildContext context) => ForkSettingsTile(
     key: const Key('fork-off-account'),
-    leading: const Icon(Icons.volunteer_activism_outlined),
-    title: const Text('Open Food Facts account'),
+    icon: Icons.volunteer_activism_rounded,
+    title: 'Open Food Facts account',
     subtitle: Text(_summary),
     onTap: _account == null ? null : _edit,
   );

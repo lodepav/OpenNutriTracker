@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:opennutritracker/fork/backup/auto_backup.dart';
+import 'package:opennutritracker/fork/display/settings_tile.dart';
 
 /// Settings → "Automatic backup" (seam S23), beside upstream's export.
 class AutoBackupTile extends StatelessWidget {
   const AutoBackupTile({super.key});
 
   @override
-  Widget build(BuildContext context) => ListTile(
-    leading: const Icon(Icons.backup_rounded),
-    title: const Text('Automatic backup'),
+  Widget build(BuildContext context) => ForkSettingsTile(
+    icon: Icons.backup_rounded,
+    title: 'Automatic backup',
     subtitle: ValueListenableBuilder(
       valueListenable: AutoBackup.state,
       builder: (context, state, _) => Text(_summary(state)),

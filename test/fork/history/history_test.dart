@@ -6,6 +6,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:opennutritracker/core/domain/entity/body_weight_unit_entity.dart';
 import 'package:opennutritracker/core/domain/entity/intake_type_entity.dart';
+import 'package:opennutritracker/core/domain/entity/weight_log_entity.dart';
+import 'package:opennutritracker/fork/body/measurement_store.dart';
 import 'package:opennutritracker/fork/history/history_file.dart';
 import 'package:opennutritracker/fork/history/history_import.dart';
 import 'package:opennutritracker/fork/history/table_reader.dart';
@@ -190,8 +192,12 @@ void main() {
         'ids from the day', () {
       final plan = planImport(
         file,
-        loggedDays: {DateTime(2026, 10, 21)},
-        weighedDays: {DateTime(2026, 10, 22)},
+        existing: HistoryExisting(
+          loggedDays: {DateTime(2026, 10, 21)},
+          weighIns: [
+            WeightLogEntity(date: DateTime(2026, 10, 22), weightKg: 79),
+          ],
+        ),
         today: DateTime(2026, 10, 23),
         source: 'MacroFactor',
       );
@@ -222,8 +228,7 @@ void main() {
       );
       HistoryPlan plan(HistoryFile f) => planImport(
         f,
-        loggedDays: const {},
-        weighedDays: const {},
+        existing: const HistoryExisting(),
         today: DateTime(2026, 10, 23),
         source: 'weights',
       );
@@ -256,5 +261,228 @@ void main() {
       await tester.pumpAndSettle();
       expect(imported!.weights.single.weightKg, closeTo(79.83, 0.01));
     });
+  });
+
+  group('MacroFactor food log', () {
+    // The columns of MacroFactor's food export that matter here, in its
+    // order, with its header spellings.
+    const header =
+        '"Date","Time","Food Name","Serving Size","Serving Qty",'
+        '"Serving Weight (g)","Calories (kcal)","Fat (g)","Carbs (g)",'
+        '"Protein (g)","B6, Pyridoxine (mg)","Isoleucine (g)",'
+        '"Saturated Fat (g)","Sodium (mg)","Sugars (g)","Sugars Added (g)"\n';
+    final file = readHistory(
+      readTables(
+        'MacroFactor-20261024101932.csv',
+        _bytes(
+          '\u{FEFF}$header'
+          '"2025-05-16","08:00","Milk Lactose Free","serving","3.0","100.0",'
+          '"135","5","14","10","0.3","0.5","3.0","117.0","14.1","2"\n'
+          '"2025-05-16","19:30","Rice","cup","1.0","200.0","260","1","56",'
+          '"5",,,,,,\n'
+          '"2025-05-17","01:30","Toast","slice","2","30","160","2","30","6",'
+          ',,,,,\n',
+        ),
+      ),
+    );
+
+    test('reads each food, its time, grams and nutrients; serving weights '
+        'are not weigh-ins', () {
+      expect(file.weightsKg, isEmpty);
+      expect(file.foods.map((f) => f.name), [
+        'Milk Lactose Free',
+        'Rice',
+        'Toast',
+      ]);
+      final milk = file.foods.first;
+      expect(milk.minute, 8 * 60);
+      expect(milk.grams, 300);
+      expect(milk.nutrients, {
+        'vitaminB6': 0.3,
+        'saturatedFat': 3.0,
+        'sodium': 117.0,
+        'sugars': 14.1,
+      });
+      // What the reading before this fix took for the day's weigh-in.
+      expect(file.misreadKg[DateTime(2025, 5, 16)], contains(200.0));
+      expect(file.food[DateTime(2025, 5, 16)]![null]!.kcal, 395);
+    });
+
+    test('each food at its time in the meal its time suggests, before the '
+        'day start on the day before', () {
+      final plan = planImport(
+        file,
+        existing: const HistoryExisting(dayStartMinutes: 4 * 60),
+        today: DateTime(2026, 10, 24),
+        source: 'MacroFactor',
+      );
+      final may16 = plan.intakes[DateTime(2025, 5, 16)]!;
+      expect(may16.map((i) => i.meal.name), [
+        'Milk Lactose Free',
+        'Rice',
+        'Toast',
+      ]);
+      final milk = may16.first;
+      expect(milk.dateTime, DateTime(2025, 5, 16, 8));
+      expect(milk.type, IntakeTypeEntity.breakfast);
+      expect(milk.amount, 300);
+      expect(milk.totalKcal, closeTo(135, 1e-9));
+      expect(milk.totalProteinsGram, closeTo(10, 1e-9));
+      expect(milk.meal.nutriments.sodium100, closeTo(39, 1e-9));
+      expect(milk.id, 'history-food-2025-05-16-1');
+      expect(isImportedHistory(milk), isFalse);
+      expect(wasImported(milk), isTrue);
+      expect(may16[1].type, IntakeTypeEntity.dinner);
+      expect(may16[2].dateTime, DateTime(2025, 5, 17, 1, 30));
+      expect(plan.intakes.keys, [DateTime(2025, 5, 16)]);
+    });
+
+    test('replaces an earlier import\'s totals and removes the weigh-ins it '
+        'misread; the same file again adds nothing', () {
+      final earlier = planImport(
+        readHistory(
+          readTables('old.csv', _bytes('Date,Calories\n2025-05-16,395\n')),
+        ),
+        existing: const HistoryExisting(),
+        today: DateTime(2026, 10, 24),
+        source: 'MacroFactor',
+      ).intakes;
+      final misread = WeightLogEntity(
+        date: DateTime(2025, 5, 16),
+        weightKg: 200,
+      );
+      final real = WeightLogEntity(date: DateTime(2025, 5, 17), weightKg: 80);
+      final plan = planImport(
+        file,
+        existing: HistoryExisting(
+          importedDays: earlier,
+          weighIns: [misread, real],
+        ),
+        today: DateTime(2026, 10, 24),
+        source: 'MacroFactor',
+      );
+      expect(plan.replaced.keys, [DateTime(2025, 5, 16)]);
+      expect(plan.intakes[DateTime(2025, 5, 16)], hasLength(2));
+      expect(plan.misread, [misread]);
+
+      final again = planImport(
+        file,
+        existing: HistoryExisting(importedDays: plan.intakes),
+        today: DateTime(2026, 10, 24),
+        source: 'MacroFactor',
+      );
+      expect(again.intakes, isEmpty);
+      expect(again.keptDays, 2);
+    });
+  });
+
+  test('MacroFactor workbook sheets: the day\'s micronutrients, body fat '
+      'and measurements, custom foods; totals never replace foods', () {
+    final file = readHistory(
+      readTables(
+        'MacroFactor.zip',
+        _zip({
+          'Calories & Macros.csv': _bytes(
+            'Date,Calories (kcal),Fat (g),Carbs (g),Protein (g)\n'
+            '2025-05-16,2709,100,282,168\n',
+          ),
+          'Micronutrients.csv': _bytes(
+            'Date,Fiber (g),Sodium (mg),Sugars (g),Isoleucine (g)\n'
+            '2025-05-16,11.4,2489.5,85,3\n',
+          ),
+          'Scale Weight.csv': _bytes(
+            'Date,Weight (kg),Fat Percent\n2025-05-16,93.85,15.7\n',
+          ),
+          'Body Metrics.csv': _bytes(
+            'Date,Left Bicep (cm),Right Bicep (cm),Visual Body Fat '
+            'Assessment,Waist (cm)\n2025-05-16,31,32,14,93\n',
+          ),
+          'Custom Foods.csv': _bytes(
+            'Food Name,Serving Size,Serving Qty,Serving Weight (g),'
+            'Calories (kcal),Fat (g),Carbs (g),Protein (g)\n'
+            'Pea Protein Isolate,,,,,,,\n'
+            'Butter Chicken,serving,1.0,159.5,221,10,13,18\n',
+          ),
+        }),
+      ),
+    );
+    expect(file.weightsKg, {DateTime(2025, 5, 16): 93.85});
+    expect(file.measurements[DateTime(2025, 5, 16)], {
+      BodyMetric.bodyFat: 15.7,
+      BodyMetric.arm: 32,
+      BodyMetric.waist: 93,
+    });
+    expect(file.customFoods.single.name, 'Butter Chicken');
+
+    final plan = planImport(
+      file,
+      existing: const HistoryExisting(customFoodNames: {'pea protein'}),
+      today: DateTime(2026, 10, 24),
+      source: 'MacroFactor',
+    );
+    final day = plan.intakes[DateTime(2025, 5, 16)]!.single;
+    expect(day.totalKcal, 2709);
+    expect(day.meal.nutriments.sodium100, 2489.5);
+    expect(day.meal.nutriments.fiber100, 11.4);
+    final chicken = plan.customFoods.single;
+    expect(chicken.nutriments.energyKcal100, closeTo(221 / 159.5 * 100, 1e-9));
+    expect(plan.measurements.keys, [DateTime(2025, 5, 16)]);
+
+    // Over a day an import wrote food by food, the totals are kept out.
+    final food = planImport(
+      readHistory(
+        readTables(
+          'foods.csv',
+          _bytes(
+            'Date,Time,Food Name,Calories (kcal)\n2025-05-16,08:00,Egg,80\n',
+          ),
+        ),
+      ),
+      existing: const HistoryExisting(),
+      today: DateTime(2026, 10, 24),
+      source: 'MacroFactor',
+    ).intakes;
+    final again = planImport(
+      file,
+      existing: HistoryExisting(
+        importedDays: food,
+        measurements: [
+          Measurement(
+            id: 'm',
+            date: DateTime(2025, 5, 16),
+            metric: BodyMetric.waist,
+            value: 92,
+          ),
+        ],
+        customFoodNames: {'butter chicken'},
+      ),
+      today: DateTime(2026, 10, 24),
+      source: 'MacroFactor',
+    );
+    expect(again.intakes, isEmpty);
+    expect(again.keptDays, 1);
+    expect(again.measurements[DateTime(2025, 5, 16)]!.keys, {
+      BodyMetric.bodyFat,
+      BodyMetric.arm,
+    });
+    expect(again.customFoods, isEmpty);
+  });
+
+  test('two food logs: each adds the days the one before did not give, '
+      'and both are named', () {
+    const header = 'Date,Time,Food Name,Calories (kcal)\n';
+    final file = readHistory([
+      ...readTables(
+        'a.csv',
+        _bytes('${header}2025-05-16,08:00,Egg,80\n2025-05-16,12:00,Soup,200\n'),
+      ),
+      ...readTables(
+        'b.csv',
+        _bytes('${header}2025-05-16,09:00,Toast,160\n2025-05-17,08:00,Tea,5\n'),
+      ),
+      ...readTables('c.csv', _bytes('${header}2025-05-17,10:00,Jam,50\n')),
+    ]);
+    expect([for (final f in file.foods) f.name], ['Egg', 'Soup', 'Tea']);
+    expect(file.foodTables, ['a.csv', 'b.csv']);
   });
 }

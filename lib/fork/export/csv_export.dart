@@ -14,6 +14,7 @@ import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:opennutritracker/fork/display/settings_tile.dart';
 
 /// One CSV field: quoted when it holds a comma, a quote or a line break.
 /// Text that a spreadsheet would run as a formula (a food name from Open
@@ -181,10 +182,10 @@ class CsvExportTile extends StatelessWidget {
   const CsvExportTile({super.key, this.share = shareDiaryCsv});
 
   @override
-  Widget build(BuildContext context) => ListTile(
+  Widget build(BuildContext context) => ForkSettingsTile(
     key: const ValueKey('fork-csv-export'),
-    leading: const Icon(Icons.table_chart_outlined),
-    title: const Text('Export diary as CSV'),
+    icon: Icons.table_chart_rounded,
+    title: 'Export diary as CSV',
     subtitle: const Text(
       'Foods and days, with weight and expenditure, for a spreadsheet',
     ),

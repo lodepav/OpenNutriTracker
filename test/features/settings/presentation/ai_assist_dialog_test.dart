@@ -509,7 +509,7 @@ void main() {
         // ignore: deprecated_member_use
         .where((tile) => tile.value == tile.groupValue)
         .single;
-    expect(selected.value, 'anthropic/claude-sonnet-5');
+    expect(selected.value, 'anthropic/claude-sonnet-5.5');
   });
 
   testWidgets('choosing a model stores it against that provider', (
@@ -521,14 +521,17 @@ void main() {
 
     // The model section sits below the credential block now, so it can be
     // off-screen on a phone-sized viewport.
-    await tester.ensureVisible(find.text('anthropic/claude-haiku-4.5'));
+    final haiku = find.bySemanticsIdentifier(
+      AiAssistDialog.modelIdentifier('anthropic/claude-haiku-5.5'),
+    );
+    await tester.ensureVisible(haiku);
     await tester.pumpAndSettle();
-    await tester.tap(find.text('anthropic/claude-haiku-4.5'));
+    await tester.tap(haiku);
     await tester.pumpAndSettle();
 
     expect(
       await storage.readModel(provider: AiProvider.openrouter),
-      'anthropic/claude-haiku-4.5',
+      'anthropic/claude-haiku-5.5',
     );
     expect(
       await storage.readModel(provider: AiProvider.anthropic),
@@ -603,7 +606,7 @@ void main() {
     // The label was keyed on the *provider*, so every non-default row on a
     // list got the same string. That held while each list was two entries
     // differing the same way. On four it reached `openai/gpt-5.6-terra`,
-    // which matches claude-sonnet-5 on input price and is dearer on output —
+    // which matched claude-sonnet-5 on input price and was dearer on output —
     // the row asserted something the price table contradicts. #726.
     await storage.setActiveProvider(AiProvider.openrouter);
     await tester.pumpWidget(_app(storage));
@@ -611,13 +614,18 @@ void main() {
 
     expect(
       find.textContaining(l10nEn.aiAssistModelCheaperLabel),
+      findsNothing,
+      reason: 'its quality claim was measured on Haiku 4.5, now off the list',
+    );
+    expect(
+      find.textContaining(l10nEn.aiAssistModelCheaperThanRecommendedLabel),
       findsOne,
-      reason: 'only claude-haiku-4.5, where #668 measured it',
+      reason: 'only gpt-5.6-luna, a price fact with no quality claim',
     );
     expect(
       find.textContaining(l10nEn.aiAssistModelCheapestLabel),
       findsOne,
-      reason: 'only gpt-5.6-luna, which is 5x below the next on both axes',
+      reason: 'only claude-haiku-5.5, below luna on both axes',
     );
     expect(
       find.textContaining(l10nEn.aiAssistModelMoreItemsLabel),
@@ -3388,8 +3396,13 @@ void main() {
   List<(String, RenderParagraph)> modelTitles(WidgetTester tester) => tester
       .widgetList<RadioListTile<String>>(find.byType(RadioListTile<String>))
       .map((tile) => (tile.title as Text).data!)
+      // The title carries a semantics label, so its paragraph sits a
+      // level below the Text.
       .map((data) => (data, tester.renderObject<RenderParagraph>(
-            find.text(data),
+            find.descendant(
+              of: find.text(data),
+              matching: find.byType(RichText),
+            ),
           )))
       .toList();
 
@@ -3445,7 +3458,7 @@ void main() {
     }
   });
 
-  testWidgets('a model row stays inside its two-line bound', (tester) async {
+  testWidgets('a model row stays inside its three-line bound', (tester) async {
     // 320dp at a 2.0 text scale leaves the title 156dp, which no model id
     // fits under any setting. What has to hold there is that it stops at the
     // bound rather than running down the dialog.
@@ -3476,7 +3489,7 @@ void main() {
           )
           .map((box) => box.top)
           .toSet();
-      expect(lines.length, lessThanOrEqualTo(2), reason: '$data ran past two');
+      expect(lines.length, lessThanOrEqualTo(3), reason: '$data ran past three');
     }
     expect(tester.takeException(), isNull);
   });
@@ -3494,6 +3507,9 @@ void main() {
     // it buys width and instead removes the `/`, which is the only point in
     // a model id where a line can break at all — so the shortened form
     // cannot use the second line, and truncates here where the full id fits.
+    // [fork] S77 ai-models-5-5: no longer so: the title may break after each
+    // `-`, so it drops the vendor, which *Served by* names below it.
+    // [/fork]
     tester.view.physicalSize = const Size(1080, 2400);
     tester.view.devicePixelRatio = 2.625;
     addTearDown(tester.view.reset);

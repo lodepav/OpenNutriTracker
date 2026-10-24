@@ -3,6 +3,9 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 import 'package:logging/logging.dart';
+// [fork] S77 ai-models-5-5
+import 'package:opennutritracker/core/utils/ai_model_catalogue.dart';
+// [/fork]
 import 'package:opennutritracker/core/utils/plaintext_destination_guard.dart';
 import 'package:opennutritracker/features/add_meal/domain/meal_items_api.dart';
 import 'package:opennutritracker/features/add_meal/util/meal_text_parser.dart';
@@ -104,6 +107,11 @@ class OpenAiCompatibleMealItemsApi implements MealItemsApi {
 
   final ToolChoiceMode toolChoice;
 
+  // [fork] S77 ai-models-5-5: OpenRouter's `reasoning.enabled: false`, for a
+  // model that thinks by default and refuses a forced call while it does
+  final bool reasoningOff;
+  // [/fork]
+
   /// What a status code means here. A parameter because the same number does
   /// not mean the same thing to every destination — #695 — and a local
   /// runtime's 404 is "that model is not pulled", not "that model was
@@ -142,6 +150,9 @@ class OpenAiCompatibleMealItemsApi implements MealItemsApi {
     this.failureFor = openRouterFailureFor,
     this.timeout = defaultTimeout,
     this.timeoutFailure = MealInterpreterFailure.transient,
+    // [fork] S77 ai-models-5-5
+    this.reasoningOff = false,
+    // [/fork]
   });
 
   /// The OpenRouter configuration, named so call sites read as intent rather
@@ -152,6 +163,9 @@ class OpenAiCompatibleMealItemsApi implements MealItemsApi {
     required String model,
     List<String>? providers,
     Duration timeout = defaultTimeout,
+    // [fork] S77 ai-models-5-5
+    AiToolCall toolCall = AiToolCall.forced,
+    // [/fork]
   }) => OpenAiCompatibleMealItemsApi(
     client,
     apiKey,
@@ -159,6 +173,12 @@ class OpenAiCompatibleMealItemsApi implements MealItemsApi {
     endpoint: openRouterEndpoint,
     broker: OpenRouterBroker(providers: providers),
     timeout: timeout,
+    // [fork] S77 ai-models-5-5
+    toolChoice: toolCall == AiToolCall.auto
+        ? ToolChoiceMode.unforced
+        : ToolChoiceMode.namedFunction,
+    reasoningOff: toolCall == AiToolCall.forcedThinkingOff,
+    // [/fork]
   );
 
   @override
@@ -168,7 +188,13 @@ class OpenAiCompatibleMealItemsApi implements MealItemsApi {
   }) async {
     final body = jsonEncode({
       'model': model,
-      'max_tokens': _maxTokens,
+      // [fork] S77 ai-models-5-5: an unforced model may think first, which
+      // the budget has to hold; one that must not think is told so
+      'max_tokens': toolChoice == ToolChoiceMode.unforced && broker != null
+          ? 4 * _maxTokens
+          : _maxTokens,
+      if (reasoningOff) 'reasoning': {'enabled': false},
+      // [/fork]
       // No top-level `system` field here: the OpenAI-compatible shape wants
       // it as the first message.
       'messages': [

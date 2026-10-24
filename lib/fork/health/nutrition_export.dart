@@ -252,7 +252,7 @@ class NutritionExport {
         for (final intake in await _intakes(since))
           // An imported day's totals: the app they came from has likely
           // written that day to Health Connect already.
-          if (!isImportedHistory(intake)) intake.id: NutritionRecord.of(intake),
+          if (!wasImported(intake)) intake.id: NutritionRecord.of(intake),
       }..removeWhere((_, record) => record.at.isBefore(since));
       for (final MapEntry(key: id, value: record) in records.entries) {
         if (written[id]?['sig'] == record.signature) continue;

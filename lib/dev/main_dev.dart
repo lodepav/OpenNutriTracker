@@ -11,6 +11,7 @@ import 'package:opennutritracker/generated/l10n.dart';
 import 'package:opennutritracker/main.dart';
 // [fork] S18 dev-adaptive
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
+import 'package:opennutritracker/fork/display/display_prefs.dart';
 import 'package:opennutritracker/core/utils/ai_credential_storage.dart';
 import 'package:opennutritracker/fork/backup/auto_backup.dart';
 import 'package:opennutritracker/fork/dev/fake_ai.dart';
@@ -47,6 +48,7 @@ Future<void> main() async {
   // [fork] S18 dev-adaptive: the trend and target switches, as main's S6
   try {
     await AdaptiveStore.start();
+    await DisplayPrefs.start();
     await AutoBackup.start();
     await WeightImport.start(refreshAfterWeightImport);
     BodyFatImport.start();

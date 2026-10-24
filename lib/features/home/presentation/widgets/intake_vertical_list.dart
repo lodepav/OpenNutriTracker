@@ -36,6 +36,9 @@ import 'package:opennutritracker/features/meal_detail/presentation/bloc/meal_det
 import 'package:opennutritracker/fork/copy/copy_ui.dart';
 // [/fork]
 import 'package:opennutritracker/generated/l10n.dart';
+// [fork] S79 macro-order
+import 'package:opennutritracker/fork/display/display_prefs.dart';
+// [/fork]
 
 class IntakeVerticalList extends StatefulWidget {
   final DateTime day;
@@ -70,6 +73,10 @@ class IntakeVerticalList extends StatefulWidget {
   /// When null, the sort menu is hidden.
   final ValueChanged<DiarySortType>? onSortTypeChanged;
 
+  // [fork] S80 diary-by-hour: an hour's section has no add row of its own
+  final bool showAddCard;
+  // [/fork]
+
   const IntakeVerticalList({
     super.key,
     required this.day,
@@ -88,6 +95,9 @@ class IntakeVerticalList extends StatefulWidget {
     this.mealKcalTarget,
     this.sortType,
     this.onSortTypeChanged,
+    // [fork] S80 diary-by-hour
+    this.showAddCard = true,
+    // [/fork]
   });
 
   /// Whether a meal section is rendered on Home and in the Diary. A 0 % share
@@ -152,13 +162,38 @@ class _IntakeVerticalListState extends State<IntakeVerticalList> {
             )
         : EnergyDisplay.formatWithUnit(context, totalKcal);
     if (widget.showMealMacros && totalKcal > 0) {
-      return '$kcalLine\n'
-          '${totalCarbsGram.toInt()} ${S.of(context).carbsLabelShort}  '
-          '${totalFatsGram.toInt()} ${S.of(context).fatLabelShort}  '
-          '${totalProteinsGram.toInt()} ${S.of(context).proteinLabelShort}';
+      // [fork] S79 macro-order
+      return '$kcalLine\n${inMacroOrder(
+        carbs: '${totalCarbsGram.toInt()} ${S.of(context).carbsLabelShort}',
+        fat: '${totalFatsGram.toInt()} ${S.of(context).fatLabelShort}',
+        protein: '${totalProteinsGram.toInt()} ${S.of(context).proteinLabelShort}',
+      ).join('  ')}';
+      // [/fork]
     }
     return kcalLine;
   }
+
+  // [fork] S81 a11y-labels: the summary in words, not "22 p 41 f 175 c"
+  String _headerSummaryLabel(BuildContext context) {
+    final s = S.of(context);
+    final consumed = EnergyDisplay.formatValue(context, totalKcal);
+    final kcalLine = _hasMealKcalTarget
+        ? s.diaryMealKcalConsumedOfTarget(
+            consumed,
+            EnergyDisplay.formatValue(context, widget.mealKcalTarget!),
+          )
+        : EnergyDisplay.formatWithUnit(context, totalKcal);
+    if (!widget.showMealMacros || totalKcal <= 0) return kcalLine;
+    return [
+      kcalLine,
+      ...inMacroOrder(
+        carbs: '${totalCarbsGram.toInt()} g ${s.carbsLabel}',
+        fat: '${totalFatsGram.toInt()} g ${s.fatLabel}',
+        protein: '${totalProteinsGram.toInt()} g ${s.proteinLabel}',
+      ),
+    ].join(', ');
+  }
+  // [/fork]
 
   @override
   Widget build(BuildContext context) {
@@ -204,7 +239,11 @@ class _IntakeVerticalListState extends State<IntakeVerticalList> {
                 Flexible(
                   child: Text(
                     _buildHeaderSummary(context),
-                    maxLines: 2,
+                    // [fork] S81 a11y-labels: read as words; at a large font
+                    // the macros wrap to a third line rather than cut off
+                    semanticsLabel: _headerSummaryLabel(context),
+                    maxLines: 3,
+                    // [/fork]
                     overflow: TextOverflow.ellipsis,
                     style: textTheme.labelMedium?.copyWith(
                       color: palette.textMuted,
@@ -399,11 +438,17 @@ class _IntakeVerticalListState extends State<IntakeVerticalList> {
                       sortType: widget.sortType,
                     ),
                   ),
+                // [fork] S80 diary-by-hour
+                if (widget.showAddCard)
+                // [/fork]
                 PlaceholderCard(
                   day: widget.day,
                   onTap: () => _onPlaceholderCardTapped(context),
                   firstListElement: true,
                   semanticIdentifier: 'add-meal-placeholder',
+                  // [fork] S81 a11y-labels
+                  label: S.of(context).addToSectionLabel(widget.title),
+                  // [/fork]
                 ),
               ],
             );
