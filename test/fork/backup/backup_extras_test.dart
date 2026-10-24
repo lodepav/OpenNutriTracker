@@ -142,9 +142,16 @@ void main() {
     );
     from.meals.saved.add(MealDBO.fromMealEntity(MealEntityFixtures.mealOne));
     await from.adaptive.save(
-      const AdaptiveSettings(smoothedTrend: true, adaptiveTarget: true),
+      const AdaptiveSettings(
+        smoothedTrend: true,
+        adaptiveTarget: true,
+        activityMode: ActivityMode.weekly,
+        checkInWeekday: 1,
+        maxCheckInChangeKcal: null,
+      ),
     );
     await from.adaptive.addCheckIn(checkIn);
+    await from.adaptive.setSkipped(DateTime(2026, 10, 18), true);
     await from.plans.add(
       [
         (
@@ -185,6 +192,10 @@ void main() {
     expect(settings.adaptiveTarget, isTrue);
     expect(settings.smoothedTrend, isTrue);
     expect(settings.cycleWindow, isFalse);
+    expect(settings.activityMode, ActivityMode.weekly);
+    expect(settings.checkInWeekday, 1);
+    expect(settings.maxCheckInChangeKcal, isNull);
+    expect(await to.adaptive.skippedDays(), {DateTime(2026, 10, 18)});
     expect((await to.adaptive.history()).map((c) => c.acceptedKcal), [2100]);
     final planned = await to.plans.forDay(DateTime(2026, 10, 25));
     expect(planned.map((f) => (f.meal.name, f.type, f.kcal)), [

@@ -37,8 +37,8 @@ class HealthStoreSteps implements StepSource {
 }
 
 /// Daily steps from the health store, shown on Trends (MacroFactor shows
-/// them beside the weight). Read only: they change no target, since the
-/// adaptive expenditure already measures what walking burns.
+/// them beside the weight). They change no target unless the expenditure
+/// settings count them (D17, `ActivityCounter`).
 ///
 /// Per profile, in the fork's box: whether it is on, the daily goal, and
 /// the days read so far, kept so the history outlives the health store's
@@ -51,6 +51,7 @@ class StepCounts {
   static const _on = 'stepsOn';
   static const _goal = 'stepGoal';
   static const _days = 'steps';
+  static const _workoutSteps = 'workoutSteps';
 
   /// Bumped when the switch or the goal changes, so the card reloads.
   static final changes = ValueNotifier(0);
@@ -113,5 +114,48 @@ class StepCounts {
       for (var ago = days - 1; ago >= 0; ago--)
         dayAt(ago): ?cached[dayAt(ago).toParsedDay()],
     };
+  }
+
+  /// The counts read so far, without asking the health store: for the
+  /// day's goal, which is read too often to ask it each time.
+  Future<Map<DateTime, int>> cached() async => {
+    for (final MapEntry(:key, :value)
+        in ((await _box()).get(_days, defaultValue: {}) as Map).entries)
+      DateTime.parse(key as String): value as int,
+  };
+
+  /// Steps within the workout [id] (`[from, to)`), which its own calories
+  /// already hold. Each read is kept; once the workout is a day old, when
+  /// a late watch sync has had its time, the kept count is final and the
+  /// health store is not asked again. [ask] false only reads what is kept.
+  /// 0 when there is nothing kept and the read is refused.
+  Future<int> duringWorkout(
+    String id,
+    DateTime from,
+    DateTime to, {
+    bool ask = true,
+    DateTime? now,
+  }) async {
+    final box = await _box();
+    final kept = Map<dynamic, dynamic>.of(
+      box.get(_workoutSteps, defaultValue: {}) as Map,
+    );
+    final entry = kept[id] as Map?;
+    if (entry != null && (entry['final'] == true || !ask)) {
+      return entry['steps'] as int;
+    }
+    if (!ask) return 0;
+    final int steps;
+    try {
+      steps = await _source.stepsBetween(from, to);
+    } catch (_) {
+      return (entry?['steps'] as int?) ?? 0;
+    }
+    final settled = to.isBefore(
+      (now ?? DateTime.now()).subtract(const Duration(days: 1)),
+    );
+    kept[id] = {'steps': steps, 'final': settled};
+    await box.put(_workoutSteps, kept);
+    return steps;
   }
 }

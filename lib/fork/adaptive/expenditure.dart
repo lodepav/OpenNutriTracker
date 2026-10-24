@@ -2,12 +2,26 @@ import 'package:opennutritracker/fork/adaptive/energy.dart';
 import 'package:opennutritracker/fork/adaptive/trend.dart';
 
 /// One day as the estimator sees it: what was logged (null when the day
-/// was not logged) and the weigh-in, if any.
+/// was not logged, or was left out), the weigh-in, if any, and the
+/// activity counted on it (null when not known, or not counted).
 class AdaptiveDay {
   final double? intakeKcal;
   final double? weightKg;
+  final double? activityKcal;
 
-  const AdaptiveDay({this.intakeKcal, this.weightKg});
+  const AdaptiveDay({this.intakeKcal, this.weightKg, this.activityKcal});
+}
+
+/// How fast the estimate follows a change, against how much it wobbles
+/// (D17; fork/research/phase3-simulation.md, "Responsiveness").
+enum Responsiveness {
+  steady('Steady'),
+  standard('Standard'),
+  responsive('Responsive');
+
+  final String label;
+
+  const Responsiveness(this.label);
 }
 
 /// The weights the simulator tunes (fork/research/phase3-simulation.md).
@@ -35,6 +49,21 @@ class ExpenditureSettings {
     this.calibrationDays = 30,
     this.warmupDays = 14,
   });
+
+  /// The preset's weights: only the blend moves, which the sweep found
+  /// trades response for wobble at the least cost in error. [cycleWindow]
+  /// reads 28 days, a whole cycle.
+  factory ExpenditureSettings.of(
+    Responsiveness responsiveness, {
+    bool cycleWindow = false,
+  }) => ExpenditureSettings(
+    window: cycleWindow ? 28 : 20,
+    blend: switch (responsiveness) {
+      Responsiveness.steady => 0.03,
+      Responsiveness.standard => 0.05,
+      Responsiveness.responsive => 0.1,
+    },
+  );
 }
 
 /// A day's intake counts only above this: a day under it is taken as not
@@ -47,6 +76,10 @@ const minLoggedKcal = 200.0;
 /// past week has under 4 logged days or no weigh-in carries the last
 /// estimate (MacroFactor's data rules). [bodyFatPercent] null uses the
 /// flat 6,000 kcal/kg.
+///
+/// With activity counted (D17) the window's mean counted activity is
+/// taken off too, so the estimate is the base that activity is added
+/// back to; without, it is the whole expenditure.
 List<double> estimateExpenditure(
   List<AdaptiveDay> days, {
   required double priorKcal,
@@ -73,8 +106,9 @@ List<double> estimateExpenditure(
     final start = (day - settings.window).clamp(0, day);
     final from = trend[start], to = trend[day];
     if (enoughData && from != null && to != null && day > start) {
+      final window = days.sublist(start + 1, day + 1);
       final intakes = [
-        for (final d in days.sublist(start + 1, day + 1))
+        for (final d in window)
           if (logged(d)) d.intakeKcal!,
       ];
       final meanIntake = intakes.reduce((a, b) => a + b) / intakes.length;
@@ -82,7 +116,7 @@ List<double> estimateExpenditure(
           ? flatKcalPerKg
           : energyDensity(fatMassKg((from + to) / 2, bodyFatPercent));
       final stored = (to - from) * density / (day - start);
-      final raw = meanIntake - stored;
+      final raw = meanIntake - stored - (meanActivity(window) ?? 0);
       final weight = day < settings.calibrationDays
           ? settings.calibrationBlend
           : settings.blend;
@@ -91,4 +125,13 @@ List<double> estimateExpenditure(
     out.add(estimate);
   }
   return out;
+}
+
+/// Mean counted activity of the [days] that have it; null when none do.
+double? meanActivity(Iterable<AdaptiveDay> days) {
+  final known = [
+    for (final d in days)
+      if (d.activityKcal != null) d.activityKcal!,
+  ];
+  return known.isEmpty ? null : known.reduce((a, b) => a + b) / known.length;
 }

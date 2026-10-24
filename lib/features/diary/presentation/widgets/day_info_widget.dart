@@ -31,6 +31,9 @@ import 'package:opennutritracker/fork/copy/copy_ui.dart';
 import 'package:opennutritracker/fork/copy/select_entries_screen.dart';
 import 'package:opennutritracker/fork/timeline/timeline.dart';
 // [/fork]
+// [fork] S84 skip-day: leave a part-logged day out of expenditure (D17)
+import 'package:opennutritracker/fork/adaptive/skip_day.dart';
+// [/fork]
 // [fork] S80 diary-by-hour
 import 'package:opennutritracker/fork/display/diary_by_hour.dart';
 import 'package:opennutritracker/fork/display/display_prefs.dart';
@@ -295,6 +298,9 @@ class _DayInfoWidgetState extends State<DayInfoWidget> {
                     ),
                   )
                 : const SizedBox(),
+            // [fork] S84 skip-day: under the day's totals
+            if (trackedDay != null) SkipDayTile(day: widget.selectedDay),
+            // [/fork]
             // #160 + #173 + #404: Daily micronutrient panel — aggregates
             // ten nutrients (fibre, sodium, saturated fat, sugar, calcium,
             // iron, potassium, vitamin D, vitamin B12, magnesium) across

@@ -9,12 +9,15 @@ import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/fork/copy/copy_ui.dart';
 import 'package:opennutritracker/fork/adaptive/check_in_history.dart';
 import 'package:opennutritracker/fork/adaptive/check_in.dart';
+import 'package:opennutritracker/fork/adaptive/expenditure_settings_ui.dart';
 import 'package:opennutritracker/fork/units/energy_text.dart';
 import 'package:opennutritracker/fork/display/display_prefs.dart';
 import 'package:opennutritracker/fork/display/settings_tile.dart';
 
-/// Seam S13: on home while a check-in is due; nothing otherwise.
-/// [onAccepted] refreshes what shows the target.
+/// Seam S13: on home while a check-in is due; nothing otherwise. With
+/// automatic check-ins (D17) it accepts a due one and says so instead; in
+/// the daily activity mode it keeps today's stored goal in step with the
+/// day's activity. [onAccepted] refreshes what shows the target.
 class AdaptiveCheckInCard extends StatefulWidget {
   final VoidCallback onAccepted;
   final AdaptiveService? service;
@@ -33,10 +36,22 @@ class _AdaptiveCheckInCardState extends State<AdaptiveCheckInCard> {
   late final _service = widget.service ?? AdaptiveService.fromLocator();
   late Future<bool> _due = _service.checkInDue();
 
+  /// A check-in accepted on its own, shown until dismissed.
+  CheckIn? _autoAccepted;
+
   @override
   void initState() {
     super.initState();
     AdaptiveStore.settings.addListener(_recheck);
+    _autoAccept();
+    _syncDailyGoal();
+  }
+
+  @override
+  void didUpdateWidget(AdaptiveCheckInCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Home rebuilds after an activity is logged or the app resumes.
+    _syncDailyGoal();
   }
 
   @override
@@ -50,36 +65,108 @@ class _AdaptiveCheckInCardState extends State<AdaptiveCheckInCard> {
     setState(() {
       _due = due;
     });
+    _autoAccept();
+  }
+
+  Future<void> _autoAccept() async {
+    final CheckIn? accepted;
+    try {
+      accepted = await _service.autoAcceptIfDue();
+    } catch (_) {
+      return; // The card stays, to be done by hand.
+    }
+    if (accepted == null || !mounted) return;
+    setState(() {
+      _autoAccepted = accepted;
+      _due = Future.value(false);
+    });
+    await _refreshGoals();
+    widget.onAccepted();
+  }
+
+  /// Today's counted activity when the goal was last written, and when.
+  static double? _syncedActivity;
+  static DateTime? _syncedAt;
+
+  /// In the daily mode, reads today's steps and workouts and rewrites
+  /// today's stored goal when they moved; at most once a minute, as Home
+  /// rebuilds often.
+  Future<void> _syncDailyGoal() async {
+    final settings = AdaptiveStore.settings.value;
+    if (!settings.adaptiveTarget ||
+        settings.fixedTarget ||
+        settings.activityMode != ActivityMode.daily ||
+        !locator.isRegistered<SettingsBloc>()) {
+      return;
+    }
+    final now = DateTime.now();
+    if (_syncedAt != null && now.difference(_syncedAt!).inSeconds < 60) return;
+    _syncedAt = now;
+    try {
+      final today = await locator<SettingsBloc>().getCurrentLogicalDay();
+      final activity = await _service.activityOn(today, readHealth: true);
+      if (activity == _syncedActivity) return;
+      _syncedActivity = activity;
+      await _refreshGoals();
+    } catch (_) {
+      // The goal keeps what it had; the next rebuild tries again.
+    }
   }
 
   @override
-  Widget build(BuildContext context) => FutureBuilder<bool>(
-    future: _due,
-    builder: (context, snapshot) {
-      if (snapshot.data != true) return const SizedBox.shrink();
+  Widget build(BuildContext context) {
+    final accepted = _autoAccepted;
+    if (accepted != null) {
       return Card(
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         child: ListTile(
           leading: const Icon(Icons.insights_rounded),
-          title: const Text('Weekly check-in'),
-          subtitle: const Text('Your expenditure and next target are ready.'),
-          trailing: const Icon(Icons.chevron_right_rounded),
-          onTap: () async {
-            final accepted = await Navigator.of(context).push<bool>(
-              MaterialPageRoute(
-                builder: (_) => CheckInScreen(service: _service),
-              ),
-            );
-            if (accepted == true) {
-              _recheck();
-              await _refreshGoals();
-              widget.onAccepted();
-            }
-          },
+          title: const Text('Weekly check-in done'),
+          subtitle: Text(
+            'New target: ${energyText(context, accepted.proposedTargetKcal)}'
+            '${AdaptiveStore.settings.value.activityMode == ActivityMode.daily ? ' before activity' : ''}.',
+          ),
+          trailing: IconButton(
+            tooltip: 'Dismiss',
+            icon: const Icon(Icons.close_rounded),
+            onPressed: () => setState(() => _autoAccepted = null),
+          ),
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (_) => CheckInHistoryScreen(store: AdaptiveStore()),
+            ),
+          ),
         ),
       );
-    },
-  );
+    }
+    return FutureBuilder<bool>(
+      future: _due,
+      builder: (context, snapshot) {
+        if (snapshot.data != true) return const SizedBox.shrink();
+        return Card(
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: ListTile(
+            leading: const Icon(Icons.insights_rounded),
+            title: const Text('Weekly check-in'),
+            subtitle: const Text('Your expenditure and next target are ready.'),
+            trailing: const Icon(Icons.chevron_right_rounded),
+            onTap: () async {
+              final accepted = await Navigator.of(context).push<bool>(
+                MaterialPageRoute(
+                  builder: (_) => CheckInScreen(service: _service),
+                ),
+              );
+              if (accepted == true) {
+                _recheck();
+                await _refreshGoals();
+                widget.onAccepted();
+              }
+            },
+          ),
+        );
+      },
+    );
+  }
 }
 
 class CheckInScreen extends StatefulWidget {
@@ -134,6 +221,9 @@ class _CheckInScreenState extends State<CheckInScreen> {
         final capped =
             (checkIn.uncappedTargetKcal - checkIn.proposedTargetKcal).abs() >=
             1;
+        final settings = AdaptiveStore.settings.value;
+        final cap = settings.maxCheckInChangeKcal;
+        final daily = settings.activityMode == ActivityMode.daily;
         return ListView(
           padding: const EdgeInsets.all(16),
           children: [
@@ -160,11 +250,21 @@ class _CheckInScreenState extends State<CheckInScreen> {
               ),
             const Divider(height: 32),
             _row('Expenditure', _kcal(checkIn.expenditureKcal)),
-            _row('Proposed target', _kcal(checkIn.proposedTargetKcal)),
-            if (capped)
+            if (checkIn.activityKcal case final activity?)
+              _row('Of it, counted activity', '${_kcal(activity)} a day'),
+            _row(
+              daily ? 'Proposed target before activity' : 'Proposed target',
+              _kcal(checkIn.proposedTargetKcal),
+            ),
+            if (daily)
+              Text(
+                "Each day's counted activity is added to it.",
+                style: theme.textTheme.bodySmall,
+              ),
+            if (capped && cap != null)
               Text(
                 'A check-in moves the target at most '
-                '${_kcal(maxCheckInChangeKcal)}; the full change '
+                '${_kcal(cap)}; the full change '
                 'would be ${_kcal(checkIn.uncappedTargetKcal)}.',
                 style: theme.textTheme.bodySmall,
               ),
@@ -229,6 +329,8 @@ const _weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 /// Today's stored goal and the screens showing it, after the target
 /// changes; skipped where the app's blocs are not registered (tests).
+Future<void> refreshGoals() => _refreshGoals();
+
 Future<void> _refreshGoals() async {
   if (!locator.isRegistered<SettingsBloc>()) return;
   final settings = locator<SettingsBloc>();
@@ -332,7 +434,11 @@ class _AdaptiveSettingsDialog extends StatelessWidget {
                   'From your profile and goal, plus logged activities.',
                 _TargetMode.adaptive =>
                   'Measured from your weight and what you log, set at a '
-                      'weekly check-in. Logged activities are not added to it.',
+                      'weekly check-in. ${switch (settings.activityMode) {
+                        ActivityMode.off => 'Logged activities are not added to it.',
+                        ActivityMode.weekly => "It counts the past week's activity.",
+                        ActivityMode.daily => "Each day's activity is added to it.",
+                      }}',
                 _TargetMode.fixed =>
                   'One you set. Logged activities and the kcal adjustment '
                       'are not added to it.',
@@ -360,27 +466,16 @@ class _AdaptiveSettingsDialog extends StatelessWidget {
                   },
                 ),
               if (mode == _TargetMode.adaptive)
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('Allow for a monthly cycle'),
-                  subtitle: const Text(
-                    'Reads a 28-day window, so a cycle\'s water swing moves '
-                    'the estimate less.',
-                  ),
-                  value: settings.cycleWindow,
-                  onChanged: (v) => _save(settings.copyWith(cycleWindow: v)),
-                ),
-              if (mode == _TargetMode.adaptive)
                 ListTile(
-                  key: const ValueKey('check-in-history'),
+                  key: const ValueKey('expenditure-settings'),
                   contentPadding: EdgeInsets.zero,
-                  title: const Text('Check-in history'),
-                  subtitle: const Text('Each target set, and from what'),
+                  title: const Text('Expenditure and check-ins'),
+                  subtitle: Text(expenditureSummary(settings)),
                   trailing: const Icon(Icons.chevron_right_rounded),
                   onTap: () => Navigator.push(
                     context,
                     MaterialPageRoute<void>(
-                      builder: (_) => CheckInHistoryScreen(store: store),
+                      builder: (_) => ExpenditureSettingsScreen(store: store),
                     ),
                   ),
                 ),

@@ -124,6 +124,9 @@ class BackupExtras {
     _addJson(archive, adaptiveFileName, {
       ...settings.toJson(),
       'checkIns': [for (final c in await adaptive.history()) c.toJson()],
+      AdaptiveStore.skippedKey: [
+        for (final d in await adaptive.skippedDays()) d.toIso8601String(),
+      ],
       PhaseStore.planKey: (await _phases().plan())?.toJson(),
     });
     _addJson(archive, planFileName, [
@@ -169,11 +172,17 @@ class BackupExtras {
       if (adaptive == null) return;
       final store = _adaptive();
       await store.mergeCheckIns(adaptive.checkIns);
+      await store.mergeSkippedDays(adaptive.skippedDays);
       await store.save(adaptive.settings);
     };
   }
 
-  ({AdaptiveSettings settings, List<CheckInRecord> checkIns, PhasePlan? plan})?
+  ({
+    AdaptiveSettings settings,
+    List<CheckInRecord> checkIns,
+    List<DateTime> skippedDays,
+    PhasePlan? plan,
+  })?
   _decodeAdaptive(Archive archive) =>
       _decode(archive, adaptiveFileName, (json) {
         final map = json as Map<String, dynamic>;
@@ -182,6 +191,10 @@ class BackupExtras {
           settings: AdaptiveSettings.fromJson(map),
           checkIns: [
             for (final c in map['checkIns'] as List) CheckInRecord.fromJson(c),
+          ],
+          skippedDays: [
+            for (final d in map[AdaptiveStore.skippedKey] as List? ?? const [])
+              DateTime.parse(d as String),
           ],
           plan: plan == null ? null : PhasePlan.fromJson(plan),
         );
