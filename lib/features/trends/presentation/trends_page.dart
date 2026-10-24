@@ -725,13 +725,14 @@ class _WeightCard extends StatelessWidget {
 }
 
 // [fork] S83 chart-summary: the calorie chart in words: the average of the
-// days logged and the average goal.
+// days logged and the average goal, both already in the display unit.
 String _caloriesSummary(BuildContext context, List<FlSpot> spots, double avgGoal) {
   final logged = [for (final s in spots) if (s.y > 0) s.y];
   if (logged.isEmpty) return '';
   final avg = logged.reduce((a, b) => a + b) / logged.length;
   final days = logged.length == 1 ? '1 day' : '${logged.length} days';
-  final goal = avgGoal > 0 ? ', goal ${EnergyDisplay.formatWithUnit(context, avgGoal)}' : '';
-  return 'Average ${EnergyDisplay.formatWithUnit(context, avg)} over $days logged$goal';
+  final unit = EnergyDisplay.unitLabel(context);
+  final goal = avgGoal > 0 ? ', goal ${avgGoal.toInt()} $unit' : '';
+  return 'Average ${avg.toInt()} $unit over $days logged$goal';
 }
 // [/fork]

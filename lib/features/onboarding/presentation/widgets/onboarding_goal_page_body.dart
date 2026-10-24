@@ -96,8 +96,13 @@ class _OnboardingGoalPageBodyState extends State<OnboardingGoalPageBody> {
     GoalSuggestionEntity? suggestion,
   ) {
     final isSuggested = suggestion?.goal == goal;
-    return Row(
+    // [fork] S83 a Wrap: at a large font the badge moves under the chip
+    // rather than overflowing the row
+    return Wrap(
+      crossAxisAlignment: WrapCrossAlignment.center,
+      runSpacing: Dimens.spacing4,
       children: [
+        // [/fork]
         Semantics(
           identifier: 'onboarding-goal-${_identifierSuffix[goal]}',
           child: ChoiceChip(

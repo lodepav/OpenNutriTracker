@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:opennutritracker/core/utils/calc/unit_calc.dart';
 import 'package:opennutritracker/core/utils/energy_unit_provider.dart';
+import 'package:opennutritracker/generated/l10n.dart';
 import 'package:provider/provider.dart';
 
 /// Energy in the user's unit (#177) for the fork's screens; kcal where no
@@ -25,3 +26,16 @@ String energyText(BuildContext context, double kcal, {bool signed = false}) {
 /// A typed value in the display unit, back to kcal.
 double kcalFromInput(BuildContext context, double value) =>
     usesKj(context, listen: false) ? UnitCalc.kjToKcal(value) : value;
+
+/// Upstream strings with "kcal" written into them (#150's "{consumed} /
+/// {target} kcal" in 16 languages), in kJ when kJ is chosen: the values
+/// passed in must be in the display unit already.
+String inEnergyUnit(BuildContext context, String text) {
+  if (!usesKj(context)) return text;
+  final s = S.of(context);
+  var out = text;
+  for (final kcal in {s.kcalLabel, 'kcal', '千卡'}) {
+    out = out.replaceAll(kcal, s.kjLabel);
+  }
+  return out;
+}

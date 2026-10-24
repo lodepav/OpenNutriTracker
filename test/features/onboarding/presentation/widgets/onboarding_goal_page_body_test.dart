@@ -35,8 +35,10 @@ void main() {
 
   /// The badge sits in the same Row as its chip, which is how we tell which
   /// option was marked.
+  // [fork] S83 a Wrap, not a Row, so the badge can move under the chip
   Finder badgeBesideChip(String chipLabel) => find.descendant(
-    of: find.ancestor(of: find.text(chipLabel), matching: find.byType(Row)),
+    of: find.ancestor(of: find.text(chipLabel), matching: find.byType(Wrap)),
+    // [/fork]
     matching: find.text(l10nEn.onboardingGoalSuggestedBadge),
   );
 

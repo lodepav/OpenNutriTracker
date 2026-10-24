@@ -35,6 +35,7 @@ import 'package:opennutritracker/features/meal_detail/presentation/bloc/meal_det
 // [fork] S25 copy-anywhere
 import 'package:opennutritracker/fork/copy/copy_ui.dart';
 // [/fork]
+import 'package:opennutritracker/fork/units/energy_text.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 // [fork] S79 macro-order
 import 'package:opennutritracker/fork/display/display_prefs.dart';
@@ -157,10 +158,15 @@ class _IntakeVerticalListState extends State<IntakeVerticalList> {
   String _buildHeaderSummary(BuildContext context) {
     final consumed = EnergyDisplay.formatValue(context, totalKcal);
     final kcalLine = _hasMealKcalTarget
-        ? S.of(context).diaryMealKcalConsumedOfTarget(
+        // [fork] S83 kJ: the string has "kcal" written into it
+        ? inEnergyUnit(
+            context,
+            S.of(context).diaryMealKcalConsumedOfTarget(
               consumed,
               EnergyDisplay.formatValue(context, widget.mealKcalTarget!),
-            )
+            ),
+          )
+        // [/fork]
         : EnergyDisplay.formatWithUnit(context, totalKcal);
     if (widget.showMealMacros && totalKcal > 0) {
       // [fork] S79 macro-order
@@ -179,9 +185,12 @@ class _IntakeVerticalListState extends State<IntakeVerticalList> {
     final s = S.of(context);
     final consumed = EnergyDisplay.formatValue(context, totalKcal);
     final kcalLine = _hasMealKcalTarget
-        ? s.diaryMealKcalConsumedOfTarget(
-            consumed,
-            EnergyDisplay.formatValue(context, widget.mealKcalTarget!),
+        ? inEnergyUnit(
+            context,
+            s.diaryMealKcalConsumedOfTarget(
+              consumed,
+              EnergyDisplay.formatValue(context, widget.mealKcalTarget!),
+            ),
           )
         : EnergyDisplay.formatWithUnit(context, totalKcal);
     if (!widget.showMealMacros || totalKcal <= 0) return kcalLine;
