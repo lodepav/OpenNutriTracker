@@ -801,6 +801,27 @@ of them Latvian; references worked out from USDA and pack figures beside each me
 - **Breakdowns of a bare Latvian word can be wrong.** Haiku read "lasis" (salmon) as yogurt
   and "olas" (eggs) as olives. Opus and Sonnet did not.
 
+*Run to run, 2026-10-24:* the photo-to-kcal set (17 photos, 5 with notes) answered a second
+time by fresh subagents (`replay/{opus2,sonnet2,haiku2}`), breakdowns included.
+
+| Model | Run 1 within 25% | Run 2 | Same photo, median gap between runs | Gap over 25% |
+|---|---|---|---|---|
+| Opus | 5/17, notes 2/5 | 4/17, notes 2/5 | 9% | 8 of 22 |
+| Sonnet | 4/17, notes 3/5 | 9/16, notes 2/5 | 26% | 11 of 21 |
+| Haiku | 10/17, notes 4/5 | 7/17, notes 3/5 | 19% | 10 of 22 |
+
+- **The model ranking is noise.** Sonnet went from 4 to 9 meals within 25% and Haiku from 10
+  to 7. On a set this size no model reads photos better than another; earlier "Haiku is
+  closest" findings do not hold.
+- **Most of the gap is naming, not counting.** One run names "chicken pilaf" (a 100 g
+  guess at 152 kcal), the next "chicken rice pilaf" (broken down, 676). "creamy sauce"
+  logs 53 kcal, "creamy garlic sauce" 245. A name that finds a row with no serving is
+  the costliest.
+- **A count on a row with no serving logs grams.** "1× breaded pork chop" → "Pork chop
+  breaded, fried" at 1 g (3 kcal), and "2 pork patties" at 2 g. This is upstream's fallback
+  (#622): the row is flagged for checking, not silently wrong. But BLS rows carry no
+  serving, so it comes up in 3 of 22 meals in run 2.
+
 Still needs the user: the leftovers photo check, typing and photographing their own
 khachapuri, pelmeni and grey peas, and ten of their own meals (photos we do not have).
 
