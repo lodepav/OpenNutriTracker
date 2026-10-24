@@ -2,6 +2,9 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
+import 'package:opennutritracker/core/data/dbo/intake_dbo.dart';
+import 'package:opennutritracker/core/domain/entity/intake_entity.dart';
+import 'package:opennutritracker/core/domain/entity/intake_type_entity.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dart';
 import 'package:opennutritracker/fork/amounts/remembered_amounts.dart';
 
@@ -19,6 +22,18 @@ MealEntity _food(String? code, String name) => MealEntity(
   nutriments: MealEntityFixtures.mealOne.nutriments,
   source: MealSourceEntity.custom,
 );
+
+IntakeDBO _entry(MealEntity food, double amount, String unit, int day) =>
+    IntakeDBO.fromIntakeEntity(
+      IntakeEntity(
+        id: '${food.name}-$day-$unit',
+        unit: unit,
+        amount: amount,
+        type: IntakeTypeEntity.dinner,
+        meal: food,
+        dateTime: DateTime(2026, 10, day, 19),
+      ),
+    );
 
 void main() {
   late Directory dir;
@@ -69,5 +84,45 @@ void main() {
     final broken = RememberedAmounts(() => throw StateError('no box'));
     expect(await broken.of(_food('1', 'x')), isNull);
     await broken.remember(_food('1', 'x'), 'g', '1');
+  });
+
+  group('with nothing remembered', () {
+    final rice = _food(null, 'Brown rice');
+    RememberedAmounts withDiary(List<IntakeDBO> diary) => RememberedAmounts(
+      () => Hive.openBox<dynamic>('amounts'),
+      () async => diary,
+    );
+
+    test('the latest entry in grams is the amount', () async {
+      final diary = [
+        _entry(rice, 200, 'g', 20),
+        _entry(rice, 640, 'g', 23),
+        _entry(_food(null, 'Oats'), 40, 'g', 24),
+      ];
+      expect(await withDiary(diary).of(rice), (unit: 'g', quantity: '640'));
+    });
+
+    test('an entry in servings or ounces is passed over', () async {
+      final diary = [
+        _entry(rice, 150.5, 'g', 20),
+        _entry(rice, 2, 'serving', 23),
+        _entry(rice, 3, 'oz', 24),
+      ];
+      expect(await withDiary(diary).of(rice), (unit: 'g', quantity: '150.5'));
+    });
+
+    test('a remembered amount wins over the diary', () async {
+      final amounts = withDiary([_entry(rice, 640, 'g', 23)]);
+      await amounts.remember(rice, 'g', '120');
+      expect(await amounts.of(rice), (unit: 'g', quantity: '120'));
+    });
+
+    test('an unreadable diary reads as nothing', () async {
+      final amounts = RememberedAmounts(
+        () => Hive.openBox<dynamic>('amounts'),
+        () => throw StateError('no diary'),
+      );
+      expect(await amounts.of(rice), isNull);
+    });
   });
 }
