@@ -128,6 +128,7 @@ class AdaptiveService {
       CheckInInputs(
         days: days,
         priorKcal: _priorKcal(user),
+        formulaKcal: CalorieGoalCalc.getTdee(user),
         goalRateKgPerWeek: rate,
         bodyFatPercent: await _bodyFat(user),
         targetWeightKg: user.targetWeightKg,

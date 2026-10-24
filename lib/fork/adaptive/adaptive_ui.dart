@@ -281,27 +281,31 @@ class _CheckInScreenState extends State<CheckInScreen> {
         return ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            Text('Past week', style: theme.textTheme.titleMedium),
-            _row(
-              'Average logged',
-              checkIn.averageIntakeKcal == null
-                  ? 'nothing logged'
-                  : '${_kcal(checkIn.averageIntakeKcal!)} '
-                        '(${checkIn.loggedDays} of 7 days)',
-            ),
-            _row('Weigh-ins', '${checkIn.weighIns}'),
-            if (checkIn.trendKg != null) _row('Trend', _kg(checkIn.trendKg!)),
-            if (checkIn.weekChangeKg != null)
-              _row('Trend change', _kg(checkIn.weekChangeKg!, signed: true)),
-            if (!checkIn.enoughData)
-              Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: Text(
-                  'Not enough data this week (4 logged days and a weigh-in '
-                  'are needed), so the expenditure carries from before.',
-                  style: TextStyle(color: theme.colorScheme.tertiary),
-                ),
+            if (checkIn.fromProfile)
+              Text(_fromProfileText(checkIn))
+            else ...[
+              Text('Past week', style: theme.textTheme.titleMedium),
+              _row(
+                'Average logged',
+                checkIn.averageIntakeKcal == null
+                    ? 'nothing logged'
+                    : '${_kcal(checkIn.averageIntakeKcal!)} '
+                          '(${checkIn.loggedDays} of 7 days)',
               ),
+              _row('Weigh-ins', '${checkIn.weighIns}'),
+              if (checkIn.trendKg != null) _row('Trend', _kg(checkIn.trendKg!)),
+              if (checkIn.weekChangeKg != null)
+                _row('Trend change', _kg(checkIn.weekChangeKg!, signed: true)),
+              if (!checkIn.enoughData)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(
+                    'Not enough data this week (4 logged days and a weigh-in '
+                    'are needed), so the expenditure carries from before.',
+                    style: TextStyle(color: theme.colorScheme.tertiary),
+                  ),
+                ),
+            ],
             const Divider(height: 32),
             _row('Expenditure', _kcal(checkIn.expenditureKcal)),
             if (checkIn.activityKcal case final activity?)
@@ -368,11 +372,28 @@ class _CheckInScreenState extends State<CheckInScreen> {
     ),
   );
 
+  String _fromProfileText(CheckIn checkIn) {
+    final formula = checkIn.formulaKcal;
+    final rate = checkIn.goalRateKgPerWeek;
+    final differs = formula != null && rate != 0;
+    return [
+      'Your first target, from your profile. From next week it follows '
+          'your weigh-ins and what you log.',
+      if (differs)
+        'The expenditure starts a little ${rate < 0 ? 'under' : 'over'} '
+            "the formula's ${_kcal(formula)} for a goal to "
+            "${rate < 0 ? 'lose' : 'gain'}, as MacroFactor's does.",
+    ].join(' ');
+  }
+
+  // Wraps at large text rather than squeezing the label a letter a line.
   Widget _row(String label, String value) => Padding(
     padding: const EdgeInsets.symmetric(vertical: 4),
-    child: Row(
+    child: Wrap(
+      alignment: WrapAlignment.spaceBetween,
+      spacing: 12,
       children: [
-        Expanded(child: Text(label)),
+        Text(label),
         Text(value, style: const TextStyle(fontWeight: FontWeight.w600)),
       ],
     ),

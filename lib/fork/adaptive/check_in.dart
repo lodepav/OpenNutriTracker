@@ -14,6 +14,10 @@ class CheckInInputs {
   /// prior.
   final double priorKcal;
 
+  /// Upstream's formula expenditure alone, for the first check-in to say
+  /// how the prior differs from it; null leaves that unsaid.
+  final double? formulaKcal;
+
   /// kg per week, negative to lose.
   final double goalRateKgPerWeek;
   final double bodyFatPercent;
@@ -44,6 +48,7 @@ class CheckInInputs {
   const CheckInInputs({
     required this.days,
     required this.priorKcal,
+    this.formulaKcal,
     required this.goalRateKgPerWeek,
     required this.bodyFatPercent,
     required this.previousBaseKcal,
@@ -102,6 +107,13 @@ class CheckIn {
   /// before the first.
   final double? activityChangeKcal;
 
+  /// No weigh-in and log has shaped the estimate yet: it is the profile's
+  /// prior, as for a new user.
+  final bool fromProfile;
+
+  /// [CheckInInputs.formulaKcal], while [fromProfile].
+  final double? formulaKcal;
+
   const CheckIn({
     required this.averageIntakeKcal,
     required this.loggedDays,
@@ -118,6 +130,8 @@ class CheckIn {
     this.goalRateKgPerWeek = 0,
     this.targetWeightKg,
     this.activityChangeKcal,
+    this.fromProfile = false,
+    this.formulaKcal,
   });
 
   /// MacroFactor's data rule for the week: 4 logged days and a weigh-in.
@@ -209,5 +223,7 @@ CheckIn computeCheckIn(CheckInInputs inputs) {
             inputs.previousActivityKcal != null
         ? weekly - inputs.previousActivityKcal!
         : null,
+    fromProfile: run.updates == 0,
+    formulaKcal: run.updates == 0 ? inputs.formulaKcal : null,
   );
 }
