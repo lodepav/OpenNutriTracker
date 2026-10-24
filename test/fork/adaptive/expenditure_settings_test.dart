@@ -480,6 +480,43 @@ void main() {
       expect(skipped.firstWhere((d) => d.date == part).intakeKcal, isNull);
     });
 
+    test('the daily limit holds for the base too, and today is left out '
+        'while its steps come in', () async {
+      AdaptiveService serviceWith(List<DateTime> workouts) => AdaptiveService(
+        _User(),
+        _Weights(),
+        _TrackedDays(),
+        AdaptiveStore(() async => box),
+        () => _today.add(const Duration(hours: 9)),
+        null,
+        ActivityCounter(
+          activities: () async => [
+            for (final d in workouts)
+              _workout(d.add(const Duration(hours: 7)), reported: 3000),
+          ],
+          steps: StepCounts(_Steps(const {}), () async => box),
+          dayStartOffsetMinutes: () async => 0,
+        ),
+      );
+      AdaptiveStore.settings.value = const AdaptiveSettings(
+        adaptiveTarget: true,
+        activityMode: ActivityMode.daily,
+        countSteps: false,
+      );
+      addTearDown(
+        () => AdaptiveStore.settings.value = const AdaptiveSettings(),
+      );
+
+      final everyDay = await serviceWith([
+        for (var d = 0; d < 7; d++) _today.subtract(Duration(days: d)),
+      ]).checkIn();
+      // A day's target adds no more than 800, so the base takes no more off.
+      expect(everyDay.activityKcal, closeTo(maxDailyActivityKcal, 0.01));
+
+      final todayOnly = await serviceWith([_today]).checkIn();
+      expect(todayOnly.activityKcal, 0);
+    });
+
     test('skipped days are kept per day and loaded', () async {
       final store = AdaptiveStore(() async => box);
       await store.setSkipped(DateTime(2026, 10, 20, 15), true);

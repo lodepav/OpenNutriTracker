@@ -118,7 +118,9 @@ const minLoggedKcal = 200.0;
 /// back to; without, it is the whole expenditure. The estimate before
 /// activity is first counted holds that activity, so its first two weeks'
 /// mean is taken off once, on the day it starts: the prior on day 0, the
-/// running estimate when steps are switched on later.
+/// running estimate when steps are switched on later. Once that day
+/// leaves the history, the prior holds the subtraction instead, and the
+/// estimates shift a little as the history slides.
 List<double> estimateExpenditure(
   List<AdaptiveDay> days, {
   required double priorKcal,

@@ -277,6 +277,25 @@ void main() {
       expect(older.basisChanged(const AdaptiveSettings()), isFalse);
     });
 
+    test("a check-in under other settings gives no change in the week's "
+        'activity', () async {
+      AdaptiveStore.settings.value = const AdaptiveSettings(
+        adaptiveTarget: true,
+        activityMode: ActivityMode.daily,
+      );
+      await service.accept(await service.checkIn(), 2100);
+      // The daily mode keeps none of its activity in the target: the
+      // weekly mode's first check-in has nothing to compare with.
+      AdaptiveStore.settings.value = const AdaptiveSettings(
+        adaptiveTarget: true,
+        activityMode: ActivityMode.weekly,
+      );
+      expect((await service.checkIn()).activityChangeKcal, isNull);
+
+      await service.accept(await service.checkIn(), 2100);
+      expect((await service.checkIn()).activityChangeKcal, 0);
+    });
+
     test('the settings are saved and loaded', () async {
       await store.save(
         const AdaptiveSettings(smoothedTrend: true, cycleWindow: true),

@@ -24,10 +24,7 @@ void main() {
     addTearDown(() => AdaptiveStore.settings.value = const AdaptiveSettings());
     final entries = [
       for (var d = 26; d <= 31; d++)
-        WeightLogEntity(
-          date: DateTime(2026, 3, d),
-          weightKg: 80.0 + d - 26,
-        ),
+        WeightLogEntity(date: DateTime(2026, 3, d), weightKg: 80.0 + d - 26),
     ];
     final points = smoothedTrendPoints(entries)!;
     expect(points.map((p) => p.date.day), [26, 27, 28, 29, 30, 31]);

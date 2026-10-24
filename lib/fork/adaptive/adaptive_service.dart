@@ -136,7 +136,13 @@ class AdaptiveService {
         previousBaseKcal: previous?.basisChanged(settings) ?? false
             ? null
             : previous?.baseKcal,
-        previousActivityKcal: previous?.activityKcal,
+        // Only a record of the same settings says what its activity was.
+        previousActivityKcal:
+            previous == null ||
+                previous.basis == null ||
+                previous.basisChanged(settings)
+            ? null
+            : previous.activityKcal,
         maxChangeKcal: settings.maxCheckInChangeKcal,
         activityMode: settings.activityMode,
         taper: (adjustment, weight) => CalorieGoalCalc.applyTargetWeightTaper(
@@ -280,7 +286,8 @@ class AdaptiveService {
         AdaptiveDay(
           intakeKcal: intakes[d],
           weightKg: weighIns[d],
-          activityKcal: activity?[d],
+          // Today's steps are still coming in.
+          activityKcal: d == today ? null : activity?[d],
         ),
     ];
     return (first: first, days: days);
@@ -300,13 +307,18 @@ class AdaptiveService {
     }
     try {
       final user = await _user.getUserData();
-      return await counter.daily(
+      final days = await counter.daily(
         first: first,
         today: today,
         settings: settings,
         user: user,
         bodyFatPercent: await _measurements?.recentBodyFat(_now()),
       );
+      // The daily target adds a day's activity up to the limit, so the
+      // base takes off no more: the excess stays in it (D21).
+      return settings.activityMode == ActivityMode.daily
+          ? days.map((d, kcal) => MapEntry(d, min(kcal, maxDailyActivityKcal)))
+          : days;
     } catch (e) {
       _log.warning('Activity unreadable, none counted: $e');
       return null;

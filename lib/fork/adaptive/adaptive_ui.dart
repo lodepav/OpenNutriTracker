@@ -321,7 +321,7 @@ class _CheckInScreenState extends State<CheckInScreen> {
               Text(
                 "The past week's activity moves the target "
                 '${energyText(context, change, signed: true)} from the last '
-                "check-in's. The limit above leaves it out.",
+                "check-in's; the check-in limit doesn't hold it back.",
                 style: theme.textTheme.bodySmall,
               ),
             if (capped && cap != null)
