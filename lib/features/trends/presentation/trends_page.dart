@@ -376,7 +376,10 @@ class _CaloriesTrendCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(S.of(context).trendsCaloriesLabel, style: text.titleMedium),
+          Text(
+            _energyTitle(context), // [fork] S103
+            style: text.titleMedium,
+          ),
           // [fork] S83 chart-summary: the chart's numbers in words, shown
           // (and so spoken) under its title
           if (_caloriesSummary(context, spots, avgGoal).isNotEmpty)
@@ -393,7 +396,7 @@ class _CaloriesTrendCard extends StatelessWidget {
           else
           // [/fork]
           Semantics(
-            label: S.of(context).trendsCaloriesLabel,
+            label: _energyTitle(context), // [fork] S103
             child: SizedBox(
             height: 140,
             child: LineChart(
@@ -806,4 +809,11 @@ String _caloriesSummary(BuildContext context, List<FlSpot> spots, double avgGoal
   final goal = avgGoal > 0 ? ', goal ${avgGoal.toInt()} $unit' : '';
   return 'Average ${avg.toInt()} $unit over $days logged$goal';
 }
+// [/fork]
+
+// [fork] S103 kj-wording: "Energy" over a chart in kJ, as the activity
+// dialogs say
+String _energyTitle(BuildContext context) => usesKj(context)
+    ? S.of(context).mealEnergyLabel
+    : S.of(context).trendsCaloriesLabel;
 // [/fork]

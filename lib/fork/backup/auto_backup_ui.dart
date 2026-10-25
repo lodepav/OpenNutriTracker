@@ -101,7 +101,7 @@ class _AutoBackupScreenState extends State<AutoBackupScreen> {
               ),
               const SizedBox(height: 8),
               Text(
-                'To restore, go to Settings → Export / Import app data → '
+                'To restore, go to Settings → Export / import app data → '
                 'Import, and pick a backup file from the folder.',
                 style: textTheme.bodyMedium,
               ),
