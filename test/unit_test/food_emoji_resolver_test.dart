@@ -102,7 +102,7 @@ void main() {
     // comma between two list entries collapses them into a single garbled
     // string, breaking both. These spot-checks would have caught that.
     test('yoghurt (UK spelling) and ice cream both resolve', () {
-      expect(resolveFoodEmoji('yoghurt'), '🍦');
+      expect(resolveFoodEmoji('yoghurt'), '🥛'); // [fork] S117: was 🍦
       expect(resolveFoodEmoji('ice cream'), '🍦');
     });
 
