@@ -383,6 +383,9 @@ class _NutrientGoalsScreenState extends State<NutrientGoalsScreen> {
                   onTextEdited: _editedControllers.add,
                   controller: _satFatController,
                   identifier: 'nutrient-sat-fat-slider',
+                  // [fork] S135 nutrient-goals
+                  limit: true,
+                  // [/fork]
                   onSliderChanged: (v) => setState(() => _satFat = v),
                   onTextSubmitted: () => _applyText(_satFatController,
                       _satFatMin, _satFatMax, (v) => _satFat = v),
@@ -397,6 +400,9 @@ class _NutrientGoalsScreenState extends State<NutrientGoalsScreen> {
                   onTextEdited: _editedControllers.add,
                   controller: _sugarsController,
                   identifier: 'nutrient-sugars-slider',
+                  // [fork] S135 nutrient-goals
+                  limit: true,
+                  // [/fork]
                   onSliderChanged: (v) => setState(() => _sugars = v),
                   onTextSubmitted: () => _applyText(_sugarsController,
                       _sugarsMin, _sugarsMax, (v) => _sugars = v),
@@ -412,6 +418,9 @@ class _NutrientGoalsScreenState extends State<NutrientGoalsScreen> {
                   controller: _sodiumController,
                   unit: 'mg',
                   identifier: 'nutrient-sodium-slider',
+                  // [fork] S135 nutrient-goals
+                  limit: true,
+                  // [/fork]
                   onSliderChanged: (v) => setState(() => _sodium = v),
                   onTextSubmitted: () => _applyText(_sodiumController,
                       _sodiumMin, _sodiumMax, (v) => _sodium = v),
@@ -574,6 +583,10 @@ class _NutrientRow extends StatelessWidget {
   final VoidCallback onTextSubmitted;
   final ValueChanged<TextEditingController> onTextEdited;
 
+  // [fork] S135 nutrient-goals: a limit to stay under, not a target
+  final bool limit;
+  // [/fork]
+
   const _NutrientRow({
     required this.label,
     required this.description,
@@ -589,6 +602,9 @@ class _NutrientRow extends StatelessWidget {
     this.unit = 'g',
     this.decimalStep = false,
     this.decimalInput = false,
+    // [fork] S135 nutrient-goals
+    this.limit = false,
+    // [/fork]
   });
 
   @override
@@ -601,7 +617,20 @@ class _NutrientRow extends StatelessWidget {
         children: [
           Row(
             children: [
-              Expanded(child: Text(label)),
+              // [fork] S135 nutrient-goals: at least, or at most
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(label),
+                    Text(
+                      limit ? 'At most' : 'At least',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ],
+                ),
+              ),
+              // [/fork]
               SizedBox(
                 // Scale with the user's text setting so the value and unit
                 // suffix stay readable at large font scales.

@@ -255,11 +255,9 @@ List<NutrientSummary> summarizeNutrients(
 typedef IntakeLoader =
     Future<List<IntakeEntity>> Function(DateTime first, DateTime last);
 
-Future<List<IntakeEntity>> _intakesBetween(
-  DateTime first,
-  DateTime last,
-) async {
-  final offset = await _dayStartMinutes();
+/// Every intake from [first] to [last], as the Diary days them.
+Future<List<IntakeEntity>> intakesBetween(DateTime first, DateTime last) async {
+  final offset = await dayStartMinutes();
   String key(DateTime d) =>
       DayBoundaryCalc.dayKeyOf(DateTime(d.year, d.month, d.day), offset);
   final from = key(first);
@@ -272,11 +270,11 @@ Future<List<IntakeEntity>> _intakesBetween(
   ];
 }
 
-Future<int> _dayStartMinutes() async => locator.isRegistered<GetConfigUsecase>()
+Future<int> dayStartMinutes() async => locator.isRegistered<GetConfigUsecase>()
     ? (await locator<GetConfigUsecase>().getConfig()).dayStartOffsetTotalMinutes
     : 0;
 
-Future<UserEntity?> _user() async {
+Future<UserEntity?> loadUser() async {
   try {
     return await locator<GetUserUsecase>().getUserData();
   } catch (_) {
@@ -309,7 +307,7 @@ class NutrientExplorerScreen extends StatefulWidget {
     required this.first,
     required this.last,
     this.load,
-    this.user = _user,
+    this.user = loadUser,
     this.editGoals = _openNutrientGoals,
   });
 
@@ -342,10 +340,10 @@ class _NutrientExplorerScreenState extends State<NutrientExplorerScreen> {
   late Future<List<NutrientSummary>> _summaries = _summarize();
 
   Future<List<NutrientSummary>> _summarize() async => summarizeNutrients(
-    await (widget.load ?? _intakesBetween)(widget.first, widget.last),
+    await (widget.load ?? intakesBetween)(widget.first, widget.last),
     _days,
     await widget.user(),
-    dayStartMinutes: await _dayStartMinutes(),
+    dayStartMinutes: await dayStartMinutes(),
   );
 
   Future<void> _editGoals() async {

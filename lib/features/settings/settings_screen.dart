@@ -71,6 +71,9 @@ import 'package:opennutritracker/fork/brand/openbite_logo.dart';
 import 'package:opennutritracker/fork/update/update_notice.dart';
 import 'package:opennutritracker/fork/version.dart';
 // [/fork]
+// [fork] S135 nutrient-goals
+import 'package:opennutritracker/fork/report/nutrient_goals_overview.dart';
+// [/fork]
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
@@ -1117,17 +1120,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   void _openNutrientGoalsScreen(BuildContext context) {
+    // [fork] S135 nutrient-goals: today's bars first, the goal list behind
+    // Edit
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => NutrientGoalsScreen(
-          settingsBloc: _settingsBloc,
-          profileBloc: _profileBloc,
-          diaryBloc: _diaryBloc,
-          calendarDayBloc: _calendarDayBloc,
-          homeBloc: _homeBloc,
+        builder: (_) => NutrientGoalsOverview(
+          onEdit: (context) => Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => NutrientGoalsScreen(
+                settingsBloc: _settingsBloc,
+                profileBloc: _profileBloc,
+                diaryBloc: _diaryBloc,
+                calendarDayBloc: _calendarDayBloc,
+                homeBloc: _homeBloc,
+              ),
+            ),
+          ),
         ),
       ),
     );
+    // [/fork]
   }
 
   void _showDayBoundaryDialog(BuildContext context) {
