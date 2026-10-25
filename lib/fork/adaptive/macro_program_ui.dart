@@ -3,11 +3,13 @@ import 'package:opennutritracker/fork/adaptive/macro_program.dart';
 
 /// The macro program, or none for upstream's percentages; pops a record
 /// so "off" and "cancelled" differ. Settings' Macros row and onboarding's
-/// goal page open it.
+/// goal page open it. Grams per pound where body weight is in pounds
+/// ([perLb]); the program keeps them per kg.
 class MacroProgramDialog extends StatefulWidget {
   final MacroProgram? program;
+  final bool perLb;
 
-  const MacroProgramDialog(this.program, {super.key});
+  const MacroProgramDialog(this.program, {super.key, this.perLb = false});
 
   @override
   State<MacroProgramDialog> createState() => _MacroProgramDialogState();
@@ -36,6 +38,9 @@ class _MacroProgramDialogState extends State<MacroProgramDialog> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final style = _program.style;
+    final perLb = widget.perLb;
+    String shown(double kg) => MacroProgram.perWeight(kg, perLb);
+    final per = perLb ? 'lb' : 'kg';
     return AlertDialog(
       title: const Text('Macros'),
       content: SingleChildScrollView(
@@ -46,7 +51,7 @@ class _MacroProgramDialogState extends State<MacroProgramDialog> {
             SwitchListTile(
               key: const ValueKey('macro-program-on'),
               contentPadding: EdgeInsets.zero,
-              title: const Text('Protein and fat per kg'),
+              title: Text('Protein and fat per $per'),
               subtitle: const Text(
                 'In place of the percentages. Protein holds steady; carbs '
                 'and fat take a weekday\'s shift.',
@@ -62,7 +67,7 @@ class _MacroProgramDialogState extends State<MacroProgramDialog> {
                   for (final (i, kg) in _proteinPresets.indexed)
                     ChoiceChip(
                       key: ValueKey('macro-protein-$i'),
-                      label: Text('${_levels[i]} $kg'),
+                      label: Text('${_levels[i]} ${shown(kg)}'),
                       selected: !_proteinManual && _program.proteinGPerKg == kg,
                       onSelected: (_) => setState(() {
                         _proteinManual = false;
@@ -84,6 +89,7 @@ class _MacroProgramDialogState extends State<MacroProgramDialog> {
                   initial: _program.proteinGPerKg,
                   min: 0.8,
                   max: 3.5,
+                  perLb: perLb,
                   onChanged: (kg) => setState(() {
                     _proteinBad = kg == null;
                     if (kg != null) {
@@ -92,14 +98,14 @@ class _MacroProgramDialogState extends State<MacroProgramDialog> {
                   }),
                 ),
               Text(
-                '${_program.proteinGPerKg.toStringAsFixed(1)} g per kg'
+                '${shown(_program.proteinGPerKg)} g per $per'
                 '${_program.leanMass ? ' of lean mass' : ' of body weight'}',
                 style: theme.textTheme.bodySmall,
               ),
               SwitchListTile(
                 key: const ValueKey('macro-lean'),
                 contentPadding: EdgeInsets.zero,
-                title: const Text('Per kg of lean mass'),
+                title: Text('Per $per of lean mass'),
                 subtitle: const Text(
                   'Weight less body fat: your latest measured body fat %, '
                   'or an estimate from your BMI and age.',
@@ -124,7 +130,7 @@ class _MacroProgramDialogState extends State<MacroProgramDialog> {
                   for (final (i, kg) in MacroProgram.fatPresets.indexed)
                     ChoiceChip(
                       key: ValueKey('macro-fat-$i'),
-                      label: Text('${_fatLevels[i]} $kg'),
+                      label: Text('${_fatLevels[i]} ${shown(kg)}'),
                       selected:
                           style == MacroStyle.perKg &&
                           !_fatManual &&
@@ -170,6 +176,7 @@ class _MacroProgramDialogState extends State<MacroProgramDialog> {
                   initial: _program.fatGPerKg,
                   min: 0.3,
                   max: 2.0,
+                  perLb: perLb,
                   onChanged: (kg) => setState(() {
                     _fatBad = kg == null;
                     if (kg != null) {
@@ -179,7 +186,7 @@ class _MacroProgramDialogState extends State<MacroProgramDialog> {
                 ),
               Text(
                 style == MacroStyle.perKg
-                    ? '${_program.fatGPerKg.toStringAsFixed(1)} g per kg of '
+                    ? '${shown(_program.fatGPerKg)} g per $per of '
                           'body weight, the rest carbs. Under about 20% of '
                           'your energy from fat is not advised.'
                     : style.explanation,
@@ -206,11 +213,13 @@ class _MacroProgramDialogState extends State<MacroProgramDialog> {
 }
 
 /// Grams per kg typed in, between [min] and [max]; null to [onChanged]
-/// while the text is no such number.
+/// while the text is no such number. Typed per pound with [perLb], and
+/// still told per kg.
 class _PerKgField extends StatefulWidget {
   final double initial;
   final double min;
   final double max;
+  final bool perLb;
   final ValueChanged<double?> onChanged;
 
   const _PerKgField({
@@ -218,6 +227,7 @@ class _PerKgField extends StatefulWidget {
     required this.initial,
     required this.min,
     required this.max,
+    required this.perLb,
     required this.onChanged,
   });
 
@@ -226,7 +236,10 @@ class _PerKgField extends StatefulWidget {
 }
 
 class _PerKgFieldState extends State<_PerKgField> {
-  late final _text = TextEditingController(text: '${widget.initial}');
+  late final _text = TextEditingController(text: _shown(widget.initial));
+
+  String _shown(double kg) =>
+      widget.perLb ? MacroProgram.perWeight(kg, true) : '$kg';
   bool _bad = false;
 
   @override
@@ -240,12 +253,20 @@ class _PerKgFieldState extends State<_PerKgField> {
     controller: _text,
     keyboardType: const TextInputType.numberWithOptions(decimal: true),
     decoration: InputDecoration(
-      suffixText: 'g/kg',
-      errorText: _bad ? 'From ${widget.min} to ${widget.max}' : null,
+      suffixText: MacroProgram.unitOf(widget.perLb),
+      errorText: _bad
+          ? 'From ${_shown(widget.min)} to ${_shown(widget.max)}'
+          : null,
     ),
     onChanged: (text) {
-      final kg = double.tryParse(text.trim().replaceAll(',', '.'));
-      final ok = kg != null && kg >= widget.min && kg <= widget.max;
+      final typed = double.tryParse(text.trim().replaceAll(',', '.'));
+      final kg = typed == null || !widget.perLb
+          ? typed
+          : typed * MacroProgram.lbPerKg;
+      // A bound shown rounded is still in range.
+      final slack = widget.perLb ? 0.005 * MacroProgram.lbPerKg : 0.0;
+      final ok =
+          kg != null && kg >= widget.min - slack && kg <= widget.max + slack;
       setState(() => _bad = !ok);
       widget.onChanged(ok ? kg : null);
     },

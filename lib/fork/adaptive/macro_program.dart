@@ -34,11 +34,11 @@ class MacroProgram {
 
   /// Moderate, high and very high: 1.6 g/kg is where the gain from more
   /// protein levels off (Morton et al. 2018), 2.0 the top of the ISSN's
-  /// range for building muscle and 2.4 the low end of its range for
-  /// keeping it in a deficit (Jäger et al. 2017). Per kg of lean mass the
-  /// same grams for a body of 15% fat.
-  static const proteinPresets = [1.6, 2.0, 2.4];
-  static const proteinPresetsLean = [1.9, 2.4, 2.8];
+  /// range for building muscle (Jäger et al. 2017) and 2.2 the gym's one
+  /// gram per pound. Per kg of lean mass the same grams for a body of 15%
+  /// fat.
+  static const proteinPresets = [1.6, 2.0, 2.2];
+  static const proteinPresetsLean = [1.9, 2.4, 2.6];
   static const defaultPerKg = 1.6;
   static const defaultPerKgLean = 1.9;
 
@@ -120,8 +120,21 @@ class MacroProgram {
     return FixedMacros(proteinG: proteinG, carbsG: carbsG, fatG: fatG);
   }
 
-  String get summary =>
-      '${style == MacroStyle.perKg ? 'Fat ${fatGPerKg.toStringAsFixed(1)} g/kg' : style.label}, '
-      'protein ${proteinGPerKg.toStringAsFixed(1)} g/kg'
+  /// Grams per pound where body weight is in pounds, else per kg.
+  String summary({bool perLb = false}) =>
+      '${style == MacroStyle.perKg ? 'Fat ${perWeight(fatGPerKg, perLb)} ${unitOf(perLb)}' : style.label}, '
+      'protein ${perWeight(proteinGPerKg, perLb)} ${unitOf(perLb)}'
       '${leanMass ? ' of lean mass' : ''}';
+
+  static const lbPerKg = 2.20462;
+
+  /// [gPerKg] as shown: one decimal per kg, two per pound, as 2.2 g/kg is
+  /// 1.0 g/lb and 1.6 is 0.73.
+  static String perWeight(double gPerKg, bool perLb) {
+    if (!perLb) return gPerKg.toStringAsFixed(1);
+    final text = (gPerKg / lbPerKg).toStringAsFixed(2);
+    return text.endsWith('0') ? text.substring(0, text.length - 1) : text;
+  }
+
+  static String unitOf(bool perLb) => perLb ? 'g/lb' : 'g/kg';
 }
