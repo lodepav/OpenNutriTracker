@@ -104,13 +104,18 @@ else
 fi
 
 TMP="$(mktemp -d)"
-trap 'rm -rf "$TMP"' EXIT
+trap 'git worktree remove --force "$TMP/src" 2>/dev/null; rm -rf "$TMP"' EXIT
 OUT="$TMP/openbite-$VER.apk"
 
 # The full flavour's release build, unsigned (no android/key.properties: the key never enters
-# Gradle). nice: a full-speed build has hung this machine.
-nice -n 19 flutter build apk --flavor full --release
-UNSIGNED=build/app/outputs/flutter-apk/app-full-release.apk
+# Gradle). nice: a full-speed build has hung this machine. It builds in a worktree of its own:
+# a test run or debug build in this tree meanwhile rewrites GeneratedPluginRegistrant.java with
+# the dev-only plugins, and the release compile then fails on integration_test.
+# Git leaves out what is generated: the keys' env.g.dart is copied in, the strings regenerated.
+git worktree add -q --detach "$TMP/src" HEAD
+cp lib/core/utils/env.g.dart "$TMP/src/lib/core/utils/"
+(cd "$TMP/src" && flutter gen-l10n && nice -n 19 flutter build apk --flavor full --release)
+UNSIGNED="$TMP/src/build/app/outputs/flutter-apk/app-full-release.apk"
 "${BT}zipalign" -f -p 4 "$UNSIGNED" "$TMP/aligned.apk"
 echo "signing with $KS ($ALIAS)"
 "${BT}apksigner" sign --ks "$KS" --ks-key-alias "$ALIAS" --out "$OUT" "$TMP/aligned.apk"
