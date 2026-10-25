@@ -612,6 +612,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 const SizedBox(height: Dimens.spacing20),
               ],
               if (_forkShows(SettingsSection.appearance)) ...[
+              // [fork] S129: the page's own title already says it
+              if (widget.embedded)
+              // [/fork]
               _categoryHeader(
                 context,
                 palette,
