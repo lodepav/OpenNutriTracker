@@ -114,11 +114,14 @@ class MealItemCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 2),
+                    // The source last, so a narrow row cuts it, not the
+                    // macros.
                     MacrosLine(
-                      lead: source,
                       carbs: last?.totalCarbsGram ?? n.carbohydrates100,
                       fat: last?.totalFatsGram ?? n.fat100,
                       protein: last?.totalProteinsGram ?? n.proteins100,
+                      tail: source == null ? null : '· $source',
+                      maxLines: 1,
                     ),
                   ],
                 ),

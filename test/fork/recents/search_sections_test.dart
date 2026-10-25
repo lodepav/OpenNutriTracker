@@ -29,7 +29,11 @@ class _Config implements GetConfigUsecase {
       throw UnimplementedError('Unexpected call: ${invocation.memberName}');
 }
 
-MealEntity _meal(String name, {double kcal = 123}) => MealEntity(
+MealEntity _meal(
+  String name, {
+  double kcal = 123,
+  MealSourceEntity source = MealSourceEntity.custom,
+}) => MealEntity(
   code: name,
   name: name,
   url: null,
@@ -47,7 +51,7 @@ MealEntity _meal(String name, {double kcal = 123}) => MealEntity(
     saturatedFat100: null,
     fiber100: null,
   ),
-  source: MealSourceEntity.custom,
+  source: source,
 );
 
 IntakeEntity _entry(MealEntity meal, double grams) => IntakeEntity(
@@ -168,5 +172,23 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('a long source is cut, the macros stay on one line', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      app([_meal('Yogurt', source: MealSourceEntity.off)]),
+    );
+    await tester.pumpAndSettle();
+
+    final macros = find.textContaining(
+      'C 166 · F 6 · P 19 · Open Food Facts',
+      findRichText: true,
+    );
+    expect(macros, findsOneWidget);
+    final height = tester.getSize(macros).height;
+    final line = tester.getSize(find.text('640 g')).height;
+    expect(height, lessThan(line * 1.5));
   });
 }

@@ -38,6 +38,9 @@ class MacrosLine extends StatelessWidget {
   final double? protein;
   final String? tail;
 
+  /// Cut short at this many lines, the [tail] going first.
+  final int? maxLines;
+
   const MacrosLine({
     super.key,
     this.lead,
@@ -45,6 +48,7 @@ class MacrosLine extends StatelessWidget {
     required this.fat,
     required this.protein,
     this.tail,
+    this.maxLines,
   });
 
   @override
@@ -74,12 +78,19 @@ class MacrosLine extends StatelessWidget {
                 ),
                 TextSpan(text: ' ${grams(value)}'),
               ],
-              // Shown with no-break spaces, so "per 100 g" never splits.
+              // Shown with no-break spaces, so "per 100 g" never splits;
+              // on one line, cut where it must.
               if (tail != null)
-                TextSpan(text: ' ${tail!.replaceAll(' ', '\u00a0')}'),
+                TextSpan(
+                  text: maxLines == 1
+                      ? ' $tail'
+                      : ' ${tail!.replaceAll(' ', '\u00a0')}',
+                ),
             ],
           ),
           style: style,
+          maxLines: maxLines,
+          overflow: maxLines == null ? null : TextOverflow.ellipsis,
           semanticsLabel: [
             ?lead,
             for (final (_, name, value) in macros)
