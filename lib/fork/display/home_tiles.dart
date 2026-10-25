@@ -181,11 +181,19 @@ class WeightTile extends StatefulWidget {
   final BodyWeightUnit unit;
   final Future<List<WeightLogEntity>> Function() load;
 
+  /// The You tab's (S121) opens the weight history instead of a weigh-in.
+  final String identifier;
+  final String hint;
+  final VoidCallback? onTap;
+
   const WeightTile({
     super.key,
     required this.weightKg,
     required this.unit,
     required this.load,
+    this.identifier = 'home-weight-chip',
+    this.hint = 'Log a weigh-in',
+    this.onTap,
   });
 
   @override
@@ -226,12 +234,12 @@ class _WeightTileState extends State<WeightTile> {
           ? trend.sublist(trend.length - 30)
           : trend;
       return HomeTile(
-        identifier: 'home-weight-chip',
+        identifier: widget.identifier,
         title: 'Weight trend',
         value: value,
         note: note,
-        hint: 'Log a weigh-in',
-        onTap: () => QuickWeightWidget.showWeightDialog(
+        hint: widget.hint,
+        onTap: widget.onTap ?? () => QuickWeightWidget.showWeightDialog(
           context,
           weightKg: widget.weightKg,
           bodyWeightUnit: widget.unit,

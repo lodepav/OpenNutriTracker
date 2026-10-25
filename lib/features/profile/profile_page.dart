@@ -10,10 +10,7 @@ import 'package:opennutritracker/core/domain/entity/user_weight_goal_entity.dart
 import 'package:opennutritracker/core/domain/entity/weight_log_entity.dart';
 import 'package:opennutritracker/core/domain/usecase/add_weight_log_usecase.dart';
 import 'package:opennutritracker/core/domain/usecase/get_user_usecase.dart';
-import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
-import 'package:opennutritracker/core/presentation/widgets/section_group.dart';
 import 'package:opennutritracker/core/presentation/widgets/calories_profile_info_dialog.dart';
-import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/core/utils/bounds/validator.dart';
 import 'package:opennutritracker/core/utils/calc/unit_calc.dart';
@@ -21,8 +18,6 @@ import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/core/utils/navigation_options.dart';
 import 'package:opennutritracker/features/profile/presentation/bloc/profile_bloc.dart';
 import 'package:opennutritracker/features/profile/presentation/utils/profile_display_format.dart';
-import 'package:opennutritracker/features/profile/presentation/widgets/bmi_overview.dart';
-import 'package:opennutritracker/features/profile/presentation/widgets/profile_switcher_header.dart';
 import 'package:opennutritracker/features/profile/presentation/widgets/set_gender_dialog.dart';
 import 'package:opennutritracker/features/profile/presentation/widgets/set_goal_dialog.dart';
 import 'package:opennutritracker/features/profile/presentation/widgets/set_height_dialog.dart';
@@ -32,9 +27,19 @@ import 'package:opennutritracker/features/profile/presentation/widgets/set_targe
 import 'package:opennutritracker/features/profile/presentation/widgets/set_weight_dialog.dart';
 import 'package:opennutritracker/features/home/presentation/bloc/home_bloc.dart';
 import 'package:opennutritracker/features/settings/presentation/bloc/settings_bloc.dart';
-import 'package:opennutritracker/features/settings/settings_screen.dart';
 import 'package:opennutritracker/features/settings/presentation/widgets/water_goal_dialog.dart';
 import 'package:opennutritracker/generated/l10n.dart';
+// [fork] S121 you-tab
+import 'package:opennutritracker/core/domain/usecase/get_profiles_usecase.dart';
+import 'package:opennutritracker/core/domain/usecase/get_weight_log_usecase.dart';
+import 'package:opennutritracker/core/presentation/sources_screen.dart';
+import 'package:opennutritracker/core/utils/extensions.dart';
+import 'package:opennutritracker/features/profile/presentation/widgets/bmi_info_screen.dart';
+import 'package:opennutritracker/features/profile/presentation/widgets/profile_switcher_sheet.dart';
+import 'package:opennutritracker/features/settings/presentation/widgets/kcal_goal_info_screen.dart';
+import 'package:opennutritracker/fork/display/home_tiles.dart';
+import 'package:opennutritracker/fork/you/you_widgets.dart';
+// [/fork]
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -96,8 +101,6 @@ class _ProfilePageState extends State<ProfilePage> {
     bool usesImperialHeightUnits,
     int effectiveWaterGoalMl,
   ) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final palette = isDark ? AppPalette.dark : AppPalette.light;
     return ListView(
       padding: const EdgeInsets.fromLTRB(
         Dimens.spacing16,
@@ -105,269 +108,236 @@ class _ProfilePageState extends State<ProfilePage> {
         Dimens.spacing16,
         _fabClearance,
       ),
+      // [fork] S121 you-tab: MacroFactor's You (YouA): who is active with a
+      // Switch button, four tiles (the weight trend, the goal, the daily
+      // budget, the BMI), then short lists: Plan, Body and Tools. Every
+      // row of upstream's is still here; Settings opens its screen
+      // (upstream: a large BMI ring, five icon groups and Settings inline)
       children: [
-        const ProfileSwitcherHeader(),
-        const SizedBox(height: Dimens.spacing24),
-        BMIOverview(
-          bmiValue: userBMIEntity.bmiValue,
-          nutritionalStatus: userBMIEntity.nutritionalStatus,
-        ),
-        const SizedBox(height: Dimens.spacing32),
-        SectionHeader(label: S.of(context).goalLabel, palette: palette),
-        const SizedBox(height: Dimens.spacing12),
-        SectionGroup(
-          palette: palette,
-          tiles: [
-            _ProfileTile(
-              identifier: 'profile-activity',
-              palette: palette,
-              icon: Icons.directions_walk_rounded,
-              title: S.of(context).activityLabel,
-              subtitle: user.pal.getName(context),
-              onTap: () => _showSetPALCategoryDialog(context, user),
+        YouProfileRow(
+          profile: locator<GetProfilesUsecase>().getActiveProfile(),
+          details: [
+            '${user.age}',
+            formatHeight(
+              user.heightCM,
+              usesImperialHeightUnits,
+              cmLabel: S.of(context).cmLabel,
+              ftLabel: S.of(context).ftLabel,
+              inLabel: S.of(context).inLabel,
             ),
-            _ProfileTile(
-              identifier: 'profile-goal',
-              palette: palette,
-              icon: Icons.flag_rounded,
+            user.gender.getName(context),
+          ].join(' · '),
+          onSwitch: () => showProfileSwitcherSheet(context),
+        ),
+        YouTiles(
+          tiles: [
+            WeightTile(
+              key: ValueKey(user.weightKG),
+              weightKg: user.weightKG,
+              unit: bodyWeightUnit,
+              load: () async => locator<GetWeightLogUsecase>().getAllEntries(),
+              identifier: 'profile-weight-trend',
+              hint: 'Open the weight history',
+              onTap: () => Navigator.of(
+                context,
+              ).pushNamed(NavigationOptions.weightHistoryRoute),
+            ),
+            YouTile(
+              identifier: 'profile-goal-tile',
               title: S.of(context).goalLabel,
-              subtitle: user.goal.getName(context),
+              value: switch (user.goal) {
+                UserWeightGoalEntity.loseWeight => 'Lose',
+                UserWeightGoalEntity.maintainWeight => 'Keep',
+                UserWeightGoalEntity.gainWeight => 'Gain',
+              },
+              note: _forkRate(context, user, bodyWeightUnit),
+              below: user.targetWeightKg == null
+                  ? S.of(context).profileTargetWeightNotSetLabel
+                  : 'Target ${_forkWeight(context, user.targetWeightKg!, bodyWeightUnit)}',
+              hint: 'Change the goal',
               onTap: () => _showSetGoalDialog(context, user),
             ),
-            _ProfileTile(
+            BudgetTile(
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => const KcalGoalInfoScreen(),
+                ),
+              ),
+            ),
+            YouTile(
+              identifier: 'profile-bmi',
+              title: S.of(context).bmiLabel,
+              value: '${userBMIEntity.bmiValue.roundToPrecision(1)}',
+              note: userBMIEntity.nutritionalStatus.getName(context),
+              below: 'How it is worked out',
+              hint: 'How the BMI is worked out',
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(builder: (_) => const BmiInfoScreen()),
+              ),
+            ),
+          ],
+        ),
+        YouSection(
+          title: 'Plan',
+          rows: [
+            YouRow(
+              identifier: 'profile-activity',
+              label: S.of(context).activityLabel,
+              value: user.pal.getName(context),
+              onTap: () => _showSetPALCategoryDialog(context, user),
+            ),
+            YouRow(
+              identifier: 'profile-goal',
+              label: S.of(context).goalLabel,
+              value: user.goal.getName(context),
+              onTap: () => _showSetGoalDialog(context, user),
+            ),
+            YouRow(
               identifier: 'profile-weekly-goal',
-              palette: palette,
-              icon: Icons.trending_down_rounded,
-              title: S.of(context).weeklyWeightGoalLabel,
-              subtitle: _weeklyGoalSubtitle(context, user, bodyWeightUnit),
+              label: S.of(context).weeklyWeightGoalLabel,
+              value: _weeklyGoalSubtitle(context, user, bodyWeightUnit),
               onTap: () => _showSetWeeklyWeightGoalDialog(
                 context,
                 user,
                 bodyWeightUnit,
               ),
             ),
-          ],
-        ),
-        const SizedBox(height: Dimens.spacing24),
-        SectionHeader(label: S.of(context).weightLabel, palette: palette),
-        const SizedBox(height: Dimens.spacing12),
-        SectionGroup(
-          palette: palette,
-          tiles: [
-            _ProfileTile(
-              identifier: 'profile-weight',
-              palette: palette,
-              icon: Icons.monitor_weight_rounded,
-              title: S.of(context).weightLabel,
-              subtitleWidget: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    formatBodyWeight(
-                      user.weightKG,
-                      bodyWeightUnit,
-                      kgLabel: S.of(context).kgLabel,
-                      lbLabel: S.of(context).lbsLabel,
-                      stLabel: S.of(context).stLabel,
-                    ),
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: palette.textMuted,
-                        ),
-                  ),
-                  // #119: When the user has set a concrete target weight, surface
-                  // the distance to it directly below the current weight. The
-                  // delta is signed-agnostic — the message holds whether the
-                  // target is above or below current (cut or gain).
-                  if (user.targetWeightKg != null)
-                    Text(
-                      _targetWeightSubLabel(context, user, bodyWeightUnit),
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: palette.textMuted,
-                          ),
-                    ),
-                ],
-              ),
-              onTap: () {
-                _showSetWeightDialog(context, user, bodyWeightUnit);
-              },
-            ),
-            _ProfileTile(
+            YouRow(
               identifier: 'profile-target-weight',
-              palette: palette,
-              icon: Icons.flag_rounded,
-              title: S.of(context).profileTargetWeightLabel,
-              subtitle: user.targetWeightKg == null
-                  ? S.of(context).profileTargetWeightNotSetLabel
-                  : formatBodyWeight(
-                      user.targetWeightKg!,
-                      bodyWeightUnit,
-                      kgLabel: S.of(context).kgLabel,
-                      lbLabel: S.of(context).lbsLabel,
-                      stLabel: S.of(context).stLabel,
-                    ),
+              label: S.of(context).profileTargetWeightLabel,
+              value: user.targetWeightKg == null
+                  ? 'Set'
+                  : _forkWeight(context, user.targetWeightKg!, bodyWeightUnit),
               onTap: () =>
                   _showSetTargetWeightDialog(context, user, bodyWeightUnit),
             ),
-            // The opt-in linear taper scales the daily kcal deficit down
-            // as current weight approaches the target. Surfaced here only
-            // once a target weight is set, since without one the toggle
-            // has nothing to scale against.
+            // The taper scales against the target, so only with one.
             if (user.targetWeightKg != null)
-              _ProfileSwitchTile(
+              YouSwitchRow(
                 identifier: 'profile-calorie-taper',
-                palette: palette,
-                icon: Icons.trending_down_rounded,
-                title: S.of(context).settingsCaloriesTaperLabel,
-                subtitle: S.of(context).settingsCaloriesTaperDescription,
+                label: S.of(context).settingsCaloriesTaperLabel,
+                detail: S.of(context).settingsCaloriesTaperDescription,
                 value: user.caloriesTaperEnabled,
                 onChanged: (v) => _profileBloc.setCaloriesTaperEnabled(v),
               ),
-            _ProfileTile(
-              identifier: 'profile-weight-history',
-              palette: palette,
-              icon: Icons.show_chart_rounded,
-              title: S.of(context).profileWeightHistoryTitle,
-              showChevron: true,
-              onTap: () => Navigator.of(
-                context,
-              ).pushNamed(NavigationOptions.weightHistoryRoute),
-            ),
-            _ProfileTile(
-              identifier: 'profile-fasting-entry',
-              palette: palette,
-              icon: Icons.timer_rounded,
-              title: S.of(context).profileFastingEntry,
-              showChevron: true,
-              onTap: () =>
-                  Navigator.of(context).pushNamed(NavigationOptions.fastingRoute),
-            ),
           ],
         ),
-        const SizedBox(height: Dimens.spacing24),
-        SectionHeader(
-          label: S.of(context).settingsWaterGoalLabel,
-          palette: palette,
-        ),
-        const SizedBox(height: Dimens.spacing12),
-        SectionGroup(
-          palette: palette,
-          tiles: [
-            _ProfileTile(
-              identifier: 'profile-water-goal',
-              palette: palette,
-              icon: Icons.water_drop_rounded,
-              title: S.of(context).settingsWaterGoalLabel,
-              subtitle: '$effectiveWaterGoalMl ${S.of(context).mlLabel}',
-              onTap: () => _showWaterGoalDialog(context),
+        YouSection(
+          title: 'Body',
+          rows: [
+            YouRow(
+              identifier: 'profile-weight',
+              label: S.of(context).weightLabel,
+              value: _forkWeight(context, user.weightKG, bodyWeightUnit),
+              detail: user.targetWeightKg == null
+                  ? null
+                  : _targetWeightSubLabel(context, user, bodyWeightUnit),
+              onTap: () => _showSetWeightDialog(context, user, bodyWeightUnit),
             ),
-          ],
-        ),
-        const SizedBox(height: Dimens.spacing24),
-        SectionHeader(
-          label: S.of(context).profileLabel,
-          palette: palette,
-        ),
-        const SizedBox(height: Dimens.spacing12),
-        SectionGroup(
-          palette: palette,
-          tiles: [
-            _ProfileTile(
+            YouRow(
               identifier: 'profile-height',
-              palette: palette,
-              icon: Icons.height_rounded,
-              title: S.of(context).heightLabel,
-              subtitle: formatHeight(
+              label: S.of(context).heightLabel,
+              value: formatHeight(
                 user.heightCM,
                 usesImperialHeightUnits,
                 cmLabel: S.of(context).cmLabel,
                 ftLabel: S.of(context).ftLabel,
                 inLabel: S.of(context).inLabel,
               ),
-              onTap: () {
-                _showSetHeightDialog(context, user, usesImperialHeightUnits);
-              },
+              onTap: () =>
+                  _showSetHeightDialog(context, user, usesImperialHeightUnits),
             ),
-            _ProfileTile(
+            YouRow(
               identifier: 'profile-age',
-              palette: palette,
-              icon: Icons.cake_rounded,
-              title: S.of(context).ageLabel,
-              subtitle: S.of(context).yearsLabel(user.age),
-              onTap: () {
-                _showSetBirthdayDialog(context, user);
-              },
+              label: S.of(context).ageLabel,
+              value: S.of(context).yearsLabel(user.age),
+              onTap: () => _showSetBirthdayDialog(context, user),
             ),
-            _ProfileTile(
+            YouRow(
               identifier: 'profile-gender',
-              palette: palette,
-              iconWidget: user.gender.getIcon(),
-              title: S.of(context).genderLabel,
-              subtitle: user.gender.getName(context),
-              onTap: () {
-                _showSetGenderDialog(context, user);
-              },
+              label: S.of(context).genderLabel,
+              value: user.gender.getName(context),
+              onTap: () => _showSetGenderDialog(context, user),
             ),
             if (user.gender == UserGenderEntity.nonBinary)
-              _ProfileTile(
+              YouRow(
                 identifier: 'profile-calories-profile',
-                palette: palette,
-                icon: Icons.tune_rounded,
-                title: S.of(context).caloriesProfileInfoTitle,
-                subtitle: (user.caloriesProfile ?? CaloriesProfileEntity.averaged)
-                    .getName(context),
-                onTap: () {
-                  _showCaloriesProfileDialog(context, user);
-                },
+                label: S.of(context).caloriesProfileInfoTitle,
+                value:
+                    (user.caloriesProfile ?? CaloriesProfileEntity.averaged)
+                        .getName(context),
+                onTap: () => _showCaloriesProfileDialog(context, user),
               ),
           ],
         ),
-        const SizedBox(height: Dimens.spacing24),
-        SectionHeader(label: S.of(context).recipesLabel, palette: palette),
-        const SizedBox(height: Dimens.spacing12),
-        SectionGroup(
-          palette: palette,
-          tiles: [
-            _ProfileTile(
+        YouSection(
+          title: 'Tools',
+          rows: [
+            YouRow(
+              identifier: 'profile-weight-history',
+              label: S.of(context).profileWeightHistoryTitle,
+              onTap: () => Navigator.of(
+                context,
+              ).pushNamed(NavigationOptions.weightHistoryRoute),
+            ),
+            YouRow(
+              identifier: 'profile-fasting-entry',
+              label: S.of(context).profileFastingEntry,
+              onTap: () =>
+                  Navigator.of(context).pushNamed(NavigationOptions.fastingRoute),
+            ),
+            YouRow(
+              identifier: 'profile-water-goal',
+              label: S.of(context).settingsWaterGoalLabel,
+              value: '$effectiveWaterGoalMl ${S.of(context).mlLabel}',
+              onTap: () => _showWaterGoalDialog(context),
+            ),
+            YouRow(
               identifier: 'profile-recipes',
-              palette: palette,
-              icon: Icons.menu_book_rounded,
-              title: S.of(context).recipesLabel,
-              showChevron: true,
+              label: S.of(context).recipesLabel,
               onTap: () =>
                   Navigator.of(context).pushNamed(NavigationOptions.recipesRoute),
             ),
+            YouRow(
+              identifier: 'profile-sources',
+              label: S.of(context).sourcesIconTooltip,
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(builder: (_) => const SourcesScreen()),
+              ),
+            ),
+            YouRow(
+              identifier: 'profile-settings',
+              label: S.of(context).settingsLabel,
+              onTap: () =>
+                  Navigator.of(context).pushNamed(NavigationOptions.settingsRoute),
+            ),
           ],
         ),
-        const SizedBox(height: Dimens.spacing24),
-        // The full settings surface lives inline so You is the single home for
-        // identity, goals and app preferences — but collapsed by default so the
-        // tab stays scannable. Reuses SettingsScreen unchanged; the pushed route
-        // still works for any other caller.
-        AppCard(
-          padding: EdgeInsets.zero,
-          child: Theme(
-            data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-            child: ExpansionTile(
-              shape: const Border(),
-              collapsedShape: const Border(),
-              tilePadding: const EdgeInsets.symmetric(
-                horizontal: Dimens.spacing16,
-                vertical: Dimens.spacing4,
-              ),
-              leading: Icon(Icons.settings_rounded, color: palette.textMuted),
-              title: Text(
-                S.of(context).settingsLabel,
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              childrenPadding: const EdgeInsets.only(bottom: Dimens.spacing8),
-              children: const [SettingsScreen(embedded: true)],
-            ),
-          ),
-        ),
       ],
+      // [/fork]
     );
   }
+
+  // [fork] S121 you-tab
+  String _forkWeight(BuildContext context, double kg, BodyWeightUnit unit) =>
+      formatBodyWeight(
+        kg,
+        unit,
+        kgLabel: S.of(context).kgLabel,
+        lbLabel: S.of(context).lbsLabel,
+        stLabel: S.of(context).stLabel,
+      );
+
+  /// The goal tile's weekly rate, unsigned: the goal says which way.
+  String? _forkRate(BuildContext context, UserEntity user, BodyWeightUnit unit) {
+    final kg = user.weeklyWeightGoalKg;
+    if (kg == null || kg == 0) return null;
+    return switch (unit) {
+      BodyWeightUnit.kg => '${kg.abs().toStringAsFixed(2)} ${S.of(context).kgLabel}/wk',
+      _ => '${UnitCalc.kgToLbs(kg.abs()).toStringAsFixed(2)} ${S.of(context).lbsLabel}/wk',
+    };
+  }
+  // [/fork]
 
   Future<void> _showSetPALCategoryDialog(
     BuildContext context,
@@ -647,125 +617,5 @@ class _ProfilePageState extends State<ProfilePage> {
 
 /// A quiet section label that gives the grouped cards a consistent rhythm —
 /// muted, lightly tracked, sitting just above the card it introduces.
-/// A single tappable row inside a [_ProfileGroup]. Keeps the underlying
-/// [ListTile] (so its role semantics carry through) but dresses the leading
-/// icon as a soft, accent-tinted rounded chip in the friendly-flat style.
-class _ProfileTile extends StatelessWidget {
-  final String identifier;
-  final AppPalette palette;
-  final IconData? icon;
-  final Widget? iconWidget;
-  final String title;
-  final String? subtitle;
-  final Widget? subtitleWidget;
-  final bool showChevron;
-  final VoidCallback onTap;
-
-  const _ProfileTile({
-    required this.identifier,
-    required this.palette,
-    required this.title,
-    required this.onTap,
-    this.icon,
-    this.iconWidget,
-    this.subtitle,
-    this.subtitleWidget,
-    this.showChevron = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final accent = Theme.of(context).colorScheme.primary;
-    final text = Theme.of(context).textTheme;
-    return Semantics(
-      identifier: identifier,
-      child: ListTile(
-        leading: _IconChip(palette: palette, icon: icon, iconWidget: iconWidget),
-        title: Text(
-          title,
-          style: text.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-        ),
-        subtitle: subtitleWidget ??
-            (subtitle != null
-                ? Text(
-                    subtitle!,
-                    style: text.bodyMedium?.copyWith(color: palette.textMuted),
-                  )
-                : null),
-        trailing: showChevron
-            ? Icon(Icons.chevron_right_rounded, color: accent)
-            : null,
-        onTap: onTap,
-      ),
-    );
-  }
-}
-
-/// Switch variant of [_ProfileTile] for the calorie-taper toggle.
-class _ProfileSwitchTile extends StatelessWidget {
-  final String identifier;
-  final AppPalette palette;
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final bool value;
-  final ValueChanged<bool> onChanged;
-
-  const _ProfileSwitchTile({
-    required this.identifier,
-    required this.palette,
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.value,
-    required this.onChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final text = Theme.of(context).textTheme;
-    return Semantics(
-      identifier: identifier,
-      child: SwitchListTile(
-        secondary: _IconChip(palette: palette, icon: icon),
-        title: Text(
-          title,
-          style: text.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-        ),
-        subtitle: Text(
-          subtitle,
-          style: text.bodySmall?.copyWith(color: palette.textMuted),
-        ),
-        value: value,
-        onChanged: onChanged,
-      ),
-    );
-  }
-}
-
-/// The soft rounded leading chip shared by every profile row — a tinted square
-/// holding the row's icon in the active accent.
-class _IconChip extends StatelessWidget {
-  final AppPalette palette;
-  final IconData? icon;
-  final Widget? iconWidget;
-
-  const _IconChip({required this.palette, this.icon, this.iconWidget});
-
-  @override
-  Widget build(BuildContext context) {
-    final accent = Theme.of(context).colorScheme.primary;
-    return Container(
-      width: 40,
-      height: 40,
-      decoration: BoxDecoration(
-        color: accent.withValues(alpha: 0.12),
-        borderRadius: Dimens.borderRadiusS,
-      ),
-      child: IconTheme(
-        data: IconThemeData(color: accent, size: 22),
-        child: Center(child: iconWidget ?? Icon(icon, color: accent, size: 22)),
-      ),
-    );
-  }
-}
+// [fork] S121 you-tab: upstream's _ProfileTile, _ProfileSwitchTile and
+// _IconChip went with the You rows (YouRow, YouSwitchRow).
