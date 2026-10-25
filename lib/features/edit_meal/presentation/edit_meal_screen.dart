@@ -39,6 +39,9 @@ import 'package:opennutritracker/fork/label/label_scan_button.dart';
 // [fork] S33 off-contributions
 import 'package:opennutritracker/fork/off/off_contribution_ui.dart';
 // [/fork]
+// [fork] S132 custom-food
+import 'package:opennutritracker/fork/edit_meal/nutrition_facts.dart';
+// [/fork]
 import 'package:opennutritracker/generated/l10n.dart';
 import 'package:provider/provider.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
@@ -270,6 +273,9 @@ class _EditMealScreenState extends State<EditMealScreen> {
           ),
           actions: [
             // [fork] S29 label-scan: read a nutrition label into the form
+            // [fork] S132 custom-food: a custom food has the card instead
+            if (_mealEntity.source != MealSourceEntity.custom)
+            // [/fork]
             LabelScanButton(
               onRead: (reading, photo) {
                 _forkLabelPhoto = photo;
@@ -277,21 +283,31 @@ class _EditMealScreenState extends State<EditMealScreen> {
               },
             ),
             // [/fork]
-            Padding(
-              padding: const EdgeInsets.fromLTRB(Dimens.spacing16, 0, Dimens.spacing16, 0),
-              child: Semantics(
-                identifier: 'edit-meal-save',
-                child: FilledButton(
-                  onPressed: () => _onSavePressed(_usesImperialUnits),
-                  style: FilledButton.styleFrom(
-                    shape: const RoundedRectangleBorder(borderRadius: Dimens.borderRadiusM),
-                  ),
-                  child: Text(S.of(context).buttonSaveLabel),
-                ),
-              ),
-            ),
           ],
         ),
+        // [fork] S132 custom-food: Save at the bottom, as the builder's
+        bottomNavigationBar: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(
+              Dimens.spacing16,
+              Dimens.spacing8,
+              Dimens.spacing16,
+              Dimens.spacing12,
+            ),
+            child: Semantics(
+              identifier: 'edit-meal-save',
+              child: FilledButton(
+                onPressed: () => _onSavePressed(_usesImperialUnits),
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size.fromHeight(48),
+                  shape: const StadiumBorder(),
+                ),
+                child: Text(S.of(context).buttonSaveLabel),
+              ),
+            ),
+          ),
+        ),
+        // [/fork]
         body: BlocBuilder<EditMealBloc, EditMealState>(
           bloc: _editMealBloc,
           builder: (BuildContext context, EditMealState state) {
@@ -414,17 +430,24 @@ class _EditMealScreenState extends State<EditMealScreen> {
     final String advancedHelper = _isTotal
         ? S.of(context).mealNutrientsTotalLabel
         : S.of(context).mealNutrientsPerQtyLabel(_getDisplayQuantity(), unitSuffix);
-    final String energyHelper = isSimple
-        ? S.of(context).customMealFormSimpleFieldHelper(energyUnitSuffix)
-        : advancedHelper;
-    final String macroHelper = isSimple
-        ? S.of(context).customMealFormSimpleFieldHelper('g')
-        : advancedHelper;
-    // perQtyHelper is the advanced-mode helper, passed to the micronutrient fields.
-    final String? perQtyHelper = isSimple ? null : advancedHelper;
+    // [fork] S132 custom-food: the field helpers go; the facts card's "Per"
+    // says what the values are for
+    // [/fork]
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
+        // [fork] S132 custom-food: read the label first
+        if (_mealEntity.source == MealSourceEntity.custom) ...[
+          LabelScanButton(
+            card: true,
+            onRead: (reading, photo) {
+              _forkLabelPhoto = photo;
+              _fillFromLabel(reading, usesKj);
+            },
+          ),
+          const SizedBox(height: Dimens.spacing8),
+        ],
+        // [/fork]
         // Custom meals get the same picker tile recipes use — a single
         // tappable circle with an overlay camera icon, "Add a photo"
         // text beneath, and a bottom-sheet for the action choice.
@@ -444,48 +467,9 @@ class _EditMealScreenState extends State<EditMealScreen> {
         else
           Center(child: _buildRemoteMealImage()),
         const SizedBox(height: 24),
-        // Simple / Advanced toggle (#232). The reporter wanted to log a
-        // homemade meal as "name + per-serving macros" without the per-100g
-        // scaffolding; the advanced view keeps the precise path for users
-        // who care about base quantities and serving math.
-        if (_mealEntity.source == MealSourceEntity.custom) ...[
-          Text(
-            S.of(context).customMealFormModeLabel,
-            style: Theme.of(context).textTheme.labelMedium,
-          ),
-          const SizedBox(height: 8),
-          Semantics(
-            identifier: 'edit-meal-mode-toggle',
-            child: SegmentedButton<CustomMealFormMode>(
-              segments: [
-                ButtonSegment(
-                  value: CustomMealFormMode.simple,
-                  label: Text(S.of(context).customMealFormSimple),
-                ),
-                ButtonSegment(
-                  value: CustomMealFormMode.advanced,
-                  label: Text(S.of(context).customMealFormAdvanced),
-                ),
-              ],
-              selected: {_formMode},
-              onSelectionChanged: (Set<CustomMealFormMode> selection) {
-                final newMode = selection.first;
-                setState(() {
-                  _formMode = newMode;
-                });
-                _editMealBloc.setFormMode(newMode);
-              },
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            isSimple
-                ? S.of(context).customMealFormSimpleHelp
-                : S.of(context).customMealFormAdvancedHelp,
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
-          const SizedBox(height: 16),
-        ],
+        // [fork] S132 custom-food: the Simple / Advanced toggle (#232) is
+        // the facts card's "Per" below
+        // [/fork]
         TextFormField(
           controller: _nameTextController,
           decoration: InputDecoration(
@@ -527,147 +511,110 @@ class _EditMealScreenState extends State<EditMealScreen> {
             keyboardType: TextInputType.number,
           ),
         ),
-        // Advanced mode: quantity, unit, base-qty, and per/total toggle.
-        // Simple mode omits these — the user types totals for one serving
-        // and the scaffolding is hidden to reduce cognitive load (#232).
-        if (!isSimple) ...[
-          const SizedBox(height: 32),
-          // Unit first: every quantity and nutrition value below is entered
-          // in this unit, so choosing it up front keeps the form consistent
-          // and lets the labels and per-100 helper reflect it (#495).
-          Semantics(
-            identifier: 'edit-meal-unit-selector',
-            child: SegmentedButton<String>(
-              segments: _mealUnitButtonSegment,
-              selected: {selectedUnit ?? _units[2]},
-              onSelectionChanged: (Set<String> newSelection) {
-                setState(() {
-                  selectedUnit = newSelection.first;
-                });
-              },
-            ),
-          ),
-          const SizedBox(height: 24),
-          TextFormField(
-            controller: _mealQuantityTextController,
-            inputFormatters: CustomTextInputFormatter.doubleOnly(),
-            decoration: InputDecoration(
-              labelText: '${S.of(context).mealSizeLabel} ($unitSuffix)',
-              border: const OutlineInputBorder(borderRadius: Dimens.borderRadiusM),
-            ),
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          ),
-          const SizedBox(height: 16),
-          TextFormField(
-            controller: _servingQuantityTextController,
-            inputFormatters: CustomTextInputFormatter.doubleOnly(),
-            decoration: InputDecoration(
-              labelText: '${S.of(context).servingSizeLabelMetric} ($unitSuffix)',
-              border: const OutlineInputBorder(borderRadius: Dimens.borderRadiusM),
-            ),
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          ),
-          const SizedBox(height: 16),
-          TextFormField(
-            controller: _baseQuantityTextController,
-            inputFormatters: CustomTextInputFormatter.doubleOnly(),
-            decoration: InputDecoration(
-                labelText: '${S.of(context).baseQuantityLabel} ($unitSuffix)',
-                border: const OutlineInputBorder(borderRadius: Dimens.borderRadiusM)),
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          ),
-          const SizedBox(height: 48),
-          Semantics(
-            identifier: 'edit-meal-nutrients-mode',
-            child: SegmentedButton<bool>(
-              segments: [
-                ButtonSegment(
-                  value: false,
-                  label: Text(S.of(context).mealNutrientsPerQtyLabel(
-                      _getDisplayQuantity(), unitSuffix)),
+        // [fork] S132 custom-food: the nutrients as a label, the sizes folded
+        const SizedBox(height: Dimens.spacing16),
+        NutritionFactsCard(
+          per: _forkFactsPer(isSimple, unitSuffix, advancedHelper),
+          rows: [
+            FactsRow(label: S.of(context).mealEnergyLabel, unit: energyUnitSuffix, controller: _kcalTextController),
+            FactsRow(label: S.of(context).mealFatLabel, unit: 'g', controller: _fatTextController),
+            if (!isSimple)
+              FactsRow(label: S.of(context).saturatedFatLabel, unit: 'g', controller: _saturatedFatTextController, indent: true),
+            FactsRow(label: S.of(context).mealCarbsLabel, unit: 'g', controller: _carbsTextController),
+            if (!isSimple) ...[
+              FactsRow(label: S.of(context).sugarLabel, unit: 'g', controller: _sugarsTextController, indent: true),
+              FactsRow(label: S.of(context).fiberLabel, unit: 'g', controller: _fiberTextController),
+            ],
+            FactsRow(label: S.of(context).mealProteinLabel, unit: 'g', controller: _proteinTextController),
+            if (!isSimple)
+              FactsRow(label: S.of(context).sodiumLabel, unit: 'mg', controller: _sodiumTextController),
+          ],
+          more: [
+            if (!isSimple) ...[
+              FactsRow(label: S.of(context).calciumLabel, unit: 'mg', controller: _calciumTextController),
+              FactsRow(label: S.of(context).ironLabel, unit: 'mg', controller: _ironTextController),
+              FactsRow(label: S.of(context).potassiumLabel, unit: 'mg', controller: _potassiumTextController),
+              FactsRow(label: S.of(context).magnesiumLabel, unit: 'mg', controller: _magnesiumTextController),
+              FactsRow(label: S.of(context).vitaminDLabel, unit: 'µg', controller: _vitaminDTextController),
+              FactsRow(label: S.of(context).vitaminB12Label, unit: 'µg', controller: _vitaminB12TextController),
+            ],
+          ],
+          moreOpen: [
+            _calciumTextController,
+            _ironTextController,
+            _potassiumTextController,
+            _magnesiumTextController,
+            _vitaminDTextController,
+            _vitaminB12TextController,
+          ].any((c) => c.text.trim().isNotEmpty),
+        ),
+        if (!isSimple)
+          ExpansionTile(
+            key: const Key('edit-meal-sizes'),
+            tilePadding: EdgeInsets.zero,
+            title: const Text('Pack size, unit and totals'),
+            childrenPadding: const EdgeInsets.only(bottom: Dimens.spacing16),
+            children: [
+              // Unit first: every quantity and nutrition value is entered
+              // in this unit (#495).
+              Semantics(
+                identifier: 'edit-meal-unit-selector',
+                child: SegmentedButton<String>(
+                  segments: _mealUnitButtonSegment,
+                  selected: {selectedUnit ?? _units[2]},
+                  onSelectionChanged: (Set<String> newSelection) {
+                    setState(() {
+                      selectedUnit = newSelection.first;
+                    });
+                  },
                 ),
-                ButtonSegment(
-                  value: true,
-                  label: Text(S.of(context).mealNutrientsTotalLabel),
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _mealQuantityTextController,
+                inputFormatters: CustomTextInputFormatter.doubleOnly(),
+                decoration: InputDecoration(
+                  labelText: '${S.of(context).mealSizeLabel} ($unitSuffix)',
+                  border: const OutlineInputBorder(borderRadius: Dimens.borderRadiusM),
                 ),
-              ],
-              selected: {_isTotal},
-              onSelectionChanged: (Set<bool> newSelection) {
-                setState(() {
-                  _isTotal = newSelection.first;
-                });
-              },
-            ),
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _baseQuantityTextController,
+                inputFormatters: CustomTextInputFormatter.doubleOnly(),
+                onChanged: (_) => setState(() {}),
+                decoration: InputDecoration(
+                    labelText: '${S.of(context).baseQuantityLabel} ($unitSuffix)',
+                    border: const OutlineInputBorder(borderRadius: Dimens.borderRadiusM)),
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              ),
+              const SizedBox(height: 16),
+              Semantics(
+                identifier: 'edit-meal-nutrients-mode',
+                child: SegmentedButton<bool>(
+                  segments: [
+                    ButtonSegment(
+                      value: false,
+                      label: Text(S.of(context).mealNutrientsPerQtyLabel(
+                          _getDisplayQuantity(), unitSuffix)),
+                    ),
+                    ButtonSegment(
+                      value: true,
+                      label: Text(S.of(context).mealNutrientsTotalLabel),
+                    ),
+                  ],
+                  selected: {_isTotal},
+                  onSelectionChanged: (Set<bool> newSelection) {
+                    setState(() {
+                      _isTotal = newSelection.first;
+                    });
+                  },
+                ),
+              ),
+            ],
           ),
-        ],
-        const SizedBox(height: 16),
-        TextFormField(
-          controller: _kcalTextController,
-          inputFormatters: CustomTextInputFormatter.doubleOnly(),
-          decoration: InputDecoration(
-              labelText:
-                  '${S.of(context).mealEnergyLabel} ($energyUnitSuffix)',
-              helperText: energyHelper,
-              border: const OutlineInputBorder(borderRadius: Dimens.borderRadiusM)),
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-        ),
-        const SizedBox(height: 16),
-        TextFormField(
-          controller: _carbsTextController,
-          inputFormatters: CustomTextInputFormatter.doubleOnly(),
-          decoration: InputDecoration(
-              labelText: S.of(context).mealCarbsLabel,
-              helperText: macroHelper,
-              border: const OutlineInputBorder(borderRadius: Dimens.borderRadiusM)),
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-        ),
-        const SizedBox(height: 16),
-        TextFormField(
-          controller: _fatTextController,
-          inputFormatters: CustomTextInputFormatter.doubleOnly(),
-          decoration: InputDecoration(
-              labelText: S.of(context).mealFatLabel,
-              helperText: macroHelper,
-              border: const OutlineInputBorder(borderRadius: Dimens.borderRadiusM)),
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-        ),
-        const SizedBox(height: 16),
-        TextFormField(
-          controller: _proteinTextController,
-          inputFormatters: CustomTextInputFormatter.doubleOnly(),
-          decoration: InputDecoration(
-              labelText: S.of(context).mealProteinLabel,
-              helperText: macroHelper,
-              border: const OutlineInputBorder(borderRadius: Dimens.borderRadiusM)),
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-        ),
-        if (!isSimple) ...[
-          const SizedBox(height: 32),
-          Text(
-            S.of(context).micronutrientsLabel,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: 8),
-          _buildMicroField(_fiberTextController, S.of(context).fiberLabel, 'g', perQtyHelper),
-          const SizedBox(height: 16),
-          _buildMicroField(_saturatedFatTextController, S.of(context).saturatedFatLabel, 'g', perQtyHelper),
-          const SizedBox(height: 16),
-          _buildMicroField(_sugarsTextController, S.of(context).sugarLabel, 'g', perQtyHelper),
-          const SizedBox(height: 16),
-          _buildMicroField(_sodiumTextController, S.of(context).sodiumLabel, 'mg', perQtyHelper),
-          const SizedBox(height: 16),
-          _buildMicroField(_calciumTextController, S.of(context).calciumLabel, 'mg', perQtyHelper),
-          const SizedBox(height: 16),
-          _buildMicroField(_ironTextController, S.of(context).ironLabel, 'mg', perQtyHelper),
-          const SizedBox(height: 16),
-          _buildMicroField(_potassiumTextController, S.of(context).potassiumLabel, 'mg', perQtyHelper),
-          const SizedBox(height: 16),
-          _buildMicroField(_magnesiumTextController, S.of(context).magnesiumLabel, 'mg', perQtyHelper),
-          const SizedBox(height: 16),
-          _buildMicroField(_vitaminDTextController, S.of(context).vitaminDLabel, 'µg', perQtyHelper),
-          const SizedBox(height: 16),
-          _buildMicroField(_vitaminB12TextController, S.of(context).vitaminB12Label, 'µg', perQtyHelper),
-        ],
+        // [/fork]
         if (!_editOnly) ...[
           const SizedBox(height: 24),
           _SaveForLaterField(
@@ -683,24 +630,73 @@ class _EditMealScreenState extends State<EditMealScreen> {
     );
   }
 
-  Widget _buildMicroField(
-    TextEditingController controller,
-    String label,
-    String unit,
-    String? helperText,
-  ) {
-    return TextFormField(
-      controller: controller,
-      inputFormatters: CustomTextInputFormatter.doubleOnly(),
-      decoration: InputDecoration(
-        labelText: label,
-        suffixText: unit,
-        helperText: helperText,
-        border: const OutlineInputBorder(borderRadius: Dimens.borderRadiusM),
-      ),
-      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+  // [fork] S132 custom-food: what the facts are per. A custom food picks
+  // one serving (Simple, #232) or per a quantity (Advanced); with Advanced
+  // the serving size sits beside it.
+  Widget _forkFactsPer(bool isSimple, String unitSuffix, String advancedHelper) {
+    final theme = Theme.of(context);
+    final perStyle = theme.textTheme.bodyMedium;
+    return Wrap(
+      crossAxisAlignment: WrapCrossAlignment.center,
+      spacing: Dimens.spacing8,
+      children: [
+        if (_mealEntity.source == MealSourceEntity.custom)
+          Semantics(
+            identifier: 'edit-meal-mode-toggle',
+            child: DropdownButton<CustomMealFormMode>(
+              value: _formMode,
+              underline: const SizedBox.shrink(),
+              style: perStyle?.copyWith(fontWeight: FontWeight.w600),
+              items: [
+                const DropdownMenuItem(
+                  value: CustomMealFormMode.simple,
+                  child: Text('Per serving'),
+                ),
+                DropdownMenuItem(
+                  value: CustomMealFormMode.advanced,
+                  child: Text(advancedHelper),
+                ),
+              ],
+              onChanged: (newMode) {
+                if (newMode == null) return;
+                setState(() {
+                  _formMode = newMode;
+                });
+                _editMealBloc.setFormMode(newMode);
+              },
+            ),
+          )
+        else
+          Text(advancedHelper, style: perStyle),
+        if (!isSimple)
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('· ${S.of(context).servingSizeLabelMetric}', style: perStyle),
+              const SizedBox(width: Dimens.spacing8),
+              SizedBox(
+                width: 96,
+                child: Semantics(
+                  label: '${S.of(context).servingSizeLabelMetric} in $unitSuffix',
+                  child: TextField(
+                    controller: _servingQuantityTextController,
+                    textAlign: TextAlign.end,
+                    inputFormatters: CustomTextInputFormatter.doubleOnly(),
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    decoration: InputDecoration(
+                      isDense: true,
+                      suffixText: unitSuffix,
+                      border: const OutlineInputBorder(borderRadius: Dimens.borderRadiusM),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+      ],
     );
   }
+  // [/fork]
 
   /// Returns "0" for empty / whitespace-only text, otherwise the original
   /// string. Used on the Simple-mode save path so a blank macro field is

@@ -198,6 +198,38 @@ void main() {
     expect(dataSource.saves, hasLength(1));
     expect(find.text('custom meals'), findsOneWidget);
   });
+
+  // [fork] S132 custom-food: the label card's "Per" is the form's mode
+  testWidgets('per 100 g opens the label rows, and the rarer ones save too',
+      (tester) async {
+    await pumpEditor(tester, customMeal(code: 'uuid-oats', name: 'Oats'));
+    expect(find.text('Per serving'), findsOneWidget);
+    expect(find.text('Saturated fat'), findsNothing);
+
+    await tester.tap(find.text('Per serving'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.textContaining('Per 100').last);
+    await tester.pumpAndSettle();
+    expect(find.text('Saturated fat'), findsOneWidget);
+    expect(find.text('Calcium'), findsNothing);
+
+    Finder field(String name) => find.descendant(
+          of: find.ancestor(of: find.text(name), matching: find.byType(Row)).first,
+          matching: find.byType(TextField),
+        );
+    await tester.enterText(field('Saturated fat'), '2');
+    await tester.tap(find.byKey(const Key('facts-more')));
+    await tester.pumpAndSettle();
+    await tester.enterText(field('Calcium'), '120');
+    await save(tester);
+
+    expect(dataSource.saves, hasLength(1));
+    final saved = dataSource.saves.single.$1.nutriments;
+    expect(saved.saturatedFat100, 2);
+    expect(saved.calcium100, 120);
+    expect(saved.carbohydrates100, 60);
+  });
+  // [/fork]
 }
 
 class _RecordingCustomMealDataSource implements CustomMealDataSource {
@@ -252,6 +284,11 @@ class _FakeConfigRepository implements ConfigRepository {
   @override
   Future<String?> getCustomMealFormMode() async =>
       CustomMealFormMode.simple.name;
+
+  // [fork] S132 custom-food: the test switches the mode
+  @override
+  Future<void> setCustomMealFormMode(String mode) async {}
+  // [/fork]
 
   @override
   dynamic noSuchMethod(Invocation invocation) =>
