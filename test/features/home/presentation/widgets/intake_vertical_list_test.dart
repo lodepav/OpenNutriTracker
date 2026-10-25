@@ -128,9 +128,11 @@ IntakeEntity _buildIntake({
   );
 }
 
-Widget _wrapWithMaterial(Widget child) {
+Widget _wrapWithMaterial(Widget child, {bool kj = false}) {
   return ChangeNotifierProvider<EnergyUnitProvider>(
-    create: (_) => EnergyUnitProvider(),
+    // [fork] S83 kJ in the meal header
+    create: (_) => EnergyUnitProvider(usesKilojoules: kj),
+    // [/fork]
     child: MaterialApp(
       localizationsDelegates: const [S.delegate],
       supportedLocales: S.supportedLocales,
@@ -337,6 +339,30 @@ void main() {
       expect(find.text(l10nEn.pasteCodeLabel), findsOneWidget);
     },
   );
+
+  // [fork] S83 kJ: the target string has "kcal" written into it
+  testWidgets('a meal header with a target reads in kJ', (tester) async {
+    await tester.pumpWidget(_wrapWithMaterial(
+      kj: true,
+      IntakeVerticalList(
+        day: DateTime(2026, 1, 1),
+        title: 'Breakfast',
+        listIcon: Icons.bakery_dining_outlined,
+        addMealType: AddMealType.breakfastType,
+        intakeList: intakes,
+        usesImperialUnits: false,
+        showMealMacros: false,
+        mealKcalTarget: 583,
+        onDeleteIntakeCallback: (_, _) {},
+      ),
+    ));
+    await tester.pump();
+
+    // 200 kcal of 583, in kJ, in the text and in its label.
+    expect(find.text('836 / 2439 kJ'), findsOneWidget);
+    expect(find.bySemanticsLabel(RegExp('836 / 2439 kJ')), findsWidgets);
+  });
+  // [/fork]
 
   // Regression: at a phone-width header the title used to be starved of space
   // by a Spacer competing with the kcal summary for flex, so "Breakfast"

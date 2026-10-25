@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
+// [fork] S83 energy-unit
 import 'package:opennutritracker/fork/units/energy_text.dart';
+// [/fork]
 import 'package:opennutritracker/generated/l10n.dart';
 
 class DailyKcalOverview extends StatelessWidget {
@@ -72,7 +74,8 @@ class DailyKcalOverview extends StatelessWidget {
             // [fork] S83 truncated, as every other screen, in kcal or kJ
             S.of(context).mealDetailDayTotalLabel(
                   energyValue(context, projected).toString(),
-                  energyText(context, dayKcalGoal),
+                  '${energyValue(context, dayKcalGoal)} '
+                  '${energyUnitLabel(context)}',
                 ),
             // [/fork]
             style: textTheme.labelLarge?.copyWith(

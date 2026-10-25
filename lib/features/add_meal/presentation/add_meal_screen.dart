@@ -702,15 +702,11 @@ class _AddMealScreenState extends State<AddMealScreen> {
             return const SizedBox();
           },
         );
-        final recentState = _recentMealBloc.state;
         return query.trim().isNotEmpty
             ? recents
             : FitsLeftSwitch(
                 day: _day,
                 addMealType: _mealType,
-                usesImperialUnits:
-                    recentState is RecentMealLoadedState &&
-                    recentState.usesImperialUnits,
                 recents: recents,
               );
         // [/fork]

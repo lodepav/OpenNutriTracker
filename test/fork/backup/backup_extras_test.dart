@@ -207,6 +207,11 @@ void main() {
     ]);
     expect((await to.phases.plan())?.toJson(), plan.toJson());
     expect(await to.phases.milestoneStep(), 2);
+    // A hand-edited backup's step past the list reads as none, not a crash.
+    for (final bad in [4, -1]) {
+      await to.phases.saveMilestoneStep(bad);
+      expect(await to.phases.milestoneStep(), 0);
+    }
     final photos = await to.photos.all();
     expect(photos.map((p) => (p.id, p.date)), [
       (photo.id, DateTime(2026, 10, 21)),
