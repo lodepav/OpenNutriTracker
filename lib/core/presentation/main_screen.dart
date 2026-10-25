@@ -221,6 +221,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
       context: context,
       isScrollControlled: true,
       useSafeArea: true, // [fork] S83 a tall sheet stops below the status bar
+      showDragHandle: true, // [fork] S131 add-sheet
       builder: (BuildContext context) {
         return AddItemBottomSheet(
           day: DateTime.now(),
