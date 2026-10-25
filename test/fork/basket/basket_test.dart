@@ -60,6 +60,12 @@ void main() {
   );
   tearDown(() => locator.unregister<GetConfigUsecase>());
 
+  test('an amount reads as it was picked', () {
+    expect(pickedLabel('1', 'serving'), '1 serving');
+    expect(pickedLabel('2.0', 'serving#1'), '2 servings');
+    expect(pickedLabel('7.5', 'oz'), '7.5 oz');
+  });
+
   test('the basket holds one meal of one day', () {
     final basket = FoodBasket()
       ..add(_item(100), IntakeTypeEntity.lunch, _day)
@@ -78,7 +84,17 @@ void main() {
     tester,
   ) async {
     final basket = FoodBasket()
-      ..add(_item(100), IntakeTypeEntity.lunch, _day)
+      ..add(
+        BasketItem(
+          meal: MealEntityFixtures.mealOne,
+          unit: 'serving',
+          amountText: '210.0',
+          kcal: 100,
+          picked: pickedLabel('1.5', 'serving'),
+        ),
+        IntakeTypeEntity.lunch,
+        _day,
+      )
       ..add(_item(250), IntakeTypeEntity.lunch, _day)
       ..add(_item(40), IntakeTypeEntity.lunch, _day);
     final logged = <double>[];
@@ -111,6 +127,9 @@ void main() {
     expect(find.text('3 in the basket · 390 kcal'), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('basket-bar')));
     await tester.pumpAndSettle();
+    // Servings as picked, not the 210 g they come to.
+    expect(find.text('1.5 servings · 100 kcal'), findsOneWidget);
+    expect(find.text('150 g · 250 kcal'), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('basket-remove-2')));
     await tester.pumpAndSettle();
     expect(find.text('Total 350 kcal'), findsOneWidget);

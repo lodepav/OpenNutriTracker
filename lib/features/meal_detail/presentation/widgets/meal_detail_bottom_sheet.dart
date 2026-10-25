@@ -305,6 +305,10 @@ class _MealDetailBottomSheetState extends State<MealDetailBottomSheet> {
                               unit: state.selectedUnit,
                               amountText: state.totalQuantityConverted,
                               kcal: state.totalKcal,
+                              picked: pickedLabel(
+                                widget.quantityTextController.text.trim(),
+                                state.selectedUnit,
+                              ),
                             );
                           },
                         ),
