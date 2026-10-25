@@ -12,6 +12,7 @@ import 'package:opennutritracker/features/add_meal/domain/entity/meal_nutriments
 import 'package:opennutritracker/features/recipes/presentation/bloc/recipe_builder_bloc.dart';
 import 'package:opennutritracker/features/recipes/presentation/screens/recipe_builder_screen.dart';
 import 'package:opennutritracker/generated/l10n.dart';
+import 'package:opennutritracker/fork/recipe/recipe_builder.dart'; // [fork] S127
 import 'package:provider/provider.dart';
 
 import '../../../../helpers/test_l10n.dart';
@@ -107,12 +108,17 @@ void main() {
     addTearDown(tester.view.reset);
     await tester.pumpWidget(_app(existing));
     await tester.pumpAndSettle();
+    // [fork] S127 recipe-builder: the weight is under Optional, open on a
+    // recipe with a typed weight, folded otherwise
+    if (find.text(l10nEn.recipeTotalWeightLabel).evaluate().isEmpty) {
+      await tester.tap(find.text('Description, servings, tags'));
+      await tester.pumpAndSettle();
+    }
+    // [/fork]
   }
 
-  Finder weightField() => find.widgetWithText(
-        TextField,
-        l10nEn.recipeTotalWeightLabel,
-      );
+  Finder weightField() =>
+      find.widgetWithText(TextField, l10nEn.recipeTotalWeightLabel);
 
   testWidgets('a typed weight says so, and Use ingredient total undoes it', (
     tester,
@@ -164,4 +170,41 @@ void main() {
     expect(find.text(l10nEn.recipeTotalWeightManualHelper), findsOneWidget);
     expect(reset(), findsOneWidget);
   });
+
+  // [fork] S127 recipe-builder
+  testWidgets('the extras fold for a plain recipe, open for one with any', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1080, 4000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(_app(_soup(totalWeightG: 800)));
+    await tester.pumpAndSettle();
+    expect(find.text(l10nEn.recipeTotalWeightLabel), findsNothing);
+    expect(find.text('Save Recipe · 800 g'), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox());
+    await tester.pumpWidget(_app(_soup(totalWeightG: 720)));
+    await tester.pumpAndSettle();
+    expect(find.text(l10nEn.recipeTotalWeightLabel), findsOneWidget);
+    expect(find.text('Save Recipe · 720 g'), findsOneWidget);
+  });
+
+  testWidgets('an amount typed in a row changes the recipe', (tester) async {
+    tester.view.physicalSize = const Size(1080, 4000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(_app(_soup(totalWeightG: 800)));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.descendant(
+        of: find.byType(BuilderIngredientRow),
+        matching: find.byType(TextField),
+      ),
+      '400',
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Save Recipe · 400 g'), findsOneWidget);
+  });
+  // [/fork]
 }
