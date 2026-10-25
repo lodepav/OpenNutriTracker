@@ -109,6 +109,23 @@ void main() {
     expect(outlook, findsOneWidget);
   });
 
+  // Seam S97: a range with nothing logged says so, rather than a flat line
+  // and its fill along the bottom under the goal.
+  testWidgets('nothing logged: the calorie and water cards say so', (
+    tester,
+  ) async {
+    await _pump(tester, const []);
+
+    expect(find.text('Nothing logged in this range.'), findsOneWidget);
+    final water = find.text('No water logged in this range.');
+    await tester.scrollUntilVisible(
+      water,
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(water, findsOneWidget);
+  });
+
   testWidgets('one weigh-in in the range: no rate beside the empty chart', (
     tester,
   ) async {

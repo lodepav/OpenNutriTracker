@@ -4,6 +4,7 @@ import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/fork/body/measurement_store.dart';
+import 'package:opennutritracker/fork/report/chart_touch.dart';
 
 const _cmPerInch = 2.54;
 
@@ -232,6 +233,12 @@ class _BodyMeasurementsCardState extends State<BodyMeasurementsCard> {
             gridData: const FlGridData(show: false),
             borderData: FlBorderData(show: false),
             titlesData: const FlTitlesData(show: false),
+            lineTouchData: labelledTouch(
+              context,
+              (s) =>
+                  '${_date(points[s.spotIndex].date)} · '
+                  '${_text(metric, points[s.spotIndex].value)}',
+            ),
             lineBarsData: [
               LineChartBarData(
                 spots: spots,

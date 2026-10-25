@@ -841,7 +841,7 @@ void main() {
       expect(find.textContaining(RegExp(r'^-\d+ kcal a day$')), findsOneWidget);
       expect(find.textContaining('Energy you burn a day'), findsOneWidget);
       expect(find.textContaining('Solid: estimated'), findsOneWidget);
-      expect(find.textContaining('Dashed: logged'), findsOneWidget);
+      expect(find.textContaining('Dots: logged'), findsOneWidget);
     });
 
     testWidgets('a single day names no lines, as none are drawn', (

@@ -10,6 +10,9 @@ import 'package:opennutritracker/generated/l10n.dart';
 // [fork] S15 smoothed-trend: the smoothed trend in place of the 7-day average (D13)
 import 'package:opennutritracker/fork/adaptive/trend_points.dart';
 // [/fork]
+// [fork] S96 chart-touch
+import 'package:opennutritracker/fork/report/chart_touch.dart';
+// [/fork]
 
 /// Smoothed weight trend line shared by the weight-history screen and the
 /// Trends view, so both render the same chart — dated axis, a dashed
@@ -160,6 +163,14 @@ class WeightTrendChart extends StatelessWidget {
         targetY <= (maxY + yPadding);
 
     final localeTag = Localizations.localeOf(context).toLanguageTag();
+    // [fork] S96 chart-touch: read here, as the tooltip is built outside
+    // the build
+    final unitLabel = switch (bodyWeightUnit) {
+      BodyWeightUnit.kg => S.of(context).kgLabel,
+      BodyWeightUnit.lb => S.of(context).lbsLabel,
+      BodyWeightUnit.st => S.of(context).stLabel,
+    };
+    // [/fork]
     final dateFormat = DateFormat.MMMd(localeTag);
     // ~5 evenly spaced date labels regardless of window length.
     final labelInterval = (windowDays / 5)
@@ -180,6 +191,16 @@ class WeightTrendChart extends StatelessWidget {
             maxY: maxY + yPadding,
             gridData: const FlGridData(show: false),
             borderData: FlBorderData(show: false),
+            // [fork] S96 chart-touch: each number says which it is, at one
+            // decimal ("Trend 95.1 kg"; upstream's default showed
+            // "95.13333333333337" over "94.6"), with no line to the axis
+            lineTouchData: labelledTouch(
+              context,
+              (s) =>
+                  '${s.barIndex == 0 ? 'Weighed' : 'Trend'} '
+                  '${s.y.toStringAsFixed(1)} $unitLabel',
+            ),
+            // [/fork]
             titlesData: FlTitlesData(
               topTitles: const AxisTitles(
                 sideTitles: SideTitles(showTitles: false),
