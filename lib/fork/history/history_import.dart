@@ -53,6 +53,13 @@ class HistoryPlan {
   final int keptDays;
   final int keptWeighIns;
 
+  /// What an earlier import already wrote: days of food (the same file
+  /// again, or totals over its foods), days whose measurements are all
+  /// here, and custom foods by name. Said, so "nothing new" says why.
+  final int keptImportedDays;
+  final int keptMeasurementDays;
+  final int keptCustomFoods;
+
   const HistoryPlan({
     required this.intakes,
     required this.weights,
@@ -62,7 +69,24 @@ class HistoryPlan {
     this.customFoods = const [],
     required this.keptDays,
     required this.keptWeighIns,
+    this.keptImportedDays = 0,
+    this.keptMeasurementDays = 0,
+    this.keptCustomFoods = 0,
   });
+
+  /// What is already here, for the dialog: "489 days already imported, …".
+  List<String> get kept {
+    String n(int count, String one) => '$count ${count == 1 ? one : '${one}s'}';
+    return [
+      if (keptDays > 0) '${n(keptDays, 'day')} already logged',
+      if (keptImportedDays > 0)
+        '${n(keptImportedDays, 'day')} already imported',
+      if (keptWeighIns > 0) '${n(keptWeighIns, 'weigh-in')} already entered',
+      if (keptMeasurementDays > 0)
+        'body measurements on ${n(keptMeasurementDays, 'day')}',
+      if (keptCustomFoods > 0) n(keptCustomFoods, 'custom food'),
+    ];
+  }
 
   bool get isEmpty =>
       intakes.isEmpty &&
@@ -135,6 +159,7 @@ HistoryPlan planImport(
   final intakes = <DateTime, List<IntakeEntity>>{};
   final replaced = <DateTime, List<IntakeEntity>>{};
   var keptDays = 0;
+  var keptImportedDays = 0;
   for (final MapEntry(key: day, value: entries) in byDay.entries) {
     if (day.isAfter(today)) continue;
     if (existing.loggedDays.contains(day)) {
@@ -147,13 +172,13 @@ HistoryPlan planImport(
       // Totals never replace foods: a day imported food by food stays.
       if (!earlier.every(isImportedHistory) &&
           entries.every(isImportedHistory)) {
-        keptDays++;
+        keptImportedDays++;
         continue;
       }
       // The same file again: nothing to do.
       if (earlier.length == entries.length &&
           earlier.every((i) => ids.contains(i.id))) {
-        keptDays++;
+        keptImportedDays++;
         continue;
       }
       replaced[day] = earlier;
@@ -188,13 +213,18 @@ HistoryPlan planImport(
     for (final m in existing.measurements) (_date(m.date), m.metric),
   };
   final measurements = <DateTime, Map<BodyMetric, double>>{};
+  var keptMeasurementDays = 0;
   for (final MapEntry(key: day, value: values) in file.measurements.entries) {
     if (day.isAfter(today)) continue;
     final fresh = {
       for (final MapEntry(key: metric, value: value) in values.entries)
         if (!measured.contains((day, metric))) metric: value,
     };
-    if (fresh.isNotEmpty) measurements[day] = fresh;
+    if (fresh.isNotEmpty) {
+      measurements[day] = fresh;
+    } else if (values.isNotEmpty) {
+      keptMeasurementDays++;
+    }
   }
   final names = {...existing.customFoodNames};
   final customFoods = [
@@ -211,6 +241,9 @@ HistoryPlan planImport(
     customFoods: customFoods,
     keptDays: keptDays,
     keptWeighIns: keptWeighIns,
+    keptImportedDays: keptImportedDays,
+    keptMeasurementDays: keptMeasurementDays,
+    keptCustomFoods: file.customFoods.length - customFoods.length,
   );
 }
 
@@ -676,10 +709,11 @@ class _HistoryImportDialogState extends State<HistoryImportDialog> {
                 key: const ValueKey('history-misread'),
               ),
             ],
-            if (plan.keptDays > 0 || plan.keptWeighIns > 0) ...[
+            if (plan.kept.isNotEmpty) ...[
               const SizedBox(height: 8),
               Text(
-                'Kept as they are here: ${[if (plan.keptDays > 0) '${plan.keptDays} days already logged', if (plan.keptWeighIns > 0) '${plan.keptWeighIns} weigh-ins already entered'].join(', ')}.',
+                'Kept as they are here: ${plan.kept.join(', ')}.',
+                key: const ValueKey('history-kept'),
               ),
             ],
             const SizedBox(height: 8),

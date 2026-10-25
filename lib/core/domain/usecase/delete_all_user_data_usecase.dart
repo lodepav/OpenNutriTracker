@@ -7,6 +7,7 @@ import 'package:opennutritracker/core/utils/tracked_day_lock.dart';
 import 'package:opennutritracker/core/utils/tracked_day_reconciler.dart';
 import 'package:opennutritracker/core/utils/widget/calorie_widget_writer.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
+import 'package:opennutritracker/fork/backup/profile_wipe.dart'; // [fork] S102
 
 /// Wipes the **active profile's** data, returning that profile to a
 /// fresh, un-onboarded state. Used by the Settings "delete all my data"
@@ -71,6 +72,7 @@ class DeleteAllUserDataUsecase {
         _hiveDBProvider.fastingBox.clear(),
         _hiveDBProvider.favouriteMealBox.clear(),
       ]);
+      await clearForkProfileData(); // [fork] S102
       await recordTrackedDayBoundary(ConfigDataSource(_hiveDBProvider));
     });
 
