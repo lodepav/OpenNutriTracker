@@ -1,14 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:logging/logging.dart';
-import 'package:opennutritracker/core/utils/custom_text_input_formatter.dart';
 import 'package:opennutritracker/core/domain/entity/intake_entity.dart';
 import 'package:opennutritracker/core/domain/entity/intake_type_entity.dart';
 import 'package:opennutritracker/core/domain/usecase/add_intake_usecase.dart';
 import 'package:opennutritracker/core/domain/usecase/add_tracked_day_usecase.dart';
 import 'package:opennutritracker/core/domain/usecase/get_kcal_goal_usecase.dart';
 import 'package:opennutritracker/core/domain/usecase/get_macro_goal_usecase.dart';
-import 'package:opennutritracker/core/utils/calc/unit_calc.dart';
-import 'package:opennutritracker/core/utils/energy_unit_provider.dart';
 import 'package:opennutritracker/core/utils/id_generator.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/core/utils/navigation_options.dart';
@@ -19,10 +16,16 @@ import 'package:opennutritracker/features/diary/presentation/bloc/calendar_day_b
 import 'package:opennutritracker/features/diary/presentation/bloc/diary_bloc.dart';
 import 'package:opennutritracker/features/home/presentation/bloc/home_bloc.dart';
 import 'package:opennutritracker/generated/l10n.dart';
-import 'package:provider/provider.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 // [fork] S64 weekday-targets: a row made for another day
 import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
+// [/fork]
+// [fork] S133 quick-add
+import 'package:opennutritracker/core/styles/dimens.dart';
+import 'package:opennutritracker/fork/add/quick_add.dart';
+import 'package:opennutritracker/fork/copy/copy_ui.dart' show mealLabel;
+import 'package:opennutritracker/fork/units/energy_text.dart';
+import 'package:opennutritracker/fork/widget/meal_picker_chip.dart';
 // [/fork]
 
 class QuickAddBottomSheet extends StatefulWidget {
@@ -50,17 +53,48 @@ class _QuickAddBottomSheetState extends State<QuickAddBottomSheet> {
 
   bool _saving = false;
 
+  // [fork] S133 quick-add: the meal can change here, and the energy can
+  // come from the macros
+  late IntakeTypeEntity _type = widget.intakeType;
+
+  double? get _kcal {
+    final typed = _parsed(_energyController);
+    return quickAddKcal(
+      typedKcal: typed == null ? null : kcalFromInput(context, typed),
+      carbs: _parsed(_carbsController),
+      fat: _parsed(_fatController),
+      protein: _parsed(_proteinController),
+    );
+  }
+
+  List<TextEditingController> get _macroControllers => [
+    _carbsController,
+    _fatController,
+    _proteinController,
+  ];
+  // [/fork]
+
   @override
   void initState() {
     super.initState();
     _titleController.addListener(_onRequiredFieldChanged);
     _energyController.addListener(_onRequiredFieldChanged);
+    // [fork] S133 quick-add
+    for (final c in _macroControllers) {
+      c.addListener(_onRequiredFieldChanged);
+    }
+    // [/fork]
   }
 
   @override
   void dispose() {
     _titleController.removeListener(_onRequiredFieldChanged);
     _energyController.removeListener(_onRequiredFieldChanged);
+    // [fork] S133 quick-add
+    for (final c in _macroControllers) {
+      c.removeListener(_onRequiredFieldChanged);
+    }
+    // [/fork]
     _titleController.dispose();
     _energyController.dispose();
     _carbsController.dispose();
@@ -79,23 +113,25 @@ class _QuickAddBottomSheetState extends State<QuickAddBottomSheet> {
     return value;
   }
 
-  bool get _canSubmit {
-    final energy = _parsed(_energyController);
-    final hasTitle = _titleController.text.trim().isNotEmpty;
-    return !_saving && hasTitle && energy != null && energy > 0;
-  }
+  // [fork] S133 quick-add: the name is optional, the energy may be the
+  // macros'
+  bool get _canSubmit => !_saving && _kcal != null;
+  // [/fork]
 
   Future<void> _onSubmit() async {
     if (!_canSubmit) return;
     setState(() => _saving = true);
 
-    final usesKj = context.read<EnergyUnitProvider>().usesKilojoules;
-    final enteredEnergy = _parsed(_energyController)!;
-    final kcal = usesKj ? UnitCalc.kjToKcal(enteredEnergy) : enteredEnergy;
+    // [fork] S133 quick-add
+    final kcal = _kcal!;
     final carbs = _parsed(_carbsController);
     final fat = _parsed(_fatController);
     final protein = _parsed(_proteinController);
-    final title = _titleController.text.trim();
+    final typedTitle = _titleController.text.trim();
+    final title = typedTitle.isEmpty
+        ? S.of(context).quickAddDefaultName
+        : typedTitle;
+    // [/fork]
 
     try {
       final intake = _buildIntake(
@@ -122,7 +158,9 @@ class _QuickAddBottomSheetState extends State<QuickAddBottomSheet> {
       locator<CalendarDayBloc>().add(RefreshCalendarDayEvent());
 
       if (!mounted) return;
-      final mealTypeLabel = _intakeTypeLabel(context, widget.intakeType);
+      // [fork] S133 quick-add
+      final mealTypeLabel = _intakeTypeLabel(context, _type);
+      // [/fork]
       final scaffoldMessenger = ScaffoldMessenger.of(context);
       // Resolve the localized message before navigating: the push below
       // removes every route (including this sheet's), so reading from
@@ -179,7 +217,9 @@ class _QuickAddBottomSheetState extends State<QuickAddBottomSheet> {
       id: IdGenerator.getUniqueID(),
       unit: 'g',
       amount: 100,
-      type: widget.intakeType,
+      // [fork] S133 quick-add
+      type: _type,
+      // [/fork]
       meal: meal,
       dateTime: widget.day,
     );
@@ -228,8 +268,14 @@ class _QuickAddBottomSheetState extends State<QuickAddBottomSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final usesKj = context.watch<EnergyUnitProvider>().usesKilojoules;
     final s = S.of(context);
+    // [fork] S133 quick-add: the canvas's Quick add A
+    final macrosKcal = quickAddKcal(
+      carbs: _parsed(_carbsController),
+      fat: _parsed(_fatController),
+      protein: _parsed(_proteinController),
+    );
+    final kcal = _kcal;
 
     return Padding(
       padding: EdgeInsets.only(
@@ -241,54 +287,52 @@ class _QuickAddBottomSheetState extends State<QuickAddBottomSheet> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           mainAxisSize: MainAxisSize.min,
           children: [
-            Padding(
-              padding: const EdgeInsets.only(bottom: 16),
-              child: Text(
-                s.quickAddBottomSheetTitle,
-                style: Theme.of(context).textTheme.titleLarge,
-                textAlign: TextAlign.center,
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    s.quickAddBottomSheetTitle,
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                ),
+                MealPickerChip(
+                  key: const ValueKey('quick-add-meal'),
+                  type: _type,
+                  onChanged: (type) => setState(() => _type = type),
+                ),
+              ],
+            ),
+            const SizedBox(height: Dimens.spacing8),
+            QuickAddEnergyField(
+              controller: _energyController,
+              macrosKcal: macrosKcal,
+            ),
+            const SizedBox(height: Dimens.spacing16),
+            QuickAddMacroFields(
+              carbs: _carbsController,
+              fat: _fatController,
+              protein: _proteinController,
+            ),
+            const SizedBox(height: Dimens.spacing12),
+            Semantics(
+              identifier: 'quick-add-title',
+              child: TextField(
+                controller: _titleController,
+                decoration: InputDecoration(
+                  labelText: '${s.quickAddTitleHint} (optional)',
+                  hintText: s.quickAddDefaultName,
+                  border: const OutlineInputBorder(),
+                ),
               ),
             ),
-            _field(
-              controller: _titleController,
-              identifier: 'quick-add-title',
-              label: s.quickAddTitleHint,
-              isRequired: true,
-              numeric: false,
-              autofocus: true,
-            ),
-            _field(
-              controller: _energyController,
-              identifier: 'quick-add-energy',
-              label: usesKj ? s.quickAddEnergyLabelKj : s.quickAddEnergyLabelKcal,
-              isRequired: true,
-              numeric: true,
-            ),
-            _field(
-              controller: _carbsController,
-              identifier: 'quick-add-carbs',
-              label: s.quickAddCarbsHint,
-              isRequired: false,
-              numeric: true,
-            ),
-            _field(
-              controller: _fatController,
-              identifier: 'quick-add-fat',
-              label: s.quickAddFatHint,
-              isRequired: false,
-              numeric: true,
-            ),
-            _field(
-              controller: _proteinController,
-              identifier: 'quick-add-protein',
-              label: s.quickAddProteinHint,
-              isRequired: false,
-              numeric: true,
-            ),
-            const SizedBox(height: 16),
+            const SizedBox(height: Dimens.spacing16),
             Semantics(
               identifier: 'quick-add-submit',
               child: FilledButton(
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size.fromHeight(48),
+                  shape: const StadiumBorder(),
+                ),
                 onPressed: _canSubmit ? _onSubmit : null,
                 child: _saving
                     ? const SizedBox(
@@ -296,40 +340,18 @@ class _QuickAddBottomSheetState extends State<QuickAddBottomSheet> {
                         width: 18,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : Text(s.quickAddSubmitLabel),
+                    : Text(
+                        kcal == null
+                            ? s.quickAddSubmitLabel
+                            : 'Add ${energyText(context, kcal)} to '
+                                  '${mealLabel(context, _type)}',
+                      ),
               ),
             ),
           ],
         ),
       ),
     );
-  }
-
-  Widget _field({
-    required TextEditingController controller,
-    required String identifier,
-    required String label,
-    required bool isRequired,
-    required bool numeric,
-    bool autofocus = false,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Semantics(
-        identifier: identifier,
-        child: TextField(
-          controller: controller,
-          autofocus: autofocus,
-          keyboardType: numeric
-              ? const TextInputType.numberWithOptions(decimal: true)
-              : TextInputType.text,
-          inputFormatters: numeric ? CustomTextInputFormatter.doubleOnly() : null,
-          decoration: InputDecoration(
-            labelText: isRequired ? '$label *' : label,
-            border: const OutlineInputBorder(),
-          ),
-        ),
-      ),
-    );
+    // [/fork]
   }
 }
