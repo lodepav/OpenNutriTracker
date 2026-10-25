@@ -12,6 +12,10 @@ import 'package:opennutritracker/features/profile/presentation/utils/profile_dis
 import 'package:opennutritracker/features/profile/presentation/widgets/body_weight_input.dart';
 import 'package:opennutritracker/features/profile/presentation/widgets/feet_inches_input.dart';
 import 'package:opennutritracker/generated/l10n.dart';
+// [fork] S99 onboarding-health-weight
+import 'package:opennutritracker/fork/health/onboarding_weight.dart';
+import 'package:opennutritracker/fork/health/weight_import.dart';
+// [/fork]
 
 class OnboardingBodyMeasurementsPageBody extends StatefulWidget {
   final Function(
@@ -49,6 +53,11 @@ class OnboardingBodyMeasurementsPageBody extends StatefulWidget {
   /// the footer snackbar and no indication of which field is at fault.
   final ValueListenable<int>? showErrorsSignal;
 
+  // [fork] S99 onboarding-health-weight: the store the button reads; the
+  // device's when null
+  final WeightSource? healthWeightSource;
+  // [/fork]
+
   const OnboardingBodyMeasurementsPageBody({
     super.key,
     required this.setButtonContent,
@@ -59,6 +68,9 @@ class OnboardingBodyMeasurementsPageBody extends StatefulWidget {
     this.initialBodyWeightUnit = BodyWeightUnit.kg,
     this.initialFoodImperial = false,
     this.showErrorsSignal,
+    // [fork] S99 onboarding-health-weight
+    this.healthWeightSource,
+    // [/fork]
   });
 
   @override
@@ -359,6 +371,25 @@ class _OnboardingBodyMeasurementsPageBodyState
     stLabel: S.of(context).stLabel,
   );
 
+  // [fork] S99 onboarding-health-weight: the weight read from Health
+  // Connect, as if typed; the stones input is rebuilt through its key to
+  // seed from it
+  int _healthWeightReads = 0;
+
+  void _applyHealthWeight(double kg) {
+    setState(() {
+      _parsedWeight = kg;
+      _confirmedWeightKg = kg;
+      _healthWeightReads++;
+      if (!_isWeightSt) {
+        final display = _isWeightLb ? UnitCalc.kgToLbs(kg) : kg;
+        _weightController.text = _formatRestoredNumber(display);
+      }
+      checkCorrectInput();
+    });
+  }
+  // [/fork]
+
   /// Fills the optional target field with the suggested weight. The stones
   /// input seeds itself from `initialKg`, so it is rebuilt via its key to
   /// pick the new value up.
@@ -630,10 +661,26 @@ class _OnboardingBodyMeasurementsPageBodyState
               ),
             ),
             const SizedBox(height: 32.0),
-            Text(
-              S.of(context).weightLabel,
-              style: Theme.of(context).textTheme.headlineSmall,
+            // [fork] S99 onboarding-health-weight: or read it from Health
+            // Connect, on Android where it is, on the heading's line so the
+            // page grows no longer
+            Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 8.0,
+              children: [
+                Text(
+                  S.of(context).weightLabel,
+                  style: Theme.of(context).textTheme.headlineSmall,
+                ),
+                if (defaultTargetPlatform == TargetPlatform.android)
+                  HealthWeightButton(
+                    onWeight: _applyHealthWeight,
+                    source: widget.healthWeightSource,
+                  ),
+              ],
             ),
+            // [/fork]
             Text(
               S.of(context).onboardingWeightQuestionSubtitle,
               style: Theme.of(context).textTheme.titleMedium,
@@ -677,6 +724,9 @@ class _OnboardingBodyMeasurementsPageBodyState
                     canRequestFocus: false,
                     onFocusChange: _onWeightGroupFocusChange,
                     child: BodyWeightInput(
+                      // [fork] S99 onboarding-health-weight
+                      key: ValueKey('onboarding-weight-$_healthWeightReads'),
+                      // [/fork]
                       initialKg: _parsedWeight ?? widget.initialWeightKg,
                       unit: BodyWeightUnit.st,
                       errorText: _showWeightError && _parsedWeight == null

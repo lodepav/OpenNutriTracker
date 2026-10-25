@@ -607,7 +607,10 @@ class BulkAddBloc extends Bloc<BulkAddEvent, BulkAddState> {
       final serving = meal.servingQuantity;
       if (serving != null) return _amountText(serving);
     }
-    return usesImperialUnits ? '1' : '100';
+    // [fork] S98 default-amount: the 100 g in ounces. Upstream's 1 oz is
+    // 28 g, so an AI-read dish with no stated amount came in as a bite.
+    return usesImperialUnits ? '3.5' : '100';
+    // [/fork]
   }
 
   String _initialUnit(
