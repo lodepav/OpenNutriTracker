@@ -12,6 +12,7 @@ import 'package:opennutritracker/core/utils/energy_display.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/core/utils/user_image_storage.dart';
 import 'package:opennutritracker/generated/l10n.dart';
+import 'package:opennutritracker/fork/off/off_kinds.dart'; // [fork] S117
 
 class RecipeListItem extends StatelessWidget {
   final RecipeEntity recipe;
@@ -44,6 +45,8 @@ class RecipeListItem extends StatelessWidget {
     // to a generic recipe icon when none of the ingredients carry imagery
     // (e.g. all-custom-meal recipes from the FDC source).
     final thumbnailUrl = recipe.ingredients
+        // [fork] S117: not an Open Food Facts product's photo
+        .where((i) => OffKinds.showsPhoto(i.snapshotMeal))
         .map((i) => i.snapshotMeal.thumbnailImageUrl)
         .firstWhere((url) => url != null && url.isNotEmpty, orElse: () => null);
 
