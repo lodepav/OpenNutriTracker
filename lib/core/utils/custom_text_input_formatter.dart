@@ -14,6 +14,10 @@ class CustomTextInputFormatter {
         // control: only the offending keystroke is dropped.
         TextInputFormatter.withFunction((oldValue, newValue) {
           final text = newValue.text.replaceAll(',', '.');
+          // [fork] S141 digits-only: a minus or a second separator from
+          // the number keyboard is dropped, not saved as an empty value
+          if (!RegExp(r'^\d*\.?\d*$').hasMatch(text)) return oldValue;
+          // [/fork]
           final dotIdx = text.indexOf('.');
           if (dotIdx >= 0 && text.length - dotIdx - 1 > maxDecimals) {
             return oldValue;

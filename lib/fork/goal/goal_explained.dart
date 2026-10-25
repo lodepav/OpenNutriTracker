@@ -68,8 +68,9 @@ class GoalExplainedBody extends StatelessWidget {
           title: 'What you burn',
           value: energyText(context, b.tdeeKcal),
           text:
-              'Resting energy from your age, height and weight, times how '
-              'active you are (${b.palValue.toStringAsFixed(2)}).',
+              'From your age, height, weight and how active you are '
+              '(activity level ${b.palValue.toStringAsFixed(2)}), by the '
+              'IOM equations.',
           math: [
             _MathRow(
               l10n.kcalGoalInfoPalRowLabel,
@@ -103,7 +104,8 @@ class GoalExplainedBody extends StatelessWidget {
           text: rate != null
               ? '${b.goal.getName(context)}, '
                     '${l10n.weeklyWeightGoalKgPerWeek(rate.toStringAsFixed(2))}: '
-                    'about 7700 kcal per kg, spread over 7 days.'
+                    'about ${usesKj(context) ? '32,200 kJ' : '7,700 kcal'} per kg, '
+                    'spread over 7 days.'
               : '${b.goal.getName(context)}: a fixed daily adjustment.',
           math: [
             _MathRow(
@@ -300,7 +302,8 @@ class _GoalStepState extends State<GoalStep> {
                         children: [
                           Expanded(
                             child: Text(
-                              '${widget.number}. ${widget.title}',
+                              // The number is on the line beside (H8)
+                              widget.title,
                               style: bold,
                             ),
                           ),

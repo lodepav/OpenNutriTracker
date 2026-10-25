@@ -8,6 +8,7 @@ import 'package:opennutritracker/features/add_meal/util/food_emoji_resolver.dart
 import 'package:opennutritracker/fork/display/display_prefs.dart';
 import 'package:opennutritracker/fork/off/off_kinds.dart';
 import 'package:opennutritracker/fork/recipe/recipe_list.dart';
+import 'package:opennutritracker/fork/units/amount_text.dart' show spokenUnit;
 import 'package:opennutritracker/fork/units/energy_text.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 
@@ -122,7 +123,7 @@ class _BuilderIngredientRowState extends State<BuilderIngredientRow> {
                           TextSpan(
                             text: '${energyText(context, values.kcal)} · ',
                           ),
-                          ...macroSpans(context, values),
+                          ...macroSpans(context, values, small: true),
                         ],
                       ),
                       style: theme.textTheme.bodySmall?.copyWith(
@@ -135,10 +136,14 @@ class _BuilderIngredientRowState extends State<BuilderIngredientRow> {
             ),
           ),
           const SizedBox(width: Dimens.spacing8),
+          // The unit beside the field, which grows with the text, so the
+          // digits never run into it (A6).
           SizedBox(
-            width: 84,
+            width: MediaQuery.textScalerOf(context).scale(80).clamp(80, 160),
             child: Semantics(
-              label: 'Amount of ${meal.name ?? 'the ingredient'}',
+              label:
+                  'Amount of ${meal.name ?? 'the ingredient'} in '
+                  '${spokenUnit(ingredient.unit)}',
               child: TextField(
                 controller: _amount,
                 textAlign: TextAlign.end,
@@ -152,7 +157,11 @@ class _BuilderIngredientRowState extends State<BuilderIngredientRow> {
                 ],
                 decoration: InputDecoration(
                   isDense: true,
-                  suffixText: ingredient.unit,
+                  // Room for four digits (A6)
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: Dimens.spacing8,
+                    vertical: Dimens.spacing12,
+                  ),
                   border: const OutlineInputBorder(
                     borderRadius: Dimens.borderRadiusS,
                   ),
@@ -162,6 +171,13 @@ class _BuilderIngredientRowState extends State<BuilderIngredientRow> {
                   if (amount != null && amount > 0) widget.onAmount(amount);
                 },
               ),
+            ),
+          ),
+          const SizedBox(width: Dimens.spacing4),
+          ExcludeSemantics(
+            child: Text(
+              ingredient.unit,
+              style: Theme.of(context).textTheme.bodyMedium,
             ),
           ),
           IconButton(
@@ -209,10 +225,10 @@ class BuilderSaveBar extends StatelessWidget {
                 color: color,
               ),
             ),
+            // Wraps at large text rather than cut "protein" (A6)
             Text(
               label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
               style: theme.textTheme.bodySmall?.copyWith(
                 color: palette.textMuted,
               ),

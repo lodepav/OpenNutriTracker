@@ -132,6 +132,7 @@ class CustomMealsTab extends StatelessWidget {
                             ),
                           IconButton(
                             icon: Icon(Icons.delete_outline_rounded, color: palette.textMuted),
+                            tooltip: 'Delete ${meal.name ?? ''}', // [fork] S132 A3
                             onPressed: () => _confirmDelete(context, meal),
                           ),
                         ],

@@ -108,7 +108,9 @@ class _LabelScanButtonState extends State<LabelScanButton> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        // Each its own node: the heading is not read as the button (A7).
         Semantics(
+          container: true,
           button: true,
           child: AppCard(
             key: const Key('fork-label-scan'),
@@ -154,10 +156,14 @@ class _LabelScanButtonState extends State<LabelScanButton> {
             top: Dimens.spacing16,
             bottom: Dimens.spacing8,
           ),
-          child: Text(
-            'Or type it like the label',
-            style: theme.textTheme.labelLarge?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
+          child: Semantics(
+            container: true,
+            header: true,
+            child: Text(
+              'Or type it like the label',
+              style: theme.textTheme.labelLarge?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
             ),
           ),
         ),
