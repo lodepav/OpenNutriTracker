@@ -12,6 +12,7 @@ import 'package:opennutritracker/main.dart';
 // [fork] S18 dev-adaptive
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/fork/display/display_prefs.dart';
+import 'package:opennutritracker/fork/off/off_kinds.dart'; // [fork] S117
 import 'package:opennutritracker/core/utils/ai_credential_storage.dart';
 import 'package:opennutritracker/fork/backup/auto_backup.dart';
 import 'package:opennutritracker/fork/backup/storage_rescue.dart';
@@ -60,6 +61,7 @@ Future<void> main() async {
   try {
     await AdaptiveStore.start();
     await DisplayPrefs.start();
+    await OffKinds.start(); // [fork] S117
     await AutoBackup.start();
     await WeightImport.start(refreshAfterWeightImport);
     BodyFatImport.start();

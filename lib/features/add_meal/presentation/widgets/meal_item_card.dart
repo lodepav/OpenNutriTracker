@@ -12,7 +12,7 @@ import 'package:opennutritracker/features/add_meal/data/dto/sp/sp_const.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dart';
 import 'package:opennutritracker/features/add_meal/presentation/add_meal_type.dart';
 import 'package:opennutritracker/features/add_meal/presentation/widgets/favourite_toggle_button.dart';
-import 'package:opennutritracker/features/add_meal/util/food_emoji_resolver.dart';
+// [fork] S117: food_emoji_resolver.dart's import went to OffKinds
 import 'package:opennutritracker/features/meal_detail/meal_detail_screen.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 // [fork] S83 search-macros
@@ -20,6 +20,7 @@ import 'package:opennutritracker/fork/display/meal_macros_line.dart';
 // [/fork]
 // [fork] S116 search-dense
 import 'package:opennutritracker/core/domain/entity/intake_entity.dart';
+import 'package:opennutritracker/fork/off/off_kinds.dart'; // S117
 import 'package:opennutritracker/fork/units/energy_text.dart';
 // [/fork]
 
@@ -55,9 +56,13 @@ class MealItemCard extends StatelessWidget {
     // noun reliably identifies the food ("Milk, fluid, nonfat..." → milk).
     // OFF products are branded, so a head-noun match would often be
     // misleading; they keep the outline icon as a placeholder.
-    final emoji = (mealEntity.thumbnailImageUrl == null && mealEntity.source == MealSourceEntity.fdc)
-        ? resolveFoodEmoji(mealEntity.name)
+    // [fork] S117 off-kinds: an OFF product shows its kind, from its
+    // categories, instead of its photo
+    final emoji = (mealEntity.thumbnailImageUrl == null ||
+            !OffKinds.showsPhoto(mealEntity))
+        ? OffKinds.emojiFor(mealEntity)
         : null;
+    // [/fork]
     // [fork] S116 search-dense: a row as short as a logged food's (S115):
     // a 32 dp picture, the source and macros under the name, the energy
     // and what it is for on the trailing edge, a small add button. Was a
@@ -190,7 +195,8 @@ class MealItemCard extends StatelessWidget {
     String? emoji,
   ) {
     final radius = BorderRadius.circular(Dimens.radiusM);
-    if (mealEntity.thumbnailImageUrl != null) {
+    if (mealEntity.thumbnailImageUrl != null &&
+        OffKinds.showsPhoto(mealEntity)) { // [fork] S117
       return ClipRRect(
         borderRadius: radius,
         child: CachedNetworkImage(

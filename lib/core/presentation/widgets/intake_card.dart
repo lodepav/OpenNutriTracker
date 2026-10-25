@@ -20,6 +20,7 @@ import 'package:opennutritracker/fork/timeline/timeline.dart';
 // [/fork]
 import 'package:opennutritracker/fork/history/food_icon.dart'; // [fork] S100
 import 'package:opennutritracker/fork/display/meal_macros_line.dart'; // [fork] S115
+import 'package:opennutritracker/fork/off/off_kinds.dart'; // [fork] S117
 
 /// A logged intake, rendered as a full-width row: a rounded thumbnail, the meal
 /// name and amount, and the energy on the trailing edge. Replaces the old
@@ -215,7 +216,8 @@ class _Thumbnail extends StatelessWidget {
     Widget content;
     if (intake.meal.localImagePath != null) {
       content = _LocalMealImage(relativePath: intake.meal.localImagePath!);
-    } else if (intake.meal.mainImageUrl != null) {
+    } else if (intake.meal.mainImageUrl != null &&
+        OffKinds.showsPhoto(intake.meal)) { // [fork] S117
       content = CachedNetworkImage(
         cacheManager: locator<CacheManager>(),
         imageUrl: intake.meal.mainImageUrl ?? "",
@@ -236,14 +238,24 @@ class _Thumbnail extends StatelessWidget {
     );
   }
 
+  // [fork] S117 off-kinds: the food's kind when its name or categories
+  // say one, as on its search row
   Widget _fallback() => Container(
         color: palette.surfaceMuted,
-        child: Icon(
+        alignment: Alignment.center,
+        child: switch (OffKinds.emojiFor(intake.meal)) {
+          final emoji? when importedFoodIcon(intake) == null =>
+            ExcludeSemantics(
+              child: Text(emoji, style: const TextStyle(fontSize: 18)),
+            ),
+          _ => Icon(
             importedFoodIcon(intake) ?? // [fork] S100
                 Icons.restaurant_rounded,
             color: palette.textMuted,
             size: 18), // [fork] S115: was 24
+        },
       );
+  // [/fork]
 }
 
 class _LocalMealImage extends StatelessWidget {
