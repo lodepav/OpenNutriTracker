@@ -35,7 +35,8 @@ class OnboardingOtherOptionsPageBody extends StatefulWidget {
     bool dailyReminderEnabled,
     bool useMaterialYou,
     int? accentColor,
-  ) setPageContent;
+  )
+  setPageContent;
 
   final AppThemeEntity initialTheme;
   final Map<String, bool> initialFoodSourceToggles;
@@ -74,8 +75,9 @@ class OnboardingOtherOptionsPageBody extends StatefulWidget {
 class _OnboardingOtherOptionsPageBodyState
     extends State<OnboardingOtherOptionsPageBody> {
   late AppThemeEntity _selectedTheme = widget.initialTheme;
-  late final Map<String, bool> _foodSourceToggles =
-      Map<String, bool>.from(widget.initialFoodSourceToggles);
+  late final Map<String, bool> _foodSourceToggles = Map<String, bool>.from(
+    widget.initialFoodSourceToggles,
+  );
   late bool _dailyReminderEnabled = widget.initialDailyReminderEnabled;
   late bool _useMaterialYou = widget.initialUseMaterialYou;
   late int? _accentColor = widget.initialAccentColor;
@@ -86,6 +88,7 @@ class _OnboardingOtherOptionsPageBodyState
   bool? _aiConfigured;
   String? _aiEndpoint;
   bool _aiEnabled = false;
+
   /// Null when the stored name is unrecognised — see #753.
   AiProvider? _aiProvider;
 
@@ -204,8 +207,8 @@ class _OnboardingOtherOptionsPageBodyState
               child: _swatch(
                 context,
                 color: color,
-                selected: !materialYouSelected &&
-                    _accentColor == color.toARGB32(),
+                selected:
+                    !materialYouSelected && _accentColor == color.toARGB32(),
                 onTap: () => _onAccentColorSelected(color),
               ),
             ),
@@ -236,9 +239,7 @@ class _OnboardingOtherOptionsPageBodyState
                   color: Theme.of(context).colorScheme.onSurface,
                   width: 3,
                 )
-              : Border.all(
-                  color: Theme.of(context).colorScheme.outlineVariant,
-                ),
+              : Border.all(color: Theme.of(context).colorScheme.outlineVariant),
         ),
         child: selected && child == null
             ? const Icon(Icons.check_rounded, color: Colors.white)
@@ -428,7 +429,8 @@ class _OnboardingOtherOptionsPageBodyState
           ),
           for (final sourceCode in SPConst.settingsSelectableFoodSources)
             Semantics(
-              identifier: 'onboarding-food-source-${sourceCode.replaceAll('_', '-')}',
+              identifier:
+                  'onboarding-food-source-${sourceCode.replaceAll('_', '-')}',
               child: SwitchListTile(
                 dense: true,
                 title: Text(
