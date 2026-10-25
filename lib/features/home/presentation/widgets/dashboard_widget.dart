@@ -14,6 +14,7 @@ import 'package:opennutritracker/generated/l10n.dart';
 // [fork] S79 macro-order
 import 'package:opennutritracker/fork/display/display_prefs.dart';
 import 'package:opennutritracker/fork/display/week_bars.dart'; // [fork] S119
+import 'package:opennutritracker/fork/display/macro_foods.dart'; // [fork] S124
 // [/fork]
 import 'package:provider/provider.dart';
 
@@ -81,6 +82,26 @@ class _DashboardWidgetState extends State<DashboardWidget> {
           goal: goal,
           day: DateTime.now(),
           usesImperialUnits: widget.usesImperialUnits,
+          // [fork] S124 macro-foods: every total, for the page's switch
+          forkTotals: {
+            FoodsMetric.energy: (
+              eaten: widget.totalKcalSupplied,
+              goal: widget.totalKcalDaily,
+            ),
+            FoodsMetric.carbs: (
+              eaten: widget.totalCarbsIntake,
+              goal: widget.totalCarbsGoal,
+            ),
+            FoodsMetric.fat: (
+              eaten: widget.totalFatsIntake,
+              goal: widget.totalFatsGoal,
+            ),
+            FoodsMetric.protein: (
+              eaten: widget.totalProteinsIntake,
+              goal: widget.totalProteinsGoal,
+            ),
+          },
+          // [/fork]
         ),
       ),
     );
