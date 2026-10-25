@@ -16,12 +16,17 @@ enum Macro { carbs, fat, protein }
 abstract final class DisplayPrefs {
   static const _orderKey = 'macroOrder';
   static const _byHourKey = 'diaryByHour';
+  static const _homeEatenKey = 'homeShowsEaten';
 
   /// Upstream's order: carbs, fat, protein.
   static const upstreamOrder = [Macro.carbs, Macro.fat, Macro.protein];
 
   static final macroOrder = ValueNotifier<List<Macro>>(upstreamOrder);
   static final diaryByHour = ValueNotifier<bool>(false);
+
+  /// Whether Home's ring counts what was eaten rather than what is left
+  /// (S119).
+  static final homeShowsEaten = ValueNotifier<bool>(false);
 
   static Future<Box<dynamic>> _box() => AdaptiveStore.openActiveBox();
 
@@ -36,6 +41,7 @@ abstract final class DisplayPrefs {
     final box = await _box();
     macroOrder.value = parseOrder(box.get(_orderKey));
     diaryByHour.value = box.get(_byHourKey) == true;
+    homeShowsEaten.value = box.get(_homeEatenKey) == true;
   }
 
   static Future<void> setMacroOrder(List<Macro> order) async {
@@ -46,6 +52,11 @@ abstract final class DisplayPrefs {
   static Future<void> setDiaryByHour(bool on) async {
     diaryByHour.value = on;
     await (await _box()).put(_byHourKey, on);
+  }
+
+  static Future<void> setHomeShowsEaten(bool on) async {
+    homeShowsEaten.value = on;
+    await (await _box()).put(_homeEatenKey, on);
   }
 
   /// A stored order, or upstream's for anything that is not all three

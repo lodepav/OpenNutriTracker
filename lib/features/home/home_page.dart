@@ -26,10 +26,10 @@ import 'package:opennutritracker/features/diary/presentation/bloc/diary_bloc.dar
 import 'package:opennutritracker/features/home/presentation/bloc/home_bloc.dart';
 import 'package:opennutritracker/features/home/presentation/widgets/dashboard_widget.dart';
 import 'package:opennutritracker/features/home/presentation/widgets/intake_vertical_list.dart';
-import 'package:opennutritracker/features/home/presentation/widgets/fasting_home_chip.dart';
-import 'package:opennutritracker/features/home/presentation/widgets/quick_water_widget.dart';
+// [fork] S119 home-tiles: fasting_home_chip, quick_water_widget and
+// quick_weight_widget are tiles now (lib/fork/display/home_tiles.dart)
+import 'package:opennutritracker/fork/display/home_tiles.dart';
 import 'package:opennutritracker/core/domain/entity/body_weight_unit_entity.dart';
-import 'package:opennutritracker/features/home/presentation/widgets/quick_weight_widget.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 // [fork] S10 meal-groups: leftovers of a whole meal (D14)
 import 'package:opennutritracker/fork/leftovers/group_leftovers.dart';
@@ -189,32 +189,10 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       children: [
         ListView(
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                Dimens.spacing16,
-                Dimens.spacing16,
-                Dimens.spacing16,
-                Dimens.spacing4,
-              ),
-              // Wrap rather than Row so the two chips drop onto a second line
-              // at large text scale instead of overflowing off the edge.
-              child: Wrap(
-                spacing: Dimens.spacing12,
-                runSpacing: Dimens.spacing8,
-                children: [
-                  QuickWeightWidget(
-                    weightKg: userWeightKg,
-                    bodyWeightUnit: bodyWeightUnit,
-                  ),
-                  QuickWaterWidget(
-                    waterMlToday: waterMlToday,
-                    waterGoalMl: waterGoalMl,
-                  ),
-                ],
-              ),
-            ),
-            const FastingHomeChip(),
+            // [fork] S119 home-tiles: the weight, water and fasting chips
+            // are tiles under the card now
             const SizedBox(height: Dimens.spacing8),
+            // [/fork]
             DashboardWidget(
               totalKcalDaily: totalKcalDaily,
               totalKcalLeft: totalKcalLeft,
@@ -233,7 +211,16 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                 ...snackIntakeList,
               ],
               usesImperialUnits: usesImperialUnits,
+              forkDay: _homeBloc.currentDay, // [fork] S119
             ),
+            // [fork] S119 home-tiles: MacroFactor's 2×2 under the card
+            HomeTiles(
+              weightKg: userWeightKg,
+              bodyWeightUnit: bodyWeightUnit,
+              waterMl: waterMlToday,
+              waterGoalMl: waterGoalMl,
+            ),
+            // [/fork]
             // [fork] S13 adaptive-check-in
             AdaptiveCheckInCard(
               onAccepted: () => _homeBloc.add(const LoadItemsEvent()),

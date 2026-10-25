@@ -83,6 +83,17 @@ class QuickWeightWidget extends StatelessWidget {
     );
   }
 
+  // [fork] S119 home-tiles: Home's weight tile opens the same dialog
+  static Future<void> showWeightDialog(
+    BuildContext context, {
+    required double weightKg,
+    required BodyWeightUnit bodyWeightUnit,
+  }) => QuickWeightWidget(
+    weightKg: weightKg,
+    bodyWeightUnit: bodyWeightUnit,
+  )._showWeightDialog(context);
+  // [/fork]
+
   Future<void> _showWeightDialog(BuildContext context) async {
     final newKg = await showDialog<double>(
       context: context,
