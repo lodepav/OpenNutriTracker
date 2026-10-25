@@ -35,7 +35,9 @@ import 'package:opennutritracker/features/meal_detail/presentation/bloc/meal_det
 // [fork] S25 copy-anywhere
 import 'package:opennutritracker/fork/copy/copy_ui.dart';
 // [/fork]
+// [fork] S83 energy-unit
 import 'package:opennutritracker/fork/units/energy_text.dart';
+// [/fork]
 import 'package:opennutritracker/generated/l10n.dart';
 // [fork] S79 macro-order
 import 'package:opennutritracker/fork/display/display_prefs.dart';

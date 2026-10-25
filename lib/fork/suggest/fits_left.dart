@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:opennutritracker/core/domain/entity/intake_entity.dart';
+import 'package:opennutritracker/core/domain/usecase/get_config_usecase.dart';
 import 'package:opennutritracker/core/domain/usecase/get_intake_usecase.dart';
 import 'package:opennutritracker/core/domain/usecase/get_kcal_goal_usecase.dart';
 import 'package:opennutritracker/core/domain/usecase/get_macro_goal_usecase.dart';
@@ -76,11 +77,18 @@ Future<DayLeft> dayLeft(DateTime day) async {
   );
 }
 
-typedef FitsLeftData = ({DayLeft left, List<IntakeEntity> recents});
+/// What is left, the recents, and whether foods show in imperial units.
+typedef FitsLeftData = ({
+  DayLeft left,
+  List<IntakeEntity> recents,
+  bool imperial,
+});
 
 Future<FitsLeftData> _load(DateTime day) async => (
   left: await dayLeft(day),
   recents: await locator<GetIntakeUsecase>().getRecentIntake(),
+  imperial:
+      (await locator<GetConfigUsecase>().getConfig()).usesImperialFoodUnits,
 );
 
 /// Seam S85: "Fits what's left" over the add-meal screen's recents
@@ -90,7 +98,6 @@ Future<FitsLeftData> _load(DateTime day) async => (
 class FitsLeftSwitch extends StatefulWidget {
   final DateTime day;
   final AddMealType addMealType;
-  final bool usesImperialUnits;
   final Widget recents;
   final Future<FitsLeftData> Function(DateTime day) load;
 
@@ -98,7 +105,6 @@ class FitsLeftSwitch extends StatefulWidget {
     super.key,
     required this.day,
     required this.addMealType,
-    required this.usesImperialUnits,
     required this.recents,
     this.load = _load,
   });
@@ -164,7 +170,7 @@ class _FitsLeftSwitchState extends State<FitsLeftSwitch> {
               day: widget.day,
               mealEntity: food.meal,
               addMealType: widget.addMealType,
-              usesImperialUnits: widget.usesImperialUnits,
+              usesImperialUnits: data.imperial,
             ),
             Text(
               '${_amount(food)}: ${energyText(context, food.totalKcal)}, '

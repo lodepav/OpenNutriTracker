@@ -13,6 +13,11 @@ bool usesKj(BuildContext context, {bool listen = true}) =>
 
 String energyUnit(BuildContext context) => usesKj(context) ? 'kJ' : 'kcal';
 
+/// The unit as the language writes it ("ккал", "千卡"), for upstream's
+/// translated strings.
+String energyUnitLabel(BuildContext context) =>
+    usesKj(context) ? S.of(context).kjLabel : S.of(context).kcalLabel;
+
 /// [kcal] in the display unit, truncated as upstream's EnergyDisplay does,
 /// so one value reads the same on every screen.
 int energyValue(BuildContext context, double kcal) =>

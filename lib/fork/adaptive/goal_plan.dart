@@ -118,12 +118,14 @@ List<double> milestonesKg(
   var m = down
       ? (now / step).floor() * step.toDouble()
       : (now / step).ceil() * step.toDouble();
-  // Not the weight already reached.
-  if ((m - now).abs() < 0.1) m += down ? -step : step;
+  // Not the weight already reached: within the 0.1 kg [daysToTarget]
+  // counts as there, in the unit's own numbers.
+  final near = 0.1 * perKg;
+  if ((m - now).abs() < near) m += down ? -step : step;
   return [
     for (
       var i = 0;
-      i < max && (down ? m > target + 0.1 : m < target - 0.1);
+      i < max && (down ? m > target + near : m < target - near);
       i++, m += down ? -step : step
     )
       m / perKg,

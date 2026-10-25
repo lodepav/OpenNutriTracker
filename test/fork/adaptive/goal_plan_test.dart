@@ -67,6 +67,20 @@ void main() {
       );
     });
 
+    test('in pounds, one under 0.1 kg away counts as reached', () {
+      // 200.15 lb: 200 is 0.07 kg off, where the planner says "reached".
+      final lb = milestonesKg(
+        200.15 / 2.20462,
+        190 / 2.20462,
+        2,
+        perKg: 2.20462,
+      );
+      expect(
+        [for (final kg in lb) (kg * 2.20462).round()],
+        [198, 196, 194, 192],
+      );
+    });
+
     test('none at the target or past it', () {
       expect(milestonesKg(80.05, 80, 1), isEmpty);
       expect(milestonesKg(79, 80, 5), isEmpty);

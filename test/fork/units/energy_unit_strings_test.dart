@@ -73,4 +73,23 @@ void main() {
     expect(find.text('Day total: 4602 / 8368 kJ'), findsOneWidget);
     expect(find.text('(+418 kJ current selection)'), findsOneWidget);
   });
+
+  testWidgets('the day total names the unit as the language does', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _app(
+        true,
+        locale: const Locale('ru'),
+        const DailyKcalOverview(
+          dayKcalConsumed: 1000,
+          dayKcalGoal: 2000,
+          currentSelectionKcal: 100,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Итого за день: 4602 / 8368 кДж'), findsOneWidget);
+    expect(find.text('(+418 кДж текущий выбор)'), findsOneWidget);
+  });
 }

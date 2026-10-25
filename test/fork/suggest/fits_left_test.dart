@@ -84,9 +84,9 @@ void main() {
           body: FitsLeftSwitch(
             day: DateTime(2026, 10, 25),
             addMealType: AddMealType.lunchType,
-            usesImperialUnits: false,
             recents: const Text('All recents'),
-            load: (_) async => (left: _left, recents: [_cake, _chicken]),
+            load: (_) async =>
+                (left: _left, recents: [_cake, _chicken], imperial: false),
           ),
         ),
       ),

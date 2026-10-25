@@ -8,6 +8,7 @@ import 'package:opennutritracker/core/utils/hive_db_provider.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/core/utils/tracked_day_lock.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
+import 'package:opennutritracker/fork/adaptive/goal_plan.dart';
 import 'package:opennutritracker/fork/adaptive/goal_plan_card.dart';
 
 enum PhaseKind {
@@ -174,8 +175,13 @@ class PhaseStore {
     changes.value++;
   }
 
-  Future<int> milestoneStep() async =>
-      (await _box()).get(milestoneKey, defaultValue: 0) as int;
+  /// 0 for anything but a step's place, as a hand-edited backup may hold.
+  Future<int> milestoneStep() async {
+    final step = (await _box()).get(milestoneKey, defaultValue: 0);
+    return step is int && step >= 0 && step <= milestoneStepsKg.length
+        ? step
+        : 0;
+  }
 
   Future<void> saveMilestoneStep(int step) async =>
       (await _box()).put(milestoneKey, step);
