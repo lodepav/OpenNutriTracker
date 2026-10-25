@@ -85,7 +85,9 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
     final textTheme = Theme.of(context).textTheme;
     return Scaffold(
       appBar: AppBar(
-        title: Text(recipe.name),
+        // [fork] S126 recipe-page: the name is the page's header below
+        title: null,
+        // [/fork]
         actions: [
           IconButton(
             tooltip: S.of(context).shareRecipeLabel,
