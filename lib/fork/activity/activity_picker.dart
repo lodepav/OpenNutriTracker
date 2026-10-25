@@ -1,4 +1,7 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:opennutritracker/core/domain/entity/physical_activity_entity.dart';
 import 'package:opennutritracker/core/domain/entity/user_activity_entity.dart';
@@ -509,12 +512,28 @@ class DurationSheet extends StatefulWidget {
 
 class _DurationSheetState extends State<DurationSheet> {
   int _minutes = 30;
+  late final _field = TextEditingController(text: '$_minutes');
 
   static const _step = 5;
   static const _max = 600;
 
-  /// The stepper's buttons turn off at the ends, so it stays in range.
-  void _set(int minutes) => setState(() => _minutes = minutes);
+  /// A stepper's tap or a chip: the field shows it too.
+  void _set(int minutes) => setState(() {
+    _minutes = minutes;
+    _field.text = '$minutes';
+  });
+
+  /// What is typed, while it is a duration; null for 0, nothing or too long.
+  int? get _typed => switch (int.tryParse(_field.text)) {
+    final m? when m >= 1 && m <= _max => m,
+    _ => null,
+  };
+
+  @override
+  void dispose() {
+    _field.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -527,9 +546,8 @@ class _DurationSheetState extends State<DurationSheet> {
       activity,
       _minutes.toDouble(),
     );
-    final mets = activity.mets == activity.mets.roundToDouble()
-        ? activity.mets.toStringAsFixed(0)
-        : activity.mets.toString();
+    final perMinute = METCalc.getTotalBurnedKcal(widget.user, activity, 1);
+    final valid = _typed != null;
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(
         Dimens.spacing16,
@@ -559,7 +577,8 @@ class _DurationSheetState extends State<DurationSheet> {
                       ),
                     ),
                     Text(
-                      '${dayLabel(widget.day, widget.today)} · $mets MET',
+                      '${dayLabel(widget.day, widget.today)} · about '
+                      '${energyText(context, perMinute)} a minute',
                       style: text.bodySmall?.copyWith(color: palette.textMuted),
                     ),
                   ],
@@ -580,34 +599,50 @@ class _DurationSheetState extends State<DurationSheet> {
                     height: 56,
                   ),
                   tooltip: '$_step minutes less',
+                  // To the five below: 42 goes to 40, then 35.
                   onPressed: _minutes > _step
-                      ? () => _set(_minutes - _step)
+                      ? () => _set((_minutes - 1) ~/ _step * _step)
                       : null,
                   icon: const Icon(Icons.remove_rounded),
                 ),
               ),
               SizedBox(
                 width: 120,
-                child: Semantics(
-                  liveRegion: true,
-                  label: '$_minutes minutes',
-                  excludeSemantics: true,
-                  child: Column(
-                    children: [
-                      Text(
-                        '$_minutes',
+                child: Column(
+                  children: [
+                    Semantics(
+                      identifier: 'activity-duration-field',
+                      label: 'Minutes',
+                      child: TextField(
+                        controller: _field,
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                          LengthLimitingTextInputFormatter(3),
+                        ],
+                        textAlign: TextAlign.center,
                         style: text.displaySmall?.copyWith(
                           fontWeight: FontWeight.w700,
                         ),
+                        decoration: InputDecoration(
+                          isDense: true,
+                          border: InputBorder.none,
+                          errorText: valid ? null : '1 to $_max',
+                        ),
+                        onChanged: (_) => setState(() {
+                          if (_typed case final m?) _minutes = m;
+                        }),
                       ),
-                      Text(
+                    ),
+                    ExcludeSemantics(
+                      child: Text(
                         'minutes',
                         style: text.bodySmall?.copyWith(
                           color: palette.textMuted,
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
               Semantics(
@@ -620,7 +655,7 @@ class _DurationSheetState extends State<DurationSheet> {
                   ),
                   tooltip: '$_step minutes more',
                   onPressed: _minutes < _max
-                      ? () => _set(_minutes + _step)
+                      ? () => _set(min(_max, (_minutes ~/ _step + 1) * _step))
                       : null,
                   icon: const Icon(Icons.add_rounded),
                 ),
@@ -636,7 +671,6 @@ class _DurationSheetState extends State<DurationSheet> {
                   child: Semantics(
                     identifier: 'activity-duration-$m',
                     child: ChoiceChip(
-                      showCheckmark: false,
                       materialTapTargetSize: MaterialTapTargetSize.padded,
                       label: SizedBox(
                         width: double.infinity,
@@ -683,9 +717,16 @@ class _DurationSheetState extends State<DurationSheet> {
                 minimumSize: const Size.fromHeight(52),
                 shape: const StadiumBorder(),
               ),
-              onPressed: () => Navigator.of(
-                context,
-              ).pop(activityEntry(activity, widget.user, _minutes, widget.day)),
+              onPressed: valid
+                  ? () => Navigator.of(context).pop(
+                      activityEntry(
+                        activity,
+                        widget.user,
+                        _minutes,
+                        widget.day,
+                      ),
+                    )
+                  : null,
               child: Text(
                 'Add $_minutes min ${name.toLowerCase()}',
                 maxLines: 2,

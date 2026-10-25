@@ -114,7 +114,6 @@ class _NutrientGoalsOverviewState extends State<NutrientGoalsOverview> {
       child: ChoiceChip(
         label: Text(label),
         selected: _week == week,
-        showCheckmark: false,
         onSelected: (_) => _show(week),
       ),
     );

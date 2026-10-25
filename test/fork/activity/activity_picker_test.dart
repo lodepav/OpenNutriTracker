@@ -151,7 +151,7 @@ void main() {
     final logged = <UserActivityEntity>[];
     await _pump(tester, onLog: logged.add);
     await _tap(tester, 'add-activity-row-02160');
-    expect(find.text('Today · 4 MET'), findsOneWidget);
+    expect(find.text('Today · about 5 kcal a minute'), findsOneWidget);
     expect(find.text('≈ 160 kcal'), findsOneWidget);
 
     await _tap(tester, 'activity-duration-45');
@@ -183,6 +183,57 @@ void main() {
       ),
     );
     expect(less.onPressed, isNull);
+  });
+
+  testWidgets('a typed duration, and the stepper goes on from it', (
+    tester,
+  ) async {
+    final logged = <UserActivityEntity>[];
+    await _pump(tester, onLog: logged.add);
+    await _tap(tester, 'add-activity-row-02160');
+    final field = find.descendant(
+      of: find.bySemanticsIdentifier('activity-duration-field'),
+      matching: find.byType(TextField),
+    );
+    await tester.enterText(field, '42');
+    await tester.pump();
+    expect(find.text('≈ 224 kcal'), findsOneWidget);
+    String shown() => tester.widget<TextField>(field).controller!.text;
+    await _tap(tester, 'activity-duration-more');
+    expect(shown(), '45');
+    await tester.enterText(field, '42');
+    await tester.pump();
+    await _tap(tester, 'activity-duration-less');
+    expect(shown(), '40');
+
+    await tester.enterText(field, '43');
+    await tester.pump();
+    await _tap(tester, 'activity-duration-add');
+    expect(logged.single.duration, 43);
+  });
+
+  testWidgets('no duration, or too long, can not be added', (tester) async {
+    await _pump(tester);
+    await _tap(tester, 'add-activity-row-02160');
+    final field = find.descendant(
+      of: find.bySemanticsIdentifier('activity-duration-field'),
+      matching: find.byType(TextField),
+    );
+    FilledButton add() => tester.widget<FilledButton>(
+      find.descendant(
+        of: find.bySemanticsIdentifier('activity-duration-add'),
+        matching: find.byType(FilledButton),
+      ),
+    );
+    for (final typed in ['', '0', '601']) {
+      await tester.enterText(field, typed);
+      await tester.pump();
+      expect(add().onPressed, isNull, reason: typed);
+      expect(find.text('1 to 600'), findsOneWidget);
+    }
+    await tester.enterText(field, '600');
+    await tester.pump();
+    expect(add().onPressed, isNotNull);
   });
 
   testWidgets('closing the sheet logs nothing', (tester) async {
