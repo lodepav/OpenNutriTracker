@@ -533,17 +533,28 @@ class _MacrosTrendCard extends StatelessWidget {
     return present.reduce((a, b) => a + b) / rangeDays;
   }
 
+  // [fork] S87 trends-macro-goal: a goal is the mean over the days that
+  // have one; over the range, a week with one day logged read a seventh
+  double _avgGoal(Iterable<double?> values) {
+    final present = values.whereType<double>().toList();
+    if (present.isEmpty) return 0;
+    return present.reduce((a, b) => a + b) / present.length;
+  }
+  // [/fork]
+
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
+    // [fork] S87 trends-macro-goal: the goals by _avgGoal
     final rows = [
       (S.of(context).carbsLabel, _avg(days.map((d) => d.carbsTracked)),
-          _avg(days.map((d) => d.carbsGoal)), palette.carbs),
+          _avgGoal(days.map((d) => d.carbsGoal)), palette.carbs),
       (S.of(context).fatLabel, _avg(days.map((d) => d.fatTracked)),
-          _avg(days.map((d) => d.fatGoal)), palette.fat),
+          _avgGoal(days.map((d) => d.fatGoal)), palette.fat),
       (S.of(context).proteinLabel, _avg(days.map((d) => d.proteinTracked)),
-          _avg(days.map((d) => d.proteinGoal)), palette.protein),
+          _avgGoal(days.map((d) => d.proteinGoal)), palette.protein),
     ];
+    // [/fork]
     return AppCard(
       padding: const EdgeInsets.all(Dimens.spacing20),
       child: Column(
