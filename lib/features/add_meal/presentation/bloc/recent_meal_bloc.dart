@@ -65,6 +65,7 @@ class RecentMealBloc extends Bloc<RecentMealEvent, RecentMealState> {
         RecentMealLoadedState(
           recentMeals: matches.map((intake) => intake.meal).toList(),
           usesImperialUnits: snapshot.usesImperialUnits,
+          forkIntakes: matches.toList(), // [fork] S116 search-dense
         ),
       );
     } catch (error) {
