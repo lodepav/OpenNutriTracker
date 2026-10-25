@@ -58,9 +58,13 @@ final _rice = _food('Rice', 300, 6, 65, 1);
 
 const DayLeft _left = (kcal: 500, protein: 40, carbs: 50, fat: 5);
 
-class _NoTrackedDay extends Fake implements GetTrackedDayUsecase {
+class _TrackedDay extends Fake implements GetTrackedDayUsecase {
+  final TrackedDayEntity? day;
+
+  _TrackedDay([this.day]);
+
   @override
-  Future<TrackedDayEntity?> getTrackedDay(DateTime day) async => null;
+  Future<TrackedDayEntity?> getTrackedDay(DateTime day) async => this.day;
 }
 
 class _KcalGoal extends Fake implements GetKcalGoalUsecase {
@@ -111,11 +115,37 @@ void main() {
     );
   });
 
+  test('a day with logs: its own goals less what is logged', () async {
+    final getIt = GetIt.instance;
+    await getIt.reset();
+    getIt.registerSingleton<GetTrackedDayUsecase>(
+      _TrackedDay(
+        TrackedDayEntity(
+          day: DateTime(2026, 10, 25),
+          calorieGoal: 2000,
+          caloriesTracked: 1500,
+          proteinGoal: 120,
+          proteinTracked: 100,
+          carbsGoal: 200,
+          carbsTracked: 150,
+          fatGoal: 60,
+          fatTracked: 70,
+        ),
+      ),
+    );
+    // The profile's goals differ from the day's (protein 100 at 2000).
+    getIt
+      ..registerSingleton<GetKcalGoalUsecase>(_KcalGoal())
+      ..registerSingleton<GetMacroGoalUsecase>(_MacroGoal());
+    final left = await dayLeft(DateTime(2026, 10, 25));
+    expect(left, (kcal: 500.0, protein: 20.0, carbs: 50.0, fat: -10.0));
+  });
+
   test('a day with nothing logged: the goal at its weekday', () async {
     final getIt = GetIt.instance;
     await getIt.reset();
     getIt
-      ..registerSingleton<GetTrackedDayUsecase>(_NoTrackedDay())
+      ..registerSingleton<GetTrackedDayUsecase>(_TrackedDay())
       ..registerSingleton<GetKcalGoalUsecase>(_KcalGoal())
       ..registerSingleton<GetMacroGoalUsecase>(_MacroGoal())
       ..registerSingleton<GetConfigUsecase>(_Config());
