@@ -659,7 +659,7 @@
   "notificationsDailyReminderChannelDescription": "Daily meal logging reminder",
   "notificationsDailyReminderTitle": "OpenBite",
   "notificationsPermissionDeniedSnack": "Notification permission denied.",
-  "nutrientPanelAllHiddenLabel": "All nutrients hidden — turn some on in Settings → Nutrients.",
+  "nutrientPanelAllHiddenLabel": "All nutrients hidden — turn some on in Settings → Appearance → Nutrients.",
   "nutrientPanelLimitLabel": "limit",
   "nutrientPanelDayLabel": "Day",
   "nutrientPanelWeekLabel": "Week",
@@ -718,7 +718,7 @@
   "onboardingIntroSourcesLinkLabel": "Read our medical calculation sources",
   "onboardingKcalPerDayLabel": "kcal per day",
   "onboardingKjPerDayLabel": "kJ per day",
-  "onboardingNonBinaryDisclaimer": "There's no published non-binary calorie baseline, so by default we use an average of the male and female formulas — a starting point, not a precise estimate. You can fine-tune anytime in Settings → Calculations.",
+  "onboardingNonBinaryDisclaimer": "There's no published non-binary calorie baseline, so by default we use an average of the male and female formulas — a starting point, not a precise estimate. You can fine-tune anytime in Settings → Goals & nutrition → Daily kcal adjustment.",
   "onboardingOverviewLabel": "Overview",
   "onboardingSaveUserError": "Wrong input, please try again",
   "onboardingTargetWeightHintOptional": "Optional",
@@ -1181,9 +1181,9 @@
   "sourcesEnergyDescription": "Daily calorie targets, basal metabolic rate, and physical activity coefficients use the equations from the Institute of Medicine. Source: Institute of Medicine (2005). Dietary Reference Intakes for Energy, Carbohydrate, Fiber, Fat, Fatty Acids, Cholesterol, Protein, and Amino Acids, Chapter 5 and Table 5-5.",
   "sourcesEnergyTitle": "Energy needs (TDEE, BMR & activity level)",
   "sourcesIconTooltip": "View sources",
-  "sourcesMacrosDescription": "The default split of 60% carbohydrates, 25% fat, and 15% protein falls within the population nutrient intake ranges published by the WHO. You can adjust this in Settings → Calculations. Source: WHO Technical Report Series 916 (2003), Diet, Nutrition and the Prevention of Chronic Diseases.",
+  "sourcesMacrosDescription": "The default split of 60% carbohydrates, 25% fat, and 15% protein falls within the population nutrient intake ranges published by the WHO. You can adjust this in Settings → Goals & nutrition → Macro split. Source: WHO Technical Report Series 916 (2003), Diet, Nutrition and the Prevention of Chronic Diseases.",
   "sourcesMacrosTitle": "Macronutrient distribution",
-  "sourcesNonBinaryDescription": "Energy-expenditure research has historically used binary sex categories, so there is no single validated TDEE formula for non-binary people. OpenBite therefore lets you choose between an averaged reference, an estrogen-typical reference, or a testosterone-typical reference under Settings → Calculations. If an accurate number genuinely matters for your care, please speak to a clinician familiar with your hormone status.",
+  "sourcesNonBinaryDescription": "Energy-expenditure research has historically used binary sex categories, so there is no single validated TDEE formula for non-binary people. OpenBite therefore lets you choose between an averaged reference, an estrogen-typical reference, or a testosterone-typical reference under Settings → Goals & nutrition → Daily kcal adjustment. If an accurate number genuinely matters for your care, please speak to a clinician familiar with your hormone status.",
   "sourcesNutrientReferenceTitle": "Nutrient reference intakes",
   "sourcesNutrientReferenceDescription": "Daily reference amounts shown on the diary nutrient panel come from the Institute of Medicine's Dietary Reference Intakes summary, which covers per-nutrient targets for adults.",
   "sourcesNonBinaryTitle": "Non-binary calorie estimation",
@@ -1488,5 +1488,5 @@
   "healthSyncDisclosureContinueAction": "Continue",
   "healthSyncUnavailableLabel": "Health data is not available on this device. Workout import needs Health Connect on Android or Apple Health on iOS.",
   "sourcesEnergyCompensationTitle": "Workout calorie credit",
-  "sourcesEnergyCompensationDescription": "Imported workouts are credited with less than the energy your device reports. People compensate for exercise by burning fewer calories through the rest of the day — about 28% on average, and more at a higher body fat percentage. The suggested credit comes from that research and you can override it under Settings → Health sync. The energy itself is reported by the app or device that recorded the workout, not calculated with the app’s MET formula."
+  "sourcesEnergyCompensationDescription": "Imported workouts are credited with less than the energy your device reports. People compensate for exercise by burning fewer calories through the rest of the day — about 28% on average, and more at a higher body fat percentage. The suggested credit comes from that research and you can override it under Settings → Data → Health Connect. The energy itself is reported by the app or device that recorded the workout, not calculated with the app’s MET formula."
 }

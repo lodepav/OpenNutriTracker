@@ -18,7 +18,7 @@ bool shouldOffer(UpdateInfo? info, String? seen) =>
 /// openGym-Hevier's UpdateNotice (its D77): a sheet with Install and Not now,
 /// 4 s after launch and 1 s after every return to the app. Asked is
 /// answered: the version offered is kept on the device, so Not now, or a tap
-/// outside, waits for the next one; Settings → Updates still has it.
+/// outside, waits for the next one; Settings → About → Updates still has it.
 class UpdateNotice extends StatefulWidget {
   static const boxName = 'ForkUpdateBox';
   static const seenKey = 'seen';
@@ -131,7 +131,7 @@ Future<void> offerUpdate(
           ListTile(
             leading: const Icon(Icons.close),
             title: const Text('Not now'),
-            subtitle: const Text('Settings → Updates still has it.'),
+            subtitle: const Text('Settings → About → Updates still has it.'),
             onTap: () => Navigator.pop(context, false),
           ),
         ],

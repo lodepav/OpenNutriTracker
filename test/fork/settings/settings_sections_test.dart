@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -189,6 +191,25 @@ Map<SettingsSection, List<String>> _rows() => {
 void main() {
   setUp(_register);
   tearDown(() => locator.reset());
+
+  test('a path in a text names a section there is', () {
+    final titles = {for (final s in SettingsSection.values) s.title};
+    final paths = RegExp(r'Settings → ([^→.]+?)(?: →|\.)').allMatches(
+      [
+            File('lib/l10n/intl_en.arb').readAsStringSync(),
+            File('lib/fork/update/update_notice.dart').readAsStringSync(),
+            File('lib/fork/backup/auto_backup_ui.dart').readAsStringSync(),
+          ]
+          .expand((f) => f.split('\n'))
+          // Comments name screens loosely; only what is shown counts.
+          .where((l) => !l.trimLeft().startsWith('//'))
+          .join('\n'),
+    );
+    expect(paths, isNotEmpty);
+    for (final m in paths) {
+      expect(titles, contains(m.group(1)!.trim()), reason: m.group(0));
+    }
+  });
 
   test('a search needs every word, in the name or its section', () {
     const entries = <SettingsEntry>[
