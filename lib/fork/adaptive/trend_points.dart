@@ -10,10 +10,12 @@ import 'package:opennutritracker/fork/adaptive/trend.dart';
 /// the setting keeps upstream's 7-day average.
 List<WeightMovingAveragePoint>? smoothedTrendPoints(
   List<WeightLogEntity> entries,
-) {
-  if (!AdaptiveStore.settings.value.smoothedTrend || entries.isEmpty) {
-    return null;
-  }
+) => AdaptiveStore.settings.value.smoothedTrend ? trendPoints(entries) : null;
+
+/// The smoothed trend whatever the chart shows, one point a day from the
+/// first weigh-in to the last; empty without weigh-ins.
+List<WeightMovingAveragePoint> trendPoints(List<WeightLogEntity> entries) {
+  if (entries.isEmpty) return const [];
   DateTime day(DateTime t) => DateTime(t.year, t.month, t.day);
   final first = entries
       .map((e) => day(e.date))

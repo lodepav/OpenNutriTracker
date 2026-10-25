@@ -29,6 +29,10 @@ import 'package:intl/intl.dart' as intl;
 import 'package:opennutritracker/fork/report/chart_touch.dart';
 import 'package:opennutritracker/fork/units/energy_text.dart';
 // [/fork]
+// [fork] S93 weight-outlook
+import 'package:opennutritracker/fork/adaptive/trend_points.dart';
+import 'package:opennutritracker/fork/report/rate_text.dart';
+// [/fork]
 // [fork] S40 expenditure-card
 import 'package:opennutritracker/fork/adaptive/expenditure_card.dart';
 import 'package:opennutritracker/fork/adaptive/goal_plan_card.dart';
@@ -674,15 +678,26 @@ class _WeightCard extends StatelessWidget {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final start = DateTime(today.year, today.month, today.day - (rangeDays - 1));
-    final projection = weightProjection(
-      [
-        for (final e
-            in [...entries]..sort((a, b) => a.date.compareTo(b.date)))
-          if (!e.date.isBefore(start) && !e.date.isAfter(today))
-            (date: e.date, kg: e.weightKg),
-      ],
-      targetWeightKg,
-    );
+    bool inRange(DateTime d) => !d.isBefore(start) && !d.isAfter(today);
+    final readings = [
+      for (final e in [...entries]..sort((a, b) => a.date.compareTo(b.date)))
+        if (inRange(e.date)) (date: e.date, kg: e.weightKg),
+    ];
+    // The rate from the smoothed trend, as the Trend weight card's is,
+    // from its first and last day in the range; a fit of the raw readings
+    // read -0.0 where that card said -0.18.
+    final trend = trendPoints(entries).where((p) => inRange(p.date)).toList();
+    final projection = readings.length < 2
+        ? null
+        : weightProjection(
+            trend.length < 2
+                ? readings
+                : [
+                    for (final p in [trend.first, trend.last])
+                      (date: p.date, kg: p.weightKg),
+                  ],
+            targetWeightKg,
+          );
     // [/fork]
     return AppCard(
       padding: const EdgeInsets.all(Dimens.spacing20),
@@ -735,24 +750,21 @@ class _WeightCard extends StatelessWidget {
     BuildContext context,
     ({double ratePerWeek, int? weeksToTarget}) projection,
   ) {
-    final String rateStr;
-    switch (bodyWeightUnit) {
-      case BodyWeightUnit.kg:
-        final rate = projection.ratePerWeek;
-        final sign = rate >= 0 ? '+' : '';
-        rateStr = '$sign${rate.toStringAsFixed(1)} ${S.of(context).kgLabel}';
-      case BodyWeightUnit.lb:
-        final rate = projection.ratePerWeek * 2.20462;
-        final sign = rate >= 0 ? '+' : '';
-        rateStr = '$sign${rate.toStringAsFixed(1)} ${S.of(context).lbsLabel}';
-      case BodyWeightUnit.st:
-        // Decimal stones for rate display.
-        final rate = projection.ratePerWeek * 2.20462 / 14;
-        final sign = rate >= 0 ? '+' : '';
-        rateStr = '$sign${rate.toStringAsFixed(2)} ${S.of(context).stLabel}';
-    }
-    // [fork] S93 weight-outlook: measured, not the plan's pace
-    var label = 'Trend: $rateStr${S.of(context).trendsPerWeekSuffix}';
+    // [fork] S93 weight-outlook: measured, not the plan's pace, at two
+    // decimals as the Trend weight card's, and never "-0.00"
+    final (rate, unit) = switch (bodyWeightUnit) {
+      BodyWeightUnit.kg => (projection.ratePerWeek, S.of(context).kgLabel),
+      BodyWeightUnit.lb => (
+        projection.ratePerWeek * 2.20462,
+        S.of(context).lbsLabel,
+      ),
+      // Decimal stones for rate display.
+      BodyWeightUnit.st => (
+        projection.ratePerWeek * 2.20462 / 14,
+        S.of(context).stLabel,
+      ),
+    };
+    var label = 'Trend: ${signedRate(rate)} $unit a week';
     // [/fork]
     if (projection.weeksToTarget != null) {
       label += ' · ~${projection.weeksToTarget} '

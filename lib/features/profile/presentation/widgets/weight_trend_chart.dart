@@ -181,7 +181,14 @@ class WeightTrendChart extends StatelessWidget {
     return Padding(
       key: const Key('weightHistoryChart'),
       padding: const EdgeInsets.fromLTRB(16, 16, 24, 16),
-      child: SizedBox(
+      // [fork] S96 chart-touch: a legend under the chart, as the dashed line
+      // means the trend here and a plan on the Trend weight card
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+      // [/fork]
+      SizedBox(
         height: chartHeight,
         child: LineChart(
           LineChartData(
@@ -294,6 +301,20 @@ class WeightTrendChart extends StatelessWidget {
           ),
         ),
       ),
+      // [fork] S96 chart-touch
+      if (maSpots.length >= 2)
+        Padding(
+          padding: const EdgeInsets.only(top: 8),
+          child: Text(
+            smoothed != null
+                ? 'Dots: weigh-ins. Dashed: trend.'
+                : 'Dots: weigh-ins. Dashed: 7-day average.',
+            style: theme.textTheme.bodySmall,
+          ),
+        ),
+        ],
+      ),
+      // [/fork]
     );
   }
 }
