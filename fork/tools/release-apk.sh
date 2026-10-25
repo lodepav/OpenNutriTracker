@@ -14,9 +14,12 @@
 # commits them, and once the APK has passed fork/tools/release-check.sh tags the commit
 # openbite-vX.Y.Z (upstream's vX.Y.Z tags share the repo) and publishes it: pushes fork/main and
 # the tag, and creates the GitHub release with the APK and its .sha256, which is what the app's
-# updater (lib/fork/update/) downloads and verifies. The APK is built in a temporary folder,
-# deleted at the end. A publish that fails takes the tag back, so the same version can be run
-# again.
+# updater (lib/fork/update/) downloads and verifies. The APK is built in a worktree of its own
+# (~/.cache/openbite/release-src, or $RELEASE_SRC), kept between releases so Gradle and Flutter
+# build only what changed; delete it and `git worktree prune` to build from scratch. It is for
+# arm64 phones only: one Dart compile rather than three, and less than half the size. A publish
+# that fails takes the tag back, so the same version can be run again. Each step says how long it
+# took.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -29,6 +32,9 @@ export PATH="$HOME/flutter/bin:$PATH"
 BT="$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -1)"
 REPO="lodepav/OpenNutriTracker"
 cd "$ROOT"
+
+T=$SECONDS
+took() { echo "-- $1: $((SECONDS - T)) s"; T=$SECONDS; }
 
 notes_tool() { dart fork/tools/release_notes.dart "$@"; }
 json() { python3 -c 'import json, sys; print(json.loads(sys.argv[1])[sys.argv[2]] or "")' "$@"; }
@@ -62,6 +68,7 @@ publish() {  # version, apk
 [[ -z "$(git status --porcelain)" ]] || { echo "uncommitted changes: a release is built from a commit" >&2; exit 2; }
 # release_notes.dart numbers the release and writes its notes: its tests first.
 flutter test test/fork/tools/ >/dev/null || { echo "the release tools' tests fail: flutter test test/fork/tools/" >&2; exit 2; }
+took "release tools' tests"
 
 # The version: from the merges since the last release, or the one fork/VERSION holds when it has no
 # tag yet (the first release, or a run that did not get published), which is released as it is.
@@ -103,24 +110,36 @@ else
   VER="$NEW"
 fi
 
+took "version and notes (with your answer)"
 TMP="$(mktemp -d)"
-trap 'git worktree remove --force "$TMP/src" 2>/dev/null; rm -rf "$TMP"' EXIT
+trap 'rm -rf "$TMP"' EXIT
 OUT="$TMP/openbite-$VER.apk"
 
 # The full flavour's release build, unsigned (no android/key.properties: the key never enters
 # Gradle). nice: a full-speed build has hung this machine. It builds in a worktree of its own:
 # a test run or debug build in this tree meanwhile rewrites GeneratedPluginRegistrant.java with
-# the dev-only plugins, and the release compile then fails on integration_test.
+# the dev-only plugins, and the release compile then fails on integration_test. The worktree is
+# set to this commit; what git ignores (build/, .dart_tool/) stays from the last release.
 # Git leaves out what is generated: the keys' env.g.dart is copied in, the strings regenerated.
-git worktree add -q --detach "$TMP/src" HEAD
-cp lib/core/utils/env.g.dart "$TMP/src/lib/core/utils/"
-(cd "$TMP/src" && flutter gen-l10n && nice -n 19 flutter build apk --flavor full --release)
-UNSIGNED="$TMP/src/build/app/outputs/flutter-apk/app-full-release.apk"
+SRC="${RELEASE_SRC:-$HOME/.cache/openbite/release-src}"
+if [[ "$(git -C "$SRC" rev-parse --path-format=absolute --git-common-dir 2>/dev/null)" == "$(git rev-parse --path-format=absolute --git-common-dir)" ]]; then
+  git -C "$SRC" checkout -q --detach -f "$(git rev-parse HEAD)"
+  git -C "$SRC" clean -fdq
+else
+  git worktree prune
+  mkdir -p "$(dirname "$SRC")"
+  git worktree add -q --detach "$SRC" HEAD
+fi
+cp lib/core/utils/env.g.dart "$SRC/lib/core/utils/"
+(cd "$SRC" && flutter gen-l10n && nice -n 19 flutter build apk --flavor full --release --target-platform android-arm64)
+UNSIGNED="$SRC/build/app/outputs/flutter-apk/app-full-release.apk"
+took "build"
 "${BT}zipalign" -f -p 4 "$UNSIGNED" "$TMP/aligned.apk"
 echo "signing with $KS ($ALIAS)"
 "${BT}apksigner" sign --ks "$KS" --ks-key-alias "$ALIAS" --out "$OUT" "$TMP/aligned.apk"
 rm -f "$OUT.idsig"
 echo "signed"
+took "signing (with your password)"
 
 DIGEST="$("${BT}apksigner" verify --print-certs "$OUT" | sed -n 's/^Signer #1 certificate SHA-256 digest: //p')"
 if ! { [[ -f "$CERT" ]] && grep -v '^#' "$CERT" | grep -q .; }; then
@@ -135,7 +154,9 @@ fi
 
 fork/tools/release-check.sh --apk "$OUT" || {
   echo; echo "release check failed: nothing tagged or published" >&2; exit 1; }
+took "release check"
 
 git tag -a "openbite-v$VER" -m "OpenBite $VER" && echo "tagged openbite-v$VER"
 publish "$VER" "$OUT"
+took "publishing"
 echo "published: https://github.com/$REPO/releases/tag/openbite-v$VER"
