@@ -73,12 +73,14 @@ class StorageRescue {
         final match = _backupFile.firstMatch(name);
         if (match == null) continue;
         final date = DateTime.parse(match.group(2)!);
-        final newest = match.group(1) == null ? first : other;
+        final tagged = match.group(1) != null;
+        final newest = tagged ? other : first;
         if (newest != null && !date.isAfter(newest.day)) continue;
-        if (match.group(1) == null) {
-          first = (name: name, day: date);
+        final found = (name: name, day: date);
+        if (tagged) {
+          other = found;
         } else {
-          other = (name: name, day: date);
+          first = found;
         }
       }
       return first ?? other;
