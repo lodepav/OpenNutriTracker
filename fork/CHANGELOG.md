@@ -2,6 +2,32 @@
 
 Written by fork/tools/release_notes.dart at each release (D16).
 
+## 0.2.1 · 2026-10-25
+
+Based on OpenNutriTracker 2.5.0.
+
+### Fixes and changes
+
+- the release stops when fork/main moved on
+- an added weigh-in refreshes Home, the delete's Undo goes after its time
+- Trends' calorie summary and tooltip cut energy as energyValue does
+- Trends' daily average rounds, as the weekly report does
+- Home shows the weight a deleted weigh-in leaves, the check-in's rows add up, the recovery text names a button
+- UX round 5's weigh-in, first check-in, weigh-in delete, recovery text and dev Updates wording
+- the Weight card's rate agrees with the Goal planner's; the dashed line passes 3:1
+- the recovery screen restores the automatic backup or starts again
+- the Weight chart's legend, and its rate from the smoothed trend, never -0.0
+- test-fast regenerates the strings
+- an Updates row with the version, a typed weigh-in, a readable doubtful match
+- the add snackbar names the meal; Log 1 item
+- UX round 3's kJ wording, import headline and plurals
+- the Health Connect note sits under the weight it filled
+- the import says what it finds already here, and a profile's deleted data takes the fork's boxes with it
+- an unstated amount is 3.5 oz for imperial, onboarding offers the weight from Health Connect
+- UX fixes, the onboarding Overview's macros, typed birth dates, 2.2 g/kg protein per lb in pounds, icons for imported foods
+- chart tooltips name and round each number, no line to the axis, empty ranges say so
+- recipe servings, labels, the check-in's change, Trends' outlook and legend, the missing-info text
+
 ## 0.2.0 · 2026-10-25
 
 Based on OpenNutriTracker 2.5.0.
