@@ -1,6 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get_it/get_it.dart';
+import 'package:opennutritracker/core/domain/entity/app_theme_entity.dart';
+import 'package:opennutritracker/core/domain/entity/config_entity.dart';
+import 'package:opennutritracker/core/domain/entity/tracked_day_entity.dart';
+import 'package:opennutritracker/core/domain/usecase/get_config_usecase.dart';
+import 'package:opennutritracker/core/domain/usecase/get_kcal_goal_usecase.dart';
+import 'package:opennutritracker/core/domain/usecase/get_macro_goal_usecase.dart';
+import 'package:opennutritracker/core/domain/usecase/get_tracked_day_usecase.dart';
+import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/core/domain/entity/intake_entity.dart';
 import 'package:opennutritracker/core/domain/entity/intake_type_entity.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dart';
@@ -50,6 +58,38 @@ final _rice = _food('Rice', 300, 6, 65, 1);
 
 const DayLeft _left = (kcal: 500, protein: 40, carbs: 50, fat: 5);
 
+class _NoTrackedDay extends Fake implements GetTrackedDayUsecase {
+  @override
+  Future<TrackedDayEntity?> getTrackedDay(DateTime day) async => null;
+}
+
+class _KcalGoal extends Fake implements GetKcalGoalUsecase {
+  @override
+  Future<double> getKcalGoal({
+    dynamic userEntity,
+    double? totalKcalActivitiesParam,
+    double? kcalUserAdjustment,
+  }) async => 2000;
+}
+
+class _MacroGoal extends Fake implements GetMacroGoalUsecase {
+  @override
+  Future<double> getCarbsGoal(double totalCalorieGoal) async => 250;
+
+  @override
+  Future<double> getFatsGoal(double totalCalorieGoal) async => 70;
+
+  @override
+  Future<double> getProteinsGoal(double totalCalorieGoal) async =>
+      totalCalorieGoal / 20;
+}
+
+class _Config extends Fake implements GetConfigUsecase {
+  @override
+  Future<ConfigEntity> getConfig() async =>
+      const ConfigEntity(true, true, false, AppThemeEntity.system);
+}
+
 void main() {
   test('what fits, the best fit for the macros left first', () {
     final names = [
@@ -69,6 +109,30 @@ void main() {
       fitsLeft([_chicken], (kcal: -10, protein: 40, carbs: 0, fat: 0)),
       isEmpty,
     );
+  });
+
+  test('a day with nothing logged: the goal at its weekday', () async {
+    final getIt = GetIt.instance;
+    await getIt.reset();
+    getIt
+      ..registerSingleton<GetTrackedDayUsecase>(_NoTrackedDay())
+      ..registerSingleton<GetKcalGoalUsecase>(_KcalGoal())
+      ..registerSingleton<GetMacroGoalUsecase>(_MacroGoal())
+      ..registerSingleton<GetConfigUsecase>(_Config());
+    final now = DateTime.now();
+    final tomorrow = DateTime(now.year, now.month, now.day + 1);
+    // +300 on tomorrow's weekday only, as a weekend's higher target.
+    AdaptiveStore.settings.value = AdaptiveSettings(
+      weekdayOffsets: [
+        for (var d = 1; d <= 7; d++) d == tomorrow.weekday ? 300 : 0,
+      ],
+    );
+    addTearDown(() => AdaptiveStore.settings.value = const AdaptiveSettings());
+
+    final left = await dayLeft(tomorrow);
+    expect(left.kcal, 2300);
+    expect(left.protein, 115); // the macros from that day's energy
+    expect(left.carbs, 250);
   });
 
   testWidgets('the chip swaps the recents for what fits', (tester) async {

@@ -100,6 +100,7 @@ class _OnboardingGoalPageBodyState extends State<OnboardingGoalPageBody> {
     // rather than overflowing the row
     return Wrap(
       crossAxisAlignment: WrapCrossAlignment.center,
+      spacing: Dimens.spacing8,
       runSpacing: Dimens.spacing4,
       children: [
         // [/fork]
@@ -114,10 +115,9 @@ class _OnboardingGoalPageBodyState extends State<OnboardingGoalPageBody> {
             onSelected: (_) => _onSelected(goal),
           ),
         ),
-        if (isSuggested) ...[
-          const SizedBox(width: Dimens.spacing8),
-          _buildSuggestedBadge(),
-        ],
+        // [fork] S83 the Wrap's spacing, so a wrapped badge starts flush
+        if (isSuggested) _buildSuggestedBadge(),
+        // [/fork]
       ],
     );
   }
