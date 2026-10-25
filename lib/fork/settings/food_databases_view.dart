@@ -205,6 +205,7 @@ class _DatabaseRow extends StatelessWidget {
     if (onChanged == null) {
       return Semantics(
         identifier: identifier,
+        container: true,
         child: MergeSemantics(
           child: ConstrainedBox(
             constraints: const BoxConstraints(minHeight: 64),
@@ -226,6 +227,7 @@ class _DatabaseRow extends StatelessWidget {
     }
     return Semantics(
       identifier: identifier,
+      container: true,
       child: SwitchListTile(
         contentPadding: const EdgeInsets.symmetric(
           horizontal: Dimens.spacing12,

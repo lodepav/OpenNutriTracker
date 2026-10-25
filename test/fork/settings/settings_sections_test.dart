@@ -1,6 +1,5 @@
-import 'dart:io';
-
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -24,6 +23,7 @@ import 'package:opennutritracker/generated/l10n.dart';
 import 'package:opennutritracker/fork/settings/settings_index.dart';
 
 import '../../helpers/test_l10n.dart';
+import '../a11y/nested_buttons.dart';
 
 // Seam S129: Settings as MacroFactor's, a page for each section, and every
 // row of the old list on one of them.
@@ -222,6 +222,18 @@ void main() {
     expect(matchingSettings(entries, 'units energy'), [entries.first]);
     expect(matchingSettings(entries, 'energy theme'), isEmpty);
     expect(matchingSettings(entries, 'appear'), [entries.last]);
+  });
+
+  testWidgets('a row is its own button, not inside its card\'s first', (
+    tester,
+  ) async {
+    final handle = tester.ensureSemantics();
+    for (final section in SettingsSection.values) {
+      await tester.pumpWidget(_app(section: section));
+      await tester.pumpAndSettle();
+      expect(tapsInTaps(tester), isEmpty, reason: section.name);
+    }
+    handle.dispose();
   });
 
   testWidgets('the plain route lists the sections, each with a summary', (

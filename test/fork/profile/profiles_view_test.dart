@@ -15,6 +15,8 @@ import 'package:opennutritracker/core/utils/energy_unit_provider.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 import 'package:provider/provider.dart';
 
+import '../a11y/nested_buttons.dart';
+
 final _alex = ProfileEntity(
   id: 'alex',
   name: 'Alex',
@@ -116,7 +118,22 @@ void main() {
     testWidgets('the active one is marked; the other has Switch', (
       tester,
     ) async {
+      final handle = tester.ensureSemantics();
       await pump(tester, [_alex, _sam]);
+      expect(tapsInTaps(tester), isEmpty);
+      // The name and status first, then the figures, each as one.
+      final card = tester.getSemantics(
+        find.bySemanticsIdentifier('profile-card-alex'),
+      );
+      final read = <String>[];
+      card.visitChildren((n) {
+        read.add(n.label);
+        return true;
+      });
+      expect(card.label, isEmpty);
+      expect(read.first, startsWith('Alex'));
+      expect(read.first, contains('Active'));
+      expect(read, contains('3097\nkcal goal'));
       expect(find.text('Active'), findsOneWidget);
       expect(find.text('Lose weight · since Mar 2026'), findsOneWidget);
       expect(find.text('3097'), findsOneWidget);
@@ -131,6 +148,7 @@ void main() {
       await tester.tap(find.byTooltip('Edit Sam'));
       await tester.tap(find.byTooltip('Delete Alex'));
       expect(calls, ['switch sam', 'edit sam', 'delete alex']);
+      handle.dispose();
     });
 
     testWidgets('the last profile can not be deleted', (tester) async {

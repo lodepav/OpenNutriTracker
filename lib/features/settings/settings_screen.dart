@@ -1915,7 +1915,10 @@ class _SettingsGroup extends StatelessWidget {
       if (i > 0) {
         rows.add(Divider(height: Dimens.hairline, color: palette.border));
       }
-      rows.add(tiles[i]);
+      // [fork] S129 settings-sections: a row is its own node; else the
+      // first row's tap took in the card's other rows
+      rows.add(Semantics(container: true, child: tiles[i]));
+      // [/fork]
     }
     return AppCard(
       padding: const EdgeInsets.symmetric(vertical: Dimens.spacing4),
