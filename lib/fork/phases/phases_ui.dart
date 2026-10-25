@@ -23,12 +23,26 @@ int _daysBetween(DateTime from, DateTime to) => DateTime.utc(
 
 String _weeks(int weeks) => '$weeks week${weeks == 1 ? '' : 's'}';
 
-String _phaseText(DietPhase p, BodyWeightUnit unit) => switch (p.untilKg) {
-  null => '${p.kind.label}, ${_weeks(p.weeks)} ${_pace(p.kgPerWeek)}',
-  final kg =>
-    '${p.kind.label} to ${weightText(kg, unit)}, about ${_weeks(p.weeks)} '
-        '${_pace(p.kgPerWeek)}',
-};
+/// Whether phase [i] of [plan], one to a weight, stops short of it: at
+/// the most weeks a phase runs.
+bool _short(PhasePlan plan, int i) {
+  final until = plan.phases[i].untilKg, end = plan.weightAt(i + 1);
+  return until != null && end != null && (end - until).abs() > 1e-6;
+}
+
+String _phaseText(PhasePlan plan, int i, BodyWeightUnit unit) {
+  final p = plan.phases[i];
+  final pace = _pace(p.kgPerWeek);
+  return switch (p.untilKg) {
+    null => '${p.kind.label}, ${_weeks(p.weeks)} $pace',
+    final kg when _short(plan, i) =>
+      '${p.kind.label} toward ${weightText(kg, unit)}, ${_weeks(p.weeks)} '
+          '(the longest a phase runs) $pace',
+    final kg =>
+      '${p.kind.label} to ${weightText(kg, unit)}, about ${_weeks(p.weeks)} '
+          '$pace',
+  };
+}
 
 /// ", ~80.0 kg" for a plan that knows the weights, nothing otherwise.
 String _about(double? kg, BodyWeightUnit unit) =>
@@ -98,14 +112,13 @@ class _DietPhasesCardState extends State<DietPhasesCard> {
   }
 
   Future<void> _edit(PhasePlan? plan) async {
-    final nowKg = await _nowKg();
-    if (!mounted) return;
+    // The editor opens at once; the weights come in when the trend is read.
     final edited = await Navigator.of(context).push<({PhasePlan? plan})>(
       MaterialPageRoute(
         builder: (_) => PhasePlanScreen(
           plan: plan,
           today: widget.clock(),
-          nowKg: nowKg,
+          nowKg: _nowKg(),
           unit: widget.unit,
         ),
       ),
@@ -165,7 +178,7 @@ class _DietPhasesCardState extends State<DietPhasesCard> {
               )
             else ...[
               Text(
-                'Now: ${_phaseText(plan.phases[index], unit)}',
+                'Now: ${_phaseText(plan, index, unit)}',
                 style: const TextStyle(fontWeight: FontWeight.w600),
               ),
               Text(
@@ -176,10 +189,10 @@ class _DietPhasesCardState extends State<DietPhasesCard> {
               ),
             ],
             const SizedBox(height: Dimens.spacing8),
-            for (final (i, p) in plan.phases.indexed)
+            for (final (i, _) in plan.phases.indexed)
               if (i > index)
                 Text(
-                  '${_date(plan.startOf(i))}: ${_phaseText(p, unit)}'
+                  '${_date(plan.startOf(i))}: ${_phaseText(plan, i, unit)}'
                   '${_about(plan.weightAt(i + 1), unit)}',
                   style: theme.textTheme.bodySmall,
                 ),
@@ -196,8 +209,9 @@ class PhasePlanScreen extends StatefulWidget {
   final PhasePlan? plan;
   final DateTime today;
 
-  /// The trend weight a new plan starts from; null leaves phases by time.
-  final double? nowKg;
+  /// The trend weight a new plan starts from, read as the editor opens;
+  /// null, or none read, leaves phases by time.
+  final Future<double?>? nowKg;
   final BodyWeightUnit unit;
 
   const PhasePlanScreen({
@@ -229,14 +243,24 @@ class _PhasePlanScreenState extends State<PhasePlanScreen> {
   };
 
   /// The weight the plan starts from: its own, kept from when it was
-  /// made, or today's trend for a new one.
-  late final double? _startKg = switch (widget.plan) {
-    null => widget.nowKg,
-    // A plan from before weights were kept takes today's, until it runs.
-    final plan when plan.startKg == null && !plan.start.isBefore(_today) =>
-      widget.nowKg,
-    final plan => plan.startKg,
-  };
+  /// made, or today's trend for a new one (and, until it runs, for a plan
+  /// from before weights were kept) once read.
+  late double? _startKg = widget.plan?.startKg;
+
+  @override
+  void initState() {
+    super.initState();
+    final plan = widget.plan;
+    if (plan == null || plan.startKg == null && !plan.start.isBefore(_today)) {
+      widget.nowKg?.then((kg) {
+        if (kg == null || !mounted) return;
+        setState(() {
+          _startKg = kg;
+          _reflow();
+        });
+      });
+    }
+  }
 
   DateTime get _today =>
       DateTime(widget.today.year, widget.today.month, widget.today.day);
@@ -251,6 +275,17 @@ class _PhasePlanScreenState extends State<PhasePlanScreen> {
 
   String _weight(double kg) => weightText(kg, widget.unit);
 
+  /// A first target for a phase to a weight: where its weeks would take it,
+  /// rounded to a step, and at least a step on from [from] the pace's way.
+  double _seed(double from, DietPhase p) {
+    final way = p.kgPerWeek < 0 ? -1 : 1;
+    var kg = _round(from + p.kgPerWeek * p.weeks);
+    while ((kg - from) * way < _stepKg - 1e-9) {
+      kg += way * _stepKg;
+    }
+    return kg;
+  }
+
   /// Works out again the weeks of each phase to a weight, from the weight
   /// it now starts at.
   void _reflow() {
@@ -259,11 +294,13 @@ class _PhasePlanScreenState extends State<PhasePlanScreen> {
       final until = p.untilKg;
       final from = _plan.weightAt(i);
       if (until == null || from == null) continue;
+      // Earlier phases now get past it: a phase by time, as long as it was.
+      final passed = (until - from) * p.kgPerWeek <= 0;
       _phases[i] = DietPhase(
         kind: p.kind,
         kgPerWeek: p.kgPerWeek,
-        weeks: DietPhase.weeksTo(from, until, p.kgPerWeek),
-        untilKg: until,
+        weeks: passed ? p.weeks : DietPhase.weeksTo(from, until, p.kgPerWeek),
+        untilKg: passed ? null : until,
       );
     }
   }
@@ -381,7 +418,7 @@ class _PhasePlanScreenState extends State<PhasePlanScreen> {
                         kind: p.kind,
                         kgPerWeek: p.kgPerWeek,
                         weeks: p.weeks,
-                        untilKg: _round(from + p.kgPerWeek * p.weeks),
+                        untilKg: _seed(from, p),
                       ),
                     ),
                   ),
@@ -392,7 +429,10 @@ class _PhasePlanScreenState extends State<PhasePlanScreen> {
                 children: [
                   Expanded(
                     child: Text(
-                      'Until ${_weight(until)}: about ${_weeks(p.weeks)}',
+                      _short(_plan, i)
+                          ? 'Until ${_weight(until)}: ${_weeks(p.weeks)}, '
+                                'the longest a phase runs'
+                          : 'Until ${_weight(until)}: about ${_weeks(p.weeks)}',
                     ),
                   ),
                   IconButton(
