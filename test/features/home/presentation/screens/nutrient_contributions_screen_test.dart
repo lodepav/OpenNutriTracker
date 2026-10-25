@@ -47,6 +47,7 @@ void main() {
       ),
     );
 
+    expect(find.text('of 93 g protein'), findsOneWidget); // [fork] S124
     await tester.tap(find.text('Chicken breast'));
     await tester.pumpAndSettle();
 

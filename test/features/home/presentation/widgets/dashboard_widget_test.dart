@@ -163,8 +163,11 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(NutrientContributionsScreen), findsOneWidget);
-      expect(find.text('60 of 93 g'), findsOneWidget);
-      expect(find.text("Today's protein"), findsOneWidget);
+      // [fork] S124: the foods page's summary and title
+      expect(find.text('60'), findsOneWidget);
+      expect(find.text('of 93 g protein'), findsOneWidget);
+      expect(find.text("Today's foods"), findsOneWidget);
+      // [/fork]
       expect(find.text('Apple'), findsNothing);
       expect(
         tester.getTopLeft(find.text('Chicken breast')).dy,
