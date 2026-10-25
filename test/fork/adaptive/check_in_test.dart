@@ -579,8 +579,11 @@ void main() {
     locator.registerSingleton<GetConfigUsecase>(_Config());
     addTearDown(locator.unregister<GetKcalGoalUsecase>);
     addTearDown(locator.unregister<GetConfigUsecase>);
-    AdaptiveStore.settings.value = const AdaptiveSettings(
-      weekdayOffsets: [300, 300, 300, 300, 300, 300, 300],
+    // Only today's shift, so another day's would show.
+    AdaptiveStore.settings.value = AdaptiveSettings(
+      weekdayOffsets: [
+        for (var d = 1; d <= 7; d++) d == DateTime.now().weekday ? 300 : 0,
+      ],
     );
     addTearDown(() => AdaptiveStore.settings.value = const AdaptiveSettings());
     final service = AdaptiveService(
