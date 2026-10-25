@@ -138,13 +138,18 @@ class _NutrientCell extends StatelessWidget {
           style: textTheme.titleLarge?.copyWith(color: color, fontWeight: FontWeight.w800),
         ),
         const SizedBox(height: 2),
-        Text(
-          label,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          textAlign: TextAlign.center,
-          style: textTheme.bodySmall?.copyWith(color: palette.textMuted),
+        // [fork] S92 a11y-labels-2: a word too wide for its cell at a large
+        // font shrinks rather than losing its end ("protei…")
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            label,
+            maxLines: 1,
+            textAlign: TextAlign.center,
+            style: textTheme.bodySmall?.copyWith(color: palette.textMuted),
+          ),
         ),
+        // [/fork]
       ],
     );
   }

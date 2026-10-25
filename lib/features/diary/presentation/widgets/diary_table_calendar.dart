@@ -79,8 +79,12 @@ class _DiaryTableCalendarState extends State<DiaryTableCalendar> {
                   color: palette.textStrong,
                 ) ??
                 const TextStyle(),
-            leftChevronIcon: Icon(Icons.chevron_left_rounded, color: palette.textMuted, size: 26),
-            rightChevronIcon: Icon(Icons.chevron_right_rounded, color: palette.textMuted, size: 26),
+            // [fork] S92 a11y-labels-2: the chevrons are spoken
+            leftChevronIcon: Icon(Icons.chevron_left_rounded,
+                color: palette.textMuted, size: 26, semanticLabel: 'Previous month'),
+            rightChevronIcon: Icon(Icons.chevron_right_rounded,
+                color: palette.textMuted, size: 26, semanticLabel: 'Next month'),
+            // [/fork]
             headerPadding: const EdgeInsets.symmetric(vertical: Dimens.spacing8),
           ),
           daysOfWeekStyle: DaysOfWeekStyle(

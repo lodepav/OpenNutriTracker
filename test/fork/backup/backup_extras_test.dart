@@ -39,6 +39,9 @@ void main() {
   });
 
   tearDown(() async {
+    // A restore sets the live settings; left, a later file in the same
+    // process reads an adaptive target with no Hive behind it.
+    AdaptiveStore.settings.value = const AdaptiveSettings();
     await Hive.close();
     await dir.delete(recursive: true);
   });

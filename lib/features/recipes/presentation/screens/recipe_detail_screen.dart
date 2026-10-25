@@ -136,6 +136,14 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
       body: ListView(
         padding: const EdgeInsets.all(Dimens.spacing16),
         children: [
+          // [fork] S92 a11y-labels-2: the whole name, which the app bar
+          // cuts short at a large font
+          Semantics(
+            header: true,
+            child: Text(recipe.name, style: textTheme.titleLarge),
+          ),
+          const SizedBox(height: Dimens.spacing8),
+          // [/fork]
           if (recipe.description != null && recipe.description!.isNotEmpty) ...[
             Text(
               recipe.description!,

@@ -619,10 +619,22 @@ class _WeightCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
+    // [fork] S93 weight-outlook: the weigh-ins the chart draws, so the
+    // outlook shows only when the chart has a trend, and from the same
+    // points; all of them read a rate under "Log at least two days".
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final start = DateTime(today.year, today.month, today.day - (rangeDays - 1));
     final projection = weightProjection(
-      [for (final e in entries) (date: e.date, kg: e.weightKg)],
+      [
+        for (final e
+            in [...entries]..sort((a, b) => a.date.compareTo(b.date)))
+          if (!e.date.isBefore(start) && !e.date.isAfter(today))
+            (date: e.date, kg: e.weightKg),
+      ],
       targetWeightKg,
     );
+    // [/fork]
     return AppCard(
       padding: const EdgeInsets.all(Dimens.spacing20),
       child: Column(
@@ -690,7 +702,9 @@ class _WeightCard extends StatelessWidget {
         final sign = rate >= 0 ? '+' : '';
         rateStr = '$sign${rate.toStringAsFixed(2)} ${S.of(context).stLabel}';
     }
-    var label = '$rateStr${S.of(context).trendsPerWeekSuffix}';
+    // [fork] S93 weight-outlook: measured, not the plan's pace
+    var label = 'Trend: $rateStr${S.of(context).trendsPerWeekSuffix}';
+    // [/fork]
     if (projection.weeksToTarget != null) {
       label += ' · ~${projection.weeksToTarget} '
           '${S.of(context).trendsWeeksToGoalLabel}';

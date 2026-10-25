@@ -1,0 +1,129 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:opennutritracker/core/domain/entity/body_weight_unit_entity.dart';
+import 'package:opennutritracker/core/domain/entity/weight_log_entity.dart';
+import 'package:opennutritracker/core/domain/usecase/get_config_usecase.dart';
+import 'package:opennutritracker/core/domain/usecase/get_tracked_day_usecase.dart';
+import 'package:opennutritracker/core/domain/usecase/get_user_usecase.dart';
+import 'package:opennutritracker/core/domain/usecase/get_water_intake_usecase.dart';
+import 'package:opennutritracker/core/domain/usecase/get_weight_log_usecase.dart';
+import 'package:opennutritracker/core/utils/energy_unit_provider.dart';
+import 'package:opennutritracker/core/utils/locator.dart';
+import 'package:opennutritracker/features/trends/presentation/bloc/trends_bloc.dart';
+import 'package:opennutritracker/features/trends/presentation/trends_page.dart';
+import 'package:opennutritracker/generated/l10n.dart';
+import 'package:provider/provider.dart';
+
+// Seam S93: the weight outlook reads the weigh-ins the chart draws, and is
+// labelled as the measured trend.
+
+class _FakeGetTrackedDayUsecase extends Fake implements GetTrackedDayUsecase {}
+
+class _FakeGetWeightLogUsecase extends Fake implements GetWeightLogUsecase {}
+
+class _FakeGetUserUsecase extends Fake implements GetUserUsecase {}
+
+class _FakeGetConfigUsecase extends Fake implements GetConfigUsecase {}
+
+class _FakeGetWaterIntakeUsecase extends Fake
+    implements GetWaterIntakeUsecase {}
+
+class _SeededTrendsBloc extends TrendsBloc {
+  _SeededTrendsBloc(TrendsLoaded seeded)
+    : super(
+        _FakeGetTrackedDayUsecase(),
+        _FakeGetWeightLogUsecase(),
+        _FakeGetUserUsecase(),
+        _FakeGetConfigUsecase(),
+        _FakeGetWaterIntakeUsecase(),
+      ) {
+    emit(seeded);
+  }
+
+  @override
+  void add(TrendsEvent event) {}
+}
+
+DateTime _day(int offset) {
+  final now = DateTime.now();
+  return DateTime(now.year, now.month, now.day + offset);
+}
+
+Future<void> _pump(WidgetTester tester, List<WeightLogEntity> weight) async {
+  // The expenditure card below builds in the list's cache; its reads fail
+  // on these and it shows nothing.
+  locator
+    ..registerSingleton<GetUserUsecase>(_FakeGetUserUsecase())
+    ..registerSingleton<GetWeightLogUsecase>(_FakeGetWeightLogUsecase())
+    ..registerSingleton<GetTrackedDayUsecase>(_FakeGetTrackedDayUsecase());
+  locator.registerSingleton<TrendsBloc>(
+    _SeededTrendsBloc(
+      TrendsLoaded(
+        rangeDays: 7,
+        windowDays: 7,
+        days: const [],
+        priorWeek: const [],
+        weight: weight,
+        bodyWeightUnit: BodyWeightUnit.kg,
+        targetWeightKg: 70,
+        waterByDay: const {},
+        waterGoalMl: 0,
+      ),
+    ),
+  );
+  await tester.pumpWidget(
+    ChangeNotifierProvider(
+      create: (_) => EnergyUnitProvider(usesKilojoules: false),
+      child: const MaterialApp(
+        localizationsDelegates: [
+          S.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: S.supportedLocales,
+        home: Scaffold(body: TrendsPage()),
+      ),
+    ),
+  );
+  await tester.pump();
+}
+
+void main() {
+  tearDown(() async => locator.reset());
+
+  testWidgets('two weigh-ins in the range: the trend, labelled as one', (
+    tester,
+  ) async {
+    await _pump(tester, [
+      WeightLogEntity(date: _day(-6), weightKg: 80),
+      WeightLogEntity(date: _day(0), weightKg: 79.4),
+    ]);
+    final outlook = find.textContaining('Trend: -0.7 kg/week');
+    await tester.scrollUntilVisible(
+      outlook,
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(outlook, findsOneWidget);
+  });
+
+  testWidgets('one weigh-in in the range: no rate beside the empty chart', (
+    tester,
+  ) async {
+    await _pump(tester, [
+      WeightLogEntity(date: _day(-40), weightKg: 84),
+      WeightLogEntity(date: _day(0), weightKg: 80),
+      // Written with the clock moved forward.
+      WeightLogEntity(date: _day(14), weightKg: 79),
+    ]);
+    final empty = find.byKey(const Key('weightHistoryChartEmptyState'));
+    await tester.scrollUntilVisible(
+      empty,
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.textContaining('/week'), findsNothing);
+  });
+}
