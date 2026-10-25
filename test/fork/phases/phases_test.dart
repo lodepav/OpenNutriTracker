@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -39,18 +40,25 @@ class _MemoryPhases extends PhaseStore {
   }
 }
 
-/// A trend weight of 90.4 kg today.
+/// A trend weight of 90.4 kg today, once [read] completes (at once by
+/// default).
 class _Trend extends Fake implements AdaptiveService {
+  final Future<void>? read;
+
+  _Trend([this.read]);
+
   @override
-  Future<GoalPlanInputs?> goalPlan({int pastDays = 60}) async =>
-      const GoalPlanInputs(
-        pastTrendKg: [91, 90.4],
-        trendKgPerDay: -0.05,
-        expenditureKcal: 2500,
-        bodyFatPercent: 25,
-        targetWeightKg: 80,
-        paceKgPerWeek: -0.5,
-      );
+  Future<GoalPlanInputs?> goalPlan({int pastDays = 60}) async {
+    await read;
+    return const GoalPlanInputs(
+      pastTrendKg: [91, 90.4],
+      trendKgPerDay: -0.05,
+      expenditureKcal: 2500,
+      bodyFatPercent: 25,
+      targetWeightKg: 80,
+      paceKgPerWeek: -0.5,
+    );
+  }
 }
 
 void main() {
@@ -319,6 +327,99 @@ void main() {
         ),
         findsOneWidget,
       );
+    });
+
+    testWidgets('the editor opens before the trend is read', (tester) async {
+      final read = Completer<void>();
+      await pump(tester, _MemoryPhases(), service: _Trend(read.future));
+      await tester.tap(find.byKey(const ValueKey('phases-edit')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('phase-0')), findsOneWidget);
+      expect(find.byKey(const ValueKey('phase-0-until')), findsNothing);
+
+      read.complete();
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('phase-0-until')), findsOneWidget);
+    });
+
+    testWidgets('a phase earlier ones get past runs by time', (tester) async {
+      await pump(tester, _MemoryPhases(), service: _Trend());
+      Future<void> tap(String key) async {
+        await tester.ensureVisible(find.byKey(ValueKey(key)));
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(ValueKey(key)));
+        await tester.pumpAndSettle();
+      }
+
+      await tap('phases-edit');
+      await tap('phases-add');
+      await tap('phase-1-cut');
+      await tap('phase-1-until');
+      // From ~84.4 after 12 weeks: to 83.5.
+      expect(find.text('Until 83.5 kg: about 2 weeks'), findsOneWidget);
+      await tap('phase-0-longer');
+      await tap('phase-0-longer');
+      // A week left after the first, then the first ends at ~83.4, past it:
+      // a week by time.
+      expect(
+        tester
+            .widget<ChoiceChip>(find.byKey(const ValueKey('phase-1-for-time')))
+            .selected,
+        isTrue,
+      );
+      expect(find.text('1 week'), findsOneWidget);
+    });
+
+    testWidgets('a first target is a step on from the start, the pace\'s way', (
+      tester,
+    ) async {
+      await pump(tester, _MemoryPhases(), service: _Trend());
+      await tester.tap(find.byKey(const ValueKey('phases-edit')));
+      await tester.pumpAndSettle();
+      for (var i = 0; i < 11; i++) {
+        await tester.tap(find.byKey(const ValueKey('phase-0-shorter')));
+        await tester.pump();
+      }
+      // The slowest pace: a week at -0.1 from 90.4 rounds to 90.5, above.
+      await tester.drag(
+        find.byKey(const ValueKey('phase-0-pace')),
+        const Offset(-1000, 0),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Pace -0.10 kg a week'), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('phase-0-until')));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('Until 89.5 kg'), findsOneWidget);
+    });
+
+    testWidgets('a phase to a weight past 52 weeks says where it ends', (
+      tester,
+    ) async {
+      await pump(
+        tester,
+        _MemoryPhases(
+          PhasePlan(
+            start: _start,
+            startKg: 90,
+            phases: const [
+              DietPhase(
+                kind: PhaseKind.cut,
+                kgPerWeek: -0.5,
+                weeks: 52,
+                untilKg: 60,
+              ),
+            ],
+          ),
+        ),
+      );
+      expect(
+        find.text(
+          'Now: Cut toward 60.0 kg, 52 weeks (the longest a phase runs) '
+          '-0.50 kg a week',
+        ),
+        findsOneWidget,
+      );
+      expect(find.textContaining('~64.0 kg'), findsOneWidget);
     });
 
     testWidgets('without a weight, phases are by time only', (tester) async {
