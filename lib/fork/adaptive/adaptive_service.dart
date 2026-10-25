@@ -382,9 +382,10 @@ class AdaptiveService {
         0;
   }
 
-  /// A settings switch's own record, made today, gives way to the next
-  /// switch's: browsing the settings with auto-accept on keeps one, and
-  /// the record before it stays the cap's mark ([capMark]).
+  /// A check-in of other settings than the last record's takes that
+  /// record's place when it is from today: browsing the settings with
+  /// auto-accept on keeps one record for the day, and the records before
+  /// it stay the cap's marks ([capMark]). The first record stays.
   Future<void> accept(CheckIn checkIn, double targetKcal) async {
     final history = await _store.history();
     final record = CheckInRecord(
@@ -400,13 +401,10 @@ class AdaptiveService {
       targetWeightKg: checkIn.targetWeightKg,
       basis: AdaptiveStore.settings.value.targetBasis,
     );
-    final n = history.length;
     final switched =
-        n >= 2 &&
+        history.length >= 2 &&
         _day(history.last.date) == _today() &&
-        history.last.basis != null &&
-        history.last.basis != history[n - 2].basis &&
-        record.basis != history.last.basis;
+        history.last.basisChanged(AdaptiveStore.settings.value);
     await (switched
         ? _store.replaceLastCheckIn(record)
         : _store.addCheckIn(record));

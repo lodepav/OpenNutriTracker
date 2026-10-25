@@ -378,8 +378,10 @@ void main() {
           basis: settings.targetBasis,
         ),
       );
+      // Back and forth, landing on the seed's settings on the way.
       for (final s in [
         settings.copyWith(activityMode: ActivityMode.daily),
+        settings,
         settings.copyWith(flatEnergy: true),
         settings,
       ]) {
@@ -391,10 +393,17 @@ void main() {
       expect(history, hasLength(2));
       expect(history.last.basis, settings.targetBasis);
 
-      // A weekly check-in, of the same settings, is a record of its own.
+      // A check-in of the same settings is a record of its own; a switch
+      // after it takes its place, as the day's target is the switch's.
       final weekly = await service.checkIn();
       await service.accept(weekly, weekly.proposedTargetKcal);
       expect(await store.history(), hasLength(3));
+      AdaptiveStore.settings.value = settings.copyWith(flatEnergy: true);
+      final due = await service.checkIn();
+      await service.accept(due, due.proposedTargetKcal);
+      final last = await store.history();
+      expect(last, hasLength(3));
+      expect(last.last.basis, AdaptiveStore.settings.value.targetBasis);
     });
 
     test('a record of these settings weeks before the last is no mark', () {
