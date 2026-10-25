@@ -14,6 +14,7 @@ import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/fork/display/display_prefs.dart';
 import 'package:opennutritracker/core/utils/ai_credential_storage.dart';
 import 'package:opennutritracker/fork/backup/auto_backup.dart';
+import 'package:opennutritracker/fork/backup/storage_rescue.dart';
 import 'package:opennutritracker/fork/dev/fake_ai.dart';
 import 'package:opennutritracker/fork/health/body_fat_import.dart';
 import 'package:opennutritracker/fork/health/nutrition_export.dart';
@@ -42,9 +43,19 @@ Future<void> main() async {
 
   WidgetsFlutterBinding.ensureInitialized();
   LoggerConfig.intiLogger();
-  await initLocator();
-
-  await seedDemoData(DemoSeedOptions.dev);
+  // [fork] S112 storage-rescue: the recovery screen, as main's, not a
+  // hung splash
+  try {
+    await initLocator();
+  } on HiveStorageIntegrityException catch (error) {
+    runApp(StorageRecoveryApp(errorCode: error.code, onRetry: main));
+    return;
+  }
+  // A backup the recovery screen chose is restored, not seeded over.
+  if (!await StorageRescue().finishPending()) {
+    await seedDemoData(DemoSeedOptions.dev);
+  }
+  // [/fork]
   // [fork] S18 dev-adaptive: the trend and target switches, as main's S6
   try {
     await AdaptiveStore.start();
