@@ -508,32 +508,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   // [fork] S32 off-contributions
                   const OffAccountTile(),
                   // [/fork]
-                  _SettingsTile(
-                    palette: palette,
-                    icon: Icons.cached_rounded,
-                    title: S.of(context).clearOffCacheLabel,
-                    subtitle: S
-                        .of(context)
-                        .clearOffCacheSubtitle(
-                          state.offCacheCount,
-                          _formatBytes(state.offCacheSizeBytes),
-                        ),
-                    enabled: state.offCacheCount > 0,
-                    onTap: () => _confirmClearOffCache(context),
-                  ),
                 ],
               ),
                 const SizedBox(height: Dimens.spacing20),
               ],
               if (_forkShows(SettingsSection.data)) ...[
-              _categoryHeader(
-                context,
-                palette,
-                S.of(context).settingsCategoryData,
-              ),
+              // [fork] S140 data-page: MacroFactor's Data A, the backup
+              // first, then what comes in and what goes out
+              if (widget.embedded)
+                _categoryHeader(
+                  context,
+                  palette,
+                  S.of(context).settingsCategoryData,
+                ),
               _SettingsGroup(
                 palette: palette,
                 tiles: [
+                  // [fork] S23 auto-backup
+                  const AutoBackupTile(),
+                  // [/fork]
                   _SettingsTile(
                     identifier: 'settings-health-sync',
                     palette: palette,
@@ -549,15 +542,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ],
               ),
               const SizedBox(height: Dimens.spacing20),
-              // [fork] S78 import-group: every file import and export in
-              // one group
-              const SizedBox(height: Dimens.spacing20),
-              _categoryHeader(context, palette, 'Import and export'),
+              _categoryHeader(context, palette, 'Bring data in'),
               _SettingsGroup(
                 palette: palette,
                 tiles: [
-                  // [fork] S51 csv-export: another app's history in, and
-                  // the diary for a spreadsheet
+                  // [fork] S51 csv-export: another app's history in
                   const HistoryImportTile(),
                   // [/fork]
                   _SettingsTile(
@@ -567,26 +556,43 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     title: S.of(context).importCustomFoodDataLabel,
                     onTap: () => _showImportCustomFoodDataDialog(context),
                   ),
+                ],
+              ),
+              const SizedBox(height: Dimens.spacing20),
+              _categoryHeader(context, palette, 'Take data out'),
+              _SettingsGroup(
+                palette: palette,
+                tiles: [
+                  // [fork] S51 csv-export: the diary for a spreadsheet
+                  const CsvExportTile(),
+                  // [/fork]
                   _SettingsTile(
                     palette: palette,
                     icon: Icons.import_export_rounded,
                     title: S.of(context).exportImportAppDataLabel,
+                    subtitle: 'Everything, to a file or back from one',
                     onTap: () => _showExportImportDialog(context),
                   ),
-                  // [fork] S23 auto-backup
-                  const AutoBackupTile(),
-                  // [/fork]
-                  // [fork] S51 csv-export
-                  const CsvExportTile(),
-                  // [/fork]
                 ],
               ),
-              // [/fork]
               const SizedBox(height: Dimens.spacing20),
               _categoryHeader(context, palette, 'Start over'),
               _SettingsGroup(
                 palette: palette,
                 tiles: [
+                  _SettingsTile(
+                    palette: palette,
+                    icon: Icons.cached_rounded,
+                    title: S.of(context).clearOffCacheLabel,
+                    subtitle: S
+                        .of(context)
+                        .clearOffCacheSubtitle(
+                          state.offCacheCount,
+                          _formatBytes(state.offCacheSizeBytes),
+                        ),
+                    enabled: state.offCacheCount > 0,
+                    onTap: () => _confirmClearOffCache(context),
+                  ),
                   _SettingsTile(
                     identifier: 'settings-delete-all-data',
                     palette: palette,
@@ -599,6 +605,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                 ],
               ),
+              // [/fork]
                 const SizedBox(height: Dimens.spacing20),
               ],
               if (_forkShows(SettingsSection.appearance)) ...[
@@ -865,7 +872,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             )
           : 'Daily reminder off · weigh-in and check-in',
       SettingsSection.food: 'Food sources, Open Food Facts, AI assist',
-      SettingsSection.data: '$healthPlatformName, import, export, backup',
+      SettingsSection.data: 'Backup, $healthPlatformName, import, export',
       SettingsSection.appearance: 'Theme, colour, language, what screens show',
       SettingsSection.about:
           'OpenBite ${state.versionNumber} · privacy · sources',
@@ -902,13 +909,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
       e(s.settingsFoodSourcesLabel, food),
       e(s.settingsAiAssistLabel, food),
       e('Open Food Facts account', food),
-      e(s.clearOffCacheLabel, food),
       e(healthPlatformName, data),
       e('Import history', data),
       e(s.importCustomFoodDataLabel, data),
       e(s.exportImportAppDataLabel, data),
       e('Automatic backup', data),
       e('Export diary as CSV', data),
+      e(s.clearOffCacheLabel, data),
       e(s.settingsDeleteAllDataLabel, data),
       e(s.settingsThemeLabel, appearance),
       e(s.settingsAccentColourTitle, appearance),

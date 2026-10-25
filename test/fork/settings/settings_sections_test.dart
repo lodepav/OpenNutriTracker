@@ -153,14 +153,16 @@ Map<SettingsSection, List<String>> _rows() => {
     l10nEn.settingsFoodSourcesLabel,
     l10nEn.settingsAiAssistLabel,
     'Open Food Facts account',
-    l10nEn.clearOffCacheLabel,
   ],
   SettingsSection.data: [
+    'Automatic backup',
+    'Bring data in',
+    'Take data out',
     'Import history',
     l10nEn.importCustomFoodDataLabel,
     l10nEn.exportImportAppDataLabel,
-    'Automatic backup',
     'Export diary as CSV',
+    l10nEn.clearOffCacheLabel,
     l10nEn.settingsDeleteAllDataLabel,
   ],
   SettingsSection.appearance: [
@@ -242,6 +244,31 @@ void main() {
       }
     });
   }
+
+  testWidgets('data: the backup, then what comes in, goes out, starts over', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(400, 3000));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(_app(section: SettingsSection.data));
+    await tester.pumpAndSettle();
+    double top(String text) => tester.getTopLeft(find.text(text).first).dy;
+    final order = [
+      'Automatic backup',
+      'Bring data in',
+      'Import history',
+      'Take data out',
+      'Export diary as CSV',
+      'Start over',
+      l10nEn.clearOffCacheLabel,
+      l10nEn.settingsDeleteAllDataLabel,
+    ];
+    for (var i = 1; i < order.length; i++) {
+      expect(top(order[i - 1]) < top(order[i]), isTrue, reason: order[i]);
+    }
+    // The page's own title is the only heading for the section.
+    expect(find.text(l10nEn.settingsCategoryData), findsOneWidget);
+  });
 
   testWidgets('a section opens its page', (tester) async {
     await tester.pumpWidget(_app());
