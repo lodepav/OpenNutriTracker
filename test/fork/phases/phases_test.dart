@@ -342,6 +342,23 @@ void main() {
       expect(find.byKey(const ValueKey('phase-0-until')), findsOneWidget);
     });
 
+    testWidgets('a plan saved before the trend is read keeps its weight', (
+      tester,
+    ) async {
+      final read = Completer<void>();
+      final store = _MemoryPhases();
+      await pump(tester, store, service: _Trend(read.future));
+      await tester.tap(find.byKey(const ValueKey('phases-edit')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('phases-save')));
+      await tester.pumpAndSettle();
+      expect(store.saved, isNull); // waiting on the read
+
+      read.complete();
+      await tester.pumpAndSettle();
+      expect(store.saved?.startKg, 90.4);
+    });
+
     testWidgets('a phase earlier ones get past runs by time', (tester) async {
       await pump(tester, _MemoryPhases(), service: _Trend());
       Future<void> tap(String key) async {
@@ -370,7 +387,7 @@ void main() {
       expect(find.text('1 week'), findsOneWidget);
     });
 
-    testWidgets('a first target is a step on from the start, the pace\'s way', (
+    testWidgets('a first target is past the start, the pace\'s way', (
       tester,
     ) async {
       await pump(tester, _MemoryPhases(), service: _Trend());
@@ -380,7 +397,8 @@ void main() {
         await tester.tap(find.byKey(const ValueKey('phase-0-shorter')));
         await tester.pump();
       }
-      // The slowest pace: a week at -0.1 from 90.4 rounds to 90.5, above.
+      // The slowest pace: a week at -0.1 from 90.4 rounds to 90.5, above;
+      // the next step under it is 90.0.
       await tester.drag(
         find.byKey(const ValueKey('phase-0-pace')),
         const Offset(-1000, 0),
@@ -389,7 +407,7 @@ void main() {
       expect(find.text('Pace -0.10 kg a week'), findsOneWidget);
       await tester.tap(find.byKey(const ValueKey('phase-0-until')));
       await tester.pumpAndSettle();
-      expect(find.textContaining('Until 89.5 kg'), findsOneWidget);
+      expect(find.textContaining('Until 90.0 kg'), findsOneWidget);
     });
 
     testWidgets('a phase to a weight past 52 weeks says where it ends', (

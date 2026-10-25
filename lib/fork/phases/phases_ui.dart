@@ -247,17 +247,23 @@ class _PhasePlanScreenState extends State<PhasePlanScreen> {
   /// from before weights were kept) once read.
   late double? _startKg = widget.plan?.startKg;
 
+  /// The trend weight being read, when the plan takes it; Save waits for
+  /// it, so a plan saved at once still keeps its weight.
+  Future<double?>? _reading;
+
   @override
   void initState() {
     super.initState();
     final plan = widget.plan;
     if (plan == null || plan.startKg == null && !plan.start.isBefore(_today)) {
-      widget.nowKg?.then((kg) {
-        if (kg == null || !mounted) return;
-        setState(() {
-          _startKg = kg;
-          _reflow();
-        });
+      _reading = widget.nowKg?.then((kg) {
+        if (kg != null && mounted) {
+          setState(() {
+            _startKg = kg;
+            _reflow();
+          });
+        }
+        return kg;
       });
     }
   }
@@ -276,11 +282,12 @@ class _PhasePlanScreenState extends State<PhasePlanScreen> {
   String _weight(double kg) => weightText(kg, widget.unit);
 
   /// A first target for a phase to a weight: where its weeks would take it,
-  /// rounded to a step, and at least a step on from [from] the pace's way.
+  /// rounded to a step, and past [from] the pace's way, as the stepper
+  /// allows.
   double _seed(double from, DietPhase p) {
     final way = p.kgPerWeek < 0 ? -1 : 1;
     var kg = _round(from + p.kgPerWeek * p.weeks);
-    while ((kg - from) * way < _stepKg - 1e-9) {
+    while ((kg - from) * way <= 1e-9) {
       kg += way * _stepKg;
     }
     return kg;
@@ -513,7 +520,17 @@ class _PhasePlanScreenState extends State<PhasePlanScreen> {
           ),
         TextButton(
           key: const ValueKey('phases-save'),
-          onPressed: () => Navigator.pop(context, (plan: _plan)),
+          onPressed: () async {
+            if (_startKg == null) {
+              // Not for long: a read that hangs saves the plan by time.
+              final kg = await _reading?.timeout(
+                const Duration(seconds: 5),
+                onTimeout: () => null,
+              );
+              _startKg ??= kg;
+            }
+            if (context.mounted) Navigator.pop(context, (plan: _plan));
+          },
           child: const Text('Save'),
         ),
       ],
