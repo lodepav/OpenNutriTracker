@@ -13,16 +13,23 @@ List<WeightMovingAveragePoint>? smoothedTrendPoints(
 ) => AdaptiveStore.settings.value.smoothedTrend ? trendPoints(entries) : null;
 
 /// The smoothed trend whatever the chart shows, one point a day from the
-/// first weigh-in to the last; empty without weigh-ins.
-List<WeightMovingAveragePoint> trendPoints(List<WeightLogEntity> entries) {
+/// first weigh-in to the last, or on to [until] with the last weigh-in held
+/// as the Goal planner's is; empty without weigh-ins.
+List<WeightMovingAveragePoint> trendPoints(
+  List<WeightLogEntity> entries, {
+  DateTime? until,
+}) {
   if (entries.isEmpty) return const [];
   DateTime day(DateTime t) => DateTime(t.year, t.month, t.day);
   final first = entries
       .map((e) => day(e.date))
       .reduce((a, b) => a.isBefore(b) ? a : b);
-  final last = entries
+  final lastWeighIn = entries
       .map((e) => day(e.date))
       .reduce((a, b) => a.isAfter(b) ? a : b);
+  final last = until != null && day(until).isAfter(lastWeighIn)
+      ? day(until)
+      : lastWeighIn;
   // Calendar days: across a spring-forward local midnights are 23 h apart.
   final count = CalendarDayCalc.daysBetween(first, last) + 1;
   final trend = smoothedTrend(

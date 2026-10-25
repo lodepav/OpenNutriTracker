@@ -11,6 +11,10 @@ import 'package:opennutritracker/core/domain/usecase/get_weight_log_usecase.dart
 import 'package:opennutritracker/core/utils/energy_unit_provider.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
+import 'package:opennutritracker/fork/adaptive/expenditure.dart';
+import 'package:opennutritracker/fork/adaptive/goal_plan.dart';
+import 'package:opennutritracker/fork/adaptive/trend.dart';
+import 'package:opennutritracker/fork/report/rate_text.dart';
 import 'package:opennutritracker/features/trends/presentation/bloc/trends_bloc.dart';
 import 'package:opennutritracker/features/trends/presentation/trends_page.dart';
 import 'package:opennutritracker/generated/l10n.dart';
@@ -137,6 +141,32 @@ void main() {
       matches(RegExp(r'^Trend: [+-]0\.\d\d kg a week')),
     );
     expect(find.text('Dots: weigh-ins. Dashed: trend.'), findsOneWidget);
+  });
+
+  // Seam S93: the rate is the Goal planner's "Last 7 days", to the
+  // hundredth: the trend carried on to today past the last weigh-in.
+  testWidgets('the rate agrees with the Goal planner\'s', (tester) async {
+    final weighIns = {0: 84.0, 9: 83.1, 15: 83.6, 18: 82.4, 21: 82.9};
+    const days = 25; // the last weigh-in four days before today
+    await _pump(tester, [
+      for (final MapEntry(key: d, value: kg) in weighIns.entries)
+        WeightLogEntity(date: _day(d - (days - 1)), weightKg: kg),
+    ]);
+    final planner = smoothedTrend(
+      dailyWeights(weighIns, days),
+      alpha: const ExpenditureSettings().alpha,
+    ).whereType<double>().toList();
+    final week = trendChanges(planner)[7]!;
+    final outlook = find.textContaining('Trend: ');
+    await tester.scrollUntilVisible(
+      outlook,
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(
+      tester.widget<Text>(outlook).data,
+      startsWith('Trend: ${signedRate(week)} kg a week'),
+    );
   });
 
   // Seam S97: a range with nothing logged says so, rather than a flat line

@@ -683,10 +683,13 @@ class _WeightCard extends StatelessWidget {
       for (final e in [...entries]..sort((a, b) => a.date.compareTo(b.date)))
         if (inRange(e.date)) (date: e.date, kg: e.weightKg),
     ];
-    // The rate from the smoothed trend, as the Trend weight card's is,
-    // from its first and last day in the range; a fit of the raw readings
-    // read -0.0 where that card said -0.18.
-    final trend = trendPoints(entries).where((p) => inRange(p.date)).toList();
+    // The rate from the smoothed trend, as the Goal planner's "Last 7
+    // days" is: carried on to today, over the range's days back from it;
+    // a fit of the raw readings read -0.0 where the planner said -0.18.
+    final from = DateTime(today.year, today.month, today.day - rangeDays);
+    final trend = trendPoints(entries, until: today)
+        .where((p) => !p.date.isBefore(from) && !p.date.isAfter(today))
+        .toList();
     final projection = readings.length < 2
         ? null
         : weightProjection(
