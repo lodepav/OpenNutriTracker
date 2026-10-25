@@ -9,6 +9,26 @@ AppPalette _palette(BuildContext context) =>
     ? AppPalette.dark
     : AppPalette.light;
 
+/// What a screen reader calls each of [accentPresetColors], in its order.
+const accentPresetNames = [
+  'Red',
+  'Coral',
+  'Orange',
+  'Amber',
+  'Yellow',
+  'Chartreuse',
+  'Lime',
+  'Green',
+  'Teal',
+  'Cyan',
+  'Sky',
+  'Blue',
+  'Indigo',
+  'Violet',
+  'Magenta',
+  'Pink',
+];
+
 /// Seam S136: the accent colour as MacroFactor's (AccentA). A preview of
 /// the colour on a ring and a button, the wallpaper switch on Android, the
 /// presets as round swatches, and a custom colour.
@@ -78,12 +98,22 @@ class AccentColourView extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: Dimens.spacing4),
-                      FilledButton(
-                        style: FilledButton.styleFrom(
+                      // A button's look only: nothing to tap in a preview.
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: Dimens.spacing16,
+                          vertical: Dimens.spacing8,
+                        ),
+                        decoration: ShapeDecoration(
+                          color: accent,
                           shape: const StadiumBorder(),
                         ),
-                        onPressed: () {},
-                        child: const Text('Add 640 g'),
+                        child: Text(
+                          'Add 640 g',
+                          style: text.labelLarge?.copyWith(
+                            color: Theme.of(context).colorScheme.onPrimary,
+                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -129,6 +159,7 @@ class AccentColourView extends StatelessWidget {
                       for (final (i, color) in accentPresetColors.indexed)
                         _Swatch(
                           index: i,
+                          name: accentPresetNames[i],
                           color: color,
                           size: size,
                           selected:
@@ -167,8 +198,10 @@ class _Swatch extends StatelessWidget {
   final bool selected;
   final VoidCallback onTap;
 
+  final String name;
   const _Swatch({
     required this.index,
+    required this.name,
     required this.color,
     required this.size,
     required this.selected,
@@ -178,16 +211,12 @@ class _Swatch extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = _palette(context);
-    final hex = (color.toARGB32() & 0xFFFFFF)
-        .toRadixString(16)
-        .padLeft(6, '0')
-        .toUpperCase();
     // The tap target is the cell, at least 48 dp, whatever the swatch is.
     return Semantics(
       identifier: 'accent-preset-${index.toString().padLeft(2, '0')}',
       button: true,
       selected: selected,
-      label: 'Colour #$hex',
+      label: name,
       // Its own tap, since the swatch's below is left out.
       onTap: onTap,
       excludeSemantics: true,

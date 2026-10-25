@@ -190,18 +190,22 @@ class _ProfileCard extends StatelessWidget {
     final since =
         'since ${DateFormat.yMMM(Localizations.localeOf(context).toLanguageTag()).format(profile.createdAt)}';
     final about = [?stats?.goal?.getName(context), since].join(' · ');
+    // A node of its own, "3097, kcal goal": loose, the figures' words were
+    // the card's own label, read before the name.
     Widget figure(String value, String label) => Expanded(
-      child: Column(
-        children: [
-          Text(
-            value,
-            style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700),
-          ),
-          Text(
-            label,
-            style: text.bodySmall?.copyWith(color: palette.textMuted),
-          ),
-        ],
+      child: MergeSemantics(
+        child: Column(
+          children: [
+            Text(
+              value,
+              style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+            ),
+            Text(
+              label,
+              style: text.bodySmall?.copyWith(color: palette.textMuted),
+            ),
+          ],
+        ),
       ),
     );
     final kcal = stats?.kcalGoal;
@@ -217,7 +221,10 @@ class _ProfileCard extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  ProfileAvatar(profile: profile, radius: 24),
+                  // Its initial says the name again, ahead of it.
+                  ExcludeSemantics(
+                    child: ProfileAvatar(profile: profile, radius: 24),
+                  ),
                   const SizedBox(width: Dimens.spacing12),
                   Expanded(
                     child: MergeSemantics(

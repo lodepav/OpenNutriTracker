@@ -150,7 +150,7 @@ void main() {
     final context = tester.element(find.byType(NutrientGoalsOverview));
     expect(bar('Fibre'), AppPalette.light.accent);
     expect(bar('Sodium'), Theme.of(context).colorScheme.error);
-    expect(bar('Sugar'), AppPalette.light.textMuted);
+    expect(bar('Sugars'), AppPalette.light.textMuted);
   });
 
   testWidgets('Edit opens the goal list, and the bars are read again', (

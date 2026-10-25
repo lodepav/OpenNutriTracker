@@ -58,7 +58,7 @@ void main() {
           identifier: 'health-sync-auto-import',
           icon: Icons.directions_run_rounded,
           title: 'Workouts in',
-          detail: 'burned energy adds to your budget',
+          detail: 'Burned energy adds to your budget',
           value: false,
           onChanged: null,
         ),
@@ -92,5 +92,21 @@ void main() {
   testWidgets('the heading says what to pick', (tester) async {
     await tester.pumpWidget(_app(const HealthSyncHeading()));
     expect(find.text('What should sync?'), findsOneWidget);
+  });
+
+  testWidgets('a greyed Import now says why', (tester) async {
+    await tester.pumpWidget(
+      _app(
+        const HealthSyncFooter(
+          lastImport: 'No workouts imported yet',
+          onImport: null,
+          why: 'Tick Workouts in to import and set the credit',
+        ),
+      ),
+    );
+    expect(
+      find.text('Tick Workouts in to import and set the credit'),
+      findsOneWidget,
+    );
   });
 }

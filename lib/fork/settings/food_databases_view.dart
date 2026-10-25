@@ -177,11 +177,16 @@ class _DatabaseRow extends StatelessWidget {
               color: palette.surfaceMuted,
               borderRadius: BorderRadius.circular(10),
             ),
-            child: Text(
-              tag,
-              style: text.labelMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-                color: scheme.primary,
+            padding: const EdgeInsets.all(4),
+            // The box keeps its size at any font; the tag shrinks to it.
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                tag,
+                style: text.labelMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: scheme.primary,
+                ),
               ),
             ),
           ),
@@ -205,6 +210,7 @@ class _DatabaseRow extends StatelessWidget {
     if (onChanged == null) {
       return Semantics(
         identifier: identifier,
+        container: true,
         child: MergeSemantics(
           child: ConstrainedBox(
             constraints: const BoxConstraints(minHeight: 64),
@@ -226,6 +232,7 @@ class _DatabaseRow extends StatelessWidget {
     }
     return Semantics(
       identifier: identifier,
+      container: true,
       child: SwitchListTile(
         contentPadding: const EdgeInsets.symmetric(
           horizontal: Dimens.spacing12,

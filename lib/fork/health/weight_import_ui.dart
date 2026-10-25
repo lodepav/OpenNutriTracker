@@ -34,7 +34,7 @@ class WeightImportTile extends StatelessWidget {
             available: available,
             icon: Icons.monitor_weight_outlined,
             title: 'Weight in',
-            detail: 'from your smart scale; never over one you enter',
+            detail: 'From your smart scale; never over one you enter',
             what: 'weight',
             offMessage: 'Weight import off; imported weights stay in the log',
             done: (days) => days == 0
@@ -69,7 +69,7 @@ class BodyFatImportTile extends StatelessWidget {
             available: available,
             icon: Icons.percent_rounded,
             title: 'Body fat in',
-            detail: 'into body measurements; never over one you enter',
+            detail: 'Into body measurements; never over one you enter',
             what: 'body fat',
             offMessage: 'Body fat import off; imported values stay',
             done: (days) => days == 0
@@ -99,7 +99,7 @@ class NutritionExportTile extends StatelessWidget {
             available: available,
             icon: Icons.restaurant_rounded,
             title: 'Nutrition out',
-            detail: 'other apps see what you ate',
+            detail: 'Other apps see what you ate',
             what: 'nutrition',
             verb: 'write',
             offMessage: 'Nutrition writing off; what was written stays',

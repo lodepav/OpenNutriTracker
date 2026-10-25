@@ -612,6 +612,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 const SizedBox(height: Dimens.spacing20),
               ],
               if (_forkShows(SettingsSection.appearance)) ...[
+              // [fork] S129: the page's own title already says it
+              if (widget.embedded)
+              // [/fork]
               _categoryHeader(
                 context,
                 palette,
@@ -624,6 +627,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     palette: palette,
                     icon: Icons.brightness_medium_rounded,
                     title: S.of(context).settingsThemeLabel,
+                    // [fork] S129 settings-sections: the row says what is set
+                    subtitle: switch (state.appTheme) {
+                      AppThemeEntity.light =>
+                        S.of(context).settingsThemeLightLabel,
+                      AppThemeEntity.dark =>
+                        S.of(context).settingsThemeDarkLabel,
+                      AppThemeEntity.system =>
+                        S.of(context).settingsThemeSystemDefaultLabel,
+                    },
+                    // [/fork]
                     onTap: () => _showThemeDialog(context, state.appTheme),
                   ),
                   _SettingsTile(
@@ -1915,7 +1928,10 @@ class _SettingsGroup extends StatelessWidget {
       if (i > 0) {
         rows.add(Divider(height: Dimens.hairline, color: palette.border));
       }
-      rows.add(tiles[i]);
+      // [fork] S129 settings-sections: a row is its own node; else the
+      // first row's tap took in the card's other rows
+      rows.add(Semantics(container: true, child: tiles[i]));
+      // [/fork]
     }
     return AppCard(
       padding: const EdgeInsets.symmetric(vertical: Dimens.spacing4),

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -22,6 +23,7 @@ import 'package:opennutritracker/generated/l10n.dart';
 import 'package:opennutritracker/fork/settings/settings_index.dart';
 
 import '../../helpers/test_l10n.dart';
+import '../a11y/nested_buttons.dart';
 
 // Seam S129: Settings as MacroFactor's, a page for each section, and every
 // row of the old list on one of them.
@@ -190,6 +192,25 @@ void main() {
   setUp(_register);
   tearDown(() => locator.reset());
 
+  test('a path in a text names a section there is', () {
+    final titles = {for (final s in SettingsSection.values) s.title};
+    final paths = RegExp(r'Settings → ([^→.]+?)(?: →|\.)').allMatches(
+      [
+            File('lib/l10n/intl_en.arb').readAsStringSync(),
+            File('lib/fork/update/update_notice.dart').readAsStringSync(),
+            File('lib/fork/backup/auto_backup_ui.dart').readAsStringSync(),
+          ]
+          .expand((f) => f.split('\n'))
+          // Comments name screens loosely; only what is shown counts.
+          .where((l) => !l.trimLeft().startsWith('//'))
+          .join('\n'),
+    );
+    expect(paths, isNotEmpty);
+    for (final m in paths) {
+      expect(titles, contains(m.group(1)!.trim()), reason: m.group(0));
+    }
+  });
+
   test('a search needs every word, in the name or its section', () {
     const entries = <SettingsEntry>[
       (label: 'Energy unit', section: SettingsSection.units),
@@ -201,6 +222,30 @@ void main() {
     expect(matchingSettings(entries, 'units energy'), [entries.first]);
     expect(matchingSettings(entries, 'energy theme'), isEmpty);
     expect(matchingSettings(entries, 'appear'), [entries.last]);
+  });
+
+  testWidgets('a row is its own button, not inside its card\'s first', (
+    tester,
+  ) async {
+    final handle = tester.ensureSemantics();
+    for (final section in SettingsSection.values) {
+      await tester.pumpWidget(_app(section: section));
+      await tester.pumpAndSettle();
+      expect(tapsInTaps(tester), isEmpty, reason: section.name);
+    }
+    handle.dispose();
+  });
+
+  testWidgets('Theme says which is set', (tester) async {
+    await tester.pumpWidget(_app(section: SettingsSection.appearance));
+    await tester.pumpAndSettle();
+    expect(
+      find.descendant(
+        of: find.widgetWithText(ListTile, l10nEn.settingsThemeLabel),
+        matching: find.text(l10nEn.settingsThemeSystemDefaultLabel),
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets('the plain route lists the sections, each with a summary', (

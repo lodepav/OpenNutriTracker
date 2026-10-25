@@ -12,6 +12,8 @@ import 'package:opennutritracker/features/settings/presentation/widgets/food_sou
 import 'package:opennutritracker/fork/settings/food_databases_view.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 
+import '../a11y/nested_buttons.dart';
+
 class _GetConfig extends Fake implements GetConfigUsecase {
   @override
   Future<ConfigEntity> getConfig() async => const ConfigEntity(
@@ -58,6 +60,7 @@ void main() {
   testWidgets('Open Food Facts is always on, the others have a switch', (
     tester,
   ) async {
+    final handle = tester.ensureSemantics();
     final opened = <String>[];
     final toggled = <(String, bool)>[];
     await tester.pumpWidget(
@@ -72,6 +75,7 @@ void main() {
       ),
     );
     expect(find.text('always'), findsOneWidget);
+    expect(tapsInTaps(tester), isEmpty);
     expect(
       find.descendant(
         of: find.bySemanticsIdentifier('food-source-off'),
@@ -96,6 +100,7 @@ void main() {
 
     await tester.tap(find.widgetWithText(TextButton, OFFConst.offSourceName));
     expect(opened, [OFFConst.offWebsiteUrl]);
+    handle.dispose();
   });
 
   testWidgets('the screen reads the switches and saves a change', (

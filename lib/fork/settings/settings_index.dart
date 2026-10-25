@@ -14,7 +14,7 @@ enum SettingsSection {
   goals('Goals & nutrition', Icons.track_changes_rounded),
   units('Units', Icons.straighten_rounded),
   reminders('Reminders', Icons.notifications_rounded),
-  food('Food database', Icons.travel_explore_rounded),
+  food('Food databases', Icons.travel_explore_rounded),
   data('Data', Icons.save_rounded),
   appearance('Appearance', Icons.palette_rounded),
   about('About', Icons.info_outline_rounded);

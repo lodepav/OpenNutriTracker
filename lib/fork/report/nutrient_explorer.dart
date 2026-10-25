@@ -73,7 +73,7 @@ final explorerNutrients = [
     fallbackGoal: DailyNutrientPanel.defaultFibreRefG,
   ),
   ExplorerNutrient(
-    'Sugar',
+    'Sugars',
     'g',
     (n) => n.sugars100,
     (d) => d.sugarsGoal,

@@ -116,10 +116,14 @@ class HealthSyncFooter extends StatelessWidget {
   /// Null while there is nothing to import, or an import is running.
   final VoidCallback? onImport;
 
+  /// Why [onImport] is off, under the last import, when it can be told.
+  final String? why;
+
   const HealthSyncFooter({
     super.key,
     required this.lastImport,
     required this.onImport,
+    this.why,
   });
 
   @override
@@ -135,11 +139,17 @@ class HealthSyncFooter extends StatelessWidget {
       child: Row(
         children: [
           Expanded(
-            child: Text(
-              lastImport,
-              style: text.bodySmall?.copyWith(
-                color: _palette(context).textMuted,
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  lastImport,
+                  style: text.bodySmall?.copyWith(
+                    color: _palette(context).textMuted,
+                  ),
+                ),
+                if (why case final why?) Text(why, style: text.bodySmall),
+              ],
             ),
           ),
           const SizedBox(width: Dimens.spacing8),
