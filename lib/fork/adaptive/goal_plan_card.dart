@@ -1,5 +1,6 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:opennutritracker/core/domain/entity/body_weight_unit_entity.dart';
 import 'package:opennutritracker/core/domain/entity/user_weight_goal_entity.dart';
 import 'package:opennutritracker/core/domain/usecase/get_user_usecase.dart';
@@ -189,8 +190,8 @@ class _GoalPlanCardState extends State<GoalPlanCard> {
     final now = DateTime.now();
     final d = DateTime(now.year, now.month, now.day + days);
     final weeks = (days / 7).round();
-    return '${d.year}-${d.month.toString().padLeft(2, '0')}-'
-        '${d.day.toString().padLeft(2, '0')} '
+    // As the locale writes it, as the rest of the app does.
+    return '${DateFormat.yMMMd().format(d)} '
         '($weeks week${weeks == 1 ? '' : 's'})';
   }
 

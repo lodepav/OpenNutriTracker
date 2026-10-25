@@ -4,11 +4,11 @@ import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
 import 'package:opennutritracker/fork/phases/phases.dart';
+import 'package:intl/intl.dart';
 import 'package:opennutritracker/fork/units/weight_text.dart';
 
-String _date(DateTime d) =>
-    '${d.year}-${d.month.toString().padLeft(2, '0')}-'
-    '${d.day.toString().padLeft(2, '0')}';
+/// As the locale writes a date, as the rest of the app does.
+String _date(DateTime d) => DateFormat.yMMMd().format(d);
 
 String _pace(double kgPerWeek) => kgPerWeek == 0
     ? 'at maintenance'
@@ -32,7 +32,7 @@ bool _short(PhasePlan plan, int i) {
 
 String _phaseText(PhasePlan plan, int i, BodyWeightUnit unit) {
   final p = plan.phases[i];
-  final pace = _pace(p.kgPerWeek);
+  final pace = p.kgPerWeek == 0 ? _pace(0) : 'at ${_pace(p.kgPerWeek)}';
   return switch (p.untilKg) {
     null => '${p.kind.label}, ${_weeks(p.weeks)} $pace',
     final kg when _short(plan, i) =>
@@ -47,6 +47,13 @@ String _phaseText(PhasePlan plan, int i, BodyWeightUnit unit) {
 /// ", ~80.0 kg" for a plan that knows the weights, nothing otherwise.
 String _about(double? kg, BodyWeightUnit unit) =>
     kg == null ? '' : ', ~${weightText(kg, unit)}';
+
+/// [_about] the end of phase [i], but nothing for one that ends at the
+/// weight it names already.
+String _aboutEnd(PhasePlan plan, int i, BodyWeightUnit unit) =>
+    plan.phases[i].untilKg != null && !_short(plan, i)
+    ? ''
+    : _about(plan.weightAt(i + 1), unit);
 
 /// Seam S40: diet phases on Trends, the running one and what follows,
 /// and the editor. A new plan starts from the trend weight, read from
@@ -185,7 +192,7 @@ class _DietPhasesCardState extends State<DietPhasesCard> {
                 'Week ${_daysBetween(plan.startOf(index), now) ~/ 7 + 1} '
                 'of ${plan.phases[index].weeks}, until '
                 '${_date(plan.startOf(index + 1))}'
-                '${_about(plan.weightAt(index + 1), unit)}',
+                '${_aboutEnd(plan, index, unit)}',
               ),
             ],
             const SizedBox(height: Dimens.spacing8),
@@ -193,7 +200,7 @@ class _DietPhasesCardState extends State<DietPhasesCard> {
               if (i > index)
                 Text(
                   '${_date(plan.startOf(i))}: ${_phaseText(plan, i, unit)}'
-                  '${_about(plan.weightAt(i + 1), unit)}',
+                  '${_aboutEnd(plan, i, unit)}',
                   style: theme.textTheme.bodySmall,
                 ),
           ],
@@ -312,7 +319,11 @@ class _PhasePlanScreenState extends State<PhasePlanScreen> {
     }
   }
 
+  /// Whether the user changed anything, so back asks before it's lost.
+  bool _changed = false;
+
   void _set(int i, DietPhase phase) => setState(() {
+    _changed = true;
     _phases[i] = phase;
     _reflow();
   });
@@ -372,6 +383,7 @@ class _PhasePlanScreenState extends State<PhasePlanScreen> {
                   onPressed: _phases.length == 1
                       ? null
                       : () => setState(() {
+                          _changed = true;
                           _phases.removeAt(i);
                           _reflow();
                         }),
@@ -387,6 +399,8 @@ class _PhasePlanScreenState extends State<PhasePlanScreen> {
                 divisions: 18,
                 value: p.kgPerWeek.abs().clamp(0.1, 1.0),
                 label: p.kgPerWeek.abs().toStringAsFixed(2),
+                semanticFormatterCallback: (v) =>
+                    'Pace, ${_pace(p.kind == PhaseKind.cut ? -v : v)}',
                 onChanged: (v) => _set(
                   i,
                   DietPhase(
@@ -466,6 +480,7 @@ class _PhasePlanScreenState extends State<PhasePlanScreen> {
                   Expanded(child: Text(_weeks(p.weeks))),
                   IconButton(
                     key: ValueKey('phase-$i-shorter'),
+                    tooltip: 'Shorter',
                     icon: const Icon(Icons.remove_rounded),
                     onPressed: p.weeks <= 1
                         ? null
@@ -480,6 +495,7 @@ class _PhasePlanScreenState extends State<PhasePlanScreen> {
                   ),
                   IconButton(
                     key: ValueKey('phase-$i-longer'),
+                    tooltip: 'Longer',
                     icon: const Icon(Icons.add_rounded),
                     onPressed: p.weeks >= 52
                         ? null
@@ -497,7 +513,7 @@ class _PhasePlanScreenState extends State<PhasePlanScreen> {
             Text(
               'Ends ${from == null ? '' : 'about '}'
               '${_date(_plan.startOf(i + 1))}'
-              '${_about(_plan.weightAt(i + 1), widget.unit)}',
+              '${_aboutEnd(_plan, i, widget.unit)}',
               key: ValueKey('phase-$i-ends'),
               style: Theme.of(context).textTheme.bodySmall,
             ),
@@ -507,15 +523,53 @@ class _PhasePlanScreenState extends State<PhasePlanScreen> {
     );
   }
 
+  Future<bool> _ask(String title, String action) async =>
+      await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text(title),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              key: const ValueKey('phases-confirm'),
+              onPressed: () => Navigator.pop(context, true),
+              child: Text(action),
+            ),
+          ],
+        ),
+      ) ??
+      false;
+
   @override
-  Widget build(BuildContext context) => Scaffold(
+  Widget build(BuildContext context) => PopScope(
+    canPop: !_changed,
+    onPopInvokedWithResult: (didPop, _) async {
+      if (didPop) return;
+      if (await _ask('Discard your changes?', 'Discard') && context.mounted) {
+        _changed = false;
+        Navigator.pop(context);
+      }
+    },
+    child: _screen(context),
+  );
+
+  Widget _screen(BuildContext context) => Scaffold(
     appBar: AppBar(
       title: const Text('Diet phases'),
       actions: [
         if (widget.plan != null)
           TextButton(
             key: const ValueKey('phases-delete'),
-            onPressed: () => Navigator.pop(context, (plan: null)),
+            onPressed: () async {
+              if (await _ask('Delete this plan?', 'Delete') &&
+                  context.mounted) {
+                _changed = false;
+                Navigator.pop(context, (plan: null));
+              }
+            },
             child: const Text('Delete'),
           ),
         TextButton(
@@ -529,7 +583,10 @@ class _PhasePlanScreenState extends State<PhasePlanScreen> {
               );
               _startKg ??= kg;
             }
-            if (context.mounted) Navigator.pop(context, (plan: _plan));
+            if (context.mounted) {
+              _changed = false;
+              Navigator.pop(context, (plan: _plan));
+            }
           },
           child: const Text('Save'),
         ),
@@ -554,18 +611,24 @@ class _PhasePlanScreenState extends State<PhasePlanScreen> {
               firstDate: DateTime(2000),
               lastDate: DateTime(2100),
             );
-            if (picked != null) setState(() => _start = picked);
+            if (picked != null) {
+              setState(() {
+                _changed = true;
+                _start = picked;
+              });
+            }
           },
         ),
         for (var i = 0; i < _phases.length; i++) _phase(i),
         const SizedBox(height: 8),
         OutlinedButton.icon(
           key: const ValueKey('phases-add'),
-          onPressed: () => setState(
-            () => _phases.add(
+          onPressed: () => setState(() {
+            _changed = true;
+            _phases.add(
               const DietPhase(kind: PhaseKind.maintain, kgPerWeek: 0, weeks: 2),
-            ),
-          ),
+            );
+          }),
           icon: const Icon(Icons.add_rounded),
           label: const Text('Add a phase'),
         ),
