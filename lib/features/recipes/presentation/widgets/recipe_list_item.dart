@@ -8,17 +8,24 @@ import 'package:opennutritracker/core/domain/entity/recipe_entity.dart';
 import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
-import 'package:opennutritracker/core/utils/energy_display.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/core/utils/user_image_storage.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 import 'package:opennutritracker/fork/off/off_kinds.dart'; // [fork] S117
+// [fork] S130 recipes-list
+import 'package:opennutritracker/fork/recipe/recipe_list.dart';
+import 'package:opennutritracker/fork/units/energy_text.dart';
+// [/fork]
 
 class RecipeListItem extends StatelessWidget {
   final RecipeEntity recipe;
   final VoidCallback onTap;
   final VoidCallback? onLongPress;
   final bool isSelected;
+
+  // [fork] S130 recipes-list: logs one serving; a chevron without it
+  final VoidCallback? onLog;
+  // [/fork]
 
   static const double _thumbSize = 52;
 
@@ -28,6 +35,7 @@ class RecipeListItem extends StatelessWidget {
     required this.onTap,
     this.onLongPress,
     this.isSelected = false,
+    this.onLog, // [fork] S130
   });
 
   @override
@@ -37,8 +45,9 @@ class RecipeListItem extends StatelessWidget {
     final accent = Theme.of(context).colorScheme.primary;
     final textTheme = Theme.of(context).textTheme;
 
-    final kcalPer100 = recipe.aggregatedNutrimentsPer100.energyKcal100;
-    final totalKcal = (kcalPer100 ?? 0) * recipe.totalWeightG / 100;
+    // [fork] S130 recipes-list: one serving's values, as the row's figures
+    final serving = servingValues(recipe);
+    // [/fork]
     final ingredientCount = recipe.ingredients.length;
 
     // Derive a thumbnail from the first ingredient that has one. Falls back
@@ -79,20 +88,60 @@ class RecipeListItem extends StatelessWidget {
                       style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
                     ),
                     const SizedBox(height: Dimens.spacing4),
-                    Text(
-                      '${S.of(context).recipeIngredientCountLabel(ingredientCount)} · '
-                      '${EnergyDisplay.formatWithUnit(context, totalKcal)}',
-                      maxLines: 1,
+                    // [fork] S130 recipes-list: the ingredients and one
+                    // serving's macros; its energy on the right
+                    Text.rich(
+                      TextSpan(
+                        children: [
+                          TextSpan(
+                            text:
+                                '${S.of(context).recipeIngredientCountLabel(ingredientCount)} · ',
+                          ),
+                          ...macroSpans(context, serving),
+                        ],
+                      ),
+                      maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: textTheme.bodyMedium?.copyWith(color: palette.textMuted),
                     ),
+                    // [/fork]
                   ],
                 ),
               ),
               const SizedBox(width: Dimens.spacing8),
-              isSelected
-                  ? Icon(Icons.check_circle_rounded, color: accent, size: 24)
-                  : Icon(Icons.chevron_right_rounded, color: palette.textMuted, size: 24),
+              // [fork] S130 recipes-list
+              MergeSemantics(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      '${energyValue(context, serving.kcal)}',
+                      style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+                    ),
+                    Text(
+                      (recipe.servingsCount ?? 0) > 0
+                          ? '${energyUnit(context)} / serving'
+                          : energyUnit(context),
+                      style: textTheme.bodySmall?.copyWith(color: palette.textMuted),
+                    ),
+                  ],
+                ),
+              ),
+              if (isSelected)
+                Padding(
+                  padding: const EdgeInsets.only(left: Dimens.spacing8),
+                  child: Icon(Icons.check_circle_rounded, color: accent, size: 24),
+                )
+              else if (onLog != null)
+                IconButton(
+                  key: ValueKey('recipe-log-${recipe.id}'),
+                  tooltip: 'Log one serving of ${recipe.name}',
+                  icon: Icon(Icons.add_circle_outline_rounded, color: accent),
+                  onPressed: onLog,
+                )
+              else
+                Icon(Icons.chevron_right_rounded, color: palette.textMuted, size: 24),
+              // [/fork]
             ],
             ),
           ),
@@ -118,6 +167,23 @@ class RecipeListItem extends StatelessWidget {
         ),
       );
     }
+    // [fork] S130 recipes-list: the first ingredient's kind
+    final emoji = recipeEmoji(recipe);
+    if (emoji != null) {
+      return Container(
+        width: _thumbSize,
+        height: _thumbSize,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: palette.surfaceMuted,
+          borderRadius: Dimens.borderRadiusS,
+        ),
+        child: ExcludeSemantics(
+          child: Text(emoji, style: const TextStyle(fontSize: 26)),
+        ),
+      );
+    }
+    // [/fork]
     return _fallbackThumb(palette, accent);
   }
 

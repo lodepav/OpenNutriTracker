@@ -12,8 +12,11 @@ import 'package:opennutritracker/features/meal_detail/meal_detail_screen.dart';
 import 'package:opennutritracker/features/recipes/domain/entity/shared_recipe_payload.dart';
 import 'package:opennutritracker/features/recipes/presentation/bloc/recipe_detail_bloc.dart';
 import 'package:opennutritracker/features/recipes/presentation/screens/recipe_builder_screen.dart';
-import 'package:opennutritracker/features/recipes/presentation/widgets/ingredient_list_item.dart';
-import 'package:opennutritracker/features/recipes/presentation/widgets/recipe_nutrition_summary.dart';
+// [fork] S126 recipe-page: in place of the summary card and upstream's rows
+import 'package:opennutritracker/features/meal_detail/presentation/bloc/meal_detail_bloc.dart';
+import 'package:opennutritracker/fork/basket/basket_ui.dart';
+import 'package:opennutritracker/fork/recipe/recipe_page.dart';
+// [/fork]
 import 'package:opennutritracker/generated/l10n.dart';
 
 class RecipeDetailArguments {
@@ -21,7 +24,9 @@ class RecipeDetailArguments {
   const RecipeDetailArguments({required this.recipeId});
 }
 
-enum _RecipeMenuAction { duplicate, delete }
+// [fork] S126 recipe-page: another amount, on the meal detail
+enum _RecipeMenuAction { otherAmount, duplicate, delete }
+// [/fork]
 
 class RecipeDetailScreen extends StatefulWidget {
   const RecipeDetailScreen({super.key});
@@ -33,6 +38,9 @@ class RecipeDetailScreen extends StatefulWidget {
 class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
   late RecipeDetailBloc _bloc;
   bool _initialized = false;
+  // [fork] S126 recipe-page: servings, or whole recipes, to log
+  double _count = 1;
+  // [/fork]
 
   @override
   void initState() {
@@ -77,7 +85,9 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
     final textTheme = Theme.of(context).textTheme;
     return Scaffold(
       appBar: AppBar(
-        title: Text(recipe.name),
+        // [fork] S126 recipe-page: the name is the page's header below
+        title: null,
+        // [/fork]
         actions: [
           IconButton(
             tooltip: S.of(context).shareRecipeLabel,
@@ -109,6 +119,18 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
             icon: const Icon(Icons.more_vert_rounded),
             onSelected: (action) => _onMenuSelected(context, action, recipe),
             itemBuilder: (context) => [
+              // [fork] S126 recipe-page
+              const PopupMenuItem(
+                value: _RecipeMenuAction.otherAmount,
+                child: Row(
+                  children: [
+                    Icon(Icons.tune_rounded),
+                    SizedBox(width: Dimens.spacing12),
+                    Text('Log another amount'),
+                  ],
+                ),
+              ),
+              // [/fork]
               PopupMenuItem(
                 value: _RecipeMenuAction.duplicate,
                 child: Row(
@@ -133,55 +155,54 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
           ),
         ],
       ),
+      // [fork] S126 recipe-page: ingredients first, a stepper beside Log
       body: ListView(
         padding: const EdgeInsets.all(Dimens.spacing16),
         children: [
-          // [fork] S92 a11y-labels-2: the whole name, which the app bar
-          // cuts short at a large font
-          Semantics(
-            header: true,
-            child: Text(recipe.name, style: textTheme.titleLarge),
-          ),
-          const SizedBox(height: Dimens.spacing8),
-          // [/fork]
-          if (recipe.description != null && recipe.description!.isNotEmpty) ...[
-            Text(
-              recipe.description!,
-              style: textTheme.bodyMedium?.copyWith(color: palette.textMuted),
-            ),
-            const SizedBox(height: Dimens.spacing16),
-          ],
-          RecipeNutritionSummary(
-            nutrimentsPer100: recipe.aggregatedNutrimentsPer100,
-            totalWeightG: recipe.totalWeightG,
-          ),
-          const SizedBox(height: Dimens.spacing24),
+          RecipeHeader(recipe: recipe),
+          const SizedBox(height: Dimens.spacing12),
+          RecipeTotalsStrip(portion: RecipePortion(recipe, _count)),
+          const SizedBox(height: Dimens.spacing16),
           Text(
             S.of(context).recipeIngredientsLabel,
             style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
           ),
-          const SizedBox(height: Dimens.spacing8),
-          ...recipe.ingredients.map(
-            (i) => IngredientListItem(ingredient: i),
-          ),
-          const SizedBox(height: Dimens.spacing24),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton.icon(
-              style: FilledButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: Dimens.spacing16),
-                shape: Dimens.shapeM,
-              ),
-              onPressed: () => _onLogPressed(context, recipe),
-              icon: const Icon(Icons.add_rounded),
-              label: Text(S.of(context).recipeLogCtaLabel),
-            ),
-          ),
-          const SizedBox(height: Dimens.spacing32),
+          const SizedBox(height: Dimens.spacing4),
+          for (final (i, ingredient) in recipe.ingredients.indexed) ...[
+            if (i > 0) Divider(height: 1, color: palette.border),
+            RecipeIngredientRow(ingredient: ingredient),
+          ],
+          const SizedBox(height: Dimens.spacing16),
         ],
       ),
+      bottomNavigationBar: RecipeLogBar(
+        portion: RecipePortion(recipe, _count),
+        onCount: (count) => setState(() => _count = count),
+        onLog: () => _logPortion(context, RecipePortion(recipe, _count)),
+      ),
+      // [/fork]
     );
   }
+
+  // [fork] S126 recipe-page: the portion straight into the meal picked
+  Future<void> _logPortion(BuildContext context, RecipePortion portion) async {
+    final type = await _pickIntakeType(context);
+    if (type == null || !context.mounted) return;
+    final written = await locator<MealDetailBloc>().addIntake(
+      context,
+      'g',
+      portion.grams.toString(),
+      type,
+      portion.recipe.toMealEntity(),
+      DateTime.now(),
+    );
+    if (written == null || !context.mounted) return;
+    refreshAfterLogging();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('${portion.label} added to your diary')),
+    );
+  }
+  // [/fork]
 
   Future<void> _onMenuSelected(
     BuildContext context,
@@ -189,6 +210,10 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
     RecipeEntity recipe,
   ) async {
     switch (action) {
+      // [fork] S126 recipe-page
+      case _RecipeMenuAction.otherAmount:
+        await _onLogPressed(context, recipe);
+      // [/fork]
       case _RecipeMenuAction.duplicate:
         // Open the builder with a copy: drop the id (so save() assigns a new
         // one) and append the localized "(copy)" suffix to the name. The

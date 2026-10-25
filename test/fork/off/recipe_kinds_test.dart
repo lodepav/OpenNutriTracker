@@ -10,6 +10,7 @@ import 'package:opennutritracker/core/utils/energy_unit_provider.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_nutriments_entity.dart';
 import 'package:opennutritracker/features/recipes/presentation/widgets/recipe_list_item.dart';
+import 'package:opennutritracker/fork/off/off_kinds.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 import 'package:provider/provider.dart';
 
@@ -85,6 +86,18 @@ void main() {
       ),
     );
     expect(find.byType(CachedNetworkImage), findsNothing);
+    // S130: its kind instead
+    final kind = OffKinds.emojiFor(
+      _ingredient(MealSourceEntity.off, 'off').snapshotMeal,
+    );
+    expect(kind, isNotNull);
+    expect(find.text(kind!), findsOne);
+  });
+
+  testWidgets('a recipe with no kind or photo shows the book', (tester) async {
+    await tester.pumpWidget(
+      _app(RecipeListItem(recipe: _recipe([]), onTap: () {})),
+    );
     expect(find.byIcon(Icons.menu_book_rounded), findsOne);
   });
 
