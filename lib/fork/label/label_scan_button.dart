@@ -3,6 +3,8 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
+import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
+import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/core/utils/ai_credential_storage.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/features/add_meal/domain/meal_photo_interpreter.dart';
@@ -17,7 +19,15 @@ class LabelScanButton extends StatefulWidget {
   final void Function(LabelReading reading, Uint8List? photoJpeg) onRead;
   final ReadLabelUseCase? useCase;
 
-  const LabelScanButton({super.key, required this.onRead, this.useCase});
+  /// The custom food page's big card (S132) instead of the app-bar icon.
+  final bool card;
+
+  const LabelScanButton({
+    super.key,
+    required this.onRead,
+    this.useCase,
+    this.card = false,
+  });
 
   @override
   State<LabelScanButton> createState() => _LabelScanButtonState();
@@ -79,6 +89,8 @@ class _LabelScanButtonState extends State<LabelScanButton> {
   @override
   Widget build(BuildContext context) => !_available
       ? const SizedBox.shrink()
+      : widget.card
+      ? _card(context)
       : IconButton(
           key: const Key('fork-label-scan'),
           tooltip: 'Read nutrition label',
@@ -90,4 +102,66 @@ class _LabelScanButtonState extends State<LabelScanButton> {
               : const Icon(Icons.document_scanner_outlined),
           onPressed: _busy ? null : _scan,
         );
+
+  Widget _card(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Semantics(
+          button: true,
+          child: AppCard(
+            key: const Key('fork-label-scan'),
+            onTap: _busy ? null : _scan,
+            padding: const EdgeInsets.all(Dimens.spacing16),
+            child: Row(
+              children: [
+                _busy
+                    ? const SizedBox.square(
+                        dimension: 32,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const ExcludeSemantics(
+                        child: Text('📸', style: TextStyle(fontSize: 32)),
+                      ),
+                const SizedBox(width: Dimens.spacing12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Scan the nutrition label',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      Text(
+                        'Fills name, serving and every nutrient; you check it',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Icon(Icons.chevron_right_rounded),
+              ],
+            ),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.only(
+            top: Dimens.spacing16,
+            bottom: Dimens.spacing8,
+          ),
+          child: Text(
+            'Or type it like the label',
+            style: theme.textTheme.labelLarge?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 }
