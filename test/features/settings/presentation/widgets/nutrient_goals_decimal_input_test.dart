@@ -176,4 +176,14 @@ void main() {
 
     expect(settingsBloc.savedSodium, 1500);
   });
+
+  // [fork] S135 nutrient-goals
+  testWidgets('the three limits say at most, the targets at least', (
+    tester,
+  ) async {
+    await openScreen(tester, _FakeSettingsBloc());
+    expect(find.text('At most'), findsNWidgets(3));
+    expect(find.text('At least'), findsNWidgets(7));
+  });
+  // [/fork]
 }
