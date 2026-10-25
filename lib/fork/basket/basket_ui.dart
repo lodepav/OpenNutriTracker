@@ -61,6 +61,9 @@ class AddToBasketButton extends StatelessWidget {
   final BasketItem? Function() current;
   final FoodBasket? basket;
 
+  /// Only the basket icon, for a row beside Add (S125).
+  final bool compact;
+
   const AddToBasketButton({
     super.key,
     required this.meal,
@@ -68,32 +71,45 @@ class AddToBasketButton extends StatelessWidget {
     required this.day,
     required this.current,
     this.basket,
+    this.compact = false,
   });
 
   @override
-  Widget build(BuildContext context) => SizedBox(
-    width: double.infinity,
-    child: OutlinedButton.icon(
-      key: const ValueKey('add-to-basket'),
-      icon: const Icon(Icons.shopping_basket_outlined),
-      label: const Text('Add to basket'),
-      onPressed: () {
-        final item = current();
-        if (item == null) return;
-        final target = basket ?? FoodBasket.instance;
-        target.add(item, type, day);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              '${meal.name ?? 'Food'} is in the basket '
-              '(${target.items.length}).',
-            ),
-          ),
-        );
-        Navigator.of(context).pop();
-      },
-    ),
-  );
+  Widget build(BuildContext context) {
+    if (compact) {
+      return IconButton.outlined(
+        key: const ValueKey('add-to-basket'),
+        tooltip: 'Add to basket',
+        icon: const Icon(Icons.shopping_basket_outlined),
+        onPressed: () => _add(context),
+      );
+    }
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton.icon(
+        key: const ValueKey('add-to-basket'),
+        icon: const Icon(Icons.shopping_basket_outlined),
+        label: const Text('Add to basket'),
+        onPressed: () => _add(context),
+      ),
+    );
+  }
+
+  void _add(BuildContext context) {
+    final item = current();
+    if (item == null) return;
+    final target = basket ?? FoodBasket.instance;
+    target.add(item, type, day);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          '${meal.name ?? 'Food'} is in the basket '
+          '(${target.items.length}).',
+        ),
+      ),
+    );
+    Navigator.of(context).pop();
+  }
 }
 
 /// Seam S42: under the search results while the basket holds this meal's
