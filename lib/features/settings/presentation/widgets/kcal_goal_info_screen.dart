@@ -23,6 +23,7 @@ import 'package:opennutritracker/fork/units/energy_text.dart';
 // [/fork]
 // [fork] S134 goal-explained
 import 'package:opennutritracker/fork/goal/goal_explained.dart';
+import 'package:opennutritracker/fork/widget/toolbar_height.dart';
 // [/fork]
 
 /// Transparency screen: shows every variable and intermediate step behind
@@ -79,7 +80,7 @@ class _KcalGoalInfoScreenState extends State<KcalGoalInfoScreen> {
     return Scaffold(
       // [fork] S134 goal-explained
       appBar: AppBar(
-        toolbarHeight: MediaQuery.textScalerOf(context).scale(kToolbarHeight),
+        toolbarHeight: twoLineToolbarHeight(context), // [fork] S134
         title: Text(
           widget.equations ? 'The equations' : l10n.settingsKcalGoalInfoLabel,
           maxLines: 2,

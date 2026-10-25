@@ -8,6 +8,7 @@ import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/fork/copy/copy_ui.dart' show mealLabel;
 import 'package:opennutritracker/fork/display/display_prefs.dart';
 import 'package:opennutritracker/fork/off/off_kinds.dart';
+import 'package:opennutritracker/fork/recipe/recipe_list.dart' show macroSpans;
 import 'package:opennutritracker/fork/units/energy_text.dart';
 import 'package:opennutritracker/fork/widget/meal_picker_chip.dart';
 import 'package:opennutritracker/generated/l10n.dart';
@@ -123,33 +124,37 @@ class RecipeTotalsStrip extends StatelessWidget {
         : AppPalette.light;
     final per100 = portion.recipe.aggregatedNutrimentsPer100;
     double of(double? value) => (value ?? 0) * portion.grams / 100;
-    Widget cell(String value, String label, Color color) => Expanded(
-      child: MergeSemantics(
-        child: Column(
-          children: [
-            Text(
-              value,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: theme.textTheme.titleLarge?.copyWith(
-                color: color,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Text(
-                label,
-                maxLines: 1,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: palette.textMuted,
+    // A macro is spoken "29 grams carbs", not "29, carbs g" (A5).
+    Widget cell(String value, String label, Color color, {String? macro}) =>
+        Expanded(
+          child: Semantics(
+            label: macro == null ? '$value $label' : '$value grams $macro',
+            excludeSemantics: true,
+            child: Column(
+              children: [
+                Text(
+                  value,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    color: color,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
-              ),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: palette.textMuted,
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
-      ),
-    );
+          ),
+        );
     return AppCard(
       padding: const EdgeInsets.all(Dimens.spacing12),
       child: Column(
@@ -166,16 +171,19 @@ class RecipeTotalsStrip extends StatelessWidget {
                   of(per100.carbohydrates100).round().toString(),
                   '${s.carbsLabel} g',
                   palette.carbs,
+                  macro: s.carbsLabel.toLowerCase(),
                 ),
                 fat: cell(
                   of(per100.fat100).round().toString(),
                   '${s.fatLabel} g',
                   palette.fat,
+                  macro: s.fatLabel.toLowerCase(),
                 ),
                 protein: cell(
                   of(per100.proteins100).round().toString(),
                   '${s.proteinLabel} g',
                   palette.protein,
+                  macro: s.proteinLabel.toLowerCase(),
                 ),
               ),
             ],
@@ -204,7 +212,6 @@ class RecipeIngredientRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final s = S.of(context);
     final theme = Theme.of(context);
     final palette = theme.brightness == Brightness.dark
         ? AppPalette.dark
@@ -213,28 +220,13 @@ class RecipeIngredientRow extends StatelessWidget {
     final n = meal.nutriments;
     double of(double? per100) =>
         (per100 ?? 0) * ingredient.convertedAmountG / 100;
-    TextSpan macro(String letter, double? per100, Color color) => TextSpan(
-      children: [
-        TextSpan(
-          text: letter,
-          style: TextStyle(color: color, fontWeight: FontWeight.w700),
-        ),
-        TextSpan(text: ' ${of(per100).round()}'),
-      ],
-    );
-    final macros = inMacroOrder(
-      carbs: macro(
-        s.carbsLabelShort.toUpperCase(),
-        n.carbohydrates100,
-        palette.carbs,
-      ),
-      fat: macro(s.fatLabelShort.toUpperCase(), n.fat100, palette.fat),
-      protein: macro(
-        s.proteinLabelShort.toUpperCase(),
-        n.proteins100,
-        palette.protein,
-      ),
-    );
+    // The recipe list's macros, spoken as grams (A5)
+    final macros = macroSpans(context, (
+      kcal: of(n.energyKcal100),
+      carbs: of(n.carbohydrates100),
+      fat: of(n.fat100),
+      protein: of(n.proteins100),
+    ), small: true);
     final amount = '${_grams(ingredient.amount)} ${ingredient.unit}';
     return ConstrainedBox(
       constraints: const BoxConstraints(minHeight: 56),
@@ -273,14 +265,7 @@ class RecipeIngredientRow extends StatelessWidget {
                     style: theme.textTheme.bodyLarge,
                   ),
                   Text.rich(
-                    TextSpan(
-                      children: [
-                        for (final (i, m) in macros.indexed) ...[
-                          if (i > 0) const TextSpan(text: ' · '),
-                          m,
-                        ],
-                      ],
-                    ),
+                    TextSpan(children: macros),
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: palette.textMuted,
                     ),

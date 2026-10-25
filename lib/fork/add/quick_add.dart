@@ -107,7 +107,9 @@ class QuickAddMacroFields extends StatelessWidget {
       fat: ('fat', fat, palette.fat),
       protein: ('protein', protein, palette.protein),
     );
+    // The fields line up even when one name wraps (H4).
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
       children: [
         for (final (i, (name, controller, color)) in fields.indexed) ...[
           if (i > 0) const SizedBox(width: Dimens.spacing8),

@@ -19,6 +19,7 @@ import 'package:opennutritracker/features/scanner/scanner_screen.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 // [fork] S127 recipe-builder
 import 'package:opennutritracker/fork/recipe/recipe_builder.dart';
+import 'package:opennutritracker/fork/widget/toolbar_height.dart';
 // [/fork]
 
 class RecipeBuilderArguments {
@@ -140,7 +141,7 @@ class _RecipeBuilderScreenState extends State<RecipeBuilderScreen> {
           },
           child: Scaffold(
             appBar: AppBar(
-            toolbarHeight: MediaQuery.textScalerOf(context).scale(kToolbarHeight),
+            toolbarHeight: twoLineToolbarHeight(context), // [fork] S127
             title: Text(
               state.isExistingRecipe
                   ? S.of(context).editRecipeTitle

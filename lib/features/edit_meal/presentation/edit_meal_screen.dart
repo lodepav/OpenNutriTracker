@@ -45,6 +45,7 @@ import 'package:opennutritracker/fork/edit_meal/nutrition_facts.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 import 'package:provider/provider.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
+import 'package:opennutritracker/fork/widget/toolbar_height.dart'; // [fork] S132
 
 class EditMealScreen extends StatefulWidget {
   const EditMealScreen({super.key});
@@ -336,7 +337,7 @@ class _EditMealScreenState extends State<EditMealScreen> {
         appBar: AppBar(
           backgroundColor: palette.canvas,
           surfaceTintColor: Colors.transparent,
-          toolbarHeight: MediaQuery.textScalerOf(context).scale(kToolbarHeight),
+          toolbarHeight: twoLineToolbarHeight(context), // [fork] S132
           title: Text(
             // [fork] S132 custom-food
             _forkNew ? 'New custom food' : S.of(context).editMealLabel,

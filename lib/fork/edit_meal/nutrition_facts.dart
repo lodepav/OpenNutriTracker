@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/core/utils/custom_text_input_formatter.dart';
+import 'package:opennutritracker/fork/units/amount_text.dart' show spokenUnit;
 
 /// Seam S132: the custom food form after the canvas's "New custom food ·
 /// B". The nutrients sit in one card laid out like a label: what they are
@@ -54,7 +55,7 @@ class FactsRow extends StatelessWidget {
           SizedBox(
             width: MediaQuery.textScalerOf(context).scale(80).clamp(80, 140),
             child: Semantics(
-              label: '$name in $unit',
+              label: '$name in ${spokenUnit(unit)}',
               child: TextField(
                 controller: controller,
                 textAlign: TextAlign.end,
@@ -64,6 +65,10 @@ class FactsRow extends StatelessWidget {
                 ),
                 decoration: InputDecoration(
                   isDense: true,
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: Dimens.spacing8,
+                    vertical: Dimens.spacing12,
+                  ),
                   border: const OutlineInputBorder(
                     borderRadius: Dimens.borderRadiusM,
                   ),
@@ -73,7 +78,7 @@ class FactsRow extends StatelessWidget {
           ),
           const SizedBox(width: Dimens.spacing4),
           SizedBox(
-            width: MediaQuery.textScalerOf(context).scale(32).clamp(32, 64),
+            width: MediaQuery.textScalerOf(context).scale(36).clamp(36, 84),
             child: ExcludeSemantics(
               child: Text(unit, style: theme.textTheme.bodyMedium),
             ),

@@ -134,9 +134,18 @@ void main() {
     expect(find.text('🍌'), findsOneWidget);
     expect(find.text('89 kcal'), findsOneWidget);
     expect(find.text('100 g'), findsOneWidget);
+    // Spoken as grams, as the recipe list's rows (A5)
     expect(
-      find.textContaining(RegExp(r'C 23 · F 0 · P 1|P 1 · F 0 · C 23')),
+      find.textContaining(RegExp('23 grams carbs.*1 gram protein')),
       findsOneWidget,
     );
+  });
+
+  testWidgets('the totals speak each macro in grams', (tester) async {
+    await tester.pumpWidget(
+      _app(RecipeTotalsStrip(portion: RecipePortion(_recipe(servings: 4), 1))),
+    );
+    // 100 g at 20 g carbs per 100 g
+    expect(find.bySemanticsLabel('20 grams carbs'), findsOneWidget);
   });
 }

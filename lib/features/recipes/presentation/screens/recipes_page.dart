@@ -357,7 +357,9 @@ class _RecipesPageState extends State<RecipesPage>
               ),
               if (allTags.isNotEmpty)
                 SizedBox(
-                  height: 44,
+                  // [fork] S130 recipes-list: 48 dp, growing with the text (A1)
+                  height: MediaQuery.textScalerOf(context).scale(48),
+                  // [/fork]
                   child: ListView(
                     scrollDirection: Axis.horizontal,
                     padding: const EdgeInsets.symmetric(horizontal: Dimens.spacing12),
