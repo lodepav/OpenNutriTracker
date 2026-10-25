@@ -32,4 +32,7 @@ Everything that belongs only to the fork lives in this `fork/` folder or in `lib
 4. **Upstream's checks stay green, unmodified.** `just ci` (format, l10n, analyze, test) passes
    on the fork trunk. A red upstream test means the fork changed behaviour it shouldn't have:
    fix the fork, never the test.
+   Before a merge, `fork/tools/test-fast.sh` runs the whole suite bundled, in about a
+   minute and a quarter rather than six; plain `flutter test`, a file a process, stays the
+   strict check before a release.
 5. **Merge upstream, never rebase.** `fork/main` merges each upstream release tag (D6); `develop` mirrors `upstream/develop` for upstream PRs.
