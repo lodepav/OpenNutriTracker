@@ -14,7 +14,10 @@ import 'package:opennutritracker/core/domain/entity/weight_log_entity.dart';
 import 'package:opennutritracker/core/domain/usecase/get_tracked_day_usecase.dart';
 import 'package:opennutritracker/core/domain/usecase/get_user_usecase.dart';
 import 'package:opennutritracker/core/domain/usecase/get_weight_log_usecase.dart';
+import 'package:opennutritracker/core/utils/calc/unit_calc.dart';
+import 'package:opennutritracker/core/utils/energy_unit_provider.dart';
 import 'package:opennutritracker/fork/adaptive/activity.dart';
+import 'package:opennutritracker/fork/adaptive/choice.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/fork/adaptive/check_in.dart';
@@ -22,6 +25,7 @@ import 'package:opennutritracker/fork/adaptive/expenditure.dart';
 import 'package:opennutritracker/fork/adaptive/expenditure_settings_ui.dart';
 import 'package:opennutritracker/fork/adaptive/skip_day.dart';
 import 'package:opennutritracker/fork/health/steps.dart';
+import 'package:provider/provider.dart';
 
 final _today = DateTime(2026, 10, 22);
 
@@ -706,6 +710,42 @@ void main() {
       await tester.tap(find.text('No limit'));
       await tester.pumpAndSettle();
       expect(AdaptiveStore.settings.value.maxCheckInChangeKcal, isNull);
+    });
+
+    testWidgets('in kJ the check-in limit steps are round kJ', (tester) async {
+      // The default limit, 200 kcal, is 837 kJ: its nearest step is 800.
+      AdaptiveStore.settings.value = const AdaptiveSettings(
+        adaptiveTarget: true,
+      );
+      await tester.pumpWidget(
+        ChangeNotifierProvider(
+          create: (_) => EnergyUnitProvider(usesKilojoules: true),
+          child: MaterialApp(
+            home: ExpenditureSettingsScreen(
+              store: _MemoryStore(),
+              steps: StepCounts(_Steps({}), () async => _NoBox()),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final limit = find.text('1200 kJ');
+      await tester.scrollUntilVisible(limit, 200);
+      await tester.pumpAndSettle();
+      for (final kj in ['400 kJ', '800 kJ']) {
+        expect(find.text(kj), findsOneWidget);
+      }
+      final chosen = tester.widget<StackingChoice<int>>(
+        find.byType(StackingChoice<int>).last,
+      );
+      expect(chosen.selected, 800);
+
+      await tester.tap(limit);
+      await tester.pumpAndSettle();
+      expect(
+        UnitCalc.kcalToKj(AdaptiveStore.settings.value.maxCheckInChangeKcal!),
+        closeTo(1200, 0.01),
+      );
     });
 
     testWidgets('the Steps switch connects, and turns off and on', (

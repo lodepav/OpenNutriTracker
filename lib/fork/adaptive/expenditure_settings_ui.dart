@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:opennutritracker/core/domain/entity/user_entity.dart';
 import 'package:opennutritracker/core/domain/usecase/get_user_usecase.dart';
+import 'package:opennutritracker/core/utils/calc/unit_calc.dart';
 import 'package:opennutritracker/core/utils/calc/workout_compensation_calc.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/fork/adaptive/activity.dart';
@@ -439,6 +440,9 @@ class _CheckInSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final adaptive = settings.adaptiveTarget && !settings.fixedTarget;
     final cap = settings.maxCheckInChangeKcal;
+    final kj = usesKj(context);
+    final steps = kj ? const [400, 800, 1200] : const [100, 200, 300];
+    double shown(double kcal) => kj ? UnitCalc.kcalToKj(kcal) : kcal;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -513,18 +517,25 @@ class _CheckInSection extends StatelessWidget {
           'A limit keeps one odd week from moving the expenditure under the '
           'target far. A goal you change applies in full at once.',
         ),
+        // Round steps in the display unit; a limit set in the other unit
+        // shows as its nearest step.
         StackingChoice<int>(
           identifier: 'check-in-cap',
           groupLabel: 'Largest change per check-in',
-          values: const [100, 200, 300, 0],
-          label: (kcal) =>
-              kcal == 0 ? 'No limit' : energyText(context, kcal.toDouble()),
-          selected: cap?.round() ?? 0,
+          values: [...steps, 0],
+          label: (v) => v == 0 ? 'No limit' : '$v ${energyUnit(context)}',
+          selected: cap == null
+              ? 0
+              : steps.reduce(
+                  (a, b) =>
+                      (a - shown(cap)).abs() <= (b - shown(cap)).abs() ? a : b,
+                ),
           onChanged: adaptive
-              ? (kcal) => _save(
+              ? (v) => _save(
                   store,
                   settings.copyWith(
-                    maxCheckInChangeKcal: () => kcal == 0 ? null : kcal * 1.0,
+                    maxCheckInChangeKcal: () =>
+                        v == 0 ? null : kcalFromInput(context, v.toDouble()),
                   ),
                 )
               : null,
