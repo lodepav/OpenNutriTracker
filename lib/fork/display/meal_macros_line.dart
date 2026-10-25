@@ -18,43 +18,73 @@ class MealMacrosLine extends StatelessWidget {
     final n = meal.nutriments;
     final kcal = n.energyKcal100;
     if (kcal == null) return const SizedBox.shrink();
+    return MacrosLine(
+      lead: energyText(context, kcal),
+      carbs: n.carbohydrates100,
+      fat: n.fat100,
+      protein: n.proteins100,
+      tail: 'per 100 ${meal.isLiquid ? 'ml' : 'g'}',
+    );
+  }
+}
+
+/// Macros in grams on one muted line, "C 20 · F 3 · P 4" in the user's
+/// order, after [lead] and before [tail] when given; a logged food's row
+/// shows its own (seam S115).
+class MacrosLine extends StatelessWidget {
+  final String? lead;
+  final double? carbs;
+  final double? fat;
+  final double? protein;
+  final String? tail;
+
+  const MacrosLine({
+    super.key,
+    this.lead,
+    required this.carbs,
+    required this.fat,
+    required this.protein,
+    this.tail,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final palette = isDark ? AppPalette.dark : AppPalette.light;
     final style = Theme.of(
       context,
     ).textTheme.bodySmall?.copyWith(color: palette.textMuted);
-    final per = 'per 100 ${meal.isLiquid ? 'ml' : 'g'}';
-    // Shown with no-break spaces, so "per 100 g" never splits.
-    final perShown = per.replaceAll(' ', '\u00a0');
     String grams(double? v) => v == null ? '–' : '${v.round()}';
     return MacroOrderBuilder(
       builder: (context) {
         final macros = inMacroOrder(
-          carbs: ('C', 'carbs', n.carbohydrates100),
-          fat: ('F', 'fat', n.fat100),
-          protein: ('P', 'protein', n.proteins100),
+          carbs: ('C', 'carbs', carbs),
+          fat: ('F', 'fat', fat),
+          protein: ('P', 'protein', protein),
         );
         return Text.rich(
           TextSpan(
             children: [
-              TextSpan(text: energyText(context, kcal)),
-              for (final (letter, _, value) in macros) ...[
-                const TextSpan(text: ' · '),
+              if (lead != null) TextSpan(text: '$lead · '),
+              for (final (i, (letter, _, value)) in macros.indexed) ...[
+                if (i > 0) const TextSpan(text: ' · '),
                 TextSpan(
                   text: letter,
                   style: const TextStyle(fontWeight: FontWeight.w700),
                 ),
                 TextSpan(text: ' ${grams(value)}'),
               ],
-              TextSpan(text: ' $perShown'),
+              // Shown with no-break spaces, so "per 100 g" never splits.
+              if (tail != null)
+                TextSpan(text: ' ${tail!.replaceAll(' ', '\u00a0')}'),
             ],
           ),
           style: style,
           semanticsLabel: [
-            energyText(context, kcal),
+            ?lead,
             for (final (_, name, value) in macros)
               '${grams(value)} grams $name',
-            per,
+            ?tail,
           ].join(', '),
         );
       },

@@ -19,12 +19,15 @@ import 'package:opennutritracker/generated/l10n.dart';
 import 'package:opennutritracker/fork/timeline/timeline.dart';
 // [/fork]
 import 'package:opennutritracker/fork/history/food_icon.dart'; // [fork] S100
+import 'package:opennutritracker/fork/display/meal_macros_line.dart'; // [fork] S115
 
 /// A logged intake, rendered as a full-width row: a rounded thumbnail, the meal
 /// name and amount, and the energy on the trailing edge. Replaces the old
 /// 120x120 tile so a day's meals read as a clean scannable list.
 class IntakeCard extends StatelessWidget {
-  static const double thumbSize = 52;
+  // [fork] S115 compact-rows: was 52
+  static const double thumbSize = 32;
+  // [/fork]
 
   final IntakeEntity intake;
   final Function(BuildContext, IntakeEntity)? onItemLongPressed;
@@ -70,10 +73,31 @@ class IntakeCard extends StatelessWidget {
             locale: Localizations.localeOf(context).toString(),
             decimalDigits: 1,
           ).format(macro.$1);
+    // [fork] S115 compact-rows: the amount under the energy, the macros
+    // under the name
+    final amount = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Flexible(
+          child: MealValueUnitText(
+            value: intake.amount,
+            meal: intake.meal,
+            usesImperialUnits: usesImperialUnits,
+            textStyle: textTheme.bodySmall?.copyWith(color: palette.textMuted),
+          ),
+        ),
+        if (showTime && !hasNoTime(intake))
+          Text(
+            ' · ${DateFormat.Hm().format(intake.dateTime)}',
+            style: textTheme.bodySmall?.copyWith(color: palette.textMuted),
+          ),
+      ],
+    );
+    // [/fork]
     return Padding(
       padding: const EdgeInsets.symmetric(
         horizontal: Dimens.spacing16,
-        vertical: Dimens.spacing4,
+        vertical: 2, // [fork] S115: was Dimens.spacing4
       ),
       child: Material(
         color: Colors.transparent,
@@ -87,8 +111,16 @@ class IntakeCard extends StatelessWidget {
               : null,
           child: AppCard(
             borderRadius: Dimens.radiusM,
-            padding: const EdgeInsets.all(Dimens.spacing12),
-            child: Row(
+            // [fork] S115 compact-rows: was EdgeInsets.all(Dimens.spacing12),
+            // the row at least 48 tall
+            padding: const EdgeInsets.symmetric(
+              horizontal: Dimens.spacing12,
+              vertical: 6,
+            ),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 36),
+              child: Row(
+              // [/fork]
               children: [
                 _Thumbnail(intake: intake, palette: palette),
                 const SizedBox(width: Dimens.spacing12),
@@ -104,24 +136,13 @@ class IntakeCard extends StatelessWidget {
                         minFontSize: 11,
                         overflow: TextOverflow.ellipsis,
                       ),
+                      // [fork] S115 compact-rows: was the amount, and
+                      // the time in an hour's section (S80)
                       const SizedBox(height: 2),
-                      // [fork] S80 diary-by-hour
-                      Row(
-                        children: [
-                          Flexible(
-                            child: MealValueUnitText(
-                              value: intake.amount,
-                              meal: intake.meal,
-                              usesImperialUnits: usesImperialUnits,
-                              textStyle: textTheme.bodySmall?.copyWith(color: palette.textMuted),
-                            ),
-                          ),
-                          if (showTime && !hasNoTime(intake))
-                            Text(
-                              ' · ${DateFormat.Hm().format(intake.dateTime)}',
-                              style: textTheme.bodySmall?.copyWith(color: palette.textMuted),
-                            ),
-                        ],
+                      MacrosLine(
+                        carbs: intake.totalCarbsGram,
+                        fat: intake.totalFatsGram,
+                        protein: intake.totalProteinsGram,
                       ),
                       // [/fork]
                     ],
@@ -159,11 +180,13 @@ class IntakeCard extends StatelessWidget {
                                 color: palette.textMuted,
                               ),
                       ),
+                      amount, // [fork] S115
                     ],
                   ),
                 ),
               ],
             ),
+            ), // [fork] S115
           ),
         ),
       ),
@@ -219,7 +242,7 @@ class _Thumbnail extends StatelessWidget {
             importedFoodIcon(intake) ?? // [fork] S100
                 Icons.restaurant_rounded,
             color: palette.textMuted,
-            size: 24),
+            size: 18), // [fork] S115: was 24
       );
 }
 
