@@ -292,7 +292,10 @@ class WeightTrendChart extends StatelessWidget {
                   spots: maSpots,
                   isCurved: true,
                   preventCurveOverShooting: true,
-                  color: lineColor.withValues(alpha: 0.55),
+                  // [fork] S96 chart-touch: full colour, as at 55% it was
+                  // 2.4:1 on a light card; the dashes tell it apart
+                  color: lineColor,
+                  // [/fork]
                   barWidth: 1.5,
                   dashArray: const [6, 4],
                   dotData: const FlDotData(show: false),

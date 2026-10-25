@@ -63,5 +63,9 @@ void main() {
       [3],
     );
     expect(indicator.single!.indicatorBelowLine.strokeWidth, 0);
+
+    // The dashed line at full colour: at 55% it fell under 3:1 on a light
+    // card.
+    expect(data.lineBarsData[1].color, data.lineBarsData[0].color);
   });
 }
