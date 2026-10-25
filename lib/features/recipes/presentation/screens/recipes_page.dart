@@ -15,6 +15,9 @@ import 'package:opennutritracker/features/recipes/presentation/widgets/custom_me
 import 'package:opennutritracker/features/recipes/presentation/widgets/recipe_list_item.dart';
 import 'package:opennutritracker/features/settings/presentation/bloc/custom_meals_bloc.dart';
 import 'package:opennutritracker/generated/l10n.dart';
+// [fork] S130 recipes-list
+import 'package:opennutritracker/fork/recipe/recipe_list.dart';
+// [/fork]
 
 class RecipesPage extends StatefulWidget {
   const RecipesPage({super.key});
@@ -123,13 +126,10 @@ class _RecipesPageState extends State<RecipesPage>
         value: _customMealsBloc,
         child: Column(
           children: [
-            TabBar(
-              controller: _tabController,
-              tabs: [
-                Tab(text: S.of(context).recipesLabel),
-                Tab(text: S.of(context).settingsCustomMealsLabel),
-              ],
-            ),
+            // [fork] S130 recipes-list: the two lists as chips with
+            // their counts, over one shared look
+            _buildListChips(context),
+            // [/fork]
             Expanded(
               child: TabBarView(
                 controller: _tabController,
@@ -142,8 +142,106 @@ class _RecipesPageState extends State<RecipesPage>
           ],
         ),
       ),
+      // [fork] S130 recipes-list: the list's own actions at the bottom
+      bottomNavigationBar: _buildFooter(context),
+      // [/fork]
     );
   }
+
+  // [fork] S130 recipes-list
+  Widget _buildListChips(BuildContext context) {
+    final s = S.of(context);
+    return ListenableBuilder(
+      listenable: _tabController,
+      builder: (context, _) => BlocBuilder<RecipesBloc, RecipesState>(
+        bloc: _bloc,
+        builder: (context, recipes) =>
+            BlocBuilder<CustomMealsBloc, CustomMealsState>(
+              bloc: _customMealsBloc,
+              builder: (context, meals) {
+                String label(String name, int? count) =>
+                    count == null ? name : '$name $count';
+                final lists = [
+                  label(
+                    s.recipesLabel,
+                    recipes is RecipesLoaded ? recipes.recipes.length : null,
+                  ),
+                  label(
+                    s.settingsCustomMealsLabel,
+                    meals is CustomMealsLoadedState ? meals.meals.length : null,
+                  ),
+                ];
+                return Container(
+                  alignment: AlignmentDirectional.centerStart,
+                  padding: const EdgeInsets.fromLTRB(
+                    Dimens.spacing16,
+                    Dimens.spacing8,
+                    Dimens.spacing16,
+                    0,
+                  ),
+                  child: Wrap(
+                    spacing: Dimens.spacing8,
+                    children: [
+                      for (var i = 0; i < lists.length; i++)
+                        ChoiceChip(
+                          key: ValueKey('recipes-list-$i'),
+                          label: Text(lists[i]),
+                          selected: _tabController.index == i,
+                          onSelected: (_) => _tabController.animateTo(i),
+                        ),
+                    ],
+                  ),
+                );
+              },
+            ),
+      ),
+    );
+  }
+
+  Widget _buildFooter(BuildContext context) {
+    final s = S.of(context);
+    return ListenableBuilder(
+      listenable: _tabController,
+      builder: (context, _) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            Dimens.spacing16,
+            Dimens.spacing8,
+            Dimens.spacing16,
+            Dimens.spacing12,
+          ),
+          child: _tabController.index == 0
+              ? Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => _onAddSelected(
+                          context,
+                          _RecipesAction.importRecipe,
+                        ),
+                        child: Text(s.importRecipeLabel),
+                      ),
+                    ),
+                    const SizedBox(width: Dimens.spacing12),
+                    Expanded(
+                      child: FilledButton(
+                        onPressed: () =>
+                            _onAddSelected(context, _RecipesAction.newRecipe),
+                        child: Text(s.createRecipeTitle),
+                      ),
+                    ),
+                  ],
+                )
+              : FilledButton(
+                  onPressed: () =>
+                      _onAddSelected(context, _RecipesAction.newCustomMeal),
+                  child: Text(s.newCustomMealLabel),
+                ),
+        ),
+      ),
+    );
+  }
+  // [/fork]
 
   Future<void> _onAddSelected(
     BuildContext context,
@@ -331,6 +429,12 @@ class _RecipesPageState extends State<RecipesPage>
                                   onLongPress: () {
                                     setState(() => _selectedIds.add(recipe.id));
                                   },
+                                  // [fork] S130 recipes-list
+                                  onLog: _selectionMode
+                                      ? null
+                                      : () =>
+                                          logRecipeServing(context, recipe),
+                                  // [/fork]
                                 );
                               },
                             ),
