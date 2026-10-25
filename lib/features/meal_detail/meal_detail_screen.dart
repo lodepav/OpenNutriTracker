@@ -1,7 +1,5 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:logging/logging.dart';
 import 'package:opennutritracker/core/domain/entity/intake_type_entity.dart';
 import 'package:opennutritracker/core/presentation/widgets/meal_value_unit_text.dart';
@@ -9,7 +7,6 @@ import 'package:opennutritracker/core/presentation/widgets/image_full_screen.dar
 import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/core/domain/usecase/get_config_usecase.dart';
-import 'package:opennutritracker/core/utils/energy_display.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/core/utils/demo/unsplash_attribution.dart';
 import 'package:opennutritracker/core/utils/navigation_options.dart';
@@ -17,20 +14,16 @@ import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dar
 import 'package:opennutritracker/features/add_meal/presentation/widgets/favourite_toggle_button.dart';
 import 'package:opennutritracker/features/edit_meal/presentation/edit_meal_screen.dart';
 import 'package:opennutritracker/features/meal_detail/presentation/bloc/meal_detail_bloc.dart';
-import 'package:opennutritracker/features/meal_detail/presentation/widgets/daily_kcal_overview.dart';
 import 'package:opennutritracker/features/meal_detail/presentation/widgets/meal_detail_bottom_sheet.dart';
-import 'package:opennutritracker/features/meal_detail/presentation/widgets/meal_detail_macro_nutrients.dart';
 import 'package:opennutritracker/features/meal_detail/presentation/widgets/meal_detail_nutriments_table.dart';
 import 'package:opennutritracker/features/meal_detail/presentation/widgets/meal_info_button.dart';
-import 'package:opennutritracker/features/meal_detail/presentation/widgets/meal_placeholder.dart';
-import 'package:opennutritracker/features/meal_detail/presentation/widgets/meal_title_expanded.dart';
 import 'package:opennutritracker/features/meal_detail/presentation/widgets/off_disclaimer.dart';
 import 'package:opennutritracker/generated/l10n.dart';
-// [fork] S79 macro-order
-import 'package:opennutritracker/fork/display/display_prefs.dart';
-// [/fork]
 // [fork] S45 remembered-amounts
 import 'package:opennutritracker/fork/amounts/remembered_amounts.dart';
+// [/fork]
+// [fork] S125 food-page
+import 'package:opennutritracker/fork/meal_detail/food_page.dart';
 // [/fork]
 
 class MealDetailScreen extends StatefulWidget {
@@ -40,12 +33,7 @@ class MealDetailScreen extends StatefulWidget {
   State<MealDetailScreen> createState() => _MealDetailScreenState();
 }
 
-// [fork] S83 large-text: the font scale, 1 to 2.
-double _textGrow(BuildContext context) => MediaQuery.textScalerOf(context).scale(1).clamp(1.0, 2.0);
-// [/fork]
-
 class _MealDetailScreenState extends State<MealDetailScreen> {
-  static const _containerSize = 350.0;
 
   static const String _initialQuantityMetric = '100';
   static const String _initialQuantityImperial = '1';
@@ -118,7 +106,10 @@ class _MealDetailScreenState extends State<MealDetailScreen> {
   // (toolbar + bottom bar): 268-124 with the DailyKcalOverview bottom bar,
   // 200-56 without it — always 144 either way, so no need to key it off
   // dayKcalGoal.
-  static const double _collapseScrollThreshold = 144.0;
+  // [fork] S125 food-page: the bar no longer collapses; the title shows
+  // once the header's name has scrolled under it
+  static const double _collapseScrollThreshold = 64.0;
+  // [/fork]
   bool _showAppBarTitle = false;
 
   @override
@@ -382,19 +373,12 @@ class _MealDetailScreenState extends State<MealDetailScreen> {
     return CustomScrollView(
       controller: _scrollController,
       slivers: [
+        // [fork] S125 food-page: a plain bar, then the food's header, the
+        // ring of where the energy comes from and the day after adding it
         SliverAppBar(
           pinned: true,
-          backgroundColor: palette.surface,
+          backgroundColor: palette.canvas,
           surfaceTintColor: Colors.transparent,
-          // [fork] S83 large-text: the header and the day total grow with
-          // the font, so the title is not hidden under the day total.
-          expandedHeight: (dayKcalGoal > 0 ? 268 : 200) + (_textGrow(context) - 1) * (dayKcalGoal > 0 ? 132 : 64),
-          // [/fork]
-          // The real toolbar title slot, not FlexibleSpaceBar.title: that
-          // widget bottom-anchors itself within the whole flexible-space
-          // stack (which includes the `bottom` bar's height), so with the
-          // DailyKcalOverview bottom bar present it renders underneath that
-          // bar instead of in the visible toolbar row.
           title: AnimatedOpacity(
             opacity: _showAppBarTitle ? 1.0 : 0.0,
             duration: const Duration(milliseconds: 200),
@@ -405,25 +389,6 @@ class _MealDetailScreenState extends State<MealDetailScreen> {
                   .titleLarge
                   ?.copyWith(fontWeight: FontWeight.w800),
               overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          bottom: PreferredSize(
-            preferredSize: Size.fromHeight(dayKcalGoal > 0 ? 68 * _textGrow(context) : 0), // [fork] S83
-            child: DailyKcalOverview(
-              dayKcalConsumed: dayKcalConsumed,
-              dayKcalGoal: dayKcalGoal,
-              currentSelectionKcal: totalKcal,
-            ),
-          ),
-          flexibleSpace: FlexibleSpaceBar(
-            background: Padding(
-              padding: EdgeInsets.only(
-                bottom: dayKcalGoal > 0 ? 68 * _textGrow(context) : 0, // [fork] S83
-              ),
-              child: MealTitleExpanded(
-                meal: meal,
-                usesImperialUnits: _usesImperialUnits,
-              ),
             ),
           ),
           actions: [
@@ -446,95 +411,60 @@ class _MealDetailScreenState extends State<MealDetailScreen> {
                   );
                 },
                 icon: const Icon(Icons.edit_rounded),
-                tooltip: S.of(context).editMealLabel, // [fork] S83
+                tooltip: S.of(context).editMealLabel,
               ),
             ),
           ],
         ),
         SliverList(
           delegate: SliverChildListDelegate([
-            const SizedBox(height: 16),
-            Center(
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(80),
-                child: GestureDetector(
-                  child: Hero(
-                    tag: ImageFullScreen.fullScreenHeroTag,
-                    child: CachedNetworkImage(
-                      width: 250,
-                      height: 250,
-                      cacheManager: locator<CacheManager>(),
-                      imageUrl: meal.mainImageUrl ?? "",
-                      fit: BoxFit.cover,
-                      placeholder: (context, string) => const MealPlaceholder(),
-                      errorWidget: (context, url, error) =>
-                          const MealPlaceholder(),
-                    ),
-                  ),
-                  onTap: () {
-                    Navigator.of(context).pushNamed(
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  FoodPageHeader(
+                    meal: meal,
+                    onPhotoTap: () => Navigator.of(context).pushNamed(
                       NavigationOptions.imageFullScreenRoute,
                       arguments: ImageFullScreenArguments(
-                        meal.mainImageUrl ?? "",
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ),
-            UnsplashCreditLine(imageUrl: meal.mainImageUrl),
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                children: [
-                  Row(
-                    children: [
-                      Text(
-                        EnergyDisplay.formatWithUnit(context, totalKcal),
-                        style: Theme.of(context)
-                            .textTheme
-                            .headlineSmall
-                            ?.copyWith(fontWeight: FontWeight.w800),
-                      ),
-                      MealValueUnitText(
-                        value: double.parse(totalQuantity),
-                        meal: meal,
-                        displayUnit:
-                            selectedUnit == UnitDropdownItem.serving.toString()
-                                ? meal.servingUnit
-                                : selectedUnit,
-                        usesImperialUnits: _usesImperialUnits,
-                        textStyle: Theme.of(context).textTheme.bodyMedium,
-                        prefix: ' / ',
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: Dimens.spacing16),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    // [fork] S79 macro-order
-                    children: inMacroOrder(
-                      carbs: MealDetailMacroNutrients(
-                        typeString: S.of(context).carbsLabel,
-                        value: totalCarbs,
-                        color: palette.carbs,
-                      ),
-                      fat: MealDetailMacroNutrients(
-                        typeString: S.of(context).fatLabel,
-                        value: totalFat,
-                        color: palette.fat,
-                      ),
-                      protein: MealDetailMacroNutrients(
-                        typeString: S.of(context).proteinLabel,
-                        value: totalProtein,
-                        color: palette.protein,
+                        meal.mainImageUrl ?? meal.thumbnailImageUrl ?? "",
                       ),
                     ),
-                    // [/fork]
                   ),
-                  const SizedBox(height: Dimens.spacing24),
-                  Divider(color: palette.border, height: Dimens.hairline),
-                  const SizedBox(height: Dimens.spacing24),
+                  UnsplashCreditLine(imageUrl: meal.mainImageUrl),
+                  const SizedBox(height: Dimens.spacing12),
+                  MergeSemantics(
+                    child: MealValueUnitText(
+                      value: double.parse(totalQuantity),
+                      meal: meal,
+                      displayUnit:
+                          selectedUnit == UnitDropdownItem.serving.toString()
+                              ? meal.servingUnit
+                              : selectedUnit,
+                      usesImperialUnits: _usesImperialUnits,
+                      textStyle: Theme.of(context).textTheme.bodySmall
+                          ?.copyWith(color: palette.textMuted),
+                      prefix: 'In ',
+                    ),
+                  ),
+                  const SizedBox(height: Dimens.spacing4),
+                  FoodMacroRing(
+                    kcal: totalKcal,
+                    carbs: totalCarbs,
+                    fat: totalFat,
+                    protein: totalProtein,
+                  ),
+                  const SizedBox(height: Dimens.spacing8),
+                  TodayAfterAdding(
+                    day: _day,
+                    kcal: totalKcal,
+                    carbs: totalCarbs,
+                    fat: totalFat,
+                    protein: totalProtein,
+                  ),
+                  const SizedBox(height: Dimens.spacing16),
+        // [/fork]
                   if (isHydrating)
                     const Padding(
                       padding: EdgeInsets.only(bottom: 16.0),
@@ -593,7 +523,10 @@ class _MealDetailScreenState extends State<MealDetailScreen> {
   void _scrollToCalorieText() {
     if (_scrollController.hasClients) {
       _scrollController.animateTo(
-        _containerSize - 50,
+        // [fork] S125 food-page: back to the top, where the ring and the
+        // day after adding now are
+        0,
+        // [/fork]
         duration: const Duration(seconds: 1),
         curve: Curves.easeInOut,
       );

@@ -71,6 +71,10 @@ class _MealDetailBottomSheetState extends State<MealDetailBottomSheet> {
   /// twice.
   bool _submitting = false;
 
+  // [fork] S125 food-page: the meal it goes to, picked beside Add
+  late IntakeTypeEntity _type = widget.intakeTypeEntity;
+  // [/fork]
+
   @override
   void initState() {
     super.initState();
@@ -257,69 +261,82 @@ class _MealDetailBottomSheetState extends State<MealDetailBottomSheet> {
                           ),
                         ),
                       const SizedBox(height: Dimens.spacing16),
-                      Semantics(
-                        identifier: 'meal-detail-add',
-                        child: SizedBox(
-                          width: double.infinity, // Make button full width
-                          child: FilledButton.icon(
-                            onPressed:
-                                !productMissingRequiredInfo && !_submitting
-                                ? () {
-                                    onAddButtonPressed(context);
-                                  }
-                                : null,
-                            style: FilledButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(
-                                vertical: Dimens.spacing16,
-                              ),
-                              shape: const RoundedRectangleBorder(
-                                borderRadius: Dimens.borderRadiusM,
+                      // [fork] S125 food-page: the meal, Add with the
+                      // amount, and the basket on one line
+                      Row(
+                        children: [
+                          _MealPicker(
+                            type: _type,
+                            onChanged: (type) => setState(() => _type = type),
+                          ),
+                          const SizedBox(width: Dimens.spacing8),
+                          Expanded(
+                            child: Semantics(
+                              identifier: 'meal-detail-add',
+                              child: FilledButton.icon(
+                                onPressed:
+                                    !productMissingRequiredInfo && !_submitting
+                                    ? () {
+                                        onAddButtonPressed(context);
+                                      }
+                                    : null,
+                                style: FilledButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: Dimens.spacing16,
+                                  ),
+                                  shape: const StadiumBorder(),
+                                ),
+                                icon: const Icon(Icons.add_rounded),
+                                label: ValueListenableBuilder(
+                                  valueListenable:
+                                      widget.quantityTextController,
+                                  builder: (context, value, _) => Text(
+                                    _addLabel(context, value.text),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
                               ),
                             ),
-                            icon: const Icon(Icons.add_rounded),
-                            label: Text(S.of(context).addLabel),
                           ),
-                        ),
-                      ),
-                      // [fork] S42 food-basket: pick several foods, log them together
-                      if (!productMissingRequiredInfo) ...[
-                        const SizedBox(height: Dimens.spacing8),
-                        AddToBasketButton(
-                          meal: widget.product,
-                          type: widget.intakeTypeEntity,
-                          day: widget.day,
-                          current: () {
-                            final quantity = double.tryParse(
-                              widget.quantityTextController.text.replaceAll(
-                                ',',
-                                '.',
-                              ),
-                            );
-                            if (quantity == null ||
-                                quantity <= 0 ||
-                                quantity > 10000) {
-                              return null;
-                            }
-                            final state = widget.mealDetailBloc.state;
-                            // S45: the amount picked is the one to remember
-                            RememberedAmounts.current.remember(
-                              widget.product,
-                              state.selectedUnit,
-                              widget.quantityTextController.text.trim(),
-                            );
-                            return BasketItem(
+                          if (!productMissingRequiredInfo) ...[
+                            const SizedBox(width: Dimens.spacing8),
+                            AddToBasketButton(
+                              compact: true,
                               meal: widget.product,
-                              unit: state.selectedUnit,
-                              amountText: state.totalQuantityConverted,
-                              kcal: state.totalKcal,
-                              picked: pickedLabel(
-                                widget.quantityTextController.text.trim(),
-                                state.selectedUnit,
-                              ),
-                            );
-                          },
-                        ),
-                      ],
+                              type: _type,
+                              day: widget.day,
+                              current: () {
+                                final quantity = double.tryParse(
+                                  widget.quantityTextController.text
+                                      .replaceAll(',', '.'),
+                                );
+                                if (quantity == null ||
+                                    quantity <= 0 ||
+                                    quantity > 10000) {
+                                  return null;
+                                }
+                                final state = widget.mealDetailBloc.state;
+                                // S45: the amount picked is the one to remember
+                                RememberedAmounts.current.remember(
+                                  widget.product,
+                                  state.selectedUnit,
+                                  widget.quantityTextController.text.trim(),
+                                );
+                                return BasketItem(
+                                  meal: widget.product,
+                                  unit: state.selectedUnit,
+                                  amountText: state.totalQuantityConverted,
+                                  kcal: state.totalKcal,
+                                  picked: pickedLabel(
+                                    widget.quantityTextController.text.trim(),
+                                    state.selectedUnit,
+                                  ),
+                                );
+                              },
+                            ),
+                          ],
+                        ],
+                      ),
                       // [/fork]
                       productMissingRequiredInfo
                           ? Text(
@@ -348,6 +365,16 @@ class _MealDetailBottomSheetState extends State<MealDetailBottomSheet> {
       },
     );
   }
+
+  // [fork] S125 food-page
+  /// "Add 640 g", or plain "Add" while the amount is not a positive number.
+  String _addLabel(BuildContext context, String text) {
+    final quantity = double.tryParse(text.trim().replaceAll(',', '.'));
+    if (quantity == null || quantity <= 0) return S.of(context).addLabel;
+    return '${S.of(context).addLabel} '
+        '${pickedLabel(text.trim(), widget.selectedUnit)}';
+  }
+  // [/fork]
 
   bool _hasRequiredProductInfoMissing() {
     final productNutriments = widget.product.nutriments;
@@ -430,7 +457,7 @@ class _MealDetailBottomSheetState extends State<MealDetailBottomSheet> {
       context,
       widget.mealDetailBloc.state.selectedUnit,
       widget.mealDetailBloc.state.totalQuantityConverted,
-      widget.intakeTypeEntity,
+      _type,
       widget.product,
       widget.day,
     );
@@ -452,7 +479,7 @@ class _MealDetailBottomSheetState extends State<MealDetailBottomSheet> {
           // [fork] S110 meal-named: which meal it went to, which a large
           // font can squeeze off the add screen's title
           S.of(context).quickAddAddedSnack(
-            mealLabel(context, widget.intakeTypeEntity),
+            mealLabel(context, _type),
           ),
         ),
       ),
@@ -467,7 +494,7 @@ class _MealDetailBottomSheetState extends State<MealDetailBottomSheet> {
     final getIntakeUsecase = locator<GetIntakeUsecase>();
     final List<IntakeEntity> todayIntakes;
 
-    switch (widget.intakeTypeEntity) {
+    switch (_type) {
       case IntakeTypeEntity.breakfast:
         todayIntakes = await getIntakeUsecase.getBreakfastIntakeByDay(
           widget.day,
@@ -600,3 +627,41 @@ class _MealDetailBottomSheetState extends State<MealDetailBottomSheet> {
     ];
   }
 }
+
+// [fork] S125 food-page
+/// The meal the food goes to, as a chip that opens the four meals.
+class _MealPicker extends StatelessWidget {
+  final IntakeTypeEntity type;
+  final ValueChanged<IntakeTypeEntity> onChanged;
+
+  const _MealPicker({required this.type, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) => PopupMenuButton<IntakeTypeEntity>(
+    key: const ValueKey('meal-detail-meal'),
+    tooltip: 'Meal',
+    initialValue: type,
+    onSelected: onChanged,
+    itemBuilder: (context) => [
+      for (final t in IntakeTypeEntity.values)
+        PopupMenuItem(value: t, child: Text(mealLabel(context, t))),
+    ],
+    child: Container(
+      constraints: const BoxConstraints(minHeight: 48),
+      padding: const EdgeInsets.symmetric(horizontal: Dimens.spacing12),
+      decoration: ShapeDecoration(
+        shape: StadiumBorder(
+          side: BorderSide(color: Theme.of(context).colorScheme.outline),
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(mealLabel(context, type)),
+          const Icon(Icons.arrow_drop_down_rounded),
+        ],
+      ),
+    ),
+  );
+}
+// [/fork]
