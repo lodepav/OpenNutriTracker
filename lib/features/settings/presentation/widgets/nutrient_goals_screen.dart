@@ -11,6 +11,8 @@ import 'package:opennutritracker/features/profile/presentation/bloc/profile_bloc
 import 'package:opennutritracker/features/settings/presentation/bloc/settings_bloc.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 // [fork] S135 nutrient-goals
+import 'package:opennutritracker/fork/widget/toolbar_height.dart';
+import 'package:opennutritracker/fork/units/amount_text.dart' show spokenUnit;
 import 'package:flutter/foundation.dart' show listEquals;
 import 'package:opennutritracker/fork/bulk/discard_guard.dart';
 // [/fork]
@@ -364,7 +366,7 @@ class _NutrientGoalsScreenState extends State<NutrientGoalsScreen> {
       appBar: AppBar(
         // Grow the bar with the text scale so the title can wrap to two lines
         // beside the actions rather than clipping at large font sizes.
-        toolbarHeight: MediaQuery.textScalerOf(context).scale(kToolbarHeight),
+        toolbarHeight: twoLineToolbarHeight(context), // [fork] S135
         title: Text(
           s.settingsNutrientGoalsLabel,
           maxLines: 2,
@@ -745,7 +747,7 @@ class _NutrientRow extends StatelessWidget {
               // the slider's value is its own node, so the name goes in it
               semanticFormatterCallback: (v) =>
                   '$label, ${decimalStep ? v.toStringAsFixed(1) : v.round()} '
-                  '$unit',
+                  '${spokenUnit(unit)}',
               // [/fork]
               min: min,
               max: max,

@@ -247,7 +247,7 @@ void main() {
     await openScreen(tester, _FakeSettingsBloc());
     expect(
       find.semantics.byPredicate(
-        (node) => node.value == '${l10nEn.settingsSodiumGoalLabel}, 2300 mg',
+        (node) => node.value == '${l10nEn.settingsSodiumGoalLabel}, 2300 milligrams',
       ),
       findsOne,
     );

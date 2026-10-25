@@ -11,6 +11,7 @@ import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/core/utils/calc/met_calc.dart';
 import 'package:opennutritracker/core/utils/id_generator.dart';
 import 'package:opennutritracker/features/activity_detail/presentation/widget/activity_info_button.dart';
+import 'package:opennutritracker/fork/widget/toolbar_height.dart';
 import 'package:opennutritracker/fork/units/energy_text.dart';
 
 AppPalette _palette(BuildContext context) =>
@@ -192,7 +193,7 @@ class ActivityPickerView extends StatelessWidget {
       backgroundColor: palette.canvas,
       appBar: AppBar(
         backgroundColor: palette.canvas,
-        toolbarHeight: MediaQuery.textScalerOf(context).scale(kToolbarHeight),
+        toolbarHeight: twoLineToolbarHeight(context),
         title: Text(title, maxLines: 2, overflow: TextOverflow.ellipsis),
         actions: [
           Semantics(
