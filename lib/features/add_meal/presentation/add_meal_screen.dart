@@ -29,6 +29,9 @@ import 'package:opennutritracker/generated/l10n.dart';
 // [fork] S42 food-basket
 import 'package:opennutritracker/fork/basket/basket_ui.dart';
 // [/fork]
+// [fork] S90 ux-journeys
+import 'package:opennutritracker/fork/bulk/photo_meal_button.dart';
+// [/fork]
 // [fork] S85 fits-left
 import 'package:opennutritracker/fork/suggest/fits_left.dart';
 // [/fork]
@@ -122,6 +125,14 @@ class _AddMealScreenState extends State<AddMealScreen> {
                 return Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    // [fork] S90 ux-journeys: a meal photo in one tap
+                    PhotoMealButton(
+                      onPressed: () => _onBulkAddPressed(
+                        state.usesImperialUnits,
+                        startWithPhoto: true,
+                      ),
+                    ),
+                    // [/fork]
                     Semantics(
                       identifier: 'add-meal-bulk-add',
                       child: IconButton(
@@ -772,13 +783,21 @@ class _AddMealScreenState extends State<AddMealScreen> {
     );
   }
 
-  void _onBulkAddPressed(bool usesImperialUnits) {
+  void _onBulkAddPressed(
+    bool usesImperialUnits, {
+    // [fork] S90 ux-journeys
+    bool startWithPhoto = false,
+    // [/fork]
+  }) {
     Navigator.of(context).pushNamed(
       NavigationOptions.bulkAddRoute,
       arguments: BulkAddScreenArguments(
         _mealType.getIntakeType(),
         _day,
         usesImperialUnits,
+        // [fork] S90 ux-journeys
+        startWithPhoto: startWithPhoto,
+        // [/fork]
       ),
     );
   }
