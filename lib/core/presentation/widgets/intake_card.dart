@@ -18,6 +18,7 @@ import 'package:opennutritracker/generated/l10n.dart';
 // [fork] S80 diary-by-hour
 import 'package:opennutritracker/fork/timeline/timeline.dart';
 // [/fork]
+import 'package:opennutritracker/fork/history/food_icon.dart'; // [fork] S100
 
 /// A logged intake, rendered as a full-width row: a rounded thumbnail, the meal
 /// name and amount, and the energy on the trailing edge. Replaces the old
@@ -214,7 +215,11 @@ class _Thumbnail extends StatelessWidget {
 
   Widget _fallback() => Container(
         color: palette.surfaceMuted,
-        child: Icon(Icons.restaurant_rounded, color: palette.textMuted, size: 24),
+        child: Icon(
+            importedFoodIcon(intake) ?? // [fork] S100
+                Icons.restaurant_rounded,
+            color: palette.textMuted,
+            size: 24),
       );
 }
 
