@@ -18,7 +18,7 @@ bool shouldOffer(UpdateInfo? info, String? seen) =>
 /// openGym-Hevier's UpdateNotice (its D77): a sheet with Install and Not now,
 /// 4 s after launch and 1 s after every return to the app. Asked is
 /// answered: the version offered is kept on the device, so Not now, or a tap
-/// outside, waits for the next one; Settings → About still has it.
+/// outside, waits for the next one; Settings → Updates still has it.
 class UpdateNotice extends StatefulWidget {
   static const boxName = 'ForkUpdateBox';
   static const seenKey = 'seen';
@@ -131,7 +131,7 @@ Future<void> offerUpdate(
           ListTile(
             leading: const Icon(Icons.close),
             title: const Text('Not now'),
-            subtitle: const Text('Settings → About still has it.'),
+            subtitle: const Text('Settings → Updates still has it.'),
             onTap: () => Navigator.pop(context, false),
           ),
         ],
@@ -234,4 +234,77 @@ class AboutUpdateRow extends StatelessWidget {
       },
     );
   }
+}
+
+/// Settings' Updates row (S76): the version running and what GitHub says,
+/// through [builder] so the row looks like the screen's others. A tap
+/// installs the update there is, or asks again.
+class UpdateStatus extends StatefulWidget {
+  /// The version running, as Settings already has it.
+  final String version;
+  final Updater? updater;
+  final Widget Function(String subtitle, VoidCallback onTap) builder;
+
+  const UpdateStatus({
+    super.key,
+    required this.version,
+    required this.builder,
+    this.updater,
+  });
+
+  @override
+  State<UpdateStatus> createState() => _UpdateStatusState();
+}
+
+class _UpdateStatusState extends State<UpdateStatus> {
+  Updater get _updater => widget.updater ?? Updater.instance;
+  late Future<UpdateInfo> _info = _updater.check();
+
+  void _again() => setState(() {
+    _info = _updater.recheck();
+  });
+
+  @override
+  Widget build(BuildContext context) => FutureBuilder<UpdateInfo>(
+    future: _info,
+    builder: (context, snapshot) {
+      final running = 'Version ${widget.version}';
+      final info = snapshot.data;
+      if (snapshot.hasError) {
+        return widget.builder(
+          '$running. Could not check for updates; tap to try again.',
+          _again,
+        );
+      }
+      if (info == null) {
+        return widget.builder('$running. Checking for updates…', () {});
+      }
+      if (!info.checked) {
+        return widget.builder(
+          '$running. This build does not update itself; tap for the '
+          'releases.',
+          () => launchUrl(
+            Uri.parse(releasesPage),
+            mode: LaunchMode.externalApplication,
+          ),
+        );
+      }
+      if (info.hasUpdate) {
+        return widget.builder(
+          '$running. OpenBite ${info.latestVersion} is available; tap to '
+          'install.',
+          () => info.apkUrl != null
+              ? installUpdate(context, info, _updater)
+              : launchUrl(
+                  Uri.parse(releasesPage),
+                  mode: LaunchMode.externalApplication,
+                ),
+        );
+      }
+      return widget.builder(
+        '$running, the latest. Tap to check again.',
+        _again,
+      );
+    },
+  );
 }

@@ -9,8 +9,13 @@ class _Updater extends Updater {
 
   _Updater(this.info);
 
+  int checks = 0;
+
   @override
-  Future<UpdateInfo> check() async => info;
+  Future<UpdateInfo> check() async {
+    checks++;
+    return info;
+  }
 }
 
 const _newer = UpdateInfo(
@@ -94,6 +99,65 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byType(BottomSheet), findsNothing);
       expect(seen, isNull);
+    });
+  });
+
+  group('the Updates row', () {
+    Future<void> row(WidgetTester tester, Updater updater) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: UpdateStatus(
+              version: '0.1.0',
+              updater: updater,
+              builder: (subtitle, onTap) =>
+                  ListTile(title: Text(subtitle), onTap: onTap),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+    }
+
+    testWidgets('names the version running and the update there is', (
+      tester,
+    ) async {
+      await row(tester, _Updater(_newer));
+      expect(
+        find.text(
+          'Version 0.1.0. OpenBite 0.2.0 is available; tap to install.',
+        ),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('up to date, a tap asks again', (tester) async {
+      final updater = _Updater(const UpdateInfo.none('0.1.0'));
+      await row(tester, updater);
+      expect(
+        find.text('Version 0.1.0, the latest. Tap to check again.'),
+        findsOneWidget,
+      );
+      expect(updater.checks, 1);
+      updater.info = _newer;
+      await tester.tap(find.byType(ListTile));
+      await tester.pumpAndSettle();
+      expect(updater.checks, 2);
+      expect(
+        find.textContaining('OpenBite 0.2.0 is available'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('a build that never asks says so', (tester) async {
+      await row(
+        tester,
+        _Updater(const UpdateInfo.none('0.1.0', checked: false)),
+      );
+      expect(
+        find.textContaining('This build does not update itself'),
+        findsOneWidget,
+      );
     });
   });
 }

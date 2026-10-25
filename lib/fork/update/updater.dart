@@ -26,15 +26,19 @@ class UpdateInfo {
   final String? apkUrl;
   final String? hashUrl;
 
+  /// False for a build that never asks (debug, profile, develop).
+  final bool checked;
+
   const UpdateInfo({
     required this.hasUpdate,
     required this.latestVersion,
     this.apkUrl,
     this.hashUrl,
+    this.checked = true,
   });
 
-  const UpdateInfo.none(String version)
-    : this(hasUpdate: false, latestVersion: version);
+  const UpdateInfo.none(String version, {bool checked = true})
+    : this(hasUpdate: false, latestVersion: version, checked: checked);
 }
 
 /// 1 when [a] is newer than [b], -1 when older, 0 when the same. Build
@@ -112,13 +116,19 @@ class Updater {
         Error.throwWithStackTrace(e, s);
       });
 
+  /// Asks GitHub again, as when the user taps Settings' Updates row.
+  Future<UpdateInfo> recheck() {
+    _cached = null;
+    return check();
+  }
+
   Future<UpdateInfo> _fetch() async {
     final package = await _package();
     final installed = package.version;
     // A debug, profile or develop build never checks: a release would
     // install beside it, or fail on its other key.
     if (!_release || package.packageName != _releaseAppId) {
-      return UpdateInfo.none(installed);
+      return UpdateInfo.none(installed, checked: false);
     }
     final res = await _client.get(
       Uri.parse(_latestUrl),

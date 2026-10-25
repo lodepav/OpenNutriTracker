@@ -83,6 +83,9 @@ void main() {
       expect((info.apkUrl, info.hashUrl), ('a', 'h'));
       await updater.check();
       expect(asked, 1);
+      // Settings' row asks again when tapped.
+      await updater.recheck();
+      expect(asked, 2);
     });
 
     test(
@@ -125,6 +128,13 @@ void main() {
               _package(id: 'io.github.lodepav.openbite.develop'),
           client: never,
         ).check()).hasUpdate,
+        isFalse,
+      );
+      expect(
+        (await Updater(
+          package: () async => _package(),
+          client: never,
+        ).check()).checked,
         isFalse,
       );
     });

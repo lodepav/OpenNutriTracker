@@ -695,6 +695,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     title: S.of(context).settingsReportErrorLabel,
                     onTap: () => _showReportErrorDialog(context),
                   ),
+                  // [fork] S76 releases: the version running, and its update
+                  UpdateStatus(
+                    version: state.versionNumber,
+                    builder: (subtitle, onTap) => _SettingsTile(
+                      identifier: 'settings-updates',
+                      palette: palette,
+                      icon: Icons.system_update_rounded,
+                      title: 'Updates',
+                      subtitle: subtitle,
+                      onTap: onTap,
+                    ),
+                  ),
+                  // [/fork]
                   _SettingsTile(
                     palette: palette,
                     icon: Icons.error_outline_rounded,
