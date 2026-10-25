@@ -326,6 +326,13 @@ Future<DayTotals> loadDayTotals(DateTime day) async {
 /// The day's energy and macros once the amount is added: each a figure
 /// over its goal and a bar of what was eaten, the amount lighter after
 /// it; red once over. Nothing until the day is read, or when it can't be.
+/// The four columns in one row, or two rows of two at large text, where a
+/// quarter of the width breaks "protein" (A6).
+List<List<Widget>> _afterAddingRows(BuildContext context, List<Widget> cells) =>
+    MediaQuery.textScalerOf(context).scale(10) > 13
+    ? [cells.sublist(0, 2), cells.sublist(2)]
+    : [cells];
+
 class TodayAfterAdding extends StatefulWidget {
   final DateTime day;
   final double kcal;
@@ -377,13 +384,17 @@ class _TodayAfterAddingState extends State<TodayAfterAdding> {
           required double added,
           required double target,
           required Color color,
+          required String spoken,
         }) {
           final over = target > 0 && eaten + added > target;
           final shown = over ? palette.fat : color;
           final scale = math.max(target, eaten + added);
           double part(double v) => scale > 0 ? (v / scale).clamp(0, 1) : 0;
           return Expanded(
-            child: MergeSemantics(
+            // Words, not "428 / 465 carbs g" (A5).
+            child: Semantics(
+              label: '$figure of $goal $spoken${over ? ', over' : ''}',
+              excludeSemantics: true,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -402,8 +413,7 @@ class _TodayAfterAddingState extends State<TodayAfterAdding> {
                         TextSpan(text: ' / $goal'),
                       ],
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                    // Wraps at large text rather than cut the goal (A6).
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: palette.textMuted,
                     ),
@@ -445,8 +455,6 @@ class _TodayAfterAddingState extends State<TodayAfterAdding> {
                   const SizedBox(height: 4),
                   Text(
                     label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: palette.textMuted,
                     ),
@@ -471,6 +479,7 @@ class _TodayAfterAddingState extends State<TodayAfterAdding> {
           added: added,
           target: goal,
           color: color,
+          spoken: 'grams ${label.toLowerCase()}',
         );
 
         final e = totals.eaten, g = totals.goal;
@@ -486,43 +495,43 @@ class _TodayAfterAddingState extends State<TodayAfterAdding> {
                 ),
               ),
               const SizedBox(height: Dimens.spacing8),
-              Row(
-                spacing: Dimens.spacing12,
-                children: [
-                  column(
-                    label: energyUnit(context),
-                    figure: '${energyValue(context, e.kcal + widget.kcal)}',
-                    goal: '${energyValue(context, g.kcal)}',
-                    eaten: e.kcal,
-                    added: widget.kcal,
-                    target: g.kcal,
-                    color: theme.colorScheme.primary,
+              for (final row in _afterAddingRows(context, [
+                column(
+                  label: energyUnit(context),
+                  figure: '${energyValue(context, e.kcal + widget.kcal)}',
+                  goal: '${energyValue(context, g.kcal)}',
+                  eaten: e.kcal,
+                  added: widget.kcal,
+                  target: g.kcal,
+                  color: theme.colorScheme.primary,
+                  spoken: energyUnit(context),
+                ),
+                ...inMacroOrder(
+                  carbs: macro(
+                    s.carbsLabel,
+                    e.carbs,
+                    widget.carbs,
+                    g.carbs,
+                    palette.carbs,
                   ),
-                  ...inMacroOrder(
-                    carbs: macro(
-                      s.carbsLabel,
-                      e.carbs,
-                      widget.carbs,
-                      g.carbs,
-                      palette.carbs,
-                    ),
-                    fat: macro(
-                      s.fatLabel,
-                      e.fat,
-                      widget.fat,
-                      g.fat,
-                      palette.fat,
-                    ),
-                    protein: macro(
-                      s.proteinLabel,
-                      e.protein,
-                      widget.protein,
-                      g.protein,
-                      palette.protein,
-                    ),
+                  fat: macro(s.fatLabel, e.fat, widget.fat, g.fat, palette.fat),
+                  protein: macro(
+                    s.proteinLabel,
+                    e.protein,
+                    widget.protein,
+                    g.protein,
+                    palette.protein,
                   ),
-                ],
-              ),
+                ),
+              ]))
+                Padding(
+                  padding: const EdgeInsets.only(bottom: Dimens.spacing8),
+                  child: Row(
+                    spacing: Dimens.spacing12,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: row,
+                  ),
+                ),
             ],
           ),
         );

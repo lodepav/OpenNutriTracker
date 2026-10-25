@@ -12,3 +12,17 @@ import 'package:opennutritracker/core/utils/calc/unit_calc.dart';
       'g/ml' || null => (unit: 'g', factor: 1.0),
       final unit => (unit: unit, factor: 1.0),
     };
+
+/// [unit] as a screen reader should say it: "grams", not "g" (A5). An
+/// unknown unit is said as written.
+String spokenUnit(String unit) => switch (unit) {
+  'g' || 'g/ml' => 'grams',
+  'mg' => 'milligrams',
+  'µg' || 'mcg' => 'micrograms',
+  'ml' => 'millilitres',
+  'oz' => 'ounces',
+  'fl.oz' || 'fl oz' => 'fluid ounces',
+  'kcal' => 'kilocalories',
+  'kJ' => 'kilojoules',
+  _ => unit,
+};

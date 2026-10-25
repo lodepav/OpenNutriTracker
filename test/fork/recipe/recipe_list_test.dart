@@ -165,9 +165,18 @@ void main() {
       );
       expect(find.text('300'), findsOneWidget);
       expect(find.text('kcal / serving'), findsOneWidget);
+      // Shown as letters, spoken as grams (A5)
+      final macros = find.byWidgetPredicate(
+        (w) =>
+            w is RichText &&
+            w.text
+                .toPlainText(includeSemanticsLabels: false)
+                .contains('C\u00A040 · F\u00A010 · P\u00A020'),
+      );
+      expect(macros, findsOneWidget);
       expect(
-        find.textContaining('C\u00A040 · F\u00A010 · P\u00A020'),
-        findsOneWidget,
+        tester.widget<RichText>(macros).text.toPlainText(),
+        contains('40 grams carbs, 10 grams fat, 20 grams protein'),
       );
       await tester.tap(find.byKey(const ValueKey('recipe-log-bowl')));
       expect(logs, 1);
@@ -211,6 +220,27 @@ void main() {
       await tester.pumpAndSettle();
       expect(bloc.logged, [(IntakeTypeEntity.lunch, 'g', '200.0')]);
       expect(find.text('1 serving of Bowl added to Lunch'), findsOneWidget);
+    });
+
+    testWidgets('with a meal given, logs to it without asking', (tester) async {
+      await tester.pumpWidget(
+        _app(
+          Builder(
+            builder: (context) => TextButton(
+              onPressed: () => logRecipeServing(
+                context,
+                _bowl(),
+                meal: IntakeTypeEntity.dinner,
+              ),
+              child: const Text('log'),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('log'));
+      await tester.pumpAndSettle();
+      expect(find.text('Lunch'), findsNothing);
+      expect(bloc.logged, [(IntakeTypeEntity.dinner, 'g', '200.0')]);
     });
 
     testWidgets('closing the meals logs nothing', (tester) async {

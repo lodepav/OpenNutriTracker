@@ -45,6 +45,7 @@ import 'package:opennutritracker/fork/edit_meal/nutrition_facts.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 import 'package:provider/provider.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
+import 'package:opennutritracker/fork/widget/toolbar_height.dart'; // [fork] S132
 
 class EditMealScreen extends StatefulWidget {
   const EditMealScreen({super.key});
@@ -232,7 +233,72 @@ class _EditMealScreenState extends State<EditMealScreen> {
         label: Text(S.of(context).gramMilliliterUnit),
       ),
     ];
+    // [fork] S132 custom-food: what Back compares against (H3)
+    _forkSeeded = [for (final c in _forkFields) c.text];
+    _forkNew =
+        _mealEntity.source == MealSourceEntity.custom &&
+        (_mealEntity.name ?? '').isEmpty;
+    // [/fork]
   }
+
+  // [fork] S132 custom-food: Back asks before dropping what was typed, as
+  // the recipe builder does
+  List<String> _forkSeeded = const [];
+  bool _forkNew = false;
+
+  List<TextEditingController> get _forkFields => [
+    _nameTextController,
+    _brandsTextController,
+    _barcodeTextController,
+    _mealQuantityTextController,
+    _servingQuantityTextController,
+    _baseQuantityTextController,
+    _kcalTextController,
+    _carbsTextController,
+    _fatTextController,
+    _proteinTextController,
+    _fiberTextController,
+    _saturatedFatTextController,
+    _sugarsTextController,
+    _sodiumTextController,
+    _calciumTextController,
+    _ironTextController,
+    _potassiumTextController,
+    _magnesiumTextController,
+    _vitaminDTextController,
+    _vitaminB12TextController,
+  ];
+
+  bool get _forkDirty =>
+      _localImagePath != _mealEntity.localImagePath ||
+      [
+        for (final (i, c) in _forkFields.indexed) c.text != _forkSeeded[i],
+      ].any((changed) => changed);
+
+  Future<void> _forkOnBack() async {
+    final s = S.of(context);
+    final discard = !_forkDirty ||
+        await showDialog<bool>(
+              context: context,
+              builder: (ctx) => AlertDialog(
+                title: Text(s.discardChangesTitle),
+                content: Text(s.discardChangesContent),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(ctx).pop(false),
+                    child: Text(s.dialogCancelLabel),
+                  ),
+                  FilledButton(
+                    onPressed: () => Navigator.of(ctx).pop(true),
+                    child: Text(s.discardChangesConfirmLabel),
+                  ),
+                ],
+              ),
+            ) ==
+            true;
+    if (discard && mounted) Navigator.of(context).pop();
+  }
+  // [/fork]
 
   @override
   void dispose() {
@@ -258,15 +324,23 @@ class _EditMealScreenState extends State<EditMealScreen> {
     _maybeReinterpretKcalField(usesKj);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final palette = isDark ? AppPalette.dark : AppPalette.light;
-    return SafeArea(
+    // [fork] S132 custom-food: Back asks first; Save pops past this
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _forkOnBack();
+      },
+      child: SafeArea(
+      // [/fork]
       child: Scaffold(
         backgroundColor: palette.canvas,
         appBar: AppBar(
           backgroundColor: palette.canvas,
           surfaceTintColor: Colors.transparent,
-          toolbarHeight: MediaQuery.textScalerOf(context).scale(kToolbarHeight),
+          toolbarHeight: twoLineToolbarHeight(context), // [fork] S132
           title: Text(
-            S.of(context).editMealLabel,
+            // [fork] S132 custom-food
+            _forkNew ? 'New custom food' : S.of(context).editMealLabel,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
@@ -324,6 +398,7 @@ class _EditMealScreenState extends State<EditMealScreen> {
           },
         ),
       ),
+      ), // [fork] S132 custom-food: PopScope
     );
   }
 

@@ -72,28 +72,51 @@ double _energy(RecipeIngredientEntity ingredient) =>
 }
 
 /// "C 38 · F 6 · P 18" in the macro order, each letter in its colour.
+///
+/// In [small] text the colour goes on a dot before a letter in the text's
+/// own colour, as the coloured letter alone is too faint there (A2).
 List<InlineSpan> macroSpans(
   BuildContext context,
-  ({double kcal, double carbs, double fat, double protein}) values,
-) {
+  ({double kcal, double carbs, double fat, double protein}) values, {
+  bool small = false,
+}) {
   final palette = Theme.of(context).brightness == Brightness.dark
       ? AppPalette.dark
       : AppPalette.light;
-  List<InlineSpan> one(String letter, double grams, Color color) => [
-    TextSpan(
-      text: letter,
-      style: TextStyle(color: color, fontWeight: FontWeight.w700),
-    ),
-    TextSpan(text: '\u00A0${grams.round()}'),
-  ];
+  // Spoken as "29 grams carbs", not "C 29" (A5).
+  List<InlineSpan> one(String letter, String name, double grams, Color color) {
+    final g = grams.round();
+    return [
+      if (small)
+        WidgetSpan(
+          alignment: PlaceholderAlignment.middle,
+          child: Container(
+            width: 7,
+            height: 7,
+            margin: const EdgeInsetsDirectional.only(end: 3),
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+          ),
+        ),
+      TextSpan(
+        text: letter,
+        semanticsLabel: '$g ${g == 1 ? 'gram' : 'grams'} $name',
+        style: TextStyle(
+          color: small ? null : color,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+      TextSpan(text: '\u00A0$g', semanticsLabel: ''),
+    ];
+  }
+
   final parts = inMacroOrder(
-    carbs: one('C', values.carbs, palette.carbs),
-    fat: one('F', values.fat, palette.fat),
-    protein: one('P', values.protein, palette.protein),
+    carbs: one('C', 'carbs', values.carbs, palette.carbs),
+    fat: one('F', 'fat', values.fat, palette.fat),
+    protein: one('P', 'protein', values.protein, palette.protein),
   );
   return [
     for (var i = 0; i < parts.length; i++) ...[
-      if (i > 0) const TextSpan(text: ' · '),
+      if (i > 0) const TextSpan(text: ' · ', semanticsLabel: ', '),
       ...parts[i],
     ],
   ];
@@ -119,9 +142,14 @@ Future<IntakeTypeEntity?> pickMeal(BuildContext context) =>
       ),
     );
 
-/// Logs one serving of [recipe] today to the meal the user picks.
-Future<void> logRecipeServing(BuildContext context, RecipeEntity recipe) async {
-  final type = await pickMeal(context);
+/// Logs one serving of [recipe] today to [meal], or to the meal the user
+/// picks when none is given.
+Future<void> logRecipeServing(
+  BuildContext context,
+  RecipeEntity recipe, {
+  IntakeTypeEntity? meal,
+}) async {
+  final type = meal ?? await pickMeal(context);
   if (type == null || !context.mounted) return;
   final portion = RecipePortion(recipe, 1);
   final written = await locator<MealDetailBloc>().addIntake(

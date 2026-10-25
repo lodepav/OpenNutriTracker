@@ -61,14 +61,19 @@ class QuickAddEnergyField extends StatelessWidget {
               hintText: macrosKcal == null
                   ? '0'
                   : '${energyValue(context, macrosKcal!)}',
-              hintStyle: big?.copyWith(color: theme.colorScheme.outline),
+              // Readable (A2): the macros' sum is a real figure.
+              hintStyle: big?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
             ),
           ),
         ),
         Text(unit, style: theme.textTheme.titleMedium),
         const SizedBox(height: Dimens.spacing4),
         Text(
-          'or let the macros add it up',
+          macrosKcal == null || controller.text.isNotEmpty
+              ? 'or let the macros add it up'
+              : 'added up from the macros',
           style: theme.textTheme.bodySmall?.copyWith(
             color: theme.colorScheme.onSurfaceVariant,
           ),
@@ -102,27 +107,58 @@ class QuickAddMacroFields extends StatelessWidget {
       fat: ('fat', fat, palette.fat),
       protein: ('protein', protein, palette.protein),
     );
+    // The fields line up even when one name wraps (H4).
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
       children: [
         for (final (i, (name, controller, color)) in fields.indexed) ...[
           if (i > 0) const SizedBox(width: Dimens.spacing8),
           Expanded(
-            child: Semantics(
-              identifier: 'quick-add-$name',
-              child: TextField(
-                controller: controller,
-                textAlign: TextAlign.center,
-                keyboardType: const TextInputType.numberWithOptions(
-                  decimal: true,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // The name above the field, so it wraps at large text
+                // (A6); the colour on a dot, as small text in it is too
+                // faint (A2).
+                ExcludeSemantics(
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 8,
+                        height: 8,
+                        decoration: BoxDecoration(
+                          color: color,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: Dimens.spacing4),
+                      Flexible(
+                        child: Text(
+                          '${name[0].toUpperCase()}${name.substring(1)} (g)',
+                          style: Theme.of(context).textTheme.labelLarge,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                inputFormatters: CustomTextInputFormatter.doubleOnly(),
-                decoration: InputDecoration(
-                  labelText: '$name g',
-                  labelStyle: TextStyle(color: color),
-                  floatingLabelStyle: TextStyle(color: color),
-                  border: const OutlineInputBorder(),
+                const SizedBox(height: Dimens.spacing4),
+                Semantics(
+                  identifier: 'quick-add-$name',
+                  label:
+                      '${name[0].toUpperCase()}${name.substring(1)} in grams',
+                  child: TextField(
+                    controller: controller,
+                    textAlign: TextAlign.center,
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    inputFormatters: CustomTextInputFormatter.doubleOnly(),
+                    decoration: const InputDecoration(
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
                 ),
-              ),
+              ],
             ),
           ),
         ],

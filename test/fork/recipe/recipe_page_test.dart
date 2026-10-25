@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:opennutritracker/core/domain/entity/intake_type_entity.dart';
 import 'package:opennutritracker/core/domain/entity/recipe_entity.dart';
 import 'package:opennutritracker/core/domain/entity/recipe_ingredient_entity.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dart';
@@ -92,6 +93,8 @@ void main() {
               RecipeLogBar(
                 portion: RecipePortion(r, count),
                 onCount: (c) => setState(() => count = c),
+                meal: IntakeTypeEntity.lunch,
+                onMeal: (_) {},
                 onLog: () {},
               ),
             ],
@@ -100,12 +103,12 @@ void main() {
       ),
     );
     // 100 g at 150 kcal per 100 g
-    expect(find.text('Log · 150 kcal'), findsOneWidget);
+    expect(find.text('Add 150 kcal to Lunch'), findsOneWidget);
     expect(find.text('1 serving, 100 g · per 100 g 150 kcal'), findsOneWidget);
 
     await tester.tap(find.byTooltip('More'));
     await tester.pump();
-    expect(find.text('Log · 225 kcal'), findsOneWidget);
+    expect(find.text('Add 225 kcal to Lunch'), findsOneWidget);
     expect(find.text('30'), findsOneWidget); // carbs in 150 g
 
     await tester.tap(find.byTooltip('Less'));
@@ -131,9 +134,18 @@ void main() {
     expect(find.text('🍌'), findsOneWidget);
     expect(find.text('89 kcal'), findsOneWidget);
     expect(find.text('100 g'), findsOneWidget);
+    // Spoken as grams, as the recipe list's rows (A5)
     expect(
-      find.textContaining(RegExp(r'C 23 · F 0 · P 1|P 1 · F 0 · C 23')),
+      find.textContaining(RegExp('23 grams carbs.*1 gram protein')),
       findsOneWidget,
     );
+  });
+
+  testWidgets('the totals speak each macro in grams', (tester) async {
+    await tester.pumpWidget(
+      _app(RecipeTotalsStrip(portion: RecipePortion(_recipe(servings: 4), 1))),
+    );
+    // 100 g at 20 g carbs per 100 g
+    expect(find.bySemanticsLabel('20 grams carbs'), findsOneWidget);
   });
 }

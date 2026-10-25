@@ -229,6 +229,46 @@ void main() {
     expect(saved.calcium100, 120);
     expect(saved.carbohydrates100, 60);
   });
+
+  testWidgets('Back asks once typed in; Cancel stays, Discard leaves',
+      (tester) async {
+    await pumpEditor(tester, customMeal(code: 'uuid-oats', name: 'Oats'));
+    await tester.enterText(
+      find.widgetWithText(TextFormField, l10nEn.mealNameLabel),
+      'Oats, rolled',
+    );
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    expect(find.text(l10nEn.discardChangesTitle), findsOneWidget);
+
+    await tester.tap(find.text(l10nEn.dialogCancelLabel));
+    await tester.pumpAndSettle();
+    expect(find.text('custom meals'), findsNothing);
+
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(l10nEn.discardChangesConfirmLabel));
+    await tester.pumpAndSettle();
+    expect(find.text('custom meals'), findsOneWidget);
+    expect(dataSource.saves, isEmpty);
+  });
+
+  testWidgets('Back does not ask once the text is as it was', (tester) async {
+    await pumpEditor(tester, customMeal(code: 'uuid-oats', name: 'Oats'));
+    await tester.enterText(
+      find.widgetWithText(TextFormField, l10nEn.mealNameLabel),
+      'Oats, rolled',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, l10nEn.mealNameLabel),
+      'Oats',
+    );
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    expect(find.text(l10nEn.discardChangesTitle), findsNothing);
+    expect(find.text('custom meals'), findsOneWidget);
+    expect(dataSource.saves, isEmpty);
+  });
   // [/fork]
 }
 
