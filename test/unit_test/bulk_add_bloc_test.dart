@@ -209,7 +209,9 @@ void main() {
 
     final state = await parse(bloc, 'black coffee', imperial: true);
 
-    expect(state.rows.single.amountText, '1');
+    // [fork] S98 default-amount: 100 g in ounces, not 1 oz
+    expect(state.rows.single.amountText, '3.5');
+    // [/fork]
     expect(state.rows.single.unit, 'oz');
   });
 
