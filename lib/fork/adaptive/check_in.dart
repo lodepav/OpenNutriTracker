@@ -15,7 +15,7 @@ class CheckInInputs {
   final double priorKcal;
 
   /// Upstream's formula expenditure alone, for the first check-in to say
-  /// how the prior differs from it; null leaves that unsaid.
+  /// how the prior differs from it; null after the first.
   final double? formulaKcal;
 
   /// kg per week, negative to lose.
@@ -107,12 +107,12 @@ class CheckIn {
   /// before the first.
   final double? activityChangeKcal;
 
-  /// No weigh-in and log has shaped the estimate yet: it is the profile's
-  /// prior, as for a new user.
-  final bool fromProfile;
-
   /// [CheckInInputs.formulaKcal], while [fromProfile].
   final double? formulaKcal;
+
+  /// The first check-in, and no weigh-in and log has shaped the estimate
+  /// yet: it is the profile's prior, as for a new user.
+  bool get fromProfile => formulaKcal != null;
 
   const CheckIn({
     required this.averageIntakeKcal,
@@ -130,7 +130,6 @@ class CheckIn {
     this.goalRateKgPerWeek = 0,
     this.targetWeightKg,
     this.activityChangeKcal,
-    this.fromProfile = false,
     this.formulaKcal,
   });
 
@@ -223,7 +222,6 @@ CheckIn computeCheckIn(CheckInInputs inputs) {
             inputs.previousActivityKcal != null
         ? weekly - inputs.previousActivityKcal!
         : null,
-    fromProfile: run.updates == 0,
     formulaKcal: run.updates == 0 ? inputs.formulaKcal : null,
   );
 }

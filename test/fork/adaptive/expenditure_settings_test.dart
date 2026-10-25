@@ -71,6 +71,14 @@ class _TrackedDays extends Fake implements GetTrackedDayUsecase {
   ];
 }
 
+/// A new user: the weigh-in from onboarding alone.
+class _OneWeighIn extends Fake implements GetWeightLogUsecase {
+  @override
+  Future<List<WeightLogEntity>> getAllEntries() async => [
+    WeightLogEntity(date: _today, weightKg: 80),
+  ];
+}
+
 class _Steps implements StepSource {
   final Map<DateTime, int> perDay;
   final int duringWorkout;
@@ -515,6 +523,46 @@ void main() {
 
       final todayOnly = await serviceWith([_today]).checkIn();
       expect(todayOnly.activityKcal, 0);
+    });
+
+    test("a new user's first day takes its activity off the prior", () async {
+      AdaptiveService serviceWith(AdaptiveSettings settings) {
+        AdaptiveStore.settings.value = settings;
+        return AdaptiveService(
+          _User(),
+          _OneWeighIn(),
+          _TrackedDays(),
+          AdaptiveStore(() async => box),
+          () => _today.add(const Duration(hours: 9)),
+          null,
+          ActivityCounter(
+            activities: () async => [
+              _workout(_today.add(const Duration(hours: 7)), reported: 3000),
+            ],
+            steps: StepCounts(_Steps(const {}), () async => box),
+            dayStartOffsetMinutes: () async => 0,
+          ),
+        );
+      }
+
+      addTearDown(
+        () => AdaptiveStore.settings.value = const AdaptiveSettings(),
+      );
+      final off = await serviceWith(
+        const AdaptiveSettings(adaptiveTarget: true),
+      ).checkIn();
+      final daily = await serviceWith(
+        const AdaptiveSettings(
+          adaptiveTarget: true,
+          activityMode: ActivityMode.daily,
+          countSteps: false,
+        ),
+      ).checkIn();
+      // The prior holds activity; the daily mode adds the day's back.
+      expect(
+        daily.baseKcal,
+        closeTo(off.baseKcal - maxDailyActivityKcal, 0.01),
+      );
     });
 
     test('skipped days are kept per day and loaded', () async {

@@ -381,13 +381,12 @@ class _CheckInScreenState extends State<CheckInScreen> {
   );
 
   String _fromProfileText(CheckIn checkIn) {
-    final formula = checkIn.formulaKcal;
+    final formula = checkIn.formulaKcal!;
     final rate = checkIn.goalRateKgPerWeek;
-    final differs = formula != null && rate != 0;
     return [
       'Your first target, from your profile. From next week it follows '
           'your weigh-ins and what you log.',
-      if (differs)
+      if (rate != 0)
         'The expenditure starts a little ${rate < 0 ? 'under' : 'over'} '
             "the formula's ${_kcal(formula)} for a goal to "
             "${rate < 0 ? 'lose' : 'gain'}, as MacroFactor's does.",

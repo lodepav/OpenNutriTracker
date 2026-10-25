@@ -331,6 +331,52 @@ void main() {
       expect((await service.checkIn()).activityChangeKcal, 0);
     });
 
+    test(
+      'a check-in is capped against a base of the same settings only',
+      () async {
+        const settings = AdaptiveSettings(
+          adaptiveTarget: true,
+          maxCheckInChangeKcal: 100,
+        );
+        AdaptiveStore.settings.value = settings;
+        final free = (await service.checkIn()).baseKcal;
+        await store.addCheckIn(
+          CheckInRecord(
+            date: _today.subtract(const Duration(days: 7)),
+            expenditureKcal: free - 500,
+            proposedKcal: 2000,
+            acceptedKcal: 2000,
+            baseKcal: free - 500,
+            basis: settings.targetBasis,
+          ),
+        );
+        expect((await service.checkIn()).baseKcal, closeTo(free - 400, 0.01));
+
+        AdaptiveStore.settings.value = settings.copyWith(
+          activityMode: ActivityMode.weekly,
+        );
+        expect((await service.checkIn()).baseKcal, closeTo(free, 0.01));
+      },
+    );
+
+    test('a record without its settings gives no activity change', () async {
+      AdaptiveStore.settings.value = const AdaptiveSettings(
+        adaptiveTarget: true,
+        activityMode: ActivityMode.weekly,
+      );
+      await store.addCheckIn(
+        CheckInRecord(
+          date: _today.subtract(const Duration(days: 7)),
+          expenditureKcal: 2500,
+          proposedKcal: 2000,
+          acceptedKcal: 2000,
+          activityKcal: 0,
+          baseKcal: 2500,
+        ),
+      );
+      expect((await service.checkIn()).activityChangeKcal, isNull);
+    });
+
     test('the settings are saved and loaded', () async {
       await store.save(
         const AdaptiveSettings(smoothedTrend: true, cycleWindow: true),
@@ -441,6 +487,25 @@ void main() {
     expect(find.text('Past week'), findsNothing);
     expect(find.textContaining('Not enough data'), findsNothing);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('a later check-in without an update keeps its past week', (
+    tester,
+  ) async {
+    final memory = _MemoryStore();
+    final service = AdaptiveService(
+      _User(),
+      _OneWeighIn(),
+      _NoLogs(),
+      memory,
+      () => _today.add(const Duration(hours: 9)),
+    );
+    await service.accept(await service.checkIn(), 2000);
+    await _pumpLarge(tester, service);
+
+    expect(find.textContaining('Your first target'), findsNothing);
+    expect(find.text('Past week'), findsOneWidget);
+    expect(find.textContaining('Not enough data'), findsOneWidget);
   });
 
   testWidgets('a row at 200% text wraps its value below the label', (

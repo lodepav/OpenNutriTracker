@@ -131,7 +131,7 @@ class AdaptiveService {
       CheckInInputs(
         days: days,
         priorKcal: _priorKcal(user),
-        formulaKcal: CalorieGoalCalc.getTdee(user),
+        formulaKcal: previous == null ? CalorieGoalCalc.getTdee(user) : null,
         goalRateKgPerWeek: rate,
         bodyFatPercent: await _bodyFat(user),
         targetWeightKg: user.targetWeightKg,
@@ -141,12 +141,9 @@ class AdaptiveService {
             ? null
             : previous?.baseKcal,
         // Only a record of the same settings says what its activity was.
-        previousActivityKcal:
-            previous == null ||
-                previous.basis == null ||
-                previous.basisChanged(settings)
-            ? null
-            : previous.activityKcal,
+        previousActivityKcal: previous?.basis == settings.targetBasis
+            ? previous!.activityKcal
+            : null,
         maxChangeKcal: settings.maxCheckInChangeKcal,
         activityMode: settings.activityMode,
         taper: (adjustment, weight) => CalorieGoalCalc.applyTargetWeightTaper(
@@ -290,8 +287,9 @@ class AdaptiveService {
         AdaptiveDay(
           intakeKcal: intakes[d],
           weightKg: weighIns[d],
-          // Today's steps are still coming in.
-          activityKcal: d == today ? null : activity?[d],
+          // Today's steps are still coming in; on a first day alone they
+          // are all there is to take off the prior's activity (D19).
+          activityKcal: d == today && d != first ? null : activity?[d],
         ),
     ];
     return (first: first, days: days);
