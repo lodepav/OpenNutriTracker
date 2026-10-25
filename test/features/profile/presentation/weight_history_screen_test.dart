@@ -103,6 +103,13 @@ Widget _buildScreen(
   );
 }
 
+// [fork] S122 weight-history: a weigh-in is swiped left to delete it.
+Future<void> _swipe(WidgetTester tester, Finder row) async {
+  await tester.ensureVisible(row);
+  await tester.drag(row, const Offset(-600, 0));
+}
+// [/fork]
+
 void main() {
   group('WeightHistoryScreen chart', () {
     testWidgets('shows the empty-state copy when there are no entries', (
@@ -191,7 +198,7 @@ void main() {
       expect(find.byKey(const Key('weightHistoryChart')), findsNothing);
 
       // Tap 60d segment: should now include the 45-day-old point, showing the chart.
-      final button60 = find.text('60d');
+      final button60 = find.text('90 d'); // [fork] S122: 30/90 d, 1 y, All
       expect(button60, findsOneWidget);
       await tester.tap(button60);
       await tester.pumpAndSettle();
@@ -203,7 +210,7 @@ void main() {
       );
 
       // Tap All segment: should show chart for all history including 200-day-old point.
-      final buttonAll = find.text(l10nEn.allItemsLabel);
+      final buttonAll = find.text('All'); // [fork] S122
       expect(buttonAll, findsOneWidget);
       await tester.tap(buttonAll);
       await tester.pumpAndSettle();
@@ -233,7 +240,7 @@ void main() {
     await tester.pumpWidget(_wrap(_buildScreen(entries)));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byIcon(Icons.delete_outline));
+    await _swipe(tester, find.text('Today')); // [fork] S122
     await tester.pumpAndSettle();
 
     expect(recorder.trendsReloaded, isTrue);
@@ -324,16 +331,9 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    final shiftedRow = find.ancestor(
-      of: find.text('80 ${l10nEn.kgLabel}'),
-      matching: find.byType(ListTile),
-    );
-    await tester.tap(
-      find.descendant(
-        of: shiftedRow,
-        matching: find.byIcon(Icons.delete_outline),
-      ),
-    );
+    // [fork] S122: swiped away, not a bin
+    await _swipe(tester, find.text('80 ${l10nEn.kgLabel}'));
+    // [/fork]
     await tester.pumpAndSettle();
 
     expect(deleteUsecase.deleted, hasLength(1));
@@ -356,7 +356,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byTooltip('Delete the weigh-in of Mar 11, 2026'));
+    await _swipe(tester, find.text('Mar 11, 2026')); // [fork] S122
     await tester.pumpAndSettle();
     // Home and the profile show the weight the delete left.
     expect(reloads.log, containsAll(['LoadProfileEvent', 'updateHomePage']));
@@ -398,7 +398,7 @@ void main() {
     final entry = WeightLogEntity(date: DateTime(2026, 3, 11), weightKg: 80);
     await tester.pumpWidget(_wrap(_buildScreen([entry])));
     await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('Delete the weigh-in of Mar 11, 2026'));
+    await _swipe(tester, find.text('Mar 11, 2026')); // [fork] S122
     await tester.pumpAndSettle();
     expect(find.text('Weigh-in deleted'), findsOneWidget);
 
