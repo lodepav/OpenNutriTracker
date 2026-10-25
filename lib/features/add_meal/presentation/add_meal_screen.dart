@@ -35,6 +35,9 @@ import 'package:opennutritracker/fork/bulk/photo_meal_button.dart';
 // [fork] S85 fits-left
 import 'package:opennutritracker/fork/suggest/fits_left.dart';
 // [/fork]
+// [fork] S116 search-dense
+import 'package:opennutritracker/fork/recents/search_sections.dart';
+// [/fork]
 
 class AddMealScreen extends StatefulWidget {
   const AddMealScreen({super.key});
@@ -670,6 +673,19 @@ class _AddMealScreenState extends State<AddMealScreen> {
                 child: CircularProgressIndicator(),
               );
             } else if (state is RecentMealLoadedState) {
+              // [fork] S116 search-dense: before anything is typed, the
+              // history at the amounts last logged, then the favourites
+              if (state.recentMeals.isNotEmpty && query.trim().isEmpty) {
+                return SearchSections(
+                  day: _day,
+                  addMealType: _mealType,
+                  usesImperialUnits: state.usesImperialUnits,
+                  history: state.recentMeals,
+                  entries: state.forkIntakes,
+                  favourites: _favouriteMealBloc,
+                );
+              }
+              // [/fork]
               if (state.recentMeals.isNotEmpty) {
                 return Semantics(
                   identifier: 'add-meal-recent-list',
@@ -682,6 +698,11 @@ class _AddMealScreenState extends State<AddMealScreen> {
                         mealEntity: state.recentMeals[index],
                         addMealType: _mealType,
                         usesImperialUnits: state.usesImperialUnits,
+                        // [fork] S116 search-dense
+                        forkLastLogged: index < state.forkIntakes.length
+                            ? state.forkIntakes[index]
+                            : null,
+                        // [/fork]
                       );
                     },
                   ),

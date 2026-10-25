@@ -3,7 +3,6 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
-import 'package:opennutritracker/core/presentation/widgets/meal_value_unit_text.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
@@ -19,6 +18,10 @@ import 'package:opennutritracker/generated/l10n.dart';
 // [fork] S83 search-macros
 import 'package:opennutritracker/fork/display/meal_macros_line.dart';
 // [/fork]
+// [fork] S116 search-dense
+import 'package:opennutritracker/core/domain/entity/intake_entity.dart';
+import 'package:opennutritracker/fork/units/energy_text.dart';
+// [/fork]
 
 class MealItemCard extends StatelessWidget {
   final DateTime day;
@@ -26,6 +29,11 @@ class MealItemCard extends StatelessWidget {
   final MealEntity mealEntity;
   final bool usesImperialUnits;
   final String? favouriteSemanticsIdentifier;
+  // [fork] S116 search-dense: a recent's latest entry; the row then shows
+  // that amount's energy and macros instead of those per 100 g
+  final IntakeEntity? forkLastLogged;
+  static const double forkThumb = 32;
+  // [/fork]
 
   const MealItemCard({
     super.key,
@@ -34,6 +42,7 @@ class MealItemCard extends StatelessWidget {
     required this.addMealType,
     required this.usesImperialUnits,
     this.favouriteSemanticsIdentifier,
+    this.forkLastLogged, // [fork] S116
   });
 
   @override
@@ -49,74 +58,126 @@ class MealItemCard extends StatelessWidget {
     final emoji = (mealEntity.thumbnailImageUrl == null && mealEntity.source == MealSourceEntity.fdc)
         ? resolveFoodEmoji(mealEntity.name)
         : null;
+    // [fork] S116 search-dense: a row as short as a logged food's (S115):
+    // a 32 dp picture, the source and macros under the name, the energy
+    // and what it is for on the trailing edge, a small add button. Was a
+    // 60 dp picture, a source chip, the package quantity and the per-100 g
+    // line on rows of their own.
+    final textTheme = Theme.of(context).textTheme;
+    final muted = textTheme.bodySmall?.copyWith(color: palette.textMuted);
+    final last = forkLastLogged;
+    final n = mealEntity.nutriments;
+    final kcal = last?.totalKcal ?? n.energyKcal100;
+    final per = last != null
+        ? _forkAmount(last)
+        : 'per 100 ${mealEntity.isLiquid ? 'ml' : 'g'}';
+    final source = isRecipe
+        ? S.of(context).additionalInfoLabelRecipe
+        : _sourceLabel();
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: Dimens.spacing8),
+      padding: const EdgeInsets.symmetric(vertical: 2),
       child: AppCard(
         onTap: () => _onItemPressed(context),
-        padding: const EdgeInsets.all(Dimens.spacing12),
-        child: Row(
-          children: [
-            _buildThumbnail(context, palette, accent, isRecipe, emoji),
-            const SizedBox(width: Dimens.spacing16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  AutoSizeText.rich(
-                    TextSpan(
-                      text: mealEntity.name ?? "?",
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
+        padding: const EdgeInsets.fromLTRB(
+          Dimens.spacing12,
+          6,
+          Dimens.spacing4,
+          6,
+        ),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 36),
+          child: Row(
+            children: [
+              _buildThumbnail(context, palette, accent, isRecipe, emoji),
+              const SizedBox(width: Dimens.spacing12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    AutoSizeText.rich(
+                      TextSpan(
+                        text: mealEntity.name ?? "?",
+                        style: textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: palette.textStrong,
+                        ),
+                        children: [
+                          TextSpan(
+                            text: ' ${mealEntity.brands ?? ""}',
+                            style: muted,
+                          ),
+                        ],
+                      ),
+                      maxLines: 2,
+                      minFontSize: 11,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    MacrosLine(
+                      lead: source,
+                      carbs: last?.totalCarbsGram ?? n.carbohydrates100,
+                      fat: last?.totalFatsGram ?? n.fat100,
+                      protein: last?.totalProteinsGram ?? n.proteins100,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: Dimens.spacing8),
+              if (kcal != null)
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      energyText(context, kcal),
+                      style: textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
                         color: palette.textStrong,
                       ),
-                      children: [
-                        TextSpan(
-                          text: ' ${mealEntity.brands ?? ""}',
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                color: palette.textMuted,
-                              ),
-                        ),
-                      ],
                     ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: Dimens.spacing4),
-                  _buildSubtitle(context, palette, accent, isRecipe),
-                  // [fork] S83 search-macros: energy and macros per 100 g
-                  const SizedBox(height: Dimens.spacing4),
-                  MealMacrosLine(meal: mealEntity),
-                  // [/fork]
-                ],
-              ),
-            ),
-            const SizedBox(width: Dimens.spacing8),
-            // A builder row leaves the identifier out and its list carries
-            // one (AGENTS.md, "Dynamic lists"); the add-item sheet's fixed
-            // recent rows pass their own.
-            FavouriteToggleButton(
-              meal: mealEntity,
-              semanticsIdentifier: favouriteSemanticsIdentifier,
-            ),
-            Semantics(
-              identifier: 'meal-item-add',
-              child: IconButton(
-                style: IconButton.styleFrom(
-                  foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                  backgroundColor: accent,
-                  shape: const RoundedRectangleBorder(borderRadius: Dimens.borderRadiusM),
+                    Text(per, style: muted),
+                  ],
                 ),
-                icon: const Icon(Icons.add_rounded, size: 24),
-                tooltip: S.of(context).addFoodLabel(mealEntity.name ?? ''), // [fork] S83
-                onPressed: () => _onItemPressed(context),
+              // A builder row leaves the identifier out and its list
+              // carries one (AGENTS.md, "Dynamic lists"); the add-item
+              // sheet's fixed recent rows pass their own.
+              FavouriteToggleButton(
+                meal: mealEntity,
+                semanticsIdentifier: favouriteSemanticsIdentifier,
               ),
-            ),
-          ],
+              Semantics(
+                identifier: 'meal-item-add',
+                child: IconButton(
+                  style: IconButton.styleFrom(
+                    foregroundColor: accent,
+                    side: BorderSide(color: accent, width: 1.5),
+                    shape: const CircleBorder(),
+                    minimumSize: const Size(32, 32),
+                    padding: EdgeInsets.zero,
+                  ),
+                  icon: const Icon(Icons.add_rounded, size: 20),
+                  tooltip: S.of(context).addFoodLabel(mealEntity.name ?? ''), // [fork] S83
+                  onPressed: () => _onItemPressed(context),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
+    // [/fork]
   }
+
+  // [fork] S116 search-dense
+  static String _forkAmount(IntakeEntity intake) {
+    final n = intake.amount;
+    final text = n == n.roundToDouble()
+        ? n.toInt().toString()
+        : n.toStringAsFixed(1);
+    return '$text ${intake.unit}';
+  }
+  // [/fork]
 
   Widget _buildThumbnail(
     BuildContext context,
@@ -132,15 +193,15 @@ class MealItemCard extends StatelessWidget {
         child: CachedNetworkImage(
           cacheManager: locator<CacheManager>(),
           fit: BoxFit.cover,
-          width: Dimens.mealThumb,
-          height: Dimens.mealThumb,
+          width: forkThumb, // [fork] S116: was Dimens.mealThumb
+          height: forkThumb, // [fork] S116
           imageUrl: mealEntity.thumbnailImageUrl ?? "",
         ),
       );
     }
     return Container(
-      width: Dimens.mealThumb,
-      height: Dimens.mealThumb,
+      width: forkThumb, // [fork] S116: was Dimens.mealThumb
+      height: forkThumb, // [fork] S116
       alignment: Alignment.center,
       decoration: BoxDecoration(
         borderRadius: radius,
@@ -148,61 +209,18 @@ class MealItemCard extends StatelessWidget {
       ),
       child: emoji != null
           ? ExcludeSemantics(
-              child: Text(emoji, style: const TextStyle(fontSize: 30)),
+              child: Text(emoji, style: const TextStyle(fontSize: 18)), // [fork] S116: was 30
             )
           : Icon(
               isRecipe ? Icons.menu_book_rounded : Icons.restaurant_rounded,
-              size: 26,
+              size: 18, // [fork] S116: was 26
               color: isRecipe ? accent : palette.textMuted,
             ),
     );
   }
 
-  Widget _buildSubtitle(BuildContext context, AppPalette palette, Color accent, bool isRecipe) {
-    if (isRecipe) {
-      return _labelChip(
-        context,
-        S.of(context).additionalInfoLabelRecipe,
-        background: accent.withValues(alpha: 0.16),
-        foreground: accent,
-      );
-    }
-
-    // Remote foods carry their database of origin; show it as a muted chip
-    // (Open Food Facts, BLS, FDC SR Legacy...) so users can tell sources
-    // apart. OFF products may additionally have a package quantity — keep
-    // it visible next to the chip.
-    final sourceLabel = _sourceLabel();
-    final chip = sourceLabel != null
-        ? _labelChip(
-            context,
-            sourceLabel,
-            background: palette.textMuted.withValues(alpha: 0.12),
-            foreground: palette.textMuted,
-          )
-        : null;
-    final quantity = mealEntity.mealQuantity != null
-        ? MealValueUnitText(
-            value: double.parse(mealEntity.mealQuantity ?? "0"),
-            meal: mealEntity,
-            usesImperialUnits: usesImperialUnits,
-          )
-        : null;
-
-    if (chip != null && quantity != null) {
-      return Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Flexible too: on a narrow phone the chip alone can be wider
-          // than the column the favourite star leaves it.
-          Flexible(child: chip),
-          const SizedBox(width: Dimens.spacing8),
-          Flexible(child: quantity),
-        ],
-      );
-    }
-    return chip ?? quantity ?? const SizedBox();
-  }
+  // [fork] S116 search-dense: upstream's _buildSubtitle and _labelChip
+  // went with the source chip
 
   /// Database-of-origin label: the Supabase backend source (BLS, FDC SR
   /// Legacy...) when known, Open Food Facts for OFF products, null for the
@@ -214,30 +232,6 @@ class MealItemCard extends StatelessWidget {
       return OFFConst.offSourceName;
     }
     return null;
-  }
-
-  Widget _labelChip(
-    BuildContext context,
-    String label, {
-    required Color background,
-    required Color foreground,
-  }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: Dimens.spacing8, vertical: Dimens.spacing4),
-      decoration: BoxDecoration(
-        color: background,
-        borderRadius: Dimens.borderRadiusS,
-      ),
-      child: Text(
-        label,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-          color: foreground,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
-    );
   }
 
   void _onItemPressed(BuildContext context) {
