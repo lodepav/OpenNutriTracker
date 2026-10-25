@@ -7,6 +7,9 @@ import 'package:opennutritracker/core/presentation/widgets/calories_profile_info
 import 'package:opennutritracker/core/utils/bounds/validator.dart';
 import 'package:opennutritracker/features/onboarding/domain/entity/user_gender_selection_entity.dart';
 import 'package:opennutritracker/generated/l10n.dart';
+// [fork] S95 birthday-typing
+import 'package:opennutritracker/fork/onboarding/birthday_input.dart';
+// [/fork]
 
 class OnboardingAboutYouPageBody extends StatefulWidget {
   final Function(
@@ -54,9 +57,7 @@ class _OnboardingAboutYouPageBodyState
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (_selectedDate != null && _dateInput.text.isEmpty) {
-      _dateInput.text = MaterialLocalizations.of(
-        context,
-      ).formatCompactDate(_selectedDate!);
+      _dateInput.text = _forkBirthday.write(_selectedDate!); // [fork] S95
     }
   }
 
@@ -202,17 +203,26 @@ class _OnboardingAboutYouPageBodyState
             identifier: 'onboarding-birthday-field',
             child: TextFormField(
               controller: _dateInput,
-              readOnly: true,
+              // [fork] S95 birthday-typing: typed as digits, the separators
+              // put in, or picked from the calendar behind the icon
+              keyboardType: TextInputType.number,
+              inputFormatters: [BirthdayInputFormatter(_forkBirthday)],
+              onChanged: _forkBirthdayTyped,
               decoration: InputDecoration(
-                hintText: S.of(context).onboardingEnterBirthdayLabel,
+                hintText: _forkBirthday.hint,
                 labelText: S.of(context).onboardingEnterBirthdayLabel,
-                prefixIcon: const Icon(Icons.calendar_month_outlined),
+                errorText: _forkBirthdayBad ? 'Not a date in range' : null,
+                prefixIcon: IconButton(
+                  icon: const Icon(Icons.calendar_month_outlined),
+                  tooltip: 'Pick from a calendar',
+                  onPressed: onDateInputClicked,
+                ),
+                // [/fork]
                 filled: true,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
                 ),
               ),
-              onTap: onDateInputClicked,
             ),
           ),
           if (showAdultEquationNotice) ...[
@@ -266,6 +276,27 @@ class _OnboardingAboutYouPageBodyState
     );
   }
 
+  // [fork] S95 birthday-typing
+  BirthdayFormat get _forkBirthday =>
+      BirthdayFormat.of(MaterialLocalizations.of(context));
+  bool _forkBirthdayBad = false;
+
+  /// A complete date in the picker's range is the birthday; anything else
+  /// is none yet, and a complete one that is not says so.
+  void _forkBirthdayTyped(String text) {
+    final date = _forkBirthday.parse(text);
+    final ok =
+        date != null &&
+        !date.isBefore(ValueValidator.getFirstDate()) &&
+        !date.isAfter(ValueValidator.getLastDate());
+    setState(() {
+      _forkBirthdayBad = !ok && text.replaceAll(RegExp(r'[^0-9]'), '').length == 8;
+      _selectedDate = ok ? date : null;
+      checkCorrectInput();
+    });
+  }
+  // [/fork]
+
   void onDateInputClicked() async {
     final selected = _selectedDate;
     final pickedDate = await showDatePicker(
@@ -273,6 +304,7 @@ class _OnboardingAboutYouPageBodyState
       // Nobody scrolls month by month to 1994, so the picker opens on the
       // year grid.
       initialDatePickerMode: DatePickerMode.year,
+      initialEntryMode: DatePickerEntryMode.calendarOnly, // [fork] S95
       initialDate: selected != null
           ? ValueValidator.clampBirthday(selected)
           : ValueValidator.getInitialBirthdayDate(),
@@ -280,9 +312,9 @@ class _OnboardingAboutYouPageBodyState
       lastDate: ValueValidator.getLastDate(),
     );
     if (pickedDate == null || !mounted) return;
-    final localizations = MaterialLocalizations.of(context);
-    final formattedDate = localizations.formatCompactDate(pickedDate);
+    final formattedDate = _forkBirthday.write(pickedDate); // [fork] S95
     setState(() {
+      _forkBirthdayBad = false; // [fork] S95
       _selectedDate = pickedDate;
       _dateInput.text = formattedDate;
       checkCorrectInput();
