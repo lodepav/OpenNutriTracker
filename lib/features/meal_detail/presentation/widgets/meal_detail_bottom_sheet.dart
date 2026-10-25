@@ -30,6 +30,9 @@ import 'package:opennutritracker/fork/amounts/remembered_amounts.dart';
 // [fork] S110 meal-named
 import 'package:opennutritracker/fork/copy/copy_ui.dart' show mealLabel;
 // [/fork]
+// [fork] S125 food-page
+import 'package:opennutritracker/fork/widget/meal_picker_chip.dart';
+// [/fork]
 
 class MealDetailBottomSheet extends StatefulWidget {
   final MealEntity product;
@@ -265,7 +268,8 @@ class _MealDetailBottomSheetState extends State<MealDetailBottomSheet> {
                       // amount, and the basket on one line
                       Row(
                         children: [
-                          _MealPicker(
+                          MealPickerChip(
+                            key: const ValueKey('meal-detail-meal'),
                             type: _type,
                             onChanged: (type) => setState(() => _type = type),
                           ),
@@ -627,41 +631,3 @@ class _MealDetailBottomSheetState extends State<MealDetailBottomSheet> {
     ];
   }
 }
-
-// [fork] S125 food-page
-/// The meal the food goes to, as a chip that opens the four meals.
-class _MealPicker extends StatelessWidget {
-  final IntakeTypeEntity type;
-  final ValueChanged<IntakeTypeEntity> onChanged;
-
-  const _MealPicker({required this.type, required this.onChanged});
-
-  @override
-  Widget build(BuildContext context) => PopupMenuButton<IntakeTypeEntity>(
-    key: const ValueKey('meal-detail-meal'),
-    tooltip: 'Meal',
-    initialValue: type,
-    onSelected: onChanged,
-    itemBuilder: (context) => [
-      for (final t in IntakeTypeEntity.values)
-        PopupMenuItem(value: t, child: Text(mealLabel(context, t))),
-    ],
-    child: Container(
-      constraints: const BoxConstraints(minHeight: 48),
-      padding: const EdgeInsets.symmetric(horizontal: Dimens.spacing12),
-      decoration: ShapeDecoration(
-        shape: StadiumBorder(
-          side: BorderSide(color: Theme.of(context).colorScheme.outline),
-        ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(mealLabel(context, type)),
-          const Icon(Icons.arrow_drop_down_rounded),
-        ],
-      ),
-    ),
-  );
-}
-// [/fork]
