@@ -8,6 +8,7 @@ import 'package:opennutritracker/core/domain/usecase/get_tracked_day_usecase.dar
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/features/add_meal/presentation/add_meal_type.dart';
 import 'package:opennutritracker/features/add_meal/presentation/widgets/meal_item_card.dart';
+import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
 import 'package:opennutritracker/fork/units/energy_text.dart';
 
 /// What is left of a day's budget: energy and each macro, in kcal and
@@ -56,12 +57,17 @@ List<IntakeEntity> fitsLeft(List<IntakeEntity> recents, DayLeft left) {
   return [for (final (_, (food, _)) in ranked.take(fitsLimit)) food];
 }
 
-/// What is left of [day]: its tracked goals less what is logged, or the
-/// profile's goals on a day with nothing logged yet.
+/// What is left of [day]: its tracked goals less what is logged, or on a
+/// day with nothing logged yet the goals its first log will set (the
+/// profile's, at [day]'s weekday shift).
 Future<DayLeft> dayLeft(DateTime day) async {
   final tracked = await locator<GetTrackedDayUsecase>().getTrackedDay(day);
   final kcalGoal =
-      tracked?.calorieGoal ?? await locator<GetKcalGoalUsecase>().getKcalGoal();
+      tracked?.calorieGoal ??
+      await forkGoalOnDay(
+        await locator<GetKcalGoalUsecase>().getKcalGoal(),
+        day,
+      );
   final macros = locator<GetMacroGoalUsecase>();
   return (
     kcal: kcalGoal - (tracked?.caloriesTracked ?? 0),
@@ -125,11 +131,14 @@ class _FitsLeftSwitchState extends State<FitsLeftSwitch> {
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      FilterChip(
-        key: const ValueKey('add-meal-fits-left'),
-        label: const Text("Fits what's left"),
-        selected: _on,
-        onSelected: (on) => setState(() => _on = on),
+      Semantics(
+        identifier: 'add-meal-fits-left',
+        child: FilterChip(
+          key: const ValueKey('add-meal-fits-left'),
+          label: const Text("Fits what's left"),
+          selected: _on,
+          onSelected: (on) => setState(() => _on = on),
+        ),
       ),
       Expanded(child: _on ? _fits(context) : widget.recents),
     ],
