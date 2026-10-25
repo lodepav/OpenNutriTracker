@@ -375,6 +375,7 @@ class _OnboardingBodyMeasurementsPageBodyState
   // Connect, as if typed; the stones input is rebuilt through its key to
   // seed from it
   int _healthWeightReads = 0;
+  String? _healthWeightNote;
 
   void _applyHealthWeight(double kg) {
     setState(() {
@@ -676,6 +677,7 @@ class _OnboardingBodyMeasurementsPageBodyState
                 if (defaultTargetPlatform == TargetPlatform.android)
                   HealthWeightButton(
                     onWeight: _applyHealthWeight,
+                    onNote: (note) => setState(() => _healthWeightNote = note),
                     source: widget.healthWeightSource,
                   ),
               ],
@@ -788,6 +790,17 @@ class _OnboardingBodyMeasurementsPageBodyState
                       ),
                     ),
                   ),
+            // [fork] S99 onboarding-health-weight: what the read came to,
+            // under the field it filled
+            if (_healthWeightNote case final note?)
+              Padding(
+                padding: const EdgeInsets.only(top: 4.0),
+                child: Text(
+                  note,
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ),
+            // [/fork]
             const SizedBox(height: 32.0),
             // Target weight — optional. A new user can set it once in onboarding
             // instead of having to find Profile after first-run. Leaving it blank
