@@ -13,6 +13,7 @@ import 'package:opennutritracker/features/add_meal/domain/meal_photo_interpreter
 import 'package:opennutritracker/features/add_meal/util/meal_text_parser.dart';
 import 'package:opennutritracker/fork/leftovers/ai_leftovers.dart';
 import 'package:opennutritracker/fork/leftovers/group_leftovers.dart';
+import 'package:opennutritracker/fork/units/amount_text.dart';
 import 'package:opennutritracker/fork/leftovers/meal_groups.dart';
 import 'package:opennutritracker/fork/leftovers/meal_photo_cache.dart';
 
@@ -138,6 +139,7 @@ void main() {
       WidgetTester tester,
       IntakeEntity intake, {
       _Reader? reader,
+      bool imperial = false,
     }) async {
       final updates = <String, double>{};
       late Future<bool> handled;
@@ -154,6 +156,7 @@ void main() {
                 leftovers: reader ?? _Reader(),
                 photoCache: MealPhotoCache(dir: () async => dir),
                 takePhoto: (_) async => _photo,
+                usesImperialUnits: imperial,
               ),
               child: const Text('tap'),
             ),
@@ -185,6 +188,51 @@ void main() {
       expect(await handled, isTrue);
       // The naan was all eaten, so it is left as logged.
       expect(updates, {'rice': 100, 'curry': 150});
+    });
+
+    testWidgets('in imperial units the amounts are ounces, typed and shown', (
+      tester,
+    ) async {
+      final (handled, updates) = await tap(tester, _curry, imperial: true);
+
+      await tester.tap(find.text(LeftoverStrings.wholeMeal(3)));
+      await tester.pumpAndSettle();
+      // 200 g of rice, shown as what it is in ounces, not "200 oz".
+      expect(find.text('7.1 → 7.1 oz'), findsOneWidget);
+      await tester.enterText(find.byKey(const ValueKey('left-rice')), '3.5');
+      await tester.pump();
+      expect(find.text('7.1 → 3.6 oz'), findsOneWidget);
+      await tester.tap(find.text(LeftoverStrings.save));
+      await tester.pumpAndSettle();
+
+      expect(await handled, isTrue);
+      expect(updates['rice'], closeTo(200 - 3.5 * 28.3495, 0.01));
+      expect(updates.keys, ['rice']);
+    });
+
+    test('an AI entry\'s "g/ml" shows as grams', () {
+      final entry = _intake('dish', 'Dish', 340.19);
+      final aiEntry = IntakeEntity(
+        id: entry.id,
+        unit: 'oz',
+        amount: entry.amount,
+        type: entry.type,
+        meal: MealEntity(
+          code: 'dish',
+          name: 'Dish',
+          url: null,
+          mealQuantity: null,
+          mealUnit: 'g/ml',
+          servingQuantity: null,
+          servingUnit: null,
+          servingSize: null,
+          nutriments: MealNutrimentsEntity.empty(),
+          source: MealSourceEntity.custom,
+        ),
+        dateTime: entry.dateTime,
+      );
+      expect(shownUnit(aiEntry, true), (unit: 'g', factor: 1.0));
+      expect(shownUnit(entry, false), (unit: 'g', factor: 1.0));
     });
 
     testWidgets('just this item leaves the edit to the usual dialog', (
@@ -296,6 +344,21 @@ void main() {
       expect(prompt, startsWith(leftoversPromptStart));
       expect(prompt, contains('1. Rice: 200 g\n2. Naan: 90 g'));
       expect(prompt, contains('on the left the meal as served'));
+    });
+
+    test('an entry logged in ounces is still listed in grams', () {
+      final inOz = IntakeEntity(
+        id: _rice.id,
+        unit: 'oz',
+        amount: _rice.amount,
+        type: _rice.type,
+        meal: _rice.meal,
+        dateTime: _rice.dateTime,
+      );
+      expect(
+        leftoversSystemPrompt([inOz], withMealPhoto: false),
+        contains('1. Rice: 200 g'),
+      );
     });
 
     test('maps items to entries by name, in their own unit', () {

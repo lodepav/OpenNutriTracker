@@ -71,7 +71,7 @@ class _FakeMealDetailBloc extends Fake implements MealDetailBloc {
   @override
   // [fork] S7 meal-groups: addIntake returns the entry written
   Future<IntakeEntity?> addIntake(
-  // [/fork]
+    // [/fork]
     BuildContext context,
     String unit,
     String amountText,
@@ -522,6 +522,9 @@ Widget _app({
   bool imperial = false,
   Locale? locale,
   List<RouteSettings>? pushed,
+  // [fork] S90 ux-journeys
+  bool startWithPhoto = false,
+  // [/fork]
 }) => ChangeNotifierProvider<EnergyUnitProvider>(
   create: (_) => EnergyUnitProvider(usesKilojoules: false),
   child: MaterialApp(
@@ -561,6 +564,9 @@ Widget _app({
             IntakeTypeEntity.breakfast,
             DateTime(2026, 8, 10),
             imperial,
+            // [fork] S90 ux-journeys
+            startWithPhoto: startWithPhoto,
+            // [/fork]
           ),
         ),
         builder: (_) => const BulkAddScreen(),
@@ -2741,6 +2747,88 @@ void main() {
       expect(find.text('Apple'), findsOneWidget);
     });
   });
+
+  // [fork] S90 ux-journeys
+  testWidgets('Back asks before found foods are lost, and only then', (
+    tester,
+  ) async {
+    await _register({
+      'toast': [_meal('Toast')],
+    });
+    await tester.pumpWidget(_app());
+    await tester.pumpAndSettle();
+    final navigator = tester.state<NavigatorState>(find.byType(Navigator));
+
+    navigator.pushNamed('/bulk');
+    await tester.pumpAndSettle();
+    await navigator.maybePop();
+    await tester.pumpAndSettle();
+    expect(find.byType(BulkAddScreen), findsNothing, reason: 'nothing found');
+
+    await _parse(tester, '100g toast');
+    await navigator.maybePop();
+    await tester.pumpAndSettle();
+    expect(find.text(l10nEn.discardChangesTitle), findsOneWidget);
+    await tester.tap(find.text(l10nEn.dialogCancelLabel));
+    await tester.pumpAndSettle();
+    expect(find.byType(BulkAddScreen), findsOneWidget);
+
+    await navigator.maybePop();
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(l10nEn.discardChangesConfirmLabel));
+    await tester.pumpAndSettle();
+    expect(find.byType(BulkAddScreen), findsNothing);
+  });
+
+  testWidgets('a found food\'s name is a full-size tap target', (
+    tester,
+  ) async {
+    await _register({
+      'toast': [_meal('Toast')],
+    });
+    await tester.pumpWidget(_app());
+    await tester.pumpAndSettle();
+    await _parse(tester, '100g toast');
+
+    final name = find.ancestor(
+      of: find.text('Toast'),
+      matching: find.byType(InkWell),
+    );
+    expect(tester.getSize(name.first).height, greaterThanOrEqualTo(48));
+  });
+
+  testWidgets('the add screen\'s camera opens at the photo sheet', (
+    tester,
+  ) async {
+    await _register(const {});
+    getIt.unregister<AiCredentialStorage>();
+    getIt.registerLazySingleton<AiCredentialStorage>(
+      () => AiCredentialStorage(
+        _MapStorage({
+          'AiApiKeyTag.anthropic': 'sk-test',
+          'AiAssistEnabledTag': 'true',
+        }),
+      ),
+    );
+    await tester.pumpWidget(_app(startWithPhoto: true));
+    await tester.pumpAndSettle();
+
+    tester.state<NavigatorState>(find.byType(Navigator)).pushNamed('/bulk');
+    await tester.pumpAndSettle();
+    expect(
+      find.textContaining(l10nEn.bulkAddPhotoDisclosureCommon),
+      findsOneWidget,
+    );
+
+    // Once: closing the sheet leaves the screen, not another sheet.
+    await tester.tapAt(const Offset(10, 10));
+    await tester.pumpAndSettle();
+    expect(
+      find.textContaining(l10nEn.bulkAddPhotoDisclosureCommon),
+      findsNothing,
+    );
+  });
+  // [/fork]
 }
 
 /// Returns a fixed reading without touching a credential or a network.

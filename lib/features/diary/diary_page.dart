@@ -335,6 +335,7 @@ class _DiaryPageState extends State<DiaryPage> with WidgetsBindingObserver {
         mealEdited = true;
         return _calendarDayBloc.updateIntakeItem(id, {'amount': amount}, day);
       },
+      usesImperialUnits: usesImperialUnits, // [fork] S90
     );
     if (handled) {
       if (!mealEdited) return;

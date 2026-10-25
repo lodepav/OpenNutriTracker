@@ -36,6 +36,9 @@ import 'package:opennutritracker/fork/dish/dish_breakdown_rows.dart';
 import 'package:opennutritracker/fork/dish/dish_recipe.dart';
 import 'package:opennutritracker/fork/dish/dish_strings.dart';
 // [/fork]
+// [fork] S90 ux-journeys
+import 'package:opennutritracker/fork/bulk/discard_guard.dart';
+// [/fork]
 // [fork] S8 meal-groups: remember which entries one save wrote (D14)
 import 'package:opennutritracker/fork/leftovers/meal_groups.dart';
 import 'package:opennutritracker/fork/leftovers/meal_photo_cache.dart';
@@ -49,12 +52,18 @@ class BulkAddScreenArguments {
   final IntakeTypeEntity intakeTypeEntity;
   final DateTime day;
   final bool usesImperialUnits;
+  // [fork] S90 ux-journeys: opened by the add screen's camera, for a photo
+  final bool startWithPhoto;
+  // [/fork]
 
   const BulkAddScreenArguments(
     this.intakeTypeEntity,
     this.day,
-    this.usesImperialUnits,
-  );
+    this.usesImperialUnits, {
+    // [fork] S90 ux-journeys
+    this.startWithPhoto = false,
+    // [/fork]
+  });
 }
 
 /// Type a whole meal, confirm what it matched, log it in one go.
@@ -386,7 +395,19 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
     super.didChangeDependencies();
     _args =
         ModalRoute.of(context)!.settings.arguments as BulkAddScreenArguments;
+    // [fork] S90 ux-journeys: straight to the photo sheet, once
+    if (_args.startWithPhoto && !_forkPhotoStarted) {
+      _forkPhotoStarted = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        if (await _photoAvailable && mounted) await _onPhotoPressed();
+      });
+    }
+    // [/fork]
   }
+
+  // [fork] S90 ux-journeys
+  bool _forkPhotoStarted = false;
+  // [/fork]
 
   @override
   void dispose() {
@@ -447,6 +468,14 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
           builder: (context, state) => LayoutBuilder(
             builder: (context, constraints) => Column(
               children: [
+                // [fork] S90 ux-journeys: Back asks before found foods are lost
+                DiscardGuard(
+                  pending:
+                      !_submitting &&
+                      state is BulkAddLoadedState &&
+                      state.rows.isNotEmpty,
+                ),
+                // [/fork]
                 // The **field** is bounded, not the block. At 2x on a 320dp
                 // screen the entry block measured 388px — a four-line field
                 // plus a full-height button — against about 595px of body,
@@ -1122,6 +1151,12 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
                 ],
               ),
             );
+            // [fork] S90 ux-journeys: the name is a 48 dp tap target
+            final forkTitle = ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 48),
+              child: titleBlock,
+            );
+            // [/fork]
 
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1131,14 +1166,14 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
                   // than by whatever is left of it.
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [titleBlock, ...buttons],
+                    children: [forkTitle, ...buttons], // [fork] S90
                   )
                 else
                   // Unchanged wherever they fit, which is every ordinary
                   // text size: name on the left, controls on the right.
                   Row(
                     children: [
-                      Expanded(child: titleBlock),
+                      Expanded(child: forkTitle), // [fork] S90
                       ...buttons,
                     ],
                   ),

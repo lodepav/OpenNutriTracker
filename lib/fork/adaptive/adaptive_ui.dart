@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:opennutritracker/core/domain/entity/body_weight_unit_entity.dart';
+import 'package:opennutritracker/core/domain/usecase/get_config_usecase.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/core/utils/reload_diary_and_trends.dart';
 import 'package:opennutritracker/features/home/presentation/bloc/home_bloc.dart';
@@ -510,17 +512,29 @@ class AdaptiveSettingsTile extends StatelessWidget {
         '${settings.weekdayOffsets.any((o) => o != 0) ? ' · by weekday' : ''}',
       ),
     ),
-    onTap: () => showDialog<void>(
-      context: context,
-      builder: (_) => _AdaptiveSettingsDialog(store ?? AdaptiveStore()),
-    ),
+    onTap: () async {
+      // Not registered in the tests that open the dialog.
+      final perLb =
+          locator.isRegistered<GetConfigUsecase>() &&
+          (await locator<GetConfigUsecase>().getConfig()).bodyWeightUnit ==
+              BodyWeightUnit.lb;
+      if (!context.mounted) return;
+      await showDialog<void>(
+        context: context,
+        builder: (_) =>
+            _AdaptiveSettingsDialog(store ?? AdaptiveStore(), perLb: perLb),
+      );
+    },
   );
 }
 
 class _AdaptiveSettingsDialog extends StatelessWidget {
   final AdaptiveStore store;
 
-  const _AdaptiveSettingsDialog(this.store);
+  /// Body weight in pounds, so macros per kg read per pound.
+  final bool perLb;
+
+  const _AdaptiveSettingsDialog(this.store, {required this.perLb});
 
   Future<void> _save(AdaptiveSettings value) async {
     await store.save(value);
@@ -651,14 +665,15 @@ class _AdaptiveSettingsDialog extends StatelessWidget {
                 subtitle: Text(
                   mode == _TargetMode.fixed && settings.fixedMacros != null
                       ? 'The fixed target\'s grams'
-                      : settings.macroProgram?.summary ??
+                      : settings.macroProgram?.summary(perLb: perLb) ??
                             'Percentages from your macro split',
                 ),
                 trailing: const Icon(Icons.edit_rounded),
                 onTap: () async {
                   final edited = await showDialog<({MacroProgram? program})>(
                     context: context,
-                    builder: (_) => MacroProgramDialog(settings.macroProgram),
+                    builder: (_) =>
+                        MacroProgramDialog(settings.macroProgram, perLb: perLb),
                   );
                   if (edited != null) {
                     await _save(

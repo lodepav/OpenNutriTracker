@@ -249,7 +249,8 @@ class _BasketSheetState extends State<BasketSheet> {
                         contentPadding: EdgeInsets.zero,
                         title: Text(item.meal.name ?? ''),
                         subtitle: Text(
-                          '${amountLabel(item.amountText)} ${item.unit} · '
+                          '${item.picked ?? '${amountLabel(item.amountText)} '
+                                  '${item.unit}'} · '
                           '${energyText(context, item.kcal)}',
                         ),
                         trailing: IconButton(

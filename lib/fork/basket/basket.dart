@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:opennutritracker/core/domain/entity/intake_type_entity.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dart';
+import 'package:opennutritracker/features/add_meal/util/portion_unit.dart';
 
 /// An amount as stored ("150.0") as a person reads it ("150").
 String amountLabel(String text) {
@@ -11,6 +12,15 @@ String amountLabel(String text) {
       : value.toStringAsFixed(1);
 }
 
+/// The amount as it was picked: [text] typed in the dropdown's [unit], which
+/// for a serving is a count of servings, not the grams logged.
+String pickedLabel(String text, String unit) {
+  final unitName = storedUnit(unit);
+  if (unitName != 'serving') return '${amountLabel(text)} $unitName';
+  return '${amountLabel(text)} '
+      '${double.tryParse(text) == 1 ? 'serving' : 'servings'}';
+}
+
 /// A food picked for the basket, with the amount and unit as the meal
 /// detail would log them.
 class BasketItem {
@@ -19,11 +29,15 @@ class BasketItem {
   final String amountText;
   final double kcal;
 
+  /// [pickedLabel], for the review; [amountText] is in the food's own unit.
+  final String? picked;
+
   const BasketItem({
     required this.meal,
     required this.unit,
     required this.amountText,
     required this.kcal,
+    this.picked,
   });
 }
 

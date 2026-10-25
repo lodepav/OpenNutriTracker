@@ -240,8 +240,9 @@ void main() {
     Future<({MacroProgram? program})?> open(
       WidgetTester tester,
       MacroProgram? program,
-      Future<void> Function() choose,
-    ) async {
+      Future<void> Function() choose, {
+      bool perLb = false,
+    }) async {
       ({MacroProgram? program})? result;
       await tester.pumpWidget(
         MaterialApp(
@@ -249,7 +250,7 @@ void main() {
             builder: (context) => TextButton(
               onPressed: () async => result = await showDialog(
                 context: context,
-                builder: (_) => MacroProgramDialog(program),
+                builder: (_) => MacroProgramDialog(program, perLb: perLb),
               ),
               child: const Text('open'),
             ),
@@ -273,6 +274,7 @@ void main() {
 
     testWidgets('three levels each, a level for each basis', (tester) async {
       final result = await open(tester, const MacroProgram(), () async {
+        expect(find.text('Very high 2.2'), findsOneWidget);
         await tapKey(tester, 'macro-protein-2');
         await tapKey(tester, 'macro-fat-0');
         await tapKey(tester, 'macro-lean');
@@ -283,6 +285,31 @@ void main() {
       expect(p.leanMass, isTrue);
       // Very high on body weight is very high on lean mass.
       expect(p.proteinGPerKg, MacroProgram.proteinPresetsLean[2]);
+    });
+
+    testWidgets('in pounds, grams per pound, still kept per kg', (
+      tester,
+    ) async {
+      final result = await open(tester, const MacroProgram(), () async {
+        expect(find.text('Very high 1.0'), findsOneWidget);
+        expect(find.text('Moderate 0.73'), findsOneWidget);
+        await tapKey(tester, 'macro-protein-manual');
+        await tester.enterText(
+          find.byKey(const ValueKey('macro-protein-kg')),
+          '0.8',
+        );
+        await tester.pumpAndSettle();
+        expect(find.text('0.8 g per lb of body weight'), findsOneWidget);
+      }, perLb: true);
+      expect(
+        result!.program!.proteinGPerKg,
+        closeTo(0.8 * MacroProgram.lbPerKg, 1e-9),
+      );
+      expect(
+        result.program!.summary(perLb: true),
+        'Fat 0.36 g/lb, protein 0.8 g/lb',
+      );
+      expect(result.program!.summary(), 'Fat 0.8 g/kg, protein 1.8 g/kg');
     });
 
     testWidgets('a manual value for one macro leaves the other', (
@@ -346,6 +373,29 @@ void main() {
       );
       expect(result!.program!.style, MacroStyle.keto);
     });
+  });
+
+  test('the onboarding overview shows the grams of the program chosen', () {
+    final user = UserEntity(
+      birthday: DateTime(1990, 1, 1),
+      heightCM: 180,
+      weightKG: 90,
+      gender: UserGenderEntity.male,
+      goal: UserWeightGoalEntity.loseWeight,
+      pal: UserPALEntity.active,
+    );
+    OnboardingMacros.pending.value = null;
+    expect(OnboardingMacros.overview(user, 2937), isNull);
+
+    OnboardingMacros.pending.value = const MacroProgram(
+      proteinGPerKg: 2.0,
+      fatGPerKg: 0.8,
+    );
+    addTearDown(() => OnboardingMacros.pending.value = null);
+    final macros = OnboardingMacros.overview(user, 2937)!;
+    expect(macros.proteinG, 180);
+    expect(macros.fatG, closeTo(72, 0.01));
+    expect(macros.carbsG, closeTo((2937 - 720 - 648) / 4, 0.01));
   });
 
   test(

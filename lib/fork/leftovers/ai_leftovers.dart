@@ -11,6 +11,7 @@ import 'package:opennutritracker/features/add_meal/domain/meal_items_api.dart';
 import 'package:opennutritracker/features/add_meal/domain/meal_photo_interpreter.dart';
 import 'package:opennutritracker/features/add_meal/util/meal_photo_encoder.dart';
 import 'package:opennutritracker/features/add_meal/util/meal_text_parser.dart';
+import 'package:opennutritracker/fork/units/amount_text.dart';
 
 /// Marks the request, for the fake AI.
 const leftoversPromptStart = 'You estimate what is left of a meal';
@@ -25,7 +26,8 @@ String leftoversSystemPrompt(
 }) {
   final listed = [
     for (final (i, e) in entries.indexed)
-      '${i + 1}. ${e.meal.name ?? ''}: ${_number(e.amount)} ${e.unit}',
+      '${i + 1}. ${e.meal.name ?? ''}: ${_number(e.amount)} '
+          '${shownUnit(e, false).unit}',
   ].join('\n');
   return '$leftoversPromptStart after eating, from a photo.\n'
       '${withMealPhoto ? 'The photo has two halves: on the left the meal as '
