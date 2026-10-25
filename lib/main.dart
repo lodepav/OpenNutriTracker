@@ -56,6 +56,7 @@ import 'package:opennutritracker/generated/l10n.dart';
 import 'package:opennutritracker/core/utils/ai_credential_storage.dart';
 import 'package:opennutritracker/fork/dev/fake_ai.dart';
 import 'package:opennutritracker/fork/backup/auto_backup.dart';
+import 'package:opennutritracker/fork/backup/storage_rescue.dart';
 import 'package:opennutritracker/fork/health/body_fat_import.dart';
 import 'package:opennutritracker/fork/health/nutrition_export.dart';
 import 'package:opennutritracker/fork/health/weight_import.dart';
@@ -116,6 +117,7 @@ Future<void> _bootstrapApp() async {
     await AdaptiveStore.start();
     await DisplayPrefs.start();
     await AutoBackup.start();
+    await StorageRescue().finishPending(); // [fork] S112
     await WeightImport.start(refreshAfterWeightImport);
     BodyFatImport.start();
     NutritionExport.start();

@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+// [fork] S112 storage-rescue
+import 'package:opennutritracker/fork/backup/storage_rescue.dart';
+// [/fork]
 
 class StorageRecoveryApp extends StatelessWidget {
   const StorageRecoveryApp({
@@ -94,6 +97,10 @@ class _StorageRecoveryScreenState extends State<_StorageRecoveryScreen> {
                       label: const Text('Retry'),
                     ),
                   ),
+                  // [fork] S112 storage-rescue: restore the automatic
+                  // backup, or start again
+                  StorageRescuePanel(onRetry: widget.onRetry),
+                  // [/fork]
                 ],
               ),
             ),
