@@ -372,7 +372,8 @@ void main() {
         source: 'MacroFactor',
       );
       expect(again.intakes, isEmpty);
-      expect(again.keptDays, 2);
+      expect(again.keptDays, 0);
+      expect(again.keptImportedDays, 2);
     });
   });
 
@@ -460,12 +461,48 @@ void main() {
       source: 'MacroFactor',
     );
     expect(again.intakes, isEmpty);
-    expect(again.keptDays, 1);
+    expect(again.keptImportedDays, 1);
+    expect(again.keptCustomFoods, 1);
+    expect(again.kept, ['1 day already imported', '1 custom food']);
     expect(again.measurements[DateTime(2025, 5, 16)]!.keys, {
       BodyMetric.bodyFat,
       BodyMetric.arm,
     });
     expect(again.customFoods, isEmpty);
+
+    // Measured too: all of it is here, and the dialog says what.
+    final third = planImport(
+      file,
+      existing: HistoryExisting(
+        importedDays: food,
+        measurements: [
+          for (final MapEntry(key: day, value: values) in planImport(
+            file,
+            existing: const HistoryExisting(),
+            today: DateTime(2026, 10, 24),
+            source: 'MacroFactor',
+          ).measurements.entries)
+            for (final MapEntry(key: metric, value: value) in values.entries)
+              Measurement(
+                id: '$day$metric',
+                date: day,
+                metric: metric,
+                value: value,
+              ),
+        ],
+        customFoodNames: {'butter chicken'},
+        weighIns: [WeightLogEntity(date: DateTime(2025, 5, 16), weightKg: 94)],
+      ),
+      today: DateTime(2026, 10, 24),
+      source: 'MacroFactor',
+    );
+    expect(third.isEmpty, isTrue);
+    expect(third.kept, [
+      '1 day already imported',
+      '1 weigh-in already entered',
+      'body measurements on 1 day',
+      '1 custom food',
+    ]);
   });
 
   test('two food logs: each adds the days the one before did not give, '
