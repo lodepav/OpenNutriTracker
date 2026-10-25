@@ -374,13 +374,16 @@ class TileBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final palette = isDark ? AppPalette.dark : AppPalette.light;
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(3),
-      child: LinearProgressIndicator(
-        value: value.clamp(0.0, 1.0),
-        minHeight: 6,
-        color: color,
-        backgroundColor: palette.surfaceMuted,
+    // The tile's text says it already: no bare percentage read out too.
+    return ExcludeSemantics(
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(3),
+        child: LinearProgressIndicator(
+          value: value.clamp(0.0, 1.0),
+          minHeight: 6,
+          color: color,
+          backgroundColor: palette.surfaceMuted,
+        ),
       ),
     );
   }
