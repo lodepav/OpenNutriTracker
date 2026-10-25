@@ -413,10 +413,11 @@ class _CaloriesTrendCard extends StatelessWidget {
                 borderData: FlBorderData(show: false),
                 titlesData: const FlTitlesData(show: false),
                 // [fork] S97 chart-touch: the day and the unit with the
-                // number, and no line down to the axis
+                // number, and no line down to the axis; cut to a whole
+                // number as energyValue is everywhere else
                 lineTouchData: labelledTouch(
                   context,
-                  (s) => '${s.y.round()}',
+                  (s) => '${s.y.toInt()}',
                   after: (s) => ' $unit\n${dayLabel(s.x)}',
                 ),
                 // [/fork]
@@ -824,8 +825,10 @@ String _caloriesSummary(BuildContext context, List<FlSpot> spots, double avgGoal
   final avg = logged.reduce((a, b) => a + b) / logged.length;
   final days = logged.length == 1 ? '1 day' : '${logged.length} days';
   final unit = EnergyDisplay.unitLabel(context);
-  final goal = avgGoal > 0 ? ', goal ${avgGoal.round()} $unit' : '';
-  return 'Average ${avg.round()} $unit over $days logged$goal';
+  // Whole numbers cut, as energyValue's are, so it agrees with the chart's
+  // "2572 kcal of 2925 kcal" below.
+  final goal = avgGoal > 0 ? ', goal ${avgGoal.toInt()} $unit' : '';
+  return 'Average ${avg.toInt()} $unit over $days logged$goal';
 }
 // [/fork]
 

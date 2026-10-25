@@ -1,3 +1,4 @@
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -47,7 +48,7 @@ class _SeededTrendsBloc extends TrendsBloc {
   void add(TrendsEvent event) {}
 }
 
-void _seed({double carbsTracked = 70}) {
+void _seed({double carbsTracked = 70, double caloriesTracked = 700}) {
   final now = DateTime.now();
   locator.registerSingleton<TrendsBloc>(
     _SeededTrendsBloc(
@@ -59,7 +60,7 @@ void _seed({double carbsTracked = 70}) {
           TrackedDayEntity(
             day: DateTime(now.year, now.month, now.day),
             calorieGoal: 2000,
-            caloriesTracked: 700,
+            caloriesTracked: caloriesTracked,
             carbsGoal: 259,
             carbsTracked: carbsTracked,
             fatGoal: 48,
@@ -143,5 +144,39 @@ void main() {
       scrollable: find.byType(Scrollable).first,
     );
     expect(carbs, findsOneWidget);
+  });
+
+  // Seam S114: energy is cut to whole numbers everywhere, as energyValue
+  // has it, so the summary and the tooltip agree with the card's "2572
+  // kcal of 2925 kcal".
+  testWidgets('energy is cut, not rounded, in the summary and tooltip', (
+    tester,
+  ) async {
+    await locator.reset();
+    _seed(caloriesTracked: 2572.6);
+    await tester.pumpWidget(
+      ChangeNotifierProvider(
+        create: (_) => EnergyUnitProvider(usesKilojoules: false),
+        child: const MaterialApp(
+          localizationsDelegates: [
+            S.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: S.supportedLocales,
+          home: Scaffold(body: TrendsPage()),
+        ),
+      ),
+    );
+    await tester.pump();
+    expect(find.textContaining('Average 2572 kcal'), findsOneWidget);
+    final data = tester.widget<LineChart>(find.byType(LineChart).first).data;
+    final bar = data.lineBarsData.first;
+    final today = bar.spots.last;
+    final item = data.lineTouchData.touchTooltipData.getTooltipItems([
+      LineBarSpot(bar, 0, today),
+    ]).single!;
+    expect(item.text, '2572');
   });
 }
