@@ -12,6 +12,7 @@ void main() {
   late _Folder folder;
   late DateTime now;
   var profile = '';
+  var hasProfile = true;
 
   setUp(() async {
     dir = await Directory.systemTemp.createTemp('auto_backup');
@@ -32,6 +33,7 @@ void main() {
     profile: () => profile,
     clock: () => now,
     box: () => Hive.openBox<dynamic>(AutoBackup.boxName),
+    hasProfile: () async => hasProfile,
   );
 
   test('off until a folder is chosen, then backs up at once', () async {
@@ -115,6 +117,36 @@ void main() {
     now = now.add(const Duration(minutes: 1));
     expect(await b.runIfDue(), isTrue);
     expect(AutoBackup.state.value.lastError, isNull);
+  });
+
+  test('no automatic backup without a profile, as after "Start again": '
+      "it would write an empty one over today's", () async {
+    final b = backup();
+    await b.load();
+    await b.chooseFolder();
+    folder.writes = 0;
+    hasProfile = false;
+    now = now.add(const Duration(hours: 2));
+    expect(await b.runIfDue(), isFalse);
+    expect(folder.writes, 0);
+    hasProfile = true;
+    expect(await b.runIfDue(), isTrue);
+  });
+
+  test("the day the files went aside, today's backup is kept for the new "
+      'start to restore', () async {
+    final b = backup();
+    await b.load();
+    await b.chooseFolder();
+    folder.writes = 0;
+    await (await Hive.openBox<dynamic>(
+      AutoBackup.boxName,
+    )).put(AutoBackup.setAsideOnKey, now);
+    now = now.add(const Duration(hours: 2));
+    expect(await b.runIfDue(), isFalse);
+    expect(folder.writes, 0);
+    now = now.add(const Duration(days: 1));
+    expect(await b.runIfDue(), isTrue);
   });
 }
 

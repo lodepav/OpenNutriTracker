@@ -5,6 +5,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:opennutritracker/core/domain/entity/tracked_day_entity.dart';
 import 'package:opennutritracker/core/domain/entity/user_entity.dart';
+import 'package:opennutritracker/core/domain/entity/app_theme_entity.dart';
+import 'package:opennutritracker/core/domain/entity/config_entity.dart';
+import 'package:opennutritracker/core/domain/usecase/get_config_usecase.dart';
 import 'package:opennutritracker/core/domain/usecase/get_kcal_goal_usecase.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/core/domain/entity/user_gender_entity.dart';
@@ -570,6 +573,32 @@ void main() {
     );
   });
 
+  testWidgets('the first check-in leaves today\'s weekday shift out of the '
+      'target in use, as the proposal does', (tester) async {
+    locator.registerSingleton<GetKcalGoalUsecase>(_Goal());
+    locator.registerSingleton<GetConfigUsecase>(_Config());
+    addTearDown(locator.unregister<GetKcalGoalUsecase>);
+    addTearDown(locator.unregister<GetConfigUsecase>);
+    // Only today's shift, so another day's would show.
+    AdaptiveStore.settings.value = AdaptiveSettings(
+      weekdayOffsets: [
+        for (var d = 1; d <= 7; d++) d == DateTime.now().weekday ? 300 : 0,
+      ],
+    );
+    addTearDown(() => AdaptiveStore.settings.value = const AdaptiveSettings());
+    final service = AdaptiveService(
+      _User(),
+      _Weights(),
+      _TrackedDays(),
+      _MemoryStore(),
+      () => _today.add(const Duration(hours: 9)),
+    );
+    await tester.pumpWidget(MaterialApp(home: CheckInScreen(service: service)));
+    await tester.pumpAndSettle();
+
+    expect(find.text('2547 kcal'), findsOneWidget);
+  });
+
   testWidgets("a new user's first check-in says it is from the profile", (
     tester,
   ) async {
@@ -911,6 +940,12 @@ void main() {
       );
     });
   });
+}
+
+class _Config extends Fake implements GetConfigUsecase {
+  @override
+  Future<ConfigEntity> getConfig() async =>
+      ConfigEntity(true, true, false, AppThemeEntity.system);
 }
 
 class _Goal extends Fake implements GetKcalGoalUsecase {

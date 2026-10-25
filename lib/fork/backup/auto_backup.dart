@@ -7,6 +7,7 @@ import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:logging/logging.dart';
 import 'package:opennutritracker/core/utils/hive_db_provider.dart';
+import 'package:opennutritracker/core/domain/usecase/get_user_usecase.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/features/settings/domain/usecase/export_data_usecase.dart';
 import 'package:opennutritracker/features/settings/presentation/bloc/export_import_bloc.dart';
@@ -44,6 +45,9 @@ class AutoBackup {
   static const keep = 14;
   static const interval = Duration(hours: 1);
   static const boxName = 'ForkAutoBackupBox';
+
+  /// When the recovery screen set the files aside (S112).
+  static const setAsideOnKey = 'setAsideOn';
   static final _day = DateFormat('yyyy-MM-dd');
   static final _log = Logger('AutoBackup');
 
@@ -54,6 +58,7 @@ class AutoBackup {
   final String Function() _profile;
   final DateTime Function() _clock;
   final Future<Box<dynamic>> Function() _box;
+  final Future<bool> Function() _hasProfile;
   Future<bool>? _running;
 
   AutoBackup({
@@ -62,11 +67,14 @@ class AutoBackup {
     String Function()? profile,
     DateTime Function()? clock,
     Future<Box<dynamic>> Function()? box,
+    Future<bool> Function()? hasProfile,
   }) : _folder = folder,
        _assemble = assemble ?? _assembleExport,
        _profile = profile ?? _activeProfile,
        _clock = clock ?? DateTime.now,
-       _box = box ?? (() => Hive.openBox<dynamic>(boxName));
+       _box = box ?? (() => Hive.openBox<dynamic>(boxName)),
+       _hasProfile =
+           hasProfile ?? (() => locator<GetUserUsecase>().hasUserData());
 
   static AutoBackup? _instance;
 
@@ -158,6 +166,15 @@ class AutoBackup {
     if (!current.isOn) return false;
     final last = current.lastSuccessAt;
     if (last != null && _clock().difference(last) < interval) return false;
+    // Before setup, as after the recovery screen's "Start again" (S112),
+    // a backup would be of an empty profile, written over today's good one.
+    if (!await _hasProfile()) return false;
+    // Nor the day the files went aside: today's file may be what the new
+    // start will restore.
+    final aside = (await _box()).get(setAsideOnKey) as DateTime?;
+    if (aside != null && _day.format(aside) == _day.format(_clock())) {
+      return false;
+    }
     return runNow();
   }
 
