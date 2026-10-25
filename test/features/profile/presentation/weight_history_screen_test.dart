@@ -218,7 +218,9 @@ void main() {
 
   testWidgets('deleting an entry reloads Trends so its weight card drops '
       'the reading (#1359)', (tester) async {
-    final recorder = ReloadRecorder()..register();
+    final recorder = ReloadRecorder()
+      ..register()
+      ..registerProfile(); // [fork] S113
     addTearDown(locator.reset);
     final today = DateTime.now();
     final entries = [
@@ -297,7 +299,9 @@ void main() {
 
   testWidgets('deleting a row hands over that row, filed day and all, '
       'when its date shows a neighbouring day (#1418)', (tester) async {
-    ReloadRecorder().register();
+    ReloadRecorder()
+      ..register()
+      ..registerProfile(); // [fork] S113
     addTearDown(locator.reset);
     final deleteUsecase = _FakeDeleteWeightLogUsecase();
     // A time-zone change moved the 10 March row's date onto 11 March, so
@@ -341,7 +345,9 @@ void main() {
   testWidgets('a delete says which weigh-in, and can be undone', (
     tester,
   ) async {
-    ReloadRecorder().register();
+    final reloads = ReloadRecorder()
+      ..register()
+      ..registerProfile();
     addTearDown(locator.reset);
     final addUsecase = _FakeAddWeightLogUsecase();
     final entry = WeightLogEntity(date: DateTime(2026, 3, 11), weightKg: 80);
@@ -352,10 +358,14 @@ void main() {
 
     await tester.tap(find.byTooltip('Delete the weigh-in of Mar 11, 2026'));
     await tester.pumpAndSettle();
+    // Home and the profile show the weight the delete left.
+    expect(reloads.log, containsAll(['LoadProfileEvent', 'updateHomePage']));
+    reloads.log.clear();
     await tester.tap(find.text('Undo'));
     await tester.pumpAndSettle();
 
     expect(addUsecase.added.single.weightKg, 80);
+    expect(reloads.log, containsAll(['LoadProfileEvent', 'updateHomePage']));
   });
   // [/fork]
 }

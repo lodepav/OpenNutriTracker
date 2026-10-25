@@ -78,9 +78,9 @@ class _StorageRecoveryScreenState extends State<_StorageRecoveryScreen> {
                   // out
                   const Text(
                     'Your data files have not been changed. Retry once. If it '
-                    'fails again, the choices below keep the files that will '
-                    'not open on the phone; do not clear the app data or '
-                    'reinstall.',
+                    'fails again, use a button below: it moves the files that '
+                    'will not open aside on the phone instead of deleting '
+                    'them. Do not clear the app data or reinstall.',
                     textAlign: TextAlign.center,
                   ),
                   // [/fork]

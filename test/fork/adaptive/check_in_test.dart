@@ -558,11 +558,16 @@ void main() {
     expect(find.text('Current target'), findsOneWidget);
     expect(find.text('2847 kcal'), findsOneWidget);
     expect(find.text('Change'), findsOneWidget);
+    // The rows add up as shown.
+    final proposed = checkIn!.proposedTargetKcal.toInt();
+    expect(find.text('${proposed - 2847} kcal'), findsOneWidget);
     expect(
-      find.text('${(checkIn!.proposedTargetKcal - 2847).round()} kcal'),
+      find.textContaining(
+        'That is the expenditure less '
+        '${checkIn.expenditureKcal.toInt() - proposed} kcal',
+      ),
       findsOneWidget,
     );
-    expect(find.textContaining('That is the expenditure less'), findsOneWidget);
   });
 
   testWidgets("a new user's first check-in says it is from the profile", (
@@ -615,8 +620,8 @@ void main() {
       () => _today.add(const Duration(hours: 9)),
     );
     await service.accept(await service.checkIn(), 2000);
-    final change = ((await service.checkIn()).proposedTargetKcal - 2000)
-        .round();
+    // As shown: the rows add up.
+    final change = (await service.checkIn()).proposedTargetKcal.toInt() - 2000;
     await _pumpLarge(tester, service);
 
     final current = find.text('Current target');
@@ -630,7 +635,7 @@ void main() {
     expect(cap, findsOneWidget);
   });
 
-  testWidgets('the first check-in has no current target to compare', (
+  testWidgets("without Home's target, the first check-in shows no change", (
     tester,
   ) async {
     final service = AdaptiveService(
