@@ -366,6 +366,37 @@ void main() {
       },
     );
 
+    test("switches in a day keep one record of their own", () async {
+      const settings = AdaptiveSettings(adaptiveTarget: true);
+      await store.addCheckIn(
+        CheckInRecord(
+          date: _today.subtract(const Duration(days: 3)),
+          expenditureKcal: 2500,
+          proposedKcal: 2000,
+          acceptedKcal: 2000,
+          baseKcal: 2500,
+          basis: settings.targetBasis,
+        ),
+      );
+      for (final s in [
+        settings.copyWith(activityMode: ActivityMode.daily),
+        settings.copyWith(flatEnergy: true),
+        settings,
+      ]) {
+        AdaptiveStore.settings.value = s;
+        final due = await service.checkIn();
+        await service.accept(due, due.proposedTargetKcal);
+      }
+      final history = await store.history();
+      expect(history, hasLength(2));
+      expect(history.last.basis, settings.targetBasis);
+
+      // A weekly check-in, of the same settings, is a record of its own.
+      final weekly = await service.checkIn();
+      await service.accept(weekly, weekly.proposedTargetKcal);
+      expect(await store.history(), hasLength(3));
+    });
+
     test('a record of these settings weeks before the last is no mark', () {
       const settings = AdaptiveSettings(adaptiveTarget: true);
       CheckInRecord at(int daysAgo, AdaptiveSettings s) => CheckInRecord(
@@ -739,6 +770,10 @@ class _MemoryStore extends AdaptiveStore {
 
   @override
   Future<void> addCheckIn(CheckInRecord record) async => records.add(record);
+
+  @override
+  Future<void> replaceLastCheckIn(CheckInRecord record) async =>
+      records[records.length - 1] = record;
 }
 
 /// [inner]'s plan at a pace set by the test.

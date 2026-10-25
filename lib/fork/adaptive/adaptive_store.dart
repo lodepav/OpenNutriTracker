@@ -442,6 +442,13 @@ class AdaptiveStore {
     await (await _box()).put('checkIns', [for (final r in merged) r.toJson()]);
   }
 
+  /// Puts [record] in place of the last one.
+  Future<void> replaceLastCheckIn(CheckInRecord record) async {
+    final box = await _box();
+    final all = box.get('checkIns', defaultValue: []) as List;
+    await box.put('checkIns', [...all.take(all.length - 1), record.toJson()]);
+  }
+
   Future<void> addCheckIn(CheckInRecord record) async {
     final box = await _box();
     await box.put('checkIns', [

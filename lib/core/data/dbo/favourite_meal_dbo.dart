@@ -55,8 +55,17 @@ class FavouriteMealDBO extends HiveObject {
 
   String get mealKey => keyFor(meal.source, meal.code, meal.name);
 
-  factory FavouriteMealDBO.fromJson(Map<String, dynamic> json) =>
-      _$FavouriteMealDBOFromJson(json);
+  // [fork] S86 favourite-time: addedAt goes out in UTC and comes back
+  // local, so a star in the hour the clocks go back keeps its moment; a
+  // file without the offset reads as local, as before.
+  factory FavouriteMealDBO.fromJson(Map<String, dynamic> json) {
+    final read = _$FavouriteMealDBOFromJson(json);
+    return FavouriteMealDBO(meal: read.meal, addedAt: read.addedAt.toLocal());
+  }
 
-  Map<String, dynamic> toJson() => _$FavouriteMealDBOToJson(this);
+  Map<String, dynamic> toJson() => {
+    ..._$FavouriteMealDBOToJson(this),
+    'addedAt': addedAt.toUtc().toIso8601String(),
+  };
+  // [/fork]
 }

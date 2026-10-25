@@ -525,6 +525,55 @@ void main() {
       expect(todayOnly.activityKcal, 0);
     });
 
+    test("a new user's first day takes off a whole day's steps from the "
+        'days before it', () async {
+      final steps = StepCounts(
+        _Steps({
+          for (var d = 1; d <= 14; d++)
+            _today.subtract(Duration(days: d)): 10000,
+          _today: 1000,
+        }),
+        () async => box,
+        () => _today.add(const Duration(hours: 9)),
+      );
+      await steps.turnOn();
+      AdaptiveService serviceWith(AdaptiveSettings settings) {
+        AdaptiveStore.settings.value = settings;
+        return AdaptiveService(
+          _User(),
+          _OneWeighIn(),
+          _TrackedDays(),
+          AdaptiveStore(() async => box),
+          () => _today.add(const Duration(hours: 9)),
+          null,
+          ActivityCounter(
+            activities: () async => [],
+            steps: steps,
+            dayStartOffsetMinutes: () async => 0,
+          ),
+        );
+      }
+
+      addTearDown(
+        () => AdaptiveStore.settings.value = const AdaptiveSettings(),
+      );
+      final off = await serviceWith(
+        const AdaptiveSettings(adaptiveTarget: true),
+      ).checkIn();
+      final daily = await serviceWith(
+        const AdaptiveSettings(
+          adaptiveTarget: true,
+          activityMode: ActivityMode.daily,
+          countWorkouts: false,
+        ),
+      ).checkIn();
+      // 10,000 a day before it, not the 1,000 of this morning.
+      expect(
+        daily.baseKcal,
+        closeTo(off.baseKcal - 10000 * kcalPerStep(80, 180), 0.01),
+      );
+    });
+
     test("a new user's first day takes its activity off the prior", () async {
       AdaptiveService serviceWith(AdaptiveSettings settings) {
         AdaptiveStore.settings.value = settings;

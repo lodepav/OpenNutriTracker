@@ -294,6 +294,12 @@ class AdaptiveService {
         .where((d) => !d.isBefore(start))
         .fold(today, (a, b) => b.isBefore(a) ? b : a);
     final activity = await _countedActivity(first, today);
+    // A new user's only day: the health store's days before it are whole
+    // ones where today's are still coming in, the better guess of the
+    // activity the prior holds (D19).
+    final firstDay = first == today && AdaptiveStore.settings.value.countSteps
+        ? await _meanActivityBefore(today)
+        : null;
     final days = [
       for (
         var d = first;
@@ -304,11 +310,26 @@ class AdaptiveService {
           intakeKcal: intakes[d],
           weightKg: weighIns[d],
           // Today's steps are still coming in; on a first day alone they
-          // are all there is to take off the prior's activity (D19).
-          activityKcal: d == today && d != first ? null : activity?[d],
+          // stand in when there is no history to read.
+          activityKcal: d == today && d != first
+              ? null
+              : d == first && firstDay != null
+              ? firstDay
+              : activity?[d],
         ),
     ];
     return (first: first, days: days);
+  }
+
+  /// The mean counted activity of the 14 days before [today], null when
+  /// none has a count.
+  Future<double?> _meanActivityBefore(DateTime today) async {
+    final days = await _countedActivity(
+      DateTime(today.year, today.month, today.day - 14),
+      DateTime(today.year, today.month, today.day - 1),
+    );
+    if (days == null || days.isEmpty) return null;
+    return days.values.reduce((a, b) => a + b) / days.length;
   }
 
   /// Counted activity per day, or null when none is counted (D17). A
@@ -361,8 +382,12 @@ class AdaptiveService {
         0;
   }
 
-  Future<void> accept(CheckIn checkIn, double targetKcal) => _store.addCheckIn(
-    CheckInRecord(
+  /// A settings switch's own record, made today, gives way to the next
+  /// switch's: browsing the settings with auto-accept on keeps one, and
+  /// the record before it stays the cap's mark ([capMark]).
+  Future<void> accept(CheckIn checkIn, double targetKcal) async {
+    final history = await _store.history();
+    final record = CheckInRecord(
       date: _now(),
       expenditureKcal: checkIn.expenditureKcal,
       proposedKcal: checkIn.proposedTargetKcal,
@@ -374,8 +399,18 @@ class AdaptiveService {
       goalRateKgPerWeek: checkIn.goalRateKgPerWeek,
       targetWeightKg: checkIn.targetWeightKg,
       basis: AdaptiveStore.settings.value.targetBasis,
-    ),
-  );
+    );
+    final n = history.length;
+    final switched =
+        n >= 2 &&
+        _day(history.last.date) == _today() &&
+        history.last.basis != null &&
+        history.last.basis != history[n - 2].basis &&
+        record.basis != history.last.basis;
+    await (switched
+        ? _store.replaceLastCheckIn(record)
+        : _store.addCheckIn(record));
+  }
 
   DateTime _today() => _day(_now());
 
