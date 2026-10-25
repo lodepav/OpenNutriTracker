@@ -1318,7 +1318,7 @@
   "bulkAddTitle": "Add several items",
   "bulkAddInputHint": "2 eggs, 100g toast, black coffee",
   "bulkAddParseLabel": "Find foods",
-  "bulkAddSubmitLabel": "Log {count} items",
+  "bulkAddSubmitLabel": "{count, plural, one{Log 1 item} other{Log {count} items}}",
   "bulkAddNoMatchLabel": "Couldn't match this item",
   "bulkAddUncertainLabel": "Check this match",
   "bulkAddSkipLabel": "Skip",
