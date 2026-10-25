@@ -1,5 +1,6 @@
 import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart'; // [fork] S118
 import 'package:opennutritracker/core/data/repository/recipe_repository.dart';
 import 'package:opennutritracker/core/domain/entity/intake_entity.dart';
 import 'package:opennutritracker/core/domain/entity/tracked_day_entity.dart';
@@ -81,6 +82,11 @@ class IntakeVerticalList extends StatefulWidget {
   final bool hourSection;
   // [/fork]
 
+  // [fork] S118 diary-timeline: the time the meal sits at on the Diary's
+  // timeline, shown in place of its icon; its add button is in the header
+  final DateTime? forkTime;
+  // [/fork]
+
   const IntakeVerticalList({
     super.key,
     required this.day,
@@ -102,6 +108,7 @@ class IntakeVerticalList extends StatefulWidget {
     // [fork] S80 diary-by-hour
     this.hourSection = false,
     // [/fork]
+    this.forkTime, // [fork] S118
   });
 
   /// Whether a meal section is rendered on Home and in the Diary. A 0 % share
@@ -182,6 +189,53 @@ class _IntakeVerticalListState extends State<IntakeVerticalList> {
     return kcalLine;
   }
 
+  // [fork] S118 diary-timeline: the summary on a line of its own under
+  // the header's row, lined up with the title
+  Widget _forkTimelineHeader(BuildContext context, Widget row) {
+    if (widget.forkTime == null || totalKcal <= 0) return row;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final palette = isDark ? AppPalette.dark : AppPalette.light;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        row,
+        // Up under the title: the row is as tall as its buttons.
+        Transform.translate(
+          offset: const Offset(0, -10),
+          child: Padding(
+          padding: const EdgeInsets.only(left: 48 + Dimens.spacing12),
+          child: Text(
+            _timelineSummary(context),
+            semanticsLabel: _headerSummaryLabel(context),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(
+              context,
+            ).textTheme.labelMedium?.copyWith(color: palette.textMuted),
+          ),
+        ),
+        ),
+      ],
+    );
+  }
+
+  // [fork] S118 diary-timeline: the summary on one line,
+  // "1166 kcal · C 215 · F 15 · P 39"; the meal's target is left to the
+  // spoken label, the day's to the card above
+  String _timelineSummary(BuildContext context) {
+    final kcalLine = EnergyDisplay.formatWithUnit(context, totalKcal);
+    if (!widget.showMealMacros || totalKcal <= 0) return kcalLine;
+    return [
+      kcalLine,
+      ...inMacroOrder(
+        carbs: 'C ${totalCarbsGram.toInt()}',
+        fat: 'F ${totalFatsGram.toInt()}',
+        protein: 'P ${totalProteinsGram.toInt()}',
+      ),
+    ].join(' · ');
+  }
+  // [/fork]
+
   // [fork] S81 a11y-labels: the summary in words, not "22 p 41 f 175 c"
   String _headerSummaryLabel(BuildContext context) {
     final s = S.of(context);
@@ -216,15 +270,31 @@ class _IntakeVerticalListState extends State<IntakeVerticalList> {
     return Column(
       children: [
         Container(
-          padding: const EdgeInsets.fromLTRB(
+          // [fork] S118 diary-timeline: closer together on the timeline
+          padding: EdgeInsets.fromLTRB(
             Dimens.spacing16,
-            Dimens.spacing20,
+            widget.forkTime == null ? Dimens.spacing20 : Dimens.spacing8,
             Dimens.spacing12,
-            Dimens.spacing8,
+            widget.forkTime == null ? Dimens.spacing8 : 0,
           ),
+          // [/fork]
           alignment: Alignment.centerLeft,
-          child: Row(
+          child: _forkTimelineHeader(context, Row( // [fork] S118
             children: [
+              // [fork] S118 diary-timeline
+              if (widget.forkTime case final time?)
+                SizedBox(
+                  width: 48,
+                  child: Text(
+                    DateFormat.Hm().format(time),
+                    style: textTheme.labelMedium?.copyWith(
+                      color: palette.textMuted,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                )
+              else
+              // [/fork]
               Container(
                 padding: const EdgeInsets.all(Dimens.spacing8),
                 decoration: BoxDecoration(
@@ -236,7 +306,20 @@ class _IntakeVerticalListState extends State<IntakeVerticalList> {
               const SizedBox(width: Dimens.spacing12),
               Expanded(
                 // [fork] S81 a11y-labels: a heading TalkBack can jump between
-                child: Semantics(
+                // [fork] S118 diary-timeline: a smaller title
+                child: widget.forkTime != null
+                    ? Semantics(
+                        header: true,
+                        child: Text(
+                          widget.title,
+                          style: textTheme.titleMedium?.copyWith(
+                            color: palette.textStrong,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      )
+                    : // [/fork]
+                Semantics(
                   header: true,
                   child: AutoSizeText(
                     widget.title,
@@ -252,7 +335,8 @@ class _IntakeVerticalListState extends State<IntakeVerticalList> {
                 // [/fork]
               ),
               const SizedBox(width: Dimens.spacing8),
-              if (_shouldShowHeaderSummary)
+              if (_shouldShowHeaderSummary &&
+                  widget.forkTime == null) // [fork] S118: under the title
                 Flexible(
                   child: Text(
                     _buildHeaderSummary(context),
@@ -272,6 +356,15 @@ class _IntakeVerticalListState extends State<IntakeVerticalList> {
                 ),
               if (widget.onSortTypeChanged != null && totalKcal > 0)
                 _buildSortMenu(context),
+              // [fork] S118 diary-timeline: the add row's button
+              if (widget.forkTime != null)
+                IconButton(
+                  key: const ValueKey('timeline-add'),
+                  tooltip: S.of(context).addToSectionLabel(widget.title),
+                  icon: Icon(Icons.add_rounded, color: accent),
+                  onPressed: () => _onPlaceholderCardTapped(context),
+                ),
+              // [/fork]
               Semantics(
                   identifier: 'intake-section-menu',
                   // Tight bounds: without this the node inherits the flex
@@ -398,7 +491,7 @@ class _IntakeVerticalListState extends State<IntakeVerticalList> {
                           ),
                         ])),
             ],
-          ),
+          )),
         ),
         DragTarget<IntakeEntity>(
           onAcceptWithDetails: (intake) {
@@ -460,7 +553,7 @@ class _IntakeVerticalListState extends State<IntakeVerticalList> {
                     ),
                   ),
                 // [fork] S80 diary-by-hour
-                if (!widget.hourSection)
+                if (!widget.hourSection && widget.forkTime == null) // S118
                 // [/fork]
                 PlaceholderCard(
                   day: widget.day,

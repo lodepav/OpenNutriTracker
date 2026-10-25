@@ -4,7 +4,11 @@ import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/core/utils/extensions.dart';
+import 'package:intl/intl.dart';
 import 'package:table_calendar/table_calendar.dart';
+// [fork] S118 diary-header
+import 'package:opennutritracker/fork/display/day_ring.dart';
+// [/fork]
 
 class DiaryTableCalendar extends StatefulWidget {
   final Function(DateTime, Map<String, TrackedDayEntity>) onDateSelected;
@@ -46,6 +50,21 @@ double _weekdayRowHeight(BuildContext context, TextStyle style) =>
         .height;
 
 class _DiaryTableCalendarState extends State<DiaryTableCalendar> {
+  // [fork] S118 diary-header: a week of day rings, the month a tap on the
+  // title away
+  var _format = CalendarFormat.week;
+
+  Widget _ring(DateTime day, {bool selected = false, bool today = false,
+          bool outside = false}) =>
+      DayRing(
+        day: day,
+        trackedDay: widget.trackedDaysMap[day.toParsedDay()],
+        selected: selected,
+        today: today,
+        outside: outside,
+      );
+  // [/fork]
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -71,6 +90,12 @@ class _DiaryTableCalendarState extends State<DiaryTableCalendar> {
           Dimens.spacing12,
         ),
         child: TableCalendar(
+          // [fork] S118 diary-header
+          calendarFormat: _format,
+          availableGestures: AvailableGestures.horizontalSwipe,
+          onFormatChanged: (format) => setState(() => _format = format),
+          rowHeight: 46,
+          // [/fork]
           headerStyle: HeaderStyle(
             titleCentered: true,
             formatButtonVisible: false,
@@ -136,23 +161,50 @@ class _DiaryTableCalendarState extends State<DiaryTableCalendar> {
           ),
           selectedDayPredicate: (day) => isSameDay(widget.selectedDate, day),
           calendarBuilders: CalendarBuilders(
-            markerBuilder: (context, date, events) {
-              final trackedDay = widget.trackedDaysMap[date.toParsedDay()];
-              if (trackedDay != null) {
-                return Container(
-                  margin: const EdgeInsets.only(top: 10),
-                  padding: const EdgeInsets.all(1),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: trackedDay.getCalendarDayRatingColor(context),
+            // [fork] S118 diary-header: the day rings in place of
+            // upstream's marker dot
+            // (a title of its own goes without the package's tap)
+            headerTitleBuilder: (context, day) => Semantics(
+              button: true,
+              label: _format == CalendarFormat.week
+                  ? 'Show the month'
+                  : 'Show the week',
+              child: InkWell(
+                borderRadius: BorderRadius.circular(8),
+                onTap: () => setState(
+                  () => _format = _format == CalendarFormat.week
+                      ? CalendarFormat.month
+                      : CalendarFormat.week,
+                ),
+                child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    DateFormat.yMMMM().format(day),
+                    style: textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: palette.textStrong,
+                    ),
                   ),
-                  width: 5.0,
-                  height: 5.0,
-                );
-              } else {
-                return const SizedBox();
-              }
-            },
+                  Icon(
+                    _format == CalendarFormat.week
+                        ? Icons.expand_more_rounded
+                        : Icons.expand_less_rounded,
+                    color: palette.textMuted,
+                  ),
+                ],
+              ),
+              ),
+            ),
+            defaultBuilder: (context, day, _) => _ring(day),
+            outsideBuilder: (context, day, _) => _ring(day, outside: true),
+            todayBuilder: (context, day, _) => _ring(day, today: true),
+            selectedBuilder: (context, day, _) => _ring(
+              day,
+              selected: true,
+              today: isSameDay(day, widget.currentDate),
+            ),
+            // [/fork]
           ),
         ),
       ),
