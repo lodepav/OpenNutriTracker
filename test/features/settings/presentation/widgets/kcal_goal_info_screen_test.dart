@@ -57,7 +57,11 @@ UserEntity _buildUser({
   );
 }
 
-Widget _wrap(KcalGoalBreakdownEntity breakdown, {bool usesKilojoules = false}) {
+Widget _wrap(
+  KcalGoalBreakdownEntity breakdown, {
+  bool usesKilojoules = false,
+  bool equations = true, // [fork] S134
+}) {
   return ChangeNotifierProvider(
     create: (_) => EnergyUnitProvider(usesKilojoules: usesKilojoules),
     child: MaterialApp(
@@ -68,7 +72,12 @@ Widget _wrap(KcalGoalBreakdownEntity breakdown, {bool usesKilojoules = false}) {
         GlobalCupertinoLocalizations.delegate,
       ],
       supportedLocales: S.supportedLocales,
-      home: KcalGoalInfoScreen(usecase: _FakeBreakdownUsecase(breakdown)),
+      // [fork] S134 goal-explained: these tests read the page of every step
+      home: KcalGoalInfoScreen(
+        usecase: _FakeBreakdownUsecase(breakdown),
+        equations: equations,
+      ),
+      // [/fork]
     ),
   );
 }
@@ -77,17 +86,57 @@ Future<void> _pump(
   WidgetTester tester,
   KcalGoalBreakdownEntity breakdown, {
   bool usesKilojoules = false,
+  bool equations = true, // [fork] S134
 }) async {
   // Tall viewport so the lazy ListView inflates every card — the tests
   // assert content across the whole screen, including the last cards.
   tester.view.physicalSize = const Size(1200, 4500);
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.reset);
-  await tester.pumpWidget(_wrap(breakdown, usesKilojoules: usesKilojoules));
+  await tester.pumpWidget(
+    _wrap(breakdown, usesKilojoules: usesKilojoules, equations: equations),
+  );
   await tester.pumpAndSettle();
 }
 
 void main() {
+  // [fork] S134 goal-explained
+  group('the overview', () {
+    KcalGoalBreakdownEntity breakdown() => KcalGoalBreakdownEntity.compute(
+      user: _buildUser(),
+      userKcalAdjustment: 150,
+      totalKcalActivities: 320,
+    );
+
+    testWidgets('three steps add up to the goal, each with its math', (
+      tester,
+    ) async {
+      await _pump(tester, breakdown(), equations: false);
+
+      expect(find.text("Today's goal"), findsOneWidget);
+      expect(find.textContaining('3134', findRichText: true), findsOneWidget);
+      expect(find.text('3164 kcal'), findsOneWidget);
+      // The weight goal's −500 and the own +150 are one step.
+      expect(find.text('−350 kcal'), findsOneWidget);
+      expect(find.text('+320 kcal'), findsOneWidget);
+
+      expect(find.text('1.27'), findsNothing);
+      await tester.tap(find.text('Show the math').first);
+      await tester.pumpAndSettle();
+      expect(find.text('1.27'), findsOneWidget);
+    });
+
+    testWidgets('The equations opens the page of every step', (tester) async {
+      await _pump(tester, breakdown(), equations: false);
+      expect(find.text(l10nEn.kcalGoalInfoIntro), findsNothing);
+
+      await tester.tap(find.byKey(const Key('goal-equations')));
+      await tester.pumpAndSettle();
+      expect(find.text(l10nEn.kcalGoalInfoIntro), findsOneWidget);
+    });
+  });
+  // [/fork]
+
   group('KcalGoalInfoScreen', () {
     // Reference case, hand-computed from IOM 2005 p. 204. PA multiplies the
     // weight *and* height terms — see #987, which is why these numbers moved.
