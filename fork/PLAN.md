@@ -399,8 +399,8 @@ and take kJ for kJ users (`lib/fork/units/energy_text.dart`).
   day's plan, counted nowhere until a tick logs a food on its planned day and meal ("Log all"
   for the lot). Kept in the fork's per-profile box beside the adaptive state, and in the
   backup as `fork_plan.json`, every profile's included.
-- *Done:* body measurements on Trends (S40): body fat %, waist, hips, chest, neck, arm and
-  thigh, any of them on a day (a second entry that day replaces it), one charted over the
+- *Done:* body measurements on Trends (S40): body fat %, waist, hips, chest, neck, left and
+  right arm and thigh, any of them on a day (a second entry that day replaces it), one charted over the
   range with its latest value and change, entries deletable; inches for lb and st users. The
   latest body fat % of the past 90 days replaces Deurenberg's estimate in the expenditure
   model and the goal planner (MacroFactor uses a measured one too). Per profile, in the

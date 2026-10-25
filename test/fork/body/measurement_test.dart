@@ -53,6 +53,18 @@ void main() {
       });
       expect(await store.recentBodyFat(_today), 22);
     });
+
+    test('an arm or thigh stored before they had sides is the right one', () {
+      Measurement read(String metric) => Measurement.fromJson({
+        'id': '1',
+        'date': '2026-10-23T00:00:00.000',
+        'metric': metric,
+        'value': 32,
+      });
+      expect(read('arm').metric, BodyMetric.rightArm);
+      expect(read('thigh').metric, BodyMetric.rightThigh);
+      expect(read('leftArm').metric, BodyMetric.leftArm);
+    });
   });
 
   testWidgets('the card adds a day of measurements, inches stored as cm', (
