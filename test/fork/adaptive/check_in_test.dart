@@ -355,9 +355,37 @@ void main() {
         AdaptiveStore.settings.value = settings.copyWith(
           activityMode: ActivityMode.weekly,
         );
-        expect((await service.checkIn()).baseKcal, closeTo(free, 0.01));
+        final switched = await service.checkIn();
+        expect(switched.baseKcal, closeTo(free, 0.01));
+
+        // Switched back, as auto-accept takes each switch: capped against
+        // the record of these settings again, not the switch's.
+        await service.accept(switched, switched.proposedTargetKcal);
+        AdaptiveStore.settings.value = settings;
+        expect((await service.checkIn()).baseKcal, closeTo(free - 400, 0.01));
       },
     );
+
+    test('a record of these settings weeks before the last is no mark', () {
+      const settings = AdaptiveSettings(adaptiveTarget: true);
+      CheckInRecord at(int daysAgo, AdaptiveSettings s) => CheckInRecord(
+        date: _today.subtract(Duration(days: daysAgo)),
+        expenditureKcal: 2500,
+        proposedKcal: 2000,
+        acceptedKcal: 2000,
+        baseKcal: 2500,
+        basis: s.targetBasis,
+      );
+      final daily = settings.copyWith(activityMode: ActivityMode.daily);
+      expect(
+        AdaptiveService.capMark([at(30, settings), at(0, daily)], settings),
+        isNull,
+      );
+      expect(
+        AdaptiveService.capMark([at(7, settings), at(0, daily)], settings),
+        isNotNull,
+      );
+    });
 
     test('a record without its settings gives no activity change', () async {
       AdaptiveStore.settings.value = const AdaptiveSettings(

@@ -101,6 +101,23 @@ class AdaptiveService {
         await basisChanged();
   }
 
+  /// The record a check-in is capped against: the last one built under
+  /// [settings], looking back from the last no more than a week. A
+  /// setting switched and back meets its own record again, not the one
+  /// the switch made; one changed for good has none.
+  static CheckInRecord? capMark(
+    List<CheckInRecord> history,
+    AdaptiveSettings settings,
+  ) {
+    if (history.isEmpty) return null;
+    final last = history.last.date;
+    for (final r in history.reversed) {
+      if (CalendarDayCalc.daysBetween(r.date, last) > checkInEveryDays) break;
+      if (!r.basisChanged(settings)) return r;
+    }
+    return null;
+  }
+
   /// Whether no check-in has been accepted yet.
   Future<bool> firstCheckIn() async => await _store.lastCheckIn() == null;
 
@@ -125,7 +142,8 @@ class AdaptiveService {
     final user = await _user.getUserData();
     final days = (await _history()).days;
     final rate = goalRateKgPerWeek(user);
-    final previous = await _store.lastCheckIn();
+    final history = await _store.history();
+    final previous = history.lastOrNull;
     final settings = AdaptiveStore.settings.value;
     return computeCheckIn(
       CheckInInputs(
@@ -137,9 +155,7 @@ class AdaptiveService {
         targetWeightKg: user.targetWeightKg,
         // A base built under other settings (one holding activity, say)
         // is no mark to cap against (D20).
-        previousBaseKcal: previous?.basisChanged(settings) ?? false
-            ? null
-            : previous?.baseKcal,
+        previousBaseKcal: capMark(history, settings)?.baseKcal,
         // Only a record of the same settings says what its activity was.
         previousActivityKcal: previous?.basis == settings.targetBasis
             ? previous!.activityKcal
