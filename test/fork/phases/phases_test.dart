@@ -248,10 +248,10 @@ void main() {
     testWidgets('shows the running phase and what follows', (tester) async {
       await pump(tester, _MemoryPhases(_plan));
 
-      expect(find.text('Now: Cut, 2 weeks -0.50 kg a week'), findsOneWidget);
-      expect(find.text('Week 2 of 2, until 2026-11-02'), findsOneWidget);
+      expect(find.text('Now: Cut, 2 weeks at -0.50 kg a week'), findsOneWidget);
+      expect(find.text('Week 2 of 2, until Nov 2, 2026'), findsOneWidget);
       expect(
-        find.text('2026-11-02: Maintenance, 1 week at maintenance'),
+        find.text('Nov 2, 2026: Maintenance, 1 week at maintenance'),
         findsOneWidget,
       );
     });
@@ -275,7 +275,10 @@ void main() {
         [for (final p in plan.phases) (p.kind, p.kgPerWeek, p.weeks)],
         [(PhaseKind.cut, -0.5, 11), (PhaseKind.maintain, 0, 2)],
       );
-      expect(find.text('Now: Cut, 11 weeks -0.50 kg a week'), findsOneWidget);
+      expect(
+        find.text('Now: Cut, 11 weeks at -0.50 kg a week'),
+        findsOneWidget,
+      );
     });
 
     testWidgets('a phase until a weight: weeks from the pace', (tester) async {
@@ -293,13 +296,14 @@ void main() {
 
       await tap('phases-edit');
       // 12 weeks at -0.5 from 90.4.
-      expect(ends(0), 'Ends about 2027-01-19, ~84.4 kg');
+      expect(ends(0), 'Ends about Jan 19, 2027, ~84.4 kg');
       await tap('phase-0-until');
       expect(find.text('Until 84.5 kg: about 12 weeks'), findsOneWidget);
       await tap('phase-0-lighter');
       await tap('phase-0-lighter');
       expect(find.text('Until 83.5 kg: about 14 weeks'), findsOneWidget);
-      expect(ends(0), 'Ends about 2027-02-02, ~83.5 kg');
+      // It says the weight once: it ends at the one it names.
+      expect(ends(0), 'Ends about Feb 2, 2027');
 
       // A later phase to a weight starts where this one ends.
       await tap('phase-0-for-time');
@@ -311,7 +315,7 @@ void main() {
       await tap('phase-0-shorter');
       // A week less before it: half a kilo more to lose.
       expect(find.text('Until 82.5 kg: about 3 weeks'), findsOneWidget);
-      expect(ends(1), 'Ends about 2027-02-16, ~82.5 kg');
+      expect(ends(1), 'Ends about Feb 16, 2027');
 
       await tap('phases-save');
       final plan = store.saved!;
@@ -322,8 +326,7 @@ void main() {
       );
       expect(
         find.text(
-          '2027-01-26: Cut to 82.5 kg, about 3 weeks -0.50 kg a week, '
-          '~82.5 kg',
+          'Jan 26, 2027: Cut to 82.5 kg, about 3 weeks at -0.50 kg a week',
         ),
         findsOneWidget,
       );
@@ -433,7 +436,7 @@ void main() {
       expect(
         find.text(
           'Now: Cut toward 60.0 kg, 52 weeks (the longest a phase runs) '
-          '-0.50 kg a week',
+          'at -0.50 kg a week',
         ),
         findsOneWidget,
       );
@@ -447,7 +450,7 @@ void main() {
       expect(find.byKey(const ValueKey('phase-0-until')), findsNothing);
       expect(
         tester.widget<Text>(find.byKey(const ValueKey('phase-0-ends'))).data,
-        'Ends 2027-01-19',
+        'Ends Jan 19, 2027',
       );
     });
 
@@ -459,9 +462,67 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const ValueKey('phases-delete')));
       await tester.pumpAndSettle();
+      // Asked first: cancelled, the plan stays.
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('phases-save')), findsOneWidget);
+      expect(store.saved, isNotNull);
+
+      await tester.tap(find.byKey(const ValueKey('phases-delete')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('phases-confirm')));
+      await tester.pumpAndSettle();
 
       expect(store.saved, isNull);
       expect(find.text('Plan'), findsOneWidget);
+    });
+
+    testWidgets('back asks before changes are lost', (tester) async {
+      final store = _MemoryPhases(_plan);
+      await pump(tester, store);
+      final save = find.byKey(const ValueKey('phases-save'));
+
+      // Nothing changed: back just leaves.
+      await tester.tap(find.byKey(const ValueKey('phases-edit')));
+      await tester.pumpAndSettle();
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      expect(save, findsNothing);
+
+      await tester.tap(find.byKey(const ValueKey('phases-edit')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('phase-0-longer')));
+      await tester.pump();
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      expect(find.text('Discard your changes?'), findsOneWidget);
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+      expect(save, findsOneWidget);
+
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('phases-confirm')));
+      await tester.pumpAndSettle();
+      expect(save, findsNothing);
+      expect(store.saved!.phases.first.weeks, _plan.phases.first.weeks);
+    });
+
+    testWidgets('the steppers and the pace are named', (tester) async {
+      await pump(tester, _MemoryPhases(_plan));
+      await tester.tap(find.byKey(const ValueKey('phases-edit')));
+      await tester.pumpAndSettle();
+
+      Finder tip(String key) => find.descendant(
+        of: find.byKey(ValueKey(key)),
+        matching: find.byType(Tooltip),
+      );
+      expect(tester.widget<Tooltip>(tip('phase-0-shorter')).message, 'Shorter');
+      expect(tester.widget<Tooltip>(tip('phase-0-longer')).message, 'Longer');
+      final pace = tester.widget<Slider>(
+        find.byKey(const ValueKey('phase-0-pace')),
+      );
+      expect(pace.semanticFormatterCallback!(0.5), 'Pace, -0.50 kg a week');
     });
   });
 }

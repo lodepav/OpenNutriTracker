@@ -191,7 +191,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('All recents'), findsNothing);
     expect(
-      find.textContaining('500 kcal left: 40 g protein, 50 g carbs, 5 g fat'),
+      find.textContaining('500 kcal left: 50 g carbs, 5 g fat, 40 g protein'),
       findsOneWidget,
     );
     expect(find.text('100 g: 200 kcal, 40 g protein'), findsOneWidget);

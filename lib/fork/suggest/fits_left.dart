@@ -9,6 +9,7 @@ import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/features/add_meal/presentation/add_meal_type.dart';
 import 'package:opennutritracker/features/add_meal/presentation/widgets/meal_item_card.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
+import 'package:opennutritracker/fork/display/display_prefs.dart';
 import 'package:opennutritracker/fork/units/energy_text.dart';
 
 /// What is left of a day's budget: energy and each macro, in kcal and
@@ -158,16 +159,21 @@ class _FitsLeftSwitchState extends State<FitsLeftSwitch> {
       final left = data.left;
       final foods = fitsLeft(data.recents, left);
       String grams(double g) => '${g < 0 ? 0 : g.round()} g';
+      final macros = inMacroOrder(
+        carbs: '${grams(left.carbs)} carbs',
+        fat: '${grams(left.fat)} fat',
+        protein: '${grams(left.protein)} protein',
+      ).join(', ');
       return ListView(
         children: [
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 8),
             child: Text(
               left.kcal <= 0
-                  ? 'Nothing is left of the day\'s energy.'
+                  ? 'Nothing is left of the day\'s energy. Turn off '
+                        '"Fits what\'s left" for all your recent foods.'
                   : '${energyText(context, left.kcal)} left: '
-                        '${grams(left.protein)} protein, '
-                        '${grams(left.carbs)} carbs, ${grams(left.fat)} fat. '
+                        '$macros. '
                         'Best fit first, at the amount you logged last.',
               style: theme.textTheme.bodySmall,
             ),
