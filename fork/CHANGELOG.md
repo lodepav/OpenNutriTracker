@@ -2,6 +2,34 @@
 
 Written by fork/tools/release_notes.dart at each release (D16).
 
+## 0.2.0 · 2026-10-25
+
+Based on OpenNutriTracker 2.5.0.
+
+### New
+
+- goal changes at once, logging-gap guard (D18), round-2 review fixes
+- expenditure and check-in settings, activity, days left out
+
+### Fixes and changes
+
+- diet phases to a weight, deferred review items
+- review round 4 simplification
+- review round 3 tests
+- review round 2 fixes
+- review round 1 fixes
+- "Fits what's left" over the add-meal recents
+- weight milestones in the goal planner; diet phases until a weight
+- kJ in meal headers, meal detail, Trends summary; onboarding badge wraps
+- review fixes for repeating planned foods
+- repeat a planned food on chosen weekdays
+- chosen segment contrast
+- usual portion from the diary, calorie chart summary
+- edit dialog, plurals, dates, search macros
+- UX standards, review loop and two rounds of fixes
+- second UX review fixes
+- macro order, diary by the hour, MacroFactor import in one go
+
 ## 0.1.0 · 2026-10-24
 
 Based on OpenNutriTracker 2.5.0.
