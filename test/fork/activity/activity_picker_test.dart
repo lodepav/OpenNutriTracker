@@ -202,6 +202,16 @@ void main() {
       recent: [UserActivityEntity('r', 45, 1, DateTime(2026), _cycling)],
     );
     expect(find.text('Recent · one tap logs it again'), findsOneWidget);
+    expect(
+      tester.getSemantics(
+        find.bySemanticsIdentifier('add-activity-recent-01015'),
+      ),
+      containsSemantics(
+        label: 'Log bicycling, 45 min, again',
+        isButton: true,
+        hasTapAction: true,
+      ),
+    );
     await _tap(tester, 'add-activity-recent-01015');
     expect(logged.single.duration, 45);
     expect(logged.single.burnedKcal, 450);

@@ -375,6 +375,8 @@ class _RecentChip extends StatelessWidget {
         identifier: 'add-activity-recent-${activity.code}',
         button: true,
         label: 'Log $name, $amount, again',
+        // Its own tap, since the chip's below is left out.
+        onTap: onTap,
         excludeSemantics: true,
         child: ActionChip(
           avatar: Icon(activity.displayIcon, size: 18),
