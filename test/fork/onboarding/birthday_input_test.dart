@@ -18,10 +18,7 @@ String _type(BirthdayFormat format, List<String> keys) {
     final text = key == '⌫'
         ? value.text.substring(0, value.text.length - 1)
         : value.text + key;
-    value = formatter.formatEditUpdate(
-      value,
-      TextEditingValue(text: text),
-    );
+    value = formatter.formatEditUpdate(value, TextEditingValue(text: text));
   }
   return value.text;
 }
