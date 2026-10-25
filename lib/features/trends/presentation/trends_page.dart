@@ -633,7 +633,10 @@ class _MacrosTrendCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis),
                 ),
                 const SizedBox(width: Dimens.spacing8),
-                Text('${intake.toInt()} / ${goal.toInt()} g',
+                // [fork] S114 average-round: rounded, as the weekly
+                // report's are (it read 439 g where this said 438 g)
+                Text('${intake.round()} / ${goal.round()} g',
+                // [/fork]
                     style: text.bodySmall?.copyWith(color: palette.textStrong, fontWeight: FontWeight.w700)),
               ],
             ),
@@ -821,8 +824,8 @@ String _caloriesSummary(BuildContext context, List<FlSpot> spots, double avgGoal
   final avg = logged.reduce((a, b) => a + b) / logged.length;
   final days = logged.length == 1 ? '1 day' : '${logged.length} days';
   final unit = EnergyDisplay.unitLabel(context);
-  final goal = avgGoal > 0 ? ', goal ${avgGoal.toInt()} $unit' : '';
-  return 'Average ${avg.toInt()} $unit over $days logged$goal';
+  final goal = avgGoal > 0 ? ', goal ${avgGoal.round()} $unit' : '';
+  return 'Average ${avg.round()} $unit over $days logged$goal';
 }
 // [/fork]
 
