@@ -206,7 +206,7 @@ void main() {
       tester.getSemantics(
         find.bySemanticsIdentifier('add-activity-recent-01015'),
       ),
-      containsSemantics(
+      isSemantics(
         label: 'Log bicycling, 45 min, again',
         isButton: true,
         hasTapAction: true,

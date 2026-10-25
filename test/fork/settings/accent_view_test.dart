@@ -86,7 +86,7 @@ void main() {
     expect(find.byIcon(Icons.check_rounded), findsOneWidget);
     expect(
       tester.getSemantics(find.bySemanticsIdentifier('accent-preset-03')),
-      containsSemantics(
+      isSemantics(
         label: 'Colour #FFB300',
         isButton: true,
         isSelected: true,
