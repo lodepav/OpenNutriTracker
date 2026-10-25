@@ -17,6 +17,7 @@ import 'package:opennutritracker/features/add_meal/presentation/widgets/default_
 import 'package:opennutritracker/features/add_meal/presentation/widgets/meal_search_bar.dart';
 import 'package:opennutritracker/features/add_meal/presentation/widgets/no_results_widget.dart';
 import 'package:opennutritracker/generated/l10n.dart';
+import 'package:opennutritracker/fork/off/off_kinds.dart'; // [fork] S117
 
 /// Reusable 3-tab food search (Products / Food / Recently) that delegates the
 /// "selected" action to a callback rather than pushing MealDetailScreen.
@@ -300,7 +301,8 @@ class _PickableMealCard extends StatelessWidget {
             padding: const EdgeInsets.all(Dimens.spacing12),
             child: Row(
               children: [
-                meal.thumbnailImageUrl != null
+                meal.thumbnailImageUrl != null &&
+                        OffKinds.showsPhoto(meal) // [fork] S117
                     ? ClipRRect(
                         borderRadius: Dimens.borderRadiusS,
                         child: CachedNetworkImage(
@@ -318,13 +320,22 @@ class _PickableMealCard extends StatelessWidget {
                           color: accent.withValues(alpha: 0.14),
                           borderRadius: Dimens.borderRadiusS,
                         ),
-                        child: Icon(
-                          meal.source == MealSourceEntity.recipe
-                              ? Icons.menu_book_rounded
-                              : Icons.restaurant_rounded,
-                          color: accent,
-                          size: 24,
-                        ),
+                        alignment: Alignment.center,
+                        // [fork] S117: an Open Food Facts product shows its
+                        // kind, as in the meal search
+                        child: switch (OffKinds.emojiFor(meal)) {
+                          final emoji? => ExcludeSemantics(
+                            child: Text(emoji, style: const TextStyle(fontSize: 26)),
+                          ),
+                          _ => Icon(
+                            meal.source == MealSourceEntity.recipe
+                                ? Icons.menu_book_rounded
+                                : Icons.restaurant_rounded,
+                            color: accent,
+                            size: 24,
+                          ),
+                        },
+                        // [/fork]
                       ),
                 const SizedBox(width: Dimens.spacing12),
                 Expanded(
