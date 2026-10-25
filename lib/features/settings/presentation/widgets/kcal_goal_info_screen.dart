@@ -21,6 +21,9 @@ import 'package:opennutritracker/fork/display/display_prefs.dart';
 // [fork] S103 kj-wording
 import 'package:opennutritracker/fork/units/energy_text.dart';
 // [/fork]
+// [fork] S134 goal-explained
+import 'package:opennutritracker/fork/goal/goal_explained.dart';
+// [/fork]
 
 /// Transparency screen: shows every variable and intermediate step behind
 /// today's kcal goal, so the number on the home screen is fully auditable
@@ -41,7 +44,17 @@ class KcalGoalInfoScreen extends StatefulWidget {
   /// can't drift apart.
   final KcalGoalBreakdownEntity? breakdown;
 
-  const KcalGoalInfoScreen({super.key, this.usecase, this.breakdown});
+  // [fork] S134 goal-explained: true for upstream's page of every step,
+  // "The equations" from the overview
+  final bool equations;
+  // [/fork]
+
+  const KcalGoalInfoScreen({
+    super.key,
+    this.usecase,
+    this.breakdown,
+    this.equations = false, // [fork] S134
+  });
 
   @override
   State<KcalGoalInfoScreen> createState() => _KcalGoalInfoScreenState();
@@ -64,7 +77,13 @@ class _KcalGoalInfoScreenState extends State<KcalGoalInfoScreen> {
   Widget build(BuildContext context) {
     final l10n = S.of(context);
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.settingsKcalGoalInfoLabel)),
+      // [fork] S134 goal-explained
+      appBar: AppBar(
+        title: Text(
+          widget.equations ? 'The equations' : l10n.settingsKcalGoalInfoLabel,
+        ),
+      ),
+      // [/fork]
       body: FutureBuilder<KcalGoalBreakdownEntity>(
         future: _breakdown,
         builder: (context, snapshot) {
@@ -72,6 +91,33 @@ class _KcalGoalInfoScreenState extends State<KcalGoalInfoScreen> {
           if (breakdown == null) {
             return const Center(child: CircularProgressIndicator());
           }
+          // [fork] S134 goal-explained: the overview first
+          if (!widget.equations) {
+            return GoalExplainedBody(
+              breakdown: breakdown,
+              showTargetNote: widget.breakdown == null,
+              onInputs: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => Scaffold(
+                    appBar: AppBar(title: Text(l10n.kcalGoalInfoInputsSection)),
+                    body: ListView(
+                      padding: const EdgeInsets.all(Dimens.spacing16),
+                      children: [_InputsCard(breakdown: breakdown)],
+                    ),
+                  ),
+                ),
+              ),
+              onEquations: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => KcalGoalInfoScreen(
+                    breakdown: breakdown,
+                    equations: true,
+                  ),
+                ),
+              ),
+            );
+          }
+          // [/fork]
           return ListView(
             padding: const EdgeInsets.symmetric(
               horizontal: Dimens.spacing16,

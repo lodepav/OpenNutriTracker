@@ -218,7 +218,13 @@ class OnboardingOverviewPageBody extends StatelessWidget {
               child: TextButton.icon(
                 onPressed: () => Navigator.of(context).push(
                   MaterialPageRoute(
-                    builder: (_) => KcalGoalInfoScreen(breakdown: breakdown),
+                    // [fork] S134 goal-explained: the steps are on this page
+                    // already, so the link goes to every number
+                    builder: (_) => KcalGoalInfoScreen(
+                      breakdown: breakdown,
+                      equations: true,
+                    ),
+                    // [/fork]
                   ),
                 ),
                 icon: const Icon(Icons.calculate_outlined, size: 18),
