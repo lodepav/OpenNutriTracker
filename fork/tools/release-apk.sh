@@ -133,6 +133,8 @@ fi
 cp lib/core/utils/env.g.dart "$SRC/lib/core/utils/"
 (cd "$SRC" && flutter gen-l10n && nice -n 19 flutter build apk --flavor full --release --target-platform android-arm64)
 UNSIGNED="$SRC/build/app/outputs/flutter-apk/app-full-release.apk"
+# Its daemon would sit on some 4 GB for three hours, enough to get the emulator OOM-killed.
+(cd "$SRC/android" && ./gradlew --stop -q) || true
 took "build"
 "${BT}zipalign" -f -p 4 "$UNSIGNED" "$TMP/aligned.apk"
 echo "signing with $KS ($ALIAS)"
