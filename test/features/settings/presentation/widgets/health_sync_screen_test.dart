@@ -178,7 +178,8 @@ void main() {
     await pumpScreen(tester);
 
     expect(
-      tester.widget<SwitchListTile>(find.byType(SwitchListTile)).value,
+      // [fork] S138 health-connect: a box to tick
+      tester.widget<CheckboxListTile>(find.byType(CheckboxListTile)).value,
       isFalse,
     );
     // A null onChanged is what makes a Slider unusable, so it is the honest
@@ -204,7 +205,8 @@ void main() {
     expect(settingsBloc.importEnabledCalls, [true]);
     expect(settingsBloc.multiplierCalls, [suggestedMultiplier]);
     expect(
-      tester.widget<SwitchListTile>(find.byType(SwitchListTile)).value,
+      // [fork] S138 health-connect: a box to tick
+      tester.widget<CheckboxListTile>(find.byType(CheckboxListTile)).value,
       isTrue,
     );
     expect(
@@ -226,7 +228,8 @@ void main() {
     await optIn(tester);
 
     expect(
-      tester.widget<SwitchListTile>(find.byType(SwitchListTile)).value,
+      // [fork] S138 health-connect: a box to tick
+      tester.widget<CheckboxListTile>(find.byType(CheckboxListTile)).value,
       isFalse,
     );
     expect(settingsBloc.importEnabledCalls, isEmpty);
@@ -343,7 +346,8 @@ void main() {
     expect(settingsBloc.importEnabledCalls, isEmpty);
     expect(importWorkoutsUsecase.importNowCalls, 0);
     expect(
-      tester.widget<SwitchListTile>(find.byType(SwitchListTile)).value,
+      // [fork] S138 health-connect: a box to tick
+      tester.widget<CheckboxListTile>(find.byType(CheckboxListTile)).value,
       isFalse,
     );
   });
