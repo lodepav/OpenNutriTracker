@@ -398,7 +398,8 @@ class _PhasePlanScreenState extends State<PhasePlanScreen> {
                 max: 1,
                 divisions: 18,
                 value: p.kgPerWeek.abs().clamp(0.1, 1.0),
-                label: p.kgPerWeek.abs().toStringAsFixed(2),
+                // No value bubble: the line above says the pace, signed,
+                // and a bubble's unsigned figure would be read out too.
                 semanticFormatterCallback: (v) =>
                     'Pace, ${_pace(p.kind == PhaseKind.cut ? -v : v)}',
                 onChanged: (v) => _set(

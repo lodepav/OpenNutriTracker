@@ -18,6 +18,9 @@ import 'package:opennutritracker/fork/adaptive/adaptive_ui.dart';
 import 'package:opennutritracker/fork/display/display_prefs.dart';
 // [/fork]
 // [/fork]
+// [fork] S103 kj-wording
+import 'package:opennutritracker/fork/units/energy_text.dart';
+// [/fork]
 
 /// Transparency screen: shows every variable and intermediate step behind
 /// today's kcal goal, so the number on the home screen is fully auditable
@@ -350,7 +353,7 @@ class _ManualAdjustmentCard extends StatelessWidget {
         ),
         const Divider(height: Dimens.spacing20),
         _ValueRow(
-          label: l10n.settingsKcalAdjustmentLabel,
+          label: _adjustmentLabel(context), // [fork] S103
           value: _signedEnergy(context, breakdown.manualKcalAdjustment),
           emphasized: true,
         ),
@@ -408,7 +411,7 @@ class _ResultCard extends StatelessWidget {
           value: _signedEnergy(context, breakdown.effectiveAdjustmentKcal),
         ),
         _ValueRow(
-          label: l10n.settingsKcalAdjustmentLabel,
+          label: _adjustmentLabel(context), // [fork] S103
           value: _signedEnergy(context, breakdown.manualKcalAdjustment),
         ),
         _ValueRow(
@@ -449,6 +452,12 @@ class _MacroCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = S.of(context);
     final goalKcal = breakdown.totalKcalGoal.toInt();
+    // [fork] S103 kj-wording: in kJ the goal above is in kJ, so the kcal
+    // these lines start from says its unit
+    final goal = usesKj(context)
+        ? '$goalKcal ${l10n.kcalLabel}'
+        : '$goalKcal';
+    // [/fork]
     return _SectionCard(
       title: l10n.kcalGoalInfoMacroSection,
       children: [
@@ -461,11 +470,11 @@ class _MacroCard extends StatelessWidget {
         _FormulaText.raw(
           text: inMacroOrder(
             carbs: '${l10n.carbsLabel}: '
-                '${_macroLine(goalKcal, breakdown.carbsFractionGoal, MacroCalc.carbsKcalPerGram, breakdown.carbsGoalGrams)}',
+                '${_macroLine(goal, breakdown.carbsFractionGoal, MacroCalc.carbsKcalPerGram, breakdown.carbsGoalGrams)}',
             fat: '${l10n.fatLabel}: '
-                '${_macroLine(goalKcal, breakdown.fatsFractionGoal, MacroCalc.fatKcalPerGram, breakdown.fatsGoalGrams)}',
+                '${_macroLine(goal, breakdown.fatsFractionGoal, MacroCalc.fatKcalPerGram, breakdown.fatsGoalGrams)}',
             protein: '${l10n.proteinLabel}: '
-                '${_macroLine(goalKcal, breakdown.proteinsFractionGoal, MacroCalc.proteinKcalPerGram, breakdown.proteinsGoalGrams)}',
+                '${_macroLine(goal, breakdown.proteinsFractionGoal, MacroCalc.proteinKcalPerGram, breakdown.proteinsGoalGrams)}',
           ).join('\n'),
         ),
         const Divider(height: Dimens.spacing20),
@@ -496,7 +505,7 @@ class _MacroCard extends StatelessWidget {
   /// macro-split dialog edits them; the gram result comes from the entity,
   /// not from re-deriving it here.
   String _macroLine(
-    int goalKcal,
+    String goalKcal, // [fork] S103
     double fraction,
     double kcalPerGram,
     double grams,
@@ -599,7 +608,9 @@ class _FormulaText extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final text = rawText ??
-        '$formula\n= ${resultKcal!.toInt()} ${S.of(context).kcalLabel}';
+        '$formula\n= ${resultKcal!.toInt()} ${S.of(context).kcalLabel}'
+            // [fork] S103 kj-wording: and the kJ the rows below show
+            '${usesKj(context) ? ' = ${EnergyDisplay.formatWithUnit(context, resultKcal!)}' : ''}';
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(Dimens.spacing8),
@@ -614,6 +625,13 @@ class _FormulaText extends StatelessWidget {
     );
   }
 }
+
+// [fork] S103 kj-wording
+String _adjustmentLabel(BuildContext context) =>
+    usesKj(context)
+    ? S.of(context).settingsKjAdjustmentLabel
+    : S.of(context).settingsKcalAdjustmentLabel;
+// [/fork]
 
 /// Formats a stored kcal component with an explicit sign in the current
 /// display unit, so additions and subtractions in the breakdown read as

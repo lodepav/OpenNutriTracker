@@ -261,6 +261,38 @@ void main() {
       await tester.pumpAndSettle();
       expect(imported!.weights.single.weightKg, closeTo(79.83, 0.01));
     });
+
+    testWidgets('a file whose day is logged here already says so, not that '
+        'it was imported', (tester) async {
+      final tables = readTables(
+        'MacroFactor.csv',
+        _bytes('Date,Calories (kcal)\n2026-10-20,2000\n'),
+      );
+      await tester.pumpWidget(
+        MaterialApp(
+          home: HistoryImportDialog(
+            file: readHistory(tables),
+            reread: (unit) => readHistory(tables, unit: unit),
+            plan: (f) => planImport(
+              f,
+              existing: HistoryExisting(loggedDays: {DateTime(2026, 10, 20)}),
+              today: DateTime(2026, 10, 23),
+              source: 'MacroFactor',
+            ),
+          ),
+        ),
+      );
+      expect(
+        find.text(
+          'Nothing to import: the file\'s days are already logged here.',
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.text('Kept as they are here: 1 day already logged.'),
+        findsOneWidget,
+      );
+    });
   });
 
   group('MacroFactor food log', () {

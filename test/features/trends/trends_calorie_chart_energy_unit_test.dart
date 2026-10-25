@@ -122,6 +122,8 @@ void main() {
     expect(_tooltipFor(chart, today), '4347');
     // [fork] S83 the summary converts once
     expect(find.textContaining('Average 4347 kJ'), findsOneWidget);
+    // [fork] S103: the card is "Energy", not "Calories", in kJ.
+    expect(find.text('Energy'), findsOneWidget);
     // [/fork]
     expect(
       chart.data.extraLinesData.horizontalLines.single.y,
@@ -139,6 +141,7 @@ void main() {
     expect(_tooltipFor(chart, today), '1039');
     // [fork] S83
     expect(find.textContaining('Average 1039 kcal'), findsOneWidget);
+    expect(find.text('Calories'), findsOneWidget);
     // [/fork]
     expect(chart.data.extraLinesData.horizontalLines.single.y, _goalKcal);
   });

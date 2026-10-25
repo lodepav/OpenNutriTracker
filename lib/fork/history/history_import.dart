@@ -76,15 +76,15 @@ class HistoryPlan {
 
   /// What is already here, for the dialog: "489 days already imported, …".
   List<String> get kept {
-    String n(int count, String one) => '$count ${count == 1 ? one : '${one}s'}';
     return [
-      if (keptDays > 0) '${n(keptDays, 'day')} already logged',
+      if (keptDays > 0) '${_count(keptDays, 'day')} already logged',
       if (keptImportedDays > 0)
-        '${n(keptImportedDays, 'day')} already imported',
-      if (keptWeighIns > 0) '${n(keptWeighIns, 'weigh-in')} already entered',
+        '${_count(keptImportedDays, 'day')} already imported',
+      if (keptWeighIns > 0)
+        '${_count(keptWeighIns, 'weigh-in')} already entered',
       if (keptMeasurementDays > 0)
-        'body measurements on ${n(keptMeasurementDays, 'day')}',
-      if (keptCustomFoods > 0) n(keptCustomFoods, 'custom food'),
+        'body measurements on ${_count(keptMeasurementDays, 'day')}',
+      if (keptCustomFoods > 0) _count(keptCustomFoods, 'custom food'),
     ];
   }
 
@@ -95,6 +95,10 @@ class HistoryPlan {
       measurements.isEmpty &&
       customFoods.isEmpty;
 }
+
+/// "1 day", "2 days".
+String _count(int count, String one) =>
+    '$count ${count == 1 ? one : '${one}s'}';
 
 /// What is here already, as an import sees it.
 class HistoryExisting {
@@ -634,7 +638,10 @@ class _HistoryImportDialogState extends State<HistoryImportDialog> {
           children: [
             if (plan.isEmpty) ...[
               Text(
-                'Nothing new to import: it is all already here.',
+                plan.keptDays > 0 && plan.keptImportedDays == 0
+                    ? 'Nothing to import: the file\'s days are already '
+                          'logged here.'
+                    : 'Nothing new to import: it is all already here.',
                 key: const ValueKey('history-nothing-new'),
                 style: Theme.of(context).textTheme.titleSmall,
               ),
@@ -645,7 +652,7 @@ class _HistoryImportDialogState extends State<HistoryImportDialog> {
             else
               Text(
                 'Food from ${file.foodTables.map((t) => '"$t"').join(' and ')}: '
-                '${plan.intakes.isEmpty ? 'no new days' : '${plan.intakes.length} days to add, ${_span(plan.intakes.keys)}'}.',
+                '${plan.intakes.isEmpty ? 'no new days' : '${_count(plan.intakes.length, 'day')} to add, ${_span(plan.intakes.keys)}'}.',
                 key: const ValueKey('history-food'),
               ),
             const SizedBox(height: 8),
@@ -680,15 +687,15 @@ class _HistoryImportDialogState extends State<HistoryImportDialog> {
             if (plan.measurements.isNotEmpty) ...[
               const SizedBox(height: 8),
               Text(
-                'Body fat and measurements: ${plan.measurements.length} days '
-                'to add.',
+                'Body fat and measurements: '
+                '${_count(plan.measurements.length, 'day')} to add.',
                 key: const ValueKey('history-measurements'),
               ),
             ],
             if (plan.customFoods.isNotEmpty) ...[
               const SizedBox(height: 8),
               Text(
-                '${plan.customFoods.length} custom foods to add to your '
+                '${_count(plan.customFoods.length, 'custom food')} to add to your '
                 'custom meals.',
                 key: const ValueKey('history-custom-foods'),
               ),
@@ -696,16 +703,18 @@ class _HistoryImportDialogState extends State<HistoryImportDialog> {
             if (plan.replaced.isNotEmpty) ...[
               const SizedBox(height: 8),
               Text(
-                '${plan.replaced.length} days an earlier import wrote as '
-                'totals are written again, food by food.',
+                '${_count(plan.replaced.length, 'day')} an earlier import wrote '
+                'as totals ${plan.replaced.length == 1 ? 'is' : 'are'} written '
+                'again, food by food.',
                 key: const ValueKey('history-replaced'),
               ),
             ],
             if (plan.misread.isNotEmpty) ...[
               const SizedBox(height: 8),
               Text(
-                '${plan.misread.length} weigh-ins an earlier import read '
-                'from serving weights are removed.',
+                '${_count(plan.misread.length, 'weigh-in')} an earlier import '
+                'read from serving weights ${plan.misread.length == 1 ? 'is' : 'are'} '
+                'removed.',
                 key: const ValueKey('history-misread'),
               ),
             ],

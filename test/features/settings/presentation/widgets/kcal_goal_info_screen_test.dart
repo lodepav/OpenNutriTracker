@@ -186,6 +186,12 @@ void main() {
       expect(find.text('13242 kJ'), findsNWidgets(2));
       // The IOM equation is defined in kcal, so the box must stay kcal.
       expect(find.textContaining('= 3164 kcal'), findsOneWidget);
+      // [fork] S103: the kcal is put in kJ, and the macro lines, which
+      // start from the kcal goal, say so.
+      expect(find.textContaining('= 3164 kcal = 13242 kJ'), findsOneWidget);
+      expect(find.textContaining('3134 kcal × 60 % ÷ 4'), findsOneWidget);
+      expect(find.text('Daily kJ adjustment'), findsNWidgets(2));
+      expect(find.text('Daily kcal adjustment'), findsNothing);
     });
 
     testWidgets('taper case shows base and tapered adjustment plus the note', (
