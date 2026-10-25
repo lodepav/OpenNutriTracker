@@ -20,6 +20,10 @@ import 'package:opennutritracker/generated/l10n.dart';
 import 'package:opennutritracker/fork/basket/basket.dart';
 import 'package:opennutritracker/fork/basket/basket_ui.dart';
 // [/fork]
+// [fork] S94 missing-info
+import 'package:opennutritracker/fork/meal_detail/missing_info.dart';
+import 'package:opennutritracker/fork/units/energy_text.dart';
+// [/fork]
 // [fork] S45 remembered-amounts
 import 'package:opennutritracker/fork/amounts/remembered_amounts.dart';
 // [/fork]
@@ -312,7 +316,15 @@ class _MealDetailBottomSheetState extends State<MealDetailBottomSheet> {
                       // [/fork]
                       productMissingRequiredInfo
                           ? Text(
-                              S.of(context).missingProductInfo,
+                              // [fork] S94 missing-info: names what is
+                              // missing, energy in the user's unit
+                              missingForLogText(
+                                missingForLog(
+                                  widget.product,
+                                  energyUnit(context),
+                                ),
+                              ),
+                              // [/fork]
                               style: Theme.of(context).textTheme.bodyMedium
                                   ?.copyWith(
                                     color: Theme.of(context).colorScheme.error,
@@ -505,7 +517,10 @@ class _MealDetailBottomSheetState extends State<MealDetailBottomSheet> {
         : servingLabel;
     return DropdownMenuItem(
       value: UnitDropdownItem.serving.toString(),
-      child: Text(servingText, overflow: TextOverflow.ellipsis, maxLines: 1),
+      // [fork] S92 a11y-labels-2: the serving's weight wraps rather than
+      // going, at 200%
+      child: Text(servingText, overflow: TextOverflow.ellipsis, maxLines: 3),
+      // [/fork]
     );
   }
 

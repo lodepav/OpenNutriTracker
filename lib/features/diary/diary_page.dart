@@ -142,6 +142,9 @@ class _DiaryPageState extends State<DiaryPage> with WidgetsBindingObserver {
             child: Padding(
               padding: const EdgeInsets.only(right: Dimens.spacing8),
               child: IconButton(
+                // [fork] S92 a11y-labels-2
+                tooltip: 'Go to today',
+                // [/fork]
                 icon: const Icon(Icons.today_rounded),
                 onPressed: () => _onDateSelected(_currentDate, trackedDaysMap),
               ),

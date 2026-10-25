@@ -95,11 +95,23 @@ class RecipeEntity extends Equatable {
       mealUnit: 'g',
       servingQuantity: hasServings ? totalWeightG / servingsCount! : null,
       servingUnit: hasServings ? 'g' : null,
-      servingSize: hasServings ? '$servingsCount servings' : null,
+      // [fork] S91 recipe-serving-label: one serving and its weight, as a
+      // food's serving reads ("1 serving (387.5 g)"); "4 servings" read as
+      // the whole pot beside a quantity of 1
+      servingSize: hasServings
+          ? '1 serving (${_grams(totalWeightG / servingsCount!)} g)'
+          : null,
+      // [/fork]
       nutriments: aggregatedNutrimentsPer100,
       source: MealSourceEntity.recipe,
     );
   }
+
+  // [fork] S91 recipe-serving-label
+  static String _grams(double g) => g == g.roundToDouble()
+      ? g.toInt().toString()
+      : g.toStringAsFixed(1);
+  // [/fork]
 
   RecipeEntity copyWith({
     String? id,

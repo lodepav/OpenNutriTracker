@@ -39,6 +39,25 @@ class AdaptiveCheckInCard extends StatefulWidget {
 /// or the target's settings (D20) changed.
 enum _Due { first, weekly, goal, settings }
 
+/// The settings that differ between two [AdaptiveSettings.targetBasis]
+/// strings, named as Expenditure settings names them.
+List<String> changedTargetSettings(String? before, String now) {
+  Map<String, String> parts(String? basis) => {
+    for (final part in (basis ?? '').split(';'))
+      if (part.contains('=')) part.split('=').first: part.split('=').last,
+  };
+  final a = parts(before), b = parts(now);
+  return [
+    for (final (key, name) in const [
+      ('activity', 'activity'),
+      ('steps', 'steps'),
+      ('workouts', 'workouts'),
+      ('flat', 'energy per kg'),
+    ])
+      if (a.containsKey(key) && b.containsKey(key) && a[key] != b[key]) name,
+  ];
+}
+
 class _AdaptiveCheckInCardState extends State<AdaptiveCheckInCard> {
   late final _service = widget.service ?? AdaptiveService.fromLocator();
   late Future<_Due?> _due = _readDue();
@@ -46,6 +65,9 @@ class _AdaptiveCheckInCardState extends State<AdaptiveCheckInCard> {
   /// A check-in accepted on its own, and why, shown until dismissed.
   CheckIn? _autoAccepted;
   _Due _autoAcceptedFor = _Due.weekly;
+
+  /// What changed, for [_Due.settings]; empty when it can't be told.
+  List<String> _changed = const [];
 
   Future<_Due?> _readDue() async {
     if (!await _service.checkInDue()) return null;
@@ -57,8 +79,16 @@ class _AdaptiveCheckInCardState extends State<AdaptiveCheckInCard> {
       : await _service.goalChanged()
       ? _Due.goal
       : await _service.basisChanged()
-      ? _Due.settings
+      ? await _settingsChanged()
       : _Due.weekly;
+
+  Future<_Due> _settingsChanged() async {
+    _changed = changedTargetSettings(
+      (await _service.lastCheckIn())?.basis,
+      AdaptiveStore.settings.value.targetBasis,
+    );
+    return _Due.settings;
+  }
 
   @override
   void initState() {
@@ -208,7 +238,11 @@ class _AdaptiveCheckInCardState extends State<AdaptiveCheckInCard> {
                 'It is ready to check. From then on it follows your '
                     'weigh-ins and what you log.',
               _Due.goal => 'A target for it is ready to check.',
-              _Due.settings => 'A target built under them is ready to check.',
+              _Due.settings =>
+                _changed.isEmpty
+                    ? 'A target built under them is ready to check.'
+                    : 'You changed ${_changed.join(', ')}. A target built '
+                          'under the new settings is ready to check.',
               _Due.weekly => 'Your expenditure and next target are ready.',
             }),
             trailing: const Icon(Icons.chevron_right_rounded),
@@ -242,6 +276,7 @@ class CheckInScreen extends StatefulWidget {
 
 class _CheckInScreenState extends State<CheckInScreen> {
   late final Future<CheckIn> _checkIn = widget.service.checkIn();
+  late final Future<CheckInRecord?> _last = widget.service.lastCheckIn();
   final _target = TextEditingController();
 
   @override
@@ -267,10 +302,11 @@ class _CheckInScreenState extends State<CheckInScreen> {
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(title: const Text('Weekly check-in')),
-    body: FutureBuilder<CheckIn>(
-      future: _checkIn,
+    body: FutureBuilder<(CheckIn, CheckInRecord?)>(
+      future: (_checkIn, _last).wait,
       builder: (context, snapshot) {
-        final checkIn = snapshot.data;
+        final checkIn = snapshot.data?.$1;
+        final last = snapshot.data?.$2;
         if (snapshot.hasError) {
           return const Center(child: Text("Couldn't read your data."));
         }
@@ -319,10 +355,24 @@ class _CheckInScreenState extends State<CheckInScreen> {
             _row('Expenditure', _kcal(checkIn.expenditureKcal)),
             if (checkIn.activityKcal case final activity?)
               _row('Of it, counted activity', '${_kcal(activity)} a day'),
+            if (last != null)
+              _row(
+                daily ? 'Current target before activity' : 'Current target',
+                _kcal(last.acceptedKcal),
+              ),
             _row(
               daily ? 'Proposed target before activity' : 'Proposed target',
               _kcal(checkIn.proposedTargetKcal),
             ),
+            if (last != null)
+              _row(
+                'Change',
+                energyText(
+                  context,
+                  checkIn.proposedTargetKcal - last.acceptedKcal,
+                  signed: true,
+                ),
+              ),
             if (daily)
               Text(
                 "Each day's counted activity is added to it, at most "
@@ -342,6 +392,12 @@ class _CheckInScreenState extends State<CheckInScreen> {
                 'A check-in moves the expenditure under the target at most '
                 '${_kcal(cap)}; the full change would put the target at '
                 '${_kcal(checkIn.uncappedTargetKcal)}.',
+                style: theme.textTheme.bodySmall,
+              )
+            else if (cap != null && last != null && !checkIn.fromProfile)
+              Text(
+                'The expenditure moved less than the check-in limit of '
+                '${_kcal(cap)}, so none of the change is held back.',
                 style: theme.textTheme.bodySmall,
               ),
             if (checkIn.daysToTargetAtGoal != null)

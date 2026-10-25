@@ -118,6 +118,9 @@ class AdaptiveService {
     return null;
   }
 
+  /// The last accepted check-in, which the next one is weighed against.
+  Future<CheckInRecord?> lastCheckIn() => _store.lastCheckIn();
+
   /// Whether no check-in has been accepted yet.
   Future<bool> firstCheckIn() async => await _store.lastCheckIn() == null;
 

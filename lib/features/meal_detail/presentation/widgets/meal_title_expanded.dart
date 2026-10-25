@@ -93,6 +93,18 @@ class MealTitleExpanded extends StatelessWidget {
                     ),
                   )
                 : const SizedBox(),
+            // [fork] S91 recipe-serving-label: a recipe's weight is the pot's
+            if (meal.source == MealSourceEntity.recipe &&
+                meal.mealQuantity != null)
+              Center(
+                child: Text(
+                  'Whole recipe',
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        color: palette.textMuted,
+                      ),
+                ),
+              ),
+            // [/fork]
           ],
         ),
       ),

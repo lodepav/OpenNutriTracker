@@ -56,7 +56,10 @@ class IngredientListItem extends StatelessWidget {
                   children: [
                     Text(
                       meal.name ?? '?',
-                      maxLines: 1,
+                      // [fork] S92 a11y-labels-2: the name wraps, as what
+                      // tells foods apart (raw, dried) ends it, at 200% too
+                      maxLines: 3,
+                      // [/fork]
                       overflow: TextOverflow.ellipsis,
                       style: textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
                     ),
@@ -73,6 +76,9 @@ class IngredientListItem extends StatelessWidget {
               ),
               if (onRemove != null)
                 IconButton(
+                  // [fork] S92 a11y-labels-2
+                  tooltip: 'Remove ingredient',
+                  // [/fork]
                   icon: Icon(Icons.delete_outline_rounded, color: palette.textMuted, size: 22),
                   onPressed: onRemove,
                 ),

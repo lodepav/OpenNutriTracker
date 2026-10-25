@@ -576,6 +576,79 @@ void main() {
     expect(find.textContaining('Not enough data'), findsOneWidget);
   });
 
+  testWidgets('a later check-in shows the current target and the change', (
+    tester,
+  ) async {
+    final service = AdaptiveService(
+      _User(),
+      _Weights(),
+      _TrackedDays(),
+      _MemoryStore(),
+      () => _today.add(const Duration(hours: 9)),
+    );
+    await service.accept(await service.checkIn(), 2000);
+    final change = ((await service.checkIn()).proposedTargetKcal - 2000)
+        .round();
+    await _pumpLarge(tester, service);
+
+    final current = find.text('Current target');
+    await tester.scrollUntilVisible(current, 200);
+    expect(find.text('2000 kcal'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('Change'), 200);
+    expect(find.text('${change > 0 ? '+' : ''}$change kcal'), findsOneWidget);
+    // The cap is explained whether or not it held the change back.
+    final cap = find.textContaining(RegExp('check-in limit|A check-in moves'));
+    await tester.scrollUntilVisible(cap, 200);
+    expect(cap, findsOneWidget);
+  });
+
+  testWidgets('the first check-in has no current target to compare', (
+    tester,
+  ) async {
+    final service = AdaptiveService(
+      _User(),
+      _Weights(),
+      _TrackedDays(),
+      _MemoryStore(),
+      () => _today.add(const Duration(hours: 9)),
+    );
+    await _pumpLarge(tester, service);
+
+    expect(find.text('Current target'), findsNothing);
+    expect(find.text('Change'), findsNothing);
+  });
+
+  testWidgets('a settings change names the setting that changed', (
+    tester,
+  ) async {
+    const weekly = AdaptiveSettings(
+      adaptiveTarget: true,
+      activityMode: ActivityMode.weekly,
+    );
+    AdaptiveStore.settings.value = weekly;
+    addTearDown(() => AdaptiveStore.settings.value = const AdaptiveSettings());
+    final service = AdaptiveService(
+      _User(),
+      _Weights(),
+      _TrackedDays(),
+      _MemoryStore(),
+      () => _today.add(const Duration(hours: 9)),
+    );
+    await service.accept(await service.checkIn(), 2000);
+    AdaptiveStore.settings.value = weekly.copyWith(countSteps: false);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: AdaptiveCheckInCard(service: service, onAccepted: () {}),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Your target settings changed'), findsOneWidget);
+    expect(find.textContaining('You changed steps.'), findsOneWidget);
+  });
+
   testWidgets('a row at 200% text wraps its value below the label', (
     tester,
   ) async {
@@ -766,6 +839,43 @@ void main() {
       expect(find.text('Expenditure'), findsOneWidget);
       expect(find.text('Balance, logged days'), findsOneWidget);
       expect(find.textContaining(RegExp(r'^-\d+ kcal a day$')), findsOneWidget);
+      expect(find.textContaining('Energy you burn a day'), findsOneWidget);
+      expect(find.textContaining('Solid: estimated'), findsOneWidget);
+      expect(find.textContaining('Dashed: logged'), findsOneWidget);
+    });
+
+    testWidgets('a single day names no lines, as none are drawn', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: ExpenditureTrendCard(
+              rangeDays: 30,
+              palette: AppPalette.light,
+              service: AdaptiveService(
+                _User(),
+                _OneWeighIn(),
+                _NoLogs(),
+                _MemoryStore(),
+                () => _today.add(const Duration(hours: 9)),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Expenditure'), findsOneWidget);
+      expect(find.textContaining('Solid'), findsNothing);
+      expect(find.textContaining('Dashed'), findsNothing);
+      expect(
+        find.text(
+          'Estimated expenditure is still the formula until two weeks of '
+          'weigh-ins and logging.',
+        ),
+        findsOneWidget,
+      );
     });
   });
 }

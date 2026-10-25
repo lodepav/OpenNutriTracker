@@ -110,6 +110,12 @@ class _ExpenditureTrendCardState extends State<ExpenditureTrendCard> {
             header: true,
             child: Text('Expenditure', style: theme.textTheme.titleMedium),
           ),
+          Text(
+            'Energy you burn a day, estimated from your weigh-ins and logs.',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: widget.palette.textMuted,
+            ),
+          ),
           const SizedBox(height: Dimens.spacing8),
           _row(context, 'Now', energyText(context, days.last.expenditureKcal)),
           if (balance != null)
@@ -165,17 +171,29 @@ class _ExpenditureTrendCardState extends State<ExpenditureTrendCard> {
               ),
             ),
           ),
-          const SizedBox(height: Dimens.spacing8),
-          Text(
-            days.last.settled
-                ? 'Solid: estimated expenditure. Dashed: logged.'
-                : 'Solid: estimated expenditure, still the formula until '
-                      'two weeks of weigh-ins and logging. Dashed: logged.',
-            style: theme.textTheme.bodySmall,
-          ),
+          if (_legend(days, logged.length) case final legend?) ...[
+            const SizedBox(height: Dimens.spacing8),
+            Text(legend, style: theme.textTheme.bodySmall),
+          ],
         ],
       ),
     );
+  }
+
+  /// Names only the lines drawn: a line takes two days, and a single day
+  /// is a dot.
+  static String? _legend(List<ExpenditureDay> days, int loggedDays) {
+    const formula =
+        'still the formula until two weeks of weigh-ins and logging';
+    final settled = days.last.settled;
+    final parts = [
+      if (days.length >= 2)
+        'Solid: estimated expenditure${settled ? '' : ', $formula'}'
+      else if (!settled)
+        'Estimated expenditure is $formula',
+      if (loggedDays >= 2) 'Dashed: logged',
+    ];
+    return parts.isEmpty ? null : '${parts.join('. ')}.';
   }
 
   Widget _row(BuildContext context, String label, String value) => Padding(
