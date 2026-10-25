@@ -6,6 +6,7 @@ import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/core/utils/calc/unit_calc.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
+import 'package:opennutritracker/fork/report/chart_touch.dart';
 import 'package:opennutritracker/fork/units/energy_text.dart';
 
 /// Seam S40: on Trends, the estimated expenditure over the picked range
@@ -72,6 +73,7 @@ class _ExpenditureTrendCardState extends State<ExpenditureTrendCard> {
     final theme = Theme.of(context);
     final accent = theme.colorScheme.primary;
     final kj = usesKj(context);
+    final unit = energyUnit(context);
     double shown(double kcal) => kj ? UnitCalc.kcalToKj(kcal) : kcal;
 
     final spent = [
@@ -138,17 +140,11 @@ class _ExpenditureTrendCardState extends State<ExpenditureTrendCard> {
                   gridData: const FlGridData(show: false),
                   borderData: FlBorderData(show: false),
                   titlesData: const FlTitlesData(show: false),
-                  lineTouchData: LineTouchData(
-                    touchTooltipData: LineTouchTooltipData(
-                      getTooltipItems: (spots) => [
-                        for (final s in spots)
-                          LineTooltipItem(
-                            '${s.barIndex == 0 ? 'Spent' : 'Logged'} '
-                            '${s.y.round()}',
-                            theme.textTheme.labelMedium ?? const TextStyle(),
-                          ),
-                      ],
-                    ),
+                  lineTouchData: labelledTouch(
+                    context,
+                    (s) =>
+                        '${s.barIndex == 0 ? 'Expenditure' : 'Logged'} '
+                        '${s.y.round()} $unit',
                   ),
                   lineBarsData: [
                     LineChartBarData(
@@ -191,7 +187,10 @@ class _ExpenditureTrendCardState extends State<ExpenditureTrendCard> {
         'Solid: estimated expenditure${settled ? '' : ', $formula'}'
       else if (!settled)
         'Estimated expenditure is $formula',
-      if (loggedDays >= 2) 'Dashed: logged',
+      // A month or less draws each logged day as a dot, apart where days
+      // between went unlogged.
+      if (loggedDays >= 2)
+        days.length <= 31 ? 'Dots: logged' : 'Dashed: logged',
     ];
     return parts.isEmpty ? null : '${parts.join('. ')}.';
   }
