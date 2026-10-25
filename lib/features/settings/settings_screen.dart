@@ -67,6 +67,9 @@ import 'package:opennutritracker/fork/display/display_prefs.dart';
 // [fork] S35 brand
 import 'package:opennutritracker/fork/brand/openbite_logo.dart';
 // [/fork]
+// [fork] S129 settings-sections
+import 'package:opennutritracker/fork/settings/settings_index.dart';
+// [/fork]
 // [fork] S76 releases: OpenBite's version, and its update
 import 'package:opennutritracker/fork/update/update_notice.dart';
 import 'package:opennutritracker/fork/version.dart';
@@ -106,7 +109,18 @@ class SettingsScreen extends StatefulWidget {
   /// route uses the default (full-screen) form.
   final bool embedded;
 
-  const SettingsScreen({super.key, this.embedded = false});
+  // [fork] S129 settings-sections: the section this page shows; the plain
+  // route lists the sections
+  final SettingsSection? section;
+  // [/fork]
+
+  const SettingsScreen({
+    super.key,
+    this.embedded = false,
+    // [fork] S129 settings-sections
+    this.section,
+    // [/fork]
+  });
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
@@ -221,6 +235,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
           final isDark = Theme.of(context).brightness == Brightness.dark;
           final palette = isDark ? AppPalette.dark : AppPalette.light;
           final error = Theme.of(context).colorScheme.error;
+          // [fork] S129 settings-sections: the sections, each a page
+          if (!widget.embedded && widget.section == null) {
+            return SettingsIndex(
+              summaries: _forkSummaries(context, state),
+              onOpen: _forkOpen,
+              footer: AppBannerVersion(versionNumber: state.versionNumber),
+            );
+          }
+          // [/fork]
           // Built once, then wrapped in one of two shapes — because the
           // embedded form is not a scrollable and should not pretend to be.
           //
@@ -240,11 +263,89 @@ class _SettingsScreenState extends State<SettingsScreen> {
           // shrink-wrapped, unscrollable list of fixed children *is* a
           // Column, with a viewport in the way.
           final children = <Widget>[
-              _categoryHeader(
-                context,
-                palette,
-                S.of(context).settingsCategoryUnits,
+              // [fork] S129 settings-sections: a page for each section
+              if (_forkShows(SettingsSection.goals)) ...[
+              if (widget.embedded)
+                _categoryHeader(
+                  context,
+                  palette,
+                  S.of(context).settingsCategoryGoals,
+                ),
+              _SettingsGroup(
+                palette: palette,
+                tiles: [
+                  // The old Calculations dialog had grown into a wall of
+                  // sliders covering daily kcal, macros, per-meal split,
+                  // ten nutrient goals, and the diary day boundary. Each
+                  // is now its own focused entry so people can find the
+                  // setting they want and only see the controls for it.
+                  _SettingsTile(
+                    identifier: 'settings-kcal-goal-info',
+                    palette: palette,
+                    icon: Icons.functions_rounded,
+                    title: S.of(context).settingsKcalGoalInfoLabel,
+                    showChevron: true,
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const KcalGoalInfoScreen(),
+                      ),
+                    ),
+                  ),
+                  _SettingsTile(
+                    identifier: 'settings-kcal-adjustment',
+                    palette: palette,
+                    icon: Icons.calculate_rounded,
+                    title: state.usesKilojoules
+                        ? S.of(context).settingsKjAdjustmentLabel
+                        : S.of(context).settingsKcalAdjustmentLabel,
+                    onTap: () => _showKcalAdjustmentDialog(context),
+                  ),
+                  // [fork] S14 adaptive-settings
+                  const AdaptiveSettingsTile(),
+                  // [/fork]
+                  // [fork] S129 settings-sections: the weigh-in and
+                  // check-in reminders are under Reminders
+                  // [/fork]
+                  _SettingsTile(
+                    identifier: 'settings-macro-split',
+                    palette: palette,
+                    icon: Icons.pie_chart_rounded,
+                    title: S.of(context).settingsMacroSplitLabel,
+                    onTap: () => _showMacroSplitDialog(context),
+                  ),
+                  _SettingsTile(
+                    identifier: 'settings-per-meal-share',
+                    palette: palette,
+                    icon: Icons.restaurant_menu_rounded,
+                    title: S.of(context).settingsPerMealKcalShareLabel,
+                    onTap: () => _showPerMealKcalShareDialog(context),
+                  ),
+                  _SettingsTile(
+                    identifier: 'settings-nutrient-goals',
+                    palette: palette,
+                    icon: Icons.spa_rounded,
+                    title: S.of(context).settingsNutrientGoalsLabel,
+                    showChevron: true,
+                    onTap: () => _openNutrientGoalsScreen(context),
+                  ),
+                  _SettingsTile(
+                    identifier: 'settings-day-boundary',
+                    palette: palette,
+                    icon: Icons.schedule_rounded,
+                    title: S.of(context).settingsDayStartLabel,
+                    onTap: () => _showDayBoundaryDialog(context),
+                  ),
+                ],
               ),
+                const SizedBox(height: Dimens.spacing20),
+              ],
+              if (_forkShows(SettingsSection.units)) ...[
+              if (widget.embedded)
+                _categoryHeader(
+                  context,
+                  palette,
+                  S.of(context).settingsCategoryUnits,
+                ),
               _SettingsGroup(
                 palette: palette,
                 tiles: [
@@ -318,75 +419,230 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                 ],
               ),
-              const SizedBox(height: Dimens.spacing20),
+                const SizedBox(height: Dimens.spacing20),
+              ],
+              if (_forkShows(SettingsSection.reminders)) ...[
               _categoryHeader(
                 context,
                 palette,
-                S.of(context).settingsCategoryGoals,
+                S.of(context).settingsNotificationsLabel,
               ),
               _SettingsGroup(
                 palette: palette,
                 tiles: [
-                  // The old Calculations dialog had grown into a wall of
-                  // sliders covering daily kcal, macros, per-meal split,
-                  // ten nutrient goals, and the diary day boundary. Each
-                  // is now its own focused entry so people can find the
-                  // setting they want and only see the controls for it.
-                  _SettingsTile(
-                    identifier: 'settings-kcal-goal-info',
+                  _SettingsSwitchTile(
                     palette: palette,
-                    icon: Icons.functions_rounded,
-                    title: S.of(context).settingsKcalGoalInfoLabel,
-                    showChevron: true,
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute<void>(
-                        builder: (_) => const KcalGoalInfoScreen(),
+                    icon: Icons.notifications_rounded,
+                    title: S.of(context).settingsNotificationsLabel,
+                    subtitle: state.notificationsEnabled
+                        ? S
+                              .of(context)
+                              .settingsNotificationsTimeLabel(
+                                _formatNotificationTime(
+                                  state.notificationHour,
+                                  state.notificationMinute,
+                                ),
+                              )
+                        : null,
+                    value: state.notificationsEnabled,
+                    onChanged: (bool value) =>
+                        _onNotificationToggled(context, value, state),
+                  ),
+                  if (state.notificationsEnabled)
+                    _SettingsTile(
+                      palette: palette,
+                      icon: Icons.access_time_rounded,
+                      title: S
+                          .of(context)
+                          .settingsNotificationsTimeLabel(
+                            _formatNotificationTime(
+                              state.notificationHour,
+                              state.notificationMinute,
+                            ),
+                          ),
+                      onTap: () => _pickNotificationTime(
+                        context,
+                        TimeOfDay(
+                          hour: state.notificationHour,
+                          minute: state.notificationMinute,
+                        ),
                       ),
                     ),
-                  ),
-                  _SettingsTile(
-                    identifier: 'settings-kcal-adjustment',
-                    palette: palette,
-                    icon: Icons.calculate_rounded,
-                    title: state.usesKilojoules
-                        ? S.of(context).settingsKjAdjustmentLabel
-                        : S.of(context).settingsKcalAdjustmentLabel,
-                    onTap: () => _showKcalAdjustmentDialog(context),
-                  ),
-                  // [fork] S14 adaptive-settings
-                  const AdaptiveSettingsTile(),
-                  // [/fork]
+                ],
+              ),
+              const SizedBox(height: Dimens.spacing20),
+              _categoryHeader(context, palette, 'Weigh-in and check-in'),
+              _SettingsGroup(
+                palette: palette,
+                tiles: [
                   // [fork] S46 reminders: weigh-in and check-in
                   const RemindersTile(),
                   // [/fork]
+                ],
+              ),
+                const SizedBox(height: Dimens.spacing20),
+              ],
+              if (_forkShows(SettingsSection.food)) ...[
+              if (widget.embedded)
+                _categoryHeader(context, palette, SettingsSection.food.title),
+              _SettingsGroup(
+                palette: palette,
+                tiles: [
                   _SettingsTile(
-                    identifier: 'settings-macro-split',
+                    identifier: 'settings-food-sources',
                     palette: palette,
-                    icon: Icons.pie_chart_rounded,
-                    title: S.of(context).settingsMacroSplitLabel,
-                    onTap: () => _showMacroSplitDialog(context),
+                    icon: Icons.travel_explore_rounded,
+                    title: S.of(context).settingsFoodSourcesLabel,
+                    subtitle: S.of(context).settingsFoodSourcesSubtitle,
+                    onTap: () => _openFoodSourcesScreen(context),
                   ),
                   _SettingsTile(
-                    identifier: 'settings-per-meal-share',
+                    identifier: 'settings-ai-assist',
+                    palette: palette,
+                    icon: Icons.auto_awesome_rounded,
+                    title: S.of(context).settingsAiAssistLabel,
+                    subtitle: _aiAssistSubtitle(context),
+                    badge: S.of(context).aiAssistExperimentalLabel,
+                    onTap: () => _openAiAssistDialog(context),
+                  ),
+                  // [fork] S32 off-contributions
+                  const OffAccountTile(),
+                  // [/fork]
+                  _SettingsTile(
+                    palette: palette,
+                    icon: Icons.cached_rounded,
+                    title: S.of(context).clearOffCacheLabel,
+                    subtitle: S
+                        .of(context)
+                        .clearOffCacheSubtitle(
+                          state.offCacheCount,
+                          _formatBytes(state.offCacheSizeBytes),
+                        ),
+                    enabled: state.offCacheCount > 0,
+                    onTap: () => _confirmClearOffCache(context),
+                  ),
+                ],
+              ),
+                const SizedBox(height: Dimens.spacing20),
+              ],
+              if (_forkShows(SettingsSection.data)) ...[
+              _categoryHeader(
+                context,
+                palette,
+                S.of(context).settingsCategoryData,
+              ),
+              _SettingsGroup(
+                palette: palette,
+                tiles: [
+                  _SettingsTile(
+                    identifier: 'settings-health-sync',
+                    palette: palette,
+                    icon: Icons.favorite_rounded,
+                    // The platform's own product name, so the row reads as
+                    // the thing users already know ("Health Connect"), not
+                    // as a generic feature label.
+                    title: healthPlatformName,
+                    subtitle: S.of(context).settingsHealthSyncSubtitle,
+                    showChevron: true,
+                    onTap: () => _openHealthSyncScreen(context),
+                  ),
+                ],
+              ),
+              const SizedBox(height: Dimens.spacing20),
+              // [fork] S78 import-group: every file import and export in
+              // one group
+              const SizedBox(height: Dimens.spacing20),
+              _categoryHeader(context, palette, 'Import and export'),
+              _SettingsGroup(
+                palette: palette,
+                tiles: [
+                  // [fork] S51 csv-export: another app's history in, and
+                  // the diary for a spreadsheet
+                  const HistoryImportTile(),
+                  // [/fork]
+                  _SettingsTile(
+                    identifier: 'settings-import-custom-food',
                     palette: palette,
                     icon: Icons.restaurant_menu_rounded,
-                    title: S.of(context).settingsPerMealKcalShareLabel,
-                    onTap: () => _showPerMealKcalShareDialog(context),
+                    title: S.of(context).importCustomFoodDataLabel,
+                    onTap: () => _showImportCustomFoodDataDialog(context),
                   ),
                   _SettingsTile(
-                    identifier: 'settings-nutrient-goals',
                     palette: palette,
-                    icon: Icons.spa_rounded,
-                    title: S.of(context).settingsNutrientGoalsLabel,
-                    showChevron: true,
-                    onTap: () => _openNutrientGoalsScreen(context),
+                    icon: Icons.import_export_rounded,
+                    title: S.of(context).exportImportAppDataLabel,
+                    onTap: () => _showExportImportDialog(context),
+                  ),
+                  // [fork] S23 auto-backup
+                  const AutoBackupTile(),
+                  // [/fork]
+                  // [fork] S51 csv-export
+                  const CsvExportTile(),
+                  // [/fork]
+                ],
+              ),
+              // [/fork]
+              const SizedBox(height: Dimens.spacing20),
+              _categoryHeader(context, palette, 'Start over'),
+              _SettingsGroup(
+                palette: palette,
+                tiles: [
+                  _SettingsTile(
+                    identifier: 'settings-delete-all-data',
+                    palette: palette,
+                    icon: Icons.delete_forever_rounded,
+                    iconColor: error,
+                    titleColor: error,
+                    title: S.of(context).settingsDeleteAllDataLabel,
+                    subtitle: S.of(context).settingsDeleteAllDataSubtitle,
+                    onTap: () => _confirmDeleteAllData(context),
+                  ),
+                ],
+              ),
+                const SizedBox(height: Dimens.spacing20),
+              ],
+              if (_forkShows(SettingsSection.appearance)) ...[
+              _categoryHeader(
+                context,
+                palette,
+                S.of(context).settingsCategoryAppearance,
+              ),
+              _SettingsGroup(
+                palette: palette,
+                tiles: [
+                  _SettingsTile(
+                    palette: palette,
+                    icon: Icons.brightness_medium_rounded,
+                    title: S.of(context).settingsThemeLabel,
+                    onTap: () => _showThemeDialog(context, state.appTheme),
                   ),
                   _SettingsTile(
-                    identifier: 'settings-day-boundary',
+                    identifier: 'settings-accent-colour',
                     palette: palette,
-                    icon: Icons.schedule_rounded,
-                    title: S.of(context).settingsDayStartLabel,
-                    onTap: () => _showDayBoundaryDialog(context),
+                    icon: Icons.palette_rounded,
+                    title: S.of(context).settingsAccentColourTitle,
+                    subtitle: _accentSubtitle(
+                      context,
+                      useMaterialYou: state.useMaterialYou,
+                      accentColor: state.accentColor,
+                    ),
+                    trailing: _AccentTrailingSwatch(
+                      useMaterialYou: state.useMaterialYou,
+                      accentColor: state.accentColor,
+                    ),
+                    onTap: () => Navigator.of(
+                      context,
+                    ).pushNamed(NavigationOptions.accentColourRoute),
+                  ),
+                  _SettingsTile(
+                    palette: palette,
+                    icon: Icons.language_rounded,
+                    title: S.of(context).settingsLanguageLabel,
+                    subtitle:
+                        _localeDisplayName(state.selectedLocale) ??
+                        S.of(context).settingsThemeSystemDefaultLabel,
+                    onTap: () =>
+                        _showLanguageDialog(context, state.selectedLocale),
                   ),
                 ],
               ),
@@ -460,203 +716,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   // [/fork]
                 ],
               ),
-              const SizedBox(height: Dimens.spacing20),
-              _categoryHeader(
-                context,
-                palette,
-                S.of(context).settingsCategoryAppearance,
-              ),
-              _SettingsGroup(
-                palette: palette,
-                tiles: [
-                  _SettingsTile(
-                    palette: palette,
-                    icon: Icons.brightness_medium_rounded,
-                    title: S.of(context).settingsThemeLabel,
-                    onTap: () => _showThemeDialog(context, state.appTheme),
-                  ),
-                  _SettingsTile(
-                    identifier: 'settings-accent-colour',
-                    palette: palette,
-                    icon: Icons.palette_rounded,
-                    title: S.of(context).settingsAccentColourTitle,
-                    subtitle: _accentSubtitle(
-                      context,
-                      useMaterialYou: state.useMaterialYou,
-                      accentColor: state.accentColor,
-                    ),
-                    trailing: _AccentTrailingSwatch(
-                      useMaterialYou: state.useMaterialYou,
-                      accentColor: state.accentColor,
-                    ),
-                    onTap: () => Navigator.of(
-                      context,
-                    ).pushNamed(NavigationOptions.accentColourRoute),
-                  ),
-                  _SettingsTile(
-                    palette: palette,
-                    icon: Icons.language_rounded,
-                    title: S.of(context).settingsLanguageLabel,
-                    subtitle:
-                        _localeDisplayName(state.selectedLocale) ??
-                        S.of(context).settingsThemeSystemDefaultLabel,
-                    onTap: () =>
-                        _showLanguageDialog(context, state.selectedLocale),
-                  ),
-                ],
-              ),
-              const SizedBox(height: Dimens.spacing20),
-              _categoryHeader(
-                context,
-                palette,
-                S.of(context).settingsNotificationsLabel,
-              ),
-              _SettingsGroup(
-                palette: palette,
-                tiles: [
-                  _SettingsSwitchTile(
-                    palette: palette,
-                    icon: Icons.notifications_rounded,
-                    title: S.of(context).settingsNotificationsLabel,
-                    subtitle: state.notificationsEnabled
-                        ? S
-                              .of(context)
-                              .settingsNotificationsTimeLabel(
-                                _formatNotificationTime(
-                                  state.notificationHour,
-                                  state.notificationMinute,
-                                ),
-                              )
-                        : null,
-                    value: state.notificationsEnabled,
-                    onChanged: (bool value) =>
-                        _onNotificationToggled(context, value, state),
-                  ),
-                  if (state.notificationsEnabled)
-                    _SettingsTile(
-                      palette: palette,
-                      icon: Icons.access_time_rounded,
-                      title: S
-                          .of(context)
-                          .settingsNotificationsTimeLabel(
-                            _formatNotificationTime(
-                              state.notificationHour,
-                              state.notificationMinute,
-                            ),
-                          ),
-                      onTap: () => _pickNotificationTime(
-                        context,
-                        TimeOfDay(
-                          hour: state.notificationHour,
-                          minute: state.notificationMinute,
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-              const SizedBox(height: Dimens.spacing20),
-              _categoryHeader(
-                context,
-                palette,
-                S.of(context).settingsCategoryData,
-              ),
-              _SettingsGroup(
-                palette: palette,
-                tiles: [
-                  _SettingsTile(
-                    identifier: 'settings-food-sources',
-                    palette: palette,
-                    icon: Icons.travel_explore_rounded,
-                    title: S.of(context).settingsFoodSourcesLabel,
-                    subtitle: S.of(context).settingsFoodSourcesSubtitle,
-                    onTap: () => _openFoodSourcesScreen(context),
-                  ),
-                  _SettingsTile(
-                    identifier: 'settings-health-sync',
-                    palette: palette,
-                    icon: Icons.favorite_rounded,
-                    // The platform's own product name, so the row reads as
-                    // the thing users already know ("Health Connect"), not
-                    // as a generic feature label.
-                    title: healthPlatformName,
-                    subtitle: S.of(context).settingsHealthSyncSubtitle,
-                    showChevron: true,
-                    onTap: () => _openHealthSyncScreen(context),
-                  ),
-                  _SettingsTile(
-                    identifier: 'settings-ai-assist',
-                    palette: palette,
-                    icon: Icons.auto_awesome_rounded,
-                    title: S.of(context).settingsAiAssistLabel,
-                    subtitle: _aiAssistSubtitle(context),
-                    badge: S.of(context).aiAssistExperimentalLabel,
-                    onTap: () => _openAiAssistDialog(context),
-                  ),
-                  // [fork] S78 import-group: the file imports and exports
-                  // moved to their own group below
-                  // [/fork]
-                  // [fork] S32 off-contributions
-                  const OffAccountTile(),
-                  // [/fork]
-                  _SettingsTile(
-                    palette: palette,
-                    icon: Icons.cached_rounded,
-                    title: S.of(context).clearOffCacheLabel,
-                    subtitle: S
-                        .of(context)
-                        .clearOffCacheSubtitle(
-                          state.offCacheCount,
-                          _formatBytes(state.offCacheSizeBytes),
-                        ),
-                    enabled: state.offCacheCount > 0,
-                    onTap: () => _confirmClearOffCache(context),
-                  ),
-                  _SettingsTile(
-                    identifier: 'settings-delete-all-data',
-                    palette: palette,
-                    icon: Icons.delete_forever_rounded,
-                    iconColor: error,
-                    titleColor: error,
-                    title: S.of(context).settingsDeleteAllDataLabel,
-                    subtitle: S.of(context).settingsDeleteAllDataSubtitle,
-                    onTap: () => _confirmDeleteAllData(context),
-                  ),
-                ],
-              ),
-              // [fork] S78 import-group: every file import and export in
-              // one group
-              const SizedBox(height: Dimens.spacing20),
-              _categoryHeader(context, palette, 'Import and export'),
-              _SettingsGroup(
-                palette: palette,
-                tiles: [
-                  // [fork] S51 csv-export: another app's history in, and
-                  // the diary for a spreadsheet
-                  const HistoryImportTile(),
-                  // [/fork]
-                  _SettingsTile(
-                    identifier: 'settings-import-custom-food',
-                    palette: palette,
-                    icon: Icons.restaurant_menu_rounded,
-                    title: S.of(context).importCustomFoodDataLabel,
-                    onTap: () => _showImportCustomFoodDataDialog(context),
-                  ),
-                  _SettingsTile(
-                    palette: palette,
-                    icon: Icons.import_export_rounded,
-                    title: S.of(context).exportImportAppDataLabel,
-                    onTap: () => _showExportImportDialog(context),
-                  ),
-                  // [fork] S23 auto-backup
-                  const AutoBackupTile(),
-                  // [/fork]
-                  // [fork] S51 csv-export
-                  const CsvExportTile(),
-                  // [/fork]
-                ],
-              ),
-              // [/fork]
-              const SizedBox(height: Dimens.spacing20),
+                const SizedBox(height: Dimens.spacing20),
+              ],
+              if (_forkShows(SettingsSection.about)) ...[
               _categoryHeader(
                 context,
                 palette,
@@ -718,6 +780,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               const SizedBox(height: Dimens.spacing24),
               AppBannerVersion(versionNumber: state.versionNumber),
+              ],
+              // [/fork]
           ];
 
           if (widget.embedded) {
@@ -738,10 +802,132 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
     if (widget.embedded) return body;
     return Scaffold(
-      appBar: AppBar(title: Text(S.of(context).settingsLabel)),
+      // [fork] S129 settings-sections: a section's page is titled with it;
+      // the list of them can be searched
+      appBar: AppBar(
+        title: Text(widget.section?.title ?? S.of(context).settingsLabel),
+        actions: [
+          if (widget.section == null)
+            Semantics(
+              identifier: 'settings-search',
+              child: IconButton(
+                tooltip: 'Search settings',
+                icon: const Icon(Icons.search_rounded),
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => SettingsSearchPage(
+                      entries: _forkEntries(context),
+                      onOpen: (section) => _forkOpen(section, replace: true),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+      // [/fork]
       body: body,
     );
   }
+
+  // [fork] S129 settings-sections
+  /// The embedded form shows every section, as it did.
+  bool _forkShows(SettingsSection section) =>
+      widget.embedded || widget.section == section;
+
+  void _forkOpen(SettingsSection section, {bool replace = false}) {
+    final route = MaterialPageRoute<void>(
+      builder: (_) => SettingsScreen(section: section),
+    );
+    final navigator = Navigator.of(context);
+    replace ? navigator.pushReplacement(route) : navigator.push(route);
+  }
+
+  /// What is set in each section now, under its name.
+  Map<SettingsSection, String> _forkSummaries(
+    BuildContext context,
+    SettingsLoadedState state,
+  ) {
+    final s = S.of(context);
+    return {
+      SettingsSection.goals: 'Energy, macros, meals, nutrients, day start',
+      SettingsSection.units: [
+        state.bodyWeightUnit.getLabel(context),
+        state.usesKilojoules ? 'kJ' : 'kcal',
+        state.usesImperialFoodUnits ? 'imperial' : 'metric',
+      ].join(' · '),
+      SettingsSection.reminders: state.notificationsEnabled
+          ? s.settingsNotificationsTimeLabel(
+              _formatNotificationTime(
+                state.notificationHour,
+                state.notificationMinute,
+              ),
+            )
+          : 'Daily reminder off · weigh-in and check-in',
+      SettingsSection.food: 'Food sources, Open Food Facts, AI assist',
+      SettingsSection.data: '$healthPlatformName, import, export, backup',
+      SettingsSection.appearance: 'Theme, colour, language, what screens show',
+      SettingsSection.about:
+          'OpenBite ${state.versionNumber} · privacy · sources',
+    };
+  }
+
+  /// Every row by its name, for the search.
+  List<SettingsEntry> _forkEntries(BuildContext context) {
+    final s = S.of(context);
+    SettingsEntry e(String label, SettingsSection section) =>
+        (label: label, section: section);
+    const goals = SettingsSection.goals;
+    const units = SettingsSection.units;
+    const reminders = SettingsSection.reminders;
+    const food = SettingsSection.food;
+    const data = SettingsSection.data;
+    const appearance = SettingsSection.appearance;
+    const about = SettingsSection.about;
+    return [
+      e(s.settingsKcalGoalInfoLabel, goals),
+      e(s.settingsKcalAdjustmentLabel, goals),
+      e('Trend and calorie target', goals),
+      e(s.settingsMacroSplitLabel, goals),
+      e(s.settingsPerMealKcalShareLabel, goals),
+      e(s.settingsNutrientGoalsLabel, goals),
+      e(s.settingsDayStartLabel, goals),
+      e(s.settingsFoodUnitsLabel, units),
+      e(s.settingsHeightUnitsLabel, units),
+      e(s.settingsBodyWeightUnitLabel, units),
+      e(s.settingsEnergyUnitLabel, units),
+      e(s.settingsDefaultToRawFoodUnitsLabel, units),
+      e(s.settingsNotificationsLabel, reminders),
+      e('Weigh-in and check-in reminders', reminders),
+      e(s.settingsFoodSourcesLabel, food),
+      e(s.settingsAiAssistLabel, food),
+      e('Open Food Facts account', food),
+      e(s.clearOffCacheLabel, food),
+      e(healthPlatformName, data),
+      e('Import history', data),
+      e(s.importCustomFoodDataLabel, data),
+      e(s.exportImportAppDataLabel, data),
+      e('Automatic backup', data),
+      e('Export diary as CSV', data),
+      e(s.settingsDeleteAllDataLabel, data),
+      e(s.settingsThemeLabel, appearance),
+      e(s.settingsAccentColourTitle, appearance),
+      e(s.settingsLanguageLabel, appearance),
+      e(s.settingsShowActivityTracking, appearance),
+      e(s.settingsShowMealMacros, appearance),
+      e(s.settingsShowMicronutrientsLabel, appearance),
+      e(s.settingsNutrientsLabel, appearance),
+      e('Macro order', appearance),
+      e('Diary by the hour', appearance),
+      e(s.settingsPrivacySettings, about),
+      e(s.settingsDisclaimerLabel, about),
+      e(s.settingsSourcesLabel, about),
+      e(s.settingsReportErrorLabel, about),
+      e('Updates', about),
+      e(s.settingAboutLabel, about),
+    ];
+  }
+  // [/fork]
 
   Widget _categoryHeader(
     BuildContext context,

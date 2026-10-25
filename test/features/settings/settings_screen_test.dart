@@ -20,6 +20,9 @@ import 'package:opennutritracker/features/settings/presentation/widgets/ai_assis
 import 'package:opennutritracker/features/settings/settings_screen.dart';
 import 'package:opennutritracker/features/trends/presentation/bloc/trends_bloc.dart';
 import 'package:opennutritracker/generated/l10n.dart';
+// [fork] S129 settings-sections
+import 'package:opennutritracker/fork/settings/settings_index.dart';
+// [/fork]
 
 import '../../helpers/test_l10n.dart';
 
@@ -115,7 +118,8 @@ void _register() {
 
 /// Pushes the settings route the way the app does, so the screen reads its
 /// arguments off a real `ModalRoute` rather than a constructor.
-Widget _app({Object? arguments}) => MaterialApp(
+// [fork] S129 settings-sections: a section's page holds its rows
+Widget _app({Object? arguments, SettingsSection? section}) => MaterialApp(
   localizationsDelegates: const [
     S.delegate,
     GlobalMaterialLocalizations.delegate,
@@ -126,9 +130,10 @@ Widget _app({Object? arguments}) => MaterialApp(
   initialRoute: NavigationOptions.settingsRoute,
   onGenerateRoute: (settings) => MaterialPageRoute<void>(
     settings: RouteSettings(name: settings.name, arguments: arguments),
-    builder: (_) => const SettingsScreen(),
+    builder: (_) => SettingsScreen(section: section),
   ),
 );
+// [/fork]
 
 void main() {
   // A handset, because the point of #852 is where the AI row sits on one.
@@ -279,7 +284,7 @@ void main() {
     tester.view.devicePixelRatio = 2;
     addTearDown(tester.view.reset);
 
-    await tester.pumpWidget(_app());
+    await tester.pumpWidget(_app(section: SettingsSection.appearance)); // [fork] S129
     await tester.pumpAndSettle();
 
     final languageTile = find.text(l10nEn.settingsLanguageLabel);
@@ -329,7 +334,7 @@ void main() {
 
   testWidgets('toggling Show Meal Macros reloads the Diary, whose meal '
       'headers read the flag from DiaryBloc (#1359)', (tester) async {
-    await tester.pumpWidget(_app());
+    await tester.pumpWidget(_app(section: SettingsSection.appearance)); // [fork] S129
     await tester.pumpAndSettle();
 
     final tile = find.text(l10nEn.settingsShowMealMacros);
