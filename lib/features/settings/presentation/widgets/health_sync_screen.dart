@@ -435,6 +435,10 @@ class _HealthSyncScreenState extends State<HealthSyncScreen> {
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
+              // [fork] S138 health-sync: at a large font the label met the
+              // figure, "credit100%"
+              const SizedBox(width: Dimens.spacing8),
+              // [/fork]
               Text(
                 s.healthSyncKcalMultiplierValueLabel(_percentOf(_multiplier)),
                 style: textTheme.titleMedium,

@@ -177,11 +177,16 @@ class _DatabaseRow extends StatelessWidget {
               color: palette.surfaceMuted,
               borderRadius: BorderRadius.circular(10),
             ),
-            child: Text(
-              tag,
-              style: text.labelMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-                color: scheme.primary,
+            padding: const EdgeInsets.all(4),
+            // The box keeps its size at any font; the tag shrinks to it.
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                tag,
+                style: text.labelMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: scheme.primary,
+                ),
               ),
             ),
           ),
