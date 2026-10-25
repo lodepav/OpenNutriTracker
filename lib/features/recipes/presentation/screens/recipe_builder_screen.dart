@@ -14,11 +14,12 @@ import 'package:opennutritracker/core/utils/user_image_storage.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dart';
 import 'package:opennutritracker/features/recipes/presentation/bloc/recipe_builder_bloc.dart';
 import 'package:opennutritracker/features/recipes/presentation/widgets/food_search_tab_view.dart';
-import 'package:opennutritracker/features/recipes/presentation/widgets/ingredient_list_item.dart';
 import 'package:opennutritracker/features/recipes/presentation/widgets/ingredient_quantity_dialog.dart';
-import 'package:opennutritracker/features/recipes/presentation/widgets/recipe_nutrition_summary.dart';
 import 'package:opennutritracker/features/scanner/scanner_screen.dart';
 import 'package:opennutritracker/generated/l10n.dart';
+// [fork] S127 recipe-builder
+import 'package:opennutritracker/fork/recipe/recipe_builder.dart';
+// [/fork]
 
 class RecipeBuilderArguments {
   final RecipeEntity? existing;
@@ -68,6 +69,20 @@ class _RecipeBuilderScreenState extends State<RecipeBuilderScreen> {
         _servingsController.text = r.servingsCount?.toString() ?? '';
         _totalWeightController.text = r.totalWeightG.toStringAsFixed(0);
         _tagsController.text = r.tags.join(', ');
+        // [fork] S127 recipe-builder
+        _optionalOpenAtStart =
+            (r.description?.trim().isNotEmpty ?? false) ||
+            r.servingsCount != null ||
+            r.tags.isNotEmpty ||
+            r.imagePath != null ||
+            (r.totalWeightG -
+                        r.ingredients.fold<double>(
+                          0,
+                          (sum, i) => sum + i.convertedAmountG,
+                        ))
+                    .abs() >
+                0.5;
+        // [/fork]
       }
     }
   }
@@ -133,46 +148,15 @@ class _RecipeBuilderScreenState extends State<RecipeBuilderScreen> {
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
-            actions: [
-              if (state.isSaving)
-                const Padding(
-                  padding: EdgeInsets.only(right: 16),
-                  child: Center(
-                    child: SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    ),
-                  ),
-                )
-              else
-                Semantics(
-                  identifier: 'recipe-builder-save',
-                  child: TextButton.icon(
-                    onPressed: () => _bloc.add(const SaveRecipeEvent()),
-                    icon: const Icon(Icons.save_outlined),
-                    label: Text(S.of(context).recipeSaveLabel),
-                  ),
-                ),
-            ],
+            // [fork] S127 recipe-builder: Save is at the bottom, with the
+            // totals
+            // [/fork]
           ),
           body: ListView(
             padding: const EdgeInsets.all(Dimens.spacing16),
             children: [
-              UserImagePickerTile(
-                kind: UserImageKind.recipe,
-                imagePath: state.imagePath,
-                onPickFromGallery: () => _onPickImage(
-                  context,
-                  source: ImageSource.gallery,
-                ),
-                onTakePhoto: () => _onPickImage(
-                  context,
-                  source: ImageSource.camera,
-                ),
-                onRemove: () => _onRemoveImage(context),
-              ),
-              const SizedBox(height: Dimens.spacing16),
+              // [fork] S127 recipe-builder: the name, the ingredients, then
+              // the rest folded under Optional
               TextField(
                 controller: _nameController,
                 decoration: InputDecoration(
@@ -182,7 +166,64 @@ class _RecipeBuilderScreenState extends State<RecipeBuilderScreen> {
                 ),
                 onChanged: (v) => _bloc.add(UpdateNameEvent(v)),
               ),
-              const SizedBox(height: Dimens.spacing12),
+              const SizedBox(height: Dimens.spacing24),
+              Text(
+                S.of(context).recipeIngredientsLabel,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: Dimens.spacing8),
+              if (state.ingredients.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: Dimens.spacing16),
+                  child: Center(
+                    child: Text(
+                      S.of(context).recipeNoIngredientsLabel,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: palette.textMuted),
+                    ),
+                  ),
+                )
+              else
+                ...List.generate(
+                  state.ingredients.length,
+                  // [fork] S127 recipe-builder: amounts typed in place
+                  (i) => BuilderIngredientRow(
+                    key: ValueKey(
+                      '$i-${state.ingredients[i].snapshotMeal.code ?? state.ingredients[i].snapshotMeal.name}',
+                    ),
+                    ingredient: state.ingredients[i],
+                    onAmount: (amount) => _bloc.add(
+                      UpdateIngredientEvent(
+                        index: i,
+                        amount: amount,
+                        unit: state.ingredients[i].unit,
+                      ),
+                    ),
+                    onEdit: () => _onEditIngredient(context, i),
+                    onRemove: () => _bloc.add(RemoveIngredientEvent(i)),
+                  ),
+                  // [/fork]
+                ),
+              const SizedBox(height: Dimens.spacing8),
+              OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: Dimens.spacing16),
+                  side: BorderSide(color: palette.border, width: Dimens.hairline),
+                  shape: Dimens.shapeM,
+                ),
+                onPressed: () => _onAddIngredient(context),
+                icon: const Icon(Icons.add_rounded),
+                label: Text(S.of(context).recipeAddIngredientLabel),
+              ),
+              const SizedBox(height: Dimens.spacing16),
+              ExpansionTile(
+                key: const ValueKey('recipe-builder-optional'),
+                tilePadding: EdgeInsets.zero,
+                childrenPadding: EdgeInsets.zero,
+                initiallyExpanded: _optionalOpenAtStart,
+                title: const Text('Description, servings, tags'),
+                subtitle: const Text('Optional · photo and weight too'),
+                children: [
+                  const SizedBox(height: Dimens.spacing8),
               TextField(
                 controller: _descriptionController,
                 maxLines: 2,
@@ -231,43 +272,7 @@ class _RecipeBuilderScreenState extends State<RecipeBuilderScreen> {
                   _bloc.add(UpdateTagsEvent(parsed));
                 },
               ),
-              const SizedBox(height: Dimens.spacing24),
-              Text(
-                S.of(context).recipeIngredientsLabel,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-              ),
-              const SizedBox(height: Dimens.spacing8),
-              if (state.ingredients.isEmpty)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: Dimens.spacing16),
-                  child: Center(
-                    child: Text(
-                      S.of(context).recipeNoIngredientsLabel,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: palette.textMuted),
-                    ),
-                  ),
-                )
-              else
-                ...List.generate(
-                  state.ingredients.length,
-                  (i) => IngredientListItem(
-                    ingredient: state.ingredients[i],
-                    onEdit: () => _onEditIngredient(context, i),
-                    onRemove: () => _bloc.add(RemoveIngredientEvent(i)),
-                  ),
-                ),
-              const SizedBox(height: Dimens.spacing8),
-              OutlinedButton.icon(
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: Dimens.spacing16),
-                  side: BorderSide(color: palette.border, width: Dimens.hairline),
-                  shape: Dimens.shapeM,
-                ),
-                onPressed: () => _onAddIngredient(context),
-                icon: const Icon(Icons.add_rounded),
-                label: Text(S.of(context).recipeAddIngredientLabel),
-              ),
-              const SizedBox(height: Dimens.spacing24),
+                  const SizedBox(height: Dimens.spacing12),
               TextField(
                 controller: _totalWeightController,
                 keyboardType: const TextInputType.numberWithOptions(
@@ -314,19 +319,44 @@ class _RecipeBuilderScreenState extends State<RecipeBuilderScreen> {
                     ),
                   ),
                 ),
-              const SizedBox(height: Dimens.spacing16),
-              RecipeNutritionSummary(
-                nutrimentsPer100: state.aggregatedNutrimentsPer100,
-                totalWeightG: state.totalWeightG,
+                  const SizedBox(height: Dimens.spacing12),
+              UserImagePickerTile(
+                kind: UserImageKind.recipe,
+                imagePath: state.imagePath,
+                onPickFromGallery: () => _onPickImage(
+                  context,
+                  source: ImageSource.gallery,
+                ),
+                onTakePhoto: () => _onPickImage(
+                  context,
+                  source: ImageSource.camera,
+                ),
+                onRemove: () => _onRemoveImage(context),
               ),
+                ],
+              ),
+              // [/fork]
               const SizedBox(height: Dimens.spacing32),
             ],
           ),
+          // [fork] S127 recipe-builder
+          bottomNavigationBar: BuilderSaveBar(
+            per100: state.aggregatedNutrimentsPer100,
+            totalWeightG: state.totalWeightG,
+            saving: state.isSaving,
+            onSave: () => _bloc.add(const SaveRecipeEvent()),
+          ),
+          // [/fork]
           ),
         );
       },
     );
   }
+
+  // [fork] S127 recipe-builder: Optional opens on an existing recipe
+  // that has any of what it holds
+  bool _optionalOpenAtStart = false;
+  // [/fork]
 
   bool _hasUnsavedChanges(RecipeBuilderState state) {
     if (state.didSave || state.isSaving) return false;
