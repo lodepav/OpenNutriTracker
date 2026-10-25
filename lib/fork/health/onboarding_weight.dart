@@ -44,14 +44,21 @@ Future<HealthWeightRead> readLatestHealthWeight(
 }
 
 /// Onboarding's "Get from Health Connect" beside the typed weight (seam
-/// S99): fills the field with the latest weigh-in, or says why it can't.
+/// S99): fills the field with the latest weigh-in, or says why it can't
+/// through [onNote], for the page to show under the field.
 class HealthWeightButton extends StatefulWidget {
   final void Function(double kg) onWeight;
+  final void Function(String note) onNote;
 
   /// The store to read; the device's (or the emulator's fake) when null.
   final WeightSource? source;
 
-  const HealthWeightButton({super.key, required this.onWeight, this.source});
+  const HealthWeightButton({
+    super.key,
+    required this.onWeight,
+    required this.onNote,
+    this.source,
+  });
 
   @override
   State<HealthWeightButton> createState() => _HealthWeightButtonState();
@@ -59,29 +66,23 @@ class HealthWeightButton extends StatefulWidget {
 
 class _HealthWeightButtonState extends State<HealthWeightButton> {
   bool _reading = false;
-  String? _note;
 
   Future<void> _read() async {
-    setState(() {
-      _reading = true;
-      _note = null;
-    });
+    setState(() => _reading = true);
     final source =
         widget.source ??
         (forkFakeHealth ? FakeWeights() : const HealthStoreWeights());
     final read = await readLatestHealthWeight(source);
     if (!mounted) return;
-    setState(() {
-      _reading = false;
-      _note = switch (read) {
-        HealthWeightFound(:final measuredAt) =>
-          'From Health Connect, weighed ${_date(measuredAt)}.',
-        HealthWeightRefused() =>
-          "Health Connect didn't share your weight. Type it instead.",
-        HealthWeightNone() =>
-          'No weigh-ins in Health Connect from the past 30 days. '
-              'Type your weight instead.',
-      };
+    setState(() => _reading = false);
+    widget.onNote(switch (read) {
+      HealthWeightFound(:final measuredAt) =>
+        'From Health Connect, weighed ${_date(measuredAt)}.',
+      HealthWeightRefused() =>
+        "Health Connect didn't share your weight. Type it instead.",
+      HealthWeightNone() =>
+        'No weigh-ins in Health Connect from the past 30 days. '
+            'Type your weight instead.',
     });
     if (read case HealthWeightFound(:final kg)) widget.onWeight(kg);
   }
@@ -91,25 +92,15 @@ class _HealthWeightButtonState extends State<HealthWeightButton> {
       '${d.day.toString().padLeft(2, '0')}';
 
   @override
-  Widget build(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      OutlinedButton.icon(
-        key: const ValueKey('onboarding-health-weight'),
-        onPressed: _reading ? null : _read,
-        icon: _reading
-            ? const SizedBox.square(
-                dimension: 18,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              )
-            : const Icon(Icons.monitor_weight_outlined),
-        label: const Text('Get from Health Connect'),
-      ),
-      if (_note case final note?)
-        Padding(
-          padding: const EdgeInsets.only(top: 4),
-          child: Text(note, style: Theme.of(context).textTheme.bodySmall),
-        ),
-    ],
+  Widget build(BuildContext context) => OutlinedButton.icon(
+    key: const ValueKey('onboarding-health-weight'),
+    onPressed: _reading ? null : _read,
+    icon: _reading
+        ? const SizedBox.square(
+            dimension: 18,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          )
+        : const Icon(Icons.monitor_weight_outlined),
+    label: const Text('Get from Health Connect'),
   );
 }
