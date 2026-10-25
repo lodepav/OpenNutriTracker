@@ -65,4 +65,6 @@ for n in range(shards):
 print(f"{len(files)} test files in {shards} bundles")
 EOF
 
+# lib/generated is not committed: a pulled ARB change needs it rebuilt.
+flutter gen-l10n
 flutter test test/_bundle_*.dart "$@"
