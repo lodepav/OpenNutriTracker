@@ -11,8 +11,10 @@ enum BodyMetric {
   hips('Hips', 'cm'),
   chest('Chest', 'cm'),
   neck('Neck', 'cm'),
-  arm('Arm', 'cm'),
-  thigh('Thigh', 'cm');
+  leftArm('Left arm', 'cm'),
+  rightArm('Right arm', 'cm'),
+  leftThigh('Left thigh', 'cm'),
+  rightThigh('Right thigh', 'cm');
 
   final String label;
   final String unit;
@@ -20,6 +22,15 @@ enum BodyMetric {
   const BodyMetric(this.label, this.unit);
 
   bool get isLength => unit == 'cm';
+
+  /// [name] as stored, also from before arms and thighs had sides: one
+  /// arm or thigh then was the right one, as the MacroFactor import took
+  /// it where both were measured.
+  static BodyMetric byName(String name) => switch (name) {
+    'arm' => rightArm,
+    'thigh' => rightThigh,
+    _ => values.byName(name),
+  };
 }
 
 class Measurement {
@@ -45,7 +56,7 @@ class Measurement {
   static Measurement fromJson(Map<dynamic, dynamic> json) => Measurement(
     id: json['id'] as String,
     date: DateTime.parse(json['date'] as String),
-    metric: BodyMetric.values.byName(json['metric'] as String),
+    metric: BodyMetric.byName(json['metric'] as String),
     value: (json['value'] as num).toDouble(),
   );
 }

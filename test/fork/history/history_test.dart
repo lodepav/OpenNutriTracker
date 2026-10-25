@@ -442,7 +442,8 @@ void main() {
     expect(file.weightsKg, {DateTime(2025, 5, 16): 93.85});
     expect(file.measurements[DateTime(2025, 5, 16)], {
       BodyMetric.bodyFat: 15.7,
-      BodyMetric.arm: 32,
+      BodyMetric.leftArm: 31,
+      BodyMetric.rightArm: 32,
       BodyMetric.waist: 93,
     });
     expect(file.customFoods.single.name, 'Butter Chicken');
@@ -498,7 +499,8 @@ void main() {
     expect(again.kept, ['1 day already imported', '1 custom food']);
     expect(again.measurements[DateTime(2025, 5, 16)]!.keys, {
       BodyMetric.bodyFat,
-      BodyMetric.arm,
+      BodyMetric.leftArm,
+      BodyMetric.rightArm,
     });
     expect(again.customFoods, isEmpty);
 

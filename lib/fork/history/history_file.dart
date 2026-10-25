@@ -499,7 +499,7 @@ class _Layout {
 
 /// Body fat % and the body measurements among [headers] (MacroFactor's
 /// "Scale Weight" fat percent and "Body Metrics"), each with its factor to
-/// cm; an arm or thigh is the right one where both are measured.
+/// cm; an arm or thigh with no side is taken as the right one.
 Map<BodyMetric, (int, double)> _measures(List<String> headers) {
   final found = <BodyMetric, (int, double)>{};
   void take(BodyMetric metric, bool Function(String) test) {
@@ -532,8 +532,10 @@ Map<BodyMetric, (int, double)> _measures(List<String> headers) {
     take(metric, (c) => _names(c, word));
   }
   for (final (metric, words) in [
-    (BodyMetric.arm, ['right bicep', 'left bicep', 'bicep', 'arm']),
-    (BodyMetric.thigh, ['right thigh', 'left thigh', 'thigh']),
+    (BodyMetric.leftArm, ['left bicep', 'left arm']),
+    (BodyMetric.rightArm, ['right bicep', 'right arm', 'bicep', 'arm']),
+    (BodyMetric.leftThigh, ['left thigh']),
+    (BodyMetric.rightThigh, ['right thigh', 'thigh']),
   ]) {
     for (final word in words) {
       take(metric, (c) => _names(c, word));
