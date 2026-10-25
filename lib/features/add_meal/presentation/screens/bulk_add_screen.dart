@@ -1121,12 +1121,26 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
                       ),
                     )
                   else if (row.isLowConfidence)
-                    Text(
-                      S.of(context).bulkAddUncertainLabel,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.tertiary,
-                      ),
+                    // [fork] S90 ux-journeys: orange text is too faint
+                    // to read on the light theme, so the orange goes on an
+                    // icon and the words are in the body colour
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.warning_amber_rounded,
+                          size: 16,
+                          color: theme.colorScheme.tertiary,
+                        ),
+                        const SizedBox(width: 4),
+                        Flexible(
+                          child: Text(
+                            S.of(context).bulkAddUncertainLabel,
+                            style: theme.textTheme.bodySmall,
+                          ),
+                        ),
+                      ],
                     )
+                  // [/fork]
                   // A bare count the app could not interpret. Shown
                   // below a doubtful match, because a wrong food
                   // matters more than a wrong unit on the right one.

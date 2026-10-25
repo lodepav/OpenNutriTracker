@@ -113,6 +113,7 @@ because upstream merged the feature) gets removed, and so does its row.
 | S102 | `lib/core/domain/usecase/delete_all_user_data_usecase.dart` | Deleting the active profile's data (Settings' reset, leaving the demo) also empties the fork's own boxes of that profile (`clearForkProfileData`, `lib/fork/backup/profile_wipe.dart`): adaptive settings, check-ins, body measurements and Health Connect's weight-import state. Two lines: the import and the call. | active |
 | S103 | `lib/features/settings/presentation/widgets/kcal_goal_info_screen.dart`, `lib/features/trends/presentation/trends_page.dart` | In kJ, the goal screen puts each equation's kcal in kJ, the macro lines say their kcal, the manual adjustment row is "Daily kJ adjustment", and the Trends calorie card is "Energy". | active |
 | S110 | `lib/features/meal_detail/presentation/widgets/meal_detail_bottom_sheet.dart` | The snackbar after adding a food names the meal ("Added to Breakfast", upstream's `quickAddAddedSnack` with `mealLabel`), since a large font can squeeze the meal off the add screen's title. | active |
+| S111 | `lib/features/profile/presentation/widgets/set_weight_dialog.dart` | The weigh-in dialog has a typed field under the ruler for kg and lb (upstream's `BodyWeightInput`, as stones already had), since the ruler takes a drag TalkBack cannot make; the field follows the ruler, the one moved last is saved, and the ruler is left out of semantics. | active |
 
 ## Carried upstream changes
 

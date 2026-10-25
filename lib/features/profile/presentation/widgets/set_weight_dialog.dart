@@ -38,6 +38,12 @@ class _SetWeightDialogState extends State<SetWeightDialog> {
   // Stones path: kg reported by BodyWeightInput, null if invalid/empty.
   double? _stKg;
 
+  // [fork] S111 typed-weigh-in: kg and lb can be typed too, as the ruler
+  // takes a drag that TalkBack cannot make. The field follows the ruler;
+  // whichever moved last is saved.
+  bool _typedLast = false;
+  // [/fork]
+
   // Date-only (midnight) so it never sits after the date-only lastDate bound.
   late DateTime _selectedDate;
 
@@ -88,7 +94,7 @@ class _SetWeightDialogState extends State<SetWeightDialog> {
 
   void _submit() {
     final double kg;
-    if (widget.unit == BodyWeightUnit.st) {
+    if (widget.unit == BodyWeightUnit.st || _typedLast /* [fork] S111 */) {
       final valid = _stKg;
       if (valid == null) {
         Navigator.of(context).pop();
@@ -131,7 +137,10 @@ class _SetWeightDialogState extends State<SetWeightDialog> {
                   onChangedKg: (kg) => setState(() => _stKg = kg),
                 )
               else
-                HorizontalPicker(
+                // [fork] S111: the typed field below says the weight; the
+                // ruler's ticks read as "| 87kg |"
+                ExcludeSemantics(
+                  child: HorizontalPicker(
                   height: 100,
                   backgroundColor: Colors.transparent,
                   minValue: minWeight,
@@ -144,9 +153,27 @@ class _SetWeightDialogState extends State<SetWeightDialog> {
                   onChanged: (value) {
                     setState(() {
                       _pickerDisplayWeight = value;
+                      _typedLast = false; // [fork] S111
                     });
                   },
                 ),
+                ),
+              // [fork] S111 typed-weigh-in
+              if (widget.unit != BodyWeightUnit.st)
+                BodyWeightInput(
+                  // Reseeded as the ruler moves.
+                  key: ValueKey(_pickerDisplayWeight.toStringAsFixed(1)),
+                  initialKg: _pickerWeightToKg(
+                    double.parse(_pickerDisplayWeight.toStringAsFixed(1)),
+                  ),
+                  unit: widget.unit,
+                  identifierPrefix: 'set-weight-dialog',
+                  onChangedKg: (kg) => setState(() {
+                    _stKg = kg;
+                    _typedLast = true;
+                  }),
+                ),
+              // [/fork]
               if (widget.allowDateSelection) ...[
                 const SizedBox(height: 8),
                 Semantics(
