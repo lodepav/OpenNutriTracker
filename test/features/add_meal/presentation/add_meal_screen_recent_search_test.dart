@@ -251,6 +251,29 @@ void main() {
       expect(_withIdentifier('add-meal-recent-list'), findsOneWidget);
     });
 
+    // [fork] S85 fits-left: only over the unfiltered recents
+    testWidgets('"Fits what\'s left" goes while a query filters the recents', (
+      tester,
+    ) async {
+      await _register([_intake('Apple')]);
+      await tester.pumpWidget(_app());
+      await tester.pumpAndSettle();
+      final chip = find.byKey(const ValueKey('add-meal-fits-left'));
+      expect(chip, findsOneWidget);
+
+      await tester.tap(find.text(l10nEn.recentlyAddedLabel));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField).first, 'ap');
+      await tester.pumpAndSettle();
+      expect(_withIdentifier('add-meal-recent-list'), findsOneWidget);
+      expect(chip, findsNothing);
+
+      await tester.enterText(find.byType(TextField).first, '');
+      await tester.pumpAndSettle();
+      expect(chip, findsOneWidget);
+    });
+    // [/fork]
+
     testWidgets(
         'Search all is offered only once the query is long enough to search, '
         'and typing never re-reads recent history', (tester) async {
