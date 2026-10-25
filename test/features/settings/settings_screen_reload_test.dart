@@ -18,6 +18,9 @@ import 'package:opennutritracker/features/settings/presentation/bloc/settings_bl
 import 'package:opennutritracker/features/settings/settings_screen.dart';
 import 'package:opennutritracker/features/trends/presentation/bloc/trends_bloc.dart';
 import 'package:opennutritracker/generated/l10n.dart';
+// [fork] S129 settings-sections
+import 'package:opennutritracker/fork/settings/settings_index.dart';
+// [/fork]
 
 import '../../helpers/test_l10n.dart';
 
@@ -77,7 +80,8 @@ class _EmptyStorage implements FlutterSecureStorage {
 
 class _FakeProber extends Fake implements AiEndpointProber {}
 
-Widget _app() => MaterialApp(
+// [fork] S129 settings-sections: a section's page holds its rows
+Widget _app({SettingsSection? section}) => MaterialApp(
   localizationsDelegates: const [
     S.delegate,
     GlobalMaterialLocalizations.delegate,
@@ -85,8 +89,9 @@ Widget _app() => MaterialApp(
     GlobalCupertinoLocalizations.delegate,
   ],
   supportedLocales: S.supportedLocales,
-  home: const SettingsScreen(),
+  home: SettingsScreen(section: section),
 );
+// [/fork]
 
 void main() {
   late _DrivenSettingsBloc settingsBloc;
@@ -115,11 +120,14 @@ void main() {
   testWidgets('a reload keeps the list and where it was scrolled to (#1368)', (
     tester,
   ) async {
-    tester.view.physicalSize = const Size(1080, 2400);
+    // [fork] S129 settings-sections: a section's page is shorter than the
+    // whole list was, so the phone is too
+    tester.view.physicalSize = const Size(1080, 900);
     tester.view.devicePixelRatio = 2.625;
     addTearDown(tester.view.reset);
 
-    await tester.pumpWidget(_app());
+    await tester.pumpWidget(_app(section: SettingsSection.data));
+    // [/fork]
     await tester.pumpAndSettle();
 
     final list = find.byType(Scrollable).first;
@@ -211,7 +219,7 @@ void main() {
       ),
     );
 
-    await tester.pumpWidget(_app());
+    await tester.pumpWidget(_app(section: SettingsSection.goals)); // [fork] S129
     await tester.pumpAndSettle();
 
     expect(find.text(l10nEn.settingsKjAdjustmentLabel), findsOneWidget);
