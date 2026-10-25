@@ -368,4 +368,43 @@ void main() {
     expect(reloads.log, containsAll(['LoadProfileEvent', 'updateHomePage']));
   });
   // [/fork]
+
+  // [fork] S113
+  testWidgets("an added weigh-in reloads Home and the profile, as today's "
+      'sets the weight', (tester) async {
+    final reloads = ReloadRecorder()
+      ..register()
+      ..registerProfile();
+    addTearDown(locator.reset);
+    final addUsecase = _FakeAddWeightLogUsecase();
+    await tester.pumpWidget(_wrap(_buildScreen(const [], addUsecase: addUsecase)));
+    await tester.pumpAndSettle();
+    await tester.tap(find.bySemanticsIdentifier('weight-history-add'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(l10nEn.dialogOKLabel));
+    await tester.pumpAndSettle();
+
+    expect(addUsecase.added, hasLength(1));
+    expect(reloads.log, containsAll(['LoadProfileEvent', 'updateHomePage']));
+  });
+
+  testWidgets("the delete's Undo goes after a while, not onto every screen", (
+    tester,
+  ) async {
+    ReloadRecorder()
+      ..register()
+      ..registerProfile();
+    addTearDown(locator.reset);
+    final entry = WeightLogEntity(date: DateTime(2026, 3, 11), weightKg: 80);
+    await tester.pumpWidget(_wrap(_buildScreen([entry])));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Delete the weigh-in of Mar 11, 2026'));
+    await tester.pumpAndSettle();
+    expect(find.text('Weigh-in deleted'), findsOneWidget);
+
+    await tester.pump(const Duration(seconds: 10));
+    await tester.pumpAndSettle();
+    expect(find.text('Weigh-in deleted'), findsNothing);
+  });
+  // [/fork]
 }

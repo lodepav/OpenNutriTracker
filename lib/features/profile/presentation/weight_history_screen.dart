@@ -285,6 +285,7 @@ class _WeightHistoryScreenState extends State<WeightHistoryScreen> {
     );
     await _load();
     reloadDiaryAndTrends();
+    refreshAfterWeightImport(); // [fork] S113: today's sets the weight
   }
 
   Future<void> _onDelete(WeightLogEntity entry) async {
@@ -300,6 +301,9 @@ class _WeightHistoryScreenState extends State<WeightHistoryScreen> {
       ..hideCurrentSnackBar()
       ..showSnackBar(
         SnackBar(
+          // Goes after its time, as the food undo's; an action alone
+          // would keep it up on every screen.
+          persist: false,
           content: const Text('Weigh-in deleted'),
           action: SnackBarAction(
             label: 'Undo',
