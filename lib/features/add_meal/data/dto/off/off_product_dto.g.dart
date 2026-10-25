@@ -41,6 +41,9 @@ OFFProductDTO _$OFFProductDTOFromJson(Map<String, dynamic> json) =>
       countries_tags: (json['countries_tags'] as List<dynamic>?)
           ?.map((e) => e as String)
           .toList(),
+      categories_tags: (json['categories_tags'] as List<dynamic>?)
+          ?.map((e) => e as String)
+          .toList(),
     );
 
 Map<String, dynamic> _$OFFProductDTOToJson(OFFProductDTO instance) =>
@@ -71,5 +74,6 @@ Map<String, dynamic> _$OFFProductDTOToJson(OFFProductDTO instance) =>
       'serving_quantity_unit': instance.serving_quantity_unit,
       'popularity_key': instance.popularity_key,
       'countries_tags': instance.countries_tags,
+      'categories_tags': instance.categories_tags,
       'nutriments': instance.nutriments,
     };

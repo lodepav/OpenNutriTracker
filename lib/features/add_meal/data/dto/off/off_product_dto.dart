@@ -73,6 +73,11 @@ class OFFProductDTO {
   // present on Search-a-licious results.
   final List<String>? countries_tags;
 
+  // [fork] S117 off-kinds: the product's categories, broadest first
+  // (`en:dairies`, …, `en:fruit-yogurts`), for the icon its row shows
+  final List<String>? categories_tags;
+  // [/fork]
+
   final OFFProductNutrimentsDTO? nutriments;
 
   String? getLocaleName(SupportedLanguage supportedLanguage) {
@@ -150,6 +155,7 @@ class OFFProductDTO {
     required this.nutriments,
     this.popularity_key,
     this.countries_tags,
+    this.categories_tags, // [fork] S117
   });
 
   factory OFFProductDTO.fromJson(Map<String, dynamic> json) =>

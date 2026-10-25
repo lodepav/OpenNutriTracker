@@ -8,6 +8,7 @@ import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dar
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_portion_entity.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_nutriments_entity.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
+import 'package:opennutritracker/fork/off/off_kinds.dart'; // [fork] S117
 
 class ProductsRepository {
   static final _log = Logger('ProductsRepository');
@@ -46,6 +47,12 @@ class ProductsRepository {
     // The country boost follows the device on purpose, not the language
     // picked in the app: a German speaker in Austria wants Austrian
     // products ranked up. Food-name language is AppLocale's job (#1214).
+    // [fork] S117 off-kinds: what kind of food each product is, for its row
+    OffKinds.learn([
+      for (final dto in offWordResponse.products)
+        (code: dto.code, categories: dto.categories_tags),
+    ]).ignore();
+    // [/fork]
     final userCountryTag = OffCountry.fromLocale(Platform.localeName);
     final candidates = <_RankedOffProduct>[];
     for (var i = 0; i < offWordResponse.products.length; i++) {
@@ -172,6 +179,12 @@ class ProductsRepository {
 
   Future<MealEntity> getOFFProductByBarcode(String barcode) async {
     final productResponse = await _offDataSource.fetchBarcodeResults(barcode);
+    // [fork] S117 off-kinds
+    final product = productResponse.product;
+    await OffKinds.learn([
+      (code: product.code, categories: product.categories_tags),
+    ]);
+    // [/fork]
 
     return MealEntity.fromOFFProduct(productResponse.product, detailed: true);
   }
