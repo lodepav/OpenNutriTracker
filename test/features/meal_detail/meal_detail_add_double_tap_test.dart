@@ -82,7 +82,7 @@ class _GatedMealDetailBloc extends MealDetailBloc {
   @override
   // [fork] S7 meal-groups
   Future<IntakeEntity> addIntake(
-  // [/fork]
+    // [/fork]
     BuildContext context,
     String unit,
     String amountText,
@@ -171,9 +171,12 @@ void main() {
     bloc.save.complete();
     await tester.pumpAndSettle();
     expect(bloc.saves, 1);
+    // [fork] S110: the snackbar names the meal.
+    expect(find.text('Added to Breakfast'), findsOneWidget);
   });
 }
 
 // [fork] S7 meal-groups: addIntake returns the entry it wrote
 class _ForkWrittenIntake extends Fake implements IntakeEntity {}
+
 // [/fork]

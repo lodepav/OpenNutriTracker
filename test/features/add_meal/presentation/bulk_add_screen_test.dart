@@ -1778,6 +1778,9 @@ void main() {
       // And the button still offers all three, so nothing has silently left
       // the batch.
       expect(find.text(l10nEn.bulkAddSubmitLabel(3)), findsOneWidget);
+      // [fork] S90: one item is one item.
+      expect(l10nEn.bulkAddSubmitLabel(1), 'Log 1 item');
+      expect(l10nEn.bulkAddSubmitLabel(3), 'Log 3 items');
     });
   });
 

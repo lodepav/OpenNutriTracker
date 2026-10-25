@@ -27,6 +27,9 @@ import 'package:opennutritracker/fork/units/energy_text.dart';
 // [fork] S45 remembered-amounts
 import 'package:opennutritracker/fork/amounts/remembered_amounts.dart';
 // [/fork]
+// [fork] S110 meal-named
+import 'package:opennutritracker/fork/copy/copy_ui.dart' show mealLabel;
+// [/fork]
 
 class MealDetailBottomSheet extends StatefulWidget {
   final MealEntity product;
@@ -443,7 +446,17 @@ class _MealDetailBottomSheetState extends State<MealDetailBottomSheet> {
     // Show snackbar and return to dashboard
     ScaffoldMessenger.of(
       context,
-    ).showSnackBar(SnackBar(content: Text(S.of(context).infoAddedIntakeLabel)));
+    ).showSnackBar(
+      SnackBar(
+        content: Text(
+          // [fork] S110 meal-named: which meal it went to, which a large
+          // font can squeeze off the add screen's title
+          S.of(context).quickAddAddedSnack(
+            mealLabel(context, widget.intakeTypeEntity),
+          ),
+        ),
+      ),
+    );
     Navigator.of(
       context,
     ).popUntil(namedRouteOrFirst(NavigationOptions.mainRoute));
