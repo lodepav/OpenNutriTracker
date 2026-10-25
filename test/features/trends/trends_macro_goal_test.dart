@@ -1,182 +1,67 @@
 import 'package:fl_chart/fl_chart.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:opennutritracker/core/domain/entity/body_weight_unit_entity.dart';
 import 'package:opennutritracker/core/domain/entity/tracked_day_entity.dart';
-import 'package:opennutritracker/core/domain/usecase/get_config_usecase.dart';
-import 'package:opennutritracker/core/domain/usecase/get_tracked_day_usecase.dart';
-import 'package:opennutritracker/core/domain/usecase/get_user_usecase.dart';
-import 'package:opennutritracker/core/domain/usecase/get_water_intake_usecase.dart';
-import 'package:opennutritracker/core/domain/usecase/get_weight_log_usecase.dart';
-import 'package:opennutritracker/core/utils/energy_unit_provider.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
-import 'package:opennutritracker/features/trends/presentation/bloc/trends_bloc.dart';
-import 'package:opennutritracker/features/trends/presentation/trends_page.dart';
-import 'package:opennutritracker/generated/l10n.dart';
-import 'package:provider/provider.dart';
 
-// Seam S87: Daily average's macro goals are the mean over the days that
-// have a goal, not their sum over the range's days.
+import '../../fork/trends/trends_harness.dart';
 
-class _FakeGetTrackedDayUsecase extends Fake implements GetTrackedDayUsecase {}
+// Seam S87: a macro's goal is the mean over the days that have a goal, not
+// their sum over the range's days. S120 moved the Daily average card to
+// the macro tiles and the Calories page's table.
 
-class _FakeGetWeightLogUsecase extends Fake implements GetWeightLogUsecase {}
-
-class _FakeGetUserUsecase extends Fake implements GetUserUsecase {}
-
-class _FakeGetConfigUsecase extends Fake implements GetConfigUsecase {}
-
-class _FakeGetWaterIntakeUsecase extends Fake
-    implements GetWaterIntakeUsecase {}
-
-/// A TrendsBloc pinned to one loaded state: the page's LoadTrendsEvent is
-/// ignored so the test controls exactly what the chart plots.
-class _SeededTrendsBloc extends TrendsBloc {
-  _SeededTrendsBloc(TrendsLoaded seeded)
-    : super(
-        _FakeGetTrackedDayUsecase(),
-        _FakeGetWeightLogUsecase(),
-        _FakeGetUserUsecase(),
-        _FakeGetConfigUsecase(),
-        _FakeGetWaterIntakeUsecase(),
-      ) {
-    emit(seeded);
-  }
-
-  @override
-  void add(TrendsEvent event) {}
-}
-
-void _seed({double carbsTracked = 70, double caloriesTracked = 700}) {
-  final now = DateTime.now();
-  locator.registerSingleton<TrendsBloc>(
-    _SeededTrendsBloc(
-      TrendsLoaded(
-        rangeDays: 7,
-        windowDays: 7,
-        // One day logged of the seven.
-        days: [
-          TrackedDayEntity(
-            day: DateTime(now.year, now.month, now.day),
-            calorieGoal: 2000,
-            caloriesTracked: caloriesTracked,
-            carbsGoal: 259,
-            carbsTracked: carbsTracked,
-            fatGoal: 48,
-            fatTracked: 14,
-            proteinGoal: 64,
-            proteinTracked: 21,
-          ),
-        ],
-        priorWeek: const [],
-        weight: const [],
-        bodyWeightUnit: BodyWeightUnit.kg,
-        targetWeightKg: null,
-        waterByDay: const {},
-        waterGoalMl: 0,
-      ),
-    ),
-  );
-}
+TrackedDayEntity _today({double carbs = 70, double kcal = 700}) =>
+    TrackedDayEntity(
+      day: day(0),
+      calorieGoal: 2000,
+      caloriesTracked: kcal,
+      carbsGoal: 259,
+      carbsTracked: carbs,
+      fatGoal: 48,
+      fatTracked: 14,
+      proteinGoal: 64,
+      proteinTracked: 21,
+    );
 
 void main() {
-  setUp(_seed);
-
   tearDown(() async => locator.reset());
 
   testWidgets('a week with one day logged: the goals as that day had them', (
     tester,
   ) async {
-    await tester.pumpWidget(
-      ChangeNotifierProvider(
-        create: (_) => EnergyUnitProvider(usesKilojoules: false),
-        child: const MaterialApp(
-          localizationsDelegates: [
-            S.delegate,
-            GlobalMaterialLocalizations.delegate,
-            GlobalWidgetsLocalizations.delegate,
-            GlobalCupertinoLocalizations.delegate,
-          ],
-          supportedLocales: S.supportedLocales,
-          home: Scaffold(body: TrendsPage()),
-        ),
-      ),
-    );
-    await tester.pump();
-    await tester.scrollUntilVisible(
-      find.text('10 / 259 g'),
-      300,
-      scrollable: find.byType(Scrollable).first,
-    );
+    // One day logged of the seven.
+    await pumpTrends(tester, loaded(days: [_today()]));
 
-    // The intake is over the range, as upstream has it.
-    expect(find.text('10 / 259 g'), findsOneWidget);
-    expect(find.text('2 / 48 g'), findsOneWidget);
-    expect(find.text('3 / 64 g'), findsOneWidget);
+    // S120: the intake is over the logged days, as the weekly report's.
+    expect(tileText(tester, 'carbs'), contains('70 / 259 g'));
+    expect(tileText(tester, 'fat'), contains('14 / 48 g'));
+    expect(tileText(tester, 'protein'), contains('21 / 64 g'));
   });
 
-  // Seam S114: the average rounds, as the weekly report's does; 69 g over
-  // seven days is 9.86 g, not 9.
+  // Seam S114: grams round, as the weekly report's do; 69.6 g is 70 g.
   testWidgets('the daily average rounds', (tester) async {
-    await locator.reset();
-    _seed(carbsTracked: 69);
-    await tester.pumpWidget(
-      ChangeNotifierProvider(
-        create: (_) => EnergyUnitProvider(usesKilojoules: false),
-        child: const MaterialApp(
-          localizationsDelegates: [
-            S.delegate,
-            GlobalMaterialLocalizations.delegate,
-            GlobalWidgetsLocalizations.delegate,
-            GlobalCupertinoLocalizations.delegate,
-          ],
-          supportedLocales: S.supportedLocales,
-          home: Scaffold(body: TrendsPage()),
-        ),
-      ),
-    );
-    await tester.pump();
-    final carbs = find.text('10 / 259 g');
-    await tester.scrollUntilVisible(
-      carbs,
-      300,
-      scrollable: find.byType(Scrollable).first,
-    );
-    expect(carbs, findsOneWidget);
+    await pumpTrends(tester, loaded(days: [_today(carbs: 69.6)]));
+    expect(tileText(tester, 'carbs'), contains('70 / 259 g'));
+    await openTile(tester, 'calories');
+    expect(find.text('70 g'), findsOneWidget);
   });
 
   // Seam S114: energy is cut to whole numbers everywhere, as energyValue
-  // has it, so the summary and the tooltip agree with the card's "2572
-  // kcal of 2925 kcal".
-  testWidgets('energy is cut, not rounded, in the summary and tooltip', (
+  // has it: the tile, the page's average and the tooltip.
+  testWidgets('energy is cut, not rounded, in the tile and tooltip', (
     tester,
   ) async {
-    await locator.reset();
-    _seed(caloriesTracked: 2572.6);
-    await tester.pumpWidget(
-      ChangeNotifierProvider(
-        create: (_) => EnergyUnitProvider(usesKilojoules: false),
-        child: const MaterialApp(
-          localizationsDelegates: [
-            S.delegate,
-            GlobalMaterialLocalizations.delegate,
-            GlobalWidgetsLocalizations.delegate,
-            GlobalCupertinoLocalizations.delegate,
-          ],
-          supportedLocales: S.supportedLocales,
-          home: Scaffold(body: TrendsPage()),
-        ),
-      ),
-    );
-    await tester.pump();
-    expect(find.textContaining('Average 2572 kcal'), findsOneWidget);
-    final data = tester.widget<LineChart>(find.byType(LineChart).first).data;
-    final bar = data.lineBarsData.first;
-    final today = bar.spots.last;
-    final item = data.lineTouchData.touchTooltipData.getTooltipItems([
-      LineBarSpot(bar, 0, today),
-    ]).single!;
-    expect(item.text, '2572');
+    await pumpTrends(tester, loaded(days: [_today(kcal: 2572.6)]));
+    expect(tileText(tester, 'calories'), contains('2572 / 2000'));
+    await openTile(tester, 'calories');
+    expect(find.text('2572 kcal'), findsOneWidget);
+    final data = tester.widget<BarChart>(find.byType(BarChart)).data;
+    final group = data.barGroups.last;
+    final item = data.barTouchData.touchTooltipData.getTooltipItem(
+      group,
+      group.x,
+      group.barRods.single,
+      0,
+    )!;
+    expect(item.text, startsWith('2572 kcal'));
   });
 }

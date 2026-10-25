@@ -20,6 +20,8 @@ import 'package:opennutritracker/features/trends/presentation/trends_page.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 import 'package:provider/provider.dart';
 
+import '../../fork/trends/trends_harness.dart' show openTile;
+
 // Seam S93: the weight outlook reads the weigh-ins the chart draws, and is
 // labelled as the measured trend.
 
@@ -56,8 +58,8 @@ DateTime _day(int offset) {
 }
 
 Future<void> _pump(WidgetTester tester, List<WeightLogEntity> weight) async {
-  // The expenditure card below builds in the list's cache; its reads fail
-  // on these and it shows nothing.
+  // The overview reads the expenditure estimate for its tiles; its reads
+  // fail on these and the tiles show none.
   locator
     ..registerSingleton<GetUserUsecase>(_FakeGetUserUsecase())
     ..registerSingleton<GetWeightLogUsecase>(_FakeGetWeightLogUsecase())
@@ -93,6 +95,8 @@ Future<void> _pump(WidgetTester tester, List<WeightLogEntity> weight) async {
     ),
   );
   await tester.pump();
+  // [fork] S120: the weight card is on the Weight trend tile's page
+  await openTile(tester, 'weight');
 }
 
 void main() {
@@ -170,20 +174,14 @@ void main() {
   });
 
   // Seam S97: a range with nothing logged says so, rather than a flat line
-  // and its fill along the bottom under the goal.
-  testWidgets('nothing logged: the calorie and water cards say so', (
-    tester,
-  ) async {
+  // and its fill along the bottom under the goal; S120 has the water card
+  // on its tile's page (the calorie page is test/fork/trends').
+  testWidgets('nothing logged: the water card says so', (tester) async {
     await _pump(tester, const []);
-
-    expect(find.text('Nothing logged in this range.'), findsOneWidget);
-    final water = find.text('No water logged in this range.');
-    await tester.scrollUntilVisible(
-      water,
-      300,
-      scrollable: find.byType(Scrollable).first,
-    );
-    expect(water, findsOneWidget);
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    await openTile(tester, 'water');
+    expect(find.text('No water logged in this range.'), findsOneWidget);
   });
 
   testWidgets('one weigh-in in the range: no rate beside the empty chart', (
