@@ -79,6 +79,10 @@ class MealItemCard extends StatelessWidget {
     final source = isRecipe
         ? S.of(context).additionalInfoLabelRecipe
         : _sourceLabel();
+    // [fork] S131 add-sheet: with large text the energy goes under the name
+    // and the macros may wrap, so the name keeps its width (A6)
+    final large = MediaQuery.textScalerOf(context).scale(10) > 13;
+    // [/fork]
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 2),
       child: AppCard(
@@ -126,13 +130,20 @@ class MealItemCard extends StatelessWidget {
                       fat: last?.totalFatsGram ?? n.fat100,
                       protein: last?.totalProteinsGram ?? n.proteins100,
                       tail: source == null ? null : '· $source',
-                      maxLines: 1,
+                      maxLines: large ? 3 : 1, // [fork] S131
                     ),
+                    // [fork] S131 add-sheet
+                    if (large && kcal != null)
+                      Text(
+                        '${energyText(context, kcal)} · $per',
+                        style: muted?.copyWith(fontWeight: FontWeight.w600),
+                      ),
+                    // [/fork]
                   ],
                 ),
               ),
               const SizedBox(width: Dimens.spacing8),
-              if (kcal != null)
+              if (kcal != null && !large) // [fork] S131
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   mainAxisSize: MainAxisSize.min,

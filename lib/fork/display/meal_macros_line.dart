@@ -94,7 +94,7 @@ class MacrosLine extends StatelessWidget {
           semanticsLabel: [
             ?lead,
             for (final (_, name, value) in macros)
-              '${grams(value)} grams $name',
+              '${grams(value)} ${grams(value) == '1' ? 'gram' : 'grams'} $name',
             ?tail,
           ].join(', '),
         );

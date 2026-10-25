@@ -135,8 +135,10 @@ class _BuilderIngredientRowState extends State<BuilderIngredientRow> {
             ),
           ),
           const SizedBox(width: Dimens.spacing8),
+          // The unit beside the field, which grows with the text, so the
+          // digits never run into it (A6).
           SizedBox(
-            width: 84,
+            width: MediaQuery.textScalerOf(context).scale(64).clamp(64, 120),
             child: Semantics(
               label: 'Amount of ${meal.name ?? 'the ingredient'}',
               child: TextField(
@@ -152,7 +154,6 @@ class _BuilderIngredientRowState extends State<BuilderIngredientRow> {
                 ],
                 decoration: InputDecoration(
                   isDense: true,
-                  suffixText: ingredient.unit,
                   border: const OutlineInputBorder(
                     borderRadius: Dimens.borderRadiusS,
                   ),
@@ -164,6 +165,8 @@ class _BuilderIngredientRowState extends State<BuilderIngredientRow> {
               ),
             ),
           ),
+          const SizedBox(width: Dimens.spacing4),
+          Text(ingredient.unit, style: Theme.of(context).textTheme.bodyMedium),
           IconButton(
             tooltip: 'Remove ${meal.name ?? 'ingredient'}',
             icon: Icon(Icons.close_rounded, color: palette.textMuted),

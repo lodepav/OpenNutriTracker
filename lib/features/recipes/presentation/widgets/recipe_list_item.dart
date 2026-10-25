@@ -47,6 +47,11 @@ class RecipeListItem extends StatelessWidget {
 
     // [fork] S130 recipes-list: one serving's values, as the row's figures
     final serving = servingValues(recipe);
+    // With large text the energy goes under the name, which may wrap (A6).
+    final large = MediaQuery.textScalerOf(context).scale(10) > 13;
+    final energy = (recipe.servingsCount ?? 0) > 0
+        ? '${energyUnit(context)} / serving'
+        : energyUnit(context);
     // [/fork]
     final ingredientCount = recipe.ingredients.length;
 
@@ -82,7 +87,7 @@ class RecipeListItem extends StatelessWidget {
                   children: [
                     AutoSizeText(
                       recipe.name,
-                      maxLines: 1,
+                      maxLines: large ? 3 : 1, // [fork] S130
                       minFontSize: 12,
                       overflow: TextOverflow.ellipsis,
                       style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
@@ -98,9 +103,13 @@ class RecipeListItem extends StatelessWidget {
                                 '${S.of(context).recipeIngredientCountLabel(ingredientCount)} · ',
                           ),
                           ...macroSpans(context, serving),
+                          if (large) // [fork] S130
+                            TextSpan(
+                              text: ' · ${energyValue(context, serving.kcal)} $energy',
+                            ),
                         ],
                       ),
-                      maxLines: 2,
+                      maxLines: large ? 4 : 2, // [fork] S130
                       overflow: TextOverflow.ellipsis,
                       style: textTheme.bodyMedium?.copyWith(color: palette.textMuted),
                     ),
@@ -110,6 +119,7 @@ class RecipeListItem extends StatelessWidget {
               ),
               const SizedBox(width: Dimens.spacing8),
               // [fork] S130 recipes-list
+              if (!large)
               MergeSemantics(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
@@ -119,9 +129,7 @@ class RecipeListItem extends StatelessWidget {
                       style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
                     ),
                     Text(
-                      (recipe.servingsCount ?? 0) > 0
-                          ? '${energyUnit(context)} / serving'
-                          : energyUnit(context),
+                      energy,
                       style: textTheme.bodySmall?.copyWith(color: palette.textMuted),
                     ),
                   ],

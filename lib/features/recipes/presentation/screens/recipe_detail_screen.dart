@@ -16,12 +16,17 @@ import 'package:opennutritracker/features/recipes/presentation/screens/recipe_bu
 import 'package:opennutritracker/features/meal_detail/presentation/bloc/meal_detail_bloc.dart';
 import 'package:opennutritracker/fork/basket/basket_ui.dart';
 import 'package:opennutritracker/fork/recipe/recipe_page.dart';
+import 'package:opennutritracker/core/utils/meal_type_suggester.dart';
+import 'package:opennutritracker/fork/copy/copy_ui.dart' show mealLabel;
 // [/fork]
 import 'package:opennutritracker/generated/l10n.dart';
 
 class RecipeDetailArguments {
   final String recipeId;
-  const RecipeDetailArguments({required this.recipeId});
+  // [fork] S126 recipe-page: the meal the + sheet was on, if it led here
+  final IntakeTypeEntity? meal;
+  const RecipeDetailArguments({required this.recipeId, this.meal});
+  // [/fork]
 }
 
 // [fork] S126 recipe-page: another amount, on the meal detail
@@ -40,6 +45,8 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
   bool _initialized = false;
   // [fork] S126 recipe-page: servings, or whole recipes, to log
   double _count = 1;
+  // The meal Log goes to: the + sheet's, else the time of day's (U7).
+  late IntakeTypeEntity _meal;
   // [/fork]
 
   @override
@@ -55,6 +62,9 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
       _initialized = true;
       final args = ModalRoute.of(context)?.settings.arguments
           as RecipeDetailArguments;
+      // [fork] S126 recipe-page
+      _meal = args.meal ?? MealTypeSuggester.suggestFromTime(DateTime.now());
+      // [/fork]
       _bloc.add(LoadRecipeEvent(args.recipeId));
     }
   }
@@ -178,6 +188,8 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
       bottomNavigationBar: RecipeLogBar(
         portion: RecipePortion(recipe, _count),
         onCount: (count) => setState(() => _count = count),
+        meal: _meal,
+        onMeal: (meal) => setState(() => _meal = meal),
         onLog: () => _logPortion(context, RecipePortion(recipe, _count)),
       ),
       // [/fork]
@@ -186,8 +198,7 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
 
   // [fork] S126 recipe-page: the portion straight into the meal picked
   Future<void> _logPortion(BuildContext context, RecipePortion portion) async {
-    final type = await _pickIntakeType(context);
-    if (type == null || !context.mounted) return;
+    final type = _meal;
     final written = await locator<MealDetailBloc>().addIntake(
       context,
       'g',
@@ -199,7 +210,12 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
     if (written == null || !context.mounted) return;
     refreshAfterLogging();
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('${portion.label} added to your diary')),
+      SnackBar(
+        content: Text(
+          '${portion.label} of ${portion.recipe.name} added to '
+          '${mealLabel(context, type)}',
+        ),
+      ),
     );
   }
   // [/fork]

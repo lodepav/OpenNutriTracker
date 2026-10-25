@@ -79,21 +79,27 @@ List<InlineSpan> macroSpans(
   final palette = Theme.of(context).brightness == Brightness.dark
       ? AppPalette.dark
       : AppPalette.light;
-  List<InlineSpan> one(String letter, double grams, Color color) => [
-    TextSpan(
-      text: letter,
-      style: TextStyle(color: color, fontWeight: FontWeight.w700),
-    ),
-    TextSpan(text: '\u00A0${grams.round()}'),
-  ];
+  // Spoken as "29 grams carbs", not "C 29" (A5).
+  List<InlineSpan> one(String letter, String name, double grams, Color color) {
+    final g = grams.round();
+    return [
+      TextSpan(
+        text: letter,
+        semanticsLabel: '$g ${g == 1 ? 'gram' : 'grams'} $name',
+        style: TextStyle(color: color, fontWeight: FontWeight.w700),
+      ),
+      TextSpan(text: '\u00A0$g', semanticsLabel: ''),
+    ];
+  }
+
   final parts = inMacroOrder(
-    carbs: one('C', values.carbs, palette.carbs),
-    fat: one('F', values.fat, palette.fat),
-    protein: one('P', values.protein, palette.protein),
+    carbs: one('C', 'carbs', values.carbs, palette.carbs),
+    fat: one('F', 'fat', values.fat, palette.fat),
+    protein: one('P', 'protein', values.protein, palette.protein),
   );
   return [
     for (var i = 0; i < parts.length; i++) ...[
-      if (i > 0) const TextSpan(text: ' · '),
+      if (i > 0) const TextSpan(text: ' · ', semanticsLabel: ', '),
       ...parts[i],
     ],
   ];
@@ -119,9 +125,14 @@ Future<IntakeTypeEntity?> pickMeal(BuildContext context) =>
       ),
     );
 
-/// Logs one serving of [recipe] today to the meal the user picks.
-Future<void> logRecipeServing(BuildContext context, RecipeEntity recipe) async {
-  final type = await pickMeal(context);
+/// Logs one serving of [recipe] today to [meal], or to the meal the user
+/// picks when none is given.
+Future<void> logRecipeServing(
+  BuildContext context,
+  RecipeEntity recipe, {
+  IntakeTypeEntity? meal,
+}) async {
+  final type = meal ?? await pickMeal(context);
   if (type == null || !context.mounted) return;
   final portion = RecipePortion(recipe, 1);
   final written = await locator<MealDetailBloc>().addIntake(

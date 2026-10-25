@@ -49,8 +49,10 @@ class FactsRow extends StatelessWidget {
                     ),
             ),
           ),
+          // The unit beside the field, shown before anything is typed
+          // (H6), and the field grows with the text (A6).
           SizedBox(
-            width: 112,
+            width: MediaQuery.textScalerOf(context).scale(80).clamp(80, 140),
             child: Semantics(
               label: '$name in $unit',
               child: TextField(
@@ -62,12 +64,18 @@ class FactsRow extends StatelessWidget {
                 ),
                 decoration: InputDecoration(
                   isDense: true,
-                  suffixText: unit,
                   border: const OutlineInputBorder(
                     borderRadius: Dimens.borderRadiusM,
                   ),
                 ),
               ),
+            ),
+          ),
+          const SizedBox(width: Dimens.spacing4),
+          SizedBox(
+            width: MediaQuery.textScalerOf(context).scale(32).clamp(32, 64),
+            child: ExcludeSemantics(
+              child: Text(unit, style: theme.textTheme.bodyMedium),
             ),
           ),
         ],

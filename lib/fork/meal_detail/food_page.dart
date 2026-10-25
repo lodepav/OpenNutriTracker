@@ -377,13 +377,17 @@ class _TodayAfterAddingState extends State<TodayAfterAdding> {
           required double added,
           required double target,
           required Color color,
+          required String spoken,
         }) {
           final over = target > 0 && eaten + added > target;
           final shown = over ? palette.fat : color;
           final scale = math.max(target, eaten + added);
           double part(double v) => scale > 0 ? (v / scale).clamp(0, 1) : 0;
           return Expanded(
-            child: MergeSemantics(
+            // Words, not "428 / 465 carbs g" (A5).
+            child: Semantics(
+              label: '$figure of $goal $spoken${over ? ', over' : ''}',
+              excludeSemantics: true,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -402,8 +406,7 @@ class _TodayAfterAddingState extends State<TodayAfterAdding> {
                         TextSpan(text: ' / $goal'),
                       ],
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                    // Wraps at large text rather than cut the goal (A6).
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: palette.textMuted,
                     ),
@@ -445,8 +448,6 @@ class _TodayAfterAddingState extends State<TodayAfterAdding> {
                   const SizedBox(height: 4),
                   Text(
                     label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: palette.textMuted,
                     ),
@@ -471,6 +472,7 @@ class _TodayAfterAddingState extends State<TodayAfterAdding> {
           added: added,
           target: goal,
           color: color,
+          spoken: 'grams ${label.toLowerCase()}',
         );
 
         final e = totals.eaten, g = totals.goal;
@@ -497,6 +499,7 @@ class _TodayAfterAddingState extends State<TodayAfterAdding> {
                     added: widget.kcal,
                     target: g.kcal,
                     color: theme.colorScheme.primary,
+                    spoken: energyUnit(context),
                   ),
                   ...inMacroOrder(
                     carbs: macro(

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:opennutritracker/core/domain/entity/intake_type_entity.dart';
 import 'package:opennutritracker/core/domain/entity/recipe_entity.dart';
 import 'package:opennutritracker/core/domain/entity/recipe_ingredient_entity.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dart';
@@ -92,6 +93,8 @@ void main() {
               RecipeLogBar(
                 portion: RecipePortion(r, count),
                 onCount: (c) => setState(() => count = c),
+                meal: IntakeTypeEntity.lunch,
+                onMeal: (_) {},
                 onLog: () {},
               ),
             ],
@@ -100,12 +103,12 @@ void main() {
       ),
     );
     // 100 g at 150 kcal per 100 g
-    expect(find.text('Log · 150 kcal'), findsOneWidget);
+    expect(find.text('Add 150 kcal to Lunch'), findsOneWidget);
     expect(find.text('1 serving, 100 g · per 100 g 150 kcal'), findsOneWidget);
 
     await tester.tap(find.byTooltip('More'));
     await tester.pump();
-    expect(find.text('Log · 225 kcal'), findsOneWidget);
+    expect(find.text('Add 225 kcal to Lunch'), findsOneWidget);
     expect(find.text('30'), findsOneWidget); // carbs in 150 g
 
     await tester.tap(find.byTooltip('Less'));

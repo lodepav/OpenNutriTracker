@@ -74,6 +74,13 @@ class _RecipesPageState extends State<RecipesPage>
     super.dispose();
   }
 
+  // [fork] S126 recipe-page: the meal the + sheet opened Recipes for
+  IntakeTypeEntity? _meal(BuildContext context) {
+    final args = ModalRoute.of(context)?.settings.arguments;
+    return args is IntakeTypeEntity ? args : null;
+  }
+  // [/fork]
+
   @override
   Widget build(BuildContext context) {
     // Standalone pushed screen (reached from Add and from You): it owns its
@@ -159,15 +166,16 @@ class _RecipesPageState extends State<RecipesPage>
             BlocBuilder<CustomMealsBloc, CustomMealsState>(
               bloc: _customMealsBloc,
               builder: (context, meals) {
+                // No count while empty (C5)
                 String label(String name, int? count) =>
-                    count == null ? name : '$name $count';
+                    count == null || count == 0 ? name : '$name $count';
                 final lists = [
                   label(
                     s.recipesLabel,
                     recipes is RecipesLoaded ? recipes.recipes.length : null,
                   ),
                   label(
-                    s.settingsCustomMealsLabel,
+                    'Custom foods',
                     meals is CustomMealsLoadedState ? meals.meals.length : null,
                   ),
                 ];
@@ -420,7 +428,8 @@ class _RecipesPageState extends State<RecipesPage>
                                     await Navigator.of(context).pushNamed(
                                       NavigationOptions.recipeDetailRoute,
                                       arguments: RecipeDetailArguments(
-                                          recipeId: recipe.id),
+                                          recipeId: recipe.id,
+                                          meal: _meal(context)), // [fork] S126
                                     );
                                     if (mounted) {
                                       _bloc.add(const LoadRecipesEvent());
@@ -433,7 +442,8 @@ class _RecipesPageState extends State<RecipesPage>
                                   onLog: _selectionMode
                                       ? null
                                       : () =>
-                                          logRecipeServing(context, recipe),
+                                          logRecipeServing(context, recipe,
+                                              meal: _meal(context)),
                                   // [/fork]
                                 );
                               },

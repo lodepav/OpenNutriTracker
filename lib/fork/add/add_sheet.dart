@@ -83,7 +83,8 @@ class _AddSheetState extends State<AddSheet> {
   void _openRecipes() {
     Navigator.of(context)
       ..pop()
-      ..pushNamed(NavigationOptions.recipesRoute);
+      // The meal picked here is the one a recipe logs to.
+      ..pushNamed(NavigationOptions.recipesRoute, arguments: _type);
   }
 
   void _openActivity() {
@@ -174,40 +175,37 @@ class _AddSheetState extends State<AddSheet> {
             ),
             _recentFoods(context),
             const SizedBox(height: Dimens.spacing16),
-            Row(
-              spacing: Dimens.spacing8,
-              children: [
+            _tiles(context, [
+              _tile(
+                context,
+                id: 'quick-add',
+                icon: Icons.bolt_rounded,
+                label: s.quickAddCardLabel,
+                onTap: _openQuickAdd,
+              ),
+              _tile(
+                context,
+                id: 'scan',
+                icon: Icons.qr_code_scanner_rounded,
+                label: 'Scan',
+                onTap: _openScanner,
+              ),
+              _tile(
+                context,
+                id: 'recipes',
+                icon: Icons.menu_book_outlined,
+                label: s.recipesLabel,
+                onTap: _openRecipes,
+              ),
+              if (widget.showActivityTracking)
                 _tile(
                   context,
-                  id: 'quick-add',
-                  icon: Icons.bolt_rounded,
-                  label: s.quickAddCardLabel,
-                  onTap: _openQuickAdd,
+                  id: 'activity',
+                  icon: UserActivityEntity.getIconData(),
+                  label: s.activityLabel,
+                  onTap: _openActivity,
                 ),
-                _tile(
-                  context,
-                  id: 'scan',
-                  icon: Icons.qr_code_scanner_rounded,
-                  label: 'Scan',
-                  onTap: _openScanner,
-                ),
-                _tile(
-                  context,
-                  id: 'recipes',
-                  icon: Icons.menu_book_outlined,
-                  label: s.recipesLabel,
-                  onTap: _openRecipes,
-                ),
-                if (widget.showActivityTracking)
-                  _tile(
-                    context,
-                    id: 'activity',
-                    icon: UserActivityEntity.getIconData(),
-                    label: s.activityLabel,
-                    onTap: _openActivity,
-                  ),
-              ],
-            ),
+            ]),
           ],
         ),
       ),
@@ -252,10 +250,33 @@ class _AddSheetState extends State<AddSheet> {
                 usesImperialUnits: widget.usesImperialUnits,
                 favouriteSemanticsIdentifier:
                     'add-item-recent-favourite-${index + 1}',
+                // The amount it was logged with, as search shows it.
+                forkLastLogged: intake,
               ),
           ],
         );
       },
+    );
+  }
+
+  /// The tiles on one row, or two rows of two with large text, so their
+  /// names do not break mid-word (A6).
+  Widget _tiles(BuildContext context, List<Widget> tiles) {
+    final large = MediaQuery.textScalerOf(context).scale(10) > 13;
+    final perRow = large ? 2 : tiles.length;
+    return Column(
+      spacing: Dimens.spacing8,
+      children: [
+        for (var i = 0; i < tiles.length; i += perRow)
+          Row(
+            spacing: Dimens.spacing8,
+            children: [
+              ...tiles.skip(i).take(perRow),
+              // An odd last tile keeps its half.
+              if (tiles.length - i < perRow) const Spacer(),
+            ],
+          ),
+      ],
     );
   }
 

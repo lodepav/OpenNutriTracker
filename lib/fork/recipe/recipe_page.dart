@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:opennutritracker/core/domain/entity/intake_type_entity.dart';
 import 'package:opennutritracker/core/domain/entity/recipe_entity.dart';
 import 'package:opennutritracker/core/domain/entity/recipe_ingredient_entity.dart';
 import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
+import 'package:opennutritracker/fork/copy/copy_ui.dart' show mealLabel;
 import 'package:opennutritracker/fork/display/display_prefs.dart';
 import 'package:opennutritracker/fork/off/off_kinds.dart';
 import 'package:opennutritracker/fork/units/energy_text.dart';
+import 'package:opennutritracker/fork/widget/meal_picker_chip.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 
 /// Seam S126: the recipe page after the canvas's Recipe B. Ingredients
@@ -310,16 +313,21 @@ class RecipeIngredientRow extends StatelessWidget {
   }
 }
 
-/// The bottom bar: fewer, the portion, more, and Log with its energy.
+/// The bottom bar: fewer, the portion, more and the meal, then Add with
+/// its energy and meal, as Quick add words it.
 class RecipeLogBar extends StatelessWidget {
   final RecipePortion portion;
   final ValueChanged<double> onCount;
+  final IntakeTypeEntity meal;
+  final ValueChanged<IntakeTypeEntity> onMeal;
   final VoidCallback onLog;
 
   const RecipeLogBar({
     super.key,
     required this.portion,
     required this.onCount,
+    required this.meal,
+    required this.onMeal,
     required this.onLog,
   });
 
@@ -343,41 +351,49 @@ class RecipeLogBar extends StatelessWidget {
             border: Border(top: BorderSide(color: palette.border)),
           ),
           padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
-          child: Row(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            spacing: Dimens.spacing8,
             children: [
-              IconButton.outlined(
-                tooltip: 'Less',
-                icon: const Icon(Icons.remove_rounded),
-                onPressed: count > RecipePortion.step
-                    ? () => onCount(count - RecipePortion.step)
-                    : null,
+              Row(
+                children: [
+                  IconButton.outlined(
+                    tooltip: 'Less',
+                    icon: const Icon(Icons.remove_rounded),
+                    onPressed: count > RecipePortion.step
+                        ? () => onCount(count - RecipePortion.step)
+                        : null,
+                  ),
+                  Expanded(
+                    child: Text(
+                      portion.label,
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.titleSmall,
+                    ),
+                  ),
+                  IconButton.outlined(
+                    tooltip: 'More',
+                    icon: const Icon(Icons.add_rounded),
+                    onPressed: () => onCount(count + RecipePortion.step),
+                  ),
+                  const SizedBox(width: Dimens.spacing8),
+                  MealPickerChip(
+                    key: const ValueKey('recipe-meal'),
+                    type: meal,
+                    onChanged: onMeal,
+                  ),
+                ],
               ),
-              SizedBox(
-                width: 84,
-                child: Text(
-                  portion.label,
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
-                  style: theme.textTheme.titleSmall,
+              FilledButton(
+                key: const ValueKey('recipe-log'),
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size.fromHeight(48),
+                  shape: const StadiumBorder(),
                 ),
-              ),
-              IconButton.outlined(
-                tooltip: 'More',
-                icon: const Icon(Icons.add_rounded),
-                onPressed: () => onCount(count + RecipePortion.step),
-              ),
-              const SizedBox(width: Dimens.spacing8),
-              Expanded(
-                child: FilledButton(
-                  style: FilledButton.styleFrom(
-                    minimumSize: const Size.fromHeight(48),
-                  ),
-                  onPressed: onLog,
-                  child: Text(
-                    'Log · ${energyText(context, kcal)}',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
+                onPressed: onLog,
+                child: Text(
+                  'Add ${energyText(context, kcal)} to ${mealLabel(context, meal)}',
+                  textAlign: TextAlign.center,
                 ),
               ),
             ],
