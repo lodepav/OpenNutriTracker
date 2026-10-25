@@ -72,11 +72,18 @@ class _StorageRecoveryScreenState extends State<_StorageRecoveryScreen> {
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 16),
+                  // [fork] S112 storage-rescue: was "Try again. If the
+                  // problem persists, contact support before clearing the
+                  // app data or reinstalling", beside the panel's two ways
+                  // out
                   const Text(
-                    'Your data files have not been changed. Try again. If the problem persists, '
-                    'contact support before clearing the app data or reinstalling.',
+                    'Your data files have not been changed. Retry once. If it '
+                    'fails again, the choices below keep the files that will '
+                    'not open on the phone; do not clear the app data or '
+                    'reinstall.',
                     textAlign: TextAlign.center,
                   ),
+                  // [/fork]
                   const SizedBox(height: 12),
                   Text(
                     'Error code: ${widget.errorCode}',

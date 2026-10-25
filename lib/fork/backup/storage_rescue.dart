@@ -182,11 +182,17 @@ class _StorageRescuePanelState extends State<StorageRescuePanel> {
     try {
       await step();
       await widget.onRetry();
-    } catch (error) {
+    } catch (error, stackTrace) {
+      StorageRescue._log.severe('Recovery step failed', error, stackTrace);
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('That did not work: $error')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'That did not work. Nothing was deleted; try again, or '
+              'start again.',
+            ),
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => _busy = false);

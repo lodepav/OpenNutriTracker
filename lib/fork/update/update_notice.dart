@@ -281,8 +281,8 @@ class _UpdateStatusState extends State<UpdateStatus> {
       }
       if (!info.checked) {
         return widget.builder(
-          '$running. This build does not update itself; tap for the '
-          'releases.',
+          '$running, a development build: it gets no updates. Tap for '
+          'the released app, which installs beside it.',
           () => launchUrl(
             Uri.parse(releasesPage),
             mode: LaunchMode.externalApplication,
