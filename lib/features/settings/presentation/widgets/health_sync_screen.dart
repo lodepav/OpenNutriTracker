@@ -356,7 +356,7 @@ class _HealthSyncScreenState extends State<HealthSyncScreen> {
                   identifier: 'health-sync-auto-import',
                   icon: Icons.directions_run_rounded,
                   title: 'Workouts in',
-                  detail: 'burned energy adds to your budget',
+                  detail: 'Burned energy adds to your budget',
                   value: _importEnabled,
                   onChanged: _isAvailable && !_busy
                       ? _onAutoImportChanged
@@ -375,6 +375,10 @@ class _HealthSyncScreenState extends State<HealthSyncScreen> {
                           _formatLastImport(context, _lastImportAt!),
                         ),
                   onImport: canEdit ? _onImportNowPressed : null,
+                  // Import now and the credit below are greyed till then.
+                  why: _isAvailable && !_importEnabled
+                      ? 'Tick Workouts in to import and set the credit'
+                      : null,
                 ),
                 AppCard(
                   padding: EdgeInsets.zero,
