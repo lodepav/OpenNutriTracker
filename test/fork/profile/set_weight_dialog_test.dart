@@ -47,6 +47,20 @@ void main() {
     );
   });
 
+  testWidgets('a typed weight out of range says so; OK waits for it', (
+    tester,
+  ) async {
+    // The dialog stays open: OK does nothing.
+    expect(await weighIn(tester, BodyWeightUnit.kg, '854'), isNull);
+    expect(find.text('Enter correct weight'), findsOneWidget);
+    await tester.enterText(find.byType(TextField), '85.4');
+    await tester.pump();
+    expect(find.text('Enter correct weight'), findsNothing);
+    await tester.tap(find.text('OK'));
+    await tester.pumpAndSettle();
+    expect(find.byType(SetWeightDialog), findsNothing);
+  });
+
   testWidgets('untouched, the ruler\'s weight is kept', (tester) async {
     Object? popped;
     await tester.pumpWidget(

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:opennutritracker/core/domain/entity/body_weight_unit_entity.dart';
 import 'package:opennutritracker/core/domain/usecase/get_config_usecase.dart';
+import 'package:opennutritracker/core/domain/usecase/get_kcal_goal_usecase.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/core/utils/reload_diary_and_trends.dart';
 import 'package:opennutritracker/features/home/presentation/bloc/home_bloc.dart';
@@ -279,6 +280,13 @@ class CheckInScreen extends StatefulWidget {
 class _CheckInScreenState extends State<CheckInScreen> {
   late final Future<CheckIn> _checkIn = widget.service.checkIn();
   late final Future<CheckInRecord?> _last = widget.service.lastCheckIn();
+
+  /// Before the first check-in, the target Home uses now (the formula's,
+  /// or a fixed one), before the day's activity.
+  late final Future<double?> _goalNow =
+      locator.isRegistered<GetKcalGoalUsecase>()
+      ? locator<GetKcalGoalUsecase>().getKcalGoal(totalKcalActivitiesParam: 0)
+      : Future.value(null);
   final _target = TextEditingController();
 
   @override
@@ -304,11 +312,12 @@ class _CheckInScreenState extends State<CheckInScreen> {
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(title: const Text('Weekly check-in')),
-    body: FutureBuilder<(CheckIn, CheckInRecord?)>(
-      future: (_checkIn, _last).wait,
+    body: FutureBuilder<(CheckIn, CheckInRecord?, double?)>(
+      future: (_checkIn, _last, _goalNow).wait,
       builder: (context, snapshot) {
         final checkIn = snapshot.data?.$1;
         final last = snapshot.data?.$2;
+        final current = last?.acceptedKcal ?? snapshot.data?.$3;
         if (snapshot.hasError) {
           return const Center(child: Text("Couldn't read your data."));
         }
@@ -357,23 +366,35 @@ class _CheckInScreenState extends State<CheckInScreen> {
             _row('Expenditure', _kcal(checkIn.expenditureKcal)),
             if (checkIn.activityKcal case final activity?)
               _row('Of it, counted activity', '${_kcal(activity)} a day'),
-            if (last != null)
+            if (current != null)
               _row(
                 daily ? 'Current target before activity' : 'Current target',
-                _kcal(last.acceptedKcal),
+                _kcal(current),
               ),
             _row(
               daily ? 'Proposed target before activity' : 'Proposed target',
               _kcal(checkIn.proposedTargetKcal),
             ),
-            if (last != null)
+            if (current != null)
               _row(
                 'Change',
                 energyText(
                   context,
-                  checkIn.proposedTargetKcal - last.acceptedKcal,
+                  checkIn.proposedTargetKcal - current,
                   signed: true,
                 ),
+              ),
+            if (last == null &&
+                !daily &&
+                !capped &&
+                !checkIn.fromProfile &&
+                checkIn.goalRateKgPerWeek != 0)
+              Text(
+                'That is the expenditure '
+                '${checkIn.goalRateKgPerWeek < 0 ? 'less' : 'plus'} '
+                '${_kcal((checkIn.expenditureKcal - checkIn.proposedTargetKcal).abs())} '
+                'for ${_kg(checkIn.goalRateKgPerWeek, signed: true)} a week.',
+                style: theme.textTheme.bodySmall,
               ),
             if (daily)
               Text(

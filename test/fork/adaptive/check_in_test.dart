@@ -5,6 +5,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:opennutritracker/core/domain/entity/tracked_day_entity.dart';
 import 'package:opennutritracker/core/domain/entity/user_entity.dart';
+import 'package:opennutritracker/core/domain/usecase/get_kcal_goal_usecase.dart';
+import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/core/domain/entity/user_gender_entity.dart';
 import 'package:opennutritracker/core/domain/entity/user_pal_entity.dart';
 import 'package:opennutritracker/core/domain/entity/user_weight_goal_entity.dart';
@@ -537,6 +539,32 @@ void main() {
     expect(memory.records.single.acceptedKcal, closeTo(2000, 0.01));
   });
 
+  testWidgets('the first check-in shows the target in use and the change', (
+    tester,
+  ) async {
+    locator.registerSingleton<GetKcalGoalUsecase>(_Goal());
+    addTearDown(locator.unregister<GetKcalGoalUsecase>);
+    final service = AdaptiveService(
+      _User(),
+      _Weights(),
+      _TrackedDays(),
+      _MemoryStore(),
+      () => _today.add(const Duration(hours: 9)),
+    );
+    final checkIn = await tester.runAsync(service.checkIn);
+    await tester.pumpWidget(MaterialApp(home: CheckInScreen(service: service)));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Current target'), findsOneWidget);
+    expect(find.text('2847 kcal'), findsOneWidget);
+    expect(find.text('Change'), findsOneWidget);
+    expect(
+      find.text('${(checkIn!.proposedTargetKcal - 2847).round()} kcal'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('That is the expenditure less'), findsOneWidget);
+  });
+
   testWidgets("a new user's first check-in says it is from the profile", (
     tester,
   ) async {
@@ -878,6 +906,15 @@ void main() {
       );
     });
   });
+}
+
+class _Goal extends Fake implements GetKcalGoalUsecase {
+  @override
+  Future<double> getKcalGoal({
+    UserEntity? userEntity,
+    double? totalKcalActivitiesParam,
+    double? kcalUserAdjustment,
+  }) async => totalKcalActivitiesParam == 0 ? 2847 : 3096;
 }
 
 /// Hive's file I/O does not finish in a widget test's fake time.

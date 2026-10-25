@@ -40,8 +40,10 @@ class _FakeGetWeightLogUsecase extends Fake implements GetWeightLogUsecase {
 }
 
 class _FakeAddWeightLogUsecase extends Fake implements AddWeightLogUsecase {
+  final added = <WeightLogEntity>[];
+
   @override
-  Future<void> addEntry(WeightLogEntity entry) async {}
+  Future<void> addEntry(WeightLogEntity entry) async => added.add(entry);
 }
 
 class _FakeDeleteWeightLogUsecase extends Fake
@@ -91,10 +93,11 @@ Widget _wrap(Widget child) {
 Widget _buildScreen(
   List<WeightLogEntity> entries, {
   _FakeDeleteWeightLogUsecase? deleteUsecase,
+  _FakeAddWeightLogUsecase? addUsecase,
 }) {
   return WeightHistoryScreen(
     getUsecase: _FakeGetWeightLogUsecase(entries),
-    addUsecase: _FakeAddWeightLogUsecase(),
+    addUsecase: addUsecase ?? _FakeAddWeightLogUsecase(),
     deleteUsecase: deleteUsecase ?? _FakeDeleteWeightLogUsecase(),
     configRepository: _FakeConfigRepository(),
   );
@@ -333,4 +336,26 @@ void main() {
     expect(deleteUsecase.deleted.single.weightKg, 80.0);
     expect(deleteUsecase.deleted.single.filedDay, DateTime(2026, 3, 10));
   });
+
+  // [fork] S113 weigh-in-delete
+  testWidgets('a delete says which weigh-in, and can be undone', (
+    tester,
+  ) async {
+    ReloadRecorder().register();
+    addTearDown(locator.reset);
+    final addUsecase = _FakeAddWeightLogUsecase();
+    final entry = WeightLogEntity(date: DateTime(2026, 3, 11), weightKg: 80);
+    await tester.pumpWidget(
+      _wrap(_buildScreen([entry], addUsecase: addUsecase)),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Delete the weigh-in of Mar 11, 2026'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Undo'));
+    await tester.pumpAndSettle();
+
+    expect(addUsecase.added.single.weightKg, 80);
+  });
+  // [/fork]
 }

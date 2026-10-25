@@ -155,7 +155,7 @@ void main() {
         _Updater(const UpdateInfo.none('0.1.0', checked: false)),
       );
       expect(
-        find.textContaining('This build does not update itself'),
+        find.textContaining('a development build: it gets no updates'),
         findsOneWidget,
       );
     });

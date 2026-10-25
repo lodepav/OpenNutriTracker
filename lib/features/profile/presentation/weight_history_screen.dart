@@ -250,6 +250,7 @@ class _WeightHistoryScreenState extends State<WeightHistoryScreen> {
       ),
       trailing: IconButton(
         icon: const Icon(Icons.delete_outline),
+        tooltip: 'Delete the weigh-in of $dateLabel', // [fork] S113
         onPressed: () => _onDelete(entry),
       ),
     );
@@ -287,6 +288,25 @@ class _WeightHistoryScreenState extends State<WeightHistoryScreen> {
     await _deleteUsecase.deleteEntry(entry);
     await _load();
     reloadDiaryAndTrends();
+    // [fork] S113 weigh-in-delete: a tap deletes at once, so it can be
+    // undone; adding it back sets today's profile weight again too
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: const Text('Weigh-in deleted'),
+          action: SnackBarAction(
+            label: 'Undo',
+            onPressed: () async {
+              await _addUsecase.addEntry(entry);
+              await _load();
+              reloadDiaryAndTrends();
+            },
+          ),
+        ),
+      );
+    // [/fork]
   }
 }
 

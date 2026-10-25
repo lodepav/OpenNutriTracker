@@ -121,6 +121,11 @@ class _SetWeightDialogState extends State<SetWeightDialog> {
     final isImperial = widget.unit == BodyWeightUnit.lb;
     final minWeight = minSelectableWeight(_pickerDisplayWeight, isImperial);
     final maxWeight = maxSelectableWeight(_pickerDisplayWeight, isImperial);
+    // [fork] S111: a typed weight out of range says so, and OK waits for it
+    final invalid =
+        (widget.unit == BodyWeightUnit.st || _typedLast) && _stKg == null;
+    final error = invalid ? S.of(context).onboardingWrongWeightLabel : null;
+    // [/fork]
 
     return AlertDialog(
       title: Text(S.of(context).selectWeightDialogLabel),
@@ -134,12 +139,16 @@ class _SetWeightDialogState extends State<SetWeightDialog> {
                   unit: BodyWeightUnit.st,
                   identifierPrefix: 'set-weight-dialog',
                   autofocus: true,
+                  errorText: error, // [fork] S111
                   onChangedKg: (kg) => setState(() => _stKg = kg),
                 )
               else
                 // [fork] S111: the typed field below says the weight; the
-                // ruler's ticks read as "| 87kg |"
+                // ruler's ticks read as "| 87kg |"; dimmed while a typed
+                // weight is the one saved
                 ExcludeSemantics(
+                  child: Opacity(
+                  opacity: _typedLast ? 0.38 : 1,
                   child: HorizontalPicker(
                   height: 100,
                   backgroundColor: Colors.transparent,
@@ -158,6 +167,7 @@ class _SetWeightDialogState extends State<SetWeightDialog> {
                   },
                 ),
                 ),
+                ),
               // [fork] S111 typed-weigh-in
               if (widget.unit != BodyWeightUnit.st)
                 BodyWeightInput(
@@ -168,6 +178,7 @@ class _SetWeightDialogState extends State<SetWeightDialog> {
                   ),
                   unit: widget.unit,
                   identifierPrefix: 'set-weight-dialog',
+                  errorText: error,
                   onChangedKg: (kg) => setState(() {
                     _stKg = kg;
                     _typedLast = true;
@@ -198,7 +209,7 @@ class _SetWeightDialogState extends State<SetWeightDialog> {
           child: Text(S.of(context).dialogCancelLabel),
         ),
         TextButton(
-          onPressed: _submit,
+          onPressed: invalid ? null : _submit, // [fork] S111
           child: Text(S.of(context).dialogOKLabel),
         ),
       ],
