@@ -348,6 +348,29 @@ void main() {
     });
   });
 
+  test('the onboarding overview shows the grams of the program chosen', () {
+    final user = UserEntity(
+      birthday: DateTime(1990, 1, 1),
+      heightCM: 180,
+      weightKG: 90,
+      gender: UserGenderEntity.male,
+      goal: UserWeightGoalEntity.loseWeight,
+      pal: UserPALEntity.active,
+    );
+    OnboardingMacros.pending.value = null;
+    expect(OnboardingMacros.overview(user, 2937), isNull);
+
+    OnboardingMacros.pending.value = const MacroProgram(
+      proteinGPerKg: 2.0,
+      fatGPerKg: 0.8,
+    );
+    addTearDown(() => OnboardingMacros.pending.value = null);
+    final macros = OnboardingMacros.overview(user, 2937)!;
+    expect(macros.proteinG, 180);
+    expect(macros.fatG, closeTo(72, 0.01));
+    expect(macros.carbsG, closeTo((2937 - 720 - 648) / 4, 0.01));
+  });
+
   test(
     'onboarding\'s choice goes into the profile when it completes',
     () async {

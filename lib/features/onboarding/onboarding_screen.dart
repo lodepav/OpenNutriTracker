@@ -27,6 +27,7 @@ import 'package:opennutritracker/features/onboarding/presentation/widgets/onboar
 import 'package:opennutritracker/features/onboarding/presentation/widgets/onboarding_body_measurements_page_body.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 // [fork] S89 onboarding-macros
+import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/fork/adaptive/onboarding_macros.dart';
 // [/fork]
 
@@ -85,11 +86,18 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     // still in the selection. Reset and reload on every entry instead.
     _onboardingBloc.resetSelection();
     _onboardingBloc.add(LoadOnboardingEvent());
+    // [fork] S89 onboarding-macros: none carried over from an earlier trip
+    OnboardingMacros.pending.value = null;
+    OnboardingMacros.pending.addListener(_forkMacrosChanged);
+    // [/fork]
     super.initState();
   }
 
   @override
   void dispose() {
+    // [fork] S89 onboarding-macros
+    OnboardingMacros.pending.removeListener(_forkMacrosChanged);
+    // [/fork]
     _bodyMeasurementsShowErrors.dispose();
     super.dispose();
   }
@@ -317,10 +325,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               _onboardingBloc.getOverviewCalorieGoal()?.toInt().toString() ??
               "?",
           carbsGoalString:
+              _forkMacros()?.carbsG.toInt().toString() ?? // [fork] S89
               _onboardingBloc.getOverviewCarbsGoal()?.toInt().toString() ?? "?",
           fatGoalString:
+              _forkMacros()?.fatG.toInt().toString() ?? // [fork] S89
               _onboardingBloc.getOverviewFatGoal()?.toInt().toString() ?? "?",
           proteinGoalString:
+              _forkMacros()?.proteinG.toInt().toString() ?? // [fork] S89
               _onboardingBloc.getOverviewProteinGoal()?.toInt().toString() ??
               "?",
           setButtonActive: _setOverviewPageContent,
@@ -442,6 +453,16 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         ? _setOverviewPageContent(true)
         : _setOverviewPageContent(false);
   }
+
+  // [fork] S89 onboarding-macros: the overview shows the protein and fat
+  // chosen on the goal page
+  FixedMacros? _forkMacros() => OnboardingMacros.overview(
+    _onboardingBloc.userSelection.toUserEntity(),
+    _onboardingBloc.getOverviewCalorieGoal(),
+  );
+
+  void _forkMacrosChanged() => setState(() {});
+  // [/fork]
 
   void _setOverviewPageContent(bool active) {
     setState(() {

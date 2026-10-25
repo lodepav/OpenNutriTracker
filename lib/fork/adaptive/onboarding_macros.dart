@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:opennutritracker/core/domain/entity/user_entity.dart';
+import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/fork/adaptive/macro_program.dart';
 import 'package:opennutritracker/fork/adaptive/macro_program_ui.dart';
@@ -8,6 +10,18 @@ import 'package:opennutritracker/fork/adaptive/macro_program_ui.dart';
 /// as the page's other choices are.
 abstract final class OnboardingMacros {
   static final pending = ValueNotifier<MacroProgram?>(null);
+
+  /// The overview page's grams for [kcal] under the program chosen, as the
+  /// app will set them; null to keep upstream's percentages.
+  static FixedMacros? overview(UserEntity? user, double? kcal) {
+    final program = pending.value;
+    if (program == null || user == null || kcal == null) return null;
+    return program.macrosFor(
+      kcal: kcal,
+      weightKg: user.weightKG,
+      bodyFatPercent: bodyFatPercent(user),
+    );
+  }
 
   /// Into the active profile, which onboarding has just set up; nothing
   /// when none was chosen, so upstream's percentages stay.
