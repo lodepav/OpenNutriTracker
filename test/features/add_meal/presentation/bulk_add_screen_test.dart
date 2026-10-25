@@ -2780,6 +2780,23 @@ void main() {
     expect(find.byType(BulkAddScreen), findsNothing);
   });
 
+  testWidgets('a found food\'s name is a full-size tap target', (
+    tester,
+  ) async {
+    await _register({
+      'toast': [_meal('Toast')],
+    });
+    await tester.pumpWidget(_app());
+    await tester.pumpAndSettle();
+    await _parse(tester, '100g toast');
+
+    final name = find.ancestor(
+      of: find.text('Toast'),
+      matching: find.byType(InkWell),
+    );
+    expect(tester.getSize(name.first).height, greaterThanOrEqualTo(48));
+  });
+
   testWidgets('the add screen\'s camera opens at the photo sheet', (
     tester,
   ) async {

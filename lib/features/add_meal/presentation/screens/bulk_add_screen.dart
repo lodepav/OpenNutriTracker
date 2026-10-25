@@ -1151,6 +1151,12 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
                 ],
               ),
             );
+            // [fork] S90 ux-journeys: the name is a 48 dp tap target
+            final forkTitle = ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 48),
+              child: titleBlock,
+            );
+            // [/fork]
 
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1160,14 +1166,14 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
                   // than by whatever is left of it.
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [titleBlock, ...buttons],
+                    children: [forkTitle, ...buttons], // [fork] S90
                   )
                 else
                   // Unchanged wherever they fit, which is every ordinary
                   // text size: name on the left, controls on the right.
                   Row(
                     children: [
-                      Expanded(child: titleBlock),
+                      Expanded(child: forkTitle), // [fork] S90
                       ...buttons,
                     ],
                   ),
