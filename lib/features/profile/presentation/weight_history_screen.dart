@@ -14,6 +14,9 @@ import 'package:opennutritracker/features/profile/presentation/utils/profile_dis
 import 'package:opennutritracker/features/profile/presentation/widgets/body_weight_input.dart';
 import 'package:opennutritracker/features/profile/presentation/widgets/weight_trend_chart.dart';
 import 'package:opennutritracker/generated/l10n.dart';
+// [fork] S113 weigh-in-delete
+import 'package:opennutritracker/fork/health/weight_import_ui.dart';
+// [/fork]
 
 /// Screen for browsing and adding weight log entries.
 ///
@@ -288,8 +291,10 @@ class _WeightHistoryScreenState extends State<WeightHistoryScreen> {
     await _deleteUsecase.deleteEntry(entry);
     await _load();
     reloadDiaryAndTrends();
-    // [fork] S113 weigh-in-delete: a tap deletes at once, so it can be
-    // undone; adding it back sets today's profile weight again too
+    // [fork] S113 weigh-in-delete: Home and the profile show the weight
+    // the delete set. A tap deletes at once, so it can be undone; adding
+    // it back sets today's profile weight again too
+    refreshAfterWeightImport();
     if (!mounted) return;
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
@@ -302,6 +307,7 @@ class _WeightHistoryScreenState extends State<WeightHistoryScreen> {
               await _addUsecase.addEntry(entry);
               await _load();
               reloadDiaryAndTrends();
+              refreshAfterWeightImport();
             },
           ),
         ),

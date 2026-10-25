@@ -297,6 +297,14 @@ class _CheckInScreenState extends State<CheckInScreen> {
 
   String _kcal(double value) => energyText(context, value);
 
+  /// [a] less [b] as shown, so the rows on screen add up; unsigned, its
+  /// size.
+  String _shownDiff(double a, double b, {bool signed = false}) {
+    final diff = energyValue(context, a) - energyValue(context, b);
+    if (!signed) return '${diff.abs()} ${energyUnit(context)}';
+    return '${diff > 0 ? '+' : ''}$diff ${energyUnit(context)}';
+  }
+
   static String _kg(double value, {bool signed = false}) =>
       '${signed && value > 0 ? '+' : ''}${value.toStringAsFixed(1)} kg';
 
@@ -378,11 +386,7 @@ class _CheckInScreenState extends State<CheckInScreen> {
             if (current != null)
               _row(
                 'Change',
-                energyText(
-                  context,
-                  checkIn.proposedTargetKcal - current,
-                  signed: true,
-                ),
+                _shownDiff(checkIn.proposedTargetKcal, current, signed: true),
               ),
             if (last == null &&
                 !daily &&
@@ -392,7 +396,7 @@ class _CheckInScreenState extends State<CheckInScreen> {
               Text(
                 'That is the expenditure '
                 '${checkIn.goalRateKgPerWeek < 0 ? 'less' : 'plus'} '
-                '${_kcal((checkIn.expenditureKcal - checkIn.proposedTargetKcal).abs())} '
+                '${_shownDiff(checkIn.expenditureKcal, checkIn.proposedTargetKcal)} '
                 'for ${_kg(checkIn.goalRateKgPerWeek, signed: true)} a week.',
                 style: theme.textTheme.bodySmall,
               ),
