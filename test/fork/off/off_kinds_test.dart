@@ -63,7 +63,7 @@ void main() {
 
   group('the kind from the categories', () {
     test('the narrowest that names one, without its leading words', () {
-      expect(OffKinds.fromCategories(_yogurt), '🍦');
+      expect(OffKinds.fromCategories(_yogurt), '🥛');
     });
 
     test('a broad category when nothing narrower names a kind', () {
@@ -85,7 +85,7 @@ void main() {
   });
 
   test("a guess from the name's last words; a brand alone says nothing", () {
-    expect(OffKinds.fromName('Greek yogurt'), '🍦');
+    expect(OffKinds.fromName('Greek yogurt'), '🥛');
     expect(OffKinds.fromName('Nutella'), isNull);
     expect(OffKinds.fromName(null), isNull);
   });
@@ -98,11 +98,11 @@ void main() {
         (code: '222', categories: null),
         (code: null, categories: _yogurt),
       ]);
-      expect(OffKinds.kinds.value, {'111': '🍦'});
+      expect(OffKinds.kinds.value, {'111': '🥛'});
 
       OffKinds.kinds.value = const {};
       await OffKinds.start();
-      expect(OffKinds.kinds.value, {'111': '🍦'});
+      expect(OffKinds.kinds.value, {'111': '🥛'});
     },
   );
 
@@ -117,11 +117,11 @@ void main() {
     expect(OffKinds.emojiFor(nutella), isNull);
 
     final yogurt = _product('Greek yogurt', code: '333');
-    expect(OffKinds.emojiFor(yogurt), '🍦');
-    await OffKinds.learn([
-      (code: '333', categories: ['en:dairies']),
-    ]);
     expect(OffKinds.emojiFor(yogurt), '🥛');
+    await OffKinds.learn([
+      (code: '333', categories: ['en:beverages']),
+    ]);
+    expect(OffKinds.emojiFor(yogurt), '🥤');
 
     expect(OffKinds.showsPhoto(yogurt), isFalse);
     expect(
@@ -163,7 +163,7 @@ void main() {
         ),
       ),
     );
-    expect(find.text('🍦'), findsOneWidget);
+    expect(find.text('🥛'), findsOneWidget);
     expect(find.byType(CachedNetworkImage), findsNothing);
   });
 

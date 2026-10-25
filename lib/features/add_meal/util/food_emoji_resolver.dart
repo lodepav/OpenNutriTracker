@@ -34,9 +34,10 @@ String? resolveFoodEmoji(String? name) {
 /// handles regular cases.
 const Map<String, List<String>> _emojiToNouns = {
   // dairy + eggs
-  '🥛': ['milk', 'cream', 'buttermilk', 'almond milk', 'soy milk', 'coconut milk', 'rice milk', 'oat milk'],
+  // [fork] S117: yogurt is milk's, not ice cream's
+  '🥛': ['milk', 'cream', 'buttermilk', 'almond milk', 'soy milk', 'coconut milk', 'rice milk', 'oat milk', 'yogurt', 'yoghurt'],
   '🧀': ['cheese'],
-  '🍦': ['yogurt', 'yoghurt', 'ice cream', 'frozen yogurt', 'milk dessert'],
+  '🍦': ['ice cream', 'frozen yogurt', 'milk dessert'],
   '🧈': ['butter', 'almond butter', 'sesame butter'],
   '🥚': ['egg'],
 
