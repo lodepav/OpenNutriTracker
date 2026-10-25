@@ -627,6 +627,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     palette: palette,
                     icon: Icons.brightness_medium_rounded,
                     title: S.of(context).settingsThemeLabel,
+                    // [fork] S129 settings-sections: the row says what is set
+                    subtitle: switch (state.appTheme) {
+                      AppThemeEntity.light =>
+                        S.of(context).settingsThemeLightLabel,
+                      AppThemeEntity.dark =>
+                        S.of(context).settingsThemeDarkLabel,
+                      AppThemeEntity.system =>
+                        S.of(context).settingsThemeSystemDefaultLabel,
+                    },
+                    // [/fork]
                     onTap: () => _showThemeDialog(context, state.appTheme),
                   ),
                   _SettingsTile(

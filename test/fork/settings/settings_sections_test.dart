@@ -236,6 +236,18 @@ void main() {
     handle.dispose();
   });
 
+  testWidgets('Theme says which is set', (tester) async {
+    await tester.pumpWidget(_app(section: SettingsSection.appearance));
+    await tester.pumpAndSettle();
+    expect(
+      find.descendant(
+        of: find.widgetWithText(ListTile, l10nEn.settingsThemeLabel),
+        matching: find.text(l10nEn.settingsThemeSystemDefaultLabel),
+      ),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('the plain route lists the sections, each with a summary', (
     tester,
   ) async {
