@@ -489,6 +489,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         mealEdited = true;
         return _homeBloc.updateIntakeItem(id, {'amount': amount});
       },
+      usesImperialUnits: usesImperialUnits, // [fork] S90
     );
     if (handled) {
       if (!mealEdited) return;

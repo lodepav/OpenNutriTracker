@@ -4,6 +4,7 @@ import 'package:opennutritracker/core/domain/entity/intake_entity.dart';
 import 'package:opennutritracker/core/domain/entity/intake_type_entity.dart';
 import 'package:opennutritracker/fork/copy/copy_entries.dart';
 import 'package:opennutritracker/fork/copy/copy_ui.dart';
+import 'package:opennutritracker/fork/units/amount_text.dart';
 
 /// Where the selected entries go.
 sealed class CopyMoment {
@@ -215,7 +216,7 @@ class _SelectEntriesScreenState extends State<SelectEntriesScreen> {
     final text = amount == amount.roundToDouble()
         ? amount.toInt().toString()
         : amount.toStringAsFixed(1);
-    return '$text ${intake.unit}';
+    return '$text ${shownUnit(intake, false).unit}';
   }
 }
 

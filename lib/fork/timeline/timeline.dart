@@ -11,6 +11,7 @@ import 'package:opennutritracker/core/utils/navigation_options.dart';
 import 'package:opennutritracker/features/add_meal/presentation/add_meal_screen.dart';
 import 'package:opennutritracker/features/add_meal/presentation/add_meal_type.dart';
 import 'package:opennutritracker/fork/copy/copy_entries.dart';
+import 'package:opennutritracker/fork/units/amount_text.dart';
 import 'package:opennutritracker/fork/units/energy_text.dart';
 
 /// An entry added to a day with no time picked sits at its midnight.
@@ -238,7 +239,7 @@ class _TimelineScreenState extends State<TimelineScreen> {
                   ),
                   title: Text(intake.meal.name ?? '?'),
                   subtitle: Text(
-                    '${intake.amount.round()} ${intake.unit} · '
+                    '${intake.amount.round()} ${shownUnit(intake, false).unit} · '
                     '${energyText(context, intake.totalKcal)}',
                   ),
                   // The day's total up to this entry, said so on screen.

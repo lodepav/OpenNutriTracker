@@ -11,6 +11,7 @@ import 'package:opennutritracker/features/add_meal/util/meal_photo_encoder.dart'
 import 'package:opennutritracker/fork/leftovers/ai_leftovers.dart';
 import 'package:opennutritracker/fork/leftovers/meal_groups.dart';
 import 'package:opennutritracker/fork/leftovers/meal_photo_cache.dart';
+import 'package:opennutritracker/fork/units/amount_text.dart';
 
 /// English only, like the rest of the fork's strings.
 abstract final class LeftoverStrings {
@@ -19,7 +20,7 @@ abstract final class LeftoverStrings {
   static String wholeMeal(int count) => 'Whole meal ($count items)';
   static const title = 'Left over from the meal';
   static const hint = 'Pick what share is left, then adjust any item.';
-  static const left = 'left';
+  static const left = 'Left';
   static const save = 'Save';
   static const cancel = 'Cancel';
   static const readPhoto = "Photo of what's left";
@@ -59,6 +60,7 @@ Future<bool> editMealGroupLeftovers(
   Future<IntakeEntity?> Function(String id)? intakeById,
   ReadLeftoversUseCase? leftovers,
   MealPhotoCache? photoCache,
+  bool usesImperialUnits = false,
   Future<MealPhoto?> Function(AiSelection selection)? takePhoto,
 }) async {
   final group = await (store ?? MealGroupStore()).groupOf(intake.id).catchError(
@@ -104,6 +106,7 @@ Future<bool> editMealGroupLeftovers(
     context: context,
     builder: (_) => GroupLeftoversDialog(
       intakes: members,
+      usesImperialUnits: usesImperialUnits,
       readLeftoverPhoto: selection == null
           ? null
           : () async {
@@ -145,11 +148,13 @@ class GroupLeftoversDialog extends StatefulWidget {
   /// Reads a photo of the leftovers into the amount left of each entry,
   /// or null when none was taken. Absent when no model is set up.
   final Future<Map<String, double>?> Function()? readLeftoverPhoto;
+  final bool usesImperialUnits;
 
   const GroupLeftoversDialog({
     super.key,
     required this.intakes,
     this.readLeftoverPhoto,
+    this.usesImperialUnits = false,
   });
 
   @override
@@ -163,6 +168,10 @@ class _GroupLeftoversDialogState extends State<GroupLeftoversDialog> {
   bool _reading = false;
   String? _photoNote;
   final _overrides = <String, double>{};
+  late final _shown = {
+    for (final intake in widget.intakes)
+      intake.id: shownUnit(intake, widget.usesImperialUnits),
+  };
   late final _controllers = {
     for (final intake in widget.intakes) intake.id: TextEditingController(),
   };
@@ -185,7 +194,10 @@ class _GroupLeftoversDialogState extends State<GroupLeftoversDialog> {
     _fraction = fraction;
     _overrides.clear();
     for (final intake in widget.intakes) {
-      _controllers[intake.id]!.text = _format(intake.amount * fraction);
+      _controllers[intake.id]!.text = _formatShown(
+        intake.id,
+        intake.amount * fraction,
+      );
     }
   });
 
@@ -204,7 +216,10 @@ class _GroupLeftoversDialogState extends State<GroupLeftoversDialog> {
           ..clear()
           ..addAll({for (final i in widget.intakes) i.id: left[i.id] ?? 0});
         for (final intake in widget.intakes) {
-          _controllers[intake.id]!.text = _format(_overrides[intake.id]!);
+          _controllers[intake.id]!.text = _formatShown(
+            intake.id,
+            _overrides[intake.id]!,
+          );
         }
         note = LeftoverStrings.aiEstimate;
       }
@@ -224,9 +239,12 @@ class _GroupLeftoversDialogState extends State<GroupLeftoversDialog> {
     if (left == null || !left.isFinite) {
       _overrides.remove(id);
     } else {
-      _overrides[id] = left;
+      _overrides[id] = left / _shown[id]!.factor;
     }
   });
+
+  String _formatShown(String id, double amount) =>
+      _format(amount * _shown[id]!.factor);
 
   static String _format(double value) => value == value.roundToDouble()
       ? '${value.toInt()}'
@@ -294,15 +312,16 @@ class _GroupLeftoversDialogState extends State<GroupLeftoversDialog> {
                             overflow: TextOverflow.ellipsis,
                           ),
                           Text(
-                            '${_format(intake.amount)} → '
-                            '${_format(amounts[intake.id]!)} ${intake.unit}',
+                            '${_formatShown(intake.id, intake.amount)} → '
+                            '${_formatShown(intake.id, amounts[intake.id]!)} '
+                            '${_shown[intake.id]!.unit}',
                             style: Theme.of(context).textTheme.bodySmall,
                           ),
                         ],
                       ),
                     ),
                     SizedBox(
-                      width: 96,
+                      width: 112,
                       child: TextField(
                         key: ValueKey('left-${intake.id}'),
                         controller: _controllers[intake.id],
@@ -312,7 +331,9 @@ class _GroupLeftoversDialogState extends State<GroupLeftoversDialog> {
                         onChanged: (text) => _override(intake.id, text),
                         decoration: InputDecoration(
                           isDense: true,
-                          suffixText: LeftoverStrings.left,
+                          labelText: LeftoverStrings.left,
+                          hintText: '0',
+                          suffixText: _shown[intake.id]!.unit,
                         ),
                       ),
                     ),
