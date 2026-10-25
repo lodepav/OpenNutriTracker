@@ -47,38 +47,40 @@ class _SeededTrendsBloc extends TrendsBloc {
   void add(TrendsEvent event) {}
 }
 
-void main() {
-  setUp(() {
-    final now = DateTime.now();
-    locator.registerSingleton<TrendsBloc>(
-      _SeededTrendsBloc(
-        TrendsLoaded(
-          rangeDays: 7,
-          windowDays: 7,
-          // One day logged of the seven.
-          days: [
-            TrackedDayEntity(
-              day: DateTime(now.year, now.month, now.day),
-              calorieGoal: 2000,
-              caloriesTracked: 700,
-              carbsGoal: 259,
-              carbsTracked: 70,
-              fatGoal: 48,
-              fatTracked: 14,
-              proteinGoal: 64,
-              proteinTracked: 21,
-            ),
-          ],
-          priorWeek: const [],
-          weight: const [],
-          bodyWeightUnit: BodyWeightUnit.kg,
-          targetWeightKg: null,
-          waterByDay: const {},
-          waterGoalMl: 0,
-        ),
+void _seed({double carbsTracked = 70}) {
+  final now = DateTime.now();
+  locator.registerSingleton<TrendsBloc>(
+    _SeededTrendsBloc(
+      TrendsLoaded(
+        rangeDays: 7,
+        windowDays: 7,
+        // One day logged of the seven.
+        days: [
+          TrackedDayEntity(
+            day: DateTime(now.year, now.month, now.day),
+            calorieGoal: 2000,
+            caloriesTracked: 700,
+            carbsGoal: 259,
+            carbsTracked: carbsTracked,
+            fatGoal: 48,
+            fatTracked: 14,
+            proteinGoal: 64,
+            proteinTracked: 21,
+          ),
+        ],
+        priorWeek: const [],
+        weight: const [],
+        bodyWeightUnit: BodyWeightUnit.kg,
+        targetWeightKg: null,
+        waterByDay: const {},
+        waterGoalMl: 0,
       ),
-    );
-  });
+    ),
+  );
+}
+
+void main() {
+  setUp(_seed);
 
   tearDown(() async => locator.reset());
 
@@ -111,5 +113,35 @@ void main() {
     expect(find.text('10 / 259 g'), findsOneWidget);
     expect(find.text('2 / 48 g'), findsOneWidget);
     expect(find.text('3 / 64 g'), findsOneWidget);
+  });
+
+  // Seam S114: the average rounds, as the weekly report's does; 69 g over
+  // seven days is 9.86 g, not 9.
+  testWidgets('the daily average rounds', (tester) async {
+    await locator.reset();
+    _seed(carbsTracked: 69);
+    await tester.pumpWidget(
+      ChangeNotifierProvider(
+        create: (_) => EnergyUnitProvider(usesKilojoules: false),
+        child: const MaterialApp(
+          localizationsDelegates: [
+            S.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: S.supportedLocales,
+          home: Scaffold(body: TrendsPage()),
+        ),
+      ),
+    );
+    await tester.pump();
+    final carbs = find.text('10 / 259 g');
+    await tester.scrollUntilVisible(
+      carbs,
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(carbs, findsOneWidget);
   });
 }
