@@ -1,0 +1,50 @@
+import 'package:flutter/material.dart';
+import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
+import 'package:opennutritracker/fork/adaptive/macro_program.dart';
+import 'package:opennutritracker/fork/adaptive/macro_program_ui.dart';
+
+/// Onboarding's protein and fat (seams S88, S89): chosen on the goal page,
+/// held here, and written with the rest of onboarding when it completes,
+/// as the page's other choices are.
+abstract final class OnboardingMacros {
+  static final pending = ValueNotifier<MacroProgram?>(null);
+
+  /// Into the active profile, which onboarding has just set up; nothing
+  /// when none was chosen, so upstream's percentages stay.
+  static Future<void> save([AdaptiveStore? store]) async {
+    final program = pending.value;
+    if (program == null) return;
+    final target = store ?? AdaptiveStore();
+    final settings = await target.read();
+    await target.save(settings.copyWith(macroProgram: () => program));
+    pending.value = null;
+  }
+}
+
+/// The goal page's row: what is chosen, and the Macros dialog to change it.
+class OnboardingMacrosRow extends StatelessWidget {
+  const OnboardingMacrosRow({super.key});
+
+  @override
+  Widget build(BuildContext context) => ValueListenableBuilder(
+    valueListenable: OnboardingMacros.pending,
+    builder: (context, program, _) => ListTile(
+      key: const ValueKey('onboarding-macros'),
+      contentPadding: EdgeInsets.zero,
+      title: const Text('Protein and fat'),
+      subtitle: Text(
+        program?.summary ??
+            'The usual percentages. Or set protein and fat per kg; the '
+                'rest is carbs.',
+      ),
+      trailing: const Icon(Icons.edit_rounded),
+      onTap: () async {
+        final edited = await showDialog<({MacroProgram? program})>(
+          context: context,
+          builder: (_) => MacroProgramDialog(program),
+        );
+        if (edited != null) OnboardingMacros.pending.value = edited.program;
+      },
+    ),
+  );
+}

@@ -6,6 +6,7 @@ import 'package:opennutritracker/features/settings/presentation/bloc/settings_bl
 import 'package:opennutritracker/fork/adaptive/activity.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
 import 'package:opennutritracker/fork/adaptive/macro_program.dart';
+import 'package:opennutritracker/fork/adaptive/macro_program_ui.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/fork/copy/copy_ui.dart';
 import 'package:opennutritracker/fork/adaptive/check_in_history.dart';
@@ -601,7 +602,7 @@ class _AdaptiveSettingsDialog extends StatelessWidget {
                 onTap: () async {
                   final edited = await showDialog<({MacroProgram? program})>(
                     context: context,
-                    builder: (_) => _MacroProgramDialog(settings.macroProgram),
+                    builder: (_) => MacroProgramDialog(settings.macroProgram),
                   );
                   if (edited != null) {
                     await _save(
@@ -966,123 +967,6 @@ class AdaptiveGoalNote extends StatelessWidget {
           ),
         );
       },
-    );
-  }
-}
-
-/// The macro program, or none for upstream's percentages; pops a record
-/// so "off" and "cancelled" differ.
-class _MacroProgramDialog extends StatefulWidget {
-  final MacroProgram? program;
-
-  const _MacroProgramDialog(this.program);
-
-  @override
-  State<_MacroProgramDialog> createState() => _MacroProgramDialogState();
-}
-
-class _MacroProgramDialogState extends State<_MacroProgramDialog> {
-  late bool _on = widget.program != null;
-  late MacroProgram _program = widget.program ?? const MacroProgram();
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return AlertDialog(
-      title: const Text('Macros'),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SwitchListTile(
-              key: const ValueKey('macro-program-on'),
-              contentPadding: EdgeInsets.zero,
-              title: const Text('Protein per kg and a diet style'),
-              subtitle: const Text(
-                'In place of the percentages. Protein holds steady; carbs '
-                'and fat take a weekday\'s shift.',
-              ),
-              value: _on,
-              onChanged: (v) => setState(() => _on = v),
-            ),
-            if (_on) ...[
-              Wrap(
-                spacing: 6,
-                children: [
-                  for (final style in MacroStyle.values)
-                    ChoiceChip(
-                      key: ValueKey('macro-style-${style.name}'),
-                      label: Text(style.label),
-                      selected: _program.style == style,
-                      onSelected: (_) => setState(
-                        () => _program = MacroProgram(
-                          style: style,
-                          proteinGPerKg: _program.proteinGPerKg,
-                          leanMass: _program.leanMass,
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-              Text(
-                _program.style.explanation,
-                style: theme.textTheme.bodySmall,
-              ),
-              const SizedBox(height: 12),
-              Text(
-                'Protein ${_program.proteinGPerKg.toStringAsFixed(1)} g per kg'
-                '${_program.leanMass ? ' of lean mass' : ' of body weight'}',
-              ),
-              Slider(
-                key: const ValueKey('macro-protein'),
-                min: 1,
-                max: 3,
-                divisions: 20,
-                value: _program.proteinGPerKg.clamp(1.0, 3.0),
-                label: _program.proteinGPerKg.toStringAsFixed(1),
-                onChanged: (v) => setState(
-                  () => _program = MacroProgram(
-                    style: _program.style,
-                    proteinGPerKg: (v * 10).round() / 10,
-                    leanMass: _program.leanMass,
-                  ),
-                ),
-              ),
-              SwitchListTile(
-                key: const ValueKey('macro-lean'),
-                contentPadding: EdgeInsets.zero,
-                title: const Text('Per kg of lean mass'),
-                subtitle: const Text(
-                  'Weight less body fat: your latest measured body fat %, '
-                  'or an estimate from your BMI and age.',
-                ),
-                value: _program.leanMass,
-                onChanged: (v) => setState(
-                  () => _program = MacroProgram(
-                    style: _program.style,
-                    proteinGPerKg: v
-                        ? MacroProgram.defaultPerKgLean
-                        : MacroProgram.defaultPerKg,
-                    leanMass: v,
-                  ),
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel'),
-        ),
-        TextButton(
-          onPressed: () =>
-              Navigator.pop(context, (program: _on ? _program : null)),
-          child: const Text('Save'),
-        ),
-      ],
     );
   }
 }

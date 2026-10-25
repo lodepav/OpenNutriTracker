@@ -26,6 +26,9 @@ import 'package:opennutritracker/features/onboarding/presentation/widgets/highli
 import 'package:opennutritracker/features/onboarding/presentation/widgets/onboarding_about_you_page_body.dart';
 import 'package:opennutritracker/features/onboarding/presentation/widgets/onboarding_body_measurements_page_body.dart';
 import 'package:opennutritracker/generated/l10n.dart';
+// [fork] S89 onboarding-macros
+import 'package:opennutritracker/fork/adaptive/onboarding_macros.dart';
+// [/fork]
 
 /// The onboarding pages, in the order they are shown.
 ///
@@ -185,159 +188,158 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   List<PageViewModel> _getPageViewModels() {
     final selection = _onboardingBloc.userSelection;
     final pages = <PageViewModel>[
-        PageViewModel(
-          title: S.of(context).onboardingWelcomeLabel,
-          decoration: _pageDecoration,
-          image: _defaultImageWidget,
-          bodyWidget: OnboardingIntroPageBody(
-            setPageContent: _setIntroPageData,
-            initialAcceptedPolicy: _introPageButtonActive,
-            initialAcceptedDataCollection: selection.acceptDataCollection,
-          ),
-          footer: HighlightButton(
-            buttonLabel: S.of(context).buttonStartLabel,
-            onButtonPressed: () => _scrollToPage(_OnboardingPage.aboutYou),
-            buttonActive: _introPageButtonActive,
-            inactiveMessage: S.of(context).onboardingBlockedPolicySnack,
-          ),
+      PageViewModel(
+        title: S.of(context).onboardingWelcomeLabel,
+        decoration: _pageDecoration,
+        image: _defaultImageWidget,
+        bodyWidget: OnboardingIntroPageBody(
+          setPageContent: _setIntroPageData,
+          initialAcceptedPolicy: _introPageButtonActive,
+          initialAcceptedDataCollection: selection.acceptDataCollection,
         ),
-        PageViewModel(
-          titleWidget: const SizedBox(),
-          // empty
-          decoration: _pageDecoration,
-          image: _defaultImageWidget,
-          bodyWidget: OnboardingAboutYouPageBody(
-            setPageContent: _setAboutYouPageData,
-            initialGender: selection.gender,
-            initialCaloriesProfile: selection.caloriesProfile,
-            initialBirthday: selection.birthday,
-          ),
-          footer: HighlightButton(
-            buttonLabel: S.of(context).buttonNextLabel,
-            onButtonPressed: () =>
-                _scrollToPage(_OnboardingPage.bodyMeasurements),
-            buttonActive: _aboutYouPageButtonActive,
-            inactiveMessage: S.of(context).onboardingBlockedProfileSnack,
-          ),
+        footer: HighlightButton(
+          buttonLabel: S.of(context).buttonStartLabel,
+          onButtonPressed: () => _scrollToPage(_OnboardingPage.aboutYou),
+          buttonActive: _introPageButtonActive,
+          inactiveMessage: S.of(context).onboardingBlockedPolicySnack,
         ),
-        PageViewModel(
-          titleWidget: const SizedBox(),
-          // empty
-          decoration: _pageDecoration,
-          image: _defaultImageWidget,
-          bodyWidget: OnboardingBodyMeasurementsPageBody(
-            setButtonContent: _setBodyMeasurementsPageData,
-            initialHeightCm: selection.height,
-            initialWeightKg: selection.weight,
-            initialTargetWeightKg: selection.targetWeight,
-            initialHeightImperial: selection.heightUsesImperial,
-            initialBodyWeightUnit: selection.bodyWeightUnit,
-            initialFoodImperial: selection.foodUsesImperial,
-            showErrorsSignal: _bodyMeasurementsShowErrors,
-          ),
-          footer: HighlightButton(
-            buttonLabel: S.of(context).buttonNextLabel,
-            onButtonPressed: () => _scrollToPage(_OnboardingPage.activity),
-            buttonActive: _bodyMeasurementsPageButtonActive,
-            inactiveMessage: S.of(context).onboardingBlockedBodySnack,
-            onBlockedPressed: () => _bodyMeasurementsShowErrors.value++,
-          ),
+      ),
+      PageViewModel(
+        titleWidget: const SizedBox(),
+        // empty
+        decoration: _pageDecoration,
+        image: _defaultImageWidget,
+        bodyWidget: OnboardingAboutYouPageBody(
+          setPageContent: _setAboutYouPageData,
+          initialGender: selection.gender,
+          initialCaloriesProfile: selection.caloriesProfile,
+          initialBirthday: selection.birthday,
         ),
-        PageViewModel(
-          titleWidget: const SizedBox(),
-          // empty
-          decoration: _pageDecoration,
-          image: _defaultImageWidget,
-          bodyWidget: OnboardingActivityPageBody(
-            setButtonContent: _setActivityPageData,
-            initialActivity: selection.activity,
-          ),
-          footer: HighlightButton(
-            buttonLabel: S.of(context).buttonNextLabel,
-            onButtonPressed: () => _scrollToPage(_OnboardingPage.goal),
-            buttonActive: _activityPageButtonActive,
-            inactiveMessage: S.of(context).onboardingBlockedActivitySnack,
-          ),
+        footer: HighlightButton(
+          buttonLabel: S.of(context).buttonNextLabel,
+          onButtonPressed: () =>
+              _scrollToPage(_OnboardingPage.bodyMeasurements),
+          buttonActive: _aboutYouPageButtonActive,
+          inactiveMessage: S.of(context).onboardingBlockedProfileSnack,
         ),
-        PageViewModel(
-          titleWidget: const SizedBox(),
-          // empty
-          decoration: _pageDecoration,
-          image: _defaultImageWidget,
-          bodyWidget: OnboardingGoalPageBody(
-            setButtonContent: _setGoalPageData,
-            initialGoal: selection.goal,
-            heightCm: selection.height,
-            weightKg: selection.weight,
-            targetWeightKg: selection.targetWeight,
-          ),
-          footer: HighlightButton(
-            buttonLabel: S.of(context).buttonNextLabel,
-            onButtonPressed: () => _scrollToPage(_OnboardingPage.otherOptions),
-            buttonActive: _goalPageButtonActive,
-            inactiveMessage: S.of(context).onboardingBlockedGoalSnack,
-          ),
+      ),
+      PageViewModel(
+        titleWidget: const SizedBox(),
+        // empty
+        decoration: _pageDecoration,
+        image: _defaultImageWidget,
+        bodyWidget: OnboardingBodyMeasurementsPageBody(
+          setButtonContent: _setBodyMeasurementsPageData,
+          initialHeightCm: selection.height,
+          initialWeightKg: selection.weight,
+          initialTargetWeightKg: selection.targetWeight,
+          initialHeightImperial: selection.heightUsesImperial,
+          initialBodyWeightUnit: selection.bodyWeightUnit,
+          initialFoodImperial: selection.foodUsesImperial,
+          showErrorsSignal: _bodyMeasurementsShowErrors,
         ),
-        PageViewModel(
-          titleWidget: const SizedBox(),
-          // empty
-          decoration: _pageDecoration,
-          image: _defaultImageWidget,
-          bodyWidget: OnboardingOtherOptionsPageBody(
-            setPageContent: _setOtherOptionsPageData,
-            initialTheme: selection.appTheme,
-            initialFoodSourceToggles: selection.foodSourceToggles,
-            initialDailyReminderEnabled: selection.dailyReminderEnabled,
-            initialUseMaterialYou: selection.useMaterialYou,
-            initialAccentColor: selection.accentColor,
-            // The one dependency on this page the bloc does not carry: the AI
-            // row reads and writes the keystore directly rather than staging
-            // through onboarding's save. #728.
-            aiCredentials: locator<AiCredentialStorage>(),
-            aiProbeRunner: locator<AiEndpointProbeRunner>(),
-          ),
-          // Everything on this page is optional and pre-filled with
-          // defaults, so the button is always active.
-          footer: HighlightButton(
-            buttonLabel: S.of(context).buttonNextLabel,
-            onButtonPressed: () => _scrollToPage(_OnboardingPage.overview),
-            buttonActive: true,
-          ),
+        footer: HighlightButton(
+          buttonLabel: S.of(context).buttonNextLabel,
+          onButtonPressed: () => _scrollToPage(_OnboardingPage.activity),
+          buttonActive: _bodyMeasurementsPageButtonActive,
+          inactiveMessage: S.of(context).onboardingBlockedBodySnack,
+          onBlockedPressed: () => _bodyMeasurementsShowErrors.value++,
         ),
-        PageViewModel(
-          titleWidget: const SizedBox(),
-          // empty
-          decoration: _pageDecoration,
-          image: _defaultImageWidget,
-          bodyWidget: OnboardingOverviewPageBody(
-            calorieGoalDayString:
-                _onboardingBloc.getOverviewCalorieGoal()?.toInt().toString() ??
-                    "?",
-            carbsGoalString:
-                _onboardingBloc.getOverviewCarbsGoal()?.toInt().toString() ??
-                    "?",
-            fatGoalString:
-                _onboardingBloc.getOverviewFatGoal()?.toInt().toString() ?? "?",
-            proteinGoalString:
-                _onboardingBloc.getOverviewProteinGoal()?.toInt().toString() ??
-                    "?",
-            setButtonActive: _setOverviewPageContent,
-            breakdown: _onboardingBloc.getOverviewBreakdown(),
-            showLowKcalWarning:
-                _onboardingBloc.isOverviewBelowRecommendedKcalFloor(),
-            lowKcalWarningThreshold:
-                _onboardingBloc.getOverviewRecommendedKcalFloor(),
-          ),
-          footer: HighlightButton(
-            buttonLabel: S.of(context).buttonStartLabel,
-            onButtonPressed: () {
-              _onOverviewStartButtonPressed(context);
-            },
-            buttonActive: _overviewPageButtonActive,
-            inactiveMessage: S.of(context).onboardingBlockedOverviewSnack,
-          ),
+      ),
+      PageViewModel(
+        titleWidget: const SizedBox(),
+        // empty
+        decoration: _pageDecoration,
+        image: _defaultImageWidget,
+        bodyWidget: OnboardingActivityPageBody(
+          setButtonContent: _setActivityPageData,
+          initialActivity: selection.activity,
         ),
-      ];
+        footer: HighlightButton(
+          buttonLabel: S.of(context).buttonNextLabel,
+          onButtonPressed: () => _scrollToPage(_OnboardingPage.goal),
+          buttonActive: _activityPageButtonActive,
+          inactiveMessage: S.of(context).onboardingBlockedActivitySnack,
+        ),
+      ),
+      PageViewModel(
+        titleWidget: const SizedBox(),
+        // empty
+        decoration: _pageDecoration,
+        image: _defaultImageWidget,
+        bodyWidget: OnboardingGoalPageBody(
+          setButtonContent: _setGoalPageData,
+          initialGoal: selection.goal,
+          heightCm: selection.height,
+          weightKg: selection.weight,
+          targetWeightKg: selection.targetWeight,
+        ),
+        footer: HighlightButton(
+          buttonLabel: S.of(context).buttonNextLabel,
+          onButtonPressed: () => _scrollToPage(_OnboardingPage.otherOptions),
+          buttonActive: _goalPageButtonActive,
+          inactiveMessage: S.of(context).onboardingBlockedGoalSnack,
+        ),
+      ),
+      PageViewModel(
+        titleWidget: const SizedBox(),
+        // empty
+        decoration: _pageDecoration,
+        image: _defaultImageWidget,
+        bodyWidget: OnboardingOtherOptionsPageBody(
+          setPageContent: _setOtherOptionsPageData,
+          initialTheme: selection.appTheme,
+          initialFoodSourceToggles: selection.foodSourceToggles,
+          initialDailyReminderEnabled: selection.dailyReminderEnabled,
+          initialUseMaterialYou: selection.useMaterialYou,
+          initialAccentColor: selection.accentColor,
+          // The one dependency on this page the bloc does not carry: the AI
+          // row reads and writes the keystore directly rather than staging
+          // through onboarding's save. #728.
+          aiCredentials: locator<AiCredentialStorage>(),
+          aiProbeRunner: locator<AiEndpointProbeRunner>(),
+        ),
+        // Everything on this page is optional and pre-filled with
+        // defaults, so the button is always active.
+        footer: HighlightButton(
+          buttonLabel: S.of(context).buttonNextLabel,
+          onButtonPressed: () => _scrollToPage(_OnboardingPage.overview),
+          buttonActive: true,
+        ),
+      ),
+      PageViewModel(
+        titleWidget: const SizedBox(),
+        // empty
+        decoration: _pageDecoration,
+        image: _defaultImageWidget,
+        bodyWidget: OnboardingOverviewPageBody(
+          calorieGoalDayString:
+              _onboardingBloc.getOverviewCalorieGoal()?.toInt().toString() ??
+              "?",
+          carbsGoalString:
+              _onboardingBloc.getOverviewCarbsGoal()?.toInt().toString() ?? "?",
+          fatGoalString:
+              _onboardingBloc.getOverviewFatGoal()?.toInt().toString() ?? "?",
+          proteinGoalString:
+              _onboardingBloc.getOverviewProteinGoal()?.toInt().toString() ??
+              "?",
+          setButtonActive: _setOverviewPageContent,
+          breakdown: _onboardingBloc.getOverviewBreakdown(),
+          showLowKcalWarning: _onboardingBloc
+              .isOverviewBelowRecommendedKcalFloor(),
+          lowKcalWarningThreshold: _onboardingBloc
+              .getOverviewRecommendedKcalFloor(),
+        ),
+        footer: HighlightButton(
+          buttonLabel: S.of(context).buttonStartLabel,
+          onButtonPressed: () {
+            _onOverviewStartButtonPressed(context);
+          },
+          buttonActive: _overviewPageButtonActive,
+          inactiveMessage: S.of(context).onboardingBlockedOverviewSnack,
+        ),
+      ),
+    ];
     assert(
       pages.length == _OnboardingPage.values.length,
       'a page was added or removed without updating _OnboardingPage',
@@ -406,10 +408,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     });
   }
 
-  void _setGoalPageData(
-    bool active,
-    UserGoalSelectionEntity? selectedGoal,
-  ) {
+  void _setGoalPageData(bool active, UserGoalSelectionEntity? selectedGoal) {
     setState(() {
       _onboardingBloc.userSelection.goal = selectedGoal;
 
@@ -498,6 +497,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         useMaterialYou: _onboardingBloc.userSelection.useMaterialYou,
         accentColor: _onboardingBloc.userSelection.accentColor,
       );
+      // [fork] S89 onboarding-macros: the goal page's protein and fat
+      await OnboardingMacros.save();
+      // [/fork]
       if (!context.mounted) return;
       // Onboarding can run for a profile added after the app has been in
       // use, so the screen-persistent tab BLoCs may still hold the previous

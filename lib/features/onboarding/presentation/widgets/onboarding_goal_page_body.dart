@@ -3,6 +3,9 @@ import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/features/onboarding/domain/entity/goal_suggestion_entity.dart';
 import 'package:opennutritracker/features/onboarding/domain/entity/user_goal_selection_entity.dart';
 import 'package:opennutritracker/generated/l10n.dart';
+// [fork] S88 onboarding-macros
+import 'package:opennutritracker/fork/adaptive/onboarding_macros.dart';
+// [/fork]
 
 class OnboardingGoalPageBody extends StatefulWidget {
   final Function(bool active, UserGoalSelectionEntity? selectedGoal)
@@ -85,6 +88,10 @@ class _OnboardingGoalPageBodyState extends State<OnboardingGoalPageBody> {
               const SizedBox(height: Dimens.spacing8),
               _buildSuggestionCard(suggestion),
             ],
+            // [fork] S88 onboarding-macros: protein and fat per kg
+            const SizedBox(height: Dimens.spacing8),
+            const OnboardingMacrosRow(),
+            // [/fork]
           ],
         ),
       ),
