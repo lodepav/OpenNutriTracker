@@ -4,14 +4,10 @@ import 'package:opennutritracker/core/utils/hive_db_provider.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 
-/// Trends' cards below the range picker, in their first order, with the
-/// names the editor shows.
+/// Trends' cards below the tile grid (S120), in their first order, with
+/// the names the editor shows. The calorie, macro, water, weight and
+/// expenditure cards became tiles; a saved order naming them drops them.
 const trendCards = {
-  'calories': 'Calories',
-  'macros': 'Macros',
-  'water': 'Water',
-  'weight': 'Weight',
-  'expenditure': 'Expenditure',
   'weekly': 'Weekly report',
   'goalPlan': 'Goal planner',
   'phases': 'Diet phases',

@@ -3,14 +3,12 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:opennutritracker/core/domain/entity/body_weight_unit_entity.dart';
-import 'package:opennutritracker/core/domain/entity/tracked_day_entity.dart';
 import 'package:opennutritracker/core/domain/entity/weight_log_entity.dart';
 import 'package:opennutritracker/core/domain/usecase/add_weight_log_usecase.dart';
 import 'package:opennutritracker/core/domain/usecase/get_user_usecase.dart';
 import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
-import 'package:opennutritracker/core/utils/energy_display.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/features/profile/presentation/bloc/profile_bloc.dart';
 import 'package:opennutritracker/features/profile/presentation/widgets/set_weight_dialog.dart';
@@ -18,30 +16,24 @@ import 'package:opennutritracker/features/profile/presentation/widgets/weight_tr
 import 'package:opennutritracker/features/trends/presentation/bloc/trends_bloc.dart';
 import 'package:opennutritracker/features/trends/presentation/trends_calc.dart';
 import 'package:opennutritracker/generated/l10n.dart';
-// [fork] S79 macro-order
-import 'package:opennutritracker/fork/display/display_prefs.dart';
-// [/fork]
-// [fork] S81 a11y-labels
-import 'package:intl/intl.dart' show toBeginningOfSentenceCase;
-// [/fork]
 // [fork] S97 chart-touch
 import 'package:intl/intl.dart' as intl;
 import 'package:opennutritracker/fork/report/chart_touch.dart';
-import 'package:opennutritracker/fork/units/energy_text.dart';
 // [/fork]
 // [fork] S93 weight-outlook
 import 'package:opennutritracker/fork/adaptive/trend_points.dart';
 import 'package:opennutritracker/fork/report/rate_text.dart';
 // [/fork]
 // [fork] S40 expenditure-card
-import 'package:opennutritracker/fork/adaptive/expenditure_card.dart';
 import 'package:opennutritracker/fork/adaptive/goal_plan_card.dart';
 import 'package:opennutritracker/fork/body/body_card.dart';
 import 'package:opennutritracker/fork/health/steps_card.dart';
 import 'package:opennutritracker/fork/phases/phases_ui.dart';
 import 'package:opennutritracker/fork/photos/photo_card.dart';
 import 'package:opennutritracker/fork/report/weekly_report.dart';
-import 'package:opennutritracker/fork/report/trends_layout.dart';
+// [/fork]
+// [fork] S120 trends-tiles
+import 'package:opennutritracker/fork/trends/trends_overview.dart';
 // [/fork]
 
 class TrendsPage extends StatefulWidget {
@@ -84,228 +76,44 @@ class _TrendsView extends StatelessWidget {
         if (state is! TrendsLoaded) {
           return const Center(child: CircularProgressIndicator());
         }
-        // [fork] S47 trends-layout: rebuilt when the cards are rearranged
-        return ValueListenableBuilder(
-          valueListenable: TrendsLayoutStore.current,
-          builder: (context, _, _) => ListView(
-        // [/fork]
-          padding: const EdgeInsets.fromLTRB(
-              Dimens.spacing16, Dimens.spacing8, Dimens.spacing16, Dimens.spacing32),
-          children: [
-            _StreakCard(
+        // [fork] S120 trends-tiles: MacroFactor's tile grid in place of
+        // upstream's streak card, range picker and cards; the weight and
+        // water cards open from their tiles, the calorie and macro cards
+        // gave way to the Calories page (S40's cards follow the grid).
+        return TrendsOverview(
+          state: state,
+          weightCard: (state) => _WeightCard(
+            entries: state.weight,
+            bodyWeightUnit: state.bodyWeightUnit,
+            targetWeightKg: state.targetWeightKg,
+            rangeDays: state.windowDays,
+            palette: palette,
+          ),
+          waterCard: (state) => _WaterTrendCard(
+            waterByDay: state.waterByDay,
+            goalMl: state.waterGoalMl,
+            rangeDays: state.windowDays,
+            palette: palette,
+          ),
+          cards: {
+            'weekly': WeeklyReportCard(
               days: state.days,
-              priorWeek: state.priorWeek,
               rangeDays: state.windowDays,
               palette: palette,
             ),
-            const SizedBox(height: Dimens.spacing16),
-            _RangeSelector(rangeDays: state.rangeDays),
-            // [fork] S47 trends-layout: the cards below in the user's order,
-            // less the hidden ones; upstream's each with its own gap above.
-            // After them S40's: estimated expenditure and balance, the
-            // weekly report, the goal planner, diet phases, body
-            // measurements, steps and progress photos
-            ...arrangeTrendCards({
-              'calories': Padding(
-                padding: const EdgeInsets.only(top: Dimens.spacing16),
-                child: _CaloriesTrendCard(
-                    days: state.days, rangeDays: state.windowDays, palette: palette),
-              ),
-              'macros': Padding(
-                padding: const EdgeInsets.only(top: Dimens.spacing16),
-                child: _MacrosTrendCard(
-                    days: state.days, rangeDays: state.windowDays, palette: palette),
-              ),
-              'water': Padding(
-                padding: const EdgeInsets.only(top: Dimens.spacing16),
-                child: _WaterTrendCard(
-                  waterByDay: state.waterByDay,
-                  goalMl: state.waterGoalMl,
-                  rangeDays: state.windowDays,
-                  palette: palette,
-                ),
-              ),
-              'weight': Padding(
-                padding: const EdgeInsets.only(top: Dimens.spacing16),
-                child: _WeightCard(
-                  entries: state.weight,
-                  bodyWeightUnit: state.bodyWeightUnit,
-                  targetWeightKg: state.targetWeightKg,
-                  rangeDays: state.windowDays,
-                  palette: palette,
-                ),
-              ),
-              'expenditure':
-                  ExpenditureTrendCard(rangeDays: state.windowDays, palette: palette),
-              'weekly': WeeklyReportCard(
-                days: state.days,
-                rangeDays: state.windowDays,
-                palette: palette,
-              ),
-              'goalPlan': GoalPlanCard(palette: palette, unit: state.bodyWeightUnit),
-              'phases': DietPhasesCard(unit: state.bodyWeightUnit),
-              'body': BodyMeasurementsCard(
-                rangeDays: state.windowDays,
-                palette: palette,
-                imperial: state.bodyWeightUnit != BodyWeightUnit.kg,
-              ),
-              'steps': StepsCard(rangeDays: state.windowDays, palette: palette),
-              'photos': const ProgressPhotosCard(),
-            }),
-            // [/fork]
-          ],
-        // [fork] S47 trends-layout
-        ),
-        // [/fork]
-        );
-      },
-    );
-  }
-}
-
-class _RangeSelector extends StatelessWidget {
-  final int rangeDays;
-  const _RangeSelector({required this.rangeDays});
-
-  @override
-  Widget build(BuildContext context) {
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: Semantics(
-        identifier: 'trends-range-selector',
-        child: SegmentedButton<int>(
-          showSelectedIcon: false,
-          segments: [
-            const ButtonSegment(value: 7, label: Text('7d')),
-            const ButtonSegment(value: 30, label: Text('30d')),
-            const ButtonSegment(value: 90, label: Text('90d')),
-            // 0 is the "All" sentinel; the bloc resolves it to the full span.
-            ButtonSegment(value: 0, label: Text(S.of(context).allItemsLabel)),
-          ],
-          selected: {rangeDays},
-          onSelectionChanged: (s) => context
-              .read<TrendsBloc>()
-              .add(LoadTrendsEvent(rangeDays: s.first)),
-        ),
-      ),
-    );
-  }
-}
-
-class _StreakCard extends StatelessWidget {
-  final List<TrackedDayEntity> days;
-  final List<TrackedDayEntity> priorWeek;
-  final int rangeDays;
-  final AppPalette palette;
-  const _StreakCard({
-    required this.days,
-    required this.priorWeek,
-    required this.rangeDays,
-    required this.palette,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final accent = Theme.of(context).colorScheme.primary;
-    final errorColor = Theme.of(context).colorScheme.error;
-    final text = Theme.of(context).textTheme;
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final windowStart =
-        DateTime(today.year, today.month, today.day - (rangeDays - 1));
-    final weekEnd = today;
-    final weekStart = weekEnd.subtract(const Duration(days: 6));
-
-    bool onTrack(TrackedDayEntity d) =>
-        d.getCalendarDayRatingColor(context) != errorColor;
-
-    final onTrackDays = <DateTime>{
-      for (final d in days)
-        if (onTrack(d)) DateTime(d.day.year, d.day.month, d.day.day),
-    };
-    final stats = streakStats(onTrackDays, windowStart, today);
-
-    // Week-over-week on-track delta (this week vs the prior week).
-    // Suppress the chip when the prior week is empty — a new user with
-    // no baseline would otherwise see a large green delta against 0.
-    final priorOnTrack = priorWeek.where(onTrack).toList();
-    final thisWeek = onTrackDays
-        .where((day) =>
-            day.isAfter(weekStart.subtract(const Duration(days: 1))) &&
-            day.isBefore(weekEnd.add(const Duration(days: 1))))
-        .length;
-    final delta = priorOnTrack.isNotEmpty
-        ? thisWeek - priorOnTrack.length
-        : 0;
-
-    return AppCard(
-      padding: const EdgeInsets.all(Dimens.spacing20),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(Dimens.spacing12),
-            decoration: BoxDecoration(
-                color: accent.withValues(alpha: 0.16), shape: BoxShape.circle),
-            child: Icon(Icons.local_fire_department_rounded,
-                color: accent, size: 28),
-          ),
-          const SizedBox(width: Dimens.spacing16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('${stats.current}', style: text.headlineSmall),
-                Text(S.of(context).trendsDayStreakLabel,
-                    style: text.bodyMedium?.copyWith(color: palette.textMuted)),
-              ],
+            'goalPlan': GoalPlanCard(palette: palette, unit: state.bodyWeightUnit),
+            'phases': DietPhasesCard(unit: state.bodyWeightUnit),
+            'body': BodyMeasurementsCard(
+              rangeDays: state.windowDays,
+              palette: palette,
+              imperial: state.bodyWeightUnit != BodyWeightUnit.kg,
             ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (delta != 0) ...[
-                _WeekDeltaChip(delta: delta, palette: palette),
-                const SizedBox(height: 6),
-              ],
-              Text(
-                '${S.of(context).trendsBestStreakLabel} ${stats.longest}',
-                style: text.bodySmall?.copyWith(color: palette.textMuted),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Week-over-week change in on-track days, shown as a coloured arrow + number
-/// (locale-neutral — no wording needed).
-class _WeekDeltaChip extends StatelessWidget {
-  final int delta;
-  final AppPalette palette;
-  const _WeekDeltaChip({required this.delta, required this.palette});
-
-  @override
-  Widget build(BuildContext context) {
-    final up = delta > 0;
-    final color = up ? palette.proteinColor : palette.fatColor;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: Dimens.spacing12, vertical: 6),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.16),
-        borderRadius: Dimens.borderRadiusS,
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(up ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded, color: color, size: 16),
-          const SizedBox(width: 2),
-          Text('${delta.abs()}',
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(color: color)),
-        ],
-      ),
+            'steps': StepsCard(rangeDays: state.windowDays, palette: palette),
+            'photos': const ProgressPhotosCard(),
+          },
+        );
+        // [/fork]
+      },
     );
   }
 }
@@ -339,120 +147,6 @@ Widget _noData(BuildContext context, String message) => SizedBox(
       ),
     );
 // [/fork]
-
-class _CaloriesTrendCard extends StatelessWidget {
-  final List<TrackedDayEntity> days;
-  final int rangeDays;
-  final AppPalette palette;
-  const _CaloriesTrendCard({required this.days, required this.rangeDays, required this.palette});
-
-  @override
-  Widget build(BuildContext context) {
-    final text = Theme.of(context).textTheme;
-    final accent = Theme.of(context).colorScheme.primary;
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final byDay = {for (final d in days) DateTime(d.day.year, d.day.month, d.day.day): d};
-    // Full per-day series across the window; missing days contribute 0 tracked.
-    // Values are converted to the user's energy unit up front (#1362), so the
-    // plotted line, the goal reference and the tooltip all read in kcal or kJ.
-    final spots = <FlSpot>[];
-    final goals = <double>[];
-    for (int i = 0; i < rangeDays; i++) {
-      final day = today.subtract(Duration(days: rangeDays - 1 - i));
-      final d = byDay[DateTime(day.year, day.month, day.day)];
-      final tracked = d?.caloriesTracked ?? 0;
-      spots.add(FlSpot(i.toDouble(), EnergyDisplay.convert(context, tracked)));
-      if (d != null && d.calorieGoal > 0) {
-        goals.add(EnergyDisplay.convert(context, d.calorieGoal));
-      }
-    }
-    final avgGoal = goals.isEmpty ? 0.0 : goals.reduce((a, b) => a + b) / goals.length;
-    final maxTracked = spots.fold<double>(0, (m, s) => s.y > m ? s.y : m);
-    // [fork] S97 chart-touch
-    final unit = energyUnit(context);
-    final dayLabel = _dayLabels(context, today, rangeDays);
-    // [/fork]
-    final maxY = [maxTracked, avgGoal].reduce((a, b) => a > b ? a : b) * 1.15 + 1;
-
-    return AppCard(
-      padding: const EdgeInsets.all(Dimens.spacing20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            _energyTitle(context), // [fork] S103
-            style: text.titleMedium,
-          ),
-          // [fork] S83 chart-summary: the chart's numbers in words, shown
-          // (and so spoken) under its title
-          if (_caloriesSummary(context, spots, avgGoal).isNotEmpty)
-            Text(
-              _caloriesSummary(context, spots, avgGoal),
-              style: text.bodySmall?.copyWith(color: palette.textMuted),
-            ),
-          // [/fork]
-          const SizedBox(height: Dimens.spacing20),
-          // [fork] S97 chart-touch: a range with nothing logged says so,
-          // rather than a flat line along the bottom under the goal
-          if (spots.every((s) => s.y == 0))
-            _noData(context, 'Nothing logged in this range.')
-          else
-          // [/fork]
-          Semantics(
-            label: _energyTitle(context), // [fork] S103
-            child: SizedBox(
-            height: 140,
-            child: LineChart(
-              LineChartData(
-                minX: 0,
-                maxX: (rangeDays - 1).toDouble(),
-                minY: 0,
-                maxY: maxY,
-                gridData: const FlGridData(show: false),
-                borderData: FlBorderData(show: false),
-                titlesData: const FlTitlesData(show: false),
-                // [fork] S97 chart-touch: the day and the unit with the
-                // number, and no line down to the axis; cut to a whole
-                // number as energyValue is everywhere else
-                lineTouchData: labelledTouch(
-                  context,
-                  (s) => '${s.y.toInt()}',
-                  after: (s) => ' $unit\n${dayLabel(s.x)}',
-                ),
-                // [/fork]
-                // Dashed average-goal reference: the line above/below it reads
-                // as days over / under goal at a glance.
-                extraLinesData: avgGoal <= 0
-                    ? const ExtraLinesData()
-                    : ExtraLinesData(horizontalLines: [
-                        HorizontalLine(
-                          y: avgGoal,
-                          color: palette.textMuted,
-                          strokeWidth: 1.2,
-                          dashArray: const [6, 4],
-                        ),
-                      ]),
-                lineBarsData: [
-                  LineChartBarData(
-                    spots: spots,
-                    isCurved: true,
-                    preventCurveOverShooting: true,
-                    color: accent,
-                    barWidth: 3,
-                    dotData: FlDotData(show: rangeDays <= 7),
-                    belowBarData: BarAreaData(show: true, color: accent.withValues(alpha: 0.12)),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 class _WaterTrendCard extends StatelessWidget {
   final Map<DateTime, int> waterByDay;
@@ -565,94 +259,6 @@ class _WaterTrendCard extends StatelessWidget {
               ),
             ),
           ),
-        ],
-      ),
-    );
-  }
-}
-
-class _MacrosTrendCard extends StatelessWidget {
-  final List<TrackedDayEntity> days;
-  final AppPalette palette;
-  final int rangeDays;
-  const _MacrosTrendCard({
-    required this.days,
-    required this.palette,
-    required this.rangeDays,
-  });
-
-  double _avg(Iterable<double?> values) {
-    final present = values.whereType<double>().toList();
-    if (present.isEmpty) return 0;
-    return present.reduce((a, b) => a + b) / rangeDays;
-  }
-
-  // [fork] S87 trends-macro-goal: a goal is the mean over the days that
-  // have one; over the range, a week with one day logged read a seventh
-  double _avgGoal(Iterable<double?> values) {
-    final present = values.whereType<double>().toList();
-    if (present.isEmpty) return 0;
-    return present.reduce((a, b) => a + b) / present.length;
-  }
-  // [/fork]
-
-  @override
-  Widget build(BuildContext context) {
-    final text = Theme.of(context).textTheme;
-    // [fork] S87 trends-macro-goal: the goals by _avgGoal
-    final rows = [
-      (S.of(context).carbsLabel, _avg(days.map((d) => d.carbsTracked)),
-          _avgGoal(days.map((d) => d.carbsGoal)), palette.carbs),
-      (S.of(context).fatLabel, _avg(days.map((d) => d.fatTracked)),
-          _avgGoal(days.map((d) => d.fatGoal)), palette.fat),
-      (S.of(context).proteinLabel, _avg(days.map((d) => d.proteinTracked)),
-          _avgGoal(days.map((d) => d.proteinGoal)), palette.protein),
-    ];
-    // [/fork]
-    return AppCard(
-      padding: const EdgeInsets.all(Dimens.spacing20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Average intake vs goal over the window — daily-average macros.
-          Text(S.of(context).trendsDailyAverageLabel, style: text.titleMedium),
-          const SizedBox(height: Dimens.spacing16),
-          // [fork] S79 macro-order; S81 a11y-labels: "Protein", as a
-          // label starting a row, not "protein"
-          for (final (label, intake, goal, color) in inMacroOrder(
-            carbs: rows[0],
-            fat: rows[1],
-            protein: rows[2],
-          ).map((r) => (toBeginningOfSentenceCase(r.$1), r.$2, r.$3, r.$4))) ...[
-          // [/fork]
-            Row(
-              children: [
-                Expanded(
-                  child: Text(label,
-                      style: text.labelMedium,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis),
-                ),
-                const SizedBox(width: Dimens.spacing8),
-                // [fork] S114 average-round: rounded, as the weekly
-                // report's are (it read 439 g where this said 438 g)
-                Text('${intake.round()} / ${goal.round()} g',
-                // [/fork]
-                    style: text.bodySmall?.copyWith(color: palette.textStrong, fontWeight: FontWeight.w700)),
-              ],
-            ),
-            const SizedBox(height: 6),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: LinearProgressIndicator(
-                value: goal <= 0 ? 0 : (intake / goal).clamp(0.0, 1.0),
-                minHeight: 8,
-                backgroundColor: palette.surfaceMuted,
-                valueColor: AlwaysStoppedAnimation(color),
-              ),
-            ),
-            const SizedBox(height: Dimens.spacing16),
-          ],
         ],
       ),
     );
@@ -816,25 +422,3 @@ class _WeightCard extends StatelessWidget {
     }
   }
 }
-
-// [fork] S83 chart-summary: the calorie chart in words: the average of the
-// days logged and the average goal, both already in the display unit.
-String _caloriesSummary(BuildContext context, List<FlSpot> spots, double avgGoal) {
-  final logged = [for (final s in spots) if (s.y > 0) s.y];
-  if (logged.isEmpty) return '';
-  final avg = logged.reduce((a, b) => a + b) / logged.length;
-  final days = logged.length == 1 ? '1 day' : '${logged.length} days';
-  final unit = EnergyDisplay.unitLabel(context);
-  // Whole numbers cut, as energyValue's are, so it agrees with the chart's
-  // "2572 kcal of 2925 kcal" below.
-  final goal = avgGoal > 0 ? ', goal ${avgGoal.toInt()} $unit' : '';
-  return 'Average ${avg.toInt()} $unit over $days logged$goal';
-}
-// [/fork]
-
-// [fork] S103 kj-wording: "Energy" over a chart in kJ, as the activity
-// dialogs say
-String _energyTitle(BuildContext context) => usesKj(context)
-    ? S.of(context).mealEnergyLabel
-    : S.of(context).trendsCaloriesLabel;
-// [/fork]

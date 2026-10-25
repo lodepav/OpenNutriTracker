@@ -31,8 +31,8 @@ void main() {
     tester,
   ) async {
     TrendsLayoutStore.current.value = (
-      order: ['weight', 'calories'],
-      hidden: {'water'},
+      order: ['body', 'weekly'],
+      hidden: {'phases'},
     );
     await tester.pumpWidget(
       MaterialApp(
@@ -41,7 +41,7 @@ void main() {
             valueListenable: TrendsLayoutStore.current,
             builder: (context, _, _) => ListView(
               children: arrangeTrendCards({
-                for (final id in ['calories', 'water', 'weight'])
+                for (final id in ['weekly', 'phases', 'body'])
                   id: Text('card $id'),
               }, store: _Memory()),
             ),
@@ -52,23 +52,23 @@ void main() {
     await tester.pumpAndSettle();
 
     double y(String id) => tester.getTopLeft(find.text('card $id')).dy;
-    expect(y('weight'), lessThan(y('calories')));
-    expect(find.text('card water'), findsNothing);
+    expect(y('body'), lessThan(y('weekly')));
+    expect(find.text('card phases'), findsNothing);
 
     await tester.tap(find.byKey(const ValueKey('trends-arrange')));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('arrange-weight')));
+    await tester.tap(find.byKey(const ValueKey('arrange-body')));
     await tester.pumpAndSettle();
-    expect(TrendsLayoutStore.current.value.hidden, {'water', 'weight'});
+    expect(TrendsLayoutStore.current.value.hidden, {'phases', 'body'});
 
     await tester.tap(find.byKey(const ValueKey('trends-reset')));
     await tester.pumpAndSettle();
     expect(TrendsLayoutStore.current.value.hidden, isEmpty);
-    expect(TrendsLayoutStore.current.value.order.first, 'calories');
+    expect(TrendsLayoutStore.current.value.order.first, 'weekly');
 
     await tester.pageBack();
     await tester.pumpAndSettle();
-    expect(y('calories'), lessThan(y('water')));
-    expect(y('water'), lessThan(y('weight')));
+    expect(y('weekly'), lessThan(y('phases')));
+    expect(y('phases'), lessThan(y('body')));
   });
 }
