@@ -58,7 +58,7 @@ Map<String, double> leftoversFromItems(
         .where(
           (e) =>
               !left.containsKey(e.id) &&
-              (item.unit == null || item.unit == e.unit) &&
+              (item.unit == null || item.unit == shownUnit(e, false).unit) &&
               (e.meal.name ?? '').trim().toLowerCase() ==
                   item.query.trim().toLowerCase(),
         )

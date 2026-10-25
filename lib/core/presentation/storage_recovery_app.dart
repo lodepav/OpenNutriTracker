@@ -50,6 +50,9 @@ class _StorageRecoveryScreenState extends State<_StorageRecoveryScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // [fork] S112: a lost or broken key is not mended by moving files
+    final rescue = StorageRescue.helps(widget.errorCode);
+    // [/fork]
     return Scaffold(
       body: SafeArea(
         child: Center(
@@ -76,11 +79,16 @@ class _StorageRecoveryScreenState extends State<_StorageRecoveryScreen> {
                   // problem persists, contact support before clearing the
                   // app data or reinstalling", beside the panel's two ways
                   // out
-                  const Text(
-                    'Your data files have not been changed. Retry once. If it '
-                    'fails again, use a button below: it moves the files that '
-                    'will not open aside on the phone instead of deleting '
-                    'them. Do not clear the app data or reinstall.',
+                  Text(
+                    rescue
+                        ? 'Your data files have not been changed. Retry once. '
+                              'If it fails again, use a button below: it moves '
+                              'the files that will not open aside on the phone '
+                              'instead of deleting them. Do not clear the app '
+                              'data or reinstall.'
+                        : 'Your data files have not been changed. Try again. '
+                              'If the problem persists, contact support before '
+                              'clearing the app data or reinstalling.',
                     textAlign: TextAlign.center,
                   ),
                   // [/fork]
@@ -106,7 +114,7 @@ class _StorageRecoveryScreenState extends State<_StorageRecoveryScreen> {
                   ),
                   // [fork] S112 storage-rescue: restore the automatic
                   // backup, or start again
-                  StorageRescuePanel(onRetry: widget.onRetry),
+                  if (rescue) StorageRescuePanel(onRetry: widget.onRetry),
                   // [/fork]
                 ],
               ),

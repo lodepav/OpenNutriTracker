@@ -359,6 +359,14 @@ void main() {
         leftoversSystemPrompt([inOz], withMealPhoto: false),
         contains('1. Rice: 200 g'),
       );
+      // The answer comes back in the unit the prompt named.
+      expect(
+        leftoversFromItems(
+          [inOz],
+          const [ParsedMealItem(query: 'Rice', quantity: 50, unit: 'g')],
+        ),
+        {'rice': 50},
+      );
     });
 
     test('maps items to entries by name, in their own unit', () {

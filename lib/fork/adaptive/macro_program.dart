@@ -46,7 +46,6 @@ class MacroProgram {
   /// g/kg). Under 20% of energy from fat is not advised (ADA/ACSM 2009).
   static const fatPresets = [0.6, 0.8, 1.0];
   static const defaultFatPerKg = 0.8;
-  static const minFatShare = 0.2;
 
   /// Protein's share of energy is held to this, so a small target still
   /// leaves room for carbs and fat.

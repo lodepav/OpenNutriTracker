@@ -14,18 +14,20 @@ import 'package:opennutritracker/fork/backup/storage_rescue.dart';
 
 class _Folder extends BackupFolder {
   final List<String> files;
-  _Folder(this.files);
+  final bool readable;
+  _Folder(this.files, {this.readable = true});
 
   @override
   Future<List<String>> list(String uri) async => files;
 
   @override
   Future<Uint8List?> read(String uri, String name) async =>
-      Uint8List.fromList(ZipEncoder().encode(Archive()));
+      readable ? Uint8List.fromList(ZipEncoder().encode(Archive())) : null;
 }
 
 class _Import extends Fake implements ImportDataUsecase {
   int imports = 0;
+  bool fails = false;
 
   @override
   Future<bool> importArchive(
@@ -41,6 +43,7 @@ class _Import extends Fake implements ImportDataUsecase {
     Object? startedOn,
   }) async {
     imports++;
+    if (fails) throw const FormatException('not a backup');
     return true;
   }
 }
@@ -67,12 +70,13 @@ class _Config extends Fake implements AddConfigUsecase {
 void main() {
   late Directory dir;
 
-  StorageRescue rescue(List<String> files) => StorageRescue(
-    folder: _Folder(files),
-    hiveDir: () async => dir,
-    box: () => Hive.openBox<dynamic>(AutoBackup.boxName),
-    clock: () => DateTime(2026, 10, 25, 14, 30),
-  );
+  StorageRescue rescue(List<String> files, {bool readable = true}) =>
+      StorageRescue(
+        folder: _Folder(files, readable: readable),
+        hiveDir: () async => dir,
+        box: () => Hive.openBox<dynamic>(AutoBackup.boxName),
+        clock: () => DateTime(2026, 10, 25, 14, 30),
+      );
 
   setUp(() async {
     dir = await Directory.systemTemp.createTemp('storage_rescue');
@@ -87,15 +91,24 @@ void main() {
     await dir.delete(recursive: true);
   });
 
-  test('the newest automatic backup, of any profile', () async {
+  test("the first profile's newest backup, as the app starts again with "
+      'only that profile', () async {
     final latest = await rescue([
       'openbite-2026-10-22.zip',
       'openbite-1a2b3c4d-2026-10-24.zip',
       'openbite-2026-10-23.zip',
       'notes.txt',
     ]).latestBackup();
+    expect(latest?.name, 'openbite-2026-10-23.zip');
+    expect(latest?.day, DateTime(2026, 10, 23));
+  });
+
+  test("another profile's newest when the first has none", () async {
+    final latest = await rescue([
+      'openbite-1a2b3c4d-2026-10-22.zip',
+      'openbite-1a2b3c4d-2026-10-24.zip',
+    ]).latestBackup();
     expect(latest?.name, 'openbite-1a2b3c4d-2026-10-24.zip');
-    expect(latest?.day, DateTime(2026, 10, 24));
   });
 
   test('none without a backup folder', () async {
@@ -116,6 +129,13 @@ void main() {
     expect(
       File('${dir.path}/${AutoBackup.boxName.toLowerCase()}.hive').existsSync(),
       isTrue,
+    );
+    // Holds today's backup back from being written over (AutoBackup).
+    expect(
+      (await Hive.openBox<dynamic>(
+        AutoBackup.boxName,
+      )).get(AutoBackup.setAsideOnKey),
+      DateTime(2026, 10, 25, 14, 30),
     );
   });
 
@@ -141,6 +161,12 @@ void main() {
       expect(await r.finishPending(), isTrue);
       expect(import.imports, 1);
       expect(config.policy, isTrue);
+      expect(
+        (await Hive.openBox<dynamic>(
+          AutoBackup.boxName,
+        )).containsKey(AutoBackup.setAsideOnKey),
+        isFalse,
+      );
       expect(await r.finishPending(), isFalse);
       expect(import.imports, 1);
     });
@@ -151,6 +177,23 @@ void main() {
         isFalse,
       );
       expect(import.imports, 0);
+    });
+
+    test('a backup that is gone or will not import is tried once, and the '
+        'app starts as new', () async {
+      final gone = rescue(['openbite-2026-10-24.zip'], readable: false);
+      await gone.restoreAtStart('openbite-2026-10-24.zip');
+      expect(await gone.finishPending(), isFalse);
+      expect(import.imports, 0);
+
+      import.fails = true;
+      final broken = rescue(['openbite-2026-10-24.zip']);
+      await broken.restoreAtStart('openbite-2026-10-24.zip');
+      expect(await broken.finishPending(), isFalse);
+      expect(import.imports, 1);
+      expect(config.policy, isNull);
+      expect(await broken.finishPending(), isFalse);
+      expect(import.imports, 1);
     });
   });
 
@@ -177,8 +220,44 @@ void main() {
     await tester.pumpAndSettle();
     expect(restored, 'openbite-2026-10-24.zip');
     expect(retried, 1);
+
+    await tester.tap(find.text('Start again without this data'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+    expect(retried, 1);
+    await tester.tap(find.text('Start again without this data'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(TextButton, 'Start again'));
+    await tester.pumpAndSettle();
+    expect(asides, 1);
+    expect(retried, 2);
+  });
+
+  testWidgets('a step that fails says nothing was deleted and does not '
+      'start again', (tester) async {
+    var retried = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: StorageRescuePanel(
+            rescue: _Rescue((_) => throw const FileSystemException('busy')),
+            onRetry: () async => retried++,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Restore the backup of Oct 24, 2026'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Restore'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Nothing was deleted'), findsOneWidget);
+    expect(retried, 0);
   });
 }
+
+var asides = 0;
 
 class _Rescue extends StorageRescue {
   final void Function(String) onRestore;
@@ -190,4 +269,10 @@ class _Rescue extends StorageRescue {
 
   @override
   Future<void> restoreAtStart(String backup) async => onRestore(backup);
+
+  @override
+  Future<Directory> setAside() async {
+    asides++;
+    return Directory.systemTemp;
+  }
 }

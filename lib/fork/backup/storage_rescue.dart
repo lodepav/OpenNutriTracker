@@ -24,12 +24,18 @@ import 'package:path_provider/path_provider.dart';
 /// onboarding can restore a backup file.
 class StorageRescue {
   static const pendingKey = 'restorePending';
+
+  /// Whether moving the files aside can help: only for data that will not
+  /// open. A lost or broken key still fails with the files gone, as the
+  /// kept backup box counts as data.
+  static bool helps(String errorCode) =>
+      errorCode == 'hive_wrong_key_or_corrupted';
   static final _log = Logger('StorageRescue');
   static final _stamp = DateFormat('yyyyMMdd-HHmmss');
 
   /// `openbite-2026-10-24.zip`, or with a profile's tag before the day.
   static final _backupFile = RegExp(
-    r'^openbite-(?:[^-]+-)?(\d{4}-\d{2}-\d{2})\.zip$',
+    r'^openbite-([^-]+-)?(\d{4}-\d{2}-\d{2})\.zip$',
   );
 
   final BackupFolder _folder;
@@ -55,21 +61,27 @@ class StorageRescue {
     return Hive.openBox<dynamic>(AutoBackup.boxName);
   }
 
-  /// The newest automatic backup, or null when there is none to be had.
+  /// The newest automatic backup, or null when there is none to be had:
+  /// the first profile's when it has one, as the app starts again with
+  /// only that profile, whose backups another's would then prune.
   Future<({String name, DateTime day})?> latestBackup() async {
     try {
       final uri = (await _box()).get('folderUri') as String?;
       if (uri == null) return null;
-      ({String name, DateTime day})? newest;
+      ({String name, DateTime day})? first, other;
       for (final name in await _folder.list(uri)) {
-        final day = _backupFile.firstMatch(name)?.group(1);
-        if (day == null) continue;
-        final date = DateTime.parse(day);
-        if (newest == null || date.isAfter(newest.day)) {
-          newest = (name: name, day: date);
+        final match = _backupFile.firstMatch(name);
+        if (match == null) continue;
+        final date = DateTime.parse(match.group(2)!);
+        final newest = match.group(1) == null ? first : other;
+        if (newest != null && !date.isAfter(newest.day)) continue;
+        if (match.group(1) == null) {
+          first = (name: name, day: date);
+        } else {
+          other = (name: name, day: date);
         }
       }
-      return newest;
+      return first ?? other;
     } catch (error, stackTrace) {
       _log.warning('No automatic backup to offer', error, stackTrace);
       return null;
@@ -91,6 +103,7 @@ class StorageRescue {
       if (name.startsWith('$keep.')) continue;
       await file.rename('${aside.path}/$name');
     }
+    await (await _box()).put(AutoBackup.setAsideOnKey, _clock());
     return aside;
   }
 
@@ -128,6 +141,8 @@ class StorageRescue {
       // Accepted before the files broke; crash reports stay off until
       // asked again.
       await OnboardingRestore().accept(dataCollection: false);
+      // The data is the backup's again, safe to back up.
+      await box.delete(AutoBackup.setAsideOnKey);
       return true;
     } catch (error, stackTrace) {
       _log.severe('Restoring $name failed', error, stackTrace);

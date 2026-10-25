@@ -282,11 +282,17 @@ class _CheckInScreenState extends State<CheckInScreen> {
   late final Future<CheckInRecord?> _last = widget.service.lastCheckIn();
 
   /// Before the first check-in, the target Home uses now (the formula's,
-  /// or a fixed one), before the day's activity.
-  late final Future<double?> _goalNow =
-      locator.isRegistered<GetKcalGoalUsecase>()
-      ? locator<GetKcalGoalUsecase>().getKcalGoal(totalKcalActivitiesParam: 0)
-      : Future.value(null);
+  /// or a fixed one), before the day's activity and, as the proposal,
+  /// without today's weekday shift.
+  late final Future<double?> _goalNow = () async {
+    if (!locator.isRegistered<GetKcalGoalUsecase>()) return null;
+    final goal = await locator<GetKcalGoalUsecase>().getKcalGoal(
+      totalKcalActivitiesParam: 0,
+    );
+    final shifts = AdaptiveStore.settings.value.weekdayOffsets;
+    if (shifts.every((s) => s == 0)) return goal;
+    return goal - shifts[(await logicalToday()).weekday - 1];
+  }();
   final _target = TextEditingController();
 
   @override
