@@ -6,17 +6,17 @@ import 'package:opennutritracker/core/domain/entity/tracked_day_entity.dart';
 import 'package:opennutritracker/core/domain/entity/user_activity_entity.dart';
 import 'package:opennutritracker/core/presentation/widgets/activity_vertial_list.dart';
 import 'package:opennutritracker/core/presentation/widgets/copy_or_delete_dialog.dart';
-import 'package:opennutritracker/core/presentation/widgets/macro_nutriments_widget.dart';
+// [fork] S118: core/presentation/widgets/macro_nutriments_widget.dart, unused since the day card
 // [fork] S24-S25 copy-anywhere: upstream's CopyDialog import, unused since
 // import 'package:opennutritracker/core/presentation/widgets/copy_dialog.dart';
 // [/fork]
-import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
+// [fork] S118: core/presentation/widgets/app_card.dart, unused since the day card
 import 'package:opennutritracker/core/presentation/widgets/empty_hint.dart';
 import 'package:opennutritracker/core/presentation/widgets/delete_dialog.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
-import 'package:opennutritracker/core/utils/calc/unit_calc.dart';
+// [fork] S118: core/utils/calc/unit_calc.dart, unused since the day card
 import 'package:opennutritracker/core/utils/custom_icons.dart';
-import 'package:opennutritracker/core/utils/energy_unit_provider.dart';
+// [fork] S118: core/utils/energy_unit_provider.dart, unused since the day card
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/features/add_meal/presentation/add_meal_type.dart';
 import 'package:opennutritracker/features/diary/presentation/bloc/calendar_day_bloc.dart';
@@ -35,11 +35,13 @@ import 'package:opennutritracker/fork/timeline/timeline.dart';
 import 'package:opennutritracker/fork/adaptive/skip_day.dart';
 // [/fork]
 // [fork] S80 diary-by-hour
+import 'package:opennutritracker/fork/display/diary_timeline.dart'; // [fork] S118
+import 'package:opennutritracker/fork/display/day_totals_card.dart'; // [fork] S118
 import 'package:opennutritracker/fork/display/diary_by_hour.dart';
 import 'package:opennutritracker/fork/display/display_prefs.dart';
 // [/fork]
 import 'package:opennutritracker/generated/l10n.dart';
-import 'package:provider/provider.dart';
+// [fork] S118: provider, unused since the day card
 
 class DayInfoWidget extends StatefulWidget {
   final DateTime selectedDay;
@@ -248,56 +250,12 @@ class _DayInfoWidgetState extends State<DayInfoWidget> {
                     title: S.of(context).nothingAddedLabel,
                   )
                 : const SizedBox(),
-            trackedDay != null
-                ? Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: Dimens.spacing16),
-                    child: AppCard(
-                      padding: const EdgeInsets.fromLTRB(
-                        Dimens.spacing20,
-                        Dimens.spacing20,
-                        Dimens.spacing20,
-                        Dimens.spacing20,
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: Dimens.spacing16,
-                              vertical: Dimens.spacing12,
-                            ),
-                            decoration: BoxDecoration(
-                              color: widget.trackedDayEntity
-                                  ?.getRatingDayTextBackgroundColor(context),
-                              borderRadius: Dimens.borderRadiusM,
-                            ),
-                            child: Text(
-                              _getCaloriesTrackedDisplayString(
-                                  context, trackedDay),
-                              style: textTheme.titleLarge?.copyWith(
-                                color: widget.trackedDayEntity
-                                    ?.getRatingDayTextColor(context),
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: Dimens.spacing16),
-                          MacroNutrientsView(
-                            totalCarbsIntake: _allIntakes
-                                .fold(0.0, (sum, i) => sum + i.totalCarbsGram),
-                            totalFatsIntake: _allIntakes
-                                .fold(0.0, (sum, i) => sum + i.totalFatsGram),
-                            totalProteinsIntake: _allIntakes
-                                .fold(0.0, (sum, i) => sum + i.totalProteinsGram),
-                            totalCarbsGoal: trackedDay.carbsGoal ?? 0.0,
-                            totalFatsGoal: trackedDay.fatGoal ?? 0.0,
-                            totalProteinsGoal: trackedDay.proteinGoal ?? 0.0,
-                          ),
-                        ],
-                      ),
-                    ),
-                  )
-                : const SizedBox(),
+            // [fork] S118 diary-header: the counts, the energy and the
+            // macros against their goals, side by side (upstream's rating
+            // and MacroNutrientsView)
+            if (trackedDay != null)
+              DayTotalsCard(intakes: _allIntakes, trackedDay: trackedDay),
+            // [/fork]
             // [fork] S84 skip-day: under the day's totals
             if (trackedDay != null) SkipDayTile(day: widget.selectedDay),
             // [/fork]
@@ -358,12 +316,22 @@ class _DayInfoWidgetState extends State<DayInfoWidget> {
             // (and anyone else who's set a meal slot to 0%) don't see a meal
             // type they explicitly opted out of. A section that holds intakes
             // always shows, so they stay editable and deletable (#1305).
-            if (!DisplayPrefs.diaryByHour.value && // [fork] S80
-                IntakeVerticalList.isShown(
-              sharePct: widget.breakfastSharePct,
-              intakes: widget.breakfastIntake,
-            ))
-              IntakeVerticalList(
+            // [fork] S118 diary-timeline: the meals in the order eaten
+            if (!DisplayPrefs.diaryByHour.value) // [fork] S80
+            ...diaryTimeline(widget.selectedDay, [
+              if (IntakeVerticalList.isShown(
+                sharePct: widget.breakfastSharePct,
+                intakes: widget.breakfastIntake,
+              ))
+              (
+                type: IntakeTypeEntity.breakfast,
+                intakes: widget.breakfastIntake,
+                section: IntakeVerticalList(
+                forkTime: mealTime(
+                  widget.selectedDay,
+                  IntakeTypeEntity.breakfast,
+                  widget.breakfastIntake,
+                ),
                 day: widget.selectedDay,
                 title: S.of(context).breakfastLabel,
                 listIcon: Icons.bakery_dining_outlined,
@@ -384,12 +352,20 @@ class _DayInfoWidgetState extends State<DayInfoWidget> {
                 onSortTypeChanged: (sort) =>
                     _setSortFor(IntakeTypeEntity.breakfast, sort),
               ),
-            if (!DisplayPrefs.diaryByHour.value && // [fork] S80
-                IntakeVerticalList.isShown(
-              sharePct: widget.lunchSharePct,
-              intakes: widget.lunchIntake,
-            ))
-              IntakeVerticalList(
+              ),
+              if (IntakeVerticalList.isShown(
+                sharePct: widget.lunchSharePct,
+                intakes: widget.lunchIntake,
+              ))
+              (
+                type: IntakeTypeEntity.lunch,
+                intakes: widget.lunchIntake,
+                section: IntakeVerticalList(
+                forkTime: mealTime(
+                  widget.selectedDay,
+                  IntakeTypeEntity.lunch,
+                  widget.lunchIntake,
+                ),
                 day: widget.selectedDay,
                 title: S.of(context).lunchLabel,
                 listIcon: Icons.lunch_dining_outlined,
@@ -410,12 +386,20 @@ class _DayInfoWidgetState extends State<DayInfoWidget> {
                 onSortTypeChanged: (sort) =>
                     _setSortFor(IntakeTypeEntity.lunch, sort),
               ),
-            if (!DisplayPrefs.diaryByHour.value && // [fork] S80
-                IntakeVerticalList.isShown(
-              sharePct: widget.dinnerSharePct,
-              intakes: widget.dinnerIntake,
-            ))
-              IntakeVerticalList(
+              ),
+              if (IntakeVerticalList.isShown(
+                sharePct: widget.dinnerSharePct,
+                intakes: widget.dinnerIntake,
+              ))
+              (
+                type: IntakeTypeEntity.dinner,
+                intakes: widget.dinnerIntake,
+                section: IntakeVerticalList(
+                forkTime: mealTime(
+                  widget.selectedDay,
+                  IntakeTypeEntity.dinner,
+                  widget.dinnerIntake,
+                ),
                 day: widget.selectedDay,
                 title: S.of(context).dinnerLabel,
                 listIcon: Icons.dinner_dining_outlined,
@@ -435,12 +419,20 @@ class _DayInfoWidgetState extends State<DayInfoWidget> {
                 onSortTypeChanged: (sort) =>
                     _setSortFor(IntakeTypeEntity.dinner, sort),
               ),
-            if (!DisplayPrefs.diaryByHour.value && // [fork] S80
-                IntakeVerticalList.isShown(
-              sharePct: widget.snackSharePct,
-              intakes: widget.snackIntake,
-            ))
-              IntakeVerticalList(
+              ),
+              if (IntakeVerticalList.isShown(
+                sharePct: widget.snackSharePct,
+                intakes: widget.snackIntake,
+              ))
+              (
+                type: IntakeTypeEntity.snack,
+                intakes: widget.snackIntake,
+                section: IntakeVerticalList(
+                forkTime: mealTime(
+                  widget.selectedDay,
+                  IntakeTypeEntity.snack,
+                  widget.snackIntake,
+                ),
                 day: widget.selectedDay,
                 title: S.of(context).snackLabel,
                 listIcon: CustomIcons.food_apple_outline,
@@ -461,6 +453,9 @@ class _DayInfoWidgetState extends State<DayInfoWidget> {
                 onSortTypeChanged: (sort) =>
                     _setSortFor(IntakeTypeEntity.snack, sort),
               ),
+              ),
+            ]),
+            // [/fork]
             const SizedBox(height: Dimens.spacing16),
           ],
         ),
@@ -476,21 +471,7 @@ class _DayInfoWidgetState extends State<DayInfoWidget> {
         ...widget.snackIntake,
       ];
 
-  String _getCaloriesTrackedDisplayString(
-      BuildContext context, TrackedDayEntity trackedDay) {
-    final actualKcal = _allIntakes.fold(0.0, (sum, i) => sum + i.totalKcal);
-    final usesKilojoules =
-        context.watch<EnergyUnitProvider>().usesKilojoules;
-    final clampedKcal = actualKcal < 0 ? 0.0 : actualKcal;
-    final displayActual = usesKilojoules
-        ? UnitCalc.kcalToKj(clampedKcal).toInt()
-        : clampedKcal.toInt();
-    final displayGoal = usesKilojoules
-        ? UnitCalc.kcalToKj(trackedDay.calorieGoal).toInt()
-        : trackedDay.calorieGoal.toInt();
-    final unit = usesKilojoules ? S.of(context).kjLabel : S.of(context).kcalLabel;
-    return '$displayActual/$displayGoal $unit';
-  }
+  // [fork] S118: _getCaloriesTrackedDisplayString went with the rating
 
   bool get _showsCurrentDay =>
       DateUtils.isSameDay(widget.selectedDay, widget.currentDay);
