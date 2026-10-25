@@ -4,6 +4,7 @@ import 'package:opennutritracker/features/diary/presentation/bloc/diary_bloc.dar
 import 'package:opennutritracker/features/profile/presentation/bloc/profile_bloc.dart';
 import 'package:opennutritracker/fork/dev/fake_health.dart';
 import 'package:opennutritracker/fork/health/body_fat_import.dart';
+import 'package:opennutritracker/fork/health/health_sync_cards.dart';
 import 'package:opennutritracker/fork/health/nutrition_export.dart';
 import 'package:opennutritracker/fork/health/weight_import.dart';
 
@@ -13,8 +14,8 @@ void refreshAfterWeightImport() {
   locator<DiaryBloc>().updateHomePage();
 }
 
-/// "Import weight" on the health sync screen (seam S27), under upstream's
-/// workout import, with its own switch and permission. Hidden where the
+/// "Weight in" on the health sync screen (seam S27), under upstream's
+/// workout import, with its own box and permission. Hidden where the
 /// import was not started.
 class WeightImportTile extends StatelessWidget {
   /// Health store present and the screen not busy.
@@ -29,12 +30,11 @@ class WeightImportTile extends StatelessWidget {
         ? const SizedBox.shrink()
         : HealthImportTile(
             key: const Key('fork-weight-import'),
+            identifier: 'health-sync-weight',
             available: available,
             icon: Icons.monitor_weight_outlined,
-            title: 'Import weight',
-            subtitle:
-                'Weigh-ins from a smart scale fill the weight log, one a day. '
-                'A weight you enter or edit is never replaced.',
+            title: 'Weight in',
+            detail: 'from your smart scale; never over one you enter',
             what: 'weight',
             offMessage: 'Weight import off; imported weights stay in the log',
             done: (days) => days == 0
@@ -65,12 +65,11 @@ class BodyFatImportTile extends StatelessWidget {
         ? const SizedBox.shrink()
         : HealthImportTile(
             key: const Key('fork-body-fat-import'),
+            identifier: 'health-sync-body-fat',
             available: available,
             icon: Icons.percent_rounded,
-            title: 'Import body fat',
-            subtitle:
-                'Body fat % from a smart scale fills the body measurements, '
-                'one a day. A value you enter is never replaced.',
+            title: 'Body fat in',
+            detail: 'into body measurements; never over one you enter',
             what: 'body fat',
             offMessage: 'Body fat import off; imported values stay',
             done: (days) => days == 0
@@ -96,12 +95,11 @@ class NutritionExportTile extends StatelessWidget {
         ? const SizedBox.shrink()
         : HealthImportTile(
             key: const Key('fork-nutrition-export'),
+            identifier: 'health-sync-nutrition',
             available: available,
             icon: Icons.restaurant_rounded,
-            title: 'Write nutrition',
-            subtitle:
-                'Calories and macros of each food you log go to the health '
-                'store; an edit or a delete follows when you leave the app.',
+            title: 'Nutrition out',
+            detail: 'other apps see what you ate',
             what: 'nutrition',
             verb: 'write',
             offMessage: 'Nutrition writing off; what was written stays',
@@ -115,13 +113,16 @@ class NutritionExportTile extends StatelessWidget {
   }
 }
 
-/// A health import's switch: asks for the permission when turned on, and
+/// A health import's card (S138): asks for the permission when turned on, and
 /// says what came of it in a snackbar.
 class HealthImportTile extends StatefulWidget {
   final bool available;
   final IconData icon;
+  final String identifier;
   final String title;
-  final String subtitle;
+
+  /// Where it goes, under the title.
+  final String detail;
 
   /// What is read, in "Could not read [what]".
   final String what;
@@ -142,8 +143,9 @@ class HealthImportTile extends StatefulWidget {
     super.key,
     required this.available,
     required this.icon,
+    required this.identifier,
     required this.title,
-    required this.subtitle,
+    required this.detail,
     required this.what,
     this.verb = 'read',
     required this.offMessage,
@@ -199,10 +201,11 @@ class _HealthImportTileState extends State<HealthImportTile> {
   }
 
   @override
-  Widget build(BuildContext context) => SwitchListTile(
-    secondary: Icon(widget.icon),
-    title: Text(widget.title),
-    subtitle: Text(widget.subtitle),
+  Widget build(BuildContext context) => HealthSyncCard(
+    identifier: widget.identifier,
+    icon: widget.icon,
+    title: widget.title,
+    detail: widget.detail,
     value: _on ?? false,
     onChanged: _on == null || _busy || !(widget.available || forkFakeHealth)
         ? null

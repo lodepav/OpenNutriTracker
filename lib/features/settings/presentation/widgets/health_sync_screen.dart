@@ -23,6 +23,11 @@ import 'package:opennutritracker/generated/l10n.dart';
 // [fork] S27 weight-import
 import 'package:opennutritracker/fork/health/weight_import_ui.dart';
 // [/fork]
+// [fork] S138 health-connect
+import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
+import 'package:opennutritracker/core/styles/app_palette.dart';
+import 'package:opennutritracker/fork/health/health_sync_cards.dart';
+// [/fork]
 import 'package:url_launcher/url_launcher.dart';
 
 /// What the platform health store is called in front of the user. Both names
@@ -316,9 +321,22 @@ class _HealthSyncScreenState extends State<HealthSyncScreen> {
     final canEdit = _isAvailable && _importEnabled && !_busy;
     return Scaffold(
       appBar: AppBar(title: Text(healthPlatformName)),
+      // [fork] S138 health-connect
+      backgroundColor: Theme.of(context).brightness == Brightness.dark
+          ? AppPalette.dark.canvas
+          : AppPalette.light.canvas,
+      // [/fork]
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : ListView(
+              // [fork] S138 health-connect
+              padding: const EdgeInsets.fromLTRB(
+                Dimens.spacing12,
+                0,
+                Dimens.spacing12,
+                Dimens.spacing32,
+              ),
+              // [/fork]
               children: [
                 if (!_isAvailable)
                   Padding(
@@ -331,42 +349,43 @@ class _HealthSyncScreenState extends State<HealthSyncScreen> {
                       style: textTheme.bodySmall,
                     ),
                   ),
-                Semantics(
+                // [fork] S138 health-connect: MacroFactor's list, a card to
+                // tick for each thing that syncs, then the last import
+                const HealthSyncHeading(),
+                HealthSyncCard(
                   identifier: 'health-sync-auto-import',
-                  child: SwitchListTile(
-                    secondary: const Icon(Icons.sync_rounded),
-                    title: Text(
-                      s.healthSyncAutoImportLabel(healthPlatformName),
-                    ),
-                    value: _importEnabled,
-                    onChanged: _isAvailable && !_busy
-                        ? _onAutoImportChanged
-                        : null,
-                  ),
+                  icon: Icons.directions_run_rounded,
+                  title: 'Workouts in',
+                  detail: 'burned energy adds to your budget',
+                  value: _importEnabled,
+                  onChanged: _isAvailable && !_busy
+                      ? _onAutoImportChanged
+                      : null,
                 ),
-                _buildMultiplierSection(context, s, textTheme, canEdit),
-                // [fork] S27 weight-import: weight and body fat in, nutrition out (S49),
-                // each its own switch and permission
+                // [fork] S27 weight-import: weight and body fat in, nutrition
+                // out (S49), each its own permission
                 WeightImportTile(available: _isAvailable && !_busy),
                 BodyFatImportTile(available: _isAvailable && !_busy),
                 NutritionExportTile(available: _isAvailable && !_busy),
                 // [/fork]
-                Semantics(
-                  identifier: 'health-sync-import-now',
-                  child: ListTile(
-                    leading: const Icon(Icons.download_rounded),
-                    title: Text(s.healthSyncImportNowLabel),
-                    subtitle: Text(
-                      _lastImportAt == null
-                          ? s.healthSyncNeverImportedLabel
-                          : s.healthSyncLastImportLabel(
-                              _formatLastImport(context, _lastImportAt!),
-                            ),
-                    ),
-                    enabled: canEdit,
-                    onTap: _onImportNowPressed,
+                HealthSyncFooter(
+                  lastImport: _lastImportAt == null
+                      ? s.healthSyncNeverImportedLabel
+                      : s.healthSyncLastImportLabel(
+                          _formatLastImport(context, _lastImportAt!),
+                        ),
+                  onImport: canEdit ? _onImportNowPressed : null,
+                ),
+                AppCard(
+                  padding: EdgeInsets.zero,
+                  child: _buildMultiplierSection(
+                    context,
+                    s,
+                    textTheme,
+                    canEdit,
                   ),
                 ),
+                // [/fork]
                 // Health Connect can send the user straight here to ask what
                 // the app wants their data for (#927), and the policy is the
                 // rest of that answer. Reachable from settings too, but a
