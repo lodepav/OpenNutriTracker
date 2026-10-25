@@ -14,26 +14,33 @@ class DiscardGuard extends StatelessWidget {
     canPop: !pending,
     onPopInvokedWithResult: (didPop, _) async {
       if (didPop) return;
-      final s = S.of(context);
-      final discard = await showDialog<bool>(
-        context: context,
-        builder: (dialog) => AlertDialog(
-          title: Text(s.discardChangesTitle),
-          content: Text(s.discardChangesContent),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialog).pop(false),
-              child: Text(s.dialogCancelLabel),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.of(dialog).pop(true),
-              child: Text(s.discardChangesConfirmLabel),
-            ),
-          ],
-        ),
-      );
-      if (discard == true && context.mounted) Navigator.of(context).pop();
+      if (await confirmDiscard(context) && context.mounted) {
+        Navigator.of(context).pop();
+      }
     },
     child: const SizedBox.shrink(),
   );
+}
+
+/// Whether the user lets unsaved changes go: "Discard changes?".
+Future<bool> confirmDiscard(BuildContext context) async {
+  final s = S.of(context);
+  final discard = await showDialog<bool>(
+    context: context,
+    builder: (dialog) => AlertDialog(
+      title: Text(s.discardChangesTitle),
+      content: Text(s.discardChangesContent),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(dialog).pop(false),
+          child: Text(s.dialogCancelLabel),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(dialog).pop(true),
+          child: Text(s.discardChangesConfirmLabel),
+        ),
+      ],
+    ),
+  );
+  return discard == true;
 }

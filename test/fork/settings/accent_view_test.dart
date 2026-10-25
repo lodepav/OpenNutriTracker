@@ -50,6 +50,11 @@ class _Settings extends Fake implements SettingsBloc {
 }
 
 void main() {
+  test('a name for every preset', () {
+    expect(accentPresetNames, hasLength(accentPresetColors.length));
+    expect(accentPresetNames.toSet(), hasLength(accentPresetNames.length));
+  });
+
   setUp(() {
     final binding = TestWidgetsFlutterBinding.ensureInitialized();
     binding.platformDispatcher.views.first.physicalSize = const Size(
@@ -87,7 +92,7 @@ void main() {
     expect(
       tester.getSemantics(find.bySemanticsIdentifier('accent-preset-03')),
       isSemantics(
-        label: 'Colour #FFB300',
+        label: 'Amber',
         isButton: true,
         isSelected: true,
         hasTapAction: true,

@@ -10,6 +10,10 @@ import 'package:opennutritracker/features/home/presentation/bloc/home_bloc.dart'
 import 'package:opennutritracker/features/profile/presentation/bloc/profile_bloc.dart';
 import 'package:opennutritracker/features/settings/presentation/bloc/settings_bloc.dart';
 import 'package:opennutritracker/generated/l10n.dart';
+// [fork] S135 nutrient-goals
+import 'package:flutter/foundation.dart' show listEquals;
+import 'package:opennutritracker/fork/bulk/discard_guard.dart';
+// [/fork]
 
 /// #173 + follow-up: full screen rather than a dialog because the ten
 /// nutrient sliders are tall enough to need real scroll room on a
@@ -84,6 +88,26 @@ class _NutrientGoalsScreenState extends State<NutrientGoalsScreen> {
   double? _vitaminB12;
   UserEntity? _user;
   bool _loaded = false;
+
+  // [fork] S135 nutrient-goals: Back asks before it drops a change
+  List<double?> _forkSaved = const [];
+
+  List<double?> get _forkGoals => [
+        _fibre,
+        _satFat,
+        _sugars,
+        _sodium,
+        _calcium,
+        _iron,
+        _potassium,
+        _magnesium,
+        _vitaminD,
+        _vitaminB12,
+      ];
+
+  bool get _forkChanged =>
+      _editedControllers.isNotEmpty || !listEquals(_forkGoals, _forkSaved);
+  // [/fork]
 
   late final TextEditingController _fibreController;
   late final TextEditingController _satFatController;
@@ -200,6 +224,9 @@ class _NutrientGoalsScreenState extends State<NutrientGoalsScreen> {
       _vitaminD = today?.vitaminDGoal;
       _vitaminB12 = today?.vitaminB12Goal;
       _loaded = true;
+      // [fork] S135 nutrient-goals
+      _forkSaved = _forkGoals;
+      // [/fork]
     });
     _syncControllers();
   }
@@ -316,6 +343,23 @@ class _NutrientGoalsScreenState extends State<NutrientGoalsScreen> {
   @override
   Widget build(BuildContext context) {
     final s = S.of(context);
+    // [fork] S135 nutrient-goals: a typed value counts too, so this asks
+    // when Back comes rather than tracking every keystroke
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) async {
+        if (didPop) return;
+        if (!_forkChanged || await confirmDiscard(context)) {
+          if (context.mounted) Navigator.of(context).pop();
+        }
+      },
+      child: _forkScaffold(context, s),
+    );
+    // [/fork]
+  }
+
+  // [fork] S135 nutrient-goals: upstream's screen, as it was
+  Widget _forkScaffold(BuildContext context, S s) {
     return Scaffold(
       appBar: AppBar(
         // Grow the bar with the text scale so the title can wrap to two lines
@@ -540,6 +584,7 @@ class _NutrientGoalsScreenState extends State<NutrientGoalsScreen> {
             ),
     );
   }
+  // [/fork]
 
   /// Direct text-input clamp: malformed parses ignore the input and
   /// leave the slider where it was; valid ones snap into the row's
@@ -696,6 +741,12 @@ class _NutrientRow extends StatelessWidget {
           Semantics(
             identifier: identifier,
             child: Slider(
+              // [fork] S135 nutrient-goals: "Fibre goal, 38 g", not "48%";
+              // the slider's value is its own node, so the name goes in it
+              semanticFormatterCallback: (v) =>
+                  '$label, ${decimalStep ? v.toStringAsFixed(1) : v.round()} '
+                  '$unit',
+              // [/fork]
               min: min,
               max: max,
               value: clamped,
