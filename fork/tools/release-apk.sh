@@ -6,7 +6,8 @@
 #
 # Signs with Go Hevier's release key (~/.config/hevier/release.keystore, alias hevier), shared on
 # purpose, and asks for its password when signing; the key's certificate is pinned beside it in
-# ~/.config/hevier/apk-cert.txt. Nothing about the key is committed or pushed.
+# ~/.config/hevier/apk-cert.txt. Nothing about the key is committed or pushed. Run by release-apks
+# (~/.local/bin), which releases Go Hevier too, it takes the password from RELEASE_KS_PASS.
 #
 # It numbers the release from what was merged since the last one (fork/tools/release_notes.dart):
 # a merge that adds a decision raises the minor, anything else the patch; it shows the notes and
@@ -183,7 +184,9 @@ up_to_date || {
 }
 "${BT}zipalign" -f -p 4 "$UNSIGNED" "$TMP/aligned.apk"
 echo "signing with $KS ($ALIAS)"
-"${BT}apksigner" sign --ks "$KS" --ks-key-alias "$ALIAS" --out "$OUT" "$TMP/aligned.apk"
+# release-apks (~/.local/bin) asks once for both apps and passes it in RELEASE_KS_PASS.
+PASS=(); [[ -n "${RELEASE_KS_PASS:-}" ]] && PASS=(--ks-pass env:RELEASE_KS_PASS)
+"${BT}apksigner" sign --ks "$KS" --ks-key-alias "$ALIAS" "${PASS[@]}" --out "$OUT" "$TMP/aligned.apk"
 rm -f "$OUT.idsig"
 echo "signed"
 took "signing (with your password)"
