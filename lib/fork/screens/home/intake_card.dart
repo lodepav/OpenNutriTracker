@@ -18,6 +18,7 @@ import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/core/utils/user_image_storage.dart';
 import 'package:opennutritracker/features/diary/presentation/widgets/diary_sort_type.dart';
 import 'package:opennutritracker/generated/l10n.dart';
+import 'package:opennutritracker/features/add_meal/util/food_emoji_resolver.dart';
 import 'package:opennutritracker/fork/timeline/timeline.dart';
 import 'package:opennutritracker/fork/history/food_icon.dart';
 import 'package:opennutritracker/fork/display/meal_macros_line.dart';
@@ -242,15 +243,19 @@ class _Thumbnail extends StatelessWidget {
   Widget _fallback() => Container(
     color: palette.surfaceMuted,
     alignment: Alignment.center,
-    child: switch (OffKinds.emojiFor(intake.meal)) {
-      final emoji? when importedFoodIcon(intake) == null => ExcludeSemantics(
-        child: Text(emoji, style: const TextStyle(fontSize: 18)),
+    // In color, as a food's emoji; a plate when its kind is unknown.
+    child: switch (importedFoodIcon(intake)) {
+      final icon? => Icon(icon, color: palette.textMuted, size: 18),
+      //: was 24
+      _ => ExcludeSemantics(
+        child: Text(
+          importedFoodEmoji(intake) ??
+              OffKinds.emojiFor(intake.meal) ??
+              resolveFoodEmoji(intake.meal.name) ??
+              '🍽️',
+          style: const TextStyle(fontSize: 18),
+        ),
       ),
-      _ => Icon(
-        importedFoodIcon(intake) ?? Icons.restaurant_rounded,
-        color: palette.textMuted,
-        size: 18,
-      ), //: was 24
     },
   );
 }
