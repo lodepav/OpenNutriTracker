@@ -135,7 +135,8 @@ class _HomeTrendTilesState extends State<HomeTrendTiles> {
                     value: t.value,
                     valueColor: t.valueColor,
                     note: t.suffix,
-                    below: t.chart,
+                    // No room kept for a tile with no chart.
+                    below: t.chart is SizedBox ? null : t.chart,
                     onTap: t.onTap,
                     hint: 'Open ${t.label.replaceAll(' · avg', '')}',
                   ),
