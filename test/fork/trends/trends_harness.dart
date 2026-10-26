@@ -44,7 +44,7 @@ class SeededTrendsBloc extends TrendsBloc {
     emit(seeded);
   }
 
-  void show(TrendsLoaded state) => emit(state);
+  void show(TrendsState state) => emit(state);
 
   @override
   void add(TrendsEvent event) => events.add(event);

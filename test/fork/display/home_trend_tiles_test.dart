@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -29,7 +31,10 @@ void main() {
     await locator.reset();
   });
 
-  Future<SeededTrendsBloc> pump(WidgetTester tester) async {
+  Future<SeededTrendsBloc> pump(
+    WidgetTester tester, {
+    Stream<Object?>? homeLoads,
+  }) async {
     final bloc = SeededTrendsBloc(loaded(rangeDays: 30));
     locator.registerSingleton<TrendsBloc>(bloc);
     await tester.pumpWidget(
@@ -51,6 +56,7 @@ void main() {
                 loadWeights: () async => const [],
                 loadExpenditure: () async => const <ExpenditureDay>[],
                 fasting: const FastingTileView(state: FastingIdle()),
+                homeLoads: homeLoads,
               ),
             ),
           ),
@@ -109,5 +115,33 @@ void main() {
     await tester.tap(sides);
     await tester.pumpAndSettle();
     expect(find.byType(SideComparePage), findsOne);
+  });
+
+  testWidgets('read again after Home reloads, kept in place meanwhile', (
+    tester,
+  ) async {
+    layout.value = (
+      order: ['weight', 'expenditure', 'water', 'fasting', 'goal'],
+      hidden: const {},
+    );
+    final homeLoads = StreamController<Object?>();
+    addTearDown(homeLoads.close);
+    final bloc = await pump(tester, homeLoads: homeLoads.stream);
+    final goal = find.byWidgetPredicate(
+      (w) => w is HomeTile && w.identifier == 'home-trends-tile-goal',
+    );
+    expect(goal, findsOne);
+
+    // Something logged: Home reloads, and the tiles ask Trends again.
+    homeLoads.add(null);
+    await tester.pump();
+    expect(bloc.events, contains(isA<RefreshTrendsEvent>()));
+
+    // While Trends reloads, the tile stays where it was.
+    // (A frame for the state to reach the builder, one to build.)
+    bloc.show(const TrendsLoading());
+    await tester.pump();
+    await tester.pump();
+    expect(goal, findsOne);
   });
 }

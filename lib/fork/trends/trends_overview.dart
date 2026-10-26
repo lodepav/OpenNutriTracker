@@ -479,7 +479,10 @@ TrendTile _goalTile(
   final now = weight.nowKg;
   // The kept start says which way the goal runs; without one, the way
   // either side is left.
-  final way = goal != null && goal.targetKg == target ? goal.totalKg : 0;
+  final way =
+      goal != null && target != null && (goal.targetKg - target).abs() < 0.05
+      ? goal.totalKg
+      : 0;
   final left = target == null || now == null
       ? null
       : (target - now) * way < 0
