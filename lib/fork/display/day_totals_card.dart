@@ -113,20 +113,29 @@ class _Total extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text.rich(
-                TextSpan(
-                  children: [
-                    TextSpan(
-                      text: '$value',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                        color: over ? error : palette.textStrong,
+              // One line, smaller if it must: "12124 / 12960" in kJ broke
+              // in two and pushed its bar below the others (JC8).
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: AlignmentDirectional.centerStart,
+                child: Text.rich(
+                  maxLines: 1,
+                  TextSpan(
+                    children: [
+                      TextSpan(
+                        text: '$value',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          color: over ? error : palette.textStrong,
+                        ),
                       ),
-                    ),
-                    if (goal > 0) TextSpan(text: ' / $goal'),
-                  ],
+                      if (goal > 0) TextSpan(text: ' / $goal'),
+                    ],
+                  ),
+                  style: textTheme.bodySmall?.copyWith(
+                    color: palette.textMuted,
+                  ),
                 ),
-                style: textTheme.bodySmall?.copyWith(color: palette.textMuted),
               ),
               const SizedBox(height: Dimens.spacing4),
               ClipRRect(

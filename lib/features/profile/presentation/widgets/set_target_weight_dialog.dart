@@ -58,6 +58,12 @@ class _SetTargetWeightDialogState extends State<SetTargetWeightDialog> {
   // Stones path: kg from BodyWeightInput, null if invalid/empty.
   double? _stKg;
 
+  // [fork] S111 typed-weigh-in: kg and lb can be typed too, as a target
+  // far off took flings and drags on the 0.1 ruler (JC3). The field
+  // follows the ruler; whichever moved last is saved.
+  bool _typedLast = false;
+  // [/fork]
+
   @override
   void initState() {
     super.initState();
@@ -89,7 +95,7 @@ class _SetTargetWeightDialogState extends State<SetTargetWeightDialog> {
 
   void _submitValue() {
     final double kg;
-    if (widget.unit == BodyWeightUnit.st) {
+    if (widget.unit == BodyWeightUnit.st || _typedLast /* [fork] S111 */) {
       final valid = _stKg;
       if (valid == null) {
         Navigator.of(context).pop();
@@ -112,6 +118,11 @@ class _SetTargetWeightDialogState extends State<SetTargetWeightDialog> {
     final isImperial = widget.unit == BodyWeightUnit.lb;
     final minWeight = minSelectableWeight(_pickerDisplayWeight, isImperial);
     final maxWeight = maxSelectableWeight(_pickerDisplayWeight, isImperial);
+    // [fork] S111: a typed weight out of range says so, and OK waits for it
+    final invalid =
+        (widget.unit == BodyWeightUnit.st || _typedLast) && _stKg == null;
+    final error = invalid ? S.of(context).onboardingWrongWeightLabel : null;
+    // [/fork]
 
     return AlertDialog(
       title: Text(S.of(context).profileTargetWeightLabel),
@@ -125,10 +136,16 @@ class _SetTargetWeightDialogState extends State<SetTargetWeightDialog> {
                   unit: BodyWeightUnit.st,
                   identifierPrefix: 'set-target-weight-dialog',
                   autofocus: true,
+                  errorText: error, // [fork] S111
                   onChangedKg: (kg) => setState(() => _stKg = kg),
                 )
               else
-                HorizontalPicker(
+                // [fork] S111: the typed field below says the weight; the
+                // ruler is dimmed while a typed weight is the one saved
+                ExcludeSemantics(
+                  child: Opacity(
+                  opacity: _typedLast ? 0.38 : 1,
+                  child: HorizontalPicker(
                   height: 100,
                   backgroundColor: Colors.transparent,
                   minValue: minWeight,
@@ -141,9 +158,30 @@ class _SetTargetWeightDialogState extends State<SetTargetWeightDialog> {
                   onChanged: (value) {
                     setState(() {
                       _pickerDisplayWeight = value;
+                      _typedLast = false; // [fork] S111
                     });
                   },
                 ),
+                ),
+                ),
+              // [/fork]
+              // [fork] S111 typed-weigh-in
+              if (widget.unit != BodyWeightUnit.st)
+                BodyWeightInput(
+                  // Reseeded as the ruler moves.
+                  key: ValueKey(_pickerDisplayWeight.toStringAsFixed(1)),
+                  initialKg: _pickerWeightToKg(
+                    double.parse(_pickerDisplayWeight.toStringAsFixed(1)),
+                  ),
+                  unit: widget.unit,
+                  identifierPrefix: 'set-target-weight-dialog',
+                  errorText: error,
+                  onChangedKg: (kg) => setState(() {
+                    _stKg = kg;
+                    _typedLast = true;
+                  }),
+                ),
+              // [/fork]
             ],
           ),
         ],
@@ -161,7 +199,7 @@ class _SetTargetWeightDialogState extends State<SetTargetWeightDialog> {
           child: Text(S.of(context).dialogCancelLabel),
         ),
         TextButton(
-          onPressed: _submitValue,
+          onPressed: invalid ? null : _submitValue, // [fork] S111
           child: Text(S.of(context).dialogOKLabel),
         ),
       ],

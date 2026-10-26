@@ -238,7 +238,7 @@ class _TrendsOverviewState extends State<TrendsOverview> {
         value: energyMean == null ? '–' : '${energyValue(context, energyMean)}',
         suffix: energyGoal == null
             ? unit
-            : '/ ${energyValue(context, energyGoal)}',
+            : '/ ${energyValue(context, energyGoal)} $unit',
         spark: energy,
         sparkColor: palette.accent,
       ),
