@@ -26,3 +26,13 @@ String spokenUnit(String unit) => switch (unit) {
   'kJ' => 'kilojoules',
   _ => unit,
 };
+
+/// Whether a serving's own text, as "1 serving (10 g)", names the
+/// [quantity] the serving adds; a text naming no weight agrees. Some
+/// databases carry a text and a quantity that disagree (S142).
+bool servingTextAgrees(String text, double? quantity) {
+  final named = RegExp(r'([\d.,]+)\s*(?:g|ml)\b').firstMatch(text);
+  final value = double.tryParse(named?.group(1)?.replaceAll(',', '.') ?? '');
+  if (value == null || quantity == null) return true;
+  return (value - quantity).abs() < 0.5;
+}

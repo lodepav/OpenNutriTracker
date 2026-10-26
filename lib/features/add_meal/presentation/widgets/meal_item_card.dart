@@ -176,7 +176,15 @@ class MealItemCard extends StatelessWidget {
                     padding: EdgeInsets.zero,
                   ),
                   icon: const Icon(Icons.add_rounded, size: 20),
-                  tooltip: S.of(context).addFoodLabel(mealEntity.name ?? ''), // [fork] S83
+                  // [fork] S83; S142: the brand tells like-named foods apart (A4)
+                  tooltip: S.of(context).addFoodLabel(
+                    [
+                      mealEntity.name ?? '',
+                      if (mealEntity.brands case final b? when b.trim().isNotEmpty)
+                        b.trim(),
+                    ].join(', '),
+                  ),
+                  // [/fork]
                   onPressed: () => _onItemPressed(context),
                 ),
               ),
