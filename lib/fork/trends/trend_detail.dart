@@ -5,12 +5,16 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart' show toBeginningOfSentenceCase;
 import 'package:opennutritracker/core/domain/entity/body_weight_unit_entity.dart';
 import 'package:opennutritracker/core/domain/entity/tracked_day_entity.dart';
-import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/features/trends/presentation/bloc/trends_bloc.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
 import 'package:opennutritracker/fork/trends/balance_detail.dart';
+import 'package:opennutritracker/fork/display/macro_foods.dart'
+    show FoodsMetric;
+import 'package:opennutritracker/fork/report/nutrient_explorer.dart'
+    show IntakeLoader, intakesBetween;
 import 'package:opennutritracker/fork/trends/calories_detail.dart';
+import 'package:opennutritracker/fork/trends/macro_contributors.dart';
 import 'package:opennutritracker/fork/trends/expenditure_detail.dart';
 import 'package:opennutritracker/fork/trends/trend_stats.dart';
 import 'package:opennutritracker/fork/trends/trends_widgets.dart';
@@ -27,11 +31,15 @@ class TrendsDeps {
   final Widget Function(TrendsLoaded state) waterCard;
   final AdaptiveService? service;
 
+  /// The intakes of a span of days, for a macro's top foods.
+  final IntakeLoader loadIntakes;
+
   const TrendsDeps({
     required this.expenditure,
     required this.weightCard,
     required this.waterCard,
     this.service,
+    this.loadIntakes = intakesBetween,
   });
 }
 
@@ -174,16 +182,18 @@ class TrendDetailPage extends StatelessWidget {
           gap,
           pills,
           gap,
-          AppCard(
-            padding: const EdgeInsets.all(Dimens.spacing16),
-            child: DailyBarChart(
-              values: series,
-              dates: dates,
-              color: color,
-              goal: goal,
-              unit: 'g',
-              label: '${metricTitle(context, metric)} chart',
-            ),
+          MacroDaysAndFoods(
+            metric: switch (metric) {
+              TrendMetric.carbs => FoodsMetric.carbs,
+              TrendMetric.fat => FoodsMetric.fat,
+              _ => FoodsMetric.protein,
+            },
+            series: series,
+            dates: dates,
+            goal: goal,
+            color: color,
+            chartLabel: '${metricTitle(context, metric)} chart',
+            load: deps.loadIntakes,
           ),
         ];
       case TrendMetric.water:
