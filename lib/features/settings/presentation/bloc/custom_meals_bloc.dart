@@ -16,9 +16,15 @@ class CustomMealsBloc extends Bloc<CustomMealsEvent, CustomMealsState> {
   final log = Logger('CustomMealsBloc');
 
   final CustomMealDataSource _customMealDataSource;
+  // [fork] S142 keep-history: unused since a delete keeps past entries;
+  // kept so the constructor stays upstream's
+  // ignore: unused_field
   final GetIntakeUsecase _getIntakeUsecase;
+  // ignore: unused_field
   final DeleteIntakeUsecase _deleteIntakeUsecase;
+  // ignore: unused_field
   final AddTrackedDayUsecase _addTrackedDayUsecase;
+  // [/fork]
   final MergeCustomMealsUseCase _mergeCustomMealsUseCase;
   final FavouriteMealRepository _favouriteMealRepository; // #1307
 
@@ -55,26 +61,10 @@ class CustomMealsBloc extends Bloc<CustomMealsEvent, CustomMealsState> {
           );
           await _customMealDataSource.deleteCustomMeal(event.mealKey);
 
-          final allCustom = await _getIntakeUsecase.getCustomMealIntakes();
-          final toDelete = allCustom
-              .where(
-                (intake) =>
-                    (intake.meal.code ?? intake.meal.name) == event.mealKey,
-              )
-              .toList();
-          for (final intake in toDelete) {
-            await _deleteIntakeUsecase.deleteIntake(intake);
-            await _addTrackedDayUsecase.removeDayCaloriesTracked(
-              intake.dateTime,
-              intake.totalKcal,
-            );
-            await _addTrackedDayUsecase.removeDayMacrosTracked(
-              intake.dateTime,
-              carbsTracked: intake.totalCarbsGram,
-              fatTracked: intake.totalFatsGram,
-              proteinTracked: intake.totalProteinsGram,
-            );
-          }
+          // [fork] S142 keep-history: past entries stay, as a deleted
+          // recipe's do; each holds its own copy of the food, and taking
+          // them would rewrite past days and the expenditure (H3)
+          // [/fork]
           return true;
         });
         if (deleted != true) return;

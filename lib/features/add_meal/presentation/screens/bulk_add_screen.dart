@@ -621,6 +621,9 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
               keyboardType: TextInputType.multiline,
               decoration: InputDecoration(
                 hintText: S.of(context).bulkAddInputHint,
+                // [fork] S142: what the field does with a photo (H10)
+                helperText: 'With a photo, this is sent as its note',
+                // [/fork]
                 border: const OutlineInputBorder(),
               ),
             ),
@@ -1073,11 +1076,11 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // User content inside a Row: shrink to fit before
-                  // ellipsizing, never wrap (AGENTS.md).
+                  // User content: shrink to fit before ellipsizing; a long
+                  // database name takes up to three lines (A6) [fork] S142
                   AutoSizeText(
                     title,
-                    maxLines: 1,
+                    maxLines: 3,
                     minFontSize: 12,
                     overflow: TextOverflow.ellipsis,
                     style: theme.textTheme.titleSmall?.copyWith(

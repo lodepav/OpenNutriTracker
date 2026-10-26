@@ -104,7 +104,8 @@ class MealPhotoCache {
 /// sheet while photos are kept.
 const keptPhotoDisclosure =
     'OpenBite keeps a copy on this phone for 24 hours, to compare '
-    'with a photo of the leftovers (Settings, Privacy turns this off). It is '
+    'with a photo of the leftovers (Settings › About › Privacy settings turns '
+    'this off). It is '
     'never included in your exports.';
 
 /// Seam S11: the setting, in the privacy dialog beside crash reports. It

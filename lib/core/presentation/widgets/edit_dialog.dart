@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:opennutritracker/core/domain/entity/intake_entity.dart';
 import 'package:opennutritracker/core/utils/calc/unit_calc.dart';
 import 'package:opennutritracker/core/utils/custom_text_input_formatter.dart';
+import 'package:opennutritracker/fork/units/energy_text.dart'; // [fork] S142
 import 'package:opennutritracker/generated/l10n.dart';
 
 class EditDialog extends StatefulWidget {
@@ -33,13 +34,40 @@ class _EditDialogState extends State<EditDialog> {
   /// taken from.
   late final double _loggedAmount;
 
+  // [fork] S142 energy-only: a Quick add with only its energy (100 "gml"
+  // of a made-up food) is edited as its energy, not a quantity (H2)
+  late final double? _kcalPerUnit = _energyOnlyKcalPerUnit(
+    widget.intakeEntity,
+  );
+
+  static double? _energyOnlyKcalPerUnit(IntakeEntity intake) {
+    final meal = intake.meal;
+    final kcal100 = meal.nutriments.energyKcal100 ?? 0;
+    final energyOnly =
+        meal.mealUnit == 'gml' &&
+        meal.mealQuantity == '100' &&
+        meal.servingQuantity == null &&
+        (meal.servingSize ?? '').isEmpty &&
+        kcal100 > 0;
+    return energyOnly ? kcal100 / 100 : null;
+  }
+
+  double _shownEnergy(double kcal) =>
+      usesKj(context, listen: false) ? UnitCalc.kcalToKj(kcal) : kcal;
+  // [/fork]
+
   @override
   void initState() {
     super.initState();
-    double initialAmount = _convertValue(
-      widget.intakeEntity.amount,
-      widget.intakeEntity.meal.mealUnit,
-    );
+    double initialAmount = switch (_kcalPerUnit) {
+      // [fork] S142
+      final perUnit? => _shownEnergy(widget.intakeEntity.amount * perUnit),
+      // [/fork]
+      _ => _convertValue(
+        widget.intakeEntity.amount,
+        widget.intakeEntity.meal.mealUnit,
+      ),
+    };
     _loggedAmount = initialAmount;
     amountEditingController = TextEditingController(
       text: _amountText(initialAmount), // [fork] S83
@@ -88,8 +116,12 @@ class _EditDialogState extends State<EditDialog> {
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             inputFormatters: CustomTextInputFormatter.doubleOnly(),
             decoration: InputDecoration(
-              labelText: S.of(context).quantityLabel,
-              suffixText: _convertUnit(widget.intakeEntity.meal.mealUnit ?? ''),
+              // [fork] S142
+              labelText: _kcalPerUnit != null
+                  ? S.of(context).mealEnergyLabel
+                  : S.of(context).quantityLabel,
+              suffixText: _shownUnit,
+              // [/fork]
             ),
           ),
           const SizedBox(height: 16),
@@ -100,8 +132,14 @@ class _EditDialogState extends State<EditDialog> {
             onChanged: _onLeftoverChanged,
             decoration: InputDecoration(
               labelText: S.of(context).leftoverLabel,
-              helperText: S.of(context).leftoverHelperLabel, // [fork] S83
-              suffixText: _convertUnit(widget.intakeEntity.meal.mealUnit ?? ''),
+              // [fork] S142: the field above already shows what is left, so
+              // the text says so rather than "taken off" again (H1); it
+              // wraps rather than being cut (A6)
+              helperText:
+                  "What you didn't eat; the ${_kcalPerUnit != null ? 'energy' : 'quantity'} above goes down by it",
+              helperMaxLines: 3,
+              suffixText: _shownUnit,
+              // [/fork]
             ),
           ),
           const SizedBox(height: 8),
@@ -137,10 +175,16 @@ class _EditDialogState extends State<EditDialog> {
             );
             if (newAmount == null || newAmount <= 0) return; // [fork] S83
             Navigator.of(context).pop(
-              _convertBackToMetricValue(
-                newAmount,
-                widget.intakeEntity.meal.mealUnit,
-              ),
+              switch (_kcalPerUnit) {
+                // [fork] S142
+                final perUnit? =>
+                  kcalFromInput(context, newAmount) / perUnit,
+                // [/fork]
+                _ => _convertBackToMetricValue(
+                  newAmount,
+                  widget.intakeEntity.meal.mealUnit,
+                ),
+              },
             );
           },
           child: Text(S.of(context).dialogOKLabel),
@@ -171,12 +215,21 @@ class _EditDialogState extends State<EditDialog> {
     }
   }
 
+  // [fork] S142: the energy's unit for an energy-only entry, and "g" for
+  // upstream's "gml" rather than the code word
+  String get _shownUnit => _kcalPerUnit != null
+      ? (usesKj(context) ? 'kJ' : 'kcal')
+      : _convertUnit(widget.intakeEntity.meal.mealUnit ?? '');
+  // [/fork]
+
   String _convertUnit(String unit) {
     switch (unit) {
       case 'g':
         return widget.usesImperialUnits ? 'oz' : 'g';
       case 'ml':
         return widget.usesImperialUnits ? 'fl.oz' : 'ml';
+      case 'gml': // [fork] S142
+        return 'g';
       default:
         return unit;
     }
