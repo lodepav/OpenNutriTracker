@@ -7,14 +7,13 @@ import 'package:opennutritracker/core/domain/usecase/add_weight_log_usecase.dart
 import 'package:opennutritracker/core/domain/usecase/delete_weight_log_usecase.dart';
 import 'package:opennutritracker/core/domain/usecase/get_user_usecase.dart';
 import 'package:opennutritracker/core/domain/usecase/get_weight_log_usecase.dart';
+import 'package:opennutritracker/core/utils/calc/calendar_day_calc.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/core/utils/reload_diary_and_trends.dart';
+import 'package:opennutritracker/features/profile/presentation/utils/profile_display_format.dart';
 import 'package:opennutritracker/features/profile/presentation/widgets/body_weight_input.dart';
+import 'package:opennutritracker/features/profile/presentation/widgets/weight_trend_chart.dart';
 import 'package:opennutritracker/generated/l10n.dart';
-// [fork] S113 weigh-in-delete
-import 'package:opennutritracker/fork/health/weight_import_ui.dart';
-import 'package:opennutritracker/fork/weight/weight_history_view.dart'; // S122 weight-history
-// [/fork]
 
 /// Screen for browsing and adding weight log entries.
 ///
@@ -72,6 +71,7 @@ class _WeightHistoryScreenState extends State<WeightHistoryScreen> {
   double? _targetWeightKg;
   // The profile's current weight, which Add entry starts from (#1367).
   double? _profileWeightKg;
+  _ChartRange _selectedRange = _ChartRange.days30;
 
   @override
   void initState() {
@@ -96,36 +96,166 @@ class _WeightHistoryScreenState extends State<WeightHistoryScreen> {
     });
   }
 
-  @override
-  Widget build(BuildContext context) {
-    // [fork] S122 weight-history: MacroFactor's (WeightB): range chips, the
-    // trend over the weigh-ins, three stats, each weigh-in's change, swipe
-    // to delete and a Weigh in button (upstream: a 30d-365d selector, the
-    // dotted chart, a list with a bin on each row and a FAB).
-    if (_loading) {
-      return Scaffold(
-        appBar: AppBar(title: Text(S.of(context).profileWeightHistoryTitle)),
-        body: const Center(child: CircularProgressIndicator()),
-      );
+  int _calculateWindowDays() {
+    switch (_selectedRange) {
+      case _ChartRange.days30:
+        return 30;
+      case _ChartRange.days60:
+        return 60;
+      case _ChartRange.days180:
+        return 180;
+      case _ChartRange.days365:
+        return 365;
+      case _ChartRange.all:
+        final now = DateTime.now();
+        final today = DateTime(now.year, now.month, now.day);
+        final nonFutureEntries = _entries
+            .where((e) => !e.date.isAfter(today))
+            .toList();
+        if (nonFutureEntries.isEmpty) {
+          return 30;
+        }
+        final oldestDate = nonFutureEntries
+            .map((e) => e.date)
+            .reduce((a, b) => a.isBefore(b) ? a : b);
+        // Calendar days, not elapsed 24-hour spans: across a spring-forward
+        // `difference().inDays` comes out one short and the chart window
+        // would start the day after the oldest entry (#1207).
+        final diffDays = CalendarDayCalc.daysBetween(oldestDate, today) + 1;
+        return diffDays < 30 ? 30 : diffDays;
     }
-    return WeightHistoryView(
-      entries: _entries,
-      unit: _bodyWeightUnit,
-      targetWeightKg: _targetWeightKg,
-      onAdd: _onAddEntry,
-      onEdit: _onEditEntry,
-      onDelete: _onDelete,
-    );
-    // [/fork]
   }
 
-  // [fork] S122 weight-history: a tapped weigh-in opens in the same
-  // dialog; moved to another day, it leaves the one it was
-  Future<void> _onEditEntry(WeightLogEntity entry) => _onAddEntry(entry);
-  // [/fork]
+  Widget _buildRangeSelector() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Center(
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Semantics(
+            identifier: 'weight-history-range-selector',
+            child: SegmentedButton<_ChartRange>(
+              showSelectedIcon: false,
+              style: const ButtonStyle(
+                visualDensity: VisualDensity.compact,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+              segments: [
+                const ButtonSegment(
+                  value: _ChartRange.days30,
+                  label: Text('30d'),
+                ),
+                const ButtonSegment(
+                  value: _ChartRange.days60,
+                  label: Text('60d'),
+                ),
+                const ButtonSegment(
+                  value: _ChartRange.days180,
+                  label: Text('180d'),
+                ),
+                const ButtonSegment(
+                  value: _ChartRange.days365,
+                  label: Text('365d'),
+                ),
+                ButtonSegment(
+                  value: _ChartRange.all,
+                  label: Text(S.of(context).allItemsLabel),
+                ),
+              ],
+              selected: {_selectedRange},
+              onSelectionChanged: (set) {
+                setState(() {
+                  _selectedRange = set.first;
+                });
+              },
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 
-  // [fork] S122: [editing] is a weigh-in opened from the list
-  Future<void> _onAddEntry([WeightLogEntity? editing]) async {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text(S.of(context).profileWeightHistoryTitle)),
+      floatingActionButton: Semantics(
+        identifier: 'weight-history-add',
+        child: FloatingActionButton.extended(
+          onPressed: _onAddEntry,
+          icon: const Icon(Icons.add),
+          label: Text(S.of(context).weightHistoryAddEntry),
+        ),
+      ),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : _entries.isEmpty
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Text(
+                  S.of(context).weightHistoryNoEntries,
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodyLarge,
+                ),
+              ),
+            )
+          : ListView.separated(
+              padding: const EdgeInsets.only(top: 8, bottom: 96),
+              itemCount: _entries.length + 1,
+              separatorBuilder: (context, index) {
+                // No divider between the chart card and the first list tile.
+                if (index == 0) return const SizedBox.shrink();
+                return const Divider(height: 1);
+              },
+              itemBuilder: (context, index) {
+                if (index == 0) {
+                  return Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _buildRangeSelector(),
+                      WeightTrendChart(
+                        entries: _entries,
+                        bodyWeightUnit: _bodyWeightUnit,
+                        targetWeightKg: _targetWeightKg,
+                        windowDays: _calculateWindowDays(),
+                      ),
+                    ],
+                  );
+                }
+                return _buildEntryTile(_entries[index - 1]);
+              },
+            ),
+    );
+  }
+
+  Widget _buildEntryTile(WeightLogEntity entry) {
+    final displayStr = formatBodyWeight(
+      entry.weightKg,
+      _bodyWeightUnit,
+      kgLabel: S.of(context).kgLabel,
+      lbLabel: S.of(context).lbsLabel,
+      stLabel: S.of(context).stLabel,
+    );
+    final dateLabel = DateFormat.yMMMd(
+      Localizations.localeOf(context).toLanguageTag(),
+    ).format(entry.date);
+
+    return ListTile(
+      title: Text(displayStr),
+      subtitle: Text(
+        entry.note?.isNotEmpty == true
+            ? '$dateLabel  •  ${entry.note}'
+            : dateLabel,
+      ),
+      trailing: IconButton(
+        icon: const Icon(Icons.delete_outline),
+        onPressed: () => _onDelete(entry),
+      ),
+    );
+  }
+
+  Future<void> _onAddEntry() async {
     // The profile weight is the current one: a reading for today updates
     // it, and so does editing it on the profile. A fixed 70 kg here
     // contradicted the profile on every log that had no entries (#1367).
@@ -135,20 +265,12 @@ class _WeightHistoryScreenState extends State<WeightHistoryScreen> {
     final result = await showDialog<_NewWeightEntry>(
       context: context,
       builder: (context) => _AddWeightEntryDialog(
-        // [fork] S122 weight-history: the weigh-in opened, if one was
-        initialDate: editing?.date ?? DateTime.now(),
-        initialWeightKg: editing?.weightKg ?? initialWeightKg,
-        initialNote: editing?.note,
-        // [/fork]
+        initialDate: DateTime.now(),
+        initialWeightKg: initialWeightKg,
         bodyWeightUnit: _bodyWeightUnit,
       ),
     );
     if (result == null) return;
-    // [fork] S122 weight-history
-    if (editing != null && !DateUtils.isSameDay(editing.date, result.date)) {
-      await _deleteUsecase.deleteEntry(editing);
-    }
-    // [/fork]
 
     await _addUsecase.addEntry(
       WeightLogEntity(
@@ -159,38 +281,12 @@ class _WeightHistoryScreenState extends State<WeightHistoryScreen> {
     );
     await _load();
     reloadDiaryAndTrends();
-    refreshAfterWeightImport(); // [fork] S113: today's sets the weight
   }
 
   Future<void> _onDelete(WeightLogEntity entry) async {
     await _deleteUsecase.deleteEntry(entry);
     await _load();
     reloadDiaryAndTrends();
-    // [fork] S113 weigh-in-delete: Home and the profile show the weight
-    // the delete set. A tap deletes at once, so it can be undone; adding
-    // it back sets today's profile weight again too
-    refreshAfterWeightImport();
-    if (!mounted) return;
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          // Goes after its time, as the food undo's; an action alone
-          // would keep it up on every screen.
-          persist: false,
-          content: const Text('Weigh-in deleted'),
-          action: SnackBarAction(
-            label: 'Undo',
-            onPressed: () async {
-              await _addUsecase.addEntry(entry);
-              await _load();
-              reloadDiaryAndTrends();
-              refreshAfterWeightImport();
-            },
-          ),
-        ),
-      );
-    // [/fork]
   }
 }
 
@@ -205,13 +301,11 @@ class _NewWeightEntry {
 class _AddWeightEntryDialog extends StatefulWidget {
   final DateTime initialDate;
   final double initialWeightKg;
-  final String? initialNote; // [fork] S122
   final BodyWeightUnit bodyWeightUnit;
 
   const _AddWeightEntryDialog({
     required this.initialDate,
     required this.initialWeightKg,
-    this.initialNote, // [fork] S122
     required this.bodyWeightUnit,
   });
 
@@ -231,9 +325,7 @@ class _AddWeightEntryDialogState extends State<_AddWeightEntryDialog> {
     super.initState();
     _date = widget.initialDate;
     _weightKg = widget.initialWeightKg;
-    _noteController = TextEditingController(
-      text: widget.initialNote, // [fork] S122
-    );
+    _noteController = TextEditingController();
   }
 
   @override
@@ -321,3 +413,4 @@ class _AddWeightEntryDialogState extends State<_AddWeightEntryDialog> {
   }
 }
 
+enum _ChartRange { days30, days60, days180, days365, all }

@@ -1,8 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:opennutritracker/fork/display/display_prefs.dart';
 
-import '../screens/home/intake_card_sort_test.dart'
-    as card;
+import '../screens/home/intake_card_sort_test.dart' as card;
 
 void main() {
   tearDown(() => DisplayPrefs.macroOrder.value = DisplayPrefs.upstreamOrder);
