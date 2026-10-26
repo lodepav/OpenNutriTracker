@@ -792,6 +792,27 @@ void main() {
     expect(find.text('Thighs · left vs right'), findsOne);
     expect(tileText(tester, 'sides'), contains('Equal'));
 
+    // A measurement added: the tile follows.
+    final before = TrendsOverview.loadMeasurements;
+    TrendsOverview.loadMeasurements = () async => [
+      ...await before(),
+      Measurement(
+        id: 'r',
+        date: day(0),
+        metric: BodyMetric.rightThigh,
+        value: 59,
+      ),
+      Measurement(
+        id: 'l',
+        date: day(0),
+        metric: BodyMetric.leftThigh,
+        value: 58.5,
+      ),
+    ];
+    MeasurementStore.changes.value++;
+    await tester.pumpAndSettle();
+    expect(tileText(tester, 'sides'), contains('0.5 cm · right bigger'));
+
     await openTile(tester, 'sides');
     expect(find.byType(SideComparePage), findsOne);
     expect(find.text('Thighs: left and right'), findsOne);

@@ -91,7 +91,9 @@ class _TrendsOverviewState extends State<TrendsOverview> {
         (Object _) => <Measurement>[],
       );
 
-  void _remeasure() => setState(() => _measurements = _measure());
+  void _remeasure() => setState(() {
+    _measurements = _measure();
+  });
 
   /// The estimate moves with the expenditure settings and the days left
   /// out (D17), and with what was logged.

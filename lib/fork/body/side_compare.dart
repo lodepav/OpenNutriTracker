@@ -150,7 +150,9 @@ class _SideComparePageState extends State<SideComparePage> {
   Future<List<Measurement>> _read() =>
       widget.load().catchError((Object _) => <Measurement>[]);
 
-  void _reload() => setState(() => _all = _read());
+  void _reload() => setState(() {
+    _all = _read();
+  });
 
   @override
   void initState() {
@@ -352,10 +354,14 @@ class _SidesChart extends StatelessWidget {
                       sideTitles: SideTitles(
                         showTitles: true,
                         reservedSize: 44,
-                        getTitlesWidget: (y, meta) => SideTitleWidget(
-                          meta: meta,
-                          child: Text(y.toStringAsFixed(1), style: small),
-                        ),
+                        // Not the padded ends: they crowd the lines'.
+                        getTitlesWidget: (y, meta) =>
+                            y == meta.min || y == meta.max
+                            ? const SizedBox()
+                            : SideTitleWidget(
+                                meta: meta,
+                                child: Text(y.toStringAsFixed(1), style: small),
+                              ),
                       ),
                     ),
                   ),
