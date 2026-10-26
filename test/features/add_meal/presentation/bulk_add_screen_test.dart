@@ -57,16 +57,8 @@ class _Write {
 class _FakeMealDetailBloc extends Fake implements MealDetailBloc {
   final writes = <_Write>[];
   final bool failOnSecondWrite;
-  // [fork] S8 meal-groups: a profile switch drops the second write
-  final bool dropSecondWrite;
-  // [/fork]
 
-  _FakeMealDetailBloc({
-    this.failOnSecondWrite = false,
-    // [fork] S8 meal-groups
-    this.dropSecondWrite = false,
-    // [/fork]
-  });
+  _FakeMealDetailBloc({this.failOnSecondWrite = false});
 
   @override
   // [fork] S7 meal-groups: addIntake returns the entry written
@@ -83,16 +75,8 @@ class _FakeMealDetailBloc extends Fake implements MealDetailBloc {
       throw StateError('write failed');
     }
     writes.add(_Write(unit, amountText, meal.name));
-    // [fork] S7 meal-groups
-    if (dropSecondWrite && writes.length == 2) return null;
-    return IntakeEntity(
-      id: 'intake-${writes.length}',
-      unit: unit,
-      amount: double.parse(amountText),
-      type: intakeTypeEntity,
-      meal: meal,
-      dateTime: day,
-    );
+    // [fork] S7 meal-groups: upstream's screen leaves the entry unused
+    return null;
     // [/fork]
   }
 }
@@ -181,17 +165,9 @@ late _FakeHomeBloc _homeBloc;
 Future<void> _register(
   Map<String, List<MealEntity>> results, {
   bool failOnSecondWrite = false,
-  // [fork] S8 meal-groups
-  bool dropSecondWrite = false,
-  // [/fork]
 }) async {
   await getIt.reset();
-  _mealDetailBloc = _FakeMealDetailBloc(
-    failOnSecondWrite: failOnSecondWrite,
-    // [fork] S8 meal-groups
-    dropSecondWrite: dropSecondWrite,
-    // [/fork]
-  );
+  _mealDetailBloc = _FakeMealDetailBloc(failOnSecondWrite: failOnSecondWrite);
   _homeBloc = _FakeHomeBloc();
   // The screen asks this directly, to decide whether to offer the camera at
   // all. Empty storage means no key, so the action stays hidden.
@@ -522,9 +498,6 @@ Widget _app({
   bool imperial = false,
   Locale? locale,
   List<RouteSettings>? pushed,
-  // [fork] S90 ux-journeys
-  bool startWithPhoto = false,
-  // [/fork]
 }) => ChangeNotifierProvider<EnergyUnitProvider>(
   create: (_) => EnergyUnitProvider(usesKilojoules: false),
   child: MaterialApp(
@@ -564,9 +537,6 @@ Widget _app({
             IntakeTypeEntity.breakfast,
             DateTime(2026, 8, 10),
             imperial,
-            // [fork] S90 ux-journeys
-            startWithPhoto: startWithPhoto,
-            // [/fork]
           ),
         ),
         builder: (_) => const BulkAddScreen(),
@@ -1778,9 +1748,6 @@ void main() {
       // And the button still offers all three, so nothing has silently left
       // the batch.
       expect(find.text(l10nEn.bulkAddSubmitLabel(3)), findsOneWidget);
-      // [fork] S90: one item is one item.
-      expect(l10nEn.bulkAddSubmitLabel(1), 'Log 1 item');
-      expect(l10nEn.bulkAddSubmitLabel(3), 'Log 3 items');
     });
   });
 
@@ -1993,27 +1960,6 @@ void main() {
     // shown the error and left on the screen to sort it out.
     expect(_mealDetailBloc.writes, hasLength(1));
   });
-
-  // [fork] S8 meal-groups
-  testWidgets('a write a profile switch dropped stops the save', (
-    tester,
-  ) async {
-    await _register({
-      'toast': [_meal('Toast')],
-      'eggs': [_meal('Egg', servingQuantity: 50)],
-      'rice': [_meal('Rice')],
-    }, dropSecondWrite: true);
-    await tester.pumpWidget(_app());
-    await _parse(tester, '100g toast, 2 eggs, 100g rice');
-
-    await tester.tap(_submitButton());
-    await tester.pumpAndSettle();
-
-    // The rice would have gone to the profile switched to.
-    expect(_mealDetailBloc.writes, hasLength(2));
-    expect(find.text('Not all added: the profile changed.'), findsOneWidget);
-  });
-  // [/fork]
 
   testWidgets('picking a different candidate updates the row', (tester) async {
     await _register({
@@ -2750,88 +2696,6 @@ void main() {
       expect(find.text('Apple'), findsOneWidget);
     });
   });
-
-  // [fork] S90 ux-journeys
-  testWidgets('Back asks before found foods are lost, and only then', (
-    tester,
-  ) async {
-    await _register({
-      'toast': [_meal('Toast')],
-    });
-    await tester.pumpWidget(_app());
-    await tester.pumpAndSettle();
-    final navigator = tester.state<NavigatorState>(find.byType(Navigator));
-
-    navigator.pushNamed('/bulk');
-    await tester.pumpAndSettle();
-    await navigator.maybePop();
-    await tester.pumpAndSettle();
-    expect(find.byType(BulkAddScreen), findsNothing, reason: 'nothing found');
-
-    await _parse(tester, '100g toast');
-    await navigator.maybePop();
-    await tester.pumpAndSettle();
-    expect(find.text(l10nEn.discardChangesTitle), findsOneWidget);
-    await tester.tap(find.text(l10nEn.dialogCancelLabel));
-    await tester.pumpAndSettle();
-    expect(find.byType(BulkAddScreen), findsOneWidget);
-
-    await navigator.maybePop();
-    await tester.pumpAndSettle();
-    await tester.tap(find.text(l10nEn.discardChangesConfirmLabel));
-    await tester.pumpAndSettle();
-    expect(find.byType(BulkAddScreen), findsNothing);
-  });
-
-  testWidgets('a found food\'s name is a full-size tap target', (
-    tester,
-  ) async {
-    await _register({
-      'toast': [_meal('Toast')],
-    });
-    await tester.pumpWidget(_app());
-    await tester.pumpAndSettle();
-    await _parse(tester, '100g toast');
-
-    final name = find.ancestor(
-      of: find.text('Toast'),
-      matching: find.byType(InkWell),
-    );
-    expect(tester.getSize(name.first).height, greaterThanOrEqualTo(48));
-  });
-
-  testWidgets('the add screen\'s camera opens at the photo sheet', (
-    tester,
-  ) async {
-    await _register(const {});
-    getIt.unregister<AiCredentialStorage>();
-    getIt.registerLazySingleton<AiCredentialStorage>(
-      () => AiCredentialStorage(
-        _MapStorage({
-          'AiApiKeyTag.anthropic': 'sk-test',
-          'AiAssistEnabledTag': 'true',
-        }),
-      ),
-    );
-    await tester.pumpWidget(_app(startWithPhoto: true));
-    await tester.pumpAndSettle();
-
-    tester.state<NavigatorState>(find.byType(Navigator)).pushNamed('/bulk');
-    await tester.pumpAndSettle();
-    expect(
-      find.textContaining(l10nEn.bulkAddPhotoDisclosureCommon),
-      findsOneWidget,
-    );
-
-    // Once: closing the sheet leaves the screen, not another sheet.
-    await tester.tapAt(const Offset(10, 10));
-    await tester.pumpAndSettle();
-    expect(
-      find.textContaining(l10nEn.bulkAddPhotoDisclosureCommon),
-      findsNothing,
-    );
-  });
-  // [/fork]
 }
 
 /// Returns a fixed reading without touching a credential or a network.
@@ -2845,12 +2709,7 @@ class _StubPhotoReader implements ReadMealPhotoUseCase {
     MealPhoto photo, {
     String? localeCode,
     String? note,
-  }) async {
-    sawNote = note;
-    return reading;
-  }
-
-  String? sawNote;
+  }) async => reading;
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);

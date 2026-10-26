@@ -31,8 +31,12 @@ import 'package:opennutritracker/core/utils/energy_unit_provider.dart';
 import 'package:opennutritracker/core/utils/locale_provider.dart';
 import 'package:opennutritracker/core/utils/theme_mode_provider.dart';
 import 'package:opennutritracker/features/activity_detail/activity_detail_screen.dart';
-import 'package:opennutritracker/features/add_meal/presentation/add_meal_screen.dart';
-import 'package:opennutritracker/features/add_meal/presentation/screens/bulk_add_screen.dart';
+// [fork] S148 own-screens: the fork's add and bulk-add screens (D23)
+// import 'package:opennutritracker/features/add_meal/presentation/add_meal_screen.dart';
+// import 'package:opennutritracker/features/add_meal/presentation/screens/bulk_add_screen.dart';
+import 'package:opennutritracker/fork/screens/add_meal/add_meal_screen.dart';
+import 'package:opennutritracker/fork/screens/add_meal/bulk_add_screen.dart';
+// [/fork]
 import 'package:opennutritracker/features/add_activity/presentation/add_activity_screen.dart';
 import 'package:opennutritracker/features/edit_meal/presentation/edit_meal_screen.dart';
 import 'package:opennutritracker/features/onboarding/onboarding_screen.dart';

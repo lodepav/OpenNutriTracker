@@ -26,18 +26,6 @@ import 'package:opennutritracker/features/edit_meal/presentation/edit_meal_scree
 import 'package:opennutritracker/features/scanner/scanner_screen.dart';
 import 'package:opennutritracker/features/scanner/util/barcode_check_digit.dart';
 import 'package:opennutritracker/generated/l10n.dart';
-// [fork] S42 food-basket
-import 'package:opennutritracker/fork/basket/basket_ui.dart';
-// [/fork]
-// [fork] S90 ux-journeys
-import 'package:opennutritracker/fork/bulk/photo_meal_button.dart';
-// [/fork]
-// [fork] S85 fits-left
-import 'package:opennutritracker/fork/suggest/fits_left.dart';
-// [/fork]
-// [fork] S116 search-dense
-import 'package:opennutritracker/fork/recents/search_sections.dart';
-// [/fork]
 
 class AddMealScreen extends StatefulWidget {
   const AddMealScreen({super.key});
@@ -83,9 +71,6 @@ class _AddMealScreenState extends State<AddMealScreen> {
         ModalRoute.of(context)?.settings.arguments as AddMealScreenArguments;
     _mealType = args.mealType;
     _day = args.day;
-    // [fork] S19 recents-by-meal: the recents put this meal's usual foods first
-    _recentMealBloc.forkMeal = _mealType.getIntakeType();
-    // [/fork]
     super.didChangeDependencies();
   }
 
@@ -105,25 +90,15 @@ class _AddMealScreenState extends State<AddMealScreen> {
       // In landscape the space above the keyboard is shorter than the pinned
       // search bar + tab bar, which otherwise overflows (issue #165 testing).
       resizeToAvoidBottomInset: false,
-      // [fork] S42 food-basket: the foods picked so far, and "Log all"
-      bottomNavigationBar: BasketBar(
-        type: _mealType.getIntakeType(),
-        day: _day,
-      ),
-      // [/fork]
       appBar: AppBar(
         title: Text(_mealType.getTypeName(context)),
         actions: [
           Semantics(
             identifier: 'add-meal-quick-add',
-            // [fork] S142: an icon, as the actions beside it, so the meal
-            // in the title has room (A6); Quick add is a tile on the + sheet
-            child: IconButton(
+            child: TextButton(
               onPressed: _onQuickAddPressed,
-              icon: const Icon(Icons.bolt_rounded),
-              tooltip: S.of(context).quickAddCardLabel,
+              child: Text(S.of(context).quickAddCardLabel),
             ),
-            // [/fork]
           ),
           BlocBuilder<AddMealBloc, AddMealState>(
             bloc: locator<AddMealBloc>()..add(InitializeAddMealEvent()),
@@ -132,14 +107,6 @@ class _AddMealScreenState extends State<AddMealScreen> {
                 return Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // [fork] S90 ux-journeys: a meal photo in one tap
-                    PhotoMealButton(
-                      onPressed: () => _onBulkAddPressed(
-                        state.usesImperialUnits,
-                        startWithPhoto: true,
-                      ),
-                    ),
-                    // [/fork]
                     Semantics(
                       identifier: 'add-meal-bulk-add',
                       child: IconButton(
@@ -155,7 +122,6 @@ class _AddMealScreenState extends State<AddMealScreen> {
                         onPressed: () =>
                             _onCustomAddButtonPressed(state.usesImperialUnits),
                         icon: const Icon(Icons.add_circle_outline),
-                        tooltip: S.of(context).newCustomMealLabel, // [fork] S83
                       ),
                     ),
                   ],
@@ -664,8 +630,7 @@ class _AddMealScreenState extends State<AddMealScreen> {
       case _SearchSource.favourites:
         return _buildFavouriteResults(context, query);
       case _SearchSource.recent:
-        // [fork] S85 fits-left: a chip over the unfiltered recents
-        final recents = BlocBuilder<RecentMealBloc, RecentMealState>(
+        return BlocBuilder<RecentMealBloc, RecentMealState>(
           bloc: _recentMealBloc,
           builder: (context, state) {
             if (state is RecentMealInitial) {
@@ -677,19 +642,6 @@ class _AddMealScreenState extends State<AddMealScreen> {
                 child: CircularProgressIndicator(),
               );
             } else if (state is RecentMealLoadedState) {
-              // [fork] S116 search-dense: before anything is typed, the
-              // history at the amounts last logged, then the favourites
-              if (state.recentMeals.isNotEmpty && query.trim().isEmpty) {
-                return SearchSections(
-                  day: _day,
-                  addMealType: _mealType,
-                  usesImperialUnits: state.usesImperialUnits,
-                  history: state.recentMeals,
-                  entries: state.forkIntakes,
-                  favourites: _favouriteMealBloc,
-                );
-              }
-              // [/fork]
               if (state.recentMeals.isNotEmpty) {
                 return Semantics(
                   identifier: 'add-meal-recent-list',
@@ -702,11 +654,6 @@ class _AddMealScreenState extends State<AddMealScreen> {
                         mealEntity: state.recentMeals[index],
                         addMealType: _mealType,
                         usesImperialUnits: state.usesImperialUnits,
-                        // [fork] S116 search-dense
-                        forkLastLogged: index < state.forkIntakes.length
-                            ? state.forkIntakes[index]
-                            : null,
-                        // [/fork]
                       );
                     },
                   ),
@@ -738,14 +685,6 @@ class _AddMealScreenState extends State<AddMealScreen> {
             return const SizedBox();
           },
         );
-        return query.trim().isNotEmpty
-            ? recents
-            : FitsLeftSwitch(
-                day: _day,
-                addMealType: _mealType,
-                recents: recents,
-              );
-        // [/fork]
     }
   }
 
@@ -808,21 +747,13 @@ class _AddMealScreenState extends State<AddMealScreen> {
     );
   }
 
-  void _onBulkAddPressed(
-    bool usesImperialUnits, {
-    // [fork] S90 ux-journeys
-    bool startWithPhoto = false,
-    // [/fork]
-  }) {
+  void _onBulkAddPressed(bool usesImperialUnits) {
     Navigator.of(context).pushNamed(
       NavigationOptions.bulkAddRoute,
       arguments: BulkAddScreenArguments(
         _mealType.getIntakeType(),
         _day,
         usesImperialUnits,
-        // [fork] S90 ux-journeys
-        startWithPhoto: startWithPhoto,
-        // [/fork]
       ),
     );
   }
