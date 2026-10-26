@@ -234,6 +234,8 @@ class TrendTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = paletteOf(context);
     final text = Theme.of(context).textTheme;
+    // at large text a second line, not the rate or goal cut off (A6)
+    final lines = MediaQuery.textScalerOf(context).scale(10) > 13 ? 2 : 1;
     return Semantics(
       identifier: id,
       child: AppCard(
@@ -249,7 +251,7 @@ class TrendTile extends StatelessWidget {
                 Expanded(
                   child: Text(
                     label,
-                    maxLines: 1,
+                    maxLines: lines,
                     overflow: TextOverflow.ellipsis,
                     style: text.labelMedium?.copyWith(color: palette.textMuted),
                   ),
@@ -280,7 +282,7 @@ class TrendTile extends StatelessWidget {
                     ),
                 ],
               ),
-              maxLines: 1,
+              maxLines: lines,
               minFontSize: 11,
               overflow: TextOverflow.ellipsis,
             ),

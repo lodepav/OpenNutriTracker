@@ -96,7 +96,10 @@ class CaloriesDetailPage extends StatelessWidget {
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      trendSection(context, 'Weekdays and weekends'),
+                      trendSection(
+                        context,
+                        'Weekdays and weekends, last ${days(dates.length)}',
+                      ),
                       WeekendCard(split: split),
                     ],
                   );

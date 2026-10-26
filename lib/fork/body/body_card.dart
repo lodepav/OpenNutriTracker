@@ -83,6 +83,23 @@ class _BodyMeasurementsCardState extends State<BodyMeasurementsCard> {
     if (mounted) setState(() => _picked = values.$2.keys.first);
   }
 
+  /// Deleted at once, with Undo, as diary entries and weigh-ins are.
+  Future<void> _delete(Measurement m) async {
+    await _store.remove(m.id);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        // goes on its own, as the other undo bars do
+        persist: false,
+        content: const Text('Measurement deleted'),
+        action: SnackBarAction(
+          label: 'Undo',
+          onPressed: () => _store.merge([m]),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) => FutureBuilder<List<Measurement>>(
     future: _all,
@@ -138,7 +155,7 @@ class _BodyMeasurementsCardState extends State<BodyMeasurementsCard> {
                 key: const ValueKey('measure-add'),
                 onPressed: _add,
                 icon: const Icon(Icons.add_rounded),
-                label: const Text('Add'),
+                label: const Text('Add', semanticsLabel: 'Add measurement'),
               ),
             ],
           ),
@@ -192,9 +209,10 @@ class _BodyMeasurementsCardState extends State<BodyMeasurementsCard> {
                     subtitle: Text(_date(m.date)),
                     trailing: IconButton(
                       key: ValueKey('measure-delete-${m.id}'),
-                      tooltip: 'Delete',
+                      tooltip:
+                          'Delete ${_text(metric, m.value)}, ${_date(m.date)}',
                       icon: const Icon(Icons.delete_outline_rounded),
-                      onPressed: () => _store.remove(m.id),
+                      onPressed: () => _delete(m),
                     ),
                   ),
               ],

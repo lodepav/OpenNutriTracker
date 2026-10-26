@@ -135,7 +135,27 @@ class _ProgressPhotosCardState extends State<ProgressPhotosCard> {
         ],
       ),
     );
-    if (delete == true) await _store.remove(shown.photo.id);
+    if (delete != true || !mounted) return;
+    // a photo of a past day can't be taken again
+    final sure = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete this photo?'),
+        content: const Text("A photo of that day can't be taken again."),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            key: const ValueKey('photo-delete-confirm'),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (sure == true) await _store.remove(shown.photo.id);
   }
 
   @override
@@ -180,7 +200,7 @@ class _ProgressPhotosCardState extends State<ProgressPhotosCard> {
                 key: const ValueKey('photo-add'),
                 onPressed: _add,
                 icon: const Icon(Icons.add_a_photo_outlined),
-                label: const Text('Add'),
+                label: const Text('Add', semanticsLabel: 'Add photo'),
               ),
             ],
           ),

@@ -54,6 +54,28 @@ void main() {
     );
   });
 
+  testWidgets('at 200% a tile wraps its label and value, not cut them', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _app(
+        SizedBox(
+          width: 180,
+          child: TrendTile(
+            id: 'weight',
+            label: 'Weight trend',
+            value: '87.1 kg',
+            suffix: '-0.20/wk',
+            chart: const SizedBox(height: 20),
+            onTap: () {},
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(tester.widget<Text>(find.text('Weight trend')).maxLines, 2);
+  });
+
   testWidgets('at 200% the weight chart axes make room for their labels', (
     tester,
   ) async {
