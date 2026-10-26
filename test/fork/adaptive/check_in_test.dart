@@ -1,6 +1,8 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:intl/intl.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:opennutritracker/core/domain/entity/tracked_day_entity.dart';
@@ -887,6 +889,7 @@ void main() {
     ) async {
       await tester.pumpWidget(
         MaterialApp(
+          localizationsDelegates: GlobalMaterialLocalizations.delegates,
           home: Scaffold(
             body: ExpenditureTrendCard(
               rangeDays: 30,
@@ -903,7 +906,9 @@ void main() {
       expect(find.textContaining(RegExp(r'^-\d+ kcal a day$')), findsOneWidget);
       expect(find.textContaining('Energy you burn a day'), findsOneWidget);
       expect(find.textContaining('Solid: estimated'), findsOneWidget);
-      expect(find.textContaining('Dots: logged'), findsOneWidget);
+      expect(find.textContaining('Dots: calories logged'), findsOneWidget);
+      // Its span, as the chart has no axes: the last day is today.
+      expect(find.text(DateFormat.MMMd('en').format(_today)), findsOneWidget);
     });
 
     testWidgets('a single day names no lines, as none are drawn', (

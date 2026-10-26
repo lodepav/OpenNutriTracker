@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:opennutritracker/core/domain/entity/body_weight_unit_entity.dart';
 import 'package:opennutritracker/core/domain/usecase/get_config_usecase.dart';
 import 'package:opennutritracker/core/domain/usecase/get_kcal_goal_usecase.dart';
@@ -1060,9 +1061,9 @@ class AdaptiveGoalNote extends StatelessWidget {
                   ? 'Until the first weekly check-in, the formula below sets '
                         'your goal.'
                   : '${goal(last.acceptedKcal + activity)}, set at '
-                        'the check-in on ${d!.year}-'
-                        '${d.month.toString().padLeft(2, '0')}-'
-                        '${d.day.toString().padLeft(2, '0')} from a measured '
+                        'the check-in on '
+                        '${DateFormat.yMMMd(Localizations.localeOf(context).toLanguageTag()).format(d!)}'
+                        ' from a measured '
                         'expenditure of ${energyText(context, last.expenditureKcal)}. '
                         '${settings.activityMode == ActivityMode.daily ? "It includes ${energyText(context, activity)} of today's counted activity, at most ${energyText(context, maxDailyActivityKcal)}. The formula below and the kcal adjustment are not used." : 'The formula below is not used; logged activities and the kcal adjustment are not added.'}',
             ),
