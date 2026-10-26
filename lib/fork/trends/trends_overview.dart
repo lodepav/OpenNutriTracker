@@ -362,15 +362,19 @@ class _GoalBarState extends State<_GoalBar> {
         return const SizedBox();
       }
       final palette = paletteOf(context);
-      return Align(
-        alignment: Alignment.bottomCenter,
-        child: ClipRRect(
-          borderRadius: Dimens.borderRadiusS,
-          child: LinearProgressIndicator(
-            value: ((widget.nowKg - start.kg) / total).clamp(0.0, 1.0),
-            minHeight: 8,
-            color: Theme.of(context).colorScheme.primary,
-            backgroundColor: palette.surfaceMuted,
+      // The tile's text says it; the bar's percent would only be read
+      // before it.
+      return ExcludeSemantics(
+        child: Align(
+          alignment: Alignment.bottomCenter,
+          child: ClipRRect(
+            borderRadius: Dimens.borderRadiusS,
+            child: LinearProgressIndicator(
+              value: ((widget.nowKg - start.kg) / total).clamp(0.0, 1.0),
+              minHeight: 8,
+              color: Theme.of(context).colorScheme.primary,
+              backgroundColor: palette.surfaceMuted,
+            ),
           ),
         ),
       );
