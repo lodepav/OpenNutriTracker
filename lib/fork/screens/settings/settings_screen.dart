@@ -7,6 +7,8 @@ import 'dart:async';
 
 import 'package:opennutritracker/features/settings/settings_screen.dart'
     show SettingsScreenArguments;
+export 'package:opennutritracker/features/settings/settings_screen.dart'
+    show SettingsScreenArguments;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:opennutritracker/core/domain/entity/app_theme_entity.dart';
