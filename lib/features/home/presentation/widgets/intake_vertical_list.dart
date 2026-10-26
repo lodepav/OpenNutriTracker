@@ -1,17 +1,12 @@
 import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart'; // [fork] S118
 import 'package:opennutritracker/core/data/repository/recipe_repository.dart';
 import 'package:opennutritracker/core/domain/entity/intake_entity.dart';
 import 'package:opennutritracker/core/domain/entity/tracked_day_entity.dart';
 import 'package:opennutritracker/core/domain/usecase/get_profiles_usecase.dart';
-// [fork] S24-S25 copy-anywhere: upstream's CopyDialog import, unused since
-// import 'package:opennutritracker/core/presentation/widgets/copy_dialog.dart';
-// [/fork]
+import 'package:opennutritracker/core/presentation/widgets/copy_dialog.dart';
 import 'package:opennutritracker/core/presentation/widgets/copy_to_profile_sheet.dart';
-// [fork] S52 undo-delete: upstream's DeleteAllDialog import, unused since
-// import 'package:opennutritracker/core/presentation/widgets/delete_all_dialog.dart';
-// [/fork]
+import 'package:opennutritracker/core/presentation/widgets/delete_all_dialog.dart';
 import 'package:opennutritracker/core/presentation/widgets/intake_card.dart';
 import 'package:opennutritracker/core/presentation/widgets/placeholder_card.dart';
 import 'package:opennutritracker/core/presentation/widgets/share_qr_dialog.dart';
@@ -33,16 +28,7 @@ import 'package:opennutritracker/features/home/presentation/screens/import_meal_
 import 'package:opennutritracker/features/home/presentation/widgets/shared_meal_import_dialogs.dart';
 import 'package:opennutritracker/features/home/presentation/widgets/shared_meal_importer.dart';
 import 'package:opennutritracker/features/meal_detail/presentation/bloc/meal_detail_bloc.dart';
-// [fork] S25 copy-anywhere
-import 'package:opennutritracker/fork/copy/copy_ui.dart';
-// [/fork]
-// [fork] S83 energy-unit
-import 'package:opennutritracker/fork/units/energy_text.dart';
-// [/fork]
 import 'package:opennutritracker/generated/l10n.dart';
-// [fork] S79 macro-order
-import 'package:opennutritracker/fork/display/display_prefs.dart';
-// [/fork]
 
 class IntakeVerticalList extends StatefulWidget {
   final DateTime day;
@@ -77,16 +63,6 @@ class IntakeVerticalList extends StatefulWidget {
   /// When null, the sort menu is hidden.
   final ValueChanged<DiarySortType>? onSortTypeChanged;
 
-  // [fork] S80 diary-by-hour: an hour's section has no add row of its own,
-  // and shows each food's time
-  final bool hourSection;
-  // [/fork]
-
-  // [fork] S118 diary-timeline: the time the meal sits at on the Diary's
-  // timeline, shown in place of its icon; its add button is in the header
-  final DateTime? forkTime;
-  // [/fork]
-
   const IntakeVerticalList({
     super.key,
     required this.day,
@@ -105,10 +81,6 @@ class IntakeVerticalList extends StatefulWidget {
     this.mealKcalTarget,
     this.sortType,
     this.onSortTypeChanged,
-    // [fork] S80 diary-by-hour
-    this.hourSection = false,
-    // [/fork]
-    this.forkTime, // [fork] S118
   });
 
   /// Whether a meal section is rendered on Home and in the Diary. A 0 % share
@@ -167,99 +139,19 @@ class _IntakeVerticalListState extends State<IntakeVerticalList> {
   String _buildHeaderSummary(BuildContext context) {
     final consumed = EnergyDisplay.formatValue(context, totalKcal);
     final kcalLine = _hasMealKcalTarget
-        // [fork] S83 kJ: the string has "kcal" written into it
-        ? inEnergyUnit(
-            context,
-            S.of(context).diaryMealKcalConsumedOfTarget(
+        ? S.of(context).diaryMealKcalConsumedOfTarget(
               consumed,
               EnergyDisplay.formatValue(context, widget.mealKcalTarget!),
-            ),
-          )
-        // [/fork]
+            )
         : EnergyDisplay.formatWithUnit(context, totalKcal);
     if (widget.showMealMacros && totalKcal > 0) {
-      // [fork] S79 macro-order
-      return '$kcalLine\n${inMacroOrder(
-        carbs: '${totalCarbsGram.toInt()} ${S.of(context).carbsLabelShort}',
-        fat: '${totalFatsGram.toInt()} ${S.of(context).fatLabelShort}',
-        protein: '${totalProteinsGram.toInt()} ${S.of(context).proteinLabelShort}',
-      ).join('  ')}';
-      // [/fork]
+      return '$kcalLine\n'
+          '${totalCarbsGram.toInt()} ${S.of(context).carbsLabelShort}  '
+          '${totalFatsGram.toInt()} ${S.of(context).fatLabelShort}  '
+          '${totalProteinsGram.toInt()} ${S.of(context).proteinLabelShort}';
     }
     return kcalLine;
   }
-
-  // [fork] S118 diary-timeline: the summary on a line of its own under
-  // the header's row, lined up with the title
-  Widget _forkTimelineHeader(BuildContext context, Widget row) {
-    if (widget.forkTime == null || totalKcal <= 0) return row;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final palette = isDark ? AppPalette.dark : AppPalette.light;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        row,
-        // Up under the title: the row is as tall as its buttons.
-        Transform.translate(
-          offset: const Offset(0, -10),
-          child: Padding(
-          padding: const EdgeInsets.only(left: 48 + Dimens.spacing12),
-          child: Text(
-            _timelineSummary(context),
-            semanticsLabel: _headerSummaryLabel(context),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: Theme.of(
-              context,
-            ).textTheme.labelMedium?.copyWith(color: palette.textMuted),
-          ),
-        ),
-        ),
-      ],
-    );
-  }
-
-  // [fork] S118 diary-timeline: the summary on one line,
-  // "1166 kcal · C 215 · F 15 · P 39"; the meal's target is left to the
-  // spoken label, the day's to the card above
-  String _timelineSummary(BuildContext context) {
-    final kcalLine = EnergyDisplay.formatWithUnit(context, totalKcal);
-    if (!widget.showMealMacros || totalKcal <= 0) return kcalLine;
-    return [
-      kcalLine,
-      ...inMacroOrder(
-        carbs: 'C ${totalCarbsGram.toInt()}',
-        fat: 'F ${totalFatsGram.toInt()}',
-        protein: 'P ${totalProteinsGram.toInt()}',
-      ),
-    ].join(' · ');
-  }
-  // [/fork]
-
-  // [fork] S81 a11y-labels: the summary in words, not "22 p 41 f 175 c"
-  String _headerSummaryLabel(BuildContext context) {
-    final s = S.of(context);
-    final consumed = EnergyDisplay.formatValue(context, totalKcal);
-    final kcalLine = _hasMealKcalTarget
-        ? inEnergyUnit(
-            context,
-            s.diaryMealKcalConsumedOfTarget(
-              consumed,
-              EnergyDisplay.formatValue(context, widget.mealKcalTarget!),
-            ),
-          )
-        : EnergyDisplay.formatWithUnit(context, totalKcal);
-    if (!widget.showMealMacros || totalKcal <= 0) return kcalLine;
-    return [
-      kcalLine,
-      ...inMacroOrder(
-        carbs: '${totalCarbsGram.toInt()} g ${s.carbsLabel}',
-        fat: '${totalFatsGram.toInt()} g ${s.fatLabel}',
-        protein: '${totalProteinsGram.toInt()} g ${s.proteinLabel}',
-      ),
-    ].join(', ');
-  }
-  // [/fork]
 
   @override
   Widget build(BuildContext context) {
@@ -270,31 +162,15 @@ class _IntakeVerticalListState extends State<IntakeVerticalList> {
     return Column(
       children: [
         Container(
-          // [fork] S118 diary-timeline: closer together on the timeline
-          padding: EdgeInsets.fromLTRB(
+          padding: const EdgeInsets.fromLTRB(
             Dimens.spacing16,
-            widget.forkTime == null ? Dimens.spacing20 : Dimens.spacing8,
+            Dimens.spacing20,
             Dimens.spacing12,
-            widget.forkTime == null ? Dimens.spacing8 : 0,
+            Dimens.spacing8,
           ),
-          // [/fork]
           alignment: Alignment.centerLeft,
-          child: _forkTimelineHeader(context, Row( // [fork] S118
+          child: Row(
             children: [
-              // [fork] S118 diary-timeline
-              if (widget.forkTime case final time?)
-                SizedBox(
-                  width: 48,
-                  child: Text(
-                    DateFormat.Hm().format(time),
-                    style: textTheme.labelMedium?.copyWith(
-                      color: palette.textMuted,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                )
-              else
-              // [/fork]
               Container(
                 padding: const EdgeInsets.all(Dimens.spacing8),
                 decoration: BoxDecoration(
@@ -305,47 +181,24 @@ class _IntakeVerticalListState extends State<IntakeVerticalList> {
               ),
               const SizedBox(width: Dimens.spacing12),
               Expanded(
-                // [fork] S81 a11y-labels: a heading TalkBack can jump between
-                // [fork] S118 diary-timeline: a smaller title
-                child: widget.forkTime != null
-                    ? Semantics(
-                        header: true,
-                        child: Text(
-                          widget.title,
-                          style: textTheme.titleMedium?.copyWith(
-                            color: palette.textStrong,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      )
-                    : // [/fork]
-                Semantics(
-                  header: true,
-                  child: AutoSizeText(
-                    widget.title,
-                    maxLines: 1,
-                    minFontSize: 14,
-                    overflow: TextOverflow.ellipsis,
-                    style: textTheme.titleLarge?.copyWith(
-                      color: palette.textStrong,
-                      fontWeight: FontWeight.w700,
-                    ),
+                child: AutoSizeText(
+                  widget.title,
+                  maxLines: 1,
+                  minFontSize: 14,
+                  overflow: TextOverflow.ellipsis,
+                  style: textTheme.titleLarge?.copyWith(
+                    color: palette.textStrong,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
-                // [/fork]
               ),
               const SizedBox(width: Dimens.spacing8),
-              if (_shouldShowHeaderSummary &&
-                  widget.forkTime == null) // [fork] S118: under the title
+              if (_shouldShowHeaderSummary)
                 Flexible(
                   child: Text(
                     _buildHeaderSummary(context),
-                    // [fork] S81 a11y-labels: read as words; at a large font
-                    // the macros wrap as far as they need rather than cut off
-                    semanticsLabel: _headerSummaryLabel(context),
-                    // (no ellipsis: with no line limit it cuts to one line)
-                    maxLines: null,
-                    // [/fork]
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                     style: textTheme.labelMedium?.copyWith(
                       color: palette.textMuted,
                       fontWeight: FontWeight.w700,
@@ -356,22 +209,12 @@ class _IntakeVerticalListState extends State<IntakeVerticalList> {
                 ),
               if (widget.onSortTypeChanged != null && totalKcal > 0)
                 _buildSortMenu(context),
-              // [fork] S118 diary-timeline: the add row's button
-              if (widget.forkTime != null)
-                IconButton(
-                  key: const ValueKey('timeline-add'),
-                  tooltip: S.of(context).addToSectionLabel(widget.title),
-                  icon: Icon(Icons.add_rounded, color: accent),
-                  onPressed: () => _onPlaceholderCardTapped(context),
-                ),
-              // [/fork]
               Semantics(
                   identifier: 'intake-section-menu',
                   // Tight bounds: without this the node inherits the flex
                   // Row's full-width box and coordinate taps miss the button.
                   container: true,
                   child: PopupMenuButton<VerticalListPopupMenuSelections>(
-                    tooltip: S.of(context).sectionOptionsLabel(widget.title), // [fork] S83
                     icon: Icon(Icons.more_vert_rounded, color: palette.textMuted),
                     shape: Dimens.shapeM,
                     onSelected:
@@ -384,23 +227,29 @@ class _IntakeVerticalListState extends State<IntakeVerticalList> {
                       final trackedDay = widget.trackedDayEntity;
                       switch (selection) {
                         case VerticalListPopupMenuSelections.onCopy:
-                          // [fork] S25 copy-anywhere: any day and meal, one
-                          // entry after another (fork/copy)
-                          await copyIntakesWithDialog(
-                            context,
-                            intakes,
-                            widget.addMealType.getIntakeType(),
-                          );
-                          // [/fork]
+                          final copyDialog =
+                              CopyDialog(initialValue: widget.addMealType);
+                          final selectedMealType =
+                              await showDialog<AddMealType>(
+                                  context: context,
+                                  builder: (context) => copyDialog);
+                          if (selectedMealType != null) {
+                            for (IntakeEntity intake in intakes) {
+                              widget.onCopyIntakeCallback!(
+                                  intake, null, selectedMealType);
+                            }
+                          }
                           break;
                         case VerticalListPopupMenuSelections.onDelete:
-                          // [fork] S52 undo-delete: deleted at once, in
-                          // place of upstream's DeleteAllDialog; each
-                          // delete's Undo bar gathers the meal into one
-                          for (IntakeEntity intake in intakes) {
-                            onDeleteIntake(intake, trackedDay);
+                          final shouldDeleteIntakes = await showDialog<bool>(
+                              context: context,
+                              builder: (context) => const DeleteAllDialog());
+                          if (shouldDeleteIntakes != null) {
+                            for (IntakeEntity intake in intakes) {
+                              onDeleteIntake(intake, trackedDay);
+                            }
+                            break;
                           }
-                          // [/fork]
                         case VerticalListPopupMenuSelections.onShare:
                           if (context.mounted) {
                             final code = SharedMealPayload.fromIntakeList(
@@ -468,9 +317,7 @@ class _IntakeVerticalListState extends State<IntakeVerticalList> {
                               totalKcal > 0)
                             PopupMenuItem<VerticalListPopupMenuSelections>(
                                 value: VerticalListPopupMenuSelections.onCopy,
-                                // [fork] S25 copy-anywhere: it asks for the day
-                                child: const Text('Copy…')),
-                                // [/fork]
+                                child: Text(S.of(context).dialogCopyLabel)),
                           if (totalKcal > 0)
                             PopupMenuItem<VerticalListPopupMenuSelections>(
                                 value: VerticalListPopupMenuSelections.onDelete,
@@ -491,7 +338,7 @@ class _IntakeVerticalListState extends State<IntakeVerticalList> {
                           ),
                         ])),
             ],
-          )),
+          ),
         ),
         DragTarget<IntakeEntity>(
           onAcceptWithDetails: (intake) {
@@ -547,22 +394,13 @@ class _IntakeVerticalListState extends State<IntakeVerticalList> {
                       firstListElement: false,
                       usesImperialUnits: widget.usesImperialUnits,
                       sortType: widget.sortType,
-                      // [fork] S80 diary-by-hour
-                      showTime: widget.hourSection,
-                      // [/fork]
                     ),
                   ),
-                // [fork] S80 diary-by-hour
-                if (!widget.hourSection && widget.forkTime == null) // S118
-                // [/fork]
                 PlaceholderCard(
                   day: widget.day,
                   onTap: () => _onPlaceholderCardTapped(context),
                   firstListElement: true,
                   semanticIdentifier: 'add-meal-placeholder',
-                  // [fork] S81 a11y-labels
-                  label: S.of(context).addToSectionLabel(widget.title),
-                  // [/fork]
                 ),
               ],
             );

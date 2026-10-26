@@ -7,7 +7,7 @@ import 'package:opennutritracker/core/domain/entity/weight_log_entity.dart';
 import 'package:opennutritracker/core/utils/energy_unit_provider.dart';
 import 'package:opennutritracker/features/fasting/domain/entity/fasting_session_entity.dart';
 import 'package:opennutritracker/features/fasting/presentation/bloc/fasting_bloc.dart';
-import 'package:opennutritracker/features/home/presentation/widgets/dashboard_widget.dart';
+import 'package:opennutritracker/fork/screens/home/dashboard_widget.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
 import 'package:opennutritracker/fork/display/display_prefs.dart';
 import 'package:opennutritracker/fork/display/home_tiles.dart';

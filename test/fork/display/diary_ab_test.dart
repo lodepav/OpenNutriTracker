@@ -11,7 +11,7 @@ import 'package:opennutritracker/features/add_meal/domain/entity/meal_nutriments
 import 'package:opennutritracker/features/add_meal/presentation/add_meal_type.dart';
 import 'package:opennutritracker/features/diary/presentation/widgets/diary_table_calendar.dart';
 import 'package:opennutritracker/features/home/presentation/bloc/home_bloc.dart';
-import 'package:opennutritracker/features/home/presentation/widgets/intake_vertical_list.dart';
+import 'package:opennutritracker/fork/screens/home/intake_vertical_list.dart';
 import 'package:opennutritracker/features/meal_detail/presentation/bloc/meal_detail_bloc.dart';
 import 'package:opennutritracker/fork/display/day_ring.dart';
 import 'package:opennutritracker/fork/display/day_totals_card.dart';

@@ -23,7 +23,7 @@ import 'package:opennutritracker/features/add_meal/presentation/add_meal_type.da
 import 'package:opennutritracker/features/diary/presentation/bloc/calendar_day_bloc.dart';
 import 'package:opennutritracker/features/diary/presentation/widgets/daily_nutrient_panel.dart';
 import 'package:opennutritracker/features/diary/presentation/widgets/diary_sort_type.dart';
-import 'package:opennutritracker/features/home/presentation/widgets/intake_vertical_list.dart';
+import 'package:opennutritracker/fork/screens/home/intake_vertical_list.dart';
 import 'package:opennutritracker/fork/plan/plan_ui.dart';
 import 'package:opennutritracker/fork/copy/copy_ui.dart';
 import 'package:opennutritracker/fork/copy/select_entries_screen.dart';

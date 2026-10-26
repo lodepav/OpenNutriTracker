@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:opennutritracker/fork/display/display_prefs.dart';
 
-import '../../features/home/presentation/widgets/intake_card_sort_test.dart'
+import '../screens/home/intake_card_sort_test.dart'
     as card;
 
 void main() {
