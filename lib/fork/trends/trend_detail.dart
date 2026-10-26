@@ -168,6 +168,7 @@ class TrendDetailPage extends StatelessWidget {
           dates: dates,
           pills: pills,
           service: deps.service,
+          loadIntakes: deps.loadIntakes,
         );
       case TrendMetric.balance:
         return balanceBody(context, state, history, dates: dates, pills: pills);

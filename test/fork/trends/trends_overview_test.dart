@@ -542,6 +542,19 @@ void main() {
     expect(find.text('enough for a steady estimate'), findsOneWidget);
     // 3000 against the formula's 2860.
     expect(find.text('yours runs 5% higher'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.widgetWithText(TrendRow, 'Counted in the estimate'),
+      200,
+      scrollable: scrollable,
+    );
+    expect(
+      tester
+          .widget<TrendRow>(
+            find.widgetWithText(TrendRow, 'Counted in the estimate'),
+          )
+          .value,
+      '4 days',
+    );
 
     await tester.ensureVisible(find.text('What is expenditure?'));
     await tester.pumpAndSettle();

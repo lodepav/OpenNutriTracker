@@ -1,4 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:opennutritracker/core/domain/entity/intake_entity.dart';
+import 'package:opennutritracker/core/domain/entity/intake_type_entity.dart';
+import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dart';
+import 'package:opennutritracker/features/add_meal/domain/entity/meal_nutriments_entity.dart';
 import 'package:opennutritracker/core/domain/entity/tracked_day_entity.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
 import 'package:opennutritracker/fork/trends/detail_stats.dart';
@@ -38,6 +42,34 @@ TrackedDayEntity _tracked(
   carbsGoal: carbsGoal,
   fatGoal: fatGoal,
   proteinGoal: proteinGoal,
+);
+
+IntakeEntity _ate(DateTime at, {String name = 'Oats'}) => IntakeEntity(
+  id: '$name $at',
+  unit: 'g',
+  amount: 100,
+  type: IntakeTypeEntity.breakfast,
+  meal: MealEntity(
+    code: name,
+    name: name,
+    url: null,
+    mealQuantity: null,
+    mealUnit: 'g',
+    servingQuantity: null,
+    servingUnit: 'g',
+    servingSize: null,
+    nutriments: const MealNutrimentsEntity(
+      energyKcal100: 380,
+      carbohydrates100: 60,
+      fat100: 7,
+      proteins100: 13,
+      sugars100: null,
+      saturatedFat100: null,
+      fiber100: null,
+    ),
+    source: MealSourceEntity.custom,
+  ),
+  dateTime: at,
 );
 
 void main() {
@@ -275,5 +307,59 @@ void main() {
     test('none without a weigh-in', () {
       expect(proteinPerKg([_tracked(0, protein: 100)], week, const {}), isNull);
     });
+  });
+
+  group('loggingCompleteness', () {
+    test('logged, counted, left out, and logged too lightly', () {
+      final week = windowDates(_today, 7);
+      final c = loggingCompleteness(
+        [
+          _tracked(-5),
+          _tracked(-4),
+          _tracked(-3, kcal: 120),
+          _tracked(-2),
+          _tracked(0),
+          _tracked(-12),
+        ],
+        [
+          // The history starts four days back, at the first weigh-in.
+          _spent(-4, 3000, ate: 2000),
+          _spent(-3, 3000),
+          _spent(-2, 3000),
+          _spent(-1, 3000),
+          _spent(0, 3000, ate: 2000),
+        ],
+        week,
+        {_d(-2), _d(-20)},
+      );
+      expect(c.of, 7);
+      expect(c.logged, 5);
+      expect(c.counted, 2);
+      expect(c.skipped, 1);
+      // Day -3, under the estimate's floor; -5 is before the history.
+      expect(c.partial, 1);
+    });
+  });
+
+  test('entries a logged day, by the Diary\'s day', () {
+    expect(entriesPerDay(const []), isNull);
+    expect(
+      entriesPerDay([
+        _ate(DateTime(2026, 10, 25, 8)),
+        _ate(DateTime(2026, 10, 25, 13)),
+        _ate(DateTime(2026, 10, 26, 1)),
+        _ate(DateTime(2026, 10, 26, 8)),
+      ]),
+      2,
+    );
+    // A day starting at 4 am counts the 1 am entry on the day before.
+    expect(
+      entriesPerDay([
+        _ate(DateTime(2026, 10, 25, 8)),
+        _ate(DateTime(2026, 10, 26, 1)),
+        _ate(DateTime(2026, 10, 26, 8)),
+      ], dayStartMinutes: 240),
+      1.5,
+    );
   });
 }

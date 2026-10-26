@@ -1,4 +1,6 @@
+import 'package:opennutritracker/core/domain/entity/intake_entity.dart';
 import 'package:opennutritracker/core/domain/entity/tracked_day_entity.dart';
+import 'package:opennutritracker/core/utils/calc/day_boundary_calc.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/fork/trends/trend_stats.dart';
@@ -310,3 +312,50 @@ double balanceWeightKg(
   int days, {
   double kcalPerKg = AdaptiveSettings.commonKcalPerKg,
 }) => meanKcal * days / kcalPerKg;
+
+/// How fully the window was logged, and how much of it the expenditure
+/// estimate counts: of its days, those logged, those the estimate counts,
+/// those [skipped] by the user, and those logged too lightly to count (only
+/// over the days [history] covers, from the first weigh-in).
+({int of, int logged, int counted, int skipped, int partial})
+loggingCompleteness(
+  List<TrackedDayEntity> days,
+  List<ExpenditureDay> history,
+  List<DateTime> dates,
+  Set<DateTime> skipped,
+) {
+  final window = dates.toSet();
+  final logged = {
+    for (final d in days)
+      if (isLogged(d) && window.contains(_date(d.day))) _date(d.day),
+  };
+  final covered = {
+    for (final d in history)
+      if (window.contains(_date(d.date))) _date(d.date): d.intakeKcal != null,
+  };
+  final left = {
+    for (final d in skipped)
+      if (window.contains(_date(d))) _date(d),
+  };
+  return (
+    of: dates.length,
+    logged: logged.length,
+    counted: covered.values.where((c) => c).length,
+    skipped: left.length,
+    partial: [
+      for (final d in logged)
+        if (covered[d] == false && !left.contains(d)) d,
+    ].length,
+  );
+}
+
+/// The entries a logged day, over [intakes] counted on the logical days
+/// the Diary lists them under; null with none.
+double? entriesPerDay(List<IntakeEntity> intakes, {int dayStartMinutes = 0}) {
+  if (intakes.isEmpty) return null;
+  final days = {
+    for (final i in intakes)
+      DayBoundaryCalc.dayKeyOf(i.dateTime, dayStartMinutes),
+  };
+  return intakes.length / days.length;
+}
