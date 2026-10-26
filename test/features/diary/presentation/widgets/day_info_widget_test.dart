@@ -161,7 +161,9 @@ void main() {
     // A past day, so the long-press asks copy-or-delete before confirming.
     await tester.longPress(find.text('Hidden Porridge'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text(l10nEn.dialogDeleteLabel.toUpperCase()));
+    // [fork] S81: the copy-or-delete dialog's labels in sentence case
+    await tester.tap(find.text(l10nEn.dialogDeleteLabel));
+    // [/fork]
     await tester.pumpAndSettle();
     expect(find.text(l10nEn.deleteTimeDialogTitle), findsOneWidget);
     await tester.tap(find.text(l10nEn.dialogOKLabel));
