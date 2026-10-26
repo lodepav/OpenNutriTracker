@@ -27,6 +27,9 @@ Everything that belongs only to the fork lives in this `fork/` folder or in `lib
 2. **Add, don't edit.** Fork-only behaviour goes in new files under `lib/fork/`. An upstream
    file is edited only at a *seam*: a short hook between `[fork]` markers, listed in
    [SEAMS.md](SEAMS.md).
+   A screen the fork mostly rewrites is copied whole into `lib/fork/` instead, wired in with
+   one seam, and the upstream file is restored (D23). Upstream's later changes to it are
+   ported by hand at each release merge: `fork/tools/upstream-copies.sh <tag>` lists them.
 3. **Logic is tested.** Anything that computes a number the user acts on (expenditure, targets,
    trend weight) is a pure Dart function in `lib/fork/` with a unit test in `test/fork/`.
 4. **Upstream's checks stay green, unmodified.** `just ci` (format, l10n, analyze, test) passes
