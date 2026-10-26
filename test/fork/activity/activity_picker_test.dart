@@ -169,6 +169,30 @@ void main() {
     expect(logged.single.physicalActivityEntity, _yoga);
   });
 
+  testWidgets('the keyboard leaves the field, its kcal and Add in sight', (
+    tester,
+  ) async {
+    await _pump(tester);
+    await _tap(tester, 'add-activity-row-02160');
+    // A keyboard 350 high over the 900 of the screen.
+    tester.view.viewInsets = FakeViewPadding(
+      bottom: 350 * tester.view.devicePixelRatio,
+    );
+    addTearDown(tester.view.resetViewInsets);
+    await tester.pumpAndSettle();
+    for (final id in ['activity-duration-field', 'activity-duration-add']) {
+      expect(
+        tester.getRect(find.bySemanticsIdentifier(id)).bottom,
+        lessThanOrEqualTo(900 - 350),
+        reason: id,
+      );
+    }
+    expect(
+      tester.getRect(find.textContaining('kcal').last).bottom,
+      lessThanOrEqualTo(900 - 350),
+    );
+  });
+
   testWidgets('down to five minutes and no lower', (tester) async {
     await _pump(tester);
     await _tap(tester, 'add-activity-row-02160');

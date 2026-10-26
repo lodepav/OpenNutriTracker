@@ -550,11 +550,12 @@ class _DurationSheetState extends State<DurationSheet> {
     final perMinute = METCalc.getTotalBurnedKcal(widget.user, activity, 1);
     final valid = _typed != null;
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(
+      // Above the keyboard, so the field, its kcal and Add stay in sight.
+      padding: EdgeInsets.fromLTRB(
         Dimens.spacing16,
         0,
         Dimens.spacing16,
-        Dimens.spacing24,
+        Dimens.spacing24 + MediaQuery.viewInsetsOf(context).bottom,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
