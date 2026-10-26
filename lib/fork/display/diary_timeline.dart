@@ -90,8 +90,7 @@ class TimelineGap extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final palette = isDark ? AppPalette.dark : AppPalette.light;
+    final palette = paletteOf(context);
     final hours = from == to
         ? DateFormat.Hm().format(from)
         : '${DateFormat.Hm().format(from)} – ${DateFormat.Hm().format(to)}';

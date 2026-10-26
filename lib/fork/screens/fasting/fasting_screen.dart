@@ -95,8 +95,7 @@ class _FastingScreenState extends State<FastingScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = S.of(context);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final palette = isDark ? AppPalette.dark : AppPalette.light;
+    final palette = paletteOf(context);
     return Scaffold(
       backgroundColor: palette.canvas,
       appBar: AppBar(
@@ -206,8 +205,7 @@ class _FastingScreenState extends State<FastingScreen> {
 
   Widget _buildCompleted(BuildContext context, S l10n) {
     final textTheme = Theme.of(context).textTheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final palette = isDark ? AppPalette.dark : AppPalette.light;
+    final palette = paletteOf(context);
     final accent = Theme.of(context).colorScheme.primary;
     return Padding(
       padding: const EdgeInsets.all(Dimens.spacing24),

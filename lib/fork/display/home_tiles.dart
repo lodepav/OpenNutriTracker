@@ -170,8 +170,7 @@ class HomeTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final palette = isDark ? AppPalette.dark : AppPalette.light;
+    final palette = paletteOf(context);
     final textTheme = Theme.of(context).textTheme;
     final card = Semantics(
       identifier: identifier,
@@ -383,8 +382,7 @@ class WaterTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final palette = isDark ? AppPalette.dark : AppPalette.light;
+    final palette = paletteOf(context);
     void logWater() => showDialog<void>(
       context: context,
       builder: (_) => const LogWaterDialog(),
@@ -433,8 +431,7 @@ class FastingTileView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final palette = isDark ? AppPalette.dark : AppPalette.light;
+    final palette = paletteOf(context);
     final active = state is FastingActive ? state as FastingActive : null;
     return HomeTile(
       identifier: 'home-fasting-chip',
@@ -465,8 +462,7 @@ class TileBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final palette = isDark ? AppPalette.dark : AppPalette.light;
+    final palette = paletteOf(context);
     // The tile's text says it already: no bare percentage read out too.
     return ExcludeSemantics(
       child: ClipRRect(

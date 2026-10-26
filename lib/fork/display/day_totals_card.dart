@@ -24,8 +24,7 @@ class DayTotalsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final palette = isDark ? AppPalette.dark : AppPalette.light;
+    final palette = paletteOf(context);
     final textTheme = Theme.of(context).textTheme;
     final meals = {for (final i in intakes) i.type}.length;
     final kcal = _sum((i) => i.totalKcal).clamp(0.0, double.infinity);
@@ -99,8 +98,7 @@ class _Total extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final palette = isDark ? AppPalette.dark : AppPalette.light;
+    final palette = paletteOf(context);
     final textTheme = Theme.of(context).textTheme;
     final over = goal > 0 && value > goal;
     final error = Theme.of(context).colorScheme.error;

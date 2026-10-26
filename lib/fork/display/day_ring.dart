@@ -34,8 +34,7 @@ class DayRing extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final palette = isDark ? AppPalette.dark : AppPalette.light;
+    final palette = paletteOf(context);
     final scheme = Theme.of(context).colorScheme;
     final style = Theme.of(context).textTheme.bodyMedium?.copyWith(
       fontWeight: selected || today ? FontWeight.w700 : null,

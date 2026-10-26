@@ -190,8 +190,7 @@ class _IntakeVerticalListState extends State<IntakeVerticalList> {
   // the header's row, lined up with the title
   Widget _forkTimelineHeader(BuildContext context, Widget row) {
     if (widget.forkTime == null || totalKcal <= 0) return row;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final palette = isDark ? AppPalette.dark : AppPalette.light;
+    final palette = paletteOf(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -258,8 +257,7 @@ class _IntakeVerticalListState extends State<IntakeVerticalList> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final palette = isDark ? AppPalette.dark : AppPalette.light;
+    final palette = paletteOf(context);
     final accent = Theme.of(context).colorScheme.primary;
     final textTheme = Theme.of(context).textTheme;
     return Column(
@@ -568,8 +566,7 @@ class _IntakeVerticalListState extends State<IntakeVerticalList> {
 
   Widget _buildSortMenu(BuildContext context) {
     final current = widget.sortType ?? DiarySortType.timeAdded;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final palette = isDark ? AppPalette.dark : AppPalette.light;
+    final palette = paletteOf(context);
     return Semantics(
       identifier: 'diary-section-sort-menu',
       child: PopupMenuButton<DiarySortType>(

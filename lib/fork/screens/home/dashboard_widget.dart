@@ -155,8 +155,7 @@ class _DashboardWidgetState extends State<DashboardWidget> {
         ? UnitCalc.kcalToKj(widget.totalKcalBurned)
         : widget.totalKcalBurned;
 
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final palette = isDark ? AppPalette.dark : AppPalette.light;
+    final palette = paletteOf(context);
     final textTheme = Theme.of(context).textTheme;
     final progressColor = widget.totalKcalLeft < 0
         ? Theme.of(context).colorScheme.error
@@ -394,8 +393,7 @@ class _StatLine extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final palette = isDark ? AppPalette.dark : AppPalette.light;
+    final palette = paletteOf(context);
     final textTheme = Theme.of(context).textTheme;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 1),
@@ -441,8 +439,7 @@ class _MacroLeft extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final palette = isDark ? AppPalette.dark : AppPalette.light;
+    final palette = paletteOf(context);
     final textTheme = Theme.of(context).textTheme;
     final error = Theme.of(context).colorScheme.error;
     final pct = goal <= 0 ? 0.0 : (intake / goal).clamp(0.0, 1.0);
