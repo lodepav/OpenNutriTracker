@@ -64,8 +64,14 @@ void main() {
     );
     expect(indicator.single!.indicatorBelowLine.strokeWidth, 0);
 
-    // The dashed line at full colour: at 55% it fell under 3:1 on a light
-    // card.
-    expect(data.lineBarsData[1].color, data.lineBarsData[0].color);
+    // The trend at full colour (at 55% it fell under 3:1 on a light card),
+    // solid and bolder than the weigh-ins, as Weight history draws it.
+    final context = tester.element(find.byType(LineChart));
+    expect(data.lineBarsData[1].color, Theme.of(context).colorScheme.primary);
+    expect(data.lineBarsData[1].dashArray, isNull);
+    expect(
+      data.lineBarsData[1].barWidth,
+      greaterThan(data.lineBarsData[0].barWidth),
+    );
   });
 }
