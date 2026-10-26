@@ -9,6 +9,7 @@ import 'package:opennutritracker/core/utils/navigation_options.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dart';
 import 'package:opennutritracker/features/home/domain/entity/nutrient_contribution_entity.dart';
 import 'package:opennutritracker/features/meal_detail/meal_detail_screen.dart';
+import 'package:opennutritracker/features/add_meal/util/food_emoji_resolver.dart';
 import 'package:opennutritracker/fork/display/display_prefs.dart';
 import 'package:opennutritracker/fork/history/food_icon.dart';
 import 'package:opennutritracker/fork/off/off_kinds.dart';
@@ -452,7 +453,10 @@ class _KindIcon extends StatelessWidget {
       child: switch (importedFoodIcon(intake)) {
         final icon? => Icon(icon, color: palette.textMuted, size: 18),
         _ => Text(
-          importedFoodEmoji(intake) ?? OffKinds.emojiFor(intake.meal) ?? '🍽️',
+          importedFoodEmoji(intake) ??
+              OffKinds.emojiFor(intake.meal) ??
+              resolveFoodEmoji(intake.meal.name) ??
+              '🍽️',
           style: const TextStyle(fontSize: 18),
         ),
       },
