@@ -15,6 +15,9 @@ import 'package:opennutritracker/generated/l10n.dart';
 import 'package:opennutritracker/fork/display/display_prefs.dart';
 import 'package:opennutritracker/fork/display/week_bars.dart'; // [fork] S119
 import 'package:opennutritracker/fork/display/macro_foods.dart'; // [fork] S124
+// [fork] S119
+import 'package:opennutritracker/fork/adaptive/activity_credit.dart';
+// [/fork]
 // [/fork]
 import 'package:provider/provider.dart';
 
@@ -64,6 +67,17 @@ class DashboardWidget extends StatefulWidget {
 }
 
 class _DashboardWidgetState extends State<DashboardWidget> {
+  // [fork] S119 home-card: whether Burned raises the goal; a fixed or
+  // adaptive target leaves it out (read again as Home reloads)
+  late Future<ActivityCredit> _forkCredit = activityCredit();
+
+  @override
+  void didUpdateWidget(DashboardWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _forkCredit = activityCredit();
+  }
+  // [/fork]
+
   void _openKcalGoalInfoScreen() {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
@@ -234,9 +248,19 @@ class _DashboardWidgetState extends State<DashboardWidget> {
                             label: 'Eaten',
                             value: '${displaySupplied.toInt()}',
                           ),
-                          _StatLine(
-                            label: 'Burned',
-                            value: '+${displayBurned.toInt()}',
+                          // [fork] S119: "+" only where it is added
+                          FutureBuilder<ActivityCredit>(
+                            future: _forkCredit,
+                            builder: (context, credit) =>
+                                credit.data?.raisesGoal ?? true
+                                ? _StatLine(
+                                    label: 'Burned',
+                                    value: '+${displayBurned.toInt()}',
+                                  )
+                                : _StatLine(
+                                    label: 'Burned, not added',
+                                    value: '${displayBurned.toInt()}',
+                                  ),
                           ),
                           _StatLine(
                             label: 'Goal',

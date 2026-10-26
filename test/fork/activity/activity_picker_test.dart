@@ -8,6 +8,7 @@ import 'package:opennutritracker/core/domain/entity/user_gender_entity.dart';
 import 'package:opennutritracker/core/domain/entity/user_pal_entity.dart';
 import 'package:opennutritracker/core/domain/entity/user_weight_goal_entity.dart';
 import 'package:opennutritracker/core/utils/energy_unit_provider.dart';
+import 'package:opennutritracker/fork/adaptive/activity_credit.dart';
 import 'package:opennutritracker/fork/activity/activity_picker.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 import 'package:provider/provider.dart';
@@ -191,6 +192,39 @@ void main() {
       tester.getRect(find.textContaining('kcal').last).bottom,
       lessThanOrEqualTo(900 - 350),
     );
+  });
+
+  testWidgets('under an adaptive target, the sheet says when it counts', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ChangeNotifierProvider(
+        create: (_) => EnergyUnitProvider(),
+        child: MaterialApp(
+          localizationsDelegates: const [
+            S.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+          ],
+          supportedLocales: S.supportedLocales,
+          home: Scaffold(
+            body: DurationSheet(
+              activity: _yoga,
+              user: _user,
+              day: _day,
+              today: _day,
+              credit: ActivityCredit.atCheckIn,
+            ),
+          ),
+        ),
+      ),
+    );
+    expect(
+      find.text('burned; counted at the next check-in, not added today'),
+      findsOneWidget,
+    );
+    expect(ActivityCredit.atCheckIn.raisesGoal, isFalse);
+    expect(ActivityCredit.dailyCapped.raisesGoal, isTrue);
   });
 
   testWidgets('down to five minutes and no lower', (tester) async {
