@@ -99,11 +99,25 @@ class _ExportImportDialogState extends State<ExportImportDialog> {
                 bloc: _exportImportBloc,
                 builder: (context, state) {
                   if (state is ExportImportInitial) {
-                    return Text(
-                      S.of(context).exportImportDescription,
-                      overflow: TextOverflow.ellipsis,
-                      maxLines: 15,
+                    // [fork] S142 import-says: what Import does to what is
+                    // here, before the file is picked (H3)
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          S.of(context).exportImportDescription,
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 15,
+                        ),
+                        const SizedBox(height: 8),
+                        const Text(
+                          'Import adds the file\'s entries to this profile, '
+                          'overwriting any it shares, and the goals it holds '
+                          'replace yours.',
+                        ),
+                      ],
                     );
+                    // [/fork]
                   } else if (state is ExportImportLoadingState) {
                     return const LinearProgressIndicator();
                   } else if (state is ExportImportSuccess) {

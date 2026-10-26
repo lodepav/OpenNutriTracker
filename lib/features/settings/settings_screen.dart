@@ -495,7 +495,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     identifier: 'settings-food-sources',
                     palette: palette,
                     icon: Icons.travel_explore_rounded,
-                    title: S.of(context).settingsFoodSourcesLabel,
+                    // [fork] S142 settings-names: not the section's name again
+                    title: 'Search sources',
+                    // [/fork]
                     subtitle: S.of(context).settingsFoodSourcesSubtitle,
                     onTap: () => _openFoodSourcesScreen(context),
                   ),
@@ -538,7 +540,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     // the thing users already know ("Health Connect"), not
                     // as a generic feature label.
                     title: healthPlatformName,
-                    subtitle: S.of(context).settingsHealthSyncSubtitle,
+                    // [fork] S142 settings-names: all the page syncs
+                    subtitle: 'Workouts, weight, body fat and nutrition',
+                    // [/fork]
                     showChevron: true,
                     onTap: () => _openHealthSyncScreen(context),
                   ),
@@ -579,6 +583,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ],
               ),
               const SizedBox(height: Dimens.spacing20),
+              // [fork] S142 settings-profiles: where a careful user looks
+              // for them (they also sit on the You tab)
+              _categoryHeader(context, palette, 'Profiles'),
+              _SettingsGroup(
+                palette: palette,
+                tiles: [
+                  _SettingsTile(
+                    identifier: 'settings-manage-profiles',
+                    palette: palette,
+                    icon: Icons.people_alt_rounded,
+                    title: S.of(context).manageProfilesLabel,
+                    subtitle: 'Switch, add or rename',
+                    showChevron: true,
+                    onTap: () => Navigator.of(
+                      context,
+                    ).pushNamed(NavigationOptions.manageProfilesRoute),
+                  ),
+                ],
+              ),
+              const SizedBox(height: Dimens.spacing20),
+              // [/fork]
               _categoryHeader(context, palette, 'Start over'),
               _SettingsGroup(
                 palette: palette,
@@ -742,6 +767,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 const SizedBox(height: Dimens.spacing20),
               ],
               if (_forkShows(SettingsSection.about)) ...[
+              // [fork] S142 settings-names: on its own page the title says it
+              if (widget.embedded)
+              // [/fork]
               _categoryHeader(
                 context,
                 palette,
@@ -796,7 +824,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   _SettingsTile(
                     palette: palette,
                     icon: Icons.error_outline_rounded,
-                    title: S.of(context).settingAboutLabel,
+                    title: 'About OpenBite', // [fork] S142 settings-names
                     onTap: () => _showAboutDialog(context),
                   ),
                 ],
@@ -898,8 +926,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
   /// Every row by its name, for the search.
   List<SettingsEntry> _forkEntries(BuildContext context) {
     final s = S.of(context);
-    SettingsEntry e(String label, SettingsSection section) =>
-        (label: label, section: section);
+    SettingsEntry e(
+      String label,
+      SettingsSection section, [
+      String also = '',
+    ]) => (label: label, section: section, also: also);
     const goals = SettingsSection.goals;
     const units = SettingsSection.units;
     const reminders = SettingsSection.reminders;
@@ -918,23 +949,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
       e(s.settingsFoodUnitsLabel, units),
       e(s.settingsHeightUnitsLabel, units),
       e(s.settingsBodyWeightUnitLabel, units),
-      e(s.settingsEnergyUnitLabel, units),
+      e(s.settingsEnergyUnitLabel, units, 'kcal kJ calories joules'),
       e(s.settingsDefaultToRawFoodUnitsLabel, units),
       e(s.settingsNotificationsLabel, reminders),
       e('Weigh-in and check-in reminders', reminders),
-      e(s.settingsFoodSourcesLabel, food),
+      e('Search sources', food, 'food databases'),
       e(s.settingsAiAssistLabel, food),
       e('Open Food Facts account', food),
-      e(healthPlatformName, data),
+      e(healthPlatformName, data, 'sync workouts weight steps'),
       e('Import history', data),
       e(s.importCustomFoodDataLabel, data),
-      e(s.exportImportAppDataLabel, data),
-      e('Automatic backup', data),
-      e('Export diary as CSV', data),
+      e(s.exportImportAppDataLabel, data, 'backup restore json'),
+      e('Automatic backup', data, 'restore'),
+      e('Export diary as CSV', data, 'spreadsheet'),
       e(s.clearOffCacheLabel, data),
+      e(s.manageProfilesLabel, data, 'profiles switch'),
       e(s.settingsDeleteAllDataLabel, data),
-      e(s.settingsThemeLabel, appearance),
-      e(s.settingsAccentColourTitle, appearance),
+      e(s.settingsThemeLabel, appearance, 'dark light'),
+      e(s.settingsAccentColourTitle, appearance, 'color'),
       e(s.settingsLanguageLabel, appearance),
       e(s.settingsShowActivityTracking, appearance),
       e(s.settingsShowMealMacros, appearance),
@@ -947,7 +979,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       e(s.settingsSourcesLabel, about),
       e(s.settingsReportErrorLabel, about),
       e('Updates', about),
-      e(s.settingAboutLabel, about),
+      e('About OpenBite', about, 'licences version'),
     ];
   }
   // [/fork]

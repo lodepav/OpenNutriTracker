@@ -152,7 +152,7 @@ Map<SettingsSection, List<String>> _rows() => {
     'Weigh-in and check-in reminders',
   ],
   SettingsSection.food: [
-    l10nEn.settingsFoodSourcesLabel,
+    'Search sources',
     l10nEn.settingsAiAssistLabel,
     'Open Food Facts account',
   ],
@@ -164,6 +164,8 @@ Map<SettingsSection, List<String>> _rows() => {
     l10nEn.importCustomFoodDataLabel,
     l10nEn.exportImportAppDataLabel,
     'Export diary as CSV',
+    'Profiles',
+    l10nEn.manageProfilesLabel,
     l10nEn.clearOffCacheLabel,
     l10nEn.settingsDeleteAllDataLabel,
   ],
@@ -184,7 +186,7 @@ Map<SettingsSection, List<String>> _rows() => {
     l10nEn.settingsSourcesLabel,
     l10nEn.settingsReportErrorLabel,
     'Updates',
-    l10nEn.settingAboutLabel,
+    'About OpenBite',
   ],
 };
 
@@ -213,8 +215,8 @@ void main() {
 
   test('a search needs every word, in the name or its section', () {
     const entries = <SettingsEntry>[
-      (label: 'Energy unit', section: SettingsSection.units),
-      (label: 'Theme', section: SettingsSection.appearance),
+      (label: 'Energy unit', section: SettingsSection.units, also: 'kJ'),
+      (label: 'Theme', section: SettingsSection.appearance, also: ''),
     ];
     expect(matchingSettings(entries, ''), isEmpty);
     expect(matchingSettings(entries, '  '), isEmpty);
@@ -222,6 +224,7 @@ void main() {
     expect(matchingSettings(entries, 'units energy'), [entries.first]);
     expect(matchingSettings(entries, 'energy theme'), isEmpty);
     expect(matchingSettings(entries, 'appear'), [entries.last]);
+    expect(matchingSettings(entries, 'kj'), [entries.first]);
   });
 
   testWidgets('a row is its own button, not inside its card\'s first', (

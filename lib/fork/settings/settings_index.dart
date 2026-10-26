@@ -36,10 +36,12 @@ enum SettingsSection {
   };
 }
 
-/// A row of a section, for the search.
-typedef SettingsEntry = ({String label, SettingsSection section});
+/// A row of a section, for the search, with other words it goes by
+/// ([also]: "kJ" for the energy unit).
+typedef SettingsEntry = ({String label, SettingsSection section, String also});
 
-/// [entries] whose label or section has every word of [query] in it.
+/// [entries] whose label, section or other words have every word of
+/// [query] in them.
 List<SettingsEntry> matchingSettings(
   List<SettingsEntry> entries,
   String query,
@@ -55,7 +57,8 @@ List<SettingsEntry> matchingSettings(
       if (words.every(
         (w) =>
             e.label.toLowerCase().contains(w) ||
-            e.section.title.toLowerCase().contains(w),
+            e.section.title.toLowerCase().contains(w) ||
+            e.also.toLowerCase().contains(w),
       ))
         e,
   ];
