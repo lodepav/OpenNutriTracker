@@ -79,13 +79,14 @@ macroOf(TrendMetric m) => switch (m) {
 void openTrendDetail(
   BuildContext context,
   TrendMetric metric,
-  TrendsDeps deps,
-) {
-  final bloc = context.read<TrendsBloc>();
+  TrendsDeps deps, {
+  TrendsBloc? bloc,
+}) {
+  bloc ??= context.read<TrendsBloc>();
   Navigator.of(context).push(
     MaterialPageRoute<void>(
       builder: (_) => BlocProvider<TrendsBloc>.value(
-        value: bloc,
+        value: bloc!,
         child: metric == TrendMetric.calories
             ? CaloriesDetailPage(deps: deps)
             : TrendDetailPage(metric: metric, deps: deps),

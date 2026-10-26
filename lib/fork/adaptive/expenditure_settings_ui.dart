@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:opennutritracker/core/domain/entity/user_entity.dart';
+import 'package:opennutritracker/core/domain/entity/user_gender_entity.dart';
 import 'package:opennutritracker/core/domain/usecase/get_user_usecase.dart';
 import 'package:opennutritracker/core/utils/calc/unit_calc.dart';
 import 'package:opennutritracker/core/utils/calc/workout_compensation_calc.dart';
@@ -32,7 +33,23 @@ class ExpenditureSettingsScreen extends StatelessWidget {
   /// The steps reader; tests pass one over a memory box.
   final StepCounts? steps;
 
-  const ExpenditureSettingsScreen({super.key, required this.store, this.steps});
+  /// Whether the profile is a woman's, for the cycle switch (S146); tests
+  /// pass their own.
+  final Future<bool> Function() isFemale;
+
+  const ExpenditureSettingsScreen({
+    super.key,
+    required this.store,
+    this.steps,
+    this.isFemale = _readFemale,
+  });
+
+  /// A profile that cannot be read (tests) is not one.
+  static Future<bool> _readFemale() async {
+    if (!locator.isRegistered<GetUserUsecase>()) return false;
+    final user = await locator<GetUserUsecase>().getUserData();
+    return user.gender == UserGenderEntity.female;
+  }
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -46,7 +63,7 @@ class ExpenditureSettingsScreen extends StatelessWidget {
           bottom: 24 + MediaQuery.paddingOf(context).bottom,
         ),
         children: [
-          _EstimateSection(settings, store),
+          _EstimateSection(settings, store, isFemale),
           const Divider(),
           _ActivitySection(settings, store, steps ?? StepCounts()),
           const Divider(),
@@ -98,59 +115,81 @@ class _Note extends StatelessWidget {
   );
 }
 
-class _EstimateSection extends StatelessWidget {
+class _EstimateSection extends StatefulWidget {
   final AdaptiveSettings settings;
   final AdaptiveStore store;
+  final Future<bool> Function() isFemale;
 
-  const _EstimateSection(this.settings, this.store);
+  const _EstimateSection(this.settings, this.store, this.isFemale);
 
   @override
-  Widget build(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      const _Heading('Estimate'),
-      StackingChoice<Responsiveness>(
-        identifier: 'expenditure-responsiveness',
-        values: Responsiveness.values,
-        label: (r) => r.label,
-        selected: settings.responsiveness,
-        onChanged: (r) => _save(store, settings.copyWith(responsiveness: r)),
-      ),
-      _Note(switch (settings.responsiveness) {
-        Responsiveness.steady =>
-          'Moves least from day to day; follows a lasting change in about '
-              '7 weeks.',
-        Responsiveness.standard => 'Follows a lasting change in about 6 weeks.',
-        Responsiveness.responsive =>
-          'Follows a lasting change in about 5 weeks, and moves more from '
-              'day to day.',
-      }),
-      SwitchListTile(
-        title: const Text('Allow for a monthly cycle'),
-        subtitle: const Text(
-          'Reads a 28-day window, so a cycle\'s water swing moves the '
-          'estimate less.',
+  State<_EstimateSection> createState() => _EstimateSectionState();
+}
+
+class _EstimateSectionState extends State<_EstimateSection> {
+  late final _female = widget.isFemale().catchError((Object _) => false);
+
+  @override
+  Widget build(BuildContext context) {
+    final settings = widget.settings;
+    final store = widget.store;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const _Heading('Estimate'),
+        StackingChoice<Responsiveness>(
+          identifier: 'expenditure-responsiveness',
+          values: Responsiveness.values,
+          label: (r) => r.label,
+          selected: settings.responsiveness,
+          onChanged: (r) => _save(store, settings.copyWith(responsiveness: r)),
         ),
-        value: settings.cycleWindow,
-        onChanged: (v) => _save(store, settings.copyWith(cycleWindow: v)),
-      ),
-      SwitchListTile(
-        key: const ValueKey('flat-energy'),
-        title: Text(
-          'Count every kg as '
-          '${energyText(context, AdaptiveSettings.commonKcalPerKg)}',
+        _Note(switch (settings.responsiveness) {
+          Responsiveness.steady =>
+            'Moves least from day to day; follows a lasting change in about '
+                '7 weeks.',
+          Responsiveness.standard =>
+            'Follows a lasting change in about 6 weeks.',
+          Responsiveness.responsive =>
+            'Follows a lasting change in about 5 weeks, and moves more from '
+                'day to day.',
+        }),
+        // A woman's profile only, or one that has it on, to turn it off.
+        FutureBuilder<bool>(
+          future: _female,
+          builder: (context, female) =>
+              female.data != true && !settings.cycleWindow
+              ? const SizedBox.shrink()
+              : SwitchListTile(
+                  key: const ValueKey('cycle-window'),
+                  title: const Text('Allow for a monthly cycle'),
+                  subtitle: const Text(
+                    'Reads a 28-day window, so a cycle\'s water swing moves '
+                    'the estimate less.',
+                  ),
+                  value: settings.cycleWindow,
+                  onChanged: (v) =>
+                      _save(store, settings.copyWith(cycleWindow: v)),
+                ),
         ),
-        subtitle: const Text(
-          'As most apps do. Off, a kg follows your body composition: part '
-          'of a change is lean tissue, which holds less. On, the same pace '
-          'takes a larger deficit or surplus.',
+        SwitchListTile(
+          key: const ValueKey('flat-energy'),
+          title: Text(
+            'Count every kg as '
+            '${energyText(context, AdaptiveSettings.commonKcalPerKg)}',
+          ),
+          subtitle: const Text(
+            'As most apps do. Off, a kg follows your body composition: part '
+            'of a change is lean tissue, which holds less. On, the same pace '
+            'takes a larger deficit or surplus.',
+          ),
+          value: settings.flatEnergy,
+          onChanged: (v) => _save(store, settings.copyWith(flatEnergy: v)),
         ),
-        value: settings.flatEnergy,
-        onChanged: (v) => _save(store, settings.copyWith(flatEnergy: v)),
-      ),
-      _SkippedDaysTile(store),
-    ],
-  );
+        _SkippedDaysTile(store),
+      ],
+    );
+  }
 }
 
 /// The days left out, each with a way to count it again.

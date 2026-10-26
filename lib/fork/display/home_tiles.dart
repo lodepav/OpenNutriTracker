@@ -12,9 +12,12 @@ import 'package:opennutritracker/core/utils/navigation_options.dart';
 import 'package:opennutritracker/features/fasting/presentation/bloc/fasting_bloc.dart';
 import 'package:opennutritracker/features/home/presentation/widgets/log_water_dialog.dart';
 import 'package:opennutritracker/features/home/presentation/widgets/quick_weight_widget.dart';
+import 'package:opennutritracker/features/trends/presentation/trends_page.dart'
+    show openTrendFromHome;
 import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
 import 'package:opennutritracker/fork/adaptive/trend_points.dart';
 import 'package:opennutritracker/fork/report/rate_text.dart';
+import 'package:opennutritracker/fork/trends/trend_stats.dart' show TrendMetric;
 import 'package:opennutritracker/fork/trends/trends_widgets.dart'
     show Sparkline;
 import 'package:opennutritracker/fork/units/energy_text.dart';
@@ -25,7 +28,8 @@ import 'package:opennutritracker/generated/l10n.dart';
 /// Home's 2×2 tiles (seam S119, MacroFactor's dashboard), in place of the
 /// weight, water and fasting chips: the weight trend and its weekly rate,
 /// the expenditure estimate, the water drunk and the fast under way. Each
-/// opens what its chip did.
+/// opens the page its Trends tile opens (S145); logging moves to a + in
+/// the weight and water tiles' corner.
 class HomeTiles extends StatelessWidget {
   final double weightKg;
   final BodyWeightUnit bodyWeightUnit;
@@ -37,6 +41,9 @@ class HomeTiles extends StatelessWidget {
   /// The fasting tile, swapped out in tests for want of its bloc.
   final Widget fasting;
 
+  /// Opens a metric's Trends page, swapped out in tests.
+  final void Function(BuildContext context, TrendMetric metric) openTrend;
+
   const HomeTiles({
     super.key,
     required this.weightKg,
@@ -46,6 +53,7 @@ class HomeTiles extends StatelessWidget {
     this.loadWeights = _weights,
     this.loadExpenditure = _expenditure,
     this.fasting = const FastingTile(),
+    this.openTrend = openTrendFromHome,
   });
 
   // Async, so a store not there is a failed future: the tile shows what
@@ -77,10 +85,17 @@ class HomeTiles extends StatelessWidget {
                   weightKg: weightKg,
                   unit: bodyWeightUnit,
                   load: loadWeights,
+                  hint: 'Open the weight trend',
+                  onTap: () => openTrend(context, TrendMetric.weight),
                 ),
               ),
               const SizedBox(width: Dimens.spacing8),
-              Expanded(child: ExpenditureTile(load: loadExpenditure)),
+              Expanded(
+                child: ExpenditureTile(
+                  load: loadExpenditure,
+                  onTap: () => openTrend(context, TrendMetric.expenditure),
+                ),
+              ),
             ],
           ),
         ),
@@ -90,7 +105,11 @@ class HomeTiles extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Expanded(
-                child: WaterTile(ml: waterMl, goalMl: waterGoalMl),
+                child: WaterTile(
+                  ml: waterMl,
+                  goalMl: waterGoalMl,
+                  onTap: () => openTrend(context, TrendMetric.water),
+                ),
               ),
               const SizedBox(width: Dimens.spacing8),
               Expanded(child: fasting),
@@ -113,6 +132,12 @@ class HomeTile extends StatelessWidget {
   final VoidCallback? onTap;
   final String? hint;
 
+  /// A + in the corner that logs (a weigh-in, water), [actionTooltip] its
+  /// name; beside the card rather than in it, a button in a button being
+  /// one target to a screen reader.
+  final VoidCallback? onAction;
+  final String? actionTooltip;
+
   const HomeTile({
     super.key,
     required this.identifier,
@@ -122,6 +147,8 @@ class HomeTile extends StatelessWidget {
     this.below,
     this.onTap,
     this.hint,
+    this.onAction,
+    this.actionTooltip,
   });
 
   @override
@@ -129,7 +156,7 @@ class HomeTile extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final palette = isDark ? AppPalette.dark : AppPalette.light;
     final textTheme = Theme.of(context).textTheme;
-    return Semantics(
+    final card = Semantics(
       identifier: identifier,
       button: onTap != null,
       hint: hint,
@@ -139,9 +166,17 @@ class HomeTile extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              title,
-              style: textTheme.labelMedium?.copyWith(color: palette.textMuted),
+            Padding(
+              // Clear of the + in the corner.
+              padding: EdgeInsetsDirectional.only(
+                end: onAction == null ? 0 : 32,
+              ),
+              child: Text(
+                title,
+                style: textTheme.labelMedium?.copyWith(
+                  color: palette.textMuted,
+                ),
+              ),
             ),
             const SizedBox(height: 2),
             Text.rich(
@@ -172,6 +207,23 @@ class HomeTile extends StatelessWidget {
         ),
       ),
     );
+    if (onAction == null) return card;
+    return Stack(
+      fit: StackFit.passthrough,
+      children: [
+        card,
+        PositionedDirectional(
+          top: 0,
+          end: 0,
+          child: IconButton(
+            key: Key('$identifier-add'),
+            tooltip: actionTooltip,
+            icon: const Icon(Icons.add_rounded),
+            onPressed: onAction,
+          ),
+        ),
+      ],
+    );
   }
 }
 
@@ -182,7 +234,8 @@ class WeightTile extends StatefulWidget {
   final BodyWeightUnit unit;
   final Future<List<WeightLogEntity>> Function() load;
 
-  /// The You tab's (S121) opens the weight history instead of a weigh-in.
+  /// Home's opens the weight trend, the You tab's (S121) the weight
+  /// history; a weigh-in without one, and always from the +.
   final String identifier;
   final String hint;
   final VoidCallback? onTap;
@@ -228,19 +281,20 @@ class _WeightTileState extends State<WeightTile> {
       final month = trend.length > 30
           ? trend.sublist(trend.length - 30)
           : trend;
+      void weighIn() => QuickWeightWidget.showWeightDialog(
+        context,
+        weightKg: widget.weightKg,
+        bodyWeightUnit: widget.unit,
+      );
       return HomeTile(
         identifier: widget.identifier,
         title: 'Weight trend',
         value: value,
         note: note,
         hint: widget.hint,
-        onTap:
-            widget.onTap ??
-            () => QuickWeightWidget.showWeightDialog(
-              context,
-              weightKg: widget.weightKg,
-              bodyWeightUnit: widget.unit,
-            ),
+        onTap: widget.onTap ?? weighIn,
+        onAction: weighIn,
+        actionTooltip: 'Log a weigh-in',
         below: month.length < 2
             ? null
             : Sparkline(
@@ -257,8 +311,9 @@ class _WeightTileState extends State<WeightTile> {
 /// show before the first weigh-in.
 class ExpenditureTile extends StatefulWidget {
   final Future<List<ExpenditureDay>> Function() load;
+  final VoidCallback? onTap;
 
-  const ExpenditureTile({super.key, required this.load});
+  const ExpenditureTile({super.key, required this.load, this.onTap});
 
   @override
   State<ExpenditureTile> createState() => _ExpenditureTileState();
@@ -276,6 +331,8 @@ class _ExpenditureTileState extends State<ExpenditureTile> {
       return HomeTile(
         identifier: 'home-expenditure-tile',
         title: 'Expenditure',
+        hint: widget.onTap == null ? null : 'Open the expenditure trend',
+        onTap: widget.onTap,
         value: days.isEmpty
             ? '—'
             : '${energyValue(context, days.last.expenditureKcal)}',
@@ -296,22 +353,34 @@ class WaterTile extends StatelessWidget {
   final int ml;
   final int goalMl;
 
-  const WaterTile({super.key, required this.ml, required this.goalMl});
+  /// Opens the water trend; water is logged from the + (or the tap
+  /// without one).
+  final VoidCallback? onTap;
+
+  const WaterTile({
+    super.key,
+    required this.ml,
+    required this.goalMl,
+    this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final palette = isDark ? AppPalette.dark : AppPalette.light;
+    void logWater() => showDialog<void>(
+      context: context,
+      builder: (_) => const LogWaterDialog(),
+    );
     return HomeTile(
       identifier: 'home-water-chip',
       title: 'Water',
       value: '$ml',
       note: '/ $goalMl ml',
-      hint: 'Log water',
-      onTap: () => showDialog<void>(
-        context: context,
-        builder: (_) => const LogWaterDialog(),
-      ),
+      hint: onTap == null ? 'Log water' : 'Open the water trend',
+      onTap: onTap ?? logWater,
+      onAction: logWater,
+      actionTooltip: 'Log water',
       below: TileBar(
         value: goalMl <= 0 ? 0 : ml / goalMl,
         color: palette.protein,
