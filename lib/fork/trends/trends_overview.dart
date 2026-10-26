@@ -10,6 +10,8 @@ import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/fork/display/display_prefs.dart';
 import 'package:opennutritracker/fork/report/rate_text.dart';
 import 'package:opennutritracker/fork/report/trends_layout.dart';
+import 'package:opennutritracker/fork/adaptive/goal_plan_card.dart'
+    show paceChanges;
 import 'package:opennutritracker/fork/goal/goal_progress.dart';
 import 'package:opennutritracker/fork/goal/goal_progress_page.dart';
 import 'package:opennutritracker/fork/report/nutrient_explorer.dart'
@@ -50,6 +52,11 @@ class TrendsOverview extends StatefulWidget {
   /// tests swap it.
   @visibleForTesting
   static IntakeLoader loadIntakes = intakesBetween;
+
+  /// Where the Goal tile's bar reads the goal, as Goal progress does;
+  /// tests swap it.
+  @visibleForTesting
+  static Future<GoalState> Function() loadGoal = () => GoalStartStore().load();
 
   @override
   State<TrendsOverview> createState() => _TrendsOverviewState();
@@ -374,7 +381,7 @@ TrendTile _goalTile(
         : '${weightUnitLabel(context, wu)} to go',
     chart: target == null || now == null
         ? const SizedBox()
-        : _GoalBar(targetKg: target, nowKg: now),
+        : _GoalBar(targetKg: target),
     onTap: () => openGoalProgress(context, wu),
   );
 }
@@ -383,35 +390,54 @@ TrendTile _goalTile(
 /// kept.
 class _GoalBar extends StatefulWidget {
   final double targetKg;
-  final double nowKg;
 
-  const _GoalBar({required this.targetKg, required this.nowKg});
+  const _GoalBar({required this.targetKg});
 
   @override
   State<_GoalBar> createState() => _GoalBarState();
 }
 
 class _GoalBarState extends State<_GoalBar> {
-  late final Future<GoalStart?> _start = _read();
+  // As Goal progress loads it, keeping the start when none is kept yet.
+  late Future<GoalState?> _goal = _load();
 
-  static Future<GoalStart?> _read() async {
+  static Future<GoalState?> _load() async {
     try {
-      return await GoalStartStore().read();
+      return await TrendsOverview.loadGoal();
     } catch (_) {
       // No store, in widget tests.
       return null;
     }
   }
 
+  void _reload() {
+    if (mounted) setState(() => _goal = _load());
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    paceChanges.addListener(_reload);
+  }
+
+  @override
+  void didUpdateWidget(_GoalBar old) {
+    super.didUpdateWidget(old);
+    if (old.targetKg != widget.targetKg) _goal = _load();
+  }
+
+  @override
+  void dispose() {
+    paceChanges.removeListener(_reload);
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) => FutureBuilder(
-    future: _start,
+    future: _goal,
     builder: (context, snapshot) {
-      final start = snapshot.data;
-      final total = start == null ? 0.0 : widget.targetKg - start.kg;
-      if (start == null ||
-          (start.targetKg - widget.targetKg).abs() >= 0.05 ||
-          total.abs() < 0.1) {
+      final progress = snapshot.data?.progress;
+      if (progress == null || progress.totalKg.abs() < 0.1) {
         return const SizedBox();
       }
       final palette = paletteOf(context);
@@ -423,7 +449,7 @@ class _GoalBarState extends State<_GoalBar> {
           child: ClipRRect(
             borderRadius: Dimens.borderRadiusS,
             child: LinearProgressIndicator(
-              value: ((widget.nowKg - start.kg) / total).clamp(0.0, 1.0),
+              value: progress.fraction,
               minHeight: 8,
               color: Theme.of(context).colorScheme.primary,
               backgroundColor: palette.surfaceMuted,
