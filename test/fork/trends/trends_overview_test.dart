@@ -410,6 +410,37 @@ void main() {
     expect(find.text('under 30 days of trend'), findsOneWidget);
   });
 
+  testWidgets('Weight: the scale swings, and the jumps after carb days', (
+    tester,
+  ) async {
+    await pumpTrends(
+      tester,
+      loaded(
+        days: [
+          for (var i = -6; i <= 0; i++)
+            _logged(i, carbs: i == -5 || i == -2 ? 300 : 69.5),
+        ],
+        weight: [
+          for (var i = -20; i <= 0; i++)
+            WeightLogEntity(
+              date: day(i),
+              weightKg: i == -4 || i == -1 ? 81 : 80,
+            ),
+        ],
+      ),
+    );
+    await openTile(tester, 'weight');
+    await tester.scrollUntilVisible(
+      find.text('Average swing'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('Scale swings'), findsOneWidget);
+    expect(find.text('Largest'), findsOneWidget);
+    expect(find.textContaining('After your higher-carb days'), findsOneWidget);
+    expect(find.textContaining('saltier'), findsNothing);
+  });
+
   testWidgets('Water: its average and goal over upstream\'s chart', (
     tester,
   ) async {

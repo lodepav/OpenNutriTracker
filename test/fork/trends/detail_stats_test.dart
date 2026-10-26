@@ -4,7 +4,9 @@ import 'package:opennutritracker/core/domain/entity/intake_type_entity.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_nutriments_entity.dart';
 import 'package:opennutritracker/core/domain/entity/tracked_day_entity.dart';
+import 'package:opennutritracker/core/domain/entity/weight_log_entity.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
+import 'package:opennutritracker/fork/report/nutrient_explorer.dart';
 import 'package:opennutritracker/fork/trends/detail_stats.dart';
 import 'package:opennutritracker/fork/trends/trend_stats.dart';
 
@@ -44,33 +46,35 @@ TrackedDayEntity _tracked(
   proteinGoal: proteinGoal,
 );
 
-IntakeEntity _ate(DateTime at, {String name = 'Oats'}) => IntakeEntity(
-  id: '$name $at',
-  unit: 'g',
-  amount: 100,
-  type: IntakeTypeEntity.breakfast,
-  meal: MealEntity(
-    code: name,
-    name: name,
-    url: null,
-    mealQuantity: null,
-    mealUnit: 'g',
-    servingQuantity: null,
-    servingUnit: 'g',
-    servingSize: null,
-    nutriments: const MealNutrimentsEntity(
-      energyKcal100: 380,
-      carbohydrates100: 60,
-      fat100: 7,
-      proteins100: 13,
-      sugars100: null,
-      saturatedFat100: null,
-      fiber100: null,
-    ),
-    source: MealSourceEntity.custom,
-  ),
-  dateTime: at,
-);
+IntakeEntity _ate(DateTime at, {String name = 'Oats', double? sodium}) =>
+    IntakeEntity(
+      id: '$name $at',
+      unit: 'g',
+      amount: 100,
+      type: IntakeTypeEntity.breakfast,
+      meal: MealEntity(
+        code: name,
+        name: name,
+        url: null,
+        mealQuantity: null,
+        mealUnit: 'g',
+        servingQuantity: null,
+        servingUnit: 'g',
+        servingSize: null,
+        nutriments: MealNutrimentsEntity(
+          energyKcal100: 380,
+          carbohydrates100: 60,
+          fat100: 7,
+          proteins100: 13,
+          sugars100: null,
+          saturatedFat100: null,
+          fiber100: null,
+          sodium100: sodium,
+        ),
+        source: MealSourceEntity.custom,
+      ),
+      dateTime: at,
+    );
 
 void main() {
   group('expenditureChanges', () {
@@ -360,6 +364,76 @@ void main() {
         _ate(DateTime(2026, 10, 26, 8)),
       ], dayStartMinutes: 240),
       1.5,
+    );
+  });
+
+  group('scaleNoise', () {
+    test('each weigh-in against the trend, the mean and the largest', () {
+      final week = windowDates(_today, 7);
+      final entries = [
+        for (var i = -20; i <= 0; i++)
+          WeightLogEntity(
+            date: _d(i).add(const Duration(hours: 7)),
+            weightKg: i == -3 ? 81.5 : 80,
+          ),
+      ];
+      final n = scaleNoise(entries, week)!;
+      expect(n.byDay.keys, week);
+      expect(n.largest.on, _d(-3));
+      expect(n.largest.kg, greaterThan(1));
+      // The days after the jump read below the trend it lifted.
+      expect(n.byDay[_d(-2)], lessThan(0));
+      expect(
+        n.meanKg,
+        closeTo(
+          n.byDay.values.map((v) => v.abs()).reduce((a, b) => a + b) / 7,
+          1e-9,
+        ),
+      );
+      expect(scaleNoise(entries, windowDates(_d(-30), 7)), isNull);
+    });
+  });
+
+  group('swingAfterHigh', () {
+    final week = windowDates(_today, 7);
+    test('the mornings after high days against the rest', () {
+      final s = swingAfterHigh(
+        {for (final (i, d) in week.indexed) d: i == 2 || i == 5 ? 0.8 : 0.1},
+        week,
+        [100, 300, 100, 100, 300, 100, 100],
+      )!;
+      expect(s.days, 2);
+      expect(s.after, closeTo(0.8, 1e-9));
+      expect(s.other, closeTo(0.1, 1e-9));
+    });
+
+    test('null with a single high day', () {
+      expect(
+        swingAfterHigh(
+          {for (final d in week) d: 0.1},
+          week,
+          [100, 300, 100, 100, 100, 100, 100],
+        ),
+        isNull,
+      );
+    });
+  });
+
+  test('a nutrient each day, by the Diary\'s day', () {
+    final sodium = explorerNutrients.firstWhere((n) => n.label == 'Sodium');
+    final days = [_d(-1), _d(0)];
+    expect(
+      nutrientByDay(
+        [
+          _ate(DateTime(2026, 10, 25, 8), sodium: 400),
+          _ate(DateTime(2026, 10, 26, 2), sodium: 100),
+          _ate(DateTime(2026, 10, 26, 9)),
+        ],
+        days,
+        sodium,
+        dayStartMinutes: 240,
+      ),
+      [500, null],
     );
   });
 }

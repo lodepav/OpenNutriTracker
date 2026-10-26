@@ -1,8 +1,11 @@
 import 'package:opennutritracker/core/domain/entity/intake_entity.dart';
 import 'package:opennutritracker/core/domain/entity/tracked_day_entity.dart';
+import 'package:opennutritracker/core/domain/entity/weight_log_entity.dart';
 import 'package:opennutritracker/core/utils/calc/day_boundary_calc.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
+import 'package:opennutritracker/fork/adaptive/trend_points.dart';
+import 'package:opennutritracker/fork/report/nutrient_explorer.dart';
 import 'package:opennutritracker/fork/trends/trend_stats.dart';
 
 /// The spans the Expenditure page's table of changes reads, in days.
@@ -358,4 +361,83 @@ double? entriesPerDay(List<IntakeEntity> intakes, {int dayStartMinutes = 0}) {
       DayBoundaryCalc.dayKeyOf(i.dateTime, dayStartMinutes),
   };
   return intakes.length / days.length;
+}
+
+/// How far the window's weigh-ins stray from the trend, in kg: the mean
+/// distance, the largest (above the trend when positive) and its day, and
+/// each day's last weigh-in less the trend that day; null without a
+/// weigh-in in the window.
+({
+  double meanKg,
+  ({double kg, DateTime on}) largest,
+  Map<DateTime, double> byDay,
+})?
+scaleNoise(List<WeightLogEntity> entries, List<DateTime> dates) {
+  final window = dates.toSet();
+  final trend = {
+    for (final p in trendPoints(entries)) _date(p.date): p.weightKg,
+  };
+  final byDay = <DateTime, double>{};
+  for (final e in [...entries]..sort((a, b) => a.date.compareTo(b.date))) {
+    final day = _date(e.date);
+    if (!window.contains(day)) continue;
+    if (trend[day] case final t?) byDay[day] = e.weightKg - t;
+  }
+  if (byDay.isEmpty) return null;
+  final largest = byDay.entries.reduce(
+    (a, b) => b.value.abs() > a.value.abs() ? b : a,
+  );
+  return (
+    meanKg:
+        byDay.values.map((v) => v.abs()).reduce((a, b) => a + b) / byDay.length,
+    largest: (kg: largest.value, on: largest.key),
+    byDay: byDay,
+  );
+}
+
+/// The mean of [byDay]'s gaps to the trend on the mornings after the days
+/// of [dates] whose [values] ran past [share] of their mean, beside the
+/// mean on the other mornings, and how many mornings followed such a day;
+/// null under [atLeast] of either.
+({double after, double other, int days})? swingAfterHigh(
+  Map<DateTime, double> byDay,
+  List<DateTime> dates,
+  List<double?> values, {
+  double share = 1.2,
+  int atLeast = 2,
+}) {
+  final known = values.whereType<double>().toList();
+  if (known.isEmpty) return null;
+  final mean = known.reduce((a, b) => a + b) / known.length;
+  final after = <double>[], other = <double>[];
+  for (var i = 1; i < dates.length; i++) {
+    final gap = byDay[dates[i]];
+    final before = values[i - 1];
+    if (gap == null || before == null) continue;
+    (before > mean * share ? after : other).add(gap);
+  }
+  if (after.length < atLeast || other.length < atLeast) return null;
+  double avg(List<double> v) => v.reduce((a, b) => a + b) / v.length;
+  return (after: avg(after), other: avg(other), days: after.length);
+}
+
+/// [nutrient] eaten each day of [dates], over [intakes] counted on the
+/// Diary's logical days; null on a day no entry gives a figure for.
+List<double?> nutrientByDay(
+  List<IntakeEntity> intakes,
+  List<DateTime> dates,
+  ExplorerNutrient nutrient, {
+  int dayStartMinutes = 0,
+}) {
+  final sums = <DateTime, double>{};
+  for (final i in intakes) {
+    final amount = nutrient.of(i);
+    if (amount == null) continue;
+    final day = DayBoundaryCalc.logicalDayOfMinutes(
+      i.dateTime,
+      dayStartMinutes,
+    );
+    sums[day] = (sums[day] ?? 0) + amount;
+  }
+  return [for (final d in dates) sums[d]];
 }
