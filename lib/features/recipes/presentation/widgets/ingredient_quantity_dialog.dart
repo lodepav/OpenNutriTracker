@@ -4,6 +4,7 @@ import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dart';
 import 'package:opennutritracker/generated/l10n.dart';
+import 'package:opennutritracker/fork/display/sheet_inset.dart'; // [fork] S160
 
 class IngredientQuantitySelection {
   final double amount;
@@ -104,7 +105,7 @@ class _IngredientQuantitySheetState extends State<_IngredientQuantitySheet> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final palette = isDark ? AppPalette.dark : AppPalette.light;
-    final viewInsets = MediaQuery.of(context).viewInsets;
+    final viewInsets = EdgeInsets.only(bottom: sheetBottomInset(context)); // [fork] S160 above the nav bar
     final fieldBorder = OutlineInputBorder(
       borderRadius: Dimens.borderRadiusS,
       borderSide: BorderSide(color: palette.border, width: Dimens.hairline),

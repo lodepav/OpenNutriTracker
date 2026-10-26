@@ -17,6 +17,7 @@ import 'package:opennutritracker/features/home/presentation/bloc/home_bloc.dart'
 import 'package:opennutritracker/generated/l10n.dart';
 import 'package:provider/provider.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
+import 'package:opennutritracker/fork/display/sheet_inset.dart'; // [fork] S160
 
 /// Fast path for logging an activity by typing the time spent and the
 /// calories burned directly, for people whose tracker (a step counter,
@@ -129,7 +130,7 @@ class _QuickAddActivityBottomSheetState
     final s = S.of(context);
 
     return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      padding: EdgeInsets.only(bottom: sheetBottomInset(context)), // [fork] S160 above the nav bar
       child: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(
           Dimens.spacing24,
