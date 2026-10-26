@@ -158,11 +158,13 @@ class _FitsLeftSwitchState extends State<FitsLeftSwitch> {
       }
       final left = data.left;
       final foods = fitsLeft(data.recents, left);
-      String grams(double g) => '${g < 0 ? 0 : g.round()} g';
+      // A macro past its goal says so, as Home does (H4)
+      String grams(double g, String name) =>
+          g < 0 ? '$name ${(-g).round()} g over' : '${g.round()} g $name';
       final macros = inMacroOrder(
-        carbs: '${grams(left.carbs)} carbs',
-        fat: '${grams(left.fat)} fat',
-        protein: '${grams(left.protein)} protein',
+        carbs: grams(left.carbs, 'carbs'),
+        fat: grams(left.fat, 'fat'),
+        protein: grams(left.protein, 'protein'),
       ).join(', ');
       return ListView(
         children: [

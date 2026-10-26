@@ -155,7 +155,8 @@ Future<void> logRecipeServing(
   final written = await locator<MealDetailBloc>().addIntake(
     context,
     'g',
-    portion.grams.toString(),
+    // One decimal: "91.3 g" in the Diary, not "91.25" (H2)
+    portion.grams.toStringAsFixed(1),
     type,
     recipe.toMealEntity(),
     DateTime.now(),

@@ -12,6 +12,12 @@ import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dar
 import 'package:opennutritracker/features/edit_meal/presentation/edit_meal_screen.dart';
 import 'package:opennutritracker/features/settings/presentation/bloc/custom_meals_bloc.dart';
 import 'package:opennutritracker/generated/l10n.dart';
+// [fork] S142 custom-food-rows
+import 'package:opennutritracker/core/utils/meal_type_suggester.dart';
+import 'package:opennutritracker/features/meal_detail/meal_detail_screen.dart';
+import 'package:opennutritracker/fork/recipe/recipe_list.dart' show macroSpans;
+import 'package:opennutritracker/fork/units/energy_text.dart';
+// [/fork]
 
 /// Embeddable list of user-created custom meals (formerly the body of
 /// CustomMealsScreen in Settings). Hosted inside RecipesPage's TabBarView.
@@ -80,7 +86,7 @@ class CustomMealsTab extends StatelessWidget {
                   padding: EdgeInsets.zero,
                   child: InkWell(
                     borderRadius: Dimens.borderRadiusL,
-                    onTap: () => _openEditMeal(context, meal),
+                    onTap: () => _openFoodPage(context, meal), // [fork] S142
                     child: Padding(
                       padding: const EdgeInsets.all(Dimens.spacing12),
                       child: Row(
@@ -97,6 +103,28 @@ class CustomMealsTab extends StatelessWidget {
                                   overflow: TextOverflow.ellipsis,
                                   style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
                                 ),
+                                // [fork] S142 custom-food-rows: what it holds,
+                                // as a recipe row says (H7)
+                                const SizedBox(height: Dimens.spacing4),
+                                Text.rich(
+                                  TextSpan(
+                                    children: [
+                                      TextSpan(
+                                        text:
+                                            '${energyText(context, meal.nutriments.energyKcal100 ?? 0)} '
+                                            'per 100 ${meal.isLiquid ? 'ml' : 'g'} · ',
+                                      ),
+                                      ...macroSpans(context, (
+                                        kcal: meal.nutriments.energyKcal100 ?? 0,
+                                        carbs: meal.nutriments.carbohydrates100 ?? 0,
+                                        fat: meal.nutriments.fat100 ?? 0,
+                                        protein: meal.nutriments.proteins100 ?? 0,
+                                      ), small: true),
+                                    ],
+                                  ),
+                                  style: textTheme.bodySmall?.copyWith(color: palette.textMuted),
+                                ),
+                                // [/fork]
                                 if (meal.brands != null) ...[
                                   const SizedBox(height: Dimens.spacing4),
                                   Text(
@@ -109,8 +137,9 @@ class CustomMealsTab extends StatelessWidget {
                               ],
                             ),
                           ),
-                          if (canMerge)
-                            Semantics(
+                          // [fork] S142 custom-food-rows: a tap logs, so
+                          // editing moves into the menu
+                          Semantics(
                               identifier: 'custom-foods-merge-open',
                               child: PopupMenuButton<String>(
                                 icon: Icon(Icons.more_vert_rounded, color: palette.textMuted),
@@ -119,8 +148,14 @@ class CustomMealsTab extends StatelessWidget {
                                   if (value == 'merge') {
                                     _startMerge(context, meal, state.meals);
                                   }
+                                  if (value == 'edit') _openEditMeal(context, meal);
                                 },
                                 itemBuilder: (ctx) => [
+                                  PopupMenuItem<String>(
+                                    value: 'edit',
+                                    child: Text(S.of(context).editMealLabel),
+                                  ),
+                                  if (canMerge)
                                   PopupMenuItem<String>(
                                     value: 'merge',
                                     child: Text(
@@ -149,6 +184,27 @@ class CustomMealsTab extends StatelessWidget {
     );
   }
 
+  // [fork] S142 custom-food-rows: a tap opens the food's page to log it,
+  // to the meal the + sheet opened Recipes for or the time's; its pencil
+  // edits it
+  Future<void> _openFoodPage(BuildContext context, MealEntity meal) async {
+    final bloc = context.read<CustomMealsBloc>();
+    final args = ModalRoute.of(context)?.settings.arguments;
+    await Navigator.of(context).pushNamed(
+      NavigationOptions.mealDetailRoute,
+      arguments: MealDetailScreenArguments(
+        meal,
+        args is IntakeTypeEntity
+            ? args
+            : MealTypeSuggester.suggestFromTime(DateTime.now()),
+        DateTime.now(),
+        usesImperialUnits,
+      ),
+    );
+    bloc.add(LoadCustomMealsEvent());
+  }
+  // [/fork]
+
   Future<void> _openEditMeal(BuildContext context, MealEntity meal) async {
     final bloc = context.read<CustomMealsBloc>();
     await Navigator.of(context).pushNamed(
@@ -170,7 +226,11 @@ class CustomMealsTab extends StatelessWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(S.of(context).customMealsDeleteConfirmTitle),
-        content: Text(S.of(context).customMealsDeleteConfirmContent),
+        // [fork] S142 keep-history
+        content: const Text(
+          'Past diary entries logged from it will be kept.',
+        ),
+        // [/fork]
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),

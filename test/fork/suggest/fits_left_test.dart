@@ -165,6 +165,42 @@ void main() {
     expect(left.carbs, 250);
   });
 
+  testWidgets('a macro past its goal says how far over', (tester) async {
+    await GetIt.instance.reset();
+    final favourites = FakeFavourites();
+    GetIt.instance.registerFactory<FavouriteToggleBloc>(
+      () => FavouriteToggleBloc(favourites.get, favourites.toggle),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: const [S.delegate],
+        home: Scaffold(
+          body: FitsLeftSwitch(
+            day: DateTime(2026, 10, 25),
+            addMealType: AddMealType.lunchType,
+            recents: const Text('All recents'),
+            load: (_) async => (
+              left: (kcal: 89.0, protein: 14.0, carbs: 50.0, fat: -10.0),
+              recents: [_cake, _chicken],
+              imperial: false,
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.byKey(const ValueKey('add-meal-fits-left')));
+    await tester.pumpAndSettle();
+    expect(
+      find.textContaining(
+        '89 kcal left: 50 g carbs, fat 10 g over, 14 g protein',
+      ),
+      findsOneWidget,
+    );
+    // The chip is remembered; leave it off for the next test.
+    await tester.tap(find.byKey(const ValueKey('add-meal-fits-left')));
+    await tester.pumpAndSettle();
+  });
+
   testWidgets('the chip swaps the recents for what fits', (tester) async {
     await GetIt.instance.reset();
     final favourites = FakeFavourites();

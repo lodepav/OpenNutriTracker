@@ -116,10 +116,14 @@ class _AddMealScreenState extends State<AddMealScreen> {
         actions: [
           Semantics(
             identifier: 'add-meal-quick-add',
-            child: TextButton(
+            // [fork] S142: an icon, as the actions beside it, so the meal
+            // in the title has room (A6); Quick add is a tile on the + sheet
+            child: IconButton(
               onPressed: _onQuickAddPressed,
-              child: Text(S.of(context).quickAddCardLabel),
+              icon: const Icon(Icons.bolt_rounded),
+              tooltip: S.of(context).quickAddCardLabel,
             ),
+            // [/fork]
           ),
           BlocBuilder<AddMealBloc, AddMealState>(
             bloc: locator<AddMealBloc>()..add(InitializeAddMealEvent()),

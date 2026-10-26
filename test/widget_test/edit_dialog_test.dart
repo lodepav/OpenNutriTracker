@@ -29,7 +29,10 @@ final _intake = IntakeEntity(
 );
 
 /// Opens the dialog and returns what it pops with, once a test closes it.
-Future<Future<double?>> _open(WidgetTester tester) async {
+Future<Future<double?>> _open(
+  WidgetTester tester, {
+  IntakeEntity? intake, // [fork] S142
+}) async {
   late Future<double?> result;
   await tester.pumpWidget(
     MaterialApp(
@@ -45,7 +48,10 @@ Future<Future<double?>> _open(WidgetTester tester) async {
           onPressed: () => result = showDialog<double>(
             context: context,
             builder: (_) =>
-                EditDialog(intakeEntity: _intake, usesImperialUnits: false),
+                EditDialog(
+                  intakeEntity: intake ?? _intake, // [fork] S142
+                  usesImperialUnits: false,
+                ),
           ),
           child: const Text('open'),
         ),
@@ -99,4 +105,48 @@ void main() {
 
     expect(_amountShown(tester), '300'); // [fork] S83
   });
+
+  // [fork] S142 energy-only: a Quick add of 250 kcal, as the sheet saves it
+  testWidgets('an energy-only Quick add is edited as its energy', (
+    tester,
+  ) async {
+    final quickAdd = IntakeEntity(
+      id: 'i-2',
+      unit: 'g',
+      amount: 100,
+      type: IntakeTypeEntity.snack,
+      meal: MealEntity(
+        code: 'qa',
+        name: 'Quick add',
+        url: null,
+        mealQuantity: '100',
+        mealUnit: 'gml',
+        servingQuantity: null,
+        servingUnit: 'gml',
+        servingSize: '',
+        nutriments: const MealNutrimentsEntity(
+          energyKcal100: 250,
+          carbohydrates100: null,
+          fat100: null,
+          proteins100: null,
+          sugars100: null,
+          saturatedFat100: null,
+          fiber100: null,
+        ),
+        source: MealSourceEntity.custom,
+      ),
+      dateTime: DateTime.utc(2026, 10, 22),
+    );
+    final result = await _open(tester, intake: quickAdd);
+    expect(find.text('Energy'), findsOneWidget);
+    expect(_amountShown(tester), '250');
+    expect(find.text('gml'), findsNothing);
+
+    await tester.enterText(find.byType(TextFormField).first, '200');
+    await tester.tap(find.text('OK'));
+    await tester.pumpAndSettle();
+    // 200 kcal of a food at 250 kcal per 100
+    expect(await result, closeTo(80, 1e-9));
+  });
+  // [/fork]
 }
