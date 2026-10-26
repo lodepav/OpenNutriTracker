@@ -32,6 +32,13 @@ List<T> arranged<T>(Map<String, T> items, Layout layout) => [
     if (!layout.hidden.contains(id)) items[id] as T,
 ];
 
+/// Of [optional] items, those not switched on: hidden, or not in the
+/// saved order yet.
+Set<String> addable(Iterable<String> optional, Layout layout) => {
+  for (final id in optional)
+    if (!layout.order.contains(id) || layout.hidden.contains(id)) id,
+};
+
 /// One list's layout under [key], per profile in the fork's box.
 class LayoutStore {
   final String key;

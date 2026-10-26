@@ -7,6 +7,9 @@ import 'package:opennutritracker/features/trends/presentation/bloc/trends_bloc.d
 import 'package:opennutritracker/features/trends/presentation/trends_calc.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
+import 'package:opennutritracker/core/domain/entity/body_weight_unit_entity.dart';
+import 'package:opennutritracker/fork/body/measurement_store.dart';
+import 'package:opennutritracker/fork/body/side_compare.dart';
 import 'package:opennutritracker/fork/display/display_prefs.dart';
 import 'package:opennutritracker/fork/report/rate_text.dart';
 import 'package:opennutritracker/fork/layout/arrange_screen.dart';
@@ -60,6 +63,11 @@ class TrendsOverview extends StatefulWidget {
   @visibleForTesting
   static Future<GoalState> Function() loadGoal = () => GoalStartStore().load();
 
+  /// Where the left and right tile reads the measurements, here and on
+  /// Home; tests swap it.
+  static Future<List<Measurement>> Function() loadMeasurements = () async =>
+      MeasurementStore().all();
+
   @override
   State<TrendsOverview> createState() => _TrendsOverviewState();
 }
@@ -67,11 +75,23 @@ class TrendsOverview extends StatefulWidget {
 class _TrendsOverviewState extends State<TrendsOverview> {
   late final _history = ValueNotifier(_load());
 
-  /// The tiles' and the cards' arrangement; Trends rebuilds on either.
+  /// The tiles' and the cards' arrangement, and the pair the left and
+  /// right tile compares; Trends rebuilds on any.
   final _layouts = Listenable.merge([
     TrendsTilesStore.current,
     TrendsLayoutStore.current,
+    SidePartPref.current,
   ]);
+
+  /// The body measurements, for the left and right tile.
+  late Future<List<Measurement>> _measurements = _measure();
+
+  static Future<List<Measurement>> _measure() =>
+      TrendsOverview.loadMeasurements().catchError(
+        (Object _) => <Measurement>[],
+      );
+
+  void _remeasure() => setState(() => _measurements = _measure());
 
   /// The estimate moves with the expenditure settings and the days left
   /// out (D17), and with what was logged.
@@ -120,6 +140,8 @@ class _TrendsOverviewState extends State<TrendsOverview> {
   void initState() {
     super.initState();
     _changes.addListener(_reload);
+    MeasurementStore.changes.addListener(_remeasure);
+    SidePartPref.ensureLoaded();
   }
 
   @override
@@ -137,6 +159,7 @@ class _TrendsOverviewState extends State<TrendsOverview> {
   @override
   void dispose() {
     _changes.removeListener(_reload);
+    MeasurementStore.changes.removeListener(_remeasure);
     _history.dispose();
     super.dispose();
   }
@@ -159,247 +182,260 @@ class _TrendsOverviewState extends State<TrendsOverview> {
             future: future,
             builder: (context, snapshot) => FutureBuilder(
               future: dates.isEmpty ? null : _microsOf(dates),
-              builder: (context, micros) {
-                final all = {
-                  for (final t in _tiles(
-                    context,
-                    dates,
-                    snapshot.data ?? const [],
-                    micros.data,
-                  ))
-                    t.id.substring('trends-tile-'.length): t,
-                };
-                final tiles = arranged(all, TrendsTilesStore.current.value);
-                final logged = state.days.where(isLogged).length;
-                return ListView(
-                  padding: const EdgeInsets.fromLTRB(
-                    Dimens.spacing12,
-                    Dimens.spacing8,
-                    Dimens.spacing12,
-                    Dimens.spacing32,
-                  ),
-                  children: [
-                    _Streak(days: state.days, windowDays: state.windowDays),
-                    const SizedBox(height: Dimens.spacing8),
-                    RangePills(
-                      rangeDays: state.rangeDays,
-                      onChanged: (d) => context.read<TrendsBloc>().add(
-                        LoadTrendsEvent(rangeDays: d),
-                      ),
+              builder: (context, micros) => FutureBuilder(
+                future: _measurements,
+                builder: (context, measured) {
+                  final all = {
+                    for (final t in trendTiles(
+                      context,
+                      state,
+                      dates: dates,
+                      history: snapshot.data ?? const [],
+                      micros: micros.data,
+                      measurements: measured.data,
+                      open: (m) => openTrendDetail(context, m, _deps),
+                    ))
+                      t.id.substring('trends-tile-'.length): t,
+                  };
+                  final tiles = arranged(all, TrendsTilesStore.current.value);
+                  final logged = state.days.where(isLogged).length;
+                  return ListView(
+                    padding: const EdgeInsets.fromLTRB(
+                      Dimens.spacing12,
+                      Dimens.spacing8,
+                      Dimens.spacing12,
+                      Dimens.spacing32,
                     ),
-                    const SizedBox(height: Dimens.spacing12),
-                    for (var i = 0; i < tiles.length; i += 2)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: Dimens.spacing8),
-                        // The tiles are alike, so a row's two are one height;
-                        // AutoSizeText measures, so no IntrinsicHeight here.
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(child: tiles[i]),
-                            const SizedBox(width: Dimens.spacing8),
-                            Expanded(
-                              child: i + 1 < tiles.length
-                                  ? tiles[i + 1]
-                                  : const SizedBox.shrink(),
-                            ),
-                          ],
+                    children: [
+                      _Streak(days: state.days, windowDays: state.windowDays),
+                      const SizedBox(height: Dimens.spacing8),
+                      RangePills(
+                        rangeDays: state.rangeDays,
+                        onChanged: (d) => context.read<TrendsBloc>().add(
+                          LoadTrendsEvent(rangeDays: d),
                         ),
                       ),
-                    Text(
-                      'Tap a card for its chart · '
-                      '${rangeText(state.rangeDays, state.windowDays)}, '
-                      '$logged logged',
-                      textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: paletteOf(context).textMuted,
+                      const SizedBox(height: Dimens.spacing12),
+                      for (var i = 0; i < tiles.length; i += 2)
+                        Padding(
+                          padding: const EdgeInsets.only(
+                            bottom: Dimens.spacing8,
+                          ),
+                          // The tiles are alike, so a row's two are one height;
+                          // AutoSizeText measures, so no IntrinsicHeight here.
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(child: tiles[i]),
+                              const SizedBox(width: Dimens.spacing8),
+                              Expanded(
+                                child: i + 1 < tiles.length
+                                    ? tiles[i + 1]
+                                    : const SizedBox.shrink(),
+                              ),
+                            ],
+                          ),
+                        ),
+                      Text(
+                        'Tap a card for its chart · '
+                        '${rangeText(state.rangeDays, state.windowDays)}, '
+                        '$logged logged',
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: paletteOf(context).textMuted,
+                        ),
                       ),
-                    ),
-                    ...arrangeTrendCards(widget.cards),
-                    const SizedBox(height: Dimens.spacing16),
-                    Center(
-                      child: TextButton.icon(
-                        key: const ValueKey('trends-arrange'),
-                        icon: const Icon(Icons.tune_rounded),
-                        label: const Text('Arrange Trends'),
-                        onPressed: () => Navigator.push(
-                          context,
-                          MaterialPageRoute<void>(
-                            builder: (_) => ArrangeScreen(
-                              title: 'Arrange Trends',
-                              lists: [
-                                ArrangeList(
-                                  title: 'Tiles',
-                                  store: TrendsTilesStore(),
-                                  names: {
-                                    for (final MapEntry(:key, :value)
-                                        in all.entries)
-                                      key: value.label.replaceAll(' · avg', ''),
-                                  },
-                                ),
-                                ArrangeList(
-                                  title: 'Cards',
-                                  store: TrendsLayoutStore(),
-                                  names: trendCards,
-                                ),
-                              ],
+                      ...arrangeTrendCards(widget.cards),
+                      const SizedBox(height: Dimens.spacing16),
+                      Center(
+                        child: TextButton.icon(
+                          key: const ValueKey('trends-arrange'),
+                          icon: const Icon(Icons.tune_rounded),
+                          label: const Text('Arrange Trends'),
+                          onPressed: () => Navigator.push(
+                            context,
+                            MaterialPageRoute<void>(
+                              builder: (_) => ArrangeScreen(
+                                title: 'Arrange Trends',
+                                lists: [
+                                  ArrangeList(
+                                    title: 'Tiles',
+                                    store: TrendsTilesStore(),
+                                    names: {
+                                      for (final MapEntry(:key, :value)
+                                          in all.entries)
+                                        key: value.label.replaceAll(
+                                          ' · avg',
+                                          '',
+                                        ),
+                                    },
+                                  ),
+                                  ArrangeList(
+                                    title: 'Cards',
+                                    store: TrendsLayoutStore(),
+                                    names: trendCards,
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         ),
                       ),
-                    ),
-                  ],
-                );
-              },
+                    ],
+                  );
+                },
+              ),
             ),
           ),
         ),
       ),
     );
   }
+}
 
-  List<TrendTile> _tiles(
-    BuildContext context,
-    List<DateTime> dates,
-    List<ExpenditureDay> history,
-    MicroData? micros,
-  ) {
-    final state = widget.state;
-    final palette = paletteOf(context);
-    final unit = energyUnit(context);
-    void open(TrendMetric m) => openTrendDetail(context, m, _deps);
+/// The tiles, by id `trends-tile-<metric>`: what each shows over [dates],
+/// and [open] opens a metric's page. Home shows those added there.
+List<TrendTile> trendTiles(
+  BuildContext context,
+  TrendsLoaded state, {
+  required List<DateTime> dates,
+  required List<ExpenditureDay> history,
+  required MicroData? micros,
+  required List<Measurement>? measurements,
+  required void Function(TrendMetric metric) open,
+}) {
+  final palette = paletteOf(context);
+  final unit = energyUnit(context);
 
-    TrendTile tile(
-      TrendMetric m, {
-      required String value,
-      String? suffix,
-      Color? valueColor,
-      required DaySeries spark,
-      required Color sparkColor,
-      bool bars = true,
-      String? label,
-    }) => TrendTile(
-      id: 'trends-tile-${m.name}',
-      label: label ?? metricTitle(context, m),
-      value: value,
-      suffix: suffix,
-      valueColor: valueColor,
-      chart: Sparkline(values: spark, color: sparkColor, bars: bars),
-      onTap: () => open(m),
+  TrendTile tile(
+    TrendMetric m, {
+    required String value,
+    String? suffix,
+    Color? valueColor,
+    required DaySeries spark,
+    required Color sparkColor,
+    bool bars = true,
+    String? label,
+  }) => TrendTile(
+    id: 'trends-tile-${m.name}',
+    label: label ?? metricTitle(context, m),
+    value: value,
+    suffix: suffix,
+    valueColor: valueColor,
+    chart: Sparkline(values: spark, color: sparkColor, bars: bars),
+    onTap: () => open(m),
+  );
+
+  final energy = nutritionSeries(state.days, dates, (d) => d.caloriesTracked);
+  final energyMean = meanOf(energy);
+  final energyGoal = goalOf(state.days, dates, (d) => d.calorieGoal);
+
+  final weight = WeightTrendStats.of(state.weight, dates);
+  final wu = state.bodyWeightUnit;
+  final wLabel = weightUnitLabel(context, wu);
+
+  final spent = expenditureSeries(history, dates);
+  final spentNow = spent.whereType<double>().lastOrNull;
+  final balance = balanceSeries(history, dates);
+  final balanceMean = meanOf(balance);
+
+  TrendTile macroTile(TrendMetric m, Color color) {
+    final macro = macroOf(m);
+    final series = nutritionSeries(state.days, dates, macro.eaten);
+    final mean = meanOf(series);
+    final goal = goalOf(state.days, dates, macro.goal);
+    return tile(
+      m,
+      label: '${metricTitle(context, m)} · avg',
+      value: mean == null ? '–' : '${mean.round()}',
+      // S114: grams rounded, as the weekly report's are.
+      suffix: goal == null ? 'g' : '/ ${goal.round()} g',
+      valueColor: color,
+      spark: series,
+      sparkColor: color,
     );
-
-    final energy = nutritionSeries(state.days, dates, (d) => d.caloriesTracked);
-    final energyMean = meanOf(energy);
-    final energyGoal = goalOf(state.days, dates, (d) => d.calorieGoal);
-
-    final weight = WeightTrendStats.of(state.weight, dates);
-    final wu = state.bodyWeightUnit;
-    final wLabel = weightUnitLabel(context, wu);
-
-    final spent = expenditureSeries(history, dates);
-    final spentNow = spent.whereType<double>().lastOrNull;
-    final balance = balanceSeries(history, dates);
-    final balanceMean = meanOf(balance);
-
-    TrendTile macroTile(TrendMetric m, Color color) {
-      final macro = macroOf(m);
-      final series = nutritionSeries(state.days, dates, macro.eaten);
-      final mean = meanOf(series);
-      final goal = goalOf(state.days, dates, macro.goal);
-      return tile(
-        m,
-        label: '${metricTitle(context, m)} · avg',
-        value: mean == null ? '–' : '${mean.round()}',
-        // S114: grams rounded, as the weekly report's are.
-        suffix: goal == null ? 'g' : '/ ${goal.round()} g',
-        valueColor: color,
-        spark: series,
-        sparkColor: color,
-      );
-    }
-
-    TrendTile microTile(TrendMetric m) {
-      final nutrient = microNutrient(m);
-      final micro = micros == null
-          ? null
-          : microOf(micros, state.days, dates, m);
-      final mean = micro == null ? null : meanOf(micro.series);
-      final goal = micro?.summary.goal;
-      final color = Theme.of(context).colorScheme.primary;
-      return tile(
-        m,
-        label: '${metricTitle(context, m)} · avg',
-        value: mean == null ? '–' : '${mean.round()}',
-        suffix: goal == null
-            ? nutrient.unit
-            : '/ ${goal.round()} ${nutrient.unit}',
-        spark: micro?.series ?? [for (final _ in dates) null],
-        sparkColor: color,
-      );
-    }
-
-    final water = waterSeries(state.waterByDay, dates);
-    final waterMean = meanOf(water);
-
-    return [
-      tile(
-        TrendMetric.calories,
-        label: '${energyTitle(context)} · avg',
-        // Cut, as energyValue is everywhere (S114).
-        value: energyMean == null ? '–' : '${energyValue(context, energyMean)}',
-        suffix: energyGoal == null
-            ? unit
-            : '/ ${energyValue(context, energyGoal)} $unit',
-        spark: energy,
-        sparkColor: palette.accent,
-      ),
-      tile(
-        TrendMetric.weight,
-        value: weight.nowKg == null
-            ? '–'
-            : weightIn(wu, weight.nowKg!).toStringAsFixed(1),
-        suffix: weight.perWeekKg == null
-            ? wLabel
-            : '$wLabel · ${signedRate(weightIn(wu, weight.perWeekKg!))}/wk',
-        spark: weight.trend,
-        sparkColor: Theme.of(context).colorScheme.primary,
-        bars: false,
-      ),
-      tile(
-        TrendMetric.expenditure,
-        value: spentNow == null ? '–' : '${energyValue(context, spentNow)}',
-        suffix: spentNow == null ? 'after a weigh-in' : '$unit/day',
-        spark: spent,
-        sparkColor: palette.accent,
-        bars: false,
-      ),
-      tile(
-        TrendMetric.balance,
-        value: balanceMean == null
-            ? '–'
-            : signedText(energyValue(context, balanceMean).toDouble()),
-        suffix: '$unit/day',
-        spark: balance,
-        sparkColor: palette.fat,
-      ),
-      ...inMacroOrder(
-        carbs: macroTile(TrendMetric.carbs, palette.carbs),
-        fat: macroTile(TrendMetric.fat, palette.fat),
-        protein: macroTile(TrendMetric.protein, palette.protein),
-      ),
-      for (final m in microLabels.keys) microTile(m),
-      if (DisplayPrefs.showWater.value)
-        tile(
-          TrendMetric.water,
-          label: '${metricTitle(context, TrendMetric.water)} · avg',
-          value: waterMean == null ? '–' : '${waterMean.round()}',
-          suffix: state.waterGoalMl > 0 ? '/ ${state.waterGoalMl} ml' : 'ml',
-          spark: water,
-          sparkColor: waterColor(context),
-        ),
-      _goalTile(context, state, weight),
-    ];
   }
+
+  TrendTile microTile(TrendMetric m) {
+    final nutrient = microNutrient(m);
+    final micro = micros == null ? null : microOf(micros, state.days, dates, m);
+    final mean = micro == null ? null : meanOf(micro.series);
+    final goal = micro?.summary.goal;
+    final color = Theme.of(context).colorScheme.primary;
+    return tile(
+      m,
+      label: '${metricTitle(context, m)} · avg',
+      value: mean == null ? '–' : '${mean.round()}',
+      suffix: goal == null
+          ? nutrient.unit
+          : '/ ${goal.round()} ${nutrient.unit}',
+      spark: micro?.series ?? [for (final _ in dates) null],
+      sparkColor: color,
+    );
+  }
+
+  final water = waterSeries(state.waterByDay, dates);
+  final waterMean = meanOf(water);
+
+  return [
+    tile(
+      TrendMetric.calories,
+      label: '${energyTitle(context)} · avg',
+      // Cut, as energyValue is everywhere (S114).
+      value: energyMean == null ? '–' : '${energyValue(context, energyMean)}',
+      suffix: energyGoal == null
+          ? unit
+          : '/ ${energyValue(context, energyGoal)} $unit',
+      spark: energy,
+      sparkColor: palette.accent,
+    ),
+    tile(
+      TrendMetric.weight,
+      value: weight.nowKg == null
+          ? '–'
+          : weightIn(wu, weight.nowKg!).toStringAsFixed(1),
+      suffix: weight.perWeekKg == null
+          ? wLabel
+          : '$wLabel · ${signedRate(weightIn(wu, weight.perWeekKg!))}/wk',
+      spark: weight.trend,
+      sparkColor: Theme.of(context).colorScheme.primary,
+      bars: false,
+    ),
+    tile(
+      TrendMetric.expenditure,
+      value: spentNow == null ? '–' : '${energyValue(context, spentNow)}',
+      suffix: spentNow == null ? 'after a weigh-in' : '$unit/day',
+      spark: spent,
+      sparkColor: palette.accent,
+      bars: false,
+    ),
+    tile(
+      TrendMetric.balance,
+      value: balanceMean == null
+          ? '–'
+          : signedText(energyValue(context, balanceMean).toDouble()),
+      suffix: '$unit/day',
+      spark: balance,
+      sparkColor: palette.fat,
+    ),
+    ...inMacroOrder(
+      carbs: macroTile(TrendMetric.carbs, palette.carbs),
+      fat: macroTile(TrendMetric.fat, palette.fat),
+      protein: macroTile(TrendMetric.protein, palette.protein),
+    ),
+    for (final m in microLabels.keys) microTile(m),
+    if (DisplayPrefs.showWater.value)
+      tile(
+        TrendMetric.water,
+        label: '${metricTitle(context, TrendMetric.water)} · avg',
+        value: waterMean == null ? '–' : '${waterMean.round()}',
+        suffix: state.waterGoalMl > 0 ? '/ ${state.waterGoalMl} ml' : 'ml',
+        spark: water,
+        sparkColor: waterColor(context),
+      ),
+    _goalTile(context, state, weight),
+    _sidesTile(context, state, measurements),
+  ];
 }
 
 /// Goal progress: the way left to the target; it opens Goal progress.
@@ -427,6 +463,32 @@ TrendTile _goalTile(
         ? const SizedBox()
         : _GoalBar(targetKg: target),
     onTap: () => openGoalProgress(context, wu),
+  );
+}
+
+/// Left against right: the latest difference of the pair picked and the
+/// bigger side; it opens their comparison.
+TrendTile _sidesTile(
+  BuildContext context,
+  TrendsLoaded state,
+  List<Measurement>? measurements,
+) {
+  final part = SidePartPref.current.value;
+  final units = SideUnits(state.bodyWeightUnit != BodyWeightUnit.kg);
+  final text = measurements == null
+      ? null
+      : sideTileText(sidePairs(measurements, part), units);
+  return TrendTile(
+    id: 'trends-tile-sides',
+    label: '${part.label} · left vs right',
+    value: text?.value ?? '–',
+    suffix: text == null ? 'measure both sides' : text.suffix,
+    chart: const SizedBox(),
+    onTap: () => openSideCompare(
+      context,
+      imperial: units.imperial,
+      rangeDays: state.windowDays,
+    ),
   );
 }
 
