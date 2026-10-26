@@ -2,6 +2,15 @@
 
 Written by fork/tools/release_notes.dart at each release (D16).
 
+## 0.3.3 · 2026-10-26
+
+Based on OpenNutriTracker 2.5.0.
+
+### Fixes and changes
+
+- the Goal tile's bar shows before Goal progress is opened
+- the Expenditure chart fits the estimate, logged in the touch
+
 ## 0.3.2 · 2026-10-26
 
 Based on OpenNutriTracker 2.5.0.
