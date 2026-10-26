@@ -53,15 +53,53 @@ class TrendRow extends StatelessWidget {
             ),
             const SizedBox(width: Dimens.spacing8),
             Flexible(
-              child: Text(
-                value,
-                textAlign: TextAlign.end,
-                style: const TextStyle(fontWeight: FontWeight.w600),
+              // Against the card's right edge, not the half's start.
+              child: Align(
+                alignment: AlignmentDirectional.topEnd,
+                child: Text(
+                  value,
+                  textAlign: TextAlign.end,
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
               ),
             ),
           ],
         ),
       ),
+    );
+  }
+}
+
+/// A chart's key: a swatch before each label, or a short bar for a line.
+class ChartLegend extends StatelessWidget {
+  final List<({String label, Color color, bool line})> entries;
+
+  const ChartLegend({super.key, required this.entries});
+
+  @override
+  Widget build(BuildContext context) {
+    final style = Theme.of(context).textTheme.bodySmall;
+    return Wrap(
+      spacing: Dimens.spacing12,
+      runSpacing: Dimens.spacing4,
+      children: [
+        for (final e in entries)
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: e.line ? 14 : 8,
+                height: e.line ? 3 : 8,
+                decoration: BoxDecoration(
+                  color: e.color,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(width: 6),
+              Text(e.label, style: style),
+            ],
+          ),
+      ],
     );
   }
 }

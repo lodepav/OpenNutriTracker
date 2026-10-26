@@ -185,6 +185,15 @@ void main() {
     expect(row('Carbs'), '51% · goal 47%');
     expect(row('Fat'), '23% · goal 33%');
     expect(row('Protein'), '26% · goal 20%');
+    // The split bar above the rows is drawn, a segment a macro.
+    final segments = find.descendant(
+      of: find.byType(ClipRRect),
+      matching: find.byType(ColoredBox),
+    );
+    expect(segments, findsNWidgets(3));
+    for (final e in segments.evaluate()) {
+      expect(e.size!.height, greaterThan(0));
+    }
   });
 
   testWidgets('kJ: the tile, the bars and the goal in kJ, titled Energy', (
@@ -440,17 +449,26 @@ void main() {
     await openTile(tester, 'expenditure');
     final table = find.byKey(const ValueKey('expenditure-changes'));
     String cellOf(String over, int column) {
-      final rows = tester.widget<Table>(table).children;
-      final row = rows.firstWhere(
-        (r) =>
-            (r.children.first as Padding).child is Text &&
-            ((r.children.first as Padding).child as Text).data == over,
-      );
-      return ((row.children[column] as Padding).child as Text).data!;
+      final cells = [
+        for (final t in tester.widgetList<Text>(
+          find.descendant(of: table, matching: find.byType(Text)),
+        ))
+          t.data!,
+      ];
+      return cells[cells.indexOf(over) + column];
     }
 
     expect(cellOf('3 days', 1), '+30 kcal');
-    expect(cellOf('3 days', 2), '2970');
+    expect(cellOf('3 days', 2), '2970 kcal');
+    // TalkBack reads each row as one sentence.
+    expect(
+      find.bySemanticsLabel('Over 3 days: up 30 kcal, from 2970 kcal'),
+      findsOneWidget,
+    );
+    expect(
+      find.bySemanticsLabel('Over 7 days: not enough history yet'),
+      findsOneWidget,
+    );
     // The history reaches back only six days.
     expect(cellOf('7 days', 1), '–');
 

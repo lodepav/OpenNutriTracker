@@ -58,8 +58,10 @@ class _TrendsOverviewState extends State<TrendsOverview> {
 
   late final _deps = TrendsDeps(
     expenditure: _history,
-    weightCard: widget.weightCard,
-    waterCard: widget.waterCard,
+    // Through the current widget, so a page open across a theme change
+    // builds the cards with the new palette.
+    weightCard: (s) => widget.weightCard(s),
+    waterCard: (s) => widget.waterCard(s),
     service: widget.service,
   );
 
