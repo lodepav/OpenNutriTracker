@@ -425,7 +425,7 @@ class _Breakdown extends StatelessWidget {
           sign('='),
           figure(
             '${energyValue(context, b.burnt)}',
-            'burnt a day',
+            'expenditure a day',
             color: accent,
           ),
         ],

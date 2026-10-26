@@ -504,8 +504,8 @@ void main() {
     );
     expect(chip('-0.4'), findsOneWidget);
     expect(chip('–'), findsNWidgets(3));
-    expect(find.text('Highest'), findsOneWidget);
-    expect(find.text('Lowest'), findsOneWidget);
+    expect(find.text('Highest trend'), findsOneWidget);
+    expect(find.text('Lowest trend'), findsOneWidget);
     // Four weigh-ins in the week, more than half: no nudge.
     expect(find.textContaining('4 of 7 days'), findsOneWidget);
     expect(find.text('Daily weigh-ins steady the trend'), findsNothing);

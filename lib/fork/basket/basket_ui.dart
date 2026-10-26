@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:opennutritracker/fork/copy/copy_ui.dart' show mealLabel;
 import 'package:opennutritracker/core/domain/entity/intake_type_entity.dart';
 import 'package:opennutritracker/core/domain/usecase/get_config_usecase.dart';
 import 'package:opennutritracker/core/utils/calc/day_boundary_calc.dart';
@@ -235,9 +236,14 @@ class _BasketSheetState extends State<BasketSheet> {
     }
     refreshAfterLogging();
     if (!mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text('Logged $logged foods.')));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'Logged $logged ${logged == 1 ? 'food' : 'foods'} to '
+          '${mealLabel(context, widget.type)}.',
+        ),
+      ),
+    );
     Navigator.of(
       context,
     ).popUntil(namedRouteOrFirst(NavigationOptions.mainRoute));
@@ -294,7 +300,10 @@ class _BasketSheetState extends State<BasketSheet> {
               const SizedBox(height: 12),
               FilledButton(
                 onPressed: _logging || items.isEmpty ? null : _logAll,
-                child: Text('Log all ${items.length}'),
+                child: Text(
+                  'Log all ${items.length} to '
+                  '${mealLabel(context, widget.type)}',
+                ),
               ),
               OutlinedButton(
                 key: const ValueKey('basket-plan'),

@@ -325,8 +325,8 @@ class _AddMealScreenState extends State<AddMealScreen> {
       padding: const EdgeInsets.only(right: Dimens.spacing8),
       child: ChoiceChip(
         label: Text(label),
+        // the check marks the chosen source; colour alone is too faint
         selected: _source == source,
-        showCheckmark: false,
         onSelected: (_) => _selectSource(source),
       ),
     );

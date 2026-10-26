@@ -371,13 +371,17 @@ class _CheckInScreenState extends State<CheckInScreen> {
     final activity = checkIn.activityKcal;
     if (changed.contains('activity')) {
       if (AdaptiveStore.settings.value.activityMode == ActivityMode.off) {
-        return 'So the expenditure no longer takes in activity.';
+        return 'So the expenditure is the plain estimate again: no average '
+            "activity taken off, no week's activity added.";
       }
+      // both steps, so a lower target after turning activity on adds up
       return activity == null
-          ? 'So the expenditure now takes in counted activity; the past '
-                'week had none.'
-          : "So the expenditure now takes in the past week's counted "
-                'activity, ${_kcal(activity)} a day.';
+          ? 'So the expenditure now takes your average counted activity '
+                "off and adds the past week's, which had none: a quieter "
+                'week than usual lowers the target.'
+          : 'So the expenditure now takes your average counted activity '
+                "off and adds the past week's, ${_kcal(activity)} a day: a "
+                'quieter week than usual lowers the target.';
     }
     if ((changed.contains('steps') || changed.contains('workouts')) &&
         activity != null) {
@@ -418,6 +422,8 @@ class _CheckInScreenState extends State<CheckInScreen> {
         final checkIn = snapshot.data?.$1;
         final last = snapshot.data?.$2;
         final current = last?.acceptedKcal ?? snapshot.data?.$3;
+        // read here, not in a button's handler
+        final unit = energyUnit(context);
         if (snapshot.hasError) {
           return const Center(child: Text("Couldn't read your data."));
         }
@@ -571,7 +577,16 @@ class _CheckInScreenState extends State<CheckInScreen> {
                 if (typed == null || !typed.isFinite || typed <= 0) return;
                 final target = kcalFromInput(context, typed);
                 await widget.service.accept(checkIn, target);
-                if (context.mounted) Navigator.of(context).pop(true);
+                if (!context.mounted) return;
+                // said on Home, which comes back away from the ring
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      'Daily target set to ${_target.text.trim()} $unit',
+                    ),
+                  ),
+                );
+                Navigator.of(context).pop(true);
               },
               child: const Text('Accept'),
             ),

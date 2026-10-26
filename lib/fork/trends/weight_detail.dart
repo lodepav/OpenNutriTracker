@@ -133,13 +133,13 @@ List<Widget> weightDetailBody(
     FigureGrid(
       tiles: [
         FigureTile(
-          label: 'Highest',
+          label: 'Highest trend',
           value: w(high?.kg) ?? '–',
           unit: high == null ? null : label,
           note: high == null ? null : day(high.on),
         ),
         FigureTile(
-          label: 'Lowest',
+          label: 'Lowest trend',
           value: w(low?.kg) ?? '–',
           unit: low == null ? null : label,
           note: low == null ? null : day(low.on),

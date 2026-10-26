@@ -34,6 +34,7 @@ import 'package:opennutritracker/fork/copy/copy_ui.dart' show mealLabel;
 import 'package:opennutritracker/fork/widget/meal_picker_chip.dart';
 import 'package:opennutritracker/fork/units/amount_text.dart' show servingTextAgrees; // [fork] S142
 import 'package:opennutritracker/core/utils/extensions.dart'; // [fork] S142
+import 'package:opennutritracker/fork/meal_detail/unit_change.dart'; // [fork] S164
 // [/fork]
 
 class MealDetailBottomSheet extends StatefulWidget {
@@ -232,6 +233,25 @@ class _MealDetailBottomSheetState extends State<MealDetailBottomSheet> {
                                 ..._getOtherDropdownItems(context),
                               ],
                               onChanged: (value) {
+                                // [fork] S164 unit-change: the same amount
+                                // in the new unit, not the old number
+                                final converted = value == null
+                                    ? null
+                                    : amountInUnit(
+                                        widget.quantityTextController.text,
+                                        widget.selectedUnit,
+                                        value,
+                                        widget.product,
+                                      );
+                                if (converted != null) {
+                                  widget.quantityTextController
+                                      .removeListener(_onQuantityChanged);
+                                  widget.quantityTextController.text =
+                                      converted;
+                                  widget.quantityTextController
+                                      .addListener(_onQuantityChanged);
+                                }
+                                // [/fork]
                                 widget.onQuantityOrUnitChanged(
                                   widget.quantityTextController.text,
                                   value,

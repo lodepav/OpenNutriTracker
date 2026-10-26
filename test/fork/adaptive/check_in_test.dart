@@ -511,6 +511,7 @@ void main() {
     expect(refreshed, 1);
     expect(find.text('Your first target'), findsNothing);
     expect(memory.records, hasLength(1));
+    expect(find.textContaining('Daily target set to'), findsOneWidget);
   });
 
   testWidgets('a kilojoule user reads and types the target in kJ', (
@@ -779,8 +780,9 @@ void main() {
     expect(find.text('Activity is now counted weekly'), findsOneWidget);
     expect(
       find.text(
-        'So the expenditure now takes in counted activity; the past week '
-        'had none.',
+        'So the expenditure now takes your average counted activity off '
+        "and adds the past week's, which had none: a quieter week than "
+        'usual lowers the target.',
       ),
       findsOneWidget,
     );

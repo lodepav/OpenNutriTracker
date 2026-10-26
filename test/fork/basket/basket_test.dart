@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:opennutritracker/generated/l10n.dart';
 import 'package:opennutritracker/core/data/repository/config_repository.dart';
 import 'package:opennutritracker/core/domain/entity/app_theme_entity.dart';
 import 'package:opennutritracker/core/domain/entity/config_entity.dart';
@@ -100,6 +101,7 @@ void main() {
     final logged = <double>[];
     await tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: const [S.delegate],
         initialRoute: 'main',
         routes: {'main': (_) => const Scaffold(body: Text('home'))},
         onGenerateRoute: (_) => null,
@@ -134,7 +136,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Total 350 kcal'), findsOneWidget);
 
-    await tester.tap(find.text('Log all 2'));
+    await tester.tap(find.text('Log all 2 to Lunch'));
     await tester.pumpAndSettle();
 
     expect(logged, [100, 250]);
@@ -151,6 +153,7 @@ void main() {
     final logged = <double>[];
     await tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: const [S.delegate],
         initialRoute: 'main',
         routes: {'main': (_) => const Scaffold(body: Text('home'))},
         onGenerateRoute: (_) => null,
@@ -176,12 +179,12 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('basket-bar')));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Log all 3'));
+    await tester.tap(find.text('Log all 3 to Lunch'));
     await tester.pumpAndSettle();
 
     expect(logged, [100, 250]);
     expect(basket.items.map((i) => i.kcal), [250, 40]);
-    expect(find.text('Logged 1 foods.'), findsOneWidget);
+    expect(find.text('Logged 1 food to Lunch.'), findsOneWidget);
   });
 
   testWidgets('a sheet closed partway through "Log all" leaves only what '
@@ -194,6 +197,7 @@ void main() {
     final firstWritten = Completer<void>();
     await tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: const [S.delegate],
         home: Scaffold(
           bottomNavigationBar: BasketBar(
             type: IntakeTypeEntity.lunch,
@@ -213,7 +217,7 @@ void main() {
     );
     await tester.tap(find.byKey(const ValueKey('basket-bar')));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Log all 3'));
+    await tester.tap(find.text('Log all 3 to Lunch'));
     await tester.pumpAndSettle();
     firstWritten.complete();
     await tester.pumpAndSettle();
@@ -228,6 +232,7 @@ void main() {
     var logged = 0;
     await tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: const [S.delegate],
         home: Scaffold(
           bottomNavigationBar: BasketBar(
             type: IntakeTypeEntity.dinner,
@@ -262,6 +267,7 @@ void main() {
     final plans = _Plans();
     await tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: const [S.delegate],
         home: Scaffold(
           bottomNavigationBar: BasketBar(
             type: IntakeTypeEntity.snack,
@@ -287,6 +293,7 @@ void main() {
     BasketItem? current;
     await tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: const [S.delegate],
         home: Builder(
           builder: (context) => TextButton(
             onPressed: () => Navigator.of(context).push(

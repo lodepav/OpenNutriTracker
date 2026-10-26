@@ -198,6 +198,29 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  testWidgets('a unit change keeps the amount, not the number', (tester) async {
+    await pumpMealDetail(tester, _solidWithServing());
+    expect(bloc!.state.totalQuantityConverted, '30.0');
+    String field() =>
+        tester.widget<TextField>(find.byType(TextField).first).controller!.text;
+    Future<void> pick(Finder item) async {
+      await tester.tap(find.byType(DropdownButton<String>));
+      await tester.pumpAndSettle();
+      await tester.tap(item.last);
+      await tester.pumpAndSettle();
+    }
+
+    await pick(find.text('g'));
+    expect(bloc!.state.selectedUnit, 'g');
+    expect(field(), '30');
+    expect(bloc!.state.totalQuantityConverted, '30.0');
+
+    await pick(find.textContaining('30'));
+    expect(bloc!.state.selectedUnit, 'serving');
+    expect(field(), '1');
+    expect(bloc!.state.totalQuantityConverted, '30.0');
+  });
+
   group('remembered amounts', () {
     late _MemoryAmounts amounts;
     final before = RememberedAmounts.current;
