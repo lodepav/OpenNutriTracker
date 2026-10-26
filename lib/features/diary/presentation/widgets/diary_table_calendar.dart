@@ -94,7 +94,7 @@ class _DiaryTableCalendarState extends State<DiaryTableCalendar> {
           calendarFormat: _format,
           availableGestures: AvailableGestures.horizontalSwipe,
           onFormatChanged: (format) => setState(() => _format = format),
-          rowHeight: 46,
+          rowHeight: 48,
           // [/fork]
           headerStyle: HeaderStyle(
             titleCentered: true,
@@ -104,11 +104,18 @@ class _DiaryTableCalendarState extends State<DiaryTableCalendar> {
                   color: palette.textStrong,
                 ) ??
                 const TextStyle(),
-            // [fork] S92 a11y-labels-2: the chevrons are spoken
+            // [fork] S92 a11y-labels-2: the chevrons are spoken, as far as
+            // they move: a week in the week strip (S118)
             leftChevronIcon: Icon(Icons.chevron_left_rounded,
-                color: palette.textMuted, size: 26, semanticLabel: 'Previous month'),
+                color: palette.textMuted, size: 26,
+                semanticLabel: _format == CalendarFormat.week
+                    ? 'Previous week'
+                    : 'Previous month'),
             rightChevronIcon: Icon(Icons.chevron_right_rounded,
-                color: palette.textMuted, size: 26, semanticLabel: 'Next month'),
+                color: palette.textMuted, size: 26,
+                semanticLabel: _format == CalendarFormat.week
+                    ? 'Next week'
+                    : 'Next month'),
             // [/fork]
             headerPadding: const EdgeInsets.symmetric(vertical: Dimens.spacing8),
           ),
