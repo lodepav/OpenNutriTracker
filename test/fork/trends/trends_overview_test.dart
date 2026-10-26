@@ -14,6 +14,7 @@ import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dar
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_nutriments_entity.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
 import 'package:opennutritracker/fork/display/display_prefs.dart';
+import 'package:opennutritracker/fork/goal/goal_progress.dart';
 import 'package:opennutritracker/fork/report/nutrient_explorer.dart';
 import 'package:opennutritracker/fork/trends/detail_widgets.dart';
 import 'package:opennutritracker/fork/trends/trends_overview.dart';
@@ -92,6 +93,7 @@ class _Service extends Fake implements AdaptiveService {
 void main() {
   tearDown(() async {
     TrendsOverview.loadIntakes = intakesBetween;
+    TrendsOverview.loadGoal = () => GoalStartStore().load();
     await locator.reset();
     DisplayPrefs.macroOrder.value = DisplayPrefs.upstreamOrder;
   });
@@ -521,6 +523,37 @@ void main() {
       200,
       scrollable: find.byType(Scrollable).first,
     );
+  });
+
+  testWidgets('the Goal tile\'s bar, from the goal Goal progress loads', (
+    tester,
+  ) async {
+    // Nothing kept before: the load keeps the start, as the page does.
+    TrendsOverview.loadGoal = () async => (
+      inputs: null,
+      progress: GoalProgress(
+        start: GoalStart(date: day(-30), kg: 80, targetKg: 75),
+        nowKg: 78.75,
+        paceKgPerWeek: -0.5,
+        trend: const [80, 78.75],
+        today: day(0),
+      ),
+    );
+    await pumpTrends(
+      tester,
+      loaded(
+        targetWeightKg: 75,
+        weight: [WeightLogEntity(date: day(0), weightKg: 78.75)],
+      ),
+    );
+    await showTile(tester, 'goal');
+    final bar = tester.widget<LinearProgressIndicator>(
+      find.descendant(
+        of: find.byKey(const ValueKey('trends-tile-goal')),
+        matching: find.byType(LinearProgressIndicator),
+      ),
+    );
+    expect(bar.value, 0.25);
   });
 
   testWidgets('Water: its average and goal over upstream\'s chart', (
