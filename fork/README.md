@@ -34,7 +34,10 @@ Everything that belongs only to the fork lives in this `fork/` folder or in `lib
    trend weight) is a pure Dart function in `lib/fork/` with a unit test in `test/fork/`.
 4. **Upstream's checks stay green, unmodified.** `just ci` (format, l10n, analyze, test) passes
    on the fork trunk. A red upstream test means the fork changed behaviour it shouldn't have:
-   fix the fork, never the test.
+   fix the fork, never the test. Where a seam changes behaviour on purpose, the upstream test
+   is skipped between markers and the fork's version lives in `test/fork/`; fork tests never
+   go into upstream test files (`test/fork/cases/` mirrors upstream's paths for the ones
+   that share an upstream file's harness).
    Before a merge, `fork/tools/test-fast.sh` runs the whole suite bundled, in about a
    minute and a quarter rather than six; plain `flutter test`, a file a process, stays the
    strict check before a release.

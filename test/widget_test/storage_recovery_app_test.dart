@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:opennutritracker/core/presentation/storage_recovery_app.dart';
-import 'package:opennutritracker/fork/backup/storage_rescue.dart';
 
 void main() {
   testWidgets('preserves the error code and retries bootstrap safely', (
@@ -30,8 +29,6 @@ void main() {
       find.text('Error code: hive_wrong_key_or_corrupted'),
       findsOneWidget,
     );
-    expect(find.byType(StorageRescuePanel), findsOneWidget);
-    expect(find.textContaining('Retry once'), findsOneWidget);
 
     await tester.tap(find.text('Retry'));
     await tester.pump();
@@ -51,16 +48,5 @@ void main() {
       tester.widget<FilledButton>(find.byType(FilledButton)).onPressed,
       isNotNull,
     );
-  });
-
-  testWidgets('a lost key offers no setting aside', (tester) async {
-    await tester.pumpWidget(
-      StorageRecoveryApp(
-        errorCode: 'hive_encryption_key_missing_with_existing_data',
-        onRetry: () async {},
-      ),
-    );
-    expect(find.byType(StorageRescuePanel), findsNothing);
-    expect(find.textContaining('contact support'), findsOneWidget);
   });
 }

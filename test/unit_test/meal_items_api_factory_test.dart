@@ -146,8 +146,11 @@ void main() {
       );
 
       expect(client.body!['model'], AiModelCatalogue.openrouter.first.id);
-      expect(client.body!['model'], 'anthropic/claude-sonnet-5.5');
-    });
+      expect(client.body!['model'], 'anthropic/claude-sonnet-5');
+      // [fork] S77 ai-models-5-5: the fork lists other models; its case is in
+      // test/fork/cases/unit_test/meal_items_api_factory_test.dart
+    }, skip: 'the fork lists other models (S77)');
+    // [/fork]
 
     test('OpenAI defaults to the screened conservative reader', () async {
       // luna leads because #686 measured it as the more conservative of the
@@ -166,12 +169,15 @@ void main() {
         const AiSelection(
           provider: AiProvider.openrouter,
           apiKey: 'sk-or',
-          modelId: 'anthropic/claude-haiku-5.5',
+          modelId: 'anthropic/claude-haiku-4.5',
         ),
       );
 
-      expect(client.body!['model'], 'anthropic/claude-haiku-5.5');
-    });
+      expect(client.body!['model'], 'anthropic/claude-haiku-4.5');
+      // [fork] S77 ai-models-5-5: the fork lists other models; its case is in
+      // test/fork/cases/unit_test/meal_items_api_factory_test.dart
+    }, skip: 'the fork lists other models (S77)');
+    // [/fork]
 
     test('falls back when the stored model has been retired', () async {
       // What a user sees after an update drops a model. Sending the dead id
