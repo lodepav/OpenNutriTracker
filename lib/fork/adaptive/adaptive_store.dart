@@ -421,6 +421,12 @@ class AdaptiveStore {
     if (_active) settings.value = value;
   }
 
+  /// Another fork store's value in this box (the goal start).
+  Future<Object?> readKey(String key) async => (await _box()).get(key);
+
+  Future<void> writeKey(String key, Object? value) async =>
+      (await _box()).put(key, value);
+
   Future<List<CheckInRecord>> history() async => [
     for (final json in (await _box()).get('checkIns', defaultValue: []) as List)
       CheckInRecord.fromJson(json as Map),

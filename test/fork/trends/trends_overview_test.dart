@@ -92,7 +92,10 @@ void main() {
     expect(tileText(tester, 'protein'), contains('93 / 110 g'));
     expect(tileText(tester, 'water'), contains('1000 / 1900 ml'));
     expect(tileText(tester, 'weight'), contains('–'));
-    expect(find.textContaining('Last 7 days, 1 logged'), findsOneWidget);
+    expect(
+      find.textContaining('Last 7 days, 1 logged', skipOffstage: false),
+      findsOneWidget,
+    );
     expect(find.textContaining('day streak'), findsOneWidget);
   });
 
@@ -306,9 +309,57 @@ void main() {
     );
     expect(find.text('Weigh-ins'), findsOneWidget);
     expect(find.text('Today'), findsOneWidget);
-    expect(find.text('80.0 kg'), findsOneWidget);
+    // The weigh-in row, and the Highest tile may read the same.
+    expect(find.text('80.0 kg'), findsWidgets);
     // Outside the week.
     expect(find.text('81.0 kg'), findsNothing);
+  });
+
+  testWidgets('Weight: the change chips, the four tiles, the goal tile', (
+    tester,
+  ) async {
+    await pumpTrends(
+      tester,
+      loaded(
+        targetWeightKg: 75,
+        weight: [
+          for (var i = -10; i <= 0; i += 2)
+            WeightLogEntity(date: day(i), weightKg: 80 - i * 0.1),
+        ],
+      ),
+    );
+    expect(tileText(tester, 'goal'), contains('Goal progress'));
+    expect(tileText(tester, 'goal'), contains('kg to go'));
+    await openTile(tester, 'weight');
+    final scroll = find.byType(Scrollable).first;
+    await tester.scrollUntilVisible(
+      find.text('Days weighed in'),
+      200,
+      scrollable: scroll,
+    );
+    // Within the trend's ten days, a change; past them, none.
+    Finder chip(String text) => find.descendant(
+      of: find.byType(ChangeChips),
+      matching: find.text(text),
+    );
+    expect(chip('-0.4'), findsOneWidget);
+    expect(chip('–'), findsNWidgets(3));
+    expect(find.text('Highest'), findsOneWidget);
+    expect(find.text('Lowest'), findsOneWidget);
+    // Four weigh-ins in the week, more than half: no nudge.
+    expect(find.textContaining('4 of 7 days'), findsOneWidget);
+    expect(find.text('Daily weigh-ins steady the trend'), findsNothing);
+    expect(find.text('To your goal'), findsOneWidget);
+    // 5 kg at about 0.35 kg a week: months on, the year shown past
+    // December.
+    final arrival = tester
+        .widget<FigureTile>(find.widgetWithText(FigureTile, 'To your goal'))
+        .note!;
+    expect(arrival, endsWith(' at this pace'));
+    expect(
+      RegExp(r'\d{4}').hasMatch(arrival),
+      day(0).month < 9 ? anything : isTrue,
+    );
   });
 
   testWidgets('Water: its average and goal over upstream\'s chart', (

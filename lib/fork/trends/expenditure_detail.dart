@@ -79,7 +79,13 @@ List<Widget> expenditureBody(
         ),
       ],
       gap,
-      const _WhatIsIt(),
+      const ExplainerLink(
+        title: 'What is expenditure?',
+        body:
+            'The energy you burn in a day: resting, moving and digesting. '
+            'It is worked out from what you log and how your trend weight '
+            'moves, so it gets steadier the more days you log and weigh in.',
+      ),
     ],
   ];
 }
@@ -464,57 +470,21 @@ class _TilesState extends State<_Tiles> {
         );
         if (formula == null || formula <= 0) return days;
         final off = ((now - formula) / formula * 100).round();
-        return IntrinsicHeight(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Expanded(child: days),
-              const SizedBox(width: Dimens.spacing8),
-              Expanded(
-                child: FigureTile(
-                  label: 'Formula estimate',
-                  value: '${energyValue(context, formula)}',
-                  unit: energyUnit(context),
-                  note: off == 0
-                      ? 'yours is about the same'
-                      : 'yours runs ${off.abs()}% '
-                            '${off > 0 ? 'higher' : 'lower'}',
-                ),
-              ),
-            ],
-          ),
+        return FigureGrid(
+          tiles: [
+            days,
+            FigureTile(
+              label: 'Formula estimate',
+              value: '${energyValue(context, formula)}',
+              unit: energyUnit(context),
+              note: off == 0
+                  ? 'yours is about the same'
+                  : 'yours runs ${off.abs()}% '
+                        '${off > 0 ? 'higher' : 'lower'}',
+            ),
+          ],
         );
       },
     );
   }
-}
-
-/// What expenditure is, behind a row.
-class _WhatIsIt extends StatelessWidget {
-  const _WhatIsIt();
-
-  @override
-  Widget build(BuildContext context) => AppCard(
-    child: ListTile(
-      title: const Text('What is expenditure?'),
-      trailing: const Icon(Icons.chevron_right_rounded),
-      onTap: () => showDialog<void>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('What is expenditure?'),
-          content: const Text(
-            'The energy you burn in a day: resting, moving and digesting. '
-            'It is worked out from what you log and how your trend weight '
-            'moves, so it gets steadier the more days you log and weigh in.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Close'),
-            ),
-          ],
-        ),
-      ),
-    ),
-  );
 }
