@@ -23,7 +23,7 @@ import 'package:opennutritracker/features/onboarding/presentation/widgets/onboar
 import 'package:opennutritracker/features/onboarding/presentation/widgets/onboarding_overview_page_body.dart';
 import 'package:opennutritracker/features/onboarding/presentation/widgets/onboarding_activity_page_body.dart';
 import 'package:opennutritracker/features/onboarding/presentation/widgets/highlight_button.dart';
-import 'package:opennutritracker/features/onboarding/presentation/widgets/onboarding_about_you_page_body.dart';
+import 'package:opennutritracker/fork/screens/onboarding/onboarding_about_you_page_body.dart'; // [fork] S159
 import 'package:opennutritracker/features/onboarding/presentation/widgets/onboarding_body_measurements_page_body.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 // [fork] S89 onboarding-macros

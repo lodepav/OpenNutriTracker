@@ -3,7 +3,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:opennutritracker/core/domain/entity/calories_profile_entity.dart';
 import 'package:opennutritracker/features/onboarding/domain/entity/user_gender_selection_entity.dart';
-import 'package:opennutritracker/features/onboarding/presentation/widgets/onboarding_about_you_page_body.dart';
+import 'package:opennutritracker/fork/screens/onboarding/onboarding_about_you_page_body.dart';
 import 'package:opennutritracker/fork/onboarding/birthday_input.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 

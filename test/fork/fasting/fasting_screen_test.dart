@@ -14,7 +14,7 @@ import 'package:opennutritracker/features/fasting/domain/usecase/complete_fastin
 import 'package:opennutritracker/features/fasting/domain/usecase/get_active_fasting_session_usecase.dart';
 import 'package:opennutritracker/features/fasting/domain/usecase/start_fasting_usecase.dart';
 import 'package:opennutritracker/features/fasting/presentation/bloc/fasting_bloc.dart';
-import 'package:opennutritracker/features/fasting/presentation/fasting_screen.dart';
+import 'package:opennutritracker/fork/screens/fasting/fasting_screen.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 
 // Seam S123: the screen writes a change to the fast under way, and the

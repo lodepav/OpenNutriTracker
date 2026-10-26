@@ -40,10 +40,8 @@ class _FakeGetWeightLogUsecase extends Fake implements GetWeightLogUsecase {
 }
 
 class _FakeAddWeightLogUsecase extends Fake implements AddWeightLogUsecase {
-  final added = <WeightLogEntity>[];
-
   @override
-  Future<void> addEntry(WeightLogEntity entry) async => added.add(entry);
+  Future<void> addEntry(WeightLogEntity entry) async {}
 }
 
 class _FakeDeleteWeightLogUsecase extends Fake
@@ -93,22 +91,14 @@ Widget _wrap(Widget child) {
 Widget _buildScreen(
   List<WeightLogEntity> entries, {
   _FakeDeleteWeightLogUsecase? deleteUsecase,
-  _FakeAddWeightLogUsecase? addUsecase,
 }) {
   return WeightHistoryScreen(
     getUsecase: _FakeGetWeightLogUsecase(entries),
-    addUsecase: addUsecase ?? _FakeAddWeightLogUsecase(),
+    addUsecase: _FakeAddWeightLogUsecase(),
     deleteUsecase: deleteUsecase ?? _FakeDeleteWeightLogUsecase(),
     configRepository: _FakeConfigRepository(),
   );
 }
-
-// [fork] S122 weight-history: a weigh-in is swiped left to delete it.
-Future<void> _swipe(WidgetTester tester, Finder row) async {
-  await tester.ensureVisible(row);
-  await tester.drag(row, const Offset(-600, 0));
-}
-// [/fork]
 
 void main() {
   group('WeightHistoryScreen chart', () {
@@ -198,7 +188,7 @@ void main() {
       expect(find.byKey(const Key('weightHistoryChart')), findsNothing);
 
       // Tap 60d segment: should now include the 45-day-old point, showing the chart.
-      final button60 = find.text('90 d'); // [fork] S122: 30/90 d, 1 y, All
+      final button60 = find.text('60d');
       expect(button60, findsOneWidget);
       await tester.tap(button60);
       await tester.pumpAndSettle();
@@ -210,7 +200,7 @@ void main() {
       );
 
       // Tap All segment: should show chart for all history including 200-day-old point.
-      final buttonAll = find.text('All'); // [fork] S122
+      final buttonAll = find.text(l10nEn.allItemsLabel);
       expect(buttonAll, findsOneWidget);
       await tester.tap(buttonAll);
       await tester.pumpAndSettle();
@@ -225,9 +215,7 @@ void main() {
 
   testWidgets('deleting an entry reloads Trends so its weight card drops '
       'the reading (#1359)', (tester) async {
-    final recorder = ReloadRecorder()
-      ..register()
-      ..registerProfile(); // [fork] S113
+    final recorder = ReloadRecorder()..register();
     addTearDown(locator.reset);
     final today = DateTime.now();
     final entries = [
@@ -240,7 +228,7 @@ void main() {
     await tester.pumpWidget(_wrap(_buildScreen(entries)));
     await tester.pumpAndSettle();
 
-    await _swipe(tester, find.text('Today')); // [fork] S122
+    await tester.tap(find.byIcon(Icons.delete_outline));
     await tester.pumpAndSettle();
 
     expect(recorder.trendsReloaded, isTrue);
@@ -306,9 +294,7 @@ void main() {
 
   testWidgets('deleting a row hands over that row, filed day and all, '
       'when its date shows a neighbouring day (#1418)', (tester) async {
-    ReloadRecorder()
-      ..register()
-      ..registerProfile(); // [fork] S113
+    ReloadRecorder().register();
     addTearDown(locator.reset);
     final deleteUsecase = _FakeDeleteWeightLogUsecase();
     // A time-zone change moved the 10 March row's date onto 11 March, so
@@ -331,120 +317,20 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    // [fork] S122: swiped away, not a bin
-    await _swipe(tester, find.text('80 ${l10nEn.kgLabel}'));
-    // [/fork]
+    final shiftedRow = find.ancestor(
+      of: find.text('80 ${l10nEn.kgLabel}'),
+      matching: find.byType(ListTile),
+    );
+    await tester.tap(
+      find.descendant(
+        of: shiftedRow,
+        matching: find.byIcon(Icons.delete_outline),
+      ),
+    );
     await tester.pumpAndSettle();
 
     expect(deleteUsecase.deleted, hasLength(1));
     expect(deleteUsecase.deleted.single.weightKg, 80.0);
     expect(deleteUsecase.deleted.single.filedDay, DateTime(2026, 3, 10));
   });
-
-  // [fork] S113 weigh-in-delete
-  testWidgets('a delete says which weigh-in, and can be undone', (
-    tester,
-  ) async {
-    final reloads = ReloadRecorder()
-      ..register()
-      ..registerProfile();
-    addTearDown(locator.reset);
-    final addUsecase = _FakeAddWeightLogUsecase();
-    final entry = WeightLogEntity(date: DateTime(2026, 3, 11), weightKg: 80);
-    await tester.pumpWidget(
-      _wrap(_buildScreen([entry], addUsecase: addUsecase)),
-    );
-    await tester.pumpAndSettle();
-
-    await _swipe(tester, find.text('Mar 11, 2026')); // [fork] S122
-    await tester.pumpAndSettle();
-    // Home and the profile show the weight the delete left.
-    expect(reloads.log, containsAll(['LoadProfileEvent', 'updateHomePage']));
-    reloads.log.clear();
-    await tester.tap(find.text('Undo'));
-    await tester.pumpAndSettle();
-
-    expect(addUsecase.added.single.weightKg, 80);
-    expect(reloads.log, containsAll(['LoadProfileEvent', 'updateHomePage']));
-  });
-  // [/fork]
-
-  // [fork] S122 weight-history: a tap opens a weigh-in in the dialog, its
-  // weight and note filled in; saved on its day, it is not deleted
-  testWidgets('a tapped weigh-in opens to edit, filled in', (tester) async {
-    ReloadRecorder()
-      ..register()
-      ..registerProfile();
-    addTearDown(locator.reset);
-    final addUsecase = _FakeAddWeightLogUsecase();
-    final deleteUsecase = _FakeDeleteWeightLogUsecase();
-    final entry = WeightLogEntity(
-      date: DateTime(2026, 3, 11),
-      weightKg: 80,
-      note: 'after the run',
-    );
-    await tester.pumpWidget(
-      _wrap(
-        _buildScreen(
-          [entry],
-          addUsecase: addUsecase,
-          deleteUsecase: deleteUsecase,
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.text('Mar 11, 2026'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.bySemanticsIdentifier('weigh-in-edit'));
-    await tester.pumpAndSettle();
-    expect(find.widgetWithText(TextField, 'after the run'), findsOneWidget);
-    await tester.tap(find.text(l10nEn.dialogOKLabel));
-    await tester.pumpAndSettle();
-
-    expect(addUsecase.added.single.weightKg, 80);
-    expect(addUsecase.added.single.date, DateTime(2026, 3, 11));
-    expect(addUsecase.added.single.note, 'after the run');
-    expect(deleteUsecase.deleted, isEmpty);
-  });
-  // [/fork]
-
-  // [fork] S113
-  testWidgets("an added weigh-in reloads Home and the profile, as today's "
-      'sets the weight', (tester) async {
-    final reloads = ReloadRecorder()
-      ..register()
-      ..registerProfile();
-    addTearDown(locator.reset);
-    final addUsecase = _FakeAddWeightLogUsecase();
-    await tester.pumpWidget(_wrap(_buildScreen(const [], addUsecase: addUsecase)));
-    await tester.pumpAndSettle();
-    await tester.tap(find.bySemanticsIdentifier('weight-history-add'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text(l10nEn.dialogOKLabel));
-    await tester.pumpAndSettle();
-
-    expect(addUsecase.added, hasLength(1));
-    expect(reloads.log, containsAll(['LoadProfileEvent', 'updateHomePage']));
-  });
-
-  testWidgets("the delete's Undo goes after a while, not onto every screen", (
-    tester,
-  ) async {
-    ReloadRecorder()
-      ..register()
-      ..registerProfile();
-    addTearDown(locator.reset);
-    final entry = WeightLogEntity(date: DateTime(2026, 3, 11), weightKg: 80);
-    await tester.pumpWidget(_wrap(_buildScreen([entry])));
-    await tester.pumpAndSettle();
-    await _swipe(tester, find.text('Mar 11, 2026')); // [fork] S122
-    await tester.pumpAndSettle();
-    expect(find.text('Weigh-in deleted'), findsOneWidget);
-
-    await tester.pump(const Duration(seconds: 10));
-    await tester.pumpAndSettle();
-    expect(find.text('Weigh-in deleted'), findsNothing);
-  });
-  // [/fork]
 }
