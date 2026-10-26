@@ -263,9 +263,15 @@ void main() {
     expect(stat('Goal'), contains('259 g'));
     expect(stat('Change'), contains('+60 g'));
     final chart = tester.widget<BarChart>(find.byType(BarChart)).data;
+    // From a little under the lowest to a little over the highest: the
+    // bars start at the chart's floor, an empty day is none.
+    expect(chart.minY, closeTo(200 - 60 * 0.15, 1e-9));
+    expect(chart.maxY, closeTo(260 + 60 * 0.15, 1e-9));
+    final rods = [for (final g in chart.barGroups) g.barRods.single];
+    expect([for (final r in rods) r.fromY], everyElement(chart.minY));
     expect(
-      [for (final g in chart.barGroups) g.barRods.single.toY],
-      [200, 0, 0, 0, 0, 0, 260],
+      [for (final r in rods) r.toY],
+      [200, ...List.filled(5, chart.minY), 260],
     );
     expect(chart.extraLinesData.horizontalLines.single.y, 259);
 

@@ -155,7 +155,9 @@ class WeightTrendChart extends StatelessWidget {
     final maxY = rangeSpots.map((s) => s.y).reduce((a, b) => a > b ? a : b);
     // Pad so points don't sit on the edges. When all weights are identical we
     // still need a non-zero range or fl_chart throws.
-    final yPadding = ((maxY - minY) * 0.15).clamp(0.5, 5.0);
+    // [fork] S161 chart-fit: a small floor, so a week's changes fill it
+    final yPadding = ((maxY - minY) * 0.15).clamp(0.1, 5.0);
+    // [/fork]
 
     final targetY = targetWeightKg == null ? null : _toChartY(targetWeightKg!);
     // Only draw the dashed reference when the target sits within (or just
