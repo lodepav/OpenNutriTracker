@@ -170,8 +170,9 @@ void main() {
 
   testWidgets('a target not set says so', (tester) async {
     await _pump(tester, _user());
-    expect(find.text('Not set'), findsOneWidget);
-    expect(find.text('Set'), findsOneWidget);
+    // The goal tile's line and the Target weight row (JC5).
+    expect(find.text('Not set'), findsNWidgets(2));
+    expect(find.text('Set'), findsNothing);
   });
 
   testWidgets('the weight tile and Weight history open the history; '

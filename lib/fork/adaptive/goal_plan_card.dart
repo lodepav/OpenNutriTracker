@@ -202,9 +202,10 @@ class _GoalPlanCardState extends State<GoalPlanCard> {
     super.initState();
     paceChanges.addListener(_reload);
     _loadMilestoneStep();
+    // A failed read is the FutureBuilder's to show.
     _inputs.then((inputs) {
       if (inputs != null) _readHomeGoal(inputs.paceKgPerWeek);
-    });
+    }).ignore();
   }
 
   @override
