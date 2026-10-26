@@ -59,23 +59,7 @@ import 'package:opennutritracker/features/settings/presentation/widgets/accent_c
 import 'package:opennutritracker/features/settings/presentation/widgets/health_sync_screen.dart';
 import 'package:opennutritracker/fork/screens/settings/settings_screen.dart'; // [fork] S153
 import 'package:opennutritracker/generated/l10n.dart';
-// [fork] S6 starter-recipes: the Latvian starter recipes (phase 1c.6)
-import 'package:opennutritracker/core/utils/ai_credential_storage.dart';
-import 'package:opennutritracker/fork/dev/fake_ai.dart';
-import 'package:opennutritracker/fork/backup/auto_backup.dart';
-import 'package:opennutritracker/fork/backup/storage_rescue.dart';
-import 'package:opennutritracker/fork/health/body_fat_import.dart';
-import 'package:opennutritracker/fork/health/nutrition_export.dart';
-import 'package:opennutritracker/fork/health/weight_import.dart';
-import 'package:opennutritracker/fork/reminders/reminders.dart';
-import 'package:opennutritracker/fork/phases/phases.dart';
-import 'package:opennutritracker/fork/health/weight_import_ui.dart';
-import 'package:opennutritracker/fork/dish/starter_recipes.dart';
-import 'package:opennutritracker/fork/leftovers/meal_photo_cache.dart';
-import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
-import 'package:opennutritracker/fork/display/display_prefs.dart';
-import 'package:opennutritracker/fork/off/off_kinds.dart';
-// [/fork]
+import 'package:opennutritracker/fork/startup.dart'; // [fork] S6
 import 'package:provider/provider.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 
@@ -118,32 +102,14 @@ Future<void> _bootstrapApp() async {
   unawaited(
     locator<RemoteSearchCacheDataSource>().pruneStale(const Duration(days: 90)),
   );
-  // [fork] S6 starter-recipes: saved once per install, off the start path
-  unawaited(StarterRecipeSeeder.fromLocator().run());
-  unawaited(MealPhotoCache().prune());
-  try {
-    await AdaptiveStore.start();
-    await DisplayPrefs.start();
-    await OffKinds.start(); // [fork] S117
-    await AutoBackup.start();
-    await StorageRescue().finishPending(); // [fork] S112
-    await WeightImport.start(refreshAfterWeightImport);
-    BodyFatImport.start();
-    NutritionExport.start();
-    await Reminders.start();
-    await PhaseRunner.start();
-  } on HiveStorageIntegrityException catch (error, stackTrace) {
-    // The fork's per-profile box opens here, after upstream's: a box that
-    // fails its checksum gets upstream's recovery screen, not a hung splash.
-    log.severe(
-      'Fork database integrity failure (code=${error.code})',
-      error,
-      stackTrace,
+  // [fork] S6 fork-startup: the fork's stores and jobs (lib/fork/startup.dart)
+  final forkFailure = await forkStartup();
+  if (forkFailure != null) {
+    runApp(
+      StorageRecoveryApp(errorCode: forkFailure.code, onRetry: _bootstrapApp),
     );
-    runApp(StorageRecoveryApp(errorCode: error.code, onRetry: _bootstrapApp));
     return;
   }
-  if (forkFakeAi) await enableFakeAi(locator<AiCredentialStorage>());
   // [/fork]
 
   final isUserInitialized = await locator<UserDataSource>().hasUserData();

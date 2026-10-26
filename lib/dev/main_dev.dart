@@ -10,19 +10,8 @@ import 'package:opennutritracker/core/utils/logger_config.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 import 'package:opennutritracker/main.dart';
 // [fork] S18 dev-adaptive
-import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
-import 'package:opennutritracker/fork/display/display_prefs.dart';
-import 'package:opennutritracker/fork/off/off_kinds.dart'; // [fork] S117
-import 'package:opennutritracker/core/utils/ai_credential_storage.dart';
-import 'package:opennutritracker/fork/backup/auto_backup.dart';
 import 'package:opennutritracker/fork/backup/storage_rescue.dart';
-import 'package:opennutritracker/fork/dev/fake_ai.dart';
-import 'package:opennutritracker/fork/health/body_fat_import.dart';
-import 'package:opennutritracker/fork/health/nutrition_export.dart';
-import 'package:opennutritracker/fork/health/weight_import.dart';
-import 'package:opennutritracker/fork/reminders/reminders.dart';
-import 'package:opennutritracker/fork/phases/phases.dart';
-import 'package:opennutritracker/fork/health/weight_import_ui.dart';
+import 'package:opennutritracker/fork/startup.dart';
 import 'package:opennutritracker/core/presentation/storage_recovery_app.dart';
 import 'package:opennutritracker/core/utils/hive_storage_integrity_exception.dart';
 // [/fork]
@@ -57,22 +46,12 @@ Future<void> main() async {
     await seedDemoData(DemoSeedOptions.dev);
   }
   // [/fork]
-  // [fork] S18 dev-adaptive: the trend and target switches, as main's S6
-  try {
-    await AdaptiveStore.start();
-    await DisplayPrefs.start();
-    await OffKinds.start(); // [fork] S117
-    await AutoBackup.start();
-    await WeightImport.start(refreshAfterWeightImport);
-    BodyFatImport.start();
-    NutritionExport.start();
-    await Reminders.start();
-    await PhaseRunner.start();
-  } on HiveStorageIntegrityException catch (error) {
-    runApp(StorageRecoveryApp(errorCode: error.code, onRetry: main));
+  // [fork] S18 dev-adaptive: the fork's stores and jobs, as main's S6
+  final forkFailure = await forkStartup();
+  if (forkFailure != null) {
+    runApp(StorageRecoveryApp(errorCode: forkFailure.code, onRetry: main));
     return;
   }
-  if (forkFakeAi) await enableFakeAi(locator<AiCredentialStorage>());
   // [/fork]
 
   final configRepo = locator<ConfigRepository>();
