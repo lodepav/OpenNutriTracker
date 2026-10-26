@@ -448,15 +448,12 @@ class _KindIcon extends StatelessWidget {
     ),
     alignment: Alignment.center,
     child: ExcludeSemantics(
-      child: switch (OffKinds.emojiFor(intake.meal)) {
-        final emoji? when importedFoodIcon(intake) == null => Text(
-          emoji,
+      // In color, as a food's emoji; a plate when its kind is unknown.
+      child: switch (importedFoodIcon(intake)) {
+        final icon? => Icon(icon, color: palette.textMuted, size: 18),
+        _ => Text(
+          importedFoodEmoji(intake) ?? OffKinds.emojiFor(intake.meal) ?? '🍽️',
           style: const TextStyle(fontSize: 18),
-        ),
-        _ => Icon(
-          importedFoodIcon(intake) ?? Icons.restaurant_rounded,
-          color: palette.textMuted,
-          size: 18,
         ),
       },
     ),

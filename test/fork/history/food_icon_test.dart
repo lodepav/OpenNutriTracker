@@ -1,8 +1,6 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:opennutritracker/core/domain/entity/intake_entity.dart';
 import 'package:opennutritracker/core/domain/entity/intake_type_entity.dart';
-import 'package:opennutritracker/core/utils/custom_icons.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_nutriments_entity.dart';
 import 'package:opennutritracker/fork/history/food_icon.dart';
@@ -39,19 +37,19 @@ IntakeEntity _entry(
   dateTime: DateTime(2026, 5, 1, 12),
 );
 
-IconData? _food(String name) =>
-    importedFoodIcon(_entry('history-food-2026-05-01-1', name));
+String? _food(String name) =>
+    importedFoodEmoji(_entry('history-food-2026-05-01-1', name));
 
 void main() {
-  test('an imported food shows the kind its name says', () {
-    expect(_food('Whey Protein Chocolate'), Icons.blender_rounded);
-    expect(_food('Green tea'), Icons.emoji_food_beverage_rounded);
-    expect(_food('Beef soup'), Icons.ramen_dining_rounded);
-    expect(_food('Sweet potato fries'), Icons.fastfood_rounded);
-    expect(_food('Steak, grilled'), Icons.kebab_dining_rounded);
-    expect(_food('Multi fruit juice'), Icons.local_drink_rounded);
-    expect(_food('Bananas'), CustomIcons.food_apple_outline);
-    expect(_food('Tomatoes, raw'), Icons.eco_rounded);
+  test('an imported food shows the kind its name says, in color', () {
+    expect(_food('Whey Protein Chocolate'), '🥤');
+    expect(_food('Green tea'), '🍵');
+    expect(_food('Beef soup'), '🍜');
+    expect(_food('Sweet potato fries'), '🍟');
+    expect(_food('Steak, grilled'), '🍖');
+    expect(_food('Multi fruit juice'), '🥛');
+    expect(_food('Bananas'), '🍎');
+    expect(_food('Tomatoes, raw'), '🥗');
     expect(_food('Olive oil'), isNull);
   });
 
@@ -72,7 +70,12 @@ void main() {
     );
   });
 
-  test('an entry logged here keeps its icon', () {
+  test('an entry logged here keeps its icon; totals have no food emoji', () {
     expect(importedFoodIcon(_entry('123', 'Banana')), isNull);
+    expect(importedFoodEmoji(_entry('123', 'Banana')), isNull);
+    expect(
+      importedFoodEmoji(_entry('history-2026-05-01-lunch', 'Banana')),
+      isNull,
+    );
   });
 }

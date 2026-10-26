@@ -242,15 +242,16 @@ class _Thumbnail extends StatelessWidget {
   Widget _fallback() => Container(
     color: palette.surfaceMuted,
     alignment: Alignment.center,
-    child: switch (OffKinds.emojiFor(intake.meal)) {
-      final emoji? when importedFoodIcon(intake) == null => ExcludeSemantics(
-        child: Text(emoji, style: const TextStyle(fontSize: 18)),
+    // In color, as a food's emoji; a plate when its kind is unknown.
+    child: switch (importedFoodIcon(intake)) {
+      final icon? => Icon(icon, color: palette.textMuted, size: 18),
+      //: was 24
+      _ => ExcludeSemantics(
+        child: Text(
+          importedFoodEmoji(intake) ?? OffKinds.emojiFor(intake.meal) ?? '🍽️',
+          style: const TextStyle(fontSize: 18),
+        ),
       ),
-      _ => Icon(
-        importedFoodIcon(intake) ?? Icons.restaurant_rounded,
-        color: palette.textMuted,
-        size: 18,
-      ), //: was 24
     },
   );
 }
