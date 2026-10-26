@@ -2,6 +2,32 @@
 
 Written by fork/tools/release_notes.dart at each release (D16).
 
+## 0.3.0 · 2026-10-26
+
+Based on OpenNutriTracker 2.5.0.
+
+### New
+
+- D23 and the upstream-copies check
+
+### Fixes and changes
+
+- the release script catches up with origin by itself
+- Settings in parts
+- paletteOf in lib/fork
+- fork tests out of upstream test files
+- the bulk-add copy in three files
+- translation overlay and one-call fork start-up
+- food search, recipe row, meal card, add activity and activity list as fork-owned copies (D23)
+- fasting, weight history and onboarding's About you as fork-owned copies (D23)
+- the diary's day card as a fork-owned copy (D23)
+- Home's dashboard, meal lists and intake card as fork-owned copies (D23)
+- the add and bulk-add screens as fork-owned copies (D23)
+- Settings as a fork-owned copy (D23)
+- Show water and Show fasting switches
+- Home tiles open Trends pages, cycle switch for women, Settings apart from Tools
+- page lists clear the navigation bar; macros on their own line in recipe and custom food rows
+
 ## 0.2.2 · 2026-10-26
 
 Based on OpenNutriTracker 2.5.0.
