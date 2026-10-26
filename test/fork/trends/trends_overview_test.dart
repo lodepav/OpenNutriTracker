@@ -65,7 +65,7 @@ void main() {
     );
 
     // Energy cut, as energyValue is everywhere; grams rounded (S114).
-    expect(tileText(tester, 'calories'), contains('2572 / 2925'));
+    expect(tileText(tester, 'calories'), contains('2572 / 2925 kcal'));
     expect(tileText(tester, 'carbs'), contains('70 / 259 g'));
     expect(tileText(tester, 'fat'), contains('81 / 81 g'));
     expect(tileText(tester, 'protein'), contains('93 / 110 g'));
@@ -169,7 +169,7 @@ void main() {
       kj: true,
     );
     expect(tileText(tester, 'calories'), contains('Energy · avg'));
-    expect(tileText(tester, 'calories'), contains('4347 / 8368'));
+    expect(tileText(tester, 'calories'), contains('4347 / 8368 kJ'));
 
     await openTile(tester, 'calories');
     expect(find.text('Energy by macro'), findsOneWidget);

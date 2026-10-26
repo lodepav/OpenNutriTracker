@@ -332,6 +332,35 @@ void main() {
       );
     });
 
+    testWidgets('a cut at its heaviest says why + is greyed', (tester) async {
+      final store = _MemoryPhases();
+      await pump(tester, store, service: _Trend());
+      Future<void> tap(String key) async {
+        await tester.ensureVisible(find.byKey(ValueKey(key)));
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(ValueKey(key)));
+        await tester.pumpAndSettle();
+      }
+
+      await tap('phases-edit');
+      await tap('phase-0-until');
+      final limit = find.byKey(const ValueKey('phase-0-limit'));
+      expect(limit, findsNothing);
+      final heavier = find.byKey(const ValueKey('phase-0-heavier'));
+      for (
+        var n = 0;
+        n < 30 && tester.widget<IconButton>(heavier).onPressed != null;
+        n++
+      ) {
+        await tap('phase-0-heavier');
+      }
+      expect(tester.widget<IconButton>(heavier).onPressed, isNull);
+      expect(
+        tester.widget<Text>(limit).data,
+        'A cut ends below your trend weight (90.4 kg).',
+      );
+    });
+
     testWidgets('the editor opens before the trend is read', (tester) async {
       final read = Completer<void>();
       await pump(tester, _MemoryPhases(), service: _Trend(read.future));

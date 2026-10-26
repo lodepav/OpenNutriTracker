@@ -474,8 +474,20 @@ class _PhasePlanScreenState extends State<PhasePlanScreen> {
                         : () => _until(i, _round(until) + _stepKg),
                   ),
                 ],
-              )
-            else
+              ),
+            // Why + or - is greyed at the limit (JC13).
+            if (until != null &&
+                from != null &&
+                (p.kgPerWeek < 0 && until + _stepKg >= from ||
+                    p.kgPerWeek > 0 && until - _stepKg <= from))
+              Text(
+                '${p.kgPerWeek < 0 ? 'A cut ends below' : 'A bulk ends above'} '
+                '${i == 0 ? 'your trend weight' : 'where the phase before ends'} '
+                '(${_weight(from)}).',
+                key: ValueKey('phase-$i-limit'),
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            if (until == null || from == null)
               Row(
                 children: [
                   Expanded(child: Text(_weeks(p.weeks))),

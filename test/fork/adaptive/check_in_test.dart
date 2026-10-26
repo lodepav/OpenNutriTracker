@@ -870,6 +870,86 @@ void main() {
     expect(saved.single, isNot(closeTo(-0.5, 0.01)));
   });
 
+  testWidgets('under the formula the planner shows Home\'s goal at the '
+      'pace, and a saved pace says so', (tester) async {
+    final paced = _PacedService(service);
+    final asked = <double>[];
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: GoalPlanCard(
+              palette: AppPalette.light,
+              unit: BodyWeightUnit.kg,
+              service: paced,
+              goalAtPace: (pace) async {
+                asked.add(pace);
+                return 3000 + pace * 1000;
+              },
+              onUsePace: (pace) async => paced.pace = pace,
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Your goal becomes'), findsOneWidget);
+    expect(find.text('2500 kcal'), findsOneWidget);
+    expect(find.text('Daily target at this pace'), findsNothing);
+
+    await tester.drag(
+      find.byKey(const ValueKey('plan-pace')),
+      const Offset(60, 0),
+    );
+    await tester.pumpAndSettle();
+    final chosen = find.textContaining('Pace: ');
+    final text = (tester.widget(chosen) as Text).data!;
+    expect(text, isNot('Pace: -0.50 kg a week'));
+    final pace = asked.last;
+    final goal = '${(3000 + pace * 1000).round()} kcal';
+    expect(find.text(goal), findsOneWidget);
+
+    await tester.ensureVisible(find.text('Use this pace'));
+    await tester.tap(find.text('Use this pace'));
+    await tester.pumpAndSettle();
+    expect(
+      find.text('Goal set to ${text.substring(6)}: $goal a day'),
+      findsOneWidget,
+    );
+    expect((tester.widget(chosen) as Text).data, text);
+    expect(find.text('Use this pace'), findsNothing);
+  });
+
+  testWidgets('a set target is changed or cleared from its row', (
+    tester,
+  ) async {
+    final targets = <double?>[];
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: GoalPlanCard(
+              palette: AppPalette.light,
+              unit: BodyWeightUnit.kg,
+              service: _PacedService(service),
+              goalAtPace: (_) async => null,
+              onSetTarget: (_, _, _, target) async {
+                targets.add(target);
+                return false;
+              },
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final row = find.byKey(const ValueKey('plan-target'));
+    expect(tester.getSize(row).height, greaterThanOrEqualTo(48));
+    await tester.tap(row);
+    await tester.pumpAndSettle();
+    expect(targets.single, isNotNull);
+  });
+
   testWidgets('the planner reloads when a pace is saved elsewhere', (
     tester,
   ) async {
@@ -908,7 +988,7 @@ void main() {
               palette: AppPalette.light,
               unit: BodyWeightUnit.kg,
               service: paced,
-              onSetTarget: (_, _, _) async {
+              onSetTarget: (_, _, _, _) async {
                 asked++;
                 paced.noTarget = false;
                 return true;

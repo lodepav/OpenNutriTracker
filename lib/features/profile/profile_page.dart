@@ -206,7 +206,7 @@ class _ProfilePageState extends State<ProfilePage> {
               identifier: 'profile-target-weight',
               label: S.of(context).profileTargetWeightLabel,
               value: user.targetWeightKg == null
-                  ? 'Set'
+                  ? S.of(context).profileTargetWeightNotSetLabel
                   : _forkWeight(context, user.targetWeightKg!, bodyWeightUnit),
               onTap: () =>
                   _showSetTargetWeightDialog(context, user, bodyWeightUnit),

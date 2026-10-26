@@ -2,7 +2,9 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:opennutritracker/core/domain/entity/body_weight_unit_entity.dart';
+import 'package:opennutritracker/core/domain/entity/user_entity.dart';
 import 'package:opennutritracker/core/domain/entity/user_weight_goal_entity.dart';
+import 'package:opennutritracker/core/domain/usecase/get_kcal_goal_usecase.dart';
 import 'package:opennutritracker/core/domain/usecase/get_user_usecase.dart';
 import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
@@ -12,6 +14,7 @@ import 'package:opennutritracker/core/utils/tracked_day_lock.dart';
 import 'package:opennutritracker/features/profile/presentation/bloc/profile_bloc.dart';
 import 'package:opennutritracker/features/profile/presentation/widgets/set_target_weight_dialog.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
+import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/fork/adaptive/goal_plan.dart';
 import 'package:opennutritracker/fork/phases/phases.dart';
 import 'package:opennutritracker/fork/units/energy_text.dart';
@@ -30,13 +33,7 @@ Future<bool> savePace(double kgPerWeek, [ProfileStamp? startedOn]) async {
   // the update, under the same (reentrant) lock, writes to this profile.
   final saved = await withTrackedDayLockOnProfile(() async {
     final user = await locator<GetUserUsecase>().getUserData();
-    user
-      ..weeklyWeightGoalKg = kgPerWeek
-      ..goal = kgPerWeek < 0
-          ? UserWeightGoalEntity.loseWeight
-          : kgPerWeek > 0
-          ? UserWeightGoalEntity.gainWeight
-          : UserWeightGoalEntity.maintainWeight;
+    _setPace(user, kgPerWeek);
     await locator<ProfileBloc>().updateUser(user);
     return true;
   }, startedOn: startedOn);
@@ -45,28 +42,50 @@ Future<bool> savePace(double kgPerWeek, [ProfileStamp? startedOn]) async {
   return true;
 }
 
-/// Asks for a target weight with upstream's dialog, seeded from [nowKg],
-/// and saves it to the profile as the Profile page does. False when
-/// cancelled, or a profile switch dropped the update.
+/// [kgPerWeek] as [user]'s pace, the goal following its sign.
+void _setPace(UserEntity user, double kgPerWeek) => user
+  ..weeklyWeightGoalKg = kgPerWeek
+  ..goal = kgPerWeek < 0
+      ? UserWeightGoalEntity.loseWeight
+      : kgPerWeek > 0
+      ? UserWeightGoalEntity.gainWeight
+      : UserWeightGoalEntity.maintainWeight;
+
+/// Home's goal today were [kgPerWeek] the profile's pace, worked out as
+/// Home works it out; null when a fixed or adaptive target sets Home's
+/// goal, which the pace does not move today.
+Future<double?> homeGoalAtPace(double kgPerWeek) async {
+  final settings = AdaptiveStore.settings.value;
+  if (settings.fixedTarget || settings.adaptiveTarget) return null;
+  if (!locator.isRegistered<GetKcalGoalUsecase>()) return null;
+  final user = await locator<GetUserUsecase>().getUserData();
+  _setPace(user, kgPerWeek);
+  return locator<GetKcalGoalUsecase>().getKcalGoal(userEntity: user);
+}
+
+/// Asks for a target weight with upstream's dialog, seeded from [targetKg]
+/// or, with none yet, [nowKg], and saves it to the profile as the Profile
+/// page does; with a target, Clear takes it off. False when cancelled, or
+/// a profile switch dropped the update.
 Future<bool> setTargetWeight(
   BuildContext context,
   BodyWeightUnit unit,
   double nowKg,
+  double? targetKg,
 ) async {
   final startedOn = ProfileStamp.now();
   final result = await showDialog<TargetWeightDialogResult>(
     context: context,
     builder: (_) => SetTargetWeightDialog(
-      initialKg: nowKg,
-      hasExistingTarget: false,
+      initialKg: targetKg ?? nowKg,
+      hasExistingTarget: targetKg != null,
       unit: unit,
     ),
   );
-  final kg = result?.value;
-  if (kg == null) return false;
+  if (result == null || (result.value == null && !result.clear)) return false;
   final saved = await withTrackedDayLockOnProfile(() async {
     final user = await locator<GetUserUsecase>().getUserData();
-    user.targetWeightKg = kg;
+    user.targetWeightKg = result.value;
     await locator<ProfileBloc>().updateUser(user);
     return true;
   }, startedOn: startedOn);
@@ -91,8 +110,10 @@ class GoalPlanCard extends StatefulWidget {
     BuildContext context,
     BodyWeightUnit unit,
     double nowKg,
+    double? targetKg,
   )
   onSetTarget;
+  final Future<double?> Function(double kgPerWeek) goalAtPace;
 
   const GoalPlanCard({
     super.key,
@@ -102,6 +123,7 @@ class GoalPlanCard extends StatefulWidget {
     this.phases,
     this.onUsePace = savePace,
     this.onSetTarget = setTargetWeight,
+    this.goalAtPace = homeGoalAtPace,
   });
 
   @override
@@ -138,11 +160,40 @@ class _GoalPlanCardState extends State<GoalPlanCard> {
   Future<GoalPlanInputs?> _load() =>
       (widget.service ?? AdaptiveService.fromLocator()).goalPlan();
 
+  /// Home's goal at [_homeGoalPace], when the formula sets it; read as
+  /// the pace moves.
+  double? _homeGoal;
+  double? _homeGoalPace;
+
+  /// While a chosen pace is saved: the card keeps it rather than show the
+  /// old one until the reload (JC2).
+  bool _saving = false;
+
+  Future<void> _readHomeGoal(double pace) async {
+    _homeGoalPace = pace;
+    double? goal;
+    try {
+      goal = await widget.goalAtPace(pace);
+    } catch (_) {
+      goal = null; // The planner's own figure stands.
+    }
+    if (mounted && _homeGoalPace == pace) setState(() => _homeGoal = goal);
+  }
+
   void _reload() {
     if (!mounted) return;
     setState(() {
-      _pace = null;
-      _inputs = _load();
+      // The chosen pace stays on screen until the saved one is read.
+      _inputs = _load().then((inputs) {
+        if (mounted) {
+          setState(() {
+            _pace = null;
+            _saving = false;
+          });
+          if (inputs != null) _readHomeGoal(inputs.paceKgPerWeek);
+        }
+        return inputs;
+      });
     });
   }
 
@@ -151,6 +202,9 @@ class _GoalPlanCardState extends State<GoalPlanCard> {
     super.initState();
     paceChanges.addListener(_reload);
     _loadMilestoneStep();
+    _inputs.then((inputs) {
+      if (inputs != null) _readHomeGoal(inputs.paceKgPerWeek);
+    });
   }
 
   @override
@@ -209,6 +263,11 @@ class _GoalPlanCardState extends State<GoalPlanCard> {
     final accent = theme.colorScheme.primary;
     final pace = _pace ?? inputs.paceKgPerWeek;
     final plan = planAt(inputs, pace);
+    final homeGoal = _homeGoalPace == pace ? _homeGoal : null;
+    // Read here: the unit can't be read in the tap.
+    final done =
+        'Goal set to ${_paceText(pace)}: '
+        '${energyText(context, homeGoal ?? plan.dailyTargetKcal)} a day';
     final target = inputs.targetWeightKg;
     final trendPerDay = inputs.trendKgPerDay;
 
@@ -253,7 +312,29 @@ class _GoalPlanCardState extends State<GoalPlanCard> {
               '${_change(kg)} (${_paceText(kg / days * 7)})',
             ),
           if (target != null)
-            _row('Target', _weight(target))
+            // Changed or cleared here too, as on You (JC4).
+            Semantics(
+              button: true,
+              hint: 'Change or clear the target weight',
+              child: InkWell(
+                key: const ValueKey('plan-target'),
+                onTap: () => _setTarget(inputs),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(minHeight: 48),
+                  child: Row(
+                    children: [
+                      Expanded(child: _row('Target', _weight(target))),
+                      const SizedBox(width: 8),
+                      Icon(
+                        Icons.edit_outlined,
+                        size: 18,
+                        color: widget.palette.textMuted,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            )
           else
             Wrap(
               alignment: WrapAlignment.spaceBetween,
@@ -263,15 +344,7 @@ class _GoalPlanCardState extends State<GoalPlanCard> {
                 const Text('No target weight, so no date to reach it.'),
                 TextButton(
                   key: const ValueKey('plan-set-target'),
-                  onPressed: () async {
-                    if (await widget.onSetTarget(
-                      context,
-                      widget.unit,
-                      inputs.nowKg,
-                    )) {
-                      _reload();
-                    }
-                  },
+                  onPressed: () => _setTarget(inputs),
                   child: const Text('Set target weight'),
                 ),
               ],
@@ -355,7 +428,10 @@ class _GoalPlanCardState extends State<GoalPlanCard> {
                 divisions: 40,
                 value: pace.clamp(-1.0, 1.0),
                 semanticFormatterCallback: _paceText,
-                onChanged: (v) => setState(() => _pace = v),
+                onChanged: (v) {
+                  setState(() => _pace = v);
+                  _readHomeGoal(v);
+                },
               ),
             ),
           ),
@@ -375,29 +451,62 @@ class _GoalPlanCardState extends State<GoalPlanCard> {
               ),
             ),
           if (target != null) ..._milestoneRows(milestones, pace, inputs),
-          _row(
-            'Daily target at this pace',
-            energyText(context, plan.dailyTargetKcal),
-          ),
-          Text(
-            'From an expenditure of '
-            '${energyText(context, inputs.expenditureKcal)}.',
-            style: theme.textTheme.bodySmall,
-          ),
+          // Under the formula, Home's goal is the formula's at the pace,
+          // not the measured expenditure's (JC1).
+          if (homeGoal != null) ...[
+            _row('Your goal becomes', energyText(context, homeGoal)),
+            Text(
+              "Today's, from your profile's formula and activity, as Home "
+              'shows it.',
+              style: theme.textTheme.bodySmall,
+            ),
+          ] else ...[
+            _row(
+              'Daily target at this pace',
+              energyText(context, plan.dailyTargetKcal),
+            ),
+            Text(
+              'From an expenditure of '
+              '${energyText(context, inputs.expenditureKcal)}.',
+              style: theme.textTheme.bodySmall,
+            ),
+          ],
           if ((pace - inputs.paceKgPerWeek).abs() > 0.001)
             Align(
               alignment: Alignment.centerRight,
               child: TextButton(
-                onPressed: () async {
-                  await widget.onUsePace(pace);
-                  _reload();
-                },
+                onPressed: _saving ? null : () => _usePace(pace, done),
                 child: const Text('Use this pace'),
               ),
             ),
         ],
       ),
     );
+  }
+
+  /// Saves [pace], then says [done].
+  Future<void> _usePace(double pace, String done) async {
+    setState(() => _saving = true);
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    try {
+      await widget.onUsePace(pace);
+    } catch (_) {
+      if (mounted) setState(() => _saving = false);
+      rethrow;
+    }
+    messenger?.showSnackBar(SnackBar(content: Text(done)));
+    _reload();
+  }
+
+  Future<void> _setTarget(GoalPlanInputs inputs) async {
+    if (await widget.onSetTarget(
+      context,
+      widget.unit,
+      inputs.nowKg,
+      inputs.targetWeightKg,
+    )) {
+      _reload();
+    }
   }
 
   /// The step choice, then each milestone and when the pace reaches it.
