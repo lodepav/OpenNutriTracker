@@ -13,6 +13,7 @@ import 'package:opennutritracker/fork/backup/auto_backup.dart';
 import 'package:opennutritracker/fork/backup/backup_extras.dart';
 import 'package:opennutritracker/fork/backup/profiles_backup.dart';
 import 'package:opennutritracker/fork/backup/storage_rescue.dart';
+import 'package:opennutritracker/fork/goal/goal_progress.dart';
 import 'package:opennutritracker/fork/dev/fake_ai.dart';
 import 'package:opennutritracker/fork/dish/starter_recipes.dart';
 import 'package:opennutritracker/fork/display/display_prefs.dart';
@@ -90,5 +91,8 @@ Future<HiveStorageIntegrityException?> forkStartup() async {
     return error;
   }
   if (forkFakeAi) await enableFakeAi(locator<AiCredentialStorage>());
+  // A target set since the last start, or set from now on, starts its
+  // goal that day (Goal progress).
+  GoalStartStore.start();
   return null;
 }

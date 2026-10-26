@@ -2,7 +2,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:intl/intl.dart' as intl;
 import 'package:intl/intl.dart' show toBeginningOfSentenceCase;
 import 'package:opennutritracker/core/domain/entity/body_weight_unit_entity.dart';
 import 'package:opennutritracker/core/domain/entity/tracked_day_entity.dart';
@@ -11,11 +10,11 @@ import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/core/utils/calc/unit_calc.dart';
 import 'package:opennutritracker/features/trends/presentation/bloc/trends_bloc.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
-import 'package:opennutritracker/fork/report/rate_text.dart';
 import 'package:opennutritracker/fork/trends/calories_detail.dart';
 import 'package:opennutritracker/fork/trends/expenditure_detail.dart';
 import 'package:opennutritracker/fork/trends/trend_stats.dart';
 import 'package:opennutritracker/fork/trends/trends_widgets.dart';
+import 'package:opennutritracker/fork/trends/weight_detail.dart';
 import 'package:opennutritracker/fork/units/energy_text.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 
@@ -152,42 +151,7 @@ class TrendDetailPage extends StatelessWidget {
 
     switch (metric) {
       case TrendMetric.weight:
-        final stats = WeightTrendStats.of(state.weight, dates);
-        final wu = state.bodyWeightUnit;
-        final label = weightUnitLabel(context, wu);
-        String? w(double? kg, {bool signed = false}) => kg == null
-            ? null
-            : signed
-            ? signedText(weightIn(wu, kg), 1)
-            : weightIn(wu, kg).toStringAsFixed(1);
-        return [
-          StatHeader(
-            stats: [
-              (
-                label: 'Trend weight',
-                value: w(stats.nowKg) ?? '–',
-                unit: label,
-              ),
-              (
-                label: 'Change',
-                value: w(stats.changeKg, signed: true) ?? '–',
-                unit: label,
-              ),
-              (
-                label: 'Per week',
-                value: stats.perWeekKg == null
-                    ? '–'
-                    : signedRate(weightIn(wu, stats.perWeekKg!)),
-                unit: label,
-              ),
-            ],
-          ),
-          gap,
-          pills,
-          gap,
-          deps.weightCard(state),
-          ..._weighIns(context, state, dates, stats),
-        ];
+        return weightDetailBody(context, state, dates, deps, pills);
       case TrendMetric.expenditure:
         return expenditureBody(
           context,
@@ -320,80 +284,5 @@ class TrendDetailPage extends StatelessWidget {
         ),
       ],
     );
-  }
-
-  /// The range's weigh-ins, newest first, each with the trend that day.
-  static List<Widget> _weighIns(
-    BuildContext context,
-    TrendsLoaded state,
-    List<DateTime> dates,
-    WeightTrendStats stats,
-  ) {
-    if (dates.isEmpty) return const [];
-    final palette = paletteOf(context);
-    final text = Theme.of(context).textTheme;
-    final wu = state.bodyWeightUnit;
-    final label = weightUnitLabel(context, wu);
-    final today = dates.last;
-    final format = intl.DateFormat.MMMEd(
-      Localizations.localeOf(context).toLanguageTag(),
-    );
-    final entries = [
-      for (final e in state.weight)
-        if (!e.date.isBefore(dates.first) &&
-            !DateTime(e.date.year, e.date.month, e.date.day).isAfter(today))
-          e,
-    ]..sort((a, b) => b.date.compareTo(a.date));
-    if (entries.isEmpty) return const [];
-    return [
-      const SizedBox(height: Dimens.spacing16),
-      Semantics(
-        header: true,
-        child: Text(
-          'Weigh-ins',
-          style: text.titleSmall?.copyWith(color: palette.textMuted),
-        ),
-      ),
-      const SizedBox(height: Dimens.spacing4),
-      for (final e in entries)
-        Builder(
-          builder: (context) {
-            final day = DateTime(e.date.year, e.date.month, e.date.day);
-            final i = dates.indexOf(day);
-            final trend = i < 0 ? null : stats.trend[i];
-            return MergeSemantics(
-              child: Container(
-                constraints: const BoxConstraints(minHeight: 48),
-                decoration: BoxDecoration(
-                  border: Border(bottom: BorderSide(color: palette.border)),
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        day == today ? 'Today' : format.format(day),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    if (trend != null)
-                      Text(
-                        'trend ${weightIn(wu, trend).toStringAsFixed(1)}',
-                        style: text.bodySmall?.copyWith(
-                          color: palette.textMuted,
-                        ),
-                      ),
-                    const SizedBox(width: Dimens.spacing16),
-                    Text(
-                      '${weightIn(wu, e.weightKg).toStringAsFixed(1)} $label',
-                      style: const TextStyle(fontWeight: FontWeight.w700),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        ),
-    ];
   }
 }

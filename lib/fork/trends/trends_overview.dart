@@ -10,6 +10,7 @@ import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/fork/display/display_prefs.dart';
 import 'package:opennutritracker/fork/report/rate_text.dart';
 import 'package:opennutritracker/fork/report/trends_layout.dart';
+import 'package:opennutritracker/fork/goal/goal_progress_page.dart';
 import 'package:opennutritracker/fork/trends/trend_detail.dart';
 import 'package:opennutritracker/fork/trends/trend_stats.dart';
 import 'package:opennutritracker/fork/trends/trends_widgets.dart';
@@ -289,8 +290,39 @@ class _TrendsOverviewState extends State<TrendsOverview> {
           spark: water,
           sparkColor: waterColor(context),
         ),
+      _goalTile(context, state, weight),
     ];
   }
+}
+
+/// Goal progress: the way left to the target; it opens Goal progress.
+TrendTile _goalTile(
+  BuildContext context,
+  TrendsLoaded state,
+  WeightTrendStats weight,
+) {
+  final wu = state.bodyWeightUnit;
+  final target = state.targetWeightKg;
+  final now = weight.nowKg;
+  final left = target == null || now == null ? null : (target - now).abs();
+  return TrendTile(
+    id: 'trends-tile-goal',
+    label: 'Goal progress',
+    value: left == null
+        ? 'No target'
+        : left < 0.1
+        ? 'There'
+        : weightIn(wu, left).toStringAsFixed(1),
+    suffix: left == null || left < 0.1
+        ? null
+        : '${weightUnitLabel(context, wu)} to go',
+    chart: Sparkline(
+      values: weight.trend,
+      color: Theme.of(context).colorScheme.primary,
+      bars: false,
+    ),
+    onTap: () => openGoalProgress(context, wu),
+  );
 }
 
 /// The on-track streak over the range, as upstream's card counted it.
