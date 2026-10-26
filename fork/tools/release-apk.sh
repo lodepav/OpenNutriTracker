@@ -42,15 +42,32 @@ json() { python3 -c 'import json, sys; print(json.loads(sys.argv[1])[sys.argv[2]
 
 # A release is of what origin's fork/main holds: a merge pushed meanwhile would be left out, and
 # the push at the end refused. Checked at the start and again before signing, as the build takes
-# a while. Behind with a release commit of a run that stopped, that commit and its tag go: a run
-# again writes them anew, the merges since included.
+# a while.
 up_to_date() {
   [[ "$(git branch --show-current)" == fork/main ]] || return 0
   git fetch -q origin fork/main
-  git merge-base --is-ancestor origin/fork/main HEAD && return 0
-  echo "fork/main is behind origin/fork/main: something was merged meanwhile." >&2
-  echo "With no commits of your own: git pull --ff-only. With only a release commit of a run that" >&2
-  echo "stopped: git tag -d openbite-v<its version>; git reset --hard origin/fork/main. Then run again." >&2
+  git merge-base --is-ancestor origin/fork/main HEAD
+}
+
+# Behind origin, catches up where that loses nothing: with no commits of its own, a fast-forward;
+# with only a release commit of a run that stopped, that commit and its tag go (a run writes them
+# anew, the merges since included). Anything else is left to you.
+catch_up() {
+  local own tag
+  own="$(git rev-list origin/fork/main..HEAD)"
+  if [[ -z "$own" ]]; then
+    git merge -q --ff-only origin/fork/main && echo "fork/main fast-forwarded to origin/fork/main" && return 0
+  elif [[ "$own" != *$'\n'* && "$(git log -1 --format=%s HEAD)" =~ ^chore\(fork\):\ OpenBite\ ([0-9.]+)$ ]]; then
+    tag="openbite-v${BASH_REMATCH[1]}"
+    if [[ "$(git rev-parse -q --verify "refs/tags/$tag^{commit}")" == "$(git rev-parse HEAD)" ]]; then
+      git tag -d "$tag" >/dev/null
+    fi
+    git reset -q --hard origin/fork/main
+    echo "dropped the release commit of a run that stopped ($tag); fork/main is at origin/fork/main"
+    return 0
+  fi
+  echo "fork/main is behind origin/fork/main and has commits of its own besides a release commit:" >&2
+  echo "merge or drop them, then run again." >&2
   return 1
 }
 
@@ -88,7 +105,7 @@ publish() {  # version, apk
 
 [[ -f "$KS" ]] || { echo "no keystore at $KS" >&2; exit 2; }
 [[ -z "$(git status --porcelain)" ]] || { echo "uncommitted changes: a release is built from a commit" >&2; exit 2; }
-up_to_date || exit 2
+up_to_date || catch_up || exit 2
 # release_notes.dart numbers the release and writes its notes: its tests first.
 flutter test test/fork/tools/ >/dev/null || { echo "the release tools' tests fail: flutter test test/fork/tools/" >&2; exit 2; }
 took "release tools' tests"
@@ -159,7 +176,11 @@ UNSIGNED="$SRC/build/app/outputs/flutter-apk/app-full-release.apk"
 # Its daemon would sit on some 4 GB for three hours, enough to get the emulator OOM-killed.
 (cd "$SRC/android" && ./gradlew --stop -q) || true
 took "build"
-up_to_date || { echo "nothing signed, tagged or published" >&2; exit 2; }
+up_to_date || {
+  echo "something was merged during the build: nothing signed, tagged or published" >&2
+  catch_up && echo "run again: the release takes the merges in" >&2
+  exit 2
+}
 "${BT}zipalign" -f -p 4 "$UNSIGNED" "$TMP/aligned.apk"
 echo "signing with $KS ($ALIAS)"
 "${BT}apksigner" sign --ks "$KS" --ks-key-alias "$ALIAS" --out "$OUT" "$TMP/aligned.apk"
