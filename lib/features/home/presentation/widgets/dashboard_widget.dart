@@ -1,25 +1,13 @@
 import 'package:animated_flip_counter/animated_flip_counter.dart';
 import 'package:flutter/material.dart';
-import 'package:opennutritracker/core/domain/entity/intake_entity.dart';
 import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/core/utils/calc/unit_calc.dart';
 import 'package:opennutritracker/core/utils/energy_unit_provider.dart';
-import 'package:opennutritracker/features/home/domain/entity/nutrient_contribution_entity.dart';
-import 'package:opennutritracker/features/home/presentation/screens/nutrient_contributions_screen.dart';
 import 'package:opennutritracker/features/settings/presentation/widgets/kcal_goal_info_screen.dart';
 import 'package:percent_indicator/circular_percent_indicator.dart';
 import 'package:opennutritracker/generated/l10n.dart';
-// [fork] S79 macro-order
-import 'package:opennutritracker/fork/display/display_prefs.dart';
-import 'package:opennutritracker/fork/display/week_bars.dart'; // [fork] S119
-import 'package:opennutritracker/fork/display/macro_foods.dart'; // [fork] S124
-// [fork] S119
-import 'package:opennutritracker/fork/adaptive/activity_credit.dart';
-import 'package:opennutritracker/fork/adaptive/activity.dart' show maxDailyActivityKcal; // [fork] S119
-// [/fork]
-// [/fork]
 import 'package:provider/provider.dart';
 
 class DashboardWidget extends StatefulWidget {
@@ -34,18 +22,6 @@ class DashboardWidget extends StatefulWidget {
   final double totalFatsGoal;
   final double totalProteinsGoal;
 
-  /// The day's logged foods, which a macro tile breaks its total into
-  /// (#1266).
-  final List<IntakeEntity> intakes;
-
-  /// For a food's details, opened from a macro's contributions.
-  final bool usesImperialUnits;
-
-  // [fork] S119 home-card: Home's (logical) day, which the week's bars
-  // end on
-  final DateTime? forkDay;
-  // [/fork]
-
   const DashboardWidget({
     super.key,
     required this.totalKcalSupplied,
@@ -58,9 +34,6 @@ class DashboardWidget extends StatefulWidget {
     required this.totalCarbsGoal,
     required this.totalFatsGoal,
     required this.totalProteinsGoal,
-    this.intakes = const [],
-    this.usesImperialUnits = false,
-    this.forkDay, // [fork] S119
   });
 
   @override
@@ -68,56 +41,10 @@ class DashboardWidget extends StatefulWidget {
 }
 
 class _DashboardWidgetState extends State<DashboardWidget> {
-  // [fork] S119 home-card: whether Burned raises the goal; a fixed or
-  // adaptive target leaves it out (read again as Home reloads)
-  late Future<ActivityCredit> _forkCredit = activityCredit();
-
-  @override
-  void didUpdateWidget(DashboardWidget oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    _forkCredit = activityCredit();
-  }
-  // [/fork]
-
   void _openKcalGoalInfoScreen() {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => const KcalGoalInfoScreen(),
-      ),
-    );
-  }
-
-  void _openNutrientContributions(MacroNutrient nutrient, double total, double goal) {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => NutrientContributionsScreen(
-          nutrient: nutrient,
-          intakes: widget.intakes,
-          total: total,
-          goal: goal,
-          day: DateTime.now(),
-          usesImperialUnits: widget.usesImperialUnits,
-          // [fork] S124 macro-foods: every total, for the page's switch
-          forkTotals: {
-            FoodsMetric.energy: (
-              eaten: widget.totalKcalSupplied,
-              goal: widget.totalKcalDaily,
-            ),
-            FoodsMetric.carbs: (
-              eaten: widget.totalCarbsIntake,
-              goal: widget.totalCarbsGoal,
-            ),
-            FoodsMetric.fat: (
-              eaten: widget.totalFatsIntake,
-              goal: widget.totalFatsGoal,
-            ),
-            FoodsMetric.protein: (
-              eaten: widget.totalProteinsIntake,
-              goal: widget.totalProteinsGoal,
-            ),
-          },
-          // [/fork]
-        ),
       ),
     );
   }
@@ -160,259 +87,131 @@ class _DashboardWidgetState extends State<DashboardWidget> {
         ? Theme.of(context).colorScheme.error
         : Theme.of(context).colorScheme.primary;
 
-    // [fork] S119 home-card: MacroFactor's dashboard. A small ring beside
-    // what was eaten, burned and the goal, the ring counting what is left
-    // or what was eaten; the macros in columns, each "g left" or "g over";
-    // and the week's bars, all in one card (upstream: a large ring between
-    // two stats, then three macro tiles).
-    return ValueListenableBuilder<bool>(
-      valueListenable: DisplayPrefs.homeShowsEaten,
-      builder: (context, showsEaten, _) {
-        final ringValue = showsEaten ? displaySupplied : displayValue;
-        final ringLabel = showsEaten
-            ? '${usesKilojoules ? S.of(context).kjLabel : S.of(context).kcalLabel} eaten'
-            : kcalLabelText;
-        final displayGoal = usesKilojoules
-            ? UnitCalc.kcalToKj(widget.totalKcalDaily)
-            : widget.totalKcalDaily;
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(
-            Dimens.spacing16,
-            Dimens.spacing8,
-            Dimens.spacing16,
-            Dimens.spacing4,
-          ),
-          child: AppCard(
-            padding: const EdgeInsets.all(Dimens.spacing16),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(Dimens.spacing16, Dimens.spacing8, Dimens.spacing16, Dimens.spacing4),
+      child: Column(
+        children: [
+          AppCard(
+            padding: const EdgeInsets.fromLTRB(Dimens.spacing24, Dimens.spacing20, Dimens.spacing24, Dimens.spacing24),
             child: Column(
               children: [
                 Row(
                   children: [
-                    Semantics(
-                      identifier: 'home-kcal-gauge',
-                      label: '${ringValue.toInt()} $ringLabel',
-                      hint: S.of(context).settingsKcalGoalInfoLabel,
-                      button: true,
-                      excludeSemantics: true,
-                      // excludeSemantics strips the GestureDetector's tap
-                      // along with the rest, so the node needs its own.
-                      onTap: _openKcalGoalInfoScreen,
-                      // The ring opens the calorie goal's derivation.
-                      child: Tooltip(
-                        message: S.of(context).settingsKcalGoalInfoLabel,
-                        child: GestureDetector(
-                          behavior: HitTestBehavior.opaque,
-                          onTap: _openKcalGoalInfoScreen,
-                          child: CircularPercentIndicator(
-                            radius: 58,
-                            lineWidth: 10,
-                            percent: gaugeValue.clamp(0.0, 1.0),
-                            animation: true,
-                            // The first build shows the real value at once;
-                            // a later change (a meal logged) animates.
-                            animateToInitialPercent: false,
-                            animationDuration: 800,
-                            curve: AppMotion.emphasized,
-                            circularStrokeCap: CircularStrokeCap.round,
-                            backgroundColor: palette.surfaceMuted,
-                            progressColor: progressColor,
-                            center: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                AnimatedFlipCounter(
-                                  duration: const Duration(milliseconds: 800),
-                                  curve: AppMotion.emphasized,
-                                  value: ringValue.toInt(),
-                                  textStyle: textTheme.headlineSmall?.copyWith(
-                                    height: 1,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                                Text(
-                                  ringLabel,
-                                  style: textTheme.labelSmall?.copyWith(
-                                    color: palette.textMuted,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
+                    // Two equal halves; each stat pins itself to its card
+                    // edge via its own cross-axis alignment. A Spacer next
+                    // to loose-fit Flexible children would leave the spare
+                    // width at the row end and pull "burned" off the edge.
+                    Expanded(
+                      child: _MiniStat(
+                        icon: Icons.arrow_downward_rounded,
+                        value: '${displaySupplied.toInt()}',
+                        label: S.of(context).suppliedLabel,
+                        color: palette.proteinColor,
                       ),
                     ),
-                    const SizedBox(width: Dimens.spacing16),
                     Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          _StatLine(
-                            label: 'Eaten',
-                            value: '${displaySupplied.toInt()}',
-                          ),
-                          // [fork] S119: "+" only where it is added
-                          FutureBuilder<ActivityCredit>(
-                            future: _forkCredit,
-                            builder: (context, credit) =>
-                                credit.data == ActivityCredit.dailyCapped &&
-                                    widget.totalKcalBurned >
-                                        maxDailyActivityKcal
-                                // The goal counts the burn up to its cap
-                                ? _StatLine(
-                                    label: 'Burned, up to',
-                                    value:
-                                        '+${(usesKilojoules ? UnitCalc.kcalToKj(maxDailyActivityKcal) : maxDailyActivityKcal).toInt()}',
-                                  )
-                                : credit.data?.raisesGoal ?? true
-                                ? _StatLine(
-                                    label: 'Burned',
-                                    value: '+${displayBurned.toInt()}',
-                                  )
-                                : _StatLine(
-                                    label: 'Burned, not added',
-                                    value: '${displayBurned.toInt()}',
-                                  ),
-                          ),
-                          _StatLine(
-                            label: 'Goal',
-                            value: '${displayGoal.toInt()}',
-                          ),
-                          const SizedBox(height: Dimens.spacing8),
-                          SegmentedButton<bool>(
-                            key: const ValueKey('home-ring-mode'),
-                            showSelectedIcon: false,
-                            style: const ButtonStyle(
-                              visualDensity: VisualDensity.compact,
-                              tapTargetSize: MaterialTapTargetSize.padded,
-                            ),
-                            segments: const [
-                              ButtonSegment(value: false, label: Text('Left')),
-                              ButtonSegment(value: true, label: Text('Eaten')),
-                            ],
-                            selected: {showsEaten},
-                            onSelectionChanged: (picked) =>
-                                DisplayPrefs.setHomeShowsEaten(picked.first),
-                          ),
-                        ],
+                      child: _MiniStat(
+                        icon: Icons.local_fire_department_rounded,
+                        value: '${displayBurned.toInt()}',
+                        label: S.of(context).burnedLabel,
+                        color: palette.carbsColor,
+                        trailing: true,
                       ),
                     ),
                   ],
                 ),
                 const SizedBox(height: Dimens.spacing16),
-                // [fork] S79 macro-order: the macros in the user's order
-                MacroOrderBuilder(
-                  // [fork] S83 large-text: at large font sizes the macros
-                  // stack, so labels and values are not broken mid-word.
-                  builder: (context) => Flex(
-                    direction: _stackMacros(context)
-                        ? Axis.vertical
-                        : Axis.horizontal,
-                    crossAxisAlignment: _stackMacros(context)
-                        ? CrossAxisAlignment.stretch
-                        : CrossAxisAlignment.start,
-                    children: [
-                      for (final (i, column) in inMacroOrder(
-                        carbs: _MacroLeft(
-                          label: S.of(context).carbsLabel,
-                          intake: widget.totalCarbsIntake,
-                          goal: widget.totalCarbsGoal,
-                          color: palette.carbs,
-                          identifier: 'home-macro-carbs',
-                          onTap: () => _openNutrientContributions(
-                            MacroNutrient.carbs,
-                            widget.totalCarbsIntake,
-                            widget.totalCarbsGoal,
-                          ),
+                Semantics(
+                  identifier: 'home-kcal-gauge',
+                  label: '${displayValue.toInt()} $kcalLabelText',
+                  hint: S.of(context).settingsKcalGoalInfoLabel,
+                  button: true,
+                  excludeSemantics: true,
+                  // excludeSemantics strips the GestureDetector's semantic
+                  // tap action along with the rest of the subtree, so the
+                  // node needs its own onTap for screen readers to be able
+                  // to activate the button it announces.
+                  onTap: _openKcalGoalInfoScreen,
+                  // Tapping the gauge opens the calorie-goal transparency
+                  // screen, so the central number on the dashboard is one
+                  // tap away from its full derivation.
+                  child: Tooltip(
+                    message: S.of(context).settingsKcalGoalInfoLabel,
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: _openKcalGoalInfoScreen,
+                      child: CircularPercentIndicator(
+                        radius: 90,
+                        lineWidth: 16,
+                        percent: gaugeValue.clamp(0.0, 1.0),
+                        animation: true,
+                        // The dashboard's first-ever build of a session (a
+                        // cold start, or landing on Home right after
+                        // seeding/onboarding) must show the real value
+                        // immediately — animating up from 0% every time
+                        // reads as the data being wrong for a beat, not as
+                        // a nice reveal. Later rebuilds (e.g. logging a
+                        // meal) still animate from the old percent, since
+                        // that's a real, visible change worth animating.
+                        animateToInitialPercent: false,
+                        animationDuration: 800,
+                        curve: AppMotion.emphasized,
+                        circularStrokeCap: CircularStrokeCap.round,
+                        backgroundColor: palette.surfaceMuted,
+                        progressColor: progressColor,
+                        center: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            AnimatedFlipCounter(
+                              duration: const Duration(milliseconds: 800),
+                              curve: AppMotion.emphasized,
+                              value: displayValue.toInt(),
+                              textStyle: textTheme.displaySmall?.copyWith(height: 1),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(kcalLabelText, style: textTheme.bodyMedium?.copyWith(color: palette.textMuted)),
+                          ],
                         ),
-                        fat: _MacroLeft(
-                          label: S.of(context).fatLabel,
-                          intake: widget.totalFatsIntake,
-                          goal: widget.totalFatsGoal,
-                          color: palette.fat,
-                          identifier: 'home-macro-fat',
-                          onTap: () => _openNutrientContributions(
-                            MacroNutrient.fat,
-                            widget.totalFatsIntake,
-                            widget.totalFatsGoal,
-                          ),
-                        ),
-                        protein: _MacroLeft(
-                          label: S.of(context).proteinLabel,
-                          intake: widget.totalProteinsIntake,
-                          goal: widget.totalProteinsGoal,
-                          color: palette.protein,
-                          identifier: 'home-macro-protein',
-                          onTap: () => _openNutrientContributions(
-                            MacroNutrient.protein,
-                            widget.totalProteinsIntake,
-                            widget.totalProteinsGoal,
-                          ),
-                        ),
-                      ).indexed) ...[
-                        if (i > 0)
-                          const SizedBox(
-                            width: Dimens.spacing12,
-                            height: Dimens.spacing8,
-                          ),
-                        if (_stackMacros(context))
-                          column
-                        else
-                          Expanded(child: column),
-                      ],
-                    ],
+                      ),
+                    ),
                   ),
-                ),
-                // [/fork]
-                Divider(height: Dimens.spacing24, color: palette.border),
-                WeekBars(
-                  today: widget.forkDay ?? DateTime.now(),
-                  todayKcal: widget.totalKcalSupplied,
-                  todayGoalKcal: widget.totalKcalDaily,
                 ),
               ],
             ),
           ),
-        );
-      },
-    );
-    // [/fork]
-  }
-}
-
-// [fork] S83 large-text: true when text is scaled past 1.3×.
-bool _stackMacros(BuildContext context) => MediaQuery.textScalerOf(context).scale(10) > 13;
-// [/fork]
-
-// [fork] S119 home-card: upstream's _MiniStat and _MacroTile went with the
-// large ring and the macro tiles.
-
-/// "Eaten  2897", one line of the stats beside the ring.
-class _StatLine extends StatelessWidget {
-  final String label;
-  final String value;
-
-  const _StatLine({required this.label, required this.value});
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final palette = isDark ? AppPalette.dark : AppPalette.light;
-    final textTheme = Theme.of(context).textTheme;
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 1),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              label,
-              style: textTheme.bodySmall?.copyWith(color: palette.textMuted),
-            ),
-          ),
-          Text(
-            value,
-            style: textTheme.bodyMedium?.copyWith(
-              color: palette.textStrong,
-              fontWeight: FontWeight.w700,
-            ),
+          const SizedBox(height: Dimens.spacing12),
+          Row(
+            children: [
+              Expanded(
+                child: _MacroTile(
+                  label: S.of(context).carbsLabel,
+                  intake: widget.totalCarbsIntake,
+                  goal: widget.totalCarbsGoal,
+                  color: palette.carbs,
+                  palette: palette,
+                ),
+              ),
+              const SizedBox(width: Dimens.spacing12),
+              Expanded(
+                child: _MacroTile(
+                  label: S.of(context).fatLabel,
+                  intake: widget.totalFatsIntake,
+                  goal: widget.totalFatsGoal,
+                  color: palette.fat,
+                  palette: palette,
+                ),
+              ),
+              const SizedBox(width: Dimens.spacing12),
+              Expanded(
+                child: _MacroTile(
+                  label: S.of(context).proteinLabel,
+                  intake: widget.totalProteinsIntake,
+                  goal: widget.totalProteinsGoal,
+                  color: palette.protein,
+                  palette: palette,
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -420,84 +219,91 @@ class _StatLine extends StatelessWidget {
   }
 }
 
-/// A macro's column: "51 g left" (or "9 g over", in red), a bar and its
-/// name; tapping it lists the foods behind it (#1266).
-class _MacroLeft extends StatelessWidget {
+class _MiniStat extends StatelessWidget {
+  final IconData icon;
+  final String value;
   final String label;
-  final double intake;
-  final double goal;
   final Color color;
-  final String identifier;
-  final VoidCallback onTap;
+  final bool trailing;
 
-  const _MacroLeft({
+  const _MiniStat({
+    required this.icon,
+    required this.value,
     required this.label,
-    required this.intake,
-    required this.goal,
     required this.color,
-    required this.identifier,
-    required this.onTap,
+    this.trailing = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final palette = isDark ? AppPalette.dark : AppPalette.light;
     final textTheme = Theme.of(context).textTheme;
-    final error = Theme.of(context).colorScheme.error;
-    final pct = goal <= 0 ? 0.0 : (intake / goal).clamp(0.0, 1.0);
-    final over = goal > 0 && intake.round() > goal.round();
-    final grams = (goal - intake).abs().round();
-    return Semantics(
-      identifier: identifier,
-      hint: S.of(context).nutrientContributionsHint,
-      button: true,
-      label: '$label: ${intake.round()} of ${goal.round()} g, '
-          '$grams g ${over ? 'over' : 'left'}',
-      excludeSemantics: true,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: Dimens.borderRadiusS,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: Dimens.spacing4),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    return Column(
+      crossAxisAlignment: trailing ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(color: color.withValues(alpha: 0.16), shape: BoxShape.circle),
+          child: Icon(icon, color: color, size: 20),
+        ),
+        const SizedBox(height: 6),
+        Text(value,
+            maxLines: 1, overflow: TextOverflow.ellipsis, style: textTheme.titleMedium),
+        Text(label,
+            maxLines: 1, overflow: TextOverflow.ellipsis, style: textTheme.labelSmall),
+      ],
+    );
+  }
+}
+
+class _MacroTile extends StatelessWidget {
+  final String label;
+  final double intake;
+  final double goal;
+  final Color color;
+  final AppPalette palette;
+
+  const _MacroTile({
+    required this.label,
+    required this.intake,
+    required this.goal,
+    required this.color,
+    required this.palette,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    final pct = (goal <= 0) ? 0.0 : (intake / goal).clamp(0.0, 1.0);
+    return AppCard(
+      borderRadius: Dimens.radiusM,
+      padding: const EdgeInsets.fromLTRB(Dimens.spacing16, Dimens.spacing16, Dimens.spacing16, Dimens.spacing16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              Text.rich(
-                TextSpan(
-                  children: [
-                    TextSpan(
-                      text: '$grams g',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                        color: over ? error : palette.textStrong,
-                      ),
-                    ),
-                    TextSpan(text: over ? ' over' : ' left'),
-                  ],
-                ),
-                style: textTheme.bodySmall?.copyWith(color: palette.textMuted),
-              ),
-              const SizedBox(height: Dimens.spacing4),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(3),
-                child: LinearProgressIndicator(
-                  value: pct,
-                  minHeight: 5,
-                  backgroundColor: palette.surfaceMuted,
-                  valueColor: AlwaysStoppedAnimation(over ? error : color),
-                ),
-              ),
-              const SizedBox(height: Dimens.spacing4),
-              Text(
-                label,
-                style: textTheme.labelSmall?.copyWith(color: palette.textMuted),
-              ),
+              Container(width: 9, height: 9, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+              const SizedBox(width: 6),
+              Flexible(child: Text(label, style: textTheme.labelMedium)),
             ],
           ),
-        ),
+          const SizedBox(height: Dimens.spacing12),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: LinearProgressIndicator(
+              value: pct,
+              minHeight: 8,
+              backgroundColor: palette.surfaceMuted,
+              valueColor: AlwaysStoppedAnimation(color),
+            ),
+          ),
+          const SizedBox(height: Dimens.spacing12),
+          Text(
+            '${intake.toInt()}/${goal.toInt()} g',
+            style: textTheme.bodySmall?.copyWith(color: palette.textStrong, fontWeight: FontWeight.w700),
+          ),
+        ],
       ),
     );
   }
 }
-// [/fork]

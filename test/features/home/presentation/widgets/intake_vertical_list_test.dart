@@ -128,11 +128,9 @@ IntakeEntity _buildIntake({
   );
 }
 
-Widget _wrapWithMaterial(Widget child, {bool kj = false}) {
+Widget _wrapWithMaterial(Widget child) {
   return ChangeNotifierProvider<EnergyUnitProvider>(
-    // [fork] S83 kJ in the meal header
-    create: (_) => EnergyUnitProvider(usesKilojoules: kj),
-    // [/fork]
+    create: (_) => EnergyUnitProvider(),
     child: MaterialApp(
       localizationsDelegates: const [S.delegate],
       supportedLocales: S.supportedLocales,
@@ -302,9 +300,7 @@ void main() {
       await tester.tap(find.byType(PopupMenuButton<VerticalListPopupMenuSelections>));
       await tester.pumpAndSettle();
 
-      // [fork] S25 copy-menu: the item reads Copy…, as it asks for the day
-      expect(find.text('Copy…'), findsOneWidget);
-      // [/fork]
+      expect(find.text(l10nEn.dialogCopyLabel), findsOneWidget);
       expect(find.text(l10nEn.deleteAllLabel), findsOneWidget);
       expect(find.text(l10nEn.shareMealLabel), findsOneWidget);
       expect(find.text(l10nEn.importMealLabel), findsOneWidget);
@@ -332,37 +328,13 @@ void main() {
 
       // Empty section: no Copy/Delete/Share — nothing to act on. Import is
       // always available so the user can scan a QR to populate the section.
-      expect(find.text('Copy…'), findsNothing); // [fork] S25 copy-menu
+      expect(find.text(l10nEn.dialogCopyLabel), findsNothing);
       expect(find.text(l10nEn.deleteAllLabel), findsNothing);
       expect(find.text(l10nEn.shareMealLabel), findsNothing);
       expect(find.text(l10nEn.importMealLabel), findsOneWidget);
       expect(find.text(l10nEn.pasteCodeLabel), findsOneWidget);
     },
   );
-
-  // [fork] S83 kJ: the target string has "kcal" written into it
-  testWidgets('a meal header with a target reads in kJ', (tester) async {
-    await tester.pumpWidget(_wrapWithMaterial(
-      kj: true,
-      IntakeVerticalList(
-        day: DateTime(2026, 1, 1),
-        title: 'Breakfast',
-        listIcon: Icons.bakery_dining_outlined,
-        addMealType: AddMealType.breakfastType,
-        intakeList: intakes,
-        usesImperialUnits: false,
-        showMealMacros: false,
-        mealKcalTarget: 583,
-        onDeleteIntakeCallback: (_, _) {},
-      ),
-    ));
-    await tester.pump();
-
-    // 200 kcal of 583, in kJ, in the text and in its label.
-    expect(find.text('836 / 2439 kJ'), findsOneWidget);
-    expect(find.bySemanticsLabel(RegExp('836 / 2439 kJ')), findsWidgets);
-  });
-  // [/fork]
 
   // Regression: at a phone-width header the title used to be starved of space
   // by a Spacer competing with the kcal summary for flex, so "Breakfast"
