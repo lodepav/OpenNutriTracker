@@ -11,9 +11,9 @@ import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/core/utils/calc/unit_calc.dart';
 import 'package:opennutritracker/features/trends/presentation/bloc/trends_bloc.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
-import 'package:opennutritracker/fork/adaptive/expenditure_card.dart';
 import 'package:opennutritracker/fork/report/rate_text.dart';
 import 'package:opennutritracker/fork/trends/calories_detail.dart';
+import 'package:opennutritracker/fork/trends/expenditure_detail.dart';
 import 'package:opennutritracker/fork/trends/trend_stats.dart';
 import 'package:opennutritracker/fork/trends/trends_widgets.dart';
 import 'package:opennutritracker/fork/units/energy_text.dart';
@@ -189,50 +189,14 @@ class TrendDetailPage extends StatelessWidget {
           ..._weighIns(context, state, dates, stats),
         ];
       case TrendMetric.expenditure:
-        final series = expenditureSeries(history, dates);
-        final present = series.whereType<double>();
-        final change = present.length < 2 ? null : present.last - present.first;
-        return [
-          StatHeader(
-            stats: [
-              (
-                label: 'Now',
-                value: present.isEmpty
-                    ? '–'
-                    : '${energyValue(context, present.last)}',
-                unit: unit,
-              ),
-              (
-                label: 'Change',
-                value: change == null
-                    ? '–'
-                    : signedText(energyValue(context, change).toDouble()),
-                unit: unit,
-              ),
-              (
-                label: 'Average',
-                value: meanOf(series) == null
-                    ? '–'
-                    : '${energyValue(context, meanOf(series)!)}',
-                unit: unit,
-              ),
-            ],
-          ),
-          gap,
-          pills,
-          if (history.isEmpty) ...[
-            gap,
-            noData(
-              context,
-              'Expenditure is estimated from your first weigh-in.',
-            ),
-          ] else
-            ExpenditureTrendCard(
-              rangeDays: state.windowDays,
-              palette: palette,
-              service: deps.service,
-            ),
-        ];
+        return expenditureBody(
+          context,
+          state,
+          history,
+          dates: dates,
+          pills: pills,
+          service: deps.service,
+        );
       case TrendMetric.balance:
         final series = balanceSeries(history, dates);
         final mean = meanOf(series);

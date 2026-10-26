@@ -41,7 +41,7 @@ void main() {
   testWidgets('the daily average rounds', (tester) async {
     await pumpTrends(tester, loaded(days: [_today(carbs: 69.6)]));
     expect(tileText(tester, 'carbs'), contains('70 / 259 g'));
-    await openTile(tester, 'calories');
+    await openTile(tester, 'carbs');
     expect(find.text('70 g'), findsOneWidget);
   });
 
