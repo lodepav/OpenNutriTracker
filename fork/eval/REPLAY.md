@@ -32,6 +32,17 @@ FORK_EVAL_REPLAY=build/fork-eval/replay/haiku flutter test test/fork/eval   # sc
 The report lands in `build/fork-eval/<time>/report.md` as usual, under the model
 `replay:haiku`.
 
+### Progress-photo pairs (AI body comparison)
+
+```sh
+python3 -I fork/tools/fetch_body_pairs.py
+FORK_EVAL_REPLAY=build/fork-eval/replay-bodies/haiku flutter test test/fork/eval/body_compare_eval_test.dart
+# answer with the subagent: the prompt below, saying it stands in for a fitness app's
+# progress-photo comparison and that each item's query is `key=value` as the system
+# prompt says, though the tool is named for meal items
+FORK_EVAL_REPLAY=build/fork-eval/replay-bodies/haiku flutter test test/fork/eval/body_compare_eval_test.dart
+```
+
 ### In the app (emulator)
 
 ```sh
