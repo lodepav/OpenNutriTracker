@@ -15,7 +15,7 @@ import 'package:opennutritracker/fork/goal/goal_progress.dart';
 import 'package:opennutritracker/fork/phases/phases.dart';
 import 'package:opennutritracker/fork/report/chart_touch.dart';
 import 'package:opennutritracker/fork/report/rate_text.dart';
-import 'package:opennutritracker/fork/trends/insight_widgets.dart';
+import 'package:opennutritracker/fork/trends/detail_widgets.dart';
 import 'package:opennutritracker/fork/trends/trend_detail.dart';
 import 'package:opennutritracker/fork/trends/trend_stats.dart';
 import 'package:opennutritracker/fork/trends/trends_widgets.dart';
@@ -226,8 +226,8 @@ class _GoalProgressPageState extends State<GoalProgressPage> {
           atPace: recent?.kgPerWeek,
         ),
       ),
-      const InsightSection('Pace'),
-      InsightRows(
+      trendSection(context, 'Pace'),
+      TrendRows(
         rows: [
           (label: 'Your plan', value: _rate(p.paceKgPerWeek)),
           if (recent != null)
@@ -237,8 +237,8 @@ class _GoalProgressPageState extends State<GoalProgressPage> {
         ],
       ),
       if (!p.reached) ...[
-        const InsightSection('When you get there'),
-        InsightRows(
+        trendSection(context, 'When you get there'),
+        TrendRows(
           rows: [
             (
               label: 'At your plan’s pace',
@@ -254,9 +254,9 @@ class _GoalProgressPageState extends State<GoalProgressPage> {
         ),
       ],
       const SizedBox(height: Dimens.spacing12),
-      InsightGrid(
+      FigureGrid(
         tiles: [
-          InsightTile(
+          FigureTile(
             label: p.behindKg >= 0 ? 'Behind the plan' : 'Ahead of the plan',
             value: _kg(p.behindKg.abs()),
             unit: label,
@@ -265,7 +265,7 @@ class _GoalProgressPageState extends State<GoalProgressPage> {
                 : 'about ${(p.behindKg.abs() / p.paceKgPerWeek.abs()).ceil()} '
                       'weeks',
           ),
-          InsightTile(
+          FigureTile(
             label: 'Calorie goal now',
             value: calories.goalKcal == null
                 ? '–'
@@ -308,7 +308,7 @@ class _GoalProgressPageState extends State<GoalProgressPage> {
     final palette = paletteOf(context);
     final label = weightUnitLabel(context, widget.unit);
     return [
-      const InsightSection('Milestones'),
+      trendSection(context, 'Milestones'),
       AppCard(
         padding: const EdgeInsets.symmetric(horizontal: Dimens.spacing16),
         child: Column(

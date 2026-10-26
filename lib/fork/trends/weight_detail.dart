@@ -7,7 +7,7 @@ import 'package:opennutritracker/fork/adaptive/goal_plan.dart';
 import 'package:opennutritracker/fork/adaptive/trend_points.dart';
 import 'package:opennutritracker/fork/goal/goal_progress_page.dart';
 import 'package:opennutritracker/fork/report/rate_text.dart';
-import 'package:opennutritracker/fork/trends/insight_widgets.dart';
+import 'package:opennutritracker/fork/trends/detail_widgets.dart';
 import 'package:opennutritracker/fork/trends/trend_detail.dart';
 import 'package:opennutritracker/fork/trends/trend_stats.dart';
 import 'package:opennutritracker/fork/trends/trends_widgets.dart';
@@ -108,7 +108,7 @@ List<Widget> weightDetailBody(
     pills,
     gap,
     deps.weightCard(state),
-    const InsightSection('Trend change over'),
+    trendSection(context, 'Trend change over'),
     ChangeChips(
       changes: [
         for (final d in weightChangeSpans)
@@ -122,21 +122,21 @@ List<Widget> weightDetailBody(
       ],
     ),
     const SizedBox(height: Dimens.spacing12),
-    InsightGrid(
+    FigureGrid(
       tiles: [
-        InsightTile(
+        FigureTile(
           label: 'Highest',
           value: w(high?.kg) ?? '–',
           unit: high == null ? null : label,
           note: high == null ? null : day(high.on),
         ),
-        InsightTile(
+        FigureTile(
           label: 'Lowest',
           value: w(low?.kg) ?? '–',
           unit: low == null ? null : label,
           note: low == null ? null : day(low.on),
         ),
-        InsightTile(
+        FigureTile(
           label: 'Days weighed in',
           value: '$weighInDays',
           unit: 'of ${dates.length} days',
@@ -172,7 +172,7 @@ Widget _goalTile(
   final target = state.targetWeightKg;
   final now = stats.nowKg;
   if (target == null || now == null) {
-    return InsightTile(
+    return FigureTile(
       label: 'To your goal',
       value: 'No target',
       note: 'Set one to see your progress',
@@ -184,7 +184,7 @@ Widget _goalTile(
       ? null
       : daysToTarget(now, target, stats.perWeekKg! / 7);
   final t = DateTime.now();
-  return InsightTile(
+  return FigureTile(
     label: 'To your goal',
     value: left < 0.1 ? 'There' : weightIn(wu, left).toStringAsFixed(1),
     unit: left < 0.1 ? null : weightUnitLabel(context, wu),
@@ -221,7 +221,7 @@ List<Widget> weighInRows(
   ]..sort((a, b) => b.date.compareTo(a.date));
   if (entries.isEmpty) return const [];
   return [
-    const InsightSection('Weigh-ins'),
+    trendSection(context, 'Weigh-ins'),
     for (final e in entries)
       Builder(
         builder: (context) {

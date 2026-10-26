@@ -11,7 +11,6 @@ import 'package:opennutritracker/features/trends/presentation/bloc/trends_bloc.d
 import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
 import 'package:opennutritracker/fork/display/display_prefs.dart';
 import 'package:opennutritracker/fork/trends/detail_widgets.dart';
-import 'package:opennutritracker/fork/trends/insight_widgets.dart';
 import 'package:opennutritracker/fork/trends/trends_overview.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 
