@@ -213,8 +213,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         } else if (state is SettingsLoadingState) {
           return const Center(child: CircularProgressIndicator());
         } else if (state is SettingsLoadedState) {
-          final isDark = Theme.of(context).brightness == Brightness.dark;
-          final palette = isDark ? AppPalette.dark : AppPalette.light;
+          final palette = paletteOf(context);
           final error = Theme.of(context).colorScheme.error;
           // The sections, each a page
           if (!widget.embedded && widget.section == null) {

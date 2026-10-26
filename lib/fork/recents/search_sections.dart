@@ -130,8 +130,7 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final palette = isDark ? AppPalette.dark : AppPalette.light;
+    final palette = paletteOf(context);
     final style = Theme.of(
       context,
     ).textTheme.labelMedium?.copyWith(color: palette.textMuted);

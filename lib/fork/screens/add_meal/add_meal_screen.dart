@@ -96,8 +96,7 @@ class _AddMealScreenState extends State<AddMealScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final palette = isDark ? AppPalette.dark : AppPalette.light;
+    final palette = paletteOf(context);
     return Scaffold(
       // Let the keyboard overlay the results rather than compress the body.
       // In landscape the space above the keyboard is shorter than the pinned

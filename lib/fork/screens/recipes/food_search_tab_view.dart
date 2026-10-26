@@ -287,8 +287,7 @@ class _PickableMealCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final palette = isDark ? AppPalette.dark : AppPalette.light;
+    final palette = paletteOf(context);
     final accent = Theme.of(context).colorScheme.primary;
     final textTheme = Theme.of(context).textTheme;
 

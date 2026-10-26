@@ -54,8 +54,7 @@ class IntakeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final palette = isDark ? AppPalette.dark : AppPalette.light;
+    final palette = paletteOf(context);
     final textTheme = Theme.of(context).textTheme;
     final radius = BorderRadius.circular(Dimens.radiusM);
     final s = S.of(context);
