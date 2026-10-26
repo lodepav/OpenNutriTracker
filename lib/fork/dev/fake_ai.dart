@@ -8,6 +8,7 @@ import 'package:opennutritracker/core/utils/ai_credential_storage.dart';
 import 'package:opennutritracker/fork/dev/replay_ai.dart';
 import 'package:opennutritracker/fork/label/label_scan.dart';
 import 'package:opennutritracker/fork/leftovers/ai_leftovers.dart';
+import 'package:opennutritracker/fork/photos/body_compare.dart';
 import 'package:path_provider/path_provider.dart';
 
 /// `--dart-define=FORK_FAKE_AI=true`: emulator runs without a model key.
@@ -79,6 +80,8 @@ class FakeAiClient extends http.BaseClient {
         ? _label
         : system.startsWith(leftoversPromptStart)
         ? _leftovers(system)
+        : system.startsWith(bodyComparePromptStart)
+        ? _body
         : system.contains('You break a dish into the ingredients')
         ? _breakdown(text)
         : _read(text);
@@ -157,6 +160,26 @@ class FakeAiClient extends http.BaseClient {
   ];
 
   /// Half of every entry is left, except the last, which was all eaten.
+  /// A cautious comparison, as for two photos under different light.
+  static const _body = [
+    {'query': 'fat=less'},
+    {'query': 'muscle=same'},
+    {'query': 'certainty=55'},
+    {
+      'query':
+          'lighting=the later photo is lit from above, the earlier '
+          'from the front',
+    },
+    {'query': 'pose=same'},
+    {'query': 'sign=the waist looks narrower'},
+    {'query': 'sign=more definition at the shoulders'},
+    {
+      'query':
+          'summary=Probably a little leaner; the light differs, so '
+          'the change may look bigger than it is.',
+    },
+  ];
+
   static List<Map<String, Object>> _leftovers(String system) {
     final entries = RegExp(
       r'^\d+\. (.+): ([\d.]+) (\S+)$',
