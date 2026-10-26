@@ -218,21 +218,6 @@ class DiaryByHourTile extends StatelessWidget {
   );
 }
 
-/// Shows [child] while [show] is on, else nothing, rebuilt as it changes.
-class ShownWhen extends StatelessWidget {
-  final ValueListenable<bool> show;
-  final Widget child;
-
-  const ShownWhen(this.show, {super.key, required this.child});
-
-  @override
-  Widget build(BuildContext context) => ValueListenableBuilder<bool>(
-    valueListenable: show,
-    builder: (context, on, child) => on ? child! : const SizedBox.shrink(),
-    child: child,
-  );
-}
-
 /// "Show water" and "Show fasting" in Settings' display section (S144),
 /// beside upstream's "Show activity tracking".
 class ShowFeatureTile extends StatelessWidget {

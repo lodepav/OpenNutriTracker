@@ -543,7 +543,6 @@ class _LoggingState extends State<_Logging> {
       widget.dates,
       AdaptiveStore.skipped.value,
     );
-    String days(int n) => n == 1 ? '1 day' : '$n days';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [

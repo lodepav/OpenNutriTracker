@@ -359,7 +359,6 @@ class DaysWentCard extends StatelessWidget {
     final format = week
         ? intl.DateFormat.E(locale)
         : intl.DateFormat.MMMd(locale);
-    String days(int n) => n == 1 ? '1 day' : '$n days';
     String day(DayValue d) =>
         '${valueText(context, d.value)} · ${format.format(d.date)}';
     return AppCard(
@@ -518,7 +517,6 @@ class WeekendCard extends StatelessWidget {
     final (:weekdays, :weekend) = split;
     final text = Theme.of(context).textTheme;
     final muted = paletteOf(context).textMuted;
-    String days(int n) => n == 1 ? '1 day' : '$n days';
     String grams(double g) => '${g.round()} g';
     String balance(double? b) =>
         b == null ? '–' : energyText(context, b, signed: true);

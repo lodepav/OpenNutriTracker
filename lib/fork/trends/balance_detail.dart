@@ -79,11 +79,8 @@ List<Widget> balanceBody(
       trendSection(context, 'How the days went'),
       TrendRows(
         rows: [
-          (
-            label: 'In deficit',
-            value: '${sum.deficit} of ${_days(sum.logged)}',
-          ),
-          (label: 'In surplus', value: _days(sum.surplus)),
+          (label: 'In deficit', value: '${sum.deficit} of ${days(sum.logged)}'),
+          (label: 'In surplus', value: days(sum.surplus)),
           (label: 'Eaten a day', value: energyText(context, sum.eaten)),
           (label: 'Burnt a day', value: energyText(context, sum.burnt)),
         ],
@@ -101,8 +98,6 @@ List<Widget> balanceBody(
     ],
   ];
 }
-
-String _days(int n) => n == 1 ? '1 day' : '$n days';
 
 /// The weight change the average balance makes over the range, beside the
 /// change in the weight trend.
@@ -129,8 +124,7 @@ class _WeightTiles extends StatelessWidget {
           label: 'From the balance',
           value: signedText(weightIn(wu, expected), 1),
           unit: label,
-          note:
-              'the average day over ${_days(dates.length)}, at 7700 kcal a kg',
+          note: 'the average day over ${days(dates.length)}, at 7700 kcal a kg',
         ),
         FigureTile(
           label: 'Trend weight',
@@ -138,7 +132,7 @@ class _WeightTiles extends StatelessWidget {
           unit: trend == null ? null : label,
           note: trend == null
               ? 'no weigh-ins in this range'
-              : 'its change over ${_days(dates.length)}',
+              : 'its change over ${days(dates.length)}',
         ),
       ],
     );
