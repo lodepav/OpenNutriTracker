@@ -269,6 +269,10 @@ class _ComparePhotosScreenState extends State<ComparePhotosScreen> {
   AiProvider? _provider;
   bool _busy = false;
 
+  /// Asking already, its dialog open or its request out: a second tap
+  /// does nothing.
+  bool _asking = false;
+
   /// Each pair's answer, by the earlier and the later photo's ids.
   final _answers = <(String, String), BodyComparison>{};
 
@@ -286,6 +290,16 @@ class _ComparePhotosScreenState extends State<ComparePhotosScreen> {
   }
 
   Future<void> _ask() async {
+    if (_asking) return;
+    _asking = true;
+    try {
+      await _askOnce();
+    } finally {
+      _asking = false;
+    }
+  }
+
+  Future<void> _askOnce() async {
     final (earlier, later) = _pair;
     final key = (earlier.photo.id, later.photo.id);
     final known = _answers[key];
@@ -318,7 +332,16 @@ class _ComparePhotosScreenState extends State<ComparePhotosScreen> {
         earlierDay: earlierDay,
         laterDay: laterDay,
       );
-      if (result == null || !mounted) return;
+      if (!mounted) return;
+      if (result == null) {
+        // The model was taken off in Settings meanwhile.
+        messenger.showSnackBar(
+          const SnackBar(
+            content: Text('Set up an AI model in Settings to compare.'),
+          ),
+        );
+        return;
+      }
       setState(() {
         _answers[key] = result;
         _busy = false;

@@ -63,6 +63,16 @@ class TrendsOverview extends StatefulWidget {
   @visibleForTesting
   static Future<GoalState> Function() loadGoal = () => GoalStartStore().load();
 
+  /// The goal as Goal progress loads it, keeping the start when none is
+  /// kept yet; null with none, or no store (widget tests).
+  static Future<GoalProgress?> goal() async {
+    try {
+      return (await loadGoal()).progress;
+    } catch (_) {
+      return null;
+    }
+  }
+
   /// Where the left and right tile reads the measurements, here and on
   /// Home; tests swap it.
   static Future<List<Measurement>> Function() loadMeasurements = () async =>
@@ -93,6 +103,13 @@ class _TrendsOverviewState extends State<TrendsOverview> {
 
   void _remeasure() => setState(() {
     _measurements = _measure();
+  });
+
+  /// The goal, for the Goal tile; read again for a new pace or target.
+  late Future<GoalProgress?> _goal = TrendsOverview.goal();
+
+  void _regoal() => setState(() {
+    _goal = TrendsOverview.goal();
   });
 
   /// The estimate moves with the expenditure settings and the days left
@@ -143,12 +160,16 @@ class _TrendsOverviewState extends State<TrendsOverview> {
     super.initState();
     _changes.addListener(_reload);
     MeasurementStore.changes.addListener(_remeasure);
+    paceChanges.addListener(_regoal);
     SidePartPref.ensureLoaded();
   }
 
   @override
   void didUpdateWidget(TrendsOverview old) {
     super.didUpdateWidget(old);
+    if (old.state.targetWeightKg != widget.state.targetWeightKg) {
+      _goal = TrendsOverview.goal();
+    }
     // After the frame: an open detail page listens too, and is not
     // under this one to be rebuilt with it.
     if (old.state != widget.state) {
@@ -162,6 +183,7 @@ class _TrendsOverviewState extends State<TrendsOverview> {
   void dispose() {
     _changes.removeListener(_reload);
     MeasurementStore.changes.removeListener(_remeasure);
+    paceChanges.removeListener(_regoal);
     _history.dispose();
     super.dispose();
   }
@@ -186,106 +208,109 @@ class _TrendsOverviewState extends State<TrendsOverview> {
               future: dates.isEmpty ? null : _microsOf(dates),
               builder: (context, micros) => FutureBuilder(
                 future: _measurements,
-                builder: (context, measured) {
-                  final all = {
-                    for (final t in trendTiles(
-                      context,
-                      state,
-                      dates: dates,
-                      history: snapshot.data ?? const [],
-                      micros: micros.data,
-                      measurements: measured.data,
-                      open: (m) => openTrendDetail(context, m, _deps),
-                    ))
-                      t.id.substring('trends-tile-'.length): t,
-                  };
-                  final tiles = arranged(all, TrendsTilesStore.current.value);
-                  final logged = state.days.where(isLogged).length;
-                  return ListView(
-                    padding: const EdgeInsets.fromLTRB(
-                      Dimens.spacing12,
-                      Dimens.spacing8,
-                      Dimens.spacing12,
-                      Dimens.spacing32,
-                    ),
-                    children: [
-                      _Streak(days: state.days, windowDays: state.windowDays),
-                      const SizedBox(height: Dimens.spacing8),
-                      RangePills(
-                        rangeDays: state.rangeDays,
-                        onChanged: (d) => context.read<TrendsBloc>().add(
-                          LoadTrendsEvent(rangeDays: d),
-                        ),
+                builder: (context, measured) => FutureBuilder(
+                  future: _goal,
+                  builder: (context, goal) {
+                    final all = {
+                      for (final t in trendTiles(
+                        context,
+                        state,
+                        dates: dates,
+                        history: snapshot.data ?? const [],
+                        micros: micros.data,
+                        measurements: measured.data,
+                        goal: goal.data,
+                        open: (m) => openTrendDetail(context, m, _deps),
+                      ))
+                        t.id.substring('trends-tile-'.length): t,
+                    };
+                    final tiles = arranged(all, TrendsTilesStore.current.value);
+                    final logged = state.days.where(isLogged).length;
+                    return ListView(
+                      padding: const EdgeInsets.fromLTRB(
+                        Dimens.spacing12,
+                        Dimens.spacing8,
+                        Dimens.spacing12,
+                        Dimens.spacing32,
                       ),
-                      const SizedBox(height: Dimens.spacing12),
-                      for (var i = 0; i < tiles.length; i += 2)
-                        Padding(
-                          padding: const EdgeInsets.only(
-                            bottom: Dimens.spacing8,
-                          ),
-                          // The tiles are alike, so a row's two are one height;
-                          // AutoSizeText measures, so no IntrinsicHeight here.
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Expanded(child: tiles[i]),
-                              const SizedBox(width: Dimens.spacing8),
-                              Expanded(
-                                child: i + 1 < tiles.length
-                                    ? tiles[i + 1]
-                                    : const SizedBox.shrink(),
-                              ),
-                            ],
+                      children: [
+                        _Streak(days: state.days, windowDays: state.windowDays),
+                        const SizedBox(height: Dimens.spacing8),
+                        RangePills(
+                          rangeDays: state.rangeDays,
+                          onChanged: (d) => context.read<TrendsBloc>().add(
+                            LoadTrendsEvent(rangeDays: d),
                           ),
                         ),
-                      Text(
-                        'Tap a card for its chart · '
-                        '${rangeText(state.rangeDays, state.windowDays)}, '
-                        '$logged logged',
-                        textAlign: TextAlign.center,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: paletteOf(context).textMuted,
+                        const SizedBox(height: Dimens.spacing12),
+                        for (var i = 0; i < tiles.length; i += 2)
+                          Padding(
+                            padding: const EdgeInsets.only(
+                              bottom: Dimens.spacing8,
+                            ),
+                            // The tiles are alike, so a row's two are one height;
+                            // AutoSizeText measures, so no IntrinsicHeight here.
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(child: tiles[i]),
+                                const SizedBox(width: Dimens.spacing8),
+                                Expanded(
+                                  child: i + 1 < tiles.length
+                                      ? tiles[i + 1]
+                                      : const SizedBox.shrink(),
+                                ),
+                              ],
+                            ),
+                          ),
+                        Text(
+                          'Tap a card for its chart · '
+                          '${rangeText(state.rangeDays, state.windowDays)}, '
+                          '$logged logged',
+                          textAlign: TextAlign.center,
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(color: paletteOf(context).textMuted),
                         ),
-                      ),
-                      ...arrangeTrendCards(widget.cards),
-                      const SizedBox(height: Dimens.spacing16),
-                      Center(
-                        child: TextButton.icon(
-                          key: const ValueKey('trends-arrange'),
-                          icon: const Icon(Icons.tune_rounded),
-                          label: const Text('Arrange Trends'),
-                          onPressed: () => Navigator.push(
-                            context,
-                            MaterialPageRoute<void>(
-                              builder: (_) => ArrangeScreen(
-                                title: 'Arrange Trends',
-                                lists: [
-                                  ArrangeList(
-                                    title: 'Tiles',
-                                    store: TrendsTilesStore(),
-                                    names: {
-                                      for (final MapEntry(:key, :value)
-                                          in all.entries)
-                                        key: value.label.replaceAll(
-                                          ' · avg',
-                                          '',
-                                        ),
-                                    },
-                                  ),
-                                  ArrangeList(
-                                    title: 'Cards',
-                                    store: TrendsLayoutStore(),
-                                    names: trendCards,
-                                  ),
-                                ],
+                        ...arrangeTrendCards(widget.cards),
+                        const SizedBox(height: Dimens.spacing16),
+                        Center(
+                          child: TextButton.icon(
+                            key: const ValueKey('trends-arrange'),
+                            icon: const Icon(Icons.tune_rounded),
+                            label: const Text('Arrange Trends'),
+                            onPressed: () => Navigator.push(
+                              context,
+                              MaterialPageRoute<void>(
+                                builder: (_) => ArrangeScreen(
+                                  title: 'Arrange Trends',
+                                  lists: [
+                                    ArrangeList(
+                                      title: 'Tiles',
+                                      store: TrendsTilesStore(),
+                                      names: {
+                                        for (final MapEntry(:key, :value)
+                                            in all.entries)
+                                          key: value.label.replaceAll(
+                                            ' · avg',
+                                            '',
+                                          ),
+                                      },
+                                    ),
+                                    ArrangeList(
+                                      title: 'Cards',
+                                      store: TrendsLayoutStore(),
+                                      names: trendCards,
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                           ),
                         ),
-                      ),
-                    ],
-                  );
-                },
+                      ],
+                    );
+                  },
+                ),
               ),
             ),
           ),
@@ -304,6 +329,7 @@ List<TrendTile> trendTiles(
   required List<ExpenditureDay> history,
   required MicroData? micros,
   required List<Measurement>? measurements,
+  GoalProgress? goal,
   required void Function(TrendMetric metric) open,
 }) {
   final palette = paletteOf(context);
@@ -435,21 +461,30 @@ List<TrendTile> trendTiles(
         spark: water,
         sparkColor: waterColor(context),
       ),
-    _goalTile(context, state, weight),
+    _goalTile(context, state, weight, goal),
     _sidesTile(context, state, measurements),
   ];
 }
 
-/// Goal progress: the way left to the target; it opens Goal progress.
+/// Goal progress: the way left to the target, none once there or past
+/// it, as Goal progress counts from [goal]'s start; it opens Goal progress.
 TrendTile _goalTile(
   BuildContext context,
   TrendsLoaded state,
   WeightTrendStats weight,
+  GoalProgress? goal,
 ) {
   final wu = state.bodyWeightUnit;
   final target = state.targetWeightKg;
   final now = weight.nowKg;
-  final left = target == null || now == null ? null : (target - now).abs();
+  // The kept start says which way the goal runs; without one, the way
+  // either side is left.
+  final way = goal != null && goal.targetKg == target ? goal.totalKg : 0;
+  final left = target == null || now == null
+      ? null
+      : (target - now) * way < 0
+      ? 0.0
+      : (target - now).abs();
   return TrendTile(
     id: 'trends-tile-goal',
     label: 'Goal',
@@ -463,7 +498,7 @@ TrendTile _goalTile(
         : '${weightUnitLabel(context, wu)} to go',
     chart: target == null || now == null
         ? const SizedBox()
-        : _GoalBar(targetKg: target),
+        : _GoalBar(progress: goal),
     onTap: () => openGoalProgress(context, wu),
   );
 }
@@ -496,77 +531,35 @@ TrendTile _sidesTile(
 
 /// How far along the goal is, from its kept start; nothing before one is
 /// kept.
-class _GoalBar extends StatefulWidget {
-  final double targetKg;
+class _GoalBar extends StatelessWidget {
+  final GoalProgress? progress;
 
-  const _GoalBar({required this.targetKg});
+  const _GoalBar({required this.progress});
 
   @override
-  State<_GoalBar> createState() => _GoalBarState();
-}
-
-class _GoalBarState extends State<_GoalBar> {
-  // As Goal progress loads it, keeping the start when none is kept yet.
-  late Future<GoalState?> _goal = _load();
-
-  static Future<GoalState?> _load() async {
-    try {
-      return await TrendsOverview.loadGoal();
-    } catch (_) {
-      // No store, in widget tests.
-      return null;
+  Widget build(BuildContext context) {
+    final progress = this.progress;
+    if (progress == null || progress.totalKg.abs() < 0.1) {
+      return const SizedBox();
     }
-  }
-
-  void _reload() {
-    if (mounted) setState(() => _goal = _load());
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    paceChanges.addListener(_reload);
-  }
-
-  @override
-  void didUpdateWidget(_GoalBar old) {
-    super.didUpdateWidget(old);
-    if (old.targetKg != widget.targetKg) _goal = _load();
-  }
-
-  @override
-  void dispose() {
-    paceChanges.removeListener(_reload);
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) => FutureBuilder(
-    future: _goal,
-    builder: (context, snapshot) {
-      final progress = snapshot.data?.progress;
-      if (progress == null || progress.totalKg.abs() < 0.1) {
-        return const SizedBox();
-      }
-      final palette = paletteOf(context);
-      // The tile's text says it; the bar's percent would only be read
-      // before it.
-      return ExcludeSemantics(
-        child: Align(
-          alignment: Alignment.bottomCenter,
-          child: ClipRRect(
-            borderRadius: Dimens.borderRadiusS,
-            child: LinearProgressIndicator(
-              value: progress.fraction,
-              minHeight: 8,
-              color: Theme.of(context).colorScheme.primary,
-              backgroundColor: palette.surfaceMuted,
-            ),
+    final palette = paletteOf(context);
+    // The tile's text says it; the bar's percent would only be read
+    // before it.
+    return ExcludeSemantics(
+      child: Align(
+        alignment: Alignment.bottomCenter,
+        child: ClipRRect(
+          borderRadius: Dimens.borderRadiusS,
+          child: LinearProgressIndicator(
+            value: progress.fraction,
+            minHeight: 8,
+            color: Theme.of(context).colorScheme.primary,
+            backgroundColor: palette.surfaceMuted,
           ),
         ),
-      );
-    },
-  );
+      ),
+    );
+  }
 }
 
 /// The on-track streak over the range, as upstream's card counted it.

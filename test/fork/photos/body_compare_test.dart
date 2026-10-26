@@ -231,15 +231,18 @@ void main() {
 
     Future<void> pump(
       WidgetTester tester,
-      CompareBodiesUseCase? useCase,
-    ) async {
+      CompareBodiesUseCase? useCase, {
+      Duration loading = Duration.zero,
+    }) async {
       await tester.pumpWidget(
         MaterialApp(
           home: ComparePhotosScreen(
             photos: photos,
             useCase: useCase,
-            loadDay: (d) async =>
-                BodyDay(date: d, weightKg: d.month == 8 ? 84 : 81.5),
+            loadDay: (d) => Future.delayed(
+              loading,
+              () => BodyDay(date: d, weightKg: d.month == 8 ? 84 : 81.5),
+            ),
           ),
         ),
       );
@@ -298,6 +301,33 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Less body fat'), findsOne);
       expect(useCase.calls, 1);
+    });
+
+    testWidgets('a second tap while asking opens no second dialog', (
+      tester,
+    ) async {
+      // The days still loading when the second tap lands.
+      await pump(
+        tester,
+        _UseCase(answer: answer),
+        loading: const Duration(milliseconds: 100),
+      );
+      await tester.tap(find.byKey(const ValueKey('compare-ai')));
+      await tester.pump(const Duration(milliseconds: 10));
+      await tester.tap(find.byKey(const ValueKey('compare-ai')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('body-compare-send')), findsOne);
+    });
+
+    testWidgets('no model by the time it is sent: says where to set one', (
+      tester,
+    ) async {
+      await pump(tester, _UseCase());
+      await tester.tap(find.byKey(const ValueKey('compare-ai')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('body-compare-send')));
+      await tester.pumpAndSettle();
+      expect(find.text('Set up an AI model in Settings to compare.'), findsOne);
     });
 
     testWidgets('a failed call says so', (tester) async {

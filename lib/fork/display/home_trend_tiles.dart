@@ -5,9 +5,12 @@ import 'package:opennutritracker/features/trends/presentation/bloc/trends_bloc.d
 import 'package:opennutritracker/features/trends/presentation/trends_page.dart'
     show openTrendFromHome;
 import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
+import 'package:opennutritracker/fork/adaptive/goal_plan_card.dart'
+    show paceChanges;
 import 'package:opennutritracker/fork/body/measurement_store.dart';
 import 'package:opennutritracker/fork/body/side_compare.dart';
 import 'package:opennutritracker/fork/display/home_tiles.dart';
+import 'package:opennutritracker/fork/goal/goal_progress.dart';
 import 'package:opennutritracker/fork/report/nutrient_explorer.dart'
     show intakesBetween;
 import 'package:opennutritracker/fork/trends/nutrient_trends.dart';
@@ -19,6 +22,7 @@ typedef _Extras = ({
   List<ExpenditureDay> history,
   MicroData? micros,
   List<Measurement> measurements,
+  GoalProgress? goal,
 });
 
 /// Trends' tiles added to Home, [ids] of them, as Home's tiles:
@@ -48,7 +52,8 @@ class HomeTrendTiles extends StatefulWidget {
 class _HomeTrendTilesState extends State<HomeTrendTiles> {
   late final TrendsBloc _bloc = widget.bloc ?? locator<TrendsBloc>();
 
-  /// Read again for a new state, or once the measurements change.
+  /// Read again for a new state, or once the measurements or the pace
+  /// change.
   Future<_Extras>? _extras;
   TrendsLoaded? _extrasFor;
 
@@ -74,6 +79,7 @@ class _HomeTrendTilesState extends State<HomeTrendTiles> {
               (Object _) => <Measurement>[],
             )
           : const <Measurement>[],
+      goal: widget.ids.contains('goal') ? await TrendsOverview.goal() : null,
     );
   }
 
@@ -85,6 +91,7 @@ class _HomeTrendTilesState extends State<HomeTrendTiles> {
     if (_bloc.state is! TrendsLoaded) _bloc.add(const LoadTrendsEvent());
     SidePartPref.ensureLoaded();
     MeasurementStore.changes.addListener(_remeasure);
+    paceChanges.addListener(_remeasure);
   }
 
   @override
@@ -97,6 +104,7 @@ class _HomeTrendTilesState extends State<HomeTrendTiles> {
   @override
   void dispose() {
     MeasurementStore.changes.removeListener(_remeasure);
+    paceChanges.removeListener(_remeasure);
     super.dispose();
   }
 
@@ -124,6 +132,7 @@ class _HomeTrendTilesState extends State<HomeTrendTiles> {
               history: extras.history,
               micros: extras.micros,
               measurements: extras.measurements,
+              goal: extras.goal,
               open: (m) => openTrendFromHome(context, m),
             );
             return widget.builder({
