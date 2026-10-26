@@ -113,30 +113,6 @@
       }
     }
   },
-  "@nutrientContributionsEmpty": {
-    "placeholders": {
-      "nutrient": {
-        "type": "String"
-      }
-    }
-  },
-  "@nutrientContributionsTitle": {
-    "placeholders": {
-      "nutrient": {
-        "type": "String"
-      }
-    }
-  },
-  "@nutrientContributionsTotal": {
-    "placeholders": {
-      "intake": {
-        "type": "String"
-      },
-      "goal": {
-        "type": "String"
-      }
-    }
-  },
   "@profileTargetWeightToGo": {
     "placeholders": {
       "value": {
@@ -224,30 +200,6 @@
   "activityLabel": "Activity",
   "addItemLabel": "Add food or activity",
   "addLabel": "Add",
-  "addFoodLabel": "Add {food}",
-  "@addFoodLabel": {
-    "placeholders": {
-      "food": {
-        "type": "String"
-      }
-    }
-  },
-  "sectionOptionsLabel": "{section} options",
-  "@sectionOptionsLabel": {
-    "placeholders": {
-      "section": {
-        "type": "String"
-      }
-    }
-  },
-  "addToSectionLabel": "Add to {section}",
-  "@addToSectionLabel": {
-    "placeholders": {
-      "section": {
-        "type": "String"
-      }
-    }
-  },
   "additionalInfoLabelCompendium2011": "Information provided\n by the \n'2024 Compendium\n of Physical Activities'",
   "additionalInfoLabelCustom": "Custom Meal Item",
   "additionalInfoLabelFDC": "More Information at\nFoodData Central",
@@ -255,8 +207,6 @@
   "@additionalInfoLabelSource": {"placeholders": {"sourceName": {"type": "String"}}},
   "foodSourcesAlwaysEnabledLabel": "Always enabled",
   "foodSourcesHelpText": "Search results come from these food databases. Open Food Facts powers the product and barcode search and is always enabled.",
-  "leftoverHelperLabel": "What you didn't eat; taken off the amount",
-  "leftoverLabel": "Left over",
   "machineTranslatedNameHint": "Name translated automatically",
   "measureUnitBar": "{count, plural, one{bar} other{bars}}",
   "@measureUnitBar": {"placeholders": {"count": {"type": "num"}}},
@@ -650,10 +600,6 @@
   "partialResultsAllSourcesDownNotice": "No online food source responded. Showing your saved foods only.",
   "notAvailableLabel": "N/A",
   "nothingAddedLabel": "Nothing added",
-  "nutrientContributionsEmpty": "Nothing logged today has any {nutrient}.",
-  "nutrientContributionsHint": "Show which foods it came from",
-  "nutrientContributionsTitle": "Today's {nutrient}",
-  "nutrientContributionsTotal": "{intake} of {goal} g",
   "notificationsDailyReminderBody": "Don't forget to log your meals today!",
   "notificationsDailyReminderChannelName": "Daily reminders",
   "notificationsDailyReminderChannelDescription": "Daily meal logging reminder",
@@ -1421,7 +1367,6 @@
   "aiAssistModelCheaperLabel": "Cheaper, and weaker on poor-quality photos",
   "aiAssistModelMoreItemsLabel": "Lists more items from a photo",
   "aiAssistModelCheapestLabel": "Cheapest on this list",
-  "aiAssistModelCheaperThanRecommendedLabel": "Cheaper than the recommended model",
   "aiAssistNoKeyForProviderLabel": "No key saved for this provider.",
   "aiAssistKeyFieldLabel": "{provider} API key",
   "@aiAssistKeyFieldLabel": {"placeholders": {"provider": {"type": "String"}}},
@@ -1488,5 +1433,60 @@
   "healthSyncDisclosureContinueAction": "Continue",
   "healthSyncUnavailableLabel": "Health data is not available on this device. Workout import needs Health Connect on Android or Apple Health on iOS.",
   "sourcesEnergyCompensationTitle": "Workout calorie credit",
-  "sourcesEnergyCompensationDescription": "Imported workouts are credited with less than the energy your device reports. People compensate for exercise by burning fewer calories through the rest of the day — about 28% on average, and more at a higher body fat percentage. The suggested credit comes from that research and you can override it under Settings → Data → Health Connect. The energy itself is reported by the app or device that recorded the workout, not calculated with the app’s MET formula."
+  "sourcesEnergyCompensationDescription": "Imported workouts are credited with less than the energy your device reports. People compensate for exercise by burning fewer calories through the rest of the day — about 28% on average, and more at a higher body fat percentage. The suggested credit comes from that research and you can override it under Settings → Data → Health Connect. The energy itself is reported by the app or device that recorded the workout, not calculated with the app’s MET formula.",
+  "@nutrientContributionsEmpty": {
+    "placeholders": {
+      "nutrient": {
+        "type": "String"
+      }
+    }
+  },
+  "@nutrientContributionsTitle": {
+    "placeholders": {
+      "nutrient": {
+        "type": "String"
+      }
+    }
+  },
+  "@nutrientContributionsTotal": {
+    "placeholders": {
+      "intake": {
+        "type": "String"
+      },
+      "goal": {
+        "type": "String"
+      }
+    }
+  },
+  "addFoodLabel": "Add {food}",
+  "@addFoodLabel": {
+    "placeholders": {
+      "food": {
+        "type": "String"
+      }
+    }
+  },
+  "sectionOptionsLabel": "{section} options",
+  "@sectionOptionsLabel": {
+    "placeholders": {
+      "section": {
+        "type": "String"
+      }
+    }
+  },
+  "addToSectionLabel": "Add to {section}",
+  "@addToSectionLabel": {
+    "placeholders": {
+      "section": {
+        "type": "String"
+      }
+    }
+  },
+  "leftoverHelperLabel": "What you didn't eat; taken off the amount",
+  "leftoverLabel": "Left over",
+  "nutrientContributionsEmpty": "Nothing logged today has any {nutrient}.",
+  "nutrientContributionsHint": "Show which foods it came from",
+  "nutrientContributionsTitle": "Today's {nutrient}",
+  "nutrientContributionsTotal": "{intake} of {goal} g",
+  "aiAssistModelCheaperThanRecommendedLabel": "Cheaper than the recommended model"
 }
