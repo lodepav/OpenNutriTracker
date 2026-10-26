@@ -62,28 +62,37 @@ expenditureBreakdown(List<ExpenditureDay> history, {int days = 30}) {
 /// target.
 const onTargetShare = 0.10;
 
+/// A day's highest or lowest: its energy or grams, and when.
+typedef DayValue = ({double value, DateTime date});
+
 /// How the logged days of the window went against their goals, and the
-/// highest and lowest of them.
+/// highest and lowest of them: the energy's, or [eaten] and [goal]'s, a
+/// macro's grams.
 ({
   int onTarget,
   int under,
   int over,
   int logged,
-  ({double kcal, DateTime date})? highest,
-  ({double kcal, DateTime date})? lowest,
+  DayValue? highest,
+  DayValue? lowest,
 })
-dayOutcomes(List<TrackedDayEntity> days, List<DateTime> dates) {
+dayOutcomes(
+  List<TrackedDayEntity> days,
+  List<DateTime> dates, {
+  double? Function(TrackedDayEntity) eaten = _calories,
+  double? Function(TrackedDayEntity) goal = _calorieGoal,
+}) {
   final window = dates.toSet();
   final logged = [
     for (final d in days)
-      if (isLogged(d) && window.contains(_date(d.day))) d,
+      if (isLogged(d) && window.contains(_date(d.day)) && eaten(d) != null) d,
   ];
   var onTarget = 0, under = 0, over = 0;
   for (final d in logged) {
-    final goal = d.calorieGoal;
-    if (goal <= 0) continue;
-    final off = d.caloriesTracked - goal;
-    if (off.abs() <= goal * onTargetShare) {
+    final target = goal(d) ?? 0;
+    if (target <= 0) continue;
+    final off = eaten(d)! - target;
+    if (off.abs() <= target * onTargetShare) {
       onTarget++;
     } else if (off < 0) {
       under++;
@@ -91,12 +100,10 @@ dayOutcomes(List<TrackedDayEntity> days, List<DateTime> dates) {
       over++;
     }
   }
-  ({double kcal, DateTime date})? pick(bool Function(double, double) better) {
+  DayValue? pick(bool Function(double, double) better) {
     if (logged.isEmpty) return null;
-    final d = logged.reduce(
-      (a, b) => better(b.caloriesTracked, a.caloriesTracked) ? b : a,
-    );
-    return (kcal: d.caloriesTracked, date: _date(d.day));
+    final d = logged.reduce((a, b) => better(eaten(b)!, eaten(a)!) ? b : a);
+    return (value: eaten(d)!, date: _date(d.day));
   }
 
   return (
@@ -106,6 +113,89 @@ dayOutcomes(List<TrackedDayEntity> days, List<DateTime> dates) {
     logged: logged.length,
     highest: pick((a, b) => a > b),
     lowest: pick((a, b) => a < b),
+  );
+}
+
+double? _calories(TrackedDayEntity d) => d.caloriesTracked;
+double? _calorieGoal(TrackedDayEntity d) => d.calorieGoal;
+
+/// Means over the logged days of a part of the week.
+typedef WeekPart = ({
+  int days,
+  double kcal,
+  double carbs,
+  double fat,
+  double protein,
+  double? balance,
+});
+
+/// The window's logged weekdays (Monday to Friday) against its weekend
+/// days, each averaged: energy, macros, and the balance where [balance]
+/// has the day. Null unless both have a logged day.
+({WeekPart weekdays, WeekPart weekend})? weekendSplit(
+  List<TrackedDayEntity> days,
+  List<DateTime> dates, {
+  Map<DateTime, double> balance = const {},
+}) {
+  final window = dates.toSet();
+  WeekPart? part(bool weekend) {
+    final logged = [
+      for (final d in days)
+        if (isLogged(d) &&
+            window.contains(_date(d.day)) &&
+            (d.day.weekday >= DateTime.saturday) == weekend)
+          d,
+    ];
+    if (logged.isEmpty) return null;
+    double mean(double? Function(TrackedDayEntity) of) =>
+        logged.map((d) => of(d) ?? 0).reduce((a, b) => a + b) / logged.length;
+    final balances = [for (final d in logged) ?balance[_date(d.day)]];
+    return (
+      days: logged.length,
+      kcal: mean((d) => d.caloriesTracked),
+      carbs: mean((d) => d.carbsTracked),
+      fat: mean((d) => d.fatTracked),
+      protein: mean((d) => d.proteinTracked),
+      balance: balances.isEmpty
+          ? null
+          : balances.reduce((a, b) => a + b) / balances.length,
+    );
+  }
+
+  final weekdays = part(false), weekend = part(true);
+  if (weekdays == null || weekend == null) return null;
+  return (weekdays: weekdays, weekend: weekend);
+}
+
+/// The protein eaten a day for each kg of trend weight that day, over the
+/// window's logged days that have a trend, and the goal's against the
+/// latest trend. Null without such a day.
+({double perKg, double? goalPerKg, int days})? proteinPerKg(
+  List<TrackedDayEntity> days,
+  List<DateTime> dates,
+  Map<DateTime, double> trendByDay,
+) {
+  final window = dates.toSet();
+  final ratios = <double>[];
+  TrackedDayEntity? last;
+  for (final d in days) {
+    final date = _date(d.day);
+    final kg = trendByDay[date];
+    final grams = d.proteinTracked;
+    if (!isLogged(d) || !window.contains(date) || kg == null || kg <= 0) {
+      continue;
+    }
+    if (grams == null) continue;
+    ratios.add(grams / kg);
+    if (last == null || d.day.isAfter(last.day)) last = d;
+  }
+  if (ratios.isEmpty) return null;
+  final goal = last!.proteinGoal;
+  final latestKg = trendByDay[_date(last.day)]!;
+  return (
+    perKg: ratios.reduce((a, b) => a + b) / ratios.length,
+    goalPerKg: goal == null || goal <= 0 ? null : goal / latestKg,
+    days: ratios.length,
   );
 }
 

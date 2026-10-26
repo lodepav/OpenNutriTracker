@@ -8,12 +8,15 @@ import 'package:opennutritracker/core/domain/entity/tracked_day_entity.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/features/trends/presentation/bloc/trends_bloc.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
+import 'package:opennutritracker/fork/adaptive/trend_points.dart';
 import 'package:opennutritracker/fork/trends/balance_detail.dart';
 import 'package:opennutritracker/fork/display/macro_foods.dart'
     show FoodsMetric;
 import 'package:opennutritracker/fork/report/nutrient_explorer.dart'
     show IntakeLoader, intakesBetween;
 import 'package:opennutritracker/fork/trends/calories_detail.dart';
+import 'package:opennutritracker/fork/trends/detail_stats.dart';
+import 'package:opennutritracker/fork/trends/detail_widgets.dart';
 import 'package:opennutritracker/fork/trends/macro_contributors.dart';
 import 'package:opennutritracker/fork/trends/expenditure_detail.dart';
 import 'package:opennutritracker/fork/trends/trend_stats.dart';
@@ -195,6 +198,46 @@ class TrendDetailPage extends StatelessWidget {
             chartLabel: '${metricTitle(context, metric)} chart',
             load: deps.loadIntakes,
           ),
+          if (dayOutcomes(
+                state.days,
+                dates,
+                eaten: macro.eaten,
+                goal: macro.goal,
+              )
+              case final o when o.logged > 0) ...[
+            trendSection(context, 'How the days went'),
+            DaysWentCard(
+              outcomes: o,
+              week: dates.length <= 7,
+              valueText: (_, g) => '${g.round()} g',
+            ),
+          ],
+          if (metric == TrendMetric.protein && dates.isNotEmpty)
+            if (proteinPerKg(state.days, dates, {
+                  for (final p in trendPoints(state.weight, until: dates.last))
+                    DateTime(p.date.year, p.date.month, p.date.day): p.weightKg,
+                })
+                case final p?) ...[
+              trendSection(context, 'For your body weight'),
+              TrendRows(
+                rows: [
+                  (
+                    label: 'Eaten a day',
+                    value: '${p.perKg.toStringAsFixed(1)} g/kg',
+                  ),
+                  if (p.goalPerKg case final g?)
+                    (label: 'Your goal', value: '${g.toStringAsFixed(1)} g/kg'),
+                ],
+              ),
+              const SizedBox(height: Dimens.spacing8),
+              Text(
+                'Per kg of trend weight each day. Around 1.6–2.2 g/kg is the '
+                'usual aim for keeping or building muscle.',
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: palette.textMuted),
+              ),
+            ],
         ];
       case TrendMetric.water:
         final series = waterSeries(state.waterByDay, dates);

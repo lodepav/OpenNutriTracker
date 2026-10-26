@@ -172,6 +172,11 @@ void main() {
       return tester.widget<TrendRow>(r).value;
     }
 
+    await tester.scrollUntilVisible(
+      find.widgetWithText(TrendRow, 'Highest'),
+      200,
+      scrollable: find.byType(Scrollable).last,
+    );
     expect(row('On target (within 10%)'), '0 of 1 day');
     expect(row('Under'), '1 day');
     expect(row('Over'), '0 days');
@@ -242,6 +247,42 @@ void main() {
           closeTo(UnitCalc.kcalToKj(kcal), 1e-6),
       ],
     );
+  });
+
+  testWidgets('Calories: top foods, and weekdays against the weekend', (
+    tester,
+  ) async {
+    // A whole week logged has both.
+    await pumpTrends(
+      tester,
+      loaded(days: [for (var i = -6; i <= 0; i++) _logged(i)]),
+    );
+    await openTile(tester, 'calories');
+    await tester.scrollUntilVisible(find.text('Top foods'), 200);
+    expect(find.text('No foods logged in this range.'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('Weekdays and weekends'), 200);
+    await tester.scrollUntilVisible(
+      find.text('Weekends run about the same as weekdays.'),
+      200,
+    );
+  });
+
+  testWidgets('a macro\'s page: its days against the goal; protein per kg', (
+    tester,
+  ) async {
+    await pumpTrends(
+      tester,
+      loaded(
+        days: [_logged(-1, protein: 160), _logged(0, protein: 80)],
+        weight: [WeightLogEntity(date: day(-1), weightKg: 80)],
+      ),
+    );
+    await openTile(tester, 'protein');
+    // 110 g a day: 80 under, 160 over.
+    await tester.scrollUntilVisible(find.text('0 of 2 days'), 200);
+    await tester.scrollUntilVisible(find.text('1.4 g/kg'), 200);
+    expect(find.text('1.5 g/kg'), findsOneWidget);
+    expect(find.text('1.4 g/kg'), findsOneWidget);
   });
 
   testWidgets('a macro\'s page: average, goal and change, bars a day', (
