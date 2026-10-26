@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:opennutritracker/core/utils/calc/calendar_day_calc.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:opennutritracker/core/domain/entity/physical_activity_entity.dart';
@@ -14,11 +15,6 @@ import 'package:opennutritracker/features/activity_detail/presentation/widget/ac
 import 'package:opennutritracker/fork/adaptive/activity_credit.dart';
 import 'package:opennutritracker/fork/widget/toolbar_height.dart';
 import 'package:opennutritracker/fork/units/energy_text.dart';
-
-AppPalette _palette(BuildContext context) =>
-    Theme.of(context).brightness == Brightness.dark
-    ? AppPalette.dark
-    : AppPalette.light;
 
 /// The durations the sheet offers at a tap, in minutes.
 const activityDurations = [15, 30, 45, 60];
@@ -64,12 +60,10 @@ UserActivityEntity repeatEntry(
 
 /// "Today", "Yesterday" or the date.
 String dayLabel(DateTime day, DateTime today) {
-  final d = DateTime(day.year, day.month, day.day);
-  final t = DateTime(today.year, today.month, today.day);
-  final ago = t.difference(d).inDays;
+  final ago = CalendarDayCalc.daysBetween(day, today);
   if (ago == 0) return 'Today';
   if (ago == 1) return 'Yesterday';
-  return DateFormat.MMMEd().format(d);
+  return DateFormat.MMMEd().format(day);
 }
 
 /// Seam S128: Add activity as MacroFactor's (ActivityAB). The recent
@@ -123,7 +117,7 @@ class ActivityPickerView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final palette = _palette(context);
+    final palette = paletteOf(context);
     final text = Theme.of(context).textTheme;
     final activities = this.activities;
     final user = this.user;
@@ -335,7 +329,7 @@ class _Heading extends StatelessWidget {
       child: Text(
         text,
         style: Theme.of(context).textTheme.labelMedium?.copyWith(
-          color: _palette(context).textMuted,
+          color: paletteOf(context).textMuted,
           fontWeight: FontWeight.w600,
         ),
       ),
@@ -355,7 +349,7 @@ class _Thumb extends StatelessWidget {
     width: size,
     height: size,
     decoration: BoxDecoration(
-      color: _palette(context).surfaceMuted,
+      color: paletteOf(context).surfaceMuted,
       borderRadius: BorderRadius.circular(size / 4),
     ),
     child: Icon(
@@ -374,7 +368,7 @@ class _RecentChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final palette = _palette(context);
+    final palette = paletteOf(context);
     final activity = entry.physicalActivityEntity;
     final name = activity.getName(context);
     final amount = activity.isCustom
@@ -427,7 +421,7 @@ class _ActivityRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final palette = _palette(context);
+    final palette = paletteOf(context);
     final text = Theme.of(context).textTheme;
     final kcal = this.kcal;
     final description = activity.getDescription(context);
@@ -546,7 +540,7 @@ class _DurationSheetState extends State<DurationSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final palette = _palette(context);
+    final palette = paletteOf(context);
     final text = Theme.of(context).textTheme;
     final activity = widget.activity;
     final name = activity.getName(context);

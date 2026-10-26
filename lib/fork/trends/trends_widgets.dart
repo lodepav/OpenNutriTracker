@@ -9,11 +9,6 @@ import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/fork/trends/trend_stats.dart';
 
-AppPalette paletteOf(BuildContext context) =>
-    Theme.of(context).brightness == Brightness.dark
-    ? AppPalette.dark
-    : AppPalette.light;
-
 /// Water's colour on Trends, a blue the palette lacks.
 Color waterColor(BuildContext context) =>
     Theme.of(context).brightness == Brightness.dark

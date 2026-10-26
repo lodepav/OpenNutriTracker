@@ -4,11 +4,6 @@ import 'package:opennutritracker/core/styles/accent_colors.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
 
-AppPalette _palette(BuildContext context) =>
-    Theme.of(context).brightness == Brightness.dark
-    ? AppPalette.dark
-    : AppPalette.light;
-
 /// What a screen reader calls each of [accentPresetColors], in its order.
 const accentPresetNames = [
   'Red',
@@ -55,7 +50,7 @@ class AccentColourView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final palette = _palette(context);
+    final palette = paletteOf(context);
     final text = Theme.of(context).textTheme;
     final accent = Theme.of(context).colorScheme.primary;
     return ListView(
@@ -210,7 +205,7 @@ class _Swatch extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final palette = _palette(context);
+    final palette = paletteOf(context);
     // The tap target is the cell, at least 48 dp, whatever the swatch is.
     return Semantics(
       identifier: 'accent-preset-${index.toString().padLeft(2, '0')}',

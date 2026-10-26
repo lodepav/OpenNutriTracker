@@ -66,9 +66,7 @@ class _BuilderIngredientRowState extends State<BuilderIngredientRow> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final palette = theme.brightness == Brightness.dark
-        ? AppPalette.dark
-        : AppPalette.light;
+    final palette = paletteOf(context);
     final ingredient = widget.ingredient;
     final meal = ingredient.snapshotMeal;
     final grams = ingredient.convertedAmountG;
@@ -210,9 +208,7 @@ class BuilderSaveBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final s = S.of(context);
     final theme = Theme.of(context);
-    final palette = theme.brightness == Brightness.dark
-        ? AppPalette.dark
-        : AppPalette.light;
+    final palette = paletteOf(context);
     double of(double? value) => (value ?? 0) * totalWeightG / 100;
     Widget figure(String value, String label, Color? color) => Expanded(
       child: MergeSemantics(

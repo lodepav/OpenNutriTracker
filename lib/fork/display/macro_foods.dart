@@ -146,9 +146,7 @@ class _MacroFoodsPageState extends State<MacroFoodsPage> {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final text = Theme.of(context).textTheme;
-    final palette = Theme.of(context).brightness == Brightness.dark
-        ? AppPalette.dark
-        : AppPalette.light;
+    final palette = paletteOf(context);
     final color = _color(palette, scheme);
     final shares = FoodShare.of(widget.intakes, _metric);
     final total =
@@ -266,9 +264,7 @@ class _Summary extends StatelessWidget {
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
     final scheme = Theme.of(context).colorScheme;
-    final palette = Theme.of(context).brightness == Brightness.dark
-        ? AppPalette.dark
-        : AppPalette.light;
+    final palette = paletteOf(context);
     final energy = metric == FoodsMetric.energy;
     // Cut as the dashboard tile shows it, so the two agree.
     final eaten = energy

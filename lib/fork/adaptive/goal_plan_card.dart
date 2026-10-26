@@ -105,7 +105,9 @@ class GoalPlanCard extends StatefulWidget {
 
   /// Where the milestone step is kept; the active profile's by default.
   final PhaseStore? phases;
-  final Future<void> Function(double kgPerWeek) onUsePace;
+
+  /// False when the save was dropped (a profile switch).
+  final Future<bool> Function(double kgPerWeek) onUsePace;
   final Future<bool> Function(
     BuildContext context,
     BodyWeightUnit unit,
@@ -489,13 +491,14 @@ class _GoalPlanCardState extends State<GoalPlanCard> {
   Future<void> _usePace(double pace, String done) async {
     setState(() => _saving = true);
     final messenger = ScaffoldMessenger.maybeOf(context);
+    final bool saved;
     try {
-      await widget.onUsePace(pace);
+      saved = await widget.onUsePace(pace);
     } catch (_) {
       if (mounted) setState(() => _saving = false);
       rethrow;
     }
-    messenger?.showSnackBar(SnackBar(content: Text(done)));
+    if (saved) messenger?.showSnackBar(SnackBar(content: Text(done)));
     _reload();
   }
 

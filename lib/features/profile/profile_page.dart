@@ -28,6 +28,7 @@ import 'package:opennutritracker/features/profile/presentation/widgets/set_weigh
 import 'package:opennutritracker/features/home/presentation/bloc/home_bloc.dart';
 import 'package:opennutritracker/features/settings/presentation/bloc/settings_bloc.dart';
 import 'package:opennutritracker/features/settings/presentation/widgets/water_goal_dialog.dart';
+import 'package:opennutritracker/fork/units/weight_text.dart' show bodyWeightText; // [fork] S121
 import 'package:opennutritracker/generated/l10n.dart';
 // [fork] S121 you-tab
 import 'package:opennutritracker/core/domain/usecase/get_profiles_usecase.dart';
@@ -153,7 +154,7 @@ class _ProfilePageState extends State<ProfilePage> {
               note: _forkRate(context, user, bodyWeightUnit),
               below: user.targetWeightKg == null
                   ? S.of(context).profileTargetWeightNotSetLabel
-                  : 'Target ${_forkWeight(context, user.targetWeightKg!, bodyWeightUnit)}',
+                  : 'Target ${bodyWeightText(context, user.targetWeightKg!, bodyWeightUnit)}',
               hint: 'Change the goal',
               onTap: () => _showSetGoalDialog(context, user),
             ),
@@ -207,7 +208,7 @@ class _ProfilePageState extends State<ProfilePage> {
               label: S.of(context).profileTargetWeightLabel,
               value: user.targetWeightKg == null
                   ? S.of(context).profileTargetWeightNotSetLabel
-                  : _forkWeight(context, user.targetWeightKg!, bodyWeightUnit),
+                  : bodyWeightText(context, user.targetWeightKg!, bodyWeightUnit),
               onTap: () =>
                   _showSetTargetWeightDialog(context, user, bodyWeightUnit),
             ),
@@ -228,7 +229,7 @@ class _ProfilePageState extends State<ProfilePage> {
             YouRow(
               identifier: 'profile-weight',
               label: S.of(context).weightLabel,
-              value: _forkWeight(context, user.weightKG, bodyWeightUnit),
+              value: bodyWeightText(context, user.weightKG, bodyWeightUnit),
               detail: user.targetWeightKg == null
                   ? null
                   : _targetWeightSubLabel(context, user, bodyWeightUnit),
@@ -319,15 +320,6 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   // [fork] S121 you-tab
-  String _forkWeight(BuildContext context, double kg, BodyWeightUnit unit) =>
-      formatBodyWeight(
-        kg,
-        unit,
-        kgLabel: S.of(context).kgLabel,
-        lbLabel: S.of(context).lbsLabel,
-        stLabel: S.of(context).stLabel,
-      );
-
   /// The goal tile's weekly rate, unsigned: the goal says which way.
   String? _forkRate(BuildContext context, UserEntity user, BodyWeightUnit unit) {
     final kg = user.weeklyWeightGoalKg;

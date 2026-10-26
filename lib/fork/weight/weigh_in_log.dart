@@ -5,8 +5,8 @@ import 'package:opennutritracker/core/domain/usecase/add_weight_log_usecase.dart
 import 'package:opennutritracker/core/domain/usecase/delete_weight_log_usecase.dart';
 import 'package:opennutritracker/core/domain/usecase/get_weight_log_usecase.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
-import 'package:opennutritracker/features/profile/presentation/utils/profile_display_format.dart';
-import 'package:opennutritracker/generated/l10n.dart';
+import 'package:opennutritracker/fork/units/weight_text.dart'
+    show bodyWeightText;
 
 DateTime _dayOf(DateTime d) => DateTime(d.year, d.month, d.day);
 
@@ -23,21 +23,12 @@ String replacedText(
   BodyWeightUnit unit,
   DateTime today,
 ) =>
-    '${_dayName(context, replaced.date, today)}\'s ${_weight(context, replaced.weightKg, unit)}';
+    '${_dayName(context, replaced.date, today)}\'s ${bodyWeightText(context, replaced.weightKg, unit)}';
 
 String _dayName(BuildContext context, DateTime day, DateTime today) =>
     DateUtils.isSameDay(day, today)
     ? 'today'
     : MaterialLocalizations.of(context).formatShortMonthDay(day);
-
-String _weight(BuildContext context, double kg, BodyWeightUnit unit) =>
-    formatBodyWeight(
-      kg,
-      unit,
-      kgLabel: S.of(context).kgLabel,
-      lbLabel: S.of(context).lbsLabel,
-      stLabel: S.of(context).stLabel,
-    );
 
 /// Files [kg] on [day] and says so, with an Undo that brings back the
 /// weigh-in it replaced, or takes it off where there was none. [refresh]
@@ -54,7 +45,7 @@ Future<void> logWeighIn(
   final messenger = ScaffoldMessenger.of(context);
   final entry = WeightLogEntity(date: _dayOf(day), weightKg: kg);
   final message =
-      '${_weight(context, kg, unit)} logged for '
+      '${bodyWeightText(context, kg, unit)} logged for '
       '${_dayName(context, day, today ?? DateTime.now())}';
   await locator<AddWeightLogUsecase>().addEntry(entry);
   await refresh();

@@ -9,11 +9,6 @@ import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/fork/copy/copy_ui.dart';
 import 'package:opennutritracker/fork/report/nutrient_explorer.dart';
 
-AppPalette _palette(BuildContext context) =>
-    Theme.of(context).brightness == Brightness.dark
-    ? AppPalette.dark
-    : AppPalette.light;
-
 /// The tracked days from the first to the last.
 typedef TrackedDayLoader =
     Future<List<TrackedDayEntity>> Function(DateTime first, DateTime last);
@@ -107,7 +102,7 @@ class _NutrientGoalsOverviewState extends State<NutrientGoalsOverview> {
 
   @override
   Widget build(BuildContext context) {
-    final palette = _palette(context);
+    final palette = paletteOf(context);
     final text = Theme.of(context).textTheme;
     Widget chip(String label, bool week) => Semantics(
       identifier: 'nutrient-goals-${week ? 'week' : 'today'}',
@@ -194,7 +189,7 @@ class _GoalBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final palette = _palette(context);
+    final palette = paletteOf(context);
     final text = Theme.of(context).textTheme;
     final s = summary;
     final unit = s.nutrient.unit;

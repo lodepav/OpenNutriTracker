@@ -56,9 +56,7 @@ class RecipeHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final palette = theme.brightness == Brightness.dark
-        ? AppPalette.dark
-        : AppPalette.light;
+    final palette = paletteOf(context);
     final description = recipe.description;
     final n = recipe.ingredients.length;
     Widget tag(String text) => Container(
@@ -119,9 +117,7 @@ class RecipeTotalsStrip extends StatelessWidget {
   Widget build(BuildContext context) {
     final s = S.of(context);
     final theme = Theme.of(context);
-    final palette = theme.brightness == Brightness.dark
-        ? AppPalette.dark
-        : AppPalette.light;
+    final palette = paletteOf(context);
     final per100 = portion.recipe.aggregatedNutrimentsPer100;
     double of(double? value) => (value ?? 0) * portion.grams / 100;
     // A macro is spoken "29 grams carbs", not "29, carbs g" (A5).
@@ -213,9 +209,7 @@ class RecipeIngredientRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final palette = theme.brightness == Brightness.dark
-        ? AppPalette.dark
-        : AppPalette.light;
+    final palette = paletteOf(context);
     final meal = ingredient.snapshotMeal;
     final n = meal.nutriments;
     double of(double? per100) =>
@@ -319,9 +313,7 @@ class RecipeLogBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final palette = theme.brightness == Brightness.dark
-        ? AppPalette.dark
-        : AppPalette.light;
+    final palette = paletteOf(context);
     final count = portion.count;
     final kcal =
         (portion.recipe.aggregatedNutrimentsPer100.energyKcal100 ?? 0) *

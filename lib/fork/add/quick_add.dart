@@ -99,9 +99,7 @@ class QuickAddMacroFields extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final palette = Theme.of(context).brightness == Brightness.dark
-        ? AppPalette.dark
-        : AppPalette.light;
+    final palette = paletteOf(context);
     final fields = inMacroOrder(
       carbs: ('carbs', carbs, palette.carbs),
       fat: ('fat', fat, palette.fat),

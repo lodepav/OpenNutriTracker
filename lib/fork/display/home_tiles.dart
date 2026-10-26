@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:opennutritracker/core/domain/entity/body_weight_unit_entity.dart';
@@ -14,11 +12,14 @@ import 'package:opennutritracker/core/utils/navigation_options.dart';
 import 'package:opennutritracker/features/fasting/presentation/bloc/fasting_bloc.dart';
 import 'package:opennutritracker/features/home/presentation/widgets/log_water_dialog.dart';
 import 'package:opennutritracker/features/home/presentation/widgets/quick_weight_widget.dart';
-import 'package:opennutritracker/features/profile/presentation/utils/profile_display_format.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
 import 'package:opennutritracker/fork/adaptive/trend_points.dart';
 import 'package:opennutritracker/fork/report/rate_text.dart';
+import 'package:opennutritracker/fork/trends/trends_widgets.dart'
+    show Sparkline;
 import 'package:opennutritracker/fork/units/energy_text.dart';
+import 'package:opennutritracker/fork/units/weight_text.dart'
+    show bodyWeightText;
 import 'package:opennutritracker/generated/l10n.dart';
 
 /// Home's 2×2 tiles (seam S119, MacroFactor's dashboard), in place of the
@@ -214,13 +215,7 @@ class _WeightTileState extends State<WeightTile> {
       );
       final kg = trend.isEmpty ? widget.weightKg : trend.last.weightKg;
       final s = S.of(context);
-      final value = formatBodyWeight(
-        kg,
-        widget.unit,
-        kgLabel: s.kgLabel,
-        lbLabel: s.lbsLabel,
-        stLabel: s.stLabel,
-      );
+      final value = bodyWeightText(context, kg, widget.unit);
       String? note;
       if (trend.length > 7) {
         final kgPerWeek =
@@ -239,16 +234,19 @@ class _WeightTileState extends State<WeightTile> {
         value: value,
         note: note,
         hint: widget.hint,
-        onTap: widget.onTap ?? () => QuickWeightWidget.showWeightDialog(
-          context,
-          weightKg: widget.weightKg,
-          bodyWeightUnit: widget.unit,
-        ),
+        onTap:
+            widget.onTap ??
+            () => QuickWeightWidget.showWeightDialog(
+              context,
+              weightKg: widget.weightKg,
+              bodyWeightUnit: widget.unit,
+            ),
         below: month.length < 2
             ? null
             : Sparkline(
                 values: [for (final p in month) p.weightKg],
                 color: Theme.of(context).colorScheme.primary,
+                bars: false,
               ),
       );
     },
@@ -287,6 +285,7 @@ class _ExpenditureTileState extends State<ExpenditureTile> {
             : Sparkline(
                 values: [for (final d in month) d.expenditureKcal],
                 color: Theme.of(context).colorScheme.primary,
+                bars: false,
               ),
       );
     },
@@ -395,56 +394,4 @@ class TileBar extends StatelessWidget {
       ),
     );
   }
-}
-
-/// A line through [values], left to right, filling the tile's width.
-class Sparkline extends StatelessWidget {
-  final List<double> values;
-  final Color color;
-
-  const Sparkline({super.key, required this.values, required this.color});
-
-  @override
-  Widget build(BuildContext context) => ExcludeSemantics(
-    child: SizedBox(
-      height: 28,
-      width: double.infinity,
-      child: CustomPaint(painter: _SparklinePainter(values, color)),
-    ),
-  );
-}
-
-class _SparklinePainter extends CustomPainter {
-  final List<double> values;
-  final Color color;
-
-  _SparklinePainter(this.values, this.color);
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final low = values.reduce(math.min);
-    final high = values.reduce(math.max);
-    final span = high - low;
-    final path = Path();
-    for (final (i, v) in values.indexed) {
-      final x = size.width * i / (values.length - 1);
-      // A flat line sits in the middle.
-      final y = span == 0
-          ? size.height / 2
-          : size.height - 2 - (size.height - 4) * (v - low) / span;
-      i == 0 ? path.moveTo(x, y) : path.lineTo(x, y);
-    }
-    canvas.drawPath(
-      path,
-      Paint()
-        ..color = color
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2
-        ..strokeJoin = StrokeJoin.round,
-    );
-  }
-
-  @override
-  bool shouldRepaint(_SparklinePainter old) =>
-      old.values != values || old.color != color;
 }

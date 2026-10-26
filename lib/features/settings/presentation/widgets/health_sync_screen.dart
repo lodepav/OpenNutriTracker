@@ -356,7 +356,7 @@ class _HealthSyncScreenState extends State<HealthSyncScreen> {
                   identifier: 'health-sync-auto-import',
                   icon: Icons.directions_run_rounded,
                   title: 'Workouts in',
-                  detail: 'Burned energy adds to your budget',
+                  detail: 'Each logged as an activity', // [fork] S142 not every target adds it
                   value: _importEnabled,
                   onChanged: _isAvailable && !_busy
                       ? _onAutoImportChanged

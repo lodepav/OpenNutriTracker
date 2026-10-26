@@ -840,7 +840,10 @@ void main() {
               palette: AppPalette.light,
               unit: BodyWeightUnit.kg,
               service: service,
-              onUsePace: (pace) async => saved.add(pace),
+              onUsePace: (pace) async {
+                saved.add(pace);
+                return true;
+              },
             ),
           ),
         ),
@@ -886,7 +889,10 @@ void main() {
                 asked.add(pace);
                 return 3000 + pace * 1000;
               },
-              onUsePace: (pace) async => paced.pace = pace,
+              onUsePace: (pace) async {
+                paced.pace = pace;
+                return true;
+              },
             ),
           ),
         ),

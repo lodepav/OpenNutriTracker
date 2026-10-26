@@ -1,5 +1,6 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:flutter/semantics.dart';
 import 'package:intl/intl.dart';
 import 'package:opennutritracker/core/domain/entity/body_weight_unit_entity.dart';
@@ -7,12 +8,13 @@ import 'package:opennutritracker/core/domain/entity/weight_log_entity.dart';
 import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/core/utils/calc/calendar_day_calc.dart';
-import 'package:opennutritracker/features/profile/presentation/utils/profile_display_format.dart';
 import 'package:opennutritracker/fork/adaptive/trend_points.dart';
 import 'package:opennutritracker/fork/report/chart_touch.dart';
 import 'package:opennutritracker/fork/trends/trend_detail.dart';
 import 'package:opennutritracker/fork/trends/trend_stats.dart';
 import 'package:opennutritracker/fork/trends/trends_widgets.dart';
+import 'package:opennutritracker/fork/units/weight_text.dart'
+    show bodyWeightText;
 import 'package:opennutritracker/generated/l10n.dart';
 
 /// The ranges, in days; 0 is everything since the first weigh-in.
@@ -580,13 +582,7 @@ class _WeighInRow extends StatelessWidget {
             weightIn(unit, entry.weightKg) - weightIn(unit, previous!.weightKg),
             1,
           );
-    final weight = formatBodyWeight(
-      entry.weightKg,
-      unit,
-      kgLabel: S.of(context).kgLabel,
-      lbLabel: S.of(context).lbsLabel,
-      stLabel: S.of(context).stLabel,
-    );
+    final weight = bodyWeightText(context, entry.weightKg, unit);
 
     return Semantics(
       customSemanticsActions: {

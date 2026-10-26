@@ -3,11 +3,6 @@ import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
 
-AppPalette _palette(BuildContext context) =>
-    Theme.of(context).brightness == Brightness.dark
-    ? AppPalette.dark
-    : AppPalette.light;
-
 /// Seam S138: Health Connect as MacroFactor's (PickHealth B), the heading
 /// over the cards.
 class HealthSyncHeading extends StatelessWidget {
@@ -35,7 +30,9 @@ class HealthSyncHeading extends StatelessWidget {
           ),
           Text(
             'Pick what to share; Android asks once for each.',
-            style: text.bodySmall?.copyWith(color: _palette(context).textMuted),
+            style: text.bodySmall?.copyWith(
+              color: paletteOf(context).textMuted,
+            ),
           ),
         ],
       ),
@@ -67,7 +64,7 @@ class HealthSyncCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final palette = _palette(context);
+    final palette = paletteOf(context);
     final text = Theme.of(context).textTheme;
     final onChanged = this.onChanged;
     return Padding(
@@ -145,7 +142,7 @@ class HealthSyncFooter extends StatelessWidget {
                 Text(
                   lastImport,
                   style: text.bodySmall?.copyWith(
-                    color: _palette(context).textMuted,
+                    color: paletteOf(context).textMuted,
                   ),
                 ),
                 if (why case final why?) Text(why, style: text.bodySmall),

@@ -80,9 +80,7 @@ List<InlineSpan> macroSpans(
   ({double kcal, double carbs, double fat, double protein}) values, {
   bool small = false,
 }) {
-  final palette = Theme.of(context).brightness == Brightness.dark
-      ? AppPalette.dark
-      : AppPalette.light;
+  final palette = paletteOf(context);
   // Spoken as "29 grams carbs", not "C 29" (A5).
   List<InlineSpan> one(String letter, String name, double grams, Color color) {
     final g = grams.round();
