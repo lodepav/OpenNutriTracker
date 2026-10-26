@@ -2,6 +2,48 @@
 
 Written by fork/tools/release_notes.dart at each release (D16).
 
+## 0.2.2 · 2026-10-26
+
+Based on OpenNutriTracker 2.5.0.
+
+### Fixes and changes
+
+- implement-review fixes over the redesign
+- the planner's goal as Home's, typed and clearable targets, energy units on tiles and totals, phase limits explained
+- UX journey fixes for logging, custom foods, Settings and Fits
+- weigh-ins edited and undone, one weight encoding, settings-made check-ins say what changed, Trends at 200%
+- UX review fixes on the Settings pages, goals, activity, Health Connect and Profiles
+- UX review fixes on the redesigned pages
+- the goal page leads with today's goal and three steps
+- the custom food form reads like a nutrition label
+- quick add is one big energy figure or the macros' sum
+- the builder takes amounts in place and saves from a totals bar
+- Profiles as cards, goal, trend and days logged
+- Health Connect as a card to tick for each thing that syncs
+- Food databases as one card, a tag for each
+- Nutrient goals as bars against the goals, Edit opens the list
+- Accent colour as MacroFactor's, a preview and round swatches
+- Data as its own page, backup, in, out, start over
+- Settings as MacroFactor's, a page for each section, with search
+- Add activity as MacroFactor's, the list with a duration pop-up
+- the + sheet starts with search and the meal as chips
+- the recipe page logs a chosen portion; the recipes list shows kinds and logs a serving
+- the food page shows its kind, the energy by macro, the day after adding and the meal beside Add
+- the You tab as MacroFactor's, profile row, four tiles and grouped lists
+- Fasting as MacroFactor's, a ring, plan chips and the last seven fasts
+- weight history shows the trend over the weigh-ins and swipes a weigh-in away
+- the foods behind a macro switch between the energy and the macros
+- yogurt shows 🥛
+- the recipe tab shows a food's kind, not its photo
+- Home in one card with the week, and 2×2 tiles
+- Trends after MacroFactor, a grid of tiles, a page each, the energy stacked by macro
+- the Diary after MacroFactor, a week of day rings, the day's totals, the meals as a timeline
+- an Open Food Facts product's row shows its kind, not its packshot
+- compact search rows, history at its last amounts, then favourites
+- shorter food rows with their macros
+- review fixes for recovery, backups, leftovers and check-in
+- left and right arm and thigh measurements
+
 ## 0.2.1 · 2026-10-25
 
 Based on OpenNutriTracker 2.5.0.
