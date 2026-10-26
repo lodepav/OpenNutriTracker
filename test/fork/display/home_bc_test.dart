@@ -205,6 +205,39 @@ void main() {
     expect(bar.value, closeTo(4.5 / 16, 1e-9));
   });
 
+  group('water and fasting hidden in Settings', () {
+    tearDown(() {
+      DisplayPrefs.showWater.value = true;
+      DisplayPrefs.showFasting.value = true;
+    });
+
+    testWidgets('one hidden: the other fills the row; both: no row', (
+      tester,
+    ) async {
+      await tester.pumpWidget(_app(_tiles()));
+      await tester.pumpAndSettle();
+      final water = find.bySemanticsIdentifier('home-water-chip');
+      final fasting = find.bySemanticsIdentifier('home-fasting-chip');
+      expect(water, findsOne);
+      expect(fasting, findsOne);
+      final half = tester.getSize(water).width;
+
+      DisplayPrefs.showWater.value = false;
+      await tester.pumpAndSettle();
+      expect(water, findsNothing);
+      expect(tester.getSize(fasting).width, greaterThan(half * 1.5));
+
+      DisplayPrefs.showFasting.value = false;
+      await tester.pumpAndSettle();
+      expect(fasting, findsNothing);
+
+      DisplayPrefs.showWater.value = true;
+      await tester.pumpAndSettle();
+      expect(water, findsOne);
+      expect(fasting, findsNothing);
+    });
+  });
+
   group('the card', () {
     setUp(() => DisplayPrefs.homeShowsEaten.value = false);
     tearDown(() => DisplayPrefs.homeShowsEaten.value = false);

@@ -15,6 +15,7 @@ import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/core/utils/navigation_options.dart';
 import 'package:opennutritracker/features/profile/presentation/bloc/profile_bloc.dart';
 import 'package:opennutritracker/features/profile/profile_page.dart';
+import 'package:opennutritracker/fork/display/display_prefs.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 
 // Seam S121: the You tab as MacroFactor's; every setting it had stays.
@@ -146,6 +147,29 @@ void main() {
     ]) {
       expect(find.bySemanticsIdentifier(id), findsOneWidget, reason: id);
     }
+  });
+
+  testWidgets('water and fasting hidden in Settings: their tools go', (
+    tester,
+  ) async {
+    addTearDown(() {
+      DisplayPrefs.showWater.value = true;
+      DisplayPrefs.showFasting.value = true;
+    });
+    await _pump(tester, _user(gender: UserGenderEntity.nonBinary));
+    final fasting = find.bySemanticsIdentifier('profile-fasting-entry');
+    final water = find.bySemanticsIdentifier('profile-water-goal');
+    DisplayPrefs.showFasting.value = false;
+    await tester.pumpAndSettle();
+    expect(fasting, findsNothing);
+    expect(water, findsOneWidget);
+    DisplayPrefs.showWater.value = false;
+    await tester.pumpAndSettle();
+    expect(water, findsNothing);
+    expect(
+      find.bySemanticsIdentifier('profile-weight-history'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('the taper and the calories profile only when they apply', (

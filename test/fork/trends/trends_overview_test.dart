@@ -51,6 +51,29 @@ void main() {
     DisplayPrefs.macroOrder.value = DisplayPrefs.upstreamOrder;
   });
 
+  testWidgets('water hidden in Settings: no tile, no row in the table', (
+    tester,
+  ) async {
+    addTearDown(() => DisplayPrefs.showWater.value = true);
+    await pumpTrends(
+      tester,
+      loaded(days: [_logged(0)], waterByDay: {day(0): 1200}),
+    );
+    expect(find.byKey(const ValueKey('trends-tile-water')), findsOne);
+
+    DisplayPrefs.showWater.value = false;
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('trends-tile-water')), findsNothing);
+    await openTile(tester, 'calories');
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('trends-averages')),
+        matching: find.text('Water'),
+      ),
+      findsNothing,
+    );
+  });
+
   testWidgets('the tiles: averages of the logged days against the goals', (
     tester,
   ) async {

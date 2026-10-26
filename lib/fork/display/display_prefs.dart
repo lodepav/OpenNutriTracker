@@ -1,7 +1,9 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:opennutritracker/core/utils/hive_db_provider.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
+import 'package:opennutritracker/core/utils/notification_service.dart';
 import 'package:opennutritracker/core/utils/reload_diary_and_trends.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/fork/basket/basket_ui.dart';
@@ -17,6 +19,8 @@ abstract final class DisplayPrefs {
   static const _orderKey = 'macroOrder';
   static const _byHourKey = 'diaryByHour';
   static const _homeEatenKey = 'homeShowsEaten';
+  static const _showWaterKey = 'showWater';
+  static const _showFastingKey = 'showFasting';
 
   /// Upstream's order: carbs, fat, protein.
   static const upstreamOrder = [Macro.carbs, Macro.fat, Macro.protein];
@@ -27,6 +31,11 @@ abstract final class DisplayPrefs {
   /// Whether Home's ring counts what was eaten rather than what is left
   /// (S119).
   static final homeShowsEaten = ValueNotifier<bool>(false);
+
+  /// Whether water and fasting show at all (S144): off, their tiles, rows
+  /// and cards go; what was logged stays.
+  static final showWater = ValueNotifier<bool>(true);
+  static final showFasting = ValueNotifier<bool>(true);
 
   static Future<Box<dynamic>> _box() => AdaptiveStore.openActiveBox();
 
@@ -42,6 +51,8 @@ abstract final class DisplayPrefs {
     macroOrder.value = parseOrder(box.get(_orderKey));
     diaryByHour.value = box.get(_byHourKey) == true;
     homeShowsEaten.value = box.get(_homeEatenKey) == true;
+    showWater.value = box.get(_showWaterKey) != false;
+    showFasting.value = box.get(_showFastingKey) != false;
   }
 
   static Future<void> setMacroOrder(List<Macro> order) async {
@@ -57,6 +68,16 @@ abstract final class DisplayPrefs {
   static Future<void> setHomeShowsEaten(bool on) async {
     homeShowsEaten.value = on;
     await (await _box()).put(_homeEatenKey, on);
+  }
+
+  static Future<void> setShowWater(bool on) async {
+    showWater.value = on;
+    await (await _box()).put(_showWaterKey, on);
+  }
+
+  static Future<void> setShowFasting(bool on) async {
+    showFasting.value = on;
+    await (await _box()).put(_showFastingKey, on);
   }
 
   /// A stored order, or upstream's for anything that is not all three
@@ -190,6 +211,88 @@ class DiaryByHourTile extends StatelessWidget {
         value: on,
         onChanged: (on) async {
           await DisplayPrefs.setDiaryByHour(on);
+          _reload();
+        },
+      ),
+    ),
+  );
+}
+
+/// Shows [child] while [show] is on, else nothing, rebuilt as it changes.
+class ShownWhen extends StatelessWidget {
+  final ValueListenable<bool> show;
+  final Widget child;
+
+  const ShownWhen(this.show, {super.key, required this.child});
+
+  @override
+  Widget build(BuildContext context) => ValueListenableBuilder<bool>(
+    valueListenable: show,
+    builder: (context, on, child) => on ? child! : const SizedBox.shrink(),
+    child: child,
+  );
+}
+
+/// "Show water" and "Show fasting" in Settings' display section (S144),
+/// beside upstream's "Show activity tracking".
+class ShowFeatureTile extends StatelessWidget {
+  final String identifier;
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final ValueListenable<bool> value;
+  final Future<void> Function(bool on) onChanged;
+
+  const ShowFeatureTile({
+    super.key,
+    required this.identifier,
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.value,
+    required this.onChanged,
+  });
+
+  static Widget water() => ShowFeatureTile(
+    identifier: 'settings-show-water',
+    icon: Icons.water_drop_outlined,
+    title: 'Show water',
+    subtitle: 'Off, water leaves Home, You and Trends; what you logged stays',
+    value: DisplayPrefs.showWater,
+    onChanged: DisplayPrefs.setShowWater,
+  );
+
+  /// [onHidden] stands in for cancelling the fasting-complete
+  /// notification, in tests.
+  static Widget fasting({Future<void> Function()? onHidden}) => ShowFeatureTile(
+    identifier: 'settings-show-fasting',
+    icon: Icons.timer_outlined,
+    title: 'Show fasting',
+    subtitle:
+        'Off, fasting leaves Home and You, and a fast under way does not '
+        'notify; your fasts stay',
+    value: DisplayPrefs.showFasting,
+    onChanged: (on) async {
+      await DisplayPrefs.setShowFasting(on);
+      if (!on) {
+        await (onHidden ??
+            () => locator<NotificationService>().cancelFastingComplete())();
+      }
+    },
+  );
+
+  @override
+  Widget build(BuildContext context) => ValueListenableBuilder<bool>(
+    valueListenable: value,
+    builder: (context, on, _) => Semantics(
+      identifier: identifier,
+      child: ForkSettingsSwitchTile(
+        icon: icon,
+        title: title,
+        subtitle: Text(subtitle),
+        value: on,
+        onChanged: (on) async {
+          await onChanged(on);
           _reload();
         },
       ),

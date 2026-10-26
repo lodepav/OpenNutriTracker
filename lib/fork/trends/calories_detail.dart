@@ -332,14 +332,15 @@ class AveragesTable extends StatelessWidget {
         (kcal) => energyValue(context, kcal),
       ),
       ...macroRows,
-      row(
-        metricTitle(context, TrendMetric.water),
-        null,
-        meanOf(waterSeries(state.waterByDay, dates)),
-        state.waterGoalMl > 0 ? state.waterGoalMl.toDouble() : null,
-        'ml',
-        grams,
-      ),
+      if (DisplayPrefs.showWater.value)
+        row(
+          metricTitle(context, TrendMetric.water),
+          null,
+          meanOf(waterSeries(state.waterByDay, dates)),
+          state.waterGoalMl > 0 ? state.waterGoalMl.toDouble() : null,
+          'ml',
+          grams,
+        ),
       if (weight.nowKg != null)
         (
           name: metricTitle(context, TrendMetric.weight),

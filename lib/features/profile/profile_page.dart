@@ -29,6 +29,7 @@ import 'package:opennutritracker/features/home/presentation/bloc/home_bloc.dart'
 import 'package:opennutritracker/features/settings/presentation/bloc/settings_bloc.dart';
 import 'package:opennutritracker/features/settings/presentation/widgets/water_goal_dialog.dart';
 import 'package:opennutritracker/fork/units/weight_text.dart' show bodyWeightText; // [fork] S121
+import 'package:opennutritracker/fork/display/display_prefs.dart'; // [fork] S144
 import 'package:opennutritracker/generated/l10n.dart';
 // [fork] S121 you-tab
 import 'package:opennutritracker/core/domain/usecase/get_profiles_usecase.dart';
@@ -271,43 +272,57 @@ class _ProfilePageState extends State<ProfilePage> {
               ),
           ],
         ),
-        YouSection(
-          title: 'Tools',
-          rows: [
-            YouRow(
-              identifier: 'profile-weight-history',
-              label: S.of(context).profileWeightHistoryTitle,
-              onTap: () => Navigator.of(
-                context,
-              ).pushNamed(NavigationOptions.weightHistoryRoute),
-            ),
-            YouRow(
-              identifier: 'profile-fasting-entry',
-              label: S.of(context).profileFastingEntry,
-              onTap: () =>
-                  Navigator.of(context).pushNamed(NavigationOptions.fastingRoute),
-            ),
-            YouRow(
-              identifier: 'profile-water-goal',
-              label: S.of(context).settingsWaterGoalLabel,
-              value: '$effectiveWaterGoalMl ${S.of(context).mlLabel}',
-              onTap: () => _showWaterGoalDialog(context),
-            ),
-            YouRow(
-              identifier: 'profile-recipes',
-              label: S.of(context).recipesLabel,
-              onTap: () =>
-                  Navigator.of(context).pushNamed(NavigationOptions.recipesRoute),
-            ),
-            YouRow(
-              identifier: 'profile-sources',
-              label: S.of(context).sourcesIconTooltip,
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute<void>(builder: (_) => const SourcesScreen()),
+        // [fork] S144 hide-features: water and fasting go when hidden
+        ListenableBuilder(
+          listenable: Listenable.merge([
+            DisplayPrefs.showWater,
+            DisplayPrefs.showFasting,
+          ]),
+          builder: (context, _) => YouSection(
+            title: 'Tools',
+            rows: [
+              YouRow(
+                identifier: 'profile-weight-history',
+                label: S.of(context).profileWeightHistoryTitle,
+                onTap: () => Navigator.of(
+                  context,
+                ).pushNamed(NavigationOptions.weightHistoryRoute),
               ),
-            ),
-          ],
+              if (DisplayPrefs.showFasting.value)
+                YouRow(
+                  identifier: 'profile-fasting-entry',
+                  label: S.of(context).profileFastingEntry,
+                  onTap: () => Navigator.of(
+                    context,
+                  ).pushNamed(NavigationOptions.fastingRoute),
+                ),
+              if (DisplayPrefs.showWater.value)
+                YouRow(
+                  identifier: 'profile-water-goal',
+                  label: S.of(context).settingsWaterGoalLabel,
+                  value: '$effectiveWaterGoalMl ${S.of(context).mlLabel}',
+                  onTap: () => _showWaterGoalDialog(context),
+                ),
+              YouRow(
+                identifier: 'profile-recipes',
+                label: S.of(context).recipesLabel,
+                onTap: () => Navigator.of(
+                  context,
+                ).pushNamed(NavigationOptions.recipesRoute),
+              ),
+              YouRow(
+                identifier: 'profile-sources',
+                label: S.of(context).sourcesIconTooltip,
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const SourcesScreen(),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
+        // [/fork]
         // S147: Settings on its own, not one of the tools
         YouSection(
           title: 'App',

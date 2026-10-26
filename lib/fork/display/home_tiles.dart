@@ -10,6 +10,7 @@ import 'package:opennutritracker/core/utils/calc/unit_calc.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/core/utils/navigation_options.dart';
 import 'package:opennutritracker/features/fasting/presentation/bloc/fasting_bloc.dart';
+import 'package:opennutritracker/fork/display/display_prefs.dart';
 import 'package:opennutritracker/features/home/presentation/widgets/log_water_dialog.dart';
 import 'package:opennutritracker/features/home/presentation/widgets/quick_weight_widget.dart';
 import 'package:opennutritracker/features/trends/presentation/trends_page.dart'
@@ -99,22 +100,38 @@ class HomeTiles extends StatelessWidget {
             ],
           ),
         ),
-        const SizedBox(height: Dimens.spacing8),
-        IntrinsicHeight(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Expanded(
-                child: WaterTile(
+        // Either hidden in Settings (S144): the other alone, or neither.
+        ListenableBuilder(
+          listenable: Listenable.merge([
+            DisplayPrefs.showWater,
+            DisplayPrefs.showFasting,
+          ]),
+          builder: (context, _) {
+            final shown = [
+              if (DisplayPrefs.showWater.value)
+                WaterTile(
                   ml: waterMl,
                   goalMl: waterGoalMl,
                   onTap: () => openTrend(context, TrendMetric.water),
                 ),
+              if (DisplayPrefs.showFasting.value) fasting,
+            ];
+            if (shown.isEmpty) return const SizedBox.shrink();
+            return Padding(
+              padding: const EdgeInsets.only(top: Dimens.spacing8),
+              child: IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    for (final (i, tile) in shown.indexed) ...[
+                      if (i > 0) const SizedBox(width: Dimens.spacing8),
+                      Expanded(child: tile),
+                    ],
+                  ],
+                ),
               ),
-              const SizedBox(width: Dimens.spacing8),
-              Expanded(child: fasting),
-            ],
-          ),
+            );
+          },
         ),
       ],
     ),
