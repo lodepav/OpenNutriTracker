@@ -156,6 +156,8 @@ class ExpenditureChart extends StatelessWidget {
     final muted = palette.textMuted;
     final small = theme.textTheme.labelSmall?.copyWith(color: muted);
     final dots = dates.length <= 92;
+    // The axis numbers' width, grown with the text so they stay on one line.
+    final axis = MediaQuery.textScalerOf(context).scale(44);
     return AppCard(
       padding: const EdgeInsets.all(Dimens.spacing16),
       child: Column(
@@ -186,7 +188,7 @@ class ExpenditureChart extends StatelessWidget {
                       sideTitles: SideTitles(
                         showTitles: true,
                         interval: step,
-                        reservedSize: 44,
+                        reservedSize: axis,
                         getTitlesWidget: (y, meta) => SideTitleWidget(
                           meta: meta,
                           child: Text('${y.round()}', style: small),
@@ -236,7 +238,7 @@ class ExpenditureChart extends StatelessWidget {
             DefaultTextStyle.merge(
               style: small,
               child: Padding(
-                padding: const EdgeInsets.only(right: 44),
+                padding: EdgeInsets.only(right: axis),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -249,38 +251,16 @@ class ExpenditureChart extends StatelessWidget {
               ),
             ),
           const SizedBox(height: Dimens.spacing8),
-          Wrap(
-            spacing: Dimens.spacing16,
-            children: [
-              _key(context, 'Expenditure', accent, line: true),
-              if (dots) _key(context, 'Logged', muted),
+          ChartLegend(
+            entries: [
+              (label: 'Expenditure', color: accent, line: true),
+              if (dots) (label: 'Logged', color: muted, line: false),
             ],
           ),
         ],
       ),
     );
   }
-
-  static Widget _key(
-    BuildContext context,
-    String label,
-    Color color, {
-    bool line = false,
-  }) => Row(
-    mainAxisSize: MainAxisSize.min,
-    children: [
-      Container(
-        width: line ? 14 : 7,
-        height: line ? 3 : 7,
-        decoration: BoxDecoration(
-          color: color,
-          borderRadius: BorderRadius.circular(4),
-        ),
-      ),
-      const SizedBox(width: 6),
-      Text(label, style: Theme.of(context).textTheme.bodySmall),
-    ],
-  );
 
   /// A round step near [raw]: 1, 2 or 5 times a power of ten.
   static double _niceStep(double raw) {
@@ -306,14 +286,39 @@ class ExpenditureChanges extends StatelessWidget {
     final text = Theme.of(context).textTheme;
     final unit = energyUnit(context);
     final head = text.labelSmall?.copyWith(color: palette.textMuted);
-    Widget cell(String s, {TextStyle? style, bool first = false}) => Padding(
-      padding: const EdgeInsets.symmetric(vertical: 10),
-      child: Text(
-        s,
-        textAlign: first ? TextAlign.start : TextAlign.end,
-        style: style,
-      ),
-    );
+    // TalkBack reads a row as one sentence, on its first cell; the other
+    // cells are left out.
+    Widget cell(
+      String s, {
+      TextStyle? style,
+      bool first = false,
+      String? spoken,
+    }) {
+      final shown = Padding(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        child: Text(
+          s,
+          textAlign: first ? TextAlign.start : TextAlign.end,
+          style: style,
+        ),
+      );
+      return spoken == null
+          ? ExcludeSemantics(child: shown)
+          : Semantics(label: spoken, excludeSemantics: true, child: shown);
+    }
+
+    String said(({int days, double? change, double? then}) c) {
+      final over = 'Over ${c.days} days';
+      if (c.change == null || c.then == null) {
+        return '$over: not enough history yet';
+      }
+      final change = energyValue(context, c.change!);
+      final then = '${energyValue(context, c.then!)} $unit';
+      if (change == 0) return '$over: no change, at $then';
+      return '$over: ${change > 0 ? 'up' : 'down'} ${change.abs()} $unit, '
+          'from $then';
+    }
+
     return AppCard(
       padding: const EdgeInsets.symmetric(
         horizontal: Dimens.spacing16,
@@ -326,7 +331,7 @@ class ExpenditureChanges extends StatelessWidget {
             children: [
               cell('Over', style: head, first: true),
               cell('Change', style: head),
-              cell('Then', style: head),
+              cell('Was', style: head),
             ],
           ),
           for (final c in expenditureChanges(history))
@@ -335,7 +340,7 @@ class ExpenditureChanges extends StatelessWidget {
                 border: Border(top: BorderSide(color: palette.border)),
               ),
               children: [
-                cell('${c.days} days', first: true),
+                cell('${c.days} days', first: true, spoken: said(c)),
                 cell(
                   c.change == null
                       ? '–'
@@ -343,7 +348,9 @@ class ExpenditureChanges extends StatelessWidget {
                   style: const TextStyle(fontWeight: FontWeight.w600),
                 ),
                 cell(
-                  c.then == null ? '–' : '${energyValue(context, c.then!)}',
+                  c.then == null
+                      ? '–'
+                      : '${energyValue(context, c.then!)} $unit',
                   style: TextStyle(color: palette.textMuted),
                 ),
               ],

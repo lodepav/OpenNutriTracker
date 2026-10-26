@@ -31,10 +31,18 @@ TrackedDayEntity _tracked(int offset, double kcal) => TrackedDayEntity(
   caloriesTracked: kcal,
 );
 
-Future<void> _pump(WidgetTester tester) async {
+Future<void> _pump(WidgetTester tester, {double scale = 1}) async {
   await tester.pumpWidget(
     MaterialApp(
-      home: Scaffold(body: WeekdayCard(now: () => _today)),
+      builder: (context, child) => MediaQuery(
+        data: MediaQuery.of(
+          context,
+        ).copyWith(textScaler: TextScaler.linear(scale)),
+        child: child!,
+      ),
+      home: Scaffold(
+        body: SingleChildScrollView(child: WeekdayCard(now: () => _today)),
+      ),
     ),
   );
   await tester.pumpAndSettle();
@@ -70,6 +78,17 @@ void main() {
     expect(find.text('No weekday runs far from your average.'), findsOneWidget);
     expect(find.bySemanticsLabel('Sunday, 2050 kcal'), findsOneWidget);
     expect(find.bySemanticsLabel('Friday, nothing logged'), findsOneWidget);
+  });
+
+  testWidgets('a large font grows the chart rather than overflowing it', (
+    tester,
+  ) async {
+    getIt.registerSingleton<GetTrackedDayUsecase>(
+      _TrackedDays([for (var i = 0; i < 7; i++) _tracked(-i, 2000.0 + i)]),
+    );
+    await _pump(tester, scale: 2);
+    expect(tester.takeException(), isNull);
+    expect(find.text('Wed'), findsOneWidget);
   });
 
   testWidgets('hidden with nothing logged', (tester) async {

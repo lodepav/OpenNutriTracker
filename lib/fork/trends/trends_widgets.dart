@@ -393,7 +393,8 @@ FlTitlesData weekdayTitles(BuildContext context, List<DateTime> dates) {
     bottomTitles: AxisTitles(
       sideTitles: SideTitles(
         showTitles: true,
-        reservedSize: 22,
+        // Grown with the text, so a large font is not cut off.
+        reservedSize: MediaQuery.textScalerOf(context).scale(22),
         getTitlesWidget: (x, meta) => SideTitleWidget(
           meta: meta,
           child: Text(format.format(dates[x.toInt()]), style: style),

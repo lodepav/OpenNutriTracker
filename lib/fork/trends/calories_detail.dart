@@ -141,7 +141,6 @@ class MacroEnergyChart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = paletteOf(context);
-    final text = Theme.of(context).textTheme;
     final scheme = Theme.of(context).colorScheme;
     final kj = usesKj(context);
     double shown(double kcal) => kj ? UnitCalc.kcalToKj(kcal) : kcal;
@@ -231,34 +230,12 @@ class MacroEnergyChart extends StatelessWidget {
               ),
             ),
           const SizedBox(height: Dimens.spacing8),
-          Wrap(
-            spacing: Dimens.spacing12,
-            children: [
+          ChartLegend(
+            entries: [
               for (final m in macros)
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 8,
-                      height: 8,
-                      decoration: BoxDecoration(
-                        color: m.color,
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    Text(m.label, style: text.bodySmall),
-                  ],
-                ),
+                (label: m.label, color: m.color, line: false),
               if (goal != null)
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(width: 14, height: 2, color: palette.textMuted),
-                    const SizedBox(width: 4),
-                    Text('Goal', style: text.bodySmall),
-                  ],
-                ),
+                (label: 'Goal', color: palette.textMuted, line: true),
             ],
           ),
         ],
@@ -412,8 +389,9 @@ class _WeekdayCardState extends State<WeekdayCard> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                SizedBox(
-                  height: 100,
+                // Sized by its bars and labels, so a large font grows it.
+                Padding(
+                  padding: const EdgeInsets.only(top: 30),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
@@ -427,15 +405,17 @@ class _WeekdayCardState extends State<WeekdayCard> {
                                       '${energyText(context, means.byWeekday[w]!)}',
                             excludeSemantics: true,
                             child: Column(
-                              mainAxisAlignment: MainAxisAlignment.end,
+                              mainAxisSize: MainAxisSize.min,
                               children: [
                                 Container(
                                   width: 22,
                                   height: 70 * (means.byWeekday[w] ?? 0) / top,
                                   decoration: BoxDecoration(
+                                    // Not the macro colours of the chart
+                                    // above: the standout day in the accent.
                                     color: standout?.weekday == w
-                                        ? palette.fat
-                                        : palette.carbs,
+                                        ? Theme.of(context).colorScheme.primary
+                                        : palette.textMuted,
                                     borderRadius: const BorderRadius.vertical(
                                       top: Radius.circular(5),
                                       bottom: Radius.circular(2),
@@ -443,10 +423,14 @@ class _WeekdayCardState extends State<WeekdayCard> {
                                   ),
                                 ),
                                 const SizedBox(height: 4),
-                                Text(
-                                  name(w, intl.DateFormat.E(locale)),
-                                  style: text.labelSmall?.copyWith(
-                                    color: palette.textMuted,
+                                FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  child: Text(
+                                    name(w, intl.DateFormat.E(locale)),
+                                    maxLines: 1,
+                                    style: text.labelSmall?.copyWith(
+                                      color: palette.textMuted,
+                                    ),
                                   ),
                                 ),
                               ],
@@ -524,6 +508,7 @@ class _Shares extends StatelessWidget {
               child: SizedBox(
                 height: 12,
                 child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     for (final r in rows)
                       if (r.share > 0)
