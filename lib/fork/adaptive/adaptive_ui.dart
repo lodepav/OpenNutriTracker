@@ -437,7 +437,12 @@ class _CheckInScreenState extends State<CheckInScreen> {
         final changed = _changedSince(last);
         final why = _whyMoved(checkIn, changed);
         return ListView(
-          padding: const EdgeInsets.all(16),
+          padding: EdgeInsets.fromLTRB(
+            16,
+            16,
+            16,
+            16 + MediaQuery.paddingOf(context).bottom,
+          ),
           children: [
             if (changed.isNotEmpty) ...[
               for (final change in targetSettingsChanges(

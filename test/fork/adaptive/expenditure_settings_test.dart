@@ -712,6 +712,26 @@ void main() {
       expect(AdaptiveStore.settings.value.maxCheckInChangeKcal, isNull);
     });
 
+    testWidgets('the last row clears the navigation bar', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(
+              context,
+            ).copyWith(padding: const EdgeInsets.only(bottom: 48)),
+            child: child!,
+          ),
+          home: ExpenditureSettingsScreen(
+            store: _MemoryStore(),
+            steps: StepCounts(_Steps({}), () async => _NoBox()),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final list = tester.widget<ListView>(find.byType(ListView).first);
+      expect(list.padding!.resolve(TextDirection.ltr).bottom, 24 + 48);
+    });
+
     testWidgets('in kJ the check-in limit steps are round kJ', (tester) async {
       // The default limit, 200 kcal, is 837 kJ: its nearest step is 800.
       AdaptiveStore.settings.value = const AdaptiveSettings(

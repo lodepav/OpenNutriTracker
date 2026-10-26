@@ -52,7 +52,12 @@ class GoalExplainedBody extends StatelessWidget {
       b.palCategory.getName(context),
     ].join(' · ');
     return ListView(
-      padding: const EdgeInsets.all(Dimens.spacing16),
+      padding: EdgeInsets.fromLTRB(
+        Dimens.spacing16,
+        Dimens.spacing16,
+        Dimens.spacing16,
+        Dimens.spacing16 + MediaQuery.paddingOf(context).bottom,
+      ),
       children: [
         if (showTargetNote) const AdaptiveGoalNote(),
         AppCard(

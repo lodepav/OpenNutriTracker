@@ -100,7 +100,7 @@ class RecipeListItem extends StatelessWidget {
                         children: [
                           TextSpan(
                             text:
-                                '${S.of(context).recipeIngredientCountLabel(ingredientCount)} · ',
+                                '${S.of(context).recipeIngredientCountLabel(ingredientCount)}\n', // [fork] S130 macros on their own line
                           ),
                           ...macroSpans(context, serving),
                           if (large) // [fork] S130

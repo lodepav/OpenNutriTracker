@@ -147,11 +147,11 @@ class _FastingViewState extends State<FastingView> {
     final active = _active;
     final l10n = S.of(context);
     return ListView(
-      padding: const EdgeInsets.fromLTRB(
+      padding: EdgeInsets.fromLTRB(
         Dimens.spacing12,
         0,
         Dimens.spacing12,
-        Dimens.spacing32,
+        Dimens.spacing32 + MediaQuery.paddingOf(context).bottom,
       ),
       children: [
         if (active != null)

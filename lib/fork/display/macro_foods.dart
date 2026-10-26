@@ -158,11 +158,11 @@ class _MacroFoodsPageState extends State<MacroFoodsPage> {
     return Scaffold(
       appBar: AppBar(title: const Text("Today's foods")),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(
+        padding: EdgeInsets.fromLTRB(
           Dimens.spacing12,
           0,
           Dimens.spacing12,
-          Dimens.spacing32,
+          Dimens.spacing32 + MediaQuery.paddingOf(context).bottom,
         ),
         children: [
           Semantics(

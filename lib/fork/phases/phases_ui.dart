@@ -606,7 +606,12 @@ class _PhasePlanScreenState extends State<PhasePlanScreen> {
       ],
     ),
     body: ListView(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.fromLTRB(
+        16,
+        16,
+        16,
+        16 + MediaQuery.paddingOf(context).bottom,
+      ),
       children: [
         ListTile(
           contentPadding: EdgeInsets.zero,
