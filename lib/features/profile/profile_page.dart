@@ -306,6 +306,12 @@ class _ProfilePageState extends State<ProfilePage> {
                 MaterialPageRoute<void>(builder: (_) => const SourcesScreen()),
               ),
             ),
+          ],
+        ),
+        // S147: Settings on its own, not one of the tools
+        YouSection(
+          title: 'App',
+          rows: [
             YouRow(
               identifier: 'profile-settings',
               label: S.of(context).settingsLabel,

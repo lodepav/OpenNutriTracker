@@ -11,7 +11,9 @@ import 'package:opennutritracker/features/home/presentation/widgets/dashboard_wi
 import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
 import 'package:opennutritracker/fork/display/display_prefs.dart';
 import 'package:opennutritracker/fork/display/home_tiles.dart';
-import 'package:opennutritracker/fork/trends/trends_widgets.dart' show Sparkline;
+import 'package:opennutritracker/fork/trends/trend_stats.dart' show TrendMetric;
+import 'package:opennutritracker/fork/trends/trends_widgets.dart'
+    show Sparkline;
 import 'package:opennutritracker/fork/display/week_bars.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 import 'package:provider/provider.dart';
@@ -37,6 +39,7 @@ Future<List<ExpenditureDay>> _noExpenditure() async => const [];
 Widget _tiles({
   Future<List<WeightLogEntity>> Function() loadWeights = _noWeights,
   Future<List<ExpenditureDay>> Function() loadExpenditure = _noExpenditure,
+  void Function(BuildContext, TrendMetric)? openTrend,
 }) => HomeTiles(
   weightKg: 81,
   bodyWeightUnit: BodyWeightUnit.kg,
@@ -45,6 +48,7 @@ Widget _tiles({
   loadWeights: loadWeights,
   loadExpenditure: loadExpenditure,
   fasting: const FastingTileView(state: FastingIdle()),
+  openTrend: openTrend ?? (_, _) {},
 );
 
 DashboardWidget _dashboard() => DashboardWidget(
@@ -150,6 +154,30 @@ void main() {
       expect(find.textContaining('2712 kcal/day'), findsOne);
       expect(find.byType(Sparkline), findsNWidgets(2));
     });
+  });
+
+  testWidgets('a tile opens its Trends page; the + logs (S145)', (
+    tester,
+  ) async {
+    final opened = <TrendMetric>[];
+    await tester.pumpWidget(
+      _app(_tiles(openTrend: (_, metric) => opened.add(metric))),
+    );
+    await tester.pumpAndSettle();
+    for (final title in ['Weight trend', 'Expenditure', 'Water']) {
+      await tester.tap(find.text(title));
+    }
+    expect(opened, [
+      TrendMetric.weight,
+      TrendMetric.expenditure,
+      TrendMetric.water,
+    ]);
+
+    await tester.tap(find.byTooltip('Log water'));
+    await tester.pumpAndSettle();
+    expect(find.byType(Dialog), findsOne);
+    expect(opened, hasLength(3));
+    expect(find.byTooltip('Log a weigh-in'), findsOne);
   });
 
   testWidgets('a fast under way: the time left and how far along', (

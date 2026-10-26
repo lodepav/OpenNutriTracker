@@ -712,6 +712,37 @@ void main() {
       expect(AdaptiveStore.settings.value.maxCheckInChangeKcal, isNull);
     });
 
+    testWidgets('the cycle switch: a woman\'s profile, or while on (S146)', (
+      tester,
+    ) async {
+      addTearDown(
+        () => AdaptiveStore.settings.value = const AdaptiveSettings(),
+      );
+      Future<void> open({required bool female}) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            home: ExpenditureSettingsScreen(
+              key: UniqueKey(),
+              store: _MemoryStore(),
+              steps: StepCounts(_Steps({}), () async => _NoBox()),
+              isFemale: () async => female,
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+      }
+
+      final cycle = find.byKey(const ValueKey('cycle-window'));
+      await open(female: false);
+      expect(cycle, findsNothing);
+      await open(female: true);
+      expect(cycle, findsOne);
+
+      AdaptiveStore.settings.value = const AdaptiveSettings(cycleWindow: true);
+      await open(female: false);
+      expect(cycle, findsOne);
+    });
+
     testWidgets('the last row clears the navigation bar', (tester) async {
       await tester.pumpWidget(
         MaterialApp(

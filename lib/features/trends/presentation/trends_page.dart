@@ -37,6 +37,11 @@ import 'package:opennutritracker/fork/trends/trends_overview.dart';
 // [fork] S111 typed-weigh-in
 import 'package:opennutritracker/fork/weight/weigh_in_log.dart';
 // [/fork]
+// [fork] S145 home-tiles
+import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
+import 'package:opennutritracker/fork/trends/trend_detail.dart';
+import 'package:opennutritracker/fork/trends/trend_stats.dart';
+// [/fork]
 
 class TrendsPage extends StatefulWidget {
   const TrendsPage({super.key});
@@ -433,3 +438,37 @@ class _WeightCard extends StatelessWidget {
     // [/fork]
   }
 }
+
+// [fork] S145 home-tiles: a Home tile opens the page its Trends tile
+// opens, on the Trends bloc (loaded here when Trends was not opened yet)
+void openTrendFromHome(BuildContext context, TrendMetric metric) {
+  final bloc = locator<TrendsBloc>();
+  if (bloc.state is! TrendsLoaded) bloc.add(const LoadTrendsEvent());
+  final palette = paletteOf(context);
+  openTrendDetail(
+    context,
+    metric,
+    TrendsDeps(
+      expenditure: ValueNotifier(
+        AdaptiveService.fromLocator().expenditureHistory().catchError(
+          (Object _) => <ExpenditureDay>[],
+        ),
+      ),
+      weightCard: (state) => _WeightCard(
+        entries: state.weight,
+        bodyWeightUnit: state.bodyWeightUnit,
+        targetWeightKg: state.targetWeightKg,
+        rangeDays: state.windowDays,
+        palette: palette,
+      ),
+      waterCard: (state) => _WaterTrendCard(
+        waterByDay: state.waterByDay,
+        goalMl: state.waterGoalMl,
+        rangeDays: state.windowDays,
+        palette: palette,
+      ),
+    ),
+    bloc: bloc,
+  );
+}
+// [/fork]
