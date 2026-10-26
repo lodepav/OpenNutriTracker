@@ -676,6 +676,37 @@ void main() {
     expect(cap, findsOneWidget);
   });
 
+  testWidgets('Keep current target records the check-in at it', (tester) async {
+    final memory = _MemoryStore();
+    final service = AdaptiveService(
+      _User(),
+      _Weights(),
+      _TrackedDays(),
+      memory,
+      () => _today.add(const Duration(hours: 9)),
+    );
+    await service.accept(await service.checkIn(), 2100);
+    await _pumpLarge(tester, service);
+    // The proposal is another figure, so Accept would have stored it.
+    expect(
+      (await service.checkIn()).proposedTargetKcal,
+      isNot(closeTo(2100, 1)),
+    );
+
+    final keep = find.byKey(const ValueKey('check-in-keep'));
+    await tester.scrollUntilVisible(
+      keep,
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.ensureVisible(keep);
+    await tester.pumpAndSettle();
+    await tester.tap(keep);
+    await tester.pumpAndSettle();
+    expect(memory.accepts, 2);
+    expect(memory.records.last.acceptedKcal, 2100);
+  });
+
   testWidgets("without Home's target, the first check-in shows no change", (
     tester,
   ) async {
@@ -1030,15 +1061,23 @@ class _Goal extends Fake implements GetKcalGoalUsecase {
 class _MemoryStore extends AdaptiveStore {
   final records = <CheckInRecord>[];
 
+  /// Check-ins accepted, new or in place of the last.
+  var accepts = 0;
+
   @override
   Future<List<CheckInRecord>> history() async => records;
 
   @override
-  Future<void> addCheckIn(CheckInRecord record) async => records.add(record);
+  Future<void> addCheckIn(CheckInRecord record) async {
+    accepts++;
+    records.add(record);
+  }
 
   @override
-  Future<void> replaceLastCheckIn(CheckInRecord record) async =>
-      records[records.length - 1] = record;
+  Future<void> replaceLastCheckIn(CheckInRecord record) async {
+    accepts++;
+    records[records.length - 1] = record;
+  }
 }
 
 /// [inner]'s plan at a pace set by the test.

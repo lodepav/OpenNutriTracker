@@ -570,6 +570,19 @@ class _CheckInScreenState extends State<CheckInScreen> {
               },
               child: const Text('Accept'),
             ),
+            // Done for the week at the target in use, so it isn't due again.
+            if (current != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: OutlinedButton(
+                  key: const ValueKey('check-in-keep'),
+                  onPressed: () async {
+                    await widget.service.accept(checkIn, current);
+                    if (context.mounted) Navigator.of(context).pop(true);
+                  },
+                  child: const Text('Keep current target'),
+                ),
+              ),
           ],
         );
       },
