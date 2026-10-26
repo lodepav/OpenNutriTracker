@@ -90,6 +90,14 @@ List<Widget> balanceBody(
       ),
       trendSection(context, 'What it means for weight'),
       _WeightTiles(state: state, dates: dates, meanKcal: mean),
+      const SizedBox(height: Dimens.spacing8),
+      Text(
+        'The two part ways while water moves the scale, and while the '
+        'expenditure estimate is settling.',
+        style: Theme.of(
+          context,
+        ).textTheme.bodySmall?.copyWith(color: palette.textMuted),
+      ),
     ],
   ];
 }
