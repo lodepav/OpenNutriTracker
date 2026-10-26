@@ -61,19 +61,13 @@ void main() {
   test('a profile switched to while its figures are read keeps its boxes '
       'open', () async {
     final db = _SwitchingDb('sam');
-    await expectLater(
-      readProfileStats(db, _sam, active: false),
-      throwsStateError,
-    );
+    await expectLater(readProfileStats(db, _sam), throwsStateError);
     expect(db.closed, isEmpty);
   });
 
   test('another profile\'s boxes are closed after the read', () async {
     final db = _SwitchingDb('alex');
-    await expectLater(
-      readProfileStats(db, _sam, active: false),
-      throwsStateError,
-    );
+    await expectLater(readProfileStats(db, _sam), throwsStateError);
     expect(db.closed, hasLength(3));
   });
 

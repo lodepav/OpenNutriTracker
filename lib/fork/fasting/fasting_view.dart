@@ -167,7 +167,7 @@ class _FastingViewState extends State<FastingView> {
             child: Text(
               l10n.fastingSubtitle,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: _palette(context).textMuted,
+                color: paletteOf(context).textMuted,
               ),
             ),
           ),
@@ -192,7 +192,7 @@ class _FastingViewState extends State<FastingView> {
               style: OutlinedButton.styleFrom(
                 minimumSize: const Size.fromHeight(48),
                 foregroundColor: Theme.of(context).colorScheme.error,
-                side: BorderSide(color: _palette(context).border),
+                side: BorderSide(color: paletteOf(context).border),
               ),
               onPressed: widget.onEnd,
               child: Text(l10n.fastingCancel),
@@ -214,11 +214,6 @@ class _FastingViewState extends State<FastingView> {
     );
   }
 }
-
-AppPalette _palette(BuildContext context) =>
-    Theme.of(context).brightness == Brightness.dark
-    ? AppPalette.dark
-    : AppPalette.light;
 
 /// "Today", "Yesterday", "Tomorrow" or the date.
 String _dayOf(BuildContext context, DateTime t, DateTime now) {
@@ -247,7 +242,7 @@ class _Timer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
-    final palette = _palette(context);
+    final palette = paletteOf(context);
     final accent = Theme.of(context).colorScheme.primary;
     final target = active.target;
     final progress = target.inSeconds == 0
@@ -389,7 +384,7 @@ class _Moment extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
-    final palette = _palette(context);
+    final palette = paletteOf(context);
     final muted = text.bodySmall?.copyWith(color: palette.textMuted);
     return Semantics(
       identifier: identifier,
@@ -452,9 +447,9 @@ class _Plans extends StatelessWidget {
         children: [
           Text(
             'Plan',
-            style: Theme.of(
-              context,
-            ).textTheme.bodySmall?.copyWith(color: _palette(context).textMuted),
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: paletteOf(context).textMuted,
+            ),
           ),
           const SizedBox(height: Dimens.spacing8),
           Wrap(
@@ -503,7 +498,7 @@ class _History extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
-    final palette = _palette(context);
+    final palette = paletteOf(context);
     final accent = Theme.of(context).colorScheme.primary;
     final muted = text.bodySmall?.copyWith(color: palette.textMuted);
     final locale = Localizations.localeOf(context).toLanguageTag();

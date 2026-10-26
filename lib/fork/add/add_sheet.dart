@@ -15,6 +15,8 @@ import 'package:opennutritracker/features/add_meal/presentation/widgets/meal_ite
 import 'package:opennutritracker/features/add_meal/presentation/widgets/quick_add_bottom_sheet.dart';
 import 'package:opennutritracker/features/scanner/scanner_screen.dart';
 import 'package:opennutritracker/fork/copy/copy_ui.dart' show mealLabel;
+import 'package:opennutritracker/fork/recents/recents_by_meal.dart'
+    show recentKey;
 import 'package:opennutritracker/generated/l10n.dart';
 
 /// Seam S131: the + sheet after the canvas's "Add sheet · A". Search
@@ -100,9 +102,7 @@ class _AddSheetState extends State<AddSheet> {
   Widget build(BuildContext context) {
     final s = S.of(context);
     final theme = Theme.of(context);
-    final palette = theme.brightness == Brightness.dark
-        ? AppPalette.dark
-        : AppPalette.light;
+    final palette = paletteOf(context);
     return SafeArea(
       child: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(
@@ -243,9 +243,7 @@ class _AddSheetState extends State<AddSheet> {
             ),
             for (final (index, intake) in shown.indexed)
               MealItemCard(
-                key: ValueKey(
-                  'add-item-recent-${intake.meal.code ?? intake.meal.name}-$_type',
-                ),
+                key: ValueKey('add-item-recent-${recentKey(intake)}-$_type'),
                 day: widget.day,
                 mealEntity: intake.meal,
                 addMealType: _mealType,
@@ -290,9 +288,7 @@ class _AddSheetState extends State<AddSheet> {
     required VoidCallback onTap,
   }) {
     final theme = Theme.of(context);
-    final palette = theme.brightness == Brightness.dark
-        ? AppPalette.dark
-        : AppPalette.light;
+    final palette = paletteOf(context);
     return Expanded(
       child: Semantics(
         identifier: 'add-item-$id',

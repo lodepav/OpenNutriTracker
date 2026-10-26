@@ -12,11 +12,6 @@ import 'package:opennutritracker/fork/display/display_prefs.dart';
 import 'package:opennutritracker/fork/display/home_tiles.dart';
 import 'package:opennutritracker/fork/units/energy_text.dart';
 
-AppPalette _palette(BuildContext context) =>
-    Theme.of(context).brightness == Brightness.dark
-    ? AppPalette.dark
-    : AppPalette.light;
-
 /// Seam S121: the You tab as MacroFactor's (YouA). Who is active, with a
 /// Switch button for the profile sheet.
 class YouProfileRow extends StatelessWidget {
@@ -65,7 +60,7 @@ class YouProfileRow extends StatelessWidget {
                   Text(
                     details,
                     style: text.bodySmall?.copyWith(
-                      color: _palette(context).textMuted,
+                      color: paletteOf(context).textMuted,
                     ),
                   ),
                 ],
@@ -78,7 +73,7 @@ class YouProfileRow extends StatelessWidget {
               child: OutlinedButton(
                 style: OutlinedButton.styleFrom(
                   minimumSize: const Size(48, 48),
-                  side: BorderSide(color: _palette(context).border),
+                  side: BorderSide(color: paletteOf(context).border),
                 ),
                 onPressed: onSwitch,
                 child: const Text('Switch', semanticsLabel: 'Switch profile'),
@@ -171,7 +166,7 @@ class _Below extends StatelessWidget {
     text,
     style: Theme.of(
       context,
-    ).textTheme.bodySmall?.copyWith(color: _palette(context).textMuted),
+    ).textTheme.bodySmall?.copyWith(color: paletteOf(context).textMuted),
   );
 }
 
@@ -217,7 +212,7 @@ class YouSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final palette = _palette(context);
+    final palette = paletteOf(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -278,7 +273,7 @@ class YouRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
-    final muted = _palette(context).textMuted;
+    final muted = paletteOf(context).textMuted;
     return Semantics(
       identifier: identifier,
       button: true,
@@ -356,7 +351,7 @@ class YouSwitchRow extends StatelessWidget {
           : Text(
               detail!,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: _palette(context).textMuted,
+                color: paletteOf(context).textMuted,
               ),
             ),
       value: value,

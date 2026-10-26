@@ -11,17 +11,13 @@ import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/core/utils/hive_db_provider.dart';
-import 'package:opennutritracker/features/profile/presentation/utils/profile_display_format.dart';
 import 'package:opennutritracker/features/profile/presentation/utils/profile_display_name.dart';
 import 'package:opennutritracker/features/profile/presentation/widgets/profile_avatar.dart';
 import 'package:opennutritracker/fork/adaptive/trend_points.dart';
 import 'package:opennutritracker/fork/units/energy_text.dart';
+import 'package:opennutritracker/fork/units/weight_text.dart'
+    show bodyWeightText;
 import 'package:opennutritracker/generated/l10n.dart';
-
-AppPalette _palette(BuildContext context) =>
-    Theme.of(context).brightness == Brightness.dark
-    ? AppPalette.dark
-    : AppPalette.light;
 
 /// What a profile's card says of it; null where it has nothing yet.
 typedef ProfileStats = ({
@@ -63,10 +59,9 @@ ProfileStats profileStats(
 Future<ProfileStats> readProfileStats(
   HiveDBProvider db,
   ProfileEntity profile, {
-  required bool active,
   DateTime Function() clock = DateTime.now,
 }) async {
-  if (active) {
+  if (profile.id == db.activeProfileId) {
     return profileStats(
       db.userBox.get(_userKey),
       db.trackedDayBox.values,
@@ -185,7 +180,7 @@ class _ProfileCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final palette = _palette(context);
+    final palette = paletteOf(context);
     final text = Theme.of(context).textTheme;
     final s = S.of(context);
     final stats = this.stats;
@@ -295,13 +290,7 @@ class _ProfileCard extends StatelessWidget {
                   figure(
                     trend == null
                         ? '—'
-                        : formatBodyWeight(
-                            trend,
-                            weightUnit,
-                            kgLabel: s.kgLabel,
-                            lbLabel: s.lbsLabel,
-                            stLabel: s.stLabel,
-                          ),
+                        : bodyWeightText(context, trend, weightUnit),
                     'trend',
                   ),
                   figure('${stats?.daysLogged ?? '—'}', 'days logged'),

@@ -57,11 +57,6 @@ class ForkSettingsSwitchTile extends StatelessWidget {
   );
 }
 
-AppPalette _palette(BuildContext context) =>
-    Theme.of(context).brightness == Brightness.dark
-    ? AppPalette.dark
-    : AppPalette.light;
-
 Widget _title(BuildContext context, String title) => Text(
   title,
   style: Theme.of(
@@ -74,7 +69,7 @@ Widget? _subtitle(BuildContext context, Widget? subtitle) => subtitle == null
     : DefaultTextStyle.merge(
         style: Theme.of(
           context,
-        ).textTheme.bodyMedium?.copyWith(color: _palette(context).textMuted),
+        ).textTheme.bodyMedium?.copyWith(color: paletteOf(context).textMuted),
         child: subtitle,
       );
 

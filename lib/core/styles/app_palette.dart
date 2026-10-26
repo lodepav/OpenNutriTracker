@@ -132,3 +132,9 @@ class AppPalette {
         shadow: shadow,
       );
 }
+
+/// The palette for [context]'s brightness.
+AppPalette paletteOf(BuildContext context) =>
+    Theme.of(context).brightness == Brightness.dark
+    ? AppPalette.dark
+    : AppPalette.light;

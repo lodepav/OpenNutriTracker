@@ -48,9 +48,7 @@ class FoodPageHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final palette = theme.brightness == Brightness.dark
-        ? AppPalette.dark
-        : AppPalette.light;
+    final palette = paletteOf(context);
     final photo = meal.mainImageUrl ?? meal.thumbnailImageUrl;
     final Widget thumb;
     if (photo != null && photo.isNotEmpty) {
@@ -152,9 +150,7 @@ class FoodMacroRing extends StatelessWidget {
   Widget build(BuildContext context) {
     final s = S.of(context);
     final theme = Theme.of(context);
-    final palette = theme.brightness == Brightness.dark
-        ? AppPalette.dark
-        : AppPalette.light;
+    final palette = paletteOf(context);
     final energy = (
       carbs: carbs * _kcalPerG.carbs,
       fat: fat * _kcalPerG.fat,
@@ -323,9 +319,6 @@ Future<DayTotals> loadDayTotals(DateTime day) async {
   );
 }
 
-/// The day's energy and macros once the amount is added: each a figure
-/// over its goal and a bar of what was eaten, the amount lighter after
-/// it; red once over. Nothing until the day is read, or when it can't be.
 /// The four columns in one row, or two rows of two at large text, where a
 /// quarter of the width breaks "protein" (A6).
 List<List<Widget>> _afterAddingRows(BuildContext context, List<Widget> cells) =>
@@ -333,6 +326,9 @@ List<List<Widget>> _afterAddingRows(BuildContext context, List<Widget> cells) =>
     ? [cells.sublist(0, 2), cells.sublist(2)]
     : [cells];
 
+/// The day's energy and macros once the amount is added: each a figure
+/// over its goal and a bar of what was eaten, the amount lighter after
+/// it; red once over. Nothing until the day is read, or when it can't be.
 class TodayAfterAdding extends StatefulWidget {
   final DateTime day;
   final double kcal;
@@ -368,9 +364,7 @@ class _TodayAfterAddingState extends State<TodayAfterAdding> {
   Widget build(BuildContext context) {
     final s = S.of(context);
     final theme = Theme.of(context);
-    final palette = theme.brightness == Brightness.dark
-        ? AppPalette.dark
-        : AppPalette.light;
+    final palette = paletteOf(context);
     return FutureBuilder<DayTotals>(
       future: _totals,
       builder: (context, snapshot) {

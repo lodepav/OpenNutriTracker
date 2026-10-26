@@ -52,11 +52,7 @@ class _ManageProfilesScreenState extends State<ManageProfilesScreen> {
       // A Switch from a card can land mid-loop: ask which is active now
       if (!mounted) return;
       try {
-        stats[p.id] = await readProfileStats(
-          db,
-          p,
-          active: p.id == db.activeProfileId,
-        );
+        stats[p.id] = await readProfileStats(db, p);
       } catch (_) {
         // A profile whose boxes can not be read shows dashes.
       }

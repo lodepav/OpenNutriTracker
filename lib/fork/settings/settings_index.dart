@@ -3,11 +3,6 @@ import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
 
-AppPalette _palette(BuildContext context) =>
-    Theme.of(context).brightness == Brightness.dark
-    ? AppPalette.dark
-    : AppPalette.light;
-
 /// Seam S129: Settings as MacroFactor's (SettingsB), a page for each of
 /// these, in this order.
 enum SettingsSection {
@@ -81,7 +76,7 @@ class SettingsIndex extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final palette = _palette(context);
+    final palette = paletteOf(context);
     Widget card(Iterable<SettingsSection> sections) => AppCard(
       padding: EdgeInsets.zero,
       child: Column(
@@ -130,7 +125,7 @@ class _SectionRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final palette = _palette(context);
+    final palette = paletteOf(context);
     final text = Theme.of(context).textTheme;
     final summary = this.summary;
     return Semantics(
@@ -219,7 +214,7 @@ class _SettingsSearchPageState extends State<SettingsSearchPage> {
 
   @override
   Widget build(BuildContext context) {
-    final palette = _palette(context);
+    final palette = paletteOf(context);
     final found = matchingSettings(widget.entries, _query);
     return Scaffold(
       backgroundColor: palette.canvas,

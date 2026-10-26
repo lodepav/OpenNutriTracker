@@ -78,9 +78,7 @@ class HourAddCard extends StatelessWidget {
   /// a bare plus here would not say a time is asked first.
   @override
   Widget build(BuildContext context) {
-    final palette = Theme.of(context).brightness == Brightness.dark
-        ? AppPalette.dark
-        : AppPalette.light;
+    final palette = paletteOf(context);
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         Dimens.spacing16,
