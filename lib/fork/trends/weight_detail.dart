@@ -184,15 +184,20 @@ Widget _goalTile(
       ? null
       : daysToTarget(now, target, stats.perWeekKg! / 7);
   final t = DateTime.now();
+  final locale = Localizations.localeOf(context).toLanguageTag();
+  final on = days == null ? null : DateTime(t.year, t.month, t.day + days);
+  final format = on?.year == t.year
+      ? intl.DateFormat.MMMd(locale)
+      : intl.DateFormat.yMMMd(locale);
   return FigureTile(
     label: 'To your goal',
     value: left < 0.1 ? 'There' : weightIn(wu, left).toStringAsFixed(1),
     unit: left < 0.1 ? null : weightUnitLabel(context, wu),
     note: left < 0.1
         ? null
-        : days == null
+        : on == null
         ? 'not at this pace'
-        : '${intl.DateFormat.MMMd(Localizations.localeOf(context).toLanguageTag()).format(DateTime(t.year, t.month, t.day + days))} at this pace',
+        : '${format.format(on)} at this pace',
     onTap: open,
   );
 }

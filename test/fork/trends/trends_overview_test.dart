@@ -324,7 +324,7 @@ void main() {
         targetWeightKg: 75,
         weight: [
           for (var i = -10; i <= 0; i += 2)
-            WeightLogEntity(date: day(i), weightKg: 80 + i * 0.1),
+            WeightLogEntity(date: day(i), weightKg: 80 - i * 0.1),
         ],
       ),
     );
@@ -342,7 +342,7 @@ void main() {
       of: find.byType(ChangeChips),
       matching: find.text(text),
     );
-    expect(chip('+0.4'), findsOneWidget);
+    expect(chip('-0.4'), findsOneWidget);
     expect(chip('–'), findsNWidgets(3));
     expect(find.text('Highest'), findsOneWidget);
     expect(find.text('Lowest'), findsOneWidget);
@@ -350,7 +350,16 @@ void main() {
     expect(find.textContaining('4 of 7 days'), findsOneWidget);
     expect(find.text('Daily weigh-ins steady the trend'), findsNothing);
     expect(find.text('To your goal'), findsOneWidget);
-    expect(find.textContaining('at this pace'), findsOneWidget);
+    // 5 kg at about 0.35 kg a week: months on, the year shown past
+    // December.
+    final arrival = tester
+        .widget<FigureTile>(find.widgetWithText(FigureTile, 'To your goal'))
+        .note!;
+    expect(arrival, endsWith(' at this pace'));
+    expect(
+      RegExp(r'\d{4}').hasMatch(arrival),
+      day(0).month < 9 ? anything : isTrue,
+    );
   });
 
   testWidgets('Water: its average and goal over upstream\'s chart', (
