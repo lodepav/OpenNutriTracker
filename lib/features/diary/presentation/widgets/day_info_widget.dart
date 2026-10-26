@@ -6,42 +6,23 @@ import 'package:opennutritracker/core/domain/entity/tracked_day_entity.dart';
 import 'package:opennutritracker/core/domain/entity/user_activity_entity.dart';
 import 'package:opennutritracker/core/presentation/widgets/activity_vertial_list.dart';
 import 'package:opennutritracker/core/presentation/widgets/copy_or_delete_dialog.dart';
-// [fork] S118: core/presentation/widgets/macro_nutriments_widget.dart, unused since the day card
-// [fork] S24-S25 copy-anywhere: upstream's CopyDialog import, unused since
-// import 'package:opennutritracker/core/presentation/widgets/copy_dialog.dart';
-// [/fork]
-// [fork] S118: core/presentation/widgets/app_card.dart, unused since the day card
+import 'package:opennutritracker/core/presentation/widgets/macro_nutriments_widget.dart';
+import 'package:opennutritracker/core/presentation/widgets/copy_dialog.dart';
+import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
 import 'package:opennutritracker/core/presentation/widgets/empty_hint.dart';
 import 'package:opennutritracker/core/presentation/widgets/delete_dialog.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
-// [fork] S118: core/utils/calc/unit_calc.dart, unused since the day card
+import 'package:opennutritracker/core/utils/calc/unit_calc.dart';
 import 'package:opennutritracker/core/utils/custom_icons.dart';
-// [fork] S118: core/utils/energy_unit_provider.dart, unused since the day card
+import 'package:opennutritracker/core/utils/energy_unit_provider.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/features/add_meal/presentation/add_meal_type.dart';
 import 'package:opennutritracker/features/diary/presentation/bloc/calendar_day_bloc.dart';
 import 'package:opennutritracker/features/diary/presentation/widgets/daily_nutrient_panel.dart';
 import 'package:opennutritracker/features/diary/presentation/widgets/diary_sort_type.dart';
-import 'package:opennutritracker/fork/screens/home/intake_vertical_list.dart'; // [fork] S155
-// [fork] S43 meal-plan
-import 'package:opennutritracker/fork/plan/plan_ui.dart';
-// [/fork]
-// [fork] S24 copy-anywhere
-import 'package:opennutritracker/fork/copy/copy_ui.dart';
-import 'package:opennutritracker/fork/copy/select_entries_screen.dart';
-import 'package:opennutritracker/fork/timeline/timeline.dart';
-// [/fork]
-// [fork] S84 skip-day: leave a part-logged day out of expenditure (D17)
-import 'package:opennutritracker/fork/adaptive/skip_day.dart';
-// [/fork]
-// [fork] S80 diary-by-hour
-import 'package:opennutritracker/fork/display/diary_timeline.dart'; // [fork] S118
-import 'package:opennutritracker/fork/display/day_totals_card.dart'; // [fork] S118
-import 'package:opennutritracker/fork/display/diary_by_hour.dart';
-import 'package:opennutritracker/fork/display/display_prefs.dart';
-// [/fork]
+import 'package:opennutritracker/features/home/presentation/widgets/intake_vertical_list.dart';
 import 'package:opennutritracker/generated/l10n.dart';
-// [fork] S118: provider, unused since the day card
+import 'package:provider/provider.dart';
 
 class DayInfoWidget extends StatefulWidget {
   final DateTime selectedDay;
@@ -216,31 +197,12 @@ class _DayInfoWidgetState extends State<DayInfoWidget> {
             Dimens.spacing20,
             Dimens.spacing4,
           ),
-          // [fork] S26 copy-day: "Timeline", "Select entries", "Copy day"
-          // by the date
-          child: Row(
-            children: [
-              Expanded(
-                child: Text(
-                  DateFormat.yMMMMEEEEd().format(widget.selectedDay),
-                  style: textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ),
-              TimelineButton(day: widget.selectedDay),
-              if (trackedDay != null) ...[
-                SelectEntriesButton(day: widget.selectedDay),
-                CopyDayButton(day: widget.selectedDay),
-              ],
-            ],
+          child: Text(
+            DateFormat.yMMMMEEEEd().format(widget.selectedDay),
+            style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
           ),
-          // [/fork]
         ),
         const SizedBox(height: Dimens.spacing8),
-        // [fork] S43 meal-plan: the day's planned foods, to tick off
-        PlannedFoodsCard(day: widget.selectedDay),
-        // [/fork]
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -250,15 +212,56 @@ class _DayInfoWidgetState extends State<DayInfoWidget> {
                     title: S.of(context).nothingAddedLabel,
                   )
                 : const SizedBox(),
-            // [fork] S118 diary-header: the counts, the energy and the
-            // macros against their goals, side by side (upstream's rating
-            // and MacroNutrientsView)
-            if (trackedDay != null)
-              DayTotalsCard(intakes: _allIntakes, trackedDay: trackedDay),
-            // [/fork]
-            // [fork] S84 skip-day: under the day's totals
-            if (trackedDay != null) SkipDayTile(day: widget.selectedDay),
-            // [/fork]
+            trackedDay != null
+                ? Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: Dimens.spacing16),
+                    child: AppCard(
+                      padding: const EdgeInsets.fromLTRB(
+                        Dimens.spacing20,
+                        Dimens.spacing20,
+                        Dimens.spacing20,
+                        Dimens.spacing20,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: Dimens.spacing16,
+                              vertical: Dimens.spacing12,
+                            ),
+                            decoration: BoxDecoration(
+                              color: widget.trackedDayEntity
+                                  ?.getRatingDayTextBackgroundColor(context),
+                              borderRadius: Dimens.borderRadiusM,
+                            ),
+                            child: Text(
+                              _getCaloriesTrackedDisplayString(
+                                  context, trackedDay),
+                              style: textTheme.titleLarge?.copyWith(
+                                color: widget.trackedDayEntity
+                                    ?.getRatingDayTextColor(context),
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: Dimens.spacing16),
+                          MacroNutrientsView(
+                            totalCarbsIntake: _allIntakes
+                                .fold(0.0, (sum, i) => sum + i.totalCarbsGram),
+                            totalFatsIntake: _allIntakes
+                                .fold(0.0, (sum, i) => sum + i.totalFatsGram),
+                            totalProteinsIntake: _allIntakes
+                                .fold(0.0, (sum, i) => sum + i.totalProteinsGram),
+                            totalCarbsGoal: trackedDay.carbsGoal ?? 0.0,
+                            totalFatsGoal: trackedDay.fatGoal ?? 0.0,
+                            totalProteinsGoal: trackedDay.proteinGoal ?? 0.0,
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                : const SizedBox(),
             // #160 + #173 + #404: Daily micronutrient panel — aggregates
             // ten nutrients (fibre, sodium, saturated fat, sugar, calcium,
             // iron, potassium, vitamin D, vitamin B12, magnesium) across
@@ -289,49 +292,15 @@ class _DayInfoWidgetState extends State<DayInfoWidget> {
                             widget.onCopyActivity(activity, widget.trackedDayEntity),
               ),
             ],
-            // [fork] S80 diary-by-hour: the day's foods by the hour eaten, in
-            // place of the four meals
-            if (DisplayPrefs.diaryByHour.value)
-              for (final section in hourSections(_allIntakes))
-                IntakeVerticalList(
-                  key: ValueKey('diary-hour-${section.title}'),
-                  day: widget.selectedDay,
-                  title: section.title,
-                  listIcon: Icons.schedule_rounded,
-                  addMealType: section.addMealType,
-                  intakeList: section.intakes,
-                  onDeleteIntakeCallback: _deleteIntakeOnShownDay,
-                  onItemLongPressedCallback: onIntakeItemLongPressed,
-                  onItemTappedCallback: widget.onEditIntake,
-                  onCopyIntakeCallback: widget.onCopyIntake,
-                  usesImperialUnits: widget.usesImperialUnits,
-                  showMealMacros: widget.showMealMacros,
-                  trackedDayEntity: trackedDay,
-                  hourSection: true,
-                ),
-            if (DisplayPrefs.diaryByHour.value)
-              HourAddCard(day: widget.selectedDay),
-            // [/fork]
             // #150 follow-up: a 0% share hides an empty section so OMAD users
             // (and anyone else who's set a meal slot to 0%) don't see a meal
             // type they explicitly opted out of. A section that holds intakes
             // always shows, so they stay editable and deletable (#1305).
-            // [fork] S118 diary-timeline: the meals in the order eaten
-            if (!DisplayPrefs.diaryByHour.value) // [fork] S80
-            ...diaryTimeline(widget.selectedDay, [
-              if (IntakeVerticalList.isShown(
-                sharePct: widget.breakfastSharePct,
-                intakes: widget.breakfastIntake,
-              ))
-              (
-                type: IntakeTypeEntity.breakfast,
-                intakes: widget.breakfastIntake,
-                section: IntakeVerticalList(
-                forkTime: mealTime(
-                  widget.selectedDay,
-                  IntakeTypeEntity.breakfast,
-                  widget.breakfastIntake,
-                ),
+            if (IntakeVerticalList.isShown(
+              sharePct: widget.breakfastSharePct,
+              intakes: widget.breakfastIntake,
+            ))
+              IntakeVerticalList(
                 day: widget.selectedDay,
                 title: S.of(context).breakfastLabel,
                 listIcon: Icons.bakery_dining_outlined,
@@ -341,9 +310,10 @@ class _DayInfoWidgetState extends State<DayInfoWidget> {
                 onDeleteIntakeCallback: _deleteIntakeOnShownDay,
                 onItemLongPressedCallback: onIntakeItemLongPressed,
                 onItemTappedCallback: widget.onEditIntake,
-                // [fork] S24 copy-anywhere: today's entries copy too
-                onCopyIntakeCallback: widget.onCopyIntake,
-                // [/fork]
+                onCopyIntakeCallback:
+                    _showsCurrentDay
+                        ? null
+                        : widget.onCopyIntake,
                 usesImperialUnits: widget.usesImperialUnits,
                 showMealMacros: widget.showMealMacros,
                 trackedDayEntity: trackedDay,
@@ -352,20 +322,11 @@ class _DayInfoWidgetState extends State<DayInfoWidget> {
                 onSortTypeChanged: (sort) =>
                     _setSortFor(IntakeTypeEntity.breakfast, sort),
               ),
-              ),
-              if (IntakeVerticalList.isShown(
-                sharePct: widget.lunchSharePct,
-                intakes: widget.lunchIntake,
-              ))
-              (
-                type: IntakeTypeEntity.lunch,
-                intakes: widget.lunchIntake,
-                section: IntakeVerticalList(
-                forkTime: mealTime(
-                  widget.selectedDay,
-                  IntakeTypeEntity.lunch,
-                  widget.lunchIntake,
-                ),
+            if (IntakeVerticalList.isShown(
+              sharePct: widget.lunchSharePct,
+              intakes: widget.lunchIntake,
+            ))
+              IntakeVerticalList(
                 day: widget.selectedDay,
                 title: S.of(context).lunchLabel,
                 listIcon: Icons.lunch_dining_outlined,
@@ -377,29 +338,21 @@ class _DayInfoWidgetState extends State<DayInfoWidget> {
                 onItemTappedCallback: widget.onEditIntake,
                 usesImperialUnits: widget.usesImperialUnits,
                 showMealMacros: widget.showMealMacros,
-                // [fork] S24 copy-anywhere: today's entries copy too
-                onCopyIntakeCallback: widget.onCopyIntake,
-                // [/fork]
+                onCopyIntakeCallback:
+                    _showsCurrentDay
+                        ? null
+                        : widget.onCopyIntake,
                 trackedDayEntity: trackedDay,
                 mealKcalTarget: widget.lunchKcalTarget,
                 sortType: _sortByMeal[IntakeTypeEntity.lunch],
                 onSortTypeChanged: (sort) =>
                     _setSortFor(IntakeTypeEntity.lunch, sort),
               ),
-              ),
-              if (IntakeVerticalList.isShown(
-                sharePct: widget.dinnerSharePct,
-                intakes: widget.dinnerIntake,
-              ))
-              (
-                type: IntakeTypeEntity.dinner,
-                intakes: widget.dinnerIntake,
-                section: IntakeVerticalList(
-                forkTime: mealTime(
-                  widget.selectedDay,
-                  IntakeTypeEntity.dinner,
-                  widget.dinnerIntake,
-                ),
+            if (IntakeVerticalList.isShown(
+              sharePct: widget.dinnerSharePct,
+              intakes: widget.dinnerIntake,
+            ))
+              IntakeVerticalList(
                 day: widget.selectedDay,
                 title: S.of(context).dinnerLabel,
                 listIcon: Icons.dinner_dining_outlined,
@@ -409,9 +362,10 @@ class _DayInfoWidgetState extends State<DayInfoWidget> {
                 onDeleteIntakeCallback: _deleteIntakeOnShownDay,
                 onItemLongPressedCallback: onIntakeItemLongPressed,
                 onItemTappedCallback: widget.onEditIntake,
-                // [fork] S24 copy-anywhere: today's entries copy too
-                onCopyIntakeCallback: widget.onCopyIntake,
-                // [/fork]
+                onCopyIntakeCallback:
+                    _showsCurrentDay
+                        ? null
+                        : widget.onCopyIntake,
                 usesImperialUnits: widget.usesImperialUnits,
                 showMealMacros: widget.showMealMacros,
                 mealKcalTarget: widget.dinnerKcalTarget,
@@ -419,20 +373,11 @@ class _DayInfoWidgetState extends State<DayInfoWidget> {
                 onSortTypeChanged: (sort) =>
                     _setSortFor(IntakeTypeEntity.dinner, sort),
               ),
-              ),
-              if (IntakeVerticalList.isShown(
-                sharePct: widget.snackSharePct,
-                intakes: widget.snackIntake,
-              ))
-              (
-                type: IntakeTypeEntity.snack,
-                intakes: widget.snackIntake,
-                section: IntakeVerticalList(
-                forkTime: mealTime(
-                  widget.selectedDay,
-                  IntakeTypeEntity.snack,
-                  widget.snackIntake,
-                ),
+            if (IntakeVerticalList.isShown(
+              sharePct: widget.snackSharePct,
+              intakes: widget.snackIntake,
+            ))
+              IntakeVerticalList(
                 day: widget.selectedDay,
                 title: S.of(context).snackLabel,
                 listIcon: CustomIcons.food_apple_outline,
@@ -444,18 +389,16 @@ class _DayInfoWidgetState extends State<DayInfoWidget> {
                 onItemTappedCallback: widget.onEditIntake,
                 usesImperialUnits: widget.usesImperialUnits,
                 showMealMacros: widget.showMealMacros,
-                // [fork] S24 copy-anywhere: today's entries copy too
-                onCopyIntakeCallback: widget.onCopyIntake,
-                // [/fork]
+                onCopyIntakeCallback:
+                    _showsCurrentDay
+                        ? null
+                        : widget.onCopyIntake,
                 trackedDayEntity: trackedDay,
                 mealKcalTarget: widget.snackKcalTarget,
                 sortType: _sortByMeal[IntakeTypeEntity.snack],
                 onSortTypeChanged: (sort) =>
                     _setSortFor(IntakeTypeEntity.snack, sort),
               ),
-              ),
-            ]),
-            // [/fork]
             const SizedBox(height: Dimens.spacing16),
           ],
         ),
@@ -471,7 +414,21 @@ class _DayInfoWidgetState extends State<DayInfoWidget> {
         ...widget.snackIntake,
       ];
 
-  // [fork] S118: _getCaloriesTrackedDisplayString went with the rating
+  String _getCaloriesTrackedDisplayString(
+      BuildContext context, TrackedDayEntity trackedDay) {
+    final actualKcal = _allIntakes.fold(0.0, (sum, i) => sum + i.totalKcal);
+    final usesKilojoules =
+        context.watch<EnergyUnitProvider>().usesKilojoules;
+    final clampedKcal = actualKcal < 0 ? 0.0 : actualKcal;
+    final displayActual = usesKilojoules
+        ? UnitCalc.kcalToKj(clampedKcal).toInt()
+        : clampedKcal.toInt();
+    final displayGoal = usesKilojoules
+        ? UnitCalc.kcalToKj(trackedDay.calorieGoal).toInt()
+        : trackedDay.calorieGoal.toInt();
+    final unit = usesKilojoules ? S.of(context).kjLabel : S.of(context).kcalLabel;
+    return '$displayActual/$displayGoal $unit';
+  }
 
   bool get _showsCurrentDay =>
       DateUtils.isSameDay(widget.selectedDay, widget.currentDay);
@@ -490,18 +447,8 @@ class _DayInfoWidgetState extends State<DayInfoWidget> {
   ) async {
     final copyOrDelete = await showDialog<bool>(
       context: context,
-      // [fork] S24 copy-anywhere: the copy opens a picker
-      builder: (context) => const CopyOrDeleteDialog(toPicker: true),
-      // [/fork]
+      builder: (context) => const CopyOrDeleteDialog(),
     );
-    // [fork] S52 undo-delete: the delete asks nothing more, so it goes ahead
-    // even when the day moved on while the choice was open and this day's
-    // view was rebuilt away (#1360); the Diary shows the Undo
-    if (copyOrDelete == false) {
-      widget.onDeleteIntake(intakeEntity, day);
-      return;
-    }
-    // [/fork]
     if (context.mounted) {
       if (copyOrDelete != null && !copyOrDelete) {
         showDeleteIntakeDialog(context, intakeEntity, day);
@@ -512,9 +459,23 @@ class _DayInfoWidgetState extends State<DayInfoWidget> {
   }
 
   void showCopyDialog(BuildContext context, IntakeEntity intakeEntity) async {
-    // [fork] S24 copy-anywhere: any day and meal, not only today's (fork/copy)
-    await copyIntakesWithDialog(context, [intakeEntity], intakeEntity.type);
-    // [/fork]
+    final defaultMealType = switch (intakeEntity.type) {
+      IntakeTypeEntity.breakfast => AddMealType.breakfastType,
+      IntakeTypeEntity.lunch => AddMealType.lunchType,
+      IntakeTypeEntity.dinner => AddMealType.dinnerType,
+      IntakeTypeEntity.snack => AddMealType.snackType,
+    };
+
+    final copyDialog = CopyDialog(
+      initialValue: defaultMealType,
+    );
+    final selectedMealType = await showDialog<AddMealType>(
+      context: context,
+      builder: (context) => copyDialog,
+    );
+    if (selectedMealType != null) {
+      widget.onCopyIntake(intakeEntity, null, selectedMealType);
+    }
   }
 
   void showDeleteIntakeDialog(
@@ -522,10 +483,13 @@ class _DayInfoWidgetState extends State<DayInfoWidget> {
     IntakeEntity intakeEntity,
     DateTime day,
   ) async {
-    // [fork] S52 undo-delete: deleted at once, with Undo on the snackbar,
-    // in place of upstream's confirmation dialog
-    widget.onDeleteIntake(intakeEntity, day);
-    // [/fork]
+    final shouldDeleteIntake = await showDialog<bool>(
+      context: context,
+      builder: (context) => const DeleteDialog(),
+    );
+    if (shouldDeleteIntake != null) {
+      widget.onDeleteIntake(intakeEntity, day);
+    }
   }
 
   void onIntakeItemLongPressed(
@@ -533,9 +497,11 @@ class _DayInfoWidgetState extends State<DayInfoWidget> {
     IntakeEntity intakeEntity,
   ) async {
     final day = widget.selectedDay;
-    // [fork] S24 copy-anywhere: today's entries copy too
-    showCopyOrDeleteIntakeDialog(context, intakeEntity, day);
-    // [/fork]
+    if (DateUtils.isSameDay(day, widget.currentDay)) {
+      showDeleteIntakeDialog(context, intakeEntity, day);
+    } else {
+      showCopyOrDeleteIntakeDialog(context, intakeEntity, day);
+    }
   }
 
   void onActivityItemLongPressed(
@@ -543,25 +509,26 @@ class _DayInfoWidgetState extends State<DayInfoWidget> {
     UserActivityEntity activityEntity,
   ) async {
     final day = widget.selectedDay;
-    // [fork] S24 copy-anywhere: an activity copies to a picked day, from
-    // any day; deleting today's still asks first
-    final copyOrDelete = await showDialog<bool>(
-      context: context,
-      builder: (context) => const CopyOrDeleteDialog(toPicker: true),
-    );
-    if (!context.mounted) return;
-    if (copyOrDelete == true) {
-      await copyActivitiesWithDialog(context, [activityEntity]);
-    } else if (copyOrDelete == false) {
-      if (DateUtils.isSameDay(day, widget.currentDay)) {
-        final shouldDelete = await showDialog<bool>(
-          context: context,
-          builder: (context) => const DeleteDialog(),
-        );
-        if (shouldDelete == null) return;
+    if (DateUtils.isSameDay(day, widget.currentDay)) {
+      final shouldDelete = await showDialog<bool>(
+        context: context,
+        builder: (context) => const DeleteDialog(),
+      );
+      if (shouldDelete != null) {
+        widget.onDeleteActivity(activityEntity, day);
       }
-      widget.onDeleteActivity(activityEntity, day);
+    } else {
+      final copyOrDelete = await showDialog<bool>(
+        context: context,
+        builder: (context) => const CopyOrDeleteDialog(),
+      );
+      if (context.mounted) {
+        if (copyOrDelete == false) {
+          widget.onDeleteActivity(activityEntity, day);
+        } else if (copyOrDelete == true) {
+          widget.onCopyActivity(activityEntity, widget.trackedDayEntity);
+        }
+      }
     }
-    // [/fork]
   }
 }
