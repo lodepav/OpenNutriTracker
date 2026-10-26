@@ -157,7 +157,11 @@ String bodyCompareSystemPrompt(BodyDay earlier, BodyDay later) {
       '- No visible difference is same, not a guess either way.\n'
       '- Above 80 only when the conditions match and the change is plain; '
       'under 50 when they differ a lot.\n'
-      '- If the halves are not the same person, or not bodies, fat and '
+      '- The person chose these as their own photos: take both halves as '
+      'the same person. A big change in weight changes the face, build, '
+      'hair and skin a lot; that is the change to judge, not a sign of '
+      'someone else. Only when the halves plainly cannot be one person (a '
+      'man and a woman, a child and an adult) or are not bodies, fat and '
       'muscle are unclear and certainty is 0; say why in summary.\n'
       '- Describe only visible change: never health, attractiveness or '
       'advice.';
