@@ -1,5 +1,8 @@
+import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:hive_ce_flutter/hive_flutter.dart';
+import 'package:opennutritracker/fork/leftovers/meal_groups.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -584,6 +587,17 @@ Future<void> _parse(WidgetTester tester, String text) async {
 Finder _submitButton() => find.widgetWithIcon(FilledButton, Icons.add_rounded);
 
 void main() {
+  // The save records its meal and the photo sheet reads the keep-photos
+  // flag, both in Hive. Their boxes open here, outside the widget tests'
+  // fake time, where a first open never finishes; with photos not kept.
+  setUpAll(() async {
+    // In memory: a write to a file never finishes in fake time either.
+    Hive.init((await Directory.systemTemp.createTemp('bulk_add')).path);
+    await Hive.openBox<Map>(MealGroupStore.boxName, bytes: Uint8List(0));
+    final flags = await Hive.openBox<bool>('fork_flags', bytes: Uint8List(0));
+    await flags.put('keepMealPhotos', false);
+  });
+
   tearDown(() async => getIt.reset());
 
   testWidgets('a rejected key is stated, and fits a phone in German', (
