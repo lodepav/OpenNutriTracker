@@ -37,7 +37,10 @@ import 'package:opennutritracker/features/activity_detail/activity_detail_screen
 import 'package:opennutritracker/fork/screens/add_meal/add_meal_screen.dart';
 import 'package:opennutritracker/fork/screens/add_meal/bulk_add_screen.dart';
 // [/fork]
-import 'package:opennutritracker/features/add_activity/presentation/add_activity_screen.dart';
+// [fork] S152 own-screens: the fork's add-activity screen (D23)
+// import 'package:opennutritracker/features/add_activity/presentation/add_activity_screen.dart';
+import 'package:opennutritracker/fork/screens/activity/add_activity_screen.dart';
+// [/fork]
 import 'package:opennutritracker/features/edit_meal/presentation/edit_meal_screen.dart';
 import 'package:opennutritracker/features/onboarding/onboarding_screen.dart';
 import 'package:opennutritracker/fork/screens/fasting/fasting_screen.dart'; // [fork] S157

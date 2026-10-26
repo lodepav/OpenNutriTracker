@@ -54,22 +54,16 @@ class _ActivityVerticalListState extends State<ActivityVerticalList> {
               ),
               const SizedBox(width: Dimens.spacing8),
               Expanded(
-                // [fork] S81 a11y-labels: a heading TalkBack can jump between
-                child: Semantics(
-                  header: true,
-                  child: AutoSizeText(
-                    widget.title,
-                    maxLines: 1,
-                    minFontSize: 14,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
+                child: AutoSizeText(
+                  widget.title,
+                  maxLines: 1,
+                  minFontSize: 14,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.titleLarge,
                 ),
-                // [/fork]
               ),
               const SizedBox(width: Dimens.spacing8),
               PopupMenuButton<_ActivityPopupMenuSelection>(
-                tooltip: S.of(context).sectionOptionsLabel(widget.title), // [fork] S83
                 onSelected: (_ActivityPopupMenuSelection selection) async {
                   switch (selection) {
                     case _ActivityPopupMenuSelection.onCopy:
@@ -135,9 +129,6 @@ class _ActivityVerticalListState extends State<ActivityVerticalList> {
               onTap: () => _onPlaceholderCardTapped(context),
               firstListElement: true,
               semanticIdentifier: 'add-activity-placeholder',
-              // [fork] S81 a11y-labels
-              label: S.of(context).addToSectionLabel(widget.title),
-              // [/fork]
             ),
           ],
         ),

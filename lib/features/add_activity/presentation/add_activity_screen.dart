@@ -2,28 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:opennutritracker/core/domain/entity/physical_activity_entity.dart';
 import 'package:opennutritracker/core/presentation/widgets/error_dialog.dart';
+import 'package:opennutritracker/core/styles/app_palette.dart';
+import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/core/utils/navigation_options.dart';
 import 'package:opennutritracker/features/activity_detail/activity_detail_screen.dart';
 import 'package:opennutritracker/features/add_activity/presentation/bloc/activities_bloc.dart';
+import 'package:opennutritracker/features/add_activity/presentation/bloc/recent_activities_bloc.dart';
+import 'package:opennutritracker/features/add_activity/presentation/widgets/activity_item_card.dart';
 import 'package:opennutritracker/features/add_activity/presentation/widgets/quick_add_activity_bottom_sheet.dart';
+import 'package:opennutritracker/features/add_meal/presentation/widgets/no_results_widget.dart';
 import 'package:opennutritracker/generated/l10n.dart';
-// [fork] S128 add-activity
-import 'package:opennutritracker/core/data/repository/config_repository.dart';
-import 'package:opennutritracker/core/domain/entity/body_weight_unit_entity.dart';
-import 'package:opennutritracker/core/domain/entity/user_activity_entity.dart';
-import 'package:opennutritracker/core/domain/entity/user_entity.dart';
-import 'package:opennutritracker/core/domain/usecase/get_user_activity_usecase.dart';
-import 'package:opennutritracker/core/domain/usecase/get_user_usecase.dart';
-import 'package:opennutritracker/core/domain/usecase/log_user_activity_usecase.dart';
-import 'package:opennutritracker/core/utils/navigation_predicates.dart';
-import 'package:opennutritracker/features/diary/presentation/bloc/calendar_day_bloc.dart';
-import 'package:opennutritracker/features/diary/presentation/bloc/diary_bloc.dart';
-import 'package:opennutritracker/features/home/presentation/bloc/home_bloc.dart';
-import 'package:opennutritracker/features/profile/presentation/utils/profile_display_format.dart';
-import 'package:opennutritracker/fork/activity/activity_picker.dart';
-import 'package:opennutritracker/fork/adaptive/activity_credit.dart';
-// [/fork]
 
 class AddActivityScreen extends StatefulWidget {
   const AddActivityScreen({super.key});
@@ -32,18 +21,21 @@ class AddActivityScreen extends StatefulWidget {
   State<AddActivityScreen> createState() => _AddActivityScreenState();
 }
 
-class _AddActivityScreenState extends State<AddActivityScreen> {
+class _AddActivityScreenState extends State<AddActivityScreen>
+    with SingleTickerProviderStateMixin {
   late DateTime _day;
 
   late ActivitiesBloc _activitiesBloc;
+  late RecentActivitiesBloc _recentActivitiesBloc;
+
+  late TabController _tabController;
 
   @override
   void initState() {
     _activitiesBloc = locator<ActivitiesBloc>();
+    _recentActivitiesBloc = locator<RecentActivitiesBloc>();
+    _tabController = TabController(length: 2, vsync: this);
     super.initState();
-    // [fork] S128 add-activity: the user for the estimates, the recents
-    _forkLoad();
-    // [/fork]
   }
 
   @override
@@ -55,118 +47,189 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
   }
 
   @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    // [fork] S128 add-activity: MacroFactor's list (ActivityAB), recent
-    // activities as chips that log again, a row's minutes in a sheet
-    return BlocBuilder<ActivitiesBloc, ActivitiesState>(
-      bloc: _activitiesBloc,
-      builder: (context, state) {
-        if (state is ActivitiesInitial) {
-          _activitiesBloc.add(LoadActivitiesEvent(context: context));
-        }
-        final s = S.of(context);
-        return ActivityPickerView(
-          title: 'Add activity',
-          activities: state is ActivitiesLoadedState ? state.activities : null,
-          error: state is ActivitiesFailedState
-              ? ErrorDialog(
-                  errorText: s.errorLoadingActivities,
-                  onRefreshPressed: _onActivitiesRefreshButtonPressed,
-                )
-              : null,
-          recent: _forkRecent,
-          user: _forkUser,
-          weightText: _forkUser == null
-              ? null
-              : formatBodyWeight(
-                  _forkUser!.weightKG,
-                  _forkUnit,
-                  kgLabel: s.kgLabel,
-                  lbLabel: s.lbsLabel,
-                  stLabel: s.stLabel,
-                ),
-          day: _day,
-          credit: _forkCredit,
-          onSearch: (query) => _activitiesBloc.add(
-            SearchActivitiesEvent(context: context, searchString: query),
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final palette = isDark ? AppPalette.dark : AppPalette.light;
+    final accent = Theme.of(context).colorScheme.primary;
+    return Scaffold(
+      backgroundColor: palette.canvas,
+      appBar: AppBar(
+        backgroundColor: palette.canvas,
+        toolbarHeight: MediaQuery.textScalerOf(context).scale(kToolbarHeight),
+        title: Text(
+          S.of(context).activityLabel,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+        ),
+        actions: [
+          Semantics(
+            identifier: 'add-activity-quick-add',
+            child: TextButton(
+              onPressed: _onQuickAddPressed,
+              child: Text(S.of(context).quickAddCardLabel),
+            ),
           ),
-          onLog: _forkLog,
-          onOpenCustom: (_) => _onCustomActivityPressed(),
-          onQuickAdd: _onQuickAddPressed,
-          onCustom: _onCustomActivityPressed,
-        );
-      },
-    );
-    // [/fork]
-  }
-
-  // [fork] S128 add-activity
-  UserEntity? _forkUser;
-  BodyWeightUnit _forkUnit = BodyWeightUnit.kg;
-  List<UserActivityEntity> _forkRecent = const [];
-
-  /// What a logged activity does to the goal, for the minutes sheet.
-  ActivityCredit _forkCredit = ActivityCredit.added;
-
-  /// At most this many recent activities as chips.
-  static const _forkRecentCount = 8;
-
-  Future<void> _forkLoad() async {
-    final user = await locator<GetUserUsecase>().getUserData();
-    final config = await locator<ConfigRepository>().getConfig();
-    final recent = await locator<GetUserActivityUsecase>()
-        .getRecentUserActivity();
-    if (!mounted) return;
-    setState(() {
-      _forkUser = user;
-      _forkUnit = config.bodyWeightUnit;
-      _forkRecent = recent
-          .where((a) => a.physicalActivityEntity.isCustom || a.duration > 0)
-          .take(_forkRecentCount)
-          .toList();
-    });
-    final credit = await activityCredit();
-    if (mounted) setState(() => _forkCredit = credit);
-  }
-
-  void _forkRefresh() {
-    locator<HomeBloc>().add(const LoadItemsEvent());
-    locator<DiaryBloc>().add(const LoadDiaryYearEvent());
-    locator<CalendarDayBloc>().add(RefreshCalendarDayEvent());
-  }
-
-  /// Logs [entry] on its day, then back to the dashboard with an Undo.
-  Future<void> _forkLog(UserActivityEntity entry) async {
-    await locator<LogUserActivityUsecase>().logActivity(entry, day: _day);
-    _forkRefresh();
-    if (!mounted) return;
-    final messenger = ScaffoldMessenger.of(context);
-    final name = entry.physicalActivityEntity.getName(context);
-    final what = entry.physicalActivityEntity.isCustom
-        ? name
-        : '${entry.duration.round()} min ${name.toLowerCase()}';
-    final day = _day;
-    Navigator.of(
-      context,
-    ).popUntil(namedRouteOrFirst(NavigationOptions.mainRoute));
-    messenger.showSnackBar(
-      SnackBar(
-        content: Text('Added $what'),
-        action: SnackBarAction(
-          label: 'Undo',
-          onPressed: () async {
-            await locator<CalendarDayBloc>().deleteUserActivityItem(
-              messenger.context,
-              entry,
-              day,
-            );
-            _forkRefresh();
-          },
+          Semantics(
+            identifier: 'add-activity-custom',
+            child: IconButton(
+              tooltip: S.of(context).customActivityName,
+              onPressed: _onCustomActivityPressed,
+              icon: const Icon(Icons.add_circle_outline_rounded),
+            ),
+          ),
+        ],
+      ),
+      body: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: Dimens.spacing12),
+        child: Column(
+          children: [
+            TextField(
+              decoration: InputDecoration(
+                filled: true,
+                fillColor: palette.surface,
+                prefixIcon: Icon(Icons.search_rounded, color: palette.textMuted),
+                hintText: S.of(context).searchLabel,
+                border: OutlineInputBorder(
+                  borderRadius: Dimens.borderRadiusM,
+                  borderSide: BorderSide(color: palette.border, width: Dimens.hairline),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: Dimens.borderRadiusM,
+                  borderSide: BorderSide(color: palette.border, width: Dimens.hairline),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: Dimens.borderRadiusM,
+                  borderSide: BorderSide(color: accent, width: 1.5),
+                ),
+              ),
+              onChanged: (String searchString) {
+                _activitiesBloc.add(
+                  SearchActivitiesEvent(
+                    context: context,
+                    searchString: searchString,
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: Dimens.spacing16),
+            TabBar(
+              tabs: [
+                Tab(text: S.of(context).allItemsLabel),
+                Tab(text: S.of(context).recentlyAddedLabel),
+              ],
+              controller: _tabController,
+              indicatorSize: TabBarIndicatorSize.tab,
+              dividerColor: Colors.transparent,
+            ),
+            const SizedBox(height: Dimens.spacing16),
+            Expanded(
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  Column(
+                    children: [
+                      BlocBuilder<ActivitiesBloc, ActivitiesState>(
+                        bloc: _activitiesBloc,
+                        builder: (context, state) {
+                          if (state is ActivitiesInitial) {
+                            _activitiesBloc.add(
+                              LoadActivitiesEvent(context: context),
+                            );
+                            return const SizedBox();
+                          }
+                          if (state is ActivitiesLoadingState) {
+                            return const Padding(
+                              padding: EdgeInsets.only(top: 32),
+                              child: CircularProgressIndicator(),
+                            );
+                          }
+                          if (state is ActivitiesLoadedState) {
+                            final physicalActivities = state.activities;
+                            return Flexible(
+                              child: ListView.builder(
+                                itemCount: physicalActivities.length,
+                                itemBuilder: (context, index) {
+                                  return ActivityItemCard(
+                                    physicalActivityEntity:
+                                        physicalActivities[index],
+                                    day: _day,
+                                  );
+                                },
+                              ),
+                            );
+                          }
+                          if (state is ActivitiesFailedState) {
+                            return ErrorDialog(
+                              errorText: S.of(context).errorLoadingActivities,
+                              onRefreshPressed:
+                                  _onActivitiesRefreshButtonPressed,
+                            );
+                          }
+                          return const SizedBox();
+                        },
+                      ),
+                    ],
+                  ),
+                  Column(
+                    children: [
+                      BlocBuilder<RecentActivitiesBloc, RecentActivitiesState>(
+                        bloc: _recentActivitiesBloc,
+                        builder: (context, state) {
+                          if (state is RecentActivitiesInitial) {
+                            _recentActivitiesBloc.add(
+                              LoadRecentActivitiesEvent(context: context),
+                            );
+                            return const SizedBox();
+                          }
+                          if (state is RecentActivitiesLoadingState) {
+                            return const Padding(
+                              padding: EdgeInsets.only(top: 32),
+                              child: CircularProgressIndicator(),
+                            );
+                          }
+                          if (state is RecentActivitiesLoadedState) {
+                            final recentActivities = state.recentActivities;
+                            return state.recentActivities.isNotEmpty
+                                ? Flexible(
+                                    child: ListView.builder(
+                                      itemCount: recentActivities.length,
+                                      itemBuilder: (context, index) {
+                                        return ActivityItemCard(
+                                          physicalActivityEntity:
+                                              recentActivities[index],
+                                          day: _day,
+                                        );
+                                      },
+                                    ),
+                                  )
+                                : const NoResultsWidget();
+                          }
+                          if (state is RecentActivitiesFailedState) {
+                            return ErrorDialog(
+                              errorText: S.of(context).errorLoadingActivities,
+                              onRefreshPressed:
+                                  _onRecentActivitiesRefreshButtonPressed,
+                            );
+                          }
+                          return const SizedBox();
+                        },
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
-  // [/fork]
 
   void _onQuickAddPressed() {
     showModalBottomSheet<void>(
@@ -189,6 +252,10 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
 
   void _onActivitiesRefreshButtonPressed() {
     _activitiesBloc.add(LoadActivitiesEvent(context: context));
+  }
+
+  void _onRecentActivitiesRefreshButtonPressed() {
+    _recentActivitiesBloc.add(LoadRecentActivitiesEvent(context: context));
   }
 }
 

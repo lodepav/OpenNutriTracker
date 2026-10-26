@@ -13,7 +13,10 @@ import 'package:opennutritracker/generated/l10n.dart';
 import 'package:opennutritracker/core/utils/navigation_options.dart';
 import 'package:opennutritracker/features/add_meal/presentation/add_meal_screen.dart';
 import 'package:opennutritracker/features/add_meal/presentation/add_meal_type.dart';
-import 'package:opennutritracker/features/add_meal/presentation/widgets/meal_item_card.dart';
+// [fork] S150 own-screens: the add sheet's rows are the fork's card (D23)
+// import 'package:opennutritracker/features/add_meal/presentation/widgets/meal_item_card.dart';
+import 'package:opennutritracker/fork/screens/add_meal/meal_item_card.dart';
+// [/fork]
 // [/fork]
 import '../../../helpers/fake_favourites.dart';
 import '../../../helpers/test_l10n.dart';

@@ -13,7 +13,10 @@ import 'package:opennutritracker/core/utils/navigation_options.dart';
 import 'package:opennutritracker/core/utils/user_image_storage.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dart';
 import 'package:opennutritracker/features/recipes/presentation/bloc/recipe_builder_bloc.dart';
-import 'package:opennutritracker/features/recipes/presentation/widgets/food_search_tab_view.dart';
+// [fork] S150 own-screens: the fork's food search tab (D23)
+// import 'package:opennutritracker/features/recipes/presentation/widgets/food_search_tab_view.dart';
+import 'package:opennutritracker/fork/screens/recipes/food_search_tab_view.dart';
+// [/fork]
 import 'package:opennutritracker/features/recipes/presentation/widgets/ingredient_quantity_dialog.dart';
 import 'package:opennutritracker/features/scanner/scanner_screen.dart';
 import 'package:opennutritracker/generated/l10n.dart';

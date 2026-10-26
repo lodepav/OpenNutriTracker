@@ -17,7 +17,7 @@ import 'package:opennutritracker/features/add_meal/domain/entity/meal_nutriments
 import 'package:opennutritracker/features/add_meal/util/food_emoji_resolver.dart';
 import 'package:opennutritracker/core/domain/entity/recipe_ingredient_entity.dart';
 import 'package:opennutritracker/features/meal_detail/presentation/bloc/meal_detail_bloc.dart';
-import 'package:opennutritracker/features/recipes/presentation/widgets/recipe_list_item.dart';
+import 'package:opennutritracker/fork/screens/recipes/recipe_list_item.dart';
 import 'package:opennutritracker/fork/recipe/recipe_list.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 

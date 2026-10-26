@@ -12,7 +12,10 @@ import 'package:opennutritracker/features/edit_meal/presentation/edit_meal_scree
 import 'package:opennutritracker/features/recipes/presentation/bloc/recipes_bloc.dart';
 import 'package:opennutritracker/features/recipes/presentation/screens/recipe_detail_screen.dart';
 import 'package:opennutritracker/features/recipes/presentation/widgets/custom_meals_tab.dart';
-import 'package:opennutritracker/features/recipes/presentation/widgets/recipe_list_item.dart';
+// [fork] S150 own-screens: the fork's recipe row (D23)
+// import 'package:opennutritracker/features/recipes/presentation/widgets/recipe_list_item.dart';
+import 'package:opennutritracker/fork/screens/recipes/recipe_list_item.dart';
+// [/fork]
 import 'package:opennutritracker/features/settings/presentation/bloc/custom_meals_bloc.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 // [fork] S130 recipes-list
