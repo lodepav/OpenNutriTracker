@@ -246,8 +246,9 @@ class AdaptiveService {
       pastTrendKg: trend.length > pastDays
           ? trend.sublist(trend.length - pastDays)
           : trend,
-      trendKgPerDay: trend.length > 20
-          ? (trend.last - trend[trend.length - 21]) / 20
+      // The span Goal progress and the weight page name too.
+      trendKgPerDay: trend.length > 30
+          ? (trend.last - trend[trend.length - 31]) / 30
           : null,
       expenditureKcal:
           estimateExpenditure(

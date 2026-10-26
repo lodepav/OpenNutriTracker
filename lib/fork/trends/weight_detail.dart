@@ -70,6 +70,9 @@ List<Widget> weightDetailBody(
   final changes = today == null
       ? const <int, double?>{}
       : trendChangesOver(trendByDay, today, weightChangeSpans);
+  // The goal tile's pace: the last 30 days, as Goal progress and the
+  // planner name it, whatever the range.
+  final pace30 = changes[30] == null ? null : changes[30]! / 30;
 
   // Highest and lowest trend in the range, the first day each was.
   ({double kg, DateTime on})? high, low;
@@ -144,7 +147,7 @@ List<Widget> weightDetailBody(
               ? 'Daily weigh-ins steady the trend'
               : null,
         ),
-        _goalTile(context, state, stats),
+        _goalTile(context, state, stats.nowKg, pace30),
       ],
     ),
     const SizedBox(height: Dimens.spacing12),
@@ -152,9 +155,10 @@ List<Widget> weightDetailBody(
       title: 'What is the trend weight?',
       body:
           'The scale moves with water, salt and the food in you, often by '
-          'a kilo or more from one day to the next. The trend smooths those '
-          'swings out, so it shows what your weight is really doing. It '
-          'moves a little each weigh-in, and more the more you weigh in.',
+          'a kilo (2 lb) or more from one day to the next. The trend smooths '
+          'those swings out, so it shows what your weight is really doing. '
+          'Each weigh-in nudges it a little, so it follows your weight '
+          'closely when you weigh in often.',
     ),
     ...weighInRows(context, state, dates, stats),
   ];
@@ -165,12 +169,12 @@ List<Widget> weightDetailBody(
 Widget _goalTile(
   BuildContext context,
   TrendsLoaded state,
-  WeightTrendStats stats,
+  double? now,
+  double? kgPerDay,
 ) {
   final wu = state.bodyWeightUnit;
   void open() => openGoalProgress(context, wu);
   final target = state.targetWeightKg;
-  final now = stats.nowKg;
   if (target == null || now == null) {
     return FigureTile(
       label: 'To your goal',
@@ -180,9 +184,7 @@ Widget _goalTile(
     );
   }
   final left = (target - now).abs();
-  final days = stats.perWeekKg == null
-      ? null
-      : daysToTarget(now, target, stats.perWeekKg! / 7);
+  final days = kgPerDay == null ? null : daysToTarget(now, target, kgPerDay);
   final t = DateTime.now();
   final locale = Localizations.localeOf(context).toLanguageTag();
   final on = days == null ? null : DateTime(t.year, t.month, t.day + days);
@@ -195,9 +197,11 @@ Widget _goalTile(
     unit: left < 0.1 ? null : weightUnitLabel(context, wu),
     note: left < 0.1
         ? null
+        : kgPerDay == null
+        ? 'under 30 days of trend'
         : on == null
-        ? 'not at this pace'
-        : '${format.format(on)} at this pace',
+        ? 'not at your last 30 days’ pace'
+        : '${format.format(on)} at your last 30 days’ pace',
     onTap: open,
   );
 }

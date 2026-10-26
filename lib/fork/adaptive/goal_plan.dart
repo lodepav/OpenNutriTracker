@@ -5,7 +5,7 @@ class GoalPlanInputs {
   /// The smoothed trend over the past days, oldest first, the last today.
   final List<double> pastTrendKg;
 
-  /// kg a day over the past 20 days of the trend; null with less history.
+  /// kg a day over the past 30 days of the trend; null with less history.
   final double? trendKgPerDay;
   final double expenditureKcal;
   final double bodyFatPercent;
