@@ -2,6 +2,17 @@
 
 Written by fork/tools/release_notes.dart at each release (D16).
 
+## 0.3.5 · 2026-10-26
+
+Based on OpenNutriTracker 2.5.0.
+
+### Fixes and changes
+
+- journey rounds 8-12 fixes
+- implement-review fixes since the redesign review
+- compare progress photos' body composition with AI, with certainty
+- left vs right measurements; Trends tiles addable to Home
+
 ## 0.3.4 · 2026-10-26
 
 Based on OpenNutriTracker 2.5.0.
