@@ -2,6 +2,15 @@
 
 Written by fork/tools/release_notes.dart at each release (D16).
 
+## 0.3.4 · 2026-10-26
+
+Based on OpenNutriTracker 2.5.0.
+
+### Fixes and changes
+
+- one password for both apps' releases
+- arrange, hide and add back Home's and Trends' tiles and sections
+
 ## 0.3.3 · 2026-10-26
 
 Based on OpenNutriTracker 2.5.0.
