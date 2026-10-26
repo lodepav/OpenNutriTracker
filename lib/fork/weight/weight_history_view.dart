@@ -378,6 +378,8 @@ class WeightHistoryChart extends StatelessWidget {
       Localizations.localeOf(context).toLanguageTag(),
     );
     final n = dates.length;
+    // Large text needs room for "87.5" and a date under the plot.
+    final textScale = MediaQuery.textScalerOf(context).scale(1);
 
     return SizedBox(
       key: const Key('weightHistoryChart'),
@@ -406,7 +408,7 @@ class WeightHistoryChart extends StatelessWidget {
               leftTitles: AxisTitles(
                 sideTitles: SideTitles(
                   showTitles: true,
-                  reservedSize: 36,
+                  reservedSize: 36 * textScale,
                   getTitlesWidget: (value, meta) =>
                       value == meta.min || value == meta.max
                       ? const SizedBox.shrink()
@@ -421,7 +423,7 @@ class WeightHistoryChart extends StatelessWidget {
               bottomTitles: AxisTitles(
                 sideTitles: SideTitles(
                   showTitles: true,
-                  reservedSize: 24,
+                  reservedSize: 24 * textScale,
                   interval: ((n - 1) / 2).clamp(1, double.infinity),
                   getTitlesWidget: (value, meta) => Padding(
                     padding: const EdgeInsets.only(top: 6),

@@ -640,7 +640,6 @@ class AdaptiveSettingsTile extends StatelessWidget {
     subtitle: ValueListenableBuilder(
       valueListenable: AdaptiveStore.settings,
       builder: (context, settings, _) => Text(
-        '${settings.smoothedTrend ? 'Smoothed trend' : '7-day average'} · '
         '${switch (_modeOf(settings)) {
           _TargetMode.formula => 'Formula target',
           _TargetMode.adaptive => 'Adaptive target',
@@ -690,16 +689,6 @@ class _AdaptiveSettingsDialog extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('Smoothed weight trend'),
-                subtitle: const Text(
-                  'On the weight chart, in place of the 7-day average.',
-                ),
-                value: settings.smoothedTrend,
-                onChanged: (v) => _save(settings.copyWith(smoothedTrend: v)),
-              ),
-              const SizedBox(height: 8),
               // The choice below carries it as its group's name.
               ExcludeSemantics(
                 child: Text(

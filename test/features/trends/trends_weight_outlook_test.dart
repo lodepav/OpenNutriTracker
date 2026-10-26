@@ -144,7 +144,7 @@ void main() {
       tester.widget<Text>(outlook).data,
       matches(RegExp(r'^Trend: [+-]0\.\d\d kg a week')),
     );
-    expect(find.text('Dots: weigh-ins. Dashed: trend.'), findsOneWidget);
+    expect(find.text('Dots: weigh-ins. Bold line: trend.'), findsOneWidget);
   });
 
   // Seam S93: the rate is the Goal planner's "Last 7 days", to the
