@@ -20,9 +20,6 @@ import 'package:opennutritracker/features/settings/presentation/widgets/ai_assis
 import 'package:opennutritracker/features/settings/settings_screen.dart';
 import 'package:opennutritracker/features/trends/presentation/bloc/trends_bloc.dart';
 import 'package:opennutritracker/generated/l10n.dart';
-// [fork] S129 settings-sections
-import 'package:opennutritracker/fork/settings/settings_index.dart';
-// [/fork]
 
 import '../../helpers/test_l10n.dart';
 
@@ -118,8 +115,7 @@ void _register() {
 
 /// Pushes the settings route the way the app does, so the screen reads its
 /// arguments off a real `ModalRoute` rather than a constructor.
-// [fork] S129 settings-sections: a section's page holds its rows
-Widget _app({Object? arguments, SettingsSection? section}) => MaterialApp(
+Widget _app({Object? arguments}) => MaterialApp(
   localizationsDelegates: const [
     S.delegate,
     GlobalMaterialLocalizations.delegate,
@@ -130,10 +126,9 @@ Widget _app({Object? arguments, SettingsSection? section}) => MaterialApp(
   initialRoute: NavigationOptions.settingsRoute,
   onGenerateRoute: (settings) => MaterialPageRoute<void>(
     settings: RouteSettings(name: settings.name, arguments: arguments),
-    builder: (_) => SettingsScreen(section: section),
+    builder: (_) => const SettingsScreen(),
   ),
 );
-// [/fork]
 
 void main() {
   // A handset, because the point of #852 is where the AI row sits on one.
@@ -284,7 +279,7 @@ void main() {
     tester.view.devicePixelRatio = 2;
     addTearDown(tester.view.reset);
 
-    await tester.pumpWidget(_app(section: SettingsSection.appearance)); // [fork] S129
+    await tester.pumpWidget(_app());
     await tester.pumpAndSettle();
 
     final languageTile = find.text(l10nEn.settingsLanguageLabel);
@@ -293,10 +288,6 @@ void main() {
       200,
       scrollable: find.byType(Scrollable).first,
     );
-    // [fork] S14/S23/S32: the fork's tiles lengthen the list, and the last
-    // scroll is still moving
-    await tester.pumpAndSettle();
-    // [/fork]
     await tester.tap(languageTile);
     await tester.pumpAndSettle();
 
@@ -334,7 +325,7 @@ void main() {
 
   testWidgets('toggling Show Meal Macros reloads the Diary, whose meal '
       'headers read the flag from DiaryBloc (#1359)', (tester) async {
-    await tester.pumpWidget(_app(section: SettingsSection.appearance)); // [fork] S129
+    await tester.pumpWidget(_app());
     await tester.pumpAndSettle();
 
     final tile = find.text(l10nEn.settingsShowMealMacros);
@@ -343,10 +334,6 @@ void main() {
       200,
       scrollable: find.byType(Scrollable).first,
     );
-    // [fork] S14/S23/S32: the fork's tiles lengthen the list, and the last
-    // scroll is still moving
-    await tester.pumpAndSettle();
-    // [/fork]
     await tester.tap(tile);
     await tester.pumpAndSettle();
 
