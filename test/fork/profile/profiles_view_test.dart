@@ -12,6 +12,9 @@ import 'package:opennutritracker/core/domain/entity/profile_entity.dart';
 import 'package:opennutritracker/core/domain/entity/user_weight_goal_entity.dart';
 import 'package:opennutritracker/fork/profile/profiles_view.dart';
 import 'package:opennutritracker/core/utils/energy_unit_provider.dart';
+import 'package:hive_ce/hive.dart';
+
+import '../../helpers/fake_hive_db_provider.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 import 'package:provider/provider.dart';
 
@@ -36,7 +39,44 @@ TrackedDayDBO _day(int day, double goal, double tracked) => TrackedDayDBO(
   caloriesTracked: tracked,
 );
 
+/// Becomes [switchTo]'s when a box is opened, as a Switch landing mid-read.
+class _SwitchingDb extends FakeHiveDBProvider {
+  final String switchTo;
+  final closed = <String>[];
+
+  _SwitchingDb(this.switchTo) : super(activeProfileId: 'alex');
+
+  @override
+  Future<Box<E>> openScopedBox<E>(String baseName, String boxSuffix) {
+    activeProfileId = switchTo;
+    throw StateError('read interrupted');
+  }
+
+  @override
+  Future<void> closeScopedBox<E>(String baseName, String boxSuffix) async =>
+      closed.add(baseName);
+}
+
 void main() {
+  test('a profile switched to while its figures are read keeps its boxes '
+      'open', () async {
+    final db = _SwitchingDb('sam');
+    await expectLater(
+      readProfileStats(db, _sam, active: false),
+      throwsStateError,
+    );
+    expect(db.closed, isEmpty);
+  });
+
+  test('another profile\'s boxes are closed after the read', () async {
+    final db = _SwitchingDb('alex');
+    await expectLater(
+      readProfileStats(db, _sam, active: false),
+      throwsStateError,
+    );
+    expect(db.closed, hasLength(3));
+  });
+
   test('the latest goal up to today, the trend, the days with food', () {
     final stats = profileStats(
       UserDBO(

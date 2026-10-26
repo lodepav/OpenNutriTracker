@@ -17,6 +17,7 @@ import 'package:opennutritracker/fork/display/week_bars.dart'; // [fork] S119
 import 'package:opennutritracker/fork/display/macro_foods.dart'; // [fork] S124
 // [fork] S119
 import 'package:opennutritracker/fork/adaptive/activity_credit.dart';
+import 'package:opennutritracker/fork/adaptive/activity.dart' show maxDailyActivityKcal; // [fork] S119
 // [/fork]
 // [/fork]
 import 'package:provider/provider.dart';
@@ -252,7 +253,16 @@ class _DashboardWidgetState extends State<DashboardWidget> {
                           FutureBuilder<ActivityCredit>(
                             future: _forkCredit,
                             builder: (context, credit) =>
-                                credit.data?.raisesGoal ?? true
+                                credit.data == ActivityCredit.dailyCapped &&
+                                    widget.totalKcalBurned >
+                                        maxDailyActivityKcal
+                                // The goal counts the burn up to its cap
+                                ? _StatLine(
+                                    label: 'Burned, up to',
+                                    value:
+                                        '+${(usesKilojoules ? UnitCalc.kcalToKj(maxDailyActivityKcal) : maxDailyActivityKcal).toInt()}',
+                                  )
+                                : credit.data?.raisesGoal ?? true
                                 ? _StatLine(
                                     label: 'Burned',
                                     value: '+${displayBurned.toInt()}',

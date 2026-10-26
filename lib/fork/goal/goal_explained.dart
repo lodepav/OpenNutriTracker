@@ -36,8 +36,12 @@ class GoalExplainedBody extends StatelessWidget {
     final settings = AdaptiveStore.settings.value;
     // With a fixed or adaptive target the formula is not today's goal;
     // S17's note above says what is.
+    // A weekday shift moves today's goal off the formula's, too.
     final formulaIsGoal =
-        !showTargetNote || (!settings.fixedTarget && !settings.adaptiveTarget);
+        !showTargetNote ||
+        (!settings.fixedTarget &&
+            !settings.adaptiveTarget &&
+            settings.weekdayOffsets[DateTime.now().weekday - 1] == 0);
     final adjustment = b.effectiveAdjustmentKcal + b.manualKcalAdjustment;
     final rate = b.weeklyWeightGoalKg;
     final inputs = [

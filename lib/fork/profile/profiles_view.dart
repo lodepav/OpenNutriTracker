@@ -95,15 +95,18 @@ Future<ProfileStats> readProfileStats(
       clock(),
     );
   } finally {
-    await db.closeScopedBox<UserDBO>(HiveDBProvider.userBoxName, suffix);
-    await db.closeScopedBox<TrackedDayDBO>(
-      HiveDBProvider.trackedDayBoxName,
-      suffix,
-    );
-    await db.closeScopedBox<WeightLogDBO>(
-      HiveDBProvider.weightLogBoxName,
-      suffix,
-    );
+    // Switched to while it was read: its boxes are now the app's own.
+    if (profile.id != db.activeProfileId) {
+      await db.closeScopedBox<UserDBO>(HiveDBProvider.userBoxName, suffix);
+      await db.closeScopedBox<TrackedDayDBO>(
+        HiveDBProvider.trackedDayBoxName,
+        suffix,
+      );
+      await db.closeScopedBox<WeightLogDBO>(
+        HiveDBProvider.weightLogBoxName,
+        suffix,
+      );
+    }
   }
 }
 

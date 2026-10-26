@@ -49,11 +49,13 @@ class _ManageProfilesScreenState extends State<ManageProfilesScreen> {
     final db = locator<HiveDBProvider>();
     final stats = <String, ProfileStats>{};
     for (final p in _profiles) {
+      // A Switch from a card can land mid-loop: ask which is active now
+      if (!mounted) return;
       try {
         stats[p.id] = await readProfileStats(
           db,
           p,
-          active: p.id == _activeId,
+          active: p.id == db.activeProfileId,
         );
       } catch (_) {
         // A profile whose boxes can not be read shows dashes.
