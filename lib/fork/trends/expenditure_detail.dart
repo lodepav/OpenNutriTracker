@@ -9,7 +9,12 @@ import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/core/utils/calc/unit_calc.dart';
 import 'package:opennutritracker/features/trends/presentation/bloc/trends_bloc.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
+import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
+import 'package:opennutritracker/fork/adaptive/expenditure.dart'
+    show minLoggedKcal;
 import 'package:opennutritracker/fork/report/chart_touch.dart';
+import 'package:opennutritracker/fork/report/nutrient_explorer.dart'
+    show IntakeLoader, intakesBetween, dayStartMinutes;
 import 'package:opennutritracker/fork/trends/detail_stats.dart';
 import 'package:opennutritracker/fork/trends/detail_widgets.dart';
 import 'package:opennutritracker/fork/trends/trend_stats.dart';
@@ -27,6 +32,7 @@ List<Widget> expenditureBody(
   required List<DateTime> dates,
   required Widget pills,
   AdaptiveService? service,
+  IntakeLoader loadIntakes = intakesBetween,
 }) {
   final unit = energyUnit(context);
   final series = expenditureSeries(history, dates);
@@ -78,6 +84,14 @@ List<Widget> expenditureBody(
           service: service ?? _locatorService(),
         ),
       ],
+      trendSection(context, 'How much was logged'),
+      _Logging(
+        key: ValueKey(dates.first),
+        state: state,
+        history: history,
+        dates: dates,
+        load: loadIntakes,
+      ),
       gap,
       const ExplainerLink(
         title: 'What is expenditure?',
@@ -501,6 +515,86 @@ class _TilesState extends State<_Tiles> {
           ],
         );
       },
+    );
+  }
+}
+
+/// How fully the range was logged, which says how far to trust the
+/// estimate: the days logged, the entries a day, and the days the estimate
+/// leaves out.
+class _Logging extends StatefulWidget {
+  final TrendsLoaded state;
+  final List<ExpenditureDay> history;
+  final List<DateTime> dates;
+  final IntakeLoader load;
+
+  const _Logging({
+    super.key,
+    required this.state,
+    required this.history,
+    required this.dates,
+    required this.load,
+  });
+
+  @override
+  State<_Logging> createState() => _LoggingState();
+}
+
+class _LoggingState extends State<_Logging> {
+  late final Future<double?> _entries = _count();
+
+  Future<double?> _count() async {
+    try {
+      return entriesPerDay(
+        await widget.load(widget.dates.first, widget.dates.last),
+        dayStartMinutes: await dayStartMinutes(),
+      );
+    } catch (_) {
+      // No database, in widget tests.
+      return null;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final c = loggingCompleteness(
+      widget.state.days,
+      widget.history,
+      widget.dates,
+      AdaptiveStore.skipped.value,
+    );
+    String days(int n) => n == 1 ? '1 day' : '$n days';
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        FutureBuilder(
+          future: _entries,
+          builder: (context, snapshot) => TrendRows(
+            rows: [
+              (label: 'Logged', value: '${c.logged} of ${days(c.of)}'),
+              (
+                label: 'Entries a day',
+                value: snapshot.data?.toStringAsFixed(1) ?? '–',
+              ),
+              (label: 'Counted in the estimate', value: days(c.counted)),
+              if (c.skipped > 0)
+                (label: 'Left out by you', value: days(c.skipped)),
+              if (c.partial > 0)
+                (label: 'Too little logged to count', value: days(c.partial)),
+            ],
+          ),
+        ),
+        const SizedBox(height: Dimens.spacing8),
+        Text(
+          'The estimate counts a day once it has '
+          '${energyText(context, minLoggedKcal)} or more logged, unless you '
+          'leave it out. The more of the range it counts, the more it can be '
+          'trusted.',
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(color: paletteOf(context).textMuted),
+        ),
+      ],
     );
   }
 }

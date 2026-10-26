@@ -19,6 +19,7 @@ import 'package:opennutritracker/fork/trends/detail_stats.dart';
 import 'package:opennutritracker/fork/trends/detail_widgets.dart';
 import 'package:opennutritracker/fork/trends/macro_contributors.dart';
 import 'package:opennutritracker/fork/trends/expenditure_detail.dart';
+import 'package:opennutritracker/fork/trends/nutrient_trends.dart';
 import 'package:opennutritracker/fork/trends/trend_stats.dart';
 import 'package:opennutritracker/fork/trends/trends_widgets.dart';
 import 'package:opennutritracker/fork/trends/weight_detail.dart';
@@ -62,6 +63,9 @@ String metricTitle(BuildContext context, TrendMetric m) {
     TrendMetric.carbs => toBeginningOfSentenceCase(s.carbsLabel),
     TrendMetric.fat => toBeginningOfSentenceCase(s.fatLabel),
     TrendMetric.protein => toBeginningOfSentenceCase(s.proteinLabel),
+    TrendMetric.fibre ||
+    TrendMetric.sugars ||
+    TrendMetric.sodium => microLabels[m]!,
     TrendMetric.water => s.trendsWaterLabel,
   };
 }
@@ -168,6 +172,7 @@ class TrendDetailPage extends StatelessWidget {
           dates: dates,
           pills: pills,
           service: deps.service,
+          loadIntakes: deps.loadIntakes,
         );
       case TrendMetric.balance:
         return balanceBody(context, state, history, dates: dates, pills: pills);
@@ -238,6 +243,16 @@ class TrendDetailPage extends StatelessWidget {
                 ).textTheme.bodySmall?.copyWith(color: palette.textMuted),
               ),
             ],
+        ];
+      case TrendMetric.fibre || TrendMetric.sugars || TrendMetric.sodium:
+        return [
+          MicroDetail(
+            metric: metric,
+            state: state,
+            dates: dates,
+            pills: pills,
+            load: deps.loadIntakes,
+          ),
         ];
       case TrendMetric.water:
         final series = waterSeries(state.waterByDay, dates);

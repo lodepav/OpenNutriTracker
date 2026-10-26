@@ -113,15 +113,22 @@ Future<SeededTrendsBloc> pumpTrends(
   return bloc;
 }
 
+/// Scrolls [metric]'s tile fully into view.
+Future<void> showTile(WidgetTester tester, String metric) async {
+  final tile = find.byKey(ValueKey('trends-tile-$metric'));
+  final scrollable = find.byType(Scrollable).first;
+  // From the top: the search scrolls down only.
+  tester.state<ScrollableState>(scrollable).position.jumpTo(0);
+  await tester.pump();
+  await tester.scrollUntilVisible(tile, 200, scrollable: scrollable);
+  await tester.ensureVisible(tile);
+  await tester.pumpAndSettle();
+}
+
 /// Taps [metric]'s tile and waits for its page.
 Future<void> openTile(WidgetTester tester, String metric) async {
-  final tile = find.byKey(ValueKey('trends-tile-$metric'));
-  await tester.scrollUntilVisible(
-    tile,
-    200,
-    scrollable: find.byType(Scrollable).first,
-  );
-  await tester.tap(tile);
+  await showTile(tester, metric);
+  await tester.tap(find.byKey(ValueKey('trends-tile-$metric')));
   await tester.pumpAndSettle();
 }
 

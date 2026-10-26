@@ -15,6 +15,9 @@ enum TrendMetric {
   carbs,
   fat,
   protein,
+  fibre,
+  sugars,
+  sodium,
   water,
 }
 

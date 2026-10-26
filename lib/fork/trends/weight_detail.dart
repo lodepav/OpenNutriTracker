@@ -6,7 +6,9 @@ import 'package:opennutritracker/features/trends/presentation/bloc/trends_bloc.d
 import 'package:opennutritracker/fork/adaptive/goal_plan.dart';
 import 'package:opennutritracker/fork/adaptive/trend_points.dart';
 import 'package:opennutritracker/fork/goal/goal_progress_page.dart';
+import 'package:opennutritracker/fork/report/nutrient_explorer.dart';
 import 'package:opennutritracker/fork/report/rate_text.dart';
+import 'package:opennutritracker/fork/trends/detail_stats.dart';
 import 'package:opennutritracker/fork/trends/detail_widgets.dart';
 import 'package:opennutritracker/fork/trends/trend_detail.dart';
 import 'package:opennutritracker/fork/trends/trend_stats.dart';
@@ -160,8 +162,130 @@ List<Widget> weightDetailBody(
           'Each weigh-in nudges it a little, so it follows your weight '
           'closely when you weigh in often.',
     ),
+    if (scaleNoise(state.weight, dates) case final noise?) ...[
+      trendSection(context, 'Scale swings'),
+      FigureGrid(
+        tiles: [
+          FigureTile(
+            label: 'Average swing',
+            value: w(noise.meanKg)!,
+            unit: label,
+            note: 'a weigh-in, off the trend',
+          ),
+          FigureTile(
+            label: 'Largest',
+            value: w(noise.largest.kg, signed: true)!,
+            unit: label,
+            note: day(noise.largest.on),
+          ),
+        ],
+      ),
+      _SwingNotes(
+        key: ValueKey(dates.first),
+        state: state,
+        dates: dates,
+        byDay: noise.byDay,
+        load: deps.loadIntakes,
+      ),
+    ],
     ...weighInRows(context, state, dates, stats),
   ];
+}
+
+/// The gap to the trend that counts as a jump after a high day, kg.
+const swingNoteKg = 0.2;
+
+/// Whether the weigh-ins after high-carb or high-sodium days ran further
+/// above the trend than the rest, and what that says.
+class _SwingNotes extends StatefulWidget {
+  final TrendsLoaded state;
+  final List<DateTime> dates;
+  final Map<DateTime, double> byDay;
+  final IntakeLoader load;
+
+  const _SwingNotes({
+    super.key,
+    required this.state,
+    required this.dates,
+    required this.byDay,
+    required this.load,
+  });
+
+  @override
+  State<_SwingNotes> createState() => _SwingNotesState();
+}
+
+class _SwingNotesState extends State<_SwingNotes> {
+  late final Future<List<double?>?> _sodium = _loadSodium();
+
+  Future<List<double?>?> _loadSodium() async {
+    try {
+      return nutrientByDay(
+        await widget.load(widget.dates.first, widget.dates.last),
+        widget.dates,
+        explorerNutrients.firstWhere((n) => n.label == 'Sodium'),
+        dayStartMinutes: await dayStartMinutes(),
+      );
+    } catch (_) {
+      // No database, in widget tests.
+      return null;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final wu = widget.state.bodyWeightUnit;
+    final label = weightUnitLabel(context, wu);
+    String kg(double v) => '${signedText(weightIn(wu, v), 1)} $label';
+    String? note(List<double?> values, String high, String why) {
+      final s = swingAfterHigh(widget.byDay, widget.dates, values);
+      if (s == null || s.after - s.other < swingNoteKg) return null;
+      return 'After your $high days you weighed in ${kg(s.after)} off the '
+          'trend on average, against ${kg(s.other)} after the rest: $why, '
+          'not fat.';
+    }
+
+    return FutureBuilder(
+      future: _sodium,
+      builder: (context, snapshot) {
+        final notes = [
+          ?note(
+            nutritionSeries(
+              widget.state.days,
+              widget.dates,
+              (d) => d.carbsTracked,
+            ),
+            'higher-carb',
+            'water stored with the carbs',
+          ),
+          if (snapshot.data case final sodium?)
+            ?note(sodium, 'saltier', 'water held with the salt'),
+        ];
+        final style = Theme.of(
+          context,
+        ).textTheme.bodySmall?.copyWith(color: paletteOf(context).textMuted);
+        return Padding(
+          padding: const EdgeInsets.only(top: Dimens.spacing8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              for (final n in notes)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: Dimens.spacing8),
+                  child: Text(n, style: style),
+                ),
+              if (notes.isEmpty)
+                Text(
+                  'How far each weigh-in sits from the trend: water, salt and '
+                  'food in you, not fat.',
+                  style: style,
+                ),
+            ],
+          ),
+        );
+      },
+    );
+  }
 }
 
 /// "To your goal": the way left and the day at this pace; it opens Goal

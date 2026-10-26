@@ -3,13 +3,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:opennutritracker/core/domain/entity/intake_entity.dart';
+import 'package:opennutritracker/core/domain/entity/intake_type_entity.dart';
 import 'package:opennutritracker/core/domain/entity/tracked_day_entity.dart';
 import 'package:opennutritracker/core/domain/entity/weight_log_entity.dart';
 import 'package:opennutritracker/core/utils/calc/unit_calc.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/features/trends/presentation/bloc/trends_bloc.dart';
+import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dart';
+import 'package:opennutritracker/features/add_meal/domain/entity/meal_nutriments_entity.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
 import 'package:opennutritracker/fork/display/display_prefs.dart';
+import 'package:opennutritracker/fork/report/nutrient_explorer.dart';
 import 'package:opennutritracker/fork/trends/detail_widgets.dart';
 import 'package:opennutritracker/fork/trends/trends_overview.dart';
 import 'package:opennutritracker/generated/l10n.dart';
@@ -38,6 +43,41 @@ TrackedDayEntity _logged(
   proteinGoal: 110,
 );
 
+IntakeEntity _ate(
+  int offset,
+  String name, {
+  double amount = 100,
+  double? fibre,
+  double? sodium,
+}) => IntakeEntity(
+  id: '$name $offset',
+  unit: 'g',
+  amount: amount,
+  type: IntakeTypeEntity.lunch,
+  meal: MealEntity(
+    code: name,
+    name: name,
+    url: null,
+    mealQuantity: null,
+    mealUnit: 'g',
+    servingQuantity: null,
+    servingUnit: 'g',
+    servingSize: null,
+    nutriments: MealNutrimentsEntity(
+      energyKcal100: 100,
+      carbohydrates100: 10,
+      fat100: 1,
+      proteins100: 5,
+      sugars100: null,
+      saturatedFat100: null,
+      fiber100: fibre,
+      sodium100: sodium,
+    ),
+    source: MealSourceEntity.custom,
+  ),
+  dateTime: day(offset).add(const Duration(hours: 12)),
+);
+
 class _Service extends Fake implements AdaptiveService {
   final List<ExpenditureDay> history;
   _Service(this.history);
@@ -51,6 +91,7 @@ class _Service extends Fake implements AdaptiveService {
 
 void main() {
   tearDown(() async {
+    TrendsOverview.loadIntakes = intakesBetween;
     await locator.reset();
     DisplayPrefs.macroOrder.value = DisplayPrefs.upstreamOrder;
   });
@@ -63,6 +104,7 @@ void main() {
       tester,
       loaded(days: [_logged(0)], waterByDay: {day(0): 1200}),
     );
+    await showTile(tester, 'water');
     expect(find.byKey(const ValueKey('trends-tile-water')), findsOne);
 
     DisplayPrefs.showWater.value = false;
@@ -90,13 +132,14 @@ void main() {
     expect(tileText(tester, 'carbs'), contains('70 / 259 g'));
     expect(tileText(tester, 'fat'), contains('81 / 81 g'));
     expect(tileText(tester, 'protein'), contains('93 / 110 g'));
-    expect(tileText(tester, 'water'), contains('1000 / 1900 ml'));
     expect(tileText(tester, 'weight'), contains('–'));
+    expect(find.textContaining('day streak'), findsOneWidget);
+    await showTile(tester, 'water');
+    expect(tileText(tester, 'water'), contains('1000 / 1900 ml'));
     expect(
       find.textContaining('Last 7 days, 1 logged', skipOffstage: false),
       findsOneWidget,
     );
-    expect(find.textContaining('day streak'), findsOneWidget);
   });
 
   testWidgets('the macro tiles follow the macro order', (tester) async {
@@ -106,11 +149,11 @@ void main() {
         tester.getTopLeft(find.byKey(ValueKey('trends-tile-$m'))).dy;
     double x(String m) =>
         tester.getTopLeft(find.byKey(ValueKey('trends-tile-$m'))).dx;
-    // Row three is protein, carbs; row four fat, water.
+    // Row three is protein, carbs; row four fat, fibre.
     expect(y('protein'), y('carbs'));
     expect(x('protein'), lessThan(x('carbs')));
     expect(y('fat'), greaterThan(y('protein')));
-    expect(y('fat'), y('water'));
+    expect(y('fat'), y('fibre'));
   });
 
   testWidgets('a pill reloads Trends at its range', (tester) async {
@@ -384,6 +427,7 @@ void main() {
         ],
       ),
     );
+    await showTile(tester, 'goal');
     expect(tileText(tester, 'goal'), contains('Goal'));
     expect(tileText(tester, 'goal'), contains('kg to go'));
     await openTile(tester, 'weight');
@@ -408,6 +452,75 @@ void main() {
     expect(find.text('To your goal'), findsOneWidget);
     // Ten days of trend: no 30 days' pace to date the goal by.
     expect(find.text('under 30 days of trend'), findsOneWidget);
+  });
+
+  testWidgets('Weight: the scale swings, and the jumps after carb days', (
+    tester,
+  ) async {
+    await pumpTrends(
+      tester,
+      loaded(
+        days: [
+          for (var i = -6; i <= 0; i++)
+            _logged(i, carbs: i == -5 || i == -2 ? 300 : 69.5),
+        ],
+        weight: [
+          for (var i = -20; i <= 0; i++)
+            WeightLogEntity(
+              date: day(i),
+              weightKg: i == -4 || i == -1 ? 81 : 80,
+            ),
+        ],
+      ),
+    );
+    await openTile(tester, 'weight');
+    await tester.scrollUntilVisible(
+      find.text('Average swing'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('Scale swings'), findsOneWidget);
+    expect(find.text('Largest'), findsOneWidget);
+    expect(find.textContaining('After your higher-carb days'), findsOneWidget);
+    expect(find.textContaining('saltier'), findsNothing);
+  });
+
+  testWidgets('fibre, sugars and sodium: tiles and their pages', (
+    tester,
+  ) async {
+    TrendsOverview.loadIntakes = (first, last) async => [
+      _ate(0, 'Oats', amount: 200, fibre: 10, sodium: 400),
+      _ate(-1, 'Soup', sodium: 1500),
+      // Outside the week.
+      _ate(-9, 'Crisps', sodium: 9000),
+    ].where((i) => !i.dateTime.isBefore(first)).toList();
+    await pumpTrends(tester, loaded(days: [_logged(0), _logged(-1)]));
+    await showTile(tester, 'sodium');
+    expect(tileText(tester, 'fibre'), contains('20 / 30 g'));
+    expect(tileText(tester, 'sugars'), contains('–'));
+    expect(tileText(tester, 'sodium'), contains('1150 / 2300 mg'));
+
+    await openTile(tester, 'sodium');
+    expect(find.text('Limit'), findsOneWidget);
+    expect(find.text('Under it'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Where it came from'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('Soup'), findsOneWidget);
+    expect(find.text('1500 mg'), findsOneWidget);
+    expect(find.text('Crisps'), findsNothing);
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+
+    await openTile(tester, 'fibre');
+    expect(find.text('Goal'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.textContaining('1 food logged here has no figure for fibre'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
   });
 
   testWidgets('Water: its average and goal over upstream\'s chart', (
@@ -542,6 +655,19 @@ void main() {
     expect(find.text('enough for a steady estimate'), findsOneWidget);
     // 3000 against the formula's 2860.
     expect(find.text('yours runs 5% higher'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.widgetWithText(TrendRow, 'Counted in the estimate'),
+      200,
+      scrollable: scrollable,
+    );
+    expect(
+      tester
+          .widget<TrendRow>(
+            find.widgetWithText(TrendRow, 'Counted in the estimate'),
+          )
+          .value,
+      '4 days',
+    );
 
     await tester.ensureVisible(find.text('What is expenditure?'));
     await tester.pumpAndSettle();
