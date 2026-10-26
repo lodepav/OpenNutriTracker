@@ -15,6 +15,7 @@ import 'package:opennutritracker/features/activity_detail/presentation/widget/ac
 import 'package:opennutritracker/fork/adaptive/activity_credit.dart';
 import 'package:opennutritracker/fork/widget/toolbar_height.dart';
 import 'package:opennutritracker/fork/units/energy_text.dart';
+import 'package:opennutritracker/fork/display/sheet_inset.dart';
 
 /// The durations the sheet offers at a tap, in minutes.
 const activityDurations = [15, 30, 45, 60];
@@ -552,12 +553,13 @@ class _DurationSheetState extends State<DurationSheet> {
     final perMinute = METCalc.getTotalBurnedKcal(widget.user, activity, 1);
     final valid = _typed != null;
     return SingleChildScrollView(
-      // Above the keyboard, so the field, its kcal and Add stay in sight.
+      // Above the keyboard, or the navigation bar, so the field, its kcal
+      // and Add stay in sight.
       padding: EdgeInsets.fromLTRB(
         Dimens.spacing16,
         0,
         Dimens.spacing16,
-        Dimens.spacing24 + MediaQuery.viewInsetsOf(context).bottom,
+        Dimens.spacing24 + sheetBottomInset(context),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,

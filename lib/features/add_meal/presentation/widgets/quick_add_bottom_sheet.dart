@@ -26,6 +26,7 @@ import 'package:opennutritracker/fork/add/quick_add.dart';
 import 'package:opennutritracker/fork/copy/copy_ui.dart' show mealLabel;
 import 'package:opennutritracker/fork/units/energy_text.dart';
 import 'package:opennutritracker/fork/widget/meal_picker_chip.dart';
+import 'package:opennutritracker/fork/display/sheet_inset.dart'; // [fork] S160
 // [/fork]
 
 class QuickAddBottomSheet extends StatefulWidget {
@@ -279,7 +280,7 @@ class _QuickAddBottomSheetState extends State<QuickAddBottomSheet> {
 
     return Padding(
       padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom,
+        bottom: sheetBottomInset(context), // [fork] S160 above the nav bar
       ),
       child: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
