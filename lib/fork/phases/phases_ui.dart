@@ -3,6 +3,7 @@ import 'package:opennutritracker/core/domain/entity/body_weight_unit_entity.dart
 import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
+import 'package:opennutritracker/fork/phases/phase_report.dart';
 import 'package:opennutritracker/fork/phases/phases.dart';
 import 'package:intl/intl.dart';
 import 'package:opennutritracker/fork/units/weight_text.dart';
@@ -203,6 +204,21 @@ class _DietPhasesCardState extends State<DietPhasesCard> {
                   '${_aboutEnd(plan, i, unit)}',
                   style: theme.textTheme.bodySmall,
                 ),
+            if (index >= 0)
+              Align(
+                alignment: AlignmentDirectional.centerStart,
+                child: TextButton(
+                  key: const ValueKey('phases-reports'),
+                  onPressed: () => openPhaseReports(
+                    context,
+                    plan,
+                    today: now,
+                    unit: unit,
+                    service: widget.service,
+                  ),
+                  child: const Text('Phase reports'),
+                ),
+              ),
           ],
         ],
       ),
