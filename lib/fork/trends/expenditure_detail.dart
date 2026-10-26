@@ -117,8 +117,9 @@ String _day(BuildContext context, DateTime date) => intl.DateFormat.MMMd(
   Localizations.localeOf(context).toLanguageTag(),
 ).format(date);
 
-/// The estimate a day over the window as a line, each logged day's intake
-/// a dot, the energy on the right and three dates under it.
+/// The estimate a day over the window as a line, fitted to its own
+/// values, the energy on the right and three dates under it; a touched day
+/// names its logged intake too.
 class ExpenditureChart extends StatelessWidget {
   final List<ExpenditureDay> history;
   final List<DateTime> dates;
@@ -148,15 +149,8 @@ class ExpenditureChart extends StatelessWidget {
         else
           FlSpot.nullSpot,
     ];
-    final eaten = [
-      for (final (i, date) in dates.indexed)
-        if (byDate[date]?.intakeKcal case final kcal?)
-          FlSpot(i.toDouble(), shown(kcal))
-        else
-          FlSpot.nullSpot,
-    ];
     final values = [
-      for (final s in [...spent, ...eaten])
+      for (final s in spent)
         if (s != FlSpot.nullSpot) s.y,
     ];
     if (values.isEmpty) {
@@ -169,7 +163,6 @@ class ExpenditureChart extends StatelessWidget {
     final maxY = (values.reduce(math.max) / step).ceil() * step;
     final muted = palette.textMuted;
     final small = theme.textTheme.labelSmall?.copyWith(color: muted);
-    final dots = dates.length <= 92;
     // The axis as wide as its widest number at the user's font, so the
     // numbers stay on one line (Android scales large text less than
     // small, so a scaled constant falls short).
@@ -187,7 +180,7 @@ class ExpenditureChart extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Semantics(
-            label: 'Expenditure chart, with calories logged',
+            label: 'Expenditure chart',
             child: SizedBox(
               height: 180,
               child: LineChart(
@@ -221,9 +214,13 @@ class ExpenditureChart extends StatelessWidget {
                   ),
                   lineTouchData: labelledTouch(
                     context,
-                    (s) =>
-                        '${s.barIndex == 0 ? 'Expenditure' : 'Logged'} '
-                        '${s.y.round()} $unit',
+                    (s) => 'Expenditure ${s.y.round()} $unit',
+                    after: (s) =>
+                        switch (byDate[dates[s.x.toInt()]]?.intakeKcal) {
+                          final kcal? =>
+                            '\nLogged ${shown(kcal).round()} $unit',
+                          null => '',
+                        },
                   ),
                   lineBarsData: [
                     LineChartBarData(
@@ -236,20 +233,6 @@ class ExpenditureChart extends StatelessWidget {
                         checkToShowDot: (spot, bar) => spot == bar.spots.last,
                         getDotPainter: (_, _, _, _) =>
                             FlDotCirclePainter(radius: 5, color: accent),
-                      ),
-                    ),
-                    // The intake, as dots only.
-                    LineChartBarData(
-                      spots: eaten,
-                      color: Colors.transparent,
-                      barWidth: 0,
-                      dotData: FlDotData(
-                        show: dots,
-                        getDotPainter: (_, _, _, _) => FlDotCirclePainter(
-                          radius: 2.6,
-                          color: muted,
-                          strokeWidth: 0,
-                        ),
                       ),
                     ),
                   ],
@@ -275,10 +258,7 @@ class ExpenditureChart extends StatelessWidget {
             ),
           const SizedBox(height: Dimens.spacing8),
           ChartLegend(
-            entries: [
-              (label: 'Expenditure', color: accent, line: true),
-              if (dots) (label: 'Logged', color: muted, line: false),
-            ],
+            entries: [(label: 'Expenditure', color: accent, line: true)],
           ),
         ],
       ),
