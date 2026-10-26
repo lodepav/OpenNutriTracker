@@ -1,5 +1,6 @@
 import 'package:opennutritracker/core/domain/entity/tracked_day_entity.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
+import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/fork/trends/trend_stats.dart';
 
 /// The spans the Expenditure page's table of changes reads, in days.
@@ -175,3 +176,47 @@ macroShares(List<TrackedDayEntity> days, List<DateTime> dates) {
         : (carbs: gc / goalTotal, fat: gf / goalTotal, protein: gp / goalTotal),
   );
 }
+
+/// The window's logged days of energy balance: eaten and burnt a day, the
+/// total eaten less burnt, and how many days ran in deficit or surplus.
+/// Null with no day logged.
+({
+  double eaten,
+  double burnt,
+  double total,
+  int deficit,
+  int surplus,
+  int logged,
+})?
+balanceSummary(List<ExpenditureDay> history, List<DateTime> dates) {
+  final window = dates.toSet();
+  final logged = [
+    for (final d in history)
+      if (d.intakeKcal != null && window.contains(_date(d.date))) d,
+  ];
+  if (logged.isEmpty) return null;
+  var eaten = 0.0, burnt = 0.0, deficit = 0, surplus = 0;
+  for (final d in logged) {
+    eaten += d.intakeKcal!;
+    burnt += d.expenditureKcal;
+    final balance = d.intakeKcal! - d.expenditureKcal;
+    if (balance < 0) deficit++;
+    if (balance > 0) surplus++;
+  }
+  return (
+    eaten: eaten / logged.length,
+    burnt: burnt / logged.length,
+    total: eaten - burnt,
+    deficit: deficit,
+    surplus: surplus,
+    logged: logged.length,
+  );
+}
+
+/// The weight change, in kg, that [days] at an average balance of
+/// [meanKcal] a day would make, at [kcalPerKg] of body weight.
+double balanceWeightKg(
+  double meanKcal,
+  int days, {
+  double kcalPerKg = AdaptiveSettings.commonKcalPerKg,
+}) => meanKcal * days / kcalPerKg;

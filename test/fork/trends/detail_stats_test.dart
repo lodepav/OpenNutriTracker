@@ -175,4 +175,35 @@ void main() {
       expect(macroShares([_tracked(0)], week), isNull);
     });
   });
+
+  group('balanceSummary', () {
+    test('eaten less burnt over the window\'s logged days', () {
+      final week = windowDates(_today, 7);
+      final s = balanceSummary([
+        _spent(-9, 3000, ate: 9000),
+        _spent(-3, 3000, ate: 2500),
+        _spent(-2, 3000),
+        _spent(-1, 2800, ate: 3100),
+        _spent(0, 3000, ate: 3000),
+      ], week)!;
+      expect(s.logged, 3);
+      expect(s.eaten, closeTo(8600 / 3, 1e-9));
+      expect(s.burnt, closeTo(8800 / 3, 1e-9));
+      expect(s.total, -200);
+      expect(s.deficit, 1);
+      expect(s.surplus, 1);
+    });
+
+    test('null with no day logged in the window', () {
+      expect(
+        balanceSummary([_spent(-9, 3000, ate: 2000)], windowDates(_today, 7)),
+        isNull,
+      );
+    });
+  });
+
+  test('a week at 1100 kcal under a day is a kilo', () {
+    expect(balanceWeightKg(-1100, 7), -1);
+    expect(balanceWeightKg(500, 30, kcalPerKg: 7500), 2);
+  });
 }

@@ -441,6 +441,22 @@ void main() {
     final bars = tester.widget<BarChart>(find.byType(BarChart)).data.barGroups;
     expect(bars.last.barRods.single.toY, -500);
     expect(bars[1].barRods.single.toY, 0);
+    // 10000 eaten less 11880 burnt over the four logged days.
+    expect(tester.getSemantics(find.text('Total')).label, contains('-1880'));
+    final scroll = find.byType(Scrollable).last;
+    await tester.scrollUntilVisible(
+      find.text('From the balance'),
+      200,
+      scrollable: scroll,
+    );
+    String row(String label) =>
+        tester.widget<TrendRow>(find.widgetWithText(TrendRow, label)).value;
+    expect(row('In deficit'), '4 of 4 days');
+    expect(row('In surplus'), '0 days');
+    expect(row('Eaten a day'), '2500 kcal');
+    expect(row('Burnt a day'), '2970 kcal');
+    // -470 a day for the week, at 7700 kcal a kg.
+    expect(find.text('-0.4 kg', findRichText: true), findsOneWidget);
 
     await tester.pageBack();
     await tester.pumpAndSettle();

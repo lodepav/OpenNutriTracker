@@ -7,9 +7,9 @@ import 'package:opennutritracker/core/domain/entity/body_weight_unit_entity.dart
 import 'package:opennutritracker/core/domain/entity/tracked_day_entity.dart';
 import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
-import 'package:opennutritracker/core/utils/calc/unit_calc.dart';
 import 'package:opennutritracker/features/trends/presentation/bloc/trends_bloc.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
+import 'package:opennutritracker/fork/trends/balance_detail.dart';
 import 'package:opennutritracker/fork/trends/calories_detail.dart';
 import 'package:opennutritracker/fork/trends/expenditure_detail.dart';
 import 'package:opennutritracker/fork/trends/trend_stats.dart';
@@ -144,9 +144,6 @@ class TrendDetailPage extends StatelessWidget {
           context.read<TrendsBloc>().add(LoadTrendsEvent(rangeDays: d)),
     );
     final palette = paletteOf(context);
-    final kj = usesKj(context);
-    double shown(double kcal) => kj ? UnitCalc.kcalToKj(kcal) : kcal;
-    final unit = energyUnit(context);
     const gap = SizedBox(height: Dimens.spacing16);
 
     switch (metric) {
@@ -162,61 +159,7 @@ class TrendDetailPage extends StatelessWidget {
           service: deps.service,
         );
       case TrendMetric.balance:
-        final series = balanceSeries(history, dates);
-        final mean = meanOf(series);
-        final change = fittedChange(series);
-        return [
-          StatHeader(
-            stats: [
-              (
-                label: 'Average',
-                value: mean == null
-                    ? '–'
-                    : signedText(energyValue(context, mean).toDouble()),
-                unit: '$unit/day',
-              ),
-              (
-                label: 'Change',
-                value: change == null
-                    ? '–'
-                    : signedText(energyValue(context, change).toDouble()),
-                unit: unit,
-              ),
-              (
-                label: 'Logged',
-                value: '${series.whereType<double>().length}',
-                unit: 'days',
-              ),
-            ],
-          ),
-          gap,
-          pills,
-          gap,
-          AppCard(
-            padding: const EdgeInsets.all(Dimens.spacing16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                DailyBarChart(
-                  values: [for (final v in series) v == null ? null : shown(v)],
-                  dates: dates,
-                  color: palette.fat,
-                  negativeColor: palette.accent,
-                  unit: unit,
-                  label: 'Energy balance chart',
-                ),
-                const SizedBox(height: Dimens.spacing8),
-                Text(
-                  'What you logged less what you burnt, each logged day: '
-                  'below the line is a deficit.',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodySmall?.copyWith(color: palette.textMuted),
-                ),
-              ],
-            ),
-          ),
-        ];
+        return balanceBody(context, state, history, dates: dates, pills: pills);
       case TrendMetric.carbs || TrendMetric.fat || TrendMetric.protein:
         final macro = macroOf(metric);
         final series = nutritionSeries(state.days, dates, macro.eaten);
