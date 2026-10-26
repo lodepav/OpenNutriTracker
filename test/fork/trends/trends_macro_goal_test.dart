@@ -3,7 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:opennutritracker/core/domain/entity/tracked_day_entity.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 
-import '../../fork/trends/trends_harness.dart';
+import 'trends_harness.dart';
 
 // Seam S87: a macro's goal is the mean over the days that have a goal, not
 // their sum over the range's days. S120 moved the Daily average card to

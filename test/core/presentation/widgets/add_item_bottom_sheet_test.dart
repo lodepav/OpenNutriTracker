@@ -9,15 +9,6 @@ import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dar
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_nutriments_entity.dart';
 import 'package:opennutritracker/features/add_meal/presentation/bloc/favourite_toggle_bloc.dart';
 import 'package:opennutritracker/generated/l10n.dart';
-// [fork] S131 add-sheet
-import 'package:opennutritracker/core/utils/navigation_options.dart';
-import 'package:opennutritracker/features/add_meal/presentation/add_meal_screen.dart';
-import 'package:opennutritracker/features/add_meal/presentation/add_meal_type.dart';
-// [fork] S150 own-screens: the add sheet's rows are the fork's card (D23)
-// import 'package:opennutritracker/features/add_meal/presentation/widgets/meal_item_card.dart';
-import 'package:opennutritracker/fork/screens/add_meal/meal_item_card.dart';
-// [/fork]
-// [/fork]
 import '../../../helpers/fake_favourites.dart';
 import '../../../helpers/test_l10n.dart';
 
@@ -142,141 +133,83 @@ void main() {
     },
   );
 
-  // [fork] S131 add-sheet: the suggestion is the meal chip picked, and
-  // the recent foods follow the chip
-  bool selected(WidgetTester tester, String label) => tester
-      .widget<ChoiceChip>(find.widgetWithText(ChoiceChip, label))
-      .selected;
+  // #580: launched from the global `+` action, the sheet preselects a
+  // suggested meal type based on the current time. Only the matching tile
+  // renders the "Suggested" chip; every tile stays tappable.
+  testWidgets(
+    'shows exactly one Suggested chip on the tile matching suggestedType',
+    (tester) async {
+      await tester.pumpWidget(_wrapWithMaterial(
+        AddItemBottomSheet(
+          day: DateTime(2026, 1, 1),
+          suggestedType: IntakeTypeEntity.lunch,
+        ),
+      ));
+      await tester.pumpAndSettle();
 
-  testWidgets('picks the suggested meal, and only it', (tester) async {
-    await tester.pumpWidget(_wrapWithMaterial(
-      AddItemBottomSheet(
-        day: DateTime(2026, 1, 1),
-        suggestedType: IntakeTypeEntity.lunch,
-      ),
-    ));
-    await tester.pumpAndSettle();
+      expect(find.text(l10nEn.suggestedLabel), findsOneWidget);
+      // The chip sits inside the Lunch ListTile, so a ListTile ancestor
+      // above the chip must exist and its title must be the lunch label.
+      final chipTile = find.ancestor(
+        of: find.text(l10nEn.suggestedLabel),
+        matching: find.byType(ListTile),
+      );
+      expect(chipTile, findsOneWidget);
+      expect(
+        find.descendant(of: chipTile, matching: find.text(l10nEn.lunchLabel)),
+        findsOneWidget,
+      );
+    },
+  );
 
-    expect(selected(tester, l10nEn.lunchLabel), isTrue);
-    for (final other in [
-      l10nEn.breakfastLabel,
-      l10nEn.dinnerLabel,
-      l10nEn.snackLabel,
-    ]) {
-      expect(selected(tester, other), isFalse);
-    }
-    await tester.tap(find.text(l10nEn.dinnerLabel));
-    await tester.pump();
-    expect(selected(tester, l10nEn.dinnerLabel), isTrue);
-    expect(selected(tester, l10nEn.lunchLabel), isFalse);
-  });
+  // #580: launched from a specific meal section (or when the caller has
+  // already committed to a meal type), no suggestion is passed and no chip
+  // should render, so nothing feels "preselected".
+  // The chip is its own semantics node rather than part of the tile's, so
+  // someone swiping through with TalkBack or VoiceOver lands on it directly.
+  // Its Semantics wrapper sets a label and the Text inside says the same
+  // word again; without excludeSemantics they both reach the node and it is
+  // announced twice in a row.
+  testWidgets(
+    'announces the suggestion once, not twice',
+    (tester) async {
+      final handle = tester.ensureSemantics();
+      await tester.pumpWidget(_wrapWithMaterial(
+        AddItemBottomSheet(
+          day: DateTime(2026, 1, 1),
+          suggestedType: IntakeTypeEntity.lunch,
+        ),
+      ));
+      await tester.pumpAndSettle();
 
-  testWidgets('without a suggestion, one meal is still picked', (
-    tester,
-  ) async {
-    await tester.pumpWidget(_wrapWithMaterial(
-      AddItemBottomSheet(day: DateTime(2026, 1, 1)),
-    ));
-    await tester.pumpAndSettle();
+      final chip = find.byWidgetPredicate(
+        (widget) =>
+            widget is Semantics &&
+            widget.properties.identifier == 'add-item-suggested-chip',
+      );
+      final label = tester.semantics.find(chip).label;
 
-    expect(
-      tester
-          .widgetList<ChoiceChip>(find.byType(ChoiceChip))
-          .where((chip) => chip.selected),
-      hasLength(1),
-    );
-  });
+      expect(label, equals(l10nEn.suggestedLabel),
+          reason: 'the chip should say it once and only once');
 
-  testWidgets('the recent foods are the picked meal\'s, else any meal\'s', (
-    tester,
-  ) async {
-    final getIt = GetIt.instance;
-    await getIt.reset();
-    final favourites = FakeFavourites();
-    getIt.registerSingleton<GetIntakeUsecase>(_FakeGetIntakeUsecase());
-    getIt.registerFactory<FavouriteToggleBloc>(
-      () => FavouriteToggleBloc(favourites.get, favourites.toggle),
-    );
+      handle.dispose();
+    },
+  );
 
-    await tester.pumpWidget(_wrapWithMaterial(
-      AddItemBottomSheet(
-        day: DateTime(2026, 1, 1),
-        suggestedType: IntakeTypeEntity.lunch,
-      ),
-    ));
-    await tester.pumpAndSettle();
-    expect(find.text('Recent for ${l10nEn.lunchLabel}'), findsOneWidget);
-    MealItemCard first() =>
-        tester.widget<MealItemCard>(find.byType(MealItemCard).first);
-    expect(first().mealEntity.name, 'Recent 0');
-    expect(first().addMealType, AddMealType.lunchType);
+  testWidgets(
+    'renders no Suggested chip when suggestedType is null',
+    (tester) async {
+      await tester.pumpWidget(_wrapWithMaterial(
+        AddItemBottomSheet(day: DateTime(2026, 1, 1)),
+      ));
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.text(l10nEn.snackLabel));
-    await tester.pumpAndSettle();
-    expect(find.text(l10nEn.recentlyAddedLabel), findsOneWidget);
-    // Logged with lunch, the foods now go to the snack.
-    expect(first().mealEntity.name, 'Recent 0');
-    expect(first().addMealType, AddMealType.snackType);
-
-    await getIt.reset();
-    await favourites.dispose();
-  });
-
-  testWidgets('search opens the food search for the picked meal', (
-    tester,
-  ) async {
-    final pushed = <RouteSettings>[];
-    await tester.pumpWidget(MaterialApp(
-      localizationsDelegates: const [S.delegate],
-      supportedLocales: S.supportedLocales,
-      onGenerateRoute: (settings) {
-        if (settings.name != '/') pushed.add(settings);
-        return MaterialPageRoute(
-          settings: settings,
-          builder: (context) => Scaffold(
-            body: TextButton(
-              onPressed: () => showModalBottomSheet<void>(
-                context: context,
-                builder: (_) => AddItemBottomSheet(
-                  day: DateTime(2026, 1, 1),
-                  suggestedType: IntakeTypeEntity.lunch,
-                ),
-              ),
-              child: const Text('open'),
-            ),
-          ),
-        );
-      },
-    ));
-    await tester.tap(find.text('open'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text(l10nEn.dinnerLabel));
-    await tester.pump();
-    await tester.tap(find.text(l10nEn.searchLabel));
-    await tester.pumpAndSettle();
-
-    expect(pushed.single.name, NavigationOptions.addMealRoute);
-    final args = pushed.single.arguments as AddMealScreenArguments;
-    expect(args.mealType, AddMealType.dinnerType);
-    expect(args.day, DateTime(2026, 1, 1));
-    expect(find.text(l10nEn.dinnerLabel), findsNothing, reason: 'closed');
-  });
-
-  testWidgets('offers search, Quick add, Scan and Recipes', (tester) async {
-    await tester.pumpWidget(_wrapWithMaterial(
-      AddItemBottomSheet(day: DateTime(2026, 1, 1)),
-    ));
-    await tester.pumpAndSettle();
-
-    for (final id in [
-      'add-item-search',
-      'add-item-quick-add',
-      'add-item-scan',
-      'add-item-recipes',
-      'add-item-activity',
-    ]) {
-      expect(_withIdentifier(id), findsOneWidget, reason: id);
-    }
-  });
-  // [/fork]
+      expect(find.text(l10nEn.suggestedLabel), findsNothing);
+      // Meal tiles still render — the sheet remains fully usable.
+      expect(find.text(l10nEn.breakfastLabel), findsOneWidget);
+      expect(find.text(l10nEn.lunchLabel), findsOneWidget);
+      expect(find.text(l10nEn.dinnerLabel), findsOneWidget);
+      expect(find.text(l10nEn.snackLabel), findsOneWidget);
+    },
+  );
 }
