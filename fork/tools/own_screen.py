@@ -31,9 +31,12 @@ for line in upstream.read_text().splitlines(keepends=True):
         if m.group(2):
             out.append(f'{m.group(1)}// {m.group(2)}\n')
         continue
-    line = INLINE.sub('', line)
-    if re.match(r'^\s*//\s*$', line):
-        continue
+    if INLINE.search(line):
+        line = INLINE.sub('', line)
+        # The marker was all of the comment: no bare `//` left behind.
+        if re.match(r'^\s*//\s*$', line):
+            continue
+        line = re.sub(r'\s*//\s*$', '', line.rstrip('\n')) + '\n'
     out.append(line)
 
 copy.parent.mkdir(parents=True, exist_ok=True)

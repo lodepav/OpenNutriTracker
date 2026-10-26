@@ -1157,14 +1157,14 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
                   // than by whatever is left of it.
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [forkTitle, ...buttons], //
+                    children: [forkTitle, ...buttons],
                   )
                 else
                   // Unchanged wherever they fit, which is every ordinary
                   // text size: name on the left, controls on the right.
                   Row(
                     children: [
-                      Expanded(child: forkTitle), //
+                      Expanded(child: forkTitle),
                       ...buttons,
                     ],
                   ),
