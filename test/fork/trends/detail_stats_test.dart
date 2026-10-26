@@ -112,8 +112,24 @@ void main() {
       expect(o.onTarget, 2);
       expect(o.under, 1);
       expect(o.over, 1);
-      expect(o.highest, (kcal: 2300.0, date: _d(-3)));
-      expect(o.lowest, (kcal: 1700.0, date: _d(-4)));
+      expect(o.highest, (value: 2300.0, date: _d(-3)));
+      expect(o.lowest, (value: 1700.0, date: _d(-4)));
+    });
+
+    test('a macro: its grams against its goal', () {
+      final o = dayOutcomes(
+        [
+          _tracked(-2, carbs: 250, carbsGoal: 250),
+          _tracked(-1, carbs: 150, carbsGoal: 250),
+          // Calories but no carbs: not a day of them.
+          _tracked(0),
+        ],
+        windowDates(_today, 7),
+        eaten: (d) => d.carbsTracked,
+        goal: (d) => d.carbsGoal,
+      );
+      expect((o.logged, o.onTarget, o.under, o.over), (2, 1, 1, 0));
+      expect(o.lowest, (value: 150.0, date: _d(-1)));
     });
 
     test('no highest or lowest without a logged day', () {
@@ -205,5 +221,59 @@ void main() {
   test('a week at 1100 kcal under a day is a kilo', () {
     expect(balanceWeightKg(-1100, 7), -1);
     expect(balanceWeightKg(500, 30, kcalPerKg: 7500), 2);
+  });
+
+  group('weekendSplit', () {
+    // The 26th is a Monday: the 24th and 25th a weekend.
+    final week = windowDates(_today, 7);
+
+    test('each part its own means, the balance where known', () {
+      final split = weekendSplit(
+        [
+          _tracked(0, kcal: 2000, carbs: 200, fat: 60, protein: 120),
+          _tracked(-3, kcal: 1800, carbs: 180, fat: 50, protein: 100),
+          _tracked(-1, kcal: 2600, carbs: 300, fat: 90, protein: 90),
+          _tracked(-2, kcal: 3000, carbs: 340, fat: 100, protein: 80),
+        ],
+        week,
+        balance: {_d(-1): 200, _d(0): -500},
+      )!;
+      expect(split.weekdays.days, 2);
+      expect(split.weekdays.kcal, 1900);
+      expect(split.weekdays.protein, 110);
+      expect(split.weekdays.balance, -500);
+      expect(split.weekend.days, 2);
+      expect(split.weekend.kcal, 2800);
+      expect(split.weekend.carbs, 320);
+      expect(split.weekend.balance, 200);
+    });
+
+    test('none without a logged day in each part', () {
+      expect(weekendSplit([_tracked(0)], week), isNull);
+    });
+  });
+
+  group('proteinPerKg', () {
+    final week = windowDates(_today, 7);
+
+    test('each day against its trend, the goal against the latest', () {
+      final p = proteinPerKg(
+        [
+          _tracked(-1, protein: 160, proteinGoal: 150),
+          _tracked(0, protein: 120, proteinGoal: 160),
+          // No trend that day.
+          _tracked(-5, protein: 300),
+        ],
+        week,
+        {_d(-1): 80, _d(0): 80},
+      )!;
+      expect(p.perKg, closeTo(1.75, 1e-9));
+      expect(p.goalPerKg, closeTo(2.0, 1e-9));
+      expect(p.days, 2);
+    });
+
+    test('none without a weigh-in', () {
+      expect(proteinPerKg([_tracked(0, protein: 100)], week, const {}), isNull);
+    });
   });
 }

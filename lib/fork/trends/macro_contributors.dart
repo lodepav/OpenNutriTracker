@@ -11,6 +11,7 @@ import 'package:opennutritracker/fork/report/nutrient_explorer.dart'
     show IntakeLoader, intakesBetween;
 import 'package:opennutritracker/fork/trends/trend_stats.dart';
 import 'package:opennutritracker/fork/trends/trends_widgets.dart';
+import 'package:opennutritracker/fork/units/energy_text.dart';
 
 /// How many foods the card lists before "See all".
 const topFoodsShown = 5;
@@ -98,7 +99,7 @@ class _MacroDaysAndFoodsState extends State<MacroDaysAndFoods> {
           future: widget.dates.isEmpty
               ? Future.value(const <IntakeEntity>[])
               : _intakes(day ?? widget.dates.first, day ?? widget.dates.last),
-          builder: (context, snapshot) => _TopFoods(
+          builder: (context, snapshot) => TopFoods(
             metric: widget.metric,
             color: widget.color,
             intakes: snapshot.data,
@@ -113,14 +114,56 @@ class _MacroDaysAndFoodsState extends State<MacroDaysAndFoods> {
   }
 }
 
-class _TopFoods extends StatelessWidget {
+/// The foods behind [metric] over the window [dates], loaded once: the
+/// Calories page's.
+class PeriodTopFoods extends StatefulWidget {
+  final FoodsMetric metric;
+  final List<DateTime> dates;
+  final Color color;
+  final IntakeLoader load;
+
+  const PeriodTopFoods({
+    super.key,
+    required this.metric,
+    required this.dates,
+    required this.color,
+    this.load = intakesBetween,
+  });
+
+  @override
+  State<PeriodTopFoods> createState() => _PeriodTopFoodsState();
+}
+
+class _PeriodTopFoodsState extends State<PeriodTopFoods> {
+  late final Future<List<IntakeEntity>> _intakes = widget.dates.isEmpty
+      ? Future.value(const <IntakeEntity>[])
+      : widget
+            .load(widget.dates.first, widget.dates.last)
+            .catchError((Object _) => const <IntakeEntity>[]);
+
+  @override
+  Widget build(BuildContext context) => FutureBuilder(
+    future: _intakes,
+    builder: (context, snapshot) => TopFoods(
+      metric: widget.metric,
+      color: widget.color,
+      intakes: snapshot.data,
+      scope: 'Last ${widget.dates.length} days',
+      onClearDay: null,
+    ),
+  );
+}
+
+/// The foods that gave the most of [metric], with a way to all of them.
+class TopFoods extends StatelessWidget {
   final FoodsMetric metric;
   final Color color;
   final List<IntakeEntity>? intakes;
   final String scope;
   final VoidCallback? onClearDay;
 
-  const _TopFoods({
+  const TopFoods({
+    super.key,
     required this.metric,
     required this.color,
     required this.intakes,
@@ -192,7 +235,9 @@ class _TopFoods extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.all(Dimens.spacing16),
               child: Text(
-                'No foods logged with ${metric.name} in this range.',
+                metric == FoodsMetric.energy
+                    ? 'No foods logged in this range.'
+                    : 'No foods logged with ${metric.name} in this range.',
                 style: text.bodyMedium?.copyWith(color: palette.textMuted),
               ),
             )
@@ -201,7 +246,11 @@ class _TopFoods extends StatelessWidget {
               if (i > 0) Divider(height: 1, color: palette.surfaceMuted),
               FoodShareRow(
                 share: share,
-                amount: share.value < 0.5 ? '<1 g' : '${share.value.round()} g',
+                amount: metric == FoodsMetric.energy
+                    ? energyText(context, share.value)
+                    : share.value < 0.5
+                    ? '<1 g'
+                    : '${share.value.round()} g',
                 percent: total > 0
                     ? '${(100 * share.value / total).round()}%'
                     : null,

@@ -14,7 +14,10 @@ import 'package:opennutritracker/core/domain/usecase/get_tracked_day_usecase.dar
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/fork/display/display_prefs.dart';
 import 'package:opennutritracker/fork/trends/detail_stats.dart';
+import 'package:opennutritracker/fork/display/macro_foods.dart'
+    show FoodsMetric;
 import 'package:opennutritracker/fork/trends/detail_widgets.dart';
+import 'package:opennutritracker/fork/trends/macro_contributors.dart';
 import 'package:opennutritracker/fork/trends/trend_detail.dart';
 import 'package:opennutritracker/fork/trends/trend_stats.dart';
 import 'package:opennutritracker/fork/trends/trends_widgets.dart';
@@ -58,12 +61,48 @@ class CaloriesDetailPage extends StatelessWidget {
             ),
             const SizedBox(height: Dimens.spacing16),
             MacroEnergyChart(state: state, dates: dates),
+            const SizedBox(height: Dimens.spacing16),
+            PeriodTopFoods(
+              key: ValueKey((dates.firstOrNull, dates.length)),
+              metric: FoodsMetric.energy,
+              dates: dates,
+              color: Theme.of(context).colorScheme.primary,
+              load: deps.loadIntakes,
+            ),
             if (dayOutcomes(state.days, dates) case final o
                 when o.logged > 0) ...[
               trendSection(context, 'How the days went'),
-              _DaysWent(outcomes: o, week: dates.length <= 7),
+              DaysWentCard(outcomes: o, week: dates.length <= 7),
             ],
             const WeekdayCard(),
+            ValueListenableBuilder(
+              valueListenable: deps.expenditure,
+              builder: (context, future, _) => FutureBuilder(
+                future: future,
+                builder: (context, snapshot) {
+                  final history = snapshot.data ?? const [];
+                  final split = weekendSplit(
+                    state.days,
+                    dates,
+                    balance: {
+                      for (final (i, b) in balanceSeries(
+                        history,
+                        dates,
+                      ).indexed)
+                        dates[i]: ?b,
+                    },
+                  );
+                  if (split == null) return const SizedBox.shrink();
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      trendSection(context, 'Weekdays and weekends'),
+                      WeekendCard(split: split),
+                    ],
+                  );
+                },
+              ),
+            ),
             if (macroShares(state.days, dates) case final shares?) ...[
               trendSection(context, 'Where the calories came from'),
               _Shares(shares: shares),
@@ -289,21 +328,29 @@ class MacroEnergyChart extends StatelessWidget {
 }
 
 /// The logged days against their goals, and the highest and lowest.
-class _DaysWent extends StatelessWidget {
+class DaysWentCard extends StatelessWidget {
   final ({
     int onTarget,
     int under,
     int over,
     int logged,
-    ({double kcal, DateTime date})? highest,
-    ({double kcal, DateTime date})? lowest,
+    DayValue? highest,
+    DayValue? lowest,
   })
   outcomes;
 
   /// A week names a day by its weekday, a longer range by its date.
   final bool week;
 
-  const _DaysWent({required this.outcomes, required this.week});
+  /// A day's value as shown: its energy, or grams.
+  final String Function(BuildContext, double) valueText;
+
+  const DaysWentCard({
+    super.key,
+    required this.outcomes,
+    required this.week,
+    this.valueText = energyText,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -313,8 +360,8 @@ class _DaysWent extends StatelessWidget {
         ? intl.DateFormat.E(locale)
         : intl.DateFormat.MMMd(locale);
     String days(int n) => n == 1 ? '1 day' : '$n days';
-    String day(({double kcal, DateTime date}) d) =>
-        '${energyText(context, d.kcal)} · ${format.format(d.date)}';
+    String day(DayValue d) =>
+        '${valueText(context, d.value)} · ${format.format(d.date)}';
     return AppCard(
       padding: const EdgeInsets.symmetric(
         horizontal: Dimens.spacing16,
@@ -457,6 +504,92 @@ class _WeekdayCardState extends State<WeekdayCard> {
       );
     },
   );
+}
+
+/// Monday to Friday against the weekend: the energy, the macros and the
+/// balance a day, each part's own mean.
+class WeekendCard extends StatelessWidget {
+  final ({WeekPart weekdays, WeekPart weekend}) split;
+
+  const WeekendCard({super.key, required this.split});
+
+  @override
+  Widget build(BuildContext context) {
+    final (:weekdays, :weekend) = split;
+    final text = Theme.of(context).textTheme;
+    final muted = paletteOf(context).textMuted;
+    String days(int n) => n == 1 ? '1 day' : '$n days';
+    String grams(double g) => '${g.round()} g';
+    String balance(double? b) =>
+        b == null ? '–' : energyText(context, b, signed: true);
+    final off = weekend.kcal - weekdays.kcal;
+    final rows = [
+      (
+        'Energy',
+        energyText(context, weekdays.kcal),
+        energyText(context, weekend.kcal),
+      ),
+      ('Carbs', grams(weekdays.carbs), grams(weekend.carbs)),
+      ('Fat', grams(weekdays.fat), grams(weekend.fat)),
+      ('Protein', grams(weekdays.protein), grams(weekend.protein)),
+      if (weekdays.balance != null || weekend.balance != null)
+        ('Balance', balance(weekdays.balance), balance(weekend.balance)),
+    ];
+    Widget cell(String s, {TextStyle? style, bool end = true}) => Expanded(
+      child: Text(s, textAlign: end ? TextAlign.end : null, style: style),
+    );
+    return AppCard(
+      padding: const EdgeInsets.all(Dimens.spacing16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              cell(
+                'A day',
+                style: text.labelMedium?.copyWith(color: muted),
+                end: false,
+              ),
+              cell(
+                'Mon–Fri\n${days(weekdays.days)}',
+                style: text.labelMedium?.copyWith(color: muted),
+              ),
+              cell(
+                'Sat–Sun\n${days(weekend.days)}',
+                style: text.labelMedium?.copyWith(color: muted),
+              ),
+            ],
+          ),
+          for (final (label, a, b) in rows)
+            MergeSemantics(
+              child: Padding(
+                padding: const EdgeInsets.only(top: Dimens.spacing8),
+                child: Row(
+                  children: [
+                    cell(label, style: text.bodyMedium, end: false),
+                    cell(a, style: text.bodyMedium),
+                    cell(
+                      b,
+                      style: text.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          const SizedBox(height: Dimens.spacing8),
+          Text(
+            off.abs() < 100
+                ? 'Weekends run about the same as weekdays.'
+                : 'Weekends run ${energyText(context, off.abs())} a day '
+                      '${off > 0 ? 'over' : 'under'} weekdays.',
+            style: text.bodySmall?.copyWith(color: muted),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 /// The share of the energy each macro gave, against its goal's share.
