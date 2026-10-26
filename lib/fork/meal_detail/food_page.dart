@@ -99,7 +99,7 @@ class FoodPageHeader extends StatelessWidget {
                 [
                   _source(),
                   if (per100 != null)
-                    '${energyText(context, per100)} per 100 g',
+                    '${energyText(context, per100)} per 100 ${meal.isLiquid ? 'ml' : 'g'}',
                 ].join(' · '),
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: palette.textMuted,
@@ -489,7 +489,9 @@ class _TodayAfterAddingState extends State<TodayAfterAdding> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Today after adding',
+                DateUtils.isSameDay(widget.day, DateTime.now())
+                    ? 'Today after adding'
+                    : 'That day after adding',
                 style: theme.textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.w700,
                 ),

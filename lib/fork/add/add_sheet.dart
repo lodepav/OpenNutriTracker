@@ -243,7 +243,9 @@ class _AddSheetState extends State<AddSheet> {
             ),
             for (final (index, intake) in shown.indexed)
               MealItemCard(
-                key: ValueKey('add-item-recent-${intake.meal.code}-$_type'),
+                key: ValueKey(
+                  'add-item-recent-${intake.meal.code ?? intake.meal.name}-$_type',
+                ),
                 day: widget.day,
                 mealEntity: intake.meal,
                 addMealType: _mealType,
