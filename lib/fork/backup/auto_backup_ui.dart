@@ -21,7 +21,7 @@ class AutoBackupTile extends StatelessWidget {
   );
 }
 
-String _when(DateTime at) => DateFormat.yMMMd().add_Hm().format(at);
+String _when(DateTime at) => DateFormat.yMMMd().add_jm().format(at);
 
 String _summary(AutoBackupState state) {
   if (!state.isOn) return 'Off';
@@ -91,8 +91,9 @@ class _AutoBackupScreenState extends State<AutoBackupScreen> {
             children: [
               Text(
                 'When you leave the app, at most once an hour, it saves a '
-                "backup of this profile's diary, recipes, foods, weights, "
-                "water, fasts and goals into a folder you choose. Today's "
+                "backup of every profile's diary, recipes, foods, weights, "
+                'water, fasts, goals, body measurements and progress photos '
+                "into a folder you choose. Today's "
                 'file is updated during the day, and the newest '
                 '${AutoBackup.keep} days are kept.',
                 style: textTheme.bodyMedium,
@@ -101,7 +102,8 @@ class _AutoBackupScreenState extends State<AutoBackupScreen> {
               Text(
                 'The files stay on this phone. To keep a copy in Google Drive, '
                 'sync the folder with an app such as Autosync for Google '
-                'Drive or FolderSync. The files are not encrypted.',
+                'Drive or FolderSync. The files are not encrypted, photos '
+                'included.',
                 style: textTheme.bodyMedium,
               ),
               const SizedBox(height: 8),

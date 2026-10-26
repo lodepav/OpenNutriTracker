@@ -78,6 +78,34 @@ void main() {
     );
   }
 
+  testWidgets('left is the shown goal less the shown eaten', (tester) async {
+    final semantics = tester.ensureSemantics();
+    await tester.binding.setSurfaceSize(const Size(500, 1600));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      _wrap(
+        const DashboardWidget(
+          totalKcalSupplied: 2896.6,
+          totalKcalBurned: 0,
+          totalKcalDaily: 3097.4,
+          totalKcalLeft: 200.8,
+          totalCarbsIntake: 100,
+          totalFatsIntake: 30,
+          totalProteinsIntake: 60,
+          totalCarbsGoal: 375,
+          totalFatsGoal: 69,
+          totalProteinsGoal: 93,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('3097'), findsOneWidget);
+    expect(find.text('2897'), findsOneWidget);
+    // 3097 − 2897, not a truncated 199 or a rounded 201
+    expect(find.bySemanticsLabel(RegExp(r'^200 ')), findsWidgets);
+    semantics.dispose();
+  });
+
   testWidgets(
     'kcal gauge uses the error color when intake exceeds the daily goal',
     (tester) async {

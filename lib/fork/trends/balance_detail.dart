@@ -124,7 +124,9 @@ class _WeightTiles extends StatelessWidget {
           label: 'From the balance',
           value: signedText(weightIn(wu, expected), 1),
           unit: label,
-          note: 'the average day over ${days(dates.length)}, at 7700 kcal a kg',
+          note:
+              'the average day over ${days(dates.length)}, at '
+              '${energyValue(context, 7700)} ${energyUnit(context)} a kg',
         ),
         FigureTile(
           label: 'Trend weight',

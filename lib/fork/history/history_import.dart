@@ -510,7 +510,38 @@ class HistoryImportTile extends StatelessWidget {
   static int _csvFirst(String name) =>
       name.toLowerCase().endsWith('.csv') ? 0 : 1;
 
+  /// Which files to export and pick, before the picker opens; true to
+  /// choose them.
+  static Future<bool> confirmPick(BuildContext context) async =>
+      await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Import history'),
+          content: const Text(
+            'From MacroFactor, export both the food log (CSV, with each '
+            "food's time) and the workbook (weigh-ins and measurements), "
+            'then pick them together: long-press the first file to choose '
+            'several.\n\n'
+            'From MyFitnessPal or Cronometer, pick their exported CSV files. '
+            'Days already logged here are kept.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              key: const ValueKey('history-import-choose'),
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Choose files'),
+            ),
+          ],
+        ),
+      ) ??
+      false;
+
   Future<void> _run(BuildContext context) async {
+    if (!await confirmPick(context) || !context.mounted) return;
     final messenger = ScaffoldMessenger.of(context);
     void say(String text) =>
         messenger.showSnackBar(SnackBar(content: Text(text)));

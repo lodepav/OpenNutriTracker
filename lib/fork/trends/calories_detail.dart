@@ -104,7 +104,7 @@ class CaloriesDetailPage extends StatelessWidget {
               ),
             ),
             if (macroShares(state.days, dates) case final shares?) ...[
-              trendSection(context, 'Where the calories came from'),
+              trendSection(context, 'Where the energy came from'),
               _Shares(shares: shares),
             ],
           ],

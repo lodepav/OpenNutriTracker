@@ -145,12 +145,26 @@ class _DashboardWidgetState extends State<DashboardWidget> {
           (widget.totalKcalDaily - widget.totalKcalLeft) /
           widget.totalKcalDaily;
     }
-    final displayValue = usesKilojoules
-        ? UnitCalc.kcalToKj(kcalValue)
-        : kcalValue;
     final displaySupplied = usesKilojoules
         ? UnitCalc.kcalToKj(widget.totalKcalSupplied)
         : widget.totalKcalSupplied;
+    final displayGoal = usesKilojoules
+        ? UnitCalc.kcalToKj(widget.totalKcalDaily)
+        : widget.totalKcalDaily;
+    // Left is the goal less what was eaten, as shown: each rounded first,
+    // so 3097 − 2897 reads 200, not a truncated 199.
+    final leftIsGoalLessEaten =
+        (widget.totalKcalDaily -
+                widget.totalKcalSupplied -
+                widget.totalKcalLeft)
+            .abs() <
+        0.5;
+    final double displayValue =
+        leftIsGoalLessEaten && widget.totalKcalLeft <= widget.totalKcalDaily
+        ? (displayGoal.round() - displaySupplied.round()).abs().toDouble()
+        : usesKilojoules
+        ? UnitCalc.kcalToKj(kcalValue)
+        : kcalValue;
     final displayBurned = usesKilojoules
         ? UnitCalc.kcalToKj(widget.totalKcalBurned)
         : widget.totalKcalBurned;
@@ -173,9 +187,6 @@ class _DashboardWidgetState extends State<DashboardWidget> {
         final ringLabel = showsEaten
             ? '${usesKilojoules ? S.of(context).kjLabel : S.of(context).kcalLabel} eaten'
             : kcalLabelText;
-        final displayGoal = usesKilojoules
-            ? UnitCalc.kcalToKj(widget.totalKcalDaily)
-            : widget.totalKcalDaily;
         return Padding(
           padding: const EdgeInsets.fromLTRB(
             Dimens.spacing16,
@@ -191,7 +202,7 @@ class _DashboardWidgetState extends State<DashboardWidget> {
                   children: [
                     Semantics(
                       identifier: 'home-kcal-gauge',
-                      label: '${ringValue.toInt()} $ringLabel',
+                      label: '${ringValue.round()} $ringLabel',
                       hint: S.of(context).settingsKcalGoalInfoLabel,
                       button: true,
                       excludeSemantics: true,
@@ -223,7 +234,7 @@ class _DashboardWidgetState extends State<DashboardWidget> {
                                 AnimatedFlipCounter(
                                   duration: const Duration(milliseconds: 800),
                                   curve: AppMotion.emphasized,
-                                  value: ringValue.toInt(),
+                                  value: ringValue.round(),
                                   textStyle: textTheme.headlineSmall?.copyWith(
                                     height: 1,
                                     fontWeight: FontWeight.w700,
@@ -248,7 +259,7 @@ class _DashboardWidgetState extends State<DashboardWidget> {
                         children: [
                           _StatLine(
                             label: 'Eaten',
-                            value: '${displaySupplied.toInt()}',
+                            value: '${displaySupplied.round()}',
                           ),
                           // "+" only where it is added
                           FutureBuilder<ActivityCredit>(
@@ -266,16 +277,16 @@ class _DashboardWidgetState extends State<DashboardWidget> {
                                 : credit.data?.raisesGoal ?? true
                                 ? _StatLine(
                                     label: 'Burned',
-                                    value: '+${displayBurned.toInt()}',
+                                    value: '+${displayBurned.round()}',
                                   )
                                 : _StatLine(
                                     label: 'Burned, not added',
-                                    value: '${displayBurned.toInt()}',
+                                    value: '${displayBurned.round()}',
                                   ),
                           ),
                           _StatLine(
                             label: 'Goal',
-                            value: '${displayGoal.toInt()}',
+                            value: '${displayGoal.round()}',
                           ),
                           const SizedBox(height: Dimens.spacing8),
                           SegmentedButton<bool>(
