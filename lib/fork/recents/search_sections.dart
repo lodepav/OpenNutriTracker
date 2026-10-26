@@ -5,7 +5,7 @@ import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dart';
 import 'package:opennutritracker/features/add_meal/presentation/add_meal_type.dart';
 import 'package:opennutritracker/features/add_meal/presentation/bloc/favourite_meal_bloc.dart';
-import 'package:opennutritracker/features/add_meal/presentation/widgets/meal_item_card.dart';
+import 'package:opennutritracker/fork/screens/add_meal/meal_item_card.dart';
 
 /// The add-meal screen before anything is typed (seam S116, MacroFactor's
 /// search): the foods from the history, each at the amount last logged,
