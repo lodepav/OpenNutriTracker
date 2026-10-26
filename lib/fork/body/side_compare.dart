@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:opennutritracker/core/utils/calc/calendar_day_calc.dart';
 import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
@@ -294,10 +295,7 @@ class _SidesChart extends StatelessWidget {
       );
     }
     final first = measurements.first.date;
-    double x(DateTime d) => DateTime.utc(d.year, d.month, d.day)
-        .difference(DateTime.utc(first.year, first.month, first.day))
-        .inDays
-        .toDouble();
+    double x(DateTime d) => CalendarDayCalc.daysBetween(first, d).toDouble();
     List<FlSpot> spots(BodyMetric metric) => [
       for (final m in measurements)
         if (m.metric == metric) FlSpot(x(m.date), units.shown(m.value)),

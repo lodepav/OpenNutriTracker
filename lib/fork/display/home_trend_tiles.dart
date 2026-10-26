@@ -1,13 +1,19 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
+import 'package:opennutritracker/features/home/presentation/bloc/home_bloc.dart';
 import 'package:opennutritracker/features/trends/presentation/bloc/trends_bloc.dart';
 import 'package:opennutritracker/features/trends/presentation/trends_page.dart'
     show openTrendFromHome;
 import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
+import 'package:opennutritracker/fork/adaptive/goal_plan_card.dart'
+    show paceChanges;
 import 'package:opennutritracker/fork/body/measurement_store.dart';
 import 'package:opennutritracker/fork/body/side_compare.dart';
 import 'package:opennutritracker/fork/display/home_tiles.dart';
+import 'package:opennutritracker/fork/goal/goal_progress.dart';
 import 'package:opennutritracker/fork/report/nutrient_explorer.dart'
     show intakesBetween;
 import 'package:opennutritracker/fork/trends/nutrient_trends.dart';
@@ -19,6 +25,7 @@ typedef _Extras = ({
   List<ExpenditureDay> history,
   MicroData? micros,
   List<Measurement> measurements,
+  GoalProgress? goal,
 });
 
 /// Trends' tiles added to Home, [ids] of them, as Home's tiles:
@@ -33,12 +40,17 @@ class HomeTrendTiles extends StatefulWidget {
   /// For tests; the app's from the locator.
   final TrendsBloc? bloc;
 
+  /// Home's reloads, after something was logged; the tiles read Trends
+  /// again on each. For tests; the app's from the locator.
+  final Stream<Object?>? homeLoads;
+
   const HomeTrendTiles({
     super.key,
     required this.ids,
     required this.loadExpenditure,
     required this.builder,
     this.bloc,
+    this.homeLoads,
   });
 
   @override
@@ -47,8 +59,14 @@ class HomeTrendTiles extends StatefulWidget {
 
 class _HomeTrendTilesState extends State<HomeTrendTiles> {
   late final TrendsBloc _bloc = widget.bloc ?? locator<TrendsBloc>();
+  StreamSubscription<Object?>? _homeLoads;
 
-  /// Read again for a new state, or once the measurements change.
+  /// The tiles last built, shown while Trends reloads, so Home's grid
+  /// keeps its arrangement.
+  Map<String, Widget> _last = const {};
+
+  /// Read again for a new state, or once the measurements or the pace
+  /// change.
   Future<_Extras>? _extras;
   TrendsLoaded? _extrasFor;
 
@@ -74,6 +92,7 @@ class _HomeTrendTilesState extends State<HomeTrendTiles> {
               (Object _) => <Measurement>[],
             )
           : const <Measurement>[],
+      goal: widget.ids.contains('goal') ? await TrendsOverview.goal() : null,
     );
   }
 
@@ -85,6 +104,15 @@ class _HomeTrendTilesState extends State<HomeTrendTiles> {
     if (_bloc.state is! TrendsLoaded) _bloc.add(const LoadTrendsEvent());
     SidePartPref.ensureLoaded();
     MeasurementStore.changes.addListener(_remeasure);
+    paceChanges.addListener(_remeasure);
+    final homeLoads =
+        widget.homeLoads ??
+        (locator.isRegistered<HomeBloc>()
+            ? locator<HomeBloc>().stream.where((s) => s is HomeLoadedState)
+            : null);
+    _homeLoads = homeLoads?.listen(
+      (_) => _bloc.add(const RefreshTrendsEvent()),
+    );
   }
 
   @override
@@ -97,6 +125,8 @@ class _HomeTrendTilesState extends State<HomeTrendTiles> {
   @override
   void dispose() {
     MeasurementStore.changes.removeListener(_remeasure);
+    paceChanges.removeListener(_remeasure);
+    _homeLoads?.cancel();
     super.dispose();
   }
 
@@ -106,7 +136,7 @@ class _HomeTrendTilesState extends State<HomeTrendTiles> {
     builder: (context, _, _) => BlocBuilder<TrendsBloc, TrendsState>(
       bloc: _bloc,
       builder: (context, state) {
-        if (state is! TrendsLoaded) return widget.builder(const {});
+        if (state is! TrendsLoaded) return widget.builder(_last);
         final now = DateTime.now();
         final dates = windowDates(
           DateTime(now.year, now.month, now.day),
@@ -116,7 +146,7 @@ class _HomeTrendTilesState extends State<HomeTrendTiles> {
           future: _extrasOf(state, dates),
           builder: (context, snapshot) {
             final extras = snapshot.data;
-            if (extras == null) return widget.builder(const {});
+            if (extras == null) return widget.builder(_last);
             final tiles = trendTiles(
               context,
               state,
@@ -124,23 +154,28 @@ class _HomeTrendTilesState extends State<HomeTrendTiles> {
               history: extras.history,
               micros: extras.micros,
               measurements: extras.measurements,
+              goal: extras.goal,
               open: (m) => openTrendFromHome(context, m),
             );
-            return widget.builder({
-              for (final t in tiles)
-                if (widget.ids.contains(t.id.substring('trends-tile-'.length)))
-                  t.id.substring('trends-tile-'.length): HomeTile(
-                    identifier: 'home-${t.id}',
-                    title: t.label,
-                    value: t.value,
-                    valueColor: t.valueColor,
-                    note: t.suffix,
-                    // No room kept for a tile with no chart.
-                    below: t.chart is SizedBox ? null : t.chart,
-                    onTap: t.onTap,
-                    hint: 'Open ${t.label.replaceAll(' · avg', '')}',
-                  ),
-            });
+            return widget.builder(
+              _last = {
+                for (final t in tiles)
+                  if (widget.ids.contains(
+                    t.id.substring('trends-tile-'.length),
+                  ))
+                    t.id.substring('trends-tile-'.length): HomeTile(
+                      identifier: 'home-${t.id}',
+                      title: t.label,
+                      value: t.value,
+                      valueColor: t.valueColor,
+                      note: t.suffix,
+                      // No room kept for a tile with no chart.
+                      below: t.chart is SizedBox ? null : t.chart,
+                      onTap: t.onTap,
+                      hint: 'Open ${t.label.replaceAll(' · avg', '')}',
+                    ),
+              },
+            );
           },
         );
       },

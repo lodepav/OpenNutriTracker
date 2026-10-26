@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:opennutritracker/core/utils/hive_db_provider.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
@@ -42,10 +41,8 @@ Set<String> addable(Iterable<String> optional, Layout layout) => {
 /// One list's layout under [key], per profile in the fork's box.
 class LayoutStore {
   final String key;
-  final Future<Box<dynamic>> Function() _box;
 
-  LayoutStore(this.key, [Future<Box<dynamic>> Function()? box])
-    : _box = box ?? AdaptiveStore.openActiveBox;
+  LayoutStore(this.key);
 
   static final _current = <String, ValueNotifier<Layout>>{};
   static var _listening = false;
@@ -81,7 +78,7 @@ class LayoutStore {
   }
 
   Future<Layout> layout() async {
-    final json = (await _box()).get(key);
+    final json = (await AdaptiveStore.openActiveBox()).get(key);
     if (json is! Map) return (order: <String>[], hidden: <String>{});
     return (
       order: [for (final id in json['order'] as List) id as String],
@@ -91,7 +88,7 @@ class LayoutStore {
 
   Future<void> save(Layout layout) async {
     current(key).value = layout;
-    await (await _box()).put(key, {
+    await (await AdaptiveStore.openActiveBox()).put(key, {
       'order': layout.order,
       'hidden': layout.hidden.toList(),
     });

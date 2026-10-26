@@ -12,18 +12,13 @@ import 'package:opennutritracker/fork/adaptive/trend_points.dart';
 import 'package:opennutritracker/fork/phases/phases.dart';
 import 'package:opennutritracker/fork/trends/detail_stats.dart';
 import 'package:opennutritracker/fork/trends/detail_widgets.dart';
-import 'package:opennutritracker/fork/trends/trend_stats.dart' show isLogged;
+import 'package:opennutritracker/core/utils/calc/calendar_day_calc.dart';
+import 'package:opennutritracker/fork/trends/trend_stats.dart'
+    show isLogged, meanOf;
 import 'package:opennutritracker/fork/units/energy_text.dart';
 import 'package:opennutritracker/fork/units/weight_text.dart';
 
 DateTime _date(DateTime t) => DateTime(t.year, t.month, t.day);
-
-/// Calendar days from [from] to [to], whatever the clocks do between.
-int _days(DateTime from, DateTime to) => DateTime.utc(
-  to.year,
-  to.month,
-  to.day,
-).difference(DateTime.utc(from.year, from.month, from.day)).inDays;
 
 /// How one phase of a plan went, from its first day to its last, or to
 /// today while it runs.
@@ -67,14 +62,14 @@ class PhaseReport {
     required this.endBurnKcal,
   });
 
-  int get length => _days(first, last) + 1;
+  int get length => CalendarDayCalc.daysBetween(first, last) + 1;
 
   double? get changeKg =>
       startKg == null || endKg == null ? null : endKg! - startKg!;
 
   /// The change a week; null under a week in.
   double? get kgPerWeek {
-    final days = _days(first, last);
+    final days = CalendarDayCalc.daysBetween(first, last);
     return changeKg == null || days < 7 ? null : changeKg! / days * 7;
   }
 }
@@ -106,7 +101,8 @@ List<PhaseReport> phaseReports(
     ];
     final phase = plan.phases[i];
     final startKg = trendByDay[first];
-    var planned = phase.kgPerWeek * _days(first, last) / 7;
+    var planned =
+        phase.kgPerWeek * CalendarDayCalc.daysBetween(first, last) / 7;
     if (phase.untilKg case final until? when startKg != null) {
       final toGo = until - startKg;
       if (toGo * phase.kgPerWeek > 0 && planned.abs() > toGo.abs()) {
@@ -128,9 +124,7 @@ List<PhaseReport> phaseReports(
         startKg: startKg,
         endKg: trendByDay[last],
         plannedKg: planned,
-        eatenKcal: eaten.isEmpty
-            ? null
-            : eaten.reduce((a, b) => a + b) / eaten.length,
+        eatenKcal: meanOf(eaten),
         days: (
           onTarget: outcomes.onTarget,
           under: outcomes.under,
@@ -264,7 +258,6 @@ class _ReportCard extends StatelessWidget {
     final planPace = r.phase.kgPerWeek == 0
         ? 'maintenance'
         : '${weightChangeText(r.phase.kgPerWeek, unit)} a week';
-    String days(int n) => n == 1 ? '1 day' : '$n days';
     return Padding(
       padding: const EdgeInsets.only(top: Dimens.spacing16),
       child: Column(

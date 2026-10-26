@@ -48,6 +48,10 @@ class HomeTiles extends StatelessWidget {
   /// Opens a metric's Trends page, swapped out in tests.
   final void Function(BuildContext context, TrendMetric metric) openTrend;
 
+  /// Home's reloads, for Trends' tiles added here; the app's from the
+  /// locator.
+  final Stream<Object?>? homeLoads;
+
   const HomeTiles({
     super.key,
     required this.weightKg,
@@ -58,6 +62,7 @@ class HomeTiles extends StatelessWidget {
     this.loadExpenditure = _expenditure,
     this.fasting = const FastingTile(),
     this.openTrend = openTrendFromHome,
+    this.homeLoads,
   });
 
   // Async, so a store not there is a failed future: the tile shows what
@@ -110,6 +115,7 @@ class HomeTiles extends StatelessWidget {
       return HomeTrendTiles(
         ids: added,
         loadExpenditure: loadExpenditure,
+        homeLoads: homeLoads,
         builder: (trends) => _grid(arranged({...own, ...trends}, layout)),
       );
     },

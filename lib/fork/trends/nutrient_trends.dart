@@ -142,7 +142,6 @@ class _MicroDetailState extends State<MicroDetail> {
       final foods = micro?.summary.foods ?? const [];
       final without = micro?.summary.foodsWithout ?? 0;
       final shown = _allFoods ? foods : foods.take(microTopFoods).toList();
-      String days(int n) => n == 1 ? '1 day' : '$n days';
 
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,

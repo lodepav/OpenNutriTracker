@@ -428,12 +428,14 @@ void main() {
           _ate(DateTime(2026, 10, 25, 8), sodium: 400),
           _ate(DateTime(2026, 10, 26, 2), sodium: 100),
           _ate(DateTime(2026, 10, 26, 9)),
+          // Added from the Diary: the day's label, kept on its day.
+          _ate(DateTime.utc(2026, 10, 26), sodium: 50),
         ],
         days,
         sodium,
         dayStartMinutes: 240,
       ),
-      [500, null],
+      [500, 50],
     );
   });
 }

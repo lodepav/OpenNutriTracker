@@ -301,3 +301,6 @@ class ExplainerLink extends StatelessWidget {
     ),
   );
 }
+
+/// [n] days, in words: "1 day", "3 days".
+String days(int n) => n == 1 ? '1 day' : '$n days';

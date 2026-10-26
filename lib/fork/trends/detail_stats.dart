@@ -161,9 +161,7 @@ typedef WeekPart = ({
       carbs: mean((d) => d.carbsTracked),
       fat: mean((d) => d.fatTracked),
       protein: mean((d) => d.proteinTracked),
-      balance: balances.isEmpty
-          ? null
-          : balances.reduce((a, b) => a + b) / balances.length,
+      balance: meanOf(balances),
     );
   }
 
@@ -406,9 +404,8 @@ scaleNoise(List<WeightLogEntity> entries, List<DateTime> dates) {
   double share = 1.2,
   int atLeast = 2,
 }) {
-  final known = values.whereType<double>().toList();
-  if (known.isEmpty) return null;
-  final mean = known.reduce((a, b) => a + b) / known.length;
+  final mean = meanOf(values);
+  if (mean == null) return null;
   final after = <double>[], other = <double>[];
   for (var i = 1; i < dates.length; i++) {
     final gap = byDay[dates[i]];
@@ -417,8 +414,7 @@ scaleNoise(List<WeightLogEntity> entries, List<DateTime> dates) {
     (before > mean * share ? after : other).add(gap);
   }
   if (after.length < atLeast || other.length < atLeast) return null;
-  double avg(List<double> v) => v.reduce((a, b) => a + b) / v.length;
-  return (after: avg(after), other: avg(other), days: after.length);
+  return (after: meanOf(after)!, other: meanOf(other)!, days: after.length);
 }
 
 /// [nutrient] eaten each day of [dates], over [intakes] counted on the
@@ -433,10 +429,10 @@ List<double?> nutrientByDay(
   for (final i in intakes) {
     final amount = nutrient.of(i);
     if (amount == null) continue;
-    final day = DayBoundaryCalc.logicalDayOfMinutes(
-      i.dateTime,
-      dayStartMinutes,
-    );
+    // A day label (a Diary or import entry's midnight) stays on its day,
+    // as the Diary keeps it; a clock time moves by the boundary.
+    final l = DayBoundaryCalc.dayLabelOf(i.dateTime, dayStartMinutes);
+    final day = DateTime(l.year, l.month, l.day);
     sums[day] = (sums[day] ?? 0) + amount;
   }
   return [for (final d in dates) sums[d]];

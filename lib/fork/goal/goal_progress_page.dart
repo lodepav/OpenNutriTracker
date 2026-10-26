@@ -47,9 +47,7 @@ Future<GoalCalories> _loadCalories() async {
   ];
   return (
     goalKcal: days.isEmpty ? null : days.last.calorieGoal,
-    meanKcal: logged.isEmpty
-        ? null
-        : logged.reduce((a, b) => a + b) / logged.length,
+    meanKcal: meanOf(logged),
   );
 }
 

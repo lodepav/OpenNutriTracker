@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:opennutritracker/fork/layout/layout_store.dart';
 
 /// Trends' cards below the tile grid (S120), in their first order, with
@@ -14,15 +13,11 @@ const trendCards = {
   'photos': 'Progress photos',
 };
 
-/// The order and the hidden cards.
-typedef TrendsLayout = Layout;
-
 /// The cards' layout, per profile in the fork's box.
 class TrendsLayoutStore extends LayoutStore {
   static const storeKey = 'trendsLayout';
 
-  TrendsLayoutStore([Future<Box<dynamic>> Function()? box])
-    : super(storeKey, box);
+  TrendsLayoutStore() : super(storeKey);
 
   /// The active profile's; Trends rebuilds on it.
   static ValueNotifier<Layout> get current => LayoutStore.current(storeKey);
@@ -32,8 +27,7 @@ class TrendsLayoutStore extends LayoutStore {
 class TrendsTilesStore extends LayoutStore {
   static const storeKey = 'trendsTiles';
 
-  TrendsTilesStore([Future<Box<dynamic>> Function()? box])
-    : super(storeKey, box);
+  TrendsTilesStore() : super(storeKey);
 
   static ValueNotifier<Layout> get current => LayoutStore.current(storeKey);
 }

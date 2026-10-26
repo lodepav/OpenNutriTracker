@@ -614,6 +614,48 @@ void main() {
     expect(bar.value, 0.25);
   });
 
+  testWidgets('the Goal tile past the target: there, as Goal progress says', (
+    tester,
+  ) async {
+    TrendsOverview.loadGoal = () async => (
+      inputs: null,
+      progress: GoalProgress(
+        start: GoalStart(date: day(-60), kg: 80, targetKg: 75),
+        nowKg: 74,
+        paceKgPerWeek: -0.5,
+        trend: const [80, 74],
+        today: day(0),
+      ),
+    );
+    await pumpTrends(
+      tester,
+      loaded(
+        targetWeightKg: 75,
+        weight: [WeightLogEntity(date: day(0), weightKg: 74)],
+      ),
+    );
+    await showTile(tester, 'goal');
+    expect(tileText(tester, 'goal'), contains('There'));
+    expect(tileText(tester, 'goal'), isNot(contains('to go')));
+    // The Weight page's own goal tile says the same.
+    await openTile(tester, 'weight');
+    await tester.scrollUntilVisible(
+      find.text('To your goal'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(
+      find.descendant(
+        of: find.ancestor(
+          of: find.text('To your goal'),
+          matching: find.byType(FigureTile),
+        ),
+        matching: find.text('There'),
+      ),
+      findsOne,
+    );
+  });
+
   testWidgets('Water: its average and goal over upstream\'s chart', (
     tester,
   ) async {
