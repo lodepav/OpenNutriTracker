@@ -202,7 +202,7 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
     final written = await locator<MealDetailBloc>().addIntake(
       context,
       'g',
-      portion.grams.toString(),
+      portion.grams.toStringAsFixed(1), // [fork] S142 one decimal
       type,
       portion.recipe.toMealEntity(),
       DateTime.now(),

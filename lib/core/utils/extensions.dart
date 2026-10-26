@@ -60,7 +60,12 @@ extension DisplayDouble on double? {
     if (this == null) {
       return "";
     } else {
-      return toString();
+      // [fork] S142: "45", not "45.0", in a form's field (A6)
+      final value = this!;
+      return value == value.truncateToDouble() && value.abs() < 1e15
+          ? value.toInt().toString()
+          : value.toString();
+      // [/fork]
     }
   }
 }

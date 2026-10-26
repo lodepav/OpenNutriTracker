@@ -33,6 +33,7 @@ import 'package:opennutritracker/fork/copy/copy_ui.dart' show mealLabel;
 // [fork] S125 food-page
 import 'package:opennutritracker/fork/widget/meal_picker_chip.dart';
 import 'package:opennutritracker/fork/units/amount_text.dart' show servingTextAgrees; // [fork] S142
+import 'package:opennutritracker/core/utils/extensions.dart'; // [fork] S142
 // [/fork]
 
 class MealDetailBottomSheet extends StatefulWidget {
@@ -563,7 +564,8 @@ class _MealDetailBottomSheetState extends State<MealDetailBottomSheet> {
             servingTextAgrees(servingSize, widget.product.servingQuantity))
             // [/fork]
         ? localizeServingLabel(S.of(context), servingSize)
-        : '${S.of(context).servingLabel} (${widget.product.servingQuantity} ${widget.product.servingUnit})';
+        // [fork] S142: "45 g", not "45.0 gml"
+        : '${S.of(context).servingLabel} (${widget.product.servingQuantity.toStringOrEmpty()} ${widget.product.servingUnit == 'gml' ? 'g' : widget.product.servingUnit})';
     // The label is the food's own text, in grams or millilitres (#1368).
     final servingText = widget.usesImperialUnits
         ? imperialServingLabel(S.of(context), servingLabel)

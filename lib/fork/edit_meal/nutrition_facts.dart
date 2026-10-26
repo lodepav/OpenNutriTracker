@@ -78,9 +78,14 @@ class FactsRow extends StatelessWidget {
           ),
           const SizedBox(width: Dimens.spacing4),
           SizedBox(
-            width: MediaQuery.textScalerOf(context).scale(36).clamp(36, 84),
+            width: MediaQuery.textScalerOf(context).scale(44).clamp(44, 110),
             child: ExcludeSemantics(
-              child: Text(unit, style: theme.textTheme.bodyMedium),
+              // A unit never breaks ("kca / l" at 200%, A6)
+              child: Text(
+                unit,
+                softWrap: false,
+                style: theme.textTheme.bodyMedium,
+              ),
             ),
           ),
         ],

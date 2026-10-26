@@ -272,7 +272,7 @@ class _BasketSheetState extends State<BasketSheet> {
                         trailing: IconButton(
                           key: ValueKey('basket-remove-$i'),
                           icon: const Icon(Icons.close_rounded),
-                          tooltip: 'Remove',
+                          tooltip: 'Remove ${item.meal.name ?? ''}',
                           onPressed: _logging
                               ? null
                               : () {
