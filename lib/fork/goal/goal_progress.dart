@@ -71,20 +71,26 @@ class GoalStart {
 /// same target and pace; with none stored, the first day of [trend]
 /// (oldest first, the last [today]); a changed target starts today, and a
 /// changed pace starts the plan today from the trend then. A start kept
-/// before the pace was takes the pace as it is.
+/// before the pace was takes the pace from [paceSince], the day the
+/// check-ins first show it, when that is after the start and in [trend].
 GoalStart resolveGoalStart({
   required GoalStart? stored,
   required double targetKg,
   required double paceKgPerWeek,
   required List<double> trend,
   required DateTime today,
+  DateTime? paceSince,
 }) {
   if (stored != null && (stored.targetKg - targetKg).abs() < 0.05) {
     final pace = stored.paceKgPerWeek;
     if (pace != null && (pace - paceKgPerWeek).abs() < 0.001) return stored;
-    return pace == null
-        ? stored.replanned(stored.planDate, stored.planKg, paceKgPerWeek)
-        : stored.replanned(today, trend.last, paceKgPerWeek);
+    if (pace != null) return stored.replanned(today, trend.last, paceKgPerWeek);
+    final i = paceSince == null
+        ? -1
+        : trend.length - 1 - CalendarDayCalc.daysBetween(paceSince, today);
+    return paceSince != null && paceSince.isAfter(stored.date) && i >= 0
+        ? stored.replanned(paceSince, trend[i], paceKgPerWeek)
+        : stored.replanned(stored.planDate, stored.planKg, paceKgPerWeek);
   }
   if (stored == null) {
     return GoalStart(
@@ -100,6 +106,19 @@ GoalStart resolveGoalStart({
     targetKg: targetKg,
     paceKgPerWeek: paceKgPerWeek,
   );
+}
+
+/// The first day of the latest run of [checkIns] (oldest first) at
+/// [paceKgPerWeek]; null when none records a pace, or every one is at it.
+DateTime? paceSetOn(List<CheckInRecord> checkIns, double paceKgPerWeek) {
+  DateTime? since;
+  for (final c in checkIns.reversed) {
+    final rate = c.goalRateKgPerWeek;
+    if (rate == null) break;
+    if ((rate - paceKgPerWeek).abs() >= 0.001) return since;
+    since = c.date;
+  }
+  return null;
 }
 
 /// How far a goal has come, from [start] to [nowKg], against the plan of
@@ -287,6 +306,9 @@ class GoalStartStore {
       stored: stored,
       targetKg: target,
       paceKgPerWeek: inputs.paceKgPerWeek,
+      paceSince: stored == null || stored.paceKgPerWeek != null
+          ? null
+          : paceSetOn(await _store.history(), inputs.paceKgPerWeek),
       trend: inputs.pastTrendKg,
       today: today,
     );
