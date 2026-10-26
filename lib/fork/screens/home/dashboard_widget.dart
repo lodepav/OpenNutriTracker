@@ -151,8 +151,8 @@ class _DashboardWidgetState extends State<DashboardWidget> {
     final displayGoal = usesKilojoules
         ? UnitCalc.kcalToKj(widget.totalKcalDaily)
         : widget.totalKcalDaily;
-    // Left is the goal less what was eaten, as shown: each rounded first,
-    // so 3097 − 2897 reads 200, not a truncated 199.
+    // Left is the goal less what was eaten, as shown: each truncated first,
+    // as every energy figure is (energyValue), so the three add up.
     final leftIsGoalLessEaten =
         (widget.totalKcalDaily -
                 widget.totalKcalSupplied -
@@ -161,7 +161,7 @@ class _DashboardWidgetState extends State<DashboardWidget> {
         0.5;
     final double displayValue =
         leftIsGoalLessEaten && widget.totalKcalLeft <= widget.totalKcalDaily
-        ? (displayGoal.round() - displaySupplied.round()).abs().toDouble()
+        ? (displayGoal.toInt() - displaySupplied.toInt()).abs().toDouble()
         : usesKilojoules
         ? UnitCalc.kcalToKj(kcalValue)
         : kcalValue;
@@ -202,7 +202,7 @@ class _DashboardWidgetState extends State<DashboardWidget> {
                   children: [
                     Semantics(
                       identifier: 'home-kcal-gauge',
-                      label: '${ringValue.round()} $ringLabel',
+                      label: '${ringValue.toInt()} $ringLabel',
                       hint: S.of(context).settingsKcalGoalInfoLabel,
                       button: true,
                       excludeSemantics: true,
@@ -234,7 +234,7 @@ class _DashboardWidgetState extends State<DashboardWidget> {
                                 AnimatedFlipCounter(
                                   duration: const Duration(milliseconds: 800),
                                   curve: AppMotion.emphasized,
-                                  value: ringValue.round(),
+                                  value: ringValue.toInt(),
                                   textStyle: textTheme.headlineSmall?.copyWith(
                                     height: 1,
                                     fontWeight: FontWeight.w700,
@@ -259,7 +259,7 @@ class _DashboardWidgetState extends State<DashboardWidget> {
                         children: [
                           _StatLine(
                             label: 'Eaten',
-                            value: '${displaySupplied.round()}',
+                            value: '${displaySupplied.toInt()}',
                           ),
                           // "+" only where it is added
                           FutureBuilder<ActivityCredit>(
@@ -277,16 +277,16 @@ class _DashboardWidgetState extends State<DashboardWidget> {
                                 : credit.data?.raisesGoal ?? true
                                 ? _StatLine(
                                     label: 'Burned',
-                                    value: '+${displayBurned.round()}',
+                                    value: '+${displayBurned.toInt()}',
                                   )
                                 : _StatLine(
                                     label: 'Burned, not added',
-                                    value: '${displayBurned.round()}',
+                                    value: '${displayBurned.toInt()}',
                                   ),
                           ),
                           _StatLine(
                             label: 'Goal',
-                            value: '${displayGoal.round()}',
+                            value: '${displayGoal.toInt()}',
                           ),
                           const SizedBox(height: Dimens.spacing8),
                           SegmentedButton<bool>(

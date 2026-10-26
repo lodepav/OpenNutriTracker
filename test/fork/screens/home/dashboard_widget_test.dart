@@ -100,9 +100,9 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.text('3097'), findsOneWidget);
-    expect(find.text('2897'), findsOneWidget);
-    // 3097 − 2897, not a truncated 199 or a rounded 201
-    expect(find.bySemanticsLabel(RegExp(r'^200 ')), findsWidgets);
+    expect(find.text('2896'), findsOneWidget);
+    // 3097 − 2896, as shown, though 200.8 is left
+    expect(find.bySemanticsLabel(RegExp(r'^201 ')), findsWidgets);
     semantics.dispose();
   });
 

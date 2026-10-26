@@ -279,6 +279,27 @@ void main() {
       expect(portions[1]!.first.label, '1 slice');
       expect(portions[1]!.first.gramWeight, 32.0);
     });
+
+    test('a food\'s own serving leads its portions, as "1 serving" '
+        'scales by the first', () async {
+      List<double> grams(Map<String, dynamic> json) => [
+        for (final p in LocalFoodTable.fromJson(json).portions[1]!)
+          p.gramWeight,
+      ];
+      Map<String, dynamic> oats(double serving) => {
+        'columns': ['food_id', 'name', 'serving_size', 'serving_gram_weight'],
+        'foods': [
+          [1, 'Oats, raw', '1 serving', serving],
+        ],
+        'portions': {
+          '1': [
+            ['1 cup', 80.0],
+          ],
+        },
+      };
+      expect(grams(oats(10)), [10.0, 80.0]);
+      expect(grams(oats(80)), [80.0]);
+    });
   });
 
   group(
