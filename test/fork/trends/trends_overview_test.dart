@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:opennutritracker/fork/layout/arrange_screen.dart';
+import 'package:opennutritracker/fork/report/trends_layout.dart';
 import 'package:opennutritracker/core/domain/entity/intake_entity.dart';
 import 'package:opennutritracker/core/domain/entity/intake_type_entity.dart';
 import 'package:opennutritracker/core/domain/entity/tracked_day_entity.dart';
@@ -142,6 +144,55 @@ void main() {
       find.textContaining('Last 7 days, 1 logged', skipOffstage: false),
       findsOneWidget,
     );
+  });
+
+  testWidgets('the tiles as arranged: moved, hidden, and in the editor', (
+    tester,
+  ) async {
+    addTearDown(
+      () =>
+          TrendsTilesStore.current.value = (order: const [], hidden: const {}),
+    );
+    TrendsTilesStore.current.value = (
+      order: ['protein', 'calories'],
+      hidden: {'weight'},
+    );
+    await pumpTrends(tester, loaded(days: [_logged(0)]));
+    double y(String m) =>
+        tester.getTopLeft(find.byKey(ValueKey('trends-tile-$m'))).dy;
+    double x(String m) =>
+        tester.getTopLeft(find.byKey(ValueKey('trends-tile-$m'))).dx;
+    // Protein first, calories after the tiles that followed protein.
+    expect(y('protein'), lessThan(y('carbs')));
+    expect(x('protein'), lessThan(x('fibre')));
+    expect(y('calories'), greaterThan(y('protein')));
+    expect(find.byKey(const ValueKey('trends-tile-weight')), findsNothing);
+
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('trends-arrange')),
+      300,
+    );
+    await tester.tap(find.byKey(const ValueKey('trends-arrange')));
+    await tester.pumpAndSettle();
+    expect(find.text('Tiles'), findsOneWidget);
+    // Hidden, listed to add back.
+    expect(
+      tester
+          .widget<SwitchListTile>(find.byKey(const ValueKey('arrange-weight')))
+          .value,
+      isFalse,
+    );
+    await tester.scrollUntilVisible(
+      find.text('Cards'),
+      300,
+      scrollable: find
+          .descendant(
+            of: find.byType(ArrangeScreen),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
+    expect(find.byKey(const ValueKey('arrange-phases')), findsOneWidget);
   });
 
   testWidgets('the macro tiles follow the macro order', (tester) async {

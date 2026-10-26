@@ -9,6 +9,8 @@ import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/fork/display/display_prefs.dart';
 import 'package:opennutritracker/fork/report/rate_text.dart';
+import 'package:opennutritracker/fork/layout/arrange_screen.dart';
+import 'package:opennutritracker/fork/layout/layout_store.dart';
 import 'package:opennutritracker/fork/report/trends_layout.dart';
 import 'package:opennutritracker/fork/adaptive/goal_plan_card.dart'
     show paceChanges;
@@ -64,6 +66,12 @@ class TrendsOverview extends StatefulWidget {
 
 class _TrendsOverviewState extends State<TrendsOverview> {
   late final _history = ValueNotifier(_load());
+
+  /// The tiles' and the cards' arrangement; Trends rebuilds on either.
+  final _layouts = Listenable.merge([
+    TrendsTilesStore.current,
+    TrendsLayoutStore.current,
+  ]);
 
   /// The estimate moves with the expenditure settings and the days left
   /// out (D17), and with what was logged.
@@ -141,9 +149,9 @@ class _TrendsOverviewState extends State<TrendsOverview> {
       DateTime(now.year, now.month, now.day),
       state.windowDays,
     );
-    return ValueListenableBuilder(
-      valueListenable: TrendsLayoutStore.current,
-      builder: (context, _, _) => ValueListenableBuilder(
+    return ListenableBuilder(
+      listenable: _layouts,
+      builder: (context, _) => ValueListenableBuilder(
         valueListenable: DisplayPrefs.showWater,
         builder: (context, _, _) => ValueListenableBuilder(
           valueListenable: _history,
@@ -152,12 +160,16 @@ class _TrendsOverviewState extends State<TrendsOverview> {
             builder: (context, snapshot) => FutureBuilder(
               future: dates.isEmpty ? null : _microsOf(dates),
               builder: (context, micros) {
-                final tiles = _tiles(
-                  context,
-                  dates,
-                  snapshot.data ?? const [],
-                  micros.data,
-                );
+                final all = {
+                  for (final t in _tiles(
+                    context,
+                    dates,
+                    snapshot.data ?? const [],
+                    micros.data,
+                  ))
+                    t.id.substring('trends-tile-'.length): t,
+                };
+                final tiles = arranged(all, TrendsTilesStore.current.value);
                 final logged = state.days.where(isLogged).length;
                 return ListView(
                   padding: const EdgeInsets.fromLTRB(
@@ -204,6 +216,38 @@ class _TrendsOverviewState extends State<TrendsOverview> {
                       ),
                     ),
                     ...arrangeTrendCards(widget.cards),
+                    const SizedBox(height: Dimens.spacing16),
+                    Center(
+                      child: TextButton.icon(
+                        key: const ValueKey('trends-arrange'),
+                        icon: const Icon(Icons.tune_rounded),
+                        label: const Text('Arrange Trends'),
+                        onPressed: () => Navigator.push(
+                          context,
+                          MaterialPageRoute<void>(
+                            builder: (_) => ArrangeScreen(
+                              title: 'Arrange Trends',
+                              lists: [
+                                ArrangeList(
+                                  title: 'Tiles',
+                                  store: TrendsTilesStore(),
+                                  names: {
+                                    for (final MapEntry(:key, :value)
+                                        in all.entries)
+                                      key: value.label.replaceAll(' · avg', ''),
+                                  },
+                                ),
+                                ArrangeList(
+                                  title: 'Cards',
+                                  store: TrendsLayoutStore(),
+                                  names: trendCards,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
                   ],
                 );
               },
@@ -214,7 +258,7 @@ class _TrendsOverviewState extends State<TrendsOverview> {
     );
   }
 
-  List<Widget> _tiles(
+  List<TrendTile> _tiles(
     BuildContext context,
     List<DateTime> dates,
     List<ExpenditureDay> history,
