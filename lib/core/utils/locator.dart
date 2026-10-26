@@ -1,14 +1,6 @@
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:get_it/get_it.dart';
-// [fork] S1 local-foods: the bundled food table (D11)
-import 'package:opennutritracker/fork/dev/fake_ai.dart';
-import 'package:opennutritracker/fork/food/food_table_licenses.dart';
-import 'package:opennutritracker/fork/food/local_food_data_source.dart';
-// [/fork]
-// [fork] S21 backup: the fork's own files in the JSON backup
-import 'package:opennutritracker/fork/backup/backup_extras.dart';
-import 'package:opennutritracker/fork/backup/profiles_backup.dart';
-// [/fork]
+import 'package:opennutritracker/fork/startup.dart'; // [fork] S1 S21 S113
 import 'package:opennutritracker/core/data/data_source/config_data_source.dart';
 import 'package:opennutritracker/core/data/data_source/custom_activity_template_data_source.dart';
 import 'package:opennutritracker/core/data/data_source/favourite_meal_data_source.dart';
@@ -538,7 +530,7 @@ Future<void> initLocator() async {
     () => AddWeightLogUsecase(locator(), locator()),
   );
   locator.registerLazySingleton<DeleteWeightLogUsecase>(
-    () => DeleteWeightLogUsecase(locator(), locator()), // [fork] S113
+    () => DeleteWeightLogUsecase(locator()),
   );
   locator.registerLazySingleton<GetFavouriteMealsUsecase>(
     () => GetFavouriteMealsUsecase(locator()),
@@ -573,16 +565,7 @@ Future<void> initLocator() async {
       locator(),
       locator(),
       locator(),
-      // [fork] S21 backup
-      forkExtras: BackupExtras(
-        locator(),
-        locator(),
-        locator(),
-        user: locator(),
-        config: locator(),
-        profiles: ProfilesBackup(hiveDBProvider),
-      ),
-      // [/fork]
+      forkExtras: forkBackupExtras(hiveDBProvider), // [fork] S21
     ),
   );
   locator.registerLazySingleton(
@@ -609,16 +592,7 @@ Future<void> initLocator() async {
             importedActivities: importedActivities,
             keyedByOffsetMinutes: keyedByOffsetMinutes,
           ),
-      // [fork] S21 backup
-      forkExtras: BackupExtras(
-        locator(),
-        locator(),
-        locator(),
-        user: locator(),
-        config: locator(),
-        profiles: ProfilesBackup(hiveDBProvider),
-      ),
-      // [/fork]
+      forkExtras: forkBackupExtras(hiveDBProvider), // [fork] S21
     ),
   );
   locator.registerLazySingleton(() => ImportMealsCsvUsecase(locator()));
@@ -718,14 +692,7 @@ Future<void> initLocator() async {
     () => PhysicalActivityDataSource(),
   );
   locator.registerLazySingleton<OFFDataSource>(() => OFFDataSource());
-  // [fork] S1 local-foods: search the bundled open tables, not the hosted backend (D11)
-  locator.registerLazySingleton<SpFoodDataSource>(() => LocalFoodDataSource());
-  registerFoodTableLicenses();
-  if (forkFakeAi) {
-    locator.unregister<http.Client>();
-    locator.registerLazySingleton<http.Client>(() => FakeAiClient(http.Client()));
-  }
-  // [/fork]
+  locator.registerLazySingleton<SpFoodDataSource>(() => SpFoodDataSource());
   locator.registerLazySingleton(() => TrackedDayDataSource(hiveDBProvider));
   locator.registerLazySingleton<WeightLogDataSource>(
     () => WeightLogDataSource(hiveDBProvider),
@@ -759,6 +726,7 @@ Future<void> initLocator() async {
   final healthService = await createHealthService();
   locator.registerLazySingleton<HealthService>(() => healthService);
 
+  registerFork(); // [fork] S1 S113: the fork's services over upstream's
   await ensureConfigInitialized(locator());
   // Before any screen reads the intake log: brings Open Food Facts rows a
   // released build wrote in raw grams into the app's units (#1152).

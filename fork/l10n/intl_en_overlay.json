@@ -1,0 +1,95 @@
+{
+  "@nutrientContributionsEmpty": {
+    "placeholders": {
+      "nutrient": {
+        "type": "String"
+      }
+    }
+  },
+  "@nutrientContributionsTitle": {
+    "placeholders": {
+      "nutrient": {
+        "type": "String"
+      }
+    }
+  },
+  "@nutrientContributionsTotal": {
+    "placeholders": {
+      "intake": {
+        "type": "String"
+      },
+      "goal": {
+        "type": "String"
+      }
+    }
+  },
+  "addItemLabel": "Add food or activity",
+  "addFoodLabel": "Add {food}",
+  "@addFoodLabel": {
+    "placeholders": {
+      "food": {
+        "type": "String"
+      }
+    }
+  },
+  "sectionOptionsLabel": "{section} options",
+  "@sectionOptionsLabel": {
+    "placeholders": {
+      "section": {
+        "type": "String"
+      }
+    }
+  },
+  "addToSectionLabel": "Add to {section}",
+  "@addToSectionLabel": {
+    "placeholders": {
+      "section": {
+        "type": "String"
+      }
+    }
+  },
+  "leftoverHelperLabel": "What you didn't eat; taken off the amount",
+  "leftoverLabel": "Left over",
+  "additionalInfoLabelRecipe": "Custom recipe",
+  "clearOffCacheSubtitle": "{count, plural, =1{1 item} other{{count} items}} · {size}",
+  "csvImportPartialLabel": "Imported {imported, plural, =1{1 meal} other{{imported} meals}}; skipped {skipped, plural, =1{1 row} other{{skipped} rows}} with invalid data.",
+  "csvImportSuccessLabel": "Imported {count, plural, =1{1 meal} other{{count} meals}}.",
+  "deleteSelectedRecipesConfirmTitle": "Delete {count, plural, =1{1 recipe} other{{count} recipes}}?",
+  "dialogCancelLabel": "Cancel",
+  "dialogDeleteLabel": "Delete",
+  "diaryNutrientPanelTitle": "Nutrients",
+  "exportImportAppDataLabel": "Export / import app data",
+  "genderFemaleLabel": "Female",
+  "genderMaleLabel": "Male",
+  "genderNonBinaryLabel": "Non-binary",
+  "goalGainWeight": "Gain weight",
+  "goalLoseWeight": "Lose weight",
+  "goalMaintainWeight": "Maintain weight",
+  "importCustomFoodDataLabel": "Import custom food data",
+  "importOffFetchFailedLabel": "{count, plural, =1{1 item} other{{count} items}} could not be fetched from OpenFoodFacts.",
+  "importRecipeConfirmContent": "Import this recipe with {count, plural, =1{1 ingredient} other{{count} ingredients}}?",
+  "infoAddedIntakeLabel": "Added to your diary",
+  "newCustomMealLabel": "New custom food",
+  "nutrientContributionsEmpty": "Nothing logged today has any {nutrient}.",
+  "nutrientContributionsHint": "Show which foods it came from",
+  "nutrientContributionsTitle": "Today's {nutrient}",
+  "nutrientContributionsTotal": "{intake} of {goal} g",
+  "notificationsDailyReminderChannelName": "Daily reminders",
+  "nutrientPanelAllHiddenLabel": "All nutrients hidden — turn some on in Settings → Appearance → Nutrients.",
+  "onboardingNonBinaryDisclaimer": "There's no published non-binary calorie baseline, so by default we use an average of the male and female formulas — a starting point, not a precise estimate. You can fine-tune anytime in Settings → Goals & nutrition → Daily kcal adjustment.",
+  "recipeIngredientCountLabel": "{count, plural, =1{1 ingredient} other{{count} ingredients}}",
+  "scanProductLabel": "Scan product",
+  "settingsNotificationsLabel": "Daily reminder",
+  "settingsPrivacySettings": "Privacy settings",
+  "settingsReportErrorLabel": "Report error",
+  "settingsShowActivityTracking": "Show activity tracking",
+  "settingsShowMealMacros": "Show meal macros",
+  "settingsShowMicronutrientsLabel": "Show micronutrients",
+  "settingsSourcesLabel": "Sources & references",
+  "sourcesMacrosDescription": "The default split of 60% carbohydrates, 25% fat, and 15% protein falls within the population nutrient intake ranges published by the WHO. You can adjust this in Settings → Goals & nutrition → Macro split. Source: WHO Technical Report Series 916 (2003), Diet, Nutrition and the Prevention of Chronic Diseases.",
+  "sourcesNonBinaryDescription": "Energy-expenditure research has historically used binary sex categories, so there is no single validated TDEE formula for non-binary people. OpenBite therefore lets you choose between an averaged reference, an estrogen-typical reference, or a testosterone-typical reference under Settings → Goals & nutrition → Daily kcal adjustment. If an accurate number genuinely matters for your care, please speak to a clinician familiar with your hormone status.",
+  "bulkAddSubmitLabel": "{count, plural, one{Log 1 item} other{Log {count} items}}",
+  "aiAssistDisclosureAnthropic": "With a key saved, the text you type on the multi-item add screen — and any photo you choose to read there — is sent to Anthropic. Photos are sent for that one request, and Anthropic does not keep them.",
+  "aiAssistModelCheaperThanRecommendedLabel": "Cheaper than the recommended model",
+  "sourcesEnergyCompensationDescription": "Imported workouts are credited with less than the energy your device reports. People compensate for exercise by burning fewer calories through the rest of the day — about 28% on average, and more at a higher body fat percentage. The suggested credit comes from that research and you can override it under Settings → Data → Health Connect. The energy itself is reported by the app or device that recorded the workout, not calculated with the app’s MET formula."
+}
