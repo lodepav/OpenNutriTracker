@@ -883,6 +883,33 @@ void main() {
     expect(find.text(lookupS(const Locale('en')).servingLabel), findsOneWidget);
   });
 
+  testWidgets('names the meal it adds to; a skipped row keeps Include clear', (
+    tester,
+  ) async {
+    await _register({
+      'toast': [_meal('Toast')],
+    });
+
+    await tester.pumpWidget(_app());
+    await tester.pumpAndSettle();
+    await _parse(tester, 'toast');
+    final en = lookupS(const Locale('en'));
+    expect(find.text(en.breakfastLabel), findsOneWidget);
+    await tester.tap(find.text(en.bulkAddSkipLabel));
+    await tester.pumpAndSettle();
+    final include = find.text(en.bulkAddIncludeLabel);
+    expect(include, findsOneWidget);
+    // faded is the name, not the button
+    expect(
+      find.ancestor(of: include, matching: find.byType(Opacity)),
+      findsNothing,
+    );
+    expect(
+      find.ancestor(of: find.text('Toast'), matching: find.byType(Opacity)),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('a defaulted amount is marked, quietly', (tester) async {
     // #864. Nobody stated an amount and the record carries none, so the row
     // shows 100 g that came from the app. `amountNeedsCheck` cannot speak

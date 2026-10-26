@@ -349,6 +349,7 @@ class _RecipeBuilderScreenState extends State<RecipeBuilderScreen> {
             totalWeightG: state.totalWeightG,
             saving: state.isSaving,
             onSave: () => _bloc.add(const SaveRecipeEvent()),
+            editing: state.isExistingRecipe,
           ),
           // [/fork]
           ),

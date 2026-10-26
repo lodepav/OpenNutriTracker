@@ -29,6 +29,19 @@ void main() {
       expect(s.targetKg, 82);
     });
 
+    test('a first target set after none was seen starts today', () {
+      final s = resolveGoalStart(
+        stored: null,
+        targetKg: 82,
+        paceKgPerWeek: -0.5,
+        trend: trend,
+        today: today,
+        backdate: false,
+      );
+      expect(s.date, today);
+      expect(s.kg, trend.last);
+    });
+
     test('the same target keeps the stored start', () {
       final stored = GoalStart(
         date: ago(10),

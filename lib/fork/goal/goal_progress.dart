@@ -69,7 +69,8 @@ class GoalStart {
 
 /// The start for [targetKg] at [paceKgPerWeek]: [stored] while it is the
 /// same target and pace; with none stored, the first day of [trend]
-/// (oldest first, the last [today]); a changed target starts today, and a
+/// (oldest first, the last [today]), or today when [backdate] is false (a
+/// first target set since); a changed target starts today, and a
 /// changed pace starts the plan today from the trend then. A start kept
 /// before the pace was takes the pace from [paceSince], the day the
 /// check-ins first show it, when that is after the start and in [trend].
@@ -80,6 +81,7 @@ GoalStart resolveGoalStart({
   required List<double> trend,
   required DateTime today,
   DateTime? paceSince,
+  bool backdate = true,
 }) {
   if (stored != null && (stored.targetKg - targetKg).abs() < 0.05) {
     final pace = stored.paceKgPerWeek;
@@ -92,7 +94,7 @@ GoalStart resolveGoalStart({
         ? stored.replanned(paceSince, trend[i], paceKgPerWeek)
         : stored.replanned(stored.planDate, stored.planKg, paceKgPerWeek);
   }
-  if (stored == null) {
+  if (stored == null && backdate) {
     return GoalStart(
       date: DateTime(today.year, today.month, today.day - (trend.length - 1)),
       kg: trend.first,
@@ -279,6 +281,11 @@ typedef GoalState = ({GoalPlanInputs? inputs, GoalProgress? progress});
 /// The active profile's goal start, in the adaptive box.
 class GoalStartStore {
   static const key = 'goalStart';
+
+  /// Set once the profile was seen with no target: a target set after
+  /// starts the day it is set, not at the first weigh-in. A target from
+  /// before starts were kept never sets it, so keeps the backdated start.
+  static const noTargetKey = 'goalStartNoTarget';
   static final _log = Logger('GoalStartStore');
 
   final AdaptiveStore _store;
@@ -307,6 +314,9 @@ class GoalStartStore {
     );
     final target = inputs?.targetWeightKg;
     if (inputs == null || target == null) {
+      if (inputs != null && await _store.readKey(noTargetKey) != true) {
+        await _store.writeKey(noTargetKey, true);
+      }
       return (inputs: inputs, progress: null);
     }
     final t = now ?? DateTime.now();
@@ -321,6 +331,7 @@ class GoalStartStore {
           : paceSetOn(await _store.history(), inputs.paceKgPerWeek),
       trend: inputs.pastTrendKg,
       today: today,
+      backdate: await _store.readKey(noTargetKey) != true,
     );
     if (!identical(start, stored)) await save(start);
     return (

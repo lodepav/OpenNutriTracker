@@ -96,7 +96,10 @@ class CaloriesDetailPage extends StatelessWidget {
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      trendSection(context, 'Weekdays and weekends'),
+                      trendSection(
+                        context,
+                        'Weekdays and weekends, last ${days(dates.length)}',
+                      ),
                       WeekendCard(split: split),
                     ],
                   );
@@ -104,7 +107,7 @@ class CaloriesDetailPage extends StatelessWidget {
               ),
             ),
             if (macroShares(state.days, dates) case final shares?) ...[
-              trendSection(context, 'Where the calories came from'),
+              trendSection(context, 'Where the energy came from'),
               _Shares(shares: shares),
             ],
           ],

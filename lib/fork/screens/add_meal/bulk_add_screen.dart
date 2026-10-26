@@ -10,6 +10,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:logging/logging.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:opennutritracker/core/domain/entity/intake_type_entity.dart';
+import 'package:opennutritracker/features/add_meal/presentation/add_meal_type.dart';
 import 'package:opennutritracker/core/utils/ai_credential_storage.dart';
 import 'package:opennutritracker/features/add_meal/domain/usecase/run_ai_endpoint_probe_usecase.dart';
 import 'package:opennutritracker/core/utils/ai_model_catalogue.dart';
@@ -418,7 +419,17 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(S.of(context).bulkAddTitle),
+        // which meal the items go to, as the add sheet named it
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(S.of(context).bulkAddTitle),
+            Text(
+              _mealName(context),
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ],
+        ),
         actions: [
           // every ready row as one recipe
           BlocBuilder<BulkAddBloc, BulkAddState>(
@@ -978,7 +989,7 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
         content: Text(
           dropped
               ? 'Not all added: the profile changed.'
-              : S.of(context).infoAddedIntakeLabel,
+              : 'Added to ${_mealName(context)}',
         ),
       ),
     );
@@ -986,4 +997,9 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
       context,
     ).popUntil(ModalRoute.withName(NavigationOptions.mainRoute));
   }
+
+  String _mealName(BuildContext context) =>
+      AddMealExtension.fromIntakeTypeEntity(
+        _args.intakeTypeEntity,
+      ).getTypeName(context);
 }

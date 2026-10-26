@@ -490,14 +490,18 @@ class _Bar extends StatelessWidget {
     required this.height,
   });
 
+  // Silent: the row's figures say it, and the bar's own value ("100" for
+  // the top food) read as a count (A5).
   @override
-  Widget build(BuildContext context) => ClipRRect(
-    borderRadius: BorderRadius.circular(height / 2),
-    child: LinearProgressIndicator(
-      value: fraction.clamp(0.0, 1.0),
-      minHeight: height,
-      backgroundColor: track,
-      valueColor: AlwaysStoppedAnimation(color),
+  Widget build(BuildContext context) => ExcludeSemantics(
+    child: ClipRRect(
+      borderRadius: BorderRadius.circular(height / 2),
+      child: LinearProgressIndicator(
+        value: fraction.clamp(0.0, 1.0),
+        minHeight: height,
+        backgroundColor: track,
+        valueColor: AlwaysStoppedAnimation(color),
+      ),
     ),
   );
 }

@@ -145,12 +145,26 @@ class _DashboardWidgetState extends State<DashboardWidget> {
           (widget.totalKcalDaily - widget.totalKcalLeft) /
           widget.totalKcalDaily;
     }
-    final displayValue = usesKilojoules
-        ? UnitCalc.kcalToKj(kcalValue)
-        : kcalValue;
     final displaySupplied = usesKilojoules
         ? UnitCalc.kcalToKj(widget.totalKcalSupplied)
         : widget.totalKcalSupplied;
+    final displayGoal = usesKilojoules
+        ? UnitCalc.kcalToKj(widget.totalKcalDaily)
+        : widget.totalKcalDaily;
+    // Left is the goal less what was eaten, as shown: each truncated first,
+    // as every energy figure is (energyValue), so the three add up.
+    final leftIsGoalLessEaten =
+        (widget.totalKcalDaily -
+                widget.totalKcalSupplied -
+                widget.totalKcalLeft)
+            .abs() <
+        0.5;
+    final double displayValue =
+        leftIsGoalLessEaten && widget.totalKcalLeft <= widget.totalKcalDaily
+        ? (displayGoal.toInt() - displaySupplied.toInt()).abs().toDouble()
+        : usesKilojoules
+        ? UnitCalc.kcalToKj(kcalValue)
+        : kcalValue;
     final displayBurned = usesKilojoules
         ? UnitCalc.kcalToKj(widget.totalKcalBurned)
         : widget.totalKcalBurned;
@@ -173,9 +187,6 @@ class _DashboardWidgetState extends State<DashboardWidget> {
         final ringLabel = showsEaten
             ? '${usesKilojoules ? S.of(context).kjLabel : S.of(context).kcalLabel} eaten'
             : kcalLabelText;
-        final displayGoal = usesKilojoules
-            ? UnitCalc.kcalToKj(widget.totalKcalDaily)
-            : widget.totalKcalDaily;
         return Padding(
           padding: const EdgeInsets.fromLTRB(
             Dimens.spacing16,

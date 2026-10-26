@@ -305,6 +305,20 @@ class LocalFoodTable {
             ),
         ],
     };
+    // "1 serving" scales by the first portion, so a food's own serving
+    // leads its list: oats' 10 g serving logged an 80 g cup.
+    for (final food in foods) {
+      final list = portions[food.foodId];
+      final size = food.servingSize, grams = food.servingGramWeight;
+      if (list == null || size == null || grams == null || grams <= 0) {
+        continue;
+      }
+      if ((list.first.gramWeight - grams).abs() < 0.5) continue;
+      list.insert(
+        0,
+        MealPortionEntity(label: size, gramWeight: grams, localized: false),
+      );
+    }
     return LocalFoodTable(foods, portions);
   }
 

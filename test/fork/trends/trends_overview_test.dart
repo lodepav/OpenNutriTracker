@@ -363,7 +363,7 @@ void main() {
     await openTile(tester, 'calories');
     await tester.scrollUntilVisible(find.text('Top foods'), 200);
     expect(find.text('No foods logged in this range.'), findsOneWidget);
-    await tester.scrollUntilVisible(find.text('Weekdays and weekends'), 200);
+    await tester.scrollUntilVisible(find.textContaining('Weekdays and weekends, last'), 200);
     await tester.scrollUntilVisible(
       find.text('Weekends run about the same as weekdays.'),
       200,
@@ -504,8 +504,8 @@ void main() {
     );
     expect(chip('-0.4'), findsOneWidget);
     expect(chip('–'), findsNWidgets(3));
-    expect(find.text('Highest'), findsOneWidget);
-    expect(find.text('Lowest'), findsOneWidget);
+    expect(find.text('Highest trend'), findsOneWidget);
+    expect(find.text('Lowest trend'), findsOneWidget);
     // Four weigh-ins in the week, more than half: no nudge.
     expect(find.textContaining('4 of 7 days'), findsOneWidget);
     expect(find.text('Daily weigh-ins steady the trend'), findsNothing);

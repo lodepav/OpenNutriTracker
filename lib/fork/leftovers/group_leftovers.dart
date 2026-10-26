@@ -17,7 +17,9 @@ import 'package:opennutritracker/fork/units/amount_text.dart';
 abstract final class LeftoverStrings {
   static const chooseTitle = 'Edit';
   static const justThis = 'Just this item';
+  static const justThisHint = 'Its amount and details';
   static String wholeMeal(int count) => 'Whole meal ($count items)';
+  static const wholeMealHint = "What's left over of each item";
   static const title = 'Left over from the meal';
   static const hint = 'Pick what share is left, then adjust any item.';
   static const left = 'Left';
@@ -84,13 +86,16 @@ Future<bool> editMealGroupLeftovers(
     builder: (context) => SimpleDialog(
       title: const Text(LeftoverStrings.chooseTitle),
       children: [
-        SimpleDialogOption(
-          onPressed: () => Navigator.pop(context, false),
-          child: const Text(LeftoverStrings.justThis),
+        // two-line tiles: 48 dp and over, and each says where it leads
+        ListTile(
+          title: const Text(LeftoverStrings.justThis),
+          subtitle: const Text(LeftoverStrings.justThisHint),
+          onTap: () => Navigator.pop(context, false),
         ),
-        SimpleDialogOption(
-          onPressed: () => Navigator.pop(context, true),
-          child: Text(LeftoverStrings.wholeMeal(members.length)),
+        ListTile(
+          title: Text(LeftoverStrings.wholeMeal(members.length)),
+          subtitle: const Text(LeftoverStrings.wholeMealHint),
+          onTap: () => Navigator.pop(context, true),
         ),
       ],
     ),

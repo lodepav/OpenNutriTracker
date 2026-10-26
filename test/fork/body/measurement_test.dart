@@ -103,6 +103,44 @@ void main() {
     expect(find.text('32.0 in'), findsOneWidget);
   });
 
+  testWidgets('a deleted measurement comes back with Undo', (tester) async {
+    final memory = _Memory()
+      ..entries.add(
+        Measurement(
+          id: 'w',
+          date: DateTime.now(),
+          metric: BodyMetric.waist,
+          value: 80,
+        ),
+      );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: BodyMeasurementsCard(
+              rangeDays: 30,
+              palette: AppPalette.light,
+              imperial: false,
+              store: memory,
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Waist'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Waist entries'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('measure-delete-w')));
+    await tester.pumpAndSettle();
+    expect(memory.entries, isEmpty);
+
+    await tester.tap(find.text('Undo'));
+    await tester.pumpAndSettle();
+    expect(memory.entries.single.value, 80);
+  });
+
   testWidgets('a value out of range is refused', (tester) async {
     final memory = _Memory();
     await tester.pumpWidget(
@@ -146,6 +184,18 @@ class _Memory extends Fake implements MeasurementStore {
         Measurement(id: e.key.name, date: date, metric: e.key, value: e.value),
       );
     }
+    MeasurementStore.changes.value++;
+  }
+
+  @override
+  Future<void> remove(String id) async {
+    entries.removeWhere((m) => m.id == id);
+    MeasurementStore.changes.value++;
+  }
+
+  @override
+  Future<void> merge(List<Measurement> measurements) async {
+    entries.addAll(measurements);
     MeasurementStore.changes.value++;
   }
 }

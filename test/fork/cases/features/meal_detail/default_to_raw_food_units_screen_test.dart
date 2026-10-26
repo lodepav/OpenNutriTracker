@@ -39,8 +39,12 @@ import 'package:opennutritracker/fork/amounts/remembered_amounts.dart';
 class _MemoryAmounts extends RememberedAmounts {
   final amounts = <String, RememberedAmount>{};
 
+  /// How long the lookup takes; on a phone it reads the whole diary.
+  Duration delay = Duration.zero;
+
   @override
-  Future<RememberedAmount?> of(MealEntity meal) async => amounts[meal.code];
+  Future<RememberedAmount?> of(MealEntity meal) =>
+      Future.delayed(delay, () => amounts[meal.code]);
 
   @override
   Future<void> remember(MealEntity meal, String unit, String quantity) async =>
@@ -194,6 +198,29 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  testWidgets('a unit change keeps the amount, not the number', (tester) async {
+    await pumpMealDetail(tester, _solidWithServing());
+    expect(bloc!.state.totalQuantityConverted, '30.0');
+    String field() =>
+        tester.widget<TextField>(find.byType(TextField).first).controller!.text;
+    Future<void> pick(Finder item) async {
+      await tester.tap(find.byType(DropdownButton<String>));
+      await tester.pumpAndSettle();
+      await tester.tap(item.last);
+      await tester.pumpAndSettle();
+    }
+
+    await pick(find.text('g'));
+    expect(bloc!.state.selectedUnit, 'g');
+    expect(field(), '30');
+    expect(bloc!.state.totalQuantityConverted, '30.0');
+
+    await pick(find.textContaining('30'));
+    expect(bloc!.state.selectedUnit, 'serving');
+    expect(field(), '1');
+    expect(bloc!.state.totalQuantityConverted, '30.0');
+  });
+
   group('remembered amounts', () {
     late _MemoryAmounts amounts;
     final before = RememberedAmounts.current;
@@ -210,6 +237,42 @@ void main() {
       expect(bloc!.state.selectedUnit, 'g');
       expect(bloc!.state.totalQuantityConverted, '45.0');
       expect(_maxScrollOffset(tester), 0.0);
+      // and the amount fields say so, not the serving default
+      expect(
+        tester.widget<TextField>(find.byType(TextField).first).controller!.text,
+        '45',
+      );
+      expect(
+        tester
+            .widget<DropdownButton<String>>(find.byType(DropdownButton<String>))
+            .value,
+        'g',
+      );
+    });
+
+    testWidgets('hydrated, it stays at the remembered amount it shows', (
+      tester,
+    ) async {
+      amounts
+        ..amounts['raw-units-test-solid'] = (unit: 'g', quantity: '80')
+        // after hydration, as on a phone
+        ..delay = const Duration(milliseconds: 200);
+      hydratedFor = _solidWithServing();
+      await pumpMealDetail(tester, _solidWithServing());
+      await tester.pumpAndSettle(const Duration(milliseconds: 300));
+
+      expect(bloc!.state.selectedUnit, 'g');
+      expect(bloc!.state.totalQuantityConverted, '80.0');
+      expect(
+        tester.widget<TextField>(find.byType(TextField).first).controller!.text,
+        '80',
+      );
+      expect(
+        tester
+            .widget<DropdownButton<String>>(find.byType(DropdownButton<String>))
+            .value,
+        'g',
+      );
     });
 
     testWidgets('a remembered serving waits for the hydrated serving', (

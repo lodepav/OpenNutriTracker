@@ -373,7 +373,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return [
       e(s.settingsKcalGoalInfoLabel, goals),
       e(s.settingsKcalAdjustmentLabel, goals),
-      e('Trend and calorie target', goals),
+      e(
+        'Trend and calorie target',
+        goals,
+        'expenditure adaptive formula fixed check-in activity steps',
+      ),
       e(s.settingsMacroSplitLabel, goals),
       e(s.settingsPerMealKcalShareLabel, goals),
       e(s.settingsNutrientGoalsLabel, goals),

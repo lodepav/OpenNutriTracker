@@ -13,165 +13,164 @@ extension _BulkAddRow on _BulkAddScreenState {
 
     // Both rows below decide between one line and two, so they need the width
     // they were actually given rather than the screen's.
-    return Opacity(
-      opacity: row.skipped ? 0.5 : 1.0,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final available = constraints.maxWidth;
-            final actions = _rowActions(context, index, row);
-            // A `TextButton` is its label plus Material's padding, floored at
-            // its minimum size. At 2x on a 320dp screen the German "skip"
-            // alone measures 353px of the 288 this row gets, and a `Row`
-            // answers that by squeezing the name to nothing and overflowing
-            // by 65 anyway. #824.
-            final actionsWidth = actions.fold<double>(
-              0,
-              (sum, action) => sum + _actionWidth(context, action.label),
-            );
-            // Below this the name has no share of the line worth reading, so
-            // the controls take a line of their own and leave it the width.
-            final stacked =
-                available - actionsWidth <
-                MediaQuery.textScalerOf(context).scale(72);
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final available = constraints.maxWidth;
+          final actions = _rowActions(context, index, row);
+          // A `TextButton` is its label plus Material's padding, floored at
+          // its minimum size. At 2x on a 320dp screen the German "skip"
+          // alone measures 353px of the 288 this row gets, and a `Row`
+          // answers that by squeezing the name to nothing and overflowing
+          // by 65 anyway. #824.
+          final actionsWidth = actions.fold<double>(
+            0,
+            (sum, action) => sum + _actionWidth(context, action.label),
+          );
+          // Below this the name has no share of the line worth reading, so
+          // the controls take a line of their own and leave it the width.
+          final stacked =
+              available - actionsWidth <
+              MediaQuery.textScalerOf(context).scale(72);
 
-            final buttons = [
-              for (final action in actions)
-                TextButton(
-                  onPressed: action.onPressed,
-                  child: Text(action.label),
-                ),
-            ];
-
-            final titleBlock = InkWell(
-              onTap: row.isResolved
-                  ? () => _showCandidatePicker(index, row)
-                  : null,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // User content: shrink to fit before ellipsizing; a long
-                  // database name takes up to three lines (A6)
-                  AutoSizeText(
-                    title,
-                    maxLines: 3,
-                    minFontSize: 12,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.titleSmall?.copyWith(
-                      decoration: row.skipped
-                          ? TextDecoration.lineThrough
-                          : null,
-                    ),
-                  ),
-                  // The brand names *which* food this is; a warning only
-                  // qualifies it. They were alternatives, and that inverted
-                  // the intent below: the more doubtful a row looked, the
-                  // less identifying detail it showed. #847 found the cost
-                  // on a Pixel 6 — "Spiegeleier" resolved to Haribo's gummy
-                  // sweets, and because the row also carried a unit warning,
-                  // the word "Haribo" never reached the screen. The one
-                  // field that gives the mistake away is the one a warning
-                  // used to hide, so it is now unconditional.
-                  if (meal?.brands != null)
-                    Text(meal!.brands!, style: theme.textTheme.bodySmall),
-                  // in progress, or an AI ingredient
-                  if (_dishBreakdown.isPending(row))
-                    Text(
-                      DishStrings.breakingDown,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.tertiary,
-                      ),
-                    )
-                  else if (row.dishIngredient case final ingredient?)
-                    Text(
-                      DishStrings.ingredientOf(ingredient.dish),
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.tertiary,
-                      ),
-                    ),
-                  if (!row.isResolved)
-                    Text(
-                      S.of(context).bulkAddNoMatchLabel,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.error,
-                      ),
-                    )
-                  else if (row.isLowConfidence)
-                    // orange text is too faint
-                    // to read on the light theme, so the orange goes on an
-                    // icon and the words are in the body colour
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.warning_amber_rounded,
-                          size: 16,
-                          color: theme.colorScheme.tertiary,
-                        ),
-                        const SizedBox(width: 4),
-                        Flexible(
-                          child: Text(
-                            S.of(context).bulkAddUncertainLabel,
-                            style: theme.textTheme.bodySmall,
-                          ),
-                        ),
-                      ],
-                    )
-                  // A bare count the app could not interpret. Shown
-                  // below a doubtful match, because a wrong food
-                  // matters more than a wrong unit on the right one.
-                  else if (row.amountNeedsCheck)
-                    Text(
-                      S.of(context).bulkAddCheckAmountLabel,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.tertiary,
-                      ),
-                    )
-                  // Last, and the quietest of the four. The others say
-                  // something is probably wrong; this only says the number
-                  // is the app's rather than the user's, so it takes the
-                  // muted surface colour instead of an accent. #864.
-                  else if (row.amountIsProvisional)
-                    Text(
-                      S.of(context).bulkAddDefaultAmountLabel,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                ],
+          final buttons = [
+            for (final action in actions)
+              TextButton(
+                onPressed: action.onPressed,
+                child: Text(action.label),
               ),
-            );
-            // the name is a 48 dp tap target
-            final forkTitle = ConstrainedBox(
-              constraints: const BoxConstraints(minHeight: 48),
-              child: titleBlock,
-            );
+          ];
 
-            return Column(
+          final titleBlock = InkWell(
+            onTap: row.isResolved
+                ? () => _showCandidatePicker(index, row)
+                : null,
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (stacked)
-                  // Stretched, so each label is bounded by the line rather
-                  // than by whatever is left of it.
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [forkTitle, ...buttons],
+                // User content: shrink to fit before ellipsizing; a long
+                // database name takes up to three lines (A6)
+                AutoSizeText(
+                  title,
+                  maxLines: 3,
+                  minFontSize: 12,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    decoration: row.skipped ? TextDecoration.lineThrough : null,
+                  ),
+                ),
+                // The brand names *which* food this is; a warning only
+                // qualifies it. They were alternatives, and that inverted
+                // the intent below: the more doubtful a row looked, the
+                // less identifying detail it showed. #847 found the cost
+                // on a Pixel 6 — "Spiegeleier" resolved to Haribo's gummy
+                // sweets, and because the row also carried a unit warning,
+                // the word "Haribo" never reached the screen. The one
+                // field that gives the mistake away is the one a warning
+                // used to hide, so it is now unconditional.
+                if (meal?.brands != null)
+                  Text(meal!.brands!, style: theme.textTheme.bodySmall),
+                // in progress, or an AI ingredient
+                if (_dishBreakdown.isPending(row))
+                  Text(
+                    DishStrings.breakingDown,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.tertiary,
+                    ),
                   )
-                else
-                  // Unchanged wherever they fit, which is every ordinary
-                  // text size: name on the left, controls on the right.
+                else if (row.dishIngredient case final ingredient?)
+                  Text(
+                    DishStrings.ingredientOf(ingredient.dish),
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.tertiary,
+                    ),
+                  ),
+                if (!row.isResolved)
+                  Text(
+                    S.of(context).bulkAddNoMatchLabel,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.error,
+                    ),
+                  )
+                else if (row.isLowConfidence)
+                  // orange text is too faint
+                  // to read on the light theme, so the orange goes on an
+                  // icon and the words are in the body colour
                   Row(
                     children: [
-                      Expanded(child: forkTitle),
-                      ...buttons,
+                      Icon(
+                        Icons.warning_amber_rounded,
+                        size: 16,
+                        color: theme.colorScheme.tertiary,
+                      ),
+                      const SizedBox(width: 4),
+                      Flexible(
+                        child: Text(
+                          S.of(context).bulkAddUncertainLabel,
+                          style: theme.textTheme.bodySmall,
+                        ),
+                      ),
                     ],
+                  )
+                // A bare count the app could not interpret. Shown
+                // below a doubtful match, because a wrong food
+                // matters more than a wrong unit on the right one.
+                else if (row.amountNeedsCheck)
+                  Text(
+                    S.of(context).bulkAddCheckAmountLabel,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.tertiary,
+                    ),
+                  )
+                // Last, and the quietest of the four. The others say
+                // something is probably wrong; this only says the number
+                // is the app's rather than the user's, so it takes the
+                // muted surface colour instead of an accent. #864.
+                else if (row.amountIsProvisional)
+                  Text(
+                    S.of(context).bulkAddDefaultAmountLabel,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
                   ),
-                if (!faded)
-                  _buildAmountRow(context, state, index, row, available),
               ],
-            );
-          },
-        ),
+            ),
+          );
+          // the name is a 48 dp tap target; a skipped one fades, but not
+          // its Include, which has to stay readable
+          final forkTitle = Opacity(
+            opacity: row.skipped ? 0.5 : 1.0,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 48),
+              child: titleBlock,
+            ),
+          );
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (stacked)
+                // Stretched, so each label is bounded by the line rather
+                // than by whatever is left of it.
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [forkTitle, ...buttons],
+                )
+              else
+                // Unchanged wherever they fit, which is every ordinary
+                // text size: name on the left, controls on the right.
+                Row(
+                  children: [
+                    Expanded(child: forkTitle),
+                    ...buttons,
+                  ],
+                ),
+              if (!faded)
+                _buildAmountRow(context, state, index, row, available),
+            ],
+          );
+        },
       ),
     );
   }

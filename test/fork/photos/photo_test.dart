@@ -127,6 +127,17 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const ValueKey('photo-delete')));
       await tester.pumpAndSettle();
+      // asked first: kept on Cancel
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+      expect(store.photos, hasLength(1));
+
+      await tester.tap(find.byKey(const ValueKey('photo-old0')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('photo-delete')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('photo-delete-confirm')));
+      await tester.pumpAndSettle();
 
       expect(store.photos, isEmpty);
       expect(find.byKey(const ValueKey('photo-old0')), findsNothing);

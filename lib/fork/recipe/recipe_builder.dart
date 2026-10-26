@@ -196,12 +196,16 @@ class BuilderSaveBar extends StatelessWidget {
   final bool saving;
   final VoidCallback onSave;
 
+  /// An existing recipe: says what saving does to portions logged.
+  final bool editing;
+
   const BuilderSaveBar({
     super.key,
     required this.per100,
     required this.totalWeightG,
     required this.saving,
     required this.onSave,
+    this.editing = false,
   });
 
   @override
@@ -274,6 +278,15 @@ class BuilderSaveBar extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: Dimens.spacing12),
+              if (editing) ...[
+                Text(
+                  'Portions already logged keep their old values.',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: palette.textMuted,
+                  ),
+                ),
+                const SizedBox(height: Dimens.spacing8),
+              ],
               Semantics(
                 identifier: 'recipe-builder-save',
                 child: SizedBox(

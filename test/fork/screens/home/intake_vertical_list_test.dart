@@ -168,9 +168,7 @@ void main() {
 
   String headerWithMacros() =>
       '200 ${l10nEn.kcalLabel}\n'
-      '20 ${l10nEn.carbsLabelShort}  '
-      '10 ${l10nEn.fatLabelShort}  '
-      '5 ${l10nEn.proteinLabelShort}';
+      'C 20 · F 10 · P 5';
 
   String headerKcalOnly() => '200 ${l10nEn.kcalLabel}';
 
