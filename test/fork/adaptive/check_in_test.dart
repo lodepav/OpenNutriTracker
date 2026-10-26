@@ -1,6 +1,8 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:intl/intl.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:opennutritracker/core/domain/entity/tracked_day_entity.dart';
@@ -558,7 +560,8 @@ void main() {
     await tester.pumpWidget(MaterialApp(home: CheckInScreen(service: service)));
     await tester.pumpAndSettle();
 
-    expect(find.text('Current target'), findsOneWidget);
+    // Home's goal adds the day's activity to it.
+    expect(find.text('Formula target without activity'), findsOneWidget);
     expect(find.text('2847 kcal'), findsOneWidget);
     expect(find.text('Change'), findsOneWidget);
     // The rows add up as shown.
@@ -568,6 +571,15 @@ void main() {
       find.textContaining(
         'That is the expenditure less '
         '${checkIn.expenditureKcal.toInt() - proposed} kcal',
+      ),
+      findsOneWidget,
+    );
+    // The goal page's figure for the pace is at 7700 a kg; this one says
+    // what it is at.
+    expect(
+      find.textContaining(
+        'at ${checkIn.kcalPerKg!.toInt()} kcal a kg of weight change '
+        '(from your body fat).',
       ),
       findsOneWidget,
     );
@@ -664,6 +676,37 @@ void main() {
     expect(cap, findsOneWidget);
   });
 
+  testWidgets('Keep current target records the check-in at it', (tester) async {
+    final memory = _MemoryStore();
+    final service = AdaptiveService(
+      _User(),
+      _Weights(),
+      _TrackedDays(),
+      memory,
+      () => _today.add(const Duration(hours: 9)),
+    );
+    await service.accept(await service.checkIn(), 2100);
+    await _pumpLarge(tester, service);
+    // The proposal is another figure, so Accept would have stored it.
+    expect(
+      (await service.checkIn()).proposedTargetKcal,
+      isNot(closeTo(2100, 1)),
+    );
+
+    final keep = find.byKey(const ValueKey('check-in-keep'));
+    await tester.scrollUntilVisible(
+      keep,
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.ensureVisible(keep);
+    await tester.pumpAndSettle();
+    await tester.tap(keep);
+    await tester.pumpAndSettle();
+    expect(memory.accepts, 2);
+    expect(memory.records.last.acceptedKcal, 2100);
+  });
+
   testWidgets("without Home's target, the first check-in shows no change", (
     tester,
   ) async {
@@ -709,6 +752,60 @@ void main() {
 
     expect(find.text('Your target settings changed'), findsOneWidget);
     expect(find.textContaining('You changed steps.'), findsOneWidget);
+  });
+
+  testWidgets('a check-in the settings made due is headed with the change', (
+    tester,
+  ) async {
+    AdaptiveStore.settings.value = const AdaptiveSettings(adaptiveTarget: true);
+    addTearDown(() => AdaptiveStore.settings.value = const AdaptiveSettings());
+    final service = AdaptiveService(
+      _User(),
+      _Weights(),
+      _TrackedDays(),
+      _MemoryStore(),
+      () => _today.add(const Duration(hours: 9)),
+    );
+    await service.accept(await service.checkIn(), 2000);
+    AdaptiveStore.settings.value = const AdaptiveSettings(
+      adaptiveTarget: true,
+      activityMode: ActivityMode.weekly,
+    );
+    await tester.pumpWidget(MaterialApp(home: CheckInScreen(service: service)));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Target settings changed'), findsOneWidget);
+    expect(find.text('Weekly check-in'), findsNothing);
+    expect(find.text('Activity is now counted weekly'), findsOneWidget);
+    expect(
+      find.text(
+        'So the expenditure now takes in counted activity; the past week '
+        'had none.',
+      ),
+      findsOneWidget,
+    );
+  });
+
+  test('each changed setting is a sentence', () {
+    expect(
+      targetSettingsChanges(
+        'activity=weekly;steps=true;workouts=true;flat=false',
+        'activity=daily;steps=false;workouts=true;flat=true',
+      ),
+      [
+        'Activity is now counted daily',
+        'Steps are no longer counted',
+        'Weight change now counts at the common energy per kg',
+      ],
+    );
+    // Steps are not in a basis without activity: only the mode is told.
+    expect(
+      targetSettingsChanges(
+        'activity=weekly;steps=true;workouts=true;flat=false',
+        'activity=off;flat=false',
+      ),
+      ['Activity is no longer counted'],
+    );
   });
 
   testWidgets('a row at 200% text wraps its value below the label', (
@@ -887,6 +984,7 @@ void main() {
     ) async {
       await tester.pumpWidget(
         MaterialApp(
+          localizationsDelegates: GlobalMaterialLocalizations.delegates,
           home: Scaffold(
             body: ExpenditureTrendCard(
               rangeDays: 30,
@@ -903,7 +1001,9 @@ void main() {
       expect(find.textContaining(RegExp(r'^-\d+ kcal a day$')), findsOneWidget);
       expect(find.textContaining('Energy you burn a day'), findsOneWidget);
       expect(find.textContaining('Solid: estimated'), findsOneWidget);
-      expect(find.textContaining('Dots: logged'), findsOneWidget);
+      expect(find.textContaining('Dots: calories logged'), findsOneWidget);
+      // Its span, as the chart has no axes: the last day is today.
+      expect(find.text(DateFormat.MMMd('en').format(_today)), findsOneWidget);
     });
 
     testWidgets('a single day names no lines, as none are drawn', (
@@ -961,15 +1061,23 @@ class _Goal extends Fake implements GetKcalGoalUsecase {
 class _MemoryStore extends AdaptiveStore {
   final records = <CheckInRecord>[];
 
+  /// Check-ins accepted, new or in place of the last.
+  var accepts = 0;
+
   @override
   Future<List<CheckInRecord>> history() async => records;
 
   @override
-  Future<void> addCheckIn(CheckInRecord record) async => records.add(record);
+  Future<void> addCheckIn(CheckInRecord record) async {
+    accepts++;
+    records.add(record);
+  }
 
   @override
-  Future<void> replaceLastCheckIn(CheckInRecord record) async =>
-      records[records.length - 1] = record;
+  Future<void> replaceLastCheckIn(CheckInRecord record) async {
+    accepts++;
+    records[records.length - 1] = record;
+  }
 }
 
 /// [inner]'s plan at a pace set by the test.

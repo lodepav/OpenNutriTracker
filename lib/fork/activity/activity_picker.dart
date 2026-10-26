@@ -11,6 +11,7 @@ import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/core/utils/calc/met_calc.dart';
 import 'package:opennutritracker/core/utils/id_generator.dart';
 import 'package:opennutritracker/features/activity_detail/presentation/widget/activity_info_button.dart';
+import 'package:opennutritracker/fork/adaptive/activity_credit.dart';
 import 'package:opennutritracker/fork/widget/toolbar_height.dart';
 import 'package:opennutritracker/fork/units/energy_text.dart';
 
@@ -99,6 +100,9 @@ class ActivityPickerView extends StatelessWidget {
   final Widget? error;
   final DateTime? today;
 
+  /// What a logged activity does to the goal, said in the minutes sheet.
+  final ActivityCredit credit;
+
   const ActivityPickerView({
     super.key,
     required this.title,
@@ -114,6 +118,7 @@ class ActivityPickerView extends StatelessWidget {
     required this.onCustom,
     this.error,
     this.today,
+    this.credit = ActivityCredit.added,
   });
 
   @override
@@ -301,6 +306,7 @@ class ActivityPickerView extends StatelessWidget {
       showDragHandle: true,
       useSafeArea: true,
       builder: (_) => DurationSheet(
+        credit: credit,
         activity: activity,
         user: user,
         day: day,
@@ -498,6 +504,7 @@ class DurationSheet extends StatefulWidget {
   final UserEntity user;
   final DateTime day;
   final DateTime today;
+  final ActivityCredit credit;
 
   const DurationSheet({
     super.key,
@@ -505,6 +512,7 @@ class DurationSheet extends StatefulWidget {
     required this.user,
     required this.day,
     required this.today,
+    this.credit = ActivityCredit.added,
   });
 
   @override
@@ -550,11 +558,12 @@ class _DurationSheetState extends State<DurationSheet> {
     final perMinute = METCalc.getTotalBurnedKcal(widget.user, activity, 1);
     final valid = _typed != null;
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(
+      // Above the keyboard, so the field, its kcal and Add stay in sight.
+      padding: EdgeInsets.fromLTRB(
         Dimens.spacing16,
         0,
         Dimens.spacing16,
-        Dimens.spacing24,
+        Dimens.spacing24 + MediaQuery.viewInsetsOf(context).bottom,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -703,7 +712,7 @@ class _DurationSheetState extends State<DurationSheet> {
                   ),
                 ),
                 Text(
-                  "burned, adds to the day's budget",
+                  widget.credit.note(context),
                   textAlign: TextAlign.center,
                   style: text.bodySmall?.copyWith(color: palette.textMuted),
                 ),

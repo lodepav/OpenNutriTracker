@@ -1,5 +1,6 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
@@ -167,6 +168,20 @@ class _ExpenditureTrendCardState extends State<ExpenditureTrendCard> {
               ),
             ),
           ),
+          // The span drawn: the chart has no axes of its own.
+          if (days.length >= 2)
+            DefaultTextStyle.merge(
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: widget.palette.textMuted,
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(_day(context, days.first.date)),
+                  Text(_day(context, days.last.date)),
+                ],
+              ),
+            ),
           if (_legend(days, logged.length) case final legend?) ...[
             const SizedBox(height: Dimens.spacing8),
             Text(legend, style: theme.textTheme.bodySmall),
@@ -175,6 +190,10 @@ class _ExpenditureTrendCardState extends State<ExpenditureTrendCard> {
       ),
     );
   }
+
+  static String _day(BuildContext context, DateTime date) => DateFormat.MMMd(
+    Localizations.localeOf(context).toLanguageTag(),
+  ).format(date);
 
   /// Names only the lines drawn: a line takes two days, and a single day
   /// is a dot.
@@ -190,7 +209,7 @@ class _ExpenditureTrendCardState extends State<ExpenditureTrendCard> {
       // A month or less draws each logged day as a dot, apart where days
       // between went unlogged.
       if (loggedDays >= 2)
-        days.length <= 31 ? 'Dots: logged' : 'Dashed: logged',
+        days.length <= 31 ? 'Dots: calories logged' : 'Dashed: calories logged',
     ];
     return parts.isEmpty ? null : '${parts.join('. ')}.';
   }

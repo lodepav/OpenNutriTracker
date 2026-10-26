@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:opennutritracker/core/domain/entity/body_weight_unit_entity.dart';
 import 'package:opennutritracker/core/domain/usecase/get_config_usecase.dart';
 import 'package:opennutritracker/core/domain/usecase/get_kcal_goal_usecase.dart';
@@ -58,6 +59,38 @@ List<String> changedTargetSettings(String? before, String now) {
       ('flat', 'energy per kg'),
     ])
       if (a.containsKey(key) && b.containsKey(key) && a[key] != b[key]) name,
+  ];
+}
+
+/// What changed between two [AdaptiveSettings.targetBasis] strings, a
+/// sentence each, to head the check-in it made due.
+List<String> targetSettingsChanges(String? before, String now) {
+  Map<String, String> parts(String? basis) => {
+    for (final part in (basis ?? '').split(';'))
+      if (part.contains('=')) part.split('=').first: part.split('=').last,
+  };
+  final a = parts(before), b = parts(now);
+  bool changed(String key) =>
+      a.containsKey(key) && b.containsKey(key) && a[key] != b[key];
+  return [
+    if (changed('activity'))
+      switch (b['activity']) {
+        'weekly' => 'Activity is now counted weekly',
+        'daily' => 'Activity is now counted daily',
+        _ => 'Activity is no longer counted',
+      },
+    if (changed('steps'))
+      b['steps'] == 'true'
+          ? 'Steps are now counted'
+          : 'Steps are no longer counted',
+    if (changed('workouts'))
+      b['workouts'] == 'true'
+          ? 'Workouts are now counted'
+          : 'Workouts are no longer counted',
+    if (changed('flat'))
+      b['flat'] == 'true'
+          ? 'Weight change now counts at the common energy per kg'
+          : 'Weight change now counts at your body fat\'s energy per kg',
   ];
 }
 
@@ -323,9 +356,62 @@ class _CheckInScreenState extends State<CheckInScreen> {
         '${date.day.toString().padLeft(2, '0')})';
   }
 
+  /// What changed since [last] when that made this check-in due, as
+  /// [changedTargetSettings] names it; empty for a weekly one.
+  static List<String> _changedSince(CheckInRecord? last) =>
+      last != null && last.basisChanged(AdaptiveStore.settings.value)
+      ? changedTargetSettings(
+          last.basis,
+          AdaptiveStore.settings.value.targetBasis,
+        )
+      : const [];
+
+  /// Why the expenditure moved under the new settings, for [changed].
+  String? _whyMoved(CheckIn checkIn, List<String> changed) {
+    final activity = checkIn.activityKcal;
+    if (changed.contains('activity')) {
+      if (AdaptiveStore.settings.value.activityMode == ActivityMode.off) {
+        return 'So the expenditure no longer takes in activity.';
+      }
+      return activity == null
+          ? 'So the expenditure now takes in counted activity; the past '
+                'week had none.'
+          : "So the expenditure now takes in the past week's counted "
+                'activity, ${_kcal(activity)} a day.';
+    }
+    if ((changed.contains('steps') || changed.contains('workouts')) &&
+        activity != null) {
+      return "So the expenditure's counted activity is now "
+          '${_kcal(activity)} a day.';
+    }
+    if (changed.contains('energy per kg') && checkIn.kcalPerKg != null) {
+      return 'So the expenditure is worked out from your weigh-ins at '
+          '${_kcal(checkIn.kcalPerKg!)} a kg.';
+    }
+    return null;
+  }
+
+  /// The energy the pace was turned into, so the goal page's figure for
+  /// the same pace at the common one isn't taken for another.
+  String _perKg(CheckIn checkIn, AdaptiveSettings settings) {
+    final kcal = checkIn.kcalPerKg;
+    if (kcal == null) return '';
+    return ', at ${_kcal(kcal)} a kg of weight change'
+        '${settings.flatEnergy ? '' : ' (from your body fat)'}';
+  }
+
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Weekly check-in')),
+    appBar: AppBar(
+      title: FutureBuilder<CheckInRecord?>(
+        future: _last,
+        builder: (context, snapshot) => Text(
+          _changedSince(snapshot.data).isEmpty
+              ? 'Weekly check-in'
+              : 'Target settings changed',
+        ),
+      ),
+    ),
     body: FutureBuilder<(CheckIn, CheckInRecord?, double?)>(
       future: (_checkIn, _last, _goalNow).wait,
       builder: (context, snapshot) {
@@ -348,9 +434,24 @@ class _CheckInScreenState extends State<CheckInScreen> {
         final settings = AdaptiveStore.settings.value;
         final cap = settings.maxCheckInChangeKcal;
         final daily = settings.activityMode == ActivityMode.daily;
+        final changed = _changedSince(last);
+        final why = _whyMoved(checkIn, changed);
         return ListView(
           padding: const EdgeInsets.all(16),
           children: [
+            if (changed.isNotEmpty) ...[
+              for (final change in targetSettingsChanges(
+                last!.basis,
+                settings.targetBasis,
+              ))
+                Text(change, style: theme.textTheme.titleLarge),
+              if (why != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Text(why),
+                ),
+              const SizedBox(height: 16),
+            ],
             if (checkIn.fromProfile)
               Text(_fromProfileText(checkIn))
             else ...[
@@ -381,10 +482,14 @@ class _CheckInScreenState extends State<CheckInScreen> {
             if (checkIn.activityKcal case final activity?)
               _row('Of it, counted activity', '${_kcal(activity)} a day'),
             if (current != null)
-              _row(
-                daily ? 'Current target before activity' : 'Current target',
-                _kcal(current),
-              ),
+              _row(switch ((daily, last == null)) {
+                // Before the first check-in it is the formula's, which
+                // Home adds the day's activity to.
+                (true, true) => 'Formula target before activity',
+                (false, true) => 'Formula target without activity',
+                (true, false) => 'Current target before activity',
+                (false, false) => 'Current target',
+              }, _kcal(current)),
             _row(
               daily ? 'Proposed target before activity' : 'Proposed target',
               _kcal(checkIn.proposedTargetKcal),
@@ -403,7 +508,8 @@ class _CheckInScreenState extends State<CheckInScreen> {
                 'That is the expenditure '
                 '${checkIn.goalRateKgPerWeek < 0 ? 'less' : 'plus'} '
                 '${_shownDiff(checkIn.expenditureKcal, checkIn.proposedTargetKcal)} '
-                'for ${_kg(checkIn.goalRateKgPerWeek, signed: true)} a week.',
+                'for ${_kg(checkIn.goalRateKgPerWeek, signed: true)} a week'
+                '${_perKg(checkIn, settings)}.',
                 style: theme.textTheme.bodySmall,
               ),
             if (daily)
@@ -464,6 +570,19 @@ class _CheckInScreenState extends State<CheckInScreen> {
               },
               child: const Text('Accept'),
             ),
+            // Done for the week at the target in use, so it isn't due again.
+            if (current != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: OutlinedButton(
+                  key: const ValueKey('check-in-keep'),
+                  onPressed: () async {
+                    await widget.service.accept(checkIn, current);
+                    if (context.mounted) Navigator.of(context).pop(true);
+                  },
+                  child: const Text('Keep current target'),
+                ),
+              ),
           ],
         );
       },
@@ -534,7 +653,6 @@ class AdaptiveSettingsTile extends StatelessWidget {
     subtitle: ValueListenableBuilder(
       valueListenable: AdaptiveStore.settings,
       builder: (context, settings, _) => Text(
-        '${settings.smoothedTrend ? 'Smoothed trend' : '7-day average'} · '
         '${switch (_modeOf(settings)) {
           _TargetMode.formula => 'Formula target',
           _TargetMode.adaptive => 'Adaptive target',
@@ -584,16 +702,6 @@ class _AdaptiveSettingsDialog extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('Smoothed weight trend'),
-                subtitle: const Text(
-                  'On the weight chart, in place of the 7-day average.',
-                ),
-                value: settings.smoothedTrend,
-                onChanged: (v) => _save(settings.copyWith(smoothedTrend: v)),
-              ),
-              const SizedBox(height: 8),
               // The choice below carries it as its group's name.
               ExcludeSemantics(
                 child: Text(
@@ -1060,9 +1168,9 @@ class AdaptiveGoalNote extends StatelessWidget {
                   ? 'Until the first weekly check-in, the formula below sets '
                         'your goal.'
                   : '${goal(last.acceptedKcal + activity)}, set at '
-                        'the check-in on ${d!.year}-'
-                        '${d.month.toString().padLeft(2, '0')}-'
-                        '${d.day.toString().padLeft(2, '0')} from a measured '
+                        'the check-in on '
+                        '${DateFormat.yMMMd(Localizations.localeOf(context).toLanguageTag()).format(d!)}'
+                        ' from a measured '
                         'expenditure of ${energyText(context, last.expenditureKcal)}. '
                         '${settings.activityMode == ActivityMode.daily ? "It includes ${energyText(context, activity)} of today's counted activity, at most ${energyText(context, maxDailyActivityKcal)}. The formula below and the kcal adjustment are not used." : 'The formula below is not used; logged activities and the kcal adjustment are not added.'}',
             ),

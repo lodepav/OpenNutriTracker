@@ -22,6 +22,7 @@ import 'package:opennutritracker/features/diary/presentation/bloc/diary_bloc.dar
 import 'package:opennutritracker/features/home/presentation/bloc/home_bloc.dart';
 import 'package:opennutritracker/features/profile/presentation/utils/profile_display_format.dart';
 import 'package:opennutritracker/fork/activity/activity_picker.dart';
+import 'package:opennutritracker/fork/adaptive/activity_credit.dart';
 // [/fork]
 
 class AddActivityScreen extends StatefulWidget {
@@ -85,6 +86,7 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
                   stLabel: s.stLabel,
                 ),
           day: _day,
+          credit: _forkCredit,
           onSearch: (query) => _activitiesBloc.add(
             SearchActivitiesEvent(context: context, searchString: query),
           ),
@@ -103,6 +105,9 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
   BodyWeightUnit _forkUnit = BodyWeightUnit.kg;
   List<UserActivityEntity> _forkRecent = const [];
 
+  /// What a logged activity does to the goal, for the minutes sheet.
+  ActivityCredit _forkCredit = ActivityCredit.added;
+
   /// At most this many recent activities as chips.
   static const _forkRecentCount = 8;
 
@@ -120,6 +125,8 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
           .take(_forkRecentCount)
           .toList();
     });
+    final credit = await activityCredit();
+    if (mounted) setState(() => _forkCredit = credit);
   }
 
   void _forkRefresh() {

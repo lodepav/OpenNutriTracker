@@ -5,6 +5,10 @@ import 'package:opennutritracker/core/utils/calc/unit_calc.dart';
 import 'package:opennutritracker/features/profile/presentation/utils/profile_picker_bounds.dart';
 import 'package:opennutritracker/features/profile/presentation/widgets/body_weight_input.dart';
 import 'package:opennutritracker/generated/l10n.dart';
+// [fork] S111 typed-weigh-in
+import 'package:opennutritracker/core/domain/entity/weight_log_entity.dart';
+import 'package:opennutritracker/fork/weight/weigh_in_log.dart';
+// [/fork]
 
 class SetWeightDialog extends StatefulWidget {
   /// The user's current weight in kilograms. All display and input are handled
@@ -19,11 +23,17 @@ class SetWeightDialog extends StatefulWidget {
   /// kg double, so existing callers are unaffected.
   final bool allowDateSelection;
 
+  // [fork] S111 typed-weigh-in: the weigh-ins by day, so a second on a day
+  // says which it replaces (a day holds one)
+  final Map<DateTime, WeightLogEntity> logged;
+  // [/fork]
+
   const SetWeightDialog({
     super.key,
     required this.initialKg,
     required this.unit,
     this.allowDateSelection = false,
+    this.logged = const {}, // [fork] S111
   });
 
   @override
@@ -183,6 +193,21 @@ class _SetWeightDialogState extends State<SetWeightDialog> {
                     _stKg = kg;
                     _typedLast = true;
                   }),
+                ),
+              // [/fork]
+              // [fork] S111 typed-weigh-in
+              if (widget.logged[_selectedDate] case final replaced?)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(
+                    'Replaces ${replacedText(
+                      context,
+                      replaced,
+                      widget.unit,
+                      DateUtils.dateOnly(DateTime.now()),
+                    )}',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
                 ),
               // [/fork]
               if (widget.allowDateSelection) ...[

@@ -369,6 +369,46 @@ void main() {
   });
   // [/fork]
 
+  // [fork] S122 weight-history: a tap opens a weigh-in in the dialog, its
+  // weight and note filled in; saved on its day, it is not deleted
+  testWidgets('a tapped weigh-in opens to edit, filled in', (tester) async {
+    ReloadRecorder()
+      ..register()
+      ..registerProfile();
+    addTearDown(locator.reset);
+    final addUsecase = _FakeAddWeightLogUsecase();
+    final deleteUsecase = _FakeDeleteWeightLogUsecase();
+    final entry = WeightLogEntity(
+      date: DateTime(2026, 3, 11),
+      weightKg: 80,
+      note: 'after the run',
+    );
+    await tester.pumpWidget(
+      _wrap(
+        _buildScreen(
+          [entry],
+          addUsecase: addUsecase,
+          deleteUsecase: deleteUsecase,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Mar 11, 2026'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.bySemanticsIdentifier('weigh-in-edit'));
+    await tester.pumpAndSettle();
+    expect(find.widgetWithText(TextField, 'after the run'), findsOneWidget);
+    await tester.tap(find.text(l10nEn.dialogOKLabel));
+    await tester.pumpAndSettle();
+
+    expect(addUsecase.added.single.weightKg, 80);
+    expect(addUsecase.added.single.date, DateTime(2026, 3, 11));
+    expect(addUsecase.added.single.note, 'after the run');
+    expect(deleteUsecase.deleted, isEmpty);
+  });
+  // [/fork]
+
   // [fork] S113
   testWidgets("an added weigh-in reloads Home and the profile, as today's "
       'sets the weight', (tester) async {

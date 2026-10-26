@@ -5,7 +5,9 @@ import 'package:opennutritracker/core/domain/entity/body_weight_unit_entity.dart
 import 'package:opennutritracker/core/domain/entity/weight_log_entity.dart';
 import 'package:opennutritracker/core/utils/calc/calendar_day_calc.dart';
 import 'package:opennutritracker/core/utils/calc/unit_calc.dart';
-import 'package:opennutritracker/core/utils/calc/weight_moving_average.dart';
+// [fork] S15 smoothed-trend: the 7-day average is no longer drawn (JB4)
+// import 'package:opennutritracker/core/utils/calc/weight_moving_average.dart';
+// [/fork]
 import 'package:opennutritracker/generated/l10n.dart';
 // [fork] S15 smoothed-trend: the smoothed trend in place of the 7-day average (D13)
 import 'package:opennutritracker/fork/adaptive/trend_points.dart';
@@ -124,16 +126,18 @@ class WeightTrendChart extends StatelessWidget {
     // Compute the moving average against the *full* log and clip to the
     // visible window, so the leftmost MA point is anchored on entries
     // predating the window rather than lagging one window-length behind.
-    // [fork] S15 smoothed-trend
-    final smoothed = smoothedTrendPoints(entries);
+    // [fork] S15 smoothed-trend: always the trend, to today, the one the
+    // header and Home report (JB4)
+    final smoothed = trendPoints(
+      entries,
+      until: today,
+    );
     // [/fork]
     final maSpots = <FlSpot>[
       if (movingAverageWindowDays != null)
         for (final point
             // [fork] S15 smoothed-trend
-            in (smoothed ??
-                    WeightMovingAverage(windowDays: movingAverageWindowDays!)
-                        .compute(entries))
+            in smoothed
                 // [/fork]
                 .where((p) =>
                     !p.date.isBefore(windowStart) &&
@@ -173,7 +177,11 @@ class WeightTrendChart extends StatelessWidget {
     // [/fork]
     final dateFormat = DateFormat.MMMd(localeTag);
     // ~5 evenly spaced date labels regardless of window length.
-    final labelInterval = (windowDays / 5)
+    // [fork] S96 chart-touch: at large text, fewer dates and axes that fit
+    // their labels ("87.5", not "87." over "5")
+    final textScale = MediaQuery.textScalerOf(context).scale(1);
+    final labelInterval = (windowDays / (textScale >= 1.5 ? 3 : 5))
+        // [/fork]
         .ceilToDouble()
         .clamp(1.0, double.infinity)
         .toDouble();
@@ -218,7 +226,7 @@ class WeightTrendChart extends StatelessWidget {
               leftTitles: AxisTitles(
                 sideTitles: SideTitles(
                   showTitles: true,
-                  reservedSize: 40,
+                  reservedSize: 40 * textScale, // [fork] S96
                   // [fork] S83 axis-labels: the padded edges are not ticks,
                   // and a half-step shows its decimal, so no two labels
                   // read the same ("88, 88, 87").
@@ -240,7 +248,7 @@ class WeightTrendChart extends StatelessWidget {
               bottomTitles: AxisTitles(
                 sideTitles: SideTitles(
                   showTitles: true,
-                  reservedSize: 28,
+                  reservedSize: 28 * textScale, // [fork] S96
                   interval: labelInterval,
                   getTitlesWidget: (value, meta) {
                     final day = dayAt(value.toInt());
@@ -267,22 +275,24 @@ class WeightTrendChart extends StatelessWidget {
               ],
             ),
             lineBarsData: [
+              // [fork] S96 chart-touch: as Weight history draws them,
+              // weigh-ins thin and muted, joined straight (a spline
+              // overshot them), the trend the bold line (JB4)
               LineChartBarData(
                 spots: spots,
-                isCurved: true,
-                preventCurveOverShooting: true,
-                color: lineColor,
-                barWidth: 2.5,
+                color: theme.colorScheme.onSurfaceVariant,
+                barWidth: 1.5,
                 dotData: FlDotData(
                   show: true,
                   getDotPainter: (spot, percent, bar, index) =>
                       FlDotCirclePainter(
-                        radius: 3,
-                        color: lineColor,
+                        radius: 2.5,
+                        color: theme.colorScheme.onSurfaceVariant,
                         strokeWidth: 0,
                       ),
                 ),
               ),
+              // [/fork]
               // Moving-average overlay (#1119): dashed, no dots, thinner
               // than the primary line so the raw readings still read as
               // the leading signal. Rendered second so it sits on top of
@@ -296,8 +306,9 @@ class WeightTrendChart extends StatelessWidget {
                   // 2.4:1 on a light card; the dashes tell it apart
                   color: lineColor,
                   // [/fork]
-                  barWidth: 1.5,
-                  dashArray: const [6, 4],
+                  // [fork] S96 chart-touch: solid and bold, the trend
+                  barWidth: 3,
+                  // [/fork]
                   dotData: const FlDotData(show: false),
                 ),
             ],
@@ -309,9 +320,7 @@ class WeightTrendChart extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.only(top: 8),
           child: Text(
-            smoothed != null
-                ? 'Dots: weigh-ins. Dashed: trend.'
-                : 'Dots: weigh-ins. Dashed: 7-day average.',
+            'Dots: weigh-ins. Bold line: trend.',
             style: theme.textTheme.bodySmall,
           ),
         ),

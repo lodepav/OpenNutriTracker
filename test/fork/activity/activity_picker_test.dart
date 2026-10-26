@@ -8,6 +8,7 @@ import 'package:opennutritracker/core/domain/entity/user_gender_entity.dart';
 import 'package:opennutritracker/core/domain/entity/user_pal_entity.dart';
 import 'package:opennutritracker/core/domain/entity/user_weight_goal_entity.dart';
 import 'package:opennutritracker/core/utils/energy_unit_provider.dart';
+import 'package:opennutritracker/fork/adaptive/activity_credit.dart';
 import 'package:opennutritracker/fork/activity/activity_picker.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 import 'package:provider/provider.dart';
@@ -167,6 +168,63 @@ void main() {
     expect(logged.single.burnedKcal, closeTo(266.67, 0.01));
     expect(logged.single.date, _day);
     expect(logged.single.physicalActivityEntity, _yoga);
+  });
+
+  testWidgets('the keyboard leaves the field, its kcal and Add in sight', (
+    tester,
+  ) async {
+    await _pump(tester);
+    await _tap(tester, 'add-activity-row-02160');
+    // A keyboard 350 high over the 900 of the screen.
+    tester.view.viewInsets = FakeViewPadding(
+      bottom: 350 * tester.view.devicePixelRatio,
+    );
+    addTearDown(tester.view.resetViewInsets);
+    await tester.pumpAndSettle();
+    for (final id in ['activity-duration-field', 'activity-duration-add']) {
+      expect(
+        tester.getRect(find.bySemanticsIdentifier(id)).bottom,
+        lessThanOrEqualTo(900 - 350),
+        reason: id,
+      );
+    }
+    expect(
+      tester.getRect(find.textContaining('kcal').last).bottom,
+      lessThanOrEqualTo(900 - 350),
+    );
+  });
+
+  testWidgets('under an adaptive target, the sheet says when it counts', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ChangeNotifierProvider(
+        create: (_) => EnergyUnitProvider(),
+        child: MaterialApp(
+          localizationsDelegates: const [
+            S.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+          ],
+          supportedLocales: S.supportedLocales,
+          home: Scaffold(
+            body: DurationSheet(
+              activity: _yoga,
+              user: _user,
+              day: _day,
+              today: _day,
+              credit: ActivityCredit.atCheckIn,
+            ),
+          ),
+        ),
+      ),
+    );
+    expect(
+      find.text('burned; counted at the next check-in, not added today'),
+      findsOneWidget,
+    );
+    expect(ActivityCredit.atCheckIn.raisesGoal, isFalse);
+    expect(ActivityCredit.dailyCapped.raisesGoal, isTrue);
   });
 
   testWidgets('down to five minutes and no lower', (tester) async {

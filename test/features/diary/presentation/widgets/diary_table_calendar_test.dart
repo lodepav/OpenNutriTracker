@@ -65,4 +65,25 @@ void main() {
       );
     }
   });
+
+  // [fork] S92 a11y-labels-2: the strip's arrows say they move a week, and
+  // a day is a 48 dp target
+  testWidgets('the week strip says week and its days are 48 high', (
+    tester,
+  ) async {
+    await tester.pumpWidget(_app(textScale: 1));
+    await tester.pumpAndSettle();
+    expect(find.bySemanticsLabel('Previous week'), findsOneWidget);
+    expect(find.bySemanticsLabel('Next week'), findsOneWidget);
+    expect(find.bySemanticsLabel('Previous month'), findsNothing);
+    // The day's cell: what takes the tap.
+    final cell = find
+        .ancestor(
+          of: find.text('25'),
+          matching: find.byType(RawGestureDetector),
+        )
+        .first;
+    expect(tester.getSize(cell).height, greaterThanOrEqualTo(48));
+  });
+  // [/fork]
 }

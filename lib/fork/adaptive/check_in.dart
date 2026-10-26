@@ -110,6 +110,10 @@ class CheckIn {
   /// [CheckInInputs.formulaKcal], while [fromProfile].
   final double? formulaKcal;
 
+  /// The energy a kg of weight change counts as, which the goal's pace is
+  /// turned into energy at.
+  final double? kcalPerKg;
+
   /// The first check-in, and no weigh-in and log has shaped the estimate
   /// yet: it is the profile's prior, as for a new user.
   bool get fromProfile => formulaKcal != null;
@@ -131,6 +135,7 @@ class CheckIn {
     this.targetWeightKg,
     this.activityChangeKcal,
     this.formulaKcal,
+    this.kcalPerKg,
   });
 
   /// MacroFactor's data rule for the week: 4 logged days and a weigh-in.
@@ -171,10 +176,8 @@ CheckIn computeCheckIn(CheckInInputs inputs) {
       : meanActivity(week);
 
   final weight = now ?? 70.0;
-  final goalKcal =
-      inputs.goalRateKgPerWeek *
-      inputs.settings.kcalPerKgAt(weight, inputs.bodyFatPercent) /
-      7;
+  final kcalPerKg = inputs.settings.kcalPerKgAt(weight, inputs.bodyFatPercent);
+  final goalKcal = inputs.goalRateKgPerWeek * kcalPerKg / 7;
   final goalEnergy = inputs.taper(goalKcal, weight);
   final previous = inputs.previousBaseKcal;
   final cap = inputs.maxChangeKcal;
@@ -223,5 +226,6 @@ CheckIn computeCheckIn(CheckInInputs inputs) {
         ? weekly - inputs.previousActivityKcal!
         : null,
     formulaKcal: run.updates == 0 ? inputs.formulaKcal : null,
+    kcalPerKg: kcalPerKg,
   );
 }

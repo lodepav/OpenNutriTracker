@@ -306,8 +306,50 @@ class StatHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = paletteOf(context);
     final text = Theme.of(context).textTheme;
+    TextSpan value(({String label, String value, String? unit}) s) => TextSpan(
+      text: s.value,
+      style: text.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
+      children: [
+        if (s.unit != null)
+          TextSpan(
+            text: ' ${s.unit}',
+            style: text.labelMedium?.copyWith(color: palette.textMuted),
+          ),
+      ],
+    );
+    // Large text leaves a third of the width too narrow for a label or a
+    // number and its unit: a row each, the label beside its figure.
+    if (MediaQuery.textScalerOf(context).scale(1) >= 1.5) {
+      return Column(
+        children: [
+          for (final s in stats)
+            MergeSemantics(
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: Dimens.spacing4),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.baseline,
+                  textBaseline: TextBaseline.alphabetic,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        s.label,
+                        style: text.labelMedium?.copyWith(
+                          color: palette.textMuted,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: Dimens.spacing8),
+                    Text.rich(value(s)),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      );
+    }
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
+      spacing: Dimens.spacing8,
       children: [
         for (final s in stats)
           Expanded(
@@ -321,25 +363,7 @@ class StatHeader extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: text.labelMedium?.copyWith(color: palette.textMuted),
                   ),
-                  AutoSizeText.rich(
-                    TextSpan(
-                      text: s.value,
-                      style: text.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                      children: [
-                        if (s.unit != null)
-                          TextSpan(
-                            text: ' ${s.unit}',
-                            style: text.labelMedium?.copyWith(
-                              color: palette.textMuted,
-                            ),
-                          ),
-                      ],
-                    ),
-                    maxLines: 1,
-                    minFontSize: 12,
-                  ),
+                  AutoSizeText.rich(value(s), maxLines: 1, minFontSize: 12),
                 ],
               ),
             ),

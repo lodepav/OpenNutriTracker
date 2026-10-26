@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:opennutritracker/core/domain/entity/body_weight_unit_entity.dart';
-import 'package:opennutritracker/core/domain/entity/weight_log_entity.dart';
-import 'package:opennutritracker/core/domain/usecase/add_weight_log_usecase.dart';
 import 'package:opennutritracker/core/domain/usecase/get_user_usecase.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
@@ -10,6 +8,9 @@ import 'package:opennutritracker/features/profile/presentation/bloc/profile_bloc
 import 'package:opennutritracker/features/profile/presentation/utils/profile_display_format.dart';
 import 'package:opennutritracker/features/profile/presentation/widgets/set_weight_dialog.dart';
 import 'package:opennutritracker/generated/l10n.dart';
+// [fork] S111 typed-weigh-in
+import 'package:opennutritracker/fork/weight/weigh_in_log.dart';
+// [/fork]
 
 /// #281: Quick weight update chip on the home screen.
 ///
@@ -95,30 +96,39 @@ class QuickWeightWidget extends StatelessWidget {
   // [/fork]
 
   Future<void> _showWeightDialog(BuildContext context) async {
+    // [fork] S111 typed-weigh-in: a second weigh-in today says it replaces
+    // the first, and the save says so with an Undo that brings it back
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final logged = await weighInsByDay();
+    if (!context.mounted) return;
+    // [/fork]
     final newKg = await showDialog<double>(
       context: context,
       builder: (context) => SetWeightDialog(
         initialKg: weightKg,
         unit: bodyWeightUnit,
+        logged: logged, // [fork] S111
       ),
     );
 
     if (newKg == null || !context.mounted) return;
 
-    final now = DateTime.now();
-    await locator<AddWeightLogUsecase>().addEntry(
-      WeightLogEntity(
-        date: DateTime(now.year, now.month, now.day),
-        weightKg: newKg,
-      ),
+    // [fork] S111 typed-weigh-in
+    await logWeighIn(
+      context,
+      kg: newKg,
+      day: today,
+      unit: bodyWeightUnit,
+      replaced: logged[today],
+      refresh: () async {
+        // addEntry already persisted today's weight onto the user record,
+        // so re-load it and route through ProfileBloc.updateUser purely so
+        // the profile screen, diary, and home all refresh in one go.
+        final user = await locator<GetUserUsecase>().getUserData();
+        await locator<ProfileBloc>().updateUser(user);
+      },
     );
-
-    // addEntry already persisted today's weight onto the user record, so
-    // re-load it and route through ProfileBloc.updateUser purely so the
-    // profile screen, diary, and home all refresh in one go. Going through
-    // AddUserUsecase directly would update Hive but leave the profile
-    // screen showing the pre-edit weight until the next manual reload.
-    final user = await locator<GetUserUsecase>().getUserData();
-    await locator<ProfileBloc>().updateUser(user);
+    // [/fork]
   }
 }

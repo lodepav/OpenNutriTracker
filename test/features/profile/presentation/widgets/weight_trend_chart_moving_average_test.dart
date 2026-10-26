@@ -69,7 +69,10 @@ void main() {
       final ma = data.lineBarsData[1];
       expect(raw.dashArray, isNull, reason: 'primary line stays solid');
       expect(raw.dotData.show, isTrue, reason: 'primary line keeps its dots');
-      expect(ma.dashArray, isNotNull, reason: 'MA line is dashed');
+      // [fork] S96 chart-touch: the trend is the solid bold line (JB4)
+      expect(ma.dashArray, isNull);
+      expect(ma.barWidth, greaterThan(raw.barWidth));
+      // [/fork]
       expect(ma.dotData.show, isFalse, reason: 'MA line has no dots');
       // MA line has one point per entry once smoothing has kicked in (i.e.
       // ≥ 2 samples in the trailing 7-day window). Entry #0 alone falls
@@ -176,8 +179,10 @@ void main() {
 
       final data = await _pumpChart(tester, entries: entries);
 
-      expect(data.lineBarsData, hasLength(1),
-          reason: 'primary line only — MA has no points that meet minSamples');
+      // [fork] S15 smoothed-trend: the trend, unlike a 7-day average, is
+      // drawn between two weigh-ins a month apart (JB4)
+      expect(data.lineBarsData, hasLength(2));
+      // [/fork]
     },
   );
 }

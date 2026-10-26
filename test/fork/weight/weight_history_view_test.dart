@@ -18,6 +18,7 @@ Future<List<WeightLogEntity>> _pump(
   WidgetTester tester,
   List<WeightLogEntity> entries, {
   BodyWeightUnit unit = BodyWeightUnit.kg,
+  ValueChanged<WeightLogEntity>? onEdit,
 }) async {
   final deleted = <WeightLogEntity>[];
   await tester.pumpWidget(
@@ -34,6 +35,7 @@ Future<List<WeightLogEntity>> _pump(
         unit: unit,
         targetWeightKg: null,
         onAdd: () {},
+        onEdit: onEdit,
         onDelete: deleted.add,
         today: _today,
       ),
@@ -136,6 +138,24 @@ void main() {
   ) async {
     final deleted = await _pump(tester, entries);
     await tester.drag(find.text('Yesterday'), const Offset(-600, 0));
+    await tester.pumpAndSettle();
+    expect(deleted, [entries[1]]);
+    expect(find.text('Yesterday'), findsNothing);
+  });
+
+  testWidgets('a tap offers Edit and Delete', (tester) async {
+    final edited = <WeightLogEntity>[];
+    final deleted = await _pump(tester, entries, onEdit: edited.add);
+    await tester.tap(find.text('Yesterday'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.bySemanticsIdentifier('weigh-in-edit'));
+    await tester.pumpAndSettle();
+    expect(edited, [entries[1]]);
+    expect(deleted, isEmpty);
+
+    await tester.tap(find.text('Yesterday'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.bySemanticsIdentifier('weigh-in-delete'));
     await tester.pumpAndSettle();
     expect(deleted, [entries[1]]);
     expect(find.text('Yesterday'), findsNothing);
