@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/fork/goal/goal_progress.dart';
 import 'package:opennutritracker/fork/trends/weight_detail.dart';
 
@@ -90,6 +91,35 @@ void main() {
         today: today,
       );
       expect((s.planDate, s.planKg, s.paceKgPerWeek), (ago(10), 89, -0.5));
+    });
+
+    test('a start kept before the pace: the plan from the check-ins\' '
+        'last pace change', () {
+      final s = resolveGoalStart(
+        stored: GoalStart(date: ago(30), kg: 89.9, targetKg: 82),
+        targetKg: 82,
+        paceKgPerWeek: -0.5,
+        trend: trend,
+        today: today,
+        paceSince: ago(7),
+      );
+      expect((s.date, s.kg), (ago(30), 89.9));
+      expect(
+        (s.planDate, s.planKg, s.paceKgPerWeek),
+        (ago(7), trend[33], -0.5),
+      );
+    });
+
+    test('a pace set before the start leaves the plan at the start', () {
+      final s = resolveGoalStart(
+        stored: GoalStart(date: ago(30), kg: 89.9, targetKg: 82),
+        targetKg: 82,
+        paceKgPerWeek: -0.5,
+        trend: trend,
+        today: today,
+        paceSince: ago(35),
+      );
+      expect((s.planDate, s.planKg), (ago(30), 89.9));
     });
 
     test('kept as JSON, with and without a replan', () {
@@ -213,5 +243,30 @@ void main() {
     expect(c[3], closeTo(-0.3, 1e-9));
     expect(c[7], closeTo(-0.7, 1e-9));
     expect(c[14], isNull);
+  });
+
+  group('paceSetOn', () {
+    CheckInRecord at(int daysAgo, double? rate) => CheckInRecord(
+      date: ago(daysAgo),
+      expenditureKcal: 2500,
+      proposedKcal: 2000,
+      acceptedKcal: 2000,
+      goalRateKgPerWeek: rate,
+    );
+
+    test('the first check-in of the latest run at the pace', () {
+      expect(
+        paceSetOn([at(21, -0.25), at(14, -0.5), at(7, -0.5)], -0.5),
+        ago(14),
+      );
+    });
+
+    test('none when every check-in is at it, none records it, or the last '
+        'is at another', () {
+      expect(paceSetOn([at(14, -0.5), at(7, -0.5)], -0.5), isNull);
+      expect(paceSetOn([at(14, null), at(7, null)], -0.5), isNull);
+      expect(paceSetOn([at(14, -0.5), at(7, -0.25)], -0.5), isNull);
+      expect(paceSetOn(const [], -0.5), isNull);
+    });
   });
 }
