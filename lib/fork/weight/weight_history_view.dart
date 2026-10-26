@@ -47,6 +47,9 @@ class WeightHistoryView extends StatefulWidget {
   final BodyWeightUnit unit;
   final double? targetWeightKg;
   final VoidCallback onAdd;
+
+  /// A tapped weigh-in, to edit; Delete is beside it.
+  final ValueChanged<WeightLogEntity>? onEdit;
   final ValueChanged<WeightLogEntity> onDelete;
 
   /// For tests.
@@ -58,6 +61,7 @@ class WeightHistoryView extends StatefulWidget {
     required this.unit,
     required this.targetWeightKg,
     required this.onAdd,
+    this.onEdit,
     required this.onDelete,
     this.today,
   });
@@ -210,6 +214,10 @@ class _WeightHistoryViewState extends State<WeightHistoryView> {
                               : null,
                           unit: unit,
                           today: today,
+                          onEdit: switch (widget.onEdit) {
+                            final edit? => () => edit(entry),
+                            null => null,
+                          },
                           onDelete: () {
                             setState(() => _gone.add(entry));
                             widget.onDelete(entry);
@@ -221,7 +229,7 @@ class _WeightHistoryViewState extends State<WeightHistoryView> {
                 ),
                 const SizedBox(height: Dimens.spacing8),
                 Text(
-                  'Swipe a weigh-in left to delete it',
+                  'Tap a weigh-in to edit or delete it',
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: paletteOf(context).textMuted,
@@ -491,6 +499,7 @@ class _WeighInRow extends StatelessWidget {
   final WeightLogEntity? previous;
   final BodyWeightUnit unit;
   final DateTime today;
+  final VoidCallback? onEdit;
   final VoidCallback onDelete;
 
   const _WeighInRow({
@@ -499,8 +508,50 @@ class _WeighInRow extends StatelessWidget {
     required this.previous,
     required this.unit,
     required this.today,
+    this.onEdit,
     required this.onDelete,
   });
+
+  /// Edit and Delete for a tap: a swipe was the only way to delete.
+  Future<void> _actions(BuildContext context, String title) async {
+    final edit = onEdit;
+    final chosen = await showModalBottomSheet<VoidCallback>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(bottom: Dimens.spacing8),
+              child: Text(
+                title,
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+            ),
+            if (edit != null)
+              Semantics(
+                identifier: 'weigh-in-edit',
+                child: ListTile(
+                  leading: const Icon(Icons.edit_outlined),
+                  title: const Text('Edit'),
+                  onTap: () => Navigator.of(context).pop(edit),
+                ),
+              ),
+            Semantics(
+              identifier: 'weigh-in-delete',
+              child: ListTile(
+                leading: const Icon(Icons.delete_outline),
+                title: const Text('Delete'),
+                onTap: () => Navigator.of(context).pop(onDelete),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+    chosen?.call();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -550,58 +601,61 @@ class _WeighInRow extends StatelessWidget {
           child: Icon(Icons.delete_outline, color: theme.colorScheme.onError),
         ),
         child: MergeSemantics(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: 56),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: Dimens.spacing12,
-                vertical: Dimens.spacing8,
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(title, style: theme.textTheme.bodyLarge),
-                        if (sub.isNotEmpty)
-                          Text(
-                            sub.join(' · '),
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: palette.textMuted,
+          child: InkWell(
+            onTap: () => _actions(context, '$title · $weight'),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 56),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: Dimens.spacing12,
+                  vertical: Dimens.spacing8,
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(title, style: theme.textTheme.bodyLarge),
+                          if (sub.isNotEmpty)
+                            Text(
+                              sub.join(' · '),
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: palette.textMuted,
+                              ),
                             ),
-                          ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                  if (change != null)
-                    Container(
-                      constraints: const BoxConstraints(minWidth: 44),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: Dimens.spacing8,
-                        vertical: 3,
-                      ),
-                      decoration: BoxDecoration(
-                        color: palette.surfaceMuted,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Text(
-                        change,
-                        textAlign: TextAlign.center,
-                        semanticsLabel: '$change since the one before',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: palette.textMuted,
+                    if (change != null)
+                      Container(
+                        constraints: const BoxConstraints(minWidth: 44),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: Dimens.spacing8,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: palette.surfaceMuted,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          change,
+                          textAlign: TextAlign.center,
+                          semanticsLabel: '$change since the one before',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: palette.textMuted,
+                          ),
                         ),
                       ),
+                    const SizedBox(width: Dimens.spacing12),
+                    Text(
+                      weight,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
-                  const SizedBox(width: Dimens.spacing12),
-                  Text(
-                    weight,
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),

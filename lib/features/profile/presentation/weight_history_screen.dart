@@ -113,12 +113,19 @@ class _WeightHistoryScreenState extends State<WeightHistoryScreen> {
       unit: _bodyWeightUnit,
       targetWeightKg: _targetWeightKg,
       onAdd: _onAddEntry,
+      onEdit: _onEditEntry,
       onDelete: _onDelete,
     );
     // [/fork]
   }
 
-  Future<void> _onAddEntry() async {
+  // [fork] S122 weight-history: a tapped weigh-in opens in the same
+  // dialog; moved to another day, it leaves the one it was
+  Future<void> _onEditEntry(WeightLogEntity entry) => _onAddEntry(entry);
+  // [/fork]
+
+  // [fork] S122: [editing] is a weigh-in opened from the list
+  Future<void> _onAddEntry([WeightLogEntity? editing]) async {
     // The profile weight is the current one: a reading for today updates
     // it, and so does editing it on the profile. A fixed 70 kg here
     // contradicted the profile on every log that had no entries (#1367).
@@ -128,12 +135,20 @@ class _WeightHistoryScreenState extends State<WeightHistoryScreen> {
     final result = await showDialog<_NewWeightEntry>(
       context: context,
       builder: (context) => _AddWeightEntryDialog(
-        initialDate: DateTime.now(),
-        initialWeightKg: initialWeightKg,
+        // [fork] S122 weight-history: the weigh-in opened, if one was
+        initialDate: editing?.date ?? DateTime.now(),
+        initialWeightKg: editing?.weightKg ?? initialWeightKg,
+        initialNote: editing?.note,
+        // [/fork]
         bodyWeightUnit: _bodyWeightUnit,
       ),
     );
     if (result == null) return;
+    // [fork] S122 weight-history
+    if (editing != null && !DateUtils.isSameDay(editing.date, result.date)) {
+      await _deleteUsecase.deleteEntry(editing);
+    }
+    // [/fork]
 
     await _addUsecase.addEntry(
       WeightLogEntity(
@@ -190,11 +205,13 @@ class _NewWeightEntry {
 class _AddWeightEntryDialog extends StatefulWidget {
   final DateTime initialDate;
   final double initialWeightKg;
+  final String? initialNote; // [fork] S122
   final BodyWeightUnit bodyWeightUnit;
 
   const _AddWeightEntryDialog({
     required this.initialDate,
     required this.initialWeightKg,
+    this.initialNote, // [fork] S122
     required this.bodyWeightUnit,
   });
 
@@ -214,7 +231,9 @@ class _AddWeightEntryDialogState extends State<_AddWeightEntryDialog> {
     super.initState();
     _date = widget.initialDate;
     _weightKg = widget.initialWeightKg;
-    _noteController = TextEditingController();
+    _noteController = TextEditingController(
+      text: widget.initialNote, // [fork] S122
+    );
   }
 
   @override
