@@ -2,7 +2,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/features/diary/presentation/bloc/calendar_day_bloc.dart';
 import 'package:opennutritracker/features/diary/presentation/bloc/diary_bloc.dart';
-import 'package:opennutritracker/features/profile/presentation/bloc/profile_bloc.dart';
 import 'package:opennutritracker/features/trends/presentation/bloc/trends_bloc.dart';
 
 /// Stand-ins for the screen-persistent Diary, CalendarDay and Trends blocs
@@ -27,11 +26,6 @@ class ReloadRecorder {
     locator.registerSingleton<CalendarDayBloc>(_RecordingCalendarDayBloc(log));
     locator.registerSingleton<TrendsBloc>(_RecordingTrendsBloc(log));
   }
-
-  // [fork] S113: the profile too, which a weigh-in's delete reloads
-  void registerProfile() =>
-      locator.registerSingleton<ProfileBloc>(_RecordingProfileBloc(log));
-  // [/fork]
 }
 
 class _RecordingDiaryBloc extends Fake implements DiaryBloc {
@@ -44,15 +38,6 @@ class _RecordingDiaryBloc extends Fake implements DiaryBloc {
 
   @override
   void updateHomePage() => _log.add('updateHomePage'); // [fork] S113
-}
-
-class _RecordingProfileBloc extends Fake implements ProfileBloc {
-  final List<String> _log;
-
-  _RecordingProfileBloc(this._log);
-
-  @override
-  void add(ProfileEvent event) => _log.add(event.runtimeType.toString());
 }
 
 class _RecordingCalendarDayBloc extends Fake implements CalendarDayBloc {

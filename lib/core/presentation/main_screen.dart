@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:opennutritracker/core/domain/usecase/get_config_usecase.dart';
-import 'package:opennutritracker/core/presentation/widgets/add_item_bottom_sheet.dart';
+// [fork] S131 add-sheet: the fork's sheet in place of add_item_bottom_sheet.dart
+import 'package:opennutritracker/fork/add/add_sheet.dart';
+// [/fork]
 import 'package:opennutritracker/core/presentation/widgets/demo_mode_banner.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/utils/health_rationale_service.dart';
@@ -223,7 +225,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
       useSafeArea: true, // [fork] S83 a tall sheet stops below the status bar
       showDragHandle: true, // [fork] S131 add-sheet
       builder: (BuildContext context) {
-        return AddItemBottomSheet(
+        return AddSheet( // [fork] S131
           day: DateTime.now(),
           showActivityTracking: config.showActivityTracking,
           usesImperialUnits: config.usesImperialFoodUnits,

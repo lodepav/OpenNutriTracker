@@ -225,8 +225,7 @@ void main() {
     expect(db.closedScopedBoxes, [(HiveDBProvider.intakeBoxName, '_partner')]);
   });
 
-  // [fork] S142 keep-history: past entries stay, as a recipe's do
-  test('deleting the edited meal keeps the entries logged before the '
+  test('deleting the edited meal removes the entries logged before the '
       'edit, and their calories', () async {
     final oats = customMeal(code: 'uuid-oats', name: 'Oats', kcal: 370);
     await customMealBox.add(MealDBO.fromMealEntity(oats));
@@ -266,10 +265,12 @@ void main() {
     );
 
     expect(customMealBox.isEmpty, isTrue);
-    expect(intakeBox.length, 2);
-    expect(trackedDayBox.values.single.caloriesTracked, 740);
-    // [/fork]
-  });
+    expect(intakeBox.isEmpty, isTrue);
+    expect(trackedDayBox.values.single.caloriesTracked, 0);
+    // [fork] S142 keep-history: the fork keeps past entries; its case is in
+    // test/fork/cases/unit_test/edit_meal_remap_intakes_test.dart
+  }, skip: 'the fork keeps past entries (S142)');
+  // [/fork]
 
   test('an edit that keeps the barcode leaves past entries alone', () async {
     final oats = customMeal(code: '4006381333931', name: 'Oats');

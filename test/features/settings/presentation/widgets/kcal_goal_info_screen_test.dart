@@ -100,42 +100,6 @@ Future<void> _pump(
 }
 
 void main() {
-  // [fork] S134 goal-explained
-  group('the overview', () {
-    KcalGoalBreakdownEntity breakdown() => KcalGoalBreakdownEntity.compute(
-      user: _buildUser(),
-      userKcalAdjustment: 150,
-      totalKcalActivities: 320,
-    );
-
-    testWidgets('three steps add up to the goal, each with its math', (
-      tester,
-    ) async {
-      await _pump(tester, breakdown(), equations: false);
-
-      expect(find.text("Today's goal"), findsOneWidget);
-      expect(find.textContaining('3134', findRichText: true), findsOneWidget);
-      expect(find.text('3164 kcal'), findsOneWidget);
-      // The weight goal's −500 and the own +150 are one step.
-      expect(find.text('−350 kcal'), findsOneWidget);
-      expect(find.text('+320 kcal'), findsOneWidget);
-
-      expect(find.text('1.27'), findsNothing);
-      await tester.tap(find.text('Show the math').first);
-      await tester.pumpAndSettle();
-      expect(find.text('1.27'), findsOneWidget);
-    });
-
-    testWidgets('The equations opens the page of every step', (tester) async {
-      await _pump(tester, breakdown(), equations: false);
-      expect(find.text(l10nEn.kcalGoalInfoIntro), findsNothing);
-
-      await tester.tap(find.byKey(const Key('goal-equations')));
-      await tester.pumpAndSettle();
-      expect(find.text(l10nEn.kcalGoalInfoIntro), findsOneWidget);
-    });
-  });
-  // [/fork]
 
   group('KcalGoalInfoScreen', () {
     // Reference case, hand-computed from IOM 2005 p. 204. PA multiplies the

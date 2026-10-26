@@ -33,20 +33,6 @@ import 'package:opennutritracker/generated/l10n.dart';
 import 'package:provider/provider.dart';
 
 import '../../helpers/fake_favourites.dart';
-// [fork] S45 remembered-amounts
-import 'package:opennutritracker/fork/amounts/remembered_amounts.dart';
-
-class _MemoryAmounts extends RememberedAmounts {
-  final amounts = <String, RememberedAmount>{};
-
-  @override
-  Future<RememberedAmount?> of(MealEntity meal) async => amounts[meal.code];
-
-  @override
-  Future<void> remember(MealEntity meal, String unit, String quantity) async =>
-      amounts[meal.code!] = (unit: unit, quantity: quantity);
-}
-// [/fork]
 
 // #1126: when the user has opted into raw units in Settings, the meal-detail
 // dropdown must skip the serving default even for a food with a scalable
@@ -163,7 +149,6 @@ void main() {
     await getIt.reset();
   });
 
-
   Future<void> pumpMealDetail(WidgetTester tester, MealEntity meal) async {
     // 600x800 leaves the CustomScrollView with a real maxScrollExtent, so
     // the scroll-offset assertion below can actually fail if the race guard
@@ -274,45 +259,6 @@ void main() {
       expect(_maxScrollOffset(tester), 0.0);
     },
   );
-
-  // [fork] S45 remembered-amounts
-  group('remembered amounts', () {
-    late _MemoryAmounts amounts;
-    final before = RememberedAmounts.current;
-
-    setUp(() => RememberedAmounts.current = amounts = _MemoryAmounts());
-    tearDown(() => RememberedAmounts.current = before);
-
-    testWidgets('a food opens at the amount it was last logged at', (
-      tester,
-    ) async {
-      amounts.amounts['raw-units-test-solid'] = (unit: 'g', quantity: '45');
-      await pumpMealDetail(tester, _solidWithServing());
-
-      expect(bloc!.state.selectedUnit, 'g');
-      expect(bloc!.state.totalQuantityConverted, '45.0');
-      expect(_maxScrollOffset(tester), 0.0);
-    });
-
-    testWidgets('a remembered serving waits for the hydrated serving', (
-      tester,
-    ) async {
-      amounts.amounts['thin-off-liquid'] = (unit: 'serving', quantity: '2');
-      hydratedFor = _liquidHydratedOff();
-      await pumpMealDetail(tester, _liquidThinOff());
-
-      expect(bloc!.state.selectedUnit, 'serving');
-      expect(bloc!.state.totalQuantityConverted, '500.0');
-    });
-
-    testWidgets('a food never logged opens at the default', (tester) async {
-      await pumpMealDetail(tester, _solidWithServing());
-
-      expect(bloc!.state.selectedUnit, 'serving');
-      expect(bloc!.state.totalQuantityConverted, '30.0');
-    });
-  });
-  // [/fork]
 }
 
 class _FakeGetConfigUsecase implements GetConfigUsecase {

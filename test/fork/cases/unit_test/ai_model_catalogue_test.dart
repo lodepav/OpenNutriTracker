@@ -1,0 +1,58 @@
+// Fork cases moved out of test/unit_test/ai_model_catalogue_test.dart (they test the fork's changes).
+import 'package:flutter_test/flutter_test.dart';
+import 'package:opennutritracker/core/utils/ai_credential_storage.dart';
+import 'package:opennutritracker/core/utils/ai_model_catalogue.dart';
+
+void main() {
+  group('the default nobody chose', () {
+    // `AiCredentialStorage.writeModel` is only ever reached from an explicit
+    // tap in the settings dialog, so everyone who saved a key without opening
+    // the model list has no stored id and resolves to `.first` on every
+    // request. That makes list *order* a behavioural property, not a
+    // cosmetic one, and these tests exist because #726 added a model that is
+    // a tenth of the default's price and would have been tempting to promote.
+
+    test(
+      'adding cheaper OpenAI models did not move the OpenRouter default',
+      () {
+        // Reordering would send the food photographs of everyone who never
+        // opened the picker to a different company, with no interaction, after
+        // the photo sheet had named the old one — it interpolates `servedBy`.
+        // #688 refused a smaller version of this.
+        final unchosen = AiModelCatalogue.resolve(AiProvider.openrouter, null)!;
+        expect(unchosen.id, 'anthropic/claude-sonnet-5.5');
+        expect(unchosen.servedBy, 'Anthropic');
+      },
+    );
+
+    test('a retired id falls back rather than 404ing forever', () {
+      expect(
+        AiModelCatalogue.resolve(AiProvider.openrouter, 'anthropic/gone')!.id,
+        'anthropic/claude-sonnet-5.5',
+      );
+    });
+  });
+
+  group('what a row is allowed to say about itself', () {
+    test(
+      'only the OpenRouter list claims a cheapest, and Haiku 5.5 holds it',
+      () {
+        // The superlative is safe because Haiku 5.5 ($0.10/$0.50) sits below
+        // luna ($0.20/$1.20) and every other sibling on both
+        // the prompt and the completion axis. It is only meaningful among
+        // siblings, so it must not appear on a list where there is nothing to
+        // be cheapest *than*.
+        for (final provider in AiProvider.values) {
+          final models = AiModelCatalogue.forProvider(provider);
+          final cheapest = models.where((m) => m.note == AiModelNote.cheapest);
+          if (provider == AiProvider.openrouter) {
+            expect(cheapest.single.id, 'anthropic/claude-haiku-5.5');
+            expect(models.length, greaterThan(1));
+          } else {
+            expect(cheapest, isEmpty, reason: provider.name);
+          }
+        }
+      },
+    );
+  });
+}

@@ -20,7 +20,7 @@ import 'package:opennutritracker/features/trends/presentation/trends_page.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 import 'package:provider/provider.dart';
 
-import '../../fork/trends/trends_harness.dart' show openTile;
+import 'trends_harness.dart' show openTile;
 
 // Seam S93: the weight outlook reads the weigh-ins the chart draws, and is
 // labelled as the measured trend.

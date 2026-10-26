@@ -20,6 +20,7 @@ import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/fork/screens/profile/weight_history_screen.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 import '../../../helpers/fake_reload_blocs.dart';
+import '../../helpers/recording_profile_bloc.dart';
 import '../../../helpers/test_l10n.dart';
 
 class _FakeGetWeightLogUsecase extends Fake implements GetWeightLogUsecase {
