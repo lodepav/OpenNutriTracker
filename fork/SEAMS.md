@@ -151,6 +151,21 @@ because upstream merged the feature) gets removed, and so does its row.
 | S146 | `lib/fork/adaptive/expenditure_settings_ui.dart` | "Allow for a monthly cycle" shows for a woman's profile only, or while it is on, so it can be turned off. | active |
 | S147 | `lib/features/profile/profile_page.dart` | The You tab's Settings row in its own App section, apart from Tools (inside S121's block). | active |
 
+## Fork-owned copies
+
+An upstream screen the fork has mostly rewritten is not patched in place. It is copied whole
+into `lib/fork/`, the fork's copy is wired in with one seam (the route, or the parent that
+builds it), and the upstream file goes back to exactly what upstream has (D23). Upstream's
+tests keep testing upstream's file; the fork's tests test the copy.
+
+**On each upstream release merge**, upstream's changes to these files no longer arrive by
+themselves. Run `fork/tools/upstream-copies.sh <release tag>`: for each row it prints what
+upstream changed in the file since the copy was taken (`--patch` for the diff). Port what
+applies to the fork's copy, then set the row's "Upstream at copy" to the release.
+
+| Fork copy | Copied from | Upstream at copy | Wired in by |
+|---|---|---|---|
+
 ## Carried upstream changes
 
 Upstream-bound work (rule 1) is built on a branch off `develop`, cherry-picked (`-x`) into a
