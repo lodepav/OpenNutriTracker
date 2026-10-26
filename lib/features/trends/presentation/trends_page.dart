@@ -41,6 +41,9 @@ import 'package:opennutritracker/fork/weight/weigh_in_log.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
 import 'package:opennutritracker/fork/trends/trend_detail.dart';
 import 'package:opennutritracker/fork/trends/trend_stats.dart';
+// [fork] S161 chart-fit
+import 'package:opennutritracker/fork/trends/trends_widgets.dart' show fittedRange;
+// [/fork]
 // [/fork]
 
 class TrendsPage extends StatefulWidget {
@@ -186,12 +189,16 @@ class _WaterTrendCard extends StatelessWidget {
       }
     }
     final avg = loggedDays == 0 ? 0 : (sum / rangeDays).round();
-    final maxWater = spots.fold<double>(0, (m, s) => s.y > m ? s.y : m);
     // [fork] S97 chart-touch
     final dayLabel = _dayLabels(context, today, rangeDays);
     // [/fork]
-    final maxY =
-        [maxWater, goalMl.toDouble()].reduce((a, b) => a > b ? a : b) * 1.15 + 1;
+    // [fork] S161 chart-fit: the period's own lowest to highest
+    final range = fittedRange([
+      for (final s in spots) s.y,
+      if (goalMl > 0) goalMl.toDouble(),
+    ], minSpan: 100);
+    final maxY = range.max;
+    // [/fork]
 
     return AppCard(
       padding: const EdgeInsets.all(Dimens.spacing20),
@@ -228,7 +235,9 @@ class _WaterTrendCard extends StatelessWidget {
                 LineChartData(
                   minX: 0,
                   maxX: (rangeDays - 1).toDouble(),
-                  minY: 0,
+                  // [fork] S161 chart-fit
+                  minY: range.min,
+                  // [/fork]
                   maxY: maxY,
                   gridData: const FlGridData(show: false),
                   borderData: FlBorderData(show: false),

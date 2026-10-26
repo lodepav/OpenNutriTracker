@@ -154,14 +154,16 @@ class _SparkPainter extends CustomPainter {
     final present = values.whereType<double>().map((v) => v.abs()).toList();
     if (values.isEmpty || present.isEmpty) return;
     if (bars) {
-      final top = present.reduce(math.max);
+      // From the period's lowest to its highest, as the pages' charts.
+      final range = fittedRange(present);
+      final span = range.max - range.min;
       final slot = size.width / values.length;
       final w = math.min(slot * 0.72, 16.0);
       for (final (i, v) in values.indexed) {
         final x = i * slot + (slot - w) / 2;
-        final h = v == null || top == 0
+        final h = v == null || span == 0
             ? 2.0
-            : math.max(2.0, v.abs() / top * size.height);
+            : math.max(2.0, (v.abs() - range.min) / span * size.height);
         canvas.drawRRect(
           RRect.fromRectAndRadius(
             Rect.fromLTWH(x, size.height - h, w, h),
@@ -404,6 +406,20 @@ FlTitlesData weekdayTitles(BuildContext context, List<DateTime> dates) {
   );
 }
 
+/// The y range a chart of [values] spans: a little under the lowest to a
+/// little over the highest, so a period's changes fill the chart rather
+/// than sit on a bar from zero. All positive, it stays at or over zero;
+/// [minSpan] keeps a flat period from filling it with noise.
+({double min, double max}) fittedRange(
+  Iterable<double> values, {
+  double minSpan = 1,
+}) {
+  if (values.isEmpty) return (min: 0, max: minSpan);
+  final lo = values.reduce(math.min), hi = values.reduce(math.max);
+  final pad = math.max(hi - lo, minSpan) * 0.15;
+  return (min: lo >= 0 && lo - pad < 0 ? 0 : lo - pad, max: hi + pad);
+}
+
 /// A dashed goal line across a chart.
 ExtraLinesData goalLine(BuildContext context, double? goal) =>
     goal == null || goal <= 0
@@ -447,8 +463,14 @@ class DailyBarChart extends StatelessWidget {
     if (present.isEmpty) {
       return noData(context, 'Nothing logged in this range.');
     }
-    final hi = [...present, goal ?? 0, 0.0].reduce(math.max);
-    final lo = [...present, 0.0].reduce(math.min);
+    // Over the period's own lowest and highest (and the goal), so its
+    // changes show; bars that cross zero keep it.
+    final range = fittedRange([
+      ...present,
+      if (goal != null && goal! > 0) goal!,
+      if (present.any((v) => v < 0)) 0,
+    ]);
+    final base = range.min > 0 ? range.min : 0.0;
     final dayLabel = dayLabels(context, dates);
     final scheme = Theme.of(context).colorScheme;
     return Semantics(
@@ -458,8 +480,8 @@ class DailyBarChart extends StatelessWidget {
         child: LayoutBuilder(
           builder: (context, box) => BarChart(
             BarChartData(
-              minY: lo < 0 ? lo * 1.15 : 0,
-              maxY: hi * 1.15 + 1,
+              minY: range.min,
+              maxY: range.max,
               alignment: BarChartAlignment.spaceAround,
               gridData: const FlGridData(show: false),
               borderData: FlBorderData(show: false),
@@ -482,7 +504,8 @@ class DailyBarChart extends StatelessWidget {
                     x: i,
                     barRods: [
                       BarChartRodData(
-                        toY: v ?? 0,
+                        fromY: base,
+                        toY: v ?? base,
                         width: barWidth(box.maxWidth, values.length),
                         color: (v ?? 0) < 0 ? negativeColor ?? color : color,
                         borderRadius: BorderRadius.circular(
