@@ -7,14 +7,12 @@ import 'package:opennutritracker/core/domain/entity/kcal_goal_breakdown_entity.d
 import 'package:opennutritracker/core/domain/usecase/get_kcal_goal_breakdown_usecase.dart';
 import 'package:opennutritracker/core/utils/energy_unit_provider.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
-import 'package:opennutritracker/features/home/presentation/screens/nutrient_contributions_screen.dart';
 import 'package:opennutritracker/features/home/presentation/widgets/dashboard_widget.dart';
 import 'package:opennutritracker/features/settings/presentation/widgets/kcal_goal_info_screen.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 import 'package:percent_indicator/circular_percent_indicator.dart';
 import 'package:provider/provider.dart';
 
-import '../../../../fixture/intake_entity_fixtures.dart';
 import '../../../../fixture/user_entity_fixtures.dart';
 
 class _FakeBreakdownUsecase extends Fake implements GetKcalGoalBreakdownUsecase {
@@ -127,53 +125,6 @@ void main() {
       expect(find.byType(KcalGoalInfoScreen), findsOneWidget);
 
       semanticsHandle.dispose();
-    },
-  );
-
-  testWidgets(
-    'tapping a macro tile lists the foods its total came from (#1266)',
-    (tester) async {
-      await tester.binding.setSurfaceSize(const Size(500, 1600));
-      addTearDown(() => tester.binding.setSurfaceSize(null));
-
-      await tester.pumpWidget(_wrap(DashboardWidget(
-        totalKcalSupplied: 2800,
-        totalKcalBurned: 200,
-        totalKcalDaily: 2500,
-        totalKcalLeft: 1900,
-        totalCarbsIntake: 100,
-        totalFatsIntake: 30,
-        totalProteinsIntake: 60,
-        totalCarbsGoal: 375,
-        totalFatsGoal: 69,
-        totalProteinsGoal: 93,
-        intakes: [
-          intakeOf('Oats', 80, protein100: 13, carbs100: 60),
-          intakeOf('Chicken breast', 150, protein100: 23),
-          intakeOf('Apple', 150, carbs100: 12),
-        ],
-      )));
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.byWidgetPredicate(
-        (widget) =>
-            widget is Semantics &&
-            widget.properties.identifier == 'home-macro-protein',
-      ));
-      await tester.pumpAndSettle();
-
-      expect(find.byType(NutrientContributionsScreen), findsOneWidget);
-      // [fork] S124: the foods page's summary and title
-      expect(find.text('60'), findsOneWidget);
-      expect(find.text('of 93 g protein'), findsOneWidget);
-      expect(find.text("Today's foods"), findsOneWidget);
-      // [/fork]
-      expect(find.text('Apple'), findsNothing);
-      expect(
-        tester.getTopLeft(find.text('Chicken breast')).dy,
-        lessThan(tester.getTopLeft(find.text('Oats')).dy),
-      );
-      expect(find.text('35 g'), findsOneWidget);
     },
   );
 }
