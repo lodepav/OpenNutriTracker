@@ -11,6 +11,8 @@ import 'package:opennutritracker/fork/screens/home/dashboard_widget.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
 import 'package:opennutritracker/fork/display/display_prefs.dart';
 import 'package:opennutritracker/fork/display/home_tiles.dart';
+import 'package:opennutritracker/fork/layout/home_layout.dart';
+import 'package:opennutritracker/fork/layout/layout_store.dart';
 import 'package:opennutritracker/fork/trends/trend_stats.dart' show TrendMetric;
 import 'package:opennutritracker/fork/trends/trends_widgets.dart'
     show Sparkline;
@@ -236,6 +238,32 @@ void main() {
       expect(water, findsOne);
       expect(fasting, findsNothing);
     });
+  });
+
+  testWidgets('the tiles as arranged: fasting first, weight hidden (S162)', (
+    tester,
+  ) async {
+    final layout = LayoutStore.current(homeTilesKey);
+    addTearDown(() => layout.value = (order: const [], hidden: const {}));
+    layout.value = (
+      order: ['fasting', 'expenditure', 'water', 'weight'],
+      hidden: {'weight'},
+    );
+    await tester.pumpWidget(_app(_tiles()));
+    await tester.pumpAndSettle();
+    final fasting = find.bySemanticsIdentifier('home-fasting-chip');
+    final water = find.bySemanticsIdentifier('home-water-chip');
+    expect(find.byType(WeightTile), findsNothing);
+    // Fasting, then expenditure; water alone on the second row.
+    expect(tester.getTopLeft(fasting).dx, lessThan(100));
+    expect(
+      tester.getTopLeft(water).dy,
+      greaterThan(tester.getTopLeft(fasting).dy),
+    );
+    expect(
+      tester.getSize(water).width,
+      greaterThan(tester.getSize(fasting).width * 1.5),
+    );
   });
 
   group('the card', () {
