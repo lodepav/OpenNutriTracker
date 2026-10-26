@@ -395,7 +395,14 @@ class _NutrientGoalsScreenState extends State<NutrientGoalsScreen> {
       body: !_loaded
           ? const Center(child: CircularProgressIndicator())
           : ListView(
-              padding: const EdgeInsets.all(16),
+              // [fork] S143 clear of the navigation bar
+              padding: EdgeInsets.fromLTRB(
+                16,
+                16,
+                16,
+                16 + MediaQuery.paddingOf(context).bottom,
+              ),
+              // [/fork]
               children: [
                 Text(
                   s.settingsNutrientGoalsHint,

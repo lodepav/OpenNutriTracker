@@ -130,11 +130,11 @@ class _NutrientGoalsOverviewState extends State<NutrientGoalsOverview> {
         ],
       ),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(
+        padding: EdgeInsets.fromLTRB(
           Dimens.spacing12,
           0,
           Dimens.spacing12,
-          Dimens.spacing32,
+          Dimens.spacing32 + MediaQuery.paddingOf(context).bottom,
         ),
         children: [
           Wrap(

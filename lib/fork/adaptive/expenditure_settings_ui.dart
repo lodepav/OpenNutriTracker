@@ -40,7 +40,11 @@ class ExpenditureSettingsScreen extends StatelessWidget {
     body: ValueListenableBuilder(
       valueListenable: AdaptiveStore.settings,
       builder: (context, settings, _) => ListView(
-        padding: const EdgeInsets.only(bottom: 24),
+        // Clear of the system's navigation bar too: a set padding
+        // replaces the one ListView would take from it.
+        padding: EdgeInsets.only(
+          bottom: 24 + MediaQuery.paddingOf(context).bottom,
+        ),
         children: [
           _EstimateSection(settings, store),
           const Divider(),

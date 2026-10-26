@@ -112,7 +112,7 @@ class CustomMealsTab extends StatelessWidget {
                                       TextSpan(
                                         text:
                                             '${energyText(context, meal.nutriments.energyKcal100 ?? 0)} '
-                                            'per 100 ${meal.isLiquid ? 'ml' : 'g'} · ',
+                                            'per 100 ${meal.isLiquid ? 'ml' : 'g'}\n',
                                       ),
                                       ...macroSpans(context, (
                                         kcal: meal.nutriments.energyKcal100 ?? 0,

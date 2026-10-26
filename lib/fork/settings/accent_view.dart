@@ -54,11 +54,11 @@ class AccentColourView extends StatelessWidget {
     final text = Theme.of(context).textTheme;
     final accent = Theme.of(context).colorScheme.primary;
     return ListView(
-      padding: const EdgeInsets.fromLTRB(
+      padding: EdgeInsets.fromLTRB(
         Dimens.spacing12,
         Dimens.spacing8,
         Dimens.spacing12,
-        Dimens.spacing32,
+        Dimens.spacing32 + MediaQuery.paddingOf(context).bottom,
       ),
       children: [
         AppCard(

@@ -839,12 +839,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
             return Column(mainAxisSize: MainAxisSize.min, children: children);
           }
           return ListView(
-            padding: const EdgeInsets.fromLTRB(
+            // [fork] S143 clear of the navigation bar
+            padding: EdgeInsets.fromLTRB(
               Dimens.spacing16,
               Dimens.spacing16,
               Dimens.spacing16,
-              Dimens.spacing32,
+              Dimens.spacing32 + MediaQuery.paddingOf(context).bottom,
             ),
+            // [/fork]
             children: children,
           );
         }

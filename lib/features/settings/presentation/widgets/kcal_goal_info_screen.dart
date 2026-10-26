@@ -105,7 +105,14 @@ class _KcalGoalInfoScreenState extends State<KcalGoalInfoScreen> {
                   builder: (_) => Scaffold(
                     appBar: AppBar(title: Text(l10n.kcalGoalInfoInputsSection)),
                     body: ListView(
-                      padding: const EdgeInsets.all(Dimens.spacing16),
+                      // [fork] S143 clear of the navigation bar
+                      padding: EdgeInsets.fromLTRB(
+                        Dimens.spacing16,
+                        Dimens.spacing16,
+                        Dimens.spacing16,
+                        Dimens.spacing16 + MediaQuery.paddingOf(context).bottom,
+                      ),
+                      // [/fork]
                       children: [_InputsCard(breakdown: breakdown)],
                     ),
                   ),

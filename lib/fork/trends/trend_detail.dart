@@ -114,11 +114,11 @@ class TrendDetailPage extends StatelessWidget {
           builder: (context, future, _) => FutureBuilder(
             future: future,
             builder: (context, snapshot) => ListView(
-              padding: const EdgeInsets.fromLTRB(
+              padding: EdgeInsets.fromLTRB(
                 Dimens.spacing16,
                 Dimens.spacing8,
                 Dimens.spacing16,
-                Dimens.spacing32,
+                Dimens.spacing32 + MediaQuery.paddingOf(context).bottom,
               ),
               children: _body(context, state, snapshot.data ?? const []),
             ),

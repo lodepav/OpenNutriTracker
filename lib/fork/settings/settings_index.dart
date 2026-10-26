@@ -93,11 +93,11 @@ class SettingsIndex extends StatelessWidget {
       ),
     );
     return ListView(
-      padding: const EdgeInsets.fromLTRB(
+      padding: EdgeInsets.fromLTRB(
         Dimens.spacing12,
         Dimens.spacing8,
         Dimens.spacing12,
-        Dimens.spacing32,
+        Dimens.spacing32 + MediaQuery.paddingOf(context).bottom,
       ),
       children: [
         card(SettingsSection.values.where((s) => s.isFirstCard)),
