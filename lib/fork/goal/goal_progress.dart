@@ -121,6 +121,16 @@ DateTime? paceSetOn(List<CheckInRecord> checkIns, double paceKgPerWeek) {
   return null;
 }
 
+/// The way left from [nowKg] to [targetKg], 0 once there or past it as
+/// [goal]'s kept start runs; without a start for that target, the way
+/// either side is left.
+double goalLeftKg(double targetKg, double nowKg, GoalProgress? goal) {
+  final way = goal != null && (goal.targetKg - targetKg).abs() < 0.05
+      ? goal.totalKg
+      : 0;
+  return (targetKg - nowKg) * way < 0 ? 0 : (targetKg - nowKg).abs();
+}
+
 /// How far a goal has come, from [start] to [nowKg], against the plan of
 /// [paceKgPerWeek] from the start.
 class GoalProgress {

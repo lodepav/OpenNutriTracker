@@ -433,10 +433,10 @@ List<double?> nutrientByDay(
   for (final i in intakes) {
     final amount = nutrient.of(i);
     if (amount == null) continue;
-    final day = DayBoundaryCalc.logicalDayOfMinutes(
-      i.dateTime,
-      dayStartMinutes,
-    );
+    // A day label (a Diary or import entry's midnight) stays on its day,
+    // as the Diary keeps it; a clock time moves by the boundary.
+    final l = DayBoundaryCalc.dayLabelOf(i.dateTime, dayStartMinutes);
+    final day = DateTime(l.year, l.month, l.day);
     sums[day] = (sums[day] ?? 0) + amount;
   }
   return [for (final d in dates) sums[d]];

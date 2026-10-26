@@ -637,6 +637,23 @@ void main() {
     await showTile(tester, 'goal');
     expect(tileText(tester, 'goal'), contains('There'));
     expect(tileText(tester, 'goal'), isNot(contains('to go')));
+    // The Weight page's own goal tile says the same.
+    await openTile(tester, 'weight');
+    await tester.scrollUntilVisible(
+      find.text('To your goal'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(
+      find.descendant(
+        of: find.ancestor(
+          of: find.text('To your goal'),
+          matching: find.byType(FigureTile),
+        ),
+        matching: find.text('There'),
+      ),
+      findsOne,
+    );
   });
 
   testWidgets('Water: its average and goal over upstream\'s chart', (

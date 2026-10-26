@@ -5,6 +5,7 @@ import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/features/trends/presentation/bloc/trends_bloc.dart';
 import 'package:opennutritracker/fork/adaptive/goal_plan.dart';
 import 'package:opennutritracker/fork/adaptive/trend_points.dart';
+import 'package:opennutritracker/fork/goal/goal_progress.dart';
 import 'package:opennutritracker/fork/goal/goal_progress_page.dart';
 import 'package:opennutritracker/fork/report/nutrient_explorer.dart';
 import 'package:opennutritracker/fork/report/rate_text.dart';
@@ -12,6 +13,8 @@ import 'package:opennutritracker/fork/trends/detail_stats.dart';
 import 'package:opennutritracker/fork/trends/detail_widgets.dart';
 import 'package:opennutritracker/fork/trends/trend_detail.dart';
 import 'package:opennutritracker/fork/trends/trend_stats.dart';
+import 'package:opennutritracker/fork/trends/trends_overview.dart'
+    show TrendsOverview;
 import 'package:opennutritracker/fork/trends/trends_widgets.dart';
 
 /// The spans the weight page's change chips compare, in days, as
@@ -149,7 +152,12 @@ List<Widget> weightDetailBody(
               ? 'Daily weigh-ins steady the trend'
               : null,
         ),
-        _goalTile(context, state, stats.nowKg, pace30),
+        _GoalFigure(
+          key: ValueKey(state.targetWeightKg),
+          state: state,
+          now: stats.nowKg,
+          kgPerDay: pace30,
+        ),
       ],
     ),
     const SizedBox(height: Dimens.spacing12),
@@ -288,6 +296,40 @@ class _SwingNotesState extends State<_SwingNotes> {
   }
 }
 
+/// [_goalTile] with the goal's kept start, which says when the target is
+/// passed, read as the Trends tile reads it.
+class _GoalFigure extends StatefulWidget {
+  final TrendsLoaded state;
+  final double? now;
+  final double? kgPerDay;
+
+  const _GoalFigure({
+    super.key,
+    required this.state,
+    required this.now,
+    required this.kgPerDay,
+  });
+
+  @override
+  State<_GoalFigure> createState() => _GoalFigureState();
+}
+
+class _GoalFigureState extends State<_GoalFigure> {
+  late final _goal = TrendsOverview.goal();
+
+  @override
+  Widget build(BuildContext context) => FutureBuilder(
+    future: _goal,
+    builder: (context, goal) => _goalTile(
+      context,
+      widget.state,
+      widget.now,
+      widget.kgPerDay,
+      goal.data,
+    ),
+  );
+}
+
 /// "To your goal": the way left and the day at this pace; it opens Goal
 /// progress.
 Widget _goalTile(
@@ -295,6 +337,7 @@ Widget _goalTile(
   TrendsLoaded state,
   double? now,
   double? kgPerDay,
+  GoalProgress? goal,
 ) {
   final wu = state.bodyWeightUnit;
   void open() => openGoalProgress(context, wu);
@@ -307,8 +350,10 @@ Widget _goalTile(
       onTap: open,
     );
   }
-  final left = (target - now).abs();
-  final days = kgPerDay == null ? null : daysToTarget(now, target, kgPerDay);
+  final left = goalLeftKg(target, now, goal);
+  final days = kgPerDay == null || left < 0.1
+      ? null
+      : daysToTarget(now, target, kgPerDay);
   final t = DateTime.now();
   final locale = Localizations.localeOf(context).toLanguageTag();
   final on = days == null ? null : DateTime(t.year, t.month, t.day + days);

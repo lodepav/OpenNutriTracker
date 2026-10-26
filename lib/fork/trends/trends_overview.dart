@@ -477,17 +477,9 @@ TrendTile _goalTile(
   final wu = state.bodyWeightUnit;
   final target = state.targetWeightKg;
   final now = weight.nowKg;
-  // The kept start says which way the goal runs; without one, the way
-  // either side is left.
-  final way =
-      goal != null && target != null && (goal.targetKg - target).abs() < 0.05
-      ? goal.totalKg
-      : 0;
   final left = target == null || now == null
       ? null
-      : (target - now) * way < 0
-      ? 0.0
-      : (target - now).abs();
+      : goalLeftKg(target, now, goal);
   return TrendTile(
     id: 'trends-tile-goal',
     label: 'Goal',
