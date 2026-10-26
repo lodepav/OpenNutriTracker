@@ -2,6 +2,19 @@
 
 Written by fork/tools/release_notes.dart at each release (D16).
 
+## 0.3.1 · 2026-10-26
+
+Based on OpenNutriTracker 2.5.0.
+
+### Fixes and changes
+
+- behind the plan counts from the last pace change
+- the Expenditure axis fits its numbers at a large font
+- round-3 UX fixes for the Weight and Goal pages
+- the round-3 UX review's Expenditure and Calories fixes
+- the Weight trend page's insights and a Goal progress page
+- the Expenditure and Calories trend pages
+
 ## 0.3.0 · 2026-10-26
 
 Based on OpenNutriTracker 2.5.0.
