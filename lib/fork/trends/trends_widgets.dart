@@ -446,6 +446,10 @@ class DailyBarChart extends StatelessWidget {
   final String unit;
   final String label;
 
+  /// A tap on a day's bar; [selected] is the day picked, the others dimmed.
+  final void Function(int index)? onTap;
+  final int? selected;
+
   const DailyBarChart({
     super.key,
     required this.values,
@@ -455,6 +459,8 @@ class DailyBarChart extends StatelessWidget {
     this.goal,
     required this.unit,
     required this.label,
+    this.onTap,
+    this.selected,
   });
 
   @override
@@ -488,6 +494,14 @@ class DailyBarChart extends StatelessWidget {
               titlesData: weekdayTitles(context, dates),
               extraLinesData: goalLine(context, goal),
               barTouchData: BarTouchData(
+                touchCallback: onTap == null
+                    ? null
+                    : (event, response) {
+                        final spot = response?.spot;
+                        if (event is FlTapUpEvent && spot != null) {
+                          onTap!(spot.touchedBarGroupIndex);
+                        }
+                      },
                 touchTooltipData: BarTouchTooltipData(
                   getTooltipColor: (_) => scheme.inverseSurface,
                   fitInsideHorizontally: true,
@@ -507,7 +521,12 @@ class DailyBarChart extends StatelessWidget {
                         fromY: base,
                         toY: v ?? base,
                         width: barWidth(box.maxWidth, values.length),
-                        color: (v ?? 0) < 0 ? negativeColor ?? color : color,
+                        color: ((v ?? 0) < 0 ? negativeColor ?? color : color)
+                            .withValues(
+                              alpha: selected == null || selected == i
+                                  ? 1
+                                  : 0.35,
+                            ),
                         borderRadius: BorderRadius.circular(
                           values.length <= 31 ? 3 : 0,
                         ),

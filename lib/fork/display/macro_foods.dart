@@ -53,12 +53,16 @@ class FoodShare {
   final IntakeEntity first;
   final List<IntakeTypeEntity> meals;
 
+  /// How many times it was logged.
+  final int entries;
+
   const FoodShare({
     required this.name,
     required this.value,
     required this.meal,
     required this.first,
     required this.meals,
+    this.entries = 1,
   });
 
   /// [intakes]' shares of [metric], highest first; foods with none of it
@@ -79,6 +83,7 @@ class FoodShare {
           ...?previous?.meals,
           if (!(previous?.meals.contains(intake.type) ?? false)) intake.type,
         ],
+        entries: (previous?.entries ?? 0) + 1,
       );
     }
     return byFood.values.toList()..sort((a, b) => b.value.compareTo(a.value));
@@ -97,8 +102,11 @@ class MacroFoodsPage extends StatefulWidget {
   /// summed from [intakes], with no goal.
   final Map<FoodsMetric, FoodsTotal> totals;
 
-  final DateTime day;
+  /// The day a food opens on; none over a period, where each opens on
+  /// the day it was first logged.
+  final DateTime? day;
   final bool usesImperialUnits;
+  final String title;
 
   const MacroFoodsPage({
     super.key,
@@ -107,6 +115,7 @@ class MacroFoodsPage extends StatefulWidget {
     required this.totals,
     required this.day,
     this.usesImperialUnits = false,
+    this.title = "Today's foods",
   });
 
   @override
@@ -157,7 +166,7 @@ class _MacroFoodsPageState extends State<MacroFoodsPage> {
     final label = _label(context, _metric);
 
     return Scaffold(
-      appBar: AppBar(title: const Text("Today's foods")),
+      appBar: AppBar(title: Text(widget.title)),
       body: ListView(
         padding: EdgeInsets.fromLTRB(
           Dimens.spacing12,
@@ -216,7 +225,7 @@ class _MacroFoodsPageState extends State<MacroFoodsPage> {
                 children: [
                   for (final (i, share) in shares.indexed) ...[
                     if (i > 0) Divider(height: 1, color: palette.surfaceMuted),
-                    _FoodRow(
+                    FoodShareRow(
                       share: share,
                       amount: _amount(context, share.value),
                       percent: total.eaten > 0
@@ -231,7 +240,7 @@ class _MacroFoodsPageState extends State<MacroFoodsPage> {
                         arguments: MealDetailScreenArguments(
                           share.meal,
                           share.meals.first,
-                          widget.day,
+                          widget.day ?? share.first.dateTime,
                           widget.usesImperialUnits,
                         ),
                       ),
@@ -335,7 +344,9 @@ class _Summary extends StatelessWidget {
   }
 }
 
-class _FoodRow extends StatelessWidget {
+/// A food's row: its kind, name and meals, its share as a bar, the
+/// amount and percent.
+class FoodShareRow extends StatelessWidget {
   final FoodShare share;
   final String amount;
   final String? percent;
@@ -345,7 +356,8 @@ class _FoodRow extends StatelessWidget {
   final TextTheme text;
   final VoidCallback onTap;
 
-  const _FoodRow({
+  const FoodShareRow({
+    super.key,
     required this.share,
     required this.amount,
     required this.percent,
@@ -387,6 +399,7 @@ class _FoodRow extends StatelessWidget {
                       Text(share.name, style: text.bodyLarge),
                       Text(
                         [
+                          if (share.entries > 1) '${share.entries}×',
                           share.meals.map((m) => _meal(context, m)).join(', '),
                           if (brands?.isNotEmpty ?? false) brands!,
                         ].join(' · '),
