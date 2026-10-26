@@ -2,6 +2,21 @@
 
 Written by fork/tools/release_notes.dart at each release (D16).
 
+## 0.3.2 · 2026-10-26
+
+Based on OpenNutriTracker 2.5.0.
+
+### Fixes and changes
+
+- how each diet phase went against its plan
+- logging completeness, scale swings, fibre/sugars/sodium trends
+- top foods on Calories, weekends, macro goal days, protein per kg
+- a macro's page lists its top foods
+- more on the Energy balance page
+- food thumbnails stay in color
+- trend charts fit the period's lowest and highest
+- bottom sheets clear the navigation bar
+
 ## 0.3.1 · 2026-10-26
 
 Based on OpenNutriTracker 2.5.0.
