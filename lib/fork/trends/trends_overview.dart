@@ -10,6 +10,7 @@ import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/fork/display/display_prefs.dart';
 import 'package:opennutritracker/fork/report/rate_text.dart';
 import 'package:opennutritracker/fork/report/trends_layout.dart';
+import 'package:opennutritracker/fork/goal/goal_progress.dart';
 import 'package:opennutritracker/fork/goal/goal_progress_page.dart';
 import 'package:opennutritracker/fork/trends/trend_detail.dart';
 import 'package:opennutritracker/fork/trends/trend_stats.dart';
@@ -309,7 +310,7 @@ TrendTile _goalTile(
   final left = target == null || now == null ? null : (target - now).abs();
   return TrendTile(
     id: 'trends-tile-goal',
-    label: 'Goal progress',
+    label: 'Goal',
     value: left == null
         ? 'No target'
         : left < 0.1
@@ -318,12 +319,62 @@ TrendTile _goalTile(
     suffix: left == null || left < 0.1
         ? null
         : '${weightUnitLabel(context, wu)} to go',
-    chart: Sparkline(
-      values: weight.trend,
-      color: Theme.of(context).colorScheme.primary,
-      bars: false,
-    ),
+    chart: target == null || now == null
+        ? const SizedBox()
+        : _GoalBar(targetKg: target, nowKg: now),
     onTap: () => openGoalProgress(context, wu),
+  );
+}
+
+/// How far along the goal is, from its kept start; nothing before one is
+/// kept.
+class _GoalBar extends StatefulWidget {
+  final double targetKg;
+  final double nowKg;
+
+  const _GoalBar({required this.targetKg, required this.nowKg});
+
+  @override
+  State<_GoalBar> createState() => _GoalBarState();
+}
+
+class _GoalBarState extends State<_GoalBar> {
+  late final Future<GoalStart?> _start = _read();
+
+  static Future<GoalStart?> _read() async {
+    try {
+      return await GoalStartStore().read();
+    } catch (_) {
+      // No store, in widget tests.
+      return null;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => FutureBuilder(
+    future: _start,
+    builder: (context, snapshot) {
+      final start = snapshot.data;
+      final total = start == null ? 0.0 : widget.targetKg - start.kg;
+      if (start == null ||
+          (start.targetKg - widget.targetKg).abs() >= 0.05 ||
+          total.abs() < 0.1) {
+        return const SizedBox();
+      }
+      final palette = paletteOf(context);
+      return Align(
+        alignment: Alignment.bottomCenter,
+        child: ClipRRect(
+          borderRadius: Dimens.borderRadiusS,
+          child: LinearProgressIndicator(
+            value: ((widget.nowKg - start.kg) / total).clamp(0.0, 1.0),
+            minHeight: 8,
+            color: Theme.of(context).colorScheme.primary,
+            backgroundColor: palette.surfaceMuted,
+          ),
+        ),
+      );
+    },
   );
 }
 

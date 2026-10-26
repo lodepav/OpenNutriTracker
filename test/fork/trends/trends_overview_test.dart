@@ -337,7 +337,7 @@ void main() {
         ],
       ),
     );
-    expect(tileText(tester, 'goal'), contains('Goal progress'));
+    expect(tileText(tester, 'goal'), contains('Goal'));
     expect(tileText(tester, 'goal'), contains('kg to go'));
     await openTile(tester, 'weight');
     final scroll = find.byType(Scrollable).first;
@@ -359,16 +359,8 @@ void main() {
     expect(find.textContaining('4 of 7 days'), findsOneWidget);
     expect(find.text('Daily weigh-ins steady the trend'), findsNothing);
     expect(find.text('To your goal'), findsOneWidget);
-    // 5 kg at about 0.35 kg a week: months on, the year shown past
-    // December.
-    final arrival = tester
-        .widget<FigureTile>(find.widgetWithText(FigureTile, 'To your goal'))
-        .note!;
-    expect(arrival, endsWith(' at this pace'));
-    expect(
-      RegExp(r'\d{4}').hasMatch(arrival),
-      day(0).month < 9 ? anything : isTrue,
-    );
+    // Ten days of trend: no 30 days' pace to date the goal by.
+    expect(find.text('under 30 days of trend'), findsOneWidget);
   });
 
   testWidgets('Water: its average and goal over upstream\'s chart', (

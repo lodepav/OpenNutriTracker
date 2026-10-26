@@ -19,6 +19,7 @@ void main() {
       final s = resolveGoalStart(
         stored: null,
         targetKg: 82,
+        paceKgPerWeek: -0.5,
         trend: trend,
         today: today,
       );
@@ -28,11 +29,17 @@ void main() {
     });
 
     test('the same target keeps the stored start', () {
-      final stored = GoalStart(date: ago(10), kg: 89, targetKg: 82);
+      final stored = GoalStart(
+        date: ago(10),
+        kg: 89,
+        targetKg: 82,
+        paceKgPerWeek: -0.5,
+      );
       expect(
         resolveGoalStart(
           stored: stored,
           targetKg: 82.02,
+          paceKgPerWeek: -0.5,
           trend: trend,
           today: today,
         ),
@@ -44,6 +51,7 @@ void main() {
       final s = resolveGoalStart(
         stored: GoalStart(date: ago(10), kg: 89, targetKg: 82),
         targetKg: 80,
+        paceKgPerWeek: -0.5,
         trend: trend,
         today: today,
       );
@@ -52,10 +60,46 @@ void main() {
       expect(s.targetKg, 80);
     });
 
-    test('kept as JSON', () {
+    test('a changed pace starts the plan today, the goal where it was', () {
+      final stored = GoalStart(
+        date: ago(10),
+        kg: 89,
+        targetKg: 82,
+        paceKgPerWeek: -0.5,
+      );
+      final s = resolveGoalStart(
+        stored: stored,
+        targetKg: 82,
+        paceKgPerWeek: -0.25,
+        trend: trend,
+        today: today,
+      );
+      expect((s.date, s.kg), (ago(10), 89));
+      expect(
+        (s.planDate, s.planKg, s.paceKgPerWeek),
+        (today, trend.last, -0.25),
+      );
+    });
+
+    test('a start kept before the pace takes the pace, the plan unmoved', () {
+      final s = resolveGoalStart(
+        stored: GoalStart(date: ago(10), kg: 89, targetKg: 82),
+        targetKg: 82,
+        paceKgPerWeek: -0.5,
+        trend: trend,
+        today: today,
+      );
+      expect((s.planDate, s.planKg, s.paceKgPerWeek), (ago(10), 89, -0.5));
+    });
+
+    test('kept as JSON, with and without a replan', () {
       final s = GoalStart(date: ago(3), kg: 88.4, targetKg: 82);
       final back = GoalStart.fromJson(s.toJson());
       expect((back.date, back.kg, back.targetKg), (s.date, s.kg, s.targetKg));
+      expect(back.paceKgPerWeek, isNull);
+      final r = GoalStart.fromJson(s.replanned(today, 88, -0.3).toJson());
+      expect((r.planDate, r.planKg, r.paceKgPerWeek), (today, 88, -0.3));
+      expect((r.date, r.kg), (ago(3), 88.4));
     });
   });
 
@@ -82,6 +126,21 @@ void main() {
 
     test('the plan stops at the target', () {
       expect(p.planKgAfter(1000), 80);
+    });
+
+    test('replanned 14 days ago at 88: behind counts from there', () {
+      final r = GoalProgress(
+        start: p.start.replanned(ago(14), 88.5, -0.5),
+        nowKg: trend.last,
+        paceKgPerWeek: -0.5,
+        trend: trend,
+        today: today,
+      );
+      expect(r.replanned, isTrue);
+      expect(r.planKgToday, closeTo(87.5, 1e-9));
+      expect(r.behindKg, closeTo(0.5, 1e-9));
+      // Still the way from the goal's own start.
+      expect(r.fraction, closeTo(0.2, 1e-9));
     });
 
     test('paces: recent over 30 days, since the start', () {

@@ -445,7 +445,7 @@ class _GoalPlanCardState extends State<GoalPlanCard> {
             ),
           if (target != null && trendPerDay != null)
             _row(
-              'At your trend (${_paceText(trendPerDay * 7)})',
+              'At your last 30 days’ pace (${_paceText(trendPerDay * 7)})',
               _eta(
                 daysToTarget(inputs.nowKg, target, trendPerDay),
                 trendPerDay,

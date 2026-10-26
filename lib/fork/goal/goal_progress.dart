@@ -10,51 +10,96 @@ import 'package:opennutritracker/fork/adaptive/goal_plan_card.dart'
 
 /// Where a goal began: the day its target was set and the trend weight
 /// then. A target set before the fork kept one starts at the first day of
-/// the trend it has.
+/// the trend it has. The plan runs at [paceKgPerWeek] from [planDate] and
+/// [planKg]: the start, or the day the pace last changed.
 class GoalStart {
   final DateTime date;
   final double kg;
   final double targetKg;
 
+  /// The pace the plan runs at; null in a start kept before it was.
+  final double? paceKgPerWeek;
+  final DateTime? _planDate;
+  final double? _planKg;
+
   const GoalStart({
     required this.date,
     required this.kg,
     required this.targetKg,
-  });
+    this.paceKgPerWeek,
+    DateTime? planDate,
+    double? planKg,
+  }) : _planDate = planDate,
+       _planKg = planKg;
+
+  DateTime get planDate => _planDate ?? date;
+  double get planKg => _planKg ?? kg;
+
+  /// The plan moved to [day] and [atKg] at [pace].
+  GoalStart replanned(DateTime day, double atKg, double pace) => GoalStart(
+    date: date,
+    kg: kg,
+    targetKg: targetKg,
+    paceKgPerWeek: pace,
+    planDate: day,
+    planKg: atKg,
+  );
 
   Map<String, dynamic> toJson() => {
     'date': date.toIso8601String(),
     'kg': kg,
     'targetKg': targetKg,
+    'paceKgPerWeek': ?paceKgPerWeek,
+    'planDate': ?_planDate?.toIso8601String(),
+    'planKg': ?_planKg,
   };
 
   static GoalStart fromJson(Map<dynamic, dynamic> json) => GoalStart(
     date: DateTime.parse(json['date'] as String),
     kg: (json['kg'] as num).toDouble(),
     targetKg: (json['targetKg'] as num).toDouble(),
+    paceKgPerWeek: (json['paceKgPerWeek'] as num?)?.toDouble(),
+    planDate: switch (json['planDate']) {
+      final String d => DateTime.parse(d),
+      _ => null,
+    },
+    planKg: (json['planKg'] as num?)?.toDouble(),
   );
 }
 
-/// The start for [targetKg]: [stored] while it is the same target; with
-/// none stored, the first day of [trend] (oldest first, the last [today]);
-/// a changed target starts today.
+/// The start for [targetKg] at [paceKgPerWeek]: [stored] while it is the
+/// same target and pace; with none stored, the first day of [trend]
+/// (oldest first, the last [today]); a changed target starts today, and a
+/// changed pace starts the plan today from the trend then. A start kept
+/// before the pace was takes the pace as it is.
 GoalStart resolveGoalStart({
   required GoalStart? stored,
   required double targetKg,
+  required double paceKgPerWeek,
   required List<double> trend,
   required DateTime today,
 }) {
   if (stored != null && (stored.targetKg - targetKg).abs() < 0.05) {
-    return stored;
+    final pace = stored.paceKgPerWeek;
+    if (pace != null && (pace - paceKgPerWeek).abs() < 0.001) return stored;
+    return pace == null
+        ? stored.replanned(stored.planDate, stored.planKg, paceKgPerWeek)
+        : stored.replanned(today, trend.last, paceKgPerWeek);
   }
   if (stored == null) {
     return GoalStart(
       date: DateTime(today.year, today.month, today.day - (trend.length - 1)),
       kg: trend.first,
       targetKg: targetKg,
+      paceKgPerWeek: paceKgPerWeek,
     );
   }
-  return GoalStart(date: today, kg: trend.last, targetKg: targetKg);
+  return GoalStart(
+    date: today,
+    kg: trend.last,
+    targetKg: targetKg,
+    paceKgPerWeek: paceKgPerWeek,
+  );
 }
 
 /// How far a goal has come, from [start] to [nowKg], against the plan of
@@ -97,22 +142,29 @@ class GoalProgress {
 
   int get daysIn => CalendarDayCalc.daysBetween(start.date, today);
 
-  /// Where the plan has the trend [days] after the start, not past the
-  /// target.
+  /// True when the plan restarted after the start, with a new pace.
+  bool get replanned => start.planDate.isAfter(start.date);
+
+  /// Where the plan has the trend [days] after its own start
+  /// ([GoalStart.planDate]), not past the target.
   double planKgAfter(int days) {
-    final kg = start.kg + paceKgPerWeek / 7 * days;
+    final kg = start.planKg + paceKgPerWeek / 7 * days;
     return totalKg < 0
         ? (kg < targetKg ? targetKg : kg)
         : (kg > targetKg ? targetKg : kg);
   }
 
+  /// Where the plan has the trend today.
+  double get planKgToday =>
+      planKgAfter(CalendarDayCalc.daysBetween(start.planDate, today));
+
   /// Share of the way the plan has come by today.
   double get planFraction => totalKg.abs() < 0.1
       ? 1
-      : ((planKgAfter(daysIn) - start.kg) / totalKg).clamp(0.0, 1.0);
+      : ((planKgToday - start.kg) / totalKg).clamp(0.0, 1.0);
 
   /// How far the trend is behind the plan today, kg; negative ahead.
-  double get behindKg => (nowKg - planKgAfter(daysIn)) * -totalKg.sign;
+  double get behindKg => (nowKg - planKgToday) * -totalKg.sign;
 
   /// The trend's pace over its last [days] (fewer with less history,
   /// none under a week), kg a week, with the days it spans.
@@ -234,6 +286,7 @@ class GoalStartStore {
     final start = resolveGoalStart(
       stored: stored,
       targetKg: target,
+      paceKgPerWeek: inputs.paceKgPerWeek,
       trend: inputs.pastTrendKg,
       today: today,
     );

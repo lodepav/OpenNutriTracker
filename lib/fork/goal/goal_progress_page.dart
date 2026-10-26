@@ -244,7 +244,7 @@ class _GoalProgressPageState extends State<GoalProgressPage> {
         TrendRows(
           rows: [
             (
-              label: 'At your plan’s pace',
+              label: 'From today at your plan’s pace',
               value: atPlan == null ? 'Not at this pace' : date(atPlan),
             ),
             if (recent != null)
@@ -252,7 +252,6 @@ class _GoalProgressPageState extends State<GoalProgressPage> {
                 label: 'At your last ${recent.days} days’ pace',
                 value: atPace == null ? 'Not at this pace' : date(atPace),
               ),
-            (label: 'Weeks in so far', value: '${(p.daysIn / 7).floor()}'),
           ],
         ),
       ],
@@ -260,27 +259,40 @@ class _GoalProgressPageState extends State<GoalProgressPage> {
       FigureGrid(
         tiles: [
           FigureTile(
-            label: p.behindKg >= 0 ? 'Behind the plan' : 'Ahead of the plan',
-            value: _kg(p.behindKg.abs()),
+            label: 'Since the start',
+            value: signedText(weightIn(widget.unit, p.nowKg - p.start.kg), 1),
             unit: label,
-            note: p.paceKgPerWeek == 0 || p.behindKg.abs() < 0.1
-                ? null
-                : 'about ${(p.behindKg.abs() / p.paceKgPerWeek.abs()).ceil()} '
-                      'weeks',
+            note: switch ((p.daysIn / 7).floor()) {
+              0 => 'in ${p.daysIn} days',
+              1 => 'in 1 week',
+              final w => 'in $w weeks',
+            },
           ),
           FigureTile(
             label: 'Calorie goal now',
             value: calories.goalKcal == null
                 ? '–'
-                : energyText(context, calories.goalKcal!),
+                : '${energyValue(context, calories.goalKcal!)}',
+            unit: calories.goalKcal == null ? null : energyUnit(context),
             note: calories.meanKcal == null
                 ? null
-                : 'you average ${energyText(context, calories.meanKcal!)}',
+                : 'you averaged ${energyText(context, calories.meanKcal!)} '
+                      'over 30 days',
           ),
         ],
       ),
       ..._milestones(context, p, step, recent, date),
       gap,
+      const ExplainerLink(
+        title: 'How is the plan worked out?',
+        body:
+            'The plan runs from where your trend weight was when you set '
+            'the target, at the pace in your goal planner, until it reaches '
+            'the target. When you change the pace, the plan starts again '
+            'from that day. The dates ahead assume your trend keeps the pace '
+            'they name.',
+      ),
+      const SizedBox(height: Dimens.spacing12),
       OutlinedButton(
         key: const Key('goal-edit'),
         onPressed: _editGoal,
@@ -347,6 +359,7 @@ class _GoalProgressPageState extends State<GoalProgressPage> {
                           '${i == rows.length - 1 ? ' · target' : ''}',
                         ),
                       ),
+                      const SizedBox(width: Dimens.spacing12),
                       Text(
                         m.reached
                             ? (m.on == null
@@ -459,13 +472,18 @@ class _ProgressCard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: Dimens.spacing8),
-            Row(
+            Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: Dimens.spacing8,
+              runSpacing: Dimens.spacing4,
               children: [
-                Expanded(
-                  child: Text(
-                    'Plan: $planPercent% by today',
-                    style: text.bodySmall?.copyWith(color: palette.textMuted),
-                  ),
+                Text(
+                  p.replanned
+                      ? 'Plan since ${intl.DateFormat.MMMd(Localizations.localeOf(context).toLanguageTag()).format(p.start.planDate)}: '
+                            '$planPercent% by today'
+                      : 'Plan: $planPercent% by today',
+                  style: text.bodySmall?.copyWith(color: palette.textMuted),
                 ),
                 Container(
                   padding: const EdgeInsets.symmetric(
@@ -475,7 +493,7 @@ class _ProgressCard extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: good
                         ? palette.accent.withValues(alpha: 0.14)
-                        : palette.carbs.withValues(alpha: 0.16),
+                        : palette.surfaceMuted,
                     borderRadius: Dimens.borderRadiusM,
                   ),
                   child: Text(
@@ -519,7 +537,6 @@ class _GoalChart extends StatelessWidget {
     );
     final origin = p.start.date.isAfter(trendFirst) ? p.start.date : trendFirst;
     final todayX = p.today.difference(origin).inDays.toDouble();
-    final startX = p.start.date.difference(origin).inDays.toDouble();
 
     final trend = [
       for (final (i, kg) in p.trend.indexed)
@@ -537,24 +554,26 @@ class _GoalChart extends StatelessWidget {
             y(kg),
           ),
     ];
+    // The plan from its own start: the goal's, or the last pace change.
+    final planX = p.start.planDate.difference(origin).inDays.toDouble();
     final planDays = p.paceKgPerWeek == 0
         ? null
-        : daysToTarget(p.start.kg, p.targetKg, p.paceKgPerWeek / 7);
+        : daysToTarget(p.start.planKg, p.targetKg, p.paceKgPerWeek / 7);
     final paceDays = p.arrivalAt(atPace)?.difference(p.today).inDays;
     final endX = math.min(
       todayX + 365,
       [
         todayX + 14,
-        if (planDays != null) startX + planDays + 7,
+        if (planDays != null) planX + planDays + 7,
         if (paceDays != null) todayX + paceDays + 7,
       ].reduce(math.max),
     );
     final plan = [
-      FlSpot(startX, y(p.start.kg)),
+      FlSpot(planX, y(p.start.planKg)),
       if (planDays != null)
         FlSpot(
-          math.min(startX + planDays, endX),
-          y(p.planKgAfter(math.min(planDays, (endX - startX).round()))),
+          math.min(planX + planDays, endX),
+          y(p.planKgAfter(math.min(planDays, (endX - planX).round()))),
         ),
     ];
     final projection = paceDays == null || p.reached
@@ -630,17 +649,23 @@ class _GoalChart extends StatelessWidget {
                       showTitles: true,
                       reservedSize: 24 * textScale,
                       interval: math.max(1, endX / 3),
-                      getTitlesWidget: (value, meta) => Padding(
-                        padding: const EdgeInsets.only(top: 6),
-                        child: Text(
-                          format.format(
-                            DateUtils.addDaysToDate(origin, value.round()),
-                          ),
-                          style: theme.textTheme.labelSmall?.copyWith(
-                            color: palette.textMuted,
-                          ),
-                        ),
-                      ),
+                      // The last date would run past the edge.
+                      getTitlesWidget: (value, meta) => value == meta.max
+                          ? const SizedBox.shrink()
+                          : Padding(
+                              padding: const EdgeInsets.only(top: 6),
+                              child: Text(
+                                format.format(
+                                  DateUtils.addDaysToDate(
+                                    origin,
+                                    value.round(),
+                                  ),
+                                ),
+                                style: theme.textTheme.labelSmall?.copyWith(
+                                  color: palette.textMuted,
+                                ),
+                              ),
+                            ),
                     ),
                   ),
                 ),
@@ -693,8 +718,9 @@ class _GoalChart extends StatelessWidget {
         ),
         const SizedBox(height: Dimens.spacing8),
         Text(
-          'Solid: your trend. Grey dashes: the plan. Blue dashes: at your '
-          'recent pace. Green dashes: the target.',
+          'Solid line: your trend. Fine dots: the plan'
+          '${p.replanned ? ' since you changed the pace' : ''}. Dashes from '
+          'today: at your recent pace. Level dashes: the target.',
           style: theme.textTheme.bodySmall?.copyWith(color: palette.textMuted),
         ),
       ],

@@ -108,12 +108,14 @@ void main() {
     await tester.scrollUntilVisible(find.text('Since the start'), 200);
     expect(find.text('Last 30 days'), findsOneWidget);
     expect(find.text('-0.20 kg a week'), findsNWidgets(2));
-    await tester.scrollUntilVisible(find.text('Weeks in so far'), 200);
-    expect(find.text('10'), findsOneWidget);
     await tester.scrollUntilVisible(find.text('Calorie goal now'), 200);
-    expect(find.text('Behind the plan'), findsOneWidget);
-    expect(find.textContaining('you average'), findsOneWidget);
-    await tester.scrollUntilVisible(find.text('Milestones, at your last 30 days’ pace'), 200);
+    expect(find.text('Since the start'), findsWidgets);
+    expect(find.text('in 10 weeks'), findsOneWidget);
+    expect(find.text('you averaged 2150 kcal over 30 days'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Milestones, at your last 30 days’ pace'),
+      200,
+    );
     await tester.scrollUntilVisible(find.byKey(const Key('goal-edit')), 200);
     expect(find.textContaining('Reached'), findsWidgets);
   });
