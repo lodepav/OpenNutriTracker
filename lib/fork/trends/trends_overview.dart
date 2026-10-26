@@ -12,6 +12,9 @@ import 'package:opennutritracker/fork/report/rate_text.dart';
 import 'package:opennutritracker/fork/report/trends_layout.dart';
 import 'package:opennutritracker/fork/goal/goal_progress.dart';
 import 'package:opennutritracker/fork/goal/goal_progress_page.dart';
+import 'package:opennutritracker/fork/report/nutrient_explorer.dart'
+    show IntakeLoader, intakesBetween;
+import 'package:opennutritracker/fork/trends/nutrient_trends.dart';
 import 'package:opennutritracker/fork/trends/trend_detail.dart';
 import 'package:opennutritracker/fork/trends/trend_stats.dart';
 import 'package:opennutritracker/fork/trends/trends_widgets.dart';
@@ -43,6 +46,11 @@ class TrendsOverview extends StatefulWidget {
     this.service,
   });
 
+  /// Where the fibre, sugars and sodium tiles and pages read the intakes;
+  /// tests swap it.
+  @visibleForTesting
+  static IntakeLoader loadIntakes = intakesBetween;
+
   @override
   State<TrendsOverview> createState() => _TrendsOverviewState();
 }
@@ -64,7 +72,22 @@ class _TrendsOverviewState extends State<TrendsOverview> {
     weightCard: (s) => widget.weightCard(s),
     waterCard: (s) => widget.waterCard(s),
     service: widget.service,
+    loadIntakes: (first, last) => TrendsOverview.loadIntakes(first, last),
   );
+
+  /// The window's intakes for the micronutrient tiles, kept while the
+  /// window and the loaded state stay.
+  Future<MicroData?>? _micros;
+  (DateTime, TrendsLoaded)? _microsFor;
+
+  Future<MicroData?> _microsOf(List<DateTime> dates) {
+    final key = (dates.first, widget.state);
+    if (_microsFor != key) {
+      _microsFor = key;
+      _micros = loadMicros(_deps.loadIntakes, dates);
+    }
+    return _micros!;
+  }
 
   Future<List<ExpenditureDay>> _load() async {
     try {
@@ -119,57 +142,65 @@ class _TrendsOverviewState extends State<TrendsOverview> {
           valueListenable: _history,
           builder: (context, future, _) => FutureBuilder(
             future: future,
-            builder: (context, snapshot) {
-              final tiles = _tiles(context, dates, snapshot.data ?? const []);
-              final logged = state.days.where(isLogged).length;
-              return ListView(
-                padding: const EdgeInsets.fromLTRB(
-                  Dimens.spacing12,
-                  Dimens.spacing8,
-                  Dimens.spacing12,
-                  Dimens.spacing32,
-                ),
-                children: [
-                  _Streak(days: state.days, windowDays: state.windowDays),
-                  const SizedBox(height: Dimens.spacing8),
-                  RangePills(
-                    rangeDays: state.rangeDays,
-                    onChanged: (d) => context.read<TrendsBloc>().add(
-                      LoadTrendsEvent(rangeDays: d),
-                    ),
+            builder: (context, snapshot) => FutureBuilder(
+              future: dates.isEmpty ? null : _microsOf(dates),
+              builder: (context, micros) {
+                final tiles = _tiles(
+                  context,
+                  dates,
+                  snapshot.data ?? const [],
+                  micros.data,
+                );
+                final logged = state.days.where(isLogged).length;
+                return ListView(
+                  padding: const EdgeInsets.fromLTRB(
+                    Dimens.spacing12,
+                    Dimens.spacing8,
+                    Dimens.spacing12,
+                    Dimens.spacing32,
                   ),
-                  const SizedBox(height: Dimens.spacing12),
-                  for (var i = 0; i < tiles.length; i += 2)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: Dimens.spacing8),
-                      // The tiles are alike, so a row's two are one height;
-                      // AutoSizeText measures, so no IntrinsicHeight here.
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(child: tiles[i]),
-                          const SizedBox(width: Dimens.spacing8),
-                          Expanded(
-                            child: i + 1 < tiles.length
-                                ? tiles[i + 1]
-                                : const SizedBox.shrink(),
-                          ),
-                        ],
+                  children: [
+                    _Streak(days: state.days, windowDays: state.windowDays),
+                    const SizedBox(height: Dimens.spacing8),
+                    RangePills(
+                      rangeDays: state.rangeDays,
+                      onChanged: (d) => context.read<TrendsBloc>().add(
+                        LoadTrendsEvent(rangeDays: d),
                       ),
                     ),
-                  Text(
-                    'Tap a card for its chart · '
-                    '${rangeText(state.rangeDays, state.windowDays)}, '
-                    '$logged logged',
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: paletteOf(context).textMuted,
+                    const SizedBox(height: Dimens.spacing12),
+                    for (var i = 0; i < tiles.length; i += 2)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: Dimens.spacing8),
+                        // The tiles are alike, so a row's two are one height;
+                        // AutoSizeText measures, so no IntrinsicHeight here.
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(child: tiles[i]),
+                            const SizedBox(width: Dimens.spacing8),
+                            Expanded(
+                              child: i + 1 < tiles.length
+                                  ? tiles[i + 1]
+                                  : const SizedBox.shrink(),
+                            ),
+                          ],
+                        ),
+                      ),
+                    Text(
+                      'Tap a card for its chart · '
+                      '${rangeText(state.rangeDays, state.windowDays)}, '
+                      '$logged logged',
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: paletteOf(context).textMuted,
+                      ),
                     ),
-                  ),
-                  ...arrangeTrendCards(widget.cards),
-                ],
-              );
-            },
+                    ...arrangeTrendCards(widget.cards),
+                  ],
+                );
+              },
+            ),
           ),
         ),
       ),
@@ -180,6 +211,7 @@ class _TrendsOverviewState extends State<TrendsOverview> {
     BuildContext context,
     List<DateTime> dates,
     List<ExpenditureDay> history,
+    MicroData? micros,
   ) {
     final state = widget.state;
     final palette = paletteOf(context);
@@ -235,6 +267,26 @@ class _TrendsOverviewState extends State<TrendsOverview> {
       );
     }
 
+    TrendTile microTile(TrendMetric m) {
+      final nutrient = microNutrient(m);
+      final micro = micros == null
+          ? null
+          : microOf(micros, state.days, dates, m);
+      final mean = micro == null ? null : meanOf(micro.series);
+      final goal = micro?.summary.goal;
+      final color = Theme.of(context).colorScheme.primary;
+      return tile(
+        m,
+        label: '${metricTitle(context, m)} · avg',
+        value: mean == null ? '–' : '${mean.round()}',
+        suffix: goal == null
+            ? nutrient.unit
+            : '/ ${goal.round()} ${nutrient.unit}',
+        spark: micro?.series ?? [for (final _ in dates) null],
+        sparkColor: color,
+      );
+    }
+
     final water = waterSeries(state.waterByDay, dates);
     final waterMean = meanOf(water);
 
@@ -284,6 +336,7 @@ class _TrendsOverviewState extends State<TrendsOverview> {
         fat: macroTile(TrendMetric.fat, palette.fat),
         protein: macroTile(TrendMetric.protein, palette.protein),
       ),
+      for (final m in microLabels.keys) microTile(m),
       if (DisplayPrefs.showWater.value)
         tile(
           TrendMetric.water,
