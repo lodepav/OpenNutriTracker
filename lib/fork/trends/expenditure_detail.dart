@@ -156,8 +156,17 @@ class ExpenditureChart extends StatelessWidget {
     final muted = palette.textMuted;
     final small = theme.textTheme.labelSmall?.copyWith(color: muted);
     final dots = dates.length <= 92;
-    // The axis numbers' width, grown with the text so they stay on one line.
-    final axis = MediaQuery.textScalerOf(context).scale(44);
+    // The axis as wide as its widest number at the user's font, so the
+    // numbers stay on one line (Android scales large text less than
+    // small, so a scaled constant falls short).
+    final widest = TextPainter(
+      text: TextSpan(text: '${(maxY + step).round()}', style: small),
+      textScaler: MediaQuery.textScalerOf(context),
+      textDirection: TextDirection.ltr,
+      maxLines: 1,
+    )..layout();
+    final axis = widest.width + 8;
+    widest.dispose();
     return AppCard(
       padding: const EdgeInsets.all(Dimens.spacing16),
       child: Column(
