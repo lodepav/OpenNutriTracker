@@ -560,7 +560,8 @@ void main() {
     await tester.pumpWidget(MaterialApp(home: CheckInScreen(service: service)));
     await tester.pumpAndSettle();
 
-    expect(find.text('Current target'), findsOneWidget);
+    // Home's goal adds the day's activity to it.
+    expect(find.text('Formula target without activity'), findsOneWidget);
     expect(find.text('2847 kcal'), findsOneWidget);
     expect(find.text('Change'), findsOneWidget);
     // The rows add up as shown.
@@ -570,6 +571,15 @@ void main() {
       find.textContaining(
         'That is the expenditure less '
         '${checkIn.expenditureKcal.toInt() - proposed} kcal',
+      ),
+      findsOneWidget,
+    );
+    // The goal page's figure for the pace is at 7700 a kg; this one says
+    // what it is at.
+    expect(
+      find.textContaining(
+        'at ${checkIn.kcalPerKg!.toInt()} kcal a kg of weight change '
+        '(from your body fat).',
       ),
       findsOneWidget,
     );
@@ -711,6 +721,60 @@ void main() {
 
     expect(find.text('Your target settings changed'), findsOneWidget);
     expect(find.textContaining('You changed steps.'), findsOneWidget);
+  });
+
+  testWidgets('a check-in the settings made due is headed with the change', (
+    tester,
+  ) async {
+    AdaptiveStore.settings.value = const AdaptiveSettings(adaptiveTarget: true);
+    addTearDown(() => AdaptiveStore.settings.value = const AdaptiveSettings());
+    final service = AdaptiveService(
+      _User(),
+      _Weights(),
+      _TrackedDays(),
+      _MemoryStore(),
+      () => _today.add(const Duration(hours: 9)),
+    );
+    await service.accept(await service.checkIn(), 2000);
+    AdaptiveStore.settings.value = const AdaptiveSettings(
+      adaptiveTarget: true,
+      activityMode: ActivityMode.weekly,
+    );
+    await tester.pumpWidget(MaterialApp(home: CheckInScreen(service: service)));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Target settings changed'), findsOneWidget);
+    expect(find.text('Weekly check-in'), findsNothing);
+    expect(find.text('Activity is now counted weekly'), findsOneWidget);
+    expect(
+      find.text(
+        'So the expenditure now takes in counted activity; the past week '
+        'had none.',
+      ),
+      findsOneWidget,
+    );
+  });
+
+  test('each changed setting is a sentence', () {
+    expect(
+      targetSettingsChanges(
+        'activity=weekly;steps=true;workouts=true;flat=false',
+        'activity=daily;steps=false;workouts=true;flat=true',
+      ),
+      [
+        'Activity is now counted daily',
+        'Steps are no longer counted',
+        'Weight change now counts at the common energy per kg',
+      ],
+    );
+    // Steps are not in a basis without activity: only the mode is told.
+    expect(
+      targetSettingsChanges(
+        'activity=weekly;steps=true;workouts=true;flat=false',
+        'activity=off;flat=false',
+      ),
+      ['Activity is no longer counted'],
+    );
   });
 
   testWidgets('a row at 200% text wraps its value below the label', (
