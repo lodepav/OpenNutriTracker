@@ -14,12 +14,19 @@ class MealSearchBar extends StatefulWidget {
   // ingredient picker) can omit the suffix icon entirely.
   final Function()? onBarcodePressed;
 
+  // [fork] S163 search-autofocus
+  final bool autofocus;
+  // [/fork]
+
   const MealSearchBar({
     super.key,
     required this.searchStringListener,
     required this.onSearchSubmit,
     required this.onBarcodePressed,
     this.onSearchChanged,
+    // [fork] S163 search-autofocus
+    this.autofocus = false,
+    // [/fork]
   });
 
   @override
@@ -56,6 +63,9 @@ class _MealSearchBarState extends State<MealSearchBar> {
             identifier: 'meal-search-field',
             child: TextField(
               controller: _searchTextController,
+              // [fork] S163 search-autofocus
+              autofocus: widget.autofocus,
+              // [/fork]
               textInputAction: TextInputAction.search,
               style: Theme.of(context).textTheme.bodyLarge,
               onChanged: (input) {

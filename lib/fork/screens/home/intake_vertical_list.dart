@@ -181,7 +181,8 @@ class _IntakeVerticalListState extends State<IntakeVerticalList> {
           )
         : EnergyDisplay.formatWithUnit(context, totalKcal);
     if (widget.showMealMacros && totalKcal > 0) {
-      return '$kcalLine\n${inMacroOrder(carbs: '${totalCarbsGram.toInt()} ${S.of(context).carbsLabelShort}', fat: '${totalFatsGram.toInt()} ${S.of(context).fatLabelShort}', protein: '${totalProteinsGram.toInt()} ${S.of(context).proteinLabelShort}').join('  ')}';
+      // as each food's row writes them, "C 20 · F 3 · P 4"
+      return '$kcalLine\n${inMacroOrder(carbs: 'C ${totalCarbsGram.round()}', fat: 'F ${totalFatsGram.round()}', protein: 'P ${totalProteinsGram.round()}').join(' · ')}';
     }
     return kcalLine;
   }
@@ -224,9 +225,9 @@ class _IntakeVerticalListState extends State<IntakeVerticalList> {
     return [
       kcalLine,
       ...inMacroOrder(
-        carbs: 'C ${totalCarbsGram.toInt()}',
-        fat: 'F ${totalFatsGram.toInt()}',
-        protein: 'P ${totalProteinsGram.toInt()}',
+        carbs: 'C ${totalCarbsGram.round()}',
+        fat: 'F ${totalFatsGram.round()}',
+        protein: 'P ${totalProteinsGram.round()}',
       ),
     ].join(' · ');
   }
@@ -248,9 +249,9 @@ class _IntakeVerticalListState extends State<IntakeVerticalList> {
     return [
       kcalLine,
       ...inMacroOrder(
-        carbs: '${totalCarbsGram.toInt()} g ${s.carbsLabel}',
-        fat: '${totalFatsGram.toInt()} g ${s.fatLabel}',
-        protein: '${totalProteinsGram.toInt()} g ${s.proteinLabel}',
+        carbs: '${totalCarbsGram.round()} g ${s.carbsLabel}',
+        fat: '${totalFatsGram.round()} g ${s.fatLabel}',
+        protein: '${totalProteinsGram.round()} g ${s.proteinLabel}',
       ),
     ].join(', ');
   }

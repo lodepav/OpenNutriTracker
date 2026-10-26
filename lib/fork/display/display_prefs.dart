@@ -242,7 +242,8 @@ class ShowFeatureTile extends StatelessWidget {
     identifier: 'settings-show-water',
     icon: Icons.water_drop_outlined,
     title: 'Show water',
-    subtitle: 'Off, water leaves Home, You and Trends; what you logged stays',
+    subtitle:
+        'When off, water leaves Home, You and Trends; what you logged stays',
     value: DisplayPrefs.showWater,
     onChanged: DisplayPrefs.setShowWater,
   );
@@ -254,7 +255,7 @@ class ShowFeatureTile extends StatelessWidget {
     icon: Icons.timer_outlined,
     title: 'Show fasting',
     subtitle:
-        'Off, fasting leaves Home and You, and a fast under way does not '
+        'When off, fasting leaves Home and You, and a fast under way does not '
         'notify; your fasts stay',
     value: DisplayPrefs.showFasting,
     onChanged: (on) async {
