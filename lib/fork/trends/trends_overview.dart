@@ -110,60 +110,63 @@ class _TrendsOverviewState extends State<TrendsOverview> {
     return ValueListenableBuilder(
       valueListenable: TrendsLayoutStore.current,
       builder: (context, _, _) => ValueListenableBuilder(
-        valueListenable: _history,
-        builder: (context, future, _) => FutureBuilder(
-          future: future,
-          builder: (context, snapshot) {
-            final tiles = _tiles(context, dates, snapshot.data ?? const []);
-            final logged = state.days.where(isLogged).length;
-            return ListView(
-              padding: const EdgeInsets.fromLTRB(
-                Dimens.spacing12,
-                Dimens.spacing8,
-                Dimens.spacing12,
-                Dimens.spacing32,
-              ),
-              children: [
-                _Streak(days: state.days, windowDays: state.windowDays),
-                const SizedBox(height: Dimens.spacing8),
-                RangePills(
-                  rangeDays: state.rangeDays,
-                  onChanged: (d) => context.read<TrendsBloc>().add(
-                    LoadTrendsEvent(rangeDays: d),
-                  ),
+        valueListenable: DisplayPrefs.showWater,
+        builder: (context, _, _) => ValueListenableBuilder(
+          valueListenable: _history,
+          builder: (context, future, _) => FutureBuilder(
+            future: future,
+            builder: (context, snapshot) {
+              final tiles = _tiles(context, dates, snapshot.data ?? const []);
+              final logged = state.days.where(isLogged).length;
+              return ListView(
+                padding: const EdgeInsets.fromLTRB(
+                  Dimens.spacing12,
+                  Dimens.spacing8,
+                  Dimens.spacing12,
+                  Dimens.spacing32,
                 ),
-                const SizedBox(height: Dimens.spacing12),
-                for (var i = 0; i < tiles.length; i += 2)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: Dimens.spacing8),
-                    // The tiles are alike, so a row's two are one height;
-                    // AutoSizeText measures, so no IntrinsicHeight here.
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(child: tiles[i]),
-                        const SizedBox(width: Dimens.spacing8),
-                        Expanded(
-                          child: i + 1 < tiles.length
-                              ? tiles[i + 1]
-                              : const SizedBox.shrink(),
-                        ),
-                      ],
+                children: [
+                  _Streak(days: state.days, windowDays: state.windowDays),
+                  const SizedBox(height: Dimens.spacing8),
+                  RangePills(
+                    rangeDays: state.rangeDays,
+                    onChanged: (d) => context.read<TrendsBloc>().add(
+                      LoadTrendsEvent(rangeDays: d),
                     ),
                   ),
-                Text(
-                  'Tap a card for its chart · '
-                  '${rangeText(state.rangeDays, state.windowDays)}, '
-                  '$logged logged',
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: paletteOf(context).textMuted,
+                  const SizedBox(height: Dimens.spacing12),
+                  for (var i = 0; i < tiles.length; i += 2)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: Dimens.spacing8),
+                      // The tiles are alike, so a row's two are one height;
+                      // AutoSizeText measures, so no IntrinsicHeight here.
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(child: tiles[i]),
+                          const SizedBox(width: Dimens.spacing8),
+                          Expanded(
+                            child: i + 1 < tiles.length
+                                ? tiles[i + 1]
+                                : const SizedBox.shrink(),
+                          ),
+                        ],
+                      ),
+                    ),
+                  Text(
+                    'Tap a card for its chart · '
+                    '${rangeText(state.rangeDays, state.windowDays)}, '
+                    '$logged logged',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: paletteOf(context).textMuted,
+                    ),
                   ),
-                ),
-                ...arrangeTrendCards(widget.cards),
-              ],
-            );
-          },
+                  ...arrangeTrendCards(widget.cards),
+                ],
+              );
+            },
+          ),
         ),
       ),
     );
@@ -277,14 +280,15 @@ class _TrendsOverviewState extends State<TrendsOverview> {
         fat: macroTile(TrendMetric.fat, palette.fat),
         protein: macroTile(TrendMetric.protein, palette.protein),
       ),
-      tile(
-        TrendMetric.water,
-        label: '${metricTitle(context, TrendMetric.water)} · avg',
-        value: waterMean == null ? '–' : '${waterMean.round()}',
-        suffix: state.waterGoalMl > 0 ? '/ ${state.waterGoalMl} ml' : 'ml',
-        spark: water,
-        sparkColor: waterColor(context),
-      ),
+      if (DisplayPrefs.showWater.value)
+        tile(
+          TrendMetric.water,
+          label: '${metricTitle(context, TrendMetric.water)} · avg',
+          value: waterMean == null ? '–' : '${waterMean.round()}',
+          suffix: state.waterGoalMl > 0 ? '/ ${state.waterGoalMl} ml' : 'ml',
+          spark: water,
+          sparkColor: waterColor(context),
+        ),
     ];
   }
 }

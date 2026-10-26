@@ -179,6 +179,8 @@ Map<SettingsSection, List<String>> _rows() => {
     l10nEn.settingsNutrientsLabel,
     'Macro order',
     'Diary by the hour',
+    'Show water',
+    'Show fasting',
   ],
   SettingsSection.about: [
     l10nEn.settingsPrivacySettings,
@@ -348,6 +350,19 @@ void main() {
       find.bySemanticsIdentifier('settings-section-units'),
       findsOneWidget,
     );
+  });
+
+  testWidgets('the search finds Show water and Show fasting', (tester) async {
+    await tester.pumpWidget(_app());
+    await tester.pumpAndSettle();
+    await tester.tap(find.bySemanticsIdentifier('settings-search'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'fasting');
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Show fasting'));
+    await tester.pumpAndSettle();
+    expect(find.bySemanticsIdentifier('settings-show-fasting'), findsOne);
+    expect(find.bySemanticsIdentifier('settings-show-water'), findsOne);
   });
 
   testWidgets('what people come to change is in the first card', (

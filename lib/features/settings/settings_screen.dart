@@ -762,6 +762,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   const MacroOrderTile(),
                   const DiaryByHourTile(),
                   // [/fork]
+                  // [fork] S144 hide-features: water and fasting can go
+                  ShowFeatureTile.water(),
+                  ShowFeatureTile.fasting(),
+                  // [/fork]
                 ],
               ),
                 const SizedBox(height: Dimens.spacing20),
@@ -976,6 +980,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       e(s.settingsNutrientsLabel, appearance),
       e('Macro order', appearance),
       e('Diary by the hour', appearance),
+      e('Show water', appearance), // [fork] S144
+      e('Show fasting', appearance), // [fork] S144
       e(s.settingsPrivacySettings, about),
       e(s.settingsDisclaimerLabel, about),
       e(s.settingsSourcesLabel, about),
