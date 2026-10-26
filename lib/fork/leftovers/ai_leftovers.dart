@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'dart:ui' as ui;
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:http/http.dart' as http;
 import 'package:opennutritracker/core/domain/entity/intake_entity.dart';
@@ -106,8 +105,8 @@ class ReadLeftoversUseCase {
 
 /// [before] and [after] side by side in one image, since upstream's
 /// clients carry one photo per request. Each is scaled to the same height,
-/// so together they stay within the size one photo is sent at.
-@visibleForTesting
+/// so together they stay within the size one photo is sent at. Progress
+/// photos are compared the same way.
 Future<MealPhoto> sideBySide(
   MealPhoto before,
   MealPhoto after,

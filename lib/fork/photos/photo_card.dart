@@ -1,7 +1,13 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
+import 'package:opennutritracker/core/utils/ai_credential_storage.dart';
+import 'package:opennutritracker/core/utils/locator.dart';
+import 'package:opennutritracker/features/add_meal/domain/meal_photo_interpreter.dart';
+import 'package:opennutritracker/fork/photos/body_compare.dart';
+import 'package:opennutritracker/fork/photos/body_compare_sheet.dart';
 import 'package:opennutritracker/core/utils/calc/calendar_day_calc.dart';
 import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
@@ -231,11 +237,21 @@ class _ProgressPhotosCardState extends State<ProgressPhotosCard> {
 }
 
 /// Two progress photos side by side, each picked by date; the oldest and
-/// the newest to start.
+/// the newest to start. With a model set up, "Ask AI" judges how body
+/// composition changed between them.
 class ComparePhotosScreen extends StatefulWidget {
   final List<ShownPhoto> photos;
 
-  const ComparePhotosScreen({super.key, required this.photos});
+  /// For tests; the app's from the locator, none without its services.
+  final CompareBodiesUseCase? useCase;
+  final Future<BodyDay> Function(DateTime day) loadDay;
+
+  const ComparePhotosScreen({
+    super.key,
+    required this.photos,
+    this.useCase,
+    this.loadDay = loadBodyDay,
+  });
 
   @override
   State<ComparePhotosScreen> createState() => _ComparePhotosScreenState();
@@ -245,6 +261,90 @@ class _ComparePhotosScreenState extends State<ComparePhotosScreen> {
   late int _left = 0;
   late int _right = widget.photos.length - 1;
 
+  late final _useCase =
+      widget.useCase ??
+      (locator.isRegistered<AiCredentialStorage>()
+          ? CompareBodiesUseCase(locator(), locator<http.Client>())
+          : null);
+  AiProvider? _provider;
+  bool _busy = false;
+
+  /// Each pair's answer, by the earlier and the later photo's ids.
+  final _answers = <(String, String), BodyComparison>{};
+
+  @override
+  void initState() {
+    super.initState();
+    _useCase?.selection.then((selection) {
+      if (mounted) setState(() => _provider = selection?.provider);
+    });
+  }
+
+  (ShownPhoto, ShownPhoto) get _pair {
+    final a = widget.photos[_left], b = widget.photos[_right];
+    return a.photo.date.isAfter(b.photo.date) ? (b, a) : (a, b);
+  }
+
+  Future<void> _ask() async {
+    final (earlier, later) = _pair;
+    final key = (earlier.photo.id, later.photo.id);
+    final known = _answers[key];
+    if (known != null) return showBodyComparison(context, known);
+    final messenger = ScaffoldMessenger.of(context);
+    if (earlier.photo.id == later.photo.id) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Pick two different photos.')),
+      );
+      return;
+    }
+    final earlierDay = await widget.loadDay(earlier.photo.date);
+    final laterDay = await widget.loadDay(later.photo.date);
+    if (!mounted ||
+        !await confirmBodyCompare(
+          context,
+          provider: _provider!,
+          earlier: earlierDay,
+          later: laterDay,
+        )) {
+      return;
+    }
+    setState(() => _busy = true);
+    try {
+      MealPhoto read(File f) =>
+          MealPhoto(bytes: f.readAsBytesSync(), mediaType: 'image/jpeg');
+      final result = await _useCase!.compare(
+        earlier: read(earlier.file),
+        later: read(later.file),
+        earlierDay: earlierDay,
+        laterDay: laterDay,
+      );
+      if (result == null || !mounted) return;
+      setState(() {
+        _answers[key] = result;
+        _busy = false;
+      });
+      await showBodyComparison(context, result);
+    } on MealInterpreterException catch (e) {
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            e.failure == MealInterpreterFailure.auth
+                ? 'The AI key was refused: check it in Settings.'
+                : "Couldn't compare the photos. Try again.",
+          ),
+        ),
+      );
+    } catch (_) {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text("Couldn't compare the photos. Try again."),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final photos = widget.photos;
@@ -252,8 +352,21 @@ class _ComparePhotosScreenState extends State<ComparePhotosScreen> {
       photos[_left].photo.date,
       photos[_right].photo.date,
     ).abs();
+    final (earlier, later) = _pair;
+    final answered = _answers.containsKey((earlier.photo.id, later.photo.id));
     return Scaffold(
-      appBar: AppBar(title: const Text('Compare photos')),
+      appBar: AppBar(
+        title: const Text('Compare photos'),
+        actions: [
+          if (_provider != null)
+            TextButton.icon(
+              key: const ValueKey('compare-ai'),
+              onPressed: _busy ? null : _ask,
+              icon: const Icon(Icons.auto_awesome_outlined),
+              label: Text(answered ? 'AI result' : 'Ask AI'),
+            ),
+        ],
+      ),
       body: SafeArea(
         child: Column(
           children: [
@@ -261,6 +374,10 @@ class _ComparePhotosScreenState extends State<ComparePhotosScreen> {
               padding: const EdgeInsets.all(Dimens.spacing8),
               child: Text('$days days apart'),
             ),
+            if (_busy)
+              const LinearProgressIndicator(
+                semanticsLabel: 'Comparing the photos',
+              ),
             Expanded(
               child: Row(
                 children: [
