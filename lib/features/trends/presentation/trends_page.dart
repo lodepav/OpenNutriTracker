@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:opennutritracker/core/domain/entity/body_weight_unit_entity.dart';
 import 'package:opennutritracker/core/domain/entity/weight_log_entity.dart';
-import 'package:opennutritracker/core/domain/usecase/add_weight_log_usecase.dart';
 import 'package:opennutritracker/core/domain/usecase/get_user_usecase.dart';
 import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
@@ -34,6 +33,9 @@ import 'package:opennutritracker/fork/report/weekly_report.dart';
 // [/fork]
 // [fork] S120 trends-tiles
 import 'package:opennutritracker/fork/trends/trends_overview.dart';
+// [/fork]
+// [fork] S111 typed-weigh-in
+import 'package:opennutritracker/fork/weight/weigh_in_log.dart';
 // [/fork]
 
 class TrendsPage extends StatefulWidget {
@@ -396,6 +398,7 @@ class _WeightCard extends StatelessWidget {
         ? (trendsBloc.state as TrendsLoaded).rangeDays
         : 7;
     final user = await locator<GetUserUsecase>().getUserData();
+    final logged = await weighInsByDay(); // [fork] S111
     if (!context.mounted) return;
     final entered = await showDialog<({double weight, DateTime date})>(
       context: context,
@@ -403,22 +406,30 @@ class _WeightCard extends StatelessWidget {
         initialKg: user.weightKG,
         unit: bodyWeightUnit,
         allowDateSelection: true,
+        logged: logged, // [fork] S111
       ),
     );
-    if (entered == null) return;
+    if (entered == null || !context.mounted) return; // [fork] S111
     // The dialog now always returns kg in the weight slot.
     final kg = entered.weight;
     final d = entered.date;
-    await locator<AddWeightLogUsecase>().addEntry(
-      WeightLogEntity(
-        date: DateTime(d.year, d.month, d.day),
-        weightKg: kg,
-      ),
+    // [fork] S111 typed-weigh-in: says what it filed, with an Undo that
+    // brings back the weigh-in it replaced
+    final day = DateTime(d.year, d.month, d.day);
+    await logWeighIn(
+      context,
+      kg: kg,
+      day: day,
+      unit: bodyWeightUnit,
+      replaced: logged[day],
+      refresh: () async {
+        final updated = await locator<GetUserUsecase>().getUserData();
+        await locator<ProfileBloc>().updateUser(updated);
+        if (context.mounted) {
+          trendsBloc.add(LoadTrendsEvent(rangeDays: rangeDays));
+        }
+      },
     );
-    final updated = await locator<GetUserUsecase>().getUserData();
-    await locator<ProfileBloc>().updateUser(updated);
-    if (context.mounted) {
-      trendsBloc.add(LoadTrendsEvent(rangeDays: rangeDays));
-    }
+    // [/fork]
   }
 }
