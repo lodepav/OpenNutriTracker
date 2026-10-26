@@ -4,6 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:opennutritracker/core/domain/entity/body_weight_unit_entity.dart';
 import 'package:opennutritracker/core/utils/energy_unit_provider.dart';
 import 'package:opennutritracker/fork/adaptive/goal_plan.dart';
+import 'package:opennutritracker/fork/adaptive/goal_plan_card.dart'
+    show paceChanges;
 import 'package:opennutritracker/fork/goal/goal_progress.dart';
 import 'package:opennutritracker/fork/goal/goal_progress_page.dart';
 import 'package:opennutritracker/generated/l10n.dart';
@@ -24,6 +26,7 @@ GoalPlanInputs inputs(List<double> trend, {double? targetKg}) => GoalPlanInputs(
 Future<void> pumpGoal(
   WidgetTester tester,
   GoalState goal, {
+  Future<GoalState> Function()? loadGoal,
   GoalCalories calories = (goalKcal: null, meanKcal: null),
 }) async {
   await tester.pumpWidget(
@@ -39,7 +42,7 @@ Future<void> pumpGoal(
         supportedLocales: S.supportedLocales,
         home: GoalProgressPage(
           unit: BodyWeightUnit.kg,
-          loadGoal: () async => goal,
+          loadGoal: loadGoal ?? () async => goal,
           loadCalories: () async => calories,
         ),
       ),
@@ -58,6 +61,16 @@ void main() {
     await pumpGoal(tester, (inputs: inputs([82]), progress: null));
     expect(find.text('Set target weight'), findsOneWidget);
     expect(find.text('Pace'), findsNothing);
+  });
+
+  testWidgets('a saved goal reloads the page', (tester) async {
+    GoalState goal = (inputs: inputs([82]), progress: null);
+    await pumpGoal(tester, goal, loadGoal: () async => goal);
+    expect(find.text('Set target weight'), findsOneWidget);
+    goal = (inputs: null, progress: null);
+    paceChanges.value++;
+    await tester.pumpAndSettle();
+    expect(find.text('Weigh in to see your progress.'), findsOneWidget);
   });
 
   testWidgets('a goal: how far, behind the plan, pace, arrival, milestones', (
@@ -100,7 +113,7 @@ void main() {
     await tester.scrollUntilVisible(find.text('Calorie goal now'), 200);
     expect(find.text('Behind the plan'), findsOneWidget);
     expect(find.textContaining('you average'), findsOneWidget);
-    await tester.scrollUntilVisible(find.text('Milestones'), 200);
+    await tester.scrollUntilVisible(find.text('Milestones, at your last 30 days’ pace'), 200);
     await tester.scrollUntilVisible(find.byKey(const Key('goal-edit')), 200);
     expect(find.textContaining('Reached'), findsWidgets);
   });

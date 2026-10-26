@@ -91,7 +91,10 @@ class _GoalProgressPageState extends State<GoalProgressPage> {
   }
 
   void _reload() {
-    if (mounted) setState(() => _data = _load());
+    if (!mounted) return;
+    setState(() {
+      _data = _load();
+    });
   }
 
   @override
@@ -276,7 +279,7 @@ class _GoalProgressPageState extends State<GoalProgressPage> {
           ),
         ],
       ),
-      ..._milestones(context, p, step, recent?.kgPerWeek, date),
+      ..._milestones(context, p, step, recent, date),
       gap,
       OutlinedButton(
         key: const Key('goal-edit'),
@@ -292,9 +295,10 @@ class _GoalProgressPageState extends State<GoalProgressPage> {
     BuildContext context,
     GoalProgress p,
     int chosen,
-    double? kgPerWeek,
+    ({double kgPerWeek, int days})? recent,
     String Function(DateTime?) date,
   ) {
+    final kgPerWeek = recent?.kgPerWeek;
     final kg = widget.unit == BodyWeightUnit.kg;
     final steps = kg ? milestoneStepsKg : milestoneStepsLb;
     final perKg = kg ? 1.0 : 2.20462;
@@ -308,7 +312,12 @@ class _GoalProgressPageState extends State<GoalProgressPage> {
     final palette = paletteOf(context);
     final label = weightUnitLabel(context, widget.unit);
     return [
-      trendSection(context, 'Milestones'),
+      trendSection(
+        context,
+        recent == null
+            ? 'Milestones'
+            : 'Milestones, at your last ${recent.days} days’ pace',
+      ),
       AppCard(
         padding: const EdgeInsets.symmetric(horizontal: Dimens.spacing16),
         child: Column(
