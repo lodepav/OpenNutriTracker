@@ -161,11 +161,11 @@ void main() {
     // A past day, so the long-press asks copy-or-delete before confirming.
     await tester.longPress(find.text('Hidden Porridge'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text(l10nEn.dialogDeleteLabel)); // [fork] S81
+    await tester.tap(find.text(l10nEn.dialogDeleteLabel.toUpperCase()));
     await tester.pumpAndSettle();
-    // [fork] S52 undo-delete: no confirmation; Undo on the snackbar instead
-    expect(find.text(l10nEn.deleteTimeDialogTitle), findsNothing);
-    // [/fork]
+    expect(find.text(l10nEn.deleteTimeDialogTitle), findsOneWidget);
+    await tester.tap(find.text(l10nEn.dialogOKLabel));
+    await tester.pumpAndSettle();
 
     expect(deleted, [porridge]);
 
@@ -182,9 +182,7 @@ void main() {
   // yesterday's date. Copying goes to that day, so it must not be offered
   // there, whatever DateTime.now() says.
   group('on the Diary\'s today', () {
-    // [fork] S24 copy-anywhere: today's entries copy too
-    testWidgets('a long-press offers copy or delete, deleting on today', (
-    // [/fork]
+    testWidgets('a long-press asks to delete, without offering a copy', (
       WidgetTester tester,
     ) async {
       final deleted = <DateTime>[];
@@ -199,25 +197,16 @@ void main() {
 
       await tester.longPress(find.text('Dinner Stew'));
       await tester.pumpAndSettle();
-      // [fork] S24 copy-anywhere: today's entries copy too
-      expect(
-        find.text('${l10nEn.copyActionLabel}…'), // [fork] S81
-        findsOneWidget,
-      );
-      await tester.tap(find.text(l10nEn.dialogDeleteLabel)); // [fork] S81
+      expect(find.text(l10nEn.dialogCopyLabel.toUpperCase()), findsNothing);
+      expect(find.text(l10nEn.deleteTimeDialogTitle), findsOneWidget);
+      await tester.tap(find.text(l10nEn.dialogOKLabel));
       await tester.pumpAndSettle();
-      // [/fork]
-      // [fork] S52 undo-delete: no confirmation; Undo on the snackbar instead
-      expect(find.text(l10nEn.deleteTimeDialogTitle), findsNothing);
-      // [/fork]
 
       expect(deleted, [DateTime(2026, 6, 15)]);
       expect(copied, isEmpty);
     });
 
-    // [fork] S25 copy-anywhere: today's sections copy too
-    testWidgets('the section menu offers Copy', (WidgetTester tester) async {
-    // [/fork]
+    testWidgets('the section menu has no Copy', (WidgetTester tester) async {
       await _pumpOmadDay(
         tester,
         breakfastIntake: const [],
@@ -226,9 +215,7 @@ void main() {
 
       await tester.tap(find.bySemanticsIdentifier('intake-section-menu'));
       await tester.pumpAndSettle();
-      // [fork] S25 copy-anywhere: today's sections copy too
-      expect(find.text('Copy…'), findsOneWidget);
-      // [/fork]
+      expect(find.text(l10nEn.dialogCopyLabel), findsNothing);
     });
   });
 
@@ -239,8 +226,6 @@ void main() {
 
     await tester.tap(find.bySemanticsIdentifier('intake-section-menu'));
     await tester.pumpAndSettle();
-    // [fork] S25 copy-anywhere: the item asks for the day, so it is "Copy…"
-    expect(find.text('Copy…'), findsOneWidget);
-    // [/fork]
+    expect(find.text(l10nEn.dialogCopyLabel), findsOneWidget);
   });
 }
