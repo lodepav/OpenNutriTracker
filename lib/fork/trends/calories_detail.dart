@@ -9,15 +9,20 @@ import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/core/utils/calc/unit_calc.dart';
 import 'package:opennutritracker/features/trends/presentation/bloc/trends_bloc.dart';
+import 'package:intl/intl.dart' as intl;
+import 'package:opennutritracker/core/domain/usecase/get_tracked_day_usecase.dart';
+import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/fork/display/display_prefs.dart';
-import 'package:opennutritracker/fork/report/rate_text.dart';
+import 'package:opennutritracker/fork/trends/detail_stats.dart';
+import 'package:opennutritracker/fork/trends/detail_widgets.dart';
 import 'package:opennutritracker/fork/trends/trend_detail.dart';
 import 'package:opennutritracker/fork/trends/trend_stats.dart';
 import 'package:opennutritracker/fork/trends/trends_widgets.dart';
 import 'package:opennutritracker/fork/units/energy_text.dart';
 
-/// Variant C: the energy of each day stacked by macro, then the range's
-/// daily averages against their goals.
+/// The Calories page, after the canvas's TdNutrA: the average and the
+/// goal, each day stacked by macro, how the days went, the weekdays over
+/// three months and where the energy came from.
 class CaloriesDetailPage extends StatelessWidget {
   final TrendsDeps deps;
 
@@ -44,6 +49,8 @@ class CaloriesDetailPage extends StatelessWidget {
             Dimens.spacing32 + MediaQuery.paddingOf(context).bottom,
           ),
           children: [
+            ..._header(context, state, dates),
+            const SizedBox(height: Dimens.spacing16),
             RangePills(
               rangeDays: state.rangeDays,
               onChanged: (d) =>
@@ -51,13 +58,70 @@ class CaloriesDetailPage extends StatelessWidget {
             ),
             const SizedBox(height: Dimens.spacing16),
             MacroEnergyChart(state: state, dates: dates),
-            const SizedBox(height: Dimens.spacing16),
-            AveragesTable(state: state, dates: dates),
+            if (dayOutcomes(state.days, dates) case final o
+                when o.logged > 0) ...[
+              trendSection(context, 'How the days went'),
+              _DaysWent(outcomes: o, week: dates.length <= 7),
+            ],
+            const WeekdayCard(),
+            if (macroShares(state.days, dates) case final shares?) ...[
+              trendSection(context, 'Where the calories came from'),
+              _Shares(shares: shares),
+            ],
           ],
         );
       },
     ),
   );
+}
+
+/// The average and the goal, and the range with the days logged in it.
+List<Widget> _header(
+  BuildContext context,
+  TrendsLoaded state,
+  List<DateTime> dates,
+) {
+  final unit = energyUnit(context);
+  final mean = meanOf(
+    nutritionSeries(state.days, dates, (d) => d.caloriesTracked),
+  );
+  final goal = goalOf(state.days, dates, (d) => d.calorieGoal);
+  final logged = nutritionSeries(
+    state.days,
+    dates,
+    (d) => d.caloriesTracked,
+  ).whereType<double>().length;
+  final format = intl.DateFormat.MMMd(
+    Localizations.localeOf(context).toLanguageTag(),
+  );
+  final span = dates.isEmpty
+      ? ''
+      : dates.length == 1
+      ? format.format(dates.single)
+      : '${format.format(dates.first)} – ${format.format(dates.last)}';
+  return [
+    StatHeader(
+      stats: [
+        (
+          label: 'Average',
+          value: mean == null ? '–' : '${energyValue(context, mean)}',
+          unit: unit,
+        ),
+        (
+          label: 'Goal',
+          value: goal == null ? '–' : '${energyValue(context, goal)}',
+          unit: unit,
+        ),
+      ],
+    ),
+    const SizedBox(height: Dimens.spacing4),
+    Text(
+      '$span · $logged of ${dates.length} days logged',
+      style: Theme.of(
+        context,
+      ).textTheme.bodyMedium?.copyWith(color: paletteOf(context).textMuted),
+    ),
+  ];
 }
 
 typedef _Macro = ({
@@ -118,36 +182,6 @@ class MacroEnergyChart extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  '${energyTitle(context)} by macro',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: text.titleSmall,
-                ),
-              ),
-              if (mean != null)
-                Text.rich(
-                  TextSpan(
-                    text: '${energyValue(context, mean)}',
-                    style: text.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                    children: [
-                      TextSpan(
-                        text: ' avg / day',
-                        style: text.bodySmall?.copyWith(
-                          color: palette.textMuted,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(height: Dimens.spacing12),
           if (mean == null)
             noData(context, 'Nothing logged in this range.')
           else
@@ -216,6 +250,15 @@ class MacroEnergyChart extends StatelessWidget {
                     Text(m.label, style: text.bodySmall),
                   ],
                 ),
+              if (goal != null)
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(width: 14, height: 2, color: palette.textMuted),
+                    const SizedBox(width: 4),
+                    Text('Goal', style: text.bodySmall),
+                  ],
+                ),
             ],
           ),
         ],
@@ -268,147 +311,239 @@ class MacroEnergyChart extends StatelessWidget {
   }
 }
 
-/// The range's daily averages, each over the logged days, against the
-/// goals: energy, the macros in the user's order, water, the weight trend.
-class AveragesTable extends StatelessWidget {
-  final TrendsLoaded state;
-  final List<DateTime> dates;
+/// The logged days against their goals, and the highest and lowest.
+class _DaysWent extends StatelessWidget {
+  final ({
+    int onTarget,
+    int under,
+    int over,
+    int logged,
+    ({double kcal, DateTime date})? highest,
+    ({double kcal, DateTime date})? lowest,
+  })
+  outcomes;
 
-  const AveragesTable({super.key, required this.state, required this.dates});
+  /// A week names a day by its weekday, a longer range by its date.
+  final bool week;
+
+  const _DaysWent({required this.outcomes, required this.week});
+
+  @override
+  Widget build(BuildContext context) {
+    final o = outcomes;
+    final locale = Localizations.localeOf(context).toLanguageTag();
+    final format = week
+        ? intl.DateFormat.E(locale)
+        : intl.DateFormat.MMMd(locale);
+    String days(int n) => n == 1 ? '1 day' : '$n days';
+    String day(({double kcal, DateTime date}) d) =>
+        '${energyText(context, d.kcal)} · ${format.format(d.date)}';
+    return AppCard(
+      padding: const EdgeInsets.symmetric(
+        horizontal: Dimens.spacing16,
+        vertical: Dimens.spacing4,
+      ),
+      child: Column(
+        children: [
+          TrendRow(
+            first: true,
+            label: 'On target (within ${(onTargetShare * 100).round()}%)',
+            value: '${o.onTarget} of ${days(o.logged)}',
+          ),
+          TrendRow(label: 'Under', value: days(o.under)),
+          TrendRow(label: 'Over', value: days(o.over)),
+          if (o.highest case final d?)
+            TrendRow(label: 'Highest', value: day(d)),
+          if (o.lowest case final d?) TrendRow(label: 'Lowest', value: day(d)),
+        ],
+      ),
+    );
+  }
+}
+
+/// The mean energy by weekday over the last three months, whatever the
+/// range, the weekday that stands out marked.
+class WeekdayCard extends StatefulWidget {
+  /// Today; the clock in tests.
+  final DateTime Function() now;
+
+  const WeekdayCard({super.key, this.now = DateTime.now});
+
+  @override
+  State<WeekdayCard> createState() => _WeekdayCardState();
+}
+
+class _WeekdayCardState extends State<WeekdayCard> {
+  late final Future<List<TrackedDayEntity>> _days = _load();
+
+  Future<List<TrackedDayEntity>> _load() async {
+    final now = widget.now();
+    try {
+      return await locator<GetTrackedDayUsecase>().getTrackedDaysByRange(
+        DateTime(now.year, now.month, now.day - 89),
+        DateTime(now.year, now.month, now.day, 23, 59, 59),
+      );
+    } catch (_) {
+      // No locator, in widget tests.
+      return const [];
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => FutureBuilder(
+    future: _days,
+    builder: (context, snapshot) {
+      final means = weekdayMeans(snapshot.data ?? const []);
+      if (means == null) return const SizedBox.shrink();
+      final palette = paletteOf(context);
+      final text = Theme.of(context).textTheme;
+      final standout = standoutWeekday(means);
+      final top = means.byWeekday.values.reduce(math.max);
+      final locale = Localizations.localeOf(context).toLanguageTag();
+      // January 2024 starts on a Monday, so its day [weekday] is one.
+      String name(int weekday, intl.DateFormat f) =>
+          f.format(DateTime(2024, 1, weekday));
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          trendSection(context, 'By weekday, last 3 months'),
+          AppCard(
+            padding: const EdgeInsets.all(Dimens.spacing16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(
+                  height: 100,
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      for (var w = 1; w <= 7; w++)
+                        Expanded(
+                          child: Semantics(
+                            label: means.byWeekday[w] == null
+                                ? '${name(w, intl.DateFormat.EEEE(locale))}, '
+                                      'nothing logged'
+                                : '${name(w, intl.DateFormat.EEEE(locale))}, '
+                                      '${energyText(context, means.byWeekday[w]!)}',
+                            excludeSemantics: true,
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: [
+                                Container(
+                                  width: 22,
+                                  height: 70 * (means.byWeekday[w] ?? 0) / top,
+                                  decoration: BoxDecoration(
+                                    color: standout?.weekday == w
+                                        ? palette.fat
+                                        : palette.carbs,
+                                    borderRadius: const BorderRadius.vertical(
+                                      top: Radius.circular(5),
+                                      bottom: Radius.circular(2),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  name(w, intl.DateFormat.E(locale)),
+                                  style: text.labelSmall?.copyWith(
+                                    color: palette.textMuted,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: Dimens.spacing8),
+                Text(
+                  standout == null
+                      ? 'No weekday runs far from your average.'
+                      : '${name(standout.weekday, intl.DateFormat.EEEE(locale))}s '
+                            'run ${energyText(context, standout.off.abs())} '
+                            '${standout.off > 0 ? 'over' : 'under'} '
+                            'your average.',
+                  style: text.bodySmall?.copyWith(color: palette.textMuted),
+                ),
+              ],
+            ),
+          ),
+        ],
+      );
+    },
+  );
+}
+
+/// The share of the energy each macro gave, against its goal's share.
+class _Shares extends StatelessWidget {
+  final ({
+    ({double carbs, double fat, double protein}) eaten,
+    ({double carbs, double fat, double protein})? goal,
+  })
+  shares;
+
+  const _Shares({required this.shares});
 
   @override
   Widget build(BuildContext context) {
     final palette = paletteOf(context);
-    final text = Theme.of(context).textTheme;
-    final unit = energyUnit(context);
-
-    ({String name, Color? color, String avg, String goal, String diff}) row(
-      String name,
-      Color? color,
-      double? avg,
-      double? goal,
-      String unit,
-      int Function(double) shown,
-    ) => (
-      name: name,
-      color: color,
-      avg: avg == null ? '–' : '${shown(avg)} $unit',
-      goal: goal == null ? '–' : '${shown(goal)} $unit',
-      diff: avg == null || goal == null
-          ? '–'
-          : signedText((shown(avg) - shown(goal)).toDouble()),
-    );
-
-    int grams(double g) => g.round();
-    final macroRows =
-        inMacroOrder(
-          carbs: TrendMetric.carbs,
-          fat: TrendMetric.fat,
-          protein: TrendMetric.protein,
-        ).map((m) {
-          final macro = macroOf(m);
-          return row(
-            metricTitle(context, m),
-            switch (m) {
-              TrendMetric.carbs => palette.carbs,
-              TrendMetric.fat => palette.fat,
-              _ => palette.protein,
-            },
-            meanOf(nutritionSeries(state.days, dates, macro.eaten)),
-            goalOf(state.days, dates, macro.goal),
-            'g',
-            grams,
-          );
-        });
-    final weight = WeightTrendStats.of(state.weight, dates);
-    final wu = state.bodyWeightUnit;
-    final rows = [
-      row(
-        energyTitle(context),
-        null,
-        meanOf(nutritionSeries(state.days, dates, (d) => d.caloriesTracked)),
-        goalOf(state.days, dates, (d) => d.calorieGoal),
-        unit,
-        (kcal) => energyValue(context, kcal),
-      ),
-      ...macroRows,
-      if (DisplayPrefs.showWater.value)
-        row(
-          metricTitle(context, TrendMetric.water),
-          null,
-          meanOf(waterSeries(state.waterByDay, dates)),
-          state.waterGoalMl > 0 ? state.waterGoalMl.toDouble() : null,
-          'ml',
-          grams,
-        ),
-      if (weight.nowKg != null)
-        (
-          name: metricTitle(context, TrendMetric.weight),
-          color: null,
-          avg:
-              '${weightIn(wu, weight.nowKg!).toStringAsFixed(1)} '
-              '${weightUnitLabel(context, wu)}',
-          goal: state.targetWeightKg == null
-              ? '–'
-              : '${weightIn(wu, state.targetWeightKg!).toStringAsFixed(1)} '
-                    '${weightUnitLabel(context, wu)}',
-          diff: weight.perWeekKg == null
-              ? '–'
-              : '${signedRate(weightIn(wu, weight.perWeekKg!))}/wk',
-        ),
-    ];
-
-    Widget cell(String s, {TextStyle? style, bool first = false}) => Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-      child: Text(
-        s,
-        textAlign: first ? TextAlign.start : TextAlign.end,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: style,
-      ),
-    );
-    final head = text.labelSmall?.copyWith(color: palette.textMuted);
-    return AppCard(
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-      child: Table(
-        key: const ValueKey('trends-averages'),
-        columnWidths: const {
-          0: FlexColumnWidth(1.25),
-          1: FlexColumnWidth(1.1),
-          2: FlexColumnWidth(1.1),
-          3: FlexColumnWidth(0.9),
-        },
-        children: [
-          TableRow(
-            children: [
-              cell('Daily average', style: head, first: true),
-              cell('Avg', style: head),
-              cell('Goal', style: head),
-              cell('Diff', style: head),
-            ],
+    final eaten = shares.eaten;
+    final goal = shares.goal;
+    final rows =
+        inMacroOrder<
+          ({TrendMetric metric, Color color, double share, double? goal})
+        >(
+          carbs: (
+            metric: TrendMetric.carbs,
+            color: palette.carbs,
+            share: eaten.carbs,
+            goal: goal?.carbs,
           ),
-          for (final r in rows)
-            TableRow(
-              decoration: BoxDecoration(
-                border: Border(top: BorderSide(color: palette.border)),
+          fat: (
+            metric: TrendMetric.fat,
+            color: palette.fat,
+            share: eaten.fat,
+            goal: goal?.fat,
+          ),
+          protein: (
+            metric: TrendMetric.protein,
+            color: palette.protein,
+            share: eaten.protein,
+            goal: goal?.protein,
+          ),
+        );
+    String pct(double share) => '${(share * 100).round()}%';
+    return AppCard(
+      padding: const EdgeInsets.all(Dimens.spacing16),
+      child: Column(
+        children: [
+          ExcludeSemantics(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: SizedBox(
+                height: 12,
+                child: Row(
+                  children: [
+                    for (final r in rows)
+                      if (r.share > 0)
+                        Expanded(
+                          flex: (r.share * 1000).round().clamp(1, 1000),
+                          child: ColoredBox(color: r.color),
+                        ),
+                  ],
+                ),
               ),
-              children: [
-                cell(
-                  r.name,
-                  first: true,
-                  style: TextStyle(
-                    color: r.color,
-                    fontWeight: r.color == null ? null : FontWeight.w700,
-                  ),
-                ),
-                cell(
-                  r.avg,
-                  style: const TextStyle(fontWeight: FontWeight.w700),
-                ),
-                cell(r.goal),
-                cell(r.diff),
-              ],
+            ),
+          ),
+          const SizedBox(height: Dimens.spacing4),
+          for (final (i, r) in rows.indexed)
+            TrendRow(
+              first: i == 0,
+              label: metricTitle(context, r.metric),
+              value: r.goal == null
+                  ? pct(r.share)
+                  : '${pct(r.share)} · goal ${pct(r.goal!)}',
             ),
         ],
       ),

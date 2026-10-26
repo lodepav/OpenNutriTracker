@@ -223,6 +223,11 @@ class AdaptiveService {
     ];
   }
 
+  /// Upstream's formula expenditure, which the Expenditure page sets the
+  /// estimate against.
+  Future<double> formulaKcal() async =>
+      CalorieGoalCalc.getTdee(await _user.getUserData());
+
   /// What the goal planner needs; null with no weigh-in yet. The past
   /// trend covers at most [pastDays].
   Future<GoalPlanInputs?> goalPlan({int pastDays = 60}) async {

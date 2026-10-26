@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:opennutritracker/core/domain/entity/tracked_day_entity.dart';
@@ -55,7 +56,7 @@ void main() {
     // [fork] S83 the average converts once
     expect(find.text('4347 kJ'), findsOneWidget);
     // [fork] S103: the page is "Energy", not "Calories", in kJ.
-    expect(find.text('Energy by macro'), findsOneWidget);
+    expect(find.widgetWithText(AppBar, 'Energy'), findsOneWidget);
     // [/fork]
     expect(
       chart.extraLinesData.horizontalLines.single.y,
@@ -73,7 +74,7 @@ void main() {
     expect(_tooltipFor(chart), startsWith('1039 kcal'));
     // [fork] S83
     expect(find.text('1039 kcal'), findsOneWidget);
-    expect(find.text('Calories by macro'), findsOneWidget);
+    expect(find.widgetWithText(AppBar, 'Calories'), findsOneWidget);
     // [/fork]
     expect(chart.extraLinesData.horizontalLines.single.y, _goalKcal);
   });

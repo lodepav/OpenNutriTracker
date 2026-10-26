@@ -10,6 +10,7 @@ import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/features/trends/presentation/bloc/trends_bloc.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
 import 'package:opennutritracker/fork/display/display_prefs.dart';
+import 'package:opennutritracker/fork/trends/detail_widgets.dart';
 import 'package:opennutritracker/fork/trends/trends_overview.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 
@@ -43,6 +44,9 @@ class _Service extends Fake implements AdaptiveService {
 
   @override
   Future<List<ExpenditureDay>> expenditureHistory() async => history;
+
+  @override
+  Future<double> formulaKcal() async => 2860;
 }
 
 void main() {
@@ -65,13 +69,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('trends-tile-water')), findsNothing);
     await openTile(tester, 'calories');
-    expect(
-      find.descendant(
-        of: find.byKey(const ValueKey('trends-averages')),
-        matching: find.text('Water'),
-      ),
-      findsNothing,
-    );
+    expect(find.textContaining('Water'), findsNothing);
   });
 
   testWidgets('the tiles: averages of the logged days against the goals', (
@@ -124,9 +122,8 @@ void main() {
     ]);
   });
 
-  testWidgets('Calories: the days stacked by macro, the goal and the table', (
-    tester,
-  ) async {
+  testWidgets('Calories: the days stacked by macro, how they went, the '
+      'macro shares', (tester) async {
     await pumpTrends(
       tester,
       loaded(
@@ -140,7 +137,10 @@ void main() {
     );
     await openTile(tester, 'calories');
 
-    expect(find.text('Calories by macro'), findsOneWidget);
+    expect(find.widgetWithText(AppBar, 'Calories'), findsOneWidget);
+    expect(find.text('1560 kcal'), findsOneWidget);
+    expect(find.text('2925 kcal'), findsOneWidget);
+    expect(find.textContaining('· 1 of 7 days logged'), findsOneWidget);
     final chart = tester.widget<BarChart>(find.byType(BarChart)).data;
     expect(chart.barGroups, hasLength(7));
     final today = chart.barGroups.last.barRods.single;
@@ -161,26 +161,27 @@ void main() {
     )!;
     expect(tip.text, startsWith('1560 kcal\n'));
 
-    final table = find.byKey(const ValueKey('trends-averages'));
-    String row(String name) {
-      final cells = tester
-          .widgetList<Text>(
-            find.descendant(of: table, matching: find.byType(Text)),
-          )
-          .map((t) => t.data!)
-          .toList();
-      final i = cells.indexOf(name);
-      return cells.sublist(i, i + 4).join(' | ');
+    String row(String label) {
+      final r = find.ancestor(
+        of: find.text(label),
+        matching: find.byType(TrendRow),
+      );
+      return tester.widget<TrendRow>(r).value;
     }
 
-    expect(row('Calories'), 'Calories | 1560 kcal | 2925 kcal | -1365');
-    expect(row('Carbs'), 'Carbs | 100 g | 259 g | -159');
-    expect(row('Protein'), 'Protein | 50 g | 110 g | -60');
-    expect(row('Water'), 'Water | – | – | –');
-    expect(
-      row('Weight trend'),
-      matches(r'^Weight trend \| 7\d\.\d kg \| 75\.0 kg \| -0\.\d\d/wk$'),
+    expect(row('On target (within 10%)'), '0 of 1 day');
+    expect(row('Under'), '1 day');
+    expect(row('Over'), '0 days');
+    expect(row('Highest'), startsWith('1560 kcal · '));
+    // 400, 180 and 200 kcal of 780; the goals' 1036, 729 and 440 of 2205.
+    await tester.scrollUntilVisible(
+      find.widgetWithText(TrendRow, 'Protein'),
+      200,
+      scrollable: find.byType(Scrollable).last,
     );
+    expect(row('Carbs'), '51% · goal 47%');
+    expect(row('Fat'), '23% · goal 33%');
+    expect(row('Protein'), '26% · goal 20%');
   });
 
   testWidgets('kJ: the tile, the bars and the goal in kJ, titled Energy', (
@@ -195,7 +196,7 @@ void main() {
     expect(tileText(tester, 'calories'), contains('4347 / 8368 kJ'));
 
     await openTile(tester, 'calories');
-    expect(find.text('Energy by macro'), findsOneWidget);
+    expect(find.widgetWithText(AppBar, 'Energy'), findsOneWidget);
     final chart = tester.widget<BarChart>(find.byType(BarChart)).data;
     expect(
       chart.barGroups.last.barRods.single.toY,
@@ -382,5 +383,49 @@ void main() {
     final bars = tester.widget<BarChart>(find.byType(BarChart)).data.barGroups;
     expect(bars.last.barRods.single.toY, -500);
     expect(bars[1].barRods.single.toY, 0);
+
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    await openTile(tester, 'expenditure');
+    final table = find.byKey(const ValueKey('expenditure-changes'));
+    String cellOf(String over, int column) {
+      final rows = tester.widget<Table>(table).children;
+      final row = rows.firstWhere(
+        (r) =>
+            (r.children.first as Padding).child is Text &&
+            ((r.children.first as Padding).child as Text).data == over,
+      );
+      return ((row.children[column] as Padding).child as Text).data!;
+    }
+
+    expect(cellOf('3 days', 1), '+30 kcal');
+    expect(cellOf('3 days', 2), '2970');
+    // The history reaches back only six days.
+    expect(cellOf('7 days', 1), '–');
+
+    final scrollable = find.byType(Scrollable).last;
+    await tester.scrollUntilVisible(
+      find.text('What is expenditure?'),
+      200,
+      scrollable: scrollable,
+    );
+    expect(find.text('Last 7 days'), findsOneWidget);
+    // Over the four logged days: 2500 eaten, 2970 burnt.
+    expect(find.text('2500'), findsOneWidget);
+    expect(find.text('470'), findsOneWidget);
+    expect(find.text('from weight lost'), findsOneWidget);
+    expect(find.text('2970'), findsWidgets);
+    expect(find.text('enough for a steady estimate'), findsOneWidget);
+    // 3000 against the formula's 2860.
+    expect(find.text('yours runs 5% higher'), findsOneWidget);
+
+    await tester.ensureVisible(find.text('What is expenditure?'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('What is expenditure?'));
+    await tester.pumpAndSettle();
+    expect(find.byType(AlertDialog), findsOneWidget);
+    await tester.tap(find.text('Close'));
+    await tester.pumpAndSettle();
+    expect(find.byType(AlertDialog), findsNothing);
   });
 }
