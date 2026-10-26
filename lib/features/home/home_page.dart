@@ -27,8 +27,10 @@ import 'package:opennutritracker/features/add_meal/presentation/add_meal_type.da
 import 'package:opennutritracker/features/diary/presentation/bloc/calendar_day_bloc.dart';
 import 'package:opennutritracker/features/diary/presentation/bloc/diary_bloc.dart';
 import 'package:opennutritracker/features/home/presentation/bloc/home_bloc.dart';
-import 'package:opennutritracker/features/home/presentation/widgets/dashboard_widget.dart';
-import 'package:opennutritracker/features/home/presentation/widgets/intake_vertical_list.dart';
+// [fork] S154 own-home: the fork's copies (D23)
+import 'package:opennutritracker/fork/screens/home/dashboard_widget.dart';
+import 'package:opennutritracker/fork/screens/home/intake_vertical_list.dart';
+// [/fork]
 // [fork] S119 home-tiles: fasting_home_chip, quick_water_widget and
 // quick_weight_widget are tiles now (lib/fork/display/home_tiles.dart)
 import 'package:opennutritracker/fork/display/home_tiles.dart';
