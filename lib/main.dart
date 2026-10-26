@@ -54,7 +54,7 @@ import 'package:opennutritracker/features/meal_detail/meal_detail_screen.dart';
 import 'package:opennutritracker/features/settings/presentation/bloc/settings_bloc.dart';
 import 'package:opennutritracker/features/settings/presentation/widgets/accent_colour_screen.dart';
 import 'package:opennutritracker/features/settings/presentation/widgets/health_sync_screen.dart';
-import 'package:opennutritracker/features/settings/settings_screen.dart';
+import 'package:opennutritracker/fork/screens/settings/settings_screen.dart'; // [fork] S153
 import 'package:opennutritracker/generated/l10n.dart';
 // [fork] S6 starter-recipes: the Latvian starter recipes (phase 1c.6)
 import 'package:opennutritracker/core/utils/ai_credential_storage.dart';
