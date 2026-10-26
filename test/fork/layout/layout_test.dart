@@ -26,6 +26,13 @@ void main() {
     expect(arrangeIds(['a', 'b'], []), ['a', 'b']);
   });
 
+  test('addable: optional items not switched on', () {
+    expect(addable(['x', 'y', 'z'], (order: ['a', 'y', 'z'], hidden: {'z'})), {
+      'x',
+      'z',
+    });
+  });
+
   test('arranged: in the saved order, less the hidden', () {
     expect(
       arranged({'a': 1, 'b': 2, 'c': 3}, (order: ['c', 'a'], hidden: {'a'})),
@@ -83,5 +90,51 @@ void main() {
     expect(LayoutStore.current('one').value.order, ['a', 'b', 'c']);
     expect(LayoutStore.current('two').value.hidden, isEmpty);
     expect(y('A'), lessThan(y('B')));
+  });
+
+  testWidgets('optional items: off until switched on, off again on reset', (
+    tester,
+  ) async {
+    Future<void> pump() async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ArrangeScreen(
+            title: 'Arrange',
+            lists: [
+              ArrangeList(
+                title: 'Tiles',
+                store: _Memory('one'),
+                names: const {'a': 'A', 'b': 'B', 'p': 'P'},
+                optional: const {'p'},
+              ),
+            ],
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    bool on(String id) => tester
+        .widget<SwitchListTile>(find.byKey(ValueKey('arrange-$id')))
+        .value;
+
+    await pump();
+    expect(on('a'), isTrue);
+    expect(on('p'), isFalse);
+    // A change elsewhere saves P as hidden, not as shown.
+    await tester.tap(find.byKey(const ValueKey('arrange-a')));
+    await tester.pumpAndSettle();
+    expect(LayoutStore.current('one').value.hidden, {'a', 'p'});
+
+    await tester.tap(find.byKey(const ValueKey('arrange-p')));
+    await tester.pumpAndSettle();
+    expect(LayoutStore.current('one').value.hidden, {'a'});
+    expect(LayoutStore.current('one').value.order, ['a', 'b', 'p']);
+
+    await tester.tap(find.byKey(const ValueKey('arrange-reset')));
+    await tester.pumpAndSettle();
+    expect(on('a'), isTrue);
+    expect(on('p'), isFalse);
+    expect(LayoutStore.current('one').value.hidden, {'p'});
   });
 }

@@ -15,6 +15,8 @@ import 'package:opennutritracker/features/trends/presentation/bloc/trends_bloc.d
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_nutriments_entity.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
+import 'package:opennutritracker/fork/body/measurement_store.dart';
+import 'package:opennutritracker/fork/body/side_compare.dart';
 import 'package:opennutritracker/fork/display/display_prefs.dart';
 import 'package:opennutritracker/fork/goal/goal_progress.dart';
 import 'package:opennutritracker/fork/report/nutrient_explorer.dart';
@@ -96,6 +98,8 @@ void main() {
   tearDown(() async {
     TrendsOverview.loadIntakes = intakesBetween;
     TrendsOverview.loadGoal = () => GoalStartStore().load();
+    TrendsOverview.loadMeasurements = () async => const [];
+    SidePartPref.current.value = SidePart.arms;
     await locator.reset();
     DisplayPrefs.macroOrder.value = DisplayPrefs.upstreamOrder;
   });
@@ -157,6 +161,9 @@ void main() {
       order: ['protein', 'calories'],
       hidden: {'weight'},
     );
+    // Tall enough for every tile to be built.
+    tester.view.physicalSize = const Size(2400, 6000);
+    addTearDown(tester.view.reset);
     await pumpTrends(tester, loaded(days: [_logged(0)]));
     double y(String m) =>
         tester.getTopLeft(find.byKey(ValueKey('trends-tile-$m'))).dy;
@@ -761,5 +768,53 @@ void main() {
     await tester.tap(find.text('Close'));
     await tester.pumpAndSettle();
     expect(find.byType(AlertDialog), findsNothing);
+  });
+
+  testWidgets('left vs right: the latest difference; it opens the page', (
+    tester,
+  ) async {
+    TrendsOverview.loadMeasurements = () async => [
+      for (final (metric, cm) in [
+        (BodyMetric.leftArm, 36.0),
+        (BodyMetric.rightArm, 35.2),
+        (BodyMetric.leftThigh, 58.0),
+        (BodyMetric.rightThigh, 58.0),
+      ])
+        Measurement(id: metric.name, date: day(-2), metric: metric, value: cm),
+    ];
+    await pumpTrends(tester, loaded());
+    await showTile(tester, 'sides');
+    expect(find.text('Arms · left vs right'), findsOne);
+    expect(tileText(tester, 'sides'), contains('0.8 cm · left bigger'));
+
+    SidePartPref.current.value = SidePart.thighs;
+    await tester.pumpAndSettle();
+    expect(find.text('Thighs · left vs right'), findsOne);
+    expect(tileText(tester, 'sides'), contains('Equal'));
+
+    // A measurement added: the tile follows.
+    final before = TrendsOverview.loadMeasurements;
+    TrendsOverview.loadMeasurements = () async => [
+      ...await before(),
+      Measurement(
+        id: 'r',
+        date: day(0),
+        metric: BodyMetric.rightThigh,
+        value: 59,
+      ),
+      Measurement(
+        id: 'l',
+        date: day(0),
+        metric: BodyMetric.leftThigh,
+        value: 58.5,
+      ),
+    ];
+    MeasurementStore.changes.value++;
+    await tester.pumpAndSettle();
+    expect(tileText(tester, 'sides'), contains('0.5 cm · right bigger'));
+
+    await openTile(tester, 'sides');
+    expect(find.byType(SideComparePage), findsOne);
+    expect(find.text('Thighs: left and right'), findsOne);
   });
 }

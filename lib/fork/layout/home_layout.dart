@@ -12,6 +12,21 @@ const homeTileNames = {
   'fasting': 'Fasting',
 };
 
+/// Trends' tiles Home can add, off until switched on in Arrange
+/// Home; by their Trends ids. Weight, expenditure and water have Home's.
+const homeTrendTileNames = {
+  'calories': 'Energy',
+  'balance': 'Energy balance',
+  'carbs': 'Carbs',
+  'fat': 'Fat',
+  'protein': 'Protein',
+  'fibre': 'Fibre',
+  'sugars': 'Sugars',
+  'sodium': 'Sodium',
+  'goal': 'Goal',
+  'sides': 'Left vs right',
+};
+
 const homeTilesKey = 'homeTiles';
 const homeSectionsKey = 'homeSections';
 
@@ -50,7 +65,9 @@ void openArrangeHome(BuildContext context) => Navigator.of(context).push(
               if ((key != 'water' || DisplayPrefs.showWater.value) &&
                   (key != 'fasting' || DisplayPrefs.showFasting.value))
                 key: value,
+            ...homeTrendTileNames,
           },
+          optional: homeTrendTileNames.keys.toSet(),
         ),
       ],
     ),

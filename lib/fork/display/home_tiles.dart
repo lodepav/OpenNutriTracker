@@ -11,6 +11,7 @@ import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/core/utils/navigation_options.dart';
 import 'package:opennutritracker/features/fasting/presentation/bloc/fasting_bloc.dart';
 import 'package:opennutritracker/fork/display/display_prefs.dart';
+import 'package:opennutritracker/fork/display/home_trend_tiles.dart';
 import 'package:opennutritracker/fork/layout/home_layout.dart';
 import 'package:opennutritracker/fork/layout/layout_store.dart';
 import 'package:opennutritracker/features/home/presentation/widgets/log_water_dialog.dart';
@@ -76,8 +77,10 @@ class HomeTiles extends StatelessWidget {
     ]),
     builder: (context, _) {
       // Water or fasting hidden in Settings (S144) is not a tile; the
-      // rest go two to a row as arranged (S162), one alone spanning it.
-      final tiles = arranged({
+      // rest go two to a row as arranged (S162), one alone spanning it,
+      // with Trends' tiles switched on there.
+      final layout = LayoutStore.current(homeTilesKey).value;
+      final own = {
         'weight': WeightTile(
           // Reloaded once a weigh-in changes today's weight.
           key: ValueKey(weightKg),
@@ -98,38 +101,51 @@ class HomeTiles extends StatelessWidget {
             onTap: () => openTrend(context, TrendMetric.water),
           ),
         if (DisplayPrefs.showFasting.value) 'fasting': fasting,
-      }, LayoutStore.current(homeTilesKey).value);
-      if (tiles.isEmpty) return const SizedBox.shrink();
-      return Padding(
-        padding: const EdgeInsets.fromLTRB(
-          Dimens.spacing16,
-          0,
-          Dimens.spacing16,
-          0,
-        ),
-        child: Column(
-          children: [
-            for (var i = 0; i < tiles.length; i += 2)
-              Padding(
-                padding: const EdgeInsets.only(top: Dimens.spacing8),
-                child: IntrinsicHeight(
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Expanded(child: tiles[i]),
-                      if (i + 1 < tiles.length) ...[
-                        const SizedBox(width: Dimens.spacing8),
-                        Expanded(child: tiles[i + 1]),
-                      ],
-                    ],
-                  ),
-                ),
-              ),
-          ],
-        ),
+      };
+      final added = {
+        for (final id in homeTrendTileNames.keys)
+          if (!addable([id], layout).contains(id)) id,
+      };
+      if (added.isEmpty) return _grid(arranged(own, layout));
+      return HomeTrendTiles(
+        ids: added,
+        loadExpenditure: loadExpenditure,
+        builder: (trends) => _grid(arranged({...own, ...trends}, layout)),
       );
     },
   );
+
+  Widget _grid(List<Widget> tiles) {
+    if (tiles.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        Dimens.spacing16,
+        0,
+        Dimens.spacing16,
+        0,
+      ),
+      child: Column(
+        children: [
+          for (var i = 0; i < tiles.length; i += 2)
+            Padding(
+              padding: const EdgeInsets.only(top: Dimens.spacing8),
+              child: IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Expanded(child: tiles[i]),
+                    if (i + 1 < tiles.length) ...[
+                      const SizedBox(width: Dimens.spacing8),
+                      Expanded(child: tiles[i + 1]),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
 }
 
 /// One tile: its title, its value with a smaller note after it, and a
@@ -139,6 +155,7 @@ class HomeTile extends StatelessWidget {
   final String title;
   final String value;
   final String? note;
+  final Color? valueColor;
   final Widget? below;
   final VoidCallback? onTap;
   final String? hint;
@@ -155,6 +172,7 @@ class HomeTile extends StatelessWidget {
     required this.title,
     required this.value,
     this.note,
+    this.valueColor,
     this.below,
     this.onTap,
     this.hint,
@@ -196,7 +214,7 @@ class HomeTile extends StatelessWidget {
                     text: value,
                     style: textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w700,
-                      color: palette.textStrong,
+                      color: valueColor ?? palette.textStrong,
                     ),
                   ),
                   if (note != null)

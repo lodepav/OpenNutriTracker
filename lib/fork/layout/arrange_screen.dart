@@ -10,15 +10,21 @@ class ArrangeList {
   final LayoutStore store;
   final Map<String, String> names;
 
+  /// Items off until switched on: hidden while the saved order does not
+  /// know them.
+  final Set<String> optional;
+
   const ArrangeList({
     required this.title,
     required this.store,
     required this.names,
+    this.optional = const {},
   });
 }
 
 /// Drag to reorder, switch off to hide and on to add back; saved as it
-/// changes. Reset puts every list back in its first order, all shown.
+/// changes. Reset puts every list back in its first order, all shown but
+/// the optional items.
 class ArrangeScreen extends StatefulWidget {
   final String title;
   final List<ArrangeList> lists;
@@ -37,7 +43,10 @@ class _ArrangeScreenState extends State<ArrangeScreen> {
           l.names.keys.toList(),
           LayoutStore.current(l.store.key).value.order,
         ),
-        hidden: {...LayoutStore.current(l.store.key).value.hidden},
+        hidden: {
+          ...LayoutStore.current(l.store.key).value.hidden,
+          ...addable(l.optional, LayoutStore.current(l.store.key).value),
+        },
       ),
   ];
 
@@ -61,7 +70,9 @@ class _ArrangeScreenState extends State<ArrangeScreen> {
                   _layouts[i].order
                     ..clear()
                     ..addAll(l.names.keys);
-                  _layouts[i].hidden.clear();
+                  _layouts[i].hidden
+                    ..clear()
+                    ..addAll(l.optional);
                 }
               });
               for (var i = 0; i < widget.lists.length; i++) {
