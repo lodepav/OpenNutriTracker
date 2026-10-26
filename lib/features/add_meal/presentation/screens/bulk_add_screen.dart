@@ -30,40 +30,17 @@ import 'package:opennutritracker/features/meal_detail/presentation/bloc/meal_det
 import 'package:opennutritracker/features/meal_detail/util/meal_quantity_converter.dart';
 import 'package:opennutritracker/features/settings/settings_screen.dart';
 import 'package:opennutritracker/generated/l10n.dart';
-// [fork] S4 dish-breakdown: break a row into a dish's ingredients (D12)
-import 'package:opennutritracker/fork/dish/dish_breakdown_controller.dart';
-import 'package:opennutritracker/fork/dish/dish_breakdown_rows.dart';
-import 'package:opennutritracker/fork/dish/dish_recipe.dart';
-import 'package:opennutritracker/fork/dish/dish_strings.dart';
-// [/fork]
-// [fork] S90 ux-journeys
-import 'package:opennutritracker/fork/bulk/discard_guard.dart';
-// [/fork]
-// [fork] S8 meal-groups: remember which entries one save wrote (D14)
-import 'package:opennutritracker/fork/leftovers/meal_groups.dart';
-import 'package:opennutritracker/fork/leftovers/meal_photo_cache.dart';
-// [/fork]
-// [fork] S30 recipe-import: a recipe from typed lines or a recipe link
-import 'package:http/http.dart' as http;
-import 'package:opennutritracker/fork/recipe/recipe_link.dart';
-// [/fork]
 
 class BulkAddScreenArguments {
   final IntakeTypeEntity intakeTypeEntity;
   final DateTime day;
   final bool usesImperialUnits;
-  // [fork] S90 ux-journeys: opened by the add screen's camera, for a photo
-  final bool startWithPhoto;
-  // [/fork]
 
   const BulkAddScreenArguments(
     this.intakeTypeEntity,
     this.day,
-    this.usesImperialUnits, {
-    // [fork] S90 ux-journeys
-    this.startWithPhoto = false,
-    // [/fork]
-  });
+    this.usesImperialUnits,
+  );
 }
 
 /// Type a whole meal, confirm what it matched, log it in one go.
@@ -85,95 +62,6 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
   final _log = Logger('BulkAddScreen');
   final _bloc = locator<BulkAddBloc>();
   final _textController = TextEditingController();
-  // [fork] S8 meal-groups: the photo this batch was read from, kept with the meal
-  MealPhoto? _forkMealPhoto;
-  // [/fork]
-  // [fork] S30 recipe-import: the page the text was read from, if any
-  LinkedRecipe? _forkLinkedRecipe;
-  String? _forkLink;
-
-  Future<void> _readRecipeLink(Uri link) async {
-    final messenger = ScaffoldMessenger.of(context)
-      ..showSnackBar(const SnackBar(content: Text(DishStrings.readingLink)));
-    LinkedRecipe? recipe;
-    String? failure;
-    try {
-      recipe = await RecipeLinkReader(locator<http.Client>()).read(link);
-      if (recipe == null) failure = DishStrings.linkHasNoRecipe;
-    } catch (e) {
-      _log.info('Recipe link not read: $e');
-      failure = DishStrings.linkFailed;
-    }
-    if (!mounted) return;
-    messenger.hideCurrentSnackBar();
-    if (recipe == null) {
-      messenger.showSnackBar(SnackBar(content: Text(failure!)));
-      return;
-    }
-    _textController.text = recipe.ingredients.join('\n');
-    _forkLinkedRecipe = recipe;
-    _forkLink = link.host;
-    _onParsePressed();
-  }
-
-  Future<void> _saveAllAsRecipe(BulkAddLoadedState state) async {
-    final linked = _forkLinkedRecipe;
-    final recipe = recipeFromRows(
-      state.rows,
-      name: linked?.name ?? '',
-      description: linked == null
-          ? DishStrings.typedRecipeDescription
-          : DishStrings.linkedRecipeDescription(_forkLink!),
-      servings: linked?.servings ?? 1,
-    );
-    if (recipe == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text(DishStrings.nothingToSave)),
-      );
-      return;
-    }
-    await openDishRecipe(context, recipe);
-  }
-  // [/fork]
-
-  // [fork] S4 dish-breakdown: runs breakdowns and marks the rows (D12)
-  late final _dishBreakdown = DishBreakdownController(_bloc)
-    ..addListener(() {
-      if (mounted) setState(() {});
-    });
-
-  Future<void> _breakDown(BulkAddRow row) async {
-    final outcome = await _dishBreakdown.breakDown(row);
-    if (!mounted) return;
-    final message = switch (outcome) {
-      DishBreakdownOutcome.replaced => null,
-      DishBreakdownOutcome.empty => DishStrings.breakDownEmpty,
-      DishBreakdownOutcome.noModel => DishStrings.breakDownNoModel,
-      DishBreakdownOutcome.failed => DishStrings.breakDownFailed,
-    };
-    if (message != null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(message)));
-    }
-    // Keyed by row index, which the swap moves.
-    _quantityErrors.clear();
-  }
-
-  Future<void> _saveDishRecipe(Object group) async {
-    final state = _bloc.state;
-    final recipe = state is BulkAddLoadedState
-        ? recipeFromDishGroup(state.rows, group)
-        : null;
-    if (recipe == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text(DishStrings.nothingToSave)),
-      );
-      return;
-    }
-    await openDishRecipe(context, recipe);
-  }
-  // [/fork]
 
   /// One controller per row, keyed by row index and rebuilt whenever a new
   /// parse produces a different set of rows.
@@ -395,27 +283,12 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
     super.didChangeDependencies();
     _args =
         ModalRoute.of(context)!.settings.arguments as BulkAddScreenArguments;
-    // [fork] S90 ux-journeys: straight to the photo sheet, once
-    if (_args.startWithPhoto && !_forkPhotoStarted) {
-      _forkPhotoStarted = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) async {
-        if (await _photoAvailable && mounted) await _onPhotoPressed();
-      });
-    }
-    // [/fork]
   }
-
-  // [fork] S90 ux-journeys
-  bool _forkPhotoStarted = false;
-  // [/fork]
 
   @override
   void dispose() {
     // registerFactory hands out a new instance per navigation, so this
     // screen owns it and has to close it.
-    // [fork] S4 dish-breakdown: before the bloc it listens to
-    _dishBreakdown.dispose();
-    // [/fork]
     _bloc.close();
     _textController.dispose();
     for (final controller in _amountControllers.values) {
@@ -430,20 +303,6 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
       appBar: AppBar(
         title: Text(S.of(context).bulkAddTitle),
         actions: [
-          // [fork] S30 recipe-import: every ready row as one recipe
-          BlocBuilder<BulkAddBloc, BulkAddState>(
-            bloc: _bloc,
-            builder: (context, state) =>
-                state is BulkAddLoadedState && state.rows.isNotEmpty
-                ? IconButton(
-                    key: const Key('fork-save-all-as-recipe'),
-                    onPressed: () => _saveAllAsRecipe(state),
-                    icon: const Icon(Icons.menu_book_outlined),
-                    tooltip: DishStrings.saveAllAsRecipe,
-                  )
-                : const SizedBox.shrink(),
-          ),
-          // [/fork]
           // Only offered when the user has a key enabled. There is no
           // offline way to read a photo, so showing the action to everyone
           // would advertise a button that can only ever apologise.
@@ -468,14 +327,6 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
           builder: (context, state) => LayoutBuilder(
             builder: (context, constraints) => Column(
               children: [
-                // [fork] S90 ux-journeys: Back asks before found foods are lost
-                DiscardGuard(
-                  pending:
-                      !_submitting &&
-                      state is BulkAddLoadedState &&
-                      state.rows.isNotEmpty,
-                ),
-                // [/fork]
                 // The **field** is bounded, not the block. At 2x on a 320dp
                 // screen the entry block measured 388px — a four-line field
                 // plus a full-height button — against about 595px of body,
@@ -621,9 +472,6 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
               keyboardType: TextInputType.multiline,
               decoration: InputDecoration(
                 hintText: S.of(context).bulkAddInputHint,
-                // [fork] S142: what the field does with a photo (H10)
-                helperText: 'With a photo, this is sent as its note',
-                // [/fork]
                 border: const OutlineInputBorder(),
               ),
             ),
@@ -1076,11 +924,11 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // User content: shrink to fit before ellipsizing; a long
-                  // database name takes up to three lines (A6) [fork] S142
+                  // User content inside a Row: shrink to fit before
+                  // ellipsizing, never wrap (AGENTS.md).
                   AutoSizeText(
                     title,
-                    maxLines: 3,
+                    maxLines: 1,
                     minFontSize: 12,
                     overflow: TextOverflow.ellipsis,
                     style: theme.textTheme.titleSmall?.copyWith(
@@ -1100,22 +948,6 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
                   // used to hide, so it is now unconditional.
                   if (meal?.brands != null)
                     Text(meal!.brands!, style: theme.textTheme.bodySmall),
-                  // [fork] S4 dish-breakdown: in progress, or an AI ingredient
-                  if (_dishBreakdown.isPending(row))
-                    Text(
-                      DishStrings.breakingDown,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.tertiary,
-                      ),
-                    )
-                  else if (row.dishIngredient case final ingredient?)
-                    Text(
-                      DishStrings.ingredientOf(ingredient.dish),
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.tertiary,
-                      ),
-                    ),
-                  // [/fork]
                   if (!row.isResolved)
                     Text(
                       S.of(context).bulkAddNoMatchLabel,
@@ -1124,26 +956,12 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
                       ),
                     )
                   else if (row.isLowConfidence)
-                    // [fork] S90 ux-journeys: orange text is too faint
-                    // to read on the light theme, so the orange goes on an
-                    // icon and the words are in the body colour
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.warning_amber_rounded,
-                          size: 16,
-                          color: theme.colorScheme.tertiary,
-                        ),
-                        const SizedBox(width: 4),
-                        Flexible(
-                          child: Text(
-                            S.of(context).bulkAddUncertainLabel,
-                            style: theme.textTheme.bodySmall,
-                          ),
-                        ),
-                      ],
+                    Text(
+                      S.of(context).bulkAddUncertainLabel,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.tertiary,
+                      ),
                     )
-                  // [/fork]
                   // A bare count the app could not interpret. Shown
                   // below a doubtful match, because a wrong food
                   // matters more than a wrong unit on the right one.
@@ -1168,12 +986,6 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
                 ],
               ),
             );
-            // [fork] S90 ux-journeys: the name is a 48 dp tap target
-            final forkTitle = ConstrainedBox(
-              constraints: const BoxConstraints(minHeight: 48),
-              child: titleBlock,
-            );
-            // [/fork]
 
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1183,14 +995,14 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
                   // than by whatever is left of it.
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [forkTitle, ...buttons], // [fork] S90
+                    children: [titleBlock, ...buttons],
                   )
                 else
                   // Unchanged wherever they fit, which is every ordinary
                   // text size: name on the left, controls on the right.
                   Row(
                     children: [
-                      Expanded(child: forkTitle), // [fork] S90
+                      Expanded(child: titleBlock),
                       ...buttons,
                     ],
                   ),
@@ -1218,17 +1030,6 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
   ) => [
     if (!row.isResolved)
       (label: S.of(context).quickAddCardLabel, onPressed: _showQuickAdd),
-    // [fork] S4 dish-breakdown: on demand, for a doubtful row; and once per
-    // breakdown, saving it as a recipe
-    if (_dishBreakdown.canBreakDown(row))
-      (label: DishStrings.breakDownAction, onPressed: () => _breakDown(row)),
-    if (_bloc.state case BulkAddLoadedState(:final rows)
-        when isFirstOfDishGroup(rows, index))
-      (
-        label: DishStrings.saveAsRecipe,
-        onPressed: () => _saveDishRecipe(row.dishIngredient!.group),
-      ),
-    // [/fork]
     (
       label: row.skipped
           ? S.of(context).bulkAddIncludeLabel
@@ -1499,19 +1300,7 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
 
   void _onParsePressed() {
     FocusScope.of(context).unfocus();
-    // [fork] S30 recipe-import: a recipe link reads as its ingredient lines
-    if (recipeLinkIn(_textController.text) case final link?) {
-      _readRecipeLink(link);
-      return;
-    }
-    if (_textController.text != _forkLinkedRecipe?.ingredients.join('\n')) {
-      _forkLinkedRecipe = null;
-    }
-    // [/fork]
     _resetAmountControllers();
-    // [fork] S8 meal-groups
-    _forkMealPhoto = null;
-    // [/fork]
     _bloc.add(
       ParseBulkTextEvent(
         text: _textController.text,
@@ -1529,10 +1318,6 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
     // is no honest sentence to put in the sheet, and the sheet is the last
     // moment the user can decline.
     if (destination == null) return;
-    // [fork] S8 meal-groups: say so when the photo is kept for leftovers
-    final keepsPhoto = await MealPhotoCache().keepsPhotos;
-    if (!mounted) return;
-    // [/fork]
     final disclosure = switch (destination.provider) {
       AiProvider.anthropic => S.of(context).bulkAddPhotoDisclosureAnthropic,
       AiProvider.openrouter =>
@@ -1560,9 +1345,7 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
               child: Text(
                 '$disclosure '
-                // [fork] S8 meal-groups
-                '${keepsPhoto ? keptPhotoDisclosure : S.of(sheetContext).bulkAddPhotoDisclosureCommon}\n\n'
-                // [/fork]
+                '${S.of(sheetContext).bulkAddPhotoDisclosureCommon}\n\n'
                 // The photo path has no deterministic fallback, so this is
                 // the only surface besides Settings where a user opts into a
                 // model. The stability note belongs on both.
@@ -1624,18 +1407,12 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
 
     // A photo replaces the previous batch, so the old controllers go with it.
     _resetAmountControllers();
-    // [fork] S8 meal-groups
-    _forkMealPhoto = photo;
-    // [/fork]
 
     _bloc.add(
       ReadMealPhotoEvent(
         photo: photo,
         usesImperialUnits: _args.usesImperialUnits,
         localeCode: Localizations.localeOf(context).languageCode,
-        note: _textController.text.trim().isEmpty
-            ? null
-            : _textController.text.trim(),
       ),
     );
   }
@@ -1785,20 +1562,12 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
     });
 
     final mealDetailBloc = locator<MealDetailBloc>();
-    // [fork] S8 meal-groups: set when a profile switch dropped a write
-    var dropped = false;
-    // [/fork]
     try {
       // Sequential, not concurrent. The tracked-day totals are accumulated
       // with a read-modify-write, so overlapping writes lose updates and
       // the day silently under-counts.
-      // [fork] S8 meal-groups
-      final intakeIds = <String>[];
-      // [/fork]
       for (final write in writes) {
-        // [fork] S8 meal-groups
-        final intake = await mealDetailBloc.addIntake(
-        // [/fork]
+        await mealDetailBloc.addIntake(
           context,
           // The suffix is a display device; the stored vocabulary stays
           // the closed set the export format and QR payload were written
@@ -1809,18 +1578,7 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
           write.row.meal!,
           _args.day,
         );
-        // [fork] S8 meal-groups: none when a profile switch dropped it; the
-        // rest would go to the profile switched to
-        if (intake == null) {
-          dropped = true;
-          break;
-        }
-        intakeIds.add(intake.id);
-        // [/fork]
       }
-      // [fork] S8 meal-groups: a group in the profile its entries are in
-      if (!dropped) await recordMealGroup(intakeIds, photo: _forkMealPhoto);
-      // [/fork]
     } catch (e, stackTrace) {
       _log.severe('Bulk intake write failed', e, stackTrace);
       if (!mounted) return;
@@ -1837,18 +1595,9 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
     locator<DiaryBloc>().add(const LoadDiaryYearEvent());
     locator<CalendarDayBloc>().add(const RefreshCalendarDayEvent());
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          // [fork] S8 meal-groups
-          dropped
-              ? 'Not all added: the profile changed.'
-              :
-              // [/fork]
-              S.of(context).infoAddedIntakeLabel,
-        ),
-      ),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(S.of(context).infoAddedIntakeLabel)));
     Navigator.of(
       context,
     ).popUntil(ModalRoute.withName(NavigationOptions.mainRoute));
