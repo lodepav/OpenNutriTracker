@@ -34,6 +34,7 @@ import 'package:opennutritracker/features/scanner/scanner_screen.dart';
 import 'package:opennutritracker/features/scanner/util/barcode_check_digit.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 import 'package:opennutritracker/fork/basket/basket_ui.dart';
+import 'package:opennutritracker/fork/screens/add_meal/result_sections.dart';
 import 'package:opennutritracker/fork/bulk/photo_meal_button.dart';
 import 'package:opennutritracker/fork/suggest/fits_left.dart';
 import 'package:opennutritracker/fork/recents/search_sections.dart';
@@ -519,14 +520,15 @@ class _AddMealScreenState extends State<AddMealScreen> {
                             child: Semantics(
                               identifier: 'add-meal-all-list',
                               container: true,
-                              child: ListView.builder(
-                                itemCount: merged.length,
-                                itemBuilder: (context, index) => MealItemCard(
-                                  day: _day,
-                                  mealEntity: merged[index],
-                                  addMealType: _mealType,
-                                  usesImperialUnits: imperial,
-                                ),
+                              // Basic foods, then products one row per
+                              // name (the search-duplicates canvas, C).
+                              child: ResultSections(
+                                day: _day,
+                                addMealType: _mealType,
+                                usesImperialUnits: imperial,
+                                merged: merged,
+                                basicOrder: foods,
+                                query: query,
                               ),
                             ),
                           ),
@@ -553,39 +555,55 @@ class _AddMealScreenState extends State<AddMealScreen> {
                 } else if (state is ProductsLoadingState) {
                   return _pendingSpinner;
                 } else if (state is ProductsLoadedState) {
+                  // Offline the tab said no foods matched, with no Retry:
+                  // the search never ran. It says so, as All does.
+                  final failed = state.remoteSourceFailed
+                      ? PartialResultsNotice(
+                          onRetry: _onProductsRefreshButtonPressed,
+                        )
+                      : null;
                   if (state.products.isEmpty) {
+                    final noResults = NoResultsWidget(
+                      onScanBarcode: _onBarcodeIconPressed,
+                      onCreateCustomFood: () =>
+                          _onCustomAddButtonPressed(state.usesImperialUnits),
+                    );
                     return Flexible(
                       child: _productsPending(state, query)
                           ? _pendingSpinner
-                          : NoResultsWidget(
-                              onScanBarcode: _onBarcodeIconPressed,
-                              onCreateCustomFood: () =>
-                                  _onCustomAddButtonPressed(
-                                    state.usesImperialUnits,
-                                  ),
+                          : failed == null
+                          ? noResults
+                          : SingleChildScrollView(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [failed, noResults],
+                              ),
                             ),
                     );
                   }
                   return Flexible(
-                    child: Semantics(
-                      identifier: 'add-meal-products-list',
-                      container: true,
-                      child: ListView.builder(
-                        itemCount:
-                            state.products.length +
-                            (state.remoteSourceEmpty ? 1 : 0),
-                        itemBuilder: (context, index) {
-                          if (index == state.products.length) {
-                            return const NoResultsWidget();
-                          }
-                          return MealItemCard(
-                            day: _day,
-                            mealEntity: state.products[index],
-                            addMealType: _mealType,
-                            usesImperialUnits: state.usesImperialUnits,
-                          );
-                        },
-                      ),
+                    child: Column(
+                      children: [
+                        ?failed,
+                        Expanded(
+                          child: Semantics(
+                            identifier: 'add-meal-products-list',
+                            container: true,
+                            // One row per product name, as in All.
+                            child: ResultSections(
+                              day: _day,
+                              addMealType: _mealType,
+                              usesImperialUnits: state.usesImperialUnits,
+                              merged: state.products,
+                              query: query,
+                              productsHeading: false,
+                              footer: state.remoteSourceEmpty
+                                  ? const NoResultsWidget()
+                                  : null,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   );
                 } else if (state is ProductsFailedState) {

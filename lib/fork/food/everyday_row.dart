@@ -47,6 +47,8 @@ const _everyday = {
   'greek yogurt': _greekYogurt,
   'greek yoghurt': _greekYogurt,
   'granola': 'Cereal, granola',
+  'basmati rice': _longGrainRice,
+  'jasmine rice': _longGrainRice,
 };
 
 const _cheesePizza =
@@ -60,5 +62,6 @@ const _boiledPotato =
 const _oatmeal = 'Oatmeal, regular or quick, made with water, no added fat';
 const _unsaltedButter = 'Butter, without salt';
 const _cola = 'Soft drink, cola';
+const _longGrainRice = 'Rice, white, long-grain, regular, enriched, cooked';
 const _dietCola = 'Soft drink, cola, diet';
 const _greekYogurt = 'Yogurt, Greek, NS as to type of milk, plain';

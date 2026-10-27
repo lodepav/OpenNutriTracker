@@ -259,13 +259,22 @@ class SearchProductsUseCase {
     // keeps the search list stable from the user's perspective ("the
     // version I saw yesterday is still at the top"). Fresh remote data
     // still wins on the per-item refresh path triggered by intake-add.
+    // [fork] S165 food-order: the offline table answers every search in
+    // its own order (the food as eaten first), so on the Food tab its rows
+    // lead and the cache adds only what they lack. Cache-first listed rows
+    // from earlier searches first: "tomato" showed crushed and sun-dried
+    // tomatoes, "carrot" rice with carrots, and "Tomatoes, raw" last.
+    final cacheLeads =
+        cacheSource != MealSourceEntity.fdc || remoteFailed || remoteSkipped;
+    // [/fork]
     return SearchProductsResult(
       meals: _deduplicateMeals([
         ...fromCustomMealBox,
         ...fromRecipes,
         ...fromIntakeHistory,
-        ...fromCache,
+        if (cacheLeads) ...fromCache, // [fork] S165
         ...remoteResults,
+        if (!cacheLeads) ...fromCache, // [fork] S165
       ]),
       remoteSourceEmpty: remoteSourceEmpty,
       remoteSourceFailed: remoteFailed,

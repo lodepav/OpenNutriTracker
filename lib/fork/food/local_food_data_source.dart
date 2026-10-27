@@ -82,6 +82,18 @@ class LocalFoodDataSource extends SpFoodDataSource {
         }
       }
     }
+    // A person's search names the food the way MacroFactor or a label
+    // does, with words no row uses: "peach, fresh", "bulgur, home cooked",
+    // "basmati rice, cooked in salted water". Without them first, before
+    // the most-words match, which took "fresh" for the food and listed
+    // queso fresco, basil and thyme on "peach, fresh".
+    if (!forResolution && rows.isEmpty) {
+      final plain = withoutDescribing(query);
+      if (plain.isNotEmpty && plain != query) {
+        rows = search(plain);
+        if (rows.isNotEmpty) query = plain;
+      }
+    }
     // A person's search with a word no row has ("cherry tomatoes", "uht
     // milk") showed nothing; it shows the rows with the most of its words.
     if (!forResolution && rows.isEmpty) {
@@ -116,17 +128,15 @@ class LocalFoodDataSource extends SpFoodDataSource {
           everyday,
       ];
     }
-    // The Food tab lists a variant the person did not name ("Bacon,
-    // meatless" for "bacon") after the plain rows, as the resolver scores
-    // it (S70), and the row the name means first.
+    // The Food tab lists a row the person did not mean after the plain
+    // rows (see [listedAfter]), and the row the name means first.
+    final after = listedAfter(ranked, query);
     return [
       ?everyday,
       for (final row in ranked)
-        if (unaskedVariant(row.name, query) == 0 && !identical(row, everyday))
-          row,
+        if (!after.contains(row) && !identical(row, everyday)) row,
       for (final row in ranked)
-        if (unaskedVariant(row.name, query) > 0 && !identical(row, everyday))
-          row,
+        if (after.contains(row) && !identical(row, everyday)) row,
     ];
   }
 
@@ -166,6 +176,120 @@ class LocalFoodDataSource extends SpFoodDataSource {
     final portions = (await table).portions;
     return {for (final id in foodIds) id: ?portions[id]};
   }
+}
+
+/// Words that say how a food was had or bought rather than which food it
+/// is. MacroFactor and labels add them ("Plum, fresh", "Bulgur, home
+/// cooked"); the table's rows seldom do, or for another food ("Cheese,
+/// fresh").
+const describingWords = {
+  'fresh',
+  'raw',
+  'plain',
+  'whole',
+  'organic',
+  'natural',
+  'home',
+  'homemade',
+};
+
+final _inWater = RegExp(r'\bin\s+(un)?salted\s+water\b', caseSensitive: false);
+
+/// [query] without its [describingWords] and a cooking water ("cooked in
+/// salted water"), its words joined by spaces.
+String withoutDescribing(String query) => _words(
+  query.replaceAll(_inWater, ' '),
+).where((w) => !describingWords.contains(w)).join(' ');
+
+/// Foods a plate holds cooked, whose dry row a bare name lists after the
+/// cooked one ("egg noodles" listed "Noodles, egg, dry" at 384 kcal first,
+/// against 138 cooked). Not oats, weighed dry for porridge.
+const _eatenCooked = {
+  'rice',
+  'longgrain',
+  'mediumgrain',
+  'pasta',
+  'noodle',
+  'noodles',
+  'spaghetti',
+  'macaroni',
+  'buckwheat',
+  'bulgur',
+  'couscous',
+  'quinoa',
+  'lentil',
+  'lentils',
+  'barley',
+  'millet',
+};
+
+/// A form of a food the name did not ask for: "carrot" listed "Carrot,
+/// dehydrated" first, "white rice" the glutinous rice. Not "dry roasted",
+/// a way of roasting nuts.
+final _unaskedForm = RegExp(
+  r'\b(dried|dehydrated|glutinous|dry(?!\s+roasted))\b',
+  caseSensitive: false,
+);
+
+/// Words after which a row's words are what it is made with: "Rice
+/// pudding ..., raisins and pistachios", "Sole, fried in butter".
+const _madeWith = {'with', 'in', 'and'};
+
+/// The rows of [rows] the Food tab lists after the others for a person's
+/// [query]: a variant not named (S70, [unaskedVariant]); a form not named
+/// ([_unaskedForm]); a food eaten cooked, dry, when the name says no
+/// state; and a row holding [query]'s words only as what it is made with,
+/// as "pistachios" listed a rice pudding first. One before is enough:
+/// "salted pumpkin seeds" are the seeds "with salt added".
+Set<SpFoodDTO> listedAfter(List<SpFoodDTO> rows, String query) {
+  final asked = query.toLowerCase();
+  final content = [
+    for (final w in _words(query))
+      if (!describingWords.contains(w) && !_madeWith.contains(w)) spelling(w),
+  ];
+  double? leanestCooked;
+  if (!_stateWords.hasMatch(asked) &&
+      content.isNotEmpty &&
+      _eatenCooked.contains(content.last)) {
+    for (final row in rows) {
+      final kcal = row.energyKcal100;
+      if (kcal != null &&
+          _cookedWords.hasMatch(row.name ?? '') &&
+          (leanestCooked == null || kcal < leanestCooked)) {
+        leanestCooked = kcal;
+      }
+    }
+  }
+  bool unaskedForm(String name) {
+    final form = _unaskedForm.firstMatch(name);
+    return form != null && !asked.contains(form[1]!.toLowerCase());
+  }
+
+  bool dry(SpFoodDTO row) =>
+      leanestCooked != null &&
+      (row.energyKcal100 ?? 0) > 2 * leanestCooked &&
+      (row.carbohydrates100 ?? 0) > 50;
+  // A query that names what the food is made with ("potatoes boiled
+  // without skin with salt") means the rows that say so.
+  final namesMadeWith = _words(query).any(_madeWith.contains);
+  bool onlyMadeWith(String name) {
+    if (namesMadeWith || content.isEmpty) return false;
+    final words = _words(name);
+    final joint = words.indexWhere(_madeWith.contains);
+    if (joint < 0) return false;
+    return content.every(
+      (q) => words.indexWhere((w) => wordsAgree(q, w)) > joint,
+    );
+  }
+
+  return Set.identity()..addAll([
+    for (final row in rows)
+      if (unaskedVariant(row.name, query) > 0 ||
+          unaskedForm(row.name ?? '') ||
+          dry(row) ||
+          onlyMadeWith(row.name ?? ''))
+        row,
+  ]);
 }
 
 final _joiner = RegExp(r'\s+(with|in|and|on|ar)\s+', caseSensitive: false);
@@ -424,16 +548,26 @@ String spelling(String word) => switch (word) {
   'bbq' || 'barbeque' => 'barbecue',
   'tater' => 'potato',
   'adjaruli' || 'acharuli' || 'adjaran' || 'ajarian' || 'ajaruli' => 'adjarian',
+  // Rice by its variety, which no row names: the table's rows go by the
+  // grain ("Rice, white, long-grain, ..."), run together as one token.
+  'basmati' || 'jasmine' => 'longgrain',
+  'arborio' => 'mediumgrain',
+  // Pasta by its shape, which no row names: the table has "Pasta, cooked".
+  'penne' || 'fusilli' || 'rigatoni' || 'farfalle' || 'tagliatelle' => 'pasta',
+  // Latvian, as the user logs them: auzu pārslas, oat flakes; siers, cheese.
+  'auzu' => 'oat',
+  'pārslas' || 'parslas' => 'flakes',
+  'siers' || 'sieru' => 'cheese',
   _ => word,
 };
 
 /// Whether query word [q] and name word [t] are the same word up to an
 /// ending: one is the other plus at most two letters (`egg`/`eggs`,
 /// `potato`/`potatoes`; one letter for a three-letter word, so `fan` is not
-/// `fanta`), or both share a stem of four letters or more and differ in at
-/// most two letters after it (`cheese`/`cheesy`), or `y` and `ies`
-/// (`berry`/`berries`). Three shared letters are not a stem: `grey` is not
-/// `green`. Recipe search uses it too (`recipe_search.dart`).
+/// `fanta`), or both share a stem of five letters or more and differ in at
+/// most two letters after it, one for the shorter (`cheese`/`cheesy`), or
+/// `y` and `ies` (`berry`/`berries`). Four shared letters are not a stem:
+/// `pasta` is not `paste`. Recipe search uses it too (`recipe_search.dart`).
 bool wordsAgree(String q, String t) {
   if (q == t) return true;
   final (shorter, longer) = q.length <= t.length ? (q, t) : (t, q);
@@ -452,5 +586,10 @@ bool wordsAgree(String q, String t) {
       longer == '${shorter.substring(0, shorter.length - 1)}ies') {
     return true;
   }
-  return shared >= 4 && longer.length - shared <= 2;
+  // Both differ after the stem, the shorter by one letter, past five
+  // shared: `casein` is not `casero` (a pound cake for "micellar casein"),
+  // `pasta` not `paste` (guava paste for "penne"), `fried` not `fries`.
+  return shared >= 5 &&
+      longer.length - shared <= 2 &&
+      shorter.length - shared <= 1;
 }

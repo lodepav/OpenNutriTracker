@@ -70,7 +70,7 @@ class _SearchSectionsState extends State<SearchSections> {
         slivers: [
           if (history.isNotEmpty)
             SliverToBoxAdapter(
-              child: _Header(
+              child: SearchSectionHeader(
                 title: 'From your history',
                 note: widget.entries.isEmpty ? null : 'last amount',
               ),
@@ -103,7 +103,9 @@ class _SearchSectionsState extends State<SearchSections> {
               }
               return SliverMainAxisGroup(
                 slivers: [
-                  const SliverToBoxAdapter(child: _Header(title: 'Favourites')),
+                  const SliverToBoxAdapter(
+                    child: SearchSectionHeader(title: 'Favourites'),
+                  ),
                   SliverList.builder(
                     itemCount: state.favourites.length,
                     itemBuilder: (context, index) => row(
@@ -122,11 +124,13 @@ class _SearchSectionsState extends State<SearchSections> {
   }
 }
 
-class _Header extends StatelessWidget {
+/// A section's label over search rows, with an optional note on the
+/// trailing edge.
+class SearchSectionHeader extends StatelessWidget {
   final String title;
   final String? note;
 
-  const _Header({required this.title, this.note});
+  const SearchSectionHeader({super.key, required this.title, this.note});
 
   @override
   Widget build(BuildContext context) {
