@@ -34,6 +34,7 @@ extension _AboutSettings on _SettingsScreenState {
             palette: palette,
             icon: Icons.menu_book_rounded,
             title: S.of(context).settingsSourcesLabel,
+            showChevron: true,
             onTap: () => Navigator.of(
               context,
             ).push(MaterialPageRoute(builder: (_) => const SourcesScreen())),

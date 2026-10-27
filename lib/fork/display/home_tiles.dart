@@ -25,8 +25,7 @@ import 'package:opennutritracker/fork/trends/trend_stats.dart' show TrendMetric;
 import 'package:opennutritracker/fork/trends/trends_widgets.dart'
     show Sparkline;
 import 'package:opennutritracker/fork/units/energy_text.dart';
-import 'package:opennutritracker/fork/units/weight_text.dart'
-    show bodyWeightText;
+import 'package:opennutritracker/fork/units/weight_text.dart' show weightText;
 import 'package:opennutritracker/generated/l10n.dart';
 
 /// Home's 2×2 tiles (seam S119, MacroFactor's dashboard), in place of the
@@ -302,7 +301,7 @@ class _WeightTileState extends State<WeightTile> {
       );
       final kg = trend.isEmpty ? widget.weightKg : trend.last.weightKg;
       final s = S.of(context);
-      final value = bodyWeightText(context, kg, widget.unit);
+      final value = weightText(kg, widget.unit);
       String? note;
       if (trend.length > 7) {
         final kgPerWeek =

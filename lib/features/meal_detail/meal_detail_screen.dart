@@ -311,7 +311,11 @@ class _MealDetailScreenState extends State<MealDetailScreen> {
       listenWhen: (prev, curr) =>
           curr.hydratedMeal != null && curr.hydratedMeal != prev.hydratedMeal,
       listener: (context, state) => _onMealHydrated(state.hydratedMeal!),
-      child: SafeArea(
+      // [fork] S168: the canvas behind the status and navigation bars, not
+      // the window's black
+      child: ColoredBox(
+        color: paletteOf(context).canvas,
+        child: SafeArea(
         child: Scaffold(
           backgroundColor:
               (Theme.of(context).brightness == Brightness.dark ? AppPalette.dark : AppPalette.light).canvas,
@@ -353,6 +357,7 @@ class _MealDetailScreenState extends State<MealDetailScreen> {
           ),
         ),
       ),
+      ), // [fork] S168
     );
   }
 

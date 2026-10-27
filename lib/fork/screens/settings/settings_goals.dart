@@ -37,6 +37,7 @@ extension _GoalsSettings on _SettingsScreenState {
             title: state.usesKilojoules
                 ? S.of(context).settingsKjAdjustmentLabel
                 : S.of(context).settingsKcalAdjustmentLabel,
+            subtitle: _kcalAdjustmentText(context),
             onTap: () => _showKcalAdjustmentDialog(context),
           ),
           const AdaptiveSettingsTile(),
@@ -47,6 +48,7 @@ extension _GoalsSettings on _SettingsScreenState {
             palette: palette,
             icon: Icons.pie_chart_rounded,
             title: S.of(context).settingsMacroSplitLabel,
+            subtitle: _macroSplitText(),
             onTap: () => _showMacroSplitDialog(context),
           ),
           _SettingsTile(
@@ -54,6 +56,7 @@ extension _GoalsSettings on _SettingsScreenState {
             palette: palette,
             icon: Icons.restaurant_menu_rounded,
             title: S.of(context).settingsPerMealKcalShareLabel,
+            subtitle: _mealSharesText(),
             onTap: () => _showPerMealKcalShareDialog(context),
           ),
           _SettingsTile(
@@ -69,6 +72,7 @@ extension _GoalsSettings on _SettingsScreenState {
             palette: palette,
             icon: Icons.schedule_rounded,
             title: S.of(context).settingsDayStartLabel,
+            subtitle: _dayStartText(context, state),
             onTap: () => _showDayBoundaryDialog(context),
           ),
         ],
@@ -77,8 +81,47 @@ extension _GoalsSettings on _SettingsScreenState {
     ];
   }
 
-  void _showKcalAdjustmentDialog(BuildContext context) {
-    showDialog(
+  String? _kcalAdjustmentText(BuildContext context) {
+    final config = _goalsConfig;
+    if (config == null) return null;
+    final kcal = config.userKcalAdjustment ?? 0;
+    return kcal == 0 ? 'None' : energyText(context, kcal, signed: true);
+  }
+
+  /// "Carbs 60 · Fat 25 · Protein 15 %", in the user's macro order.
+  String? _macroSplitText() {
+    final config = _goalsConfig;
+    if (config == null) return null;
+    String pct(double? fraction, int fallback) =>
+        '${((fraction ?? fallback / 100) * 100).round()}';
+    final parts = inMacroOrder(
+      carbs: 'Carbs ${pct(config.userCarbGoalPct, 60)}',
+      fat: 'Fat ${pct(config.userFatGoalPct, 25)}',
+      protein: 'Protein ${pct(config.userProteinGoalPct, 15)}',
+    );
+    return '${parts.join(' · ')} %';
+  }
+
+  String? _mealSharesText() {
+    final shares = _goalsConfig?.mealKcalSharesPct;
+    if (shares == null) return null;
+    return [
+      'Breakfast ${shares[ConfigEntity.mealKeyBreakfast] ?? 0}',
+      'Lunch ${shares[ConfigEntity.mealKeyLunch] ?? 0}',
+      'Dinner ${shares[ConfigEntity.mealKeyDinner] ?? 0}',
+      'Snack ${shares[ConfigEntity.mealKeySnack] ?? 0} %',
+    ].join(' · ');
+  }
+
+  String _dayStartText(BuildContext context, SettingsLoadedState state) {
+    final hour = state.dayStartOffsetHours;
+    final minute = state.dayStartOffsetMinutes;
+    if (hour == 0 && minute == 0) return 'Midnight';
+    return TimeOfDay(hour: hour, minute: minute).format(context);
+  }
+
+  Future<void> _showKcalAdjustmentDialog(BuildContext context) async {
+    await showDialog(
       context: context,
       builder: (context) => KcalAdjustmentDialog(
         settingsBloc: _settingsBloc,
@@ -86,18 +129,20 @@ extension _GoalsSettings on _SettingsScreenState {
         homeBloc: _homeBloc,
       ),
     );
+    _refreshGoalsConfig();
   }
 
-  void _showMacroSplitDialog(BuildContext context) {
-    showDialog(
+  Future<void> _showMacroSplitDialog(BuildContext context) async {
+    await showDialog(
       context: context,
       builder: (context) =>
           MacroSplitDialog(settingsBloc: _settingsBloc, homeBloc: _homeBloc),
     );
+    _refreshGoalsConfig();
   }
 
-  void _showPerMealKcalShareDialog(BuildContext context) {
-    showDialog(
+  Future<void> _showPerMealKcalShareDialog(BuildContext context) async {
+    await showDialog(
       context: context,
       builder: (context) => PerMealKcalShareDialog(
         settingsBloc: _settingsBloc,
@@ -105,6 +150,7 @@ extension _GoalsSettings on _SettingsScreenState {
         calendarDayBloc: _calendarDayBloc,
       ),
     );
+    _refreshGoalsConfig();
   }
 
   void _openNutrientGoalsScreen(BuildContext context) {

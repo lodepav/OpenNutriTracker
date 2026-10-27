@@ -286,34 +286,43 @@ class YouRow extends StatelessWidget {
               horizontal: Dimens.spacing16,
               vertical: Dimens.spacing8,
             ),
+            // The label takes what the value leaves, the value at most
+            // half, so every chevron sits at the right edge (H4).
             child: MergeSemantics(
-              child: Row(
-                children: [
-                  Expanded(child: Text(label, style: text.bodyLarge)),
-                  const SizedBox(width: Dimens.spacing12),
-                  Flexible(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        if (value != null)
-                          Text(
-                            value!,
-                            textAlign: TextAlign.end,
-                            style: text.bodyMedium?.copyWith(color: muted),
-                          ),
-                        if (detail != null && detail!.isNotEmpty)
-                          Text(
-                            detail!,
-                            textAlign: TextAlign.end,
-                            style: text.bodySmall?.copyWith(color: muted),
-                          ),
-                      ],
+              child: LayoutBuilder(
+                builder: (context, constraints) => Row(
+                  children: [
+                    Expanded(child: Text(label, style: text.bodyLarge)),
+                    if (value != null || (detail?.isNotEmpty ?? false)) ...[
+                      const SizedBox(width: Dimens.spacing12),
+                      ConstrainedBox(
+                        constraints: BoxConstraints(
+                          maxWidth: constraints.maxWidth / 2,
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            if (value != null)
+                              Text(
+                                value!,
+                                textAlign: TextAlign.end,
+                                style: text.bodyMedium?.copyWith(color: muted),
+                              ),
+                            if (detail != null && detail!.isNotEmpty)
+                              Text(
+                                detail!,
+                                textAlign: TextAlign.end,
+                                style: text.bodySmall?.copyWith(color: muted),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ],
+                    ExcludeSemantics(
+                      child: Icon(Icons.chevron_right_rounded, color: muted),
                     ),
-                  ),
-                  ExcludeSemantics(
-                    child: Icon(Icons.chevron_right_rounded, color: muted),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),

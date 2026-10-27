@@ -156,39 +156,49 @@ class _EditDialogState extends State<EditDialog> {
           ),
         ],
       ),
+      // [fork] S83 tap-delete; Material order: Delete on its own on the
+      // left in the error colour (S168), then Cancel, then the confirming OK
+      // on the right
+      actionsAlignment: MainAxisAlignment.spaceBetween,
       actions: [
-        // [fork] S83 tap-delete; Material order: Delete, then Cancel, then
-        // the confirming OK on the right
         TextButton(
+          style: TextButton.styleFrom(
+            foregroundColor: Theme.of(context).colorScheme.error,
+          ),
           onPressed: () => Navigator.of(context).pop(EditDialog.deleteResult),
           child: Text(S.of(context).dialogDeleteLabel),
         ),
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: Text(S.of(context).dialogCancelLabel),
-        ),
-        // [/fork]
-        TextButton(
-          onPressed: () {
-            final newAmount = double.tryParse(
-              amountEditingController.text.replaceAll(',', '.'),
-            );
-            if (newAmount == null || newAmount <= 0) return; // [fork] S83
-            Navigator.of(context).pop(
-              switch (_kcalPerUnit) {
-                // [fork] S142
-                final perUnit? =>
-                  kcalFromInput(context, newAmount) / perUnit,
-                // [/fork]
-                _ => _convertBackToMetricValue(
-                  newAmount,
-                  widget.intakeEntity.meal.mealUnit,
-                ),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text(S.of(context).dialogCancelLabel),
+            ),
+            // [/fork]
+            TextButton(
+              onPressed: () {
+                final newAmount = double.tryParse(
+                  amountEditingController.text.replaceAll(',', '.'),
+                );
+                if (newAmount == null || newAmount <= 0) return; // [fork] S83
+                Navigator.of(context).pop(
+                  switch (_kcalPerUnit) {
+                    // [fork] S142
+                    final perUnit? =>
+                      kcalFromInput(context, newAmount) / perUnit,
+                    // [/fork]
+                    _ => _convertBackToMetricValue(
+                      newAmount,
+                      widget.intakeEntity.meal.mealUnit,
+                    ),
+                  },
+                );
               },
-            );
-          },
-          child: Text(S.of(context).dialogOKLabel),
-        ),
+              child: Text(S.of(context).dialogOKLabel),
+            ),
+          ], // [fork] S168
+        ), // [fork] S168
       ],
     );
   }

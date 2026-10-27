@@ -111,7 +111,7 @@ void main() {
     ) async {
       await tester.pumpWidget(_app(_tiles()));
       await tester.pump();
-      expect(find.textContaining('81 kg'), findsOne);
+      expect(find.textContaining('81.0 kg'), findsOne);
       expect(find.textContaining('/wk'), findsNothing);
       expect(find.textContaining('after a weigh-in'), findsOne);
       expect(find.textContaining('750 / 2000 ml'), findsOne);

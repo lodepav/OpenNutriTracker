@@ -4,6 +4,7 @@ import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/features/home/presentation/bloc/home_bloc.dart';
 import 'package:opennutritracker/features/settings/presentation/bloc/settings_bloc.dart';
 import 'package:opennutritracker/features/settings/presentation/widgets/macro_split_dialog.dart';
+import 'package:opennutritracker/fork/display/display_prefs.dart'; // [fork] S168
 import 'package:opennutritracker/generated/l10n.dart';
 import '../../../../helpers/fake_reload_blocs.dart';
 import '../../../../helpers/test_l10n.dart';
@@ -69,9 +70,20 @@ void main() {
 
   setUp(() {
     recorder = ReloadRecorder()..register();
+    // [fork] S168: the dialog follows the app's macro order; these tests
+    // find its fields by position in upstream's
+    DisplayPrefs.macroOrder.value = const [
+      Macro.carbs,
+      Macro.protein,
+      Macro.fat,
+    ];
+    // [/fork]
   });
 
-  tearDown(() async => locator.reset());
+  tearDown(() async {
+    await locator.reset();
+    DisplayPrefs.macroOrder.value = DisplayPrefs.upstreamOrder; // [fork] S168
+  });
 
   testWidgets(
     'saving reloads the Diary, the open day and Trends after today\'s '

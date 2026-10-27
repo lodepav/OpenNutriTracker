@@ -117,6 +117,7 @@ extension _AppearanceSettings on _SettingsScreenState {
             icon: Icons.tune_rounded,
             title: S.of(context).settingsNutrientsLabel,
             subtitle: S.of(context).settingsNutrientsSubtitle,
+            showChevron: true,
             onTap: () => _openNutrientVisibilityScreen(context),
           ),
           // The macros' order everywhere, and

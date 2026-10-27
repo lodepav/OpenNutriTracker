@@ -22,13 +22,10 @@ enum SettingsSection {
   /// The first four are what people come to change; the rest, a second card.
   bool get isFirstCard => index < 4;
 
-  Color colorIn(AppPalette palette, ColorScheme scheme) => switch (this) {
-    goals => palette.accent,
-    units => palette.proteinColor,
-    reminders => palette.carbsColor,
-    food => scheme.secondary,
-    _ => palette.textMuted,
-  };
+  /// The accent for the first card, muted for the second: not the macro
+  /// colours, which mean carbs, fat and protein everywhere else (H4).
+  Color colorIn(AppPalette palette, ColorScheme scheme) =>
+      isFirstCard ? palette.accent : palette.textMuted;
 }
 
 /// A row of a section, for the search, with other words it goes by

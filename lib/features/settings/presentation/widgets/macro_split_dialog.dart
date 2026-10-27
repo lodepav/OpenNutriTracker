@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:opennutritracker/core/styles/app_palette.dart'; // [fork] S168
 import 'package:opennutritracker/core/utils/reload_diary_and_trends.dart';
 import 'package:opennutritracker/features/home/presentation/bloc/home_bloc.dart';
 import 'package:opennutritracker/features/settings/presentation/bloc/settings_bloc.dart';
+import 'package:opennutritracker/fork/display/display_prefs.dart'; // [fork] S168
 import 'package:opennutritracker/generated/l10n.dart';
 
 /// Rounds three macro percentage shares to integers that sum to exactly 100.
@@ -349,72 +351,77 @@ class _MacroSplitDialogState extends State<MacroSplitDialog> {
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                   const SizedBox(height: 8),
-                  _MacroRow(
-                    label: s.carbsLabel,
-                    value: _carbsPct,
-                    color: Colors.orange,
-                    controller: _carbsController,
-                    focusNode: _focusNodes[_MacroField.carbs]!,
-                    semanticIdentifier: 'macro-split-carbs',
-                    onSliderChanged: (v) => setState(
-                      () => _redistribute(
-                        moved: v,
-                        oldMoved: _carbsPct,
-                        setMoved: (x) => _carbsPct = x,
-                        otherA: _proteinPct,
-                        setOtherA: (x) => _proteinPct = x,
-                        otherB: _fatPct,
-                        setOtherB: (x) => _fatPct = x,
+                  // [fork] S168 the app's macro colours and order
+                  ...inMacroOrder(
+                    carbs: _MacroRow(
+                      label: s.carbsLabel,
+                      value: _carbsPct,
+                      color: paletteOf(context).carbs,
+                      controller: _carbsController,
+                      focusNode: _focusNodes[_MacroField.carbs]!,
+                      semanticIdentifier: 'macro-split-carbs',
+                      onSliderChanged: (v) => setState(
+                        () => _redistribute(
+                          moved: v,
+                          oldMoved: _carbsPct,
+                          setMoved: (x) => _carbsPct = x,
+                          otherA: _proteinPct,
+                          setOtherA: (x) => _proteinPct = x,
+                          otherB: _fatPct,
+                          setOtherB: (x) => _fatPct = x,
+                        ),
                       ),
+                      onSliderEnd: _syncControllers,
+                      onTextChanged: (_) => _markLastEdited(_MacroField.carbs),
+                      onTextSubmitted: _applyPendingTextInputs,
                     ),
-                    onSliderEnd: _syncControllers,
-                    onTextChanged: (_) => _markLastEdited(_MacroField.carbs),
-                    onTextSubmitted: _applyPendingTextInputs,
-                  ),
-                  _MacroRow(
-                    label: s.proteinLabel,
-                    value: _proteinPct,
-                    color: Colors.blue,
-                    controller: _proteinController,
-                    focusNode: _focusNodes[_MacroField.protein]!,
-                    semanticIdentifier: 'macro-split-protein',
-                    onSliderChanged: (v) => setState(
-                      () => _redistribute(
-                        moved: v,
-                        oldMoved: _proteinPct,
-                        setMoved: (x) => _proteinPct = x,
-                        otherA: _carbsPct,
-                        setOtherA: (x) => _carbsPct = x,
-                        otherB: _fatPct,
-                        setOtherB: (x) => _fatPct = x,
+                    fat: _MacroRow(
+                      label: s.fatLabel,
+                      value: _fatPct,
+                      color: paletteOf(context).fat,
+                      controller: _fatController,
+                      focusNode: _focusNodes[_MacroField.fat]!,
+                      semanticIdentifier: 'macro-split-fat',
+                      onSliderChanged: (v) => setState(
+                        () => _redistribute(
+                          moved: v,
+                          oldMoved: _fatPct,
+                          setMoved: (x) => _fatPct = x,
+                          otherA: _carbsPct,
+                          setOtherA: (x) => _carbsPct = x,
+                          otherB: _proteinPct,
+                          setOtherB: (x) => _proteinPct = x,
+                        ),
                       ),
+                      onSliderEnd: _syncControllers,
+                      onTextChanged: (_) => _markLastEdited(_MacroField.fat),
+                      onTextSubmitted: _applyPendingTextInputs,
                     ),
-                    onSliderEnd: _syncControllers,
-                    onTextChanged: (_) => _markLastEdited(_MacroField.protein),
-                    onTextSubmitted: _applyPendingTextInputs,
-                  ),
-                  _MacroRow(
-                    label: s.fatLabel,
-                    value: _fatPct,
-                    color: Colors.green,
-                    controller: _fatController,
-                    focusNode: _focusNodes[_MacroField.fat]!,
-                    semanticIdentifier: 'macro-split-fat',
-                    onSliderChanged: (v) => setState(
-                      () => _redistribute(
-                        moved: v,
-                        oldMoved: _fatPct,
-                        setMoved: (x) => _fatPct = x,
-                        otherA: _carbsPct,
-                        setOtherA: (x) => _carbsPct = x,
-                        otherB: _proteinPct,
-                        setOtherB: (x) => _proteinPct = x,
+                    protein: _MacroRow(
+                      label: s.proteinLabel,
+                      value: _proteinPct,
+                      color: paletteOf(context).protein,
+                      controller: _proteinController,
+                      focusNode: _focusNodes[_MacroField.protein]!,
+                      semanticIdentifier: 'macro-split-protein',
+                      onSliderChanged: (v) => setState(
+                        () => _redistribute(
+                          moved: v,
+                          oldMoved: _proteinPct,
+                          setMoved: (x) => _proteinPct = x,
+                          otherA: _carbsPct,
+                          setOtherA: (x) => _carbsPct = x,
+                          otherB: _fatPct,
+                          setOtherB: (x) => _fatPct = x,
+                        ),
                       ),
+                      onSliderEnd: _syncControllers,
+                      onTextChanged: (_) =>
+                          _markLastEdited(_MacroField.protein),
+                      onTextSubmitted: _applyPendingTextInputs,
                     ),
-                    onSliderEnd: _syncControllers,
-                    onTextChanged: (_) => _markLastEdited(_MacroField.fat),
-                    onTextSubmitted: _applyPendingTextInputs,
                   ),
+                  // [/fork]
                 ],
               ),
             ),

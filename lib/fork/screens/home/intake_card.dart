@@ -10,13 +10,13 @@ import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:intl/intl.dart';
 import 'package:opennutritracker/core/domain/entity/intake_entity.dart';
 import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
-import 'package:opennutritracker/core/presentation/widgets/meal_value_unit_text.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/core/utils/energy_display.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/core/utils/user_image_storage.dart';
 import 'package:opennutritracker/features/diary/presentation/widgets/diary_sort_type.dart';
+import 'package:opennutritracker/fork/units/amount_text.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 import 'package:opennutritracker/features/add_meal/util/food_emoji_resolver.dart';
 import 'package:opennutritracker/fork/timeline/timeline.dart';
@@ -77,16 +77,16 @@ class IntakeCard extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Flexible(
-          child: MealValueUnitText(
-            value: intake.amount,
-            meal: intake.meal,
-            usesImperialUnits: usesImperialUnits,
-            textStyle: textTheme.bodySmall?.copyWith(color: palette.textMuted),
+          child: Text(
+            amountText(intake, usesImperialUnits),
+            style: textTheme.bodySmall?.copyWith(color: palette.textMuted),
+            overflow: TextOverflow.ellipsis,
+            maxLines: 1,
           ),
         ),
         if (showTime && !hasNoTime(intake))
           Text(
-            ' · ${DateFormat.Hm().format(intake.dateTime)}',
+            ' · ${clockText(context, intake.dateTime)}',
             style: textTheme.bodySmall?.copyWith(color: palette.textMuted),
           ),
       ],
