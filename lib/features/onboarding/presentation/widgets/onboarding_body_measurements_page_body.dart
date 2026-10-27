@@ -795,10 +795,7 @@ class _OnboardingBodyMeasurementsPageBodyState
             if (_healthWeightNote case final note?)
               Padding(
                 padding: const EdgeInsets.only(top: 4.0),
-                child: Text(
-                  note,
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
+                child: Text(note, style: Theme.of(context).textTheme.bodySmall),
               ),
             // [/fork]
             const SizedBox(height: 32.0),

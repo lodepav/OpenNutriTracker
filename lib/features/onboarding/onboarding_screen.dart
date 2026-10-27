@@ -89,6 +89,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     // [fork] S89 onboarding-macros: none carried over from an earlier trip
     OnboardingMacros.pending.value = null;
     OnboardingMacros.pending.addListener(_forkMacrosChanged);
+    AdaptiveStore.settings.addListener(_forkMacrosChanged);
     // [/fork]
     super.initState();
   }
@@ -97,6 +98,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   void dispose() {
     // [fork] S89 onboarding-macros
     OnboardingMacros.pending.removeListener(_forkMacrosChanged);
+    AdaptiveStore.settings.removeListener(_forkMacrosChanged);
     // [/fork]
     _bodyMeasurementsShowErrors.dispose();
     super.dispose();
@@ -322,20 +324,29 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         image: _defaultImageWidget,
         bodyWidget: OnboardingOverviewPageBody(
           calorieGoalDayString:
+              OnboardingMacros.overviewKcal()
+                  ?.round()
+                  .toString() ?? // [fork] S89
               _onboardingBloc.getOverviewCalorieGoal()?.toInt().toString() ??
               "?",
           carbsGoalString:
-              _forkMacros()?.carbsG.toInt().toString() ?? // [fork] S89
-              _onboardingBloc.getOverviewCarbsGoal()?.toInt().toString() ?? "?",
+              _forkMacros()?.carbsG.round().toString() ?? // [fork] S89
+              _onboardingBloc.getOverviewCarbsGoal()?.toInt().toString() ??
+              "?",
           fatGoalString:
-              _forkMacros()?.fatG.toInt().toString() ?? // [fork] S89
-              _onboardingBloc.getOverviewFatGoal()?.toInt().toString() ?? "?",
+              _forkMacros()?.fatG.round().toString() ?? // [fork] S89
+              _onboardingBloc.getOverviewFatGoal()?.toInt().toString() ??
+              "?",
           proteinGoalString:
-              _forkMacros()?.proteinG.toInt().toString() ?? // [fork] S89
+              _forkMacros()?.proteinG.round().toString() ?? // [fork] S89
               _onboardingBloc.getOverviewProteinGoal()?.toInt().toString() ??
               "?",
           setButtonActive: _setOverviewPageContent,
-          breakdown: _onboardingBloc.getOverviewBreakdown(),
+          breakdown:
+              OnboardingMacros.overviewKcal() !=
+                  null // [fork] S89
+              ? null // a fixed target, not the formula's
+              : _onboardingBloc.getOverviewBreakdown(),
           showLowKcalWarning: _onboardingBloc
               .isOverviewBelowRecommendedKcalFloor(),
           lowKcalWarningThreshold: _onboardingBloc
@@ -459,6 +470,18 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   FixedMacros? _forkMacros() => OnboardingMacros.overview(
     _onboardingBloc.userSelection.toUserEntity(),
     _onboardingBloc.getOverviewCalorieGoal(),
+    split: switch ((
+      _onboardingBloc.getOverviewProteinGoal(),
+      _onboardingBloc.getOverviewCarbsGoal(),
+      _onboardingBloc.getOverviewFatGoal(),
+    )) {
+      (final p?, final c?, final f?) => FixedMacros(
+        proteinG: p,
+        carbsG: c,
+        fatG: f,
+      ),
+      _ => null,
+    },
   );
 
   void _forkMacrosChanged() => setState(() {});

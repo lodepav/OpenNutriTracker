@@ -91,6 +91,7 @@ class _OnboardingGoalPageBodyState extends State<OnboardingGoalPageBody> {
             // [fork] S88 onboarding-macros: protein and fat per kg
             const SizedBox(height: Dimens.spacing8),
             const OnboardingMacrosRow(),
+            const OnboardingTargetRow(),
             // [/fork]
           ],
         ),
