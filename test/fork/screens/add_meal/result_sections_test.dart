@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get_it/get_it.dart';
@@ -61,7 +62,7 @@ void main() {
     await favourites.dispose();
   });
 
-  Widget app(List<MealEntity> merged, {Widget? footer}) =>
+  Widget app(List<MealEntity> merged, {Widget? footer, double scale = 1}) =>
       ChangeNotifierProvider<EnergyUnitProvider>(
         create: (_) => EnergyUnitProvider(usesKilojoules: false),
         child: MaterialApp(
@@ -70,6 +71,12 @@ void main() {
             ...GlobalMaterialLocalizations.delegates,
           ],
           supportedLocales: S.supportedLocales,
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(
+              context,
+            ).copyWith(textScaler: TextScaler.linear(scale)),
+            child: child!,
+          ),
           home: Scaffold(
             body: ResultSections(
               day: DateTime(2026, 10, 27),
@@ -133,7 +140,7 @@ void main() {
       'place to five, then all', (tester) async {
     await tester.pumpWidget(app(brands));
     expect(find.text('Cooked Basmati Rice'), findsOneWidget);
-    expect(find.text('Brand 0, Brand 1 and 5 more'), findsOneWidget);
+    expect(find.text('Brand 0 and 6 more'), findsOneWidget);
     expect(find.text('121–146 kcal'), findsOneWidget);
     expect(find.text('7'), findsOneWidget);
 
@@ -166,13 +173,60 @@ void main() {
     expect(
       tester.getSemantics(find.text('Cooked Basmati Rice')),
       matchesSemantics(
-        label: 'Cooked Basmati Rice, 7 products, 121–146 kcal per 100 g',
+        label:
+            'Cooked Basmati Rice, 7 products, Brand 0 and 6 more, '
+            '121–146 kcal per 100 g',
         isButton: true,
         hasExpandedState: true,
         hasTapAction: true,
       ),
     );
     handle.dispose();
+  });
+
+  testWidgets('at large text the range goes under the name', (tester) async {
+    await tester.pumpWidget(app(brands, scale: 2));
+    expect(tester.takeException(), isNull);
+    // Under the name, in its column, not in a column of its own beside it.
+    final name = tester.getTopLeft(find.text('Cooked Basmati Rice'));
+    final range = tester.getTopLeft(find.text('121–146 kcal'));
+    expect(range.dx, name.dx);
+    expect(range.dy, greaterThan(name.dy));
+    expect(find.text('Brand 0 and 6 more'), findsOne);
+  });
+
+  testWidgets('at large text the count shows whole', (tester) async {
+    await tester.pumpWidget(
+      app([
+        for (var i = 0; i < 14; i++)
+          _meal('Penne', MealSourceEntity.off, brand: 'B$i', kcal: 150.0 + i),
+      ], scale: 2),
+    );
+    final count = tester.renderObject<RenderParagraph>(find.text('14'));
+    expect(count.didExceedMaxLines, isFalse);
+    expect(
+      count.size.width,
+      greaterThanOrEqualTo(count.getMaxIntrinsicWidth(double.infinity)),
+    );
+  });
+
+  testWidgets('brands in one field count one each, once', (tester) async {
+    await tester.pumpWidget(
+      app([
+        _meal(
+          'Instant White Rice',
+          MealSourceEntity.off,
+          brand: 'Riviana Foods Inc., Minute',
+        ),
+        _meal(
+          'Instant White Rice',
+          MealSourceEntity.off,
+          brand: 'minute',
+          kcal: 131,
+        ),
+      ]),
+    );
+    expect(find.text('Riviana Foods Inc., Minute'), findsOne);
   });
 
   testWidgets('a footer comes last, under the products', (tester) async {

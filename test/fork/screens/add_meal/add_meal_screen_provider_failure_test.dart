@@ -363,6 +363,25 @@ void main() {
       },
     );
 
+    testWidgets(
+      'Products offline: the tab says the search did not answer, with Retry, '
+      'not that nothing matched alone',
+      (tester) async {
+        await _register();
+        _repository.offThrows = true;
+
+        await _search(tester, 'apple');
+        await tester.tap(find.text(l10nEn.searchProductsPage));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(PartialResultsNotice), findsOneWidget);
+        expect(
+          find.bySemanticsIdentifier('search-partial-results-retry'),
+          findsOneWidget,
+        );
+      },
+    );
+
     testWidgets('one provider down, other empty: notice above no-results', (
       tester,
     ) async {

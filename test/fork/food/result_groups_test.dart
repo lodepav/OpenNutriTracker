@@ -94,6 +94,33 @@ void main() {
     ]);
   });
 
+  test('a product far outside its group\'s range is listed last', () {
+    MealEntity rice(String brand, double kcal) => MealEntity(
+      code: brand,
+      name: 'Cooked Basmati Rice',
+      brands: brand,
+      url: null,
+      mealQuantity: null,
+      mealUnit: 'g',
+      servingQuantity: null,
+      servingUnit: 'g',
+      servingSize: null,
+      nutriments: MealNutrimentsEntity(
+        energyKcal100: kcal,
+        carbohydrates100: null,
+        fat100: null,
+        proteins100: null,
+        sugars100: null,
+        saturatedFat100: null,
+        fiber100: null,
+      ),
+      source: MealSourceEntity.off,
+    );
+    final odd = rice('Heb', 345);
+    final a = rice('A', 125), b = rice('B', 131), c = rice('C', 140);
+    expect(sectionResults([a, odd, b, c]).products.single, [a, b, c, odd]);
+  });
+
   test('a group\'s range leaves out values far from the middle', () {
     expect(typicalRange([]), isNull);
     expect(typicalRange([125, 345]), (low: 125.0, high: 345.0));

@@ -180,14 +180,23 @@ class _GroupRow extends StatelessWidget {
     final text = Theme.of(context).textTheme;
     final muted = text.bodySmall?.copyWith(color: palette.textMuted);
     final name = group.first.name ?? '?';
-    final brands = <String>{
+    // Each product's brands split, one spelling per brand: OFF lists
+    // several in one field ("Riviana Foods Inc., Minute"), and two
+    // products read as three brands, "Minute" twice.
+    final seen = <String>{};
+    final brands = [
       for (final meal in group)
-        if (meal.brands?.trim() case final b? when b.isNotEmpty) b,
-    }.toList();
+        for (final b in (meal.brands ?? '').split(','))
+          if (b.trim() case final brand
+              when brand.isNotEmpty && seen.add(brand.toLowerCase()))
+            brand,
+    ];
+    // One brand and the count past two, so a long brand cannot cut the
+    // count off ("Fresh & Easy, Co-Op and 3 m…").
     final whose = switch (brands.length) {
       0 => '${group.length} products',
-      <= 3 => brands.join(', '),
-      _ => '${brands.take(2).join(', ')} and ${brands.length - 2} more',
+      <= 2 => brands.join(', '),
+      _ => '${brands.first} and ${brands.length - 1} more',
     };
     final typical = typicalRange([
       for (final meal in group) ?meal.nutriments.energyKcal100,
@@ -199,6 +208,18 @@ class _GroupRow extends StatelessWidget {
         : '${energyValue(context, typical.low)}–'
               '${energyText(context, typical.high)}';
     final unit = group.every((m) => m.isLiquid) ? 'ml' : 'g';
+    // At large text the range goes under the name, as on MealItemCard: at
+    // 200% beside it, the name broke mid-word ("Pistachi / os").
+    final large = MediaQuery.textScalerOf(context).scale(10) > 13;
+    final rangeText = range == null
+        ? null
+        : Text(
+            range,
+            style: text.bodyMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+              color: palette.textStrong,
+            ),
+          );
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 2),
       child: Semantics(
@@ -206,6 +227,7 @@ class _GroupRow extends StatelessWidget {
         expanded: open,
         label:
             '$name, ${group.length} products'
+            '${brands.isEmpty ? '' : ', $whose'}'
             '${range == null ? '' : ', $range per 100 $unit'}',
         excludeSemantics: true,
         onTap: onTap,
@@ -221,9 +243,14 @@ class _GroupRow extends StatelessWidget {
             constraints: const BoxConstraints(minHeight: 36),
             child: Row(
               children: [
+                // At least the thumbnail's size, wider with the text: a
+                // fixed box showed "1" for 14 at 200%.
                 Container(
-                  width: MealItemCard.forkThumb,
-                  height: MealItemCard.forkThumb,
+                  constraints: const BoxConstraints(
+                    minWidth: MealItemCard.forkThumb,
+                    minHeight: MealItemCard.forkThumb,
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(Dimens.radiusM),
@@ -245,8 +272,8 @@ class _GroupRow extends StatelessWidget {
                     children: [
                       Text(
                         name,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
+                        maxLines: large ? null : 2,
+                        overflow: large ? null : TextOverflow.ellipsis,
                         style: text.titleSmall?.copyWith(
                           fontWeight: FontWeight.w600,
                           color: palette.textStrong,
@@ -255,26 +282,25 @@ class _GroupRow extends StatelessWidget {
                       const SizedBox(height: 2),
                       Text(
                         whose,
-                        maxLines: 1,
+                        maxLines: large ? 2 : 1,
                         overflow: TextOverflow.ellipsis,
                         style: muted,
                       ),
+                      if (large && rangeText != null) ...[
+                        const SizedBox(height: 2),
+                        rangeText,
+                        Text('per 100 $unit', style: muted),
+                      ],
                     ],
                   ),
                 ),
                 const SizedBox(width: Dimens.spacing8),
-                if (range != null)
+                if (!large && rangeText != null)
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(
-                        range,
-                        style: text.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: palette.textStrong,
-                        ),
-                      ),
+                      rangeText,
                       Text('per 100 $unit', style: muted),
                     ],
                   ),

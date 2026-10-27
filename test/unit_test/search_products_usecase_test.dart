@@ -592,11 +592,13 @@ void main() {
 
         final result = await useCase.searchFDCFoodByString('e');
 
-        // The cache's order, the page's data.
-        expect(result.meals.map((m) => m.code), ['fdc-cheese', 'fdc-egg']);
-        expect(result.meals[0].portions, hasLength(1));
-        expect(result.meals[1].portions, hasLength(2));
-        expect(result.meals[1].scoringName, 'Egg');
+        // [fork] S165 food-order: the page's order and data; on the Food
+        // tab the fresh rows lead the cache.
+        expect(result.meals.map((m) => m.code), ['fdc-egg', 'fdc-cheese']);
+        expect(result.meals[0].portions, hasLength(2));
+        expect(result.meals[1].portions, hasLength(1));
+        expect(result.meals[0].scoringName, 'Egg');
+        // [/fork]
       },
     );
 

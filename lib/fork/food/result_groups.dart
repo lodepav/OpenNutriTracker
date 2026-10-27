@@ -55,12 +55,27 @@ ResultSections sectionResults(
       nameWords(
         group.first.name,
       ).any((w) => asked.any((q) => wordsAgree(q, w)));
-  final products = groups.values.toList();
+  final products = [for (final group in groups.values) _typicalFirst(group)];
   return (
     own: own,
     basic: [for (final (_, meal) in sortedBasic) meal],
     products: [...products.where(named), ...products.where((g) => !named(g))],
   );
+}
+
+/// [group] with the products [typicalRange] leaves out last, so an open
+/// group does not list one far outside the range its row shows among the
+/// first: "Cooked Basmati Rice" read 125–163 and showed 345 kcal second.
+List<MealEntity> _typicalFirst(List<MealEntity> group) {
+  final range = typicalRange([
+    for (final meal in group) ?meal.nutriments.energyKcal100,
+  ]);
+  if (range == null) return group;
+  bool outside(MealEntity meal) => switch (meal.nutriments.energyKcal100) {
+    final k? => k < range.low || k > range.high,
+    null => false,
+  };
+  return [...group.where((m) => !outside(m)), ...group.where(outside)];
 }
 
 /// The words of [meal]'s name in any order and case, a plural as its

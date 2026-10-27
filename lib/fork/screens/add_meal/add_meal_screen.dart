@@ -555,35 +555,55 @@ class _AddMealScreenState extends State<AddMealScreen> {
                 } else if (state is ProductsLoadingState) {
                   return _pendingSpinner;
                 } else if (state is ProductsLoadedState) {
+                  // Offline the tab said no foods matched, with no Retry:
+                  // the search never ran. It says so, as All does.
+                  final failed = state.remoteSourceFailed
+                      ? PartialResultsNotice(
+                          onRetry: _onProductsRefreshButtonPressed,
+                        )
+                      : null;
                   if (state.products.isEmpty) {
+                    final noResults = NoResultsWidget(
+                      onScanBarcode: _onBarcodeIconPressed,
+                      onCreateCustomFood: () =>
+                          _onCustomAddButtonPressed(state.usesImperialUnits),
+                    );
                     return Flexible(
                       child: _productsPending(state, query)
                           ? _pendingSpinner
-                          : NoResultsWidget(
-                              onScanBarcode: _onBarcodeIconPressed,
-                              onCreateCustomFood: () =>
-                                  _onCustomAddButtonPressed(
-                                    state.usesImperialUnits,
-                                  ),
+                          : failed == null
+                          ? noResults
+                          : SingleChildScrollView(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [failed, noResults],
+                              ),
                             ),
                     );
                   }
                   return Flexible(
-                    child: Semantics(
-                      identifier: 'add-meal-products-list',
-                      container: true,
-                      // One row per product name, as in All.
-                      child: ResultSections(
-                        day: _day,
-                        addMealType: _mealType,
-                        usesImperialUnits: state.usesImperialUnits,
-                        merged: state.products,
-                        query: query,
-                        productsHeading: false,
-                        footer: state.remoteSourceEmpty
-                            ? const NoResultsWidget()
-                            : null,
-                      ),
+                    child: Column(
+                      children: [
+                        ?failed,
+                        Expanded(
+                          child: Semantics(
+                            identifier: 'add-meal-products-list',
+                            container: true,
+                            // One row per product name, as in All.
+                            child: ResultSections(
+                              day: _day,
+                              addMealType: _mealType,
+                              usesImperialUnits: state.usesImperialUnits,
+                              merged: state.products,
+                              query: query,
+                              productsHeading: false,
+                              footer: state.remoteSourceEmpty
+                                  ? const NoResultsWidget()
+                                  : null,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   );
                 } else if (state is ProductsFailedState) {
