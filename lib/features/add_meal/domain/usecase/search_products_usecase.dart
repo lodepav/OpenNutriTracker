@@ -264,8 +264,7 @@ class SearchProductsUseCase {
     // lead and the cache adds only what they lack. Cache-first listed rows
     // from earlier searches first: "tomato" showed crushed and sun-dried
     // tomatoes, "carrot" rice with carrots, and "Tomatoes, raw" last.
-    final cacheLeads =
-        cacheSource != MealSourceEntity.fdc || remoteFailed || remoteSkipped;
+    final cacheLeads = cacheSource != MealSourceEntity.fdc;
     // [/fork]
     return SearchProductsResult(
       meals: _deduplicateMeals([

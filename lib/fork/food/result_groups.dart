@@ -49,7 +49,12 @@ ResultSections sectionResults(
       final byPlace = at(a.$2).compareTo(at(b.$2));
       return byPlace != 0 ? byPlace : a.$1.compareTo(b.$1);
     });
-  final asked = contentWords(query);
+  // The words that name the food, as typed and as the table spells them:
+  // "penne" is "pasta" for the table, and "Penne Rigate" went last.
+  final asked = {
+    for (final w in nameWords(query))
+      if (!describingWords.contains(w)) ...{w, spelling(w)},
+  };
   bool named(List<MealEntity> group) =>
       asked.isEmpty ||
       nameWords(
@@ -95,20 +100,6 @@ String _singular(String word) {
   if (word.endsWith('oes')) return word.substring(0, word.length - 2);
   return word.substring(0, word.length - 1);
 }
-
-/// [name]'s words, lower-cased.
-List<String> nameWords(String? name) => (name ?? '')
-    .toLowerCase()
-    .split(RegExp(r'[^\p{L}\p{N}]+', unicode: true))
-    .where((w) => w.isNotEmpty)
-    .toList();
-
-/// [query]'s words that name the food, without the ones that only describe
-/// it ([describingWords]), each as the table spells it.
-Set<String> contentWords(String query) => {
-  for (final w in nameWords(query))
-    if (!describingWords.contains(w)) spelling(w),
-};
 
 /// The energy range a group's row shows: [kcals] without the values far
 /// from the middle one, when three or more leave a middle. One product

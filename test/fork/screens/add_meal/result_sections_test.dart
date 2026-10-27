@@ -62,7 +62,12 @@ void main() {
     await favourites.dispose();
   });
 
-  Widget app(List<MealEntity> merged, {Widget? footer, double scale = 1}) =>
+  Widget app(
+    List<MealEntity> merged, {
+    Widget? footer,
+    double scale = 1,
+    String query = '',
+  }) =>
       ChangeNotifierProvider<EnergyUnitProvider>(
         create: (_) => EnergyUnitProvider(usesKilojoules: false),
         child: MaterialApp(
@@ -83,6 +88,7 @@ void main() {
               addMealType: AddMealType.dinnerType,
               usesImperialUnits: false,
               merged: merged,
+              query: query,
               footer: footer,
             ),
           ),
@@ -157,6 +163,21 @@ void main() {
     await tester.tap(find.text('Cooked Basmati Rice').first);
     await tester.pump();
     expect(find.text('Cooked Basmati Rice'), findsOneWidget);
+  });
+
+  testWidgets('an open group stays open when the same search lists again, '
+      'and closes on a new search', (tester) async {
+    await tester.pumpWidget(app(brands, query: 'rice'));
+    await tester.tap(find.text('Cooked Basmati Rice'));
+    await tester.pump();
+    expect(find.textContaining('Brand 4', findRichText: true), findsWidgets);
+
+    // The All tab builds a new list each time it builds.
+    await tester.pumpWidget(app([...brands], query: 'rice'));
+    expect(find.textContaining('Brand 4', findRichText: true), findsWidgets);
+
+    await tester.pumpWidget(app([...brands], query: 'basmati'));
+    expect(find.textContaining('Brand 4', findRichText: true), findsNothing);
   });
 
   testWidgets('a product alone is its own row, not a group', (tester) async {

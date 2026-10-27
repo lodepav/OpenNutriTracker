@@ -60,8 +60,9 @@ class _ResultSectionsState extends State<ResultSections> {
   @override
   void didUpdateWidget(ResultSections old) {
     super.didUpdateWidget(old);
-    // A new search starts closed.
-    if (!identical(old.merged, widget.merged)) {
+    // A new search starts closed. Not a new list: the All tab builds one
+    // each time, and opening a product closed its group behind it.
+    if (old.query != widget.query) {
       _allBasic = false;
       _open.clear();
       _openAll.clear();
