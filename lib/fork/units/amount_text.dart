@@ -13,6 +13,17 @@ import 'package:opennutritracker/core/utils/calc/unit_calc.dart';
       final unit => (unit: unit, factor: 1.0),
     };
 
+/// [intake]'s amount as the app shows it on every list (H4): in
+/// [shownUnit], whole when it is, else to one decimal, as "7.1 oz".
+String amountText(IntakeEntity intake, bool imperial) {
+  final shown = shownUnit(intake, imperial);
+  final n = intake.amount * shown.factor;
+  final text = n == n.roundToDouble()
+      ? n.toInt().toString()
+      : n.toStringAsFixed(1);
+  return '$text ${shown.unit}';
+}
+
 /// [unit] as a screen reader should say it: "grams", not "g" (A5). An
 /// unknown unit is said as written.
 String spokenUnit(String unit) => switch (unit) {

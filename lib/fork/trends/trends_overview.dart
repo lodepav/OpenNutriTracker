@@ -585,6 +585,8 @@ class _Streak extends StatelessWidget {
       start,
       today,
     );
+    // No "0 day streak" to someone who has not had one yet (C3)
+    if (stats.longest == 0) return const SizedBox.shrink();
     return MergeSemantics(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: Dimens.spacing4),

@@ -5,6 +5,7 @@ import 'package:opennutritracker/core/domain/entity/intake_type_entity.dart';
 import 'package:opennutritracker/fork/copy/copy_entries.dart';
 import 'package:opennutritracker/fork/copy/copy_ui.dart';
 import 'package:opennutritracker/fork/units/amount_text.dart';
+import 'package:opennutritracker/fork/timeline/timeline.dart' show clockText;
 
 /// Where the selected entries go.
 sealed class CopyMoment {
@@ -188,8 +189,8 @@ class _SelectEntriesScreenState extends State<SelectEntriesScreen> {
             value: _stateOf(group),
             onChanged: (_) => _toggleAll(group, _stateOf(group) != true),
             title: Text(
-              '${DateFormat.Hm().format(hour)}–'
-              '${DateFormat.Hm().format(hour.add(const Duration(hours: 1)))}',
+              '${clockText(context, hour)}–'
+              '${clockText(context, hour.add(const Duration(hours: 1)))}',
               style: textTheme.titleSmall,
             ),
           ),
@@ -202,7 +203,7 @@ class _SelectEntriesScreenState extends State<SelectEntriesScreen> {
               title: Text(intake.meal.name ?? ''),
               subtitle: Text(
                 '${_amount(intake)} · ${mealLabel(context, intake.type)} · '
-                '${DateFormat.Hm().format(intake.dateTime)} · '
+                '${clockText(context, intake.dateTime)} · '
                 '${intake.totalKcal.round()} kcal',
               ),
             ),
@@ -302,7 +303,7 @@ class _TargetSheetState extends State<_TargetSheet> {
             key: const Key('fork-copy-now'),
             leading: const Icon(Icons.schedule_rounded),
             title: const Text('Now'),
-            subtitle: Text(DateFormat.Hm().format(now)),
+            subtitle: Text(clockText(context, now)),
             onTap: () => _done(CopyAt(now)),
           ),
           ListTile(

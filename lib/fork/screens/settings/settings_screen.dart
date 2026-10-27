@@ -64,6 +64,9 @@ import 'package:opennutritracker/fork/export/csv_export.dart';
 // The user's Open Food Facts account
 import 'package:opennutritracker/fork/off/off_contribution_ui.dart';
 import 'package:opennutritracker/fork/display/display_prefs.dart';
+import 'package:opennutritracker/fork/units/energy_text.dart';
+import 'package:opennutritracker/core/domain/entity/config_entity.dart';
+import 'package:opennutritracker/core/domain/usecase/get_config_usecase.dart';
 import 'package:opennutritracker/fork/brand/openbite_logo.dart';
 import 'package:opennutritracker/fork/settings/settings_index.dart';
 // OpenBite's version, and its update
@@ -133,6 +136,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String? _aiEndpoint;
   bool _aiEnabled = false;
 
+  /// What Goals & nutrition shows under its rows (H6); null until read.
+  ConfigEntity? _goalsConfig;
+
   /// Null when the stored name is unrecognised — see #753.
   AiProvider? _aiProvider;
 
@@ -156,6 +162,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _trendsBloc = locator<TrendsBloc>();
     super.initState();
     _refreshAiAssistState();
+    _refreshGoalsConfig();
     // SettingsBloc is registered as a singleton so the previous
     // SettingsLoadedState survives across screen visits. The cache
     // count and on-disk size in particular are written in the
@@ -445,6 +452,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _refreshGoalsConfig() async {
+    if (!locator.isRegistered<GetConfigUsecase>()) return; // widget tests
+    final config = await locator<GetConfigUsecase>().getConfig();
+    if (mounted) setState(() => _goalsConfig = config);
   }
 
   Future<void> _refreshAiAssistState() async {

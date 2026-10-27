@@ -6,6 +6,7 @@ import 'dart:math' as math;
 
 import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/material.dart';
+import 'package:opennutritracker/core/presentation/widgets/badged_title.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:logging/logging.dart';
@@ -588,7 +589,8 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
       return Semantics(
         identifier: 'bulk-add-model-hint',
         child: Padding(
-          padding: const EdgeInsets.only(bottom: 12),
+          // The screen's 16 dp edge, which the list below it has not
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
           child: InkWell(
             // Asks for the AI dialog by name, the same way the failure
             // notices below have since #852. Plain Settings opens with the
@@ -614,9 +616,10 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          '${s.bulkAddModelHintLabel} · '
-                          '${s.aiAssistExperimentalLabel}',
+                        // The marker as Settings shows it
+                        BadgedTitle(
+                          title: s.bulkAddModelHintLabel,
+                          badge: s.aiAssistExperimentalLabel,
                           style: theme.textTheme.bodyMedium,
                         ),
                         Text(

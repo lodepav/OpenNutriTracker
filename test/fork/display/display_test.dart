@@ -69,8 +69,8 @@ void main() {
     }
   });
 
-  test('the Diary by the hour: untimed first, each hour adds to its usual '
-      'meal', () {
+  test('the Diary by the hour: untimed at their meal\'s usual hour, each '
+      'hour adds to its usual meal', () {
     final sections = hourSections([
       _eat('Soup', DateTime(2026, 10, 23, 12, 5), IntakeTypeEntity.lunch),
       _eat('Coffee', DateTime(2026, 10, 23, 7, 50), IntakeTypeEntity.snack),
@@ -78,12 +78,14 @@ void main() {
       _eat('Egg', DateTime(2026, 10, 23, 7, 20), IntakeTypeEntity.breakfast),
       _eat('Apple', DateTime(2026, 10, 23), IntakeTypeEntity.snack),
     ]);
-    expect([for (final s in sections) s.title], ['No time', '07:00', '12:00']);
+    // The snack with no time sits at 16:00, where the Diary puts snacks.
+    expect([for (final s in sections) s.title], ['07:00', '12:00', '16:00']);
     expect(
-      [for (final i in sections[1].intakes) i.id],
+      [for (final i in sections[0].intakes) i.id],
       ['Toast', 'Egg', 'Coffee'],
     );
-    expect(sections[1].addMealType, AddMealType.breakfastType);
-    expect(sections[2].addMealType, AddMealType.lunchType);
+    expect(sections[0].addMealType, AddMealType.breakfastType);
+    expect(sections[1].addMealType, AddMealType.lunchType);
+    expect(sections[2].addMealType, AddMealType.snackType);
   });
 }

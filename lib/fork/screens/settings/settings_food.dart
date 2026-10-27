@@ -20,6 +20,7 @@ extension _FoodSettings on _SettingsScreenState {
             // Not the section's name again
             title: 'Search sources',
             subtitle: S.of(context).settingsFoodSourcesSubtitle,
+            showChevron: true,
             onTap: () => _openFoodSourcesScreen(context),
           ),
           _SettingsTile(

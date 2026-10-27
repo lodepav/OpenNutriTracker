@@ -23,15 +23,20 @@ typedef HourSection = ({
 });
 
 /// A day's [intakes] by the hour they were eaten, entries with no time
-/// first. A section adds to the meal most of its foods were logged under.
-List<HourSection> hourSections(List<IntakeEntity> intakes) => [
+/// at their meal's usual hour. A section adds to the meal most of its foods were logged under.
+List<HourSection> hourSections(
+  List<IntakeEntity> intakes, {
+  String Function(DateTime hour) clock = _hm,
+}) => [
   for (final (hour, group) in timelineHours(intakes))
     (
-      title: hour == null ? 'No time' : DateFormat.Hm().format(hour),
+      title: clock(hour),
       addMealType: AddMealExtension.fromIntakeTypeEntity(_mostCommon(group)),
       intakes: group,
     ),
 ];
+
+String _hm(DateTime hour) => DateFormat.Hm().format(hour);
 
 IntakeTypeEntity _mostCommon(List<IntakeEntity> group) {
   final counts = <IntakeTypeEntity, int>{};

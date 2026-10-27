@@ -21,7 +21,7 @@ import 'package:opennutritracker/fork/display/meal_macros_line.dart';
 import 'package:opennutritracker/core/domain/entity/intake_entity.dart';
 import 'package:opennutritracker/fork/off/off_kinds.dart'; // S117
 import 'package:opennutritracker/fork/units/energy_text.dart';
-import 'package:opennutritracker/fork/units/amount_text.dart' show shownUnit;
+import 'package:opennutritracker/fork/units/amount_text.dart' show amountText;
 
 class MealItemCard extends StatelessWidget {
   final DateTime day;
@@ -193,14 +193,8 @@ class MealItemCard extends StatelessWidget {
 
   // S142: in the unit the amount is in, not the one it was logged by
   // ("45 g", not "45 serving")
-  String _forkAmount(IntakeEntity intake) {
-    final shown = shownUnit(intake, usesImperialUnits);
-    final n = intake.amount * shown.factor;
-    final text = n == n.roundToDouble()
-        ? n.toInt().toString()
-        : n.toStringAsFixed(1);
-    return '$text ${shown.unit}';
-  }
+  String _forkAmount(IntakeEntity intake) =>
+      amountText(intake, usesImperialUnits);
 
   Widget _buildThumbnail(
     BuildContext context,

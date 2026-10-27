@@ -244,10 +244,13 @@ class _DayInfoWidgetState extends State<DayInfoWidget> {
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Centred, as Home's and Search's are (H4)
             trackedDay == null
-                ? EmptyHint(
-                    icon: Icons.restaurant_rounded,
-                    title: S.of(context).nothingAddedLabel,
+                ? Center(
+                    child: EmptyHint(
+                      icon: Icons.restaurant_rounded,
+                      title: S.of(context).nothingAddedLabel,
+                    ),
                   )
                 : const SizedBox(),
             // the counts, the energy and the
@@ -278,6 +281,7 @@ class _DayInfoWidgetState extends State<DayInfoWidget> {
                 day: widget.selectedDay,
                 title: S.of(context).activityLabel,
                 userActivityList: widget.userActivities,
+                compact: true,
                 onItemLongPressedCallback: onActivityItemLongPressed,
                 onItemTappedCallback: widget.onEditActivity,
                 onCopyActivityCallback: _showsCurrentDay
@@ -291,7 +295,10 @@ class _DayInfoWidgetState extends State<DayInfoWidget> {
             // the day's foods by the hour eaten, in
             // place of the four meals
             if (DisplayPrefs.diaryByHour.value)
-              for (final section in hourSections(_allIntakes))
+              for (final section in hourSections(
+                _allIntakes,
+                clock: (hour) => clockText(context, hour),
+              ))
                 IntakeVerticalList(
                   key: ValueKey('diary-hour-${section.title}'),
                   day: widget.selectedDay,

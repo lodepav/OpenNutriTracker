@@ -3,7 +3,6 @@
 // fork/tools/upstream-copies.sh.
 import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:opennutritracker/core/data/repository/recipe_repository.dart';
 import 'package:opennutritracker/core/domain/entity/intake_entity.dart';
 import 'package:opennutritracker/core/domain/entity/tracked_day_entity.dart';
@@ -36,6 +35,7 @@ import 'package:opennutritracker/features/home/presentation/widgets/shared_meal_
 import 'package:opennutritracker/features/meal_detail/presentation/bloc/meal_detail_bloc.dart';
 import 'package:opennutritracker/fork/copy/copy_ui.dart';
 import 'package:opennutritracker/fork/units/energy_text.dart';
+import 'package:opennutritracker/fork/timeline/timeline.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 import 'package:opennutritracker/fork/display/display_prefs.dart';
 
@@ -120,6 +120,10 @@ class IntakeVerticalList extends StatefulWidget {
 }
 
 class _IntakeVerticalListState extends State<IntakeVerticalList> {
+  /// The timeline's time column: "12:30 PM" on one line, as the phone's
+  /// 12-hour clock writes it.
+  static const _timeWidth = 64.0;
+
   late MealDetailBloc _mealDetailBloc;
   late HomeBloc _homeBloc;
 
@@ -200,7 +204,7 @@ class _IntakeVerticalListState extends State<IntakeVerticalList> {
         Transform.translate(
           offset: const Offset(0, -10),
           child: Padding(
-            padding: const EdgeInsets.only(left: 48 + Dimens.spacing12),
+            padding: const EdgeInsets.only(left: _timeWidth + Dimens.spacing12),
             child: Text(
               _timelineSummary(context),
               semanticsLabel: _headerSummaryLabel(context),
@@ -278,9 +282,11 @@ class _IntakeVerticalListState extends State<IntakeVerticalList> {
               children: [
                 if (widget.forkTime case final time?)
                   SizedBox(
-                    width: 48,
+                    width: _timeWidth,
                     child: Text(
-                      DateFormat.Hm().format(time),
+                      clockText(context, time),
+                      maxLines: 1,
+                      softWrap: false,
                       style: textTheme.labelMedium?.copyWith(
                         color: palette.textMuted,
                         fontWeight: FontWeight.w700,
@@ -329,7 +335,12 @@ class _IntakeVerticalListState extends State<IntakeVerticalList> {
                 const SizedBox(width: Dimens.spacing8),
                 if (_shouldShowHeaderSummary &&
                     widget.forkTime == null) //: under the title
-                  Flexible(
+                  // At most half the row, not half of it always, so the ⋮
+                  // sits at the edge on every meal (H4)
+                  ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxWidth: MediaQuery.sizeOf(context).width / 2,
+                    ),
                     child: Text(
                       _buildHeaderSummary(context),
                       // read as words; at a large font

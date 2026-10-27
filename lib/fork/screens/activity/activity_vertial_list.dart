@@ -23,6 +23,10 @@ class ActivityVerticalList extends StatefulWidget {
   final Function(bool isDragging)? onItemDragCallback;
   final Function(UserActivityEntity)? onCopyActivityCallback;
 
+  /// The Diary's: a + in the header, as its meals have, for the full-width
+  /// add row (H4).
+  final bool compact;
+
   const ActivityVerticalList({
     super.key,
     required this.day,
@@ -32,6 +36,7 @@ class ActivityVerticalList extends StatefulWidget {
     this.onItemTappedCallback,
     this.onItemDragCallback,
     this.onCopyActivityCallback,
+    this.compact = false,
   });
 
   @override
@@ -44,10 +49,11 @@ class _ActivityVerticalListState extends State<ActivityVerticalList> {
     return Column(
       children: [
         Container(
-          padding: const EdgeInsets.fromLTRB(
+          // The meals' right edge, so the ⋮ line up when compact
+          padding: EdgeInsets.fromLTRB(
             Dimens.spacing16,
             Dimens.spacing16,
-            Dimens.spacing16,
+            widget.compact ? Dimens.spacing12 : Dimens.spacing16,
             Dimens.spacing8,
           ),
           alignment: Alignment.centerLeft,
@@ -73,6 +79,15 @@ class _ActivityVerticalListState extends State<ActivityVerticalList> {
                 ),
               ),
               const SizedBox(width: Dimens.spacing8),
+              if (widget.compact)
+                IconButton(
+                  tooltip: S.of(context).addToSectionLabel(widget.title),
+                  icon: Icon(
+                    Icons.add_rounded,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                  onPressed: () => _onPlaceholderCardTapped(context),
+                ),
               PopupMenuButton<_ActivityPopupMenuSelection>(
                 tooltip: S.of(context).sectionOptionsLabel(widget.title),
                 onSelected: (_ActivityPopupMenuSelection selection) async {
@@ -135,13 +150,14 @@ class _ActivityVerticalListState extends State<ActivityVerticalList> {
                 onItemDragCallback: widget.onItemDragCallback,
                 firstListElement: false,
               ),
-            PlaceholderCard(
-              day: widget.day,
-              onTap: () => _onPlaceholderCardTapped(context),
-              firstListElement: true,
-              semanticIdentifier: 'add-activity-placeholder',
-              label: S.of(context).addToSectionLabel(widget.title),
-            ),
+            if (!widget.compact)
+              PlaceholderCard(
+                day: widget.day,
+                onTap: () => _onPlaceholderCardTapped(context),
+                firstListElement: true,
+                semanticIdentifier: 'add-activity-placeholder',
+                label: S.of(context).addToSectionLabel(widget.title),
+              ),
           ],
         ),
       ],

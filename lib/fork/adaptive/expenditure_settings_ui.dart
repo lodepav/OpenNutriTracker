@@ -53,7 +53,7 @@ class ExpenditureSettingsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Expenditure')),
+    appBar: AppBar(title: const Text('Expenditure and check-ins')),
     body: ValueListenableBuilder(
       valueListenable: AdaptiveStore.settings,
       builder: (context, settings, _) => ListView(

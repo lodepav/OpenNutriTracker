@@ -182,7 +182,8 @@ void main() {
           ),
         ),
       );
-      expect(find.text('13:00'), findsOneWidget);
+      // The phone's clock: 12 hours in the test's en-US
+      expect(find.text('1:00 PM'), findsOneWidget);
       // The summary on one line under the title.
       expect(find.text('100 kcal · C 20 · F 10 · P 5'), findsOneWidget);
       expect(find.byIcon(Icons.lunch_dining_outlined), findsNothing);

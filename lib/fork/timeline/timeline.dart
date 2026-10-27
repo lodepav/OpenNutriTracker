@@ -20,18 +20,37 @@ bool hasNoTime(IntakeEntity intake) {
   return at.hour == 0 && at.minute == 0 && at.second == 0;
 }
 
-/// [intakes] by the hour they were eaten, earliest first; those with no
-/// time first, under null.
-List<(DateTime? hour, List<IntakeEntity> intakes)> timelineHours(
+/// [at]'s time of day as the phone shows times: 12 or 24 hours (H2).
+String clockText(BuildContext context, DateTime at) =>
+    TimeOfDay.fromDateTime(at).format(context);
+
+/// The hour a meal is usually eaten, where its foods with no time sit.
+DateTime usualMealTime(DateTime day, IntakeTypeEntity type) {
+  final hour = switch (type) {
+    IntakeTypeEntity.breakfast => 8,
+    IntakeTypeEntity.lunch => 13,
+    IntakeTypeEntity.snack => 16,
+    IntakeTypeEntity.dinner => 19,
+  };
+  return DateTime(day.year, day.month, day.day, hour);
+}
+
+/// Where [intake] sits on a timeline: when it was eaten, or with no time,
+/// its meal's usual hour, as the Diary places it.
+DateTime placedAt(IntakeEntity intake) => hasNoTime(intake)
+    ? usualMealTime(intake.dateTime, intake.type)
+    : intake.dateTime;
+
+/// [intakes] by the hour they sit at ([placedAt]), earliest first.
+List<(DateTime hour, List<IntakeEntity> intakes)> timelineHours(
   List<IntakeEntity> intakes,
 ) {
-  final sorted = [...intakes]..sort((a, b) => a.dateTime.compareTo(b.dateTime));
-  final groups = <(DateTime?, List<IntakeEntity>)>[];
+  final sorted = [...intakes]
+    ..sort((a, b) => placedAt(a).compareTo(placedAt(b)));
+  final groups = <(DateTime, List<IntakeEntity>)>[];
   for (final intake in sorted) {
-    final at = intake.dateTime;
-    final hour = hasNoTime(intake)
-        ? null
-        : DateTime(at.year, at.month, at.day, at.hour);
+    final at = placedAt(intake);
+    final hour = DateTime(at.year, at.month, at.day, at.hour);
     if (groups.isNotEmpty && groups.last.$1 == hour) {
       groups.last.$2.add(intake);
     } else {
@@ -140,6 +159,15 @@ class TimelineScreen extends StatefulWidget {
 class _TimelineScreenState extends State<TimelineScreen> {
   late final _entries = widget.entries ?? TimelineEntries.fromLocator();
   late Future<List<IntakeEntity>> _day = _entries.of(widget.day);
+  var _imperial = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _entries.config().then((config) {
+      if (mounted) setState(() => _imperial = config.usesImperialFoodUnits);
+    });
+  }
 
   void _reload() {
     if (!mounted) return;
@@ -152,11 +180,7 @@ class _TimelineScreenState extends State<TimelineScreen> {
       widget.pickTime(context, initial);
 
   Future<void> _move(IntakeEntity intake) async {
-    final time = await _pickTime(
-      hasNoTime(intake)
-          ? const TimeOfDay(hour: 12, minute: 0)
-          : TimeOfDay.fromDateTime(intake.dateTime),
-    );
+    final time = await _pickTime(TimeOfDay.fromDateTime(placedAt(intake)));
     if (time == null) return;
     final offset = (await _entries.config()).dayStartOffsetTotalMinutes;
     await _entries.replace(
@@ -222,7 +246,7 @@ class _TimelineScreenState extends State<TimelineScreen> {
                 child: Semantics(
                   header: true,
                   child: Text(
-                    hour == null ? 'No time' : DateFormat.Hm().format(hour),
+                    clockText(context, hour),
                     style: theme.textTheme.titleSmall?.copyWith(
                       color: theme.colorScheme.primary,
                     ),
@@ -235,11 +259,11 @@ class _TimelineScreenState extends State<TimelineScreen> {
                   leading: Text(
                     hasNoTime(intake)
                         ? '–'
-                        : DateFormat.Hm().format(intake.dateTime),
+                        : clockText(context, intake.dateTime),
                   ),
                   title: Text(intake.meal.name ?? '?'),
                   subtitle: Text(
-                    '${intake.amount.round()} ${shownUnit(intake, false).unit} · '
+                    '${amountText(intake, _imperial)} · '
                     '${energyText(context, intake.totalKcal)}',
                   ),
                   // The day's total up to this entry, said so on screen.

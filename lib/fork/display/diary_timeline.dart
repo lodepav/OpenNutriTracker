@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:opennutritracker/core/domain/entity/intake_entity.dart';
 import 'package:opennutritracker/core/domain/entity/intake_type_entity.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
@@ -26,13 +25,7 @@ DateTime mealTime(
       if (!hasNoTime(i)) i.dateTime,
   ];
   if (timed.isNotEmpty) return timed.reduce((a, b) => a.isBefore(b) ? a : b);
-  final hour = switch (type) {
-    IntakeTypeEntity.breakfast => 8,
-    IntakeTypeEntity.lunch => 13,
-    IntakeTypeEntity.snack => 16,
-    IntakeTypeEntity.dinner => 19,
-  };
-  return DateTime(day.year, day.month, day.day, hour);
+  return usualMealTime(day, type);
 }
 
 /// The last hour a meal of [day] takes up on the timeline.
@@ -92,8 +85,8 @@ class TimelineGap extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = paletteOf(context);
     final hours = from == to
-        ? DateFormat.Hm().format(from)
-        : '${DateFormat.Hm().format(from)} – ${DateFormat.Hm().format(to)}';
+        ? clockText(context, from)
+        : '${clockText(context, from)} – ${clockText(context, to)}';
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         Dimens.spacing16,

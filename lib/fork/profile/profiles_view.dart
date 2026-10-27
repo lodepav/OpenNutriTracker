@@ -15,8 +15,7 @@ import 'package:opennutritracker/features/profile/presentation/utils/profile_dis
 import 'package:opennutritracker/features/profile/presentation/widgets/profile_avatar.dart';
 import 'package:opennutritracker/fork/adaptive/trend_points.dart';
 import 'package:opennutritracker/fork/units/energy_text.dart';
-import 'package:opennutritracker/fork/units/weight_text.dart'
-    show bodyWeightText;
+import 'package:opennutritracker/fork/units/weight_text.dart' show weightText;
 import 'package:opennutritracker/generated/l10n.dart';
 
 /// What a profile's card says of it; null where it has nothing yet.
@@ -288,9 +287,7 @@ class _ProfileCard extends StatelessWidget {
                     '${energyUnit(context)} goal',
                   ),
                   figure(
-                    trend == null
-                        ? '—'
-                        : bodyWeightText(context, trend, weightUnit),
+                    trend == null ? '—' : weightText(trend, weightUnit),
                     'trend',
                   ),
                   figure('${stats?.daysLogged ?? '—'}', 'days logged'),
