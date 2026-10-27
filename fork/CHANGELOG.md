@@ -2,6 +2,14 @@
 
 Written by fork/tools/release_notes.dart at each release (D16).
 
+## 0.3.9 · 2026-10-27
+
+Based on OpenNutriTracker 2.5.0.
+
+### Fixes and changes
+
+- UI consistency review fixes
+
 ## 0.3.8 · 2026-10-27
 
 Based on OpenNutriTracker 2.5.0.
