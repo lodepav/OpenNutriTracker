@@ -2,6 +2,14 @@
 
 Written by fork/tools/release_notes.dart at each release (D16).
 
+## 0.3.6 · 2026-10-27
+
+Based on OpenNutriTracker 2.5.0.
+
+### Fixes and changes
+
+- grouped search, the food as eaten first
+
 ## 0.3.5 · 2026-10-26
 
 Based on OpenNutriTracker 2.5.0.
