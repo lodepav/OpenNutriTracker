@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:opennutritracker/core/data/repository/user_repository.dart';
 import 'package:opennutritracker/core/domain/entity/body_weight_unit_entity.dart';
 import 'package:opennutritracker/core/domain/usecase/get_config_usecase.dart';
 import 'package:opennutritracker/core/domain/usecase/get_kcal_goal_usecase.dart';
@@ -653,6 +654,12 @@ Future<void> refreshGoals() => _refreshGoals();
 
 Future<void> _refreshGoals() async {
   if (!locator.isRegistered<SettingsBloc>()) return;
+  // Onboarding sets the target before there is a profile to rewrite goals
+  // from; its first day is written when it completes.
+  if (locator.isRegistered<UserRepository>() &&
+      !await locator<UserRepository>().hasUserData()) {
+    return;
+  }
   final settings = locator<SettingsBloc>();
   await settings.updateTrackedDay(await settings.getCurrentLogicalDay());
   locator<HomeBloc>().add(const LoadItemsEvent());
@@ -672,14 +679,7 @@ class AdaptiveSettingsTile extends StatelessWidget {
     title: 'Trend and calorie target',
     subtitle: ValueListenableBuilder(
       valueListenable: AdaptiveStore.settings,
-      builder: (context, settings, _) => Text(
-        '${switch (_modeOf(settings)) {
-          _TargetMode.formula => 'Formula target',
-          _TargetMode.adaptive => 'Adaptive target',
-          _TargetMode.fixed => 'Fixed target',
-        }}'
-        '${settings.weekdayOffsets.any((o) => o != 0) ? ' · by weekday' : ''}',
-      ),
+      builder: (context, settings, _) => Text(targetSummary(settings)),
     ),
     onTap: () async {
       // Not registered in the tests that open the dialog.
@@ -691,19 +691,38 @@ class AdaptiveSettingsTile extends StatelessWidget {
       await showDialog<void>(
         context: context,
         builder: (_) =>
-            _AdaptiveSettingsDialog(store ?? AdaptiveStore(), perLb: perLb),
+            AdaptiveSettingsDialog(store ?? AdaptiveStore(), perLb: perLb),
       );
     },
   );
 }
 
-class _AdaptiveSettingsDialog extends StatelessWidget {
+/// The calorie target's mode, and whether it shifts by weekday.
+String targetSummary(AdaptiveSettings settings) =>
+    '${switch (_modeOf(settings)) {
+      _TargetMode.formula => 'Formula target',
+      _TargetMode.adaptive => 'Adaptive target',
+      _TargetMode.fixed => 'Fixed target',
+    }}'
+    '${settings.weekdayOffsets.any((o) => o != 0) ? ' · by weekday' : ''}';
+
+/// "Trend and calorie target", from Settings and from onboarding's goal
+/// page.
+class AdaptiveSettingsDialog extends StatelessWidget {
   final AdaptiveStore store;
 
   /// Body weight in pounds, so macros per kg read per pound.
   final bool perLb;
 
-  const _AdaptiveSettingsDialog(this.store, {required this.perLb});
+  /// Onboarding has its own protein and fat row beside this one.
+  final bool showMacros;
+
+  const AdaptiveSettingsDialog(
+    this.store, {
+    super.key,
+    required this.perLb,
+    this.showMacros = true,
+  });
 
   Future<void> _save(AdaptiveSettings value) async {
     await store.save(value);
@@ -817,30 +836,33 @@ class _AdaptiveSettingsDialog extends StatelessWidget {
                   }
                 },
               ),
-              ListTile(
-                key: const ValueKey('macro-program'),
-                contentPadding: EdgeInsets.zero,
-                title: const Text('Macros'),
-                subtitle: Text(
-                  mode == _TargetMode.fixed && settings.fixedMacros != null
-                      ? 'The fixed target\'s grams'
-                      : settings.macroProgram?.summary(perLb: perLb) ??
-                            'Percentages from your macro split',
-                ),
-                trailing: const Icon(Icons.edit_rounded),
-                onTap: () async {
-                  final edited = await showDialog<({MacroProgram? program})>(
-                    context: context,
-                    builder: (_) =>
-                        MacroProgramDialog(settings.macroProgram, perLb: perLb),
-                  );
-                  if (edited != null) {
-                    await _save(
-                      settings.copyWith(macroProgram: () => edited.program),
+              if (showMacros)
+                ListTile(
+                  key: const ValueKey('macro-program'),
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Macros'),
+                  subtitle: Text(
+                    mode == _TargetMode.fixed && settings.fixedMacros != null
+                        ? 'The fixed target\'s grams'
+                        : settings.macroProgram?.summary(perLb: perLb) ??
+                              'Percentages from your macro split',
+                  ),
+                  trailing: const Icon(Icons.edit_rounded),
+                  onTap: () async {
+                    final edited = await showDialog<({MacroProgram? program})>(
+                      context: context,
+                      builder: (_) => MacroProgramDialog(
+                        settings.macroProgram,
+                        perLb: perLb,
+                      ),
                     );
-                  }
-                },
-              ),
+                    if (edited != null) {
+                      await _save(
+                        settings.copyWith(macroProgram: () => edited.program),
+                      );
+                    }
+                  },
+                ),
             ],
           ),
         );

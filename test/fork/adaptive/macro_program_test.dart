@@ -398,6 +398,52 @@ void main() {
     expect(macros.carbsG, closeTo((2937 - 720 - 648) / 4, 0.01));
   });
 
+  test('the onboarding overview follows a fixed target', () {
+    final user = UserEntity(
+      birthday: DateTime(1990, 1, 1),
+      heightCM: 180,
+      weightKG: 90,
+      gender: UserGenderEntity.male,
+      goal: UserWeightGoalEntity.loseWeight,
+      pal: UserPALEntity.active,
+    );
+    addTearDown(() {
+      OnboardingMacros.pending.value = null;
+      AdaptiveStore.settings.value = const AdaptiveSettings();
+    });
+    const split = FixedMacros(proteinG: 100, carbsG: 300, fatG: 80);
+    expect(OnboardingMacros.overviewKcal(), isNull);
+    expect(OnboardingMacros.overview(user, 2800, split: split), isNull);
+
+    // Upstream's split, scaled from the formula's energy to the fixed one.
+    AdaptiveStore.settings.value = const AdaptiveSettings(
+      fixedTarget: true,
+      fixedKcal: 1400,
+    );
+    expect(OnboardingMacros.overviewKcal(), 1400);
+    final scaled = OnboardingMacros.overview(user, 2800, split: split)!;
+    expect(scaled.proteinG, 50);
+    expect(scaled.carbsG, 150);
+    expect(scaled.fatG, 40);
+
+    // A program takes the fixed energy, not the formula's.
+    OnboardingMacros.pending.value = const MacroProgram(
+      proteinGPerKg: 2.0,
+      fatGPerKg: 0.8,
+    );
+    final program = OnboardingMacros.overview(user, 2800, split: split)!;
+    expect(program.carbsG, closeTo((1400 - 720 - 648) / 4, 0.01));
+
+    // The fixed target's own grams win, and are its energy.
+    const grams = FixedMacros(proteinG: 150, carbsG: 150, fatG: 50);
+    AdaptiveStore.settings.value = const AdaptiveSettings(
+      fixedTarget: true,
+      fixedMacros: grams,
+    );
+    expect(OnboardingMacros.overview(user, 2800, split: split), same(grams));
+    expect(OnboardingMacros.overviewKcal(), grams.kcal);
+  });
+
   test(
     'onboarding\'s choice goes into the profile when it completes',
     () async {
