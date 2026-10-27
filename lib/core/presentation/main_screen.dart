@@ -19,6 +19,9 @@ import 'package:opennutritracker/generated/l10n.dart';
 // [fork] S76 releases: a new OpenBite offers itself (D16)
 import 'package:opennutritracker/fork/update/update_notice.dart';
 // [/fork]
+// [fork] S167 launch-actions: shortcuts and shares open their screens
+import 'package:opennutritracker/fork/launch/launch_actions.dart';
+// [/fork]
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -126,7 +129,9 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final palette = isDark ? AppPalette.dark : AppPalette.light;
     // [fork] S76 releases
-    return UpdateNotice(child: _scaffold(context, palette));
+    return UpdateNotice(
+      child: LaunchActionHost(child: _scaffold(context, palette)), // S167
+    );
   }
 
   Widget _scaffold(BuildContext context, AppPalette palette) {
@@ -225,7 +230,8 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
       useSafeArea: true, // [fork] S83 a tall sheet stops below the status bar
       showDragHandle: true, // [fork] S131 add-sheet
       builder: (BuildContext context) {
-        return AddSheet( // [fork] S131
+        return AddSheet(
+          // [fork] S131
           day: DateTime.now(),
           showActivityTracking: config.showActivityTracking,
           usesImperialUnits: config.usesImperialFoodUnits,

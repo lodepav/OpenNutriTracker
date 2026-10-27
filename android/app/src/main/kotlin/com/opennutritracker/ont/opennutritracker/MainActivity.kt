@@ -44,6 +44,10 @@ class MainActivity : FlutterFragmentActivity() {
      */
     private var healthRationalePending = false
 
+    // [fork] S167 launch-actions
+    private var forkLaunch: com.opennutritracker.ont.opennutritracker.fork.LaunchActionChannel? = null
+    // [/fork]
+
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         // [fork] S22 backup-folder: the automatic backup's folder (fork phase 2)
@@ -51,6 +55,9 @@ class MainActivity : FlutterFragmentActivity() {
         // [/fork]
         // [fork] S76 updater: hands a checked release APK to the installer (D16)
         com.opennutritracker.ont.opennutritracker.fork.UpdateInstallChannel(this, flutterEngine)
+        // [/fork]
+        // [fork] S167 launch-actions: launcher shortcuts and shares into the app
+        forkLaunch = com.opennutritracker.ont.opennutritracker.fork.LaunchActionChannel(this, flutterEngine)
         // [/fork]
 
         // A cold start: the launching intent is the one held by the activity.
@@ -157,6 +164,9 @@ class MainActivity : FlutterFragmentActivity() {
      */
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
+        // [fork] S167 launch-actions: a shortcut or share reaching the running app
+        forkLaunch?.onNewIntent(intent)
+        // [/fork]
         if (isHealthRationaleIntent(intent)) {
             healthRationalePending = true
         }

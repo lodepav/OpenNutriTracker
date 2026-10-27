@@ -1,5 +1,6 @@
 # Components other apps can reach: "type name [permission]" (fork/tools/release-check.sh).
 activity com.opennutritracker.ont.opennutritracker.MainActivity  # the launcher entry
+activity com.opennutritracker.ont.opennutritracker.fork.LaunchActionActivity  # S167: launcher shortcuts and shares (image/*, text/plain); copies a shared image into the cache and opens the review screen, nothing is logged without the user
 activity-alias com.opennutritracker.ont.opennutritracker.ViewPermissionUsageActivity [android.permission.START_VIEW_PERMISSION_USAGE]  # Health Connect's "why this app reads your data" link; only the system can start it
 receiver androidx.profileinstaller.ProfileInstallReceiver [android.permission.DUMP]  # androidx: installs the baseline profile; only adb/system hold DUMP
 service androidx.health.platform.client.impl.sdkservice.HealthDataSdkService  # Health Connect client (connect-client 1.2.0-alpha02): the Health Connect app binds it; the library checks the caller

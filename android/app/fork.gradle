@@ -19,10 +19,13 @@ android {
     // The launcher name and icon (S34). Variant source sets outrank upstream's flavour ones, so these
     // override src/main's and src/develop's app_name without editing them.
     sourceSets {
-        // The fork's own Android code: the backup folder's channel (S22), the updater's (S76).
+        // The fork's own Android code: the backup folder's channel (S22), the updater's (S76),
+        // shortcuts and shares (S167).
         main.java.srcDirs += 'src/fork/kotlin'
         // The macro widget's layout and look (S50).
         main.res.srcDirs += 'src/fork/widget/res'
+        // The launcher shortcuts' icons (S167).
+        main.res.srcDirs += 'src/fork/launch/res'
         fullDebug.res.srcDirs += ['src/fork/full/res', 'src/fork/icon/res']
         fullProfile.res.srcDirs += ['src/fork/full/res', 'src/fork/icon/res']
         fullRelease.res.srcDirs += ['src/fork/full/res', 'src/fork/icon/res', 'src/fork/update/res']
