@@ -80,6 +80,16 @@ void main() {
     ]);
   });
 
+  test('a product named with the word as typed is named for it', () {
+    final byBrand = _off('Complete Sleep Formula', 'Penne');
+    final penne = _off('Penne Rigate', 'B');
+    final s = sectionResults([byBrand, penne], query: 'penne');
+    expect(s.products, [
+      [penne],
+      [byBrand],
+    ]);
+  });
+
   test('a plural is the same product as its singular', () {
     final a = _off('Chicken Breasts', 'A');
     final b = _off('chicken breast', 'B');

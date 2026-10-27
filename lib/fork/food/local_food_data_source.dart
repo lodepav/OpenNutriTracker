@@ -197,7 +197,7 @@ final _inWater = RegExp(r'\bin\s+(un)?salted\s+water\b', caseSensitive: false);
 
 /// [query] without its [describingWords] and a cooking water ("cooked in
 /// salted water"), its words joined by spaces.
-String withoutDescribing(String query) => _words(
+String withoutDescribing(String query) => nameWords(
   query.replaceAll(_inWater, ' '),
 ).where((w) => !describingWords.contains(w)).join(' ');
 
@@ -244,7 +244,7 @@ const _madeWith = {'with', 'in', 'and'};
 Set<SpFoodDTO> listedAfter(List<SpFoodDTO> rows, String query) {
   final asked = query.toLowerCase();
   final content = [
-    for (final w in _words(query))
+    for (final w in nameWords(query))
       if (!describingWords.contains(w) && !_madeWith.contains(w)) spelling(w),
   ];
   double? leanestCooked;
@@ -271,10 +271,10 @@ Set<SpFoodDTO> listedAfter(List<SpFoodDTO> rows, String query) {
       (row.carbohydrates100 ?? 0) > 50;
   // A query that names what the food is made with ("potatoes boiled
   // without skin with salt") means the rows that say so.
-  final namesMadeWith = _words(query).any(_madeWith.contains);
+  final namesMadeWith = nameWords(query).any(_madeWith.contains);
   bool onlyMadeWith(String name) {
     if (namesMadeWith || content.isEmpty) return false;
-    final words = _words(name);
+    final words = nameWords(name);
     final joint = words.indexWhere(_madeWith.contains);
     if (joint < 0) return false;
     return content.every(
@@ -389,7 +389,7 @@ class LocalFoodTable {
   /// [name]'s words, and each pair of neighbours run together: "KIT KAT"
   /// is found by `kitkat`, as a person types it.
   static Set<String> _nameTokens(String? name) {
-    final words = _words(name);
+    final words = nameWords(name);
     return {
       ...words,
       for (var i = 0; i + 1 < words.length; i++) '${words[i]}${words[i + 1]}',
@@ -456,7 +456,7 @@ class LocalFoodTable {
     String searchString, {
     required bool Function(String? source) isEnabled,
   }) {
-    final query = _words(searchString).map(spelling).toSet();
+    final query = nameWords(searchString).map(spelling).toSet();
     if (query.isEmpty) return const [];
     final matches = <SpFoodDTO>[];
     for (var i = 0; i < foods.length; i++) {
@@ -479,7 +479,7 @@ class LocalFoodTable {
     String searchString, {
     required bool Function(String? source) isEnabled,
   }) {
-    final words = _words(searchString).map(spelling).toList();
+    final words = nameWords(searchString).map(spelling).toList();
     if (words.toSet().length < 2) return const [];
     final last = words.last;
     var best = (0, false);
@@ -534,7 +534,7 @@ class LocalFoodTable {
 }
 
 /// [text]'s words in order, lower-cased, as [tokenize] splits them.
-List<String> _words(String? text) => (text ?? '')
+List<String> nameWords(String? text) => (text ?? '')
     .toLowerCase()
     .split(RegExp(r'[^\p{L}\p{N}]+', unicode: true))
     .where((w) => w.isNotEmpty)
