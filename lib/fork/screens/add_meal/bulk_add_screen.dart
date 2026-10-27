@@ -1,6 +1,7 @@
 // Fork-owned copy of lib/features/add_meal/presentation/screens/bulk_add_screen.dart (D23); upstream's later changes to it
 // are ported by hand: fork/tools/upstream-copies.sh.
 import 'dart:async';
+import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:auto_size_text/auto_size_text.dart';
@@ -55,12 +56,17 @@ class BulkAddScreenArguments {
   final bool usesImperialUnits;
   // opened by the add screen's camera, for a photo
   final bool startWithPhoto;
+  // shared from another app (S167): a photo copied into the cache, or text
+  final String? sharedPhotoPath;
+  final String? sharedText;
 
   const BulkAddScreenArguments(
     this.intakeTypeEntity,
     this.day,
     this.usesImperialUnits, {
     this.startWithPhoto = false,
+    this.sharedPhotoPath,
+    this.sharedText,
   });
 }
 
@@ -397,9 +403,45 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
         if (await _photoAvailable && mounted) await _onPhotoPressed();
       });
     }
+    // what another app shared, once: text is read as if typed, a photo
+    // after the same disclosure as the camera's
+    if (_forkSharedTaken) return;
+    _forkSharedTaken = true;
+    if (_args.sharedText case final text?) {
+      _textController.text = text;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _onParsePressed();
+      });
+    }
+    if (_args.sharedPhotoPath case final path?) {
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        if (await _photoAvailable && mounted) {
+          await _onPhotoPressed(sharedPath: path);
+          return;
+        }
+        _discardShared(path);
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Reading a photo needs a model that sees images: set one up '
+              'in Settings › AI meal logging.',
+            ),
+          ),
+        );
+      });
+    }
+  }
+
+  /// A shared photo not read is not kept.
+  void _discardShared(String path) {
+    try {
+      File(path).deleteSync();
+    } catch (_) {}
   }
 
   bool _forkPhotoStarted = false;
+  bool _forkSharedTaken = false;
 
   @override
   void dispose() {
@@ -682,14 +724,17 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
     );
   }
 
-  Future<void> _onPhotoPressed() async {
+  Future<void> _onPhotoPressed({String? sharedPath}) async {
     FocusScope.of(context).unfocus();
     final destination = await _photoDestination;
     if (!mounted) return;
     // Refusing rather than guessing: with no identifiable destination there
     // is no honest sentence to put in the sheet, and the sheet is the last
     // moment the user can decline.
-    if (destination == null) return;
+    if (destination == null) {
+      if (sharedPath != null) _discardShared(sharedPath);
+      return;
+    }
     // say so when the photo is kept for leftovers
     final keepsPhoto = await MealPhotoCache().keepsPhotos;
     if (!mounted) return;
@@ -731,8 +776,16 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
             Semantics(
               identifier: 'bulk-add-photo-camera',
               child: ListTile(
-                leading: const Icon(Icons.photo_camera_rounded),
-                title: Text(S.of(sheetContext).mealImageTakePhoto),
+                leading: Icon(
+                  sharedPath == null
+                      ? Icons.photo_camera_rounded
+                      : Icons.photo_rounded,
+                ),
+                title: Text(
+                  sharedPath == null
+                      ? S.of(sheetContext).mealImageTakePhoto
+                      : 'Read the shared photo',
+                ),
                 onTap: () => Navigator.of(sheetContext).pop(true),
               ),
             ),
@@ -740,19 +793,28 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
         ),
       ),
     );
-    if (shouldOpenCamera != true || !mounted) return;
-
-    final XFile? picked;
-    try {
-      picked = await ImagePicker().pickImage(source: ImageSource.camera);
-    } catch (e, stackTrace) {
-      _log.warning('Opening the meal photo camera failed', e, stackTrace);
-      if (!mounted) return;
-      _bloc.add(const ReadMealPhotoFailedEvent(BulkAddPhotoError.camera));
+    if (shouldOpenCamera != true || !mounted) {
+      if (sharedPath != null) _discardShared(sharedPath);
       return;
     }
-    // A cancelled picker is not a failure and says nothing to the user.
-    if (picked == null || !mounted) return;
+
+    final String source;
+    if (sharedPath != null) {
+      source = sharedPath;
+    } else {
+      final XFile? picked;
+      try {
+        picked = await ImagePicker().pickImage(source: ImageSource.camera);
+      } catch (e, stackTrace) {
+        _log.warning('Opening the meal photo camera failed', e, stackTrace);
+        if (!mounted) return;
+        _bloc.add(const ReadMealPhotoFailedEvent(BulkAddPhotoError.camera));
+        return;
+      }
+      // A cancelled picker is not a failure and says nothing to the user.
+      if (picked == null || !mounted) return;
+      source = picked.path;
+    }
 
     final MealPhoto? photo;
     try {
@@ -760,7 +822,7 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
       // [MealPhotoEncoder.encodeAndDiscardSource]. Without it the app leaves
       // the photo on disk, which the settings disclosure says it does not.
       photo = await MealPhotoEncoder.encodeAndDiscardSource(
-        picked.path,
+        source,
         // Per destination, not per app: a server the user runs may be
         // llama.cpp, which cannot decode WebP at all (#747).
         format: MealPhotoFormat.forProvider(destination.provider),

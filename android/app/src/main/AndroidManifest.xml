@@ -147,5 +147,27 @@
                 android:resource="@xml/fork_weight_widget_info" />
         </receiver>
         <!-- [/fork] -->
+        <!-- [fork] S167 launch-actions: launcher shortcuts and shares (a photo, a meal's
+             text, a recipe link) pass through here to MainActivity in the app's own task
+             (android/app/src/fork) -->
+        <activity
+            android:name=".fork.LaunchActionActivity"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:taskAffinity=""
+            android:theme="@android:style/Theme.Translucent.NoTitleBar">
+            <intent-filter android:label="Log in OpenBite">
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="image/*" />
+            </intent-filter>
+            <intent-filter android:label="Log in OpenBite">
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+        </activity>
+        <!-- [/fork] -->
     </application>
 </manifest>

@@ -27,6 +27,11 @@ import 'package:opennutritracker/fork/weight/weight_history_view.dart'; // S122 
 /// Dependencies are resolved from the locator by default; the optional
 /// constructor parameters exist so widget tests can inject fakes without
 /// standing up the whole DI graph.
+/// The route's argument that opens the weigh-in dialog with the screen.
+class WeighInOnOpen {
+  const WeighInOnOpen();
+}
+
 class WeightHistoryScreen extends StatefulWidget {
   final GetWeightLogUsecase? getUsecase;
   final AddWeightLogUsecase? addUsecase;
@@ -94,6 +99,10 @@ class _WeightHistoryScreenState extends State<WeightHistoryScreen> {
       _profileWeightKg = user?.weightKG;
       _loading = false;
     });
+    // the Weigh in shortcut (S167) opens the dialog straight away
+    if (ModalRoute.of(context)?.settings.arguments is WeighInOnOpen) {
+      await _onAddEntry();
+    }
   }
 
   @override
