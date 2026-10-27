@@ -229,10 +229,15 @@ class ExpenditureChart extends StatelessWidget {
                       preventCurveOverShooting: true,
                       color: accent,
                       barWidth: 3,
+                      // A dot a day up to a month, the last one larger.
                       dotData: FlDotData(
-                        checkToShowDot: (spot, bar) => spot == bar.spots.last,
-                        getDotPainter: (_, _, _, _) =>
-                            FlDotCirclePainter(radius: 5, color: accent),
+                        checkToShowDot: (spot, bar) =>
+                            dates.length <= 31 || spot == bar.spots.last,
+                        getDotPainter: (spot, _, bar, _) => FlDotCirclePainter(
+                          radius: spot == bar.spots.last ? 5 : 3,
+                          color: accent,
+                          strokeWidth: 0,
+                        ),
                       ),
                     ),
                   ],

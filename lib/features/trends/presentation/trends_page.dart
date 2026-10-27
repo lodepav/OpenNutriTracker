@@ -266,7 +266,9 @@ class _WaterTrendCard extends StatelessWidget {
                       preventCurveOverShooting: true,
                       color: color,
                       barWidth: 3,
-                      dotData: FlDotData(show: rangeDays <= 7),
+                      // [fork] S166 chart-dots: a dot a day up to a month
+                      dotData: FlDotData(show: rangeDays <= 31),
+                      // [/fork]
                       belowBarData: BarAreaData(
                           show: true, color: color.withValues(alpha: 0.12)),
                     ),

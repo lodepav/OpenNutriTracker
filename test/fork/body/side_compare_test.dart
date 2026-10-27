@@ -1,6 +1,7 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:intl/intl.dart';
 import 'package:opennutritracker/fork/body/measurement_store.dart';
 import 'package:opennutritracker/fork/body/side_compare.dart';
 
@@ -100,6 +101,42 @@ void main() {
     expect(SidePartPref.current.value, SidePart.thighs);
     expect(find.text('Thighs: left and right'), findsOne);
     expect(find.textContaining('Measure your left and right thighs'), findsOne);
-    expect(find.text('No thighs measured in this range.'), findsOne);
+    expect(find.text('No thighs measured yet.'), findsOne);
+  });
+
+  testWidgets('none in the range charts them all, and says so', (
+    tester,
+  ) async {
+    SidePartPref.current.value = SidePart.arms;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: SideComparePage(
+          imperial: false,
+          rangeDays: 30,
+          load: () async => [
+            _m(-60, BodyMetric.leftArm, 35),
+            _m(-60, BodyMetric.rightArm, 37),
+            _m(-43, BodyMetric.leftArm, 36),
+            _m(-43, BodyMetric.rightArm, 37),
+          ],
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final bars = tester.widget<LineChart>(find.byType(LineChart)).data;
+    expect(
+      [for (final b in bars.lineBarsData) b.spots.map((s) => s.y)],
+      [
+        [35.0, 36.0],
+        [37.0, 37.0],
+      ],
+    );
+    expect(
+      find.text(
+        'None in the last 30 days; all since '
+        '${DateFormat.yMMM().format(_day(-60))}.',
+      ),
+      findsOne,
+    );
   });
 }
