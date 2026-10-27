@@ -62,4 +62,42 @@ void main() {
     expect(s.basic, hasLength(2));
     expect(s.products.single, hasLength(1));
   });
+
+  test('basic foods keep the Food search\'s order', () {
+    final pickled = _meal('Tomato, green, pickled', MealSourceEntity.fdc);
+    final raw = _meal('Tomatoes, raw', MealSourceEntity.fdc);
+    final s = sectionResults([pickled, raw], basicOrder: [raw, pickled]);
+    expect(s.basic, [raw, pickled]);
+  });
+
+  test('a product named for none of the words goes last', () {
+    final byBrand = _off('Complete Sleep Formula', 'RAW');
+    final cashews = _off('Cashews', 'A');
+    final s = sectionResults([byBrand, cashews], query: 'cashews, raw');
+    expect(s.products, [
+      [cashews],
+      [byBrand],
+    ]);
+  });
+
+  test('a plural is the same product as its singular', () {
+    final a = _off('Chicken Breasts', 'A');
+    final b = _off('chicken breast', 'B');
+    final c = _off('Cherries', 'C');
+    final d = _off('cherry', 'D');
+    final glass = _off('Glass', 'E');
+    final s = sectionResults([a, b, c, d, glass]);
+    expect(s.products, [
+      [a, b],
+      [c, d],
+      [glass],
+    ]);
+  });
+
+  test('a group\'s range leaves out values far from the middle', () {
+    expect(typicalRange([]), isNull);
+    expect(typicalRange([125, 345]), (low: 125.0, high: 345.0));
+    expect(typicalRange([125, 131, 140, 146, 345]), (low: 125.0, high: 146.0));
+    expect(typicalRange([95, 567, 586, 633, 643]), (low: 567.0, high: 643.0));
+  });
 }

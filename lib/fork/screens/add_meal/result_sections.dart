@@ -22,6 +22,12 @@ class ResultSections extends StatefulWidget {
   final bool usesImperialUnits;
   final List<MealEntity> merged;
 
+  /// The Food search's own list, whose order the basic foods keep, and the
+  /// search, which puts a product named for none of its words last (see
+  /// [sectionResults]).
+  final List<MealEntity> basicOrder;
+  final String query;
+
   /// A last row under the sections, as the Products tab's note that the
   /// online search found nothing.
   final Widget? footer;
@@ -36,6 +42,8 @@ class ResultSections extends StatefulWidget {
     required this.addMealType,
     required this.usesImperialUnits,
     required this.merged,
+    this.basicOrder = const [],
+    this.query = '',
     this.footer,
     this.productsHeading = true,
   });
@@ -74,7 +82,11 @@ class _ResultSectionsState extends State<ResultSections> {
 
   @override
   Widget build(BuildContext context) {
-    final sections = sectionResults(widget.merged);
+    final sections = sectionResults(
+      widget.merged,
+      basicOrder: widget.basicOrder,
+      query: widget.query,
+    );
     final basic = sections.basic;
     final basicShown = _allBasic
         ? basic.length
@@ -177,14 +189,15 @@ class _GroupRow extends StatelessWidget {
       <= 3 => brands.join(', '),
       _ => '${brands.take(2).join(', ')} and ${brands.length - 2} more',
     };
-    final kcals = [for (final meal in group) ?meal.nutriments.energyKcal100]
-      ..sort();
-    final range = kcals.isEmpty
+    final typical = typicalRange([
+      for (final meal in group) ?meal.nutriments.energyKcal100,
+    ]);
+    final range = typical == null
         ? null
-        : kcals.first.round() == kcals.last.round()
-        ? energyText(context, kcals.first)
-        : '${energyValue(context, kcals.first)}–'
-              '${energyText(context, kcals.last)}';
+        : typical.low.round() == typical.high.round()
+        ? energyText(context, typical.low)
+        : '${energyValue(context, typical.low)}–'
+              '${energyText(context, typical.high)}';
     final unit = group.every((m) => m.isLiquid) ? 'ml' : 'g';
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 2),

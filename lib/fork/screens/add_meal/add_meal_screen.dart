@@ -527,6 +527,8 @@ class _AddMealScreenState extends State<AddMealScreen> {
                                 addMealType: _mealType,
                                 usesImperialUnits: imperial,
                                 merged: merged,
+                                basicOrder: foods,
+                                query: query,
                               ),
                             ),
                           ),
@@ -576,6 +578,7 @@ class _AddMealScreenState extends State<AddMealScreen> {
                         addMealType: _mealType,
                         usesImperialUnits: state.usesImperialUnits,
                         merged: state.products,
+                        query: query,
                         productsHeading: false,
                         footer: state.remoteSourceEmpty
                             ? const NoResultsWidget()

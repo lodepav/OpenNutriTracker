@@ -368,6 +368,37 @@ void main() {
         }
       });
 
+      // The user's MacroFactor single foods, typed as logged: the first row
+      // is the food as eaten, not one that holds the word.
+      test('the first row is the plain food as it is eaten', () async {
+        for (final (query, first) in [
+          ('peach, fresh', RegExp(r'^Peach')),
+          ('banana, fresh', RegExp(r'^Banana')),
+          ('bulgur, home cooked', RegExp(r'^Bulgur, cooked')),
+          ('basmati rice, cooked in salted water', RegExp('long.grain.*cook')),
+          ('white rice, cooked in unsalted water', RegExp(r'^Rice, white')),
+          ('pistachios', RegExp(r'^Pistachio')),
+          ('carrot', RegExp(r'^Carrot.*raw')),
+          ('tomato', RegExp(r'^Tomato.*raw')),
+          ('white rice', RegExp(r'^Rice, white, cooked, (?!glutinous)')),
+          ('egg noodles', RegExp(r'cooked|boiled')),
+          ('buckwheat', RegExp(r'cooked|boiled')),
+          ('cooked penne', RegExp(r'^Pasta, cooked')),
+          ('auzu pārslas', RegExp(r'^Oat flakes')),
+        ]) {
+          final rows = await source.fetchSearchWordResults(query);
+          expect(rows, isNotEmpty, reason: query);
+          expect(rows.first.name, matches(first), reason: query);
+        }
+      });
+
+      test('a stem shared in four letters is no match past one letter of '
+          'the shorter word', () async {
+        // "casein" found "Panque Casero", a pound cake.
+        final rows = await source.fetchSearchWordResults('micellar casein');
+        expect(rows.map((r) => r.name), isNot(contains(contains('Casero'))));
+      });
+
       test('an egg resolves to a record with egg-sized portions', () async {
         final egg = (await source.fetchSearchWordResults(
           'egg',
