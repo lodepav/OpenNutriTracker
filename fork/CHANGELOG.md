@@ -2,6 +2,15 @@
 
 Written by fork/tools/release_notes.dart at each release (D16).
 
+## 0.3.8 · 2026-10-27
+
+Based on OpenNutriTracker 2.5.0.
+
+### Fixes and changes
+
+- calorie target and expenditure in onboarding
+- launcher shortcuts and sharing into the app
+
 ## 0.3.7 · 2026-10-27
 
 Based on OpenNutriTracker 2.5.0.
