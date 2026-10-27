@@ -64,6 +64,10 @@ void main() {
     );
     expect(indicator.single!.indicatorBelowLine.strokeWidth, 0);
 
+    // A touch above or below the line, or between days far apart, takes
+    // the nearest day: fl_chart measures across only, within 10 px.
+    expect(data.lineTouchData.touchSpotThreshold, double.infinity);
+
     // The trend at full colour (at 55% it fell under 3:1 on a light card),
     // solid and bolder than the weigh-ins, as Weight history draws it.
     final context = tester.element(find.byType(LineChart));

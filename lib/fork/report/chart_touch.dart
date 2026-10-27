@@ -5,7 +5,9 @@ import 'package:flutter/material.dart';
 /// fl_chart's line down to the axis, and a tooltip line a series that says
 /// which series it is ([label]), its number rounded. [after] follows the
 /// label in the same line, as its own span (a unit and a date after a bare
-/// number, which upstream's tests read as the item's text).
+/// number, which upstream's tests read as the item's text). A touch
+/// anywhere over the chart takes the nearest day: within fl_chart's 10 px
+/// of a point, a tap between days far apart found nothing.
 LineTouchData labelledTouch(
   BuildContext context,
   String Function(LineBarSpot spot) label, {
@@ -15,6 +17,7 @@ LineTouchData labelledTouch(
   final style = (Theme.of(context).textTheme.labelMedium ?? const TextStyle())
       .copyWith(color: scheme.onInverseSurface);
   return LineTouchData(
+    touchSpotThreshold: double.infinity,
     getTouchedSpotIndicator: (bar, indexes) => [
       for (final _ in indexes)
         TouchedSpotIndicatorData(

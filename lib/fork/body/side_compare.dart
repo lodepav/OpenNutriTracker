@@ -191,12 +191,18 @@ class _SideComparePageState extends State<SideComparePage> {
     final pairs = sidePairs(all, part);
     final now = DateTime.now();
     final from = DateTime(now.year, now.month, now.day - widget.rangeDays + 1);
-    final inRange = [
+    final sides = [
       for (final m in all)
-        if ((m.metric == part.left || m.metric == part.right) &&
-            !m.date.isBefore(from))
-          m,
+        if (m.metric == part.left || m.metric == part.right) m,
     ];
+    final inRange = [
+      for (final m in sides)
+        if (!m.date.isBefore(from)) m,
+    ];
+    // None in the range, all of them: the stats and the days above and
+    // below showed a measurement 43 days old while the chart said "No arms
+    // measured in this range", a range this page does not name.
+    final charted = inRange.isEmpty ? sides : inRange;
     final last = pairs.lastOrNull;
     return ListView(
       padding: EdgeInsets.fromLTRB(
@@ -251,7 +257,15 @@ class _SideComparePageState extends State<SideComparePage> {
           ),
         ],
         const SizedBox(height: Dimens.spacing16),
-        _SidesChart(part: part, measurements: inRange, units: units),
+        _SidesChart(
+          part: part,
+          measurements: charted,
+          units: units,
+          caption: inRange.isEmpty && sides.isNotEmpty
+              ? 'None in the last ${widget.rangeDays} days; all since '
+                    '${DateFormat.yMMM().format(sides.first.date)}.'
+              : null,
+        ),
         if (pairs.isNotEmpty) ...[
           trendSection(context, 'Both sides measured'),
           TrendRows(
@@ -277,10 +291,14 @@ class _SidesChart extends StatelessWidget {
   final List<Measurement> measurements;
   final SideUnits units;
 
+  /// Why the chart shows other days than the range's, under the legend.
+  final String? caption;
+
   const _SidesChart({
     required this.part,
     required this.measurements,
     required this.units,
+    this.caption,
   });
 
   @override
@@ -288,11 +306,7 @@ class _SidesChart extends StatelessWidget {
     final palette = paletteOf(context);
     final theme = Theme.of(context);
     if (measurements.isEmpty) {
-      return noData(
-        context,
-        'No ${part.label.toLowerCase()} measured in '
-        'this range.',
-      );
+      return noData(context, 'No ${part.label.toLowerCase()} measured yet.');
     }
     final first = measurements.first.date;
     double x(DateTime d) => CalendarDayCalc.daysBetween(first, d).toDouble();
@@ -384,6 +398,10 @@ class _SidesChart extends StatelessWidget {
               (label: 'Right', color: rightColor, line: true),
             ],
           ),
+          if (caption != null) ...[
+            const SizedBox(height: Dimens.spacing8),
+            Text(caption!, style: small),
+          ],
         ],
       ),
     );

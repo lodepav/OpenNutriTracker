@@ -154,7 +154,7 @@ class _ExpenditureTrendCardState extends State<ExpenditureTrendCard> {
                       preventCurveOverShooting: true,
                       color: accent,
                       barWidth: 3,
-                      dotData: const FlDotData(show: false),
+                      dotData: FlDotData(show: days.length <= 31),
                     ),
                     LineChartBarData(
                       spots: eaten,
