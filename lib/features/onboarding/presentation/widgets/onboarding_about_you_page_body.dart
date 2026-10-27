@@ -14,8 +14,7 @@ class OnboardingAboutYouPageBody extends StatefulWidget {
     UserGenderSelectionEntity? gender,
     CaloriesProfileEntity? caloriesProfile,
     DateTime? birthday,
-  )
-  setPageContent;
+  ) setPageContent;
 
   final UserGenderSelectionEntity? initialGender;
   final CaloriesProfileEntity? initialCaloriesProfile;
@@ -54,9 +53,8 @@ class _OnboardingAboutYouPageBodyState
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (_selectedDate != null && _dateInput.text.isEmpty) {
-      _dateInput.text = MaterialLocalizations.of(
-        context,
-      ).formatCompactDate(_selectedDate!);
+      _dateInput.text =
+          MaterialLocalizations.of(context).formatCompactDate(_selectedDate!);
     }
   }
 
