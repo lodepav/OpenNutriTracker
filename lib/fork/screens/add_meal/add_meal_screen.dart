@@ -34,7 +34,7 @@ import 'package:opennutritracker/features/scanner/scanner_screen.dart';
 import 'package:opennutritracker/features/scanner/util/barcode_check_digit.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 import 'package:opennutritracker/fork/basket/basket_ui.dart';
-import 'package:opennutritracker/fork/food/reference_up.dart';
+import 'package:opennutritracker/fork/screens/add_meal/result_sections.dart';
 import 'package:opennutritracker/fork/bulk/photo_meal_button.dart';
 import 'package:opennutritracker/fork/suggest/fits_left.dart';
 import 'package:opennutritracker/fork/recents/search_sections.dart';
@@ -449,9 +449,7 @@ class _AddMealScreenState extends State<AddMealScreen> {
                       final foods = fs is FoodLoadedState
                           ? fs.food
                           : const <MealEntity>[];
-                      final merged = referenceUp(
-                        mergeAndRankMeals(products, foods, query),
-                      );
+                      final merged = mergeAndRankMeals(products, foods, query);
                       final imperial = ps is ProductsLoadedState
                           ? ps.usesImperialUnits
                           : (fs is FoodLoadedState
@@ -522,14 +520,13 @@ class _AddMealScreenState extends State<AddMealScreen> {
                             child: Semantics(
                               identifier: 'add-meal-all-list',
                               container: true,
-                              child: ListView.builder(
-                                itemCount: merged.length,
-                                itemBuilder: (context, index) => MealItemCard(
-                                  day: _day,
-                                  mealEntity: merged[index],
-                                  addMealType: _mealType,
-                                  usesImperialUnits: imperial,
-                                ),
+                              // Basic foods, then products one row per
+                              // name (the search-duplicates canvas, C).
+                              child: ResultSections(
+                                day: _day,
+                                addMealType: _mealType,
+                                usesImperialUnits: imperial,
+                                merged: merged,
                               ),
                             ),
                           ),
@@ -573,21 +570,16 @@ class _AddMealScreenState extends State<AddMealScreen> {
                     child: Semantics(
                       identifier: 'add-meal-products-list',
                       container: true,
-                      child: ListView.builder(
-                        itemCount:
-                            state.products.length +
-                            (state.remoteSourceEmpty ? 1 : 0),
-                        itemBuilder: (context, index) {
-                          if (index == state.products.length) {
-                            return const NoResultsWidget();
-                          }
-                          return MealItemCard(
-                            day: _day,
-                            mealEntity: state.products[index],
-                            addMealType: _mealType,
-                            usesImperialUnits: state.usesImperialUnits,
-                          );
-                        },
+                      // One row per product name, as in All.
+                      child: ResultSections(
+                        day: _day,
+                        addMealType: _mealType,
+                        usesImperialUnits: state.usesImperialUnits,
+                        merged: state.products,
+                        productsHeading: false,
+                        footer: state.remoteSourceEmpty
+                            ? const NoResultsWidget()
+                            : null,
                       ),
                     ),
                   );
