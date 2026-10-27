@@ -347,6 +347,27 @@ void main() {
         }
       });
 
+      // No row names a rice by its variety; the table's rows go by the
+      // grain, and the Food tab showed rice with honey for basmati.
+      test('a rice variety finds the rows of its grain', () async {
+        for (final (query, grain) in [
+          ('cooked basmati rice', 'long.grain'),
+          ('jasmine rice', 'long.grain'),
+          ('arborio rice', 'medium.grain'),
+        ]) {
+          final names = [
+            for (final row in await source.fetchSearchWordResults(query))
+              row.name,
+          ];
+          expect(names, isNotEmpty, reason: query);
+          expect(
+            names.take(3),
+            everyElement(matches(RegExp(grain))),
+            reason: query,
+          );
+        }
+      });
+
       test('an egg resolves to a record with egg-sized portions', () async {
         final egg = (await source.fetchSearchWordResults(
           'egg',

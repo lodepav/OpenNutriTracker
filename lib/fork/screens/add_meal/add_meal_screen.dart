@@ -34,6 +34,7 @@ import 'package:opennutritracker/features/scanner/scanner_screen.dart';
 import 'package:opennutritracker/features/scanner/util/barcode_check_digit.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 import 'package:opennutritracker/fork/basket/basket_ui.dart';
+import 'package:opennutritracker/fork/food/reference_up.dart';
 import 'package:opennutritracker/fork/bulk/photo_meal_button.dart';
 import 'package:opennutritracker/fork/suggest/fits_left.dart';
 import 'package:opennutritracker/fork/recents/search_sections.dart';
@@ -448,7 +449,9 @@ class _AddMealScreenState extends State<AddMealScreen> {
                       final foods = fs is FoodLoadedState
                           ? fs.food
                           : const <MealEntity>[];
-                      final merged = mergeAndRankMeals(products, foods, query);
+                      final merged = referenceUp(
+                        mergeAndRankMeals(products, foods, query),
+                      );
                       final imperial = ps is ProductsLoadedState
                           ? ps.usesImperialUnits
                           : (fs is FoodLoadedState

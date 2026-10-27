@@ -424,6 +424,10 @@ String spelling(String word) => switch (word) {
   'bbq' || 'barbeque' => 'barbecue',
   'tater' => 'potato',
   'adjaruli' || 'acharuli' || 'adjaran' || 'ajarian' || 'ajaruli' => 'adjarian',
+  // Rice by its variety, which no row names: the table's rows go by the
+  // grain ("Rice, white, long-grain, ..."), run together as one token.
+  'basmati' || 'jasmine' => 'longgrain',
+  'arborio' => 'mediumgrain',
   _ => word,
 };
 

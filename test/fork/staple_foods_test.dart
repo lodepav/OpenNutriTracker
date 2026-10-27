@@ -121,6 +121,9 @@ void main() {
     ('diet coke', 'Soft drink, cola, diet'),
     ('greek yogurt', 'Yogurt, Greek, NS as to type of milk, plain'),
     ('granola', 'Cereal, granola'),
+    ('basmati rice', 'Rice, white, long-grain, regular, enriched, cooked'),
+    ('jasmine rice', 'Rice, white, long-grain, regular, enriched, cooked'),
+    ('cooked basmati rice', 'Rice, white, long-grain'),
     ('vegetable lasagna', 'Lasagna, Vegetable'),
   ]) {
     test('bare "$query" resolves to "$expected..."', () async {
