@@ -258,7 +258,12 @@ class OpenAiCompatibleMealItemsApi implements MealItemsApi {
         // would surface as "malformed response" rather than as the
         // capability problem it is. With it, an unfit provider is refused up
         // front with a 404 the user can be told about.
-        'require_parameters': true,
+        // [fork] S77 ai-models-5-5: not for a model asked not to think.
+        // OpenRouter's filter refuses a forced `tool_choice` to Haiku 5.5 on
+        // every endpoint (404, measured 2026-10-28), though Anthropic serves
+        // it with thinking off. The pin below still names who serves it.
+        if (!reasoningOff) 'require_parameters': true,
+        // [/fork]
         // Routing default is `allow`, meaning providers that store input
         // non-transiently and may train on it are eligible. The app cannot
         // promise a destination's behaviour it never asked for.

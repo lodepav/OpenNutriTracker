@@ -99,4 +99,29 @@ void main() {
       expect(client.body!['model'], 'anthropic/claude-haiku-5.5');
     });
   });
+
+  test('every curated OpenRouter model is pinned, fallbacks off; only a '
+      'model asked not to think skips the parameter filter', () async {
+    // OpenRouter's filter refuses a forced tool_choice to Haiku 5.5 on every
+    // endpoint (404); the pin still names who serves it.
+    for (final model in AiModelCatalogue.openrouter) {
+      final client = await send(
+        AiSelection(
+          provider: AiProvider.openrouter,
+          apiKey: 'sk-or',
+          modelId: model.id,
+        ),
+      );
+
+      final provider = client.body!['provider'] as Map;
+      expect(provider['only'], isNotEmpty, reason: model.id);
+      expect(provider['allow_fallbacks'], false, reason: model.id);
+      expect(provider['data_collection'], 'deny', reason: model.id);
+      expect(
+        provider['require_parameters'],
+        model.toolCall == AiToolCall.forcedThinkingOff ? isNull : true,
+        reason: model.id,
+      );
+    }
+  });
 }

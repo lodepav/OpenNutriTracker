@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:http/http.dart' as http;
+import 'package:opennutritracker/core/utils/ai_model_catalogue.dart';
 import 'package:opennutritracker/features/add_meal/data/anthropic_meal_items_api.dart';
 import 'package:opennutritracker/features/add_meal/data/openai_compatible_meal_items_api.dart';
 import 'package:opennutritracker/features/add_meal/data/data_sources/off_data_source.dart';
@@ -55,12 +56,15 @@ class EvalModels {
     }
     final [model, ...rest] = spec.split('@');
     final providers = rest.isEmpty || rest.first.isEmpty ? null : [rest.first];
+    // The tool call the app asks this model for (S77); forced off the list.
+    final listed = AiModelCatalogue.openrouter.where((m) => m.id == model);
     return OpenAiCompatibleMealItemsApi.openRouter(
       client,
       () => key,
       model: model,
       providers: providers,
       timeout: const Duration(seconds: 90),
+      toolCall: listed.isEmpty ? AiToolCall.forced : listed.first.toolCall,
     );
   }
 
