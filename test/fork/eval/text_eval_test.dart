@@ -251,8 +251,9 @@ void main() {
         client.close();
         models.reportWaiting(spec, waiting);
       },
-      // A slow model's 37 reads can take most of the 100 s each.
-      timeout: const Timeout(Duration(minutes: 70)),
+      // A slow model's 37 reads, and their breakdowns, can each take the
+      // app's full 20 s.
+      timeout: const Timeout(Duration(minutes: 60)),
       skip: models.skip,
     );
   }

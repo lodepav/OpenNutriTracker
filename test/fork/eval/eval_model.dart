@@ -105,7 +105,8 @@ class EvalModels {
       () => key,
       model: model,
       providers: providers,
-      timeout: const Duration(seconds: 90),
+      // The app's own limit: a model too slow for it fails here as there.
+      timeout: OpenAiCompatibleMealItemsApi.defaultTimeout,
       toolCall: flags.contains('auto')
           ? AiToolCall.auto
           : listed.isEmpty

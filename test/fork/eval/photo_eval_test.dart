@@ -117,8 +117,8 @@ void main() {
           [...alone, ...noted].where((r) => r.error != null).length,
         );
       },
-      // A slow model's 97 reads can take most of the 90 s each.
-      timeout: const Timeout(Duration(minutes: 150)),
+      // A slow model's 97 reads can each take the app's full 20 s.
+      timeout: const Timeout(Duration(minutes: 60)),
       skip: skip,
     );
   }
