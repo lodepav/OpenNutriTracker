@@ -43,6 +43,7 @@ import 'package:opennutritracker/fork/dish/dish_strings.dart';
 import 'package:opennutritracker/fork/bulk/discard_guard.dart';
 // remember which entries one save wrote (D14)
 import 'package:opennutritracker/fork/leftovers/meal_groups.dart';
+import 'package:opennutritracker/fork/bulk/name_dish_dialog.dart';
 import 'package:opennutritracker/fork/leftovers/meal_photo_cache.dart';
 // a recipe from typed lines or a recipe link
 import 'package:http/http.dart' as http;
@@ -858,6 +859,28 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
         note: _textController.text.trim().isEmpty
             ? null
             : _textController.text.trim(),
+      ),
+    );
+  }
+
+  /// The photo just read, read again with what the user names in it as
+  /// the note, which also goes in the box.
+  Future<void> _rereadPhotoWithNote() async {
+    final photo = _forkMealPhoto;
+    if (photo == null) return;
+    final note = await askDishName(
+      context,
+      initial: _textController.text.trim(),
+    );
+    if (note == null || !mounted) return;
+    _textController.text = note;
+    _resetAmountControllers();
+    _bloc.add(
+      ReadMealPhotoEvent(
+        photo: photo,
+        usesImperialUnits: _args.usesImperialUnits,
+        localeCode: Localizations.localeOf(context).languageCode,
+        note: note,
       ),
     );
   }

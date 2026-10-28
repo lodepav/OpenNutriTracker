@@ -972,6 +972,13 @@ and misnamed dishes the largest errors, big plates running low):
   default in the unit shown. A stated count saves its recipe with that many servings.
 - **A photo row's breakdown goes with the photo** and is sized to the portion shown, not a typical
   serving (D12's exception to #250, widened).
+- **A note's part count is kept** (S170): "half a pork chop", "1.5 cabbage rolls".
+- **The photo prompt lists the saved recipe names** (S172), for photo to saved recipe.
+- **"Name the dish" on the photo banner** reads the same photo again with the typed name as its
+  note (`lib/fork/bulk/name_dish_dialog.dart`): with a note every model named every dish.
+- Not changed: a count on a row with no serving was already held back from the save
+  (`amountWouldBeWrong`, #973; the eval took starting amounts as they were), and a dish row
+  with a serving already starts at it. BLS rows have none and still start at 100 g, flagged.
 - The eval's scores move with these: the Haiku 5.5 baseline needs a rerun before models are
   compared against it.
 
