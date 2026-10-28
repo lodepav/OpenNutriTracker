@@ -180,9 +180,26 @@ class MealTextParseResult {
 /// so a substring test reports a unit in exactly the phrase this exists to
 /// catch. [_leadingQuantity] and [_trailingQuantity] only see a unit when a
 /// number is against it.
-bool textStatesAUnit(String input) => _segment(
-  input,
-).any((segment) => _extractQuantityAndUnit(segment).unit != null);
+bool textStatesAUnit(String input) => _segment(input).any(
+  (segment) =>
+      _extractQuantityAndUnit(segment).unit != null ||
+      // [fork] S169 unit-mid-phrase: an amount inside a phrase ("a 330 ml
+      // can of coke", "and 30 g almonds") or alone ("…, 300 g"), which the
+      // two anchored patterns miss; the model's unit was then dropped and
+      // 330 ml logged as 330 servings (live Haiku 5.5, 2026-10-28)
+      _unitInPhrase.hasMatch(segment),
+  // [/fork]
+);
+
+// [fork] S169 unit-mid-phrase: a number with a unit symbol against it, the
+// Latin symbols as whole words, so `2 large eggs` and `Glas` state none;
+// the number may follow a letter only in an unspaced script (`一碗200克`).
+final _unitInPhrase = RegExp(
+  r'(?<![\d.,]|(?!' '$_unspacedScript' r')\p{L})' '$_number'
+  r'\s*(?:(?:kg|lb|ml|oz|g|l)(?![\p{L}\d])|毫升|千克|克|升)',
+  unicode: true,
+);
+// [/fork]
 
 MealTextParseResult validateParsedMealItems(
   List<ParsedMealItem> candidates, {
