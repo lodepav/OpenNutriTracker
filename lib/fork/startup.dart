@@ -3,6 +3,9 @@ import 'dart:async';
 import 'package:http/http.dart' as http;
 import 'package:logging/logging.dart';
 import 'package:opennutritracker/features/add_meal/data/data_sources/sp_food_data_source.dart';
+import 'package:opennutritracker/features/add_meal/data/meal_items_api_factory.dart';
+import 'package:opennutritracker/features/add_meal/data/model_meal_photo_interpreter.dart';
+import 'package:opennutritracker/features/add_meal/domain/usecase/read_meal_photo_usecase.dart';
 import 'package:opennutritracker/core/domain/usecase/delete_weight_log_usecase.dart';
 import 'package:opennutritracker/core/utils/ai_credential_storage.dart';
 import 'package:opennutritracker/core/utils/hive_db_provider.dart';
@@ -13,6 +16,7 @@ import 'package:opennutritracker/fork/backup/auto_backup.dart';
 import 'package:opennutritracker/fork/backup/backup_extras.dart';
 import 'package:opennutritracker/fork/backup/profiles_backup.dart';
 import 'package:opennutritracker/fork/backup/storage_rescue.dart';
+import 'package:opennutritracker/fork/bulk/saved_dishes.dart';
 import 'package:opennutritracker/fork/goal/goal_progress.dart';
 import 'package:opennutritracker/fork/dev/fake_ai.dart';
 import 'package:opennutritracker/fork/dish/starter_recipes.dart';
@@ -41,6 +45,16 @@ void registerFork() {
   if (forkFakeAi) {
     _replace<http.Client>(() => FakeAiClient(http.Client()));
   }
+  // S172: a photo read knows the user's saved dish names
+  _replace<ReadMealPhotoUseCase>(
+    () => ReadMealPhotoUseCase(
+      locator<AiCredentialStorage>(),
+      (selection) => ModelMealPhotoInterpreter(
+        mealItemsApiFor(locator(), selection),
+        savedDishes: savedDishNames,
+      ),
+    ),
+  );
   // S113: deleting today's weigh-in sets the profile weight back
   _replace<DeleteWeightLogUsecase>(
     () => DeleteWeightLogUsecase(locator(), locator()),
