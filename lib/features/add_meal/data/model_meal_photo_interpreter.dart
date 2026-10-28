@@ -4,8 +4,9 @@ import 'package:opennutritracker/features/add_meal/domain/meal_items_api.dart';
 import 'package:opennutritracker/features/add_meal/domain/meal_photo_interpreter.dart';
 import 'package:opennutritracker/features/add_meal/util/meal_text_parser.dart';
 import 'package:opennutritracker/features/add_meal/util/soft_text_score.dart';
-// [fork] S170 note-fractions
+// [fork] S170 note-fractions, S172 saved-dishes
 import 'package:opennutritracker/fork/bulk/note_counts.dart';
+import 'package:opennutritracker/fork/bulk/saved_dishes.dart';
 // [/fork]
 
 /// Reads a photograph of a meal with a model and returns the foods it can
@@ -42,7 +43,12 @@ import 'package:opennutritracker/fork/bulk/note_counts.dart';
 class ModelMealPhotoInterpreter implements MealPhotoInterpreter {
   final MealItemsApi _api;
 
-  ModelMealPhotoInterpreter(this._api);
+  // [fork] S172 saved-dishes: the user's recipe names, for the prompt
+  final List<String> Function()? _savedDishes;
+
+  ModelMealPhotoInterpreter(this._api, {List<String> Function()? savedDishes})
+    : _savedDishes = savedDishes;
+  // [/fork]
 
   // [fork] S60 photo-counts: count every countable piece (phase 4 replay:
   // smaller models left dumplings, khinkali and one whole pizza uncounted)
@@ -84,15 +90,22 @@ Rules:
     String? localeCode,
     String? note,
   }) async {
+    // [fork] S172 saved-dishes: named as the user saved them
+    final saved = savedDishesPrompt(_savedDishes?.call() ?? const []);
+    // [/fork]
     final result = await _api.requestItems(
       content: MealPhotoContent(
         mediaType: photo.mediaType,
         base64Data: base64Encode(photo.bytes),
         note: note,
       ),
-      system: localeCode == null
-          ? _systemPrompt
-          : '$_systemPrompt\nThe user\'s app language is "$localeCode".',
+      system:
+          (localeCode == null
+              ? _systemPrompt
+              : '$_systemPrompt\nThe user\'s app language is "$localeCode".') +
+          // [fork] S172 saved-dishes
+          (saved == null ? '' : '\n$saved'),
+      // [/fork]
     );
 
     return _sizesOnly(_countsOnly(result, note));
