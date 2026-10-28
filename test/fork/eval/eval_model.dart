@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -26,12 +27,11 @@ class EvalModels {
 
   /// `FORK_EVAL_MODELS=screen`: the latest cheap model from each Chinese
   /// vendor whose first-party endpoint the app could route to, against
-  /// Haiku 5.5 (2026-10-28), and Qwen 3.7 Flash, the cheapest capable one;
-  /// then Mistral's four cheap vision models.
+  /// Haiku 5.5 (2026-10-28); then Mistral's four cheap vision models.
   /// Below Haiku 5.5 is not recommended; above it is noted.
+  // Not Qwen 3.8 or 3.7 Flash: disqualified 2026-10-28, most reads failed
+  // within the app's 20 s (3.8: 64 of 134, 3.7: 104).
   static const _screenModels =
-      'qwen/qwen3.8-flash@alibaba#auto,'
-      'qwen/qwen3.7-flash@alibaba#auto,'
       'bytedance-seed/seed-2.0-mini@seed#auto,'
       'z-ai/glm-5.3-flash@z-ai#auto,'
       'xiaomi/mimo-v2.6-flash@xiaomi#auto,'
@@ -77,6 +77,9 @@ class EvalModels {
         },
         _ => null,
       };
+
+  /// Rate-limited answers each spec waited out, by [BackoffClient].
+  final Map<String, int> limited = {};
 
   /// Whether [spec] runs [read]: always, outside a retry pass.
   bool runs(String spec, String read) => _only?[spec]?.contains(read) ?? true;
@@ -126,12 +129,16 @@ class EvalModels {
     // The tool call the app asks this model for (S77); forced off the list.
     final listed = AiModelCatalogue.openrouter.where((m) => m.id == model);
     return OpenAiCompatibleMealItemsApi.openRouter(
-      client,
+      BackoffClient(
+        client,
+        onLimited: () => limited[spec] = (limited[spec] ?? 0) + 1,
+      ),
       () => key,
       model: model,
       providers: providers,
-      // The app's own limit: a model too slow for it fails here as there.
-      timeout: OpenAiCompatibleMealItemsApi.defaultTimeout,
+      // BackoffClient holds each attempt to the app's limit; this one only
+      // has to outlast its waits.
+      timeout: BackoffClient.budget,
       toolCall: flags.contains('auto')
           ? AiToolCall.auto
           : listed.isEmpty
@@ -143,6 +150,10 @@ class EvalModels {
   /// Says how many requests still wait for the subagent in replay mode, or
   /// how many reads failed in a live run.
   void reportWaiting(String spec, int waiting) {
+    if (limited[spec] case final n?) {
+      // ignore: avoid_print
+      print('$spec: waited out $n rate-limited answers');
+    }
     if (waiting == 0) return;
     // ignore: avoid_print
     print(
@@ -151,6 +162,56 @@ class EvalModels {
           : '$spec: $waiting reads failed (error, timeout or no model read)',
     );
   }
+}
+
+/// Waits out a 429 and asks again, so a vendor's rate limit is not scored
+/// as the model's failure: 5, 15 and 45 s, or the `retry-after` asked for
+/// (up to a minute). Each attempt gets the app's own 20 s, so a model too
+/// slow for the app still fails here as there. Only this client's caller
+/// waits: each vendor has its own and runs beside the others.
+class BackoffClient extends http.BaseClient {
+  static const _waits = [5, 15, 45];
+
+  /// The longest a call through this client can take.
+  static final budget =
+      OpenAiCompatibleMealItemsApi.defaultTimeout * (_waits.length + 1) +
+      Duration(seconds: 60 * _waits.length + 5);
+
+  final http.Client _inner;
+  final void Function() onLimited;
+
+  BackoffClient(this._inner, {required this.onLimited});
+
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) async {
+    final body = await request.finalize().toBytes();
+    for (var attempt = 0; ; attempt++) {
+      final copy = http.Request(request.method, request.url)
+        ..headers.addAll(request.headers)
+        ..bodyBytes = body;
+      // The whole answer within the limit, as the app's post reads it.
+      final response = await _inner
+          .send(copy)
+          .then(http.Response.fromStream)
+          .timeout(OpenAiCompatibleMealItemsApi.defaultTimeout);
+      if (response.statusCode != 429 || attempt == _waits.length) {
+        return http.StreamedResponse(
+          Stream.value(response.bodyBytes),
+          response.statusCode,
+          headers: response.headers,
+          request: request,
+        );
+      }
+      onLimited();
+      final asked = int.tryParse(response.headers['retry-after'] ?? '');
+      await Future<void>.delayed(
+        Duration(seconds: (asked ?? _waits[attempt]).clamp(1, 60)),
+      );
+    }
+  }
+
+  @override
+  void close() => _inner.close();
 }
 
 /// The bundled food table, as the app searches it.
