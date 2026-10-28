@@ -2,6 +2,20 @@
 
 Written by fork/tools/release_notes.dart at each release (D16).
 
+## 0.3.10 · 2026-10-29
+
+Based on OpenNutriTracker 2.5.0.
+
+### Fixes and changes
+
+- each AI model row shows its eval rating and price tier
+- GPT-6 luna and GPT-6.1 terra replace the GPT-5.6 pair
+- a rate-limited AI read is asked once more
+- "Name the dish" reads the photo again with a note
+- a photo read knows the user's saved dish names
+- a photo keeps a part count the note states
+- a breakdown weighs the amount stated, and a photo's the plate shown
+
 ## 0.3.9 · 2026-10-27
 
 Based on OpenNutriTracker 2.5.0.
