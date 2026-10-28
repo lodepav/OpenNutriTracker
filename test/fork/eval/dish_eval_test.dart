@@ -2,9 +2,10 @@
 // (eval_model.dart):
 //
 // - Photo -> breakdown: each test photo's dish, as the model named it, is
-//   broken into one serving's ingredients by the fork's own prompt
-//   (BreakDownDishUseCase), each ingredient looked up in the bundled table,
-//   and the total set against the recipe page's per-serving macros.
+//   broken into ingredients as the app does it (BreakDownDishUseCase, sent
+//   with the photo and the count the read gave), each ingredient resolved
+//   over the bundled table, and the total set against the recipe page's
+//   per-serving macros.
 // - Typed and photographed names -> saved recipes: whether the model's name
 //   for a dish finds the starter recipes (and a saved khachapuri) by the
 //   app's recipe match, upstream's substring or every word (S5).
@@ -17,17 +18,20 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
+import 'package:opennutritracker/features/add_meal/data/data_sources/off_data_source.dart';
 import 'package:opennutritracker/features/add_meal/data/model_meal_photo_interpreter.dart';
 import 'package:opennutritracker/features/add_meal/data/model_meal_text_interpreter.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_nutriments_entity.dart';
-import 'package:opennutritracker/features/add_meal/domain/meal_items_api.dart';
 import 'package:opennutritracker/features/add_meal/domain/meal_photo_interpreter.dart';
-import 'package:opennutritracker/fork/dish/break_down_dish_usecase.dart';
+import 'package:opennutritracker/features/add_meal/data/repository/products_repository.dart';
+import 'package:opennutritracker/features/add_meal/domain/usecase/resolve_parsed_meals_usecase.dart';
+import 'package:opennutritracker/features/add_meal/util/meal_text_parser.dart';
 import 'package:opennutritracker/fork/dish/recipe_search.dart';
 import 'package:opennutritracker/fork/dish/starter_recipes.dart';
 import 'package:opennutritracker/fork/food/local_food_data_source.dart';
 
 import 'eval_model.dart';
+import 'logged_kcal.dart';
 
 const _photoDir = 'build/fork-eval/photos';
 
@@ -104,6 +108,12 @@ void main() {
         final client = http.Client();
         final api = models.api(spec, client);
         final photoReader = ModelMealPhotoInterpreter(api);
+        final breakDown = evalBreakDown(
+          api,
+          ResolveParsedMealsUseCase(
+            TableOnlySearch(ProductsRepository(OFFDataSource(), foods)),
+          ),
+        );
         final textReader = ModelMealTextInterpreter(api);
         var waiting = 0;
         out.writeln('\n## $spec\n');
@@ -138,7 +148,7 @@ void main() {
         }
 
         out
-          ..writeln('\n### Photo → breakdown, one serving\n')
+          ..writeln('\n### Photo → breakdown, the portion shown\n')
           ..writeln(
             'Page figures are the recipe sites\' own per serving. "Shown 1" '
             'marks the photos of one serving, the ones that can be '
@@ -153,31 +163,31 @@ void main() {
           final file = File('$_photoDir/${photo['id']}.jpg');
           // A set meal is several dishes, not one to break down.
           if (!file.existsSync() || photo['parts'] != null) continue;
-          final List<String> names;
+          final mealPhoto = MealPhoto(
+            bytes: file.readAsBytesSync(),
+            mediaType: 'image/jpeg',
+          );
+          final List<ParsedMealItem> items;
           try {
-            names = [
-              for (final item in (await photoReader.interpret(
-                MealPhoto(
-                  bytes: file.readAsBytesSync(),
-                  mediaType: 'image/jpeg',
-                ),
-                localeCode: 'en',
-              )).items)
-                item.query,
-            ];
+            items = (await photoReader.interpret(
+              mealPhoto,
+              localeCode: 'en',
+            )).items;
           } on MealInterpreterException {
             waiting++;
             continue;
           }
           final expected = (photo['expect_any'] as List).cast<String>();
-          final dish =
-              names
+          final item =
+              items
                   .where(
-                    (n) => expected.any((w) => n.toLowerCase().contains(w)),
+                    (i) =>
+                        expected.any((w) => i.query.toLowerCase().contains(w)),
                   )
                   .firstOrNull ??
-              names.firstOrNull;
-          if (dish == null) continue;
+              items.firstOrNull;
+          if (item == null) continue;
+          final dish = item.query;
           final recipe = _photographed[photo['id']];
           final found = recipeFor(dish);
           if (recipe != null) {
@@ -193,19 +203,26 @@ void main() {
           final total = _Totals();
           final unmatched = <String>[];
           try {
-            final reply = await api.requestItems(
-              content: MealTextContent(BreakDownDishUseCase.contentFor(dish)),
-              system: BreakDownDishUseCase.systemPrompt,
+            // A photo's count is the row's stated amount (statedAmount).
+            final broken = await breakDown(
+              dish,
+              amount: switch (item.quantity) {
+                null => null,
+                final q when q == q.roundToDouble() => '${q.round()}',
+                final q => '$q',
+              },
+              photo: mealPhoto,
             );
-            for (final item in reply.items) {
-              final row = await tableMatch(foods, item.query);
-              final n = row?.nutriments;
-              rows[item.query] = row?.name ?? '*none*';
-              if (n == null || item.quantity == null) {
-                unmatched.add(item.query);
+            for (final ingredient in broken!.ingredients) {
+              final query = ingredient.parsed.query;
+              final quantity = ingredient.parsed.quantity;
+              final n = ingredient.selected?.nutriments;
+              rows[query] = ingredient.selected?.name ?? '*none*';
+              if (n == null || quantity == null) {
+                unmatched.add(query);
                 continue;
               }
-              total.add(n, item.quantity!);
+              total.add(n, quantity);
             }
           } on MealInterpreterException {
             waiting++;

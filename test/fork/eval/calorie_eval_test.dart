@@ -89,13 +89,14 @@ void main() {
           final label = ((photo['per_serving'] as Map)['kcal'] as num)
               .toDouble();
           for (final note in [null, ?photo['user_note'] as String?]) {
+            final mealPhoto = MealPhoto(
+              bytes: file.readAsBytesSync(),
+              mediaType: 'image/jpeg',
+            );
             final bloc = evalBulkAddBloc(api, resolver);
             bloc.add(
               ReadMealPhotoEvent(
-                photo: MealPhoto(
-                  bytes: file.readAsBytesSync(),
-                  mediaType: 'image/jpeg',
-                ),
+                photo: mealPhoto,
                 usesImperialUnits: false,
                 localeCode: 'en',
                 note: note,
@@ -111,7 +112,13 @@ void main() {
               waiting++;
               continue;
             }
-            final logged = await loggedKcal(state, api, foods);
+            final logged = await loggedKcal(
+              state,
+              api,
+              foods,
+              resolver,
+              photo: mealPhoto,
+            );
             if (logged == null) {
               waiting++;
               continue;

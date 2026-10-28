@@ -241,7 +241,7 @@ void main() {
           waiting++;
           continue;
         }
-        final logged = await loggedKcal(state, api, foods);
+        final logged = await loggedKcal(state, api, foods, resolver);
         if (logged == null) {
           waiting++;
           continue;

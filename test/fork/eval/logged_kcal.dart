@@ -4,12 +4,15 @@ import 'package:opennutritracker/core/utils/ai_credential_storage.dart';
 import 'package:opennutritracker/features/add_meal/data/model_meal_photo_interpreter.dart';
 import 'package:opennutritracker/features/add_meal/data/model_meal_text_interpreter.dart';
 import 'package:opennutritracker/features/add_meal/domain/meal_items_api.dart';
+import 'package:opennutritracker/features/add_meal/domain/meal_photo_interpreter.dart';
 import 'package:opennutritracker/features/add_meal/domain/usecase/read_meal_photo_usecase.dart';
 import 'package:opennutritracker/features/add_meal/domain/usecase/read_meal_text_usecase.dart';
 import 'package:opennutritracker/features/add_meal/domain/usecase/resolve_parsed_meals_usecase.dart';
 import 'package:opennutritracker/features/add_meal/presentation/bloc/bulk_add_bloc.dart';
 import 'package:opennutritracker/features/meal_detail/util/meal_quantity_converter.dart';
 import 'package:opennutritracker/fork/dish/break_down_dish_usecase.dart';
+import 'package:opennutritracker/fork/dish/dish_breakdown_controller.dart';
+import 'package:opennutritracker/fork/dish/dish_breakdown_rows.dart';
 import 'package:opennutritracker/fork/food/local_food_data_source.dart';
 
 import 'eval_model.dart';
@@ -43,28 +46,57 @@ Future<BulkAddState> settled(BulkAddBloc bloc) => bloc.stream
 typedef Logged = ({double kcal, int guessed, List<String> cells});
 
 /// [state]'s rows in kcal, each at the amount the screen starts it at. A
-/// dish the table does not have is broken down (D9) into one serving, as
-/// the app does, whatever count the model gave the dish. Null while a
+/// dish the table does not have is broken down (D9) as the app's
+/// `DishBreakdownController` does it: for the amount the row states, with
+/// [photo] when the row was read off it, and swapped for its ingredient
+/// rows by the bloc's own `replaceRowWithBreakdown`. Null while a
 /// breakdown's answer is not in yet.
 Future<Logged?> loggedKcal(
   BulkAddLoadedState state,
   MealItemsApi api,
   LocalFoodDataSource foods,
-) async {
+  ResolveParsedMealsUseCase resolver, {
+  MealPhoto? photo,
+}) async {
+  final breakDown = evalBreakDown(api, resolver);
+  // The dish each breakdown replaced, with the amount it was asked for.
+  final dishes = <Object, String>{};
+  for (final row in [...state.rows]) {
+    if (row.meal != null) continue;
+    final dish = row.resolved.parsed;
+    final amount = statedAmount(row);
+    final DishBreakdown? broken;
+    try {
+      broken = await breakDown(
+        dish.query,
+        amount: amount,
+        photo: row.fromPhoto ? photo : null,
+      );
+    } on MealInterpreterException {
+      return null;
+    }
+    final next = replaceRowWithBreakdown(
+      state,
+      ReplaceRowWithBreakdownEvent(row.resolved, broken!),
+    );
+    if (identical(next, state)) continue;
+    state = next;
+    final group = state.rows
+        .map((r) => r.dishIngredient?.group)
+        .firstWhere((g) => g != null && !dishes.containsKey(g));
+    dishes[group!] = '${amount == null ? '' : '$amount '}${dish.query}';
+  }
+
   var kcal = 0.0;
   var guessed = 0;
   final cells = <String>[];
+  final dishKcal = <Object, double>{};
   for (final row in state.rows) {
     final meal = row.meal;
+    // A dish the model returned nothing for: the app keeps the row, which
+    // logs nothing until the user picks a food.
     if (meal == null) {
-      final dish = row.resolved.parsed;
-      final broken = await _breakDown(api, foods, dish.query);
-      if (broken == null) return null;
-      kcal += broken;
-      cells.add(
-        '${dish.quantity == null ? '' : '${_n(dish.quantity!)}× '}'
-        '${dish.query} → breakdown ${broken.round()}',
-      );
+      cells.add('${row.resolved.parsed.query} → no breakdown 0');
       continue;
     }
     final amount = double.tryParse(row.amountText.replaceAll(',', '.')) ?? 0;
@@ -74,38 +106,40 @@ Future<Logged?> loggedKcal(
         (row.resolved.parsed.quantity == null && meal.servingQuantity == null);
     if (isGuess) guessed++;
     kcal += rowKcal;
+    if (row.dishIngredient case final ingredient?) {
+      dishKcal.update(
+        ingredient.group,
+        (k) => k + rowKcal,
+        ifAbsent: () => rowKcal,
+      );
+      continue;
+    }
     cells.add(
       '${row.resolved.parsed.query} → ${meal.name} '
       '${_n(amount)} ${row.effectiveUnit.split('.').last}'
       '${isGuess ? ' (guess)' : ''} ${rowKcal.round()}',
     );
   }
+  for (final MapEntry(key: group, value: dish) in dishes.entries) {
+    cells.add('$dish → breakdown ${(dishKcal[group] ?? 0).round()}');
+  }
   return (kcal: kcal, guessed: guessed, cells: cells);
 }
 
-/// One serving of [dish] broken down by the fork's prompt, in kcal, or null
-/// while the answer is not in yet.
-Future<double?> _breakDown(
-  MealItemsApi api,
-  LocalFoodDataSource foods,
-  String dish,
-) async {
-  try {
-    final reply = await api.requestItems(
-      content: MealTextContent(BreakDownDishUseCase.contentFor(dish)),
-      system: BreakDownDishUseCase.systemPrompt,
-    );
-    var kcal = 0.0;
-    for (final item in reply.items) {
-      final row = await tableMatch(foods, item.query);
-      final per100 = row?.nutriments.energyKcal100;
-      if (per100 == null || item.quantity == null) continue;
-      kcal += per100 * item.quantity! / 100;
-    }
-    return kcal;
-  } on MealInterpreterException {
-    return null;
-  }
+/// The app's breakdown (`BreakDownDishUseCase`) on [api] and [resolver],
+/// with a model always configured.
+BreakDown evalBreakDown(MealItemsApi api, ResolveParsedMealsUseCase resolver) =>
+    BreakDownDishUseCase(_Configured(), (_) => api, resolver).call;
+
+/// Credentials that always name a model: [evalBreakDown]'s api ignores
+/// which.
+class _Configured implements AiCredentialStorage {
+  @override
+  Future<AiSelection?> readSelection() async =>
+      const AiSelection(provider: AiProvider.anthropic, apiKey: 'eval');
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
 String _n(double v) =>
