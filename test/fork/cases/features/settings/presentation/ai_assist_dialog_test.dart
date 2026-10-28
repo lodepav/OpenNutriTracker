@@ -187,6 +187,23 @@ void main() {
     expect(find.textContaining(l10nEn.aiAssistModelRecommendedLabel), findsOne);
   });
 
+  testWidgets('each OpenRouter row shows its eval rating and price tier', (
+    tester,
+  ) async {
+    // S174: the words the phase 4 live eval earned each listed model.
+    await storage.setActiveProvider(AiProvider.openrouter);
+    await tester.pumpWidget(_app(storage));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Best accuracy · High cost'), findsOne);
+    expect(
+      find.textContaining('Good accuracy · Low cost'),
+      findsNWidgets(2),
+      reason: 'Haiku 5.5 and GPT-6 luna',
+    );
+    expect(find.textContaining('Good accuracy · Medium cost'), findsOne);
+  });
+
   /// The model rows, and the paragraph each one actually painted.
   List<(String, RenderParagraph)> modelTitles(WidgetTester tester) => tester
       .widgetList<RadioListTile<String>>(find.byType(RadioListTile<String>))

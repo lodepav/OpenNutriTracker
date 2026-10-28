@@ -11,6 +11,9 @@ import 'package:opennutritracker/features/add_meal/domain/usecase/probe_ai_endpo
 import 'package:opennutritracker/features/add_meal/domain/usecase/run_ai_endpoint_probe_usecase.dart';
 import 'package:opennutritracker/features/settings/presentation/widgets/ai_consent_screen.dart';
 import 'package:opennutritracker/generated/l10n.dart';
+// [fork] S174 model-ratings
+import 'package:opennutritracker/fork/ai/model_ratings.dart';
+// [/fork]
 
 /// Where the user chooses a provider, supplies a key for it, picks a model,
 /// and pauses or removes any of it.
@@ -1211,6 +1214,13 @@ class _AiAssistDialogState extends State<AiAssistDialog> {
   static String _shownId(String id) => id.substring(id.indexOf('/') + 1);
   // [/fork]
 
+  // [fork] S174 model-ratings: the eval's rating and price tier, in words
+  String _rating(AiModel model) => switch (modelRatings[model.id]) {
+    final rating? => '\n$rating',
+    null => '',
+  };
+  // [/fork]
+
   String _noteLabel(S s, AiModelNote note) => switch (note) {
     AiModelNote.cheaper => s.aiAssistModelCheaperLabel,
     AiModelNote.moreItems => s.aiAssistModelMoreItemsLabel,
@@ -1579,7 +1589,10 @@ class _AiAssistDialogState extends State<AiAssistDialog> {
             padding: const EdgeInsets.only(bottom: 4),
             child: Text(
               '${models.single.id} — '
-              '${s.aiAssistServedByLabel(models.single.servedBy)}',
+              '${s.aiAssistServedByLabel(models.single.servedBy)}'
+              // [fork] S174 model-ratings
+              '${_rating(models.single)}',
+              // [/fork]
               style: theme.textTheme.bodyMedium,
             ),
           )
@@ -1637,7 +1650,10 @@ class _AiAssistDialogState extends State<AiAssistDialog> {
                       s.aiAssistModelRecommendedLabel
                     else if (model.note case final note?)
                       _noteLabel(s, note),
-                  ].join(' · '),
+                  ].join(' · ') +
+                  // [fork] S174 model-ratings
+                  _rating(model),
+                  // [/fork]
                   style: theme.textTheme.bodySmall,
                 ),
                 value: model.id,
