@@ -25,10 +25,11 @@ class EvalModels {
 
   /// `FORK_EVAL_MODELS=screen`: the latest cheap model from each Chinese
   /// vendor whose first-party endpoint the app could route to, against
-  /// Haiku 5.5 (2026-10-28).
+  /// Haiku 5.5 (2026-10-28), and Qwen 3.7 Flash, the cheapest capable one.
   /// Below Haiku 5.5 is not recommended; above it is noted.
   static const _screenModels =
       'qwen/qwen3.8-flash@alibaba#auto,'
+      'qwen/qwen3.7-flash@alibaba#auto,'
       'bytedance-seed/seed-2.0-mini@seed#auto,'
       'z-ai/glm-5.3-flash@z-ai#auto';
   // Not deepseek/deepseek-v4.1-flash-1017: its first-party endpoint trains
