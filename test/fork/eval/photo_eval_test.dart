@@ -42,13 +42,16 @@ void main() {
       jsonDecode(File('fork/eval/photos.json').readAsStringSync()) as Map;
   final photos = (manifest['photos'] as List).cast<Map<String, dynamic>>();
   final runDir = evalRunDir('');
-  final report = <String, List<_PhotoResult>>{};
+  // Keyed in spec order up front, since the vendors run side by side.
+  final report = <String, List<_PhotoResult>>{
+    for (final spec in models.specs) ...{spec: [], '$spec$_withNote': []},
+  };
 
   late LocalFoodDataSource foods;
   setUpAll(() async => foods = await loadFoodTable());
 
   tearDownAll(() {
-    if (report.isEmpty) return;
+    if (report.values.every((results) => results.isEmpty)) return;
     runDir.createSync(recursive: true);
     File('${runDir.path}/results.json').writeAsStringSync(
       const JsonEncoder.withIndent(' ').convert({
@@ -63,65 +66,83 @@ void main() {
     print('report: ${runDir.path}/report.md');
   });
 
-  for (final spec in models.specs) {
-    test(
-      spec,
-      () async {
-        final client = http.Client();
-        final interpreter = ModelMealPhotoInterpreter(models.api(spec, client));
-        final alone = report[spec] = [];
-        final noted = report['$spec$_withNote'] = [];
-        final runs = [
-          for (final photo in photos) (photo, null, alone),
-          for (final photo in photos)
-            if (photo['user_note'] != null)
-              (photo, photo['user_note'] as String, noted),
-        ];
-        for (final (photo, note, results) in runs) {
-          final read = note == null ? '${photo['id']}' : '${photo['id']}+note';
-          if (!models.runs(spec, read)) continue;
-          final file = File('$_photoDir/${photo['id']}.jpg');
-          if (!file.existsSync()) continue;
-          final watch = Stopwatch()..start();
-          try {
-            final parsed = await interpreter.interpret(
-              MealPhoto(bytes: file.readAsBytesSync(), mediaType: 'image/jpeg'),
-              localeCode: 'en',
-              note: note,
-            );
-            final items = <_Item>[];
-            for (final item in parsed.items) {
-              final top = await tableMatch(foods, item.query);
-              items.add(
-                _Item(
-                  item.query,
-                  item.quantity,
-                  item.portion,
-                  top?.name,
-                  top?.nutriments.energyKcal100,
-                ),
-              );
-            }
-            results.add(
-              _PhotoResult(photo, items, null, watch.elapsedMilliseconds),
-            );
-          } on MealInterpreterException catch (e) {
-            results.add(
-              _PhotoResult(photo, const [], '$e', watch.elapsedMilliseconds),
-            );
-          }
-        }
-        client.close();
-        models.reportWaiting(
-          spec,
-          [...alone, ...noted].where((r) => r.error != null).length,
+  Future<void> run(String spec) async {
+    // ignore: avoid_print
+    print('started: photo $spec');
+    final client = http.Client();
+    final interpreter = ModelMealPhotoInterpreter(models.api(spec, client));
+    final alone = report[spec]!;
+    final noted = report['$spec$_withNote']!;
+    final runs = [
+      for (final photo in photos) (photo, null, alone),
+      for (final photo in photos)
+        if (photo['user_note'] != null)
+          (photo, photo['user_note'] as String, noted),
+    ];
+    for (final (photo, note, results) in runs) {
+      final read = note == null ? '${photo['id']}' : '${photo['id']}+note';
+      if (!models.runs(spec, read)) continue;
+      final file = File('$_photoDir/${photo['id']}.jpg');
+      if (!file.existsSync()) continue;
+      final watch = Stopwatch()..start();
+      try {
+        final parsed = await interpreter.interpret(
+          MealPhoto(bytes: file.readAsBytesSync(), mediaType: 'image/jpeg'),
+          localeCode: 'en',
+          note: note,
         );
-      },
-      // A slow model's 97 reads can each take the app's full 20 s.
-      timeout: const Timeout(Duration(minutes: 60)),
-      skip: skip,
+        final items = <_Item>[];
+        for (final item in parsed.items) {
+          final top = await tableMatch(foods, item.query);
+          items.add(
+            _Item(
+              item.query,
+              item.quantity,
+              item.portion,
+              top?.name,
+              top?.nutriments.energyKcal100,
+            ),
+          );
+        }
+        results.add(
+          _PhotoResult(photo, items, null, watch.elapsedMilliseconds),
+        );
+      } on MealInterpreterException catch (e) {
+        results.add(
+          _PhotoResult(photo, const [], '$e', watch.elapsedMilliseconds),
+        );
+      }
+    }
+    client.close();
+    models.reportWaiting(
+      spec,
+      [...alone, ...noted].where((r) => r.error != null).length,
     );
+    // ignore: avoid_print
+    print('finished: photo $spec');
   }
+
+  test(
+    'photos, one call in flight per vendor',
+    () => Future.wait([
+      for (final group in models.groups)
+        () async {
+          for (final spec in group) {
+            try {
+              await run(spec);
+            } catch (e) {
+              // One model's crash leaves the other vendors' runs alone.
+              // ignore: avoid_print
+              print('failed: photo $spec: $e');
+            }
+          }
+        }(),
+    ]),
+    // The vendors run side by side, so this is the slowest vendor's share:
+    // four Mistral models' 97 reads, each up to the app's 20 s.
+    timeout: const Timeout(Duration(minutes: 180)),
+    skip: skip,
+  );
 }
 
 class _Item {

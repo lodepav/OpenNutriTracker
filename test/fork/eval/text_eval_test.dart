@@ -11,6 +11,7 @@
 //   FORK_EVAL_REPLAY=build/fork-eval/replay/haiku flutter test test/fork/eval
 //
 // The report is written to build/fork-eval/<time>-typed/report.md.
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -168,8 +169,9 @@ const _meals = <_Meal>[
 void main() {
   final models = EvalModels();
   final runDir = evalRunDir('-typed');
-  final out = StringBuffer();
-  final summary = StringBuffer(KcalScore.header);
+  // Per model, since the vendors run side by side; joined in spec order.
+  final outs = {for (final spec in models.specs) spec: StringBuffer()};
+  final summaries = {for (final spec in models.specs) spec: StringBuffer()};
 
   late LocalFoodDataSource foods;
   late ResolveParsedMealsUseCase resolver;
@@ -186,75 +188,102 @@ void main() {
   });
 
   tearDownAll(() {
-    if (out.isEmpty) return;
+    if (outs.values.every((out) => out.isEmpty)) return;
     runDir.createSync(recursive: true);
     File('${runDir.path}/report.md').writeAsStringSync(
       '# Typed meal to logged kcal, ${DateTime.now()}\n\n'
       'Off: |logged / reference - 1|. The references are worked out in '
       'text_eval_test.dart. A guessed amount is a row the screen starts at '
-      '100 g, or flags for the user to check.\n\n$summary$out',
+      '100 g, or flags for the user to check.\n\n${KcalScore.header}'
+      '${summaries.values.join()}${outs.values.join()}',
     );
     // ignore: avoid_print
     print('report: ${runDir.path}/report.md');
   });
 
-  for (final spec in models.specs) {
-    test(
-      spec,
-      () async {
-        final client = http.Client();
-        final api = models.api(spec, client);
-        var waiting = 0;
-        out
-          ..writeln('\n## $spec\n')
-          ..writeln('| Meal | Locale | Logged kcal | Reference | Rows |')
-          ..writeln('|---|---|---|---|---|');
-        final scores = {'en': KcalScore(), 'lv': KcalScore()};
+  Future<void> run(String spec) async {
+    final out = outs[spec]!;
+    final client = http.Client();
+    final api = models.api(spec, client);
+    var waiting = 0;
+    // ignore: avoid_print
+    print('started: typed $spec');
+    out
+      ..writeln('\n## $spec\n')
+      ..writeln('| Meal | Locale | Logged kcal | Reference | Rows |')
+      ..writeln('|---|---|---|---|---|');
+    final scores = {'en': KcalScore(), 'lv': KcalScore()};
 
-        for (final meal in _meals) {
-          for (final locale in ['en', if (meal.latvian) 'lv']) {
-            if (!models.runs(spec, '$locale|${meal.text}')) continue;
-            final bloc = evalBulkAddBloc(api, resolver);
-            bloc.add(
-              ParseBulkTextEvent(
-                text: meal.text,
-                usesImperialUnits: false,
-                localeCode: locale,
-              ),
-            );
-            final state = await settled(bloc);
-            await bloc.close();
-            // A model read that failed falls back to upstream's parser; that
-            // is a request still waiting for its answer here.
-            if (state is! BulkAddLoadedState ||
-                state.source != BulkAddReadSource.model) {
-              waiting++;
-              continue;
-            }
-            final logged = await loggedKcal(state, api, foods);
-            if (logged == null) {
-              waiting++;
-              continue;
-            }
-            final (:kcal, :guessed, :cells) = logged;
-            scores[locale]!.add(kcal, meal.kcal, guessed);
-            out.writeln(
-              '| ${meal.text} | $locale | ${kcal.round()} '
-              '| ${meal.kcal.round()} | ${cells.join('; ')} |',
-            );
-          }
+    for (final meal in _meals) {
+      for (final locale in ['en', if (meal.latvian) 'lv']) {
+        if (!models.runs(spec, '$locale|${meal.text}')) continue;
+        final bloc = evalBulkAddBloc(api, resolver);
+        bloc.add(
+          ParseBulkTextEvent(
+            text: meal.text,
+            usesImperialUnits: false,
+            localeCode: locale,
+          ),
+        );
+        final BulkAddState state;
+        try {
+          state = await settled(bloc);
+        } on TimeoutException {
+          waiting++;
+          continue;
+        } finally {
+          await bloc.close();
         }
-        for (final MapEntry(key: locale, value: score) in scores.entries) {
-          if (score.offs.isEmpty) continue;
-          summary.writeln(score.row('$spec, $locale'));
+        // A model read that failed falls back to upstream's parser; that
+        // is a request still waiting for its answer here.
+        if (state is! BulkAddLoadedState ||
+            state.source != BulkAddReadSource.model) {
+          waiting++;
+          continue;
         }
-        client.close();
-        models.reportWaiting(spec, waiting);
-      },
-      // A slow model's 37 reads, and their breakdowns, can each take the
-      // app's full 20 s.
-      timeout: const Timeout(Duration(minutes: 60)),
-      skip: models.skip,
-    );
+        final logged = await loggedKcal(state, api, foods);
+        if (logged == null) {
+          waiting++;
+          continue;
+        }
+        final (:kcal, :guessed, :cells) = logged;
+        scores[locale]!.add(kcal, meal.kcal, guessed);
+        out.writeln(
+          '| ${meal.text} | $locale | ${kcal.round()} '
+          '| ${meal.kcal.round()} | ${cells.join('; ')} |',
+        );
+      }
+    }
+    for (final MapEntry(key: locale, value: score) in scores.entries) {
+      if (score.offs.isEmpty) continue;
+      summaries[spec]!.writeln(score.row('$spec, $locale'));
+    }
+    client.close();
+    models.reportWaiting(spec, waiting);
+    // ignore: avoid_print
+    print('finished: typed $spec');
   }
+
+  test(
+    'typed meals, one call in flight per vendor',
+    () => Future.wait([
+      for (final group in models.groups)
+        () async {
+          for (final spec in group) {
+            try {
+              await run(spec);
+            } catch (e) {
+              // One model's crash leaves the other vendors' runs alone.
+              // ignore: avoid_print
+              print('failed: typed $spec: $e');
+            }
+          }
+        }(),
+    ]),
+    // The vendors run side by side, so this is the slowest vendor's share:
+    // four Mistral models' 37 reads, each up to the app's 20 s and more
+    // for a breakdown.
+    timeout: const Timeout(Duration(minutes: 180)),
+    skip: models.skip,
+  );
 }

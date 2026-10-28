@@ -85,6 +85,18 @@ class EvalModels {
           null => _defaultModels,
         }.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toList();
 
+  /// [specs] by the vendor that serves them (the pin before any `/`), in
+  /// order. A live run takes the groups side by side, one call in flight per
+  /// vendor, so no vendor is sent more at once than a one-model run sends it.
+  List<List<String>> get groups {
+    final byVendor = <String, List<String>>{};
+    for (final spec in specs) {
+      final pin = spec.split('#').first.split('@').skip(1).firstOrNull;
+      byVendor.putIfAbsent(pin?.split('/').first ?? spec, () => []).add(spec);
+    }
+    return byVendor.values.toList();
+  }
+
   MealItemsApi api(String spec, http.Client client) {
     if (spec.startsWith('replay:')) {
       final dir = replays.firstWhere(
