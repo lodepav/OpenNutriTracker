@@ -25,7 +25,8 @@ class EvalModels {
 
   /// `FORK_EVAL_MODELS=screen`: the latest cheap model from each Chinese
   /// vendor whose first-party endpoint the app could route to, against
-  /// Haiku 5.5 (2026-10-28), and Qwen 3.7 Flash, the cheapest capable one.
+  /// Haiku 5.5 (2026-10-28), and Qwen 3.7 Flash, the cheapest capable one;
+  /// then Mistral's three cheap vision models.
   /// Below Haiku 5.5 is not recommended; above it is noted.
   static const _screenModels =
       'qwen/qwen3.8-flash@alibaba#auto,'
@@ -33,7 +34,12 @@ class EvalModels {
       'bytedance-seed/seed-2.0-mini@seed#auto,'
       'z-ai/glm-5.3-flash@z-ai#auto,'
       'xiaomi/mimo-v2.6-flash@xiaomi#auto,'
-      'minimax/minimax-m3.1-flash@minimax#auto';
+      'minimax/minimax-m3.1-flash@minimax#auto,'
+      // Mistral, pinned to its zero-data-retention endpoint, which settles
+      // whether OpenRouter's Mistral account trains on the traffic.
+      'mistralai/ministral-14b-2512@mistral/zdr,'
+      'mistralai/ministral-8b-2512@mistral/zdr,'
+      'mistralai/mistral-small-2603@mistral/zdr';
   // Not deepseek/deepseek-v4.1-flash-1017: its first-party endpoint trains
   // on paid traffic, so the app's `data_collection: deny` gets a 404.
 
