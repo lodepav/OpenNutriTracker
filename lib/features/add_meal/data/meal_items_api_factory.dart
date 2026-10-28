@@ -6,6 +6,9 @@ import 'package:opennutritracker/features/add_meal/data/anthropic_meal_items_api
 import 'package:opennutritracker/features/add_meal/data/openai_meal_items_api.dart';
 import 'package:opennutritracker/features/add_meal/data/openai_compatible_meal_items_api.dart';
 import 'package:opennutritracker/features/add_meal/domain/meal_items_api.dart';
+// [fork] S171 rate-limit-retry
+import 'package:opennutritracker/fork/ai/rate_limit_retry_client.dart';
+// [/fork]
 
 /// Turns a stored selection into the client that will carry it.
 ///
@@ -66,6 +69,9 @@ MealItemsApi mealItemsApiFor(
   AiSelection selection, {
   Duration? timeout,
 }) {
+  // [fork] S171 rate-limit-retry: a 429 is asked once more, a moment later.
+  client = RateLimitRetryClient(client);
+  // [/fork]
   final model = AiModelCatalogue.resolve(selection.provider, selection.modelId);
   final modelId = model?.id ?? selection.modelId;
   if (modelId == null) {
