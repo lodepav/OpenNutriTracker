@@ -21,9 +21,12 @@ import 'package:opennutritracker/fork/food/local_food_data_source.dart';
 /// key with `model@provider` specs. `#auto` after a spec asks for the tool
 /// call unforced, for a model whose endpoints take no forced one.
 class EvalModels {
+  /// The app's OpenRouter list (AiModelCatalogue.openrouter).
   static const _defaultModels =
       'anthropic/claude-haiku-5.5@anthropic,'
-      'openai/gpt-5.6-luna@openai';
+      'anthropic/claude-sonnet-5.5@anthropic,'
+      'openai/gpt-6-luna@openai,'
+      'openai/gpt-6.1-terra@openai';
 
   /// `FORK_EVAL_MODELS=screen`: the latest cheap model from each Chinese
   /// vendor whose first-party endpoint the app could route to, against
