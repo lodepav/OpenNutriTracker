@@ -28,7 +28,8 @@ BulkAddBloc evalBulkAddBloc(
   );
 }
 
-/// The state [bloc] settles on after a read, within 30 seconds.
+/// The state [bloc] settles on after a read, within 100 seconds: past the
+/// eval client's own 90, so a slow model fails as the client says.
 Future<BulkAddState> settled(BulkAddBloc bloc) => bloc.stream
     .firstWhere(
       (s) =>
@@ -36,7 +37,7 @@ Future<BulkAddState> settled(BulkAddBloc bloc) => bloc.stream
           s is BulkAddErrorState ||
           s is BulkAddPhotoErrorState,
     )
-    .timeout(const Duration(seconds: 30));
+    .timeout(const Duration(seconds: 100));
 
 /// The rows of a read as a user who accepts them would log them.
 typedef Logged = ({double kcal, int guessed, List<String> cells});

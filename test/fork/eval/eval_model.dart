@@ -95,11 +95,16 @@ class EvalModels {
     );
   }
 
-  /// Says how many requests still wait for the subagent, in replay mode.
+  /// Says how many requests still wait for the subagent in replay mode, or
+  /// how many reads failed in a live run.
   void reportWaiting(String spec, int waiting) {
-    if (!spec.startsWith('replay:') || waiting == 0) return;
+    if (waiting == 0) return;
     // ignore: avoid_print
-    print('$spec: $waiting requests have no answer yet');
+    print(
+      spec.startsWith('replay:')
+          ? '$spec: $waiting requests have no answer yet'
+          : '$spec: $waiting reads failed (error, timeout or no model read)',
+    );
   }
 }
 
