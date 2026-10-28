@@ -32,7 +32,8 @@ class EvalModels {
       'qwen/qwen3.7-flash@alibaba#auto,'
       'bytedance-seed/seed-2.0-mini@seed#auto,'
       'z-ai/glm-5.3-flash@z-ai#auto,'
-      'xiaomi/mimo-v2.6-flash@xiaomi#auto';
+      'xiaomi/mimo-v2.6-flash@xiaomi#auto,'
+      'minimax/minimax-m3.1-flash@minimax#auto';
   // Not deepseek/deepseek-v4.1-flash-1017: its first-party endpoint trains
   // on paid traffic, so the app's `data_collection: deny` gets a 404.
 
