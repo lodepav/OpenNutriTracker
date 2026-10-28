@@ -571,7 +571,7 @@ pizza and everyday (5). Each entry records the words a correct answer contains, 
 count where countable, and, where the photo shows a known amount, the servings shown.
 `fork/tools/fetch_eval_photos.py` downloads the photos into `build/` (they are the sites',
 not ours). `FORK_EVAL_OPENROUTER_KEY=... flutter test test/fork/eval` runs upstream's photo
-path unchanged for each model (`FORK_EVAL_MODELS`, default Haiku 5.5, Haiku 4.5, luna) and
+path unchanged for each model (`FORK_EVAL_MODELS`, default Haiku 5.5 and luna) and
 looks every name up in the bundled table. It writes `build/fork-eval/<time>/report.md`, with
 the dish named, the count right, and names with no table match (phase 1c's job). Upstream's
 photo path returns names and counts, not grams, so photos are scored on those. The recipe

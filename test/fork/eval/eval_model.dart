@@ -20,7 +20,6 @@ import 'package:opennutritracker/fork/food/local_food_data_source.dart';
 class EvalModels {
   static const _defaultModels =
       'anthropic/claude-haiku-5.5@anthropic,'
-      'anthropic/claude-haiku-4.5@anthropic,'
       'openai/gpt-5.6-luna@openai';
 
   final String key = Platform.environment['FORK_EVAL_OPENROUTER_KEY'] ?? '';
