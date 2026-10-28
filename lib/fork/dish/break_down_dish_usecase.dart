@@ -1,9 +1,12 @@
+import 'dart:convert';
+
 import 'package:http/http.dart' as http;
 import 'package:opennutritracker/core/utils/ai_credential_storage.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/features/add_meal/data/meal_items_api_factory.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dart';
 import 'package:opennutritracker/features/add_meal/domain/meal_items_api.dart';
+import 'package:opennutritracker/features/add_meal/domain/meal_photo_interpreter.dart';
 import 'package:opennutritracker/features/add_meal/domain/usecase/resolve_parsed_meals_usecase.dart';
 
 /// One serving of a dish, as ingredients matched against the food table.
@@ -23,7 +26,10 @@ class DishBreakdown {
 /// model still returns names and amounts, never nutrients. The one
 /// deviation is that it is asked for gram amounts nobody stated: upstream's
 /// photo path refuses to estimate grams (#250), and this is the fork-only,
-/// marked exception D12 makes for dishes with no table row.
+/// marked exception D12 makes for dishes with no table row. With the
+/// photo the dish was read from, the grams are sized to the plate shown,
+/// which the eval found mattered most: a typical serving runs low on a big
+/// plate.
 class BreakDownDishUseCase {
   final AiCredentialStorage _credentials;
   final MealItemsApi Function(AiSelection selection) _apiFor;
@@ -56,23 +62,50 @@ Rules:
   biezpiens -> "quark", speķis -> "pork bacon".
 - Every entry has "quantity" in grams with "unit" "g". A liquid may use "ml".
   Never leave the amount out, never use "portion".
+- An amount given is the whole of what was eaten: weigh the ingredients
+  for it. A bare count is pieces, or servings of a dish not eaten in
+  pieces.
+- With a photo, break down only the named dish, sized to the portion the
+  photo shows; leave out the other foods on the plate.
 - If the input is not a dish or food, return an empty list.''';
 
   /// The text the model is given. It has to state a unit: every client
   /// drops a unit the text it was given does not state (#977,
   /// `validateParsedMealItems`), which would turn the grams into bare
   /// counts. "e.g. 100 g" is what makes `textStatesAUnit` see one.
-  static String contentFor(String dish) =>
-      'Dish: ${dish.trim()}. One serving; amounts in grams, e.g. 100 g';
+  /// [amount] is what the user stated ("500 ml", "3"); without one, one
+  /// serving, or the portion in the photo.
+  static String contentFor(String dish, {String? amount, bool photo = false}) {
+    final size = amount != null
+        ? 'Amount: $amount'
+        : photo
+        ? 'The portion in the photo'
+        : 'One serving';
+    return 'Dish: ${dish.trim()}. $size; amounts in grams, e.g. 100 g';
+  }
 
   /// Null when no model is configured. Raises [MealInterpreterException]
   /// when the model could not answer; unlike the text path there is no
   /// parser to fall back to.
-  Future<DishBreakdown?> call(String dish) async {
+  Future<DishBreakdown?> call(
+    String dish, {
+    String? amount,
+    MealPhoto? photo,
+  }) async {
     final selection = await _credentials.readSelection();
     if (selection == null) return null;
+    final text = contentFor(dish, amount: amount, photo: photo != null);
     final reply = await _apiFor(selection).requestItems(
-      content: MealTextContent(contentFor(dish)),
+      // The clients send a photo's note after "List the foods in this
+      // photo."; the system prompt narrows that to the dish. A photo keeps
+      // the reply's units (only text is checked for one, #977).
+      content: photo == null
+          ? MealTextContent(text)
+          : MealPhotoContent(
+              mediaType: photo.mediaType,
+              base64Data: base64Encode(photo.bytes),
+              note: text,
+            ),
       system: systemPrompt,
     );
     final resolved = await _resolver.resolve(reply.items);

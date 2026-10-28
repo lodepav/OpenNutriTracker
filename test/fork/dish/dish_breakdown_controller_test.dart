@@ -1,9 +1,10 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_nutriments_entity.dart';
-import 'package:opennutritracker/features/add_meal/domain/meal_items_api.dart';
+import 'package:opennutritracker/features/add_meal/domain/meal_photo_interpreter.dart';
 import 'package:opennutritracker/features/add_meal/domain/usecase/read_meal_photo_usecase.dart';
 import 'package:opennutritracker/features/add_meal/domain/usecase/read_meal_text_usecase.dart';
 import 'package:opennutritracker/features/add_meal/domain/usecase/resolve_parsed_meals_usecase.dart';
@@ -80,15 +81,33 @@ class _ModelReader implements ReadMealTextUseCase {
 
 class _PhotoReader implements ReadMealPhotoUseCase {
   @override
+  Future<MealPhotoReadResult> read(
+    MealPhoto photo, {
+    String? localeCode,
+    String? note,
+  }) async => const MealPhotoRead(
+    MealTextParseResult(
+      items: [ParsedMealItem(query: 'pelmeni', quantity: 14)],
+      errors: [],
+    ),
+  );
+
+  @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
 void main() {
   late BulkAddBloc bloc;
   late List<String> asked;
+  late List<(String?, MealPhoto?)> sent;
 
-  Future<DishBreakdown?> breakDown(String dish) async {
+  Future<DishBreakdown?> breakDown(
+    String dish, {
+    String? amount,
+    MealPhoto? photo,
+  }) async {
     asked.add(dish);
+    sent.add((amount, photo));
     return DishBreakdown(
       dish,
       await _Resolver().resolve(const [
@@ -100,6 +119,7 @@ void main() {
 
   setUp(() {
     asked = [];
+    sent = [];
     bloc = BulkAddBloc(_Resolver(), _ModelReader(), _PhotoReader());
   });
   tearDown(() => bloc.close());
@@ -141,7 +161,7 @@ void main() {
     final gate = Completer<void>();
     final controller = DishBreakdownController(
       bloc,
-      breakDown: (dish) async {
+      breakDown: (dish, {amount, photo}) async {
         await gate.future;
         return breakDown(dish);
       },
@@ -158,6 +178,29 @@ void main() {
     expect(state.rows[0].skipped, isTrue);
     expect(state.rows[0].dishIngredient, isNull);
     expect(state.rows[0].willBeLogged, isFalse);
+    controller.dispose();
+  });
+
+  test('a stated count goes with the breakdown, and its recipe has as many '
+      'servings', () async {
+    final photo = MealPhoto(bytes: Uint8List(1), mediaType: 'image/webp');
+    final controller = DishBreakdownController(
+      bloc,
+      breakDown: breakDown,
+      modelConfigured: () async => true,
+      photo: () => photo,
+    );
+    bloc.add(const ParseBulkTextEvent(text: 'x', usesImperialUnits: false));
+    await settle();
+    // A typed read: the photo stays home.
+    expect(sent, [('1', null)]);
+
+    bloc.add(ReadMealPhotoEvent(photo: photo, usesImperialUnits: false));
+    final state = await settle();
+    expect(sent.last.$1, '14');
+    expect(sent.last.$2, same(photo));
+    final group = state.rows.first.dishIngredient!.group;
+    expect(recipeFromDishGroup(state.rows, group)!.servingsCount, 14);
     controller.dispose();
   });
 
@@ -195,7 +238,7 @@ void main() {
       'ingredient', () async {
     final controller = DishBreakdownController(
       bloc,
-      breakDown: (dish) async => null,
+      breakDown: (dish, {amount, photo}) async => null,
       modelConfigured: () async => true,
     );
     bloc.add(const ParseBulkTextEvent(text: 'x', usesImperialUnits: false));
@@ -209,7 +252,7 @@ void main() {
       'is', () async {
     final controller = DishBreakdownController(
       bloc,
-      breakDown: (dish) async => null,
+      breakDown: (dish, {amount, photo}) async => null,
       modelConfigured: () async => true,
     );
     await pumpEventQueue();
@@ -236,7 +279,8 @@ void main() {
   test('a failed call leaves the row and reports it', () async {
     final controller = DishBreakdownController(
       bloc,
-      breakDown: (dish) async => throw const MealInterpreterException('down'),
+      breakDown: (dish, {amount, photo}) async =>
+          throw const MealInterpreterException('down'),
       modelConfigured: () async => true,
     );
     bloc.add(const ParseBulkTextEvent(text: 'x', usesImperialUnits: false));
@@ -296,5 +340,82 @@ void main() {
     state = await settle();
     expect(recipeFromDishGroup(state.rows, group), isNull);
     controller.dispose();
+  });
+
+  group('statedAmount', () {
+    BulkAddRow row(
+      ParsedMealItem parsed, {
+      String amountText = '100',
+      String unit = 'g/ml',
+      bool edited = false,
+      bool unitChosen = false,
+    }) => BulkAddRow(
+      resolved: ResolvedMealItem(
+        parsed: parsed,
+        candidates: const [],
+        selectedIndex: 0,
+        confidence: 0,
+      ),
+      selectedIndex: 0,
+      amountText: amountText,
+      unit: unit,
+      amountEditedByUser: edited,
+      unitChosenByUser: unitChosen,
+    );
+
+    test('nothing stated: none, not the 100 g default', () {
+      expect(statedAmount(row(const ParsedMealItem(query: 'borscht'))), isNull);
+    });
+
+    test('a stated amount keeps its unit; a bare count stays a count', () {
+      expect(
+        statedAmount(
+          row(
+            const ParsedMealItem(query: 'kefir', quantity: 500, unit: 'ml'),
+            amountText: '500',
+            unit: 'ml',
+          ),
+        ),
+        '500 ml',
+      );
+      final eggs = row(
+        const ParsedMealItem(query: 'olas', quantity: 3),
+        amountText: '3',
+      );
+      expect(statedAmount(eggs), '3');
+      expect(statedCount(eggs), 3);
+      // Retyped, a count is still a count.
+      expect(
+        statedAmount(
+          row(
+            const ParsedMealItem(query: 'olas', quantity: 3),
+            amountText: '4',
+            edited: true,
+          ),
+        ),
+        '4',
+      );
+    });
+
+    test('typed over the default, the number is in the unit shown', () {
+      final typed = row(
+        const ParsedMealItem(query: 'plov'),
+        amountText: '350,5',
+        edited: true,
+      );
+      expect(statedAmount(typed), '350.5 g');
+      expect(statedCount(typed), isNull);
+      expect(
+        statedAmount(
+          row(
+            const ParsedMealItem(query: 'plov', quantity: 2),
+            amountText: '2',
+            unit: 'serving#1',
+            unitChosen: true,
+          ),
+        ),
+        '2 servings',
+      );
+    });
   });
 }

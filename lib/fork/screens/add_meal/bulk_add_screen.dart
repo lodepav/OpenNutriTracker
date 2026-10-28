@@ -140,10 +140,11 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
   }
 
   // runs breakdowns and marks the rows (D12)
-  late final _dishBreakdown = DishBreakdownController(_bloc)
-    ..addListener(() {
-      if (mounted) setState(() {});
-    });
+  late final _dishBreakdown =
+      DishBreakdownController(_bloc, photo: () => _forkMealPhoto)
+        ..addListener(() {
+          if (mounted) setState(() {});
+        });
 
   Future<void> _breakDown(BulkAddRow row) async {
     final outcome = await _dishBreakdown.breakDown(row);

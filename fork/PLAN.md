@@ -965,6 +965,16 @@ Commons photos of dishes from the user's log, the manifest kept with the labels 
   lasagna, and the frozen forms tie on the title. A homemade beef lasagna is a fork dish now,
   and a tie on score goes to a fork dish (S74); "vegetable lasagna" keeps its row.
 
+*Fixes after the published studies, 2026-10-28* (weighed-meal photo studies found portion size
+and misnamed dishes the largest errors, big plates running low):
+- **A breakdown weighs what was stated** (`statedAmount`, `lib/fork/dish/dish_breakdown_rows.dart`):
+  "kefir 500 ml" is asked for as 500 ml, "3 olas" as three, an amount typed over the 100 g
+  default in the unit shown. A stated count saves its recipe with that many servings.
+- **A photo row's breakdown goes with the photo** and is sized to the portion shown, not a typical
+  serving (D12's exception to #250, widened).
+- The eval's scores move with these: the Haiku 5.5 baseline needs a rerun before models are
+  compared against it.
+
 Still needs the user: the leftovers photo check, typing and photographing their own
 khachapuri, pelmeni and grey peas, and ten of their own meals (photos we do not have).
 

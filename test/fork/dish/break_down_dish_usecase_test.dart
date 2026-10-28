@@ -1,8 +1,11 @@
+import 'dart:typed_data';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:opennutritracker/core/utils/ai_credential_storage.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_nutriments_entity.dart';
 import 'package:opennutritracker/features/add_meal/domain/meal_items_api.dart';
+import 'package:opennutritracker/features/add_meal/domain/meal_photo_interpreter.dart';
 import 'package:opennutritracker/features/add_meal/domain/usecase/resolve_parsed_meals_usecase.dart';
 import 'package:opennutritracker/features/add_meal/util/meal_text_parser.dart';
 import 'package:opennutritracker/fork/dish/break_down_dish_usecase.dart';
@@ -104,12 +107,49 @@ void main() {
       'pizza 4 cheeses',
       '',
     ]) {
-      expect(
-        textStatesAUnit(BreakDownDishUseCase.contentFor(dish)),
-        isTrue,
-        reason: dish,
-      );
+      for (final text in [
+        BreakDownDishUseCase.contentFor(dish),
+        BreakDownDishUseCase.contentFor(dish, amount: '3'),
+        BreakDownDishUseCase.contentFor(dish, photo: true),
+      ]) {
+        expect(textStatesAUnit(text), isTrue, reason: text);
+      }
     }
+  });
+
+  test('a stated amount is what the breakdown weighs for', () async {
+    final api = _Api(reply);
+    await BreakDownDishUseCase(
+      _Credentials(selection),
+      (_) => api,
+      _Resolver(),
+    )('kefir', amount: '500 ml');
+    expect(
+      (api.content! as MealTextContent).text,
+      'Dish: kefir. Amount: 500 ml; amounts in grams, e.g. 100 g',
+    );
+  });
+
+  test('with the photo, the plate shown is sized and the grams kept', () async {
+    final api = _Api(reply);
+    final photo = MealPhoto(
+      bytes: Uint8List.fromList([1, 2, 3]),
+      mediaType: 'image/webp',
+    );
+    final breakdown = await BreakDownDishUseCase(
+      _Credentials(selection),
+      (_) => api,
+      _Resolver(),
+    )('plov', photo: photo);
+
+    final content = api.content! as MealPhotoContent;
+    expect(content.base64Data, 'AQID');
+    expect(content.mediaType, 'image/webp');
+    expect(
+      content.note,
+      'Dish: plov. The portion in the photo; amounts in grams, e.g. 100 g',
+    );
+    expect(breakdown!.ingredients.first.parsed.unit, 'g');
   });
 
   test('no model configured: no breakdown, nothing sent', () async {
