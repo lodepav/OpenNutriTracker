@@ -16,11 +16,23 @@ import 'package:opennutritracker/fork/food/local_food_data_source.dart';
 
 /// The models the eval tests run, from the environment: replay folders,
 /// comma-separated, one model each (fork/eval/REPLAY.md), or an OpenRouter
-/// key with `model@provider` specs.
+/// key with `model@provider` specs. `#auto` after a spec asks for the tool
+/// call unforced, for a model whose endpoints take no forced one.
 class EvalModels {
   static const _defaultModels =
       'anthropic/claude-haiku-5.5@anthropic,'
       'openai/gpt-5.6-luna@openai';
+
+  /// `FORK_EVAL_MODELS=screen`: the latest cheap model from each Chinese
+  /// vendor whose first-party endpoint the app could route to, against
+  /// Haiku 5.5 (2026-10-28).
+  /// Below Haiku 5.5 is not recommended; above it is noted.
+  static const _screenModels =
+      'qwen/qwen3.8-flash@alibaba#auto,'
+      'bytedance-seed/seed-2.0-mini@seed#auto,'
+      'z-ai/glm-5.3-flash@z-ai#auto';
+  // Not deepseek/deepseek-v4.1-flash-1017: its first-party endpoint trains
+  // on paid traffic, so the app's `data_collection: deny` gets a 404.
 
   final String key = Platform.environment['FORK_EVAL_OPENROUTER_KEY'] ?? '';
   final List<String> replays = (Platform.environment['FORK_EVAL_REPLAY'] ?? '')
@@ -37,11 +49,11 @@ class EvalModels {
 
   List<String> get specs => replays.isNotEmpty
       ? [for (final dir in replays) 'replay:${dir.split('/').last}']
-      : (Platform.environment['FORK_EVAL_MODELS'] ?? _defaultModels)
-            .split(',')
-            .map((s) => s.trim())
-            .where((s) => s.isNotEmpty)
-            .toList();
+      : switch (Platform.environment['FORK_EVAL_MODELS']) {
+          'screen' => _screenModels,
+          final models? => models,
+          null => _defaultModels,
+        }.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toList();
 
   MealItemsApi api(String spec, http.Client client) {
     if (spec.startsWith('replay:')) {
@@ -53,7 +65,8 @@ class EvalModels {
         () => 'replay',
       );
     }
-    final [model, ...rest] = spec.split('@');
+    final [route, ...flags] = spec.split('#');
+    final [model, ...rest] = route.split('@');
     final providers = rest.isEmpty || rest.first.isEmpty ? null : [rest.first];
     // The tool call the app asks this model for (S77); forced off the list.
     final listed = AiModelCatalogue.openrouter.where((m) => m.id == model);
@@ -63,7 +76,11 @@ class EvalModels {
       model: model,
       providers: providers,
       timeout: const Duration(seconds: 90),
-      toolCall: listed.isEmpty ? AiToolCall.forced : listed.first.toolCall,
+      toolCall: flags.contains('auto')
+          ? AiToolCall.auto
+          : listed.isEmpty
+          ? AiToolCall.forced
+          : listed.first.toolCall,
     );
   }
 
