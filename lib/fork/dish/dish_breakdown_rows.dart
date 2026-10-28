@@ -1,5 +1,6 @@
 import 'package:opennutritracker/features/add_meal/domain/usecase/resolve_parsed_meals_usecase.dart';
 import 'package:opennutritracker/features/add_meal/presentation/bloc/bulk_add_bloc.dart';
+import 'package:opennutritracker/features/add_meal/util/portion_unit.dart';
 import 'package:opennutritracker/features/add_meal/util/meal_text_parser.dart';
 import 'package:opennutritracker/fork/dish/break_down_dish_usecase.dart';
 
@@ -13,13 +14,46 @@ class DishIngredientItem extends ParsedMealItem {
   /// breakdowns of the same dish stay two groups.
   final Object group;
 
+  /// The servings the breakdown was asked for: a stated count of the dish
+  /// ("3 sklandrauši"), else one. Its recipe is saved with as many.
+  final int servings;
+
   const DishIngredientItem({
     required super.query,
     super.quantity,
     super.unit,
     required this.dish,
     required this.group,
+    this.servings = 1,
   });
+}
+
+/// The amount [row] states for its dish, as the breakdown is asked for it:
+/// "500 ml", "200 g", or a bare count "3". Null when nobody stated one, so
+/// the breakdown is one serving (or the portion in the photo), not the
+/// app's 100 g default.
+String? statedAmount(BulkAddRow row) {
+  final parsed = row.resolved.parsed;
+  if (parsed.quantity == null && !row.amountEditedByUser) return null;
+  final text = row.amountText.trim().replaceAll(',', '.');
+  final quantity = double.tryParse(text);
+  if (quantity == null || quantity <= 0) return null;
+  // Typed over the 100 g default, the number is in the unit shown; over a
+  // stated count, still a count unless the user picked a unit.
+  final unit = row.unitChosenByUser || parsed.quantity == null
+      ? row.unit
+      : parsed.unit;
+  if (unit == null) return text;
+  if (isPortionUnit(unit)) return '$text servings';
+  if (unit == 'g/ml') return '$text g';
+  return '$text $unit';
+}
+
+/// The whole count [statedAmount] states, or null for an amount in units.
+int? statedCount(BulkAddRow row) {
+  final amount = statedAmount(row);
+  final count = amount == null ? null : double.tryParse(amount);
+  return count != null && count == count.roundToDouble() ? count.toInt() : null;
 }
 
 extension DishIngredientRow on BulkAddRow {
@@ -62,6 +96,7 @@ BulkAddLoadedState replaceRowWithBreakdown(
   }
 
   final group = Object();
+  final servings = statedCount(state.rows[index]) ?? 1;
   final ingredients = [
     for (final item in event.breakdown.ingredients)
       _row(
@@ -72,6 +107,7 @@ BulkAddLoadedState replaceRowWithBreakdown(
             unit: item.parsed.unit,
             dish: event.breakdown.dish,
             group: group,
+            servings: servings,
           ),
           candidates: item.candidates,
           selectedIndex: item.selectedIndex,

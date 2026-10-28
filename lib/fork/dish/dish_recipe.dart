@@ -17,7 +17,8 @@ bool isFirstOfDishGroup(List<BulkAddRow> rows, int index) {
       (index == 0 || !identical(rows[index - 1].dishIngredient?.group, group));
 }
 
-/// An unsaved recipe of one serving from a breakdown group (phase 1c.4):
+/// An unsaved recipe from a breakdown group (phase 1c.4), of the servings
+/// it was asked for:
 /// the rows as they stand, edits included, each converted to grams the way
 /// bulk add's own save converts it. Skipped, unmatched and unreadable rows
 /// are left out. Null when nothing is left.
@@ -35,6 +36,7 @@ RecipeEntity? recipeFromDishGroup(List<BulkAddRow> rows, Object group) {
     members,
     name: _capitalized(members.first.dishIngredient!.dish),
     description: DishStrings.recipeDescription,
+    servings: members.first.dishIngredient!.servings,
   );
 }
 

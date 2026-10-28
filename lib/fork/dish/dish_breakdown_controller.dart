@@ -4,13 +4,20 @@ import 'package:flutter/foundation.dart';
 import 'package:logging/logging.dart';
 import 'package:opennutritracker/core/utils/ai_credential_storage.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
-import 'package:opennutritracker/features/add_meal/domain/meal_items_api.dart';
+import 'package:opennutritracker/features/add_meal/domain/meal_photo_interpreter.dart';
 import 'package:opennutritracker/features/add_meal/domain/usecase/resolve_parsed_meals_usecase.dart';
 import 'package:opennutritracker/features/add_meal/presentation/bloc/bulk_add_bloc.dart';
 import 'package:opennutritracker/fork/dish/break_down_dish_usecase.dart';
 import 'package:opennutritracker/fork/dish/dish_breakdown_rows.dart';
 
 enum DishBreakdownOutcome { replaced, empty, noModel, failed }
+
+typedef BreakDown =
+    Future<DishBreakdown?> Function(
+      String dish, {
+      String? amount,
+      MealPhoto? photo,
+    });
 
 /// Runs breakdowns for the review screen (phase 1c.2): automatically for a
 /// row the model named but nothing matched, and on demand for a doubtful
@@ -21,8 +28,9 @@ class DishBreakdownController extends ChangeNotifier {
   static final _log = Logger('DishBreakdownController');
 
   final BulkAddBloc _bloc;
-  final Future<DishBreakdown?> Function(String dish) _breakDown;
+  final BreakDown _breakDown;
   final Future<bool> Function() _modelConfigured;
+  final MealPhoto? Function() _photo;
   late final StreamSubscription<BulkAddState> _subscription;
 
   final _pending = Set<ResolvedMealItem>.identity();
@@ -31,11 +39,18 @@ class DishBreakdownController extends ChangeNotifier {
 
   DishBreakdownController(
     this._bloc, {
-    Future<DishBreakdown?> Function(String dish)? breakDown,
+    BreakDown? breakDown,
     Future<bool> Function()? modelConfigured,
+    MealPhoto? Function()? photo,
   }) : _breakDown =
-           breakDown ?? ((dish) => BreakDownDishUseCase.fromLocator()(dish)),
-       _modelConfigured = modelConfigured ?? _modelSelected {
+           breakDown ??
+           ((dish, {amount, photo}) => BreakDownDishUseCase.fromLocator()(
+             dish,
+             amount: amount,
+             photo: photo,
+           )),
+       _modelConfigured = modelConfigured ?? _modelSelected,
+       _photo = photo ?? (() => null) {
     _subscription = _bloc.stream.listen(_onState);
     _modelConfigured().then((ready) {
       if (_disposed) return;
@@ -70,7 +85,12 @@ class DishBreakdownController extends ChangeNotifier {
     _tried.add(target);
     notifyListeners();
     try {
-      final breakdown = await _breakDown(target.parsed.query);
+      final breakdown = await _breakDown(
+        target.parsed.query,
+        amount: statedAmount(row),
+        // The photo a row was read off, so the grams fit the plate shown.
+        photo: row.fromPhoto ? _photo() : null,
+      );
       if (breakdown == null) return DishBreakdownOutcome.noModel;
       if (breakdown.ingredients.isEmpty) return DishBreakdownOutcome.empty;
       if (!_bloc.isClosed) {
