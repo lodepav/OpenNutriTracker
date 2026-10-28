@@ -46,6 +46,18 @@ class EvalModels {
   // Not deepseek/deepseek-v4.1-flash-1017: its first-party endpoint trains
   // on paid traffic, so the app's `data_collection: deny` gets a 404.
 
+  /// `FORK_EVAL_MODELS=mid`: dearer models from vendors the app could route
+  /// to, against Haiku 5.5 (2026-10-28), with Sonnet 5.5, the app's
+  /// OpenRouter default, as the top of the scale. Not Gemini: Google's Cloud
+  /// terms §20(d) bar an app likely to be used by under-18s.
+  static const _midModels =
+      'openai/gpt-6-luna@openai,'
+      'openai/gpt-6.1-terra@openai,'
+      'x-ai/grok-4.3@xai/zdr,'
+      'mistralai/mistral-medium-3-5@mistral/zdr,'
+      'mistralai/mistral-large-2512@mistral/zdr,'
+      'anthropic/claude-sonnet-5.5@anthropic';
+
   final String key = Platform.environment['FORK_EVAL_OPENROUTER_KEY'] ?? '';
   final List<String> replays = (Platform.environment['FORK_EVAL_REPLAY'] ?? '')
       .split(',')
@@ -81,6 +93,7 @@ class EvalModels {
       ? _only.keys.toList()
       : switch (Platform.environment['FORK_EVAL_MODELS']) {
           'screen' => _screenModels,
+          'mid' => _midModels,
           final models? => models,
           null => _defaultModels,
         }.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toList();
