@@ -188,6 +188,9 @@ extension _BulkAddBody on _BulkAddScreenState {
       text: photo
           ? S.of(context).bulkAddReadFromPhotoLabel
           : S.of(context).bulkAddReadByModelLabel,
+      // a wrong dish name is the costliest photo error, and a note fixes it
+      action: photo && _forkMealPhoto != null ? _rereadPhotoWithNote : null,
+      actionLabel: 'Name the dish',
     );
   }
 
@@ -200,6 +203,7 @@ extension _BulkAddBody on _BulkAddScreenState {
     required String text,
     bool emphasised = false,
     VoidCallback? action,
+    String? actionLabel,
   }) {
     final scheme = Theme.of(context).colorScheme;
     // The ceiling is a share of what this widget was actually given, not of
@@ -279,7 +283,9 @@ extension _BulkAddBody on _BulkAddScreenState {
                                     : null,
                                 visualDensity: VisualDensity.compact,
                               ),
-                              child: Text(S.of(context).settingsLabel),
+                              child: Text(
+                                actionLabel ?? S.of(context).settingsLabel,
+                              ),
                             ),
                           ),
                         ),
