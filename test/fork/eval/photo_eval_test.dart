@@ -78,6 +78,8 @@ void main() {
               (photo, photo['user_note'] as String, noted),
         ];
         for (final (photo, note, results) in runs) {
+          final read = note == null ? '${photo['id']}' : '${photo['id']}+note';
+          if (!models.runs(spec, read)) continue;
           final file = File('$_photoDir/${photo['id']}.jpg');
           if (!file.existsSync()) continue;
           final watch = Stopwatch()..start();
@@ -115,7 +117,8 @@ void main() {
           [...alone, ...noted].where((r) => r.error != null).length,
         );
       },
-      timeout: const Timeout(Duration(minutes: 30)),
+      // A slow model's 97 reads can take most of the 90 s each.
+      timeout: const Timeout(Duration(minutes: 150)),
       skip: skip,
     );
   }

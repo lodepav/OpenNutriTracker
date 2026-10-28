@@ -213,6 +213,7 @@ void main() {
 
         for (final meal in _meals) {
           for (final locale in ['en', if (meal.latvian) 'lv']) {
+            if (!models.runs(spec, '$locale|${meal.text}')) continue;
             final bloc = evalBulkAddBloc(api, resolver);
             bloc.add(
               ParseBulkTextEvent(
@@ -250,7 +251,8 @@ void main() {
         client.close();
         models.reportWaiting(spec, waiting);
       },
-      timeout: const Timeout(Duration(minutes: 30)),
+      // A slow model's 37 reads can take most of the 100 s each.
+      timeout: const Timeout(Duration(minutes: 70)),
       skip: models.skip,
     );
   }

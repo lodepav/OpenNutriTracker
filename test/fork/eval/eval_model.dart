@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:http/http.dart' as http;
@@ -52,6 +53,22 @@ class EvalModels {
       .where((s) => s.isNotEmpty)
       .toList();
 
+  /// `FORK_EVAL_ONLY=<file>`: a retry pass, as `{spec: [read, ...]}` from
+  /// fork/tools/eval_failed.py. Only those specs run, and each only the
+  /// reads listed (a photo's id, `id+note`, or a typed meal's `locale|text`).
+  final Map<String, Set<String>>? _only =
+      switch (Platform.environment['FORK_EVAL_ONLY']) {
+        final path? when path.isNotEmpty => {
+          for (final MapEntry(:key, :value)
+              in (jsonDecode(File(path).readAsStringSync()) as Map).entries)
+            key as String: {for (final read in value as List) read as String},
+        },
+        _ => null,
+      };
+
+  /// Whether [spec] runs [read]: always, outside a retry pass.
+  bool runs(String spec, String read) => _only?[spec]?.contains(read) ?? true;
+
   /// Why the tests are skipped, or false when they run.
   Object get skip => key.isEmpty && replays.isEmpty
       ? 'set FORK_EVAL_OPENROUTER_KEY (or FORK_EVAL_REPLAY) to run the '
@@ -60,6 +77,8 @@ class EvalModels {
 
   List<String> get specs => replays.isNotEmpty
       ? [for (final dir in replays) 'replay:${dir.split('/').last}']
+      : _only != null
+      ? _only.keys.toList()
       : switch (Platform.environment['FORK_EVAL_MODELS']) {
           'screen' => _screenModels,
           final models? => models,
