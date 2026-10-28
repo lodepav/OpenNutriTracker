@@ -100,6 +100,17 @@ void main() {
     });
   });
 
+  test('OpenAI defaults to the screened conservative reader', () async {
+    // luna leads because #686 measured it as the more conservative of the
+    // two; GPT-6 luna succeeds GPT-5.6 luna.
+    final client = await send(
+      const AiSelection(provider: AiProvider.openai, apiKey: 'sk-oa'),
+    );
+
+    expect(client.body!['model'], AiModelCatalogue.openai.first.id);
+    expect(client.body!['model'], 'gpt-6-luna');
+  });
+
   test('every curated OpenRouter model is pinned, fallbacks off; only a '
       'model asked not to think skips the parameter filter', () async {
     // OpenRouter's filter refuses a forced tool_choice to Haiku 5.5 on every

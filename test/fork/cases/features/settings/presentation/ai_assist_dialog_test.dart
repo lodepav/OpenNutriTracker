@@ -172,17 +172,17 @@ void main() {
     expect(
       find.textContaining(l10nEn.aiAssistModelCheaperThanRecommendedLabel),
       findsOne,
-      reason: 'only gpt-5.6-luna, a price fact with no quality claim',
+      reason: 'only gpt-6-luna, a price fact with no quality claim',
     );
     expect(
       find.textContaining(l10nEn.aiAssistModelCheapestLabel),
       findsOne,
-      reason: 'only claude-haiku-5.5, below luna on both axes',
+      reason: 'only claude-haiku-5.5, which nothing undercuts',
     );
     expect(
       find.textContaining(l10nEn.aiAssistModelMoreItemsLabel),
       findsOne,
-      reason: 'only gpt-5.6-terra, where #686 measured 7 rows against 3',
+      reason: 'only gpt-6.1-terra, which returns more items a photo',
     );
     expect(find.textContaining(l10nEn.aiAssistModelRecommendedLabel), findsOne);
   });

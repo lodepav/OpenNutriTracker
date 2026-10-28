@@ -25,6 +25,19 @@ void main() {
       },
     );
 
+    test('a stored GPT-5.6 choice moves to its successor, same vendor', () {
+      for (final (provider, old, successor) in [
+        (AiProvider.openrouter, 'openai/gpt-5.6-luna', 'openai/gpt-6-luna'),
+        (AiProvider.openrouter, 'openai/gpt-5.6-terra', 'openai/gpt-6.1-terra'),
+        (AiProvider.openai, 'gpt-5.6-luna', 'gpt-6-luna'),
+        (AiProvider.openai, 'gpt-5.6-terra', 'gpt-6.1-terra'),
+      ]) {
+        final model = AiModelCatalogue.resolve(provider, old)!;
+        expect(model.id, successor);
+        expect(model.servedBy, 'OpenAI');
+      }
+    });
+
     test('a retired id falls back rather than 404ing forever', () {
       expect(
         AiModelCatalogue.resolve(AiProvider.openrouter, 'anthropic/gone')!.id,
@@ -37,9 +50,9 @@ void main() {
     test(
       'only the OpenRouter list claims a cheapest, and Haiku 5.5 holds it',
       () {
-        // The superlative is safe because Haiku 5.5 ($0.10/$0.50) sits below
-        // luna ($0.20/$1.20) and every other sibling on both
-        // the prompt and the completion axis. It is only meaningful among
+        // The superlative is safe because no sibling is below Haiku 5.5
+        // ($0.10/$0.50) on the prompt or the completion axis; GPT-6 luna
+        // ties it. It is only meaningful among
         // siblings, so it must not appear on a list where there is nothing to
         // be cheapest *than*.
         for (final provider in AiProvider.values) {
