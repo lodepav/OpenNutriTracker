@@ -4,6 +4,9 @@ import 'package:opennutritracker/features/add_meal/domain/meal_items_api.dart';
 import 'package:opennutritracker/features/add_meal/domain/meal_photo_interpreter.dart';
 import 'package:opennutritracker/features/add_meal/util/meal_text_parser.dart';
 import 'package:opennutritracker/features/add_meal/util/soft_text_score.dart';
+// [fork] S170 note-fractions
+import 'package:opennutritracker/fork/bulk/note_counts.dart';
+// [/fork]
 
 /// Reads a photograph of a meal with a model and returns the foods it can
 /// identify, so the existing search can resolve each one against Open Food
@@ -157,7 +160,11 @@ Rules:
               unit: kept[i],
               portion: item.portion,
             )
-          else if (item.unit == null && _isWholeCount(item.quantity))
+          else if (item.unit == null &&
+              (_isWholeCount(item.quantity) ||
+                  // [fork] S170 note-fractions: a part count the note states
+                  noteStatesCount(note, item.quantity)))
+            // [/fork]
             item
           else
             ParsedMealItem(query: item.query, quantity: null, unit: null),
