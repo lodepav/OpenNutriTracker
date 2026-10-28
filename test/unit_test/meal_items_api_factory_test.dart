@@ -140,29 +140,40 @@ void main() {
   });
 
   group('the model the settings screen named is the model that is sent', () {
-    test('defaults to the curated first entry', () async {
-      final client = await send(
-        const AiSelection(provider: AiProvider.openrouter, apiKey: 'sk-or'),
-      );
+    test(
+      'defaults to the curated first entry',
+      () async {
+        final client = await send(
+          const AiSelection(provider: AiProvider.openrouter, apiKey: 'sk-or'),
+        );
 
-      expect(client.body!['model'], AiModelCatalogue.openrouter.first.id);
-      expect(client.body!['model'], 'anthropic/claude-sonnet-5');
-      // [fork] S77 ai-models-5-5: the fork lists other models; its case is in
-      // test/fork/cases/unit_test/meal_items_api_factory_test.dart
-    }, skip: 'the fork lists other models (S77)');
+        expect(client.body!['model'], AiModelCatalogue.openrouter.first.id);
+        expect(client.body!['model'], 'anthropic/claude-sonnet-5');
+        // [fork] S77 ai-models-5-5: the fork lists other models; its case is in
+        // test/fork/cases/unit_test/meal_items_api_factory_test.dart
+      },
+      skip: 'the fork lists other models (S77)',
+    );
     // [/fork]
 
-    test('OpenAI defaults to the screened conservative reader', () async {
-      // luna leads because #686 measured it as the more conservative of the
-      // two clean candidates: 3 rows where terra returned 7 on the same
-      // plate. Pinned here so a reordering of the list is a visible change.
-      final client = await send(
-        const AiSelection(provider: AiProvider.openai, apiKey: 'sk-oa'),
-      );
+    test(
+      'OpenAI defaults to the screened conservative reader',
+      () async {
+        // luna leads because #686 measured it as the more conservative of the
+        // two clean candidates: 3 rows where terra returned 7 on the same
+        // plate. Pinned here so a reordering of the list is a visible change.
+        final client = await send(
+          const AiSelection(provider: AiProvider.openai, apiKey: 'sk-oa'),
+        );
 
-      expect(client.body!['model'], AiModelCatalogue.openai.first.id);
-      expect(client.body!['model'], 'gpt-5.6-luna');
-    });
+        expect(client.body!['model'], AiModelCatalogue.openai.first.id);
+        expect(client.body!['model'], 'gpt-5.6-luna');
+        // [fork] S77 ai-models-5-5: the fork lists other models; its case is in
+        // test/fork/cases/unit_test/meal_items_api_factory_test.dart
+      },
+      skip: 'the fork lists other models (S77)',
+    );
+    // [/fork]
 
     test('honours a stored choice', () async {
       final client = await send(
@@ -212,27 +223,31 @@ void main() {
   });
 
   group('pinning', () {
-    test('every curated OpenRouter model is pinned, fallbacks off', () async {
-      // #656: the policy fit that justified Anthropic survives only under
-      // provider.only. An unpinned entry on this list would silently be a
-      // different company's terms.
-      for (final model in AiModelCatalogue.openrouter) {
-        final client = await send(
-          AiSelection(
-            provider: AiProvider.openrouter,
-            apiKey: 'sk-or',
-            modelId: model.id,
-          ),
-        );
+    test(
+      'every curated OpenRouter model is pinned, fallbacks off',
+      () async {
+        // #656: the policy fit that justified Anthropic survives only under
+        // provider.only. An unpinned entry on this list would silently be a
+        // different company's terms.
+        for (final model in AiModelCatalogue.openrouter) {
+          final client = await send(
+            AiSelection(
+              provider: AiProvider.openrouter,
+              apiKey: 'sk-or',
+              modelId: model.id,
+            ),
+          );
 
-        final provider = client.body!['provider'] as Map;
-        expect(provider['only'], isNotEmpty, reason: model.id);
-        expect(provider['allow_fallbacks'], false, reason: model.id);
-        expect(provider['require_parameters'], true, reason: model.id);
-      }
-      // [fork] S77 ai-models-5-5: Haiku 5.5 is sent without the filter; its
-      // case is in test/fork/cases/unit_test/meal_items_api_factory_test.dart
-    }, skip: 'Haiku 5.5 is sent without require_parameters (S77)');
+          final provider = client.body!['provider'] as Map;
+          expect(provider['only'], isNotEmpty, reason: model.id);
+          expect(provider['allow_fallbacks'], false, reason: model.id);
+          expect(provider['require_parameters'], true, reason: model.id);
+        }
+        // [fork] S77 ai-models-5-5: Haiku 5.5 is sent without the filter; its
+        // case is in test/fork/cases/unit_test/meal_items_api_factory_test.dart
+      },
+      skip: 'Haiku 5.5 is sent without require_parameters (S77)',
+    );
     // [/fork]
 
     test('the pin matches the vendor settings names', () async {
@@ -343,10 +358,7 @@ void main() {
       final openai =
           mealItemsApiFor(
                 CapturingClient(),
-                const AiSelection(
-                  provider: AiProvider.openai,
-                  apiKey: 'sk-oa',
-                ),
+                const AiSelection(provider: AiProvider.openai, apiKey: 'sk-oa'),
               )
               as OpenAiMealItemsApi;
 

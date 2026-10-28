@@ -170,9 +170,12 @@ abstract final class AiModelCatalogue {
   /// withdrawn `openai/*` id answered 404 rather than OpenAI's native 400 —
   /// so the loud-failure promise above needs no `error.code` reader here.
   // [fork] S77 ai-models-5-5: Sonnet 5.5 and Haiku 5.5 for Sonnet 5 and
-  // Haiku 4.5. Haiku 5.5 ($0.10/$0.50) is now the cheapest row, below luna
-  // ($0.20/$1.20): it takes the cheapest note, and luna one that claims
-  // only its price, since the cheaper note's quality claim was Haiku 4.5's.
+  // Haiku 4.5. Haiku 5.5 ($0.10/$0.50) is the cheapest row, tied with GPT-6
+  // luna: it keeps the cheapest note, and luna one that claims only its
+  // price, since the cheaper note's quality claim was Haiku 4.5's. GPT-6
+  // luna and GPT-6.1 terra for the 5.6 pair (2026-10-28), both run in
+  // phase 4's live eval; terra ($1/$5) still returned more items a photo
+  // than luna (2.71 against 2.58 over 65 photos).
   static const openrouter = <AiModel>[
     AiModel(
       id: 'anthropic/claude-sonnet-5.5',
@@ -188,18 +191,18 @@ abstract final class AiModelCatalogue {
       toolCall: AiToolCall.forcedThinkingOff,
     ),
     AiModel(
-      id: 'openai/gpt-5.6-luna',
+      id: 'openai/gpt-6-luna',
       servedBy: 'OpenAI',
       providers: ['openai'],
       note: AiModelNote.cheaperThanRecommended,
     ),
-    // [/fork]
     AiModel(
-      id: 'openai/gpt-5.6-terra',
+      id: 'openai/gpt-6.1-terra',
       servedBy: 'OpenAI',
       providers: ['openai'],
       note: AiModelNote.moreItems,
     ),
+    // [/fork]
   ];
 
   /// Ordered: the default is first.
@@ -222,14 +225,16 @@ abstract final class AiModelCatalogue {
   ///
   /// `providers` stays empty: that field pins an OpenRouter route, and a
   /// direct path has no broker to constrain.
+  // [fork] S77 ai-models-5-5: GPT-6 luna and GPT-6.1 terra for the 5.6 pair
   static const openai = <AiModel>[
-    AiModel(id: 'gpt-5.6-luna', servedBy: 'OpenAI'),
+    AiModel(id: 'gpt-6-luna', servedBy: 'OpenAI'),
     AiModel(
-      id: 'gpt-5.6-terra',
+      id: 'gpt-6.1-terra',
       servedBy: 'OpenAI',
       note: AiModelNote.moreItems,
     ),
   ];
+  // [/fork]
 
   /// Empty for [AiProvider.ownServer], and that is the answer rather than a
   /// gap. Membership of the lists above requires a behavioural screen the
@@ -259,10 +264,24 @@ abstract final class AiModelCatalogue {
   /// after an update that retires a model. Falling back beats leaving them
   /// pointed at an id that can only 404.
   static AiModel? resolve(AiProvider provider, String? id) {
+    // [fork] S77 ai-models-5-5
+    id = _successors[id] ?? id;
+    // [/fork]
     final models = forProvider(provider);
     for (final model in models) {
       if (model.id == id) return model;
     }
     return models.isEmpty ? null : models.first;
   }
+
+  // [fork] S77 ai-models-5-5: a stored GPT-5.6 choice moves to its
+  // successor, not to the list's head: on OpenRouter that is Sonnet, and the
+  // fallback would send the user's photos to another company (#726).
+  static const _successors = {
+    'openai/gpt-5.6-luna': 'openai/gpt-6-luna',
+    'openai/gpt-5.6-terra': 'openai/gpt-6.1-terra',
+    'gpt-5.6-luna': 'gpt-6-luna',
+    'gpt-5.6-terra': 'gpt-6.1-terra',
+  };
+  // [/fork]
 }
