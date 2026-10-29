@@ -19,6 +19,7 @@ import 'package:opennutritracker/fork/adaptive/goal_plan_card.dart'
     show paceChanges;
 import 'package:opennutritracker/fork/goal/goal_progress.dart';
 import 'package:opennutritracker/fork/goal/goal_progress_page.dart';
+import 'package:opennutritracker/fork/goal/goal_you_tile.dart' show noGoalText;
 import 'package:opennutritracker/fork/report/nutrient_explorer.dart'
     show IntakeLoader, intakesBetween;
 import 'package:opennutritracker/fork/trends/nutrient_trends.dart';
@@ -484,7 +485,7 @@ TrendTile _goalTile(
     id: 'trends-tile-goal',
     label: 'Goal',
     value: left == null
-        ? 'No target'
+        ? noGoalText
         : left < 0.1
         ? 'There'
         : weightIn(wu, left).toStringAsFixed(1),

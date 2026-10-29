@@ -6,6 +6,10 @@ import 'package:opennutritracker/fork/phases/phases.dart';
 
 DateTime _date(DateTime t) => DateTime(t.year, t.month, t.day);
 
+/// The running goal and the queue after it, as they were: what Undo puts
+/// back.
+typedef GoalSnapshot = ({PhasePlan? plan, List<PhasePlan> upcoming});
+
 /// Starting, completing and extending the profile's goal: its plan in the
 /// phase store, and the pace and target weight in the profile, which the
 /// formula, the check-in and Goal progress read; and the goals queued
@@ -87,6 +91,21 @@ class GoalActions {
     null,
     (q) => q.insert(to.clamp(0, q.length - 1), q.removeAt(from)),
   );
+
+  /// The running goal and the queue now, for [restore].
+  Future<GoalSnapshot> snapshot() async =>
+      (plan: await _store.plan(), upcoming: await _store.upcoming());
+
+  /// Puts back the running goal (its pace and target in the profile) and
+  /// the queue as [was]: Undo after a move or a removal.
+  Future<bool> restore(GoalSnapshot was) => _onProfile(() async {
+    final plan = was.plan;
+    final pace = plan == null ? 0.0 : plan.paceOn(_clock());
+    if (!await _saveGoal(pace, plan?.targetKg)) return false;
+    await _store.save(plan);
+    await _store.saveUpcoming(was.upcoming);
+    return true;
+  });
 
   /// The first queued goal started on the day it was planned to, the
   /// running one kept as completed at [nowKg], once today reaches that

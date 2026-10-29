@@ -363,9 +363,10 @@ class _GoalCalendarPageState extends State<GoalCalendarPage> {
             sheet,
             confirm: (
               title: 'Remove the goal?',
-              body: 'It is kept nowhere, not among your completed goals.',
+              body: 'It is not saved in your completed goals.',
               action: 'Remove',
             ),
+            undo: 'Removed',
             () => _actions.remove(widget.nowKg),
           ),
         ),
@@ -382,10 +383,18 @@ class _GoalCalendarPageState extends State<GoalCalendarPage> {
           onEdit: () => _edit(sheet, i),
           onEarlier: i == 0
               ? null
-              : () => _act(sheet, () => _actions.moveUpcoming(i, i - 1)),
+              : () => _act(
+                  sheet,
+                  undo: 'Moved',
+                  () => _actions.moveUpcoming(i, i - 1),
+                ),
           onLater: i == goals.upcoming.length - 1
               ? null
-              : () => _act(sheet, () => _actions.moveUpcoming(i, i + 1)),
+              : () => _act(
+                  sheet,
+                  undo: 'Moved',
+                  () => _actions.moveUpcoming(i, i + 1),
+                ),
           onRemove: () => _act(
             sheet,
             confirm: (
@@ -393,6 +402,7 @@ class _GoalCalendarPageState extends State<GoalCalendarPage> {
               body: 'It is taken out of the goals up next.',
               action: 'Remove',
             ),
+            undo: 'Removed',
             () => _actions.removeUpcoming(i),
           ),
         ),
@@ -405,11 +415,13 @@ class _GoalCalendarPageState extends State<GoalCalendarPage> {
     await (widget.edit ?? _editGoal)(context, upcomingIndex);
   }
 
-  /// Runs [action] from the sheet, once [confirm]ed, and closes it.
+  /// Runs [action] from the sheet, once [confirm]ed, and closes it; with
+  /// [undo], says so with an Undo.
   Future<void> _act(
     BuildContext sheet,
     Future<bool> Function() action, {
     ({String title, String body, String action})? confirm,
+    String? undo,
   }) async {
     if (confirm != null) {
       final sure = await showDialog<bool>(
@@ -434,10 +446,12 @@ class _GoalCalendarPageState extends State<GoalCalendarPage> {
       );
       if (sure != true) return;
     }
+    final was = undo == null ? null : await _actions.snapshot();
     final done = await action();
     if (!mounted) return;
     if (sheet.mounted) Navigator.of(sheet).pop();
     if (done) {
+      if (was != null) showGoalUndo(context, undo!, _actions, was, _load);
       await _load();
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -445,6 +459,39 @@ class _GoalCalendarPageState extends State<GoalCalendarPage> {
       );
     }
   }
+}
+
+/// "[message]" with an Undo that puts the goals back as they [was], then
+/// calls [undone].
+void showGoalUndo(
+  BuildContext context,
+  String message,
+  GoalActions actions,
+  GoalSnapshot was,
+  VoidCallback undone,
+) {
+  final messenger = ScaffoldMessenger.of(context);
+  messenger
+    ..hideCurrentSnackBar()
+    ..showSnackBar(
+      SnackBar(
+        content: Text(message),
+        action: SnackBarAction(
+          label: 'Undo',
+          onPressed: () async {
+            if (await actions.restore(was)) {
+              undone();
+            } else {
+              messenger.showSnackBar(
+                const SnackBar(
+                  content: Text('Not undone: the profile changed.'),
+                ),
+              );
+            }
+          },
+        ),
+      ),
+    );
 }
 
 class _Legend extends StatelessWidget {

@@ -8,6 +8,7 @@ import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/fork/goal/completed_goals_page.dart';
 import 'package:opennutritracker/fork/goal/goal_actions.dart';
 import 'package:opennutritracker/fork/goal/goal_calendar_page.dart';
+import 'package:opennutritracker/fork/goal/goal_you_tile.dart';
 import 'package:opennutritracker/fork/goal/goal_planner.dart';
 import 'package:opennutritracker/fork/goal/goal_reached.dart';
 import 'package:opennutritracker/fork/goal/phase_colors.dart';
@@ -40,6 +41,10 @@ class GoalPlanSection extends StatelessWidget {
   /// shows it first.
   final bool showStatus;
 
+  /// Makes the actions the goals up next are moved and removed with;
+  /// tests swap it.
+  final GoalActions Function() actions;
+
   const GoalPlanSection({
     super.key,
     required this.plan,
@@ -50,6 +55,7 @@ class GoalPlanSection extends StatelessWidget {
     required this.today,
     required this.onChanged,
     this.showStatus = true,
+    this.actions = GoalActions.new,
   });
 
   String _day(BuildContext context, DateTime d) {
@@ -77,10 +83,10 @@ class GoalPlanSection extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'No goal planned',
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
+                Text(switch (maintainingSince(null, history)) {
+                  final since? => maintainingSinceText(context, since),
+                  null => noGoalText,
+                }, style: Theme.of(context).textTheme.titleMedium),
                 const SizedBox(height: 4),
                 const Text(
                   'Plan a cut, maintenance or a bulk: its pace, what you '
@@ -193,35 +199,29 @@ class GoalPlanSection extends StatelessWidget {
               unit: unit,
               day: _day,
               onChanged: onChanged,
+              actions: actions,
             ),
           ],
           gap,
-          Row(
-            children: [
-              Expanded(
-                child: Semantics(
-                  identifier: 'goal-plan-edit',
-                  child: OutlinedButton(
-                    onPressed: () => _plan(context, fresh: false),
-                    child: const Text('Edit plan'),
-                  ),
-                ),
+          // Stacked, full width: the longer label stays on one line.
+          Semantics(
+            identifier: 'goal-plan-edit',
+            child: OutlinedButton(
+              onPressed: () => _plan(context, fresh: false),
+              child: const Text('Edit plan'),
+            ),
+          ),
+          const SizedBox(height: Dimens.spacing8),
+          Semantics(
+            identifier: 'goal-plan-new',
+            child: OutlinedButton(
+              onPressed: () => _plan(context, fresh: true),
+              child: Text(
+                upcoming.isEmpty
+                    ? 'Plan a goal after this'
+                    : 'Plan a goal after these',
               ),
-              const SizedBox(width: Dimens.spacing8),
-              Expanded(
-                child: Semantics(
-                  identifier: 'goal-plan-new',
-                  child: OutlinedButton(
-                    onPressed: () => _plan(context, fresh: true),
-                    child: Text(
-                      upcoming.isEmpty
-                          ? 'Plan a goal after this'
-                          : 'Plan a goal after these',
-                    ),
-                  ),
-                ),
-              ),
-            ],
+            ),
           ),
         ],
         gap,
@@ -285,6 +285,8 @@ class GoalPlanSection extends StatelessWidget {
   }
 }
 
+enum _UpNextAction { edit, earlier, later, remove }
+
 /// The goals planned after the running one, numbered in turn.
 class _UpNext extends StatelessWidget {
   final List<PhasePlan> upcoming;
@@ -292,17 +294,32 @@ class _UpNext extends StatelessWidget {
   final String Function(BuildContext, DateTime) day;
 
   final VoidCallback onChanged;
+  final GoalActions Function() actions;
 
   const _UpNext({
     required this.upcoming,
     required this.unit,
     required this.day,
     required this.onChanged,
+    required this.actions,
   });
+
+  /// [change] made, then "[done]" with an Undo.
+  Future<void> _change(
+    BuildContext context,
+    GoalActions actions,
+    String done,
+    Future<bool> Function() change,
+  ) async {
+    final was = await actions.snapshot();
+    if (!await change()) return;
+    onChanged();
+    if (context.mounted) showGoalUndo(context, done, actions, was, onChanged);
+  }
 
   Future<void> _remove(BuildContext context, int i) async {
     final title = goalTitle(upcoming[i], unit);
-    final actions = GoalActions();
+    final actions = this.actions();
     final sure = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -324,7 +341,18 @@ class _UpNext extends StatelessWidget {
         ],
       ),
     );
-    if (sure == true && await actions.removeUpcoming(i)) onChanged();
+    if (sure != true || !context.mounted) return;
+    await _change(context, actions, 'Removed', () => actions.removeUpcoming(i));
+  }
+
+  Future<void> _move(BuildContext context, int from, int to) {
+    final actions = this.actions();
+    return _change(
+      context,
+      actions,
+      'Moved',
+      () => actions.moveUpcoming(from, to),
+    );
   }
 
   @override
@@ -355,17 +383,46 @@ class _UpNext extends StatelessWidget {
                 ),
                 trailing: Semantics(
                   identifier: 'goal-upcoming-$i-menu',
-                  child: PopupMenuButton<bool>(
-                    tooltip: '${goalTitle(p, unit)}: edit or remove',
-                    onSelected: (edit) async {
-                      if (!edit) return _remove(context, i);
-                      if (await openGoalPlanner(context, upcomingIndex: i)) {
-                        onChanged();
+                  child: PopupMenuButton<_UpNextAction>(
+                    tooltip: upcoming.length > 1
+                        ? '${goalTitle(p, unit)}: edit, move or remove'
+                        : '${goalTitle(p, unit)}: edit or remove',
+                    onSelected: (action) async {
+                      switch (action) {
+                        case _UpNextAction.edit:
+                          if (await openGoalPlanner(
+                            context,
+                            upcomingIndex: i,
+                          )) {
+                            onChanged();
+                          }
+                        case _UpNextAction.earlier:
+                          await _move(context, i, i - 1);
+                        case _UpNextAction.later:
+                          await _move(context, i, i + 1);
+                        case _UpNextAction.remove:
+                          await _remove(context, i);
                       }
                     },
-                    itemBuilder: (_) => const [
-                      PopupMenuItem(value: true, child: Text('Edit')),
-                      PopupMenuItem(value: false, child: Text('Remove')),
+                    itemBuilder: (_) => [
+                      const PopupMenuItem(
+                        value: _UpNextAction.edit,
+                        child: Text('Edit'),
+                      ),
+                      if (i > 0)
+                        const PopupMenuItem(
+                          value: _UpNextAction.earlier,
+                          child: Text('Move earlier'),
+                        ),
+                      if (i < upcoming.length - 1)
+                        const PopupMenuItem(
+                          value: _UpNextAction.later,
+                          child: Text('Move later'),
+                        ),
+                      const PopupMenuItem(
+                        value: _UpNextAction.remove,
+                        child: Text('Remove'),
+                      ),
                     ],
                   ),
                 ),

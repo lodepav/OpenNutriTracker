@@ -7,6 +7,7 @@ import 'package:opennutritracker/fork/adaptive/goal_plan.dart';
 import 'package:opennutritracker/fork/adaptive/trend_points.dart';
 import 'package:opennutritracker/fork/goal/goal_progress.dart';
 import 'package:opennutritracker/fork/goal/goal_progress_page.dart';
+import 'package:opennutritracker/fork/goal/goal_you_tile.dart' show noGoalText;
 import 'package:opennutritracker/fork/report/nutrient_explorer.dart';
 import 'package:opennutritracker/fork/report/rate_text.dart';
 import 'package:opennutritracker/fork/trends/detail_stats.dart';
@@ -345,8 +346,8 @@ Widget _goalTile(
   if (target == null || now == null) {
     return FigureTile(
       label: 'To your goal',
-      value: 'No target',
-      note: 'Set one to see your progress',
+      value: noGoalText,
+      note: 'Plan one to see your progress',
       onTap: open,
     );
   }
