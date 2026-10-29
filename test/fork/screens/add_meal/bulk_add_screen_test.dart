@@ -1390,7 +1390,8 @@ void main() {
     );
     final reader = _SequencePhotoReader([
       const MealPhotoFailed(MealPhotoFailure.transient),
-      const MealPhotoFailed(MealPhotoFailure.transient),
+      // no food found: kept, like a failure
+      const MealPhotoRead(MealTextParseResult(items: [], errors: [])),
       const MealPhotoRead(
         MealTextParseResult(
           items: [ParsedMealItem(query: 'egg', quantity: 2)],
@@ -1459,6 +1460,20 @@ void main() {
     expect(staged, findsNothing);
     expect(find.text('Egg'), findsOneWidget);
     expect(find.widgetWithText(TextField, 'two eggs'), findsNothing);
+  });
+
+  testWidgets('the Photo log shortcut says why, without a model that '
+      'reads photos', (tester) async {
+    await _register(const {});
+    await tester.pumpWidget(_app(startWithPhoto: true));
+    await tester.pumpAndSettle();
+    tester.state<NavigatorState>(find.byType(Navigator)).pushNamed('/bulk');
+    await tester.pumpAndSettle();
+
+    expect(
+      find.textContaining('Reading a photo needs a model that sees images'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('a photo with no food says so, not "nothing to log yet"', (

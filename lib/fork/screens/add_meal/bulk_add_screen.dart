@@ -420,6 +420,9 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
       WidgetsBinding.instance.addPostFrameCallback((_) async {
         if (await _photoAvailable && mounted) {
           await _onPhotoPressed(readNow: true);
+        } else if (mounted) {
+          // the Photo log shortcut is there whether or not photos can be read
+          _showNoPhotoModel();
         }
       });
     }
@@ -440,18 +443,19 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
           return;
         }
         _discardShared(path);
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Reading a photo needs a model that sees images: set one up '
-              'in Settings › AI meal logging.',
-            ),
-          ),
-        );
+        if (mounted) _showNoPhotoModel();
       });
     }
   }
+
+  void _showNoPhotoModel() => ScaffoldMessenger.of(context).showSnackBar(
+    const SnackBar(
+      content: Text(
+        'Reading a photo needs a model that sees images: set one up '
+        'in Settings › AI meal logging.',
+      ),
+    ),
+  );
 
   /// A shared photo not read is not kept.
   void _discardShared(String path) {
@@ -1019,7 +1023,8 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
     if (!_readingStaged || !mounted || state is BulkAddLoadingState) return;
     setState(() {
       _readingStaged = false;
-      if (state is BulkAddLoadedState) {
+      // a read that found no food keeps the photo and the note
+      if (state is BulkAddLoadedState && state.rows.isNotEmpty) {
         _stagedPhoto = null;
       } else if (_textController.text.isEmpty) {
         _textController.text = _photoNote ?? '';

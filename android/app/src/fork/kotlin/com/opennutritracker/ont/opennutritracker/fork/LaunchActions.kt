@@ -157,9 +157,12 @@ class LaunchActionActivity : Activity() {
  * known before the engine is), pushed for one that reaches a running app. Registered by S167 in
  * MainActivity, which passes on [onNewIntent].
  */
-class LaunchActionChannel(private val activity: Activity, engine: FlutterEngine) {
+class LaunchActionChannel(private val activity: Activity, engine: FlutterEngine, restored: Boolean) {
     private val channel = MethodChannel(engine.dartExecutor.binaryMessenger, "openbite/launch")
-    private var pending: Map<String, String>? = take(activity.intent)
+    // a restored activity, or one reopened from Recents, keeps the intent
+    // it was started with after the process died: that action already ran
+    private var pending: Map<String, String>? =
+        if (restored || fromHistory(activity.intent)) null else take(activity.intent)
 
     init {
         LaunchActions.publishShortcuts(activity.applicationContext)
@@ -175,6 +178,9 @@ class LaunchActionChannel(private val activity: Activity, engine: FlutterEngine)
         pending = payload
         channel.invokeMethod("launch", null)
     }
+
+    private fun fromHistory(intent: Intent?): Boolean =
+        (intent?.flags ?: 0) and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY != 0
 
     /** Read once: a recreated activity keeps its intent, which must not log twice. */
     private fun take(intent: Intent?): Map<String, String>? {
