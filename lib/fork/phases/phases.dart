@@ -63,7 +63,9 @@ class DietPhase {
 }
 
 /// MacroFactor's diet phases: cut, maintenance and bulk one after another
-/// from [start]; maintenance once the last ends.
+/// from [start]; maintenance once the last ends. A plan made by the goal
+/// planner is the goal: it keeps the [targetKg] it was planned to and how
+/// often it was [extensions] extended.
 class PhasePlan {
   final DateTime start;
   final List<DietPhase> phases;
@@ -72,7 +74,27 @@ class PhasePlan {
   /// weights were kept, which estimates none.
   final double? startKg;
 
-  const PhasePlan({required this.start, required this.phases, this.startKg});
+  /// The weight the goal ends at; null for a maintenance goal, or a plan
+  /// from before the goal planner.
+  final double? targetKg;
+  final int extensions;
+
+  const PhasePlan({
+    required this.start,
+    required this.phases,
+    this.startKg,
+    this.targetKg,
+    this.extensions = 0,
+  });
+
+  /// The goal's kind: the first phase that is not maintenance, as diet
+  /// breaks are; maintenance when every one is.
+  PhaseKind get kind => phases
+      .map((p) => p.kind)
+      .firstWhere(
+        (k) => k != PhaseKind.maintain,
+        orElse: () => PhaseKind.maintain,
+      );
 
   /// The rough weight phase [index] starts at, the end weight for
   /// `phases.length`: [startKg] moved by each phase's pace and weeks, a
@@ -128,11 +150,15 @@ class PhasePlan {
     'start': start.toIso8601String(),
     'phases': [for (final p in phases) p.toJson()],
     'startKg': ?startKg,
+    'targetKg': ?targetKg,
+    if (extensions > 0) 'extensions': extensions,
   };
 
   static PhasePlan fromJson(Map<dynamic, dynamic> json) => PhasePlan(
     start: DateTime.parse(json['start'] as String),
     startKg: (json['startKg'] as num?)?.toDouble(),
+    targetKg: (json['targetKg'] as num?)?.toDouble(),
+    extensions: json['extensions'] as int? ?? 0,
     phases: [
       for (final p in json['phases'] as List) DietPhase.fromJson(p as Map),
     ],
@@ -143,6 +169,9 @@ class PhasePlan {
 /// which phase was last put into the profile.
 class PhaseStore {
   static const planKey = 'phasePlan';
+
+  /// The goals completed, oldest first ([GoalRecord]).
+  static const historyKey = 'goalHistory';
   static const _appliedKey = 'phaseApplied';
 
   /// The goal planner's milestone step: its place in the unit's list
@@ -175,6 +204,23 @@ class PhaseStore {
     changes.value++;
   }
 
+  Future<List<GoalRecord>> history() async => [
+    for (final json in (await _box()).get(historyKey, defaultValue: []) as List)
+      GoalRecord.fromJson(json as Map),
+  ];
+
+  /// Keeps [records] among the completed goals, replacing one that started
+  /// the same day (a backup restored twice), oldest first.
+  Future<void> addToHistory(List<GoalRecord> records) async {
+    final byStart = {
+      for (final r in [...await history(), ...records]) r.start: r,
+    };
+    final all = byStart.values.toList()
+      ..sort((a, b) => a.start.compareTo(b.start));
+    await (await _box()).put(historyKey, [for (final r in all) r.toJson()]);
+    changes.value++;
+  }
+
   /// 0 for anything but a step's place, as a hand-edited backup may hold.
   Future<int> milestoneStep() async {
     final step = (await _box()).get(milestoneKey, defaultValue: 0);
@@ -190,6 +236,58 @@ class PhaseStore {
 
   Future<void> markApplied(String key) async =>
       (await _box()).put(_appliedKey, key);
+}
+
+/// A goal once completed: its kind, its days and the trend weight on the
+/// first and last; [targetKg] null for maintenance.
+class GoalRecord {
+  final PhaseKind kind;
+  final DateTime start;
+  final DateTime end;
+  final double? startKg;
+  final double? endKg;
+  final double? targetKg;
+  final int extensions;
+
+  const GoalRecord({
+    required this.kind,
+    required this.start,
+    required this.end,
+    required this.startKg,
+    required this.endKg,
+    this.targetKg,
+    this.extensions = 0,
+  });
+
+  /// Whole weeks, at least one.
+  int get weeks {
+    final days = DateTime.utc(
+      end.year,
+      end.month,
+      end.day,
+    ).difference(DateTime.utc(start.year, start.month, start.day)).inDays;
+    return (days / 7).round().clamp(1, 1 << 20);
+  }
+
+  Map<String, Object> toJson() => {
+    'kind': kind.name,
+    'start': start.toIso8601String(),
+    'end': end.toIso8601String(),
+    'startKg': ?startKg,
+    'endKg': ?endKg,
+    'targetKg': ?targetKg,
+    if (extensions > 0) 'extensions': extensions,
+  };
+
+  static GoalRecord fromJson(Map<dynamic, dynamic> json) => GoalRecord(
+    kind: PhaseKind.values.byName(json['kind'] as String),
+    start: DateTime.parse(json['start'] as String),
+    end: DateTime.parse(json['end'] as String),
+    startKg: (json['startKg'] as num?)?.toDouble(),
+    endKg: (json['endKg'] as num?)?.toDouble(),
+    targetKg: (json['targetKg'] as num?)?.toDouble(),
+    extensions: json['extensions'] as int? ?? 0,
+  );
 }
 
 /// Puts the running phase's pace into the profile when a phase begins

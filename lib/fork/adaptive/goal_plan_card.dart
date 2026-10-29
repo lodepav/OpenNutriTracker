@@ -42,6 +42,25 @@ Future<bool> savePace(double kgPerWeek, [ProfileStamp? startedOn]) async {
   return true;
 }
 
+/// Saves [kgPerWeek] as [savePace] does, and [targetKg] as the target
+/// weight, each unless it is null, in one profile update.
+Future<bool> saveGoal(
+  double? kgPerWeek,
+  double? targetKg, [
+  ProfileStamp? startedOn,
+]) async {
+  final saved = await withTrackedDayLockOnProfile(() async {
+    final user = await locator<GetUserUsecase>().getUserData();
+    if (kgPerWeek != null) _setPace(user, kgPerWeek);
+    if (targetKg != null) user.targetWeightKg = targetKg;
+    await locator<ProfileBloc>().updateUser(user);
+    return true;
+  }, startedOn: startedOn);
+  if (saved == null) return false;
+  paceChanges.value++;
+  return true;
+}
+
 /// [kgPerWeek] as [user]'s pace, the goal following its sign.
 void _setPace(UserEntity user, double kgPerWeek) => user
   ..weeklyWeightGoalKg = kgPerWeek
