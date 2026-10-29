@@ -123,7 +123,14 @@ class _GoalReachedPageState extends State<GoalReachedPage> {
   var _next = _Next.maintain;
   var _busy = false;
 
-  GoalActions get _actions => widget.actions ?? GoalActions();
+  // Made as the page opens: its profile is the one acted on.
+  late final GoalActions _actions;
+
+  @override
+  void initState() {
+    super.initState();
+    _actions = widget.actions ?? GoalActions();
+  }
 
   Future<void> _continue() async {
     setState(() => _busy = true);
@@ -138,7 +145,7 @@ class _GoalReachedPageState extends State<GoalReachedPage> {
           widget.nowKg,
           widget.unit,
           ended: false,
-          actions: widget.actions,
+          actions: _actions,
         );
       case _Next.planNext:
         done = await _actions.complete(widget.plan, widget.nowKg);

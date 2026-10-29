@@ -8,6 +8,7 @@ import 'package:opennutritracker/core/domain/usecase/get_tracked_day_usecase.dar
 import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
+import 'package:opennutritracker/core/utils/calc/calendar_day_calc.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/fork/adaptive/goal_plan.dart';
 import 'package:opennutritracker/fork/adaptive/goal_plan_card.dart';
@@ -519,6 +520,13 @@ class _ProgressCard extends StatelessWidget {
   }
 }
 
+/// The chart's x for [day]: calendar days from [origin], a whole day
+/// across a daylight saving change, when local midnights are 23 or 25
+/// hours apart.
+@visibleForTesting
+double chartDay(DateTime origin, DateTime day) =>
+    CalendarDayCalc.daysBetween(origin, day).toDouble();
+
 /// The trend since the start, the plan from the start, the projection
 /// from today at [atPace] and the target.
 class _GoalChart extends StatelessWidget {
@@ -542,7 +550,7 @@ class _GoalChart extends StatelessWidget {
       p.today.day - (p.trend.length - 1),
     );
     final origin = p.start.date.isAfter(trendFirst) ? p.start.date : trendFirst;
-    final todayX = p.today.difference(origin).inDays.toDouble();
+    final todayX = chartDay(origin, p.today);
 
     final trend = [
       for (final (i, kg) in p.trend.indexed)
@@ -552,20 +560,22 @@ class _GoalChart extends StatelessWidget {
           trendFirst.day + i,
         ).isBefore(origin))
           FlSpot(
-            DateTime(
-              trendFirst.year,
-              trendFirst.month,
-              trendFirst.day + i,
-            ).difference(origin).inDays.toDouble(),
+            chartDay(
+              origin,
+              DateTime(trendFirst.year, trendFirst.month, trendFirst.day + i),
+            ),
             y(kg),
           ),
     ];
     // The plan from its own start: the goal's, or the last pace change.
-    final planX = p.start.planDate.difference(origin).inDays.toDouble();
+    final planX = chartDay(origin, p.start.planDate);
     final planDays = p.paceKgPerWeek == 0
         ? null
         : daysToTarget(p.start.planKg, p.targetKg, p.paceKgPerWeek / 7);
-    final paceDays = p.arrivalAt(atPace)?.difference(p.today).inDays;
+    final arrival = p.arrivalAt(atPace);
+    final paceDays = arrival == null
+        ? null
+        : CalendarDayCalc.daysBetween(p.today, arrival);
     final endX = math.min(
       todayX + 365,
       [
