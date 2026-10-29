@@ -427,6 +427,40 @@ void main() {
     expect(reloads.log, containsAll(['LoadProfileEvent', 'updateHomePage']));
   });
 
+  testWidgets('the Weigh in shortcut opens the dialog once, not again '
+      'after the save', (tester) async {
+    ReloadRecorder()
+      ..register()
+      ..registerProfile();
+    addTearDown(locator.reset);
+    final addUsecase = _FakeAddWeightLogUsecase();
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: const [
+          S.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: S.supportedLocales,
+        onGenerateRoute: (settings) => MaterialPageRoute(
+          settings: RouteSettings(
+            name: settings.name,
+            arguments: const WeighInOnOpen(),
+          ),
+          builder: (_) => _buildScreen(const [], addUsecase: addUsecase),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text(l10nEn.dialogOKLabel), findsOneWidget);
+    await tester.tap(find.text(l10nEn.dialogOKLabel));
+    await tester.pumpAndSettle();
+
+    expect(addUsecase.added, hasLength(1));
+    expect(find.text(l10nEn.dialogOKLabel), findsNothing);
+  });
+
   testWidgets("the delete's Undo goes after a while, not onto every screen", (
     tester,
   ) async {

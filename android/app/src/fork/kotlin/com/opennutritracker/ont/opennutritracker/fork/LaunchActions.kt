@@ -1,6 +1,7 @@
 package com.opennutritracker.ont.opennutritracker.fork
 
 import android.app.Activity
+import android.content.ContentResolver
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -134,6 +135,8 @@ class LaunchActionActivity : Activity() {
 
     /** Into the cache, replacing any share not read yet; null when it cannot be read. */
     private fun copy(uri: Uri): File? {
+        // a file:// share could name this app's own private files
+        if (uri.scheme != ContentResolver.SCHEME_CONTENT) return null
         return try {
             val dir = LaunchActions.sharedDir(this)
             dir.deleteRecursively()

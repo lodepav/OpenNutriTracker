@@ -70,6 +70,8 @@ class _WeightHistoryScreenState extends State<WeightHistoryScreen> {
           : null);
 
   bool _loading = true;
+  // the shortcut's dialog opens once, not after every save or undo
+  bool _weighInOpened = false;
   BodyWeightUnit _bodyWeightUnit = BodyWeightUnit.kg;
   List<WeightLogEntity> _entries = const [];
   // Loaded once at mount time so the chart can draw a dashed reference
@@ -100,7 +102,9 @@ class _WeightHistoryScreenState extends State<WeightHistoryScreen> {
       _loading = false;
     });
     // the Weigh in shortcut (S167) opens the dialog straight away
-    if (ModalRoute.of(context)?.settings.arguments is WeighInOnOpen) {
+    if (!_weighInOpened &&
+        ModalRoute.of(context)?.settings.arguments is WeighInOnOpen) {
+      _weighInOpened = true;
       await _onAddEntry();
     }
   }
