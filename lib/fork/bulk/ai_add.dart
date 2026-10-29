@@ -5,13 +5,16 @@ import 'package:opennutritracker/core/utils/locator.dart';
 
 /// AI add (canvas "AI add", B for both): "Add several items" named for
 /// what it does while AI meal assistance is on — a wide "Log with AI" on
-/// the + sheet, an "AI add" floating button on food search. With the
+/// the + sheet, a "Log with AI" floating button on food search. With the
 /// feature off neither shows; search keeps its list icon. The screen they
 /// open still decides whether a photo can be read.
 Future<bool> aiAddEnabled() => locator.isRegistered<AiCredentialStorage>()
     ? locator<AiCredentialStorage>().isEnabled()
     // not registered in the many upstream tests that pump these screens
     : Future.value(false);
+
+/// One name for AI add's buttons and the screen they open.
+const aiAddLabel = 'Log with AI';
 
 /// The sparkle that marks AI in the add flow.
 const aiAddIcon = Icons.auto_awesome_rounded;
@@ -28,7 +31,7 @@ class AiAddFab extends StatelessWidget {
     child: FloatingActionButton.extended(
       onPressed: onPressed,
       icon: const Icon(aiAddIcon),
-      label: const Text('AI add'),
+      label: const Text(aiAddLabel),
     ),
   );
 }
@@ -76,7 +79,7 @@ class LogWithAiButton extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Log with AI',
+                          aiAddLabel,
                           style: theme.textTheme.titleSmall?.copyWith(
                             color: scheme.onPrimaryContainer,
                             fontWeight: FontWeight.w600,
@@ -90,11 +93,6 @@ class LogWithAiButton extends StatelessWidget {
                         ),
                       ],
                     ),
-                  ),
-                  const SizedBox(width: Dimens.spacing8),
-                  Icon(
-                    Icons.photo_camera_outlined,
-                    color: scheme.onPrimaryContainer,
                   ),
                 ],
               ),

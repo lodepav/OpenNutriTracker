@@ -194,9 +194,15 @@ class _AddMealScreenState extends State<AddMealScreen> {
                   future: _aiAdd,
                   builder: (context, ai) => MediaQuery(
                     data: MediaQuery.of(context).copyWith(
-                      padding: MediaQuery.paddingOf(
-                        context,
-                      ).copyWith(bottom: ai.data == true ? 88 : 0),
+                      padding: MediaQuery.paddingOf(context).copyWith(
+                        // the button, its margin, the inset under it, a gap
+                        bottom: ai.data == true
+                            ? 56 +
+                                  kFloatingActionButtonMargin +
+                                  MediaQuery.viewPaddingOf(context).bottom +
+                                  Dimens.spacing16
+                            : 0,
+                      ),
                     ),
                     child: ValueListenableBuilder<String>(
                       valueListenable: _searchStringListener,

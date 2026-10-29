@@ -389,6 +389,7 @@ Future<void> _startWaiting(WidgetTester tester, String text) async {
   await tester.pumpAndSettle();
 
   await tester.enterText(find.byType(TextField).first, text);
+  await tester.pump(); // the send waits for text
   await tester.tap(find.widgetWithIcon(FilledButton, Icons.search));
   await tester.pump();
   // The screen decides which loading state to draw from a keystore read
@@ -578,6 +579,7 @@ Future<void> _parse(WidgetTester tester, String text) async {
   await tester.pumpAndSettle();
 
   await tester.enterText(find.byType(TextField).first, text);
+  await tester.pump(); // the send waits for text
   // By icon, not label: these tests also pump a German locale, where the
   // button reads something else entirely.
   await tester.tap(find.widgetWithIcon(FilledButton, Icons.search));
@@ -1535,13 +1537,33 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('Find foods waits for something to find', (tester) async {
+    await _register(const {});
+    await tester.pumpWidget(_app());
+    await tester.pumpAndSettle();
+    tester.state<NavigatorState>(find.byType(Navigator)).pushNamed('/bulk');
+    await tester.pumpAndSettle();
+    FilledButton send() => tester.widget<FilledButton>(
+      find.widgetWithIcon(FilledButton, Icons.search),
+    );
+
+    expect(send().onPressed, isNull, reason: 'an empty box');
+    await tester.enterText(find.byType(TextField).first, '  ');
+    await tester.pump();
+    expect(send().onPressed, isNull, reason: 'only spaces');
+    await tester.enterText(find.byType(TextField).first, 'toast');
+    await tester.pump();
+    expect(send().onPressed, isNotNull);
+  });
+
   testWidgets('a message with nowhere to go stays a sentence', (tester) async {
     // The centred message's other callers were not given a button by this
     // change. An empty parse is not fixed in Settings, and sending someone
     // there for it is the mis-direction #992 fixes, pointed the other way.
     await _register(const {});
     await tester.pumpWidget(_app());
-    await _parse(tester, '');
+    // an empty box can't be sent; a lone comma finds nothing too
+    await _parse(tester, ',');
 
     expect(find.text(l10nEn.bulkAddNothingToLogLabel), findsOneWidget);
     expect(find.bySemanticsIdentifier('bulk-add-message-action'), findsNothing);
@@ -1555,7 +1577,8 @@ void main() {
   testWidgets('a short message is still vertically centred', (tester) async {
     await _register(const {});
     await tester.pumpWidget(_app());
-    await _parse(tester, '');
+    // an empty box can't be sent; a lone comma finds nothing too
+    await _parse(tester, ',');
 
     final message = find.text(l10nEn.bulkAddNothingToLogLabel);
     expect(message, findsOneWidget);
@@ -1588,7 +1611,8 @@ void main() {
     // The photo wording must not leak onto the path it was not written for.
     await _register(const {});
     await tester.pumpWidget(_app());
-    await _parse(tester, '');
+    // an empty box can't be sent; a lone comma finds nothing too
+    await _parse(tester, ',');
 
     final l10n = await S.delegate.load(const Locale('en'));
     expect(find.text(l10n.bulkAddNothingToLogLabel), findsOneWidget);
@@ -2707,6 +2731,7 @@ void main() {
       navigator.pushNamed('/bulk');
       await tester.pumpAndSettle();
       await tester.enterText(find.byType(TextField).first, 'ein Apfel');
+      await tester.pump(); // the send waits for text
       await tester.tap(find.widgetWithIcon(FilledButton, Icons.search));
       await tester.pump();
       await tester.pump(threshold);

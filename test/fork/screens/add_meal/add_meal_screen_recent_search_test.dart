@@ -325,17 +325,17 @@ void main() {
   });
 
   group('AI add', () {
-    testWidgets('off: the list icon, no AI add', (tester) async {
+    testWidgets('off: the list icon, no Log with AI', (tester) async {
       await _register(const []);
       getIt.registerSingleton<AiCredentialStorage>(_AiCredentials(false));
       await tester.pumpWidget(_app());
       await tester.pumpAndSettle();
 
       expect(_withIdentifier('add-meal-bulk-add'), findsOneWidget);
-      expect(find.text('AI add'), findsNothing);
+      expect(find.text('Log with AI'), findsNothing);
     });
 
-    testWidgets('on: AI add in place of the list icon', (tester) async {
+    testWidgets('on: Log with AI in place of the list icon', (tester) async {
       await _register(const []);
       getIt.registerSingleton<AiCredentialStorage>(_AiCredentials(true));
       await tester.pumpWidget(_app());
@@ -343,7 +343,7 @@ void main() {
 
       expect(_withIdentifier('add-meal-bulk-add'), findsNothing);
       expect(_withIdentifier('add-meal-ai-add'), findsOneWidget);
-      expect(find.text('AI add'), findsOneWidget);
+      expect(find.text('Log with AI'), findsOneWidget);
     });
   });
 }
