@@ -6,6 +6,7 @@ import 'package:opennutritracker/core/domain/entity/body_weight_unit_entity.dart
 import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/fork/goal/completed_goals_page.dart';
+import 'package:opennutritracker/fork/goal/goal_actions.dart';
 import 'package:opennutritracker/fork/goal/goal_calendar_page.dart';
 import 'package:opennutritracker/fork/goal/goal_planner.dart';
 import 'package:opennutritracker/fork/goal/goal_reached.dart';
@@ -35,6 +36,10 @@ class GoalPlanSection extends StatelessWidget {
   /// After the plan changed here.
   final VoidCallback onChanged;
 
+  /// Whether the goal reached or over shows here; off where the page
+  /// shows it first.
+  final bool showStatus;
+
   const GoalPlanSection({
     super.key,
     required this.plan,
@@ -44,6 +49,7 @@ class GoalPlanSection extends StatelessWidget {
     required this.unit,
     required this.today,
     required this.onChanged,
+    this.showStatus = true,
   });
 
   String _day(BuildContext context, DateTime d) {
@@ -92,8 +98,8 @@ class GoalPlanSection extends StatelessWidget {
             ),
           ),
         ] else ...[
-          if (nowKg != null)
-            _StatusBanner(plan, nowKg!, unit, today, onChanged),
+          if (nowKg != null && showStatus)
+            GoalStatusBanner(plan, nowKg!, unit, today, onChanged),
           Semantics(
             identifier: 'goal-plan-calendar',
             button: true,
@@ -104,9 +110,12 @@ class GoalPlanSection extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Whole plan',
-                    style: Theme.of(context).textTheme.titleMedium,
+                  Semantics(
+                    header: true,
+                    child: Text(
+                      'Whole plan',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
                   ),
                   const SizedBox(height: Dimens.spacing8),
                   PlanGrid(
@@ -116,7 +125,19 @@ class GoalPlanSection extends StatelessWidget {
                     today: today,
                   ),
                   const SizedBox(height: Dimens.spacing8),
-                  const PhaseLegend(),
+                  PhaseLegend(
+                    kinds: {
+                      PhaseKind.maintain,
+                      for (final p in [plan, ...upcoming])
+                        for (final phase in p.phases) phase.kind,
+                      for (final r in history) r.kind,
+                    },
+                    breaks: [plan, ...upcoming].any(
+                      (p) =>
+                          p.kind == PhaseKind.cut &&
+                          p.phases.any((x) => x.kind == PhaseKind.maintain),
+                    ),
+                  ),
                   const SizedBox(height: 6),
                   Text(
                     'A square a day; today is outlined.',
@@ -160,7 +181,12 @@ class GoalPlanSection extends StatelessWidget {
           ),
           if (upcoming.isNotEmpty) ...[
             gap,
-            _UpNext(upcoming: upcoming, unit: unit, day: _day),
+            _UpNext(
+              upcoming: upcoming,
+              unit: unit,
+              day: _day,
+              onChanged: onChanged,
+            ),
           ],
           gap,
           Row(
@@ -258,11 +284,41 @@ class _UpNext extends StatelessWidget {
   final BodyWeightUnit unit;
   final String Function(BuildContext, DateTime) day;
 
+  final VoidCallback onChanged;
+
   const _UpNext({
     required this.upcoming,
     required this.unit,
     required this.day,
+    required this.onChanged,
   });
+
+  Future<void> _remove(BuildContext context, int i) async {
+    final title = goalTitle(upcoming[i], unit);
+    final actions = GoalActions();
+    final sure = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Remove $title?'),
+        content: Text(
+          i == upcoming.length - 1
+              ? 'Nothing is planned after it.'
+              : 'The goals after it start earlier.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Keep'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Remove'),
+          ),
+        ],
+      ),
+    );
+    if (sure == true && await actions.removeUpcoming(i)) onChanged();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -289,6 +345,22 @@ class _UpNext extends StatelessWidget {
                   '${day(context, p.start)} – '
                   '${p.targetKg == null ? '' : 'about '}'
                   '${day(context, p.end.subtract(const Duration(hours: 12)))}',
+                ),
+                trailing: Semantics(
+                  identifier: 'goal-upcoming-$i-menu',
+                  child: PopupMenuButton<bool>(
+                    tooltip: '${goalTitle(p, unit)}: edit or remove',
+                    onSelected: (edit) async {
+                      if (!edit) return _remove(context, i);
+                      if (await openGoalPlanner(context, upcomingIndex: i)) {
+                        onChanged();
+                      }
+                    },
+                    itemBuilder: (_) => const [
+                      PopupMenuItem(value: true, child: Text('Edit')),
+                      PopupMenuItem(value: false, child: Text('Remove')),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -325,20 +397,21 @@ class _Square extends StatelessWidget {
 }
 
 /// Reached, or over without: a card to complete or extend the goal.
-class _StatusBanner extends StatelessWidget {
+class GoalStatusBanner extends StatelessWidget {
   final PhasePlan plan;
   final double nowKg;
   final BodyWeightUnit unit;
   final DateTime today;
   final VoidCallback onChanged;
 
-  const _StatusBanner(
+  const GoalStatusBanner(
     this.plan,
     this.nowKg,
     this.unit,
     this.today,
-    this.onChanged,
-  );
+    this.onChanged, {
+    super.key,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -641,7 +714,10 @@ class _ThisWeek extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: Text('This week', style: theme.textTheme.titleMedium),
+                child: Semantics(
+                  header: true,
+                  child: Text('This week', style: theme.textTheme.titleMedium),
+                ),
               ),
               Text(
                 '${day(context, days.first)} – ${day(context, days.last)}',

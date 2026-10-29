@@ -29,7 +29,17 @@ String phaseName(PhaseKind kind, {bool inCut = false}) =>
 
 /// The phase colours named, for the calendar and bars.
 class PhaseLegend extends StatelessWidget {
-  const PhaseLegend({super.key});
+  /// The kinds shown; every kind by default.
+  final Set<PhaseKind> kinds;
+
+  /// Maintenance is also a cut's diet breaks.
+  final bool breaks;
+
+  const PhaseLegend({
+    super.key,
+    this.kinds = const {...PhaseKind.values},
+    this.breaks = false,
+  });
 
   @override
   Widget build(BuildContext context) => ExcludeSemantics(
@@ -38,21 +48,27 @@ class PhaseLegend extends StatelessWidget {
       runSpacing: 4,
       children: [
         for (final kind in PhaseKind.values)
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 14,
-                height: 14,
-                decoration: BoxDecoration(
-                  color: phaseColor(context, kind),
-                  borderRadius: BorderRadius.circular(4),
+          if (kinds.contains(kind))
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 14,
+                  height: 14,
+                  decoration: BoxDecoration(
+                    color: phaseColor(context, kind),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
                 ),
-              ),
-              const SizedBox(width: 6),
-              Text(kind.label, style: Theme.of(context).textTheme.bodySmall),
-            ],
-          ),
+                const SizedBox(width: 6),
+                Text(
+                  kind == PhaseKind.maintain && breaks
+                      ? 'Maintenance or diet break'
+                      : kind.label,
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ],
+            ),
       ],
     ),
   );
