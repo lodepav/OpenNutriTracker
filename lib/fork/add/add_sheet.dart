@@ -9,6 +9,8 @@ import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/core/utils/meal_type_suggester.dart';
 import 'package:opennutritracker/core/utils/navigation_options.dart';
 import 'package:opennutritracker/fork/screens/activity/add_activity_screen.dart';
+import 'package:opennutritracker/fork/bulk/ai_add.dart';
+import 'package:opennutritracker/fork/screens/add_meal/bulk_add_screen.dart';
 import 'package:opennutritracker/features/add_meal/presentation/add_meal_screen.dart';
 import 'package:opennutritracker/features/add_meal/presentation/add_meal_type.dart';
 import 'package:opennutritracker/fork/screens/add_meal/meal_item_card.dart';
@@ -21,8 +23,8 @@ import 'package:opennutritracker/generated/l10n.dart';
 
 /// Seam S131: the + sheet after the canvas's "Add sheet · A". Search
 /// first, the meal it goes to as chips (the time's meal picked), the
-/// foods logged lately with that meal, then Quick add, Scan, Recipes and
-/// Activity as tiles.
+/// foods logged lately with that meal, "Log with AI" while AI meal
+/// assistance is on, then Quick add, Scan, Recipes and Activity as tiles.
 class AddSheet extends StatefulWidget {
   final DateTime day;
   final bool showActivityTracking;
@@ -53,6 +55,9 @@ class _AddSheetState extends State<AddSheet> {
       ? locator<GetIntakeUsecase>().getRecentIntake()
       : null;
 
+  // "Log with AI" shows while AI meal assistance is on
+  final _aiAdd = aiAddEnabled();
+
   AddMealType get _mealType => AddMealExtension.fromIntakeTypeEntity(_type);
 
   void _openSearch() {
@@ -61,6 +66,19 @@ class _AddSheetState extends State<AddSheet> {
       ..pushNamed(
         NavigationOptions.addMealRoute,
         arguments: AddMealScreenArguments(_mealType, widget.day),
+      );
+  }
+
+  void _openAiAdd() {
+    Navigator.of(context)
+      ..pop()
+      ..pushNamed(
+        NavigationOptions.bulkAddRoute,
+        arguments: BulkAddScreenArguments(
+          _type,
+          widget.day,
+          widget.usesImperialUnits,
+        ),
       );
   }
 
@@ -175,6 +193,15 @@ class _AddSheetState extends State<AddSheet> {
             ),
             _recentFoods(context),
             const SizedBox(height: Dimens.spacing16),
+            FutureBuilder<bool>(
+              future: _aiAdd,
+              builder: (context, ai) => ai.data == true
+                  ? Padding(
+                      padding: const EdgeInsets.only(bottom: Dimens.spacing8),
+                      child: LogWithAiButton(onPressed: _openAiAdd),
+                    )
+                  : const SizedBox.shrink(),
+            ),
             _tiles(context, [
               _tile(
                 context,

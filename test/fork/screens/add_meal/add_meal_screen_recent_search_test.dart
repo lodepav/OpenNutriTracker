@@ -8,6 +8,7 @@ import 'package:opennutritracker/core/domain/entity/intake_entity.dart';
 import 'package:opennutritracker/core/domain/entity/intake_type_entity.dart';
 import 'package:opennutritracker/core/domain/usecase/get_config_usecase.dart';
 import 'package:opennutritracker/core/domain/usecase/get_intake_usecase.dart';
+import 'package:opennutritracker/core/utils/ai_credential_storage.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_nutriments_entity.dart';
 import 'package:opennutritracker/features/add_meal/domain/usecase/search_products_usecase.dart';
@@ -115,6 +116,18 @@ MealEntity _meal(String name, MealSourceEntity source) => MealEntity(
   nutriments: MealNutrimentsEntity.empty(),
   source: source,
 );
+
+class _AiCredentials implements AiCredentialStorage {
+  final bool enabled;
+
+  _AiCredentials(this.enabled);
+
+  @override
+  Future<bool> isEnabled() async => enabled;
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
 
 Finder _withIdentifier(String identifier) => find.byWidgetPredicate(
   (widget) => widget is Semantics && widget.properties.identifier == identifier,
@@ -309,5 +322,28 @@ void main() {
         expect(find.text(l10nEn.noResultsFound), findsOneWidget);
       },
     );
+  });
+
+  group('AI add', () {
+    testWidgets('off: the list icon, no Log with AI', (tester) async {
+      await _register(const []);
+      getIt.registerSingleton<AiCredentialStorage>(_AiCredentials(false));
+      await tester.pumpWidget(_app());
+      await tester.pumpAndSettle();
+
+      expect(_withIdentifier('add-meal-bulk-add'), findsOneWidget);
+      expect(find.text('Log with AI'), findsNothing);
+    });
+
+    testWidgets('on: Log with AI in place of the list icon', (tester) async {
+      await _register(const []);
+      getIt.registerSingleton<AiCredentialStorage>(_AiCredentials(true));
+      await tester.pumpWidget(_app());
+      await tester.pumpAndSettle();
+
+      expect(_withIdentifier('add-meal-bulk-add'), findsNothing);
+      expect(_withIdentifier('add-meal-ai-add'), findsOneWidget);
+      expect(find.text('Log with AI'), findsOneWidget);
+    });
   });
 }

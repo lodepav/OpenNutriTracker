@@ -35,7 +35,7 @@ import 'package:opennutritracker/features/scanner/util/barcode_check_digit.dart'
 import 'package:opennutritracker/generated/l10n.dart';
 import 'package:opennutritracker/fork/basket/basket_ui.dart';
 import 'package:opennutritracker/fork/screens/add_meal/result_sections.dart';
-import 'package:opennutritracker/fork/bulk/photo_meal_button.dart';
+import 'package:opennutritracker/fork/bulk/ai_add.dart';
 import 'package:opennutritracker/fork/suggest/fits_left.dart';
 import 'package:opennutritracker/fork/recents/search_sections.dart';
 
@@ -56,6 +56,12 @@ class _AddMealScreenState extends State<AddMealScreen> {
   late FoodBloc _foodBloc;
   late RecentMealBloc _recentMealBloc;
   late FavouriteMealBloc _favouriteMealBloc;
+
+  // one bloc for the app bar and AI add, both need the units
+  final _addMealBloc = locator<AddMealBloc>()..add(InitializeAddMealEvent());
+
+  // AI add replaces the list icon while AI meal assistance is on
+  final _aiAdd = aiAddEnabled();
 
   // Single smart search: one field, one results list, and source-filter chips.
   // Opens on Recent (fast re-logging); typing searches Products by default,
@@ -92,6 +98,7 @@ class _AddMealScreenState extends State<AddMealScreen> {
   void dispose() {
     _searchStringListener.dispose();
     _favouriteMealBloc.close();
+    _addMealBloc.close();
     super.dispose();
   }
 
@@ -108,6 +115,7 @@ class _AddMealScreenState extends State<AddMealScreen> {
         type: _mealType.getIntakeType(),
         day: _day,
       ),
+      floatingActionButton: _aiAddFab(),
       appBar: AppBar(
         title: Text(_mealType.getTypeName(context)),
         actions: [
@@ -122,27 +130,25 @@ class _AddMealScreenState extends State<AddMealScreen> {
             ),
           ),
           BlocBuilder<AddMealBloc, AddMealState>(
-            bloc: locator<AddMealBloc>()..add(InitializeAddMealEvent()),
+            bloc: _addMealBloc,
             builder: (BuildContext context, AddMealState state) {
               if (state is AddMealLoadedState) {
                 return Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // a meal photo in one tap
-                    PhotoMealButton(
-                      onPressed: () => _onBulkAddPressed(
-                        state.usesImperialUnits,
-                        startWithPhoto: true,
-                      ),
-                    ),
-                    Semantics(
-                      identifier: 'add-meal-bulk-add',
-                      child: IconButton(
-                        onPressed: () =>
-                            _onBulkAddPressed(state.usesImperialUnits),
-                        icon: const Icon(Icons.playlist_add),
-                        tooltip: S.of(context).bulkAddTitle,
-                      ),
+                    FutureBuilder<bool>(
+                      future: _aiAdd,
+                      builder: (context, ai) => ai.data == false
+                          ? Semantics(
+                              identifier: 'add-meal-bulk-add',
+                              child: IconButton(
+                                onPressed: () =>
+                                    _onBulkAddPressed(state.usesImperialUnits),
+                                icon: const Icon(Icons.playlist_add),
+                                tooltip: S.of(context).bulkAddTitle,
+                              ),
+                            )
+                          : const SizedBox.shrink(),
                     ),
                     Semantics(
                       identifier: 'add-meal-custom-add',
@@ -183,10 +189,27 @@ class _AddMealScreenState extends State<AddMealScreen> {
               // "no results for this query" apart from "a newer query is
               // still debouncing/searching" — the latter shows a spinner.
               Expanded(
-                child: ValueListenableBuilder<String>(
-                  valueListenable: _searchStringListener,
-                  builder: (context, query, _) =>
-                      _buildResults(context, palette, query),
+                // the lists scroll their last row clear of AI add
+                child: FutureBuilder<bool>(
+                  future: _aiAdd,
+                  builder: (context, ai) => MediaQuery(
+                    data: MediaQuery.of(context).copyWith(
+                      padding: MediaQuery.paddingOf(context).copyWith(
+                        // the button, its margin, the inset under it, a gap
+                        bottom: ai.data == true
+                            ? 56 +
+                                  kFloatingActionButtonMargin +
+                                  MediaQuery.viewPaddingOf(context).bottom +
+                                  Dimens.spacing16
+                            : 0,
+                      ),
+                    ),
+                    child: ValueListenableBuilder<String>(
+                      valueListenable: _searchStringListener,
+                      builder: (context, query, _) =>
+                          _buildResults(context, palette, query),
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -820,20 +843,30 @@ class _AddMealScreenState extends State<AddMealScreen> {
     );
   }
 
-  void _onBulkAddPressed(
-    bool usesImperialUnits, {
-    bool startWithPhoto = false,
-  }) {
+  void _onBulkAddPressed(bool usesImperialUnits) {
     Navigator.of(context).pushNamed(
       NavigationOptions.bulkAddRoute,
       arguments: BulkAddScreenArguments(
         _mealType.getIntakeType(),
         _day,
         usesImperialUnits,
-        startWithPhoto: startWithPhoto,
       ),
     );
   }
+
+  Widget _aiAddFab() => FutureBuilder<bool>(
+    future: _aiAdd,
+    builder: (context, ai) => ai.data != true
+        ? const SizedBox.shrink()
+        : BlocBuilder<AddMealBloc, AddMealState>(
+            bloc: _addMealBloc,
+            builder: (context, state) => state is AddMealLoadedState
+                ? AiAddFab(
+                    onPressed: () => _onBulkAddPressed(state.usesImperialUnits),
+                  )
+                : const SizedBox.shrink(),
+          ),
+  );
 
   void _onQuickAddPressed() {
     showModalBottomSheet<void>(

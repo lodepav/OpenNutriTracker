@@ -67,33 +67,32 @@ void main() {
     Widget? footer,
     double scale = 1,
     String query = '',
-  }) =>
-      ChangeNotifierProvider<EnergyUnitProvider>(
-        create: (_) => EnergyUnitProvider(usesKilojoules: false),
-        child: MaterialApp(
-          localizationsDelegates: const [
-            S.delegate,
-            ...GlobalMaterialLocalizations.delegates,
-          ],
-          supportedLocales: S.supportedLocales,
-          builder: (context, child) => MediaQuery(
-            data: MediaQuery.of(
-              context,
-            ).copyWith(textScaler: TextScaler.linear(scale)),
-            child: child!,
-          ),
-          home: Scaffold(
-            body: ResultSections(
-              day: DateTime(2026, 10, 27),
-              addMealType: AddMealType.dinnerType,
-              usesImperialUnits: false,
-              merged: merged,
-              query: query,
-              footer: footer,
-            ),
-          ),
+  }) => ChangeNotifierProvider<EnergyUnitProvider>(
+    create: (_) => EnergyUnitProvider(usesKilojoules: false),
+    child: MaterialApp(
+      localizationsDelegates: const [
+        S.delegate,
+        ...GlobalMaterialLocalizations.delegates,
+      ],
+      supportedLocales: S.supportedLocales,
+      builder: (context, child) => MediaQuery(
+        data: MediaQuery.of(
+          context,
+        ).copyWith(textScaler: TextScaler.linear(scale)),
+        child: child!,
+      ),
+      home: Scaffold(
+        body: ResultSections(
+          day: DateTime(2026, 10, 27),
+          addMealType: AddMealType.dinnerType,
+          usesImperialUnits: false,
+          merged: merged,
+          query: query,
+          footer: footer,
         ),
-      );
+      ),
+    ),
+  );
 
   final brands = [
     for (final (i, kcal) in [

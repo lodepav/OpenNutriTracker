@@ -30,10 +30,9 @@ void main() {
 
   test('the model\'s unit is kept for an amount inside a phrase', () {
     // Live Haiku 5.5 answered 330 ml; dropping the unit logged 330 servings.
-    final result = validateParsedMealItems(
-      const [ParsedMealItem(query: 'coke', quantity: 330, unit: 'ml')],
-      statedIn: 'a 330 ml can of coke and a cheeseburger',
-    );
+    final result = validateParsedMealItems(const [
+      ParsedMealItem(query: 'coke', quantity: 330, unit: 'ml'),
+    ], statedIn: 'a 330 ml can of coke and a cheeseburger');
 
     expect(result.items.single.unit, 'ml');
     expect(result.items.single.quantity, 330);

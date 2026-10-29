@@ -6,6 +6,8 @@ import 'package:get_it/get_it.dart';
 import 'package:opennutritracker/core/domain/entity/intake_entity.dart';
 import 'package:opennutritracker/core/domain/entity/intake_type_entity.dart';
 import 'package:opennutritracker/core/domain/usecase/get_intake_usecase.dart';
+import 'package:opennutritracker/core/utils/ai_credential_storage.dart';
+import 'package:opennutritracker/fork/screens/add_meal/bulk_add_screen.dart';
 import 'package:opennutritracker/fork/add/add_sheet.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_nutriments_entity.dart';
@@ -64,6 +66,18 @@ class _FakeGetIntakeUsecase implements GetIntakeUsecase {
   @override
   dynamic noSuchMethod(Invocation invocation) =>
       throw UnimplementedError('Unexpected call: ${invocation.memberName}');
+}
+
+class _AiCredentials implements AiCredentialStorage {
+  final bool enabled;
+
+  _AiCredentials(this.enabled);
+
+  @override
+  Future<bool> isEnabled() async => enabled;
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
 Finder _withIdentifier(String identifier) => find.byWidgetPredicate(
@@ -276,5 +290,68 @@ void main() {
     ]) {
       expect(_withIdentifier(id), findsOneWidget, reason: id);
     }
+  });
+
+  testWidgets('no "Log with AI" while AI meal assistance is off', (
+    tester,
+  ) async {
+    final getIt = GetIt.instance;
+    await getIt.reset();
+    getIt.registerSingleton<AiCredentialStorage>(_AiCredentials(false));
+    await tester.pumpWidget(
+      _wrapWithMaterial(AddSheet(day: DateTime(2026, 1, 1))),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Log with AI'), findsNothing);
+    await getIt.reset();
+  });
+
+  testWidgets('"Log with AI" opens Add several items for the picked meal', (
+    tester,
+  ) async {
+    final getIt = GetIt.instance;
+    await getIt.reset();
+    getIt.registerSingleton<AiCredentialStorage>(_AiCredentials(true));
+    final pushed = <RouteSettings>[];
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: const [S.delegate],
+        supportedLocales: S.supportedLocales,
+        onGenerateRoute: (settings) {
+          if (settings.name != '/') pushed.add(settings);
+          return MaterialPageRoute(
+            settings: settings,
+            builder: (context) => Scaffold(
+              body: TextButton(
+                onPressed: () => showModalBottomSheet<void>(
+                  context: context,
+                  isScrollControlled: true,
+                  builder: (_) => AddSheet(
+                    day: DateTime(2026, 1, 1),
+                    usesImperialUnits: true,
+                    suggestedType: IntakeTypeEntity.lunch,
+                  ),
+                ),
+                child: const Text('open'),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(l10nEn.dinnerLabel));
+    await tester.pump();
+    await tester.tap(find.text('Log with AI'));
+    await tester.pumpAndSettle();
+
+    expect(pushed.single.name, NavigationOptions.bulkAddRoute);
+    final args = pushed.single.arguments as BulkAddScreenArguments;
+    expect(args.intakeTypeEntity, IntakeTypeEntity.dinner);
+    expect(args.day, DateTime(2026, 1, 1));
+    expect(args.usesImperialUnits, isTrue);
+    await getIt.reset();
   });
 }
