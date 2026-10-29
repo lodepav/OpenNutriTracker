@@ -174,6 +174,9 @@ class PhaseStore {
   static const historyKey = 'goalHistory';
   static const _appliedKey = 'phaseApplied';
 
+  /// The goals planned to follow the running one, in order ([PhasePlan]).
+  static const upcomingKey = 'goalsUpcoming';
+
   /// The goal planner's milestone step: its place in the unit's list
   /// (`milestoneStepsKg`, `milestoneStepsLb`) from 1, 0 for none.
   static const milestoneKey = 'milestoneStep';
@@ -201,6 +204,23 @@ class PhaseStore {
       await box.put(planKey, plan.toJson());
     }
     await box.delete(_appliedKey);
+    changes.value++;
+  }
+
+  /// The goals after the running one, in the order they run.
+  Future<List<PhasePlan>> upcoming() async => [
+    for (final json
+        in (await _box()).get(upcomingKey, defaultValue: []) as List)
+      PhasePlan.fromJson(json as Map),
+  ];
+
+  Future<void> saveUpcoming(List<PhasePlan> plans) async {
+    final box = await _box();
+    if (plans.isEmpty) {
+      await box.delete(upcomingKey);
+    } else {
+      await box.put(upcomingKey, [for (final p in plans) p.toJson()]);
+    }
     changes.value++;
   }
 

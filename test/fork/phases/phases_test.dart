@@ -166,6 +166,16 @@ void main() {
       expect((await store.history()).map((r) => r.endKg), [80, 75.5]);
     });
 
+    test('the upcoming goals are kept in order, and cleared', () async {
+      await store.saveUpcoming([_plan, _plan]);
+      expect((await store.upcoming()).map((p) => p.start), [
+        _plan.start,
+        _plan.start,
+      ]);
+      await store.saveUpcoming([]);
+      expect(await store.upcoming(), isEmpty);
+    });
+
     test('a pace a profile switch dropped is tried again', () async {
       await store.save(_plan);
       saves = false;

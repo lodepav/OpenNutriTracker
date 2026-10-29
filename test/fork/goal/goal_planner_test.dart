@@ -400,4 +400,66 @@ void main() {
       expect(store.saved!.kind, PhaseKind.maintain);
     });
   });
+
+  group('upcoming goals', () {
+    final cut = _cut().toPlan();
+    final maintain = GoalDraft(
+      kind: PhaseKind.maintain,
+      startKg: 70,
+      start: DateTime(2020),
+      paceKg: 0,
+      breaks: false,
+      maintainWeeks: 4,
+    ).toPlan();
+    final bulk = GoalDraft(
+      kind: PhaseKind.bulk,
+      startKg: 70,
+      targetKg: 84,
+      start: DateTime(2020),
+      paceKg: 0.25,
+      breaks: false,
+    ).toPlan();
+
+    test('each starts as the one before ends, from its weight', () {
+      final queue = reflowed(
+        cut,
+        [maintain, bulk],
+        from: DateTime(2026, 10, 29),
+        fromKg: 85,
+      );
+      expect(queue[0].start, cut.end);
+      expect(queue[0].startKg, 80);
+      expect(queue[0].phases.single.weeks, 4);
+      expect(queue[1].start, queue[0].end);
+      expect(queue[1].startKg, 80);
+      // 4 kg at 0.25 a week.
+      expect(queue[1].phases.single.weeks, 16);
+      expect(queue[1].targetKg, 84);
+    });
+
+    test('with none running, the first starts on the day given', () {
+      final queue = reflowed(
+        null,
+        [bulk],
+        from: DateTime(2026, 10, 29, 15),
+        fromKg: 82,
+      );
+      expect(queue.single.start, DateTime(2026, 10, 29));
+      expect(queue.single.phases.single.weeks, 8);
+    });
+
+    test("the calendar has each upcoming goal's days", () {
+      final queue = reflowed(
+        cut,
+        [maintain, bulk],
+        from: DateTime(2026, 10, 29),
+        fromKg: 85,
+      );
+      PhaseKind? on(DateTime d) => kindOn(d, cut, [], upcoming: queue);
+      expect(on(cut.end.subtract(const Duration(days: 1))), PhaseKind.cut);
+      expect(on(cut.end), PhaseKind.maintain);
+      expect(on(queue[1].start), PhaseKind.bulk);
+      expect(on(queue[1].end), PhaseKind.maintain);
+    });
+  });
 }

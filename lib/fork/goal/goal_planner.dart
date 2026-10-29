@@ -309,14 +309,20 @@ PhasePlan extendedPlan(
   );
 }
 
-/// The phase kind on [day]: the running plan's, a completed goal's, or
-/// null on a day no goal covers. After the plan's end, maintenance.
-PhaseKind? kindOn(DateTime day, PhasePlan? plan, List<GoalRecord> history) {
+/// The phase kind on [day]: the running plan's, an [upcoming] goal's, a
+/// completed goal's, or null on a day no goal covers. After the last
+/// plan's end, maintenance.
+PhaseKind? kindOn(
+  DateTime day,
+  PhasePlan? plan,
+  List<GoalRecord> history, {
+  List<PhasePlan> upcoming = const [],
+}) {
   final date = _date(day);
-  if (plan != null) {
-    final i = plan.indexOn(date);
-    if (i >= plan.phases.length) return PhaseKind.maintain;
-    if (i >= 0) return plan.phases[i].kind;
+  for (final p in [?plan, ...upcoming].reversed) {
+    final i = p.indexOn(date);
+    if (i >= p.phases.length) return PhaseKind.maintain;
+    if (i >= 0) return p.phases[i].kind;
   }
   for (final r in history.reversed) {
     if (!date.isBefore(_date(r.start)) && !date.isAfter(_date(r.end))) {
@@ -357,4 +363,37 @@ PhasePlan editedPlan(
     extensions: plan.extensions,
     phases: [...kept, ...ahead.phases],
   );
+}
+
+/// The weight [plan] ends at: its target, else where its paces lead.
+double? endKgOf(PhasePlan plan) =>
+    plan.targetKg ?? plan.weightAt(plan.phases.length);
+
+/// [plan] planned again from [start] at [startKg]: the same goal, pace and
+/// breaks, its weeks worked out afresh.
+PhasePlan restarted(PhasePlan plan, DateTime start, double startKg) =>
+    GoalDraft.of(
+      plan,
+      startKg,
+    ).copyWith(start: _date(start), startKg: startKg).toPlan();
+
+/// The goals in [upcoming], each [restarted] the day after the one before
+/// ends, from the weight it ends at: the first after [current], or from
+/// [from] at [fromKg] with no goal running.
+List<PhasePlan> reflowed(
+  PhasePlan? current,
+  List<PhasePlan> upcoming, {
+  required DateTime from,
+  required double fromKg,
+}) {
+  var start = current?.end ?? _date(from);
+  var kg = (current == null ? null : endKgOf(current)) ?? fromKg;
+  final out = <PhasePlan>[];
+  for (final p in upcoming) {
+    final next = restarted(p, start, kg);
+    out.add(next);
+    start = next.end;
+    kg = endKgOf(next) ?? kg;
+  }
+  return out;
 }
