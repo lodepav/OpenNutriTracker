@@ -175,6 +175,21 @@ void main() {
     expect([for (final p in store.queue) p.kind], [PhaseKind.maintain]);
   });
 
+  testWidgets('Up next flags a goal left behind its target', (tester) async {
+    // A bulk to 84 that now starts at 85: nothing to gain.
+    final stale = PhasePlan(
+      start: DateTime(2027, 1, 4),
+      startKg: 85,
+      targetKg: 84,
+      phases: const [
+        DietPhase(kind: PhaseKind.bulk, kgPerWeek: 0.25, weeks: 1),
+      ],
+    );
+    await _pump(tester, section(_MemoryPhases(_cut, [_hold, stale])));
+    await tester.scrollUntilVisible(_id('goal-upcoming-1'), 200);
+    expect(find.textContaining('behind where it now starts'), findsOneWidget);
+  });
+
   testWidgets('the two plan buttons stack full width', (tester) async {
     await _pump(tester, section(_MemoryPhases(_cut, [_hold])));
     final edit = tester.getRect(_id('goal-plan-edit'));

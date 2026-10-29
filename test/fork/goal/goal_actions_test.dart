@@ -240,6 +240,35 @@ void main() {
       expect(saved, [(0.0, null)]);
     });
 
+    test('started late, the one before still ends the day the next '
+        'began', () async {
+      store.queue.addAll(
+        reflowed(_plan, [_hold, _bulk], from: today, fromKg: 80),
+      );
+      // The app first opened three days after the hold was due.
+      today = DateTime(2027, 1, 7, 9);
+      expect(await actions().startNextIfDue(80.4), isTrue);
+      expect(store.saved!.start, DateTime(2027, 1, 4));
+      expect(store.goals.single.end, DateTime(2027, 1, 4));
+    });
+
+    test('a move that leaves a goal behind its target flags it', () async {
+      // A cut to 81 after a bulk to 84; moved first, it starts at the
+      // running cut's 80, already under its target.
+      final cut = GoalDraft(
+        kind: PhaseKind.cut,
+        startKg: 84,
+        targetKg: 81,
+        start: DateTime(2027, 5, 3),
+      ).toPlan();
+      store.queue.addAll(
+        reflowed(_plan, [_bulk, cut], from: today, fromKg: 80),
+      );
+      expect(store.queue.map(queuedProblem), [null, null]);
+      await actions().moveUpcoming(1, 0);
+      expect(queuedProblem(store.queue.first), isNotNull);
+    });
+
     test('a profile switch drops a queue change', () async {
       final made = actions();
       await withProfileSwitchLock(() async {});

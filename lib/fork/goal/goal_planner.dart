@@ -369,6 +369,13 @@ PhasePlan editedPlan(
 double? endKgOf(PhasePlan plan) =>
     plan.targetKg ?? plan.weightAt(plan.phases.length);
 
+/// What is wrong with queued goal [plan] where it now starts: a target it
+/// has passed, after a goal before it moved, went or changed.
+String? queuedProblem(PhasePlan plan) {
+  final kg = plan.startKg;
+  return kg == null ? null : GoalDraft.of(plan, kg).problem;
+}
+
 /// [plan] planned again from [start] at [startKg]: the same goal, pace and
 /// breaks, its weeks worked out afresh.
 PhasePlan restarted(PhasePlan plan, DateTime start, double startKg) =>

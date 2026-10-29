@@ -376,11 +376,16 @@ class _UpNext extends StatelessWidget {
               child: ListTile(
                 leading: _Square(color: phaseColor(context, p.kind)),
                 title: Text('${i + 1}. ${goalTitle(p, unit)}'),
-                subtitle: Text(
-                  '${day(context, p.start)} – '
-                  '${p.targetKg == null ? '' : 'about '}'
-                  '${day(context, p.end.subtract(const Duration(hours: 12)))}',
-                ),
+                subtitle: queuedProblem(p) == null
+                    ? Text(
+                        '${day(context, p.start)} – '
+                        '${p.targetKg == null ? '' : 'about '}'
+                        '${day(context, p.end.subtract(const Duration(hours: 12)))}',
+                      )
+                    : Text(
+                        'Its target is behind where it now starts: edit it.',
+                        style: TextStyle(color: theme.colorScheme.error),
+                      ),
                 trailing: Semantics(
                   identifier: 'goal-upcoming-$i-menu',
                   child: PopupMenuButton<_UpNextAction>(

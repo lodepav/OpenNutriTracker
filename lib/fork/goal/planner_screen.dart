@@ -375,8 +375,8 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
   int _step = 0;
 
   /// A queued goal's target, set from where it starts until picked, gives
-  /// no error before then.
-  bool _targetSet = false;
+  /// no error before then; an upcoming goal's own, being edited, does.
+  late bool _targetSet = widget.queuedAt != null;
   bool _macrosValid = true;
   bool _saving = false;
 
@@ -767,8 +767,13 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
               child: Row(
                 children: [
                   Expanded(
+                    // A new queued goal's target, the profile's, is mostly
+                    // where it starts: then asked for, not shown.
                     child: Text(
-                      target == null ? 'Set a target weight' : _kg(target),
+                      target == null ||
+                              (_queued && !_targetSet && problem != null)
+                          ? 'Set a target weight'
+                          : _kg(target),
                       style: Theme.of(context).textTheme.titleLarge,
                     ),
                   ),

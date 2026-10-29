@@ -119,8 +119,12 @@ class GoalActions {
     if (plan != null && today.isBefore(_date(queue.first.start))) return false;
     final next = queue.first;
     if (!await _saveGoal(next.paceOn(today), next.targetKg)) return false;
+    // The one before ended the day the next began, though the app
+    // opened later.
     if (plan != null) {
-      await _store.addToHistory([completedGoal(plan, nowKg, today)]);
+      await _store.addToHistory([
+        completedGoal(plan, nowKg, _date(next.start)),
+      ]);
     }
     // It begins the day it was planned to, so the rest stay as planned.
     await _store.save(next);
