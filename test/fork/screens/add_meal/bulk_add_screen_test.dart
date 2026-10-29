@@ -524,6 +524,7 @@ Widget _app({
   List<RouteSettings>? pushed,
   bool startWithPhoto = false,
   String? sharedPhotoPath,
+  String? sharedText,
   // [/fork]
 }) => ChangeNotifierProvider<EnergyUnitProvider>(
   create: (_) => EnergyUnitProvider(usesKilojoules: false),
@@ -566,6 +567,7 @@ Widget _app({
             imperial,
             startWithPhoto: startWithPhoto,
             sharedPhotoPath: sharedPhotoPath,
+            sharedText: sharedText,
             // [/fork]
           ),
         ),
@@ -1378,8 +1380,8 @@ void main() {
     );
   });
 
-  testWidgets('a shared photo waits by the buttons until it reads, its '
-      'note back in the box after a failure', (tester) async {
+  testWidgets('a shared photo waits by the buttons until send, its note '
+      'back in the box after a failure', (tester) async {
     await _register(const {});
     final storage = AiCredentialStorage(
       _MapStorage({
@@ -1439,27 +1441,49 @@ void main() {
     final readShared = find.text('Read the shared photo');
     await settleUntil(() => readShared.evaluate().isNotEmpty);
     await tester.tap(readShared);
-    await settleUntil(() => reader.notes.isNotEmpty);
-
-    // read at once, failed, and still waiting to be sent again
-    expect(reader.notes, [null]);
     final staged = find.bySemanticsIdentifier('bulk-add-photo-staged');
+    await settleUntil(() => staged.evaluate().isNotEmpty);
+
+    // staged, not read: it waits for send like a photo taken here
     expect(staged, findsOneWidget);
+    expect(reader.notes, isEmpty);
 
     await tester.enterText(find.byType(TextField).first, 'two eggs');
     await tester.pump();
-    await tester.tap(find.bySemanticsIdentifier('bulk-add-parse'));
-    await tester.pumpAndSettle();
-    expect(reader.notes.last, 'two eggs');
-    expect(staged, findsOneWidget);
-    expect(find.widgetWithText(TextField, 'two eggs'), findsOneWidget);
+    final send = find.bySemanticsIdentifier('bulk-add-parse');
+    // a failed read, then one that found no food: both keep the photo and
+    // put the note back
+    for (var i = 0; i < 2; i++) {
+      await tester.tap(send);
+      await tester.pumpAndSettle();
+      expect(reader.notes.last, 'two eggs');
+      expect(staged, findsOneWidget);
+      expect(find.widgetWithText(TextField, 'two eggs'), findsOneWidget);
+    }
 
-    await tester.tap(find.bySemanticsIdentifier('bulk-add-parse'));
+    await tester.tap(send);
     await tester.pumpAndSettle();
-    expect(reader.notes.last, 'two eggs');
+    expect(reader.notes, hasLength(3));
     expect(staged, findsNothing);
     expect(find.text('Egg'), findsOneWidget);
     expect(find.widgetWithText(TextField, 'two eggs'), findsNothing);
+  });
+
+  testWidgets('shared text waits in the box for send', (tester) async {
+    await _register({
+      'toast': [_meal('Toast')],
+    });
+    await tester.pumpWidget(_app(sharedText: '100g toast'));
+    await tester.pumpAndSettle();
+    tester.state<NavigatorState>(find.byType(Navigator)).pushNamed('/bulk');
+    await tester.pumpAndSettle();
+
+    expect(find.widgetWithText(TextField, '100g toast'), findsOneWidget);
+    expect(find.text('Toast'), findsNothing);
+
+    await tester.tap(find.widgetWithIcon(FilledButton, Icons.search));
+    await tester.pumpAndSettle();
+    expect(find.text('Toast'), findsOneWidget);
   });
 
   testWidgets('the Photo log shortcut says why, without a model that '

@@ -419,27 +419,22 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
       _forkPhotoStarted = true;
       WidgetsBinding.instance.addPostFrameCallback((_) async {
         if (await _photoAvailable && mounted) {
-          await _onPhotoPressed(readNow: true);
+          await _onPhotoPressed();
         } else if (mounted) {
           // the Photo log shortcut is there whether or not photos can be read
           _showNoPhotoModel();
         }
       });
     }
-    // what another app shared, once: text is read as if typed, a photo
-    // after the same disclosure as the camera's
+    // what another app shared, once, waiting for send like anything
+    // typed or taken: text in the box, a photo after the camera's disclosure
     if (_forkSharedTaken) return;
     _forkSharedTaken = true;
-    if (_args.sharedText case final text?) {
-      _textController.text = text;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _onParsePressed();
-      });
-    }
+    if (_args.sharedText case final text?) _textController.text = text;
     if (_args.sharedPhotoPath case final path?) {
       WidgetsBinding.instance.addPostFrameCallback((_) async {
         if (await _photoAvailable && mounted) {
-          await _onPhotoPressed(sharedPath: path, readNow: true);
+          await _onPhotoPressed(sharedPath: path);
           return;
         }
         _discardShared(path);
@@ -861,12 +856,11 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
     );
   }
 
-  /// Takes or picks a photo and holds it until send, so the box can
-  /// describe it; [readNow] reads it at once (the photo shortcut, a share).
+  /// Takes or picks a photo (or takes a shared one) and holds it until
+  /// send, so the box can describe it.
   Future<void> _onPhotoPressed({
     String? sharedPath,
     ImageSource from = ImageSource.camera,
-    bool readNow = false,
   }) async {
     FocusScope.of(context).unfocus();
     final destination = await _photoDestination;
@@ -988,7 +982,6 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
     }
 
     setState(() => _stagedPhoto = photo);
-    if (readNow) _readStagedPhoto();
   }
 
   /// Sends the photo waiting by the buttons, with the box as its note.
