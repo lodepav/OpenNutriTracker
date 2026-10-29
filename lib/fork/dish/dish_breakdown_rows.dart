@@ -18,6 +18,12 @@ class DishIngredientItem extends ParsedMealItem {
   /// ("3 sklandrauši"), else one. Its recipe is saved with as many.
   final int servings;
 
+  /// The dish's weight as eaten, when the user stated it in grams: a
+  /// weighed plate's total (S175), or the amount a breakdown was asked for.
+  /// The ingredients add up to it on a weighed plate; a breakdown's are
+  /// raw, so theirs may not.
+  final double? dishGrams;
+
   const DishIngredientItem({
     required super.query,
     super.quantity,
@@ -25,6 +31,7 @@ class DishIngredientItem extends ParsedMealItem {
     required this.dish,
     required this.group,
     this.servings = 1,
+    this.dishGrams,
   });
 }
 
@@ -100,6 +107,10 @@ BulkAddLoadedState replaceRowWithBreakdown(
 
   final group = Object();
   final servings = statedCount(state.rows[index]) ?? 1;
+  final stated = statedAmount(state.rows[index]);
+  final dishGrams = stated != null && stated.endsWith(' g')
+      ? double.tryParse(stated.substring(0, stated.length - 2))
+      : null;
   final ingredients = [
     for (final item in event.breakdown.ingredients)
       _row(
@@ -111,6 +122,7 @@ BulkAddLoadedState replaceRowWithBreakdown(
             dish: event.breakdown.dish,
             group: group,
             servings: servings,
+            dishGrams: dishGrams,
           ),
           candidates: item.candidates,
           selectedIndex: item.selectedIndex,
