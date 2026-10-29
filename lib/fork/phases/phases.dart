@@ -7,9 +7,11 @@ import 'package:opennutritracker/core/domain/usecase/get_user_usecase.dart';
 import 'package:opennutritracker/core/utils/hive_db_provider.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/core/utils/tracked_day_lock.dart';
+import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/fork/adaptive/goal_plan.dart';
 import 'package:opennutritracker/fork/adaptive/goal_plan_card.dart';
+import 'package:opennutritracker/fork/goal/goal_actions.dart';
 
 enum PhaseKind {
   cut('Cut'),
@@ -325,13 +327,32 @@ class PhaseRunner {
   _setPace;
   final DateTime Function() _clock;
 
+  /// Starts the first queued goal, keeping the running one as completed;
+  /// false when it was not.
+  final Future<bool> Function(PhaseStore store, ProfileStamp startedOn)
+  _startNext;
+
   PhaseRunner({
     PhaseStore? store,
     Future<bool> Function(double kgPerWeek, ProfileStamp startedOn)? setPace,
     DateTime Function()? clock,
+    Future<bool> Function(PhaseStore store, ProfileStamp startedOn)? startNext,
   }) : _store = store ?? PhaseStore(),
        _setPace = setPace ?? _savePaceIfProfile,
-       _clock = clock ?? DateTime.now;
+       _clock = clock ?? DateTime.now,
+       _startNext = startNext ?? _startNextIfProfile;
+
+  static Future<bool> _startNextIfProfile(
+    PhaseStore store,
+    ProfileStamp startedOn,
+  ) async {
+    if (!await locator<GetUserUsecase>().hasUserData()) return false;
+    final inputs = await AdaptiveService.fromLocator().goalPlan(pastDays: 1);
+    return GoalActions(
+      store: store,
+      startedOn: startedOn,
+    ).startNextIfDue(inputs?.pastTrendKg.lastOrNull);
+  }
 
   static Future<bool> _savePaceIfProfile(
     double kgPerWeek,
@@ -345,9 +366,10 @@ class PhaseRunner {
     // The plan and the pace of one profile.
     final startedOn = ProfileStamp.now();
     try {
+      final now = _clock();
+      await _startDue(now, startedOn);
       final plan = await _store.plan();
       if (plan == null) return false;
-      final now = _clock();
       final pace = plan.paceOn(now);
       if (pace == null) return false;
       final key = '${plan.start.toIso8601String()}#${plan.indexOn(now)}';
@@ -360,6 +382,18 @@ class PhaseRunner {
     } catch (error, stack) {
       _log.warning('Could not apply the diet phase', error, stack);
       return false;
+    }
+  }
+
+  /// The queued goals whose day has come started in turn, each keeping
+  /// the one before as completed.
+  Future<void> _startDue(DateTime now, ProfileStamp startedOn) async {
+    final day = DateTime(now.year, now.month, now.day);
+    for (var queue = await _store.upcoming(); queue.isNotEmpty;) {
+      final plan = await _store.plan();
+      if (plan != null && day.isBefore(queue.first.start)) return;
+      if (!await _startNext(_store, startedOn)) return;
+      queue = await _store.upcoming();
     }
   }
 
