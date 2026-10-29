@@ -115,7 +115,7 @@ void main() {
     expect(find.text('Cut to 80.0 kg'), findsOneWidget);
     expect(find.text('Now'), findsOneWidget);
     expect(find.text('Edit plan'), findsOneWidget);
-    expect(find.text('1 · the last a bulk to 85.9 kg'), findsOneWidget);
+    expect(find.text('1 · the last a bulk, ended at 85.9 kg'), findsOneWidget);
     // Not reached, not over: no banner.
     expect(find.text('See how it went'), findsNothing);
   });
@@ -164,7 +164,7 @@ void main() {
       ),
     );
     expect(find.text('Up next'), findsOneWidget);
-    expect(find.text('1. Maintenance, 4 weeks'), findsOneWidget);
+    expect(find.text('1. Maintain for 4 weeks'), findsOneWidget);
     expect(find.text('2. Bulk to 84.0 kg'), findsOneWidget);
     expect(find.text('Plan a goal after these'), findsOneWidget);
     final grid = tester.widget<PlanGrid>(find.byType(PlanGrid));

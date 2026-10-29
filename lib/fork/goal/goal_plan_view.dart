@@ -148,7 +148,14 @@ class GoalPlanSection extends StatelessWidget {
             ),
           ),
           gap,
-          _ThisWeek(plan: plan, history: history, today: today, day: _day),
+          _ThisWeek(
+            plan: plan,
+            upcoming: upcoming,
+            history: history,
+            unit: unit,
+            today: today,
+            day: _day,
+          ),
           gap,
           AppCard(
             padding: const EdgeInsets.symmetric(vertical: Dimens.spacing4),
@@ -228,7 +235,7 @@ class GoalPlanSection extends StatelessWidget {
                     ? 'None yet'
                     : '${history.length} · the last a '
                           '${history.last.kind.label.toLowerCase()}'
-                          '${history.last.endKg == null ? '' : ' to ${weightText(history.last.endKg!, unit)}'}',
+                          '${history.last.endKg == null ? '' : ', ended at ${weightText(history.last.endKg!, unit)}'}',
               ),
               trailing: const Icon(Icons.chevron_right_rounded),
               onTap: () => Navigator.of(context).push(
@@ -308,7 +315,7 @@ class _UpNext extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Keep'),
+            child: const Text('Cancel'),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
@@ -377,7 +384,10 @@ String goalTitle(PhasePlan plan, BodyWeightUnit unit) {
     return '${plan.kind.label} to ${weightText(target, unit)}';
   }
   final weeks = plan.phases.fold(0, (w, p) => w + p.weeks);
-  return '${plan.kind.label}, $weeks ${weeks == 1 ? 'week' : 'weeks'}';
+  final w = '$weeks ${weeks == 1 ? 'week' : 'weeks'}';
+  return plan.kind == PhaseKind.maintain
+      ? 'Maintain for $w'
+      : '${plan.kind.label} for $w';
 }
 
 class _Square extends StatelessWidget {
@@ -673,13 +683,17 @@ class _GridPainter extends CustomPainter {
 /// This week's days in their colours, and when the next phase begins.
 class _ThisWeek extends StatelessWidget {
   final PhasePlan plan;
+  final List<PhasePlan> upcoming;
   final List<GoalRecord> history;
+  final BodyWeightUnit unit;
   final DateTime today;
   final String Function(BuildContext, DateTime) day;
 
   const _ThisWeek({
     required this.plan,
+    required this.upcoming,
     required this.history,
+    required this.unit,
     required this.today,
     required this.day,
   });
@@ -702,6 +716,9 @@ class _ThisWeek extends StatelessWidget {
         : next < plan.phases.length
         ? 'Next: ${phaseName(plan.phases[next].kind, inCut: inCut).toLowerCase()} '
               'from ${day(context, plan.startOf(next))}.'
+        : next == plan.phases.length && upcoming.isNotEmpty
+        ? 'Next: ${goalTitle(upcoming.first, unit).toLowerCase()} from '
+              '${day(context, upcoming.first.start)}.'
         : next == plan.phases.length
         ? 'Maintenance from ${day(context, plan.end)}, after the last phase.'
         : 'The plan\'s phases are over: maintenance.';
@@ -732,7 +749,7 @@ class _ThisWeek extends StatelessWidget {
                 Expanded(
                   child: Builder(
                     builder: (context) {
-                      final kind = kindOn(d, plan, history);
+                      final kind = kindOn(d, plan, history, upcoming: upcoming);
                       final isToday = d == t;
                       return Semantics(
                         label:

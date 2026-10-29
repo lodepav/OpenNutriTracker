@@ -18,6 +18,7 @@ import 'package:opennutritracker/fork/adaptive/macro_program_ui.dart';
 import 'package:opennutritracker/fork/adaptive/onboarding_macros.dart';
 import 'package:opennutritracker/fork/display/display_prefs.dart';
 import 'package:opennutritracker/fork/goal/goal_actions.dart';
+import 'package:opennutritracker/fork/goal/goal_plan_view.dart' show goalTitle;
 import 'package:opennutritracker/fork/goal/goal_planner.dart';
 import 'package:opennutritracker/fork/goal/phase_colors.dart';
 import 'package:opennutritracker/fork/phases/phases.dart';
@@ -271,6 +272,13 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
 
   bool get _queued => _place != null;
 
+  /// The upcoming goal that follows this one, if any.
+  PhasePlan? get _nextGoal {
+    final up = _setup.upcoming;
+    final at = widget.queuedAt != null ? widget.queuedAt! + 1 : _place ?? 0;
+    return at < up.length ? up[at] : null;
+  }
+
   /// The goal before [place]: the one running, or an upcoming one.
   PhasePlan _goalBefore(int place) =>
       place == 0 ? _setup.running! : _setup.upcoming[place - 1];
@@ -355,6 +363,10 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
     (p) => (p - _draft.paceKg).abs() < 0.001,
   );
   int _step = 0;
+
+  /// A queued goal's target, set from where it starts until picked, gives
+  /// no error before then.
+  bool _targetSet = false;
   bool _macrosValid = true;
   bool _saving = false;
 
@@ -739,11 +751,16 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
             ),
           ),
         ),
-        if (problem != null && target != null)
+        if (problem != null && target != null && (!_queued || _targetSet))
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
             child: Text(
-              problem,
+              _queued
+                  ? problem.replaceFirst(
+                      'your weight now',
+                      '${_kg(_draft.startKg)}, where it starts',
+                    )
+                  : problem,
               style: TextStyle(color: Theme.of(context).colorScheme.error),
             ),
           ),
@@ -753,9 +770,9 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Text(
-            'Starts ${_date(_draft.start)}, after '
-            '${_goalName(_goalBefore(widget.queuedAt!))}. To change when, '
-            'move it on the calendar.',
+            'Starts ${_date(_draft.start)}, when '
+            '${_goalName(_goalBefore(widget.queuedAt!))} ends.'
+            '${_setup.upcoming.length > 1 ? ' To change the order, move it on the calendar.' : ''}',
           ),
         )
       else if (_begun && _draft.kind == widget.editing!.kind)
@@ -771,13 +788,15 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Wrap(
             spacing: 8,
+            runSpacing: 8,
             children: [
               if (widget.onQueue != null && _setup.running != null)
                 for (var place = _setup.upcoming.length; place >= 0; place--)
                   Semantics(
                     identifier: 'goal-start-after-$place',
                     child: ChoiceChip(
-                      label: Text(
+                      label: _chipText(
+                        context,
                         'After ${_goalName(_goalBefore(place))} · '
                         '${_date(_goalBefore(place).end)}',
                       ),
@@ -794,7 +813,12 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
                   today,
                 ),
                 if (!_sameDay(monday, today))
-                  ('monday', 'Monday, ${_date(monday)}', monday),
+                  (
+                    'monday',
+                    'Monday, ${_date(monday)}'
+                        '${_setup.running != null && widget.onQueue != null ? ', replacing ${_goalName(_setup.running!)}' : ''}',
+                    monday,
+                  ),
                 if (_setup.running != null &&
                     !_sameDay(_setup.running!.start, today) &&
                     !_sameDay(_setup.running!.start, monday))
@@ -807,7 +831,7 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
                 Semantics(
                   identifier: 'goal-start-$id',
                   child: ChoiceChip(
-                    label: Text(label),
+                    label: _chipText(context, label),
                     selected: !_queued && _sameDay(_draft.start, day),
                     onSelected: (_) => setState(() {
                       _place = null;
@@ -824,6 +848,14 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
         ),
     ];
   }
+
+  /// A chip's label, wrapping at large text rather than cut off.
+  static Widget _chipText(BuildContext context, String text) => ConstrainedBox(
+    constraints: BoxConstraints(
+      maxWidth: MediaQuery.sizeOf(context).width - 96,
+    ),
+    child: Text(text, softWrap: true),
+  );
 
   /// [plan] in a sentence: "the cut", "maintaining", "the bulk".
   static String _goalName(PhasePlan plan) => switch (plan.kind) {
@@ -851,7 +883,10 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
     );
     final kg = result?.value;
     if (kg == null || !mounted) return;
-    setState(() => _draft = _draft.copyWith(targetKg: () => kg));
+    setState(() {
+      _targetSet = true;
+      _draft = _draft.copyWith(targetKg: () => kg);
+    });
   }
 
   // ---------------------------------------------------------------- pace
@@ -1254,8 +1289,8 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
               identifier: 'goal-carried-macros',
               title: 'Macros',
               subtitle:
-                  settings.macroProgram?.summary(perLb: _perLb) ??
-                  'Percentages from your macro split',
+                  '${_gramsText(_gramsAt(_mainKcal, settings.macroProgram))} · '
+                  '${settings.macroProgram?.summary(perLb: _perLb) ?? 'your split, $_splitText'}',
               onChange: () => _goTo(_Step.macros),
             ),
         ],
@@ -1299,7 +1334,12 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
                   '${phaseName(p.kind, inCut: inCut)}'
                   '${settings.fixedTarget ? '' : ' · about ${energyText(context, _kcalAt(p.kgPerWeek))}'}',
             ),
-          _Row(label: 'From ${_date(plan.end)}', value: 'Maintenance'),
+          _Row(
+            label: 'From ${_date(plan.end)}',
+            value: _nextGoal == null
+                ? 'Maintenance'
+                : '${goalTitle(_nextGoal!, _unit)}, up next',
+          ),
         ],
       ),
       _Panel(

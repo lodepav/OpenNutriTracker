@@ -128,7 +128,7 @@ void main() {
     expect(
       linesIn(DateTime(2027, 1)),
       'Cut to 80.0 kg · until Jan 3 / '
-      'Maintenance, 4 weeks · Jan 4 – 31 · up next',
+      'Maintain for 4 weeks · Jan 4 – 31 · up next',
     );
     expect(linesIn(DateTime(2026, 7)), 'Bulk to 86.0 kg · done');
   });
@@ -155,9 +155,9 @@ void main() {
     await tester.tap(_day(2027, 2, 3));
     await tester.pumpAndSettle();
     expect(find.text('Bulk · up next, 2nd'), findsOneWidget);
-    expect(find.text('Move before Maintenance, 4 weeks'), findsOneWidget);
+    expect(find.text('Move before Maintain for 4 weeks'), findsOneWidget);
     expect(find.textContaining('Move after'), findsNothing);
-    await tester.tap(find.text('Move before Maintenance, 4 weeks'));
+    await tester.tap(find.text('Move before Maintain for 4 weeks'));
     await tester.pumpAndSettle();
     expect(
       [for (final p in store.queue) p.kind],
@@ -207,7 +207,7 @@ void main() {
     expect(find.textContaining('week 4 of 13'), findsOneWidget);
     expect(
       find.text(
-        'Keeps it in completed goals; Maintenance, 4 weeks starts today',
+        'Keeps it in completed goals; Maintain for 4 weeks starts today',
       ),
       findsOneWidget,
     );
@@ -269,7 +269,7 @@ void main() {
     );
     await tester.scrollUntilVisible(find.text('Continue'), 200);
     expect(find.text('Mark completed and start the next'), findsOneWidget);
-    expect(find.text('Maintenance, 4 weeks starts today.'), findsOneWidget);
+    expect(find.text('Maintain for 4 weeks starts today.'), findsOneWidget);
     expect(find.text('Mark completed and plan the next'), findsNothing);
   });
 
