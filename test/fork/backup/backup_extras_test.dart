@@ -176,6 +176,13 @@ void main() {
       phases: const [DietPhase(kind: PhaseKind.cut, kgPerWeek: -0.5, weeks: 8)],
     );
     await from.phases.save(plan);
+    final next = PhasePlan(
+      start: DateTime(2026, 12, 14),
+      phases: const [
+        DietPhase(kind: PhaseKind.maintain, kgPerWeek: 0, weeks: 4),
+      ],
+    );
+    await from.phases.saveUpcoming([next]);
     await from.phases.saveMilestoneStep(2);
 
     final archive = Archive();
@@ -209,6 +216,10 @@ void main() {
       (BodyMetric.waist, 84),
     ]);
     expect((await to.phases.plan())?.toJson(), plan.toJson());
+    expect(
+      [for (final p in await to.phases.upcoming()) p.toJson()],
+      [next.toJson()],
+    );
     expect(await to.phases.milestoneStep(), 2);
     // A hand-edited backup's step past the list reads as none, not a crash.
     for (final bad in [4, -1]) {
