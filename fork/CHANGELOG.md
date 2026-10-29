@@ -2,6 +2,14 @@
 
 Written by fork/tools/release_notes.dart at each release (D16).
 
+## 0.4.1 · 2026-10-29
+
+Based on OpenNutriTracker 2.5.0.
+
+### Fixes and changes
+
+- The planner shows a Formula target as Home computes it
+
 ## 0.4.0 · 2026-10-29
 
 Based on OpenNutriTracker 2.5.0.
