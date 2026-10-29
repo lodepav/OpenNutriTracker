@@ -6,6 +6,7 @@ import 'package:opennutritracker/core/domain/entity/body_weight_unit_entity.dart
 import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/fork/goal/completed_goals_page.dart';
+import 'package:opennutritracker/fork/goal/goal_actions.dart';
 import 'package:opennutritracker/fork/goal/goal_planner.dart';
 import 'package:opennutritracker/fork/goal/goal_reached.dart';
 import 'package:opennutritracker/fork/goal/phase_colors.dart';
@@ -153,7 +154,12 @@ class GoalPlanSection extends StatelessWidget {
           ),
           if (upcoming.isNotEmpty) ...[
             gap,
-            _UpNext(upcoming: upcoming, unit: unit, day: _day),
+            _UpNext(
+              upcoming: upcoming,
+              unit: unit,
+              day: _day,
+              onChanged: onChanged,
+            ),
           ],
           gap,
           Row(
@@ -251,11 +257,41 @@ class _UpNext extends StatelessWidget {
   final BodyWeightUnit unit;
   final String Function(BuildContext, DateTime) day;
 
+  final VoidCallback onChanged;
+
   const _UpNext({
     required this.upcoming,
     required this.unit,
     required this.day,
+    required this.onChanged,
   });
+
+  Future<void> _remove(BuildContext context, int i) async {
+    final title = goalTitle(upcoming[i], unit);
+    final actions = GoalActions();
+    final sure = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Remove $title?'),
+        content: Text(
+          i == upcoming.length - 1
+              ? 'Nothing is planned after it.'
+              : 'The goals after it start earlier.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Keep'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Remove'),
+          ),
+        ],
+      ),
+    );
+    if (sure == true && await actions.removeUpcoming(i)) onChanged();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -282,6 +318,22 @@ class _UpNext extends StatelessWidget {
                   '${day(context, p.start)} – '
                   '${p.targetKg == null ? '' : 'about '}'
                   '${day(context, p.end.subtract(const Duration(hours: 12)))}',
+                ),
+                trailing: Semantics(
+                  identifier: 'goal-upcoming-$i-menu',
+                  child: PopupMenuButton<bool>(
+                    tooltip: '${goalTitle(p, unit)}: edit or remove',
+                    onSelected: (edit) async {
+                      if (!edit) return _remove(context, i);
+                      if (await openGoalPlanner(context, upcomingIndex: i)) {
+                        onChanged();
+                      }
+                    },
+                    itemBuilder: (_) => const [
+                      PopupMenuItem(value: true, child: Text('Edit')),
+                      PopupMenuItem(value: false, child: Text('Remove')),
+                    ],
+                  ),
                 ),
               ),
             ),

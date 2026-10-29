@@ -115,14 +115,37 @@ class PlannerSetup {
   }
 }
 
-/// Opens the planner on the active profile's goal: [fresh] plans a new one
-/// (the running one is kept as completed when it starts), else the
-/// running goal is edited. True once a plan was started.
-Future<bool> openGoalPlanner(BuildContext context, {bool fresh = false}) async {
+/// Opens the planner on the active profile's goal: [fresh] plans a new one,
+/// after the goals planned or replacing the running one (kept as
+/// completed when it starts); [upcomingIndex] edits that upcoming goal;
+/// else the running goal is edited. True once a plan was saved.
+Future<bool> openGoalPlanner(
+  BuildContext context, {
+  bool fresh = false,
+  int? upcomingIndex,
+}) async {
   final setup = await PlannerSetup.load();
   if (!context.mounted) return false;
   final running = setup.running;
   final today = DateTime.now();
+  // Made now, so a profile switch while planning drops the save.
+  final actions = GoalActions();
+  if (upcomingIndex != null) {
+    if (upcomingIndex >= setup.upcoming.length) return false;
+    final queued = setup.upcoming[upcomingIndex];
+    final saved = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => GoalPlannerScreen(
+          setup: setup,
+          draft: GoalDraft.of(queued, queued.startKg ?? setup.nowKg),
+          queuedAt: upcomingIndex,
+          onStart: (_) async => false,
+          onQueue: (at, plan) => actions.replaceUpcoming(at, plan),
+        ),
+      ),
+    );
+    return saved ?? false;
+  }
   final editing = fresh ? null : running;
   final begun = editing != null && editing.indexOn(today) >= 0;
   final draft = editing != null
@@ -132,8 +155,6 @@ Future<bool> openGoalPlanner(BuildContext context, {bool fresh = false}) async {
           setup.nowKg,
         ).copyWith(startKg: begun ? setup.nowKg : null)
       : GoalDraft.fresh(setup.nowKg, today, targetKg: setup.targetKg);
-  // Made now, so a profile switch while planning drops the save.
-  final actions = GoalActions();
   final started = await Navigator.of(context).push<bool>(
     MaterialPageRoute(
       builder: (_) => GoalPlannerScreen(
@@ -149,6 +170,9 @@ Future<bool> openGoalPlanner(BuildContext context, {bool fresh = false}) async {
               : null,
           nowKg: setup.nowKg,
         ),
+        onQueue: fresh
+            ? (at, plan) => actions.add(plan, at: at, nowKg: setup.nowKg)
+            : null,
       ),
     ),
   );
