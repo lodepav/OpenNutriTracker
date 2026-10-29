@@ -1438,7 +1438,7 @@ void main() {
     await tester.pumpWidget(_app(sharedPhotoPath: shared.path));
     await tester.pumpAndSettle();
     tester.state<NavigatorState>(find.byType(Navigator)).pushNamed('/bulk');
-    final readShared = find.text('Read the shared photo');
+    final readShared = find.text('Use the shared photo');
     await settleUntil(() => readShared.evaluate().isNotEmpty);
     await tester.tap(readShared);
     final staged = find.bySemanticsIdentifier('bulk-add-photo-staged');
