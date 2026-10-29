@@ -47,55 +47,79 @@ NoteWeights? noteWeights(String? note) {
     return null;
   }
 
-  double? total;
+  RegExpMatch? total;
   for (final m in amounts) {
     // "350g total", "total 350g", "in total: 350 g"
     final around = text.substring(
       (m.start - 12).clamp(0, text.length),
       (m.end + 12).clamp(0, text.length),
     );
-    if (_totalWord.hasMatch(around)) total = _grams(m);
+    if (_totalWord.hasMatch(around)) total = m;
   }
   if (total == null && amounts.length == 1) {
     final m = amounts.single;
-    final before = text.substring(0, m.start).trim();
+    final rawBefore = text.substring(0, m.start);
+    final before = rawBefore.trim();
     final after = text.substring(m.end).trim();
-    final lead = after.isNotEmpty && _separators.contains(after[0]);
-    final trail =
-        before.isNotEmpty && _separators.contains(before[before.length - 1]);
-    if (before.isEmpty && after.isEmpty) {
-      total = _grams(m);
-    } else if (before.isEmpty && lead) {
-      // "350g: chicken, rice"
-      total = _grams(m);
-    } else if (after.isEmpty && trail) {
-      // "chicken, rice, spinach - 350g", "plov - 350g": the whole of what
-      // comes before, one food or several
-      total = _grams(m);
-    } else if (_onlySeparators(after) && _list.hasMatch(before)) {
+    if (before.isEmpty &&
+        (after.isEmpty || _separators.contains(after[0]) || after[0] == ',')) {
+      // "350g", "350g: chicken, rice"
+      total = m;
+    } else if (_onlySeparators(after) &&
+        (_trailSeparator.hasMatch(rawBefore) || _plate.hasMatch(before))) {
+      // "chicken, rice - 350g", "plov - 350g", "chicken, rice (350g)",
+      // "chicken, rice" and the weight on a line of its own, "whole plate
+      // 350g": the whole of what comes before, one food or several
+      total = m;
+    } else if (_onlySeparators(after) &&
+        after.isNotEmpty &&
+        _list.hasMatch(before)) {
       // "chicken, rice, spinach 350g:"
-      total = _grams(m);
+      total = m;
     }
   }
 
-  final foods = <FoodWeight>[
-    for (final item in parseMealText(text).items)
-      if (item.quantity != null &&
-          item.unit != null &&
-          _toGrams(item.quantity!, item.unit!) != total)
-        (name: _name(item.query), grams: _toGrams(item.quantity!, item.unit!)),
-  ];
+  // The foods' own weights, read with the total and its word taken out
+  // ("spinach 30g - 250g total" is spinach's 30 g).
+  final rest = total == null
+      ? text
+      : text
+            .replaceRange(total.start, total.end, '')
+            .replaceAll(_totalWord, '');
   return NoteWeights(
-    totalGrams: total,
+    totalGrams: total == null ? null : _grams(total),
     foods: [
-      for (final f in foods)
-        if (f.name.isNotEmpty) f,
+      for (final item in parseMealText(
+        // "spinach 30g." and "spinach 30g -" read as no weight at all
+        rest.replaceAllMapped(_markAfterWeight, (m) => m[1]!),
+      ).items)
+        if (item.quantity != null && item.unit != null)
+          if (_name(item.query) case final name when name.isNotEmpty)
+            (name: name, grams: _toGrams(item.quantity!, item.unit!)),
     ],
   );
 }
 
+final _markAfterWeight = RegExp(
+  r'(\d\s*(?:kg|grams?|gr|g|ml|l|oz|lb))\b[ \t]*[-–—:=.)]+',
+  caseSensitive: false,
+);
+
+/// What may stand between a list and the weight of all of it: a separator,
+/// a comma, a full stop, an opening bracket, or a new line.
+final _trailSeparator = RegExp(r'([-–—:=,.(]|\n)\s*$');
+
+/// A note that names the plate rather than a food: "whole plate 350g",
+/// "weighed 350g", "bowl - 350g".
+final _plate = RegExp(
+  r'^(the |my )?(whole |entire )?(plate|bowl|portion|meal|everything|all|'
+  r'weighed|weight)\b[\s\-–—:=,(]*$',
+  caseSensitive: false,
+);
+
+/// Nothing but closing marks: "", ":", ")", ".".
 bool _onlySeparators(String text) =>
-    text.isNotEmpty && text.split('').every(_separators.contains);
+    text.split('').every((c) => '$_separators).'.contains(c));
 
 double _grams(RegExpMatch m) => _toGrams(
   double.parse(m.group(1)!.replaceAll(',', '.')),
@@ -112,5 +136,8 @@ double _toGrams(double quantity, String unit) => switch (unit) {
 };
 
 /// The food's name without the separator the parser left on it ("rice -").
-String _name(String query) =>
-    query.replaceAll(RegExp('[$_separators]+\$'), '').trim();
+String _name(String query) => query
+    .replaceAll(RegExp('[$_separators]+\$'), '')
+    // a bullet: "- chicken 120g"
+    .replaceAll(RegExp(r'^[-–—•*\s]+'), '')
+    .trim();
