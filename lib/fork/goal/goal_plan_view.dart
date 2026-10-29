@@ -6,6 +6,7 @@ import 'package:opennutritracker/core/domain/entity/body_weight_unit_entity.dart
 import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/fork/goal/completed_goals_page.dart';
+import 'package:opennutritracker/fork/goal/goal_calendar_page.dart';
 import 'package:opennutritracker/fork/goal/goal_planner.dart';
 import 'package:opennutritracker/fork/goal/goal_reached.dart';
 import 'package:opennutritracker/fork/goal/phase_colors.dart';
@@ -93,30 +94,36 @@ class GoalPlanSection extends StatelessWidget {
         ] else ...[
           if (nowKg != null)
             _StatusBanner(plan, nowKg!, unit, today, onChanged),
-          AppCard(
-            padding: const EdgeInsets.all(Dimens.spacing16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Whole plan',
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                const SizedBox(height: Dimens.spacing8),
-                PlanGrid(
-                  plan: plan,
-                  upcoming: upcoming,
-                  history: history,
-                  today: today,
-                ),
-                const SizedBox(height: Dimens.spacing8),
-                const PhaseLegend(),
-                const SizedBox(height: 6),
-                Text(
-                  'A square a day; today is outlined.',
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-              ],
+          Semantics(
+            identifier: 'goal-plan-calendar',
+            button: true,
+            hint: 'Open the calendar',
+            child: AppCard(
+              padding: const EdgeInsets.all(Dimens.spacing16),
+              onTap: () => openGoalCalendar(context, unit, nowKg),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Whole plan',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: Dimens.spacing8),
+                  PlanGrid(
+                    plan: plan,
+                    upcoming: upcoming,
+                    history: history,
+                    today: today,
+                  ),
+                  const SizedBox(height: Dimens.spacing8),
+                  const PhaseLegend(),
+                  const SizedBox(height: 6),
+                  Text(
+                    'A square a day; today is outlined.',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ],
+              ),
             ),
           ),
           gap,

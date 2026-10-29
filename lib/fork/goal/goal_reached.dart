@@ -10,6 +10,7 @@ import 'package:opennutritracker/features/profile/presentation/widgets/set_targe
 import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
 import 'package:opennutritracker/fork/goal/goal_actions.dart';
 import 'package:opennutritracker/fork/goal/goal_chart.dart';
+import 'package:opennutritracker/fork/goal/goal_plan_view.dart' show goalTitle;
 import 'package:opennutritracker/fork/goal/goal_planner.dart';
 import 'package:opennutritracker/fork/goal/phase_colors.dart';
 import 'package:opennutritracker/fork/goal/planner_screen.dart';
@@ -104,6 +105,9 @@ class GoalReachedPage extends StatefulWidget {
   final GoalActions? actions;
   final DateTime? today;
 
+  /// The goals queued after this one; the active profile's by default.
+  final Future<List<PhasePlan>> Function()? upcoming;
+
   const GoalReachedPage({
     super.key,
     required this.plan,
@@ -112,6 +116,7 @@ class GoalReachedPage extends StatefulWidget {
     this.load,
     this.actions,
     this.today,
+    this.upcoming,
   });
 
   @override
@@ -120,6 +125,9 @@ class GoalReachedPage extends StatefulWidget {
 
 class _GoalReachedPageState extends State<GoalReachedPage> {
   late final Future<GoalRun> _run = (widget.load ?? loadGoalRun)(widget.plan);
+
+  /// The goal that starts once this one is completed; null for none.
+  PhasePlan? _queued;
   var _next = _Next.maintain;
   var _busy = false;
 
@@ -130,6 +138,16 @@ class _GoalReachedPageState extends State<GoalReachedPage> {
   void initState() {
     super.initState();
     _actions = widget.actions ?? GoalActions();
+    _loadNext();
+  }
+
+  Future<void> _loadNext() async {
+    try {
+      final queue = await (widget.upcoming ?? () => PhaseStore().upcoming())();
+      if (mounted && queue.isNotEmpty) setState(() => _queued = queue.first);
+    } catch (_) {
+      // No store in a test: none queued.
+    }
   }
 
   Future<void> _continue() async {
@@ -299,24 +317,34 @@ class _GoalReachedPageState extends State<GoalReachedPage> {
               padding: const EdgeInsets.symmetric(vertical: Dimens.spacing4),
               child: Column(
                 children: [
-                  _choice(
-                    _Next.maintain,
-                    'goal-next-maintain',
-                    'Mark completed and maintain',
-                    'Eat at what you burn from today.',
-                  ),
+                  if (_queued case final queued?)
+                    _choice(
+                      _Next.maintain,
+                      'goal-next-maintain',
+                      'Mark completed and start the next',
+                      '${goalTitle(queued, unit)} starts today.',
+                    )
+                  else
+                    _choice(
+                      _Next.maintain,
+                      'goal-next-maintain',
+                      'Mark completed and maintain',
+                      'Eat at what you burn from today.',
+                    ),
                   _choice(
                     _Next.extend,
                     'goal-next-extend',
                     'Extend the goal',
                     'Go on to a new weight, or for more weeks.',
                   ),
-                  _choice(
-                    _Next.planNext,
-                    'goal-next-plan',
-                    'Mark completed and plan the next',
-                    'A new cut, maintenance or bulk.',
-                  ),
+                  // With one queued, the next is planned already.
+                  if (_queued == null)
+                    _choice(
+                      _Next.planNext,
+                      'goal-next-plan',
+                      'Mark completed and plan the next',
+                      'A new cut, maintenance or bulk.',
+                    ),
                 ],
               ),
             ),
