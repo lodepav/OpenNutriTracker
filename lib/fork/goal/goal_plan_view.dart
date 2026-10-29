@@ -21,6 +21,9 @@ DateTime _date(DateTime t) => DateTime(t.year, t.month, t.day);
 /// week, the phases, and the planner; the completed goals below.
 class GoalPlanSection extends StatelessWidget {
   final PhasePlan? plan;
+
+  /// The goals planned after [plan], in order.
+  final List<PhasePlan> upcoming;
   final List<GoalRecord> history;
 
   /// The trend now; null before the first weigh-in.
@@ -34,6 +37,7 @@ class GoalPlanSection extends StatelessWidget {
   const GoalPlanSection({
     super.key,
     required this.plan,
+    this.upcoming = const [],
     required this.history,
     required this.nowKg,
     required this.unit,
@@ -99,7 +103,12 @@ class GoalPlanSection extends StatelessWidget {
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 const SizedBox(height: Dimens.spacing8),
-                PlanGrid(plan: plan, history: history, today: today),
+                PlanGrid(
+                  plan: plan,
+                  upcoming: upcoming,
+                  history: history,
+                  today: today,
+                ),
                 const SizedBox(height: Dimens.spacing8),
                 const PhaseLegend(),
                 const SizedBox(height: 6),
@@ -142,6 +151,10 @@ class GoalPlanSection extends StatelessWidget {
               ],
             ),
           ),
+          if (upcoming.isNotEmpty) ...[
+            gap,
+            _UpNext(upcoming: upcoming, unit: unit, day: _day),
+          ],
           gap,
           Row(
             children: [
@@ -160,7 +173,11 @@ class GoalPlanSection extends StatelessWidget {
                   identifier: 'goal-plan-new',
                   child: OutlinedButton(
                     onPressed: () => _plan(context, fresh: true),
-                    child: const Text('Plan a new goal'),
+                    child: Text(
+                      upcoming.isEmpty
+                          ? 'Plan a goal after this'
+                          : 'Plan a goal after these',
+                    ),
                   ),
                 ),
               ),
@@ -226,6 +243,62 @@ class GoalPlanSection extends StatelessWidget {
           : null,
     );
   }
+}
+
+/// The goals planned after the running one, numbered in turn.
+class _UpNext extends StatelessWidget {
+  final List<PhasePlan> upcoming;
+  final BodyWeightUnit unit;
+  final String Function(BuildContext, DateTime) day;
+
+  const _UpNext({
+    required this.upcoming,
+    required this.unit,
+    required this.day,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return AppCard(
+      padding: const EdgeInsets.symmetric(vertical: Dimens.spacing4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+            child: Semantics(
+              header: true,
+              child: Text('Up next', style: theme.textTheme.titleMedium),
+            ),
+          ),
+          for (final (i, p) in upcoming.indexed)
+            Semantics(
+              identifier: 'goal-upcoming-$i',
+              child: ListTile(
+                leading: _Square(color: phaseColor(context, p.kind)),
+                title: Text('${i + 1}. ${goalTitle(p, unit)}'),
+                subtitle: Text(
+                  '${day(context, p.start)} – '
+                  '${p.targetKg == null ? '' : 'about '}'
+                  '${day(context, p.end.subtract(const Duration(hours: 12)))}',
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// [plan] by its kind and target: "Cut to 80 kg", "Maintain, 4 weeks".
+String goalTitle(PhasePlan plan, BodyWeightUnit unit) {
+  final target = plan.targetKg;
+  if (plan.kind != PhaseKind.maintain && target != null) {
+    return '${plan.kind.label} to ${weightText(target, unit)}';
+  }
+  final weeks = plan.phases.fold(0, (w, p) => w + p.weeks);
+  return '${plan.kind.label}, $weeks ${weeks == 1 ? 'week' : 'weeks'}';
 }
 
 class _Square extends StatelessWidget {
@@ -324,12 +397,14 @@ class _StatusBanner extends StatelessWidget {
 /// day's goal colour; days no goal covers are left blank.
 class PlanGrid extends StatelessWidget {
   final PhasePlan plan;
+  final List<PhasePlan> upcoming;
   final List<GoalRecord> history;
   final DateTime today;
 
   const PlanGrid({
     super.key,
     required this.plan,
+    this.upcoming = const [],
     required this.history,
     required this.today,
   });
@@ -348,7 +423,7 @@ class PlanGrid extends StatelessWidget {
   }
 
   int get weeks {
-    final end = _date(plan.end);
+    final end = _date((upcoming.isEmpty ? plan : upcoming.last).end);
     final after = DateTime(end.year, end.month, end.day + 14);
     final t = _date(today);
     final last = after.isAfter(t)
@@ -371,7 +446,12 @@ class PlanGrid extends StatelessWidget {
     final count = weeks;
     final kinds = [
       for (var d = 0; d < count * 7; d++)
-        kindOn(DateTime(from.year, from.month, from.day + d), plan, history),
+        kindOn(
+          DateTime(from.year, from.month, from.day + d),
+          plan,
+          history,
+          upcoming: upcoming,
+        ),
     ];
     final colors = {
       for (final k in PhaseKind.values) k: phaseColor(context, k),
@@ -417,7 +497,10 @@ class PlanGrid extends StatelessWidget {
         '${r.kind.label} ${format.format(r.start)} to ${format.format(r.end)}',
       for (final (i, p) in plan.phases.indexed)
         '${phaseName(p.kind, inCut: inCut)} from ${format.format(plan.startOf(i))}',
-      'maintenance from ${format.format(plan.end)}',
+      for (final p in upcoming)
+        '${p.kind.label} from ${format.format(p.start)}',
+      'maintenance from '
+          '${format.format((upcoming.isEmpty ? plan : upcoming.last).end)}',
     ].join('; ');
   }
 }
