@@ -68,16 +68,26 @@ class GoalDraft {
   /// The draft of a running [plan], to edit it.
   factory GoalDraft.of(PhasePlan plan, double nowKg) {
     final kind = plan.kind;
-    final paced = plan.phases.where((p) => p.kind == kind).firstOrNull;
+    // The pace now: an extension's, after the first.
+    final paced = plan.phases.where((p) => p.kind == kind).lastOrNull;
+    final phases = plan.phases;
     return GoalDraft(
       kind: kind,
       startKg: plan.startKg ?? nowKg,
       start: plan.start,
       targetKg: plan.targetKg,
       paceKg: (paced?.kgPerWeek ?? 0.5).abs(),
+      // Regular breaks, not an extension's one-off break or a gap held at
+      // maintenance.
       breaks:
-          plan.phases.any((p) => p.kind == PhaseKind.maintain) &&
-          kind == PhaseKind.cut,
+          kind == PhaseKind.cut &&
+          [
+            for (var i = 1; i < phases.length; i++)
+              phases[i].kind == PhaseKind.maintain &&
+                  phases[i].weeks == breakWeeks &&
+                  phases[i - 1].kind == PhaseKind.cut &&
+                  phases[i - 1].weeks == breakEveryWeeks,
+          ].any((b) => b),
       maintainWeeks: kind == PhaseKind.maintain
           ? plan.phases.fold(0, (w, p) => w + p.weeks)
           : 8,
@@ -220,19 +230,10 @@ GoalRecord completedGoal(PhasePlan plan, double? nowKg, DateTime today) =>
       extensions: plan.extensions,
     );
 
-/// [plan] extended from [today] at the trend [nowKg]: until [untilKg]
-/// (the plan's target by default) or for [weeks], after a diet break when
-/// [breakFirst]. The running phase ends this week; a plan over for a week
-/// or more holds maintenance until now.
-PhasePlan extendedPlan(
-  PhasePlan plan, {
-  required DateTime today,
-  required double nowKg,
-  double? untilKg,
-  int? weeks,
-  bool breakFirst = false,
-}) {
-  final day = _date(today);
+/// [plan]'s phases run by [day]: those over, the one running cut to the
+/// weeks begun (so it ends this week), and, a week or more after the
+/// plan's end, the weeks held at maintenance since.
+List<DietPhase> _ranUntil(PhasePlan plan, DateTime day) {
   final index = plan.indexOn(day);
   final kept = <DietPhase>[
     ...plan.phases.take(index.clamp(0, plan.phases.length)),
@@ -250,15 +251,25 @@ PhasePlan extendedPlan(
   } else if (index >= plan.phases.length) {
     final gap = CalendarDayCalc.daysBetween(plan.end, day) ~/ 7;
     if (gap > 0) {
-      kept.add(
-        DietPhase(
-          kind: PhaseKind.maintain,
-          kgPerWeek: 0,
-          weeks: gap.clamp(1, 52),
-        ),
-      );
+      kept.add(DietPhase(kind: PhaseKind.maintain, kgPerWeek: 0, weeks: gap));
     }
   }
+  return kept;
+}
+
+/// [plan] extended from [today] at the trend [nowKg]: until [untilKg]
+/// (the plan's target by default) or for [weeks], after a diet break when
+/// [breakFirst]. The running phase ends this week; a plan over for a week
+/// or more holds maintenance until now.
+PhasePlan extendedPlan(
+  PhasePlan plan, {
+  required DateTime today,
+  required double nowKg,
+  double? untilKg,
+  int? weeks,
+  bool breakFirst = false,
+}) {
+  final kept = _ranUntil(plan, _date(today));
   if (breakFirst) {
     kept.add(
       const DietPhase(
@@ -313,4 +324,37 @@ PhaseKind? kindOn(DateTime day, PhasePlan? plan, List<GoalRecord> history) {
     }
   }
   return null;
+}
+
+/// [plan] edited as [draft] has it, on [today] at the trend [nowKg]: once
+/// begun, the phases run so far stay as they were, and [draft]'s follow
+/// from the end of this week; not begun yet, [draft]'s plan. Either keeps
+/// [plan]'s extensions.
+PhasePlan editedPlan(
+  PhasePlan plan,
+  GoalDraft draft, {
+  required DateTime today,
+  required double nowKg,
+}) {
+  final day = _date(today);
+  if (plan.indexOn(day) < 0) {
+    final fresh = draft.toPlan();
+    return PhasePlan(
+      start: fresh.start,
+      startKg: fresh.startKg,
+      targetKg: fresh.targetKg,
+      extensions: plan.extensions,
+      phases: fresh.phases,
+    );
+  }
+  final kept = _ranUntil(plan, day);
+  final from = PhasePlan(start: plan.start, phases: kept).end;
+  final ahead = draft.copyWith(start: from, startKg: nowKg).toPlan();
+  return PhasePlan(
+    start: plan.start,
+    startKg: plan.startKg,
+    targetKg: ahead.targetKg,
+    extensions: plan.extensions,
+    phases: [...kept, ...ahead.phases],
+  );
 }

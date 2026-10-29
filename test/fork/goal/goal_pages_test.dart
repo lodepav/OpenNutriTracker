@@ -368,4 +368,44 @@ void main() {
     expect(OnboardingGoal.pending.value, same(plan));
     OnboardingGoal.pending.value = null;
   });
+
+  testWidgets('editing a begun goal keeps its past and its start', (
+    tester,
+  ) async {
+    final running = _cut(breaks: false);
+    final today = DateTime(2026, 11, 18);
+    await _pump(
+      tester,
+      GoalPlannerScreen(
+        setup: PlannerSetup(
+          nowKg: 84,
+          unit: BodyWeightUnit.kg,
+          expenditureKcal: 2600,
+          bodyFatPercent: 22,
+          running: running,
+        ),
+        draft: GoalDraft.of(running, 84).copyWith(startKg: 84),
+        editing: running,
+        today: today,
+        onStart: (_) async => true,
+      ),
+    );
+    await tester.scrollUntilVisible(
+      find.textContaining('The weeks so far stay'),
+      100,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.textContaining('Today,'), findsNothing);
+    await tester.tap(find.text('Next'));
+    await tester.pumpAndSettle();
+    // Seven weeks begun, then from 84 kg at 0.5 a week: 8 more, from
+    // the start kept.
+    await tester.scrollUntilVisible(
+      find.text('15 weeks'),
+      100,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.textContaining('Oct 5'), findsOneWidget);
+    expect(find.textContaining('Jan 17, 2027'), findsWidgets);
+  });
 }

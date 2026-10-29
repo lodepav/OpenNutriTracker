@@ -97,17 +97,30 @@ Future<bool> openGoalPlanner(BuildContext context, {bool fresh = false}) async {
   if (!context.mounted) return false;
   final running = setup.running;
   final today = DateTime.now();
-  final draft = running != null && !fresh
-      ? GoalDraft.of(running, setup.nowKg)
+  final editing = fresh ? null : running;
+  final begun = editing != null && editing.indexOn(today) >= 0;
+  final draft = editing != null
+      // Begun, what is still to go is planned from the weight now.
+      ? GoalDraft.of(
+          editing,
+          setup.nowKg,
+        ).copyWith(startKg: begun ? setup.nowKg : null)
       : GoalDraft.fresh(setup.nowKg, today, targetKg: setup.targetKg);
+  // Made now, so a profile switch while planning drops the save.
+  final actions = GoalActions();
   final started = await Navigator.of(context).push<bool>(
     MaterialPageRoute(
       builder: (_) => GoalPlannerScreen(
         setup: setup,
         draft: draft,
-        onStart: (plan) => GoalActions().start(
+        editing: editing,
+        onStart: (plan) => actions.start(
           plan,
-          replacing: fresh ? running : null,
+          // Another kind of goal, once one is begun, is a new goal; the
+          // one before is kept.
+          replacing: fresh || (begun && plan.kind != running?.kind)
+              ? running
+              : null,
           nowKg: setup.nowKg,
         ),
       ),
@@ -138,12 +151,21 @@ class GoalPlannerScreen extends StatefulWidget {
   final Future<bool> Function(PhasePlan plan) onStart;
   final AdaptiveStore? store;
 
+  /// The running goal being edited: once begun, its phases so far stay
+  /// and the draft plans what is still to go (`editedPlan`).
+  final PhasePlan? editing;
+
+  /// Today; the clock's by default.
+  final DateTime? today;
+
   const GoalPlannerScreen({
     super.key,
     required this.setup,
     required this.draft,
     required this.onStart,
     this.store,
+    this.editing,
+    this.today,
   });
 
   @override
@@ -155,6 +177,24 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
   late final _before = AdaptiveStore.settings.value;
   late final _macrosBefore = OnboardingMacros.pending.value;
   late GoalDraft _draft = widget.draft;
+
+  DateTime get _today => widget.today ?? DateTime.now();
+
+  /// The goal edited, once begun: its start stays.
+  bool get _begun =>
+      widget.editing != null && widget.editing!.indexOn(_today) >= 0;
+
+  /// The plan [draft] makes: a new goal's own, or the goal edited with its
+  /// past kept. Another kind of goal starts anew.
+  PhasePlan _planOf(GoalDraft draft) {
+    final editing = widget.editing;
+    if (editing == null || draft.kind != editing.kind) {
+      return draft.copyWith(start: _begun ? _date0(_today) : null).toPlan();
+    }
+    return editedPlan(editing, draft, today: _today, nowKg: _setup.nowKg);
+  }
+
+  static DateTime _date0(DateTime t) => DateTime(t.year, t.month, t.day);
 
   /// A pace of the user's own on the slider, not one of the three.
   late bool _customPace = !_draft.paces.any(
@@ -236,7 +276,7 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
 
   Future<void> _start() async {
     setState(() => _saving = true);
-    final saved = await widget.onStart(_draft.toPlan());
+    final saved = await widget.onStart(_planOf(_draft));
     if (!mounted) return;
     setState(() => _saving = false);
     if (saved) {
@@ -487,39 +527,48 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
           ),
       ],
       _heading(context, 'Start'),
-      Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: Wrap(
-          spacing: 8,
-          children: [
-            for (final (id, label, day) in [
-              ('today', 'Today, ${_date(today)}', today),
-              if (!_sameDay(monday, today))
-                ('monday', 'Monday, ${_date(monday)}', monday),
-              if (_setup.running != null &&
-                  !_sameDay(_setup.running!.start, today) &&
-                  !_sameDay(_setup.running!.start, monday))
-                (
-                  'kept',
-                  'As planned, ${_date(_setup.running!.start)}',
-                  _setup.running!.start,
-                ),
-            ])
-              Semantics(
-                identifier: 'goal-start-$id',
-                child: ChoiceChip(
-                  label: Text(label),
-                  selected: _sameDay(_draft.start, day),
-                  onSelected: (_) => setState(
-                    () => _draft = _draft.copyWith(
-                      start: DateTime(day.year, day.month, day.day),
+      if (_begun && _draft.kind == widget.editing!.kind)
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Text(
+            'Started ${_date(widget.editing!.start)}. The weeks so far stay '
+            'as they were; a change applies from the end of this week.',
+          ),
+        )
+      else
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Wrap(
+            spacing: 8,
+            children: [
+              for (final (id, label, day) in [
+                ('today', 'Today, ${_date(today)}', today),
+                if (!_sameDay(monday, today))
+                  ('monday', 'Monday, ${_date(monday)}', monday),
+                if (_setup.running != null &&
+                    !_sameDay(_setup.running!.start, today) &&
+                    !_sameDay(_setup.running!.start, monday))
+                  (
+                    'kept',
+                    'As planned, ${_date(_setup.running!.start)}',
+                    _setup.running!.start,
+                  ),
+              ])
+                Semantics(
+                  identifier: 'goal-start-$id',
+                  child: ChoiceChip(
+                    label: Text(label),
+                    selected: _sameDay(_draft.start, day),
+                    onSelected: (_) => setState(
+                      () => _draft = _draft.copyWith(
+                        start: DateTime(day.year, day.month, day.day),
+                      ),
                     ),
                   ),
                 ),
-              ),
-          ],
+            ],
+          ),
         ),
-      ),
     ];
   }
 
@@ -619,7 +668,7 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
   }
 
   List<Widget> _paceStep(BuildContext context) {
-    final plan = _draft.toPlan();
+    final plan = _planOf(_draft);
     final end = _dayBefore(plan.end);
     if (_draft.kind == PhaseKind.maintain) {
       return [
@@ -656,7 +705,7 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
       for (final (i, pace) in _draft.paces.indexed)
         Builder(
           builder: (context) {
-            final at = _draft.copyWith(paceKg: pace).toPlan();
+            final at = _planOf(_draft.copyWith(paceKg: pace));
             final kcal = (pace * AdaptiveSettings.commonKcalPerKg / 7).round();
             return _OptionCard(
               identifier: 'goal-pace-$i',
@@ -756,7 +805,7 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
   List<Widget> _targetStep(BuildContext context) {
     final pace = _draft.signedPace;
     final shift = (pace * AdaptiveSettings.commonKcalPerKg / 7).round();
-    final breaks = _draft.toPlan().phases.length > 1;
+    final breaks = _planOf(_draft).phases.length > 1;
     return [
       _question(
         context,
@@ -861,7 +910,7 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
   // ---------------------------------------------------------------- plan
 
   List<Widget> _planStep(BuildContext context) {
-    final plan = _draft.toPlan();
+    final plan = _planOf(_draft);
     final theme = Theme.of(context);
     final settings = AdaptiveStore.settings.value;
     final inCut = plan.kind == PhaseKind.cut;

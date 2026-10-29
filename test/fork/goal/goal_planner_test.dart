@@ -217,6 +217,86 @@ void main() {
     });
   });
 
+  group('editedPlan', () {
+    // Cut from Oct 5, reached early on Dec 2 and extended to 78 kg after a
+    // diet break.
+    final extended = extendedPlan(
+      _cut().toPlan(),
+      today: DateTime(2026, 12, 2),
+      nowKg: 80,
+      untilKg: 78,
+      breakFirst: true,
+    );
+
+    test('begun, the weeks so far stay and the rest follows the draft', () {
+      final draft = GoalDraft.of(extended, 79.6).copyWith(paceKg: 0.25);
+      final edited = editedPlan(
+        extended,
+        draft,
+        today: DateTime(2026, 12, 23),
+        nowKg: 79.6,
+      );
+      expect(
+        [for (final p in edited.phases) (p.kind, p.weeks)],
+        [
+          (PhaseKind.cut, 9),
+          (PhaseKind.maintain, breakWeeks),
+          (PhaseKind.cut, 1),
+          (PhaseKind.cut, 7),
+        ],
+      );
+      expect(edited.phases.last.kgPerWeek, -0.25);
+      expect(edited.phases.last.untilKg, 78);
+      expect(edited.start, _start);
+      expect(edited.startKg, 86.4);
+      expect(edited.extensions, 1);
+    });
+
+    test('not begun, the draft plans it, extensions kept', () {
+      final later = PhasePlan.fromJson({
+        ...extended.toJson(),
+        'start': DateTime(2027, 1, 4).toIso8601String(),
+      });
+      final edited = editedPlan(
+        later,
+        GoalDraft.of(later, 86),
+        today: DateTime(2026, 12, 23),
+        nowKg: 86,
+      );
+      expect(edited.start, DateTime(2027, 1, 4));
+      expect(edited.extensions, 1);
+    });
+
+    test('an extended cut reads back with its pace, no regular breaks', () {
+      final draft = GoalDraft.of(
+        extendedPlan(
+          GoalDraft(
+            kind: PhaseKind.cut,
+            startKg: 86.4,
+            targetKg: 80,
+            start: _start,
+            paceKg: 0.25,
+          ).toPlan(),
+          today: DateTime(2026, 12, 2),
+          nowKg: 84,
+          breakFirst: true,
+        ),
+        84,
+      );
+      expect(draft.breaks, isFalse);
+      expect(draft.paceKg, 0.25);
+      expect(GoalDraft.of(_cut(breaks: true).toPlan(), 85).breaks, isTrue);
+    });
+
+    test('a plan over for more than a year holds maintenance until now', () {
+      final plan = _cut().toPlan();
+      final today = DateTime(plan.end.year + 2, plan.end.month, plan.end.day);
+      final extended = extendedPlan(plan, today: today, nowKg: 82);
+      expect(extended.phases[1].weeks, greaterThan(100));
+      expect(extended.indexOn(today), 2);
+    });
+  });
+
   test('kindOn reads the plan, then the completed goals', () {
     final plan = _cut(breaks: true).toPlan();
     final history = [
