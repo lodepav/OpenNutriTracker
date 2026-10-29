@@ -33,6 +33,16 @@ class _MemoryPhases extends PhaseStore {
   @override
   Future<void> addToHistory(List<GoalRecord> records) async =>
       goals.addAll(records);
+
+  final queue = <PhasePlan>[];
+
+  @override
+  Future<List<PhasePlan>> upcoming() async => [...queue];
+
+  @override
+  Future<void> saveUpcoming(List<PhasePlan> plans) async => queue
+    ..clear()
+    ..addAll(plans);
 }
 
 void main() {
