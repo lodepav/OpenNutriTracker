@@ -4,6 +4,7 @@ import 'package:opennutritracker/core/domain/entity/body_weight_unit_entity.dart
 import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/core/utils/calc/calendar_day_calc.dart';
+import 'package:opennutritracker/fork/adaptive/macro_program.dart';
 import 'package:opennutritracker/fork/goal/goal_actions.dart';
 import 'package:opennutritracker/fork/goal/goal_plan_view.dart' show goalTitle;
 import 'package:opennutritracker/fork/goal/phase_colors.dart';
@@ -651,14 +652,29 @@ class _Day extends StatelessWidget {
             ? Border.all(color: theme.colorScheme.onSurface, width: 2.5)
             : null,
       ),
-      alignment: Alignment.center,
-      child: Text(
-        '${day.day}',
-        style: theme.textTheme.bodyMedium?.copyWith(
-          fontWeight: isToday ? FontWeight.w800 : FontWeight.w500,
-          color: at == null
-              ? theme.colorScheme.onSurfaceVariant
-              : onPhaseColor(context, at.kind),
+      child: CustomPaint(
+        painter: queued ? const _Stripes() : null,
+        child: Center(
+          // On a queued day the numeral sits on a solid chip, clear of the
+          // stripes, so it keeps its contrast.
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+            decoration: queued
+                ? BoxDecoration(
+                    color: color,
+                    borderRadius: BorderRadius.circular(6),
+                  )
+                : null,
+            child: Text(
+              '${day.day}',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                fontWeight: isToday ? FontWeight.w800 : FontWeight.w500,
+                color: at == null
+                    ? theme.colorScheme.onSurfaceVariant
+                    : onPhaseColor(context, at.kind),
+              ),
+            ),
+          ),
         ),
       ),
     );
@@ -669,13 +685,7 @@ class _Day extends StatelessWidget {
       excludeSemantics: true,
       child: GestureDetector(
         onTap: tappable ? () => onTap(at) : null,
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(9),
-          child: CustomPaint(
-            foregroundPainter: queued ? const _Stripes() : null,
-            child: cell,
-          ),
-        ),
+        child: ClipRRect(borderRadius: BorderRadius.circular(9), child: cell),
       ),
     );
   }
@@ -840,7 +850,7 @@ class _NowSheet extends StatelessWidget {
               context,
               id: 'goal-calendar-edit-now',
               icon: Icons.edit_rounded,
-              title: 'Edit the plan',
+              title: 'Edit this goal',
               subtitle: 'The weeks so far stay as they were',
               onTap: onEdit,
             ),
@@ -856,8 +866,8 @@ class _NowSheet extends StatelessWidget {
               context,
               id: 'goal-calendar-remove-now',
               icon: Icons.delete_outline_rounded,
-              title: 'Remove it',
-              subtitle: 'Kept nowhere; $then',
+              title: 'Remove this goal',
+              subtitle: 'Not saved in completed goals; $then',
               onTap: onRemove,
               destructive: true,
             ),
@@ -866,6 +876,16 @@ class _NowSheet extends StatelessWidget {
       ),
     );
   }
+}
+
+/// [kgPerWeek] as the planner shows a pace: "0.25 kg a week", "0.5 kg a week".
+String _rate(double kgPerWeek, BodyWeightUnit unit) {
+  final v = unit == BodyWeightUnit.kg
+      ? kgPerWeek
+      : kgPerWeek * MacroProgram.lbPerKg;
+  final text = v.toStringAsFixed(2);
+  final trimmed = text.endsWith('0') ? v.toStringAsFixed(1) : text;
+  return '$trimmed ${unit == BodyWeightUnit.kg ? 'kg' : 'lb'} a week';
 }
 
 /// A queued goal's sheet (FgSheetNext).
@@ -912,8 +932,7 @@ class _NextSheet extends StatelessWidget {
               detail: [
                 _when(plan, locale),
                 '$weeks ${weeks == 1 ? 'week' : 'weeks'}',
-                if (pace != null && pace > 0)
-                  '${weightText(pace, unit)} a week',
+                if (pace != null && pace > 0) _rate(pace, unit),
               ].join(' · '),
             ),
             _row(
@@ -921,7 +940,7 @@ class _NextSheet extends StatelessWidget {
               id: 'goal-calendar-edit-next',
               icon: Icons.edit_rounded,
               title: 'Edit this goal',
-              subtitle: 'Its pages, from where it starts',
+              subtitle: 'Change its target, pace and food',
               onTap: onEdit,
             ),
             if (onEarlier case final earlier?)

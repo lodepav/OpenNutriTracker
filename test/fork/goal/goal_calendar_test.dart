@@ -155,6 +155,7 @@ void main() {
     await tester.tap(_day(2027, 2, 3));
     await tester.pumpAndSettle();
     expect(find.text('Bulk · up next, 2nd'), findsOneWidget);
+    expect(find.textContaining('0.25 kg a week'), findsOneWidget);
     expect(find.text('Move before Maintenance, 4 weeks'), findsOneWidget);
     expect(find.textContaining('Move after'), findsNothing);
     await tester.tap(find.text('Move before Maintenance, 4 weeks'));
@@ -250,7 +251,7 @@ void main() {
     expect(find.text('October 2026'), findsOneWidget);
     await tester.tap(_day(2026, 10, 29));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Edit the plan'));
+    await tester.tap(find.text('Edit this goal'));
     await tester.pumpAndSettle();
     expect(edited, [0, null]);
   });
