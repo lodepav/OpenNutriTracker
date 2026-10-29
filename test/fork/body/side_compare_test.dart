@@ -104,9 +104,7 @@ void main() {
     expect(find.text('No thighs measured yet.'), findsOne);
   });
 
-  testWidgets('none in the range charts them all, and says so', (
-    tester,
-  ) async {
+  testWidgets('none in the range charts them all, and says so', (tester) async {
     SidePartPref.current.value = SidePart.arms;
     await tester.pumpWidget(
       MaterialApp(

@@ -363,7 +363,10 @@ void main() {
     await openTile(tester, 'calories');
     await tester.scrollUntilVisible(find.text('Top foods'), 200);
     expect(find.text('No foods logged in this range.'), findsOneWidget);
-    await tester.scrollUntilVisible(find.textContaining('Weekdays and weekends, last'), 200);
+    await tester.scrollUntilVisible(
+      find.textContaining('Weekdays and weekends, last'),
+      200,
+    );
     await tester.scrollUntilVisible(
       find.text('Weekends run about the same as weekdays.'),
       200,
