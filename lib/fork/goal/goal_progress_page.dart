@@ -158,7 +158,9 @@ class _GoalProgressPageState extends State<GoalProgressPage> {
           unit: widget.unit,
           today: DateTime.now(),
           onChanged: _reload,
+          showStatus: false,
         );
+        final plan = plans.plan;
         return ListView(
           padding: EdgeInsets.fromLTRB(
             Dimens.spacing16,
@@ -167,12 +169,21 @@ class _GoalProgressPageState extends State<GoalProgressPage> {
             Dimens.spacing32 + MediaQuery.paddingOf(context).bottom,
           ),
           children: [
+            // Reached or over, what to do next comes first.
+            if (plan != null && nowKg != null)
+              GoalStatusBanner(
+                plan,
+                nowKg,
+                widget.unit,
+                DateTime.now(),
+                _reload,
+              ),
             if (goal.inputs == null)
               noData(context, 'Weigh in to see your progress.')
             else if (goal.progress == null)
               ..._noTarget(context, goal.inputs!.nowKg, plans.plan)
             else
-              ..._body(context, goal.progress!, calories, step),
+              ..._body(context, goal.progress!, calories, step, plans.plan),
             const SizedBox(height: Dimens.spacing16),
             section,
           ],
@@ -210,6 +221,7 @@ class _GoalProgressPageState extends State<GoalProgressPage> {
     GoalProgress p,
     GoalCalories calories,
     int step,
+    PhasePlan? plan,
   ) {
     final label = weightUnitLabel(context, widget.unit);
     final format = intl.DateFormat.MMMd(
@@ -265,10 +277,17 @@ class _GoalProgressPageState extends State<GoalProgressPage> {
         trendSection(context, 'When you get there'),
         TrendRows(
           rows: [
-            (
-              label: 'From today at your plan’s pace',
-              value: atPlan == null ? 'Not at this pace' : date(atPlan),
-            ),
+            // The plan's own end counts its diet breaks.
+            if (plan?.targetKg != null)
+              (
+                label: 'By your plan',
+                value: date(plan!.end.subtract(const Duration(hours: 12))),
+              )
+            else
+              (
+                label: 'From today at your plan’s pace',
+                value: atPlan == null ? 'Not at this pace' : date(atPlan),
+              ),
             if (recent != null)
               (
                 label: 'At your last ${recent.days} days’ pace',

@@ -44,6 +44,10 @@ class PlannerSetup {
   /// The goals planned after [running], in order.
   final List<PhasePlan> upcoming;
 
+  /// The macro split's shares of the calories, which stand with no
+  /// program of grams by weight.
+  final ({double carbs, double fat, double protein}) split;
+
   /// The profile's target weight, a new goal's starting point.
   final double? targetKg;
 
@@ -59,9 +63,12 @@ class PlannerSetup {
     double? formulaKcal,
     this.running,
     this.upcoming = const [],
+    this.split = defaultSplit,
     this.targetKg,
     this.onboarding = false,
   }) : formulaKcal = formulaKcal ?? expenditureKcal;
+
+  static const defaultSplit = (carbs: 0.6, fat: 0.25, protein: 0.15);
 
   /// For [user], with no weigh-ins: onboarding's, or a profile's before its
   /// first.
@@ -72,6 +79,7 @@ class PlannerSetup {
     PhasePlan? running,
     List<PhasePlan> upcoming = const [],
     double kcalAdjustment = 0,
+    ({double carbs, double fat, double protein}) split = defaultSplit,
   }) => PlannerSetup(
     nowKg: user.weightKG,
     unit: unit,
@@ -81,6 +89,7 @@ class PlannerSetup {
     targetKg: user.targetWeightKg,
     running: running,
     upcoming: upcoming,
+    split: split,
     onboarding: onboarding,
   );
 
@@ -90,6 +99,11 @@ class PlannerSetup {
     final config = await locator<GetConfigUsecase>().getConfig();
     final unit = config.bodyWeightUnit;
     final adjustment = config.userKcalAdjustment ?? 0;
+    final split = (
+      carbs: config.userCarbGoalPct ?? defaultSplit.carbs,
+      fat: config.userFatGoalPct ?? defaultSplit.fat,
+      protein: config.userProteinGoalPct ?? defaultSplit.protein,
+    );
     final running = await PhaseStore().plan();
     final upcoming = await PhaseStore().upcoming();
     final inputs = await adaptive.AdaptiveService.fromLocator().goalPlan();
@@ -100,6 +114,7 @@ class PlannerSetup {
         running: running,
         upcoming: upcoming,
         kcalAdjustment: adjustment,
+        split: split,
       );
     }
     return PlannerSetup(
@@ -111,6 +126,7 @@ class PlannerSetup {
       targetKg: inputs.targetWeightKg,
       running: running,
       upcoming: upcoming,
+      split: split,
     );
   }
 }
@@ -386,6 +402,32 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
   double _kcalAt(double kgPerWeek) =>
       _baseKcal + kgPerWeek * AdaptiveSettings.commonKcalPerKg / 7;
 
+  /// The grams at the main phase's target: by weight with a program,
+  /// else the macro split's shares.
+  FixedMacros _gramsAt(double kcal, MacroProgram? program) =>
+      program?.macrosFor(
+        kcal: kcal,
+        weightKg: _setup.nowKg,
+        bodyFatPercent: _setup.bodyFatPercent,
+      ) ??
+      FixedMacros(
+        proteinG: kcal * _setup.split.protein / 4,
+        carbsG: kcal * _setup.split.carbs / 4,
+        fatG: kcal * _setup.split.fat / 9,
+      );
+
+  static String _gramsText(FixedMacros g) => inMacroOrder(
+    protein: 'Protein ${g.proteinG.round()} g',
+    carbs: 'Carbs ${g.carbsG.round()} g',
+    fat: 'Fat ${g.fatG.round()} g',
+  ).join(' · ');
+
+  String get _splitText {
+    final s = _setup.split;
+    String pct(double f) => '${(f * 100).round()}';
+    return '${inMacroOrder(protein: 'protein ${pct(s.protein)}', carbs: 'carbs ${pct(s.carbs)}', fat: 'fat ${pct(s.fat)}').join(' · ')} %';
+  }
+
   double get _mainKcal {
     final s = AdaptiveStore.settings.value;
     return s.fixedTarget ? s.fixedTargetKcal : _kcalAt(_draft.signedPace);
@@ -476,6 +518,8 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
                 ? 'Edit an upcoming goal'
                 : _queued
                 ? 'Plan the next goal'
+                : widget.editing != null
+                ? 'Edit plan'
                 : 'Plan your goal',
           ),
           bottom: PreferredSize(
@@ -570,6 +614,8 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
                             ? 'Add to the plan'
                             : _setup.onboarding
                             ? 'Use this plan'
+                            : widget.editing != null
+                            ? 'Save plan'
                             : 'Start plan',
                       ),
                     ),
@@ -693,7 +739,7 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
             ),
           ),
         ),
-        if (problem != null)
+        if (problem != null && target != null)
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
             child: Text(
@@ -1095,11 +1141,7 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
         ? OnboardingMacros.pending.value
         : settings.macroProgram;
     final kcal = _mainKcal;
-    final grams = program?.macrosFor(
-      kcal: kcal,
-      weightKg: _setup.nowKg,
-      bodyFatPercent: _setup.bodyFatPercent,
-    );
+    final grams = _gramsAt(kcal, program);
     return [
       _question(
         context,
@@ -1117,24 +1159,23 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
           ],
         )
       else ...[
-        if (grams != null)
-          _Panel(
-            children: [
-              Text(
-                'At about ${energyText(context, kcal)}',
-                style: Theme.of(context).textTheme.labelMedium,
-              ),
-              const SizedBox(height: 4),
-              Text(
-                inMacroOrder(
-                  protein: 'Protein ${grams.proteinG.round()} g',
-                  carbs: 'Carbs ${grams.carbsG.round()} g',
-                  fat: 'Fat ${grams.fatG.round()} g',
-                ).join(' · '),
+        _Panel(
+          children: [
+            Text(
+              'At about ${energyText(context, kcal)}'
+              '${program == null ? ', by your split: $_splitText' : ''}',
+              style: Theme.of(context).textTheme.labelMedium,
+            ),
+            const SizedBox(height: 4),
+            Semantics(
+              identifier: 'goal-macros-grams',
+              child: Text(
+                _gramsText(grams),
                 style: Theme.of(context).textTheme.titleMedium,
               ),
-            ],
-          ),
+            ),
+          ],
+        ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: MacroProgramForm(
@@ -1192,9 +1233,11 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
             _ChangeRow(
               identifier: 'goal-carried-burn',
               title: 'Expenditure',
-              subtitle:
-                  '${energyText(context, _setup.expenditureKcal)} now · '
-                  '${expenditureSummary(settings)}',
+              subtitle: _formula
+                  ? '${energyText(context, _setup.formulaKcal)} by the '
+                        'formula, which your target uses'
+                  : '${energyText(context, _setup.expenditureKcal)} now · '
+                        '${expenditureSummary(settings)}',
               onChange: () => _goTo(_Step.burn),
             ),
           if (!steps.contains(_Step.target))
@@ -1265,9 +1308,12 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
           _ChangeRow(
             identifier: 'goal-plan-change-burn',
             title: 'Expenditure',
-            subtitle:
-                '${energyText(context, _setup.expenditureKcal)} · '
-                '${expenditureSummary(settings)}',
+            subtitle: _formula
+                ? '${energyText(context, _setup.formulaKcal)} by the formula, '
+                      'which your target uses · estimate '
+                      '${energyText(context, _setup.expenditureKcal)}'
+                : '${energyText(context, _setup.expenditureKcal)} · '
+                      '${expenditureSummary(settings)}',
             onChange: () => _goTo(_Step.burn),
           ),
           _ChangeRow(
@@ -1281,8 +1327,8 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
             title: 'Macros',
             subtitle: settings.fixedTarget && settings.fixedMacros != null
                 ? 'The fixed target\'s grams'
-                : program?.summary(perLb: _perLb) ??
-                      'Percentages from your macro split',
+                : '${_gramsText(_gramsAt(_mainKcal, program))} · '
+                      '${program?.summary(perLb: _perLb) ?? 'your split, $_splitText'}',
             onChange: () => _goTo(_Step.macros),
           ),
         ],

@@ -567,6 +567,51 @@ void main() {
     expect(find.textContaining('Step 2 of 4 · Pace'), findsOneWidget);
   });
 
+  testWidgets('with no program, the macros step shows the split in grams', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      GoalPlannerScreen(
+        setup: const PlannerSetup(
+          nowKg: 80,
+          unit: BodyWeightUnit.kg,
+          expenditureKcal: 2400,
+          bodyFatPercent: 22,
+        ),
+        draft: GoalDraft.fresh(
+          80,
+          _start,
+          targetKg: 80,
+        ).copyWith(kind: PhaseKind.maintain, paceKg: 0),
+        onStart: (_) async => true,
+      ),
+    );
+    for (var i = 0; i < 4; i++) {
+      await tester.tap(find.text('Next'));
+      await tester.pumpAndSettle();
+    }
+    // 2400 kcal at 15 / 60 / 25 %: 90 g, 360 g, 67 g.
+    expect(find.textContaining('Protein 90 g'), findsOneWidget);
+    expect(find.textContaining('Carbs 360 g'), findsOneWidget);
+    expect(find.textContaining('Fat 67 g'), findsOneWidget);
+  });
+
+  testWidgets('the legend has only the kinds the plan has', (tester) async {
+    await _pump(
+      tester,
+      const Scaffold(
+        body: PhaseLegend(
+          kinds: {PhaseKind.cut, PhaseKind.maintain},
+          breaks: true,
+        ),
+      ),
+    );
+    expect(find.text('Cut'), findsOneWidget);
+    expect(find.text('Maintenance or diet break'), findsOneWidget);
+    expect(find.text('Bulk'), findsNothing);
+  });
+
   test('onboarding drops a plan whose goal was changed after', () async {
     final store = _MemoryPhases();
     OnboardingGoal.pending.value = _cut();

@@ -35,6 +35,10 @@ class GoalPlanSection extends StatelessWidget {
   /// After the plan changed here.
   final VoidCallback onChanged;
 
+  /// Whether the goal reached or over shows here; off where the page
+  /// shows it first.
+  final bool showStatus;
+
   const GoalPlanSection({
     super.key,
     required this.plan,
@@ -44,6 +48,7 @@ class GoalPlanSection extends StatelessWidget {
     required this.unit,
     required this.today,
     required this.onChanged,
+    this.showStatus = true,
   });
 
   String _day(BuildContext context, DateTime d) {
@@ -92,16 +97,19 @@ class GoalPlanSection extends StatelessWidget {
             ),
           ),
         ] else ...[
-          if (nowKg != null)
-            _StatusBanner(plan, nowKg!, unit, today, onChanged),
+          if (nowKg != null && showStatus)
+            GoalStatusBanner(plan, nowKg!, unit, today, onChanged),
           AppCard(
             padding: const EdgeInsets.all(Dimens.spacing16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Whole plan',
-                  style: Theme.of(context).textTheme.titleMedium,
+                Semantics(
+                  header: true,
+                  child: Text(
+                    'Whole plan',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
                 ),
                 const SizedBox(height: Dimens.spacing8),
                 PlanGrid(
@@ -111,7 +119,19 @@ class GoalPlanSection extends StatelessWidget {
                   today: today,
                 ),
                 const SizedBox(height: Dimens.spacing8),
-                const PhaseLegend(),
+                PhaseLegend(
+                  kinds: {
+                    PhaseKind.maintain,
+                    for (final p in [plan, ...upcoming])
+                      for (final phase in p.phases) phase.kind,
+                    for (final r in history) r.kind,
+                  },
+                  breaks: [plan, ...upcoming].any(
+                    (p) =>
+                        p.kind == PhaseKind.cut &&
+                        p.phases.any((x) => x.kind == PhaseKind.maintain),
+                  ),
+                ),
                 const SizedBox(height: 6),
                 Text(
                   'A square a day; today is outlined.',
@@ -370,20 +390,21 @@ class _Square extends StatelessWidget {
 }
 
 /// Reached, or over without: a card to complete or extend the goal.
-class _StatusBanner extends StatelessWidget {
+class GoalStatusBanner extends StatelessWidget {
   final PhasePlan plan;
   final double nowKg;
   final BodyWeightUnit unit;
   final DateTime today;
   final VoidCallback onChanged;
 
-  const _StatusBanner(
+  const GoalStatusBanner(
     this.plan,
     this.nowKg,
     this.unit,
     this.today,
-    this.onChanged,
-  );
+    this.onChanged, {
+    super.key,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -686,7 +707,10 @@ class _ThisWeek extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: Text('This week', style: theme.textTheme.titleMedium),
+                child: Semantics(
+                  header: true,
+                  child: Text('This week', style: theme.textTheme.titleMedium),
+                ),
               ),
               Text(
                 '${day(context, days.first)} – ${day(context, days.last)}',
