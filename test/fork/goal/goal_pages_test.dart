@@ -110,6 +110,63 @@ void main() {
     expect(find.text('See how it went'), findsNothing);
   });
 
+  testWidgets('the goals up next, in turn, after the running one', (
+    tester,
+  ) async {
+    final cut = _cut();
+    final queue = reflowed(
+      cut,
+      [
+        GoalDraft(
+          kind: PhaseKind.maintain,
+          startKg: 80,
+          start: _start,
+          paceKg: 0,
+          breaks: false,
+          maintainWeeks: 4,
+        ).toPlan(),
+        GoalDraft(
+          kind: PhaseKind.bulk,
+          startKg: 80,
+          targetKg: 84,
+          start: _start,
+          paceKg: 0.25,
+          breaks: false,
+        ).toPlan(),
+      ],
+      from: _start,
+      fromKg: 86.4,
+    );
+    await _pump(
+      tester,
+      Scaffold(
+        body: SingleChildScrollView(
+          child: GoalPlanSection(
+            plan: cut,
+            upcoming: queue,
+            history: const [],
+            nowKg: 84,
+            unit: BodyWeightUnit.kg,
+            today: DateTime(2026, 10, 29),
+            onChanged: () {},
+          ),
+        ),
+      ),
+    );
+    expect(find.text('Up next'), findsOneWidget);
+    expect(find.text('1. Maintenance, 4 weeks'), findsOneWidget);
+    expect(find.text('2. Bulk to 84.0 kg'), findsOneWidget);
+    expect(find.text('Plan a goal after these'), findsOneWidget);
+    final grid = tester.widget<PlanGrid>(find.byType(PlanGrid));
+    // The grid runs on to the bulk's end.
+    final last = DateTime(
+      grid.first.year,
+      grid.first.month,
+      grid.first.day + grid.weeks * 7,
+    );
+    expect(last.isAfter(queue.last.end), isTrue);
+  });
+
   testWidgets('a reached goal offers to see how it went', (tester) async {
     await _pump(
       tester,

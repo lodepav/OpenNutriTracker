@@ -33,11 +33,19 @@ void openGoalProgress(BuildContext context, BodyWeightUnit unit) =>
 typedef GoalCalories = ({double? goalKcal, double? meanKcal});
 
 /// The goal's plan and the goals completed before it.
-typedef GoalPlans = ({PhasePlan? plan, List<GoalRecord> history});
+typedef GoalPlans = ({
+  PhasePlan? plan,
+  List<PhasePlan> upcoming,
+  List<GoalRecord> history,
+});
 
 Future<GoalPlans> _loadPlans() async {
   final store = PhaseStore();
-  return (plan: await store.plan(), history: await store.history());
+  return (
+    plan: await store.plan(),
+    upcoming: await store.upcoming(),
+    history: await store.history(),
+  );
 }
 
 Future<GoalCalories> _loadCalories() async {
@@ -97,7 +105,7 @@ class _GoalProgressPageState extends State<GoalProgressPage> {
     } catch (_) {
       // No store in a test: the default step.
     }
-    GoalPlans plans = (plan: null, history: const []);
+    GoalPlans plans = (plan: null, upcoming: const [], history: const []);
     try {
       plans = await (widget.loadPlans ?? _loadPlans)();
     } catch (_) {
@@ -144,6 +152,7 @@ class _GoalProgressPageState extends State<GoalProgressPage> {
         final nowKg = goal.inputs?.nowKg;
         final section = GoalPlanSection(
           plan: plans.plan,
+          upcoming: plans.upcoming,
           history: plans.history,
           nowKg: nowKg,
           unit: widget.unit,
