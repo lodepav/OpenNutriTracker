@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:opennutritracker/core/domain/entity/body_weight_unit_entity.dart';
 import 'package:opennutritracker/core/utils/energy_unit_provider.dart';
 import 'package:opennutritracker/features/onboarding/domain/entity/user_goal_selection_entity.dart';
+import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/fork/goal/completed_goals_page.dart';
 import 'package:opennutritracker/fork/goal/goal_actions.dart';
 import 'package:opennutritracker/fork/goal/goal_plan_view.dart';
@@ -345,6 +346,60 @@ void main() {
     await tester.tap(find.text('Gentle · 0.25 kg a week'));
     await tester.pumpAndSettle();
     expect(find.byType(Slider), findsNothing);
+  });
+
+  testWidgets('on Formula the target goes by the profile, not the estimate', (
+    tester,
+  ) async {
+    addTearDown(() => AdaptiveStore.settings.value = const AdaptiveSettings());
+    await _pump(
+      tester,
+      GoalPlannerScreen(
+        setup: PlannerSetup(
+          nowKg: 86.4,
+          unit: BodyWeightUnit.kg,
+          expenditureKcal: 3045,
+          formulaKcal: 3540,
+          bodyFatPercent: 22,
+          running: _cut(),
+        ),
+        draft: GoalDraft.fresh(86.4, _start, targetKg: 80),
+        onStart: (_) async => true,
+      ),
+    );
+    for (var i = 0; i < 2; i++) {
+      await tester.tap(find.text('Next'));
+      await tester.pumpAndSettle();
+    }
+    expect(
+      find.textContaining('this estimate sets it only on Adaptive'),
+      findsOneWidget,
+    );
+    await tester.tap(find.text('Next'));
+    await tester.pumpAndSettle();
+    // 0.5 kg a week less is 550 a day.
+    expect(find.textContaining('gives about 2990'), findsOneWidget);
+    expect(
+      find.byWidgetPredicate(
+        (w) =>
+            w is Semantics &&
+            w.properties.identifier == 'goal-target-adaptive-hint',
+      ),
+      findsOneWidget,
+    );
+    AdaptiveStore.settings.value = AdaptiveStore.settings.value.copyWith(
+      adaptiveTarget: true,
+    );
+    await tester.pumpAndSettle();
+    expect(find.textContaining('gives about 2495'), findsOneWidget);
+    expect(
+      find.byWidgetPredicate(
+        (w) =>
+            w is Semantics &&
+            w.properties.identifier == 'goal-target-adaptive-hint',
+      ),
+      findsNothing,
+    );
   });
 
   test('onboarding drops a plan whose goal was changed after', () async {

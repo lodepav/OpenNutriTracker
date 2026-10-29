@@ -32,6 +32,12 @@ class PlannerSetup {
   final double expenditureKcal;
   final double bodyFatPercent;
 
+  /// What the Formula target starts from: upstream's estimate from the
+  /// profile alone, with the manual adjustment, before the pace and
+  /// logged activities. Not [expenditureKcal], which only an Adaptive
+  /// target is built on.
+  final double formulaKcal;
+
   /// The goal running now, to edit or replace.
   final PhasePlan? running;
 
@@ -47,10 +53,11 @@ class PlannerSetup {
     required this.unit,
     required this.expenditureKcal,
     required this.bodyFatPercent,
+    double? formulaKcal,
     this.running,
     this.targetKg,
     this.onboarding = false,
-  });
+  }) : formulaKcal = formulaKcal ?? expenditureKcal;
 
   /// For [user], with no weigh-ins: onboarding's, or a profile's before its
   /// first.
@@ -59,10 +66,12 @@ class PlannerSetup {
     BodyWeightUnit unit, {
     bool onboarding = false,
     PhasePlan? running,
+    double kcalAdjustment = 0,
   }) => PlannerSetup(
     nowKg: user.weightKG,
     unit: unit,
     expenditureKcal: CalorieGoalCalc.getTdee(user),
+    formulaKcal: CalorieGoalCalc.getTdee(user) + kcalAdjustment,
     bodyFatPercent: adaptive.bodyFatPercent(user),
     targetKg: user.targetWeightKg,
     running: running,
@@ -72,16 +81,24 @@ class PlannerSetup {
   /// The active profile's.
   static Future<PlannerSetup> load() async {
     final user = await locator<GetUserUsecase>().getUserData();
-    final unit = (await locator<GetConfigUsecase>().getConfig()).bodyWeightUnit;
+    final config = await locator<GetConfigUsecase>().getConfig();
+    final unit = config.bodyWeightUnit;
+    final adjustment = config.userKcalAdjustment ?? 0;
     final running = await PhaseStore().plan();
     final inputs = await adaptive.AdaptiveService.fromLocator().goalPlan();
     if (inputs == null) {
-      return PlannerSetup.ofUser(user, unit, running: running);
+      return PlannerSetup.ofUser(
+        user,
+        unit,
+        running: running,
+        kcalAdjustment: adjustment,
+      );
     }
     return PlannerSetup(
       nowKg: inputs.nowKg,
       unit: unit,
       expenditureKcal: inputs.expenditureKcal,
+      formulaKcal: CalorieGoalCalc.getTdee(user) + adjustment,
       bodyFatPercent: inputs.bodyFatPercent,
       targetKg: inputs.targetWeightKg,
       running: running,
@@ -234,8 +251,19 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
   static String _weeks(int w) => '$w ${w == 1 ? 'week' : 'weeks'}';
 
   /// About what a day of a phase at [kgPerWeek] gets.
+  /// The Formula target is on: neither Adaptive nor Fixed.
+  static bool get _formula {
+    final s = AdaptiveStore.settings.value;
+    return !s.adaptiveTarget && !s.fixedTarget;
+  }
+
+  /// What the target is built on: the profile's formula for a Formula
+  /// target, else the expenditure estimate.
+  double get _baseKcal =>
+      _formula ? _setup.formulaKcal : _setup.expenditureKcal;
+
   double _kcalAt(double kgPerWeek) =>
-      _setup.expenditureKcal + kgPerWeek * AdaptiveSettings.commonKcalPerKg / 7;
+      _baseKcal + kgPerWeek * AdaptiveSettings.commonKcalPerKg / 7;
 
   double get _mainKcal {
     final s = AdaptiveStore.settings.value;
@@ -346,29 +374,33 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
             ),
           ),
         ),
-        body: ListView(
-          key: ValueKey('goal-planner-step-$_step'),
-          padding: const EdgeInsets.only(bottom: Dimens.spacing24),
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-              child: Text(
-                'Step ${_step + 1} of ${_stepNames.length} · '
-                '${_stepNames[_step]}',
-                style: theme.textTheme.labelMedium?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
+        // The mode toggled on the target step changes its figures.
+        body: ValueListenableBuilder(
+          valueListenable: AdaptiveStore.settings,
+          builder: (context, _, _) => ListView(
+            key: ValueKey('goal-planner-step-$_step'),
+            padding: const EdgeInsets.only(bottom: Dimens.spacing24),
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                child: Text(
+                  'Step ${_step + 1} of ${_stepNames.length} · '
+                  '${_stepNames[_step]}',
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
                 ),
               ),
-            ),
-            ...switch (_step) {
-              0 => _goalStep(context),
-              1 => _paceStep(context),
-              2 => _burnStep(context),
-              3 => _targetStep(context),
-              4 => _macrosStep(context),
-              _ => _planStep(context),
-            },
-          ],
+              ...switch (_step) {
+                0 => _goalStep(context),
+                1 => _paceStep(context),
+                2 => _burnStep(context),
+                3 => _targetStep(context),
+                4 => _macrosStep(context),
+                _ => _planStep(context),
+              },
+            ],
+          ),
         ),
         bottomNavigationBar: SafeArea(
           child: Padding(
@@ -676,7 +708,7 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
           context,
           'For how long?',
           'Maintenance at what you burn, about '
-              '${energyText(context, _setup.expenditureKcal)} a day. When '
+              '${energyText(context, _baseKcal)} a day. When '
               'it ends, mark it completed or extend it.',
         ),
         for (final w in maintainWeeksChoices)
@@ -773,8 +805,8 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
     _question(
       context,
       'Your expenditure',
-      'What you burn a day. The target is built on it, so a good estimate '
-          'matters more than the pace.',
+      'What you burn a day. An Adaptive target is built on it, so a good '
+          'estimate matters more than the pace.',
     ),
     _Panel(
       children: [
@@ -795,6 +827,13 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
                     'below.',
           style: Theme.of(context).textTheme.bodySmall,
         ),
+        if (_formula)
+          Text(
+            'Your target is on Formula, which goes by your profile, '
+            '${energyText(context, _setup.formulaKcal)}; this estimate sets '
+            'it only on Adaptive.',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
       ],
     ),
     ExpenditureGroups.estimate(store: _store),
@@ -806,19 +845,52 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
     final pace = _draft.signedPace;
     final shift = (pace * AdaptiveSettings.commonKcalPerKg / 7).round();
     final breaks = _planOf(_draft).phases.length > 1;
+    final settings = AdaptiveStore.settings.value;
+    final base = energyText(context, _baseKcal);
+    final from = _formula
+        ? 'The formula\'s estimate from your age, height, weight and '
+              'activity, $base,'
+        : 'What you burn, $base,';
     return [
       _question(
         context,
         'How the target is set',
-        pace == 0
-            ? 'At maintenance the target is what you burn, about '
-                  '${energyText(context, _setup.expenditureKcal)}.'
-            : 'What you burn, ${energyText(context, _setup.expenditureKcal)}, '
-                  '${pace < 0 ? 'less' : 'plus'} the pace\'s '
+        settings.fixedTarget
+            ? 'A fixed target: '
+                  '${energyText(context, settings.fixedTargetKcal)} a day, '
+                  'whatever the pace.'
+            : pace == 0
+            ? '${_formula ? 'The formula\'s estimate from your age, height, weight and activity' : 'At maintenance the target is what you burn'}, '
+                  'about $base.'
+            : '$from ${pace < 0 ? 'less' : 'plus'} the pace\'s '
                   '${energyText(context, shift.abs().toDouble())} gives about '
                   '${energyText(context, _kcalAt(pace))} a day'
-                  '${breaks ? '; on diet breaks, what you burn.' : '.'}',
+                  '${breaks ? '; on diet breaks, $base.' : '.'}',
       ),
+      if (_formula && !_setup.onboarding)
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+          child: Semantics(
+            identifier: 'goal-target-adaptive-hint',
+            child: Text(
+              'With a few weeks of weigh-ins and logging, Adaptive follows '
+              'what you actually burn, '
+              '${energyText(context, _setup.expenditureKcal)} by the '
+              'estimate now, rather than the formula\'s guess.',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ),
+        ),
+      if (_formula && _setup.onboarding)
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+          child: Text(
+            'After a few weeks of weigh-ins and logging, Adaptive follows '
+            'what you actually burn: switch in Settings, or here when you '
+            'edit the plan.',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        ),
       Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16),
         child: TargetModeFields(
