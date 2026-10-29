@@ -260,6 +260,17 @@ class PhaseStore {
       (await _box()).put(_appliedKey, key);
 }
 
+/// A goal's length from [start] to [end] in whole weeks, rounded, at
+/// least one: the one rule Goal reached and Completed goals count by.
+int goalWeeks(DateTime start, DateTime end) {
+  final days = DateTime.utc(
+    end.year,
+    end.month,
+    end.day,
+  ).difference(DateTime.utc(start.year, start.month, start.day)).inDays;
+  return (days / 7).round().clamp(1, 1 << 20);
+}
+
 /// A goal once completed: its kind, its days and the trend weight on the
 /// first and last; [targetKg] null for maintenance.
 class GoalRecord {
@@ -282,14 +293,7 @@ class GoalRecord {
   });
 
   /// Whole weeks, at least one.
-  int get weeks {
-    final days = DateTime.utc(
-      end.year,
-      end.month,
-      end.day,
-    ).difference(DateTime.utc(start.year, start.month, start.day)).inDays;
-    return (days / 7).round().clamp(1, 1 << 20);
-  }
+  int get weeks => goalWeeks(start, end);
 
   Map<String, Object> toJson() => {
     'kind': kind.name,

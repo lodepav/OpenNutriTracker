@@ -181,7 +181,7 @@ class _CompletedGoalsPageState extends State<CompletedGoalsPage> {
           child: _row(
             context,
             kind: running.kind,
-            weeks: CalendarDayCalc.daysBetween(running.start, today) ~/ 7,
+            weeks: goalWeeks(running.start, today),
             dates: '${format.format(running.start)} – now',
             startKg: running.startKg,
             endKg: data.trend.isEmpty ? null : data.trend.last,

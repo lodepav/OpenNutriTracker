@@ -261,6 +261,9 @@ class _GoalProgressPageState extends State<GoalProgressPage> {
           progress: p,
           unit: widget.unit,
           atPace: recent?.kgPerWeek,
+          planLastDay: plan?.targetKg == null
+              ? null
+              : plan!.end.subtract(const Duration(hours: 12)),
         ),
       ),
       trendSection(context, 'Pace'),
@@ -299,16 +302,19 @@ class _GoalProgressPageState extends State<GoalProgressPage> {
       const SizedBox(height: Dimens.spacing12),
       FigureGrid(
         tiles: [
-          FigureTile(
-            label: 'Since the start',
-            value: signedText(weightIn(widget.unit, p.nowKg - p.start.kg), 1),
-            unit: label,
-            note: switch ((p.daysIn / 7).floor()) {
-              0 => 'in ${p.daysIn} days',
-              1 => 'in 1 week',
-              final w => 'in $w weeks',
-            },
-          ),
+          if (p.daysIn <= 0)
+            const FigureTile(label: 'Since the start', value: 'Started today')
+          else
+            FigureTile(
+              label: 'Since the start',
+              value: signedText(weightIn(widget.unit, p.nowKg - p.start.kg), 1),
+              unit: label,
+              note: switch ((p.daysIn / 7).floor()) {
+                0 => 'in ${p.daysIn} ${p.daysIn == 1 ? 'day' : 'days'}',
+                1 => 'in 1 week',
+                final w => 'in $w weeks',
+              },
+            ),
           FigureTile(
             label: 'Calorie goal now',
             value: calories.goalKcal == null
@@ -562,7 +568,16 @@ class _GoalChart extends StatelessWidget {
   final BodyWeightUnit unit;
   final double? atPace;
 
-  const _GoalChart({required this.progress, required this.unit, this.atPace});
+  /// The last day of the plan, diet breaks and whole weeks counted: the
+  /// plan's line reaches the target then, as "By your plan" says.
+  final DateTime? planLastDay;
+
+  const _GoalChart({
+    required this.progress,
+    required this.unit,
+    this.atPace,
+    this.planLastDay,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -597,7 +612,12 @@ class _GoalChart extends StatelessWidget {
     ];
     // The plan from its own start: the goal's, or the last pace change.
     final planX = chartDay(origin, p.start.planDate);
-    final planDays = p.paceKgPerWeek == 0
+    final planDays = planLastDay != null
+        ? math.max(
+            1,
+            CalendarDayCalc.daysBetween(p.start.planDate, planLastDay!),
+          )
+        : p.paceKgPerWeek == 0
         ? null
         : daysToTarget(p.start.planKg, p.targetKg, p.paceKgPerWeek / 7);
     final arrival = p.arrivalAt(atPace);

@@ -188,7 +188,7 @@ class _GoalReachedPageState extends State<GoalReachedPage> {
     final today = _date(widget.today ?? DateTime.now());
     final locale = Localizations.localeOf(context).toLanguageTag();
     final format = intl.DateFormat.yMMMd(locale);
-    final weeks = (CalendarDayCalc.daysBetween(plan.start, today) / 7).round();
+    final weeks = goalWeeks(plan.start, today);
     final startKg = plan.startKg;
     final target = plan.targetKg;
     return Scaffold(

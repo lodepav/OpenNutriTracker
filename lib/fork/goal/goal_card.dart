@@ -6,6 +6,7 @@ import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/core/utils/hive_db_provider.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/fork/goal/goal_progress_page.dart';
+import 'package:opennutritracker/fork/goal/goal_you_tile.dart' show noGoalText;
 import 'package:opennutritracker/fork/goal/phase_colors.dart';
 import 'package:opennutritracker/fork/goal/planner_screen.dart';
 import 'package:opennutritracker/fork/phases/phases.dart';
@@ -88,7 +89,7 @@ class _GoalCardState extends State<GoalCard> {
               const SizedBox(height: 4),
               Text(
                 plan == null
-                    ? 'No goal planned. Plan a cut, maintenance or a bulk: '
+                    ? '$noGoalText. Plan a cut, maintenance or a bulk: '
                           'its pace, what you burn, the calorie target and '
                           'macros, step by step.'
                     : '${plan.kind.label}'
