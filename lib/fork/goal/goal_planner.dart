@@ -273,6 +273,10 @@ PhasePlan extendedPlan(
       .lastWhere((p) => p.kind == kind, orElse: () => plan.phases.last)
       .kgPerWeek;
   final until = weeks == null ? (untilKg ?? plan.targetKg) : untilKg;
+  // A reached goal run on for weeks aims at no weight: kept, its target
+  // would show as reached again at once.
+  final reached = goalStatus(plan, nowKg, today) == GoalStatus.reached;
+  final target = untilKg ?? (weeks != null && reached ? null : plan.targetKg);
   kept.add(
     DietPhase(
       kind: kind,
@@ -288,7 +292,7 @@ PhasePlan extendedPlan(
   return PhasePlan(
     start: plan.start,
     startKg: plan.startKg,
-    targetKg: untilKg ?? plan.targetKg,
+    targetKg: target,
     extensions: plan.extensions + 1,
     phases: kept,
   );

@@ -561,7 +561,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       // [fork] S89 onboarding-macros: the goal page's protein and fat
       await OnboardingMacros.save();
       // and the plan from the goal planner
-      await OnboardingGoal.save();
+      await OnboardingGoal.save(chosen: _onboardingBloc.userSelection.goal);
       // [/fork]
       if (!context.mounted) return;
       // Onboarding can run for a profile added after the app has been in

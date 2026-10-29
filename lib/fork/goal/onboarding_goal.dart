@@ -16,12 +16,20 @@ abstract final class OnboardingGoal {
   static final pending = ValueNotifier<PhasePlan?>(null);
 
   /// Starts the plan in the active profile, which onboarding has just set
-  /// up; nothing when none was planned.
-  static Future<void> save([GoalActions? actions]) async {
+  /// up; nothing when none was planned, or when [chosen], the goal picked
+  /// last on the page, is no longer the plan's. Kept when the save was
+  /// dropped.
+  static Future<void> save({
+    UserGoalSelectionEntity? chosen,
+    GoalActions? actions,
+  }) async {
     final plan = pending.value;
     if (plan == null) return;
-    await (actions ?? GoalActions()).start(plan);
-    pending.value = null;
+    if (chosen != null && chosen != choiceFor(plan.kind)) {
+      pending.value = null;
+      return;
+    }
+    if (await (actions ?? GoalActions()).start(plan)) pending.value = null;
   }
 
   /// Upstream's goal choice for [kind].

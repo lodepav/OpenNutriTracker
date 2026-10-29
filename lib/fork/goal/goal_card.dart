@@ -3,6 +3,8 @@ import 'package:intl/intl.dart' as intl;
 import 'package:opennutritracker/core/domain/entity/body_weight_unit_entity.dart';
 import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
+import 'package:opennutritracker/core/utils/hive_db_provider.dart';
+import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/fork/goal/goal_progress_page.dart';
 import 'package:opennutritracker/fork/goal/phase_colors.dart';
 import 'package:opennutritracker/fork/goal/planner_screen.dart';
@@ -42,11 +44,17 @@ class _GoalCardState extends State<GoalCard> {
   void initState() {
     super.initState();
     PhaseStore.changes.addListener(_reload);
+    if (locator.isRegistered<HiveDBProvider>()) {
+      locator<HiveDBProvider>().addListener(_reload);
+    }
   }
 
   @override
   void dispose() {
     PhaseStore.changes.removeListener(_reload);
+    if (locator.isRegistered<HiveDBProvider>()) {
+      locator<HiveDBProvider>().removeListener(_reload);
+    }
     super.dispose();
   }
 

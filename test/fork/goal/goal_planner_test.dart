@@ -191,6 +191,20 @@ void main() {
       expect(extended.targetKg, 80);
     });
 
+    test('a reached goal run on for weeks aims at no weight', () {
+      final extended = extendedPlan(
+        _cut().toPlan(),
+        today: DateTime(2026, 12, 2),
+        nowKg: 79.9,
+        weeks: 4,
+      );
+      expect(extended.targetKg, isNull);
+      expect(
+        goalStatus(extended, 79.9, DateTime(2026, 12, 3)),
+        GoalStatus.running,
+      );
+    });
+
     test('a plan over for weeks holds maintenance until now', () {
       final plan = _cut().toPlan();
       final extended = extendedPlan(

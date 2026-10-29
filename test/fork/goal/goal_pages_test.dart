@@ -3,6 +3,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:opennutritracker/core/domain/entity/body_weight_unit_entity.dart';
 import 'package:opennutritracker/core/utils/energy_unit_provider.dart';
+import 'package:opennutritracker/features/onboarding/domain/entity/user_goal_selection_entity.dart';
 import 'package:opennutritracker/fork/goal/completed_goals_page.dart';
 import 'package:opennutritracker/fork/goal/goal_actions.dart';
 import 'package:opennutritracker/fork/goal/goal_plan_view.dart';
@@ -278,11 +279,11 @@ void main() {
   test('onboarding starts its plan once the profile is saved', () async {
     final store = _MemoryPhases();
     final actions = GoalActions(store: store, save: (_, _) async => true);
-    await OnboardingGoal.save(actions);
+    await OnboardingGoal.save(actions: actions);
     expect(store.saved, isNull);
     final plan = _cut();
     OnboardingGoal.pending.value = plan;
-    await OnboardingGoal.save(actions);
+    await OnboardingGoal.save(actions: actions);
     expect(store.saved, same(plan));
     expect(OnboardingGoal.pending.value, isNull);
   });
@@ -344,5 +345,27 @@ void main() {
     await tester.tap(find.text('Gentle · 0.25 kg a week'));
     await tester.pumpAndSettle();
     expect(find.byType(Slider), findsNothing);
+  });
+
+  test('onboarding drops a plan whose goal was changed after', () async {
+    final store = _MemoryPhases();
+    OnboardingGoal.pending.value = _cut();
+    await OnboardingGoal.save(
+      chosen: UserGoalSelectionEntity.gainWeigh,
+      actions: GoalActions(store: store, save: (_, _) async => true),
+    );
+    expect(store.saved, isNull);
+    expect(OnboardingGoal.pending.value, isNull);
+  });
+
+  test('onboarding keeps its plan when the save was dropped', () async {
+    final plan = _cut();
+    OnboardingGoal.pending.value = plan;
+    await OnboardingGoal.save(
+      chosen: UserGoalSelectionEntity.loseWeight,
+      actions: GoalActions(store: _MemoryPhases(), save: (_, _) async => false),
+    );
+    expect(OnboardingGoal.pending.value, same(plan));
+    OnboardingGoal.pending.value = null;
   });
 }

@@ -52,7 +52,7 @@ Future<bool> saveGoal(
   final saved = await withTrackedDayLockOnProfile(() async {
     final user = await locator<GetUserUsecase>().getUserData();
     if (kgPerWeek != null) _setPace(user, kgPerWeek);
-    if (targetKg != null) user.targetWeightKg = targetKg;
+    user.targetWeightKg = targetKg;
     await locator<ProfileBloc>().updateUser(user);
     return true;
   }, startedOn: startedOn);

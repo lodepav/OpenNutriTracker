@@ -9,8 +9,8 @@ import 'package:opennutritracker/fork/phases/phases.dart';
 class GoalActions {
   final PhaseStore _store;
 
-  /// Saves the pace and the target weight, each unless null; false when a
-  /// profile switch dropped it.
+  /// Saves the pace (unless null) and the target weight (null clears
+  /// it); false when a profile switch dropped it.
   final Future<bool> Function(double? kgPerWeek, double? targetKg) _saveGoal;
   final DateTime Function() _clock;
 
