@@ -155,6 +155,11 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
   late final _before = AdaptiveStore.settings.value;
   late final _macrosBefore = OnboardingMacros.pending.value;
   late GoalDraft _draft = widget.draft;
+
+  /// A pace of the user's own on the slider, not one of the three.
+  late bool _customPace = !_draft.paces.any(
+    (p) => (p - _draft.paceKg).abs() < 0.001,
+  );
   int _step = 0;
   bool _macrosValid = true;
   bool _saving = false;
@@ -428,6 +433,7 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
           title: title,
           subtitle: text,
           onTap: () => setState(() {
+            _customPace = false;
             _draft = _draft.copyWith(
               kind: kind,
               paceKg: switch (kind) {
@@ -541,6 +547,77 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
 
   // ---------------------------------------------------------------- pace
 
+  /// The custom pace's toggle and, when on, its slider.
+  List<Widget> _customPaceRows(BuildContext context, bool cut) {
+    final range = cut ? cutCustomPaceKg : bulkCustomPaceKg;
+    final pace = _draft.paceKg.clamp(range.min, range.max);
+    final kcal = pace * AdaptiveSettings.commonKcalPerKg / 7;
+    final percent = pace / _draft.startKg * 100;
+    final theme = Theme.of(context);
+    return [
+      Padding(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+        child: Semantics(
+          identifier: 'goal-pace-custom',
+          child: SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('Custom pace'),
+            subtitle: const Text('Set your own on a slider'),
+            value: _customPace,
+            onChanged: (on) => setState(() {
+              _customPace = on;
+              if (!on && !_draft.paces.contains(_draft.paceKg)) {
+                _draft = _draft.copyWith(paceKg: _draft.paces[1]);
+              }
+            }),
+          ),
+        ),
+      ),
+      if (_customPace)
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(_rate(pace), style: theme.textTheme.titleMedium),
+              Text(
+                'about ${energyText(context, kcal)} '
+                '${cut ? 'under' : 'over'} · '
+                '${percent.toStringAsFixed(1)}% of your weight a week',
+                style: theme.textTheme.bodySmall,
+              ),
+              Semantics(
+                identifier: 'goal-pace-slider',
+                child: Slider(
+                  value: pace,
+                  min: range.min,
+                  max: range.max,
+                  divisions: ((range.max - range.min) / customPaceStepKg)
+                      .round(),
+                  label: _rate(pace),
+                  semanticFormatterCallback: _rate,
+                  onChanged: (v) => setState(
+                    () => _draft = _draft.copyWith(
+                      paceKg: (v / customPaceStepKg).round() * customPaceStepKg,
+                    ),
+                  ),
+                ),
+              ),
+              if (percent > (cut ? 1 : 0.5))
+                Text(
+                  cut
+                      ? 'Over 1% a week: more hunger and more muscle lost.'
+                      : 'Over 0.5% a week: more of the gain is fat.',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.error,
+                  ),
+                ),
+            ],
+          ),
+        ),
+    ];
+  }
+
   List<Widget> _paceStep(BuildContext context) {
     final plan = _draft.toPlan();
     final end = _dayBefore(plan.end);
@@ -583,18 +660,21 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
             final kcal = (pace * AdaptiveSettings.commonKcalPerKg / 7).round();
             return _OptionCard(
               identifier: 'goal-pace-$i',
-              selected: _draft.paceKg == pace,
+              selected: !_customPace && _draft.paceKg == pace,
               title: '${['Gentle', 'Steady', 'Fast'][i]} · ${_rate(pace)}',
               subtitle:
                   'about ${energyText(context, kcal.toDouble())} '
                   '${cut ? 'under' : 'over'} · until '
                   '${_date(_dayBefore(at.end))} · '
                   '${(pace / _draft.startKg * 100).toStringAsFixed(1)}% a week',
-              onTap: () =>
-                  setState(() => _draft = _draft.copyWith(paceKg: pace)),
+              onTap: () => setState(() {
+                _customPace = false;
+                _draft = _draft.copyWith(paceKg: pace);
+              }),
             );
           },
         ),
+      ..._customPaceRows(context, cut),
       if (cut)
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),

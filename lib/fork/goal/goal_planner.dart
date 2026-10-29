@@ -5,6 +5,11 @@ import 'package:opennutritracker/fork/phases/phases.dart';
 const cutPacesKg = [0.25, 0.5, 0.75];
 const bulkPacesKg = [0.1, 0.25, 0.4];
 
+/// A custom pace's range and step, kg a week.
+const cutCustomPaceKg = (min: 0.1, max: 1.5);
+const bulkCustomPaceKg = (min: 0.05, max: 0.75);
+const customPaceStepKg = 0.05;
+
 /// A maintenance goal's lengths, in weeks.
 const maintainWeeksChoices = [4, 8, 12];
 

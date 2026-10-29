@@ -10,6 +10,7 @@ import 'package:opennutritracker/fork/goal/goal_planner.dart';
 import 'package:opennutritracker/fork/goal/goal_reached.dart';
 import 'package:opennutritracker/fork/goal/onboarding_goal.dart';
 import 'package:opennutritracker/fork/goal/phase_colors.dart';
+import 'package:opennutritracker/fork/goal/planner_screen.dart';
 import 'package:opennutritracker/fork/phases/phases.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 import 'package:provider/provider.dart';
@@ -302,5 +303,46 @@ void main() {
     );
     expect(boxes, findsNWidgets(5));
     expect(tester.getSize(boxes.first).height, 14);
+  });
+
+  testWidgets('a custom pace: the three, or a slider when toggled', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      GoalPlannerScreen(
+        setup: const PlannerSetup(
+          nowKg: 86.4,
+          unit: BodyWeightUnit.kg,
+          expenditureKcal: 2600,
+          bodyFatPercent: 22,
+        ),
+        draft: GoalDraft.fresh(86.4, _start, targetKg: 80),
+        onStart: (_) async => true,
+      ),
+    );
+    await tester.tap(find.text('Next'));
+    await tester.pumpAndSettle();
+    expect(find.text('Steady · 0.5 kg a week'), findsOneWidget);
+    expect(find.byType(Slider), findsNothing);
+    await tester.ensureVisible(find.text('Custom pace'));
+    await tester.tap(find.text('Custom pace'));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.byType(Slider),
+      100,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.byType(Slider), findsOneWidget);
+    // Right to the end: 1.5 kg a week, over 1% of 86.4 kg.
+    await tester.drag(find.byType(Slider), const Offset(600, 0));
+    await tester.pumpAndSettle();
+    expect(find.text('1.5 kg a week'), findsOneWidget);
+    expect(find.textContaining('Over 1% a week'), findsOneWidget);
+    await tester.drag(find.byType(Scrollable).first, const Offset(0, 400));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Gentle · 0.25 kg a week'));
+    await tester.pumpAndSettle();
+    expect(find.byType(Slider), findsNothing);
   });
 }
