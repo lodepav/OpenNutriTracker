@@ -78,6 +78,7 @@ class PhaseBar extends StatelessWidget {
         child: SizedBox(
           height: 14,
           child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               for (final (i, p) in plan.phases.indexed) ...[
                 if (i > 0) const SizedBox(width: 2),

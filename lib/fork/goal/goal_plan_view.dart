@@ -10,6 +10,7 @@ import 'package:opennutritracker/fork/goal/goal_planner.dart';
 import 'package:opennutritracker/fork/goal/goal_reached.dart';
 import 'package:opennutritracker/fork/goal/phase_colors.dart';
 import 'package:opennutritracker/fork/goal/planner_screen.dart';
+import 'package:opennutritracker/fork/phases/phase_report.dart';
 import 'package:opennutritracker/fork/phases/phases.dart';
 import 'package:opennutritracker/fork/units/weight_text.dart';
 
@@ -118,6 +119,26 @@ class GoalPlanSection extends StatelessWidget {
               children: [
                 for (final (i, p) in plan.phases.indexed)
                   _phaseRow(context, plan, i, p),
+                if (plan.indexOn(today) >= 0) ...[
+                  const Divider(height: 1),
+                  Semantics(
+                    identifier: 'goal-phase-reports',
+                    child: ListTile(
+                      title: const Text('Phase reports'),
+                      subtitle: const Text(
+                        'Each phase begun: its change and pace against the '
+                        'plan, what you ate and burned',
+                      ),
+                      trailing: const Icon(Icons.chevron_right_rounded),
+                      onTap: () => openPhaseReports(
+                        context,
+                        plan,
+                        today: today,
+                        unit: unit,
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -369,7 +390,7 @@ class PlanGrid extends StatelessWidget {
                 weeks: count,
                 kinds: kinds,
                 colors: colors,
-                none: Theme.of(context).colorScheme.surfaceContainerHighest,
+                none: Theme.of(context).colorScheme.outlineVariant,
                 todayIndex: DateTime.utc(today.year, today.month, today.day)
                     .difference(DateTime.utc(from.year, from.month, from.day))
                     .inDays,
@@ -453,12 +474,21 @@ class _GridPainter extends CustomPainter {
       for (var d = 0; d < 7; d++) {
         final i = w * 7 + d;
         final kind = kinds[i];
-        paint.color = kind == null ? none : colors[kind]!;
         final rect = RRect.fromRectAndRadius(
           Rect.fromLTWH(x, top + d * cell, cell - gap, cell - gap),
           Radius.circular(cell / 5),
         );
-        canvas.drawRRect(rect, paint);
+        // A day no goal covers is an outline, apart from maintenance.
+        if (kind == null) {
+          canvas.drawRRect(
+            rect.deflate(0.5),
+            Paint()
+              ..color = none
+              ..style = PaintingStyle.stroke,
+          );
+        } else {
+          canvas.drawRRect(rect, paint..color = colors[kind]!);
+        }
         if (i == todayIndex) {
           canvas.drawRRect(
             rect.inflate(0.5),
@@ -569,10 +599,14 @@ class _ThisWeek extends StatelessWidget {
                                 ),
                                 decoration: BoxDecoration(
                                   color: kind == null
-                                      ? theme
-                                            .colorScheme
-                                            .surfaceContainerHighest
+                                      ? null
                                       : phaseColor(context, kind),
+                                  border: kind == null
+                                      ? Border.all(
+                                          color:
+                                              theme.colorScheme.outlineVariant,
+                                        )
+                                      : null,
                                   borderRadius: BorderRadius.circular(3),
                                 ),
                               ),

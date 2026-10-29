@@ -59,10 +59,7 @@ void main() {
 
   testWidgets('no goal: offers to plan one', (tester) async {
     await pumpGoal(tester, (inputs: inputs([82]), progress: null));
-    expect(
-      find.text('Plan a goal to see how far along you are.'),
-      findsOneWidget,
-    );
+    expect(find.text('No goal planned'), findsOneWidget);
     expect(find.text('Plan a goal'), findsOneWidget);
     expect(find.text('Pace'), findsNothing);
   });

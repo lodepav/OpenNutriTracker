@@ -9,6 +9,7 @@ import 'package:opennutritracker/fork/goal/goal_plan_view.dart';
 import 'package:opennutritracker/fork/goal/goal_planner.dart';
 import 'package:opennutritracker/fork/goal/goal_reached.dart';
 import 'package:opennutritracker/fork/goal/onboarding_goal.dart';
+import 'package:opennutritracker/fork/goal/phase_colors.dart';
 import 'package:opennutritracker/fork/phases/phases.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 import 'package:provider/provider.dart';
@@ -283,5 +284,23 @@ void main() {
     await OnboardingGoal.save(actions);
     expect(store.saved, same(plan));
     expect(OnboardingGoal.pending.value, isNull);
+  });
+
+  testWidgets('the phase bar is drawn as tall as it is', (tester) async {
+    await _pump(
+      tester,
+      Scaffold(
+        body: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [PhaseBar(_cut())],
+        ),
+      ),
+    );
+    final boxes = find.descendant(
+      of: find.byType(PhaseBar),
+      matching: find.byType(ColoredBox),
+    );
+    expect(boxes, findsNWidgets(5));
+    expect(tester.getSize(boxes.first).height, 14);
   });
 }

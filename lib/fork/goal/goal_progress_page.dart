@@ -173,9 +173,7 @@ class _GoalProgressPageState extends State<GoalProgressPage> {
 
   List<Widget> _noTarget(BuildContext context, double nowKg, PhasePlan? plan) =>
       [
-        if (plan == null)
-          noData(context, 'Plan a goal to see how far along you are.')
-        else if (plan.kind != PhaseKind.maintain) ...[
+        if (plan != null && plan.kind != PhaseKind.maintain) ...[
           noData(context, 'Set a target weight to see how far along you are.'),
           const SizedBox(height: Dimens.spacing16),
           Center(

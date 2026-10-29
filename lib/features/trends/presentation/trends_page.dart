@@ -24,10 +24,9 @@ import 'package:opennutritracker/fork/adaptive/trend_points.dart';
 import 'package:opennutritracker/fork/report/rate_text.dart';
 // [/fork]
 // [fork] S40 expenditure-card
-import 'package:opennutritracker/fork/adaptive/goal_plan_card.dart';
 import 'package:opennutritracker/fork/body/body_card.dart';
 import 'package:opennutritracker/fork/health/steps_card.dart';
-import 'package:opennutritracker/fork/phases/phases_ui.dart';
+import 'package:opennutritracker/fork/goal/goal_card.dart';
 import 'package:opennutritracker/fork/photos/photo_card.dart';
 import 'package:opennutritracker/fork/report/weekly_report.dart';
 // [/fork]
@@ -111,8 +110,7 @@ class _TrendsView extends StatelessWidget {
               rangeDays: state.windowDays,
               palette: palette,
             ),
-            'goalPlan': GoalPlanCard(palette: palette, unit: state.bodyWeightUnit),
-            'phases': DietPhasesCard(unit: state.bodyWeightUnit),
+            'goalPlan': GoalCard(unit: state.bodyWeightUnit),
             'body': BodyMeasurementsCard(
               rangeDays: state.windowDays,
               palette: palette,
