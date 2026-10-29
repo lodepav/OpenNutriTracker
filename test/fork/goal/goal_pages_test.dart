@@ -402,6 +402,104 @@ void main() {
     );
   });
 
+  testWidgets('a goal after the planned ones: its place, its pace, the rest '
+      'carried over', (tester) async {
+    final cut = _cut(breaks: false);
+    final maintain = GoalDraft(
+      kind: PhaseKind.maintain,
+      startKg: 80,
+      start: cut.end,
+      paceKg: 0,
+      breaks: false,
+      maintainWeeks: 4,
+    ).toPlan();
+    (int, PhasePlan)? queued;
+    await _pump(
+      tester,
+      GoalPlannerScreen(
+        setup: PlannerSetup(
+          nowKg: 85,
+          unit: BodyWeightUnit.kg,
+          expenditureKcal: 2870,
+          bodyFatPercent: 22,
+          running: cut,
+          upcoming: [maintain],
+        ),
+        draft: GoalDraft.fresh(85, DateTime(2026, 10, 29), targetKg: 84),
+        onStart: (_) async => fail('replaced the cut'),
+        onQueue: (at, plan) async {
+          queued = (at, plan);
+          return true;
+        },
+        today: DateTime(2026, 10, 29),
+      ),
+    );
+    expect(find.text('Plan the next goal'), findsOneWidget);
+    await tester.tap(find.text('Gain'));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.textContaining('After maintaining'),
+      100,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.textContaining('After the cut'), findsOneWidget);
+    expect(find.textContaining('Today, replacing the cut'), findsOneWidget);
+    await tester.tap(find.text('Next'));
+    await tester.pumpAndSettle();
+    // A bulk after maintaining: its pace is set up, then the rest kept.
+    expect(find.textContaining('Step 2 of 4 · Pace'), findsOneWidget);
+    await tester.tap(find.text('Next'));
+    await tester.pumpAndSettle();
+    expect(find.text('The rest is set up'), findsOneWidget);
+    await tester.tap(find.text('Keep all and go on'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Add to the plan'));
+    await tester.pumpAndSettle();
+    final (at, plan) = queued!;
+    expect(at, 1);
+    expect(plan.start, maintain.end);
+    expect(plan.startKg, 80);
+    expect(plan.kind, PhaseKind.bulk);
+  });
+
+  testWidgets('a cut after a cut carries its pace over, and opens it on '
+      'Change', (tester) async {
+    final cut = _cut(breaks: false);
+    await _pump(
+      tester,
+      GoalPlannerScreen(
+        setup: PlannerSetup(
+          nowKg: 85,
+          unit: BodyWeightUnit.kg,
+          expenditureKcal: 2870,
+          bodyFatPercent: 22,
+          running: cut,
+        ),
+        draft: GoalDraft.fresh(85, DateTime(2026, 10, 29), targetKg: 76),
+        onStart: (_) async => true,
+        onQueue: (_, _) async => true,
+        today: DateTime(2026, 10, 29),
+      ),
+    );
+    await tester.tap(find.text('Lose fat'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Next'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Step 2 of 3 · Carried over'), findsOneWidget);
+    expect(find.text('0.5 kg a week'), findsOneWidget);
+    await tester.tap(
+      find.descendant(
+        of: find.byWidgetPredicate(
+          (w) =>
+              w is Semantics && w.properties.identifier == 'goal-carried-pace',
+        ),
+        matching: find.text('Change'),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Step 2 of 4 · Pace'), findsOneWidget);
+  });
+
   test('onboarding drops a plan whose goal was changed after', () async {
     final store = _MemoryPhases();
     OnboardingGoal.pending.value = _cut();

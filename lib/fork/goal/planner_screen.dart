@@ -41,6 +41,9 @@ class PlannerSetup {
   /// The goal running now, to edit or replace.
   final PhasePlan? running;
 
+  /// The goals planned after [running], in order.
+  final List<PhasePlan> upcoming;
+
   /// The profile's target weight, a new goal's starting point.
   final double? targetKg;
 
@@ -55,6 +58,7 @@ class PlannerSetup {
     required this.bodyFatPercent,
     double? formulaKcal,
     this.running,
+    this.upcoming = const [],
     this.targetKg,
     this.onboarding = false,
   }) : formulaKcal = formulaKcal ?? expenditureKcal;
@@ -66,6 +70,7 @@ class PlannerSetup {
     BodyWeightUnit unit, {
     bool onboarding = false,
     PhasePlan? running,
+    List<PhasePlan> upcoming = const [],
     double kcalAdjustment = 0,
   }) => PlannerSetup(
     nowKg: user.weightKG,
@@ -75,6 +80,7 @@ class PlannerSetup {
     bodyFatPercent: adaptive.bodyFatPercent(user),
     targetKg: user.targetWeightKg,
     running: running,
+    upcoming: upcoming,
     onboarding: onboarding,
   );
 
@@ -85,12 +91,14 @@ class PlannerSetup {
     final unit = config.bodyWeightUnit;
     final adjustment = config.userKcalAdjustment ?? 0;
     final running = await PhaseStore().plan();
+    final upcoming = await PhaseStore().upcoming();
     final inputs = await adaptive.AdaptiveService.fromLocator().goalPlan();
     if (inputs == null) {
       return PlannerSetup.ofUser(
         user,
         unit,
         running: running,
+        upcoming: upcoming,
         kcalAdjustment: adjustment,
       );
     }
@@ -102,6 +110,7 @@ class PlannerSetup {
       bodyFatPercent: inputs.bodyFatPercent,
       targetKg: inputs.targetWeightKg,
       running: running,
+      upcoming: upcoming,
     );
   }
 }
@@ -146,14 +155,18 @@ Future<bool> openGoalPlanner(BuildContext context, {bool fresh = false}) async {
   return started ?? false;
 }
 
-const _stepNames = [
-  'Goal',
-  'Pace',
-  'What you burn',
-  'Calorie target',
-  'Macros',
-  'Your plan',
-];
+enum _Step {
+  goal('Goal'),
+  pace('Pace'),
+  burn('What you burn'),
+  target('Calorie target'),
+  macros('Macros'),
+  carried('Carried over'),
+  plan('Your plan');
+
+  final String label;
+  const _Step(this.label);
+}
 
 /// The goal planner (design A, round 4): the goal, its pace, the
 /// expenditure, how the target is set, the macros and the plan, one full
@@ -175,6 +188,13 @@ class GoalPlannerScreen extends StatefulWidget {
   /// Today; the clock's by default.
   final DateTime? today;
 
+  /// Puts the plan among the upcoming goals at its place there; with a
+  /// goal running, the start offers a place after each goal planned.
+  final Future<bool> Function(int at, PhasePlan plan)? onQueue;
+
+  /// The upcoming goal at this place being edited: it keeps its place.
+  final int? queuedAt;
+
   const GoalPlannerScreen({
     super.key,
     required this.setup,
@@ -183,6 +203,8 @@ class GoalPlannerScreen extends StatefulWidget {
     this.store,
     this.editing,
     this.today,
+    this.onQueue,
+    this.queuedAt,
   });
 
   @override
@@ -196,6 +218,81 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
   late GoalDraft _draft = widget.draft;
 
   DateTime get _today => widget.today ?? DateTime.now();
+
+  /// The place among the upcoming goals the plan goes to; null when it
+  /// starts on a day of its own, replacing the goal running.
+  late int? _place =
+      widget.queuedAt ??
+      (widget.onQueue != null &&
+              widget.editing == null &&
+              _setup.running != null
+          ? _setup.upcoming.length
+          : null);
+
+  bool get _queued => _place != null;
+
+  /// The goal before [place]: the one running, or an upcoming one.
+  PhasePlan _goalBefore(int place) =>
+      place == 0 ? _setup.running! : _setup.upcoming[place - 1];
+
+  /// The steps set up anew in a queued goal, the rest carried over:
+  /// another kind of goal than the one before has its own pace.
+  final _opened = <_Step>{};
+
+  List<_Step> get _steps {
+    final place = _place;
+    if (place == null) {
+      return const [
+        _Step.goal,
+        _Step.pace,
+        _Step.burn,
+        _Step.target,
+        _Step.macros,
+        _Step.plan,
+      ];
+    }
+    final paceAgain = _draft.kind != _goalBefore(place).kind;
+    return [
+      _Step.goal,
+      for (final step in [_Step.pace, _Step.burn, _Step.target, _Step.macros])
+        if (_opened.contains(step) || (step == _Step.pace && paceAgain)) step,
+      _Step.carried,
+      _Step.plan,
+    ];
+  }
+
+  _Step get _at => _steps[_step];
+
+  /// Shows [step], opening it in a queued goal.
+  void _goTo(_Step step) => setState(() {
+    _opened.add(step);
+    _step = _steps.indexOf(step);
+  });
+
+  /// [_draft] at [place]: from the day the goal before ends, at the
+  /// weight it ends at, with its pace when it is the same kind.
+  void _moveTo(int place) {
+    final before = _goalBefore(place);
+    final kg = endKgOf(before) ?? _setup.nowKg;
+    _place = place;
+    _draft = _draft.copyWith(start: before.end, startKg: kg);
+    if (_draft.kind == before.kind) {
+      final same = GoalDraft.of(before, kg);
+      _draft = _draft.copyWith(
+        paceKg: same.paceKg,
+        breaks: same.breaks,
+        maintainWeeks: same.maintainWeeks,
+      );
+    }
+    _customPace = !_draft.paces.any((p) => (p - _draft.paceKg).abs() < 0.001);
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    final place = _place;
+    if (place != null && widget.queuedAt == null) _moveTo(place);
+  }
 
   /// The goal edited, once begun: its start stays.
   bool get _begun =>
@@ -304,7 +401,10 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
 
   Future<void> _start() async {
     setState(() => _saving = true);
-    final saved = await widget.onStart(_planOf(_draft));
+    final place = _place;
+    final saved = place == null
+        ? await widget.onStart(_planOf(_draft))
+        : await widget.onQueue!(place, _draft.toPlan());
     if (!mounted) return;
     setState(() => _saving = false);
     if (saved) {
@@ -316,16 +416,17 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
     }
   }
 
-  bool get _canGoOn => switch (_step) {
-    0 => _draft.problem == null,
-    4 => _macrosValid,
+  bool get _canGoOn => switch (_at) {
+    _Step.goal => _draft.problem == null,
+    _Step.macros => _macrosValid,
     _ => true,
   };
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final last = _step == _stepNames.length - 1;
+    final steps = _steps;
+    final last = _step == steps.length - 1;
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {
@@ -346,7 +447,13 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
               onPressed: _leave,
             ),
           ),
-          title: const Text('Plan your goal'),
+          title: Text(
+            widget.queuedAt != null
+                ? 'Edit an upcoming goal'
+                : _queued
+                ? 'Plan the next goal'
+                : 'Plan your goal',
+          ),
           bottom: PreferredSize(
             preferredSize: const Size.fromHeight(12),
             child: Padding(
@@ -354,7 +461,7 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
               child: ExcludeSemantics(
                 child: Row(
                   children: [
-                    for (var i = 0; i < _stepNames.length; i++) ...[
+                    for (var i = 0; i < steps.length; i++) ...[
                       if (i > 0) const SizedBox(width: 4),
                       Expanded(
                         child: Container(
@@ -378,26 +485,26 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
         body: ValueListenableBuilder(
           valueListenable: AdaptiveStore.settings,
           builder: (context, _, _) => ListView(
-            key: ValueKey('goal-planner-step-$_step'),
+            key: ValueKey('goal-planner-step-${_at.name}'),
             padding: const EdgeInsets.only(bottom: Dimens.spacing24),
             children: [
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
                 child: Text(
-                  'Step ${_step + 1} of ${_stepNames.length} · '
-                  '${_stepNames[_step]}',
+                  'Step ${_step + 1} of ${steps.length} · ${_at.label}',
                   style: theme.textTheme.labelMedium?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
                 ),
               ),
-              ...switch (_step) {
-                0 => _goalStep(context),
-                1 => _paceStep(context),
-                2 => _burnStep(context),
-                3 => _targetStep(context),
-                4 => _macrosStep(context),
-                _ => _planStep(context),
+              ...switch (_at) {
+                _Step.goal => _goalStep(context),
+                _Step.pace => _paceStep(context),
+                _Step.burn => _burnStep(context),
+                _Step.target => _targetStep(context),
+                _Step.macros => _macrosStep(context),
+                _Step.carried => _carriedStep(context),
+                _Step.plan => _planStep(context),
               },
             ],
           ),
@@ -429,8 +536,14 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
                           ? _start
                           : () => setState(() => _step++),
                       child: Text(
-                        !last
+                        _at == _Step.carried
+                            ? 'Keep all and go on'
+                            : !last
                             ? 'Next'
+                            : widget.queuedAt != null
+                            ? 'Save goal'
+                            : _queued
+                            ? 'Add to the plan'
                             : _setup.onboarding
                             ? 'Use this plan'
                             : 'Start plan',
@@ -490,8 +603,13 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
       _question(
         context,
         'What do you want to do?',
-        'Your ${_setup.running == null ? 'weight' : 'trend weight'} is '
-            '${_kg(_setup.nowKg)}. Diet breaks come in the next step.',
+        _queued
+            ? 'It starts from ${_kg(_draft.startKg)}, where '
+                  '${_goalName(_goalBefore(_place!))} ends. Diet breaks '
+                  'come in the next step.'
+            : 'Your ${_setup.running == null ? 'weight' : 'trend weight'} '
+                  'is ${_kg(_setup.nowKg)}. Diet breaks come in the next '
+                  'step.',
       ),
       for (final (kind, title, text) in [
         (PhaseKind.cut, 'Lose fat', 'A cut: eat under what you burn'),
@@ -515,6 +633,8 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
               },
               breaks: kind == PhaseKind.cut && _draft.breaks,
             );
+            final place = _place;
+            if (place != null) _moveTo(place);
           }),
         ),
       if (_draft.kind != PhaseKind.maintain) ...[
@@ -559,7 +679,16 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
           ),
       ],
       _heading(context, 'Start'),
-      if (_begun && _draft.kind == widget.editing!.kind)
+      if (widget.queuedAt != null)
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Text(
+            'Starts ${_date(_draft.start)}, after '
+            '${_goalName(_goalBefore(widget.queuedAt!))}. To change when, '
+            'move it on the calendar.',
+          ),
+        )
+      else if (_begun && _draft.kind == widget.editing!.kind)
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Text(
@@ -573,8 +702,27 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
           child: Wrap(
             spacing: 8,
             children: [
+              if (widget.onQueue != null && _setup.running != null)
+                for (var place = _setup.upcoming.length; place >= 0; place--)
+                  Semantics(
+                    identifier: 'goal-start-after-$place',
+                    child: ChoiceChip(
+                      label: Text(
+                        'After ${_goalName(_goalBefore(place))} · '
+                        '${_date(_goalBefore(place).end)}',
+                      ),
+                      selected: _place == place,
+                      onSelected: (_) => setState(() => _moveTo(place)),
+                    ),
+                  ),
               for (final (id, label, day) in [
-                ('today', 'Today, ${_date(today)}', today),
+                (
+                  'today',
+                  _setup.running != null && widget.onQueue != null
+                      ? 'Today, replacing ${_goalName(_setup.running!)}'
+                      : 'Today, ${_date(today)}',
+                  today,
+                ),
                 if (!_sameDay(monday, today))
                   ('monday', 'Monday, ${_date(monday)}', monday),
                 if (_setup.running != null &&
@@ -590,12 +738,15 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
                   identifier: 'goal-start-$id',
                   child: ChoiceChip(
                     label: Text(label),
-                    selected: _sameDay(_draft.start, day),
-                    onSelected: (_) => setState(
-                      () => _draft = _draft.copyWith(
+                    selected: !_queued && _sameDay(_draft.start, day),
+                    onSelected: (_) => setState(() {
+                      _place = null;
+                      _opened.clear();
+                      _draft = _draft.copyWith(
                         start: DateTime(day.year, day.month, day.day),
-                      ),
-                    ),
+                        startKg: _setup.nowKg,
+                      );
+                    }),
                   ),
                 ),
             ],
@@ -603,6 +754,13 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
         ),
     ];
   }
+
+  /// [plan] in a sentence: "the cut", "maintaining", "the bulk".
+  static String _goalName(PhasePlan plan) => switch (plan.kind) {
+    PhaseKind.cut => 'the cut',
+    PhaseKind.maintain => 'maintaining',
+    PhaseKind.bulk => 'the bulk',
+  };
 
   static bool _sameDay(DateTime a, DateTime b) =>
       a.year == b.year && a.month == b.month && a.day == b.day;
@@ -979,6 +1137,65 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
     ];
   }
 
+  // ------------------------------------------------------------- carried
+
+  /// A queued goal's steps set up already (design B): kept, or one opened.
+  List<Widget> _carriedStep(BuildContext context) {
+    final settings = AdaptiveStore.settings.value;
+    final steps = _steps;
+    final before = _goalName(_goalBefore(_place!));
+    return [
+      _question(
+        context,
+        'The rest is set up',
+        'From $before. Keep them, or change one: a change applies to '
+            'every goal, the one now included.',
+      ),
+      _Panel(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        children: [
+          if (!steps.contains(_Step.pace))
+            _ChangeRow(
+              identifier: 'goal-carried-pace',
+              title: _draft.kind == PhaseKind.maintain ? 'How long' : 'Pace',
+              subtitle: _draft.kind == PhaseKind.maintain
+                  ? _weeks(_draft.maintainWeeks)
+                  : '${_rate(_draft.paceKg)}'
+                        '${_draft.breaks ? ' · diet breaks' : ''}',
+              onChange: () => _goTo(_Step.pace),
+            ),
+          if (!steps.contains(_Step.burn))
+            _ChangeRow(
+              identifier: 'goal-carried-burn',
+              title: 'Expenditure',
+              subtitle:
+                  '${energyText(context, _setup.expenditureKcal)} now · '
+                  '${expenditureSummary(settings)}',
+              onChange: () => _goTo(_Step.burn),
+            ),
+          if (!steps.contains(_Step.target))
+            _ChangeRow(
+              identifier: 'goal-carried-target',
+              title: 'Calorie target',
+              subtitle:
+                  '${targetSummary(settings)}'
+                  '${settings.fixedTarget ? '' : ' · about ${energyText(context, _mainKcal)}'}',
+              onChange: () => _goTo(_Step.target),
+            ),
+          if (!steps.contains(_Step.macros))
+            _ChangeRow(
+              identifier: 'goal-carried-macros',
+              title: 'Macros',
+              subtitle:
+                  settings.macroProgram?.summary(perLb: _perLb) ??
+                  'Percentages from your macro split',
+              onChange: () => _goTo(_Step.macros),
+            ),
+        ],
+      ),
+    ];
+  }
+
   // ---------------------------------------------------------------- plan
 
   List<Widget> _planStep(BuildContext context) {
@@ -1027,13 +1244,13 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
             subtitle:
                 '${energyText(context, _setup.expenditureKcal)} · '
                 '${expenditureSummary(settings)}',
-            onChange: () => setState(() => _step = 2),
+            onChange: () => _goTo(_Step.burn),
           ),
           _ChangeRow(
             identifier: 'goal-plan-change-target',
             title: 'Calorie target',
             subtitle: targetSummary(settings),
-            onChange: () => setState(() => _step = 3),
+            onChange: () => _goTo(_Step.target),
           ),
           _ChangeRow(
             identifier: 'goal-plan-change-macros',
@@ -1042,7 +1259,7 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
                 ? 'The fixed target\'s grams'
                 : program?.summary(perLb: _perLb) ??
                       'Percentages from your macro split',
-            onChange: () => setState(() => _step = 4),
+            onChange: () => _goTo(_Step.macros),
           ),
         ],
       ),
