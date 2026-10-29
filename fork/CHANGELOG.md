@@ -2,6 +2,18 @@
 
 Written by fork/tools/release_notes.dart at each release (D16).
 
+## 0.4.0 · 2026-10-29
+
+Based on OpenNutriTracker 2.5.0.
+
+### New
+
+- a photo note's weights are kept
+
+### Fixes and changes
+
+- a dish the AI lists is one card; more plate weights read
+
 ## 0.3.11 · 2026-10-29
 
 Based on OpenNutriTracker 2.5.0.
