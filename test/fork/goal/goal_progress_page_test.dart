@@ -57,16 +57,20 @@ void main() {
     expect(find.text('Weigh in to see your progress.'), findsOneWidget);
   });
 
-  testWidgets('no target: offers to set one', (tester) async {
+  testWidgets('no goal: offers to plan one', (tester) async {
     await pumpGoal(tester, (inputs: inputs([82]), progress: null));
-    expect(find.text('Set target weight'), findsOneWidget);
+    expect(
+      find.text('Plan a goal to see how far along you are.'),
+      findsOneWidget,
+    );
+    expect(find.text('Plan a goal'), findsOneWidget);
     expect(find.text('Pace'), findsNothing);
   });
 
   testWidgets('a saved goal reloads the page', (tester) async {
     GoalState goal = (inputs: inputs([82]), progress: null);
     await pumpGoal(tester, goal, loadGoal: () async => goal);
-    expect(find.text('Set target weight'), findsOneWidget);
+    expect(find.text('Plan a goal'), findsOneWidget);
     goal = (inputs: null, progress: null);
     paceChanges.value++;
     await tester.pumpAndSettle();
@@ -116,7 +120,7 @@ void main() {
       find.text('Milestones, at your last 30 days’ pace'),
       200,
     );
-    await tester.scrollUntilVisible(find.byKey(const Key('goal-edit')), 200);
+    await tester.scrollUntilVisible(find.text('Plan a goal'), 200);
     expect(find.textContaining('Reached'), findsWidgets);
   });
 }

@@ -50,13 +50,16 @@ void main() {
 
     test('diet breaks come after every stretch of cutting', () {
       final plan = _cut(breaks: true).toPlan();
-      expect([for (final p in plan.phases) (p.kind, p.weeks)], [
-        (PhaseKind.cut, breakEveryWeeks),
-        (PhaseKind.maintain, breakWeeks),
-        (PhaseKind.cut, breakEveryWeeks),
-        (PhaseKind.maintain, breakWeeks),
-        (PhaseKind.cut, 1),
-      ]);
+      expect(
+        [for (final p in plan.phases) (p.kind, p.weeks)],
+        [
+          (PhaseKind.cut, breakEveryWeeks),
+          (PhaseKind.maintain, breakWeeks),
+          (PhaseKind.cut, breakEveryWeeks),
+          (PhaseKind.maintain, breakWeeks),
+          (PhaseKind.cut, 1),
+        ],
+      );
       expect(plan.phases.last.untilKg, 80);
       expect(plan.kind, PhaseKind.cut);
       expect(plan.weightAt(plan.phases.length), closeTo(80, 0.01));
@@ -89,10 +92,7 @@ void main() {
       expect(_cut().problem, isNull);
       expect(_cut().copyWith(targetKg: () => 90).problem, isNotNull);
       expect(_cut().copyWith(targetKg: () => null).problem, isNotNull);
-      expect(
-        _cut().copyWith(kind: PhaseKind.bulk).problem,
-        contains('above'),
-      );
+      expect(_cut().copyWith(kind: PhaseKind.bulk).problem, contains('above'));
       expect(
         _cut().copyWith(kind: PhaseKind.maintain, targetKg: () => null).problem,
         isNull,
@@ -126,7 +126,10 @@ void main() {
 
     test('runs until the target or the end', () {
       expect(goalStatus(plan, 84, DateTime(2026, 10, 29)), GoalStatus.running);
-      expect(goalStatus(plan, 80.05, DateTime(2026, 12, 1)), GoalStatus.reached);
+      expect(
+        goalStatus(plan, 80.05, DateTime(2026, 12, 1)),
+        GoalStatus.reached,
+      );
       expect(goalStatus(plan, 79.2, DateTime(2026, 12, 1)), GoalStatus.reached);
       expect(goalStatus(plan, 80.8, plan.end), GoalStatus.ended);
     });
@@ -146,11 +149,7 @@ void main() {
   group('extendedPlan', () {
     test('an ended cut goes on until its target from now', () {
       final plan = _cut().toPlan();
-      final extended = extendedPlan(
-        plan,
-        today: plan.end,
-        nowKg: 80.8,
-      );
+      final extended = extendedPlan(plan, today: plan.end, nowKg: 80.8);
       expect(extended.phases, hasLength(2));
       expect(extended.phases.last.untilKg, 80);
       expect(extended.phases.last.weeks, 2);
@@ -167,11 +166,14 @@ void main() {
         untilKg: 78,
         breakFirst: true,
       );
-      expect([for (final p in extended.phases) (p.kind, p.weeks)], [
-        (PhaseKind.cut, 9),
-        (PhaseKind.maintain, breakWeeks),
-        (PhaseKind.cut, 4),
-      ]);
+      expect(
+        [for (final p in extended.phases) (p.kind, p.weeks)],
+        [
+          (PhaseKind.cut, 9),
+          (PhaseKind.maintain, breakWeeks),
+          (PhaseKind.cut, 4),
+        ],
+      );
       expect(extended.targetKg, 78);
     });
 
@@ -278,10 +280,7 @@ void main() {
     test('a dropped save changes nothing', () async {
       final plan = _cut().toPlan();
       final store = _MemoryPhases(plan);
-      final actions = GoalActions(
-        store: store,
-        save: (_, _) async => false,
-      );
+      final actions = GoalActions(store: store, save: (_, _) async => false);
       expect(await actions.complete(plan, 80), isFalse);
       expect(store.saved, same(plan));
       expect(store.goals, isEmpty);

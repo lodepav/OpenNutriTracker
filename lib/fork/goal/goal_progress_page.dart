@@ -11,6 +11,7 @@ import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/fork/adaptive/goal_plan.dart';
 import 'package:opennutritracker/fork/adaptive/goal_plan_card.dart';
+import 'package:opennutritracker/fork/goal/goal_plan_view.dart';
 import 'package:opennutritracker/fork/goal/goal_progress.dart';
 import 'package:opennutritracker/fork/phases/phases.dart';
 import 'package:opennutritracker/fork/report/chart_touch.dart';
@@ -29,6 +30,14 @@ void openGoalProgress(BuildContext context, BodyWeightUnit unit) =>
 
 /// The calorie goal now and the mean of the logged days of the last 30.
 typedef GoalCalories = ({double? goalKcal, double? meanKcal});
+
+/// The goal's plan and the goals completed before it.
+typedef GoalPlans = ({PhasePlan? plan, List<GoalRecord> history});
+
+Future<GoalPlans> _loadPlans() async {
+  final store = PhaseStore();
+  return (plan: await store.plan(), history: await store.history());
+}
 
 Future<GoalCalories> _loadCalories() async {
   if (!locator.isRegistered<GetTrackedDayUsecase>()) {
@@ -61,12 +70,14 @@ class GoalProgressPage extends StatefulWidget {
   /// The goal and the calories; the profile's by default.
   final Future<GoalState> Function()? loadGoal;
   final Future<GoalCalories> Function()? loadCalories;
+  final Future<GoalPlans> Function()? loadPlans;
 
   const GoalProgressPage({
     super.key,
     required this.unit,
     this.loadGoal,
     this.loadCalories,
+    this.loadPlans,
   });
 
   @override
@@ -74,9 +85,9 @@ class GoalProgressPage extends StatefulWidget {
 }
 
 class _GoalProgressPageState extends State<GoalProgressPage> {
-  late Future<(GoalState, GoalCalories, int)> _data = _load();
+  late Future<(GoalState, GoalCalories, int, GoalPlans)> _data = _load();
 
-  Future<(GoalState, GoalCalories, int)> _load() async {
+  Future<(GoalState, GoalCalories, int, GoalPlans)> _load() async {
     final goal = await (widget.loadGoal ?? () => GoalStartStore().load())();
     final calories = await (widget.loadCalories ?? _loadCalories)();
     var step = 0;
@@ -85,7 +96,13 @@ class _GoalProgressPageState extends State<GoalProgressPage> {
     } catch (_) {
       // No store in a test: the default step.
     }
-    return (goal, calories, step);
+    GoalPlans plans = (plan: null, history: const []);
+    try {
+      plans = await (widget.loadPlans ?? _loadPlans)();
+    } catch (_) {
+      // No store in a test: no plan.
+    }
+    return (goal, calories, step, plans);
   }
 
   void _reload() {
@@ -99,34 +116,14 @@ class _GoalProgressPageState extends State<GoalProgressPage> {
   void initState() {
     super.initState();
     paceChanges.addListener(_reload);
+    PhaseStore.changes.addListener(_reload);
   }
 
   @override
   void dispose() {
     paceChanges.removeListener(_reload);
+    PhaseStore.changes.removeListener(_reload);
     super.dispose();
-  }
-
-  Future<void> _editGoal() async {
-    await Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (context) => Scaffold(
-          appBar: AppBar(title: const Text('Goal planner')),
-          body: ListView(
-            padding: const EdgeInsets.fromLTRB(
-              Dimens.spacing16,
-              0,
-              Dimens.spacing16,
-              Dimens.spacing32,
-            ),
-            children: [
-              GoalPlanCard(palette: paletteOf(context), unit: widget.unit),
-            ],
-          ),
-        ),
-      ),
-    );
-    _reload();
   }
 
   @override
@@ -142,7 +139,16 @@ class _GoalProgressPageState extends State<GoalProgressPage> {
         if (data == null) {
           return const Center(child: CircularProgressIndicator());
         }
-        final (goal, calories, step) = data;
+        final (goal, calories, step, plans) = data;
+        final nowKg = goal.inputs?.nowKg;
+        final section = GoalPlanSection(
+          plan: plans.plan,
+          history: plans.history,
+          nowKg: nowKg,
+          unit: widget.unit,
+          today: DateTime.now(),
+          onChanged: _reload,
+        );
         return ListView(
           padding: EdgeInsets.fromLTRB(
             Dimens.spacing16,
@@ -150,30 +156,40 @@ class _GoalProgressPageState extends State<GoalProgressPage> {
             Dimens.spacing16,
             Dimens.spacing32 + MediaQuery.paddingOf(context).bottom,
           ),
-          children: goal.inputs == null
-              ? [noData(context, 'Weigh in to see your progress.')]
-              : goal.progress == null
-              ? _noTarget(context, goal.inputs!.nowKg)
-              : _body(context, goal.progress!, calories, step),
+          children: [
+            if (goal.inputs == null)
+              noData(context, 'Weigh in to see your progress.')
+            else if (goal.progress == null)
+              ..._noTarget(context, goal.inputs!.nowKg, plans.plan)
+            else
+              ..._body(context, goal.progress!, calories, step),
+            const SizedBox(height: Dimens.spacing16),
+            section,
+          ],
         );
       },
     ),
   );
 
-  List<Widget> _noTarget(BuildContext context, double nowKg) => [
-    noData(context, 'Set a target weight to see how far along you are.'),
-    const SizedBox(height: Dimens.spacing16),
-    Center(
-      child: FilledButton(
-        onPressed: () async {
-          if (await setTargetWeight(context, widget.unit, nowKg, null)) {
-            _reload();
-          }
-        },
-        child: const Text('Set target weight'),
-      ),
-    ),
-  ];
+  List<Widget> _noTarget(BuildContext context, double nowKg, PhasePlan? plan) =>
+      [
+        if (plan == null)
+          noData(context, 'Plan a goal to see how far along you are.')
+        else if (plan.kind != PhaseKind.maintain) ...[
+          noData(context, 'Set a target weight to see how far along you are.'),
+          const SizedBox(height: Dimens.spacing16),
+          Center(
+            child: OutlinedButton(
+              onPressed: () async {
+                if (await setTargetWeight(context, widget.unit, nowKg, null)) {
+                  _reload();
+                }
+              },
+              child: const Text('Set target weight'),
+            ),
+          ),
+        ],
+      ];
 
   String _kg(double kg) => weightIn(widget.unit, kg).toStringAsFixed(1);
 
@@ -289,12 +305,6 @@ class _GoalProgressPageState extends State<GoalProgressPage> {
             'the target. When you change the pace, the plan starts again '
             'from that day. The dates ahead assume your trend keeps the pace '
             'they name.',
-      ),
-      const SizedBox(height: Dimens.spacing12),
-      OutlinedButton(
-        key: const Key('goal-edit'),
-        onPressed: _editGoal,
-        child: const Text('Edit goal'),
       ),
     ];
   }
