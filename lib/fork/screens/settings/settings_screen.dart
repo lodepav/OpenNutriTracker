@@ -56,6 +56,7 @@ import 'package:opennutritracker/generated/l10n.dart';
 import 'package:opennutritracker/fork/leftovers/meal_photo_cache.dart';
 // The trend and target switches (D13)
 import 'package:opennutritracker/fork/adaptive/adaptive_ui.dart';
+import 'package:opennutritracker/fork/goal/planner_screen.dart';
 import 'package:opennutritracker/fork/reminders/reminders_ui.dart';
 // The automatic backup's settings (phase 2)
 import 'package:opennutritracker/fork/backup/auto_backup_ui.dart';

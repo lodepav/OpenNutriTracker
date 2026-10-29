@@ -6,8 +6,7 @@ import 'package:opennutritracker/fork/layout/layout_store.dart';
 /// expenditure cards became tiles; a saved order naming them drops them.
 const trendCards = {
   'weekly': 'Weekly report',
-  'goalPlan': 'Goal planner',
-  'phases': 'Diet phases',
+  'goalPlan': 'Goal',
   'body': 'Body measurements',
   'steps': 'Steps',
   'photos': 'Progress photos',

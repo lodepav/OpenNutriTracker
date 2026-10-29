@@ -13,6 +13,15 @@ extension _GoalsSettings on _SettingsScreenState {
       _SettingsGroup(
         palette: palette,
         tiles: [
+          _SettingsTile(
+            identifier: 'settings-goal-planner',
+            palette: palette,
+            icon: Icons.flag_rounded,
+            title: 'Goal planner',
+            subtitle: 'A cut, maintenance or bulk, step by step',
+            showChevron: true,
+            onTap: () => openGoalPlanner(context),
+          ),
           // The old Calculations dialog had grown into a wall of
           // sliders covering daily kcal, macros, per-meal split,
           // ten nutrient goals, and the diary day boundary. Each

@@ -30,6 +30,7 @@ import 'package:opennutritracker/features/settings/presentation/bloc/settings_bl
 import 'package:opennutritracker/features/settings/presentation/widgets/water_goal_dialog.dart';
 import 'package:opennutritracker/fork/units/weight_text.dart' show bodyWeightText; // [fork] S121
 import 'package:opennutritracker/fork/display/display_prefs.dart'; // [fork] S144
+import 'package:opennutritracker/fork/goal/goal_progress_page.dart'; // [fork] S121
 import 'package:opennutritracker/generated/l10n.dart';
 // [fork] S121 you-tab
 import 'package:opennutritracker/core/domain/usecase/get_profiles_usecase.dart';
@@ -156,8 +157,8 @@ class _ProfilePageState extends State<ProfilePage> {
               below: user.targetWeightKg == null
                   ? S.of(context).profileTargetWeightNotSetLabel
                   : 'Target ${bodyWeightText(context, user.targetWeightKg!, bodyWeightUnit)}',
-              hint: 'Change the goal',
-              onTap: () => _showSetGoalDialog(context, user),
+              hint: 'Open the goal and its plan',
+              onTap: () => openGoalProgress(context, bodyWeightUnit),
             ),
             BudgetTile(
               onTap: () => Navigator.of(context).push(

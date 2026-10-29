@@ -30,6 +30,7 @@ import 'package:opennutritracker/generated/l10n.dart';
 // [fork] S89 onboarding-macros
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/fork/adaptive/onboarding_macros.dart';
+import 'package:opennutritracker/fork/goal/onboarding_goal.dart';
 // [/fork]
 
 /// The onboarding pages, in the order they are shown.
@@ -89,6 +90,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     _onboardingBloc.add(LoadOnboardingEvent());
     // [fork] S89 onboarding-macros: none carried over from an earlier trip
     OnboardingMacros.pending.value = null;
+    OnboardingGoal.pending.value = null;
     OnboardingMacros.pending.addListener(_forkMacrosChanged);
     AdaptiveStore.settings.addListener(_forkMacrosChanged);
     // [/fork]
@@ -558,6 +560,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       );
       // [fork] S89 onboarding-macros: the goal page's protein and fat
       await OnboardingMacros.save();
+      // and the plan from the goal planner
+      await OnboardingGoal.save(chosen: _onboardingBloc.userSelection.goal);
       // [/fork]
       if (!context.mounted) return;
       // Onboarding can run for a profile added after the app has been in

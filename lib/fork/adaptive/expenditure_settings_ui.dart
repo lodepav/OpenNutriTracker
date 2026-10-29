@@ -74,6 +74,40 @@ class ExpenditureSettingsScreen extends StatelessWidget {
   );
 }
 
+/// The screen's groups, live on [AdaptiveStore.settings], for the goal
+/// planner's steps: the estimate and its activity, or the check-in.
+class ExpenditureGroups extends StatelessWidget {
+  final AdaptiveStore store;
+  final bool checkIn;
+  final StepCounts? steps;
+
+  const ExpenditureGroups.estimate({super.key, required this.store, this.steps})
+    : checkIn = false;
+
+  const ExpenditureGroups.checkIn({super.key, required this.store})
+    : checkIn = true,
+      steps = null;
+
+  @override
+  Widget build(BuildContext context) => ValueListenableBuilder(
+    valueListenable: AdaptiveStore.settings,
+    builder: (context, settings, _) => Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: checkIn
+          ? [_CheckInSection(settings, store)]
+          : [
+              _EstimateSection(
+                settings,
+                store,
+                ExpenditureSettingsScreen._readFemale,
+              ),
+              const Divider(),
+              _ActivitySection(settings, store, steps ?? StepCounts()),
+            ],
+    ),
+  );
+}
+
 Future<void> _save(AdaptiveStore store, AdaptiveSettings value) async {
   await store.save(value);
   await refreshGoals();

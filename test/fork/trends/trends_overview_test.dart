@@ -199,7 +199,7 @@ void main() {
           )
           .first,
     );
-    expect(find.byKey(const ValueKey('arrange-phases')), findsOneWidget);
+    expect(find.byKey(const ValueKey('arrange-goalPlan')), findsOneWidget);
   });
 
   testWidgets('the macro tiles follow the macro order', (tester) async {

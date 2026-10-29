@@ -16,6 +16,63 @@ class MacroProgramDialog extends StatefulWidget {
 }
 
 class _MacroProgramDialogState extends State<MacroProgramDialog> {
+  late MacroProgram? _program = widget.program;
+  bool _valid = true;
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    title: const Text('Macros'),
+    content: SingleChildScrollView(
+      child: MacroProgramForm(
+        widget.program,
+        perLb: widget.perLb,
+        onChanged: (program, valid) => setState(() {
+          _program = program;
+          _valid = valid;
+        }),
+      ),
+    ),
+    actions: [
+      TextButton(
+        onPressed: () => Navigator.pop(context),
+        child: const Text('Cancel'),
+      ),
+      TextButton(
+        onPressed: _valid
+            ? () => Navigator.pop(context, (program: _program))
+            : null,
+        child: const Text('Save'),
+      ),
+    ],
+  );
+}
+
+/// The dialog's fields: the program, or null when off, and whether the
+/// typed values are numbers in range, to [onChanged] on every change. The
+/// goal planner's macros step shows it on its own.
+class MacroProgramForm extends StatefulWidget {
+  final MacroProgram? program;
+  final bool perLb;
+  final void Function(MacroProgram? program, bool valid) onChanged;
+
+  const MacroProgramForm(
+    this.program, {
+    super.key,
+    this.perLb = false,
+    required this.onChanged,
+  });
+
+  @override
+  State<MacroProgramForm> createState() => _MacroProgramFormState();
+}
+
+class _MacroProgramFormState extends State<MacroProgramForm> {
+  @override
+  void setState(VoidCallback fn) {
+    super.setState(fn);
+    widget.onChanged(_on ? _program : null, !_on || !(_proteinBad || _fatBad));
+  }
+
   late bool _on = widget.program != null;
   late MacroProgram _program = widget.program ?? const MacroProgram();
 
@@ -41,172 +98,155 @@ class _MacroProgramDialogState extends State<MacroProgramDialog> {
     final perLb = widget.perLb;
     String shown(double kg) => MacroProgram.perWeight(kg, perLb);
     final per = perLb ? 'lb' : 'kg';
-    return AlertDialog(
-      title: const Text('Macros'),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SwitchListTile(
-              key: const ValueKey('macro-program-on'),
-              contentPadding: EdgeInsets.zero,
-              title: Text('Protein and fat per $per'),
-              subtitle: const Text(
-                'In place of the percentages. Protein holds steady; carbs '
-                'and fat take a weekday\'s shift.',
-              ),
-              value: _on,
-              onChanged: (v) => setState(() => _on = v),
-            ),
-            if (_on) ...[
-              Text('Protein', style: theme.textTheme.titleSmall),
-              Wrap(
-                spacing: 6,
-                children: [
-                  for (final (i, kg) in _proteinPresets.indexed)
-                    ChoiceChip(
-                      key: ValueKey('macro-protein-$i'),
-                      label: Text('${_levels[i]} ${shown(kg)}'),
-                      selected: !_proteinManual && _program.proteinGPerKg == kg,
-                      onSelected: (_) => setState(() {
-                        _proteinManual = false;
-                        _proteinBad = false;
-                        _program = _program.copyWith(proteinGPerKg: kg);
-                      }),
-                    ),
-                  ChoiceChip(
-                    key: const ValueKey('macro-protein-manual'),
-                    label: const Text('Manual'),
-                    selected: _proteinManual,
-                    onSelected: (_) => setState(() => _proteinManual = true),
-                  ),
-                ],
-              ),
-              if (_proteinManual)
-                _PerKgField(
-                  key: const ValueKey('macro-protein-kg'),
-                  initial: _program.proteinGPerKg,
-                  min: 0.8,
-                  max: 3.5,
-                  perLb: perLb,
-                  onChanged: (kg) => setState(() {
-                    _proteinBad = kg == null;
-                    if (kg != null) {
-                      _program = _program.copyWith(proteinGPerKg: kg);
-                    }
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SwitchListTile(
+          key: const ValueKey('macro-program-on'),
+          contentPadding: EdgeInsets.zero,
+          title: Text('Protein and fat per $per'),
+          subtitle: const Text(
+            'In place of the percentages. Protein holds steady; carbs '
+            'and fat take a weekday\'s shift.',
+          ),
+          value: _on,
+          onChanged: (v) => setState(() => _on = v),
+        ),
+        if (_on) ...[
+          Text('Protein', style: theme.textTheme.titleSmall),
+          Wrap(
+            spacing: 6,
+            children: [
+              for (final (i, kg) in _proteinPresets.indexed)
+                ChoiceChip(
+                  key: ValueKey('macro-protein-$i'),
+                  label: Text('${_levels[i]} ${shown(kg)}'),
+                  selected: !_proteinManual && _program.proteinGPerKg == kg,
+                  onSelected: (_) => setState(() {
+                    _proteinManual = false;
+                    _proteinBad = false;
+                    _program = _program.copyWith(proteinGPerKg: kg);
                   }),
                 ),
-              Text(
-                '${shown(_program.proteinGPerKg)} g per $per'
-                '${_program.leanMass ? ' of lean mass' : ' of body weight'}',
-                style: theme.textTheme.bodySmall,
-              ),
-              SwitchListTile(
-                key: const ValueKey('macro-lean'),
-                contentPadding: EdgeInsets.zero,
-                title: Text('Per $per of lean mass'),
-                subtitle: const Text(
-                  'Weight less body fat: your latest measured body fat %, '
-                  'or an estimate from your BMI and age.',
-                ),
-                value: _program.leanMass,
-                // A preset moves to the same level of the other basis.
-                onChanged: (v) => setState(() {
-                  final level = _proteinPresets.indexOf(_program.proteinGPerKg);
-                  _program = _program.copyWith(leanMass: v);
-                  if (!_proteinManual) {
-                    _program = _program.copyWith(
-                      proteinGPerKg: _proteinPresets[level < 0 ? 0 : level],
-                    );
-                  }
-                }),
-              ),
-              const SizedBox(height: 8),
-              Text('Fat', style: theme.textTheme.titleSmall),
-              Wrap(
-                spacing: 6,
-                children: [
-                  for (final (i, kg) in MacroProgram.fatPresets.indexed)
-                    ChoiceChip(
-                      key: ValueKey('macro-fat-$i'),
-                      label: Text('${_fatLevels[i]} ${shown(kg)}'),
-                      selected:
-                          style == MacroStyle.perKg &&
-                          !_fatManual &&
-                          _program.fatGPerKg == kg,
-                      onSelected: (_) => setState(() {
-                        _fatManual = false;
-                        _fatBad = false;
-                        _program = _program.copyWith(
-                          style: MacroStyle.perKg,
-                          fatGPerKg: kg,
-                        );
-                      }),
-                    ),
-                  ChoiceChip(
-                    key: const ValueKey('macro-fat-manual'),
-                    label: const Text('Manual'),
-                    selected: style == MacroStyle.perKg && _fatManual,
-                    onSelected: (_) => setState(() {
-                      _fatManual = true;
-                      _program = _program.copyWith(style: MacroStyle.perKg);
-                    }),
-                  ),
-                  for (final other in MacroStyle.values)
-                    // A style no longer offered shows only while it is saved.
-                    if (other == MacroStyle.lowCarb ||
-                        other == MacroStyle.keto ||
-                        (other != MacroStyle.perKg &&
-                            widget.program?.style == other))
-                      ChoiceChip(
-                        key: ValueKey('macro-style-${other.name}'),
-                        label: Text(other.label),
-                        selected: style == other,
-                        onSelected: (_) => setState(() {
-                          _fatBad = false;
-                          _program = _program.copyWith(style: other);
-                        }),
-                      ),
-                ],
-              ),
-              if (style == MacroStyle.perKg && _fatManual)
-                _PerKgField(
-                  key: const ValueKey('macro-fat-kg'),
-                  initial: _program.fatGPerKg,
-                  min: 0.3,
-                  max: 2.0,
-                  perLb: perLb,
-                  onChanged: (kg) => setState(() {
-                    _fatBad = kg == null;
-                    if (kg != null) {
-                      _program = _program.copyWith(fatGPerKg: kg);
-                    }
-                  }),
-                ),
-              Text(
-                style == MacroStyle.perKg
-                    ? '${shown(_program.fatGPerKg)} g per $per of '
-                          'body weight, the rest carbs. Under about 20% of '
-                          'your energy from fat is not advised.'
-                    : style.explanation,
-                style: theme.textTheme.bodySmall,
+              ChoiceChip(
+                key: const ValueKey('macro-protein-manual'),
+                label: const Text('Manual'),
+                selected: _proteinManual,
+                onSelected: (_) => setState(() => _proteinManual = true),
               ),
             ],
-          ],
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel'),
-        ),
-        TextButton(
-          onPressed: _on && (_proteinBad || _fatBad)
-              ? null
-              : () => Navigator.pop(context, (program: _on ? _program : null)),
-          child: const Text('Save'),
-        ),
+          ),
+          if (_proteinManual)
+            _PerKgField(
+              key: const ValueKey('macro-protein-kg'),
+              initial: _program.proteinGPerKg,
+              min: 0.8,
+              max: 3.5,
+              perLb: perLb,
+              onChanged: (kg) => setState(() {
+                _proteinBad = kg == null;
+                if (kg != null) {
+                  _program = _program.copyWith(proteinGPerKg: kg);
+                }
+              }),
+            ),
+          Text(
+            '${shown(_program.proteinGPerKg)} g per $per'
+            '${_program.leanMass ? ' of lean mass' : ' of body weight'}',
+            style: theme.textTheme.bodySmall,
+          ),
+          SwitchListTile(
+            key: const ValueKey('macro-lean'),
+            contentPadding: EdgeInsets.zero,
+            title: Text('Per $per of lean mass'),
+            subtitle: const Text(
+              'Weight less body fat: your latest measured body fat %, '
+              'or an estimate from your BMI and age.',
+            ),
+            value: _program.leanMass,
+            // A preset moves to the same level of the other basis.
+            onChanged: (v) => setState(() {
+              final level = _proteinPresets.indexOf(_program.proteinGPerKg);
+              _program = _program.copyWith(leanMass: v);
+              if (!_proteinManual) {
+                _program = _program.copyWith(
+                  proteinGPerKg: _proteinPresets[level < 0 ? 0 : level],
+                );
+              }
+            }),
+          ),
+          const SizedBox(height: 8),
+          Text('Fat', style: theme.textTheme.titleSmall),
+          Wrap(
+            spacing: 6,
+            children: [
+              for (final (i, kg) in MacroProgram.fatPresets.indexed)
+                ChoiceChip(
+                  key: ValueKey('macro-fat-$i'),
+                  label: Text('${_fatLevels[i]} ${shown(kg)}'),
+                  selected:
+                      style == MacroStyle.perKg &&
+                      !_fatManual &&
+                      _program.fatGPerKg == kg,
+                  onSelected: (_) => setState(() {
+                    _fatManual = false;
+                    _fatBad = false;
+                    _program = _program.copyWith(
+                      style: MacroStyle.perKg,
+                      fatGPerKg: kg,
+                    );
+                  }),
+                ),
+              ChoiceChip(
+                key: const ValueKey('macro-fat-manual'),
+                label: const Text('Manual'),
+                selected: style == MacroStyle.perKg && _fatManual,
+                onSelected: (_) => setState(() {
+                  _fatManual = true;
+                  _program = _program.copyWith(style: MacroStyle.perKg);
+                }),
+              ),
+              for (final other in MacroStyle.values)
+                // A style no longer offered shows only while it is saved.
+                if (other == MacroStyle.lowCarb ||
+                    other == MacroStyle.keto ||
+                    (other != MacroStyle.perKg &&
+                        widget.program?.style == other))
+                  ChoiceChip(
+                    key: ValueKey('macro-style-${other.name}'),
+                    label: Text(other.label),
+                    selected: style == other,
+                    onSelected: (_) => setState(() {
+                      _fatBad = false;
+                      _program = _program.copyWith(style: other);
+                    }),
+                  ),
+            ],
+          ),
+          if (style == MacroStyle.perKg && _fatManual)
+            _PerKgField(
+              key: const ValueKey('macro-fat-kg'),
+              initial: _program.fatGPerKg,
+              min: 0.3,
+              max: 2.0,
+              perLb: perLb,
+              onChanged: (kg) => setState(() {
+                _fatBad = kg == null;
+                if (kg != null) {
+                  _program = _program.copyWith(fatGPerKg: kg);
+                }
+              }),
+            ),
+          Text(
+            style == MacroStyle.perKg
+                ? '${shown(_program.fatGPerKg)} g per $per of '
+                      'body weight, the rest carbs. Under about 20% of '
+                      'your energy from fat is not advised.'
+                : style.explanation,
+            style: theme.textTheme.bodySmall,
+          ),
+        ],
       ],
     );
   }
