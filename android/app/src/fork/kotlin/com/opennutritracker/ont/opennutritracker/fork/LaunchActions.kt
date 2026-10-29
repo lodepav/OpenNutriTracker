@@ -162,7 +162,8 @@ class LaunchActionChannel(private val activity: Activity, engine: FlutterEngine,
     // a restored activity, or one reopened from Recents, keeps the intent
     // it was started with after the process died: that action already ran
     private var pending: Map<String, String>? =
-        if (restored || fromHistory(activity.intent)) null else take(activity.intent)
+        if (restored || fromHistory(activity.intent)) null
+        else LaunchActions.payload(activity, activity.intent)
 
     init {
         LaunchActions.publishShortcuts(activity.applicationContext)
@@ -174,18 +175,11 @@ class LaunchActionChannel(private val activity: Activity, engine: FlutterEngine,
     }
 
     fun onNewIntent(intent: Intent) {
-        val payload = take(intent) ?: return
+        val payload = LaunchActions.payload(activity, intent) ?: return
         pending = payload
         channel.invokeMethod("launch", null)
     }
 
     private fun fromHistory(intent: Intent?): Boolean =
         (intent?.flags ?: 0) and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY != 0
-
-    /** Read once: a recreated activity keeps its intent, which must not log twice. */
-    private fun take(intent: Intent?): Map<String, String>? {
-        val payload = LaunchActions.payload(activity, intent) ?: return null
-        intent?.removeExtra(LaunchActions.EXTRA_KIND)
-        return payload
-    }
 }
