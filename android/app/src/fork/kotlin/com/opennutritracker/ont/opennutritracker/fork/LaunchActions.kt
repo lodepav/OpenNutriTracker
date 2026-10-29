@@ -52,14 +52,26 @@ object LaunchActions {
         }
     }
 
-    /** What [intent] asks of the app, as the Dart side reads it; null for an ordinary start. */
-    fun payload(intent: Intent?): Map<String, String>? {
+    /**
+     * What [intent] asks of the app, as the Dart side reads it; null for an ordinary start.
+     * MainActivity is exported, so any app can send these extras: a path is passed on only inside
+     * [sharedDir], since the photo reader deletes the file it is given.
+     */
+    fun payload(context: Context, intent: Intent?): Map<String, String>? {
         val kind = intent?.getStringExtra(EXTRA_KIND) ?: return null
         return buildMap {
             put("kind", kind)
-            intent.getStringExtra(EXTRA_PATH)?.let { put("path", it) }
+            intent.getStringExtra(EXTRA_PATH)
+                ?.takeIf { isShared(context, it) }
+                ?.let { put("path", it) }
             intent.getStringExtra(EXTRA_TEXT)?.let { put("text", it) }
         }
+    }
+
+    private fun isShared(context: Context, path: String): Boolean = try {
+        File(path).canonicalPath.startsWith(sharedDir(context).canonicalPath + File.separator)
+    } catch (_: Exception) {
+        false
     }
 
     fun isShortcut(intent: Intent) = intent.action == ACTION_SHORTCUT
@@ -163,7 +175,7 @@ class LaunchActionChannel(private val activity: Activity, engine: FlutterEngine)
 
     /** Read once: a recreated activity keeps its intent, which must not log twice. */
     private fun take(intent: Intent?): Map<String, String>? {
-        val payload = LaunchActions.payload(intent) ?: return null
+        val payload = LaunchActions.payload(activity, intent) ?: return null
         intent?.removeExtra(LaunchActions.EXTRA_KIND)
         return payload
     }
