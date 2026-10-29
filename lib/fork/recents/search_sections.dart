@@ -118,6 +118,10 @@ class _SearchSectionsState extends State<SearchSections> {
               );
             },
           ),
+          // room under the last row, as a ListView keeps (AI add's button)
+          SliverToBoxAdapter(
+            child: SizedBox(height: MediaQuery.paddingOf(context).bottom),
+          ),
         ],
       ),
     );

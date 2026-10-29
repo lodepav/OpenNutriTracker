@@ -6,6 +6,7 @@ import 'dart:math' as math;
 
 import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/material.dart';
+import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/presentation/widgets/badged_title.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
@@ -93,6 +94,8 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
   final _textController = TextEditingController();
   // the photo this batch was read from, kept with the meal
   MealPhoto? _forkMealPhoto;
+  // taken or picked, waiting for send
+  MealPhoto? _stagedPhoto;
   // the page the text was read from, if any
   LinkedRecipe? _forkLinkedRecipe;
   String? _forkLink;
@@ -403,7 +406,9 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
     if (_args.startWithPhoto && !_forkPhotoStarted) {
       _forkPhotoStarted = true;
       WidgetsBinding.instance.addPostFrameCallback((_) async {
-        if (await _photoAvailable && mounted) await _onPhotoPressed();
+        if (await _photoAvailable && mounted) {
+          await _onPhotoPressed(readNow: true);
+        }
       });
     }
     // what another app shared, once: text is read as if typed, a photo
@@ -419,7 +424,7 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
     if (_args.sharedPhotoPath case final path?) {
       WidgetsBinding.instance.addPostFrameCallback((_) async {
         if (await _photoAvailable && mounted) {
-          await _onPhotoPressed(sharedPath: path);
+          await _onPhotoPressed(sharedPath: path, readNow: true);
           return;
         }
         _discardShared(path);
@@ -486,22 +491,6 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
                     onPressed: () => _saveAllAsRecipe(state),
                     icon: const Icon(Icons.menu_book_outlined),
                     tooltip: DishStrings.saveAllAsRecipe,
-                  )
-                : const SizedBox.shrink(),
-          ),
-          // Only offered when the user has a key enabled. There is no
-          // offline way to read a photo, so showing the action to everyone
-          // would advertise a button that can only ever apologise.
-          FutureBuilder<bool>(
-            future: _photoAvailable,
-            builder: (context, snapshot) => snapshot.data == true
-                ? Semantics(
-                    identifier: 'bulk-add-photo',
-                    child: IconButton(
-                      onPressed: _onPhotoPressed,
-                      icon: const Icon(Icons.photo_camera_rounded),
-                      tooltip: S.of(context).bulkAddPhotoLabel,
-                    ),
                   )
                 : const SizedBox.shrink(),
           ),
@@ -642,48 +631,143 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
     },
   );
 
+  // Capture and gallery, the box, one send (AI add, after MacroFactor's
+  // AI tab): only offered when the user has a key enabled. There is no
+  // offline way to read a photo, so showing the photo buttons to everyone
+  // would advertise buttons that can only ever apologise.
   Widget _buildInput(
     BuildContext context, {
     required double maxFieldHeight,
-  }) => Padding(
-    padding: const EdgeInsets.all(16),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+  }) => FutureBuilder<bool>(
+    future: _photoAvailable,
+    builder: (context, snapshot) {
+      final photos = snapshot.data == true;
+      final staged = _stagedPhoto;
+      return Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (photos) ...[
+              _buildPhotoRow(context, staged),
+              const SizedBox(height: 12),
+            ],
+            // Scrolls past its ceiling rather than being clipped: what is
+            // typed must stay reachable, and at ordinary text sizes four
+            // lines are far below this so nothing changes.
+            ConstrainedBox(
+              constraints: BoxConstraints(maxHeight: maxFieldHeight),
+              child: Semantics(
+                identifier: 'bulk-add-input',
+                child: TextField(
+                  controller: _textController,
+                  minLines: 2,
+                  maxLines: 4,
+                  textInputAction: TextInputAction.newline,
+                  keyboardType: TextInputType.multiline,
+                  decoration: InputDecoration(
+                    hintText: staged != null
+                        ? 'Describe it (optional)'
+                        : S.of(context).bulkAddInputHint,
+                    // what the field does with a photo (H10)
+                    helperText: photos
+                        ? 'With a photo, this is sent as its note'
+                        : null,
+                    border: const OutlineInputBorder(),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Semantics(
+              identifier: 'bulk-add-parse',
+              child: FilledButton.icon(
+                onPressed: staged != null ? _readStagedPhoto : _onParsePressed,
+                icon: Icon(staged != null ? Icons.send_rounded : Icons.search),
+                label: Text(
+                  staged != null
+                      ? S.of(context).bulkAddPhotoLabel
+                      : S.of(context).bulkAddParseLabel,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    },
+  );
+
+  /// Capture wide, the gallery beside it; a photo waiting to be sent sits
+  /// first, with a way to take it back.
+  Widget _buildPhotoRow(BuildContext context, MealPhoto? staged) {
+    const height = 48.0;
+    final s = S.of(context);
+    return Row(
       children: [
-        // Scrolls past its ceiling rather than being clipped: what is typed
-        // must stay reachable, and at ordinary text sizes four lines are far
-        // below this so nothing changes.
-        ConstrainedBox(
-          constraints: BoxConstraints(maxHeight: maxFieldHeight),
+        if (staged != null) ...[
+          Semantics(
+            identifier: 'bulk-add-photo-staged',
+            image: true,
+            label: 'Photo to read',
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Image.memory(
+                staged.bytes,
+                width: height,
+                height: height,
+                fit: BoxFit.cover,
+              ),
+            ),
+          ),
+          Semantics(
+            identifier: 'bulk-add-photo-remove',
+            child: IconButton(
+              onPressed: () => setState(() => _stagedPhoto = null),
+              icon: const Icon(Icons.close_rounded),
+              tooltip: s.mealImageRemove,
+            ),
+          ),
+        ],
+        Expanded(
           child: Semantics(
-            identifier: 'bulk-add-input',
-            child: TextField(
-              controller: _textController,
-              minLines: 2,
-              maxLines: 4,
-              textInputAction: TextInputAction.newline,
-              keyboardType: TextInputType.multiline,
-              decoration: InputDecoration(
-                hintText: S.of(context).bulkAddInputHint,
-                // what the field does with a photo (H10)
-                helperText: 'With a photo, this is sent as its note',
-                border: const OutlineInputBorder(),
+            identifier: 'bulk-add-photo',
+            child: FilledButton.tonalIcon(
+              // muted, so "Find foods" stays the one primary action
+              style: FilledButton.styleFrom(
+                minimumSize: const Size.fromHeight(height),
+                backgroundColor: paletteOf(context).surfaceMuted,
+                foregroundColor: Theme.of(context).colorScheme.onSurface,
+              ),
+              onPressed: _onPhotoPressed,
+              icon: const Icon(Icons.photo_camera_rounded),
+              label: Text(
+                staged != null ? s.mealImageReplace : s.mealImageTakePhoto,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(width: 8),
         Semantics(
-          identifier: 'bulk-add-parse',
-          child: FilledButton.icon(
-            onPressed: _onParsePressed,
-            icon: const Icon(Icons.search),
-            label: Text(S.of(context).bulkAddParseLabel),
+          identifier: 'bulk-add-gallery',
+          child: IconButton.filledTonal(
+            style: IconButton.styleFrom(
+              minimumSize: const Size.square(height),
+              backgroundColor: paletteOf(context).surfaceMuted,
+              foregroundColor: Theme.of(context).colorScheme.onSurface,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(height / 2),
+              ),
+            ),
+            onPressed: () => _onPhotoPressed(from: ImageSource.gallery),
+            icon: const Icon(Icons.photo_library_rounded),
+            tooltip: s.mealImagePickFromGallery,
           ),
         ),
       ],
-    ),
-  );
+    );
+  }
 
   void _clearQuantityError(int index) =>
       setState(() => _quantityErrors.remove(index));
@@ -729,7 +813,13 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
     );
   }
 
-  Future<void> _onPhotoPressed({String? sharedPath}) async {
+  /// Takes or picks a photo and holds it until send, so the box can
+  /// describe it; [readNow] reads it at once (the photo shortcut, a share).
+  Future<void> _onPhotoPressed({
+    String? sharedPath,
+    ImageSource from = ImageSource.camera,
+    bool readNow = false,
+  }) async {
     FocusScope.of(context).unfocus();
     final destination = await _photoDestination;
     if (!mounted) return;
@@ -781,16 +871,18 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
             Semantics(
               identifier: 'bulk-add-photo-camera',
               child: ListTile(
-                leading: Icon(
-                  sharedPath == null
-                      ? Icons.photo_camera_rounded
-                      : Icons.photo_rounded,
-                ),
-                title: Text(
-                  sharedPath == null
-                      ? S.of(sheetContext).mealImageTakePhoto
-                      : 'Read the shared photo',
-                ),
+                leading: Icon(switch ((sharedPath, from)) {
+                  (null, ImageSource.camera) => Icons.photo_camera_rounded,
+                  (null, ImageSource.gallery) => Icons.photo_library_rounded,
+                  _ => Icons.photo_rounded,
+                }),
+                title: Text(switch ((sharedPath, from)) {
+                  (null, ImageSource.camera) =>
+                    S.of(sheetContext).mealImageTakePhoto,
+                  (null, ImageSource.gallery) =>
+                    S.of(sheetContext).mealImagePickFromGallery,
+                  _ => 'Read the shared photo',
+                }),
                 onTap: () => Navigator.of(sheetContext).pop(true),
               ),
             ),
@@ -809,7 +901,7 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
     } else {
       final XFile? picked;
       try {
-        picked = await ImagePicker().pickImage(source: ImageSource.camera);
+        picked = await ImagePicker().pickImage(source: from);
       } catch (e, stackTrace) {
         _log.warning('Opening the meal photo camera failed', e, stackTrace);
         if (!mounted) return;
@@ -847,6 +939,16 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
       return;
     }
 
+    setState(() => _stagedPhoto = photo);
+    if (readNow) _readStagedPhoto();
+  }
+
+  /// Sends the photo waiting by the buttons, with the box as its note.
+  void _readStagedPhoto() {
+    final photo = _stagedPhoto;
+    if (photo == null) return;
+    FocusScope.of(context).unfocus();
+    setState(() => _stagedPhoto = null);
     // A photo replaces the previous batch, so the old controllers go with it.
     _resetAmountControllers();
     _forkMealPhoto = photo;

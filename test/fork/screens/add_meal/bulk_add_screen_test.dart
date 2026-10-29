@@ -2444,7 +2444,9 @@ void main() {
 
       final camera = find.bySemanticsIdentifier('bulk-add-photo');
       final hint = find.bySemanticsIdentifier('bulk-add-model-hint');
+      final gallery = find.bySemanticsIdentifier('bulk-add-gallery');
       expect(camera, findsNothing, reason: 'nothing is configured yet');
+      expect(gallery, findsNothing);
       expect(hint, findsOneWidget);
 
       await tester.tap(hint);
@@ -2479,6 +2481,7 @@ void main() {
             'the answers are re-resolved when settings pops, so the camera '
             'appears without leaving and re-entering the screen',
       );
+      expect(gallery, findsOneWidget, reason: 'beside the camera');
       // And the line inviting them to set one up has done its job.
       expect(hint, findsNothing);
       expect(tester.takeException(), isNull);

@@ -189,10 +189,21 @@ class _AddMealScreenState extends State<AddMealScreen> {
               // "no results for this query" apart from "a newer query is
               // still debouncing/searching" — the latter shows a spinner.
               Expanded(
-                child: ValueListenableBuilder<String>(
-                  valueListenable: _searchStringListener,
-                  builder: (context, query, _) =>
-                      _buildResults(context, palette, query),
+                // the lists scroll their last row clear of AI add
+                child: FutureBuilder<bool>(
+                  future: _aiAdd,
+                  builder: (context, ai) => MediaQuery(
+                    data: MediaQuery.of(context).copyWith(
+                      padding: MediaQuery.paddingOf(
+                        context,
+                      ).copyWith(bottom: ai.data == true ? 88 : 0),
+                    ),
+                    child: ValueListenableBuilder<String>(
+                      valueListenable: _searchStringListener,
+                      builder: (context, query, _) =>
+                          _buildResults(context, palette, query),
+                    ),
+                  ),
                 ),
               ),
             ],
