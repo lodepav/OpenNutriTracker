@@ -19,12 +19,17 @@ String _sinceText(BuildContext context, DateTime since) =>
     'since ${intl.DateFormat.MMMd(Localizations.localeOf(context).toLanguageTag()).format(since)}';
 
 /// The goal with no target weight: a goal running, a maintenance one,
-/// until it ends; maintenance since the last goal completed; or none.
+/// until it ends; maintenance since the last goal completed, or since a
+/// goal ended that is not yet marked; or none.
 ({String value, String? note}) untargetedGoal(
   BuildContext context,
   PhasePlan? plan,
-  DateTime? since,
-) {
+  DateTime? since, {
+  DateTime? today,
+}) {
+  if (plan != null && !(today ?? DateTime.now()).isBefore(plan.end)) {
+    return (value: 'Maintain', note: _sinceText(context, plan.end));
+  }
   if (plan != null) {
     final until = intl.DateFormat.MMMd(
       Localizations.localeOf(context).toLanguageTag(),

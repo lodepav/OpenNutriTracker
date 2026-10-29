@@ -241,7 +241,9 @@ class _GoalPlannerTileState extends State<_GoalPlannerTile> {
       title: 'Goal planner',
       subtitle: plan == null
           ? 'A cut, maintenance or bulk, step by step'
-          : '${goalTitle(plan, widget.unit)} · until $until',
+          : '${goalTitle(plan, widget.unit)} · '
+                '${DateTime.now().isBefore(plan.end) ? 'until' : 'ended'} '
+                '$until',
       showChevron: true,
       onTap: () => openGoalPlanner(context),
     );

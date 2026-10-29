@@ -190,6 +190,30 @@ void main() {
     expect(find.textContaining('behind where it now starts'), findsOneWidget);
   });
 
+  testWidgets('a goal with no target: until its end, then since it', (
+    tester,
+  ) async {
+    late ({String value, String? note}) before, after;
+    await _pump(
+      tester,
+      Builder(
+        builder: (context) {
+          before = untargetedGoal(context, _hold, null, today: today);
+          after = untargetedGoal(
+            context,
+            _hold,
+            null,
+            today: DateTime(2027, 2, 10),
+          );
+          return const SizedBox();
+        },
+      ),
+    );
+    // The hold runs Jan 4 to Jan 31.
+    expect(before, (value: 'Maintain', note: 'until Jan 31'));
+    expect(after, (value: 'Maintain', note: 'since Feb 1'));
+  });
+
   testWidgets('the two plan buttons stack full width', (tester) async {
     await _pump(tester, section(_MemoryPhases(_cut, [_hold])));
     final edit = tester.getRect(_id('goal-plan-edit'));

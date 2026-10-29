@@ -622,6 +622,76 @@ void main() {
     expect(find.text('Keep all and go on'), findsOneWidget);
   });
 
+  testWidgets('an upcoming goal left behind its target says so at once', (
+    tester,
+  ) async {
+    // A bulk to 84 that a move left starting at 85.
+    final stale = GoalDraft(
+      kind: PhaseKind.bulk,
+      startKg: 85,
+      targetKg: 84,
+      start: DateTime(2027, 1, 4),
+      paceKg: 0.25,
+    ).toPlan();
+    await _pump(
+      tester,
+      GoalPlannerScreen(
+        setup: PlannerSetup(
+          nowKg: 85,
+          unit: BodyWeightUnit.kg,
+          expenditureKcal: 2870,
+          bodyFatPercent: 22,
+          running: _cut(breaks: false),
+          upcoming: [stale],
+        ),
+        draft: GoalDraft.of(stale, 85),
+        queuedAt: 0,
+        onStart: (_) async => true,
+        onQueue: (_, _) async => true,
+        today: DateTime(2026, 10, 29),
+      ),
+    );
+    expect(find.textContaining('A bulk needs a target above'), findsOneWidget);
+    expect(
+      tester
+          .widget<FilledButton>(
+            find.ancestor(
+              of: find.text('Next'),
+              matching: find.byType(FilledButton),
+            ),
+          )
+          .onPressed,
+      isNull,
+    );
+  });
+
+  testWidgets('a new queued goal asks for a target, not the one it starts at', (
+    tester,
+  ) async {
+    // The profile's target, 80, is where the running cut ends.
+    await _pump(
+      tester,
+      GoalPlannerScreen(
+        setup: PlannerSetup(
+          nowKg: 85,
+          unit: BodyWeightUnit.kg,
+          expenditureKcal: 2870,
+          bodyFatPercent: 22,
+          running: _cut(breaks: false),
+        ),
+        draft: GoalDraft.fresh(85, DateTime(2026, 10, 29), targetKg: 80),
+        onStart: (_) async => true,
+        onQueue: (_, _) async => true,
+        today: DateTime(2026, 10, 29),
+      ),
+    );
+    await tester.tap(find.text('Lose fat'));
+    await tester.pumpAndSettle();
+    expect(find.text('Set a target weight'), findsOneWidget);
+    expect(find.text('80.0 kg'), findsNothing);
+    expect(find.textContaining('needs a target'), findsNothing);
+  });
+
   testWidgets('a queued maintenance calls its second step Length', (
     tester,
   ) async {
