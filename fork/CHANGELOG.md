@@ -2,6 +2,17 @@
 
 Written by fork/tools/release_notes.dart at each release (D16).
 
+## 0.3.11 · 2026-10-29
+
+Based on OpenNutriTracker 2.5.0.
+
+### Fixes and changes
+
+- Use the shared photo
+- a share and the Photo log shortcut wait for send
+- implement-review of everything since the last code review
+- AI add on the + sheet and search, and an AI screen led by photo buttons
+
 ## 0.3.10 · 2026-10-29
 
 Based on OpenNutriTracker 2.5.0.
