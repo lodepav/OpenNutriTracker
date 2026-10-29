@@ -1,6 +1,7 @@
 package com.opennutritracker.ont.opennutritracker.fork
 
 import android.app.Activity
+import android.content.ContentResolver
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -52,14 +53,26 @@ object LaunchActions {
         }
     }
 
-    /** What [intent] asks of the app, as the Dart side reads it; null for an ordinary start. */
-    fun payload(intent: Intent?): Map<String, String>? {
+    /**
+     * What [intent] asks of the app, as the Dart side reads it; null for an ordinary start.
+     * MainActivity is exported, so any app can send these extras: a path is passed on only inside
+     * [sharedDir], since the photo reader deletes the file it is given.
+     */
+    fun payload(context: Context, intent: Intent?): Map<String, String>? {
         val kind = intent?.getStringExtra(EXTRA_KIND) ?: return null
         return buildMap {
             put("kind", kind)
-            intent.getStringExtra(EXTRA_PATH)?.let { put("path", it) }
+            intent.getStringExtra(EXTRA_PATH)
+                ?.takeIf { isShared(context, it) }
+                ?.let { put("path", it) }
             intent.getStringExtra(EXTRA_TEXT)?.let { put("text", it) }
         }
+    }
+
+    private fun isShared(context: Context, path: String): Boolean = try {
+        File(path).canonicalPath.startsWith(sharedDir(context).canonicalPath + File.separator)
+    } catch (_: Exception) {
+        false
     }
 
     fun isShortcut(intent: Intent) = intent.action == ACTION_SHORTCUT
@@ -122,6 +135,8 @@ class LaunchActionActivity : Activity() {
 
     /** Into the cache, replacing any share not read yet; null when it cannot be read. */
     private fun copy(uri: Uri): File? {
+        // a file:// share could name this app's own private files
+        if (uri.scheme != ContentResolver.SCHEME_CONTENT) return null
         return try {
             val dir = LaunchActions.sharedDir(this)
             dir.deleteRecursively()
@@ -142,9 +157,13 @@ class LaunchActionActivity : Activity() {
  * known before the engine is), pushed for one that reaches a running app. Registered by S167 in
  * MainActivity, which passes on [onNewIntent].
  */
-class LaunchActionChannel(private val activity: Activity, engine: FlutterEngine) {
+class LaunchActionChannel(private val activity: Activity, engine: FlutterEngine, restored: Boolean) {
     private val channel = MethodChannel(engine.dartExecutor.binaryMessenger, "openbite/launch")
-    private var pending: Map<String, String>? = take(activity.intent)
+    // a restored activity, or one reopened from Recents, keeps the intent
+    // it was started with after the process died: that action already ran
+    private var pending: Map<String, String>? =
+        if (restored || fromHistory(activity.intent)) null
+        else LaunchActions.payload(activity, activity.intent)
 
     init {
         LaunchActions.publishShortcuts(activity.applicationContext)
@@ -156,15 +175,11 @@ class LaunchActionChannel(private val activity: Activity, engine: FlutterEngine)
     }
 
     fun onNewIntent(intent: Intent) {
-        val payload = take(intent) ?: return
+        val payload = LaunchActions.payload(activity, intent) ?: return
         pending = payload
         channel.invokeMethod("launch", null)
     }
 
-    /** Read once: a recreated activity keeps its intent, which must not log twice. */
-    private fun take(intent: Intent?): Map<String, String>? {
-        val payload = LaunchActions.payload(intent) ?: return null
-        intent?.removeExtra(LaunchActions.EXTRA_KIND)
-        return payload
-    }
+    private fun fromHistory(intent: Intent?): Boolean =
+        (intent?.flags ?: 0) and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY != 0
 }

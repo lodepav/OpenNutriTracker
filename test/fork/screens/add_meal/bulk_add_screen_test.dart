@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
@@ -522,6 +523,7 @@ Widget _app({
   Locale? locale,
   List<RouteSettings>? pushed,
   bool startWithPhoto = false,
+  String? sharedPhotoPath,
   // [/fork]
 }) => ChangeNotifierProvider<EnergyUnitProvider>(
   create: (_) => EnergyUnitProvider(usesKilojoules: false),
@@ -563,6 +565,7 @@ Widget _app({
             DateTime(2026, 8, 10),
             imperial,
             startWithPhoto: startWithPhoto,
+            sharedPhotoPath: sharedPhotoPath,
             // [/fork]
           ),
         ),
@@ -1371,6 +1374,104 @@ void main() {
     // The sentence true either way is still there, once.
     expect(
       find.textContaining(l10nEn.bulkAddPhotoDisclosureCommon),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('a shared photo waits by the buttons until it reads, its '
+      'note back in the box after a failure', (tester) async {
+    await _register(const {});
+    final storage = AiCredentialStorage(
+      _MapStorage({
+        'AiApiKeyTag.openrouter': 'sk-or-test',
+        'AiAssistEnabledTag': 'true',
+        'AiProviderTag': 'openrouter',
+      }),
+    );
+    final reader = _SequencePhotoReader([
+      const MealPhotoFailed(MealPhotoFailure.transient),
+      // no food found: kept, like a failure
+      const MealPhotoRead(MealTextParseResult(items: [], errors: [])),
+      const MealPhotoRead(
+        MealTextParseResult(
+          items: [ParsedMealItem(query: 'egg', quantity: 2)],
+          errors: [],
+        ),
+      ),
+    ]);
+    getIt
+      ..unregister<AiCredentialStorage>()
+      ..registerLazySingleton<AiCredentialStorage>(() => storage)
+      ..unregister<BulkAddBloc>()
+      ..registerFactory<BulkAddBloc>(
+        () => BulkAddBloc(
+          ResolveParsedMealsUseCase(
+            _FakeSearch({
+              'egg': [_meal('Egg')],
+            }),
+          ),
+          ReadMealTextUseCase(
+            AiCredentialStorage(_EmptyStorage()),
+            (_) => throw StateError('must not be built without a key'),
+          ),
+          reader,
+        ),
+      );
+    final shared = (await tester.runAsync(() async {
+      final dir = await Directory.systemTemp.createTemp('bulk_shared');
+      // no device encoder here, so it is sent as it is
+      return File('${dir.path}/shared.png')
+        ..writeAsBytesSync(base64Decode(_onePixelPng));
+    }))!;
+    // the encoder reads and deletes the file outside fake time
+    Future<void> settleUntil(bool Function() done) async {
+      for (var i = 0; i < 100 && !done(); i++) {
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 10)),
+        );
+        await tester.pumpAndSettle();
+      }
+    }
+
+    await tester.pumpWidget(_app(sharedPhotoPath: shared.path));
+    await tester.pumpAndSettle();
+    tester.state<NavigatorState>(find.byType(Navigator)).pushNamed('/bulk');
+    final readShared = find.text('Read the shared photo');
+    await settleUntil(() => readShared.evaluate().isNotEmpty);
+    await tester.tap(readShared);
+    await settleUntil(() => reader.notes.isNotEmpty);
+
+    // read at once, failed, and still waiting to be sent again
+    expect(reader.notes, [null]);
+    final staged = find.bySemanticsIdentifier('bulk-add-photo-staged');
+    expect(staged, findsOneWidget);
+
+    await tester.enterText(find.byType(TextField).first, 'two eggs');
+    await tester.pump();
+    await tester.tap(find.bySemanticsIdentifier('bulk-add-parse'));
+    await tester.pumpAndSettle();
+    expect(reader.notes.last, 'two eggs');
+    expect(staged, findsOneWidget);
+    expect(find.widgetWithText(TextField, 'two eggs'), findsOneWidget);
+
+    await tester.tap(find.bySemanticsIdentifier('bulk-add-parse'));
+    await tester.pumpAndSettle();
+    expect(reader.notes.last, 'two eggs');
+    expect(staged, findsNothing);
+    expect(find.text('Egg'), findsOneWidget);
+    expect(find.widgetWithText(TextField, 'two eggs'), findsNothing);
+  });
+
+  testWidgets('the Photo log shortcut says why, without a model that '
+      'reads photos', (tester) async {
+    await _register(const {});
+    await tester.pumpWidget(_app(startWithPhoto: true));
+    await tester.pumpAndSettle();
+    tester.state<NavigatorState>(find.byType(Navigator)).pushNamed('/bulk');
+    await tester.pumpAndSettle();
+
+    expect(
+      find.textContaining('Reading a photo needs a model that sees images'),
       findsOneWidget,
     );
   });
@@ -2909,6 +3010,31 @@ class _StubPhotoReader implements ReadMealPhotoUseCase {
   }
 
   String? sawNote;
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+/// A 1x1 PNG: the staged thumbnail decodes what it is given.
+const _onePixelPng =
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+
+/// Answers each photo read with the next of [readings], recording the note.
+class _SequencePhotoReader implements ReadMealPhotoUseCase {
+  final List<MealPhotoReadResult> readings;
+  final notes = <String?>[];
+
+  _SequencePhotoReader(this.readings);
+
+  @override
+  Future<MealPhotoReadResult> read(
+    MealPhoto photo, {
+    String? localeCode,
+    String? note,
+  }) async {
+    notes.add(note);
+    return readings[notes.length - 1];
+  }
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);

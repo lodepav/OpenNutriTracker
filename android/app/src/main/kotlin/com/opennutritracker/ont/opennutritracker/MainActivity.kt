@@ -46,6 +46,13 @@ class MainActivity : FlutterFragmentActivity() {
 
     // [fork] S167 launch-actions
     private var forkLaunch: com.opennutritracker.ont.opennutritracker.fork.LaunchActionChannel? = null
+    private var forkRestored = false
+
+    override fun onCreate(savedInstanceState: android.os.Bundle?) {
+        // set before super, which configures the engine
+        forkRestored = savedInstanceState != null
+        super.onCreate(savedInstanceState)
+    }
     // [/fork]
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
@@ -57,7 +64,7 @@ class MainActivity : FlutterFragmentActivity() {
         com.opennutritracker.ont.opennutritracker.fork.UpdateInstallChannel(this, flutterEngine)
         // [/fork]
         // [fork] S167 launch-actions: launcher shortcuts and shares into the app
-        forkLaunch = com.opennutritracker.ont.opennutritracker.fork.LaunchActionChannel(this, flutterEngine)
+        forkLaunch = com.opennutritracker.ont.opennutritracker.fork.LaunchActionChannel(this, flutterEngine, forkRestored)
         // [/fork]
 
         // A cold start: the launching intent is the one held by the activity.

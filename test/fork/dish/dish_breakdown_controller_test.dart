@@ -405,17 +405,15 @@ void main() {
       );
       expect(statedAmount(typed), '350.5 g');
       expect(statedCount(typed), isNull);
-      expect(
-        statedAmount(
-          row(
-            const ParsedMealItem(query: 'plov', quantity: 2),
-            amountText: '2',
-            unit: 'serving#1',
-            unitChosen: true,
-          ),
-        ),
-        '2 servings',
+      final servings = row(
+        const ParsedMealItem(query: 'plov', quantity: 2),
+        amountText: '2',
+        unit: 'serving#1',
+        unitChosen: true,
       );
+      expect(statedAmount(servings), '2 servings');
+      // a recipe saved from it holds two servings, not one of double
+      expect(statedCount(servings), 2);
     });
   });
 }

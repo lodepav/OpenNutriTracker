@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:opennutritracker/core/utils/calc/calorie_goal_calc.dart'; // [fork] S89
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:introduction_screen/introduction_screen.dart';
 import 'package:opennutritracker/core/domain/entity/app_theme_entity.dart';
@@ -347,8 +348,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   null // [fork] S89
               ? null // a fixed target, not the formula's
               : _onboardingBloc.getOverviewBreakdown(),
-          showLowKcalWarning: _onboardingBloc
-              .isOverviewBelowRecommendedKcalFloor(),
+          showLowKcalWarning:
+              _forkBelowFloor() ?? // [fork] S89
+              _onboardingBloc.isOverviewBelowRecommendedKcalFloor(),
           lowKcalWarningThreshold: _onboardingBloc
               .getOverviewRecommendedKcalFloor(),
         ),
@@ -463,6 +465,19 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     _onboardingBloc.userSelection.checkDataProvided()
         ? _setOverviewPageContent(true)
         : _setOverviewPageContent(false);
+  }
+
+  // [fork] S89 onboarding-macros: a fixed target is held to the same floor
+  // as the formula's; null without one
+  bool? _forkBelowFloor() {
+    final kcal = OnboardingMacros.overviewKcal();
+    final user = _onboardingBloc.userSelection.toUserEntity();
+    if (kcal == null || user == null) return null;
+    return CalorieGoalCalc.isBelowRecommendedDailyKcalFloor(
+      goalKcal: kcal,
+      gender: user.gender,
+      caloriesProfile: user.caloriesProfile,
+    );
   }
 
   // [fork] S89 onboarding-macros: the overview shows the protein and fat

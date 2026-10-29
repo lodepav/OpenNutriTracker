@@ -49,10 +49,13 @@ String? statedAmount(BulkAddRow row) {
   return '$text $unit';
 }
 
-/// The whole count [statedAmount] states, or null for an amount in units.
+/// The whole count [statedAmount] states, a bare count or "N servings",
+/// or null for an amount in other units.
 int? statedCount(BulkAddRow row) {
   final amount = statedAmount(row);
-  final count = amount == null ? null : double.tryParse(amount);
+  final count = amount == null
+      ? null
+      : double.tryParse(amount.replaceFirst(RegExp(r' servings$'), ''));
   return count != null && count == count.roundToDouble() ? count.toInt() : null;
 }
 
