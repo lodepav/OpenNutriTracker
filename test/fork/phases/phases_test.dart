@@ -150,6 +150,22 @@ void main() {
       clock: () => now,
     );
 
+    test('completed goals of one start day are both kept', () async {
+      GoalRecord goal(DateTime end, double endKg) => GoalRecord(
+        kind: PhaseKind.cut,
+        start: DateTime(2026, 10, 20),
+        end: end,
+        startKg: 80,
+        endKg: endKg,
+      );
+      await store.addToHistory([goal(DateTime(2026, 10, 20), 80)]);
+      await store.addToHistory([goal(DateTime(2026, 12, 1), 76)]);
+      // A backup restored again replaces its own goal.
+      await store.addToHistory([goal(DateTime(2026, 12, 1), 75.5)]);
+
+      expect((await store.history()).map((r) => r.endKg), [80, 75.5]);
+    });
+
     test('a pace a profile switch dropped is tried again', () async {
       await store.save(_plan);
       saves = false;

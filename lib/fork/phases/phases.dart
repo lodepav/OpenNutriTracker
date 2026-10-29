@@ -210,12 +210,12 @@ class PhaseStore {
   ];
 
   /// Keeps [records] among the completed goals, replacing one that started
-  /// the same day (a backup restored twice), oldest first.
+  /// and ended the same days (a backup restored twice), oldest first.
   Future<void> addToHistory(List<GoalRecord> records) async {
-    final byStart = {
-      for (final r in [...await history(), ...records]) r.start: r,
+    final byDays = {
+      for (final r in [...await history(), ...records]) (r.start, r.end): r,
     };
-    final all = byStart.values.toList()
+    final all = byDays.values.toList()
       ..sort((a, b) => a.start.compareTo(b.start));
     await (await _box()).put(historyKey, [for (final r in all) r.toJson()]);
     changes.value++;
