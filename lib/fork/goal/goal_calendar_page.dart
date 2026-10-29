@@ -22,8 +22,7 @@ typedef EditGoal =
     Future<bool> Function(BuildContext context, int? upcomingIndex);
 
 Future<bool> _editGoal(BuildContext context, int? upcomingIndex) =>
-    // The planner opens a queued goal once it takes its place.
-    upcomingIndex == null ? openGoalPlanner(context) : Future.value(false);
+    openGoalPlanner(context, upcomingIndex: upcomingIndex);
 
 /// Opens the goal calendar at today's month.
 Future<void> openGoalCalendar(

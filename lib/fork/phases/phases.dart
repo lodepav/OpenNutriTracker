@@ -361,10 +361,24 @@ class PhaseRunner {
       await locator<GetUserUsecase>().hasUserData() &&
       await savePace(kgPerWeek, startedOn);
 
-  /// Returns whether a pace was set; failures are logged.
-  Future<bool> run() async {
+  /// Returns whether a pace was set; failures are logged. It runs whole
+  /// under the tracked-day lock, and from outside it: called while a goal
+  /// is saved (a listener of [PhaseStore.changes]), it waits for the save
+  /// rather than reading the plan half way.
+  Future<bool> run() {
     // The plan and the pace of one profile.
     final startedOn = ProfileStamp.now();
+    return Zone.root.run(
+      () async =>
+          await withTrackedDayLockOnProfile(
+            () => _run(startedOn),
+            startedOn: startedOn,
+          ) ??
+          false,
+    );
+  }
+
+  Future<bool> _run(ProfileStamp startedOn) async {
     try {
       final now = _clock();
       await _startDue(now, startedOn);

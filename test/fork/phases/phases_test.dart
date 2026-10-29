@@ -269,6 +269,38 @@ void main() {
       expect(paces.last, -0.75);
     });
 
+    test(
+      'a run while a goal is completed waits, and sets no old pace',
+      () async {
+        // Just saved, so its phase is not applied yet.
+        await store.save(_plan);
+        var profile = -0.5;
+        final runner = PhaseRunner(
+          store: store,
+          setPace: (kg, startedOn) async {
+            profile = kg;
+            return true;
+          },
+          clock: () => now,
+        );
+        Future<bool>? run;
+        final actions = GoalActions(
+          store: store,
+          save: (pace, target) async {
+            if (pace != null) profile = pace;
+            // A change notice lands while the goal is being saved.
+            run = runner.run();
+            return true;
+          },
+          clock: () => now,
+        );
+
+        expect(await actions.complete(_plan, 80), isTrue);
+        expect(await run, isFalse);
+        expect(profile, 0);
+      },
+    );
+
     test('saving the plan applies its phase afresh', () async {
       await store.save(_plan);
       await runner().run();
