@@ -13,7 +13,6 @@ import 'package:opennutritracker/fork/adaptive/goal_plan_card.dart'
 import 'package:opennutritracker/fork/body/measurement_store.dart';
 import 'package:opennutritracker/fork/body/side_compare.dart';
 import 'package:opennutritracker/fork/display/home_tiles.dart';
-import 'package:opennutritracker/fork/goal/goal_progress.dart';
 import 'package:opennutritracker/fork/report/nutrient_explorer.dart'
     show intakesBetween;
 import 'package:opennutritracker/fork/trends/nutrient_trends.dart';
@@ -25,7 +24,7 @@ typedef _Extras = ({
   List<ExpenditureDay> history,
   MicroData? micros,
   List<Measurement> measurements,
-  GoalProgress? goal,
+  TrendsGoal? goal,
 });
 
 /// Trends' tiles added to Home, [ids] of them, as Home's tiles:

@@ -18,6 +18,32 @@ DateTime? maintainingSince(PhasePlan? plan, List<GoalRecord> history) {
 String _sinceText(BuildContext context, DateTime since) =>
     'since ${intl.DateFormat.MMMd(Localizations.localeOf(context).toLanguageTag()).format(since)}';
 
+/// The goal with no target weight: a goal running, a maintenance one,
+/// until it ends; maintenance since the last goal completed; or none.
+({String value, String? note}) untargetedGoal(
+  BuildContext context,
+  PhasePlan? plan,
+  DateTime? since,
+) {
+  if (plan != null) {
+    final until = intl.DateFormat.MMMd(
+      Localizations.localeOf(context).toLanguageTag(),
+    ).format(plan.end.subtract(const Duration(hours: 12)));
+    return (
+      value: switch (plan.kind) {
+        PhaseKind.cut => 'Cut',
+        PhaseKind.maintain => 'Maintain',
+        PhaseKind.bulk => 'Bulk',
+      },
+      note: 'until $until',
+    );
+  }
+  if (since != null) {
+    return (value: 'Maintain', note: _sinceText(context, since));
+  }
+  return (value: noGoalText, note: null);
+}
+
 /// "Maintaining since Oct 29".
 String maintainingSinceText(BuildContext context, DateTime since) =>
     'Maintaining ${_sinceText(context, since)}';
@@ -71,7 +97,13 @@ class _GoalYouTileState extends State<GoalYouTile> {
   }
 
   Future<void> _reload() async {
-    final goals = await (widget.load ?? _loadGoals)();
+    final ({PhasePlan? plan, List<GoalRecord> history}) goals;
+    try {
+      goals = await (widget.load ?? _loadGoals)();
+    } catch (_) {
+      // No store in a test: the profile's own goal shows.
+      return;
+    }
     if (mounted) setState(() => _goals = goals);
   }
 
