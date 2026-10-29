@@ -724,149 +724,11 @@ class AdaptiveSettingsDialog extends StatelessWidget {
     this.showMacros = true,
   });
 
-  Future<void> _save(AdaptiveSettings value) async {
-    await store.save(value);
-    await _refreshGoals();
-  }
-
   @override
   Widget build(BuildContext context) => AlertDialog(
     title: const Text('Trend and calorie target'),
-    content: ValueListenableBuilder(
-      valueListenable: AdaptiveStore.settings,
-      builder: (context, settings, _) {
-        final mode = _modeOf(settings);
-        return SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // The choice below carries it as its group's name.
-              ExcludeSemantics(
-                child: Text(
-                  'Calorie target',
-                  style: Theme.of(context).textTheme.titleSmall,
-                ),
-              ),
-              const SizedBox(height: 8),
-              StackingChoice<_TargetMode>(
-                key: const ValueKey('target-mode'),
-                identifier: 'target-mode',
-                groupLabel: 'Calorie target',
-                padding: EdgeInsets.zero,
-                values: _TargetMode.values,
-                label: (m) => switch (m) {
-                  _TargetMode.formula => 'Formula',
-                  _TargetMode.adaptive => 'Adaptive',
-                  _TargetMode.fixed => 'Fixed',
-                },
-                selected: mode,
-                onChanged: (picked) => _save(
-                  settings.copyWith(
-                    adaptiveTarget: picked == _TargetMode.adaptive,
-                    fixedTarget: picked == _TargetMode.fixed,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(switch (mode) {
-                _TargetMode.formula =>
-                  'From your profile and goal, plus logged activities.',
-                _TargetMode.adaptive =>
-                  'Measured from your weight and what you log, set at a '
-                      'weekly check-in. ${switch (settings.activityMode) {
-                        ActivityMode.off => 'Logged activities are not added to it.',
-                        ActivityMode.weekly => "It counts the past week's activity.",
-                        ActivityMode.daily => "Each day's activity is added to it.",
-                      }}',
-                _TargetMode.fixed =>
-                  'One you set. Logged activities and the kcal adjustment '
-                      'are not added to it.',
-              }, style: Theme.of(context).textTheme.bodySmall),
-              if (mode == _TargetMode.fixed)
-                ListTile(
-                  key: const ValueKey('fixed-target'),
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(
-                    'Fixed target: '
-                    '${energyText(context, settings.fixedTargetKcal)}',
-                  ),
-                  subtitle: Text(
-                    settings.fixedMacros == null
-                        ? 'Macros from your split'
-                        : _macroText(settings.fixedMacros!),
-                  ),
-                  trailing: const Icon(Icons.edit_rounded),
-                  onTap: () async {
-                    final edited = await showDialog<AdaptiveSettings>(
-                      context: context,
-                      builder: (_) => _FixedTargetDialog(settings),
-                    );
-                    if (edited != null) await _save(edited);
-                  },
-                ),
-              // Every mode: the estimate runs whichever target is on.
-              ListTile(
-                key: const ValueKey('expenditure-settings'),
-                contentPadding: EdgeInsets.zero,
-                title: const Text('Expenditure and check-ins'),
-                subtitle: Text(expenditureSummary(settings)),
-                trailing: const Icon(Icons.chevron_right_rounded),
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute<void>(
-                    builder: (_) => ExpenditureSettingsScreen(store: store),
-                  ),
-                ),
-              ),
-              ListTile(
-                key: const ValueKey('weekday-targets'),
-                contentPadding: EdgeInsets.zero,
-                title: const Text('Targets by weekday'),
-                subtitle: Text(_offsetsText(context, settings.weekdayOffsets)),
-                trailing: const Icon(Icons.edit_rounded),
-                onTap: () async {
-                  final edited = await showDialog<List<double>>(
-                    context: context,
-                    builder: (_) =>
-                        _WeekdayTargetsDialog(settings.weekdayOffsets),
-                  );
-                  if (edited != null) {
-                    await _save(settings.copyWith(weekdayOffsets: edited));
-                  }
-                },
-              ),
-              if (showMacros)
-                ListTile(
-                  key: const ValueKey('macro-program'),
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('Macros'),
-                  subtitle: Text(
-                    mode == _TargetMode.fixed && settings.fixedMacros != null
-                        ? 'The fixed target\'s grams'
-                        : settings.macroProgram?.summary(perLb: perLb) ??
-                              'Percentages from your macro split',
-                  ),
-                  trailing: const Icon(Icons.edit_rounded),
-                  onTap: () async {
-                    final edited = await showDialog<({MacroProgram? program})>(
-                      context: context,
-                      builder: (_) => MacroProgramDialog(
-                        settings.macroProgram,
-                        perLb: perLb,
-                      ),
-                    );
-                    if (edited != null) {
-                      await _save(
-                        settings.copyWith(macroProgram: () => edited.program),
-                      );
-                    }
-                  },
-                ),
-            ],
-          ),
-        );
-      },
+    content: SingleChildScrollView(
+      child: TargetModeFields(store, perLb: perLb, showMacros: showMacros),
     ),
     actions: [
       TextButton(
@@ -883,6 +745,169 @@ class AdaptiveSettingsDialog extends StatelessWidget {
         if (o != 0) '${_weekdays[i]} ${energyText(context, o, signed: true)}',
     ].join(', ');
   }
+}
+
+/// The calorie target's mode with the fixed target, and the rows the
+/// dialog opens: expenditure, targets by weekday and, with [showMacros],
+/// macros. Live on [AdaptiveStore.settings]; the goal planner's target step
+/// shows it without the expenditure row, a step of its own.
+class TargetModeFields extends StatelessWidget {
+  final AdaptiveStore store;
+  final bool perLb;
+  final bool showMacros;
+  final bool showExpenditure;
+
+  const TargetModeFields(
+    this.store, {
+    super.key,
+    required this.perLb,
+    this.showMacros = true,
+    this.showExpenditure = true,
+  });
+
+  Future<void> _save(AdaptiveSettings value) async {
+    await store.save(value);
+    await _refreshGoals();
+  }
+
+  @override
+  Widget build(BuildContext context) => ValueListenableBuilder(
+    valueListenable: AdaptiveStore.settings,
+    builder: (context, settings, _) {
+      final mode = _modeOf(settings);
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // The choice below carries it as its group's name.
+          ExcludeSemantics(
+            child: Text(
+              'Calorie target',
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
+          ),
+          const SizedBox(height: 8),
+          StackingChoice<_TargetMode>(
+            key: const ValueKey('target-mode'),
+            identifier: 'target-mode',
+            groupLabel: 'Calorie target',
+            padding: EdgeInsets.zero,
+            values: _TargetMode.values,
+            label: (m) => switch (m) {
+              _TargetMode.formula => 'Formula',
+              _TargetMode.adaptive => 'Adaptive',
+              _TargetMode.fixed => 'Fixed',
+            },
+            selected: mode,
+            onChanged: (picked) => _save(
+              settings.copyWith(
+                adaptiveTarget: picked == _TargetMode.adaptive,
+                fixedTarget: picked == _TargetMode.fixed,
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(switch (mode) {
+            _TargetMode.formula =>
+              'From your profile and goal, plus logged activities.',
+            _TargetMode.adaptive =>
+              'Measured from your weight and what you log, set at a '
+                  'weekly check-in. ${switch (settings.activityMode) {
+                    ActivityMode.off => 'Logged activities are not added to it.',
+                    ActivityMode.weekly => "It counts the past week's activity.",
+                    ActivityMode.daily => "Each day's activity is added to it.",
+                  }}',
+            _TargetMode.fixed =>
+              'One you set. Logged activities and the kcal adjustment '
+                  'are not added to it.',
+          }, style: Theme.of(context).textTheme.bodySmall),
+          if (mode == _TargetMode.fixed)
+            ListTile(
+              key: const ValueKey('fixed-target'),
+              contentPadding: EdgeInsets.zero,
+              title: Text(
+                'Fixed target: '
+                '${energyText(context, settings.fixedTargetKcal)}',
+              ),
+              subtitle: Text(
+                settings.fixedMacros == null
+                    ? 'Macros from your split'
+                    : _macroText(settings.fixedMacros!),
+              ),
+              trailing: const Icon(Icons.edit_rounded),
+              onTap: () async {
+                final edited = await showDialog<AdaptiveSettings>(
+                  context: context,
+                  builder: (_) => _FixedTargetDialog(settings),
+                );
+                if (edited != null) await _save(edited);
+              },
+            ),
+          // Every mode: the estimate runs whichever target is on.
+          if (showExpenditure)
+            ListTile(
+              key: const ValueKey('expenditure-settings'),
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Expenditure and check-ins'),
+              subtitle: Text(expenditureSummary(settings)),
+              trailing: const Icon(Icons.chevron_right_rounded),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute<void>(
+                  builder: (_) => ExpenditureSettingsScreen(store: store),
+                ),
+              ),
+            ),
+          ListTile(
+            key: const ValueKey('weekday-targets'),
+            contentPadding: EdgeInsets.zero,
+            title: const Text('Targets by weekday'),
+            subtitle: Text(
+              AdaptiveSettingsDialog._offsetsText(
+                context,
+                settings.weekdayOffsets,
+              ),
+            ),
+            trailing: const Icon(Icons.edit_rounded),
+            onTap: () async {
+              final edited = await showDialog<List<double>>(
+                context: context,
+                builder: (_) => _WeekdayTargetsDialog(settings.weekdayOffsets),
+              );
+              if (edited != null) {
+                await _save(settings.copyWith(weekdayOffsets: edited));
+              }
+            },
+          ),
+          if (showMacros)
+            ListTile(
+              key: const ValueKey('macro-program'),
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Macros'),
+              subtitle: Text(
+                mode == _TargetMode.fixed && settings.fixedMacros != null
+                    ? 'The fixed target\'s grams'
+                    : settings.macroProgram?.summary(perLb: perLb) ??
+                          'Percentages from your macro split',
+              ),
+              trailing: const Icon(Icons.edit_rounded),
+              onTap: () async {
+                final edited = await showDialog<({MacroProgram? program})>(
+                  context: context,
+                  builder: (_) =>
+                      MacroProgramDialog(settings.macroProgram, perLb: perLb),
+                );
+                if (edited != null) {
+                  await _save(
+                    settings.copyWith(macroProgram: () => edited.program),
+                  );
+                }
+              },
+            ),
+        ],
+      );
+    },
+  );
 }
 
 String _macroText(FixedMacros m) => inMacroOrder(
