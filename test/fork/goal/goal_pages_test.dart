@@ -8,6 +8,7 @@ import 'package:opennutritracker/fork/goal/goal_actions.dart';
 import 'package:opennutritracker/fork/goal/goal_plan_view.dart';
 import 'package:opennutritracker/fork/goal/goal_planner.dart';
 import 'package:opennutritracker/fork/goal/goal_reached.dart';
+import 'package:opennutritracker/fork/goal/onboarding_goal.dart';
 import 'package:opennutritracker/fork/phases/phases.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 import 'package:provider/provider.dart';
@@ -270,5 +271,17 @@ void main() {
       find.text('Cut · 13 weeks · extended 1×'),
       200,
     );
+  });
+
+  test('onboarding starts its plan once the profile is saved', () async {
+    final store = _MemoryPhases();
+    final actions = GoalActions(store: store, save: (_, _) async => true);
+    await OnboardingGoal.save(actions);
+    expect(store.saved, isNull);
+    final plan = _cut();
+    OnboardingGoal.pending.value = plan;
+    await OnboardingGoal.save(actions);
+    expect(store.saved, same(plan));
+    expect(OnboardingGoal.pending.value, isNull);
   });
 }

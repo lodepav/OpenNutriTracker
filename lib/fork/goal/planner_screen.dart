@@ -351,7 +351,13 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
                           : last
                           ? _start
                           : () => setState(() => _step++),
-                      child: Text(last ? 'Start plan' : 'Next'),
+                      child: Text(
+                        !last
+                            ? 'Next'
+                            : _setup.onboarding
+                            ? 'Use this plan'
+                            : 'Start plan',
+                      ),
                     ),
                   ),
                 ),
