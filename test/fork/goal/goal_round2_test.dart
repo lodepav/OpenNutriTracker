@@ -203,13 +203,13 @@ void main() {
             context,
             _hold,
             null,
-            today: DateTime(2027, 2, 10),
+            today: DateTime(2027, 2, 1),
           );
           return const SizedBox();
         },
       ),
     );
-    // The hold runs Jan 4 to Jan 31.
+    // The hold runs Jan 4 to Jan 31; on Feb 1 it has ended.
     expect(before, (value: 'Maintain', note: 'until Jan 31'));
     expect(after, (value: 'Maintain', note: 'since Feb 1'));
   });
