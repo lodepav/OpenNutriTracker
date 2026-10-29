@@ -228,7 +228,7 @@ void main() {
 
     test('the next goal starts on its day, the one before kept', () async {
       store.queue.addAll(
-        reflowed(_plan, [_hold, _bulk], from: today, fromKg: 80),
+        reflowed(_plan, [_hold, _bulk], fromKg: 80),
       );
       expect(await actions().startNextIfDue(81), isFalse);
       today = DateTime(2027, 1, 4, 7);
@@ -243,7 +243,7 @@ void main() {
     test('started late, the one before still ends the day the next '
         'began', () async {
       store.queue.addAll(
-        reflowed(_plan, [_hold, _bulk], from: today, fromKg: 80),
+        reflowed(_plan, [_hold, _bulk], fromKg: 80),
       );
       // The app first opened three days after the hold was due.
       today = DateTime(2027, 1, 7, 9);
@@ -262,7 +262,7 @@ void main() {
         start: DateTime(2027, 5, 3),
       ).toPlan();
       store.queue.addAll(
-        reflowed(_plan, [_bulk, cut], from: today, fromKg: 80),
+        reflowed(_plan, [_bulk, cut], fromKg: 80),
       );
       expect(store.queue.map(queuedProblem), [null, null]);
       await actions().moveUpcoming(1, 0);

@@ -144,7 +144,6 @@ void main() {
           breaks: false,
         ).toPlan(),
       ],
-      from: _start,
       fromKg: 86.4,
     );
     await _pump(

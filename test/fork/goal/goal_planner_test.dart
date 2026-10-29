@@ -434,7 +434,6 @@ void main() {
       final queue = reflowed(
         cut,
         [maintain, bulk],
-        from: DateTime(2026, 10, 29),
         fromKg: 85,
       );
       expect(queue[0].start, cut.end);
@@ -447,22 +446,11 @@ void main() {
       expect(queue[1].targetKg, 84);
     });
 
-    test('with none running, the first starts on the day given', () {
-      final queue = reflowed(
-        null,
-        [bulk],
-        from: DateTime(2026, 10, 29, 15),
-        fromKg: 82,
-      );
-      expect(queue.single.start, DateTime(2026, 10, 29));
-      expect(queue.single.phases.single.weeks, 8);
-    });
 
     test("the calendar has each upcoming goal's days", () {
       final queue = reflowed(
         cut,
         [maintain, bulk],
-        from: DateTime(2026, 10, 29),
         fromKg: 85,
       );
       PhaseKind? on(DateTime d) => kindOn(d, cut, [], upcoming: queue);

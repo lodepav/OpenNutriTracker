@@ -385,16 +385,15 @@ PhasePlan restarted(PhasePlan plan, DateTime start, double startKg) =>
     ).copyWith(start: _date(start), startKg: startKg).toPlan();
 
 /// The goals in [upcoming], each [restarted] the day after the one before
-/// ends, from the weight it ends at: the first after [current], or from
-/// [from] at [fromKg] with no goal running.
+/// ends, from the weight it ends at (or [fromKg]): the first after
+/// [current].
 List<PhasePlan> reflowed(
-  PhasePlan? current,
+  PhasePlan current,
   List<PhasePlan> upcoming, {
-  required DateTime from,
   required double fromKg,
 }) {
-  var start = current?.end ?? _date(from);
-  var kg = (current == null ? null : endKgOf(current)) ?? fromKg;
+  var start = current.end;
+  var kg = endKgOf(current) ?? fromKg;
   final out = <PhasePlan>[];
   for (final p in upcoming) {
     final next = restarted(p, start, kg);

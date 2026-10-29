@@ -174,14 +174,7 @@ class GoalActions {
     List<PhasePlan> queue,
     double? nowKg,
   ) => _store.saveUpcoming(
-    queue.isEmpty
-        ? const []
-        : reflowed(
-            current,
-            queue,
-            from: _clock(),
-            fromKg: nowKg ?? current.startKg ?? 0,
-          ),
+    reflowed(current, queue, fromKg: nowKg ?? current.startKg ?? 0),
   );
 
   /// [action] on the actions' profile; false when a switch overtook it.
