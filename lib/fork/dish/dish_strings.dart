@@ -12,6 +12,13 @@ abstract final class DishStrings {
   static const saveAsRecipe = 'Save recipe';
   static const recipeDescription =
       'One serving, from an AI breakdown. The grams are estimates: check them.';
+  static const logSeparately = 'Log separately';
+  static const logAsOneDish = 'Log as one dish';
+  static const portion = 'Portion';
+  static const showFoods = 'Show the foods';
+  static const hideFoods = 'Hide the foods';
+  static String dishSummary(int foods, String energy) =>
+      '$foods ${foods == 1 ? 'food' : 'foods'} · $energy';
   static const nothingToSave = 'No ingredient row is ready to save.';
   static const saveAllAsRecipe = 'Save all as a recipe';
   static const typedRecipeDescription =

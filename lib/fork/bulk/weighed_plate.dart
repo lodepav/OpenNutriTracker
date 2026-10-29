@@ -134,8 +134,6 @@ List<ParsedMealItem> weighedPlateItems(
     ];
   }
   final group = Object();
-  final known = grams.nonNulls;
-  final plate = total ?? (known.isEmpty ? null : known.reduce((a, b) => a + b));
   return [
     for (final (i, food) in foods.indexed)
       DishIngredientItem(
@@ -144,7 +142,6 @@ List<ParsedMealItem> weighedPlateItems(
         unit: grams[i] == null ? null : 'g',
         dish: dish == null || dish.isEmpty ? 'Meal' : dish,
         group: group,
-        dishGrams: plate,
       ),
   ];
 }

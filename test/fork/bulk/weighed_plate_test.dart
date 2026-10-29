@@ -122,7 +122,6 @@ void main() {
       expect(items.map((i) => i.quantity), [150, 150, 50]);
       final first = items.first as DishIngredientItem;
       expect(first.dish, 'Chicken bowl');
-      expect(first.dishGrams, 350);
       expect(
         items.every(
           (i) => identical((i as DishIngredientItem).group, first.group),
@@ -171,7 +170,6 @@ void main() {
         ('carrots, raw', 40),
         ('beans', 30),
       ]);
-      expect((items.first as DishIngredientItem).dishGrams, 290);
     });
 
     test(

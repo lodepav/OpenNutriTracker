@@ -20,6 +20,7 @@ import 'package:opennutritracker/core/utils/ai_model_catalogue.dart';
 import 'package:opennutritracker/core/utils/energy_display.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/core/utils/navigation_options.dart';
+import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dart';
 import 'package:opennutritracker/features/add_meal/domain/meal_photo_interpreter.dart';
 import 'package:opennutritracker/features/add_meal/domain/usecase/read_meal_text_usecase.dart';
 import 'package:opennutritracker/features/add_meal/presentation/bloc/bulk_add_bloc.dart';
@@ -40,6 +41,7 @@ import 'package:opennutritracker/generated/l10n.dart';
 // break a row into a dish's ingredients (D12)
 import 'package:opennutritracker/fork/dish/dish_breakdown_controller.dart';
 import 'package:opennutritracker/fork/dish/dish_breakdown_rows.dart';
+import 'package:opennutritracker/fork/dish/dish_group.dart';
 import 'package:opennutritracker/fork/dish/dish_recipe.dart';
 import 'package:opennutritracker/fork/dish/dish_strings.dart';
 import 'package:opennutritracker/fork/bulk/discard_guard.dart';
@@ -53,6 +55,7 @@ import 'package:opennutritracker/fork/recipe/recipe_link.dart';
 
 part 'bulk_add_body.dart';
 part 'bulk_add_row.dart';
+part 'bulk_add_dish.dart';
 
 class BulkAddScreenArguments {
   final IntakeTypeEntity intakeTypeEntity;
@@ -197,6 +200,29 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
   /// One controller per row, keyed by row index and rebuilt whenever a new
   /// parse produces a different set of rows.
   final _amountControllers = <int, TextEditingController>{};
+
+  /// A dish's portion field, its folded state, and the dishes the user
+  /// chose to log as separate rows (canvas "AI dish A", D24); keyed by its
+  /// group.
+  final _portionControllers = <Object, TextEditingController>{};
+  final _foldedDishes = <Object>{};
+  final _separateDishes = <Object>{};
+
+  /// The rows' amounts when the portion being typed was first changed, so
+  /// that each keystroke scales from them and not from the last rounding.
+  final _portionBase = <Object, Map<int, double>>{};
+
+  void _toggleDishFolded(Object group) =>
+      setState(() => _foldedDishes.remove(group) || _foldedDishes.add(group));
+
+  void _logDishSeparately(Object group, {bool separately = true}) => setState(
+    () =>
+        separately ? _separateDishes.add(group) : _separateDishes.remove(group),
+  );
+
+  /// Done typing a portion: the field shows the rows' sum again.
+  void _endPortionEdit(Object group) =>
+      setState(() => _portionBase.remove(group));
 
   /// What the last submit attempt refused, keyed by index into
   /// `BulkAddLoadedState.rows`.
@@ -472,6 +498,9 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
     _bloc.close();
     _textController.dispose();
     for (final controller in _amountControllers.values) {
+      controller.dispose();
+    }
+    for (final controller in _portionControllers.values) {
       controller.dispose();
     }
     super.dispose();
@@ -816,7 +845,7 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
       setState(() => _quantityErrors.remove(index));
 
   Widget _buildSubmitBar(BuildContext context, BulkAddLoadedState state) {
-    final count = state.loggableCount;
+    final count = loggedEntries(state.rows, separate: _separateDishes);
     return SafeArea(
       top: false,
       child: Padding(
@@ -1049,6 +1078,11 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
       controller.dispose();
     }
     _amountControllers.clear();
+    for (final controller in _portionControllers.values) {
+      controller.dispose();
+    }
+    _portionControllers.clear();
+    _portionBase.clear();
     // Both are keyed by row index, so both belong to the batch that is
     // being replaced. A mark left behind would land on whichever row
     // happens to take that index next.
@@ -1123,7 +1157,9 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
     // are marked on the rows themselves and a filtered iterable cannot say
     // which row it came from.
     final invalid = <int, BulkAddQuantityError>{};
-    final writes = <({BulkAddRow row, double amount})>[];
+    final writes = <({String unit, double amount, MealEntity meal})>[];
+    // where each dish logged as one goes in [writes]
+    final dishes = <({int at, Object group})>[];
     for (var index = 0; index < state.rows.length; index++) {
       final row = state.rows[index];
       if (!row.willBeLogged) continue;
@@ -1136,16 +1172,24 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
       // Cannot throw: `quantityError` returned null, which required this
       // same text to parse.
       final quantity = double.parse(row.amountText.trim().replaceAll(',', '.'));
+      if (row.dishIngredient?.group case final group?
+          when !_separateDishes.contains(group)) {
+        if (!dishes.any((d) => identical(d.group, group))) {
+          dishes.add((at: writes.length, group: group));
+        }
+        continue;
+      }
       // Store the value the intake is actually written with: nutriment
       // values are per gram/millilitre, so oz / fl.oz / serving have to be
       // converted first. Logging the raw amount stores 4 g for 4 oz.
       writes.add((
-        row: row,
+        unit: row.effectiveUnit,
         amount: convertQuantityToBaseUnit(
           quantity,
           row.effectiveUnit,
           row.meal!,
         ),
+        meal: row.meal!,
       ));
     }
 
@@ -1181,6 +1225,17 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
       return;
     }
 
+    // A dish is one entry: its rows combined as a recipe, at its portion.
+    for (final dish in dishes.reversed) {
+      final meal = dishMeal(state.rows, dish.group);
+      final grams = dishPortion(
+        state.rows,
+        dishMembers(state.rows, dish.group),
+      );
+      if (meal == null || grams <= 0) continue;
+      writes.insert(dish.at, (unit: 'g', amount: grams, meal: meal));
+    }
+
     setState(() {
       _quantityErrors.clear();
       _submitting = true;
@@ -1200,10 +1255,10 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
           // The suffix is a display device; the stored vocabulary stays
           // the closed set the export format and QR payload were written
           // against. #864 decision 3.
-          storedUnit(write.row.effectiveUnit),
+          storedUnit(write.unit),
           write.amount.toString(),
           _args.intakeTypeEntity,
-          write.row.meal!,
+          write.meal,
           _args.day,
         );
         // none when a profile switch dropped it; the
