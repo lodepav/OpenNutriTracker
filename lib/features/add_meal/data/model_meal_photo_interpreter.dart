@@ -4,9 +4,11 @@ import 'package:opennutritracker/features/add_meal/domain/meal_items_api.dart';
 import 'package:opennutritracker/features/add_meal/domain/meal_photo_interpreter.dart';
 import 'package:opennutritracker/features/add_meal/util/meal_text_parser.dart';
 import 'package:opennutritracker/features/add_meal/util/soft_text_score.dart';
-// [fork] S170 note-fractions, S172 saved-dishes
+// [fork] S170 note-fractions, S172 saved-dishes, S175 weighed-plate
 import 'package:opennutritracker/fork/bulk/note_counts.dart';
+import 'package:opennutritracker/fork/bulk/note_weights.dart';
 import 'package:opennutritracker/fork/bulk/saved_dishes.dart';
+import 'package:opennutritracker/fork/bulk/weighed_plate.dart';
 // [/fork]
 
 /// Reads a photograph of a meal with a model and returns the foods it can
@@ -92,6 +94,18 @@ Rules:
   }) async {
     // [fork] S172 saved-dishes: named as the user saved them
     final saved = savedDishesPrompt(_savedDishes?.call() ?? const []);
+    // [/fork]
+    // [fork] S175 weighed-plate: a note that states weights
+    if (noteWeights(note) case final weights?) {
+      return readWeighedPlate(
+        _api,
+        photo,
+        note: note!,
+        weights: weights,
+        localeCode: localeCode,
+        savedDishes: saved,
+      );
+    }
     // [/fork]
     final result = await _api.requestItems(
       content: MealPhotoContent(
