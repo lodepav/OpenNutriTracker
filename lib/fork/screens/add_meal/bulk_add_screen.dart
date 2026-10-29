@@ -923,7 +923,7 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
                     S.of(sheetContext).mealImageTakePhoto,
                   (null, ImageSource.gallery) =>
                     S.of(sheetContext).mealImagePickFromGallery,
-                  _ => 'Read the shared photo',
+                  _ => 'Use the shared photo',
                 }),
                 onTap: () => Navigator.of(sheetContext).pop(true),
               ),
