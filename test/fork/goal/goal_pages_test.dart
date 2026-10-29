@@ -408,6 +408,12 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('1.5 kg a week'), findsOneWidget);
     expect(find.textContaining('Over 1% a week'), findsOneWidget);
+    // Its end, as the three give theirs; the rate read out once.
+    expect(
+      find.textContaining(RegExp(r'until \w+ \d+ · .*of your weight a week')),
+      findsOneWidget,
+    );
+    expect(tester.widget<Slider>(find.byType(Slider)).label, isNull);
     await tester.drag(find.byType(Scrollable).first, const Offset(0, 400));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Gentle · 0.25 kg a week'));
@@ -467,6 +473,47 @@ void main() {
       ),
       findsNothing,
     );
+  });
+
+  testWidgets('the check-in settings show only on Adaptive', (tester) async {
+    addTearDown(() => AdaptiveStore.settings.value = const AdaptiveSettings());
+    await _pump(
+      tester,
+      GoalPlannerScreen(
+        setup: const PlannerSetup(
+          nowKg: 86.4,
+          unit: BodyWeightUnit.kg,
+          expenditureKcal: 3045,
+          formulaKcal: 3540,
+          bodyFatPercent: 22,
+        ),
+        draft: GoalDraft.fresh(86.4, _start, targetKg: 80),
+        onStart: (_) async => true,
+      ),
+    );
+    for (var i = 0; i < 3; i++) {
+      await tester.tap(find.text('Next'));
+      await tester.pumpAndSettle();
+    }
+    final note = find.textContaining('its settings show then');
+    await tester.scrollUntilVisible(
+      note,
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    // Hidden, not greyed: a greyed limit still looked chosen.
+    expect(find.text('Check-in day'), findsNothing);
+    expect(find.text('Largest change per check-in'), findsNothing);
+    AdaptiveStore.settings.value = AdaptiveStore.settings.value.copyWith(
+      adaptiveTarget: true,
+    );
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('Check-in day'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(note, findsNothing);
   });
 
   testWidgets('a goal after the planned ones: its place, its pace, the rest '
@@ -564,7 +611,41 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.textContaining('Step 2 of 4 · Pace'), findsOneWidget);
+    // A detour: the step count stays, and Done comes back to Carried over.
+    expect(
+      find.textContaining('Step 2 of 3 · Carried over › Pace'),
+      findsOneWidget,
+    );
+    await tester.tap(find.text('Done'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Step 2 of 3 · Carried over'), findsOneWidget);
+    expect(find.text('Keep all and go on'), findsOneWidget);
+  });
+
+  testWidgets('a queued maintenance calls its second step Length', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      GoalPlannerScreen(
+        setup: PlannerSetup(
+          nowKg: 85,
+          unit: BodyWeightUnit.kg,
+          expenditureKcal: 2870,
+          bodyFatPercent: 22,
+          running: _cut(breaks: false),
+        ),
+        draft: GoalDraft.fresh(85, DateTime(2026, 10, 29), targetKg: 76),
+        onStart: (_) async => true,
+        onQueue: (_, _) async => true,
+        today: DateTime(2026, 10, 29),
+      ),
+    );
+    await tester.tap(find.text('Maintain'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Next'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Step 2 of 4 · Length'), findsOneWidget);
   });
 
   testWidgets('with no program, the macros step shows the split in grams', (

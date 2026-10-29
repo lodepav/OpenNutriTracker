@@ -13,6 +13,7 @@ export 'package:opennutritracker/features/settings/settings_screen.dart'
     show SettingsScreenArguments;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:intl/intl.dart' show DateFormat;
 import 'package:opennutritracker/core/domain/entity/app_theme_entity.dart';
 import 'package:opennutritracker/core/domain/entity/body_weight_unit_entity.dart';
 import 'package:opennutritracker/core/l10n/shipped_locales.dart';
@@ -56,7 +57,9 @@ import 'package:opennutritracker/generated/l10n.dart';
 import 'package:opennutritracker/fork/leftovers/meal_photo_cache.dart';
 // The trend and target switches (D13)
 import 'package:opennutritracker/fork/adaptive/adaptive_ui.dart';
+import 'package:opennutritracker/fork/goal/goal_plan_view.dart';
 import 'package:opennutritracker/fork/goal/planner_screen.dart';
+import 'package:opennutritracker/fork/phases/phases.dart';
 import 'package:opennutritracker/fork/reminders/reminders_ui.dart';
 // The automatic backup's settings (phase 2)
 import 'package:opennutritracker/fork/backup/auto_backup_ui.dart';

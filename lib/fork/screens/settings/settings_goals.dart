@@ -13,15 +13,7 @@ extension _GoalsSettings on _SettingsScreenState {
       _SettingsGroup(
         palette: palette,
         tiles: [
-          _SettingsTile(
-            identifier: 'settings-goal-planner',
-            palette: palette,
-            icon: Icons.flag_rounded,
-            title: 'Goal planner',
-            subtitle: 'A cut, maintenance or bulk, step by step',
-            showChevron: true,
-            onTap: () => openGoalPlanner(context),
-          ),
+          _GoalPlannerTile(palette: palette, unit: state.bodyWeightUnit),
           // The old Calculations dialog had grown into a wall of
           // sliders covering daily kcal, macros, per-meal split,
           // ten nutrient goals, and the diary day boundary. Each
@@ -193,6 +185,65 @@ extension _GoalsSettings on _SettingsScreenState {
         diaryBloc: _diaryBloc,
         calendarDayBloc: _calendarDayBloc,
       ),
+    );
+  }
+}
+
+/// The Goal planner row: the goal running, or what the planner does.
+class _GoalPlannerTile extends StatefulWidget {
+  final AppPalette palette;
+  final BodyWeightUnit unit;
+
+  const _GoalPlannerTile({required this.palette, required this.unit});
+
+  @override
+  State<_GoalPlannerTile> createState() => _GoalPlannerTileState();
+}
+
+class _GoalPlannerTileState extends State<_GoalPlannerTile> {
+  PhasePlan? _plan;
+
+  Future<void> _read() async {
+    PhasePlan? plan;
+    try {
+      plan = await PhaseStore().plan();
+    } catch (_) {
+      // No store in a test: no plan.
+    }
+    if (mounted) setState(() => _plan = plan);
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _read();
+    PhaseStore.changes.addListener(_read);
+  }
+
+  @override
+  void dispose() {
+    PhaseStore.changes.removeListener(_read);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final plan = _plan;
+    final until = plan == null
+        ? null
+        : DateFormat.MMMd(
+            Localizations.localeOf(context).toLanguageTag(),
+          ).format(plan.end.subtract(const Duration(hours: 12)));
+    return _SettingsTile(
+      identifier: 'settings-goal-planner',
+      palette: widget.palette,
+      icon: Icons.flag_rounded,
+      title: 'Goal planner',
+      subtitle: plan == null
+          ? 'A cut, maintenance or bulk, step by step'
+          : '${goalTitle(plan, widget.unit)} · until $until',
+      showChevron: true,
+      onTap: () => openGoalPlanner(context),
     );
   }
 }

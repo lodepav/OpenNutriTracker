@@ -283,9 +283,9 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
   PhasePlan _goalBefore(int place) =>
       place == 0 ? _setup.running! : _setup.upcoming[place - 1];
 
-  /// The steps set up anew in a queued goal, the rest carried over:
-  /// another kind of goal than the one before has its own pace.
-  final _opened = <_Step>{};
+  /// A step opened from Carried over or the plan in a queued goal: shown
+  /// as a detour, so Done and Back return to where it was opened.
+  _Step? _detour;
 
   List<_Step> get _steps {
     final place = _place;
@@ -299,22 +299,32 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
         _Step.plan,
       ];
     }
-    final paceAgain = _draft.kind != _goalBefore(place).kind;
+    // Another kind of goal than the one before has its own pace; the
+    // rest is carried over.
     return [
       _Step.goal,
-      for (final step in [_Step.pace, _Step.burn, _Step.target, _Step.macros])
-        if (_opened.contains(step) || (step == _Step.pace && paceAgain)) step,
+      if (_draft.kind != _goalBefore(place).kind) _Step.pace,
       _Step.carried,
       _Step.plan,
     ];
   }
 
-  _Step get _at => _steps[_step];
+  _Step get _at => _detour ?? _steps[_step];
 
-  /// Shows [step], opening it in a queued goal.
+  /// [step]'s name; a maintenance goal's pace is its length.
+  String _label(_Step step) =>
+      step == _Step.pace && _draft.kind == PhaseKind.maintain
+      ? 'Length'
+      : step.label;
+
+  /// Shows [step]: in the steps, or as a detour from a queued goal's.
   void _goTo(_Step step) => setState(() {
-    _opened.add(step);
-    _step = _steps.indexOf(step);
+    final i = _steps.indexOf(step);
+    if (i < 0) {
+      _detour = step;
+    } else {
+      _step = i;
+    }
   });
 
   /// [_draft] at [place]: from the day the goal before ends, at the
@@ -449,9 +459,16 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
     final keep = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Leave without a plan?'),
-        content: const Text(
-          'Your goal stays as it is, and the settings changed here go back.',
+        title: Text(
+          widget.queuedAt != null
+              ? 'Leave without saving?'
+              : _queued
+              ? 'Leave without adding it?'
+              : 'Leave without a plan?',
+        ),
+        content: Text(
+          '${_place == null ? 'Your goal stays' : 'Your plan stays'} as it '
+          'is, and the settings changed here go back.',
         ),
         actions: [
           TextButton(
@@ -509,7 +526,9 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {
         if (didPop) return;
-        if (_step > 0) {
+        if (_detour != null) {
+          setState(() => _detour = null);
+        } else if (_step > 0) {
           setState(() => _step--);
         } else {
           _leave();
@@ -571,7 +590,9 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
                 child: Text(
-                  'Step ${_step + 1} of ${steps.length} · ${_at.label}',
+                  'Step ${_step + 1} of ${steps.length} · '
+                  '${_label(steps[_step])}'
+                  '${_detour == null ? '' : ' › ${_label(_detour!)}'}',
                   style: theme.textTheme.labelMedium?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
@@ -594,11 +615,17 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
             child: Row(
               children: [
-                if (_step > 0) ...[
+                if (_step > 0 || _detour != null) ...[
                   Semantics(
                     identifier: 'goal-planner-back',
                     child: OutlinedButton(
-                      onPressed: () => setState(() => _step--),
+                      onPressed: () => setState(() {
+                        if (_detour != null) {
+                          _detour = null;
+                        } else {
+                          _step--;
+                        }
+                      }),
                       child: const Text('Back'),
                     ),
                   ),
@@ -606,17 +633,23 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
                 ],
                 Expanded(
                   child: Semantics(
-                    identifier: last
+                    identifier: _detour != null
+                        ? 'goal-planner-done'
+                        : last
                         ? 'goal-planner-start'
                         : 'goal-planner-next',
                     child: FilledButton(
                       onPressed: !_canGoOn || _saving
                           ? null
+                          : _detour != null
+                          ? () => setState(() => _detour = null)
                           : last
                           ? _start
                           : () => setState(() => _step++),
                       child: Text(
-                        _at == _Step.carried
+                        _detour != null
+                            ? 'Done'
+                            : _at == _Step.carried
                             ? 'Keep all and go on'
                             : !last
                             ? 'Next'
@@ -835,7 +868,6 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
                     selected: !_queued && _sameDay(_draft.start, day),
                     onSelected: (_) => setState(() {
                       _place = null;
-                      _opened.clear();
                       _draft = _draft.copyWith(
                         start: DateTime(day.year, day.month, day.day),
                         startKg: _setup.nowKg,
@@ -897,6 +929,7 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
     final pace = _draft.paceKg.clamp(range.min, range.max);
     final kcal = pace * AdaptiveSettings.commonKcalPerKg / 7;
     final percent = pace / _draft.startKg * 100;
+    final end = _planOf(_draft.copyWith(paceKg: pace)).end;
     final theme = Theme.of(context);
     return [
       Padding(
@@ -926,7 +959,8 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
               Text(_rate(pace), style: theme.textTheme.titleMedium),
               Text(
                 'about ${energyText(context, kcal)} '
-                '${cut ? 'under' : 'over'} · '
+                '${cut ? 'under' : 'over'} · until '
+                '${_date(_dayBefore(end))} · '
                 '${percent.toStringAsFixed(1)}% of your weight a week',
                 style: theme.textTheme.bodySmall,
               ),
@@ -938,7 +972,8 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
                   max: range.max,
                   divisions: ((range.max - range.min) / customPaceStepKg)
                       .round(),
-                  label: _rate(pace),
+                  // The rate above shows it; a label would be read out
+                  // with the value, twice.
                   semanticFormatterCallback: _rate,
                   onChanged: (v) => setState(
                     () => _draft = _draft.copyWith(
@@ -1248,8 +1283,8 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
       _question(
         context,
         'The rest is set up',
-        'From $before. Keep them, or change one: a change applies to '
-            'every goal, the one now included.',
+        'From $before. Keep them, or change one: a change to these also '
+            'changes your current goal.',
       ),
       _Panel(
         padding: const EdgeInsets.symmetric(vertical: 4),
@@ -1257,7 +1292,7 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
           if (!steps.contains(_Step.pace))
             _ChangeRow(
               identifier: 'goal-carried-pace',
-              title: _draft.kind == PhaseKind.maintain ? 'How long' : 'Pace',
+              title: _label(_Step.pace),
               subtitle: _draft.kind == PhaseKind.maintain
                   ? _weeks(_draft.maintainWeeks)
                   : '${_rate(_draft.paceKg)}'
