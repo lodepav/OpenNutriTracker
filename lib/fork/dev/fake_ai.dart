@@ -8,6 +8,7 @@ import 'package:opennutritracker/core/utils/ai_credential_storage.dart';
 import 'package:opennutritracker/fork/dev/replay_ai.dart';
 import 'package:opennutritracker/fork/label/label_scan.dart';
 import 'package:opennutritracker/fork/leftovers/ai_leftovers.dart';
+import 'package:opennutritracker/fork/bulk/weighed_plate.dart';
 import 'package:opennutritracker/fork/photos/body_compare.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -82,6 +83,8 @@ class FakeAiClient extends http.BaseClient {
         ? _leftovers(system)
         : system.startsWith(bodyComparePromptStart)
         ? _body
+        : system.startsWith(weighedPlatePrompt)
+        ? _plate
         : system.contains('You break a dish into the ingredients')
         ? _breakdown(text)
         : _read(text);
@@ -103,6 +106,17 @@ class FakeAiClient extends http.BaseClient {
       headers: {'content-type': 'application/json'},
     );
   }
+
+  /// A weighed plate, whatever the note weighs: a chicken bowl as served,
+  /// which the app sizes to the note's weights.
+  static const _plate = [
+    {'query': 'dish=Chicken rice bowl'},
+    {'query': 'chicken breast, grilled', 'quantity': 130, 'unit': 'g'},
+    {'query': 'rice, white, cooked', 'quantity': 100, 'unit': 'g'},
+    {'query': 'spinach, raw', 'quantity': 40, 'unit': 'g'},
+    {'query': 'carrots, raw', 'quantity': 40, 'unit': 'g'},
+    {'query': 'cabbage, red, raw', 'quantity': 40, 'unit': 'g'},
+  ];
 
   static String _userText(Map<String, dynamic> body) {
     final buffer = StringBuffer();

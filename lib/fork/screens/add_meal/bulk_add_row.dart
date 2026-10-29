@@ -79,7 +79,9 @@ extension _BulkAddRow on _BulkAddScreenState {
                       color: theme.colorScheme.tertiary,
                     ),
                   )
-                else if (row.dishIngredient case final ingredient?)
+                // under its dish's heading it needs no line of its own
+                else if (row.dishIngredient case final ingredient?
+                    when _separateDishes.contains(ingredient.group))
                   Text(
                     DishStrings.ingredientOf(ingredient.dish),
                     style: theme.textTheme.bodySmall?.copyWith(
@@ -193,13 +195,20 @@ extension _BulkAddRow on _BulkAddScreenState {
     // breakdown, saving it as a recipe
     if (_dishBreakdown.canBreakDown(row))
       (label: DishStrings.breakDownAction, onPressed: () => _breakDown(row)),
-    if (_bloc.state case BulkAddLoadedState(
-      :final rows,
-    ) when isFirstOfDishGroup(rows, index))
+    // a dish logged as one has these under its rows instead
+    if (_bloc.state case BulkAddLoadedState(:final rows)
+        when isFirstOfDishGroup(rows, index) &&
+            _separateDishes.contains(row.dishIngredient!.group)) ...[
       (
         label: DishStrings.saveAsRecipe,
         onPressed: () => _saveDishRecipe(row.dishIngredient!.group),
       ),
+      (
+        label: DishStrings.logAsOneDish,
+        onPressed: () =>
+            _logDishSeparately(row.dishIngredient!.group, separately: false),
+      ),
+    ],
     (
       label: row.skipped
           ? S.of(context).bulkAddIncludeLabel

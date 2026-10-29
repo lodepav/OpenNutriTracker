@@ -39,6 +39,14 @@ void main() {
       '150g',
       '150 g total',
       '0.15 kg',
+      '150 grams',
+      'chicken, rice, broccoli = 150g',
+      'chicken, rice, broccoli (150g)',
+      'chicken, rice, broccoli, 150g',
+      'chicken, rice, broccoli\n150g',
+      'weighed 150g',
+      'whole plate 150g',
+      'bowl - 150g',
     ]) {
       test('"$note" is a 150 g plate', () {
         final w = noteWeights(note)!;
@@ -51,6 +59,9 @@ void main() {
       'chicken 50g, rice 80g',
       'chicken - 50g, rice - 80g',
       'chicken: 50g, rice: 80g',
+      'chicken 50g\nrice 80g',
+      '- chicken 50g\n- rice 80g',
+      'chicken 50g, rice 80g.',
     ]) {
       test('"$note" weighs each food', () {
         final w = noteWeights(note)!;
@@ -66,6 +77,24 @@ void main() {
       final w = noteWeights('total 400g, chicken 150g, potatoes, sauce')!;
       expect(w.totalGrams, 400);
       expect(w.foods, [(name: 'chicken', grams: 150.0)]);
+    });
+
+    test('a total after the foods\' own weights keeps them all', () {
+      final w = noteWeights(
+        'chicken 120g, rice 100g, spinach 30g - 250g total',
+      )!;
+      expect(w.totalGrams, 250);
+      expect(w.foods, [
+        (name: 'chicken', grams: 120.0),
+        (name: 'rice', grams: 100.0),
+        (name: 'spinach', grams: 30.0),
+      ]);
+    });
+
+    test('a weight after a list with no separator is the last food\'s', () {
+      final w = noteWeights('chicken, rice, spinach 350g')!;
+      expect(w.totalGrams, isNull);
+      expect(w.foods, [(name: 'spinach', grams: 350.0)]);
     });
 
     test('one food and its weight is that food\'s', () {
@@ -93,7 +122,6 @@ void main() {
       expect(items.map((i) => i.quantity), [150, 150, 50]);
       final first = items.first as DishIngredientItem;
       expect(first.dish, 'Chicken bowl');
-      expect(first.dishGrams, 350);
       expect(
         items.every(
           (i) => identical((i as DishIngredientItem).group, first.group),
@@ -142,7 +170,6 @@ void main() {
         ('carrots, raw', 40),
         ('beans', 30),
       ]);
-      expect((items.first as DishIngredientItem).dishGrams, 290);
     });
 
     test(

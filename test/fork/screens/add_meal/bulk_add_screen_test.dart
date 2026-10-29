@@ -31,6 +31,8 @@ import 'package:opennutritracker/features/add_meal/domain/usecase/resolve_parsed
 import 'package:opennutritracker/features/add_meal/domain/usecase/search_products_usecase.dart';
 import 'package:opennutritracker/features/add_meal/presentation/bloc/bulk_add_bloc.dart';
 import 'package:opennutritracker/features/add_meal/util/meal_text_parser.dart';
+import 'package:opennutritracker/fork/dish/dish_breakdown_rows.dart';
+import 'package:opennutritracker/fork/dish/dish_strings.dart';
 import 'package:opennutritracker/fork/screens/add_meal/bulk_add_screen.dart';
 import 'package:opennutritracker/features/add_meal/presentation/widgets/own_server_wait_indicator.dart';
 import 'package:opennutritracker/features/diary/presentation/bloc/calendar_day_bloc.dart';
@@ -220,11 +222,12 @@ Future<void> _register(
 /// test can hold the instance the screen holds and drive a photo read
 /// without a picker. Returns that bloc.
 Future<BulkAddBloc> _registerWithPhotoReading(
-  MealPhotoReadResult reading,
-) async {
-  await _register(const {});
+  MealPhotoReadResult reading, {
+  Map<String, List<MealEntity>> results = const {},
+}) async {
+  await _register(results);
   final bloc = BulkAddBloc(
-    ResolveParsedMealsUseCase(_FakeSearch(const {})),
+    ResolveParsedMealsUseCase(_FakeSearch(results)),
     ReadMealTextUseCase(
       AiCredentialStorage(_EmptyStorage()),
       (_) => throw StateError('must not be built without a key'),
@@ -1765,6 +1768,129 @@ void main() {
       'Milk',
     ]);
     expect(_homeBloc.refreshed, isTrue);
+  });
+
+  group('a dish the photo read (D24)', () {
+    final group = Object();
+    DishIngredientItem item(String query, double grams, double? eaten) =>
+        DishIngredientItem(
+          query: query,
+          quantity: grams,
+          unit: 'g',
+          dish: 'chicken bowl',
+          group: group,
+          dishGrams: eaten,
+        );
+
+    Future<void> readDish(
+      WidgetTester tester, {
+      double chicken = 200,
+      double rice = 150,
+      double? eaten,
+    }) async {
+      // the heading, both rows and the dish's actions on one screen
+      tester.view.physicalSize = const Size(800, 2000);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final bloc = await _registerWithPhotoReading(
+        MealPhotoRead(
+          MealTextParseResult(
+            items: [item('chicken', chicken, eaten), item('rice', rice, eaten)],
+            errors: const [],
+          ),
+        ),
+        results: {
+          'chicken': [_meal('Chicken')],
+          'rice': [_meal('Rice')],
+        },
+      );
+      await tester.pumpWidget(_app());
+      tester.state<NavigatorState>(find.byType(Navigator)).pushNamed('/bulk');
+      await tester.pumpAndSettle();
+      bloc.add(
+        ReadMealPhotoEvent(
+          photo: MealPhoto(
+            bytes: Uint8List.fromList([1, 2, 3]),
+            mediaType: 'image/webp',
+          ),
+          usesImperialUnits: false,
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    Finder portion() => find.widgetWithText(TextField, DishStrings.portion);
+
+    testWidgets('its portion scales the foods; it logs as one', (tester) async {
+      await readDish(tester);
+      expect(find.text('Chicken bowl'), findsOneWidget);
+      final l10n = await S.delegate.load(const Locale('en'));
+      expect(find.text(l10n.bulkAddSubmitLabel(1)), findsOneWidget);
+      expect(tester.widget<TextField>(portion()).controller!.text, '350');
+
+      await tester.enterText(portion(), '175');
+      await tester.pumpAndSettle();
+      expect(find.widgetWithText(TextField, '100'), findsOneWidget);
+      expect(find.widgetWithText(TextField, '75'), findsOneWidget);
+
+      await tester.tap(_submitButton());
+      await tester.pumpAndSettle();
+      expect(_mealDetailBloc.writes.map((w) => '$w'), ['Chicken bowl 175.0 g']);
+    });
+
+    testWidgets('a breakdown\'s portion is in grams as eaten', (tester) async {
+      // 300 g of raw ingredients for a 350 g dish
+      await readDish(tester, chicken: 200, rice: 100, eaten: 350);
+      expect(tester.widget<TextField>(portion()).controller!.text, '350');
+
+      await tester.enterText(portion(), '175');
+      await tester.pumpAndSettle();
+      expect(find.widgetWithText(TextField, '100'), findsOneWidget);
+      expect(find.widgetWithText(TextField, '50'), findsOneWidget);
+
+      await tester.tap(_submitButton());
+      await tester.pumpAndSettle();
+      expect(_mealDetailBloc.writes.map((w) => '$w'), ['Chicken bowl 175.0 g']);
+    });
+
+    testWidgets('a food changed changes the portion', (tester) async {
+      await readDish(tester);
+      await tester.enterText(find.widgetWithText(TextField, '150'), '50');
+      await tester.pumpAndSettle();
+      expect(tester.widget<TextField>(portion()).controller!.text, '250');
+    });
+
+    testWidgets('logged separately, its foods are their own entries', (
+      tester,
+    ) async {
+      await readDish(tester);
+      await tester.tap(find.text(DishStrings.logSeparately));
+      await tester.pumpAndSettle();
+      expect(portion(), findsNothing);
+      expect(find.text(DishStrings.logAsOneDish), findsOneWidget);
+      final l10n = await S.delegate.load(const Locale('en'));
+      expect(find.text(l10n.bulkAddSubmitLabel(2)), findsOneWidget);
+
+      await tester.tap(_submitButton());
+      await tester.pumpAndSettle();
+      expect(_mealDetailBloc.writes.map((w) => '$w'), [
+        'Chicken 200.0 g',
+        'Rice 150.0 g',
+      ]);
+    });
+
+    testWidgets('folded, its foods are hidden and still logged', (
+      tester,
+    ) async {
+      await readDish(tester);
+      await tester.tap(find.byTooltip(DishStrings.hideFoods));
+      await tester.pumpAndSettle();
+      expect(find.text('Chicken'), findsNothing);
+
+      await tester.tap(_submitButton());
+      await tester.pumpAndSettle();
+      expect(_mealDetailBloc.writes.map((w) => '$w'), ['Chicken bowl 350.0 g']);
+    });
   });
 
   testWidgets('converts the amount before writing it', (tester) async {

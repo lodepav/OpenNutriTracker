@@ -99,19 +99,32 @@ extension _BulkAddBody on _BulkAddScreenState {
       );
     }
 
+    final entries = dishListEntries(
+      state.rows,
+      folded: _foldedDishes,
+      separate: _separateDishes,
+    );
     // The list is the labelled surface, not each child — row identifiers
     // would churn every time the row count changes.
     final list = Semantics(
       identifier: 'bulk-add-row-list',
       child: ListView.separated(
         padding: const EdgeInsets.symmetric(vertical: 8),
-        itemCount: state.rows.length + (state.parseErrors.isEmpty ? 0 : 1),
+        itemCount: entries.length + (state.parseErrors.isEmpty ? 0 : 1),
         separatorBuilder: (_, _) => const Divider(height: 1),
         itemBuilder: (context, index) {
-          if (index == state.rows.length) {
+          if (index == entries.length) {
             return _buildParseErrors(context, state.parseErrors);
           }
-          return _buildRow(context, state, index);
+          return switch (entries[index]) {
+            DishHeading heading => _buildDishHeading(context, state, heading),
+            DishActions(:final group) => _buildDishActions(context, group),
+            DishRowEntry(:final index, inDish: true) => Padding(
+              padding: const EdgeInsets.only(left: 16),
+              child: _buildRow(context, state, index),
+            ),
+            DishRowEntry(:final index) => _buildRow(context, state, index),
+          };
         },
       ),
     );

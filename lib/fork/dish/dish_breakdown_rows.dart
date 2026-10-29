@@ -18,10 +18,9 @@ class DishIngredientItem extends ParsedMealItem {
   /// ("3 sklandrauši"), else one. Its recipe is saved with as many.
   final int servings;
 
-  /// The dish's weight as eaten, when the user stated it in grams: a
-  /// weighed plate's total (S175), or the amount a breakdown was asked for.
-  /// The ingredients add up to it on a weighed plate; a breakdown's are
-  /// raw, so theirs may not.
+  /// The dish's weight as eaten, when a breakdown was asked for an amount
+  /// in grams: its ingredients are raw, so they need not add up to it. The
+  /// dish's portion is in these grams (D24).
   final double? dishGrams;
 
   const DishIngredientItem({
