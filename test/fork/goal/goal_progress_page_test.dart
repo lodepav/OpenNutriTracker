@@ -120,4 +120,13 @@ void main() {
     await tester.scrollUntilVisible(find.text('Plan a goal'), 200);
     expect(find.textContaining('Reached'), findsWidgets);
   });
+
+  test('a chart day is a calendar day, 23 hours apart or 25', () {
+    // Local midnights either side of a daylight saving change: a day
+    // short of 24 hours, and one over.
+    final origin = DateTime(2026, 3, 28, 1);
+    expect(chartDay(origin, DateTime(2026, 3, 29)), 1);
+    expect(chartDay(DateTime(2026, 10, 24), DateTime(2026, 10, 26, 1)), 2);
+    expect(chartDay(origin, origin), 0);
+  });
 }
