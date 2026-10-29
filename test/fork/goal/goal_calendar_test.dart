@@ -4,6 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:opennutritracker/core/domain/entity/body_weight_unit_entity.dart';
 import 'package:opennutritracker/core/utils/energy_unit_provider.dart';
+import 'package:opennutritracker/features/profile/presentation/widgets/set_target_weight_dialog.dart';
+import 'package:opennutritracker/fork/goal/completed_goals_page.dart';
 import 'package:opennutritracker/fork/goal/goal_actions.dart';
 import 'package:opennutritracker/fork/goal/goal_calendar_page.dart';
 import 'package:opennutritracker/fork/goal/goal_planner.dart';
@@ -269,6 +271,73 @@ void main() {
     expect(find.text('Mark completed and start the next'), findsOneWidget);
     expect(find.text('Maintenance, 4 weeks starts today.'), findsOneWidget);
     expect(find.text('Mark completed and plan the next'), findsNothing);
+  });
+
+  testWidgets('a new weight picked is changed by tapping its row again', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      Scaffold(
+        body: ExtendSheet(
+          plan: _cut,
+          nowKg: 80.8,
+          unit: BodyWeightUnit.kg,
+          ended: true,
+          today: _cut.end,
+          actions: GoalActions(
+            store: _MemoryPhases(_cut, const []),
+            save: (_, _) async => true,
+            clock: () => _cut.end,
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('To a new weight'));
+    await tester.pumpAndSettle();
+    expect(find.byType(SetTargetWeightDialog), findsOneWidget);
+    await tester.tap(find.text('OK'));
+    await tester.pumpAndSettle();
+    expect(find.text('Tap to change'), findsOneWidget);
+
+    await tester.tap(find.text('Tap to change'));
+    await tester.pumpAndSettle();
+    expect(find.byType(SetTargetWeightDialog), findsOneWidget);
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+    expect(
+      find.bySemanticsIdentifier('goal-extend-weight-edit'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('completed goals: lost while cutting, no bulk tile', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      CompletedGoalsPage(
+        unit: BodyWeightUnit.kg,
+        load: () async => (
+          history: [
+            GoalRecord(
+              kind: PhaseKind.cut,
+              start: DateTime(2026, 1, 5),
+              end: DateTime(2026, 4, 6),
+              startKg: 88,
+              endKg: 81.2,
+              targetKg: 81,
+            ),
+          ],
+          running: null,
+          trend: const <double>[],
+          today: today,
+        ),
+      ),
+    );
+    expect(find.text('Lost while cutting'), findsOneWidget);
+    expect(find.text('6.8 kg'), findsOneWidget);
+    expect(find.textContaining('bulking'), findsNothing);
   });
 }
 

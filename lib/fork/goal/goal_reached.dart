@@ -198,7 +198,7 @@ class _GoalReachedPageState extends State<GoalReachedPage> {
           Dimens.spacing16,
           Dimens.spacing8,
           Dimens.spacing16,
-          Dimens.spacing32 + MediaQuery.paddingOf(context).bottom,
+          Dimens.spacing16,
         ),
         children: [
           Center(
@@ -349,15 +349,24 @@ class _GoalReachedPageState extends State<GoalReachedPage> {
               ),
             ),
           ),
-          const SizedBox(height: Dimens.spacing16),
-          Semantics(
-            identifier: 'goal-reached-continue',
-            child: FilledButton(
-              onPressed: _busy ? null : _continue,
-              child: const Text('Continue'),
-            ),
-          ),
         ],
+      ),
+      // Held at the bottom, clear of the gesture bar, so it shows without
+      // a scroll.
+      bottomNavigationBar: SafeArea(
+        minimum: const EdgeInsets.fromLTRB(
+          Dimens.spacing16,
+          Dimens.spacing8,
+          Dimens.spacing16,
+          Dimens.spacing16,
+        ),
+        child: Semantics(
+          identifier: 'goal-reached-continue',
+          child: FilledButton(
+            onPressed: _busy ? null : _continue,
+            child: const Text('Continue'),
+          ),
+        ),
       ),
     );
   }
@@ -557,7 +566,9 @@ class _ExtendSheetState extends State<ExtendSheet> {
             RadioGroup<_Extend>(
               groupValue: _how,
               onChanged: (v) {
-                if (v == _Extend.newWeight && _newKg == null) {
+                // null: the chosen new weight's row tapped again.
+                if (v == _Extend.newWeight && _newKg == null ||
+                    v == null && _how == _Extend.newWeight) {
                   _pickWeight();
                   return;
                 }
@@ -579,32 +590,41 @@ class _ExtendSheetState extends State<ExtendSheet> {
                       ),
                     ),
                   if (!hold)
-                    Semantics(
-                      identifier: 'goal-extend-weight',
-                      child: RadioListTile<_Extend>(
-                        value: _Extend.newWeight,
-                        title: Text(
-                          _newKg == null
-                              ? 'To a new weight'
-                              : 'To ${weightText(_newKg!, unit)}',
-                        ),
-                        subtitle: Text(
-                          _problem ??
-                              (_newKg == null
-                                  ? 'Choose the weight'
-                                  : 'Tap to change'),
-                          style: _problem == null
-                              ? null
-                              : TextStyle(color: theme.colorScheme.error),
-                        ),
-                        secondary: _newKg == null
-                            ? null
-                            : IconButton(
-                                tooltip: 'Change the weight',
-                                icon: const Icon(Icons.edit_outlined),
-                                onPressed: _pickWeight,
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Semantics(
+                            identifier: 'goal-extend-weight',
+                            child: RadioListTile<_Extend>(
+                              value: _Extend.newWeight,
+                              toggleable: true,
+                              title: Text(
+                                _newKg == null
+                                    ? 'To a new weight'
+                                    : 'To ${weightText(_newKg!, unit)}',
                               ),
-                      ),
+                              subtitle: Text(
+                                _problem ??
+                                    (_newKg == null
+                                        ? 'Choose the weight'
+                                        : 'Tap to change'),
+                                style: _problem == null
+                                    ? null
+                                    : TextStyle(color: theme.colorScheme.error),
+                              ),
+                            ),
+                          ),
+                        ),
+                        if (_newKg != null)
+                          Semantics(
+                            identifier: 'goal-extend-weight-edit',
+                            child: IconButton(
+                              tooltip: 'Change the weight',
+                              icon: const Icon(Icons.edit_outlined),
+                              onPressed: _pickWeight,
+                            ),
+                          ),
+                      ],
                     ),
                   Semantics(
                     identifier: 'goal-extend-weeks',
