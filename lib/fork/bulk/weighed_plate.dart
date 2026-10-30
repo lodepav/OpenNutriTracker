@@ -4,6 +4,7 @@ import 'package:opennutritracker/features/add_meal/domain/meal_items_api.dart';
 import 'package:opennutritracker/features/add_meal/domain/meal_photo_interpreter.dart';
 import 'package:opennutritracker/features/add_meal/util/meal_text_parser.dart';
 import 'package:opennutritracker/features/add_meal/util/soft_text_score.dart';
+import 'package:opennutritracker/fork/bulk/note_counts.dart';
 import 'package:opennutritracker/fork/bulk/note_weights.dart';
 import 'package:opennutritracker/fork/dish/dish_breakdown_rows.dart';
 
@@ -38,6 +39,45 @@ The user's note states weights. Rules:
 - Leave out water, salt and garnish nobody eats.
 - If the photo contains no food, return an empty list.''';
 
+/// A photo whose note names the meal but states no weight (D25): the model
+/// estimates each food's grams from the photo, by the sizes of what it sits
+/// in and of its pieces. Measured in `portion_eval_test.dart` with Haiku:
+/// the meals' median kcal 21% off against 31% for counts and the table's
+/// serving, and weights 16% off the six known ones; asking it to write
+/// down its scale first, or to fall back to a typical serving, did no
+/// better. The screen asks the user to check every amount.
+const estimatedPlatePrompt = '''
+You list the foods on a plate and estimate how much of each was served, so
+each can be looked up in a table of generic foods (USDA, BLS). You do not
+estimate nutrition.
+
+The user's note names the meal but states no weight. Rules:
+- If the note names one dish or food and nothing else, return just that one
+  item: "query" its name as the note writes it, with your estimate of its
+  weight as served. Do not split it into ingredients. A dish named with
+  what is in it ("bread soup with apples", "buckwheat with mushrooms") is
+  one dish.
+- Otherwise the first item names the plate: "query" is "dish=" and a short
+  name for the whole meal in the user's app language ("dish=Chicken rice
+  bowl"), with no quantity.
+- Then one item per food on the plate, as served (cooked, as eaten, not
+  raw): every food the note names, and when the note names none, every food
+  the photo shows. "query" is the nearest generic food in English, named
+  the way a food table names it: the food, then its form and state after
+  commas ("chicken breast, grilled", "rice, white, cooked", "potatoes,
+  roasted", "spinach, raw").
+- Every food has "quantity" in grams with "unit" "g" (a drink or soup may
+  use "ml"): your estimate of what the photo shows. Judge it by what the
+  food sits in, how much of it the food fills and how high it is piled.
+  Sizes to go by: a dinner plate is about 26 cm across, a side plate 20 cm,
+  a soup bowl 15-18 cm and about 350 ml when full, a gravy boat or dip pot
+  30-60 ml; a fork or knife is about 20 cm, a tablespoon's bowl 4 cm wide.
+  Weigh pieces by their size: a cutlet or chop about 80-150 g, a slice of
+  bread 30 g, an egg 50 g. Restaurant and recipe photos are often generous:
+  do not shrink a full plate to a diet portion.
+- Leave out water, salt and garnish nobody eats.
+- If the photo contains no food, return an empty list.''';
+
 const _dishKey = 'dish=';
 
 /// Reads [photo] as a weighed plate; [weights] is what [note] states.
@@ -48,6 +88,51 @@ Future<MealTextParseResult> readWeighedPlate(
   required NoteWeights weights,
   String? localeCode,
   String? savedDishes,
+}) => _readPlate(
+  api,
+  photo,
+  weighedPlatePrompt,
+  (items) => weighedPlateItems(items, weights),
+  note: note,
+  localeCode: localeCode,
+  savedDishes: savedDishes,
+);
+
+/// Whether [note] names the meal and states no amount, neither a weight
+/// nor a count: a count the user gave is kept as given (S170), on the
+/// photo prompt.
+bool noteStatesNoAmount(String? note) =>
+    note != null &&
+    note.trim().isNotEmpty &&
+    !noteHasCount(note) &&
+    parseMealText(note).items.every((item) => item.quantity == null);
+
+/// Reads [photo] with a [note] that states no amount: every food at the
+/// model's estimate of its grams.
+Future<MealTextParseResult> readEstimatedPlate(
+  MealItemsApi api,
+  MealPhoto photo, {
+  required String note,
+  String? localeCode,
+  String? savedDishes,
+}) => _readPlate(
+  api,
+  photo,
+  estimatedPlatePrompt,
+  (items) => weighedPlateItems(items, const NoteWeights(), estimated: true),
+  note: note,
+  localeCode: localeCode,
+  savedDishes: savedDishes,
+);
+
+Future<MealTextParseResult> _readPlate(
+  MealItemsApi api,
+  MealPhoto photo,
+  String prompt,
+  List<ParsedMealItem> Function(List<ParsedMealItem>) hold, {
+  required String note,
+  String? localeCode,
+  String? savedDishes,
 }) async {
   final reply = await api.requestItems(
     content: MealPhotoContent(
@@ -56,25 +141,24 @@ Future<MealTextParseResult> readWeighedPlate(
       note: note,
     ),
     system:
-        weighedPlatePrompt +
+        prompt +
         (localeCode == null
             ? ''
             : '\nThe user\'s app language is "$localeCode".') +
         (savedDishes == null ? '' : '\n$savedDishes'),
   );
-  return MealTextParseResult(
-    items: weighedPlateItems(reply.items, weights),
-    errors: reply.errors,
-  );
+  return MealTextParseResult(items: hold(reply.items), errors: reply.errors);
 }
 
 /// The model's [items] held to [weights]: one food comes back as a plain
 /// row at the plate's weight; several, as one dish's ingredients in grams
-/// that add up to the total.
+/// that add up to the total. [estimated] keeps the model's grams with no
+/// total to hold them to.
 List<ParsedMealItem> weighedPlateItems(
   List<ParsedMealItem> items,
-  NoteWeights weights,
-) {
+  NoteWeights weights, {
+  bool estimated = false,
+}) {
   String? dish;
   final foods = <({String query, double? grams, double? count})>[];
   for (final item in items) {
@@ -118,7 +202,7 @@ List<ParsedMealItem> weighedPlateItems(
       stated[i] ??
           // the model's split of a weight the user gave, never its own
           // estimate of one nobody gave
-          (total != null ? food.grams : null),
+          (total != null || estimated ? food.grams : null),
   ];
   if (total != null) _sizeToTotal(grams, stated.keys.toSet(), total);
 

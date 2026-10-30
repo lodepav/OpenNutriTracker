@@ -126,19 +126,33 @@ void main() {
       expect(names(rankForResolution(rows, 'toast')).first, 'Toast');
     });
 
+    // [fork] S178 own-food-by-name: by its name, in any order; else dropped
     test('own content outranks remote results regardless of score', () {
       // A custom meal with a weaker text match must still come first —
       // the tier from mergeAndRankMeals is preserved, not re-sorted away.
       final rows = [
-        meal('Egg'),
-        meal('My scrambled eggs recipe', source: MealSourceEntity.custom),
+        meal('Eggs, scrambled'),
+        meal('Scrambled eggs', source: MealSourceEntity.custom),
       ];
 
-      final ranked = rankForResolution(rows, 'eggs');
+      final ranked = rankForResolution(rows, 'eggs, scrambled');
 
       expect(ranked.first.source, MealSourceEntity.custom);
-      expect(names(ranked).last, 'Egg');
+      expect(names(ranked).last, 'Eggs, scrambled');
     });
+
+    test('own content that only shares words is left out', () {
+      final rows = [
+        meal('Chicken breast, cooked'),
+        meal('Chicken with rice and peas', source: MealSourceEntity.recipe),
+        meal('My chicken', source: MealSourceEntity.custom),
+      ];
+
+      expect(names(rankForResolution(rows, 'chicken breast, cooked')), [
+        'Chicken breast, cooked',
+      ]);
+    });
+    // [/fork]
 
     test('a brand-only match scores below the same match on the name', () {
       final byName = scoreMealForResolution(meal('Nescafe'), 'nescafe');

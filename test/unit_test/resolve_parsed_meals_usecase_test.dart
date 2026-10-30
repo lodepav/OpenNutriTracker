@@ -159,7 +159,27 @@ void main() {
     expect(resolved.single.selected!.name, 'Egg');
   });
 
+  // [fork] S178 own-food-by-name: own content by its name, else not at all
   test('own content is selected over a better-scoring remote result', () async {
+    final search = _FakeSearch(
+      off: {
+        'scrambled eggs': [meal('Egg')],
+      },
+      supabase: {
+        'scrambled eggs': [
+          meal('Scrambled eggs', source: MealSourceEntity.custom),
+        ],
+      },
+    );
+
+    final resolved = await ResolveParsedMealsUseCase(
+      search,
+    ).resolve([item('scrambled eggs')]);
+
+    expect(resolved.single.selected!.source, MealSourceEntity.custom);
+  });
+
+  test('own content that only shares a word is not a candidate', () async {
     final search = _FakeSearch(
       off: {
         'eggs': [meal('Egg')],
@@ -173,8 +193,10 @@ void main() {
       search,
     ).resolve([item('eggs')]);
 
-    expect(resolved.single.selected!.source, MealSourceEntity.custom);
+    expect(resolved.single.selected!.name, 'Egg');
+    expect(resolved.single.candidates, hasLength(1));
   });
+  // [/fork]
 
   test('one source throwing still yields results from the other', () async {
     final search = _FakeSearch(
