@@ -122,15 +122,22 @@ class _GoalYouTileState extends State<GoalYouTile> {
   Widget build(BuildContext context) {
     final goals = _goals;
     final none = goals != null && goals.plan == null && !widget.profileGoal;
+    final plan = goals?.plan;
     final untargeted = none
         ? untargetedGoal(context, null, maintainingSince(null, goals.history))
+        : plan != null && plan.targetKg == null
+        ? untargetedGoal(context, plan, null)
         : null;
     return YouTile(
       identifier: 'profile-goal-tile',
       title: widget.title,
       value: untargeted?.value ?? widget.value,
-      note: none ? untargeted!.note : widget.note,
-      below: none ? 'Plan a goal' : widget.below,
+      note: untargeted != null ? untargeted.note : widget.note,
+      below: none
+          ? 'Plan a goal'
+          : untargeted != null
+          ? null
+          : widget.below,
       hint: 'Open the goal and its plan',
       onTap: widget.onTap,
     );

@@ -155,6 +155,21 @@ void main() {
     expect(store.saved, same(_cut));
   });
 
+  testWidgets('an Undo goes once the goals change again', (tester) async {
+    final store = _MemoryPhases(_cut, [_hold, _bulk]);
+    await _pump(tester, section(store));
+    await tester.scrollUntilVisible(_id('goal-upcoming-0-menu'), 200);
+    await tester.tap(_id('goal-upcoming-0-menu'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Move later'));
+    await tester.pumpAndSettle();
+    expect(find.text('Undo'), findsOneWidget);
+    // Completed elsewhere, as from the calendar.
+    PhaseStore.changes.value++;
+    await tester.pumpAndSettle();
+    expect(find.text('Undo'), findsNothing);
+  });
+
   testWidgets('Up next removes a goal with an Undo; one alone has no moves', (
     tester,
   ) async {
@@ -283,6 +298,28 @@ void main() {
     await _pump(tester, tile([_done], profileGoal: true));
     expect(find.text('Keep'), findsOneWidget);
     expect(find.text('Not set'), findsOneWidget);
+
+    // A maintenance goal running is named, not "Keep · Not set".
+    await _pump(
+      tester,
+      Scaffold(
+        body: GoalYouTile(
+          key: UniqueKey(),
+          title: 'Goal',
+          value: 'Keep',
+          note: null,
+          below: 'Not set',
+          profileGoal: true,
+          onTap: () {},
+          load: () async => (plan: _hold, history: const <GoalRecord>[]),
+        ),
+      ),
+    );
+    expect(
+      find.text('Maintain until Jan 31', findRichText: true),
+      findsOneWidget,
+    );
+    expect(find.text('Not set'), findsNothing);
 
     final store = _MemoryPhases(null, const [])..goals.add(_done);
     await _pump(tester, section(store));

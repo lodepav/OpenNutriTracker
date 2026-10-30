@@ -462,7 +462,8 @@ class _GoalCalendarPageState extends State<GoalCalendarPage> {
 }
 
 /// "[message]" with an Undo that puts the goals back as they [was], then
-/// calls [undone].
+/// calls [undone]; it goes once the goals change again, so it never undoes
+/// more than [message] says.
 void showGoalUndo(
   BuildContext context,
   String message,
@@ -471,14 +472,16 @@ void showGoalUndo(
   VoidCallback undone,
 ) {
   final messenger = ScaffoldMessenger.of(context);
-  messenger
-    ..hideCurrentSnackBar()
-    ..showSnackBar(
+  final seen = PhaseStore.changes.value;
+  late final ScaffoldFeatureController<SnackBar, SnackBarClosedReason> bar;
+  void changed() => bar.close();
+  bar = (messenger..hideCurrentSnackBar()).showSnackBar(
       SnackBar(
         content: Text(message),
         action: SnackBarAction(
           label: 'Undo',
           onPressed: () async {
+            if (PhaseStore.changes.value != seen) return;
             if (await actions.restore(was)) {
               undone();
             } else {
@@ -492,6 +495,8 @@ void showGoalUndo(
         ),
       ),
     );
+  PhaseStore.changes.addListener(changed);
+  bar.closed.whenComplete(() => PhaseStore.changes.removeListener(changed));
 }
 
 class _Legend extends StatelessWidget {

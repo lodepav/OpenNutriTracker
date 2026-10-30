@@ -460,7 +460,7 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: Text(
-          widget.queuedAt != null
+          widget.queuedAt != null || widget.editing != null
               ? 'Leave without saving?'
               : _queued
               ? 'Leave without adding it?'
@@ -714,17 +714,18 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
     final problem = _draft.problem;
     final monday = _nextMonday(DateTime.now());
     final today = DateTime.now();
+    final breaks = _draft.kind == PhaseKind.cut && _steps.contains(_Step.pace)
+        ? ' Diet breaks come in the next step.'
+        : '';
     return [
       _question(
         context,
         'What do you want to do?',
         _queued
             ? 'It starts from ${_kg(_draft.startKg)}, where '
-                  '${_goalName(_goalBefore(_place!))} ends. Diet breaks '
-                  'come in the next step.'
+                  '${_goalName(_goalBefore(_place!))} ends.$breaks'
             : 'Your ${_setup.running == null ? 'weight' : 'trend weight'} '
-                  'is ${_kg(_setup.nowKg)}. Diet breaks come in the next '
-                  'step.',
+                  'is ${_kg(_setup.nowKg)}.$breaks',
       ),
       for (final (kind, title, text) in [
         (PhaseKind.cut, 'Lose fat', 'A cut: eat under what you burn'),

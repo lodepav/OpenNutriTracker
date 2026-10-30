@@ -8,7 +8,7 @@ Color phaseColor(BuildContext context, PhaseKind kind) {
   return switch (kind) {
     PhaseKind.cut => const Color(0xFFE59A4E),
     PhaseKind.maintain =>
-      dark ? const Color(0xFF4A5552) : const Color(0xFFCFDAD7),
+      dark ? const Color(0xFF8A9B97) : const Color(0xFF7F948F),
     PhaseKind.bulk => dark ? const Color(0xFFA9CCEB) : const Color(0xFF2C6E9E),
   };
 }
@@ -18,7 +18,6 @@ Color onPhaseColor(BuildContext context, PhaseKind kind) {
   final dark = Theme.of(context).brightness == Brightness.dark;
   return switch (kind) {
     PhaseKind.bulk when !dark => Colors.white,
-    PhaseKind.maintain when dark => Colors.white,
     _ => const Color(0xFF2B2A27),
   };
 }
