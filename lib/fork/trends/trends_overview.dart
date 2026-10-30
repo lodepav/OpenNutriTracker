@@ -260,91 +260,100 @@ class _TrendsOverviewState extends State<TrendsOverview> {
                         TrendsTilesStore.current.value,
                       );
                       final logged = state.days.where(isLogged).length;
-                      return ListView(
+                      // One column, built once: a lazy list dropped the
+                      // cards scrolled past, and rebuilt they load from
+                      // nothing to their height above the screen, which
+                      // fought the scroll on the way back up.
+                      return SingleChildScrollView(
                         padding: const EdgeInsets.fromLTRB(
                           Dimens.spacing12,
                           Dimens.spacing8,
                           Dimens.spacing12,
                           Dimens.spacing32,
                         ),
-                        children: [
-                          _Streak(
-                            days: state.days,
-                            windowDays: state.windowDays,
-                          ),
-                          const SizedBox(height: Dimens.spacing8),
-                          RangePills(
-                            rangeDays: state.rangeDays,
-                            onChanged: (d) => context.read<TrendsBloc>().add(
-                              LoadTrendsEvent(rangeDays: d),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            _Streak(
+                              days: state.days,
+                              windowDays: state.windowDays,
                             ),
-                          ),
-                          const SizedBox(height: Dimens.spacing12),
-                          for (var i = 0; i < tiles.length; i += 2)
-                            Padding(
-                              padding: const EdgeInsets.only(
-                                bottom: Dimens.spacing8,
+                            const SizedBox(height: Dimens.spacing8),
+                            RangePills(
+                              rangeDays: state.rangeDays,
+                              onChanged: (d) => context.read<TrendsBloc>().add(
+                                LoadTrendsEvent(rangeDays: d),
                               ),
-                              // The tiles are alike, so a row's two are one height;
-                              // AutoSizeText measures, so no IntrinsicHeight here.
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Expanded(child: tiles[i]),
-                                  const SizedBox(width: Dimens.spacing8),
-                                  Expanded(
-                                    child: i + 1 < tiles.length
-                                        ? tiles[i + 1]
-                                        : const SizedBox.shrink(),
+                            ),
+                            const SizedBox(height: Dimens.spacing12),
+                            for (var i = 0; i < tiles.length; i += 2)
+                              Padding(
+                                padding: const EdgeInsets.only(
+                                  bottom: Dimens.spacing8,
+                                ),
+                                // The tiles are alike, so a row's two are one height;
+                                // AutoSizeText measures, so no IntrinsicHeight here.
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Expanded(child: tiles[i]),
+                                    const SizedBox(width: Dimens.spacing8),
+                                    Expanded(
+                                      child: i + 1 < tiles.length
+                                          ? tiles[i + 1]
+                                          : const SizedBox.shrink(),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            Text(
+                              'Tap a card for its chart · '
+                              '${rangeText(state.rangeDays, state.windowDays)}, '
+                              '$logged logged',
+                              textAlign: TextAlign.center,
+                              style: Theme.of(context).textTheme.bodySmall
+                                  ?.copyWith(
+                                    color: paletteOf(context).textMuted,
                                   ),
-                                ],
-                              ),
                             ),
-                          Text(
-                            'Tap a card for its chart · '
-                            '${rangeText(state.rangeDays, state.windowDays)}, '
-                            '$logged logged',
-                            textAlign: TextAlign.center,
-                            style: Theme.of(context).textTheme.bodySmall
-                                ?.copyWith(color: paletteOf(context).textMuted),
-                          ),
-                          ...arrangeTrendCards(widget.cards),
-                          const SizedBox(height: Dimens.spacing16),
-                          Center(
-                            child: TextButton.icon(
-                              key: const ValueKey('trends-arrange'),
-                              icon: const Icon(Icons.tune_rounded),
-                              label: const Text('Arrange Trends'),
-                              onPressed: () => Navigator.push(
-                                context,
-                                MaterialPageRoute<void>(
-                                  builder: (_) => ArrangeScreen(
-                                    title: 'Arrange Trends',
-                                    lists: [
-                                      ArrangeList(
-                                        title: 'Tiles',
-                                        store: TrendsTilesStore(),
-                                        names: {
-                                          for (final MapEntry(:key, :value)
-                                              in all.entries)
-                                            key: value.label.replaceAll(
-                                              ' · avg',
-                                              '',
-                                            ),
-                                        },
-                                      ),
-                                      ArrangeList(
-                                        title: 'Cards',
-                                        store: TrendsLayoutStore(),
-                                        names: trendCards,
-                                      ),
-                                    ],
+                            ...arrangeTrendCards(widget.cards),
+                            const SizedBox(height: Dimens.spacing16),
+                            Center(
+                              child: TextButton.icon(
+                                key: const ValueKey('trends-arrange'),
+                                icon: const Icon(Icons.tune_rounded),
+                                label: const Text('Arrange Trends'),
+                                onPressed: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute<void>(
+                                    builder: (_) => ArrangeScreen(
+                                      title: 'Arrange Trends',
+                                      lists: [
+                                        ArrangeList(
+                                          title: 'Tiles',
+                                          store: TrendsTilesStore(),
+                                          names: {
+                                            for (final MapEntry(:key, :value)
+                                                in all.entries)
+                                              key: value.label.replaceAll(
+                                                ' · avg',
+                                                '',
+                                              ),
+                                          },
+                                        ),
+                                        ArrangeList(
+                                          title: 'Cards',
+                                          store: TrendsLayoutStore(),
+                                          names: trendCards,
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 ),
                               ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       );
                     },
                   ),
