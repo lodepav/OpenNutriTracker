@@ -1,3 +1,5 @@
+import 'package:opennutritracker/core/utils/energy_unit_provider.dart';
+import 'package:provider/provider.dart';
 import 'package:opennutritracker/core/domain/entity/user_gender_entity.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
@@ -95,6 +97,29 @@ class _Service extends Fake implements AdaptiveService {
 
   @override
   Future<double> formulaKcal() async => 2860;
+}
+
+/// A card that counts how often it is built from nothing.
+class _CountedCard extends StatefulWidget {
+  final Map<String, int> starts;
+  final String id;
+
+  const _CountedCard(this.starts, this.id);
+
+  @override
+  State<_CountedCard> createState() => _CountedCardState();
+}
+
+class _CountedCardState extends State<_CountedCard> {
+  @override
+  void initState() {
+    super.initState();
+    widget.starts.update(widget.id, (n) => n + 1, ifAbsent: () => 1);
+  }
+
+  @override
+  Widget build(BuildContext context) =>
+      SizedBox(height: 700, child: Text(widget.id));
 }
 
 void main() {
@@ -908,6 +933,45 @@ void main() {
     await openTile(tester, 'sides');
     expect(find.byType(SideComparePage), findsOne);
     expect(find.text('Thighs: left and right'), findsOne);
+  });
+
+  testWidgets('the cards are kept while scrolled past and back', (
+    tester,
+  ) async {
+    // A card rebuilt on the way back up loaded from nothing to its height
+    // above the screen, and the scroll stuttered against it.
+    final starts = <String, int>{};
+    await tester.pumpWidget(
+      ChangeNotifierProvider(
+        create: (_) => EnergyUnitProvider(usesKilojoules: false),
+        child: MaterialApp(
+          localizationsDelegates: const [
+            S.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+          ],
+          supportedLocales: S.supportedLocales,
+          home: Scaffold(
+            body: TrendsOverview(
+              state: loaded(),
+              weightCard: (_) => const SizedBox(),
+              waterCard: (_) => const SizedBox(),
+              cards: {
+                for (final id in trendCards.keys) id: _CountedCard(starts, id),
+              },
+              service: _Service(const []),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final scrollable = find.byType(Scrollable).first;
+    for (final dy in [...List.filled(12, -500.0), ...List.filled(12, 500.0)]) {
+      await tester.drag(scrollable, Offset(0, dy));
+      await tester.pumpAndSettle();
+    }
+    expect(starts, {for (final id in trendCards.keys) id: 1});
   });
 
   testWidgets('waist to height: the ratio and its band; it opens the page', (
