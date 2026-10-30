@@ -590,12 +590,12 @@ void main() {
     expect(find.text('2847 kcal'), findsOneWidget);
     expect(find.text('Change'), findsOneWidget);
     // The rows add up as shown.
-    final proposed = checkIn!.proposedTargetKcal.toInt();
+    final proposed = checkIn!.proposedTargetKcal.round();
     expect(find.text('${proposed - 2847} kcal'), findsOneWidget);
     expect(
       find.textContaining(
         'That is the expenditure less '
-        '${checkIn.expenditureKcal.toInt() - proposed} kcal',
+        '${checkIn.expenditureKcal.round() - proposed} kcal',
       ),
       findsOneWidget,
     );
@@ -687,7 +687,7 @@ void main() {
     );
     await service.accept(await service.checkIn(), 2000);
     // As shown: the rows add up.
-    final change = (await service.checkIn()).proposedTargetKcal.toInt() - 2000;
+    final change = (await service.checkIn()).proposedTargetKcal.round() - 2000;
     await _pumpLarge(tester, service);
 
     final current = find.text('Current target');

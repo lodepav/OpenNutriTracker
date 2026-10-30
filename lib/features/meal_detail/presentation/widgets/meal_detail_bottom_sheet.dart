@@ -9,6 +9,8 @@ import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/core/utils/serving_label_localizer.dart';
 import 'package:opennutritracker/core/utils/navigation_options.dart';
 import 'package:opennutritracker/core/utils/navigation_predicates.dart';
+import 'package:opennutritracker/features/add_meal/presentation/log_tray.dart';
+import 'package:opennutritracker/features/add_meal/util/portion_unit.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dart';
 import 'package:opennutritracker/features/diary/presentation/bloc/calendar_day_bloc.dart';
 import 'package:opennutritracker/features/diary/presentation/bloc/diary_bloc.dart';
@@ -52,6 +54,10 @@ class MealDetailBottomSheet extends StatefulWidget {
 
   final Function(String?, String?) onQuantityOrUnitChanged;
 
+  /// The add-food screen's "To log" list, when the sheet was opened from it.
+  /// The button then adds to the list instead of logging.
+  final LogTray? logTray;
+
   const MealDetailBottomSheet({
     super.key,
     required this.product,
@@ -62,6 +68,7 @@ class MealDetailBottomSheet extends StatefulWidget {
     required this.mealDetailBloc,
     required this.selectedUnit,
     this.usesImperialUnits = false,
+    this.logTray,
   });
 
   @override
@@ -395,6 +402,7 @@ class _MealDetailBottomSheetState extends State<MealDetailBottomSheet> {
   // [fork] S125 food-page
   /// "Add 640 g", or plain "Add" while the amount is not a positive number.
   String _addLabel(BuildContext context, String text) {
+    if (widget.logTray != null) return S.of(context).addToListLabel;
     final quantity = double.tryParse(text.trim().replaceAll(',', '.'));
     if (quantity == null || quantity <= 0) return S.of(context).addLabel;
     return '${S.of(context).addLabel} '
@@ -402,16 +410,20 @@ class _MealDetailBottomSheetState extends State<MealDetailBottomSheet> {
   }
   // [/fork]
 
-  bool _hasRequiredProductInfoMissing() {
+  bool _hasRequiredProductInfoMissing() =>
+      _missingRequiredProductInfo().isNotEmpty;
+
+  /// The labels of the required values the product lacks, so the warning
+  /// can say which one is missing (#1474).
+  List<String> _missingRequiredProductInfo() {
     final productNutriments = widget.product.nutriments;
-    if (productNutriments.energyKcal100 == null ||
-        productNutriments.carbohydrates100 == null ||
-        productNutriments.fat100 == null ||
-        productNutriments.proteins100 == null) {
-      return true;
-    } else {
-      return false;
-    }
+    final s = S.of(context);
+    return [
+      if (productNutriments.energyKcal100 == null) s.energyLabel,
+      if (productNutriments.carbohydrates100 == null) s.carbohydrateLabel,
+      if (productNutriments.fat100 == null) s.fatLabel,
+      if (productNutriments.proteins100 == null) s.proteinLabel,
+    ];
   }
 
   Future<void> onAddButtonPressed(BuildContext context) async {
@@ -476,6 +488,36 @@ class _MealDetailBottomSheetState extends State<MealDetailBottomSheet> {
       widget.quantityTextController.text.trim(),
     );
     // [/fork]
+    final logTray = widget.logTray;
+    if (logTray != null) {
+      // Onto the list, with exactly what `addIntake` below would have been
+      // given; the add-food screen writes it when the list is logged.
+      final state = widget.mealDetailBloc.state;
+      logTray.add(
+        LogTrayItem(
+          meal: widget.product,
+          unit: storedUnit(state.selectedUnit),
+          amount: double.parse(
+            state.totalQuantityConverted.replaceAll(',', '.'),
+          ),
+          amountLabel: logTrayAmountLabel(
+            context,
+            quantity,
+            state.selectedUnit,
+            widget.product,
+          ),
+        ),
+      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(S.of(context).logTrayAddedLabel)));
+      // Back to the list, past the scanner too when that is how the user
+      // came: it replaced itself with this screen.
+      Navigator.of(
+        context,
+      ).popUntil(namedRouteOrFirst(NavigationOptions.addMealRoute));
+      return;
+    }
 
     // The refreshes below only see the intake once it is stored, which
     // can wait for the tracked-day lock (#1317).

@@ -39,6 +39,7 @@ import 'package:opennutritracker/features/diary/presentation/bloc/calendar_day_b
 import 'package:opennutritracker/features/diary/presentation/bloc/diary_bloc.dart';
 import 'package:opennutritracker/features/home/presentation/bloc/home_bloc.dart';
 import 'package:opennutritracker/features/meal_detail/presentation/bloc/meal_detail_bloc.dart';
+import 'package:opennutritracker/features/meal_detail/util/meal_quantity_converter.dart';
 import 'package:opennutritracker/features/settings/settings_screen.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 
@@ -833,6 +834,48 @@ void main() {
           'the unit dropdown is narrower than the unit it has to show, '
           'and a clipped unit reads as a different one',
     );
+  });
+
+  testWidgets('the button adds up the rows; a count says the grams it is', (
+    tester,
+  ) async {
+    await _register({
+      'bread': [
+        _meal('Bread', servingQuantity: 38, servingSize: '1 slice (38 g)'),
+      ],
+    });
+
+    await tester.pumpWidget(_app());
+    await tester.pumpAndSettle();
+    await _parse(tester, '3 bread');
+
+    final kcal = kcalForQuantity(
+      3,
+      UnitDropdownItem.serving.toString(),
+      _meal('Bread', servingQuantity: 38, servingSize: '1 slice (38 g)'),
+    )!.round();
+    expect(find.text('Log 1 item · $kcal kcal'), findsOneWidget);
+    expect(find.text('≈ 114 g'), findsOneWidget);
+  });
+
+  testWidgets('a weight has no grams line, and 2x has no total on the button', (
+    tester,
+  ) async {
+    await _register({
+      'toast': [_meal('Toast')],
+    });
+
+    await tester.pumpWidget(
+      MediaQuery(
+        data: const MediaQueryData(textScaler: TextScaler.linear(2.0)),
+        child: _app(),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await _parse(tester, '100g toast');
+
+    expect(find.textContaining('≈'), findsNothing);
+    expect(find.text('Log 1 item'), findsOneWidget);
   });
 
   testWidgets('a row says the word the food uses, not "serving"', (
@@ -1825,7 +1868,7 @@ void main() {
       await readDish(tester);
       expect(find.text('Chicken bowl'), findsOneWidget);
       final l10n = await S.delegate.load(const Locale('en'));
-      expect(find.text(l10n.bulkAddSubmitLabel(1)), findsOneWidget);
+      expect(find.textContaining(l10n.bulkAddSubmitLabel(1)), findsOneWidget);
       expect(tester.widget<TextField>(portion()).controller!.text, '350');
 
       await tester.enterText(portion(), '175');
@@ -1869,7 +1912,7 @@ void main() {
       expect(portion(), findsNothing);
       expect(find.text(DishStrings.logAsOneDish), findsOneWidget);
       final l10n = await S.delegate.load(const Locale('en'));
-      expect(find.text(l10n.bulkAddSubmitLabel(2)), findsOneWidget);
+      expect(find.textContaining(l10n.bulkAddSubmitLabel(2)), findsOneWidget);
 
       await tester.tap(_submitButton());
       await tester.pumpAndSettle();
@@ -2086,7 +2129,7 @@ void main() {
       expect(_mealDetailBloc.writes, isEmpty);
       // And the button still offers all three, so nothing has silently left
       // the batch.
-      expect(find.text(l10nEn.bulkAddSubmitLabel(3)), findsOneWidget);
+      expect(find.textContaining(l10nEn.bulkAddSubmitLabel(3)), findsOneWidget);
       // one item is one item.
       expect(l10nEn.bulkAddSubmitLabel(1), 'Log 1 item');
       expect(l10nEn.bulkAddSubmitLabel(3), 'Log 3 items');

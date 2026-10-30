@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/widgets.dart';
 import 'package:health/health.dart';
+import 'package:opennutritracker/fork/health/health_grants.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:logging/logging.dart';
 import 'package:opennutritracker/core/utils/extensions.dart';
@@ -52,11 +53,11 @@ class HealthStoreBodyFat implements BodyFatSource {
   @override
   Future<bool> requestPermission() async =>
       await Health().requestAuthorization(_types, permissions: _read) &&
-      await Health().hasPermissions(_types, permissions: _read) != false;
+      await hasHealthGrantsOrFalse(['READ_BODY_FAT'], _types, _read);
 
   @override
   Future<List<HealthBodyFat>> read(DateTime from, DateTime to) async {
-    if (await Health().hasPermissions(_types, permissions: _read) == false) {
+    if (await hasHealthGrants(['READ_BODY_FAT'], _types, _read) == false) {
       throw StateError('No permission to read body fat');
     }
     final points = await Health().getHealthDataFromTypes(

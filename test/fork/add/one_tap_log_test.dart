@@ -86,7 +86,10 @@ class _Products extends Fake implements ProductsRepository {
   var lookups = 0;
 
   @override
-  Future<MealEntity> getOFFProductByBarcode(String barcode) {
+  Future<MealEntity> getOFFProductByBarcode(
+    String barcode, {
+    String? knownName,
+  }) {
     lookups++;
     return lookup();
   }
@@ -180,6 +183,13 @@ void main() {
       final meal = await hydratedForLog(_thin(), cache, products);
       expect(meal.detailed, isTrue);
       expect(products.lookups, 0);
+    });
+
+    test('a cached record keeps the name the search showed (#1475)', () async {
+      cache.held = MealDBO.fromMealEntity(_full().withName('Fulgi de ovăz'));
+      final meal = await hydratedForLog(_thin(), cache, products);
+      expect(meal.detailed, isTrue);
+      expect(meal.name, _thin().name);
     });
 
     test('else from the network, and caches it', () async {

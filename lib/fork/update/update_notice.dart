@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:opennutritracker/fork/update/updater.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:opennutritracker/core/utils/safe_url_launcher.dart';
 
 /// Whether to offer [info] now: a newer version with an APK, and not the
 /// version last offered ([seen]).
@@ -219,10 +219,7 @@ class AboutUpdateRow extends StatelessWidget {
         return TextButton(
           onPressed: () => info.apkUrl != null
               ? installUpdate(context, info, updater)
-              : launchUrl(
-                  Uri.parse(releasesPage),
-                  mode: LaunchMode.externalApplication,
-                ),
+              : tryLaunchExternalUrl(releasesPage),
           child: Row(
             children: [
               const Icon(Icons.system_update_outlined),
@@ -283,10 +280,7 @@ class _UpdateStatusState extends State<UpdateStatus> {
         return widget.builder(
           '$running, a development build: it gets no updates. Tap for '
           'the released app, which installs beside it.',
-          () => launchUrl(
-            Uri.parse(releasesPage),
-            mode: LaunchMode.externalApplication,
-          ),
+          () => tryLaunchExternalUrl(releasesPage),
         );
       }
       if (info.hasUpdate) {
@@ -295,10 +289,7 @@ class _UpdateStatusState extends State<UpdateStatus> {
           'install.',
           () => info.apkUrl != null
               ? installUpdate(context, info, _updater)
-              : launchUrl(
-                  Uri.parse(releasesPage),
-                  mode: LaunchMode.externalApplication,
-                ),
+              : tryLaunchExternalUrl(releasesPage),
         );
       }
       return widget.builder(

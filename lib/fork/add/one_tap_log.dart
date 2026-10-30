@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:logging/logging.dart';
 import 'package:opennutritracker/core/data/data_source/remote_search_cache_data_source.dart';
-import 'package:opennutritracker/core/data/dbo/meal_dbo.dart';
 import 'package:opennutritracker/core/domain/entity/intake_entity.dart';
 import 'package:opennutritracker/core/domain/entity/intake_type_entity.dart';
 import 'package:opennutritracker/core/domain/usecase/get_config_usecase.dart';
@@ -12,6 +11,7 @@ import 'package:opennutritracker/features/add_meal/data/repository/products_repo
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dart';
 import 'package:opennutritracker/features/meal_detail/meal_detail_screen.dart';
 import 'package:opennutritracker/features/meal_detail/presentation/bloc/meal_detail_bloc.dart';
+import 'package:opennutritracker/features/meal_detail/util/hydrate_off_meal.dart';
 import 'package:opennutritracker/features/meal_detail/util/meal_quantity_converter.dart';
 import 'package:opennutritracker/fork/amounts/remembered_amounts.dart';
 import 'package:opennutritracker/fork/basket/basket_ui.dart'
@@ -73,7 +73,8 @@ bool _isThin(MealEntity meal) =>
     (meal.code?.isNotEmpty ?? false);
 
 /// [meal] as the food's page would log it (HydrateMealEvent): the full
-/// record of a text-search hit, from the cache or else the network, and
+/// record of a text-search hit, under the name the search showed (#1475),
+/// from the cache or else the network, and
 /// [meal] itself when that fails or takes longer than [wait]. A lookup can
 /// run for 60 s and the user is waiting on a tap.
 Future<MealEntity> hydratedForLog(
@@ -82,16 +83,11 @@ Future<MealEntity> hydratedForLog(
   ProductsRepository products, {
   Duration wait = const Duration(seconds: 5),
 }) async {
-  if (!_isThin(meal)) return meal;
-  final code = meal.code!;
   try {
-    final cached = cache.getDetailedByBarcode(code);
-    if (cached != null) return MealEntity.fromMealDBO(cached);
-    final full = await products.getOFFProductByBarcode(code).timeout(wait);
-    await cache.cache(MealDBO.fromMealEntity(full));
-    return full;
+    return await fetchDetailedOffMeal(meal, cache, products).timeout(wait) ??
+        meal;
   } catch (error, stack) {
-    _log.warning('OFF hydration failed for $code', error, stack);
+    _log.warning('OFF hydration failed for ${meal.code}', error, stack);
     return meal;
   }
 }

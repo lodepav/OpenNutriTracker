@@ -386,8 +386,8 @@ void main() {
     await tester.pump();
 
     // 200 kcal of 583, in kJ, in the text and in its label.
-    expect(find.text('836 / 2439 kJ'), findsOneWidget);
-    expect(find.bySemanticsLabel(RegExp('836 / 2439 kJ')), findsWidgets);
+    expect(find.text('837 / 2439 kJ'), findsOneWidget);
+    expect(find.bySemanticsLabel(RegExp('837 / 2439 kJ')), findsWidgets);
   });
 
   // Regression: at a phone-width header the title used to be starved of space

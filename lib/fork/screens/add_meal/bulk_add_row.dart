@@ -310,7 +310,23 @@ extension _BulkAddRow on _BulkAddScreenState {
       },
     );
 
-    final energy = Text(energyText, style: theme.textTheme.titleSmall);
+    // A count of portions, and the weight it was taken to be.
+    final grams = _portionWeightLabel(context, row);
+    final energy = grams.isEmpty
+        ? Text(energyText, style: theme.textTheme.titleSmall)
+        : Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(energyText, style: theme.textTheme.titleSmall),
+              Text(
+                grams,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          );
 
     final error = _quantityErrors[index];
 
@@ -389,6 +405,17 @@ extension _BulkAddRow on _BulkAddScreenState {
   }
 
   static const _dropdownArrowWidth = 24.0;
+
+  /// "≈ 120 g" under a count of portions; empty for a weight or volume.
+  String _portionWeightLabel(BuildContext context, BulkAddRow row) {
+    final meal = row.meal;
+    if (meal == null || !isPortionUnit(row.effectiveUnit)) return '';
+    final quantity = double.tryParse(row.amountText.replaceAll(',', '.'));
+    if (quantity == null || quantity <= 0) return '';
+    final base = convertQuantityToBaseUnit(quantity, row.effectiveUnit, meal);
+    final s = S.of(context);
+    return '≈ ${base.round()} ${meal.isLiquid ? s.milliliterUnit : s.gramUnit}';
+  }
 
   /// Empty when the amount is not yet usable or the food has no energy value.
   String _energyLabel(BuildContext context, BulkAddRow row) {

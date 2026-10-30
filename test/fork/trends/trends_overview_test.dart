@@ -168,8 +168,8 @@ void main() {
       ),
     );
 
-    // Energy cut, as energyValue is everywhere; grams rounded (S114).
-    expect(tileText(tester, 'calories'), contains('2572 / 2925 kcal'));
+    // Energy and grams rounded, as everywhere (S114, #1469).
+    expect(tileText(tester, 'calories'), contains('2573 / 2925 kcal'));
     expect(tileText(tester, 'carbs'), contains('70 / 259 g'));
     expect(tileText(tester, 'fat'), contains('81 / 81 g'));
     expect(tileText(tester, 'protein'), contains('93 / 110 g'));

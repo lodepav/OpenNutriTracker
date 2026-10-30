@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/widgets.dart';
 import 'package:health/health.dart';
+import 'package:opennutritracker/fork/health/health_grants.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:logging/logging.dart';
 import 'package:opennutritracker/core/data/repository/user_repository.dart';
@@ -59,12 +60,12 @@ class HealthStoreWeights implements WeightSource {
   @override
   Future<bool> requestPermission() async =>
       await Health().requestAuthorization(_types, permissions: _read) &&
-      await Health().hasPermissions(_types, permissions: _read) != false;
+      await hasHealthGrantsOrFalse(['READ_WEIGHT'], _types, _read);
 
   @override
   Future<List<HealthWeight>> read(DateTime from, DateTime to) async {
     // A revoked grant would read as "no readings" and move the watermark on.
-    if (await Health().hasPermissions(_types, permissions: _read) == false) {
+    if (await hasHealthGrants(['READ_WEIGHT'], _types, _read) == false) {
       throw StateError('No permission to read weight');
     }
     final points = await Health().getHealthDataFromTypes(

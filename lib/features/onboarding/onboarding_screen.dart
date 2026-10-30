@@ -330,7 +330,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               OnboardingMacros.overviewKcal()
                   ?.round()
                   .toString() ?? // [fork] S89
-              _onboardingBloc.getOverviewCalorieGoal()?.toInt().toString() ??
+              _onboardingBloc.getOverviewCalorieGoal()?.round().toString() ??
               "?",
           carbsGoalString:
               _forkMacros()?.carbsG.round().toString() ?? // [fork] S89

@@ -1,6 +1,5 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:opennutritracker/core/presentation/sources_screen.dart';
 import 'package:opennutritracker/core/presentation/widgets/app_banner_version.dart';
 import 'package:opennutritracker/core/utils/app_const.dart';
@@ -12,7 +11,7 @@ import 'package:opennutritracker/features/profile/presentation/utils/profile_swi
 import 'package:opennutritracker/fork/backup/onboarding_restore.dart';
 // [/fork]
 import 'package:opennutritracker/generated/l10n.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:opennutritracker/core/utils/safe_url_launcher.dart';
 
 class OnboardingIntroPageBody extends StatefulWidget {
   const OnboardingIntroPageBody({
@@ -248,16 +247,7 @@ class _OnboardingIntroPageBodyState extends State<OnboardingIntroPageBody> {
     // A device with no browser is the case worth reporting: this link is the
     // only way to read the policy the checkbox below asks you to accept, and
     // silently doing nothing reads as a broken tap.
-    var opened = false;
-    try {
-      opened = await launchUrl(
-        Uri.parse(policy),
-        mode: LaunchMode.externalApplication,
-      );
-    } on PlatformException {
-      // No activity able to handle the intent — a failure to open, not a crash.
-      opened = false;
-    }
+    final opened = await tryLaunchExternalUrl(policy);
 
     if (opened || !mounted) return;
 

@@ -107,20 +107,17 @@ extension _AboutSettings on _SettingsScreenState {
   }
 
   Future<void> _reportError(BuildContext context) async {
-    final reportUri = Uri.parse(
-      "mailto:${AppConst.reportErrorEmail}?subject=Report_Error",
-    );
+    final messenger = ScaffoldMessenger.of(context);
+    final errorText = S.of(context).errorOpeningEmail;
 
-    if (await canLaunchUrl(reportUri)) {
-      launchUrl(reportUri);
-    } else {
-      // Cannot open email app, show error snackbar
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(S.of(context).errorOpeningEmail)),
-        );
-      }
+    // Cannot open email app: show error snackbar.
+    if (await tryLaunchExternalUrl(
+      "mailto:${AppConst.reportErrorEmail}?subject=Report_Error",
+      mode: LaunchMode.platformDefault,
+    )) {
+      return;
     }
+    messenger.showSnackBar(SnackBar(content: Text(errorText)));
   }
 
   void _showPrivacyDialog(
@@ -250,15 +247,11 @@ extension _AboutSettings on _SettingsScreenState {
   }
 
   void _launchUrl(BuildContext context, Uri url) async {
-    if (await canLaunchUrl(url)) {
-      launchUrl(url, mode: LaunchMode.externalApplication);
-    } else {
-      // Cannot open browser app, show error snackbar
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(S.of(context).errorOpeningBrowser)),
-        );
-      }
-    }
+    final messenger = ScaffoldMessenger.of(context);
+    final errorText = S.of(context).errorOpeningBrowser;
+
+    // Cannot open browser app: show error snackbar.
+    if (await tryLaunchExternalUrl(url.toString())) return;
+    messenger.showSnackBar(SnackBar(content: Text(errorText)));
   }
 }

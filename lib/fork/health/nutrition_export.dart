@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/widgets.dart';
 import 'package:health/health.dart';
+import 'package:opennutritracker/fork/health/health_grants.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:logging/logging.dart';
 import 'package:opennutritracker/core/data/repository/intake_repository.dart';
@@ -108,7 +109,7 @@ class HealthStoreNutrition implements NutritionSink {
   @override
   Future<bool> requestPermission() async =>
       await Health().requestAuthorization(_types, permissions: _write) &&
-      await Health().hasPermissions(_types, permissions: _write) != false;
+      await hasHealthGrantsOrFalse(['WRITE_NUTRITION'], _types, _write);
 
   @override
   Future<void> write(NutritionRecord record, int version) async {

@@ -7,6 +7,7 @@ import 'package:opennutritracker/features/add_meal/data/data_sources/sp_food_dat
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_portion_entity.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_nutriments_entity.dart';
+import 'package:opennutritracker/features/scanner/data/product_not_found_exception.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:opennutritracker/fork/off/off_kinds.dart'; // [fork] S117
 
@@ -177,16 +178,26 @@ class ProductsRepository {
     return result;
   }
 
-  Future<MealEntity> getOFFProductByBarcode(String barcode) async {
+  /// [knownName] is the name of the meal this lookup refreshes, if any:
+  /// it stands in when the product has no name in the app's language,
+  /// rather than OFF's name in some other language (#1475).
+  Future<MealEntity> getOFFProductByBarcode(
+    String barcode, {
+    String? knownName,
+  }) async {
     final productResponse = await _offDataSource.fetchBarcodeResults(barcode);
-    // [fork] S117 off-kinds
     final product = productResponse.product;
+    if (product == null) throw ProductNotFoundException();
+    // [fork] S117 off-kinds
     await OffKinds.learn([
       (code: product.code, categories: product.categories_tags),
     ]);
     // [/fork]
-
-    return MealEntity.fromOFFProduct(productResponse.product, detailed: true);
+    return MealEntity.fromOFFProduct(
+      product,
+      detailed: true,
+      knownName: knownName,
+    );
   }
 
   /// Drops items whose nutriments fail the physical-plausibility rules from

@@ -28,7 +28,7 @@ import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/fork/health/health_sync_cards.dart';
 // [/fork]
-import 'package:url_launcher/url_launcher.dart';
+import 'package:opennutritracker/core/utils/safe_url_launcher.dart';
 
 /// What the platform health store is called in front of the user. Both names
 /// are product names, so they are deliberately not localized. Lives here
@@ -285,12 +285,11 @@ class _HealthSyncScreenState extends State<HealthSyncScreen> {
   /// Opens the policy in the language the app is being read in, matching how
   /// Settings and the onboarding intro do it.
   Future<void> _openPrivacyPolicy() async {
-    final url = Uri.parse(
-      URLConst.privacyPolicyFor(Localizations.localeOf(context).languageCode),
+    final url = URLConst.privacyPolicyFor(
+      Localizations.localeOf(context).languageCode,
     );
-    if (await canLaunchUrl(url)) {
-      await launchUrl(url, mode: LaunchMode.externalApplication);
-    } else if (mounted) {
+    if (await tryLaunchExternalUrl(url)) return;
+    if (mounted) {
       _showMessage(S.of(context).errorOpeningBrowser);
     }
   }

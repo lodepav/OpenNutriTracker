@@ -113,8 +113,8 @@ void main() {
       await _pump(tester, breakdown(), equations: false);
 
       expect(find.text("Today's goal"), findsOneWidget);
-      expect(find.textContaining('3134', findRichText: true), findsOneWidget);
-      expect(find.text('3164 kcal'), findsOneWidget);
+      expect(find.textContaining('3135', findRichText: true), findsOneWidget);
+      expect(find.text('3165 kcal'), findsOneWidget);
       // The weight goal's −500 and the own +150 are one step.
       expect(find.text('−350 kcal'), findsOneWidget);
       expect(find.text('+320 kcal'), findsOneWidget);

@@ -8,7 +8,8 @@
 #
 # Each file's tests run in a group named after it. A bundle shares one
 # process, so after each file it closes Hive's boxes and resets the app's
-# chosen locale, which tests leave behind: left, they break later files. The check
+# chosen locale and the service locator, which tests leave behind: left, they
+# break later files. The check
 # before a merge; plain `flutter test`, a file a process, stays the strict
 # one, before a release or when a bundled run fails and you want to know
 # whether a file's own tests do. The bundles (test/_bundle_*.dart) are
@@ -41,6 +42,7 @@ for n in range(shards):
     lines += [f"import '{f}' as t{i};" for i, f in enumerate(mine)]
     lines += [
         "import 'package:flutter_test/flutter_test.dart';",
+        "import 'package:get_it/get_it.dart';",
         "import 'package:hive_ce/hive.dart';",
         "import 'package:opennutritracker/core/utils/app_locale.dart';",
         "",
@@ -48,6 +50,7 @@ for n in range(shards):
         "Future<void> _isolate() async {",
         "  await Hive.close();",
         "  AppLocale.reset();",
+        "  await GetIt.instance.reset();",
         "}",
         "",
         "void main() {",

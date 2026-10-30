@@ -846,6 +846,15 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
 
   Widget _buildSubmitBar(BuildContext context, BulkAddLoadedState state) {
     final count = loggedEntries(state.rows, separate: _separateDishes);
+    // What the button will log, summed as the rows show it (#1469). Not at a
+    // large font: a second line on the button comes out of the rows above.
+    final showTotal = MediaQuery.textScalerOf(context).scale(1) <= 1.5;
+    final rowKcals = [
+      for (final row in state.loggableRows)
+        if (double.tryParse(row.amountText.replaceAll(',', '.'))
+            case final quantity? when quantity > 0)
+          kcalForQuantity(quantity, row.effectiveUnit, row.meal!) ?? 0,
+    ];
     return SafeArea(
       top: false,
       child: Padding(
@@ -857,7 +866,12 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
                 ? null
                 : () => _onSubmitPressed(state),
             icon: const Icon(Icons.add_rounded),
-            label: Text(S.of(context).bulkAddSubmitLabel(count)),
+            label: Text(
+              count == 0 || !showTotal
+                  ? S.of(context).bulkAddSubmitLabel(count)
+                  : '${S.of(context).bulkAddSubmitLabel(count)} · '
+                        '${EnergyDisplay.formatSumWithUnit(context, rowKcals)}',
+            ),
           ),
         ),
       ),

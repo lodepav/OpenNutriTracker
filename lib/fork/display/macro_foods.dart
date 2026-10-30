@@ -276,7 +276,7 @@ class _Summary extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final palette = paletteOf(context);
     final energy = metric == FoodsMetric.energy;
-    // Cut as the dashboard tile shows it, so the two agree.
+    // As the dashboard tile shows it, so the two agree.
     final eaten = energy
         ? '${energyValue(context, total.eaten)}'
         : '${total.eaten.toInt()}';

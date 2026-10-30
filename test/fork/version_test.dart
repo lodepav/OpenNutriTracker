@@ -20,6 +20,9 @@ void main() {
       File('fork/VERSION').readAsStringSync().trim(),
       matches(RegExp(r'^\d+\.\d+\.\d+$')),
     );
-    expect(aboutVersion('0.1.0'), '0.1.0 · based on OpenNutriTracker 2.5.0');
+    expect(
+      aboutVersion('0.1.0'),
+      '0.1.0 · based on OpenNutriTracker $upstreamVersion',
+    );
   });
 }

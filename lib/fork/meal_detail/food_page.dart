@@ -9,6 +9,7 @@ import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dart';
+import 'package:opennutritracker/features/meal_detail/presentation/widgets/meal_detail_nutriments_table.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
 import 'package:opennutritracker/fork/display/display_prefs.dart';
 import 'package:opennutritracker/fork/off/off_kinds.dart';
@@ -131,12 +132,13 @@ class FoodPageHeader extends StatelessWidget {
 }
 
 /// The amount's energy in a ring split by where it comes from, beside
-/// each macro's grams and share of the energy.
+/// each macro's grams and share of the energy. A value the food lacks is
+/// null and shows as missing, not as 0.
 class FoodMacroRing extends StatelessWidget {
-  final double kcal;
-  final double carbs;
-  final double fat;
-  final double protein;
+  final double? kcal;
+  final double? carbs;
+  final double? fat;
+  final double? protein;
 
   const FoodMacroRing({
     super.key,
@@ -152,43 +154,48 @@ class FoodMacroRing extends StatelessWidget {
     final theme = Theme.of(context);
     final palette = paletteOf(context);
     final energy = (
-      carbs: carbs * _kcalPerG.carbs,
-      fat: fat * _kcalPerG.fat,
-      protein: protein * _kcalPerG.protein,
+      carbs: (carbs ?? 0) * _kcalPerG.carbs,
+      fat: (fat ?? 0) * _kcalPerG.fat,
+      protein: (protein ?? 0) * _kcalPerG.protein,
     );
     final sum = energy.carbs + energy.fat + energy.protein;
     int share(double part) => sum > 0 ? (part / sum * 100).round() : 0;
-    Widget line(String name, double grams, double part, Color color) => Padding(
-      padding: const EdgeInsets.symmetric(vertical: 3),
-      child: Row(
-        children: [
-          Container(
-            width: 10,
-            height: 10,
-            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-          ),
-          const SizedBox(width: Dimens.spacing8),
-          Expanded(
-            child: Text.rich(
-              TextSpan(
-                children: [
+    Widget line(String name, double? grams, double part, Color color) =>
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 3),
+          child: Row(
+            children: [
+              Container(
+                width: 10,
+                height: 10,
+                decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+              ),
+              const SizedBox(width: Dimens.spacing8),
+              Expanded(
+                child: Text.rich(
                   TextSpan(
-                    text: '${grams.round()} g ',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
+                    children: [
+                      TextSpan(
+                        text: grams == null
+                            ? '$missingNutrientPlaceholder '
+                            : '${grams.round()} g ',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      TextSpan(
+                        text: grams == null ? name : '$name · ${share(part)}%',
+                      ),
+                    ],
                   ),
-                  TextSpan(text: '$name · ${share(part)}%'),
-                ],
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: palette.textMuted,
+                  ),
+                ),
               ),
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: palette.textMuted,
-              ),
-            ),
+            ],
           ),
-        ],
-      ),
-    );
+        );
     return AppCard(
       padding: const EdgeInsets.all(Dimens.spacing16),
       child: Row(
@@ -211,7 +218,10 @@ class FoodMacroRing extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        '${energyValue(context, kcal)}',
+                        switch (kcal) {
+                          final kcal? => '${energyValue(context, kcal)}',
+                          null => missingNutrientPlaceholder,
+                        },
                         style: theme.textTheme.headlineSmall?.copyWith(
                           fontWeight: FontWeight.w800,
                         ),

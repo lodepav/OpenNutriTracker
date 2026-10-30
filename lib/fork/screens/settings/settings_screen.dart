@@ -80,6 +80,7 @@ import 'package:opennutritracker/fork/report/nutrient_goals_overview.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
+import 'package:opennutritracker/core/utils/safe_url_launcher.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:opennutritracker/features/settings/presentation/widgets/diary_day_boundary_dialog.dart';
 import 'package:opennutritracker/features/settings/presentation/widgets/kcal_adjustment_dialog.dart';
@@ -214,8 +215,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
     // `showDialog` pushes a route.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      unawaited(_openAiAssistDialog(context));
+      unawaited(_hostAiAssistDialog());
     });
+  }
+
+  /// The dialog a caller asked for, and the route closed behind it: every
+  /// caller is the bulk-add screen, expecting the user back (#1471). Only
+  /// while this route is still the top one.
+  Future<void> _hostAiAssistDialog() async {
+    await _openAiAssistDialog(context);
+    if (!mounted || !(ModalRoute.isCurrentOf(context) ?? false)) return;
+    Navigator.of(context).pop();
   }
 
   @override

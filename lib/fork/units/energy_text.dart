@@ -13,23 +13,19 @@ bool usesKj(BuildContext context, {bool listen = true}) =>
 
 String energyUnit(BuildContext context) => usesKj(context) ? 'kJ' : 'kcal';
 
-/// [kcal] in the display unit, truncated as upstream's EnergyDisplay does,
+/// [kcal] in the display unit, rounded as upstream's EnergyDisplay does,
 /// so one value reads the same on every screen.
 int energyValue(BuildContext context, double kcal) =>
-    (usesKj(context) ? UnitCalc.kcalToKj(kcal) : kcal).toInt();
+    (usesKj(context) ? UnitCalc.kcalToKj(kcal) : kcal).round();
 
 String energyText(BuildContext context, double kcal, {bool signed = false}) {
   final value = energyValue(context, kcal);
   return '${signed && value > 0 ? '+' : ''}$value ${energyUnit(context)}';
 }
 
-/// A typed value in the display unit, back to kcal. A typed kJ goes back
-/// to its own number under truncation toward zero: 7239 alone returns
-/// 7238.99…, so it is moved a hair away from zero; 0 stays 0.
+/// A typed value in the display unit, back to kcal.
 double kcalFromInput(BuildContext context, double value) =>
-    usesKj(context, listen: false)
-    ? UnitCalc.kjToKcal(value + 1e-6 * value.sign)
-    : value;
+    usesKj(context, listen: false) ? UnitCalc.kjToKcal(value) : value;
 
 /// Upstream strings with "kcal" written into them (#150's "{consumed} /
 /// {target} kcal" in 16 languages), in kJ when kJ is chosen: the values

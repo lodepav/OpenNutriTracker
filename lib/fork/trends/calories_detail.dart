@@ -250,7 +250,7 @@ class MacroEnergyChart extends StatelessWidget {
                           fitInsideVertically: true,
                           // Cut, as energyValue is everywhere (S114).
                           getTooltipItem: (group, _, rod, _) => BarTooltipItem(
-                            '${rod.toY.toInt()} $unit\n${dayLabel(group.x)}',
+                            '${rod.toY.round()} $unit\n${dayLabel(group.x)}',
                             TextStyle(color: scheme.onInverseSurface),
                           ),
                         ),

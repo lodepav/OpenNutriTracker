@@ -10,6 +10,7 @@ import 'package:opennutritracker/core/domain/usecase/get_config_usecase.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/core/utils/demo/unsplash_attribution.dart';
 import 'package:opennutritracker/core/utils/navigation_options.dart';
+import 'package:opennutritracker/features/add_meal/presentation/log_tray.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dart';
 import 'package:opennutritracker/features/add_meal/presentation/widgets/favourite_toggle_button.dart';
 import 'package:opennutritracker/features/edit_meal/presentation/edit_meal_screen.dart';
@@ -49,6 +50,7 @@ class _MealDetailScreenState extends State<MealDetailScreen> {
 
   final quantityTextController = TextEditingController();
   late bool _usesImperialUnits;
+  LogTray? _logTray;
   bool _showMicronutrients = false;
   // #1126: preloaded from `ConfigEntity.defaultToRawFoodUnits`. False keeps
   // the pre-existing "serving wins whenever one exists" default; true
@@ -173,6 +175,7 @@ class _MealDetailScreenState extends State<MealDetailScreen> {
       _day = args.day;
       intakeTypeEntity = args.intakeTypeEntity;
       _usesImperialUnits = args.usesImperialUnits;
+      _logTray = args.logTray;
       _argumentsRead = true;
 
       // Thin OFF search results get hydrated to the full product record
@@ -352,6 +355,7 @@ class _MealDetailScreenState extends State<MealDetailScreen> {
               mealDetailBloc: _mealDetailBloc,
               quantityTextController: quantityTextController,
               onQuantityOrUnitChanged: onQuantityOrUnitChanged,
+              logTray: _logTray,
             );
           },
           ),
@@ -412,6 +416,7 @@ class _MealDetailScreenState extends State<MealDetailScreen> {
                       meal,
                       intakeTypeEntity,
                       _usesImperialUnits,
+                      logTray: _logTray,
                     ),
                   );
                 },
@@ -455,10 +460,16 @@ class _MealDetailScreenState extends State<MealDetailScreen> {
                   ),
                   const SizedBox(height: Dimens.spacing4),
                   FoodMacroRing(
-                    kcal: totalKcal,
-                    carbs: totalCarbs,
-                    fat: totalFat,
-                    protein: totalProtein,
+                    kcal: meal.nutriments.energyKcal100 == null
+                        ? null
+                        : totalKcal,
+                    carbs: meal.nutriments.carbohydrates100 == null
+                        ? null
+                        : totalCarbs,
+                    fat: meal.nutriments.fat100 == null ? null : totalFat,
+                    protein: meal.nutriments.proteins100 == null
+                        ? null
+                        : totalProtein,
                   ),
                   const SizedBox(height: Dimens.spacing8),
                   TodayAfterAdding(
@@ -545,11 +556,16 @@ class MealDetailScreenArguments {
   final DateTime day;
   final bool usesImperialUnits;
 
+  /// The add-food screen's "To log" list. With one, the button adds the food
+  /// to it and returns there instead of logging.
+  final LogTray? logTray;
+
   MealDetailScreenArguments(
     this.mealEntity,
     this.intakeTypeEntity,
     this.day,
-    this.usesImperialUnits,
-  );
+    this.usesImperialUnits, {
+    this.logTray,
+  });
 }
 

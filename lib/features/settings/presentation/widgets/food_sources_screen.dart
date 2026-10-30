@@ -8,6 +8,7 @@ import 'package:opennutritracker/generated/l10n.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/fork/settings/food_databases_view.dart';
 // [/fork]
+import 'package:opennutritracker/core/utils/safe_url_launcher.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 /// Settings → Food databases: lets the user pick which food databases the
@@ -50,7 +51,12 @@ class _FoodSourcesScreenState extends State<FoodSourcesScreen> {
   /// Opens the database's public website in the in-app browser (Custom
   /// Tabs / SFSafariViewController) so the user stays inside the app.
   Future<void> _openSourceInfo(String url) async {
-    await launchUrl(Uri.parse(url), mode: LaunchMode.inAppBrowserView);
+    final messenger = ScaffoldMessenger.of(context);
+    final errorText = S.of(context).errorOpeningBrowser;
+    if (await tryLaunchExternalUrl(url, mode: LaunchMode.inAppBrowserView)) {
+      return;
+    }
+    messenger.showSnackBar(SnackBar(content: Text(errorText)));
   }
 
   @override

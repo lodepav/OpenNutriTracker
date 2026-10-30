@@ -45,15 +45,15 @@ void main() {
     expect(find.text('70 g'), findsOneWidget);
   });
 
-  // Seam S114: energy is cut to whole numbers everywhere, as energyValue
-  // has it: the tile, the page's average and the tooltip.
-  testWidgets('energy is cut, not rounded, in the tile and tooltip', (
+  // Energy rounds everywhere, as energyValue has it (#1469): the tile, the
+  // page's average and the tooltip.
+  testWidgets('energy rounds in the tile and tooltip', (
     tester,
   ) async {
     await pumpTrends(tester, loaded(days: [_today(kcal: 2572.6)]));
-    expect(tileText(tester, 'calories'), contains('2572 / 2000'));
+    expect(tileText(tester, 'calories'), contains('2573 / 2000'));
     await openTile(tester, 'calories');
-    expect(find.text('2572 kcal'), findsOneWidget);
+    expect(find.text('2573 kcal'), findsOneWidget);
     final data = tester.widget<BarChart>(find.byType(BarChart)).data;
     final group = data.barGroups.last;
     final item = data.barTouchData.touchTooltipData.getTooltipItem(
@@ -62,6 +62,6 @@ void main() {
       group.barRods.single,
       0,
     )!;
-    expect(item.text, startsWith('2572 kcal'));
+    expect(item.text, startsWith('2573 kcal'));
   });
 }

@@ -139,6 +139,19 @@ void main() {
     expect(find.text('25 g protein · 50%'), findsOneWidget);
   });
 
+  // #1474: what the food lacks is missing, not 0.
+  testWidgets('a value the food lacks shows as missing, with no share', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _app(const FoodMacroRing(kcal: null, carbs: 25, fat: null, protein: 25)),
+    );
+    expect(find.text('—'), findsOneWidget);
+    expect(find.text('— fat'), findsOneWidget);
+    expect(find.text('25 g carbs · 50%'), findsOneWidget);
+    expect(find.text('25 g protein · 50%'), findsOneWidget);
+  });
+
   testWidgets('the header names where the food comes from and its energy', (
     tester,
   ) async {

@@ -104,7 +104,7 @@ void main() {
   });
 
   testWidgets('energy, in kJ when kJ is chosen', (tester) async {
-    // 100 kcal per 100 g: 150 g of chicken is 150 kcal, 627 kJ.
+    // 100 kcal per 100 g: 150 g of chicken is 150 kcal, 628 kJ.
     await _pump(
       tester,
       intakes: [chicken, oats],
@@ -114,7 +114,7 @@ void main() {
     );
     expect(find.text('962'), findsOneWidget);
     expect(find.text('of 8368 kJ'), findsOneWidget);
-    expect(find.text('627 kJ'), findsOneWidget);
+    expect(find.text('628 kJ'), findsOneWidget);
     expect(find.text('65%'), findsOneWidget);
   });
 

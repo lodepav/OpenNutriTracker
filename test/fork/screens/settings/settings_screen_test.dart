@@ -92,6 +92,17 @@ class _EmptyStorage implements FlutterSecureStorage {
   }) async => null;
 
   @override
+  Future<void> delete({
+    required String key,
+    AppleOptions? iOptions,
+    AndroidOptions? aOptions,
+    LinuxOptions? lOptions,
+    WebOptions? webOptions,
+    AppleOptions? mOptions,
+    WindowsOptions? wOptions,
+  }) async {}
+
+  @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
@@ -253,6 +264,71 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(AiAssistDialog), findsOneWidget);
+  });
+
+  testWidgets('a route pushed to host the dialog closes with it (#1471)', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 2.625;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: const [
+          S.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: S.supportedLocales,
+        home: Builder(
+          builder: (context) => TextButton(
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                settings: const RouteSettings(
+                  arguments: SettingsScreenArguments(openAiAssist: true),
+                ),
+                builder: (_) => const SettingsScreen(),
+              ),
+            ),
+            child: const Text('Bulk add'),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('Bulk add'));
+    await tester.pumpAndSettle();
+    expect(find.byType(AiAssistDialog), findsOneWidget);
+
+    await tester.tap(find.bySemanticsIdentifier('ai-assist-cancel'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(SettingsScreen), findsNothing);
+    expect(find.text('Bulk add'), findsOneWidget);
+  });
+
+  testWidgets('and opened from its own tile, it closes back onto Settings', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 2.625;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(_app(section: SettingsSection.food));
+    await tester.pumpAndSettle();
+
+    final tile = find.bySemanticsIdentifier('settings-ai-assist');
+    await tester.ensureVisible(tile);
+    await tester.pumpAndSettle();
+    await tester.tap(tile);
+    await tester.pumpAndSettle();
+    await tester.tap(find.bySemanticsIdentifier('ai-assist-cancel'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AiAssistDialog), findsNothing);
+    expect(find.byType(SettingsScreen), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('arguments that ask for nothing leave the screen alone', (
