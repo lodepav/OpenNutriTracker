@@ -2,6 +2,14 @@
 
 Written by fork/tools/release_notes.dart at each release (D16).
 
+## 0.4.2 · 2026-10-30
+
+Based on OpenNutriTracker 2.5.0.
+
+### Fixes and changes
+
+- Maintenance lengths of 2, 4 or 8 weeks
+
 ## 0.4.1 · 2026-10-29
 
 Based on OpenNutriTracker 2.5.0.
