@@ -98,6 +98,19 @@ void main() {
     );
   });
 
+  test('a drink is not broken down; a cold soup is', () {
+    // kvass broken down came back as rye bread and sugar, its water left
+    // out: 286 kcal for a 100 kcal soup (the portion eval)
+    expect(
+      BreakDownDishUseCase.systemPrompt,
+      contains('A drink is not broken down: kvass'),
+    );
+    expect(
+      BreakDownDishUseCase.systemPrompt,
+      contains('A soup is a dish, a cold one too.'),
+    );
+  });
+
   // The clients drop a unit the text does not state (#977). If the wording
   // stops stating one, the grams turn into bare counts: "120 wheat flour".
   test('the text sent states a unit, whatever the dish is called', () {

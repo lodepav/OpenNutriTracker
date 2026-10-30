@@ -21,8 +21,18 @@ final _number = RegExp(r'(?<![\d.,])(\d+)(?:[.,](\d+))?');
 final _wholeAnd = RegExp(r'(\d+|one|two|three)\s+and\s+an?\s+(half|quarter)');
 const _wholeWords = {'one': 1, 'two': 2, 'three': 3};
 
+/// [note] without the sizes it gives a food ("a 23 cm pizza", "a 12 inch
+/// tortilla", "12\""): a size says how big a food is, not how many there
+/// are, nor how much it weighs.
+String withoutSizes(String note) => note.replaceAll(_size, ' ');
+
+final _size = RegExp(
+  r'(?<![\d.,])\d+(?:[.,]\d+)?\s*(?:-\s*)?(?:cm|mm|inch(?:es)?|in\.|"|″)(?![a-z])',
+  caseSensitive: false,
+);
+
 Set<double> _counts(String note) {
-  final text = note.toLowerCase();
+  final text = withoutSizes(note).toLowerCase();
   final counts = <double>{};
   for (final m in _number.allMatches(text)) {
     final whole = double.parse(m.group(1)!);

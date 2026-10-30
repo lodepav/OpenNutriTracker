@@ -465,6 +465,7 @@ void main() {
           ),
           ('Chili con carne', ['chili con carne', 'chilli con carne']),
           ('Lasagna, beef', ['beef lasagna', 'lasagna bolognese']),
+          ('Kvass, bread drink', ['kvass', 'kvas', 'gira', 'bread kvass']),
         ]) {
           for (final query in queries) {
             final row = (await source.fetchSearchWordResults(

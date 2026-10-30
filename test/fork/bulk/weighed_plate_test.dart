@@ -250,6 +250,25 @@ void main() {
       expect(noteStatesNoAmount(null), isFalse);
     });
 
+    test('a size is no amount: the model weighs the food by it', () {
+      expect(
+        noteStatesNoAmount('23 cm meat assortment wholegrain pizza'),
+        isTrue,
+      );
+      expect(noteStatesNoAmount('a 12 inch tortilla'), isTrue);
+      expect(noteStatesNoAmount('30cm pizza'), isTrue);
+      expect(noteStatesNoAmount('2 30 cm pizzas'), isFalse);
+      expect(estimatedPlatePrompt, contains('"a 23 cm pizza"'));
+      // a named dish is split into its foods, its broth too
+      expect(estimatedPlatePrompt, contains('a pizza is its crust'));
+      expect(estimatedPlatePrompt, isNot(contains('Do not split')));
+      // the oil on a salad is not seen, and is most of its energy
+      expect(
+        estimatedPlatePrompt,
+        contains('A salad or slaw lists its dressing'),
+      );
+    });
+
     test(
       'with no note the photo prompt stays, and its grams are dropped',
       () async {

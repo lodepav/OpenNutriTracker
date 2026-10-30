@@ -120,4 +120,38 @@ void main() {
     await tester.pumpAndSettle();
     expect(added, [(IntakeTypeEntity.dinner, DateTime(2026, 10, 23, 19, 30))]);
   });
+
+  testWidgets('a row fits at 200% text', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2340);
+    tester.view.devicePixelRatio = 2.625;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      MediaQuery(
+        data: const MediaQueryData(textScaler: TextScaler.linear(2)),
+        child: MaterialApp(
+          home: TimelineScreen(
+            day: _day,
+            entries: TimelineEntries(
+              of: (_) async => [
+                _eat('Wholegrain bread', DateTime(2026, 10, 23, 8, 41)),
+              ],
+              replace: (_) async {},
+              config: () async => const ConfigEntity(
+                false,
+                false,
+                false,
+                AppThemeEntity.system,
+              ),
+            ),
+            pickTime: (_, _) async => null,
+            addAt: (_, _, _) async {},
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    // An overflow is an exception the test fails on.
+    expect(tester.takeException(), isNull);
+    expect(find.text('100 kcal so far'), findsOneWidget);
+  });
 }

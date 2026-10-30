@@ -5,12 +5,15 @@ import 'package:archive/archive.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:opennutritracker/core/domain/entity/body_weight_unit_entity.dart';
+import 'package:opennutritracker/core/domain/entity/intake_entity.dart';
 import 'package:opennutritracker/core/domain/entity/intake_type_entity.dart';
 import 'package:opennutritracker/core/domain/entity/weight_log_entity.dart';
+import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dart';
 import 'package:opennutritracker/fork/body/measurement_store.dart';
 import 'package:opennutritracker/fork/history/history_file.dart';
 import 'package:opennutritracker/fork/history/history_import.dart';
 import 'package:opennutritracker/fork/history/table_reader.dart';
+import 'package:opennutritracker/fork/phases/phases.dart';
 
 Uint8List _bytes(String text) => Uint8List.fromList(utf8.encode(text));
 
@@ -450,7 +453,9 @@ void main() {
 
     final plan = planImport(
       file,
-      existing: const HistoryExisting(customFoodNames: {'pea protein'}),
+      existing: const HistoryExisting(
+        customMeals: {'pea protein': (code: null, name: 'pea protein')},
+      ),
       today: DateTime(2026, 10, 24),
       source: 'MacroFactor',
     );
@@ -488,7 +493,7 @@ void main() {
             value: 92,
           ),
         ],
-        customFoodNames: {'butter chicken'},
+        customMeals: {'butter chicken': (code: null, name: 'Butter chicken')},
       ),
       today: DateTime(2026, 10, 24),
       source: 'MacroFactor',
@@ -524,7 +529,7 @@ void main() {
                 value: value,
               ),
         ],
-        customFoodNames: {'butter chicken'},
+        customMeals: {'butter chicken': (code: null, name: 'Butter chicken')},
         weighIns: [WeightLogEntity(date: DateTime(2025, 5, 16), weightKg: 94)],
       ),
       today: DateTime(2026, 10, 24),
@@ -555,5 +560,384 @@ void main() {
     ]);
     expect([for (final f in file.foods) f.name], ['Egg', 'Soup', 'Tea']);
     expect(file.foodTables, ['a.csv', 'b.csv']);
+  });
+
+  group('MacroFactor workbook, everything else', () {
+    final today = DateTime(2026, 10, 30);
+    HistoryFile workbook() => readHistory(
+      readTables(
+        'MacroFactor.zip',
+        _zip({
+          'Partial Logging.csv': _bytes(
+            'Date,Partial Logging\n'
+            '16/05/2025,No\n09/08/2025,Yes\n14/08/2025,Yes\n',
+          ),
+          'Weight Goals.csv': _bytes(
+            'Goal,Status,Start Date,End Date,Goal Weight (kg),'
+            'Starting Scale Weight (kg),Starting Trend Weight (kg),'
+            'Ending Scale Weight (kg),Ending Trend Weight (kg)\n'
+            'Weight Loss,Completed,16/05/2025,17/07/2025,90.0,93.9,93.5,90.0,90.2\n'
+            'Maintenance,Completed,17/07/2025,13/08/2025,90.0,90.0,90.2,90.9,90.5\n'
+            'Weight Gain,Not Completed,13/08/2025,28/08/2025,95.0,90.9,90.5,91.5,91\n'
+            'Maintenance,In Progress,28/08/2025,,93.0,91.5,91,,\n',
+          ),
+          'Recipes.csv': _bytes(
+            'Recipe Name,Total Weight (g),Serving Qty,Ingredients,'
+            'Description,Calories (kcal),Protein (g),Fat (g),Carbs (g),'
+            'Fiber (g),Step 1,Step 2\n'
+            '"Butter Chicken",638.0,4.0,"Chicken (1 serving)\nSauce (100 g)",'
+            'Mild,886.0,72.33,40.52,51.83,1.23,Fry it,Simmer it\n'
+            'Ragu,,6.0,Pasta Sauce (100 g),,616.0,87.0,22.0,20.0,,,\n',
+          ),
+        }),
+      ),
+    );
+
+    test('reads the days logged in part, the goals over and the recipes', () {
+      final file = workbook();
+      expect(file.partialDays, {DateTime(2025, 8, 9), DateTime(2025, 8, 14)});
+      expect(file.goals.map((g) => (g.kind, g.start, g.end, g.targetKg)), [
+        (PhaseKind.cut, DateTime(2025, 5, 16), DateTime(2025, 7, 17), 90.0),
+        (
+          PhaseKind.maintain,
+          DateTime(2025, 7, 17),
+          DateTime(2025, 8, 13),
+          null,
+        ),
+        (PhaseKind.bulk, DateTime(2025, 8, 13), DateTime(2025, 8, 28), 95.0),
+      ]);
+      expect(file.goals.first.startKg, 93.9);
+      expect(file.goals.first.endKg, 90.0);
+      final chicken = file.recipes.first;
+      expect(chicken.food.name, 'Butter Chicken');
+      expect(chicken.food.grams, 638);
+      expect(chicken.food.kcal, 886);
+      expect(chicken.food.nutrients['fiber'], 1.23);
+      expect(chicken.servings, 4);
+      expect(
+        chicken.notes,
+        'Mild\n\nIngredients:\nChicken (1 serving)\nSauce (100 g)\n\n'
+        '1. Fry it\n\n2. Simmer it',
+      );
+      expect(file.recipes.last.food.grams, isNull);
+      expect(file.isEmpty, isFalse);
+    });
+
+    test('plans them as here, once, and keeps what is here', () {
+      final file = workbook();
+      final plan = planImport(
+        file,
+        existing: HistoryExisting(partialDays: {DateTime(2025, 8, 9)}),
+        today: today,
+        source: 'MacroFactor',
+      );
+      expect(plan.partialDays, {DateTime(2025, 8, 14)});
+      expect(plan.goals, hasLength(3));
+      final chicken = plan.recipes.first;
+      expect(chicken.totalWeightG, 638);
+      expect(chicken.servingsCount, 4);
+      expect(chicken.aggregatedNutrimentsPer100.energyKcal100, 886 / 638 * 100);
+      expect(chicken.toMealEntity().servingQuantity, 638 / 4);
+      expect(chicken.ingredients.single.convertedAmountG, 638);
+      final ragu = plan.recipes.last;
+      expect(ragu.totalWeightG, 600);
+      expect(ragu.description, contains('no total weight'));
+      expect(plan.isEmpty, isFalse);
+
+      final again = planImport(
+        file,
+        existing: HistoryExisting(
+          partialDays: {DateTime(2025, 8, 9), ...plan.partialDays},
+          goals: plan.goals,
+          recipeNames: {for (final r in plan.recipes) r.name.toLowerCase()},
+        ),
+        today: today,
+        source: 'MacroFactor',
+      );
+      expect(again.isEmpty, isTrue);
+      expect(again.kept, [
+        '2 recipes',
+        '2 days already left out of the expenditure estimate',
+        '3 past goals',
+      ]);
+    });
+
+    test('a goal set here over the same weeks is kept, not doubled', () {
+      final plan = planImport(
+        workbook(),
+        existing: HistoryExisting(
+          goals: [
+            GoalRecord(
+              kind: PhaseKind.cut,
+              start: DateTime(2025, 6, 1),
+              end: DateTime(2025, 7, 1),
+              startKg: 92,
+              endKg: 91,
+            ),
+          ],
+        ),
+        today: today,
+        source: 'MacroFactor',
+      );
+      expect(plan.goals.map((g) => g.kind), [
+        PhaseKind.maintain,
+        PhaseKind.bulk,
+      ]);
+      expect(plan.keptGoals, 1);
+    });
+  });
+
+  group('a food log as if logged here', () {
+    const header = 'Date,Time,Food Name,Serving Weight (g),Calories (kcal)\n';
+    final log = readTables(
+      'foods.csv',
+      _bytes(
+        '${header}2025-05-16,08:00,Oats,50,190\n'
+        '2025-05-17,08:00,Oats,60,228\n'
+        '2025-05-17,12:00,Pea Protein,30,110\n',
+      ),
+    );
+    final customs = readTables(
+      'Custom Foods.csv',
+      _bytes(
+        'Food Name,Serving Size,Serving Qty,Serving Weight (g),'
+        'Calories (kcal)\nPea Protein,,,,\nNever Logged,,,,\n',
+      ),
+    );
+
+    test('a food logged twice is one food; a custom food is its custom '
+        'meal', () {
+      final file = readHistory([...log, ...customs]);
+      expect(file.customFoodNames, {'pea protein', 'never logged'});
+      final plan = planImport(
+        file,
+        existing: const HistoryExisting(),
+        today: DateTime(2026, 10, 30),
+        source: 'MacroFactor',
+      );
+      final entries = plan.intakes.values.expand((e) => e).toList();
+      final oats = entries.where((i) => i.meal.name == 'Oats').toList();
+      expect(oats.map((i) => i.id).toSet(), hasLength(2));
+      expect(oats.map((i) => i.meal.code).toSet(), hasLength(1));
+      expect(oats.every(wasImported), isTrue);
+      expect(oats.any(isImportedHistory), isFalse);
+
+      final pea = plan.customFoods.single;
+      expect(pea.name, 'Pea Protein');
+      expect(pea.source, MealSourceEntity.custom);
+      expect(pea.nutriments.energyKcal100, closeTo(110 / 30 * 100, 1e-9));
+      final logged = entries.singleWhere((i) => i.meal.name == 'Pea Protein');
+      expect(logged.meal.code, pea.code);
+      expect(logged.meal.source, MealSourceEntity.custom);
+    });
+
+    test('a custom meal here by the name is the one logged', () {
+      final plan = planImport(
+        readHistory([...log, ...customs]),
+        existing: const HistoryExisting(
+          customMeals: {'pea protein': (code: 'mine', name: 'Pea protein')},
+        ),
+        today: DateTime(2026, 10, 30),
+        source: 'MacroFactor',
+      );
+      expect(plan.customFoods, isEmpty);
+      expect(plan.keptCustomFoods, 1);
+      final pea = plan.intakes[DateTime(2025, 5, 17)]!.singleWhere(
+        (i) => i.meal.code == 'mine',
+      );
+      // spelt as the meal here is, so it is that meal
+      expect(pea.meal.name, 'Pea protein');
+    });
+
+    test('an earlier import of a food per row is written again', () {
+      final file = readHistory(log);
+      final plan = planImport(
+        file,
+        existing: const HistoryExisting(),
+        today: DateTime(2026, 10, 30),
+        source: 'MacroFactor',
+      );
+      final earlier = {
+        for (final MapEntry(key: day, value: entries) in plan.intakes.entries)
+          day: [
+            for (final i in entries)
+              IntakeEntity(
+                id: i.id,
+                unit: i.unit,
+                amount: i.amount,
+                type: i.type,
+                meal: MealEntity(
+                  code: i.id,
+                  name: i.meal.name,
+                  url: null,
+                  mealQuantity: i.meal.mealQuantity,
+                  mealUnit: i.meal.mealUnit,
+                  servingQuantity: i.meal.servingQuantity,
+                  servingUnit: i.meal.servingUnit,
+                  servingSize: i.meal.servingSize,
+                  nutriments: i.meal.nutriments,
+                  source: i.meal.source,
+                ),
+                dateTime: i.dateTime,
+              ),
+          ],
+      };
+      final again = planImport(
+        file,
+        existing: HistoryExisting(importedDays: earlier),
+        today: DateTime(2026, 10, 30),
+        source: 'MacroFactor',
+      );
+      expect(again.replaced.keys, earlier.keys);
+      expect(
+        planImport(
+          file,
+          existing: HistoryExisting(importedDays: plan.intakes),
+          today: DateTime(2026, 10, 30),
+          source: 'MacroFactor',
+        ).intakes,
+        isEmpty,
+      );
+    });
+  });
+
+  test('an earlier import renamed here since is kept, not written over', () {
+    final file = readHistory(
+      readTables(
+        'MacroFactor.zip',
+        _zip({
+          'Recipes.csv': _bytes(
+            'Recipe Name,Total Weight (g),Serving Qty,Calories (kcal)\n'
+            'Ragu,600,6,616\n',
+          ),
+          'Custom Foods.csv': _bytes(
+            'Food Name,Serving Weight (g),Calories (kcal)\nShake,300,300\n',
+          ),
+        }),
+      ),
+    );
+    final first = planImport(
+      file,
+      existing: const HistoryExisting(),
+      today: DateTime(2026, 10, 30),
+      source: 'MacroFactor',
+    );
+    final again = planImport(
+      file,
+      existing: HistoryExisting(
+        recipeNames: const {'ragu bolognese'},
+        recipeIds: {first.recipes.single.id},
+        customMeals: {
+          'my shake': (code: first.customFoods.single.code, name: 'My shake'),
+        },
+      ),
+      today: DateTime(2026, 10, 30),
+      source: 'MacroFactor',
+    );
+    expect(again.recipes, isEmpty);
+    expect(again.customFoods, isEmpty);
+    expect(again.kept, ['1 custom food', '1 recipe']);
+  });
+
+  test('a goal of one day is kept on a second import', () {
+    final file = readHistory(
+      readTables(
+        'Weight Goals.csv',
+        _bytes(
+          'Goal,Status,Start Date,End Date\n'
+          'Maintenance,Completed,16/05/2025,16/05/2025\n',
+        ),
+      ),
+    );
+    expect(file.goals, hasLength(1));
+    final again = planImport(
+      file,
+      existing: HistoryExisting(goals: file.goals),
+      today: DateTime(2026, 10, 30),
+      source: 'MacroFactor',
+    );
+    expect(again.goals, isEmpty);
+    expect(again.keptGoals, 1);
+  });
+
+  test('a custom food named only is as the log last had it, whatever the '
+      'order of the log', () {
+    final file = readHistory([
+      ...readTables(
+        'foods.csv',
+        _bytes(
+          'Date,Time,Food Name,Serving Weight (g),Calories (kcal)\n'
+          '2025-05-17,08:00,Shake,300,330\n'
+          '2025-05-16,08:00,Shake,300,300\n',
+        ),
+      ),
+      ...readTables(
+        'Custom Foods.csv',
+        _bytes('Food Name,Calories (kcal)\nShake,\n'),
+      ),
+    ]);
+    final plan = planImport(
+      file,
+      existing: const HistoryExisting(),
+      today: DateTime(2026, 10, 30),
+      source: 'MacroFactor',
+    );
+    expect(
+      plan.customFoods.single.nutriments.energyKcal100,
+      closeTo(110, 1e-9),
+    );
+  });
+
+  test('a copy of an imported day\'s totals is no food either', () {
+    final day = DateTime(2025, 5, 16);
+    final totals = planImport(
+      HistoryFile(
+        food: {
+          day: {null: FoodTotals()..add(2000, 150, 200, 70)},
+        },
+        weightsKg: const {},
+        weightUnit: BodyWeightUnit.kg,
+        weightUnitStated: false,
+      ),
+      existing: const HistoryExisting(),
+      today: day,
+      source: 'MacroFactor',
+    ).intakes[day]!.single;
+    final copy = IntakeEntity(
+      id: 'a-new-id',
+      unit: totals.unit,
+      amount: totals.amount,
+      type: totals.type,
+      meal: totals.meal,
+      dateTime: DateTime(2026, 10, 30),
+    );
+    expect(isImportedHistory(copy), isTrue);
+    expect(wasImported(copy), isFalse);
+  });
+
+  test('a custom food with calories, logged too, is one kept here', () {
+    final plan = planImport(
+      readHistory([
+        ...readTables(
+          'foods.csv',
+          _bytes(
+            'Date,Time,Food Name,Serving Weight (g),Calories (kcal)\n'
+            '2025-05-16,08:00,Shake,300,300\n',
+          ),
+        ),
+        ...readTables(
+          'Custom Foods.csv',
+          _bytes(
+            'Food Name,Serving Weight (g),Calories (kcal)\nShake,300,300\n',
+          ),
+        ),
+      ]),
+      existing: const HistoryExisting(
+        customMeals: {'shake': (code: 'mine', name: 'Shake')},
+      ),
+      today: DateTime(2026, 10, 30),
+      source: 'MacroFactor',
+    );
+    expect(plan.keptCustomFoods, 1);
   });
 }

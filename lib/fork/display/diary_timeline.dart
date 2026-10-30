@@ -84,9 +84,10 @@ class TimelineGap extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = paletteOf(context);
-    final hours = from == to
-        ? clockText(context, from)
-        : '${clockText(context, from)} – ${clockText(context, to)}';
+    // [to] is the last empty hour's start: the range ends an hour later.
+    final hours =
+        '${clockText(context, from)} – '
+        '${clockText(context, to.add(const Duration(hours: 1)))}';
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         Dimens.spacing16,
@@ -94,17 +95,27 @@ class TimelineGap extends StatelessWidget {
         Dimens.spacing16,
         0,
       ),
-      child: Row(
-        children: [
-          Text(
-            '$hours · nothing logged',
-            style: Theme.of(
-              context,
-            ).textTheme.labelSmall?.copyWith(color: palette.textMuted),
-          ),
-          const SizedBox(width: Dimens.spacing8),
-          Expanded(child: Divider(color: palette.border, height: 1)),
-        ],
+      // The text takes what it needs and wraps at the row's width; the rule
+      // takes what is left. A Flexible would split the row with the rule and
+      // wrap a text that fits.
+      child: LayoutBuilder(
+        builder: (context, constraints) => Row(
+          children: [
+            ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: constraints.maxWidth - Dimens.spacing8,
+              ),
+              child: Text(
+                '$hours · nothing logged',
+                style: Theme.of(
+                  context,
+                ).textTheme.labelSmall?.copyWith(color: palette.textMuted),
+              ),
+            ),
+            const SizedBox(width: Dimens.spacing8),
+            Expanded(child: Divider(color: palette.border, height: 1)),
+          ],
+        ),
       ),
     );
   }

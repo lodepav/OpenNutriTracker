@@ -45,7 +45,9 @@ The user's note states weights. Rules:
 /// the meals' median kcal 21% off against 31% for counts and the table's
 /// serving, and weights 16% off the six known ones; asking it to write
 /// down its scale first, or to fall back to a typical serving, did no
-/// better. The screen asks the user to check every amount.
+/// better. A named dish is split into its foods (the user, 2026-10-30): a
+/// pizza searched by its name found a puffed snack. The screen asks the
+/// user to check every amount.
 const estimatedPlatePrompt = '''
 You list the foods on a plate and estimate how much of each was served, so
 each can be looked up in a table of generic foods (USDA, BLS). You do not
@@ -53,27 +55,34 @@ estimate nutrition.
 
 The user's note names the meal, or says what a food on it is ("the cheese
 is sulguni"), but states no weight. Rules:
-- If the note names the whole meal as one dish or food, return just that one
-  item: "query" its name as the note writes it, with your estimate of its
-  weight as served. Do not split it into ingredients. A dish named with
-  what is in it ("bread soup with apples", "buckwheat with mushrooms") is
-  one dish.
-- Otherwise the first item names the plate: "query" is "dish=" and a short
-  name for the whole meal in the user's app language ("dish=Chicken rice
-  bowl"), with no quantity.
-- Then one item per food on the plate, as served (cooked, as eaten, not
-  raw): every food the note names; when it names none, or only says what
-  one food on the plate is, every food the photo shows, that one taken to
-  be what the note says it is. "query" is the nearest generic food in
-  English, named the way a food table names it: the food, then its form and state after
-  commas ("chicken breast, grilled", "rice, white, cooked", "potatoes,
-  roasted", "spinach, raw").
+- If the note names one plain food and nothing else ("a banana", "greek
+  yogurt"), return just that one item: "query" its name, with your
+  estimate of its weight as served.
+- Otherwise the first item names the meal: "query" is "dish=" and the name
+  the note gives it, without any size it gives, in the user's app
+  language; when the note gives no name for the whole meal, a short one
+  ("dish=Chicken rice bowl"). It has no quantity.
+- Then one item per food in it, as served (cooked, as eaten, not raw),
+  a named dish too: a pizza is its crust, sauce, cheese and each topping;
+  a soup or stew is its broth or base and each solid in it, so none of it
+  goes missing. A salad or slaw lists its dressing as a food: the oil,
+  vinaigrette, mayonnaise or sour cream the note or the photo shows, and
+  when it looks dressed with nothing to say what, oil, a tablespoon (14 g)
+  for each 150 g of salad. Every food the note names is among them; the
+  rest are what the photo shows, a food the note says what it is taken to
+  be that.
+  "query" is the nearest generic food in English, named the way a food
+  table names it: the food, then its form and state after commas
+  ("chicken breast, grilled", "rice, white, cooked", "potatoes, roasted",
+  "spinach, raw").
 - Every food has "quantity" in grams with "unit" "g" (a drink or soup may
   use "ml"): your estimate of what the photo shows. Judge it by what the
   food sits in, how much of it the food fills and how high it is piled.
   Sizes to go by: a dinner plate is about 26 cm across, a side plate 20 cm,
   a soup bowl 15-18 cm and about 350 ml when full, a gravy boat or dip pot
   30-60 ml; a fork or knife is about 20 cm, a tablespoon's bowl 4 cm wide.
+  A size the note gives ("a 23 cm pizza") is the dish's size: weigh its
+  foods by that, not by the plate.
   Weigh pieces by their size: a cutlet or chop about 80-150 g, a slice of
   bread 30 g, an egg 50 g. Restaurant and recipe photos are often generous:
   do not shrink a full plate to a diet portion.
@@ -102,12 +111,15 @@ Future<MealTextParseResult> readWeighedPlate(
 
 /// Whether [note] names the meal and states no amount, neither a weight
 /// nor a count: a count the user gave is kept as given (S170), on the
-/// photo prompt.
+/// photo prompt. A size ("a 23 cm pizza") is no amount: the model weighs
+/// the food by it.
 bool noteStatesNoAmount(String? note) =>
     note != null &&
     note.trim().isNotEmpty &&
     !noteHasCount(note) &&
-    parseMealText(note).items.every((item) => item.quantity == null);
+    parseMealText(
+      withoutSizes(note),
+    ).items.every((item) => item.quantity == null);
 
 /// Reads [photo] with a [note] that states no amount: every food at the
 /// model's estimate of its grams.
