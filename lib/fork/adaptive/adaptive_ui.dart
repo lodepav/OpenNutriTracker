@@ -17,6 +17,7 @@ import 'package:opennutritracker/fork/copy/copy_ui.dart';
 import 'package:opennutritracker/fork/adaptive/check_in_history.dart';
 import 'package:opennutritracker/fork/adaptive/check_in.dart';
 import 'package:opennutritracker/fork/adaptive/choice.dart';
+import 'package:opennutritracker/fork/adaptive/expenditure.dart';
 import 'package:opennutritracker/fork/adaptive/expenditure_settings_ui.dart';
 import 'package:opennutritracker/fork/units/energy_text.dart';
 import 'package:opennutritracker/fork/display/display_prefs.dart';
@@ -483,8 +484,11 @@ class _CheckInScreenState extends State<CheckInScreen> {
                 Padding(
                   padding: const EdgeInsets.only(top: 8),
                   child: Text(
-                    'Not enough data this week (4 logged days and a weigh-in '
-                    'are needed), so the expenditure carries from before.',
+                    checkIn.breakHold == null
+                        ? 'Not enough data this week (4 logged days and a '
+                              'weigh-in are needed), so the expenditure '
+                              'carries from before.'
+                        : _breakHoldText(checkIn.breakHold!),
                     style: TextStyle(color: theme.colorScheme.tertiary),
                   ),
                 ),
@@ -609,6 +613,17 @@ class _CheckInScreenState extends State<CheckInScreen> {
       },
     ),
   );
+
+  String _breakHoldText(BreakHold hold) {
+    final left = hold.resumesIn;
+    final when = left == null
+        ? 'a week after your first weigh-in back'
+        : left == 1
+        ? 'tomorrow'
+        : 'in $left days';
+    return 'Back after a break in logging, so the target holds while your '
+        'weight settles. It adjusts again $when.';
+  }
 
   String _fromProfileText(CheckIn checkIn) {
     final formula = checkIn.formulaKcal!;

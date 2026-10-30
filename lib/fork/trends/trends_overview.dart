@@ -10,6 +10,7 @@ import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/core/domain/entity/body_weight_unit_entity.dart';
 import 'package:opennutritracker/fork/body/measurement_store.dart';
 import 'package:opennutritracker/fork/body/side_compare.dart';
+import 'package:opennutritracker/fork/body/waist_ratio.dart';
 import 'package:opennutritracker/fork/display/display_prefs.dart';
 import 'package:opennutritracker/fork/report/rate_text.dart';
 import 'package:opennutritracker/fork/layout/arrange_screen.dart';
@@ -125,6 +126,9 @@ class _TrendsOverviewState extends State<TrendsOverview> {
     _measurements = _measure();
   });
 
+  /// The profile's height and gender, for the waist tile.
+  late Future<BodyFrame?> _frame = loadBodyFrame();
+
   /// The goal, for the Goal tile; read again for a new pace or target.
   late Future<TrendsGoal> _goal = TrendsOverview.goal();
 
@@ -191,6 +195,8 @@ class _TrendsOverviewState extends State<TrendsOverview> {
     if (old.state.targetWeightKg != widget.state.targetWeightKg) {
       _goal = TrendsOverview.goal();
     }
+    // A height changed in the profile reloads Trends.
+    if (old.state != widget.state) _frame = loadBodyFrame();
     // After the frame: an open detail page listens too, and is not
     // under this one to be rebuilt with it.
     if (old.state != widget.state) {
@@ -232,106 +238,116 @@ class _TrendsOverviewState extends State<TrendsOverview> {
                 future: _measurements,
                 builder: (context, measured) => FutureBuilder(
                   future: _goal,
-                  builder: (context, goal) {
-                    final all = {
-                      for (final t in trendTiles(
-                        context,
-                        state,
-                        dates: dates,
-                        history: snapshot.data ?? const [],
-                        micros: micros.data,
-                        measurements: measured.data,
-                        goal: goal.data,
-                        open: (m) => openTrendDetail(context, m, _deps),
-                      ))
-                        t.id.substring('trends-tile-'.length): t,
-                    };
-                    final tiles = arranged(all, TrendsTilesStore.current.value);
-                    final logged = state.days.where(isLogged).length;
-                    return ListView(
-                      padding: const EdgeInsets.fromLTRB(
-                        Dimens.spacing12,
-                        Dimens.spacing8,
-                        Dimens.spacing12,
-                        Dimens.spacing32,
-                      ),
-                      children: [
-                        _Streak(days: state.days, windowDays: state.windowDays),
-                        const SizedBox(height: Dimens.spacing8),
-                        RangePills(
-                          rangeDays: state.rangeDays,
-                          onChanged: (d) => context.read<TrendsBloc>().add(
-                            LoadTrendsEvent(rangeDays: d),
-                          ),
+                  builder: (context, goal) => FutureBuilder(
+                    future: _frame,
+                    builder: (context, frame) {
+                      final all = {
+                        for (final t in trendTiles(
+                          context,
+                          state,
+                          dates: dates,
+                          history: snapshot.data ?? const [],
+                          micros: micros.data,
+                          measurements: measured.data,
+                          goal: goal.data,
+                          frame: frame.data,
+                          open: (m) => openTrendDetail(context, m, _deps),
+                        ))
+                          t.id.substring('trends-tile-'.length): t,
+                      };
+                      final tiles = arranged(
+                        all,
+                        TrendsTilesStore.current.value,
+                      );
+                      final logged = state.days.where(isLogged).length;
+                      return ListView(
+                        padding: const EdgeInsets.fromLTRB(
+                          Dimens.spacing12,
+                          Dimens.spacing8,
+                          Dimens.spacing12,
+                          Dimens.spacing32,
                         ),
-                        const SizedBox(height: Dimens.spacing12),
-                        for (var i = 0; i < tiles.length; i += 2)
-                          Padding(
-                            padding: const EdgeInsets.only(
-                              bottom: Dimens.spacing8,
-                            ),
-                            // The tiles are alike, so a row's two are one height;
-                            // AutoSizeText measures, so no IntrinsicHeight here.
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Expanded(child: tiles[i]),
-                                const SizedBox(width: Dimens.spacing8),
-                                Expanded(
-                                  child: i + 1 < tiles.length
-                                      ? tiles[i + 1]
-                                      : const SizedBox.shrink(),
-                                ),
-                              ],
+                        children: [
+                          _Streak(
+                            days: state.days,
+                            windowDays: state.windowDays,
+                          ),
+                          const SizedBox(height: Dimens.spacing8),
+                          RangePills(
+                            rangeDays: state.rangeDays,
+                            onChanged: (d) => context.read<TrendsBloc>().add(
+                              LoadTrendsEvent(rangeDays: d),
                             ),
                           ),
-                        Text(
-                          'Tap a card for its chart · '
-                          '${rangeText(state.rangeDays, state.windowDays)}, '
-                          '$logged logged',
-                          textAlign: TextAlign.center,
-                          style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(color: paletteOf(context).textMuted),
-                        ),
-                        ...arrangeTrendCards(widget.cards),
-                        const SizedBox(height: Dimens.spacing16),
-                        Center(
-                          child: TextButton.icon(
-                            key: const ValueKey('trends-arrange'),
-                            icon: const Icon(Icons.tune_rounded),
-                            label: const Text('Arrange Trends'),
-                            onPressed: () => Navigator.push(
-                              context,
-                              MaterialPageRoute<void>(
-                                builder: (_) => ArrangeScreen(
-                                  title: 'Arrange Trends',
-                                  lists: [
-                                    ArrangeList(
-                                      title: 'Tiles',
-                                      store: TrendsTilesStore(),
-                                      names: {
-                                        for (final MapEntry(:key, :value)
-                                            in all.entries)
-                                          key: value.label.replaceAll(
-                                            ' · avg',
-                                            '',
-                                          ),
-                                      },
-                                    ),
-                                    ArrangeList(
-                                      title: 'Cards',
-                                      store: TrendsLayoutStore(),
-                                      names: trendCards,
-                                    ),
-                                  ],
+                          const SizedBox(height: Dimens.spacing12),
+                          for (var i = 0; i < tiles.length; i += 2)
+                            Padding(
+                              padding: const EdgeInsets.only(
+                                bottom: Dimens.spacing8,
+                              ),
+                              // The tiles are alike, so a row's two are one height;
+                              // AutoSizeText measures, so no IntrinsicHeight here.
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Expanded(child: tiles[i]),
+                                  const SizedBox(width: Dimens.spacing8),
+                                  Expanded(
+                                    child: i + 1 < tiles.length
+                                        ? tiles[i + 1]
+                                        : const SizedBox.shrink(),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          Text(
+                            'Tap a card for its chart · '
+                            '${rangeText(state.rangeDays, state.windowDays)}, '
+                            '$logged logged',
+                            textAlign: TextAlign.center,
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(color: paletteOf(context).textMuted),
+                          ),
+                          ...arrangeTrendCards(widget.cards),
+                          const SizedBox(height: Dimens.spacing16),
+                          Center(
+                            child: TextButton.icon(
+                              key: const ValueKey('trends-arrange'),
+                              icon: const Icon(Icons.tune_rounded),
+                              label: const Text('Arrange Trends'),
+                              onPressed: () => Navigator.push(
+                                context,
+                                MaterialPageRoute<void>(
+                                  builder: (_) => ArrangeScreen(
+                                    title: 'Arrange Trends',
+                                    lists: [
+                                      ArrangeList(
+                                        title: 'Tiles',
+                                        store: TrendsTilesStore(),
+                                        names: {
+                                          for (final MapEntry(:key, :value)
+                                              in all.entries)
+                                            key: value.label.replaceAll(
+                                              ' · avg',
+                                              '',
+                                            ),
+                                        },
+                                      ),
+                                      ArrangeList(
+                                        title: 'Cards',
+                                        store: TrendsLayoutStore(),
+                                        names: trendCards,
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
                             ),
                           ),
-                        ),
-                      ],
-                    );
-                  },
+                        ],
+                      );
+                    },
+                  ),
                 ),
               ),
             ),
@@ -352,6 +368,7 @@ List<TrendTile> trendTiles(
   required MicroData? micros,
   required List<Measurement>? measurements,
   TrendsGoal? goal,
+  BodyFrame? frame,
   required void Function(TrendMetric metric) open,
 }) {
   final palette = paletteOf(context);
@@ -485,7 +502,33 @@ List<TrendTile> trendTiles(
       ),
     _goalTile(context, state, weight, goal),
     _sidesTile(context, state, measurements),
+    _waistTile(context, state, measurements, frame),
   ];
+}
+
+/// Waist to height: the latest ratio and its band; it opens its page.
+TrendTile _waistTile(
+  BuildContext context,
+  TrendsLoaded state,
+  List<Measurement>? measurements,
+  BodyFrame? frame,
+) {
+  final text = measurements == null || frame == null
+      ? null
+      : waistTileText(waistPoints(measurements, frame.heightCm));
+  final imperial = state.bodyWeightUnit != BodyWeightUnit.kg;
+  return TrendTile(
+    id: 'trends-tile-waist',
+    label: 'Waist to height',
+    value: text?.value ?? '–',
+    suffix: text?.suffix ?? 'measure your waist',
+    chart: const SizedBox(),
+    onTap: () => openWaistRatio(
+      context,
+      imperial: imperial,
+      rangeDays: state.windowDays,
+    ),
+  );
 }
 
 /// Goal progress: the way left to the target, none once there or past

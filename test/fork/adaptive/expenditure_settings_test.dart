@@ -190,13 +190,18 @@ void main() {
 
   group('D18', () {
     test('a gap while not logging leaves the estimate where it was', () {
-      // 60 days at 2,500 kcal holding 80 kg, then 14 unlogged days gaining
-      // 1 kg, then 6 days back on 2,500 kcal: under 60% of the window is
-      // logged, so the gain is not priced at the logged intake.
+      // 60 days at 2,500 kcal holding 80 kg, then 14 days gaining 1 kg
+      // with only every fourth logged (no break, D27), then 6 days back on
+      // 2,500 kcal: under 60% of the window is logged, so the gain is not
+      // priced at the logged intake.
       final days = [
         for (var d = 0; d < 60; d++)
           const AdaptiveDay(intakeKcal: 2500, weightKg: 80),
-        for (var d = 1; d <= 14; d++) AdaptiveDay(weightKg: 80 + d / 14),
+        for (var d = 1; d <= 14; d++)
+          AdaptiveDay(
+            intakeKcal: d % 4 == 0 ? 2500 : null,
+            weightKg: 80 + d / 14,
+          ),
         for (var d = 0; d < 6; d++)
           const AdaptiveDay(intakeKcal: 2500, weightKg: 81),
       ];
