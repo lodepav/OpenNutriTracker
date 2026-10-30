@@ -8,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:get_it/get_it.dart';
 import 'package:opennutritracker/core/domain/entity/intake_entity.dart';
 import 'package:opennutritracker/core/domain/entity/intake_type_entity.dart';
+import 'package:opennutritracker/fork/copy/diary_selection.dart';
 import 'package:opennutritracker/fork/screens/home/intake_card.dart';
 import 'package:opennutritracker/features/diary/presentation/widgets/diary_sort_type.dart';
 import 'package:opennutritracker/core/domain/entity/profile_entity.dart';
@@ -393,6 +394,95 @@ void main() {
   // by a Spacer competing with the kcal summary for flex, so "Breakfast"
   // wrapped onto a second line ("Breakfas" / "t"). The title now takes an
   // Expanded and shrinks to fit, so it must stay on exactly one line.
+  group('a timeline header at large text', () {
+    Future<void> pump(
+      WidgetTester tester,
+      double scale, {
+      DiarySelection? selection,
+    }) async {
+      await tester.pumpWidget(
+        _wrapWithMaterial(
+          MediaQuery(
+            data: MediaQueryData(
+              size: const Size(360, 800),
+              textScaler: TextScaler.linear(scale),
+            ),
+            child: Align(
+              alignment: Alignment.topCenter,
+              child: SizedBox(
+                width: 360,
+                child: SingleChildScrollView(
+                  child: IntakeVerticalList(
+                    day: DateTime(2026, 1, 1),
+                    title: 'Lunch',
+                    listIcon: Icons.lunch_dining_outlined,
+                    addMealType: AddMealType.lunchType,
+                    intakeList: intakes,
+                    usesImperialUnits: false,
+                    showMealMacros: true,
+                    forkTime: DateTime(2026, 1, 1, 13, 19),
+                    selection: selection,
+                    onDeleteIntakeCallback: (_, _) {},
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+    }
+
+    /// The width [finder]'s text needs against the width it was given.
+    void expectNotClipped(WidgetTester tester, Finder finder) {
+      final paragraph = tester.renderObject<RenderParagraph>(finder);
+      expect(
+        paragraph.size.width,
+        greaterThanOrEqualTo(
+          paragraph.getMaxIntrinsicWidth(double.infinity).floorToDouble(),
+        ),
+      );
+    }
+
+    final time = find.textContaining('1:19');
+    final title = find.text('Lunch');
+
+    testWidgets('at 200% the time sits whole above the meal', (tester) async {
+      await pump(tester, 2);
+      expect(tester.takeException(), isNull);
+      expectNotClipped(tester, time);
+      expect(
+        tester.getBottomLeft(time).dy,
+        lessThanOrEqualTo(tester.getTopLeft(title).dy),
+      );
+    });
+
+    testWidgets('at 130% the time\'s column grows to fit it', (tester) async {
+      await pump(tester, 1.3);
+      expect(tester.takeException(), isNull);
+      // The test font's glyphs are wider than a phone's; the column grows
+      // with the text, so a time that fits at 100% fits here.
+      final width = tester.getSize(time).width;
+      await pump(tester, 1);
+      expect(width, 1.3 * tester.getSize(time).width);
+    });
+
+    testWidgets('selecting at 200% the macros wrap, not cut', (tester) async {
+      final selection = DiarySelection()..start(intakes.single);
+      await pump(tester, 2, selection: selection);
+      expect(tester.takeException(), isNull);
+      final macros = tester.renderObject<RenderParagraph>(
+        find.descendant(
+          of: find.textContaining('kcal · C 20'),
+          matching: find.byType(RichText),
+        ),
+      );
+      expect(macros.didExceedMaxLines, isFalse);
+      expect(time, findsOneWidget);
+      selection.dispose();
+    });
+  });
+
   testWidgets('meal title stays on a single line beside the kcal summary', (
     WidgetTester tester,
   ) async {

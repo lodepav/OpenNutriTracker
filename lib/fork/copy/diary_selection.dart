@@ -96,7 +96,7 @@ class DiarySelectionBar extends StatelessWidget {
               ),
               Expanded(
                 child: Text(
-                  count == 0 ? 'Tap entries' : '$count selected',
+                  count == 0 ? 'Tap foods' : '$count selected',
                   style: Theme.of(context).textTheme.titleMedium,
                   overflow: TextOverflow.ellipsis,
                 ),

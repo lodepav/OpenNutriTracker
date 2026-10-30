@@ -71,7 +71,15 @@ Sources, checked 2026-10-24:
 | C2 | Say what happens, not how it works: "Import" not "Run import job". |
 | C3 | No zero counts or empty clauses ("0 weigh-ins"); leave the part out. |
 | C4 | Singular and plural agree with the count ("1 day", "2 days"; "the file" for one, "the files" for several). |
-| C5 | The same word for the same thing throughout (meal vs. section; weigh-in vs. weight entry). |
+| C5 | The same word for the same thing throughout, as in the glossary below. `fork/tools/ux_words.py` lists fork strings that break it. |
+
+### Glossary
+
+| Say | Not | For |
+|---|---|---|
+| food | entry | what is logged in the Diary |
+| meal | section | Breakfast, Lunch, Dinner, Snack |
+| weigh-in | weight entry | a logged body weight |
 
 ## Severity
 

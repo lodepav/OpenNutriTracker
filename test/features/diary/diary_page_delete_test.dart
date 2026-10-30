@@ -402,7 +402,7 @@ void main() {
 
     await tester.tap(find.byKey(const Key('fork-select-entries')));
     await settle(tester);
-    expect(find.text('Tap entries'), findsOneWidget);
+    expect(find.text('Tap foods'), findsOneWidget);
     await tester.tap(find.text('Toast'));
     await settle(tester);
     expect(find.text('1 selected'), findsOneWidget);

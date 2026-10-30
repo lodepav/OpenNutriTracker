@@ -557,7 +557,7 @@ class _LoggingState extends State<_Logging> {
             rows: [
               (label: 'Logged', value: '${c.logged} of ${days(c.of)}'),
               (
-                label: 'Entries a day',
+                label: 'Foods a day',
                 value: snapshot.data?.toStringAsFixed(1) ?? '–',
               ),
               (label: 'Counted in the estimate', value: days(c.counted)),

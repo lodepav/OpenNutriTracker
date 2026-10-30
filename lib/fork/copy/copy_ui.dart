@@ -139,7 +139,7 @@ Future<void> placeWithUndo(
       // An action keeps a bar up until dismissed: this one goes.
       persist: false,
       content: Text(
-        '$verb${count == 1 ? '' : ' $count entries'}'
+        '$verb${count == 1 ? '' : ' $count foods'}'
         '${to.isEmpty ? '' : ' to ${to.join(', ')}'}',
       ),
       action: SnackBarAction(
@@ -494,7 +494,9 @@ class _WhereToSheetState extends State<WhereToSheet> {
                         meal: _meal,
                         activities: _activities,
                       )),
-                child: Text(many && _foods ? '$verb ${widget.count}' : verb),
+                child: Text(
+                  _foods && many ? '$verb ${widget.count} foods' : verb,
+                ),
               ),
             ),
           ],

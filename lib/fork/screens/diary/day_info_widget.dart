@@ -218,7 +218,7 @@ class _DayInfoWidgetState extends State<DayInfoWidget> {
             Dimens.spacing20,
             Dimens.spacing4,
           ),
-          // "Timeline", "Select entries", "Copy day"
+          // "Timeline", "Select foods", "Copy day"
           // by the date
           child: Row(
             children: [
@@ -234,7 +234,7 @@ class _DayInfoWidgetState extends State<DayInfoWidget> {
               if (trackedDay != null) ...[
                 IconButton(
                   key: const Key('fork-select-entries'),
-                  tooltip: 'Select entries',
+                  tooltip: 'Select foods',
                   icon: const Icon(Icons.checklist_rounded),
                   onPressed: () => DiarySelection.instance.start(),
                 ),
