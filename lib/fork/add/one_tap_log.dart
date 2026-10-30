@@ -1,0 +1,140 @@
+import 'package:flutter/material.dart';
+import 'package:opennutritracker/core/domain/entity/intake_entity.dart';
+import 'package:opennutritracker/core/domain/entity/intake_type_entity.dart';
+import 'package:opennutritracker/core/domain/usecase/get_config_usecase.dart';
+import 'package:opennutritracker/core/utils/locator.dart';
+import 'package:opennutritracker/core/utils/tracked_day_lock.dart';
+import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dart';
+import 'package:opennutritracker/features/meal_detail/presentation/bloc/meal_detail_bloc.dart';
+import 'package:opennutritracker/features/meal_detail/util/meal_quantity_converter.dart';
+import 'package:opennutritracker/fork/amounts/remembered_amounts.dart';
+import 'package:opennutritracker/fork/basket/basket_ui.dart'
+    show refreshAfterLogging;
+import 'package:opennutritracker/fork/copy/copy_entries.dart';
+import 'package:opennutritracker/fork/copy/copy_ui.dart' show mealLabel;
+import 'package:opennutritracker/fork/units/amount_text.dart' show amountText;
+
+/// What a food row's plus logs at once: the unit and the amount in grams
+/// or millilitres, as an entry stores them.
+typedef OneTapAmount = ({String unit, double amount});
+
+/// The amount the food's page would open at: [last], a recent's latest
+/// entry, as it was logged; else the amount last logged of the food
+/// ([remembered]); else a serving when the food has one that scales and
+/// [rawUnits] is off, else 100 g or ml (1 oz or fl oz when [imperial]).
+OneTapAmount oneTapAmount(
+  MealEntity meal, {
+  IntakeEntity? last,
+  RememberedAmount? remembered,
+  bool imperial = false,
+  bool rawUnits = false,
+}) {
+  if (last != null && last.amount > 0) {
+    return (unit: last.unit, amount: last.amount);
+  }
+  OneTapAmount of(String unit, double quantity) =>
+      (unit: unit, amount: convertQuantityToBaseUnit(quantity, unit, meal));
+  if (remembered != null) {
+    final quantity = double.tryParse(remembered.quantity.replaceAll(',', '.'));
+    final serving = remembered.unit == UnitDropdownItem.serving.toString();
+    if (quantity != null &&
+        quantity > 0 &&
+        (!serving || meal.scalableServingQuantity != null)) {
+      return of(remembered.unit, quantity);
+    }
+  }
+  if (meal.scalableServingQuantity != null && !rawUnits) {
+    return of(UnitDropdownItem.serving.toString(), 1);
+  }
+  final unit = meal.isLiquid
+      ? (imperial ? UnitDropdownItem.flOz : UnitDropdownItem.ml)
+      : meal.isSolid
+      ? (imperial ? UnitDropdownItem.oz : UnitDropdownItem.g)
+      : UnitDropdownItem.gml;
+  return of(
+    unit.toString(),
+    imperial && unit != UnitDropdownItem.gml ? 1 : 100,
+  );
+}
+
+/// The plus on a food's row (S179's card, a fork-owned copy): logs [meal]
+/// to [type] on [day] at [oneTapAmount] and says so with an Undo. A
+/// screen stays open for the next food; the add sheet closes, as its other
+/// actions do, so the bar shows rather than under it. The row itself opens
+/// the food's page to pick an amount. Tests swap it.
+Future<void> Function(
+  BuildContext context, {
+  required MealEntity meal,
+  required IntakeTypeEntity type,
+  required DateTime day,
+  required bool imperial,
+  IntakeEntity? last,
+})
+logFromRow = defaultLogFromRow;
+
+/// The app's [logFromRow].
+Future<void> defaultLogFromRow(
+  BuildContext context, {
+  required MealEntity meal,
+  required IntakeTypeEntity type,
+  required DateTime day,
+  required bool imperial,
+  IntakeEntity? last,
+}) async {
+  // The search's keyboard would cover the bar.
+  FocusManager.instance.primaryFocus?.unfocus();
+  final messenger = ScaffoldMessenger.maybeOf(context);
+  final stamp = ProfileStamp.now();
+  final rawUnits =
+      (await locator<GetConfigUsecase>().getConfig()).defaultToRawFoodUnits;
+  final amount = oneTapAmount(
+    meal,
+    last: last,
+    remembered: last == null ? await RememberedAmounts.current.of(meal) : null,
+    imperial: imperial,
+    rawUnits: rawUnits,
+  );
+  if (!context.mounted) return;
+  final mealName = mealLabel(context, type);
+  final sheet = ModalRoute.of(context) is PopupRoute;
+  final written = await locator<MealDetailBloc>().addIntake(
+    context,
+    amount.unit,
+    amount.amount.toString(),
+    type,
+    meal,
+    day,
+  );
+  refreshAfterLogging();
+  if (sheet && context.mounted) Navigator.of(context).pop();
+  if (messenger == null) return;
+  messenger.removeCurrentSnackBar();
+  if (written == null) {
+    messenger.showSnackBar(
+      const SnackBar(content: Text('Not added: the profile changed.')),
+    );
+    return;
+  }
+  messenger.showSnackBar(
+    SnackBar(
+      // An action keeps a bar up until dismissed: this one goes.
+      persist: false,
+      content: Text('Added ${amountText(written, imperial)} to $mealName'),
+      action: SnackBarAction(
+        label: 'Undo',
+        onPressed: () async {
+          final undone = await CopyEntries.fromLocator().undoPlace((
+            day: DateUtils.dateOnly(day),
+            written: [written],
+          ), startedOn: stamp);
+          refreshAfterLogging();
+          if (!undone) {
+            messenger.showSnackBar(
+              const SnackBar(content: Text('Not undone: the profile changed.')),
+            );
+          }
+        },
+      ),
+    ),
+  );
+}
