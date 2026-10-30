@@ -61,6 +61,10 @@ class _DiaryPageState extends State<DiaryPage> with WidgetsBindingObserver {
   DateTime get _selectedDate => _pickedDate ?? _currentDate;
   DateTime get _focusedDate => _selectedDate;
 
+  // [fork] S176 diary-swipe: 1 when the day shown moved forward, -1 back.
+  var _dayStep = 0;
+  // [/fork]
+
   // The "today" the day view was last loaded for, so a reload that moves
   // it (a day-boundary change, or a resume past the boundary) moves the
   // day view along with it.
@@ -128,7 +132,12 @@ class _DiaryPageState extends State<DiaryPage> with WidgetsBindingObserver {
     bool showMealMacros,
     bool showActivityTracking,
   ) {
-    return ListView(
+    // [fork] S176 diary-swipe: the whole page steps a day, on to tomorrow
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onHorizontalDragEnd: (d) => _onDaySwipe(d, trackedDaysMap),
+      child: ListView(
+    // [/fork]
       padding: const EdgeInsets.only(bottom: Dimens.spacing16),
       children: [
         DiaryTableCalendar(
@@ -154,11 +163,26 @@ class _DiaryPageState extends State<DiaryPage> with WidgetsBindingObserver {
             ),
           ),
         const SizedBox(height: Dimens.spacing8),
-        // Swipe horizontally on the day's detail to step a day back / forward.
-        GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onHorizontalDragEnd: (d) => _onDaySwipe(d, trackedDaysMap),
-          child: BlocBuilder<CalendarDayBloc, CalendarDayState>(
+        // [fork] S176 diary-swipe: the day slides in from the side it is on
+        AnimatedSwitcher(
+          duration: const Duration(milliseconds: 220),
+          layoutBuilder: (current, _) => current ?? const SizedBox(),
+          transitionBuilder: (child, animation) => FadeTransition(
+            opacity: animation,
+            child: SlideTransition(
+              position: Tween(
+                begin: Offset(_dayStep * 0.25, 0),
+                end: Offset.zero,
+              ).animate(CurvedAnimation(
+                parent: animation,
+                curve: Curves.easeOutCubic,
+              )),
+              child: child,
+            ),
+          ),
+          child: KeyedSubtree(
+            key: ValueKey(_selectedDate),
+            child: BlocBuilder<CalendarDayBloc, CalendarDayState>(
             bloc: _calendarDayBloc,
             builder: (context, state) {
               if (state is CalendarDayInitial) {
@@ -198,8 +222,11 @@ class _DiaryPageState extends State<DiaryPage> with WidgetsBindingObserver {
             return const SizedBox();
           },
           ),
+          ),
         ),
+        // [/fork]
       ],
+    ),
     );
   }
 
@@ -212,12 +239,15 @@ class _DiaryPageState extends State<DiaryPage> with WidgetsBindingObserver {
     final today =
         DateTime(_currentDate.year, _currentDate.month, _currentDate.day);
     // Swipe left advances a day, swipe right goes back. Clamp to the calendar's
-    // range (no further back than 5 years, no further forward than today).
+    // range (5 years either way).
     final delta = velocity < 0 ? 1 : -1;
     var next = DateUtils.addDaysToDate(_selectedDate, delta);
     final first = today.subtract(_calendarDurationDays);
     if (next.isBefore(first)) next = first;
-    if (next.isAfter(today)) next = today;
+    // [fork] S176 diary-swipe: on to tomorrow, as the calendar can
+    final last = today.add(_calendarDurationDays);
+    if (next.isAfter(last)) next = last;
+    // [/fork]
     if (!DateUtils.isSameDay(next, _selectedDate)) {
       _onDateSelected(next, trackedDaysMap);
     }
@@ -417,12 +447,17 @@ class _DiaryPageState extends State<DiaryPage> with WidgetsBindingObserver {
     Map<String, TrackedDayEntity> trackedDaysMap,
   ) {
     setState(() {
+      // [fork] S176 diary-swipe
+      _dayStep = newDate.isAfter(_selectedDate) ? 1 : -1;
+      // [/fork]
       _pickedDate =
           DateUtils.isSameDay(newDate, _currentDate) ? null : newDate;
       _calendarDayBloc.add(LoadCalendarDayEvent(_selectedDate));
     });
     if (newDate.isAfter(_currentDate) && !DateUtils.isSameDay(newDate, _currentDate)) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar() // [fork] S176 one at a time, swiping on
+        ..showSnackBar(
         SnackBar(content: Text(S.of(context).diaryFutureDateWarning)),
       );
     }

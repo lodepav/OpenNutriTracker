@@ -92,7 +92,8 @@ class _DiaryTableCalendarState extends State<DiaryTableCalendar> {
         child: TableCalendar(
           // [fork] S118 diary-header
           calendarFormat: _format,
-          availableGestures: AvailableGestures.horizontalSwipe,
+          // A swipe steps the Diary a day (S176); the arrows page the weeks.
+          availableGestures: AvailableGestures.none,
           onFormatChanged: (format) => setState(() => _format = format),
           rowHeight: 48,
           // [/fork]

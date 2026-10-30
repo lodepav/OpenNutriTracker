@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:opennutritracker/features/diary/presentation/widgets/diary_table_calendar.dart'; // [fork] S176
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get_it/get_it.dart';
@@ -307,6 +308,36 @@ void main() {
   }
 
   TrackedDayDBO? rowOf(DateTime day) => trackedDayBox.get(day.toParsedDay());
+
+  // [fork] S176 diary-swipe: the whole page steps a day, on to tomorrow
+  DateTime shown(WidgetTester tester) =>
+      tester.widget<DayInfoWidget>(find.byType(DayInfoWidget)).selectedDay;
+
+  testWidgets('a swipe on the calendar steps the day back too', (
+    tester,
+  ) async {
+    await setUpDiary(yesterdayHasRow: true);
+    await pumpDiary(tester);
+    await tester.fling(
+      find.byType(DiaryTableCalendar),
+      const Offset(400, 0),
+      1500,
+    );
+    await settle(tester);
+    expect(DateUtils.isSameDay(shown(tester), yesterday), isTrue);
+  });
+
+  testWidgets('a swipe forward from today shows tomorrow', (tester) async {
+    await setUpDiary(yesterdayHasRow: true);
+    await pumpDiary(tester);
+    await tester.fling(find.byType(DayInfoWidget), const Offset(-400, 0), 1500);
+    await settle(tester);
+    expect(
+      DateUtils.isSameDay(shown(tester), today.add(const Duration(days: 1))),
+      isTrue,
+    );
+  });
+  // [/fork]
 
   testWidgets('deleting a past day\'s entries changes only that day\'s row', (
     tester,
