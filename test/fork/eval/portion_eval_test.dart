@@ -6,6 +6,10 @@
 //   FORK_EVAL_REPLAY=build/fork-eval/replay/portion flutter test test/fork/eval/portion_eval_test.dart
 //
 // The report is written to build/fork-eval/<time>-portion/report.md.
+//
+// FORK_EVAL_PHOTOS=<dir>/photos.json runs another set instead: its photos in
+// <dir>/photos, each with the note in its "typed" field. A set made from a
+// user's own log stays under build/, out of the repo.
 import 'dart:convert';
 import 'dart:io';
 
@@ -22,7 +26,10 @@ import 'package:opennutritracker/fork/food/local_food_data_source.dart';
 import 'eval_model.dart';
 import 'logged_kcal.dart';
 
-const _photoDir = 'build/fork-eval/photos';
+final _set = Platform.environment['FORK_EVAL_PHOTOS'];
+final _photoDir = _set == null
+    ? 'build/fork-eval/photos'
+    : '${File(_set!).parent.path}/photos';
 
 /// What a user would type under each photo: the name, nothing more.
 const _notes = {
@@ -48,11 +55,18 @@ const _notes = {
 void main() {
   final models = EvalModels();
   final manifest =
-      jsonDecode(File('fork/eval/photos.json').readAsStringSync()) as Map;
+      jsonDecode(File(_set ?? 'fork/eval/photos.json').readAsStringSync())
+          as Map;
+  final notes = {
+    ..._notes,
+    for (final photo in manifest['photos'] as List)
+      if (photo['typed'] != null)
+        photo['id'] as String: photo['typed'] as String,
+  };
   final photos = [
     for (final photo
         in (manifest['photos'] as List).cast<Map<String, dynamic>>())
-      if (_notes.containsKey(photo['id'])) photo,
+      if (notes.containsKey(photo['id'])) photo,
   ];
   final runDir = evalRunDir('-portion');
   final out = StringBuffer();
@@ -101,7 +115,7 @@ void main() {
           if (!file.existsSync()) continue;
           final label = ((photo['per_serving'] as Map)['kcal'] as num)
               .toDouble();
-          final note = _notes[photo['id']]!;
+          final note = notes[photo['id']]!;
           final mealPhoto = MealPhoto(
             bytes: file.readAsBytesSync(),
             mediaType: 'image/jpeg',

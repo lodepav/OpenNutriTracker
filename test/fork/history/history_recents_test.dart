@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_ce/hive.dart';
 import 'package:opennutritracker/core/data/data_source/intake_data_source.dart';
@@ -10,6 +13,7 @@ import 'package:opennutritracker/core/domain/entity/body_weight_unit_entity.dart
 import 'package:opennutritracker/core/domain/usecase/get_intake_usecase.dart';
 import 'package:opennutritracker/fork/history/history_file.dart';
 import 'package:opennutritracker/fork/history/history_import.dart';
+import 'package:opennutritracker/fork/history/table_reader.dart';
 
 import '../../fixture/intake_entity_fixtures.dart';
 import '../../helpers/fake_hive_db_provider.dart';
@@ -52,5 +56,46 @@ void main() {
 
     expect(isImportedHistory(imported), isTrue);
     expect(recents.map((i) => i.id), [oats.id]);
+  });
+
+  test('a food imported twice is one recent, at its latest', () async {
+    TestWidgetsFlutterBinding.ensureInitialized();
+    Hive.init('.');
+    registerHiveAdaptersOnce();
+    final provider = FakeHiveDBProvider(
+      intakeBox: await Hive.openBox<IntakeDBO>('history_recents_food_intake'),
+      recipeBox: await Hive.openBox<RecipeDBO>('history_recents_food_recipe'),
+    );
+    addTearDown(Hive.deleteFromDisk);
+    final intakes = IntakeRepository(IntakeDataSource(provider));
+    final plan = planImport(
+      readHistory(
+        readTables(
+          'foods.csv',
+          Uint8List.fromList(
+            utf8.encode(
+              'Date,Time,Food Name,Serving Weight (g),Calories (kcal)\n'
+              '2025-05-16,08:00,Oats,50,190\n'
+              '2025-05-17,08:00,Oats,60,228\n',
+            ),
+          ),
+        ),
+      ),
+      existing: const HistoryExisting(),
+      today: DateTime(2026, 10, 30),
+      source: 'MacroFactor',
+    );
+    for (final entries in plan.intakes.values) {
+      for (final intake in entries) {
+        await intakes.addIntake(intake);
+      }
+    }
+
+    final recents = await GetIntakeUsecase(
+      intakes,
+      RecipeRepository(RecipeDataSource(provider)),
+    ).getRecentIntake();
+
+    expect(recents.map((i) => (i.meal.name, i.amount)), [('Oats', 60.0)]);
   });
 }

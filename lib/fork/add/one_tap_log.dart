@@ -1,10 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:logging/logging.dart';
+import 'package:opennutritracker/core/data/data_source/remote_search_cache_data_source.dart';
+import 'package:opennutritracker/core/data/dbo/meal_dbo.dart';
 import 'package:opennutritracker/core/domain/entity/intake_entity.dart';
 import 'package:opennutritracker/core/domain/entity/intake_type_entity.dart';
 import 'package:opennutritracker/core/domain/usecase/get_config_usecase.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
+import 'package:opennutritracker/core/utils/navigation_options.dart';
 import 'package:opennutritracker/core/utils/tracked_day_lock.dart';
+import 'package:opennutritracker/features/add_meal/data/repository/products_repository.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dart';
+import 'package:opennutritracker/features/meal_detail/meal_detail_screen.dart';
 import 'package:opennutritracker/features/meal_detail/presentation/bloc/meal_detail_bloc.dart';
 import 'package:opennutritracker/features/meal_detail/util/meal_quantity_converter.dart';
 import 'package:opennutritracker/fork/amounts/remembered_amounts.dart';
@@ -12,6 +18,7 @@ import 'package:opennutritracker/fork/basket/basket_ui.dart'
     show refreshAfterLogging;
 import 'package:opennutritracker/fork/copy/copy_entries.dart';
 import 'package:opennutritracker/fork/copy/copy_ui.dart' show mealLabel;
+import 'package:opennutritracker/fork/meal_detail/missing_info.dart';
 import 'package:opennutritracker/fork/units/amount_text.dart' show amountText;
 
 /// What a food row's plus logs at once: the unit and the amount in grams
@@ -57,11 +64,48 @@ OneTapAmount oneTapAmount(
   );
 }
 
+final _log = Logger('OneTapLog');
+
+/// An Open Food Facts text-search hit: no serving, no micronutrients.
+bool _isThin(MealEntity meal) =>
+    meal.source == MealSourceEntity.off &&
+    !meal.detailed &&
+    (meal.code?.isNotEmpty ?? false);
+
+/// [meal] as the food's page would log it (HydrateMealEvent): the full
+/// record of a text-search hit, from the cache or else the network, and
+/// [meal] itself when that fails or takes longer than [wait]. A lookup can
+/// run for 60 s and the user is waiting on a tap.
+Future<MealEntity> hydratedForLog(
+  MealEntity meal,
+  RemoteSearchCacheDataSource cache,
+  ProductsRepository products, {
+  Duration wait = const Duration(seconds: 5),
+}) async {
+  if (!_isThin(meal)) return meal;
+  final code = meal.code!;
+  try {
+    final cached = cache.getDetailedByBarcode(code);
+    if (cached != null) return MealEntity.fromMealDBO(cached);
+    final full = await products.getOFFProductByBarcode(code).timeout(wait);
+    await cache.cache(MealDBO.fromMealEntity(full));
+    return full;
+  } catch (error, stack) {
+    _log.warning('OFF hydration failed for $code', error, stack);
+    return meal;
+  }
+}
+
+/// Codes being looked up: a second tap on the plus in that wait would log
+/// the food twice.
+final _hydrating = <String>{};
+
 /// The plus on a food's row (S179's card, a fork-owned copy): logs [meal]
 /// to [type] on [day] at [oneTapAmount] and says so with an Undo. A
 /// screen stays open for the next food; the add sheet closes, as its other
 /// actions do, so the bar shows rather than under it. The row itself opens
-/// the food's page to pick an amount. Tests swap it.
+/// the food's page to pick an amount, and so does the plus when the food
+/// lacks what the page requires to log it. Tests swap it.
 Future<void> Function(
   BuildContext context, {
   required MealEntity meal,
@@ -85,12 +129,29 @@ Future<void> defaultLogFromRow(
   FocusManager.instance.primaryFocus?.unfocus();
   final messenger = ScaffoldMessenger.maybeOf(context);
   final stamp = ProfileStamp.now();
+  final thin = _isThin(meal);
+  if (thin && !_hydrating.add(meal.code!)) return;
+  final MealEntity food;
+  try {
+    food = await hydratedForLog(meal, locator(), locator());
+  } finally {
+    if (thin) _hydrating.remove(meal.code);
+  }
+  if (!context.mounted) return;
+  // The unit only names what is missing, which the page says itself.
+  if (missingForLog(food, 'kcal').isNotEmpty) {
+    Navigator.of(context).pushNamed(
+      NavigationOptions.mealDetailRoute,
+      arguments: MealDetailScreenArguments(food, type, day, imperial),
+    );
+    return;
+  }
   final rawUnits =
       (await locator<GetConfigUsecase>().getConfig()).defaultToRawFoodUnits;
   final amount = oneTapAmount(
-    meal,
+    food,
     last: last,
-    remembered: last == null ? await RememberedAmounts.current.of(meal) : null,
+    remembered: last == null ? await RememberedAmounts.current.of(food) : null,
     imperial: imperial,
     rawUnits: rawUnits,
   );
@@ -102,7 +163,7 @@ Future<void> defaultLogFromRow(
     amount.unit,
     amount.amount.toString(),
     type,
-    meal,
+    food,
     day,
   );
   refreshAfterLogging();
@@ -115,11 +176,17 @@ Future<void> defaultLogFromRow(
     );
     return;
   }
+  final amountAdded = amountText(written, imperial);
+  final name = food.name?.trim() ?? '';
   messenger.showSnackBar(
     SnackBar(
       // An action keeps a bar up until dismissed: this one goes.
       persist: false,
-      content: Text('Added ${amountText(written, imperial)} to $mealName'),
+      content: Text(
+        name.isEmpty
+            ? 'Added $amountAdded to $mealName'
+            : 'Added $name, $amountAdded, to $mealName',
+      ),
       action: SnackBarAction(
         label: 'Undo',
         onPressed: () async {

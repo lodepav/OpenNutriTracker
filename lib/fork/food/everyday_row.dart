@@ -49,6 +49,16 @@ const _everyday = {
   'granola': 'Cereal, granola',
   'basmati rice': _longGrainRice,
   'jasmine rice': _longGrainRice,
+  // A soup's broth, which found canned chicken "with broth" and a dry
+  // bouillon cube at 170 kcal per 100 g, tripling a bowl of soup.
+  'chicken broth': _chickenStock,
+  'chicken stock': _chickenStock,
+  'beef broth': _beefStock,
+  'beef stock': _beefStock,
+  'vegetable broth': 'Soup, vegetable broth, ready to serve',
+  'vegetable stock': 'Soup, vegetable broth, ready to serve',
+  // a salad's or a soup's, not the light one the shortest name found
+  'sour cream': 'Cream, sour, cultured',
 };
 
 const _cheesePizza =
@@ -64,4 +74,6 @@ const _unsaltedButter = 'Butter, without salt';
 const _cola = 'Soft drink, cola';
 const _longGrainRice = 'Rice, white, long-grain, regular, enriched, cooked';
 const _dietCola = 'Soft drink, cola, diet';
-const _greekYogurt = 'Yogurt, Greek, NS as to type of milk, plain';
+const _chickenStock = 'Soup, stock, chicken, home-prepared';
+const _beefStock = 'Soup, stock, beef, home-prepared';
+const _greekYogurt ='Yogurt, Greek, NS as to type of milk, plain';

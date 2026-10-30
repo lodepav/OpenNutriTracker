@@ -568,6 +568,16 @@
         ["fdc_sr_legacy", "Cheese, mozzarella, whole milk", 100],
         ["fdc_sr_legacy", "Cheese, parmesan, grated", 50]
       ]
+    },
+    {
+      "code": "kvass",
+      "name": "Kvass, bread drink (kvas, kwas chlebowy, gira, kvasas)",
+      "basis": "Kvass is a fermented rye bread drink the tables lack; its labels give about 27-40 kcal per 100 ml, nearly all of it sugar, with a trace of protein. Worked out as the closest table row, an alcohol-free malt drink, thinned to 70%: 30 kcal and 7 g carbohydrate per 100 ml. A drink is never broken into ingredients (D25): its sugar is fermented and its water would go missing.",
+      "yield_g": 100,
+      "serving": ["1 glass", 250],
+      "ingredients": [
+        ["bls", "Malt drink, alcohol-free", 70]
+      ]
     }
   ]
 }

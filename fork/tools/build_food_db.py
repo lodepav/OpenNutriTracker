@@ -10,6 +10,12 @@
         [--dishes fork/data/dishes.json] \
         [--out assets/fork/foods.json.gz]
 
+    python3 -I fork/tools/build_food_db.py --add-dishes
+
+adds the dishes of fork/data/dishes.json that the built table lacks, worked
+out from its own rows, without the source files; a full build gives them the
+same ids and, up to the table's rounding, the same nutrients.
+
 Downloads (all free):
   USDA FoodData Central (public domain): https://fdc.nal.usda.gov/download-datasets
     SR Legacy, Foundation and FNDDS Survey, CSV. The asset is built from SR
@@ -328,17 +334,53 @@ def dish_foods(path, rows):
 
 # --- Output ------------------------------------------------------------------
 
+def add_dishes(dishes_path, out):
+    """Appends to the table at [out] the dishes it lacks, by code."""
+    with gzip.open(out, 'rt', encoding='utf-8') as f:
+        table = json.load(f)
+    columns = table['columns']
+    rows = {}
+    for food in table['foods']:
+        row = dict(zip(columns, food))
+        rows.setdefault((row['source'], row['name']), row)
+    have = {row[2] for row in table['foods'] if row[1] == 'fork_dishes'}
+    added = []
+    for food_id, src, code, name, nutrients, food_portions, serving in \
+            dish_foods(dishes_path, rows):
+        if code in have:
+            continue
+        table['foods'].append([food_id, src, code, name, serving[0],
+                               serving[1], True]
+                              + [rounded(nutrients.get(c)) for c in NUTRIENTS])
+        table['portions'][str(food_id)] = [list(p) for p in food_portions]
+        added.append(name)
+    if not added:
+        print(f'no dishes to add -> {out} unchanged')
+        return
+    payload = json.dumps(table, ensure_ascii=False, separators=(',', ':'))
+    with gzip.open(out, 'wt', encoding='utf-8', compresslevel=9) as f:
+        f.write(payload)
+    print(f'added {len(added)} dishes: {added} -> {out}')
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument('--sr-legacy', required=True)
-    parser.add_argument('--foundation', required=True)
-    parser.add_argument('--survey', required=True)
-    parser.add_argument('--bls', required=True)
+    parser.add_argument('--add-dishes', action='store_true',
+                        help='add the dishes the built table lacks, from its rows')
+    parser.add_argument('--sr-legacy')
+    parser.add_argument('--foundation')
+    parser.add_argument('--survey')
+    parser.add_argument('--bls')
     parser.add_argument('--fineli')
     parser.add_argument('--dishes', default='fork/data/dishes.json')
     parser.add_argument('--out', default='assets/fork/foods.json.gz')
     args = parser.parse_args()
+    if args.add_dishes:
+        return add_dishes(args.dishes, args.out)
+    if not (args.sr_legacy and args.foundation and args.survey and args.bls):
+        parser.error('--sr-legacy, --foundation, --survey and --bls are '
+                     'required for a full build')
 
     sources = [
         fdc_foods(args.sr_legacy, 'fdc_sr_legacy', 'sr_legacy_food.csv'),

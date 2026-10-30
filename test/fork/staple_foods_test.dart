@@ -102,6 +102,7 @@ void main() {
     ('salad', 'Salad, green, without dressing'),
     ('pepperoni pizza', 'Pizza, with pepperoni'),
     ('coffee', 'Coffee, NS as to type'),
+    ('kvass, bread-based', 'Kvass, bread drink'),
     ('lasagna', 'Lasagna, beef, homemade'),
     ('egg', 'Egg, whole, raw, fresh'),
     ('eggs', 'Eggs, Grade A, Large, egg whole'),
@@ -124,6 +125,10 @@ void main() {
     ('basmati rice', 'Rice, white, long-grain, regular, enriched, cooked'),
     ('jasmine rice', 'Rice, white, long-grain, regular, enriched, cooked'),
     ('cooked basmati rice', 'Rice, white, long-grain'),
+    ('chicken broth', 'Soup, stock, chicken, home-prepared'),
+    ('beef broth', 'Soup, stock, beef, home-prepared'),
+    ('vegetable stock', 'Soup, vegetable broth, ready to serve'),
+    ('sour cream', 'Cream, sour, cultured'),
     ('vegetable lasagna', 'Lasagna, Vegetable'),
   ]) {
     test('bare "$query" resolves to "$expected..."', () async {

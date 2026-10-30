@@ -64,4 +64,11 @@ void main() {
       expect(await countFor(1.5, '2 pork chops'), isNull);
     });
   });
+
+  test('a size is no count', () {
+    expect(noteHasCount('23 cm pizza'), isFalse);
+    expect(noteHasCount('a 12" sub'), isFalse);
+    expect(noteHasCount('2 30 cm pizzas'), isTrue);
+    expect(noteStatesCount('2 30 cm pizzas', 30), isFalse);
+  });
 }

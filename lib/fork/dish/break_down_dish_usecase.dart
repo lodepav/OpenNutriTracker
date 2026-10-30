@@ -67,6 +67,9 @@ Rules:
   pieces.
 - With a photo, break down only the named dish, sized to the portion the
   photo shows; leave out the other foods on the plate.
+- A drink is not broken down: kvass, juice, a soft drink, beer, wine,
+  coffee, tea, milk, a smoothie or a shake. Return an empty list for it.
+  A soup is a dish, a cold one too.
 - If the input is not a dish or food, return an empty list.''';
 
   /// The text the model is given. It has to state a unit: every client

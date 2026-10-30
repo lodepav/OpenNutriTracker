@@ -4,17 +4,26 @@ import 'package:opennutritracker/core/domain/entity/intake_type_entity.dart';
 import 'package:opennutritracker/core/utils/calc/unit_calc.dart';
 import 'package:opennutritracker/fork/body/measurement_store.dart';
 import 'package:opennutritracker/fork/history/table_reader.dart';
+import 'package:opennutritracker/fork/phases/phases.dart';
 
 /// An entry an import wrote as a day's or a meal's totals, never a food to
-/// offer again among the recents. A food an import wrote food by food is a
-/// real food and is offered.
-bool isImportedHistory(IntakeEntity intake) =>
-    wasImported(intake) && !intake.meal.code!.startsWith(historyFoodCodePrefix);
+/// offer again among the recents, nor a copy of one. A food an import
+/// wrote food by food is a real food and is offered.
+bool isImportedHistory(IntakeEntity intake) => switch (intake.meal.code) {
+  final code? =>
+    code.startsWith(historyCodePrefix) &&
+        !code.startsWith('${historyCodePrefix}food') &&
+        !code.startsWith('${historyCodePrefix}custom:') &&
+        !code.startsWith('${historyCodePrefix}recipe:'),
+  null => false,
+};
 
 /// Any entry an import wrote, totals or food: another app logged it, so it
-/// is not written to the health store again.
+/// is not written to the health store again. Told by the entry's id, which
+/// an import makes and an edit or a move keeps; its food is the food's own,
+/// as one logged here is.
 bool wasImported(IntakeEntity intake) =>
-    intake.meal.code?.startsWith(historyCodePrefix) ?? false;
+    intake.id.startsWith(historyCodePrefix);
 
 const historyCodePrefix = 'history-';
 const historyFoodCodePrefix = 'history-food-';
@@ -97,6 +106,18 @@ class FoodTotals {
   }
 }
 
+/// A recipe of the user's (MacroFactor's "Recipes"): the whole of it as
+/// one food, its grams the total weight (null where the file gives none).
+class HistoryRecipe {
+  final FoodRow food;
+  final int? servings;
+
+  /// The description, the ingredients and the steps, as the file has them.
+  final String notes;
+
+  const HistoryRecipe({required this.food, this.servings, this.notes = ''});
+}
+
 /// The history found in an export: food by day (and meal, where the file
 /// has meals; null for a day's total) and one weigh-in a day.
 class HistoryFile {
@@ -123,6 +144,21 @@ class HistoryFile {
   /// Foods"), only those the file gives calories for.
   final List<FoodRow> customFoods;
 
+  /// The names of all the user's own foods, lower case, with calories or
+  /// not: a food of the log by one of these names is a custom meal.
+  final Set<String> customFoodNames;
+
+  /// The user's recipes, only those the file gives calories for.
+  final List<HistoryRecipe> recipes;
+
+  /// Days the user marked as logged in part (MacroFactor's "Partial
+  /// Logging"), to leave out of the expenditure estimate.
+  final Set<DateTime> partialDays;
+
+  /// The goals over (MacroFactor's "Weight Goals"), oldest first; never
+  /// the one in progress.
+  final List<GoalRecord> goals;
+
   /// The tables food was read from, in order; none when none had it.
   final List<String> foodTables;
 
@@ -144,6 +180,10 @@ class HistoryFile {
     this.dayNutrients = const {},
     this.measurements = const {},
     this.customFoods = const [],
+    this.customFoodNames = const {},
+    this.recipes = const [],
+    this.partialDays = const {},
+    this.goals = const [],
     this.foodTables = const [],
     this.weightTable,
     required this.weightUnit,
@@ -154,7 +194,10 @@ class HistoryFile {
       food.isEmpty &&
       weightsKg.isEmpty &&
       measurements.isEmpty &&
-      customFoods.isEmpty;
+      customFoods.isEmpty &&
+      recipes.isEmpty &&
+      partialDays.isEmpty &&
+      goals.isEmpty;
 }
 
 /// Reads food and weight history from an export's [tables] by their
@@ -182,6 +225,10 @@ HistoryFile readHistory(
   final dayNutrients = <DateTime, Map<String, double>>{};
   final measurements = <DateTime, Map<BodyMetric, double>>{};
   final customFoods = <FoodRow>[];
+  final customFoodNames = <String>{};
+  final recipes = <HistoryRecipe>[];
+  final partialDays = <DateTime>{};
+  final goals = <GoalRecord>[];
   final weights = <DateTime, double>{};
   final foodTables = <String>[];
   String? weightTable;
@@ -194,10 +241,29 @@ HistoryFile readHistory(
 
   for (final table in tables) {
     if (customFoods.isEmpty) customFoods.addAll(_customFoods(table.rows));
+    if (customFoodNames.isEmpty) {
+      customFoodNames.addAll(_customFoodNames(table.rows));
+    }
+    if (recipes.isEmpty) recipes.addAll(_recipes(table.rows));
+    if (goals.isEmpty) goals.addAll(_goals(table.rows, unit));
     final layout = _Layout.find(table.rows);
     if (layout == null) continue;
     final rows = table.rows.sublist(layout.headerRow + 1);
     final dates = _DateColumn([for (final r in rows) _at(r, layout.date)]);
+
+    final partial = table.rows[layout.headerRow].indexWhere(
+      (c) => c.toLowerCase().contains('partial'),
+    );
+    if (partial >= 0) {
+      for (final row in rows) {
+        final day = dates.parse(_at(row, layout.date));
+        final yes = const ['yes', 'true', '1'];
+        if (day != null &&
+            yes.contains(_at(row, partial).trim().toLowerCase())) {
+          partialDays.add(day);
+        }
+      }
+    }
 
     final takesFood =
         layout.kcal != null &&
@@ -326,6 +392,10 @@ HistoryFile readHistory(
     dayNutrients: dayNutrients,
     measurements: measurements,
     customFoods: customFoods,
+    customFoodNames: customFoodNames,
+    recipes: recipes,
+    partialDays: partialDays,
+    goals: goals,
     foodTables: foodTables,
     weightTable: weightTable,
     weightUnit: stated ? weightUnit : unit,
@@ -544,56 +614,195 @@ Map<BodyMetric, (int, double)> _measures(List<String> headers) {
   return found;
 }
 
+/// What one row of a sheet of foods with headers [h] holds, as a food of
+/// [name] and [grams]: its calories, macros and nutrients. Null when the
+/// headers name no calories, or a row gives none.
+FoodRow? Function(List<String> row, String name, double? grams)? _foodColumns(
+  List<String> h,
+) {
+  final kcal = _col(
+    h,
+    (c) => _names(c, 'calories') || c == 'kcal' || c.startsWith('energy'),
+  );
+  if (kcal == null) return null;
+  final protein = _col(h, (c) => _names(c, 'protein'));
+  final carbs = _col(
+    h,
+    (c) => _names(c, 'carbs') || _names(c, 'carbohydrates'),
+  );
+  final fat = _col(h, (c) => _names(c, 'fat'));
+  final nutrients = {
+    for (final MapEntry(key: key, value: starts) in nutrientColumns.entries)
+      key: ?_col(
+        h,
+        (c) => starts.any((s) => _names(c, s)) && !c.contains('added'),
+      ),
+  };
+  return (row, name, grams) => switch (_number(_at(row, kcal))) {
+    final k? when k >= 0 => FoodRow(
+      name: name,
+      grams: grams,
+      kcal: k,
+      protein: _number(_at(row, protein)),
+      carbs: _number(_at(row, carbs)),
+      fat: _number(_at(row, fat)),
+      nutrients: {
+        for (final MapEntry(key: key, value: column) in nutrients.entries)
+          if (_number(_at(row, column)) case final v? when v > 0) key: v,
+      },
+    ),
+    _ => null,
+  };
+}
+
+/// The index of the first of headers [h] to pass [test]; null for none.
+int? _col(List<String> h, bool Function(String) test) {
+  final i = h.indexWhere(test);
+  return i < 0 ? null : i;
+}
+
+/// The headers of a sheet with no date column, lower case; null for one
+/// with a date column, which is a log.
+List<String>? _undatedHeaders(List<List<String>> rows) {
+  if (rows.isEmpty) return null;
+  final h = [for (final c in rows.first) c.toLowerCase().trim()];
+  return h.any((c) => c == 'date' || c == 'day' || c.startsWith('date '))
+      ? null
+      : h;
+}
+
 /// The custom foods of a sheet that names foods and their calories but no
 /// date: one serving each, with its grams where the sheet gives them.
 List<FoodRow> _customFoods(List<List<String>> rows) {
-  if (rows.isEmpty) return const [];
-  final h = [for (final c in rows.first) c.toLowerCase().trim()];
-  if (h.any((c) => c == 'date' || c == 'day' || c.startsWith('date '))) {
-    return const [];
-  }
+  final h = _undatedHeaders(rows);
+  if (h == null) return const [];
   final name = h.indexWhere((c) => c == 'food name' || c == 'food');
-  final kcal = h.indexWhere(
-    (c) => _names(c, 'calories') || c == 'kcal' || c.startsWith('energy'),
-  );
-  if (name < 0 || kcal < 0) return const [];
-  int? col(bool Function(String) test) {
-    final i = h.indexWhere(test);
-    return i < 0 ? null : i;
-  }
-
-  final grams = col((c) => c.contains('serving weight'));
-  final servings = col((c) => c == 'serving qty');
-  final protein = col((c) => _names(c, 'protein'));
-  final carbs = col((c) => _names(c, 'carbs') || _names(c, 'carbohydrates'));
-  final fat = col((c) => _names(c, 'fat'));
-  final nutrients = {
-    for (final MapEntry(key: key, value: starts) in nutrientColumns.entries)
-      key: ?col((c) => starts.any((s) => _names(c, s)) && !c.contains('added')),
-  };
+  final food = _foodColumns(h);
+  if (name < 0 || food == null) return const [];
+  final grams = _col(h, (c) => c.contains('serving weight'));
+  final servings = _col(h, (c) => c == 'serving qty');
   return [
     for (final row in rows.skip(1))
       if (_at(row, name).trim() case final n when n.isNotEmpty)
-        if (_number(_at(row, kcal)) case final k? when k >= 0)
-          FoodRow(
-            name: n,
-            grams: switch ((
-              _number(_at(row, grams)),
-              servings == null ? 1.0 : _number(_at(row, servings)),
-            )) {
-              (final g?, final q?) when g > 0 && q > 0 => g * q,
+        ?food(row, n, switch ((
+          _number(_at(row, grams)),
+          servings == null ? 1.0 : _number(_at(row, servings)),
+        )) {
+          (final g?, final q?) when g > 0 && q > 0 => g * q,
+          _ => null,
+        }),
+  ];
+}
+
+/// The names of a sheet of custom foods, lower case, calories or not.
+Set<String> _customFoodNames(List<List<String>> rows) {
+  final h = _undatedHeaders(rows);
+  if (h == null) return const {};
+  final name = h.indexWhere((c) => c == 'food name' || c == 'food');
+  if (name < 0 || _foodColumns(h) == null) return const {};
+  return {
+    for (final row in rows.skip(1))
+      if (_at(row, name).trim() case final n when n.isNotEmpty) n.toLowerCase(),
+  };
+}
+
+/// The recipes of a sheet that names recipes and their calories: the whole
+/// recipe as one food, its servings, and its text.
+List<HistoryRecipe> _recipes(List<List<String>> rows) {
+  final h = _undatedHeaders(rows);
+  if (h == null) return const [];
+  final name = h.indexWhere((c) => c == 'recipe name' || c == 'recipe');
+  final food = _foodColumns(h);
+  if (name < 0 || food == null) return const [];
+  final grams = _col(h, (c) => c.startsWith('total weight'));
+  final servings = _col(h, (c) => c == 'serving qty' || c == 'servings');
+  final description = _col(h, (c) => c == 'description');
+  final ingredients = _col(h, (c) => c == 'ingredients');
+  final steps = [
+    for (var i = 0; i < h.length; i++)
+      if (RegExp(r'^step \d+$').hasMatch(h[i])) i,
+  ];
+  return [
+    for (final row in rows.skip(1))
+      if (_at(row, name).trim() case final n when n.isNotEmpty)
+        if (food(row, n, switch (_number(_at(row, grams))) {
+              final g? when g > 0 => g,
+              _ => null,
+            })
+            case final f?)
+          HistoryRecipe(
+            food: f,
+            servings: switch (_number(_at(row, servings))) {
+              final q? when q >= 1 => q.round(),
               _ => null,
             },
-            kcal: k,
-            protein: _number(_at(row, protein)),
-            carbs: _number(_at(row, carbs)),
-            fat: _number(_at(row, fat)),
-            nutrients: {
-              for (final MapEntry(key: key, value: column) in nutrients.entries)
-                if (_number(_at(row, column)) case final v? when v > 0) key: v,
-            },
+            notes: [
+              _at(row, description).trim(),
+              if (_at(row, ingredients).trim() case final i when i.isNotEmpty)
+                'Ingredients:\n$i',
+              for (final (k, i) in steps.indexed)
+                if (_at(row, i).trim() case final step when step.isNotEmpty)
+                  '${k + 1}. $step',
+            ].where((t) => t.isNotEmpty).join('\n\n'),
           ),
   ];
+}
+
+/// The goals over in a sheet of goals (MacroFactor's "Weight Goals"): its
+/// kind, start and end dates, and the scale weights at either end and the
+/// goal weight. A weight header that states no unit is read in [unit].
+List<GoalRecord> _goals(List<List<String>> rows, BodyWeightUnit unit) {
+  final h = _undatedHeaders(rows);
+  if (h == null) return const [];
+  final goal = _col(h, (c) => c == 'goal' || c == 'goal type');
+  final start = _col(h, (c) => c == 'start date');
+  final end = _col(h, (c) => c == 'end date');
+  if (goal == null || start == null || end == null) return const [];
+  final status = _col(h, (c) => c == 'status');
+  final startKg = _col(h, (c) => c.startsWith('start') && _isWeight(c));
+  final endKg = _col(h, (c) => c.startsWith('end') && _isWeight(c));
+  final targetKg = _col(
+    h,
+    (c) => c.startsWith('goal weight') || c.startsWith('target weight'),
+  );
+  double? kg(List<String> row, int? column) {
+    final value = _number(_at(row, column));
+    if (column == null || value == null || value <= 0) return null;
+    return _kg(value, _unitIn(h[column]) ?? unit);
+  }
+
+  final body = rows.skip(1).toList();
+  final dates = _DateColumn([
+    for (final r in body) ...[_at(r, start), _at(r, end)],
+  ]);
+  final goals = [
+    for (final row in body)
+      if ((
+            _kindOf(_at(row, goal)),
+            dates.parse(_at(row, start)),
+            dates.parse(_at(row, end)),
+          )
+          case (final kind?, final from?, final to?)
+          when !to.isBefore(from) &&
+              !_at(row, status).toLowerCase().contains('progress'))
+        GoalRecord(
+          kind: kind,
+          start: from,
+          end: to,
+          startKg: kg(row, startKg),
+          endKg: kg(row, endKg),
+          targetKg: kind == PhaseKind.maintain ? null : kg(row, targetKg),
+        ),
+  ];
+  return goals..sort((a, b) => a.start.compareTo(b.start));
+}
+
+PhaseKind? _kindOf(String goal) {
+  final g = goal.toLowerCase();
+  if (_any(g, ['loss', 'lose', 'cut'])) return PhaseKind.cut;
+  if (_any(g, ['gain', 'bulk'])) return PhaseKind.bulk;
+  if (g.contains('maint')) return PhaseKind.maintain;
+  return null;
 }
 
 const _notEaten = [
