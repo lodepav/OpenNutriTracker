@@ -351,6 +351,11 @@ void main() {
     // A move to where it is changes nothing.
     final done = find.byKey(const Key('fork-where-done'));
     expect(tester.widget<FilledButton>(done).onPressed, isNull);
+    // One food: the button says the verb alone.
+    expect(
+      find.descendant(of: done, matching: find.text('Move')),
+      findsOneWidget,
+    );
     // "Now" is today's only.
     expect(find.byKey(const Key('fork-where-now')), findsOneWidget);
     await tester.tap(find.byKey(const Key('fork-where-day1')));
@@ -376,7 +381,56 @@ void main() {
       find.byKey(const Key('fork-where-own-meals')),
     );
     expect(own.selected, isTrue);
-    expect(find.text('Copy 2'), findsOneWidget);
+    expect(find.text('Copy 2 foods'), findsOneWidget);
+  });
+
+  testWidgets('the bar counts several in foods', (tester) async {
+    final oats = at(intakeOf('oats', 50), DateTime(2026, 10, 22, 8));
+    final rice = at(intakeOf('rice', 80), DateTime(2026, 10, 22, 9));
+    intakes.stored[oats.id] = oats;
+    intakes.stored[rice.id] = rice;
+    final from = DateTime(2026, 10, 22);
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: const [S.delegate],
+        home: Scaffold(
+          body: Builder(
+            builder: (context) => Column(
+              children: [
+                TextButton(
+                  onPressed: () => placeWithUndo(
+                    context,
+                    [oats, rice],
+                    CopySameTimes(from),
+                    meal: IntakeTypeEntity.lunch,
+                    copier: copier(),
+                  ),
+                  child: const Text('copy'),
+                ),
+                TextButton(
+                  onPressed: () => placeWithUndo(
+                    context,
+                    [oats, rice],
+                    CopySameTimes(from),
+                    meal: IntakeTypeEntity.lunch,
+                    movedFrom: from,
+                    copier: copier(),
+                  ),
+                  child: const Text('move'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('copy'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Copied 2 foods to Lunch'), findsOneWidget);
+
+    await tester.tap(find.text('move'));
+    await tester.pumpAndSettle();
+    expect(find.text('Moved 2 foods to Lunch'), findsOneWidget);
   });
 
   testWidgets('a move says where, and its Undo puts the entry back', (

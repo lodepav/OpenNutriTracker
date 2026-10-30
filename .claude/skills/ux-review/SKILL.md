@@ -11,35 +11,37 @@ Modelled on `implement-review`. The reviewer is the `ux-reviewer` agent (`.claud
 
 ## 0. Set up
 
-1. Boot and install: `SEED=1 FAKE_AI=true fork/tools/emulator.sh` (headless). Push the sample import files if `/sdcard/Download` lacks them.
-2. Run `flutter analyze lib test` and `flutter test` once; record the baseline.
-3. Start the **ledger**: `round, id, severity, rule, claim, decision, one-line reason`.
+1. With no emulator up, run `flutter analyze lib test` and `flutter test` once; record the baseline. The suite beside the emulator can run this machine out of memory, and the kernel then kills the emulator. Shut one down first: `adb emu kill`.
+2. Run `fork/tools/ux_words.py` and fix what it lists, or add it to its `ALLOWED` with the reason. Findings a tool can catch don't need a reviewer.
+3. Boot and install: `SEED=1 FAKE_AI=true fork/tools/emulator.sh` (headless). Push the sample import files if `/sdcard/Download` lacks them.
+4. Read the **ledger**, `fork/UX_LEDGER.md`: what earlier reviews decided. New rows go at its end.
+5. Set the **focus**, which every round's prompt must carry: the screens named in the arguments, or else the screens the change under review touches, by name and with no opinion of them. A sweep of the whole app takes about an hour; pass `full sweep` only when the user asks for one.
 
 ## 1. Rounds (default 2)
 
 Each round:
 
-1. **Spawn** the reviewer (a new spawn each round) with the prompt below. Do not touch the emulator while it runs.
-2. **Triage** every finding not withdrawn: **accept**, **reject** (wrong, the counterargument wins, or the fix costs more than it gives; say which), or **defer** (real, but upstream-only after phase 4, or out of scope). Look at the screenshot and read the code before deciding. Lows are deferred or rejected unless the fix is small and clearly helps. Improvements are triaged the same way.
-3. **Fix** accepted findings with the minimal change, at seams for upstream files (`fork/SEAMS.md`).
-4. **Test**: analyze and the full suite. Tests are ground truth.
+1. **Spawn** the reviewer (a new spawn each round) with the prompt below. Do not touch the emulator while it runs. From round 2, the focus is only the screens of the fixes accepted in the last round.
+2. **Triage** every finding not withdrawn: **accept**, **reject** (wrong, the counterargument wins, or the fix costs more than it gives; say which), or **defer** (real, but upstream-only after phase 4, or out of scope). Look at the screenshot and read the code before deciding. Lows are one line each with no counterargument, so make the case against one yourself; they are deferred or rejected unless the fix is small and clearly helps. Improvements are triaged the same way.
+3. **Fix** accepted findings with the minimal change, at seams for upstream files (`fork/SEAMS.md`). An accepted A1, A2, A3 or A6 gets a test that fails without the fix: `test/helpers/ux_checks.dart` pumps a widget at 200% text in the app's font and checks for cut text, tap targets, labels and contrast.
+4. **Test**: analyze and only the test files of what changed, one at a time (`-j 1`), under `flock /tmp/claude-1000/ont-flutter-test.lock`. The emulator is still up: a 300-test run at `-j 2` beside it lost the device. The full suite waits for the end.
 5. **Reinstall** (`SEED=1 FAKE_AI=true fork/tools/emulator.sh`) and check each fix on screen yourself.
-6. Write the round into the ledger.
+6. Write the round into the ledger, with the date and screens.
 
 ### Reviewer prompt
 
 ```
 Round N of M. Follow .claude/agents/ux-reviewer.md.
 Screenshots: build/ux/roundN
-Focus: <focus, or "the default coverage">
+Focus: <screens, or "full sweep">
 Ledger (do not re-raise rejected/deferred items without new evidence;
 check that accepted ones are fixed on screen):
-<ledger rows: id, severity, rule, claim, decision, reason>
+<this review's rows, and earlier reviews' rejected and deferred rows for the focus's screens>
 ```
 
-## 2. Report
+## 2. Finish
 
-Do not commit unless asked. End with: rounds run, tests before and after, the full ledger table, the deferred list (for upstream or later), and any finding where you and the reviewer disagreed on a high.
+Shut the emulator down (`adb emu kill`) and run analyze and the full suite: tests are ground truth. Do not commit unless asked; `fork/UX_LEDGER.md` goes with the fixes when you do. End with: rounds run, tests before and after, the full ledger table, the deferred list (for upstream or later), and any finding where you and the reviewer disagreed on a high.
 
 ## Guardrails
 

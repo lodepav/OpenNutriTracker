@@ -49,11 +49,11 @@ void main() {
 
     show(oats, today);
     await tester.pumpAndSettle();
-    expect(find.text('Entry deleted'), findsOneWidget);
+    expect(find.text('Food deleted'), findsOneWidget);
 
     show(milk, today);
     await tester.pumpAndSettle();
-    expect(find.text('2 entries deleted'), findsOneWidget);
+    expect(find.text('2 foods deleted'), findsOneWidget);
 
     await tester.tap(find.text('Undo'));
     await tester.pumpAndSettle();
@@ -64,7 +64,7 @@ void main() {
     await tester.pumpAndSettle();
     show(milk, DateTime(2026, 10, 22));
     await tester.pumpAndSettle();
-    expect(find.text('Entry deleted'), findsOneWidget);
+    expect(find.text('Food deleted'), findsOneWidget);
     await tester.tap(find.text('Undo'));
     await tester.pumpAndSettle();
     expect(restored.last.$1, [milk]);
@@ -84,7 +84,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.pump(const Duration(seconds: 5));
     await tester.pumpAndSettle();
-    expect(find.text('Entry deleted'), findsNothing);
+    expect(find.text('Food deleted'), findsNothing);
 
     DeletedEntries.show(
       context,
@@ -94,7 +94,7 @@ void main() {
       restore: restore,
     );
     await tester.pumpAndSettle();
-    expect(find.text('Entry deleted'), findsOneWidget);
+    expect(find.text('Food deleted'), findsOneWidget);
     await tester.pump(const Duration(seconds: 5));
     await tester.pumpAndSettle();
   });
@@ -123,8 +123,8 @@ void main() {
       restore: restore,
     );
     await tester.pumpAndSettle();
-    expect(find.text('2 entries deleted'), findsNothing);
-    expect(find.text('Entry deleted'), findsOneWidget);
+    expect(find.text('2 foods deleted'), findsNothing);
+    expect(find.text('Food deleted'), findsOneWidget);
     await tester.tap(find.text('Undo'));
     await tester.pumpAndSettle();
     // The bar up is the old profile's oats: no bar for the overtaken milk,
@@ -141,7 +141,7 @@ void main() {
       restore: restore,
     );
     await tester.pumpAndSettle();
-    expect(find.text('Entry deleted'), findsOneWidget);
+    expect(find.text('Food deleted'), findsOneWidget);
     await tester.tap(find.text('Undo'));
     await tester.pumpAndSettle();
     expect(restored.single.$1, [milk]);
@@ -178,7 +178,7 @@ void main() {
       restore: restore,
     );
     await tester.pumpAndSettle();
-    expect(find.text('Entry deleted'), findsOneWidget);
+    expect(find.text('Food deleted'), findsOneWidget);
     await tester.tap(find.text('Undo'));
     await tester.pumpAndSettle();
     expect(restored.single.$1, [milk]);
@@ -206,7 +206,7 @@ void main() {
       restore: restore,
     );
     await tester.pumpAndSettle();
-    expect(find.text('Entry deleted'), findsOneWidget);
+    expect(find.text('Food deleted'), findsOneWidget);
     await tester.tap(find.text('Undo'));
     await tester.pumpAndSettle();
     expect(restored.last.$1, [milk]);

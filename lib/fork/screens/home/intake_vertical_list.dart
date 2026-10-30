@@ -127,8 +127,16 @@ class IntakeVerticalList extends StatefulWidget {
 
 class _IntakeVerticalListState extends State<IntakeVerticalList> {
   /// The timeline's time column: "12:30 PM" on one line, as the phone's
-  /// 12-hour clock writes it.
+  /// 12-hour clock writes it, growing with the text.
   static const _timeWidth = 64.0;
+  double _timeColumn(BuildContext context) =>
+      MediaQuery.textScalerOf(context).scale(_timeWidth);
+
+  /// From 150% text, as on the Timeline, the time goes above the meal, so
+  /// the meal keeps the row's width.
+  bool _timeAbove(BuildContext context) =>
+      widget.forkTime != null &&
+      MediaQuery.textScalerOf(context).scale(10) >= 15;
 
   late MealDetailBloc _mealDetailBloc;
   late HomeBloc _homeBloc;
@@ -200,31 +208,47 @@ class _IntakeVerticalListState extends State<IntakeVerticalList> {
   // the summary on a line of its own under
   // the header's row, lined up with the title
   Widget _forkTimelineHeader(BuildContext context, Widget row) {
-    if (widget.forkTime == null || totalKcal <= 0) return row;
+    final time = widget.forkTime;
+    final above = _timeAbove(context);
+    if (time == null || (totalKcal <= 0 && !above)) return row;
     final palette = paletteOf(context);
+    final textTheme = Theme.of(context).textTheme;
+    final summary = Text(
+      _timelineSummary(context),
+      semanticsLabel: _headerSummaryLabel(context),
+      style: textTheme.labelMedium?.copyWith(color: palette.textMuted),
+    );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        if (above) _timeText(context, time),
         row,
-        // Up under the title: the row is as tall as its buttons.
-        Transform.translate(
-          offset: const Offset(0, -10),
-          child: Padding(
-            padding: const EdgeInsets.only(left: _timeWidth + Dimens.spacing12),
-            child: Text(
-              _timelineSummary(context),
-              semanticsLabel: _headerSummaryLabel(context),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(
-                context,
-              ).textTheme.labelMedium?.copyWith(color: palette.textMuted),
-            ),
-          ),
-        ),
+        if (totalKcal > 0)
+          above
+              ? summary
+              // Up under the title: the row is as tall as its buttons.
+              : Transform.translate(
+                  offset: const Offset(0, -10),
+                  child: Padding(
+                    padding: EdgeInsets.only(
+                      left: _timeColumn(context) + Dimens.spacing12,
+                    ),
+                    child: summary,
+                  ),
+                ),
       ],
     );
   }
+
+  Widget _timeText(BuildContext context, DateTime time) => Text(
+    clockText(context, time),
+    maxLines: 1,
+    softWrap: false,
+    style: Theme.of(context).textTheme.labelMedium?.copyWith(
+      color: paletteOf(context).textMuted,
+      fontWeight: FontWeight.w700,
+    ),
+  );
 
   // the summary on one line,
   // "1166 kcal · C 215 · F 15 · P 39"; the meal's target is left to the
@@ -298,7 +322,9 @@ class _IntakeVerticalListState extends State<IntakeVerticalList> {
               children: [
                 if (selecting)
                   SizedBox(
-                    width: widget.forkTime == null ? null : _timeWidth,
+                    width: widget.forkTime == null || _timeAbove(context)
+                        ? null
+                        : _timeColumn(context),
                     child: Align(
                       alignment: Alignment.centerLeft,
                       child: Checkbox(
@@ -315,20 +341,13 @@ class _IntakeVerticalListState extends State<IntakeVerticalList> {
                       ),
                     ),
                   )
-                else if (widget.forkTime case final time?)
+                else if (widget.forkTime case final time?
+                    when !_timeAbove(context))
                   SizedBox(
-                    width: _timeWidth,
-                    child: Text(
-                      clockText(context, time),
-                      maxLines: 1,
-                      softWrap: false,
-                      style: textTheme.labelMedium?.copyWith(
-                        color: palette.textMuted,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
+                    width: _timeColumn(context),
+                    child: _timeText(context, time),
                   )
-                else
+                else if (widget.forkTime == null)
                   Container(
                     padding: const EdgeInsets.all(Dimens.spacing8),
                     decoration: BoxDecoration(
@@ -337,7 +356,8 @@ class _IntakeVerticalListState extends State<IntakeVerticalList> {
                     ),
                     child: Icon(widget.listIcon, size: 20, color: accent),
                   ),
-                const SizedBox(width: Dimens.spacing12),
+                if (selecting || !_timeAbove(context))
+                  const SizedBox(width: Dimens.spacing12),
                 Expanded(
                   // a heading TalkBack can jump between
                   // a smaller title

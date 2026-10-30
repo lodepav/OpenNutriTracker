@@ -115,9 +115,12 @@ class MealItemCard extends StatelessWidget {
                           ),
                         ],
                       ),
-                      maxLines: 2,
+                      // the whole name at large text (A6): like-named foods
+                      // are told apart by its end, the brand
+                      maxLines: large ? null : 2,
                       minFontSize: 11,
-                      overflow: TextOverflow.ellipsis,
+                      // (an ellipsis with no line limit cuts to one line)
+                      overflow: large ? null : TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 2),
                     // The source last, so a narrow row cuts it, not the

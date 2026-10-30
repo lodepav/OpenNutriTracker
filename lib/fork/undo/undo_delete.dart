@@ -27,7 +27,7 @@ Future<void> restoreDeletedIntakes(
   refreshAfterLogging();
 }
 
-/// "Entry deleted · Undo" after a diary entry is deleted (seam S52), in place
+/// "Food deleted · Undo" after a diary entry is deleted (seam S52), in place
 /// of upstream's confirmation dialog: the delete happens at once, and Undo
 /// writes the entries back with their ids, so meal groups and the Health
 /// Connect export see them unchanged. Deletes of one day that follow each
@@ -73,8 +73,8 @@ class DeletedEntries {
         persist: false,
         content: Text(
           entries.length == 1
-              ? 'Entry deleted'
-              : '${entries.length} entries deleted',
+              ? 'Food deleted'
+              : '${entries.length} foods deleted',
         ),
         action: SnackBarAction(
           label: 'Undo',
