@@ -437,6 +437,30 @@ void main() {
     expect(intakeBox.values.single.amount, 100);
     expect(rowOf(today)!.caloriesTracked, 500);
   });
+
+  testWidgets('the move\'s Undo after a new meal and amount puts the entry '
+      'back as it was, the row with it', (tester) async {
+    await setUpDiary(yesterdayHasRow: false, entriesToday: true);
+    await pumpDiary(tester);
+
+    await tester.tap(find.text('Toast'));
+    await settle(tester);
+    await tester.enterText(find.byType(TextFormField).first, '200');
+    await tester.tap(find.byKey(const Key('fork-edit-meal')));
+    await settle(tester);
+    await tester.tap(find.text(l10nEn.dinnerLabel).last);
+    await settle(tester);
+    await tester.tap(find.text(l10nEn.dialogOKLabel));
+    await settle(tester);
+    expect(intakeBox.values.single.amount, 200);
+    expect(rowOf(today)!.caloriesTracked, 700);
+
+    await tester.tap(find.text('Undo'));
+    await settle(tester);
+    expect(toastMeal(), IntakeTypeDBO.breakfast);
+    expect(intakeBox.values.single.amount, 100);
+    expect(rowOf(today)!.caloriesTracked, 500, reason: 'was left at 700');
+  });
   // [/fork]
 
   testWidgets('deleting a past day\'s entries changes only that day\'s row', (
@@ -546,6 +570,23 @@ void main() {
       expect(rowOf(today)!.caloriesTracked, 300, reason: 'was left at 500');
       expect(rowOf(tomorrow), isNull);
     });
+
+    // [fork] S177 copy-move
+    testWidgets('a selection ends when the Diary follows today on', (
+      tester,
+    ) async {
+      await openToday(tester);
+
+      await tester.tap(find.byKey(const Key('fork-select-entries')));
+      await settle(tester);
+      await tester.tap(find.text('Toast'));
+      await settle(tester);
+      expect(find.text('1 selected'), findsOneWidget);
+      await passMidnight(tester);
+
+      expect(find.text('1 selected'), findsNothing);
+    });
+    // [/fork]
 
     testWidgets('an activity delete lowers the goal of its own day', (
       tester,

@@ -1,8 +1,10 @@
 import 'dart:async';
 
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:opennutritracker/core/utils/tracked_day_lock.dart';
 import 'package:opennutritracker/fork/goal/goal_actions.dart';
+import 'package:opennutritracker/fork/goal/goal_calendar_page.dart';
 import 'package:opennutritracker/fork/goal/goal_planner.dart';
 import 'package:opennutritracker/fork/phases/phases.dart';
 
@@ -85,6 +87,33 @@ final _bulk = GoalDraft(
 ).toPlan();
 
 void main() {
+  testWidgets('an Undo bar gone with its screen leaves no listener on the '
+      'goals', (tester) async {
+    late BuildContext context;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Builder(
+            builder: (c) {
+              context = c;
+              return const SizedBox();
+            },
+          ),
+        ),
+      ),
+    );
+    showGoalUndo(context, 'Goal saved', GoalActions(store: _MemoryPhases()), (
+      plan: null,
+      upcoming: const [],
+    ), () {});
+    await tester.pump();
+    await tester.pumpWidget(const SizedBox());
+
+    // Was: the bar's listener closing it on a disposed messenger.
+    PhaseStore.changes.value++;
+    await tester.pump();
+  });
+
   test('a profile switch after the actions were made drops them', () async {
     final log = <String>[];
     final store = _LoggedPhases(log);

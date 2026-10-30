@@ -75,7 +75,7 @@ class CopyEntries {
   final GetIntakeUsecase _intakes;
   final GetUserActivityUsecase _activities;
   final LogUserActivityUsecase _logActivity;
-  final DeleteIntakeUsecase? _deleteIntake;
+  final DeleteIntakeUsecase _deleteIntake;
   final String Function() _newId;
 
   CopyEntries(
@@ -87,7 +87,7 @@ class CopyEntries {
     this._intakes,
     this._activities,
     this._logActivity, {
-    DeleteIntakeUsecase? delete,
+    required DeleteIntakeUsecase delete,
     String Function()? newId,
   }) : _deleteIntake = delete,
        _newId = newId ?? IdGenerator.getUniqueID;
@@ -139,8 +139,13 @@ class CopyEntries {
             timeOf = (intake) => _moveTo(intake.dateTime, target, offset);
         }
         final written = <IntakeEntity>[];
-        for (final intake in intakes) {
-          if (movedFrom != null) await _remove(intake, _dateOf(movedFrom));
+        for (var intake in intakes) {
+          if (movedFrom != null) {
+            // An entry deleted since it was picked is not put back.
+            final stored = await _remove(intake.id, _dateOf(movedFrom));
+            if (stored == null) continue;
+            intake = stored;
+          }
           final placed = IntakeEntity(
             id: movedFrom != null ? intake.id : _newId(),
             unit: intake.unit,
@@ -167,7 +172,7 @@ class CopyEntries {
   }) async =>
       await withTrackedDayLockOnProfile(() async {
         for (final intake in placed.written) {
-          await _remove(intake, placed.day);
+          await _remove(intake.id, placed.day);
         }
         if (moved != null) await restoreIntakes(moved, from!);
         return true;
@@ -281,9 +286,12 @@ class CopyEntries {
     );
   }
 
-  /// As the Diary's delete does.
-  Future<void> _remove(IntakeEntity intake, DateTime day) async {
-    await _deleteIntake!.deleteIntake(intake);
+  /// As the Diary's delete does, at what is stored under [id], which may
+  /// have been edited or deleted since; returns that, null when it is gone.
+  Future<IntakeEntity?> _remove(String id, DateTime day) async {
+    final intake = await _intakes.getIntakeById(id);
+    if (intake == null) return null;
+    await _deleteIntake.deleteIntake(intake);
     await _trackedDay.removeDayCaloriesTracked(day, intake.totalKcal);
     await _trackedDay.removeDayMacrosTracked(
       day,
@@ -291,6 +299,7 @@ class CopyEntries {
       fatTracked: intake.totalFatsGram,
       proteinTracked: intake.totalProteinsGram,
     );
+    return intake;
   }
 
   /// As upstream's meal detail does after logging an entry.

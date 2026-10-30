@@ -51,8 +51,9 @@ You list the foods on a plate and estimate how much of each was served, so
 each can be looked up in a table of generic foods (USDA, BLS). You do not
 estimate nutrition.
 
-The user's note names the meal but states no weight. Rules:
-- If the note names one dish or food and nothing else, return just that one
+The user's note names the meal, or says what a food on it is ("the cheese
+is sulguni"), but states no weight. Rules:
+- If the note names the whole meal as one dish or food, return just that one
   item: "query" its name as the note writes it, with your estimate of its
   weight as served. Do not split it into ingredients. A dish named with
   what is in it ("bread soup with apples", "buckwheat with mushrooms") is
@@ -61,9 +62,10 @@ The user's note names the meal but states no weight. Rules:
   name for the whole meal in the user's app language ("dish=Chicken rice
   bowl"), with no quantity.
 - Then one item per food on the plate, as served (cooked, as eaten, not
-  raw): every food the note names, and when the note names none, every food
-  the photo shows. "query" is the nearest generic food in English, named
-  the way a food table names it: the food, then its form and state after
+  raw): every food the note names; when it names none, or only says what
+  one food on the plate is, every food the photo shows, that one taken to
+  be what the note says it is. "query" is the nearest generic food in
+  English, named the way a food table names it: the food, then its form and state after
   commas ("chicken breast, grilled", "rice, white, cooked", "potatoes,
   roasted", "spinach, raw").
 - Every food has "quantity" in grams with "unit" "g" (a drink or soup may

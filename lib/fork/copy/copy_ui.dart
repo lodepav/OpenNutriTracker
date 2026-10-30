@@ -133,7 +133,7 @@ Future<void> placeWithUndo(
     if (movedFrom == null || !DateUtils.isSameDay(placed.day, movedFrom))
       DateFormat.MMMEd().format(placed.day),
   ];
-  final count = intakes.length;
+  final count = placed.written.length;
   messenger.showSnackBar(
     SnackBar(
       // An action keeps a bar up until dismissed: this one goes.
@@ -148,7 +148,14 @@ Future<void> placeWithUndo(
           final undone = await entries.undoPlace(
             placed,
             startedOn: stamp,
-            moved: movedFrom == null ? null : intakes,
+            // Only what the move took: one deleted since it was picked
+            // stays deleted.
+            moved: movedFrom == null
+                ? null
+                : [
+                    for (final intake in intakes)
+                      if (placed.written.any((w) => w.id == intake.id)) intake,
+                  ],
             from: movedFrom,
           );
           refreshAfterCopy();
