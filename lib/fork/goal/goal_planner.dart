@@ -11,7 +11,10 @@ const bulkCustomPaceKg = (min: 0.05, max: 0.75);
 const customPaceStepKg = 0.05;
 
 /// A maintenance goal's lengths, in weeks.
-const maintainWeeksChoices = [4, 8, 12];
+const maintainWeeksChoices = [2, 4, 8];
+
+/// A custom maintenance length's range, in weeks.
+const customMaintainWeeks = (min: 1, max: 52);
 
 /// Diet breaks: [breakWeeks] at maintenance after every [breakEveryWeeks]
 /// of cutting.
@@ -309,14 +312,20 @@ PhasePlan extendedPlan(
   );
 }
 
-/// The phase kind on [day]: the running plan's, a completed goal's, or
-/// null on a day no goal covers. After the plan's end, maintenance.
-PhaseKind? kindOn(DateTime day, PhasePlan? plan, List<GoalRecord> history) {
+/// The phase kind on [day]: the running plan's, an [upcoming] goal's, a
+/// completed goal's, or null on a day no goal covers. After the last
+/// plan's end, maintenance.
+PhaseKind? kindOn(
+  DateTime day,
+  PhasePlan? plan,
+  List<GoalRecord> history, {
+  List<PhasePlan> upcoming = const [],
+}) {
   final date = _date(day);
-  if (plan != null) {
-    final i = plan.indexOn(date);
-    if (i >= plan.phases.length) return PhaseKind.maintain;
-    if (i >= 0) return plan.phases[i].kind;
+  for (final p in [?plan, ...upcoming].reversed) {
+    final i = p.indexOn(date);
+    if (i >= p.phases.length) return PhaseKind.maintain;
+    if (i >= 0) return p.phases[i].kind;
   }
   for (final r in history.reversed) {
     if (!date.isBefore(_date(r.start)) && !date.isAfter(_date(r.end))) {
@@ -357,4 +366,43 @@ PhasePlan editedPlan(
     extensions: plan.extensions,
     phases: [...kept, ...ahead.phases],
   );
+}
+
+/// The weight [plan] ends at: its target, else where its paces lead.
+double? endKgOf(PhasePlan plan) =>
+    plan.targetKg ?? plan.weightAt(plan.phases.length);
+
+/// What is wrong with queued goal [plan] where it now starts: a target it
+/// has passed, after a goal before it moved, went or changed.
+String? queuedProblem(PhasePlan plan) {
+  final kg = plan.startKg;
+  return kg == null ? null : GoalDraft.of(plan, kg).problem;
+}
+
+/// [plan] planned again from [start] at [startKg]: the same goal, pace and
+/// breaks, its weeks worked out afresh.
+PhasePlan restarted(PhasePlan plan, DateTime start, double startKg) =>
+    GoalDraft.of(
+      plan,
+      startKg,
+    ).copyWith(start: _date(start), startKg: startKg).toPlan();
+
+/// The goals in [upcoming], each [restarted] the day after the one before
+/// ends, from the weight it ends at (or [fromKg]): the first after
+/// [current].
+List<PhasePlan> reflowed(
+  PhasePlan current,
+  List<PhasePlan> upcoming, {
+  required double fromKg,
+}) {
+  var start = current.end;
+  var kg = endKgOf(current) ?? fromKg;
+  final out = <PhasePlan>[];
+  for (final p in upcoming) {
+    final next = restarted(p, start, kg);
+    out.add(next);
+    start = next.end;
+    kg = endKgOf(next) ?? kg;
+  }
+  return out;
 }

@@ -19,6 +19,7 @@ import 'package:opennutritracker/fork/body/measurement_store.dart';
 import 'package:opennutritracker/fork/body/side_compare.dart';
 import 'package:opennutritracker/fork/display/display_prefs.dart';
 import 'package:opennutritracker/fork/goal/goal_progress.dart';
+import 'package:opennutritracker/fork/phases/phases.dart';
 import 'package:opennutritracker/fork/report/nutrient_explorer.dart';
 import 'package:opennutritracker/fork/trends/detail_widgets.dart';
 import 'package:opennutritracker/fork/trends/trends_overview.dart';
@@ -98,6 +99,10 @@ void main() {
   tearDown(() async {
     TrendsOverview.loadIntakes = intakesBetween;
     TrendsOverview.loadGoal = () => GoalStartStore().load();
+    TrendsOverview.loadPhases = () async => (
+      plan: await PhaseStore().plan(),
+      history: await PhaseStore().history(),
+    );
     TrendsOverview.loadMeasurements = () async => const [];
     SidePartPref.current.value = SidePart.arms;
     await locator.reset();
@@ -654,6 +659,45 @@ void main() {
           matching: find.byType(FigureTile),
         ),
         matching: find.text('There'),
+      ),
+      findsOne,
+    );
+  });
+
+  testWidgets('a maintenance goal with no target: the Goal tiles name it', (
+    tester,
+  ) async {
+    TrendsOverview.loadPhases = () async => (
+      plan: PhasePlan(
+        start: day(-7),
+        phases: const [
+          DietPhase(kind: PhaseKind.maintain, kgPerWeek: 0, weeks: 4),
+        ],
+      ),
+      history: const <GoalRecord>[],
+    );
+    await pumpTrends(
+      tester,
+      loaded(weight: [WeightLogEntity(date: day(0), weightKg: 80)]),
+    );
+    await showTile(tester, 'goal');
+    // Not "No goal" while one runs; it ends 4 weeks from its start.
+    expect(tileText(tester, 'goal'), contains('Maintain'));
+    expect(tileText(tester, 'goal'), contains('until'));
+    expect(tileText(tester, 'goal'), isNot(contains('No goal')));
+    await openTile(tester, 'weight');
+    await tester.scrollUntilVisible(
+      find.text('To your goal'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(
+      find.descendant(
+        of: find.ancestor(
+          of: find.text('To your goal'),
+          matching: find.byType(FigureTile),
+        ),
+        matching: find.text('Maintain'),
       ),
       findsOne,
     );

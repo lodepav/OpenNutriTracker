@@ -9,6 +9,7 @@ import 'package:opennutritracker/core/domain/entity/body_weight_unit_entity.dart
 import 'package:opennutritracker/core/utils/tracked_day_lock.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
 import 'package:opennutritracker/fork/adaptive/goal_plan.dart';
+import 'package:opennutritracker/fork/goal/goal_actions.dart';
 import 'package:opennutritracker/fork/phases/phases.dart';
 import 'package:opennutritracker/fork/phases/phases_ui.dart';
 
@@ -166,6 +167,16 @@ void main() {
       expect((await store.history()).map((r) => r.endKg), [80, 75.5]);
     });
 
+    test('the upcoming goals are kept in order, and cleared', () async {
+      await store.saveUpcoming([_plan, _plan]);
+      expect((await store.upcoming()).map((p) => p.start), [
+        _plan.start,
+        _plan.start,
+      ]);
+      await store.saveUpcoming([]);
+      expect(await store.upcoming(), isEmpty);
+    });
+
     test('a pace a profile switch dropped is tried again', () async {
       await store.save(_plan);
       saves = false;
@@ -210,6 +221,85 @@ void main() {
 
       expect(paces, [-0.5, 0, 0]);
     });
+
+    test('a queued goal starts on its day, the one before kept', () async {
+      // _plan runs 6 weeks from Oct 19, to Nov 30.
+      final next = PhasePlan(
+        start: DateTime(2026, 11, 30),
+        startKg: 80,
+        phases: const [
+          DietPhase(kind: PhaseKind.cut, kgPerWeek: -0.75, weeks: 4),
+        ],
+      );
+      await store.save(_plan);
+      await store.saveUpcoming([next]);
+      final profile = <(double?, double?)>[];
+      PhaseRunner run() => PhaseRunner(
+        store: store,
+        setPace: (kg, startedOn) async {
+          paces.add(kg);
+          return true;
+        },
+        clock: () => now,
+        startNext: (store, startedOn) => GoalActions(
+          store: store,
+          startedOn: startedOn,
+          save: (pace, target) async {
+            profile.add((pace, target));
+            return true;
+          },
+          clock: () => now,
+        ).startNextIfDue(80.4),
+      );
+
+      now = DateTime(2026, 11, 29, 9);
+      await run().run();
+      expect((await store.plan())?.start, _start);
+      now = DateTime(2026, 11, 30, 9);
+      await run().run();
+
+      expect((await store.plan())?.toJson(), next.toJson());
+      expect(await store.upcoming(), isEmpty);
+      final kept = (await store.history()).single;
+      expect(
+        (kept.start, kept.end, kept.endKg),
+        (_start, DateTime(2026, 11, 30), 80.4),
+      );
+      expect(profile, [(-0.75, null)]);
+      expect(paces.last, -0.75);
+    });
+
+    test(
+      'a run while a goal is completed waits, and sets no old pace',
+      () async {
+        // Just saved, so its phase is not applied yet.
+        await store.save(_plan);
+        var profile = -0.5;
+        final runner = PhaseRunner(
+          store: store,
+          setPace: (kg, startedOn) async {
+            profile = kg;
+            return true;
+          },
+          clock: () => now,
+        );
+        Future<bool>? run;
+        final actions = GoalActions(
+          store: store,
+          save: (pace, target) async {
+            if (pace != null) profile = pace;
+            // A change notice lands while the goal is being saved.
+            run = runner.run();
+            return true;
+          },
+          clock: () => now,
+        );
+
+        expect(await actions.complete(_plan, 80), isTrue);
+        expect(await run, isFalse);
+        expect(profile, 0);
+      },
+    );
 
     test('saving the plan applies its phase afresh', () async {
       await store.save(_plan);

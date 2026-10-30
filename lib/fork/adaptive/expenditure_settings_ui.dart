@@ -526,108 +526,109 @@ class _CheckInSection extends StatelessWidget {
         const _Heading('Check-in'),
         if (!adaptive)
           const _Note(
-            'Used when the calorie target is Adaptive. The estimate above '
-            'shows on Trends either way.',
+            'Used when the calorie target is Adaptive; its settings show '
+            'then. The estimate above shows on Trends either way.',
           ),
-        ListTile(
-          key: const ValueKey('check-in-day'),
-          enabled: adaptive,
-          title: const Text('Check-in day'),
-          subtitle: Text(
-            settings.checkInWeekday == null
-                ? 'A week after the last one'
-                : 'Every ${_weekday(settings.checkInWeekday!)}; a missed '
-                      'one stays due until done',
-          ),
-          trailing: const Icon(Icons.edit_rounded),
-          onTap: () async {
-            final picked = await showDialog<({int? weekday})>(
-              context: context,
-              builder: (context) => SimpleDialog(
-                title: const Text('Check-in day'),
-                children: [
-                  for (final day in [null, 1, 2, 3, 4, 5, 6, 7])
-                    ListTile(
-                      selected: day == settings.checkInWeekday,
-                      trailing: day == settings.checkInWeekday
-                          ? const Icon(Icons.check_rounded)
-                          : null,
-                      title: Text(
-                        day == null
-                            ? 'A week after the last one'
-                            : _weekday(day),
+        // Hidden, not greyed, when unused: a greyed choice still looks
+        // chosen.
+        if (adaptive) ...[
+          ListTile(
+            key: const ValueKey('check-in-day'),
+            title: const Text('Check-in day'),
+            subtitle: Text(
+              settings.checkInWeekday == null
+                  ? 'A week after the last one'
+                  : 'Every ${_weekday(settings.checkInWeekday!)}; a missed '
+                        'one stays due until done',
+            ),
+            trailing: const Icon(Icons.edit_rounded),
+            onTap: () async {
+              final picked = await showDialog<({int? weekday})>(
+                context: context,
+                builder: (context) => SimpleDialog(
+                  title: const Text('Check-in day'),
+                  children: [
+                    for (final day in [null, 1, 2, 3, 4, 5, 6, 7])
+                      ListTile(
+                        selected: day == settings.checkInWeekday,
+                        trailing: day == settings.checkInWeekday
+                            ? const Icon(Icons.check_rounded)
+                            : null,
+                        title: Text(
+                          day == null
+                              ? 'A week after the last one'
+                              : _weekday(day),
+                        ),
+                        onTap: () => Navigator.pop(context, (weekday: day)),
                       ),
-                      onTap: () => Navigator.pop(context, (weekday: day)),
-                    ),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: Padding(
-                      padding: const EdgeInsets.only(right: 16),
-                      child: TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: const Text('Cancel'),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: Padding(
+                        padding: const EdgeInsets.only(right: 16),
+                        child: TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text('Cancel'),
+                        ),
                       ),
                     ),
-                  ),
-                ],
-              ),
-            );
-            if (picked != null) {
-              await _save(
-                store,
-                settings.copyWith(checkInWeekday: () => picked.weekday),
+                  ],
+                ),
               );
-            }
-          },
-        ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-          // The segments below carry it as their group's name.
-          child: ExcludeSemantics(
-            child: Text(
-              'Largest change per check-in',
-              style: Theme.of(context).textTheme.bodyLarge,
+              if (picked != null) {
+                await _save(
+                  store,
+                  settings.copyWith(checkInWeekday: () => picked.weekday),
+                );
+              }
+            },
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+            // The segments below carry it as their group's name.
+            child: ExcludeSemantics(
+              child: Text(
+                'Largest change per check-in',
+                style: Theme.of(context).textTheme.bodyLarge,
+              ),
             ),
           ),
-        ),
-        const _Note(
-          'A limit keeps one odd week from moving the expenditure under the '
-          'target far. A goal you change applies in full at once.',
-        ),
-        // Round steps in the display unit; a limit set in the other unit
-        // shows as its nearest step.
-        StackingChoice<int>(
-          identifier: 'check-in-cap',
-          groupLabel: 'Largest change per check-in',
-          values: [...steps, 0],
-          label: (v) => v == 0 ? 'No limit' : '$v ${energyUnit(context)}',
-          selected: cap == null
-              ? 0
-              : steps.reduce(
-                  (a, b) =>
-                      (a - shown(cap)).abs() <= (b - shown(cap)).abs() ? a : b,
-                ),
-          onChanged: adaptive
-              ? (v) => _save(
-                  store,
-                  settings.copyWith(
-                    maxCheckInChangeKcal: () =>
-                        v == 0 ? null : kcalFromInput(context, v.toDouble()),
-                  ),
-                )
-              : null,
-        ),
-        SwitchListTile(
-          key: const ValueKey('auto-accept-check-in'),
-          title: const Text('Accept check-ins automatically'),
-          subtitle: const Text(
-            'The proposed target is set without asking; Home says so.',
+          const _Note(
+            'A limit keeps one odd week from moving the expenditure under the '
+            'target far. A goal you change applies in full at once.',
           ),
-          value: settings.autoAcceptCheckIn,
-          onChanged: adaptive
-              ? (v) => _save(store, settings.copyWith(autoAcceptCheckIn: v))
-              : null,
-        ),
+          // Round steps in the display unit; a limit set in the other unit
+          // shows as its nearest step.
+          StackingChoice<int>(
+            identifier: 'check-in-cap',
+            groupLabel: 'Largest change per check-in',
+            values: [...steps, 0],
+            label: (v) => v == 0 ? 'No limit' : '$v ${energyUnit(context)}',
+            selected: cap == null
+                ? 0
+                : steps.reduce(
+                    (a, b) => (a - shown(cap)).abs() <= (b - shown(cap)).abs()
+                        ? a
+                        : b,
+                  ),
+            onChanged: (v) => _save(
+              store,
+              settings.copyWith(
+                maxCheckInChangeKcal: () =>
+                    v == 0 ? null : kcalFromInput(context, v.toDouble()),
+              ),
+            ),
+          ),
+          SwitchListTile(
+            key: const ValueKey('auto-accept-check-in'),
+            title: const Text('Accept check-ins automatically'),
+            subtitle: const Text(
+              'The proposed target is set without asking; Home says so.',
+            ),
+            value: settings.autoAcceptCheckIn,
+            onChanged: (v) =>
+                _save(store, settings.copyWith(autoAcceptCheckIn: v)),
+          ),
+        ],
         ListTile(
           key: const ValueKey('check-in-history'),
           title: const Text('Check-in history'),

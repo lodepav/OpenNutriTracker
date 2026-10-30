@@ -7,9 +7,11 @@ import 'package:opennutritracker/core/domain/usecase/get_user_usecase.dart';
 import 'package:opennutritracker/core/utils/hive_db_provider.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/core/utils/tracked_day_lock.dart';
+import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/fork/adaptive/goal_plan.dart';
 import 'package:opennutritracker/fork/adaptive/goal_plan_card.dart';
+import 'package:opennutritracker/fork/goal/goal_actions.dart';
 
 enum PhaseKind {
   cut('Cut'),
@@ -174,6 +176,9 @@ class PhaseStore {
   static const historyKey = 'goalHistory';
   static const _appliedKey = 'phaseApplied';
 
+  /// The goals planned to follow the running one, in order ([PhasePlan]).
+  static const upcomingKey = 'goalsUpcoming';
+
   /// The goal planner's milestone step: its place in the unit's list
   /// (`milestoneStepsKg`, `milestoneStepsLb`) from 1, 0 for none.
   static const milestoneKey = 'milestoneStep';
@@ -201,6 +206,23 @@ class PhaseStore {
       await box.put(planKey, plan.toJson());
     }
     await box.delete(_appliedKey);
+    changes.value++;
+  }
+
+  /// The goals after the running one, in the order they run.
+  Future<List<PhasePlan>> upcoming() async => [
+    for (final json
+        in (await _box()).get(upcomingKey, defaultValue: []) as List)
+      PhasePlan.fromJson(json as Map),
+  ];
+
+  Future<void> saveUpcoming(List<PhasePlan> plans) async {
+    final box = await _box();
+    if (plans.isEmpty) {
+      await box.delete(upcomingKey);
+    } else {
+      await box.put(upcomingKey, [for (final p in plans) p.toJson()]);
+    }
     changes.value++;
   }
 
@@ -238,6 +260,17 @@ class PhaseStore {
       (await _box()).put(_appliedKey, key);
 }
 
+/// A goal's length from [start] to [end] in whole weeks, rounded, at
+/// least one: the one rule Goal reached and Completed goals count by.
+int goalWeeks(DateTime start, DateTime end) {
+  final days = DateTime.utc(
+    end.year,
+    end.month,
+    end.day,
+  ).difference(DateTime.utc(start.year, start.month, start.day)).inDays;
+  return (days / 7).round().clamp(1, 1 << 20);
+}
+
 /// A goal once completed: its kind, its days and the trend weight on the
 /// first and last; [targetKg] null for maintenance.
 class GoalRecord {
@@ -260,14 +293,7 @@ class GoalRecord {
   });
 
   /// Whole weeks, at least one.
-  int get weeks {
-    final days = DateTime.utc(
-      end.year,
-      end.month,
-      end.day,
-    ).difference(DateTime.utc(start.year, start.month, start.day)).inDays;
-    return (days / 7).round().clamp(1, 1 << 20);
-  }
+  int get weeks => goalWeeks(start, end);
 
   Map<String, Object> toJson() => {
     'kind': kind.name,
@@ -305,13 +331,32 @@ class PhaseRunner {
   _setPace;
   final DateTime Function() _clock;
 
+  /// Starts the first queued goal, keeping the running one as completed;
+  /// false when it was not.
+  final Future<bool> Function(PhaseStore store, ProfileStamp startedOn)
+  _startNext;
+
   PhaseRunner({
     PhaseStore? store,
     Future<bool> Function(double kgPerWeek, ProfileStamp startedOn)? setPace,
     DateTime Function()? clock,
+    Future<bool> Function(PhaseStore store, ProfileStamp startedOn)? startNext,
   }) : _store = store ?? PhaseStore(),
        _setPace = setPace ?? _savePaceIfProfile,
-       _clock = clock ?? DateTime.now;
+       _clock = clock ?? DateTime.now,
+       _startNext = startNext ?? _startNextIfProfile;
+
+  static Future<bool> _startNextIfProfile(
+    PhaseStore store,
+    ProfileStamp startedOn,
+  ) async {
+    if (!await locator<GetUserUsecase>().hasUserData()) return false;
+    final inputs = await AdaptiveService.fromLocator().goalPlan(pastDays: 1);
+    return GoalActions(
+      store: store,
+      startedOn: startedOn,
+    ).startNextIfDue(inputs?.pastTrendKg.lastOrNull);
+  }
 
   static Future<bool> _savePaceIfProfile(
     double kgPerWeek,
@@ -320,14 +365,29 @@ class PhaseRunner {
       await locator<GetUserUsecase>().hasUserData() &&
       await savePace(kgPerWeek, startedOn);
 
-  /// Returns whether a pace was set; failures are logged.
-  Future<bool> run() async {
+  /// Returns whether a pace was set; failures are logged. It runs whole
+  /// under the tracked-day lock, and from outside it: called while a goal
+  /// is saved (a listener of [PhaseStore.changes]), it waits for the save
+  /// rather than reading the plan half way.
+  Future<bool> run() {
     // The plan and the pace of one profile.
     final startedOn = ProfileStamp.now();
+    return Zone.root.run(
+      () async =>
+          await withTrackedDayLockOnProfile(
+            () => _run(startedOn),
+            startedOn: startedOn,
+          ) ??
+          false,
+    );
+  }
+
+  Future<bool> _run(ProfileStamp startedOn) async {
     try {
+      final now = _clock();
+      await _startDue(now, startedOn);
       final plan = await _store.plan();
       if (plan == null) return false;
-      final now = _clock();
       final pace = plan.paceOn(now);
       if (pace == null) return false;
       final key = '${plan.start.toIso8601String()}#${plan.indexOn(now)}';
@@ -340,6 +400,18 @@ class PhaseRunner {
     } catch (error, stack) {
       _log.warning('Could not apply the diet phase', error, stack);
       return false;
+    }
+  }
+
+  /// The queued goals whose day has come started in turn, each keeping
+  /// the one before as completed.
+  Future<void> _startDue(DateTime now, ProfileStamp startedOn) async {
+    final day = DateTime(now.year, now.month, now.day);
+    for (var queue = await _store.upcoming(); queue.isNotEmpty;) {
+      final plan = await _store.plan();
+      if (plan != null && day.isBefore(queue.first.start)) return;
+      if (!await _startNext(_store, startedOn)) return;
+      queue = await _store.upcoming();
     }
   }
 

@@ -10,6 +10,7 @@ import 'package:opennutritracker/features/profile/presentation/widgets/set_targe
 import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
 import 'package:opennutritracker/fork/goal/goal_actions.dart';
 import 'package:opennutritracker/fork/goal/goal_chart.dart';
+import 'package:opennutritracker/fork/goal/goal_plan_view.dart' show goalTitle;
 import 'package:opennutritracker/fork/goal/goal_planner.dart';
 import 'package:opennutritracker/fork/goal/phase_colors.dart';
 import 'package:opennutritracker/fork/goal/planner_screen.dart';
@@ -104,6 +105,9 @@ class GoalReachedPage extends StatefulWidget {
   final GoalActions? actions;
   final DateTime? today;
 
+  /// The goals queued after this one; the active profile's by default.
+  final Future<List<PhasePlan>> Function()? upcoming;
+
   const GoalReachedPage({
     super.key,
     required this.plan,
@@ -112,6 +116,7 @@ class GoalReachedPage extends StatefulWidget {
     this.load,
     this.actions,
     this.today,
+    this.upcoming,
   });
 
   @override
@@ -120,6 +125,9 @@ class GoalReachedPage extends StatefulWidget {
 
 class _GoalReachedPageState extends State<GoalReachedPage> {
   late final Future<GoalRun> _run = (widget.load ?? loadGoalRun)(widget.plan);
+
+  /// The goal that starts once this one is completed; null for none.
+  PhasePlan? _queued;
   var _next = _Next.maintain;
   var _busy = false;
 
@@ -130,6 +138,16 @@ class _GoalReachedPageState extends State<GoalReachedPage> {
   void initState() {
     super.initState();
     _actions = widget.actions ?? GoalActions();
+    _loadNext();
+  }
+
+  Future<void> _loadNext() async {
+    try {
+      final queue = await (widget.upcoming ?? () => PhaseStore().upcoming())();
+      if (mounted && queue.isNotEmpty) setState(() => _queued = queue.first);
+    } catch (_) {
+      // No store in a test: none queued.
+    }
   }
 
   Future<void> _continue() async {
@@ -170,7 +188,7 @@ class _GoalReachedPageState extends State<GoalReachedPage> {
     final today = _date(widget.today ?? DateTime.now());
     final locale = Localizations.localeOf(context).toLanguageTag();
     final format = intl.DateFormat.yMMMd(locale);
-    final weeks = (CalendarDayCalc.daysBetween(plan.start, today) / 7).round();
+    final weeks = goalWeeks(plan.start, today);
     final startKg = plan.startKg;
     final target = plan.targetKg;
     return Scaffold(
@@ -180,7 +198,7 @@ class _GoalReachedPageState extends State<GoalReachedPage> {
           Dimens.spacing16,
           Dimens.spacing8,
           Dimens.spacing16,
-          Dimens.spacing32 + MediaQuery.paddingOf(context).bottom,
+          Dimens.spacing16,
         ),
         children: [
           Center(
@@ -299,37 +317,56 @@ class _GoalReachedPageState extends State<GoalReachedPage> {
               padding: const EdgeInsets.symmetric(vertical: Dimens.spacing4),
               child: Column(
                 children: [
-                  _choice(
-                    _Next.maintain,
-                    'goal-next-maintain',
-                    'Mark completed and maintain',
-                    'Eat at what you burn from today.',
-                  ),
+                  if (_queued case final queued?)
+                    _choice(
+                      _Next.maintain,
+                      'goal-next-maintain',
+                      'Mark completed and start the next',
+                      '${goalTitle(queued, unit)} starts today.',
+                    )
+                  else
+                    _choice(
+                      _Next.maintain,
+                      'goal-next-maintain',
+                      'Mark completed and maintain',
+                      'Eat at what you burn from today.',
+                    ),
                   _choice(
                     _Next.extend,
                     'goal-next-extend',
                     'Extend the goal',
                     'Go on to a new weight, or for more weeks.',
                   ),
-                  _choice(
-                    _Next.planNext,
-                    'goal-next-plan',
-                    'Mark completed and plan the next',
-                    'A new cut, maintenance or bulk.',
-                  ),
+                  // With one queued, the next is planned already.
+                  if (_queued == null)
+                    _choice(
+                      _Next.planNext,
+                      'goal-next-plan',
+                      'Mark completed and plan the next',
+                      'A new cut, maintenance or bulk.',
+                    ),
                 ],
               ),
             ),
           ),
-          const SizedBox(height: Dimens.spacing16),
-          Semantics(
-            identifier: 'goal-reached-continue',
-            child: FilledButton(
-              onPressed: _busy ? null : _continue,
-              child: const Text('Continue'),
-            ),
-          ),
         ],
+      ),
+      // Held at the bottom, clear of the gesture bar, so it shows without
+      // a scroll.
+      bottomNavigationBar: SafeArea(
+        minimum: const EdgeInsets.fromLTRB(
+          Dimens.spacing16,
+          Dimens.spacing8,
+          Dimens.spacing16,
+          Dimens.spacing16,
+        ),
+        child: Semantics(
+          identifier: 'goal-reached-continue',
+          child: FilledButton(
+            onPressed: _busy ? null : _continue,
+            child: const Text('Continue'),
+          ),
+        ),
       ),
     );
   }
@@ -529,7 +566,9 @@ class _ExtendSheetState extends State<ExtendSheet> {
             RadioGroup<_Extend>(
               groupValue: _how,
               onChanged: (v) {
-                if (v == _Extend.newWeight && _newKg == null) {
+                // null: the chosen new weight's row tapped again.
+                if (v == _Extend.newWeight && _newKg == null ||
+                    v == null && _how == _Extend.newWeight) {
                   _pickWeight();
                   return;
                 }
@@ -551,32 +590,41 @@ class _ExtendSheetState extends State<ExtendSheet> {
                       ),
                     ),
                   if (!hold)
-                    Semantics(
-                      identifier: 'goal-extend-weight',
-                      child: RadioListTile<_Extend>(
-                        value: _Extend.newWeight,
-                        title: Text(
-                          _newKg == null
-                              ? 'To a new weight'
-                              : 'To ${weightText(_newKg!, unit)}',
-                        ),
-                        subtitle: Text(
-                          _problem ??
-                              (_newKg == null
-                                  ? 'Choose the weight'
-                                  : 'Tap to change'),
-                          style: _problem == null
-                              ? null
-                              : TextStyle(color: theme.colorScheme.error),
-                        ),
-                        secondary: _newKg == null
-                            ? null
-                            : IconButton(
-                                tooltip: 'Change the weight',
-                                icon: const Icon(Icons.edit_outlined),
-                                onPressed: _pickWeight,
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Semantics(
+                            identifier: 'goal-extend-weight',
+                            child: RadioListTile<_Extend>(
+                              value: _Extend.newWeight,
+                              toggleable: true,
+                              title: Text(
+                                _newKg == null
+                                    ? 'To a new weight'
+                                    : 'To ${weightText(_newKg!, unit)}',
                               ),
-                      ),
+                              subtitle: Text(
+                                _problem ??
+                                    (_newKg == null
+                                        ? 'Choose the weight'
+                                        : 'Tap to change'),
+                                style: _problem == null
+                                    ? null
+                                    : TextStyle(color: theme.colorScheme.error),
+                              ),
+                            ),
+                          ),
+                        ),
+                        if (_newKg != null)
+                          Semantics(
+                            identifier: 'goal-extend-weight-edit',
+                            child: IconButton(
+                              tooltip: 'Change the weight',
+                              icon: const Icon(Icons.edit_outlined),
+                              onPressed: _pickWeight,
+                            ),
+                          ),
+                      ],
                     ),
                   Semantics(
                     identifier: 'goal-extend-weeks',

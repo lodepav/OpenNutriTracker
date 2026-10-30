@@ -19,6 +19,8 @@ import 'package:opennutritracker/fork/adaptive/goal_plan_card.dart'
     show paceChanges;
 import 'package:opennutritracker/fork/goal/goal_progress.dart';
 import 'package:opennutritracker/fork/goal/goal_progress_page.dart';
+import 'package:opennutritracker/fork/goal/goal_you_tile.dart';
+import 'package:opennutritracker/fork/phases/phases.dart';
 import 'package:opennutritracker/fork/report/nutrient_explorer.dart'
     show IntakeLoader, intakesBetween;
 import 'package:opennutritracker/fork/trends/nutrient_trends.dart';
@@ -63,14 +65,32 @@ class TrendsOverview extends StatefulWidget {
   @visibleForTesting
   static Future<GoalState> Function() loadGoal = () => GoalStartStore().load();
 
+  /// Where the Goal tile reads the goal running and those completed;
+  /// tests swap it.
+  @visibleForTesting
+  static Future<({PhasePlan? plan, List<GoalRecord> history})> Function()
+  loadPhases = () async {
+    final store = PhaseStore();
+    return (plan: await store.plan(), history: await store.history());
+  };
+
   /// The goal as Goal progress loads it, keeping the start when none is
-  /// kept yet; null with none, or no store (widget tests).
-  static Future<GoalProgress?> goal() async {
+  /// kept yet, with the goal running and, after a completed one, when
+  /// maintenance began; nulls with none, or no store (widget tests).
+  static Future<TrendsGoal> goal() async {
+    GoalProgress? progress;
+    ({PhasePlan? plan, List<GoalRecord> history})? phases;
     try {
-      return (await loadGoal()).progress;
-    } catch (_) {
-      return null;
-    }
+      progress = (await loadGoal()).progress;
+    } catch (_) {}
+    try {
+      phases = await loadPhases();
+    } catch (_) {}
+    return (
+      progress: progress,
+      plan: phases?.plan,
+      since: maintainingSince(phases?.plan, phases?.history ?? const []),
+    );
   }
 
   /// Where the left and right tile reads the measurements, here and on
@@ -106,7 +126,7 @@ class _TrendsOverviewState extends State<TrendsOverview> {
   });
 
   /// The goal, for the Goal tile; read again for a new pace or target.
-  late Future<GoalProgress?> _goal = TrendsOverview.goal();
+  late Future<TrendsGoal> _goal = TrendsOverview.goal();
 
   void _regoal() => setState(() {
     _goal = TrendsOverview.goal();
@@ -161,6 +181,7 @@ class _TrendsOverviewState extends State<TrendsOverview> {
     _changes.addListener(_reload);
     MeasurementStore.changes.addListener(_remeasure);
     paceChanges.addListener(_regoal);
+    PhaseStore.changes.addListener(_regoal);
     SidePartPref.ensureLoaded();
   }
 
@@ -184,6 +205,7 @@ class _TrendsOverviewState extends State<TrendsOverview> {
     _changes.removeListener(_reload);
     MeasurementStore.changes.removeListener(_remeasure);
     paceChanges.removeListener(_regoal);
+    PhaseStore.changes.removeListener(_regoal);
     _history.dispose();
     super.dispose();
   }
@@ -329,7 +351,7 @@ List<TrendTile> trendTiles(
   required List<ExpenditureDay> history,
   required MicroData? micros,
   required List<Measurement>? measurements,
-  GoalProgress? goal,
+  TrendsGoal? goal,
   required void Function(TrendMetric metric) open,
 }) {
   final palette = paletteOf(context);
@@ -472,28 +494,31 @@ TrendTile _goalTile(
   BuildContext context,
   TrendsLoaded state,
   WeightTrendStats weight,
-  GoalProgress? goal,
+  TrendsGoal? goal,
 ) {
   final wu = state.bodyWeightUnit;
   final target = state.targetWeightKg;
   final now = weight.nowKg;
   final left = target == null || now == null
       ? null
-      : goalLeftKg(target, now, goal);
+      : goalLeftKg(target, now, goal?.progress);
+  final untargeted = untargetedGoal(context, goal?.plan, goal?.since);
   return TrendTile(
     id: 'trends-tile-goal',
     label: 'Goal',
     value: left == null
-        ? 'No target'
+        ? untargeted.value
         : left < 0.1
         ? 'There'
         : weightIn(wu, left).toStringAsFixed(1),
-    suffix: left == null || left < 0.1
+    suffix: left == null
+        ? untargeted.note
+        : left < 0.1
         ? null
         : '${weightUnitLabel(context, wu)} to go',
     chart: target == null || now == null
         ? const SizedBox()
-        : _GoalBar(progress: goal),
+        : _GoalBar(progress: goal?.progress),
     onTap: () => openGoalProgress(context, wu),
   );
 }
@@ -616,3 +641,11 @@ class _Streak extends StatelessWidget {
     );
   }
 }
+
+/// The Goal tile's goal: its progress to the target, the goal running,
+/// and when maintenance began after a completed one.
+typedef TrendsGoal = ({
+  GoalProgress? progress,
+  PhasePlan? plan,
+  DateTime? since,
+});

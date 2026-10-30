@@ -132,6 +132,9 @@ class BackupExtras {
       PhaseStore.historyKey: [
         for (final r in await _phases().history()) r.toJson(),
       ],
+      PhaseStore.upcomingKey: [
+        for (final p in await _phases().upcoming()) p.toJson(),
+      ],
     });
     _addJson(archive, planFileName, [
       for (final food in await _plans().all()) food.toJson(),
@@ -188,11 +191,13 @@ class BackupExtras {
     PhasePlan? plan,
     int? milestoneStep,
     List<GoalRecord> goals,
+    List<PhasePlan>? upcoming,
   })?
   _decodeAdaptive(Archive archive) =>
       _decode(archive, adaptiveFileName, (json) {
         final map = json as Map<String, dynamic>;
         final plan = map[PhaseStore.planKey] as Map?;
+        final upcoming = map[PhaseStore.upcomingKey] as List?;
         return (
           settings: AdaptiveSettings.fromJson(map),
           checkIns: [
@@ -208,6 +213,10 @@ class BackupExtras {
             for (final g in map[PhaseStore.historyKey] as List? ?? const [])
               GoalRecord.fromJson(g as Map),
           ],
+          // Absent in a backup from before the queue: left as it is.
+          upcoming: upcoming == null
+              ? null
+              : [for (final p in upcoming) PhasePlan.fromJson(p as Map)],
         );
       });
 
@@ -281,6 +290,9 @@ class BackupExtras {
         await _customMeals.saveCustomMeal(meal);
       }
       if (adaptive?.plan case final plan?) await _phases().save(plan);
+      if (adaptive?.upcoming case final upcoming?) {
+        await _phases().saveUpcoming(upcoming);
+      }
       if (adaptive?.milestoneStep case final step?) {
         await _phases().saveMilestoneStep(step);
       }

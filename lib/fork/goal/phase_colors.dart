@@ -8,7 +8,7 @@ Color phaseColor(BuildContext context, PhaseKind kind) {
   return switch (kind) {
     PhaseKind.cut => const Color(0xFFE59A4E),
     PhaseKind.maintain =>
-      dark ? const Color(0xFF4A5552) : const Color(0xFFCFDAD7),
+      dark ? const Color(0xFF8A9B97) : const Color(0xFF7F948F),
     PhaseKind.bulk => dark ? const Color(0xFFA9CCEB) : const Color(0xFF2C6E9E),
   };
 }
@@ -18,7 +18,6 @@ Color onPhaseColor(BuildContext context, PhaseKind kind) {
   final dark = Theme.of(context).brightness == Brightness.dark;
   return switch (kind) {
     PhaseKind.bulk when !dark => Colors.white,
-    PhaseKind.maintain when dark => Colors.white,
     _ => const Color(0xFF2B2A27),
   };
 }
@@ -29,7 +28,17 @@ String phaseName(PhaseKind kind, {bool inCut = false}) =>
 
 /// The phase colours named, for the calendar and bars.
 class PhaseLegend extends StatelessWidget {
-  const PhaseLegend({super.key});
+  /// The kinds shown; every kind by default.
+  final Set<PhaseKind> kinds;
+
+  /// Maintenance is also a cut's diet breaks.
+  final bool breaks;
+
+  const PhaseLegend({
+    super.key,
+    this.kinds = const {...PhaseKind.values},
+    this.breaks = false,
+  });
 
   @override
   Widget build(BuildContext context) => ExcludeSemantics(
@@ -38,21 +47,27 @@ class PhaseLegend extends StatelessWidget {
       runSpacing: 4,
       children: [
         for (final kind in PhaseKind.values)
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 14,
-                height: 14,
-                decoration: BoxDecoration(
-                  color: phaseColor(context, kind),
-                  borderRadius: BorderRadius.circular(4),
+          if (kinds.contains(kind))
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 14,
+                  height: 14,
+                  decoration: BoxDecoration(
+                    color: phaseColor(context, kind),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
                 ),
-              ),
-              const SizedBox(width: 6),
-              Text(kind.label, style: Theme.of(context).textTheme.bodySmall),
-            ],
-          ),
+                const SizedBox(width: 6),
+                Text(
+                  kind == PhaseKind.maintain && breaks
+                      ? 'Maintenance or diet break'
+                      : kind.label,
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ],
+            ),
       ],
     ),
   );

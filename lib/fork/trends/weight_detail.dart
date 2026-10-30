@@ -7,6 +7,7 @@ import 'package:opennutritracker/fork/adaptive/goal_plan.dart';
 import 'package:opennutritracker/fork/adaptive/trend_points.dart';
 import 'package:opennutritracker/fork/goal/goal_progress.dart';
 import 'package:opennutritracker/fork/goal/goal_progress_page.dart';
+import 'package:opennutritracker/fork/goal/goal_you_tile.dart';
 import 'package:opennutritracker/fork/report/nutrient_explorer.dart';
 import 'package:opennutritracker/fork/report/rate_text.dart';
 import 'package:opennutritracker/fork/trends/detail_stats.dart';
@@ -14,7 +15,7 @@ import 'package:opennutritracker/fork/trends/detail_widgets.dart';
 import 'package:opennutritracker/fork/trends/trend_detail.dart';
 import 'package:opennutritracker/fork/trends/trend_stats.dart';
 import 'package:opennutritracker/fork/trends/trends_overview.dart'
-    show TrendsOverview;
+    show TrendsGoal, TrendsOverview;
 import 'package:opennutritracker/fork/trends/trends_widgets.dart';
 
 /// The spans the weight page's change chips compare, in days, as
@@ -337,20 +338,21 @@ Widget _goalTile(
   TrendsLoaded state,
   double? now,
   double? kgPerDay,
-  GoalProgress? goal,
+  TrendsGoal? goal,
 ) {
   final wu = state.bodyWeightUnit;
   void open() => openGoalProgress(context, wu);
   final target = state.targetWeightKg;
   if (target == null || now == null) {
+    final untargeted = untargetedGoal(context, goal?.plan, goal?.since);
     return FigureTile(
       label: 'To your goal',
-      value: 'No target',
-      note: 'Set one to see your progress',
+      value: untargeted.value,
+      note: untargeted.note ?? 'Plan one to see your progress',
       onTap: open,
     );
   }
-  final left = goalLeftKg(target, now, goal);
+  final left = goalLeftKg(target, now, goal?.progress);
   final days = kgPerDay == null || left < 0.1
       ? null
       : daysToTarget(now, target, kgPerDay);

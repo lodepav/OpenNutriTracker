@@ -151,14 +151,28 @@ class _CompletedGoalsPageState extends State<CompletedGoalsPage> {
             value: '$weeks',
             note: running == null ? null : 'and the one running',
           ),
-          FigureTile(
-            label: 'Lost cutting',
-            value: lost == 0 ? '–' : weightChangeText(lost, unit),
-          ),
-          FigureTile(
-            label: 'Gained bulking',
-            value: gained == 0 ? '–' : weightChangeText(gained, unit),
-          ),
+          // A kind with no goal completed has no tile; a cut that ended
+          // heavier shows its change, not "lost" a negative.
+          if (history.any((r) => r.kind == PhaseKind.cut))
+            lost <= 0
+                ? FigureTile(
+                    label: 'Lost while cutting',
+                    value: weightText(-lost, unit),
+                  )
+                : FigureTile(
+                    label: 'Change while cutting',
+                    value: weightChangeText(lost, unit),
+                  ),
+          if (history.any((r) => r.kind == PhaseKind.bulk))
+            gained >= 0
+                ? FigureTile(
+                    label: 'Gained while bulking',
+                    value: weightText(gained, unit),
+                  )
+                : FigureTile(
+                    label: 'Change while bulking',
+                    value: weightChangeText(gained, unit),
+                  ),
         ],
       ),
       if (running != null) ...[
@@ -167,7 +181,7 @@ class _CompletedGoalsPageState extends State<CompletedGoalsPage> {
           child: _row(
             context,
             kind: running.kind,
-            weeks: CalendarDayCalc.daysBetween(running.start, today) ~/ 7,
+            weeks: goalWeeks(running.start, today),
             dates: '${format.format(running.start)} – now',
             startKg: running.startKg,
             endKg: data.trend.isEmpty ? null : data.trend.last,
