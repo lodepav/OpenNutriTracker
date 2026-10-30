@@ -2,6 +2,23 @@
 
 Written by fork/tools/release_notes.dart at each release (D16).
 
+## 0.5.0 · 2026-10-30
+
+Based on OpenNutriTracker 2.5.0.
+
+### New
+
+- a photo named without an amount gets estimated grams; read meals take own foods only by name
+- a break in logging holds the target for a week; waist to height on Trends and Home
+
+### Fixes and changes
+
+- a food row's plus logs it at once, with an Undo; the row opens its page
+- an Undo takes off what is stored; the goals' Undo bar stops listening once its screen is gone
+- Trends keeps its cards while scrolled past, so the way back up no longer stutters
+- copy or move foods to any day and meal from one sheet, a one-tap meal change, selecting on the Diary, Undo on every copy and move
+- the whole Diary page swipes to the previous or next day, tomorrow too
+
 ## 0.4.2 · 2026-10-30
 
 Based on OpenNutriTracker 2.5.0.
