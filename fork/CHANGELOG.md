@@ -8,7 +8,7 @@ Based on OpenNutriTracker 2.5.0.
 
 ### Fixes and changes
 
-- Maintenance lengths of 2, 4 or 8 weeks
+- Future goals: plan goals to follow the running one, each starting on its day (Up next, a goal calendar, Carried over settings); every goal has its own pace or length, maintenance from 1 to 52 weeks; tap the running goal to edit, complete or remove it, with Undo
 
 ## 0.4.1 · 2026-10-29
 
