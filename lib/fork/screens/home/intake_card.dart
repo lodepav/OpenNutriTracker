@@ -42,6 +42,10 @@ class IntakeCard extends StatelessWidget {
   // hour's section where foods of one hour are listed together
   final bool showTime;
 
+  /// While the Diary selects (S177): whether this entry is picked; null
+  /// when not selecting.
+  final bool? selected;
+
   const IntakeCard({
     required super.key,
     required this.intake,
@@ -51,6 +55,7 @@ class IntakeCard extends StatelessWidget {
     required this.usesImperialUnits,
     this.sortType,
     this.showTime = false,
+    this.selected,
   });
 
   @override
@@ -96,96 +101,115 @@ class IntakeCard extends StatelessWidget {
         horizontal: Dimens.spacing16,
         vertical: 2, //: was Dimens.spacing4
       ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: radius,
-          onTap: onItemTapped != null
-              ? () => onTappedItem(context, usesImperialUnits)
-              : null,
-          onLongPress: onItemLongPressed != null
-              ? () => onLongPressedItem(context)
-              : null,
-          child: AppCard(
-            borderRadius: Dimens.radiusM,
-            // was EdgeInsets.all(Dimens.spacing12),
-            // the row at least 48 tall
-            padding: const EdgeInsets.symmetric(
-              horizontal: Dimens.spacing12,
-              vertical: 6,
-            ),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(minHeight: 36),
-              child: Row(
-                children: [
-                  _Thumbnail(intake: intake, palette: palette),
-                  const SizedBox(width: Dimens.spacing12),
-                  Expanded(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        AutoSizeText(
-                          intake.meal.name ?? "?",
-                          style: textTheme.titleSmall?.copyWith(
-                            color: palette.textStrong,
+      child: Semantics(
+        selected: selected,
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: radius,
+            onTap: onItemTapped != null
+                ? () => onTappedItem(context, usesImperialUnits)
+                : null,
+            onLongPress: onItemLongPressed != null
+                ? () => onLongPressedItem(context)
+                : null,
+            child: AppCard(
+              color: selected == true
+                  ? Theme.of(context).colorScheme.secondaryContainer
+                  : null,
+              borderRadius: Dimens.radiusM,
+              // was EdgeInsets.all(Dimens.spacing12),
+              // the row at least 48 tall
+              padding: const EdgeInsets.symmetric(
+                horizontal: Dimens.spacing12,
+                vertical: 6,
+              ),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 36),
+                child: Row(
+                  children: [
+                    if (selected case final picked?)
+                      SizedBox.square(
+                        dimension: IntakeCard.thumbSize,
+                        child: Icon(
+                          picked
+                              ? Icons.check_circle_rounded
+                              : Icons.radio_button_unchecked_rounded,
+                          color: picked
+                              ? Theme.of(context).colorScheme.primary
+                              : palette.textMuted,
+                        ),
+                      )
+                    else
+                      _Thumbnail(intake: intake, palette: palette),
+                    const SizedBox(width: Dimens.spacing12),
+                    Expanded(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          AutoSizeText(
+                            intake.meal.name ?? "?",
+                            style: textTheme.titleSmall?.copyWith(
+                              color: palette.textStrong,
+                            ),
+                            maxLines:
+                                2, // large-text: a long name wraps once before it is cut
+                            minFontSize: 11,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          maxLines:
-                              2, // large-text: a long name wraps once before it is cut
-                          minFontSize: 11,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        // was the amount, and
-                        // the time in an hour's section (S80)
-                        const SizedBox(height: 2),
-                        MacrosLine(
-                          carbs: intake.totalCarbsGram,
-                          fat: intake.totalFatsGram,
-                          protein: intake.totalProteinsGram,
-                        ),
-                      ],
+                          // was the amount, and
+                          // the time in an hour's section (S80)
+                          const SizedBox(height: 2),
+                          MacrosLine(
+                            carbs: intake.totalCarbsGram,
+                            fat: intake.totalFatsGram,
+                            protein: intake.totalProteinsGram,
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: Dimens.spacing8),
-                  ConstrainedBox(
-                    constraints: BoxConstraints(
-                      maxWidth: MediaQuery.sizeOf(context).width * 0.4,
-                    ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        if (macro != null)
+                    const SizedBox(width: Dimens.spacing8),
+                    ConstrainedBox(
+                      constraints: BoxConstraints(
+                        maxWidth: MediaQuery.sizeOf(context).width * 0.4,
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          if (macro != null)
+                            Text(
+                              '$macroValue ${s.gramUnit} ${macro.$2}',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: textTheme.labelMedium?.copyWith(
+                                color: palette.textStrong,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
                           Text(
-                            '$macroValue ${s.gramUnit} ${macro.$2}',
+                            EnergyDisplay.formatWithUnit(
+                              context,
+                              intake.totalKcal,
+                            ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: textTheme.labelMedium?.copyWith(
-                              color: palette.textStrong,
-                              fontWeight: FontWeight.w700,
-                            ),
+                            style: macro == null
+                                ? textTheme.labelMedium?.copyWith(
+                                    color: palette.textStrong,
+                                    fontWeight: FontWeight.w700,
+                                  )
+                                : textTheme.bodySmall?.copyWith(
+                                    color: palette.textMuted,
+                                  ),
                           ),
-                        Text(
-                          EnergyDisplay.formatWithUnit(
-                            context,
-                            intake.totalKcal,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: macro == null
-                              ? textTheme.labelMedium?.copyWith(
-                                  color: palette.textStrong,
-                                  fontWeight: FontWeight.w700,
-                                )
-                              : textTheme.bodySmall?.copyWith(
-                                  color: palette.textMuted,
-                                ),
-                        ),
-                        amount,
-                      ],
+                          amount,
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),

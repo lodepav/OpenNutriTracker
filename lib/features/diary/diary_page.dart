@@ -29,6 +29,10 @@ import 'package:opennutritracker/fork/leftovers/group_leftovers.dart';
 import 'package:opennutritracker/core/utils/tracked_day_lock.dart';
 import 'package:opennutritracker/fork/undo/undo_delete.dart';
 // [/fork]
+// [fork] S177 copy-move: the Diary's own rows selected, and the meal edited
+import 'package:opennutritracker/fork/copy/copy_ui.dart' show moveToMeal;
+import 'package:opennutritracker/fork/copy/diary_selection.dart';
+// [/fork]
 
 class DiaryPage extends StatefulWidget {
   const DiaryPage({super.key});
@@ -132,8 +136,24 @@ class _DiaryPageState extends State<DiaryPage> with WidgetsBindingObserver {
     bool showMealMacros,
     bool showActivityTracking,
   ) {
+    // [fork] S177 copy-move: the selection's bar under the day, and Back
+    // ends the selection
+    final selection = DiarySelection.instance;
+    return ListenableBuilder(
+      listenable: selection,
+      builder: (context, child) => PopScope(
+        canPop: !selection.active,
+        onPopInvokedWithResult: (didPop, _) {
+          if (!didPop) selection.end();
+        },
+        child: child!,
+      ),
+      child: Column(
+        children: [
+          Expanded(
+    // [/fork]
     // [fork] S176 diary-swipe: the whole page steps a day, on to tomorrow
-    return GestureDetector(
+    child: GestureDetector(
       behavior: HitTestBehavior.opaque,
       onHorizontalDragEnd: (d) => _onDaySwipe(d, trackedDaysMap),
       child: ListView(
@@ -227,7 +247,18 @@ class _DiaryPageState extends State<DiaryPage> with WidgetsBindingObserver {
         // [/fork]
       ],
     ),
+    ),
+    // [fork] S177 copy-move
+          ),
+          DiarySelectionBar(
+            selection: selection,
+            day: _selectedDate,
+            onDelete: _onDeleteIntakeItem,
+          ),
+        ],
+      ),
     );
+    // [/fork]
   }
 
   void _onDaySwipe(
@@ -384,17 +415,29 @@ class _DiaryPageState extends State<DiaryPage> with WidgetsBindingObserver {
     }
     if (!context.mounted) return;
     // [/fork]
+    final meal = ValueNotifier(intakeEntity.type); // [fork] S177
     final changeIntakeAmount = await showDialog<double>(
       context: context,
       builder: (context) => EditDialog(
         intakeEntity: intakeEntity,
         usesImperialUnits: usesImperialUnits,
+        meal: meal, // [fork] S177
       ),
     );
     // [fork] S83 tap-delete
     if (changeIntakeAmount == EditDialog.deleteResult) {
       if (context.mounted) _onDeleteIntakeItem(intakeEntity, day);
       return;
+    }
+    // [/fork]
+    // [fork] S177 copy-move: a new meal moves the entry first, keeping its
+    // id, so the amount is then updated on the moved entry; the move's bar
+    // has its Undo
+    if (changeIntakeAmount != null &&
+        meal.value != intakeEntity.type &&
+        context.mounted) {
+      await moveToMeal(context, intakeEntity, day, meal.value);
+      if (changeIntakeAmount == intakeEntity.amount) return;
     }
     // [/fork]
     if (changeIntakeAmount != null) {
@@ -446,6 +489,9 @@ class _DiaryPageState extends State<DiaryPage> with WidgetsBindingObserver {
     DateTime newDate,
     Map<String, TrackedDayEntity> trackedDaysMap,
   ) {
+    // [fork] S177 copy-move: a selection is of one day's entries
+    DiarySelection.instance.end();
+    // [/fork]
     setState(() {
       // [fork] S176 diary-swipe
       _dayStep = newDate.isAfter(_selectedDate) ? 1 : -1;

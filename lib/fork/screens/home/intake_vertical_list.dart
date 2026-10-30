@@ -34,6 +34,7 @@ import 'package:opennutritracker/features/home/presentation/widgets/shared_meal_
 import 'package:opennutritracker/features/home/presentation/widgets/shared_meal_importer.dart';
 import 'package:opennutritracker/features/meal_detail/presentation/bloc/meal_detail_bloc.dart';
 import 'package:opennutritracker/fork/copy/copy_ui.dart';
+import 'package:opennutritracker/fork/copy/diary_selection.dart';
 import 'package:opennutritracker/fork/units/energy_text.dart';
 import 'package:opennutritracker/fork/timeline/timeline.dart';
 import 'package:opennutritracker/generated/l10n.dart';
@@ -84,6 +85,10 @@ class IntakeVerticalList extends StatefulWidget {
   // timeline, shown in place of its icon; its add button is in the header
   final DateTime? forkTime;
 
+  /// The Diary's selection: while on, a tap or long-press picks an entry
+  /// and the header picks the section (S177).
+  final DiarySelection? selection;
+
   const IntakeVerticalList({
     super.key,
     required this.day,
@@ -104,6 +109,7 @@ class IntakeVerticalList extends StatefulWidget {
     this.onSortTypeChanged,
     this.hourSection = false,
     this.forkTime,
+    this.selection,
   });
 
   /// Whether a meal section is rendered on Home and in the Diary. A 0 % share
@@ -261,7 +267,17 @@ class _IntakeVerticalListState extends State<IntakeVerticalList> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => switch (widget.selection) {
+    final selection? => ListenableBuilder(
+      listenable: selection,
+      builder: (context, _) => _section(context),
+    ),
+    null => _section(context),
+  };
+
+  Widget _section(BuildContext context) {
+    final selection = widget.selection;
+    final selecting = selection?.active ?? false;
     final palette = paletteOf(context);
     final accent = Theme.of(context).colorScheme.primary;
     final textTheme = Theme.of(context).textTheme;
@@ -280,7 +296,26 @@ class _IntakeVerticalListState extends State<IntakeVerticalList> {
             context,
             Row(
               children: [
-                if (widget.forkTime case final time?)
+                if (selecting)
+                  SizedBox(
+                    width: widget.forkTime == null ? null : _timeWidth,
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Checkbox(
+                        key: ValueKey('fork-select-section-${widget.title}'),
+                        tristate: true,
+                        semanticLabel: 'Select all of ${widget.title}',
+                        value: selection!.stateOf(widget.intakeList),
+                        onChanged: widget.intakeList.isEmpty
+                            ? null
+                            : (_) => selection.setAll(
+                                widget.intakeList,
+                                selection.stateOf(widget.intakeList) != true,
+                              ),
+                      ),
+                    ),
+                  )
+                else if (widget.forkTime case final time?)
                   SizedBox(
                     width: _timeWidth,
                     child: Text(
@@ -390,10 +425,10 @@ class _IntakeVerticalListState extends State<IntakeVerticalList> {
                             case VerticalListPopupMenuSelections.onCopy:
                               // any day and meal, one
                               // entry after another (fork/copy)
-                              await copyIntakesWithDialog(
+                              await copyOrMoveIntakes(
                                 context,
                                 intakes,
-                                widget.addMealType.getIntakeType(),
+                                from: widget.day,
                               );
                               break;
                             case VerticalListPopupMenuSelections.onDelete:
@@ -472,8 +507,8 @@ class _IntakeVerticalListState extends State<IntakeVerticalList> {
                               totalKcal > 0)
                             PopupMenuItem<VerticalListPopupMenuSelections>(
                               value: VerticalListPopupMenuSelections.onCopy,
-                              // it asks for the day
-                              child: const Text('Copy…'),
+                              // it asks where, and copies or moves
+                              child: const Text('Copy or move…'),
                             ),
                           if (totalKcal > 0)
                             PopupMenuItem<VerticalListPopupMenuSelections>(
@@ -514,6 +549,8 @@ class _IntakeVerticalListState extends State<IntakeVerticalList> {
                   LongPressDraggable<IntakeEntity>(
                     key: ValueKey(intakeEntity.id),
                     data: intakeEntity,
+                    // a long-press picks it while selecting
+                    maxSimultaneousDrags: selecting ? 0 : null,
                     onDragStarted: () => widget.onItemDragCallback?.call(true),
                     onDragEnd: (_) => widget.onItemDragCallback?.call(false),
                     feedback: Material(
@@ -552,8 +589,15 @@ class _IntakeVerticalListState extends State<IntakeVerticalList> {
                     child: IntakeCard(
                       key: ValueKey(intakeEntity.id),
                       intake: intakeEntity,
-                      onItemLongPressed: widget.onItemLongPressedCallback,
-                      onItemTapped: widget.onItemTappedCallback,
+                      selected: selecting
+                          ? selection!.isPicked(intakeEntity)
+                          : null,
+                      onItemLongPressed: selecting
+                          ? (_, intake) => selection!.toggle(intake)
+                          : widget.onItemLongPressedCallback,
+                      onItemTapped: selecting
+                          ? (_, intake, _) => selection!.toggle(intake)
+                          : widget.onItemTappedCallback,
                       firstListElement: false,
                       usesImperialUnits: widget.usesImperialUnits,
                       sortType: widget.sortType,

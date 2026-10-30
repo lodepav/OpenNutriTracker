@@ -9,6 +9,7 @@ import 'package:opennutritracker/core/domain/entity/intake_type_entity.dart';
 import 'package:opennutritracker/core/domain/entity/user_activity_entity.dart';
 import 'package:opennutritracker/core/domain/usecase/add_intake_usecase.dart';
 import 'package:opennutritracker/core/domain/usecase/add_tracked_day_usecase.dart';
+import 'package:opennutritracker/core/domain/usecase/delete_intake_usecase.dart';
 import 'package:opennutritracker/core/domain/usecase/get_config_usecase.dart';
 import 'package:opennutritracker/core/domain/usecase/get_intake_usecase.dart';
 import 'package:opennutritracker/core/domain/usecase/get_kcal_goal_usecase.dart';
@@ -17,7 +18,7 @@ import 'package:opennutritracker/core/domain/usecase/get_user_activity_usecase.d
 import 'package:opennutritracker/core/domain/usecase/log_user_activity_usecase.dart';
 import 'package:opennutritracker/core/utils/tracked_day_lock.dart';
 import 'package:opennutritracker/fork/copy/copy_entries.dart';
-import 'package:opennutritracker/fork/copy/select_entries_screen.dart';
+import 'package:opennutritracker/fork/copy/copy_ui.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 
 import '../../fixture/intake_entity_fixtures.dart';
@@ -37,6 +38,7 @@ void main() {
     intakes,
     _Activities(),
     _Log(),
+    delete: intakes,
     newId: () => 'copy${ids++}',
   );
 
@@ -110,13 +112,11 @@ void main() {
       'night of the day picked', () async {
     config = _Config(4);
     final oats = at(intakeOf('oats', 50), DateTime(2026, 10, 20, 8));
-    final day = await copier().copyIntakesAt(
-      [oats],
-      DateTime(2026, 10, 23),
-      time: const TimeOfDay(hour: 2, minute: 0),
-    );
+    final placed = await copier().placeIntakes([
+      oats,
+    ], CopyAt(_oct23, time: const TimeOfDay(hour: 2, minute: 0)));
 
-    expect(day, DateTime(2026, 10, 23));
+    expect(placed?.day, DateTime(2026, 10, 23));
     expect(intakes.added.single.dateTime, DateTime(2026, 10, 24, 2));
     expect(days.created, [DateTime(2026, 10, 23)]);
   });
@@ -144,9 +144,9 @@ void main() {
       final rice = at(intakeOf('rice', 150), DateTime(2026, 10, 20, 19));
       final now = DateTime(2026, 10, 23, 1, 15);
 
-      await copier().copyIntakesAt(
+      await copier().placeIntakes(
         [oats, rice],
-        now,
+        CopyAt(now),
         type: IntakeTypeEntity.snack,
       );
 
@@ -193,48 +193,102 @@ void main() {
     ]);
   });
 
-  testWidgets('entries picked by meal and by hour are copied to now', (
-    tester,
-  ) async {
+  test('a move keeps the id, takes the entry off its day and puts it on '
+      'the new one, and its undo puts it back', () async {
     final oats = at(
       intakeOf('oats', 50, type: IntakeTypeEntity.breakfast),
-      DateTime(2026, 10, 22, 8, 10),
+      DateTime(2026, 10, 22, 8, 30),
     );
-    final coffee = at(
-      intakeOf('coffee', 200, type: IntakeTypeEntity.breakfast),
-      DateTime(2026, 10, 22, 8, 40),
+    final from = DateTime(2026, 10, 22);
+    final placed = await copier().placeIntakes(
+      [oats],
+      CopySameTimes(_oct23),
+      type: IntakeTypeEntity.lunch,
+      movedFrom: from,
     );
-    final apple = at(
-      intakeOf('apple', 100, type: IntakeTypeEntity.snack),
-      DateTime(2026, 10, 22, 11),
+
+    expect(intakes.deleted, [oats.id]);
+    expect(days.kcal[from], -oats.totalKcal);
+    final moved = intakes.added.single;
+    expect(moved.id, oats.id);
+    expect(moved.type, IntakeTypeEntity.lunch);
+    expect(moved.dateTime, DateTime(2026, 10, 23, 8, 30));
+    expect(days.kcal[_oct23], oats.totalKcal);
+
+    expect(
+      await copier().undoPlace(
+        placed!,
+        startedOn: ProfileStamp.now(),
+        moved: [oats],
+        from: from,
+      ),
+      isTrue,
     );
-    final rice = at(
-      intakeOf('rice', 150, type: IntakeTypeEntity.dinner),
-      DateTime(2026, 10, 22, 19),
-    );
-    intakes.byMeal = {
-      IntakeTypeEntity.breakfast: [oats, coffee],
-      IntakeTypeEntity.snack: [apple],
-      IntakeTypeEntity.dinner: [rice],
-    };
-    final now = DateTime(2026, 10, 23, 12, 30);
+    expect(intakes.deleted, [oats.id, oats.id]);
+    expect(intakes.added.last, oats);
+    expect(days.kcal[from], 0);
+    expect(days.kcal[_oct23], 0);
+  });
+
+  test('a copy\'s undo takes the copies back', () async {
+    final oats = at(intakeOf('oats', 50), DateTime(2026, 10, 22, 8));
+    final placed = await copier().placeIntakes([oats], CopySameTimes(_oct23));
+    await copier().undoPlace(placed!, startedOn: ProfileStamp.now());
+
+    expect(intakes.deleted, ['copy0']);
+    expect(days.kcal[_oct23], 0);
+  });
+
+  Future<void> openSheet(
+    WidgetTester tester, {
+    required Set<IntakeTypeEntity> meals,
+    int count = 1,
+  }) async {
     await tester.pumpWidget(
       MaterialApp(
         localizationsDelegates: const [S.delegate],
         home: Builder(
-          builder: (context) => Scaffold(
-            body: TextButton(
-              onPressed: () => Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (_) => SelectEntriesScreen(
-                    day: DateTime(2026, 10, 22),
-                    copier: copier(),
-                    now: () => now,
-                  ),
-                ),
+          builder: (context) => TextButton(
+            onPressed: () => showModalBottomSheet<WhereTo>(
+              context: context,
+              builder: (_) => WhereToSheet(
+                today: _oct23,
+                now: DateTime(2026, 10, 23, 12, 30),
+                from: _oct23,
+                meals: meals,
+                count: count,
               ),
-              child: const Text('open'),
             ),
+            child: const Text('open'),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+  }
+
+  testWidgets('the sheet picks move, tomorrow and lunch with chips', (
+    tester,
+  ) async {
+    WhereTo? picked;
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: const [S.delegate],
+        home: Builder(
+          builder: (context) => TextButton(
+            onPressed: () async => picked = await showModalBottomSheet<WhereTo>(
+              context: context,
+              isScrollControlled: true,
+              builder: (_) => WhereToSheet(
+                today: _oct23,
+                now: DateTime(2026, 10, 23, 12, 30),
+                from: _oct23,
+                meals: const {IntakeTypeEntity.breakfast},
+                count: 1,
+              ),
+            ),
+            child: const Text('open'),
           ),
         ),
       ),
@@ -242,32 +296,80 @@ void main() {
     await tester.tap(find.text('open'));
     await tester.pumpAndSettle();
 
-    // The 8 o'clock hour, then dinner by its chip; apple stays out.
-    await tester.tap(find.byKey(const Key('fork-select-hour-8')));
-    await tester.tap(find.byKey(const Key('fork-select-meal-dinner')));
-    await tester.pump();
-    expect(find.text('3 selected'), findsOneWidget);
-    // Unticking coffee leaves its hour half ticked.
-    await tester.tap(find.byKey(Key('fork-select-${coffee.id}')));
-    await tester.pump();
-    final hour = tester.widget<CheckboxListTile>(
-      find.byKey(const Key('fork-select-hour-8')),
+    await tester.tap(find.text('Move'));
+    await tester.pumpAndSettle();
+    // A move to where it is changes nothing.
+    final done = find.byKey(const Key('fork-where-done'));
+    expect(tester.widget<FilledButton>(done).onPressed, isNull);
+    // "Now" is today's only.
+    expect(find.byKey(const Key('fork-where-now')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('fork-where-day1')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('fork-where-now')), findsNothing);
+    await tester.tap(find.byKey(const Key('fork-where-meal-lunch')));
+    await tester.pumpAndSettle();
+    await tester.tap(done);
+    await tester.pumpAndSettle();
+
+    expect(picked?.move, isTrue);
+    expect(picked?.meal, IntakeTypeEntity.lunch);
+    expect((picked?.moment as CopySameTimes).day, DateTime(2026, 10, 24));
+  });
+
+  testWidgets('foods from several meals can keep their own', (tester) async {
+    await openSheet(
+      tester,
+      meals: const {IntakeTypeEntity.breakfast, IntakeTypeEntity.dinner},
+      count: 2,
     );
-    expect(hour.value, isNull);
+    final own = tester.widget<ChoiceChip>(
+      find.byKey(const Key('fork-where-own-meals')),
+    );
+    expect(own.selected, isTrue);
+    expect(find.text('Copy 2'), findsOneWidget);
+  });
 
-    await tester.tap(find.byKey(const Key('fork-copy-selected')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('fork-copy-now')));
+  testWidgets('a move says where, and its Undo puts the entry back', (
+    tester,
+  ) async {
+    final oats = at(
+      intakeOf('oats', 50, type: IntakeTypeEntity.breakfast),
+      DateTime(2026, 10, 22, 8),
+    );
+    final from = DateTime(2026, 10, 22);
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: const [S.delegate],
+        home: Scaffold(
+          body: Builder(
+            builder: (context) => TextButton(
+              onPressed: () => placeWithUndo(
+                context,
+                [oats],
+                CopySameTimes(from),
+                meal: IntakeTypeEntity.lunch,
+                movedFrom: from,
+                copier: copier(),
+              ),
+              child: const Text('move'),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('move'));
     await tester.pumpAndSettle();
 
-    expect(intakes.added.map((i) => (i.meal.name, i.dateTime, i.type)), [
-      ('oats', now, IntakeTypeEntity.breakfast),
-      ('rice', now, IntakeTypeEntity.dinner),
-    ]);
-    expect(find.text('open'), findsOneWidget);
-    expect(find.text('Copied 2 entries to Fri, Oct 23'), findsOneWidget);
+    expect(find.text('Moved to Lunch'), findsOneWidget);
+    expect(intakes.added.single.type, IntakeTypeEntity.lunch);
+    await tester.tap(find.text('Undo'));
+    await tester.pumpAndSettle();
+    expect(intakes.added.last, oats);
+    expect(days.kcal[from], 0);
   });
 }
+
+final _oct23 = DateTime(2026, 10, 23);
 
 class _Config extends Fake implements GetConfigUsecase {
   final int hours;
@@ -284,8 +386,14 @@ class _Config extends Fake implements GetConfigUsecase {
   );
 }
 
-class _Intakes extends Fake implements AddIntakeUsecase, GetIntakeUsecase {
+class _Intakes extends Fake
+    implements AddIntakeUsecase, GetIntakeUsecase, DeleteIntakeUsecase {
   final added = <IntakeEntity>[];
+  final deleted = <String>[];
+
+  @override
+  Future<void> deleteIntake(IntakeEntity intake) async =>
+      deleted.add(intake.id);
   var byMeal = <IntakeTypeEntity, List<IntakeEntity>>{};
 
   @override
@@ -342,6 +450,18 @@ class _TrackedDays extends Fake implements AddTrackedDayUsecase {
   @override
   Future<void> addDayCaloriesTracked(DateTime day, double calories) async =>
       kcal[day] = (kcal[day] ?? 0) + calories;
+
+  @override
+  Future<void> removeDayCaloriesTracked(DateTime day, double calories) async =>
+      kcal[day] = (kcal[day] ?? 0) - calories;
+
+  @override
+  Future<void> removeDayMacrosTracked(
+    DateTime day, {
+    double? carbsTracked,
+    double? fatTracked,
+    double? proteinTracked,
+  }) async {}
 
   @override
   Future<void> addDayMacrosTracked(
