@@ -9,6 +9,7 @@ import 'package:opennutritracker/core/domain/entity/user_activity_entity.dart';
 import 'package:opennutritracker/core/utils/energy_unit_provider.dart';
 import 'package:opennutritracker/core/presentation/widgets/activity_card.dart';
 import 'package:opennutritracker/fork/screens/diary/day_info_widget.dart';
+import 'package:opennutritracker/fork/copy/copy_entries.dart';
 import 'package:opennutritracker/fork/copy/copy_ui.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 import 'package:provider/provider.dart';
@@ -110,17 +111,17 @@ void main() {
   });
 
   testWidgets('the activity copy asks only for a day', (tester) async {
-    CopyTarget? picked;
+    WhereTo? picked;
     await tester.pumpWidget(
       MaterialApp(
         localizationsDelegates: const [S.delegate],
         supportedLocales: S.supportedLocales,
         home: Builder(
           builder: (context) => TextButton(
-            onPressed: () async => picked = await showDialog<CopyTarget>(
+            onPressed: () async => picked = await showModalBottomSheet<WhereTo>(
               context: context,
               builder: (_) =>
-                  CopyTargetDialog(initialDay: _today, activitiesOnly: true),
+                  WhereToSheet(today: _today, now: _today, count: 1),
             ),
             child: const Text('open'),
           ),
@@ -130,10 +131,12 @@ void main() {
     await tester.tap(find.text('open'));
     await tester.pumpAndSettle();
 
-    expect(find.byType(DropdownButton), findsNothing);
+    expect(find.byType(SegmentedButton<bool>), findsNothing);
+    expect(find.text('Meal'), findsNothing);
+    expect(find.text('Time'), findsNothing);
     expect(find.byType(CheckboxListTile), findsNothing);
-    await tester.tap(find.text(l10nEn.dialogOKLabel));
+    await tester.tap(find.byKey(const Key('fork-where-done')));
     await tester.pumpAndSettle();
-    expect(picked?.day, _today);
+    expect((picked?.moment as CopySameTimes?)?.day, _today);
   });
 }

@@ -3,6 +3,10 @@ import 'package:opennutritracker/core/domain/entity/intake_entity.dart';
 import 'package:opennutritracker/core/utils/calc/unit_calc.dart';
 import 'package:opennutritracker/core/utils/custom_text_input_formatter.dart';
 import 'package:opennutritracker/fork/units/energy_text.dart'; // [fork] S142
+// [fork] S177 copy-move
+import 'package:opennutritracker/core/domain/entity/intake_type_entity.dart';
+import 'package:opennutritracker/fork/widget/meal_picker_chip.dart';
+// [/fork]
 import 'package:opennutritracker/generated/l10n.dart';
 
 class EditDialog extends StatefulWidget {
@@ -12,11 +16,16 @@ class EditDialog extends StatefulWidget {
   // [/fork]
   final IntakeEntity intakeEntity;
   final bool usesImperialUnits;
+  // [fork] S177 copy-move: the meal, changed here and applied on OK by
+  // the caller; null where it cannot be changed
+  final ValueNotifier<IntakeTypeEntity>? meal;
+  // [/fork]
 
   const EditDialog({
     super.key,
     required this.intakeEntity,
     required this.usesImperialUnits,
+    this.meal, // [fork] S177
   });
 
   @override
@@ -111,6 +120,22 @@ class _EditDialogState extends State<EditDialog> {
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          // [fork] S177 copy-move
+          if (widget.meal case final meal?) ...[
+            Align(
+              alignment: Alignment.centerLeft,
+              child: ValueListenableBuilder(
+                valueListenable: meal,
+                builder: (context, type, _) => MealPickerChip(
+                  key: const Key('fork-edit-meal'),
+                  type: type,
+                  onChanged: (type) => meal.value = type,
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
+          // [/fork]
           TextFormField(
             controller: amountEditingController,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),

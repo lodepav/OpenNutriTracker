@@ -26,7 +26,7 @@ import 'package:opennutritracker/features/diary/presentation/widgets/diary_sort_
 import 'package:opennutritracker/fork/screens/home/intake_vertical_list.dart';
 import 'package:opennutritracker/fork/plan/plan_ui.dart';
 import 'package:opennutritracker/fork/copy/copy_ui.dart';
-import 'package:opennutritracker/fork/copy/select_entries_screen.dart';
+import 'package:opennutritracker/fork/copy/diary_selection.dart';
 import 'package:opennutritracker/fork/timeline/timeline.dart';
 // leave a part-logged day out of expenditure (D17)
 import 'package:opennutritracker/fork/adaptive/skip_day.dart';
@@ -232,7 +232,12 @@ class _DayInfoWidgetState extends State<DayInfoWidget> {
               ),
               TimelineButton(day: widget.selectedDay),
               if (trackedDay != null) ...[
-                SelectEntriesButton(day: widget.selectedDay),
+                IconButton(
+                  key: const Key('fork-select-entries'),
+                  tooltip: 'Select entries',
+                  icon: const Icon(Icons.checklist_rounded),
+                  onPressed: () => DiarySelection.instance.start(),
+                ),
                 CopyDayButton(day: widget.selectedDay),
               ],
             ],
@@ -308,6 +313,7 @@ class _DayInfoWidgetState extends State<DayInfoWidget> {
                   intakeList: section.intakes,
                   onDeleteIntakeCallback: _deleteIntakeOnShownDay,
                   onItemLongPressedCallback: onIntakeItemLongPressed,
+                  selection: DiarySelection.instance,
                   onItemTappedCallback: widget.onEditIntake,
                   onCopyIntakeCallback: widget.onCopyIntake,
                   usesImperialUnits: widget.usesImperialUnits,
@@ -345,6 +351,7 @@ class _DayInfoWidgetState extends State<DayInfoWidget> {
                           .apply(widget.breakfastIntake),
                       onDeleteIntakeCallback: _deleteIntakeOnShownDay,
                       onItemLongPressedCallback: onIntakeItemLongPressed,
+                      selection: DiarySelection.instance,
                       onItemTappedCallback: widget.onEditIntake,
                       // today's entries copy too
                       onCopyIntakeCallback: widget.onCopyIntake,
@@ -379,6 +386,7 @@ class _DayInfoWidgetState extends State<DayInfoWidget> {
                       ),
                       onDeleteIntakeCallback: _deleteIntakeOnShownDay,
                       onItemLongPressedCallback: onIntakeItemLongPressed,
+                      selection: DiarySelection.instance,
                       onItemTappedCallback: widget.onEditIntake,
                       usesImperialUnits: widget.usesImperialUnits,
                       showMealMacros: widget.showMealMacros,
@@ -413,6 +421,7 @@ class _DayInfoWidgetState extends State<DayInfoWidget> {
                       ),
                       onDeleteIntakeCallback: _deleteIntakeOnShownDay,
                       onItemLongPressedCallback: onIntakeItemLongPressed,
+                      selection: DiarySelection.instance,
                       onItemTappedCallback: widget.onEditIntake,
                       // today's entries copy too
                       onCopyIntakeCallback: widget.onCopyIntake,
@@ -446,6 +455,7 @@ class _DayInfoWidgetState extends State<DayInfoWidget> {
                       ),
                       onDeleteIntakeCallback: _deleteIntakeOnShownDay,
                       onItemLongPressedCallback: onIntakeItemLongPressed,
+                      selection: DiarySelection.instance,
                       onItemTappedCallback: widget.onEditIntake,
                       usesImperialUnits: widget.usesImperialUnits,
                       showMealMacros: widget.showMealMacros,
@@ -486,54 +496,20 @@ class _DayInfoWidgetState extends State<DayInfoWidget> {
     return (intake, _) => widget.onDeleteIntake(intake, day);
   }
 
-  void showCopyOrDeleteIntakeDialog(
-    BuildContext context,
-    IntakeEntity intakeEntity,
-    DateTime day,
-  ) async {
-    final copyOrDelete = await showDialog<bool>(
-      context: context,
-      // the copy opens a picker
-      builder: (context) => const CopyOrDeleteDialog(toPicker: true),
-    );
-    // the delete asks nothing more, so it goes ahead
-    // even when the day moved on while the choice was open and this day's
-    // view was rebuilt away (#1360); the Diary shows the Undo
-    if (copyOrDelete == false) {
-      widget.onDeleteIntake(intakeEntity, day);
-      return;
-    }
-    if (context.mounted) {
-      if (copyOrDelete != null && !copyOrDelete) {
-        showDeleteIntakeDialog(context, intakeEntity, day);
-      } else if (copyOrDelete != null && copyOrDelete) {
-        showCopyDialog(context, intakeEntity);
-      }
-    }
-  }
-
-  void showCopyDialog(BuildContext context, IntakeEntity intakeEntity) async {
-    // any day and meal, not only today's (fork/copy)
-    await copyIntakesWithDialog(context, [intakeEntity], intakeEntity.type);
-  }
-
-  void showDeleteIntakeDialog(
-    BuildContext context,
-    IntakeEntity intakeEntity,
-    DateTime day,
-  ) async {
-    // deleted at once, with Undo on the snackbar,
-    // in place of upstream's confirmation dialog
-    widget.onDeleteIntake(intakeEntity, day);
-  }
-
   void onIntakeItemLongPressed(
     BuildContext context,
     IntakeEntity intakeEntity,
-  ) async {
-    final day = widget.selectedDay;
-    // today's entries copy too
-    showCopyOrDeleteIntakeDialog(context, intakeEntity, day);
+  ) {
+    // the meal chips, copy or move anywhere, select more, delete; today's
+    // entries too
+    showEntryActions(
+      context,
+      intakeEntity,
+      widget.selectedDay,
+      usesImperialUnits: widget.usesImperialUnits,
+      onDelete: (intake, day) => widget.onDeleteIntake(intake, day),
+      selection: DiarySelection.instance,
+    );
   }
 
   void onActivityItemLongPressed(

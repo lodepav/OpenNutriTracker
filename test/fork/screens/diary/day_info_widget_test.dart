@@ -162,7 +162,7 @@ void main() {
       onDeleteIntake: (intake, _) => deleted.add(intake),
     );
 
-    // A past day, so the long-press asks copy-or-delete before confirming.
+    // The long-press opens the entry's actions.
     await tester.longPress(find.text('Hidden Porridge'));
     await tester.pumpAndSettle();
     await tester.tap(find.text(l10nEn.dialogDeleteLabel));
@@ -201,8 +201,9 @@ void main() {
 
       await tester.longPress(find.text('Dinner Stew'));
       await tester.pumpAndSettle();
-      // today's entries copy too
-      expect(find.text('${l10nEn.copyActionLabel}…'), findsOneWidget);
+      // today's entries copy and move too
+      expect(find.text('Copy to…'), findsOneWidget);
+      expect(find.text('Move to…'), findsOneWidget);
       await tester.tap(find.text(l10nEn.dialogDeleteLabel));
       await tester.pumpAndSettle();
       // no confirmation; Undo on the snackbar instead
@@ -223,7 +224,7 @@ void main() {
       await tester.tap(find.bySemanticsIdentifier('intake-section-menu'));
       await tester.pumpAndSettle();
       // today's sections copy too
-      expect(find.text('Copy…'), findsOneWidget);
+      expect(find.text('Copy or move…'), findsOneWidget);
     });
   });
 
@@ -234,7 +235,7 @@ void main() {
 
     await tester.tap(find.bySemanticsIdentifier('intake-section-menu'));
     await tester.pumpAndSettle();
-    // the item asks for the day, so it is "Copy…"
-    expect(find.text('Copy…'), findsOneWidget);
+    // the item asks where, so it is "Copy or move…"
+    expect(find.text('Copy or move…'), findsOneWidget);
   });
 }

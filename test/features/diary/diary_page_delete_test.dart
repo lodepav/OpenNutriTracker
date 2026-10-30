@@ -54,6 +54,14 @@ import 'package:opennutritracker/features/meal_detail/presentation/bloc/meal_det
 import 'package:opennutritracker/generated/l10n.dart';
 import 'package:provider/provider.dart';
 
+// [fork] S177 copy-move
+import 'package:opennutritracker/core/domain/usecase/add_intake_usecase.dart';
+import 'package:opennutritracker/core/domain/usecase/get_kcal_goal_usecase.dart';
+import 'package:opennutritracker/core/domain/usecase/get_macro_goal_usecase.dart';
+import 'package:opennutritracker/core/domain/usecase/log_user_activity_usecase.dart';
+import 'package:opennutritracker/core/data/dbo/intake_type_dbo.dart';
+import 'package:opennutritracker/fork/copy/diary_selection.dart';
+// [/fork]
 import '../../fixture/physical_activity_entity_fixtures.dart';
 import '../../helpers/fake_hive_db_provider.dart';
 import '../../helpers/hive_test_setup.dart';
@@ -76,6 +84,14 @@ class _FakeHomeBloc extends Fake implements HomeBloc {
 }
 
 class _FakeUpdateActivity extends Fake implements UpdateUserActivityUsecase {}
+
+// [fork] S177 copy-move: a copy or a move resolves these
+class _FakeKcalGoal extends Fake implements GetKcalGoalUsecase {}
+
+class _FakeMacroGoal extends Fake implements GetMacroGoalUsecase {}
+
+class _FakeLogActivity extends Fake implements LogUserActivityUsecase {}
+// [/fork]
 
 class _SingleProfile implements GetProfilesUsecase {
   static final _profile = ProfileEntity(
@@ -245,7 +261,24 @@ void main() {
       ..registerFactory<MealDetailBloc>(_FakeMealDetailBloc.new)
       ..registerFactory<ActivityDetailBloc>(_FakeActivityDetailBloc.new)
       ..registerSingleton<HomeBloc>(_FakeHomeBloc())
-      ..registerFactory<GetProfilesUsecase>(_SingleProfile.new);
+      ..registerFactory<GetProfilesUsecase>(_SingleProfile.new)
+      // [fork] S177 copy-move
+      ..registerSingleton(AddIntakeUsecase(intakeRepository))
+      ..registerSingleton(AddTrackedDayUsecase(trackedDayRepository))
+      ..registerSingleton<GetKcalGoalUsecase>(_FakeKcalGoal())
+      ..registerSingleton<GetMacroGoalUsecase>(_FakeMacroGoal())
+      ..registerSingleton(getConfig)
+      ..registerSingleton(
+        GetIntakeUsecase(
+          intakeRepository,
+          RecipeRepository(RecipeDataSource(db)),
+        ),
+      )
+      ..registerSingleton(GetUserActivityUsecase(activityRepository))
+      ..registerSingleton<LogUserActivityUsecase>(_FakeLogActivity())
+      ..registerSingleton(DeleteIntakeUsecase(intakeRepository));
+    DiarySelection.instance.end();
+    // [/fork]
   }
 
   Future<void> settle(WidgetTester tester) async {
@@ -313,9 +346,7 @@ void main() {
   DateTime shown(WidgetTester tester) =>
       tester.widget<DayInfoWidget>(find.byType(DayInfoWidget)).selectedDay;
 
-  testWidgets('a swipe on the calendar steps the day back too', (
-    tester,
-  ) async {
+  testWidgets('a swipe on the calendar steps the day back too', (tester) async {
     await setUpDiary(yesterdayHasRow: true);
     await pumpDiary(tester);
     await tester.fling(
@@ -336,6 +367,75 @@ void main() {
       DateUtils.isSameDay(shown(tester), today.add(const Duration(days: 1))),
       isTrue,
     );
+  });
+  // [/fork]
+
+  // [fork] S177 copy-move
+  IntakeTypeDBO toastMeal() => intakeBox.values.single.type;
+
+  testWidgets('a long-press moves a food to another meal in one tap, and '
+      'Undo puts it back', (tester) async {
+    await setUpDiary(yesterdayHasRow: false, entriesToday: true);
+    await pumpDiary(tester);
+
+    await tester.longPress(find.text('Toast'));
+    await settle(tester);
+    await tester.tap(find.byKey(const Key('fork-entry-meal-lunch')));
+    await settle(tester);
+
+    expect(toastMeal(), IntakeTypeDBO.lunch);
+    expect(intakeBox.values.single.id, 'toast', reason: 'the id is kept');
+    expect(rowOf(today)!.caloriesTracked, 500, reason: 'still on today');
+    expect(find.text('Moved to Lunch'), findsOneWidget);
+
+    await tester.tap(find.text('Undo'));
+    await settle(tester);
+    expect(toastMeal(), IntakeTypeDBO.breakfast);
+    expect(rowOf(today)!.caloriesTracked, 500);
+  });
+
+  testWidgets('selected on the Diary, foods move to another day', (
+    tester,
+  ) async {
+    await setUpDiary(yesterdayHasRow: true, entriesToday: true);
+    await pumpDiary(tester);
+
+    await tester.tap(find.byKey(const Key('fork-select-entries')));
+    await settle(tester);
+    expect(find.text('Tap entries'), findsOneWidget);
+    await tester.tap(find.text('Toast'));
+    await settle(tester);
+    expect(find.text('1 selected'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('fork-selection-move')));
+    await settle(tester);
+    await tester.tap(find.byKey(const Key('fork-where-day-1')));
+    await settle(tester);
+    await tester.tap(find.byKey(const Key('fork-where-done')));
+    await settle(tester);
+
+    expect(intakeBox.values.single.dateTime, yesterday);
+    expect(rowOf(today)!.caloriesTracked, 300);
+    expect(rowOf(yesterday)!.caloriesTracked, 400);
+    expect(find.text('1 selected'), findsNothing, reason: 'selection ended');
+    expect(find.text('Toast'), findsNothing, reason: 'gone from today');
+  });
+
+  testWidgets('the edit dialog changes the meal', (tester) async {
+    await setUpDiary(yesterdayHasRow: false, entriesToday: true);
+    await pumpDiary(tester);
+
+    await tester.tap(find.text('Toast'));
+    await settle(tester);
+    await tester.tap(find.byKey(const Key('fork-edit-meal')));
+    await settle(tester);
+    await tester.tap(find.text(l10nEn.dinnerLabel).last);
+    await settle(tester);
+    await tester.tap(find.text(l10nEn.dialogOKLabel));
+    await settle(tester);
+
+    expect(toastMeal(), IntakeTypeDBO.dinner);
+    expect(intakeBox.values.single.amount, 100);
+    expect(rowOf(today)!.caloriesTracked, 500);
   });
   // [/fork]
 
@@ -391,12 +491,17 @@ void main() {
           DateTime(tomorrow.year, tomorrow.month, tomorrow.day, 0, 30);
       locator<DiaryBloc>().add(const LoadDiaryYearEvent());
       await settle(tester);
-      // [fork] S83: the open edit dialog is titled with the food; the list
-      // is what moved on
+      // [fork] S83: the open edit dialog is titled with the food, as S177's
+      // actions sheet is; the list is what moved on
       expect(
-        find.text('Toast').evaluate().where(
-          (e) => e.findAncestorWidgetOfExactType<AlertDialog>() == null,
-        ),
+        find
+            .text('Toast')
+            .evaluate()
+            .where(
+              (e) =>
+                  e.findAncestorWidgetOfExactType<AlertDialog>() == null &&
+                  e.findAncestorWidgetOfExactType<BottomSheet>() == null,
+            ),
         isEmpty,
         reason: 'followed today',
       );
@@ -429,7 +534,7 @@ void main() {
 
       await tester.longPress(find.text('Toast'));
       await settle(tester);
-      // [fork] S24 copy-anywhere: today's entries offer copy or delete;
+      // [fork] S24 copy-anywhere: today's entries open their actions;
       // S52 undo-delete: no confirmation follows, so midnight passes while
       // the choice is open
       await passMidnight(tester);

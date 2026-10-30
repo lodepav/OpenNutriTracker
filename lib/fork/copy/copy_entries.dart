@@ -4,6 +4,7 @@ import 'package:opennutritracker/core/domain/entity/intake_type_entity.dart';
 import 'package:opennutritracker/core/domain/entity/user_activity_entity.dart';
 import 'package:opennutritracker/core/domain/usecase/add_intake_usecase.dart';
 import 'package:opennutritracker/core/domain/usecase/add_tracked_day_usecase.dart';
+import 'package:opennutritracker/core/domain/usecase/delete_intake_usecase.dart';
 import 'package:opennutritracker/core/domain/usecase/get_config_usecase.dart';
 import 'package:opennutritracker/core/domain/usecase/get_intake_usecase.dart';
 import 'package:opennutritracker/core/domain/usecase/get_kcal_goal_usecase.dart';
@@ -33,6 +34,29 @@ DateTime momentOn(DateTime day, TimeOfDay time, int offsetMinutes) {
   );
 }
 
+/// Where entries go.
+sealed class CopyMoment {
+  const CopyMoment();
+}
+
+/// All at one moment: "now", or [time] on the logical day [at].
+class CopyAt extends CopyMoment {
+  final DateTime at;
+  final TimeOfDay? time;
+
+  const CopyAt(this.at, {this.time});
+}
+
+/// To a logical day, each entry at its own time of day.
+class CopySameTimes extends CopyMoment {
+  final DateTime day;
+
+  const CopySameTimes(this.day);
+}
+
+/// What a copy or a move wrote: the logical [day] and the entries as stored.
+typedef Placed = ({DateTime day, List<IntakeEntity> written});
+
 /// Copies diary entries to any day: one entry, a meal, or a whole day with
 /// its activities. A copy gets a new id and keeps the logged food, amount and
 /// unit; it lands at the same time of the target logical day, so a day start
@@ -51,6 +75,7 @@ class CopyEntries {
   final GetIntakeUsecase _intakes;
   final GetUserActivityUsecase _activities;
   final LogUserActivityUsecase _logActivity;
+  final DeleteIntakeUsecase? _deleteIntake;
   final String Function() _newId;
 
   CopyEntries(
@@ -62,8 +87,10 @@ class CopyEntries {
     this._intakes,
     this._activities,
     this._logActivity, {
+    DeleteIntakeUsecase? delete,
     String Function()? newId,
-  }) : _newId = newId ?? IdGenerator.getUniqueID;
+  }) : _deleteIntake = delete,
+       _newId = newId ?? IdGenerator.getUniqueID;
 
   CopyEntries.fromLocator()
     : this(
@@ -75,6 +102,7 @@ class CopyEntries {
         locator(),
         locator(),
         locator(),
+        delete: locator(),
       );
 
   /// Copies [intakes] to the logical day [day], into meal [type] (null keeps
@@ -84,55 +112,67 @@ class CopyEntries {
     DateTime day, {
     IntakeTypeEntity? type,
   }) async =>
-      // Each entry and its row together, in the profile it began in (#1317).
-      await withTrackedDayLockOnProfile(() async {
-        final offset = (await _config.getConfig()).dayStartOffsetTotalMinutes;
-        final target = _dateOf(day);
-        for (final intake in intakes) {
-          final copy = IntakeEntity(
-            id: _newId(),
-            unit: intake.unit,
-            amount: intake.amount,
-            type: type ?? intake.type,
-            meal: intake.meal,
-            dateTime: _moveTo(intake.dateTime, target, offset),
-          );
-          await _addIntake.addIntake(copy);
-          await _addToTrackedDay(copy, target);
-        }
-        return true;
-      }) ??
-      false;
+      await placeIntakes(intakes, CopySameTimes(day), type: type) != null;
 
-  /// Copies [intakes] to the moment [at], all of them, on the logical day
-  /// [at] is listed under ("copy to now"), or to [time] on the logical day
-  /// [at] when [time] is set. Into meal [type] (null keeps each entry's own).
-  /// The logical day written to, or null when a profile switch stopped it.
-  Future<DateTime?> copyIntakesAt(
+  /// Copies [intakes] to [moment], into meal [type] (null keeps each entry's
+  /// own); with [movedFrom], the logical day they are listed under, moves
+  /// them there instead: each keeps its id, and so its meal group (S7), as
+  /// the timeline's move does. Null when a profile switch stopped it.
+  Future<Placed?> placeIntakes(
     List<IntakeEntity> intakes,
-    DateTime at, {
-    TimeOfDay? time,
+    CopyMoment moment, {
     IntakeTypeEntity? type,
+    DateTime? movedFrom,
   }) =>
-      // Each entry and its row together, in the profile it began in (#1317).
+      // Each entry and its rows together, in the profile it began in (#1317).
       withTrackedDayLockOnProfile(() async {
         final offset = (await _config.getConfig()).dayStartOffsetTotalMinutes;
-        if (time != null) at = momentOn(at, time, offset);
-        final target = _dateOf(DayBoundaryCalc.dayLabelOf(at, offset));
+        final DateTime target;
+        final DateTime Function(IntakeEntity) timeOf;
+        switch (moment) {
+          case CopyAt(:var at, :final time):
+            if (time != null) at = momentOn(at, time, offset);
+            target = _dateOf(DayBoundaryCalc.dayLabelOf(at, offset));
+            timeOf = (_) => at;
+          case CopySameTimes(:final day):
+            target = _dateOf(day);
+            timeOf = (intake) => _moveTo(intake.dateTime, target, offset);
+        }
+        final written = <IntakeEntity>[];
         for (final intake in intakes) {
-          final copy = IntakeEntity(
-            id: _newId(),
+          if (movedFrom != null) await _remove(intake, _dateOf(movedFrom));
+          final placed = IntakeEntity(
+            id: movedFrom != null ? intake.id : _newId(),
             unit: intake.unit,
             amount: intake.amount,
             type: type ?? intake.type,
             meal: intake.meal,
-            dateTime: at,
+            dateTime: timeOf(intake),
           );
-          await _addIntake.addIntake(copy);
-          await _addToTrackedDay(copy, target);
+          await _addIntake.addIntake(placed);
+          await _addToTrackedDay(placed, target);
+          written.add(placed);
         }
-        return target;
+        return (day: target, written: written);
       });
+
+  /// Takes back what [placed] wrote, and for a move puts [moved] back on
+  /// the logical day [from] (the copy's or the move's undo), in the profile
+  /// [startedOn] only. False when that profile is no longer the one open.
+  Future<bool> undoPlace(
+    Placed placed, {
+    required ProfileStamp startedOn,
+    List<IntakeEntity>? moved,
+    DateTime? from,
+  }) async =>
+      await withTrackedDayLockOnProfile(() async {
+        for (final intake in placed.written) {
+          await _remove(intake, placed.day);
+        }
+        if (moved != null) await restoreIntakes(moved, from!);
+        return true;
+      }, startedOn: startedOn) ??
+      false;
 
   /// Puts deleted [intakes] back as they were, ids and times included, on
   /// the logical day [day] they were taken from (the delete's undo).
@@ -238,6 +278,18 @@ class CopyEntries {
       local.second,
       local.millisecond,
       local.microsecond,
+    );
+  }
+
+  /// As the Diary's delete does.
+  Future<void> _remove(IntakeEntity intake, DateTime day) async {
+    await _deleteIntake!.deleteIntake(intake);
+    await _trackedDay.removeDayCaloriesTracked(day, intake.totalKcal);
+    await _trackedDay.removeDayMacrosTracked(
+      day,
+      carbsTracked: intake.totalCarbsGram,
+      fatTracked: intake.totalFatsGram,
+      proteinTracked: intake.totalProteinsGram,
     );
   }
 
