@@ -130,6 +130,12 @@ void main() {
     ('vegetable stock', 'Soup, vegetable broth, ready to serve'),
     ('sour cream', 'Cream, sour, cultured'),
     ('vegetable lasagna', 'Lasagna, Vegetable'),
+    ('hamburger bun, plain', 'Roll, white, hamburger bun'),
+    ('salad dressing, caesar', 'Salad dressing, caesar dressing, regular'),
+    ('beef patty, cooked, pan-broiled', 'Beef, ground, 70%'),
+    ('bacon, cooked, pan-fried', 'Pork, cured, bacon'),
+    ('tortilla, wheat flour', 'Wheat flour tortilla'),
+    ('potatoes, boiled, cooked without skin', 'Potatoes, boiled, cooked'),
   ]) {
     test('bare "$query" resolves to "$expected..."', () async {
       final item = await resolve(query);

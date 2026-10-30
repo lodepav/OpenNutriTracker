@@ -57,6 +57,10 @@ const _everyday = {
   'beef stock': _beefStock,
   'vegetable broth': 'Soup, vegetable broth, ready to serve',
   'vegetable stock': 'Soup, vegetable broth, ready to serve',
+  // a burger's bun, which found a whole hamburger
+  'hamburger bun': _burgerBun,
+  'hamburger bun, plain': _burgerBun,
+  'burger bun': _burgerBun,
   // a salad's or a soup's, not the light one the shortest name found
   'sour cream': 'Cream, sour, cultured',
 };
@@ -76,4 +80,5 @@ const _longGrainRice = 'Rice, white, long-grain, regular, enriched, cooked';
 const _dietCola = 'Soft drink, cola, diet';
 const _chickenStock = 'Soup, stock, chicken, home-prepared';
 const _beefStock = 'Soup, stock, beef, home-prepared';
-const _greekYogurt ='Yogurt, Greek, NS as to type of milk, plain';
+const _burgerBun = 'Roll, white, hamburger bun';
+const _greekYogurt = 'Yogurt, Greek, NS as to type of milk, plain';

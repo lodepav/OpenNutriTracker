@@ -11,12 +11,38 @@
 const unaskedVariantPenalty = 0.3;
 
 /// The words that make a row a different food from the one named: meat
-/// left out, or a baby food. Not "unprepared": USDA's word for a food as
-/// sold, the raw row a recipe ingredient wants ("Pork, cured, bacon,
-/// unprepared").
+/// left out, a baby food, or Canadian bacon (a loin: "bacon, cooked,
+/// pan-fried" logged it at a third of bacon's energy). Not "unprepared":
+/// USDA's word for a food as sold, the raw row a recipe ingredient wants
+/// ("Pork, cured, bacon, unprepared").
 final _variantWords = RegExp(
   r'\b(meatless|no meat|without meat|vegan|vegetarian|imitation|substitute|'
-  r'baby food|toddler|infant)\b',
+  r'baby food|toddler|infant|canadian)\b',
+  caseSensitive: false,
+);
+
+/// A lighter make of the food: a wrap's caesar dressing logged "Salad
+/// dressing, caesar, fat-free" at a quarter of the regular one's energy,
+/// and a burger's "beef patty" the 97% lean one. Any wording of lighter in
+/// the query asks for one.
+final _lighter = RegExp(
+  r'\b(fat[- ]free|non-?fat|(reduced|low)[- ]?(fat|calorie|sodium)|lowfat|'
+  r'9\d% lean)',
+  caseSensitive: false,
+);
+final _asksLighter = RegExp(
+  r'\b(fat[- ]free|non-?fat|reduced|low|lowfat|lean|light|lite|skim|diet)',
+  caseSensitive: false,
+);
+
+/// A dry mix as sold, not a dish made from one: "tortilla, wheat flour"
+/// logged the tortilla mix. "Potato, scalloped, from dry mix" is the dish.
+final _mix = RegExp(r'(?<!from |from dry )\bmix\b', caseSensitive: false);
+
+/// A query naming the skin to say it is left off: "potatoes, boiled, cooked
+/// without skin" logged the boiled peel.
+final _asksSkin = RegExp(
+  r'(?<!without |no )\bskin(?!less)',
   caseSensitive: false,
 );
 
@@ -45,15 +71,21 @@ final _lacks = RegExp(
 );
 
 /// [unaskedVariantPenalty] when [name] carries one of the variant words, or
-/// is only a skin, pickled or made with turkey, and [query] does not say
-/// so, or lacks a food [query] names; else 0.
+/// is only a skin, pickled, lighter or made with turkey, and [query] does
+/// not say so, or lacks a food [query] names; else 0.
 double unaskedVariant(String? name, String query) {
   final asked = query.toLowerCase();
   final row = name ?? '';
-  if (_skinOnly.hasMatch(row) && !asked.contains('skin')) {
+  if (_skinOnly.hasMatch(row) && !_asksSkin.hasMatch(asked)) {
     return unaskedVariantPenalty;
   }
   if (_pickled.hasMatch(row) && !asked.contains('pickl')) {
+    return unaskedVariantPenalty;
+  }
+  if (_lighter.hasMatch(row) && !_asksLighter.hasMatch(asked)) {
+    return unaskedVariantPenalty;
+  }
+  if (_mix.hasMatch(row) && !asked.contains('mix')) {
     return unaskedVariantPenalty;
   }
   if (_turkeyAfterTitle.hasMatch(row) && !asked.contains('turkey')) {
