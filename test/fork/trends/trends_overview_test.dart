@@ -1,3 +1,4 @@
+import 'package:opennutritracker/core/domain/entity/user_gender_entity.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -17,6 +18,7 @@ import 'package:opennutritracker/features/add_meal/domain/entity/meal_nutriments
 import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
 import 'package:opennutritracker/fork/body/measurement_store.dart';
 import 'package:opennutritracker/fork/body/side_compare.dart';
+import 'package:opennutritracker/fork/body/waist_ratio.dart';
 import 'package:opennutritracker/fork/display/display_prefs.dart';
 import 'package:opennutritracker/fork/goal/goal_progress.dart';
 import 'package:opennutritracker/fork/phases/phases.dart';
@@ -104,6 +106,7 @@ void main() {
       history: await PhaseStore().history(),
     );
     TrendsOverview.loadMeasurements = () async => const [];
+    loadBodyFrame = () async => null;
     SidePartPref.current.value = SidePart.arms;
     await locator.reset();
     DisplayPrefs.macroOrder.value = DisplayPrefs.upstreamOrder;
@@ -905,5 +908,26 @@ void main() {
     await openTile(tester, 'sides');
     expect(find.byType(SideComparePage), findsOne);
     expect(find.text('Thighs: left and right'), findsOne);
+  });
+
+  testWidgets('waist to height: the ratio and its band; it opens the page', (
+    tester,
+  ) async {
+    loadBodyFrame = () async =>
+        (heightCm: 180.0, gender: UserGenderEntity.male);
+    await pumpTrends(tester, loaded());
+    await showTile(tester, 'waist');
+    expect(tileText(tester, 'waist'), contains('measure your waist'));
+
+    TrendsOverview.loadMeasurements = () async => [
+      Measurement(id: 'w', date: day(-3), metric: BodyMetric.waist, value: 95),
+    ];
+    MeasurementStore.changes.value++;
+    await tester.pumpAndSettle();
+    expect(tileText(tester, 'waist'), contains('0.53'));
+    expect(tileText(tester, 'waist'), contains('increased risk'));
+
+    await openTile(tester, 'waist');
+    expect(find.byType(WaistRatioPage), findsOne);
   });
 }

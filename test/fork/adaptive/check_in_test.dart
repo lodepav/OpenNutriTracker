@@ -202,6 +202,30 @@ void main() {
       expect(calibrating.baseKcal, calibrating.expenditureKcal);
     });
 
+    test('back from a break the target holds at the last check-in\'s '
+        'base (D27)', () {
+      final c = computeCheckIn(
+        CheckInInputs(
+          days: [
+            for (var d = 0; d < 40; d++)
+              AdaptiveDay(intakeKcal: 2000, weightKg: 90 - 0.5 * d / 7),
+            for (var d = 0; d < 7; d++) const AdaptiveDay(),
+            for (var d = 0; d < 5; d++)
+              const AdaptiveDay(intakeKcal: 2000, weightKg: 89),
+          ],
+          priorKcal: 2500,
+          goalRateKgPerWeek: -0.5,
+          bodyFatPercent: 25,
+          previousBaseKcal: 2450,
+          taper: (adjustment, _) => adjustment,
+        ),
+      );
+      expect(c.breakHold, isNotNull);
+      expect(c.enoughData, isFalse);
+      expect(c.baseKcal, 2450);
+      expect(c.proposedTargetKcal, c.uncappedTargetKcal);
+    });
+
     test('the target weight is about 13 weeks off at either pace', () {
       final checkIn = run();
 

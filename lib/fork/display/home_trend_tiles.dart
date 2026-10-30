@@ -12,6 +12,7 @@ import 'package:opennutritracker/fork/adaptive/goal_plan_card.dart'
     show paceChanges;
 import 'package:opennutritracker/fork/body/measurement_store.dart';
 import 'package:opennutritracker/fork/body/side_compare.dart';
+import 'package:opennutritracker/fork/body/waist_ratio.dart';
 import 'package:opennutritracker/fork/display/home_tiles.dart';
 import 'package:opennutritracker/fork/report/nutrient_explorer.dart'
     show intakesBetween;
@@ -25,6 +26,7 @@ typedef _Extras = ({
   MicroData? micros,
   List<Measurement> measurements,
   TrendsGoal? goal,
+  BodyFrame? frame,
 });
 
 /// Trends' tiles added to Home, [ids] of them, as Home's tiles:
@@ -86,12 +88,13 @@ class _HomeTrendTilesState extends State<HomeTrendTiles> {
         (Object _) => <ExpenditureDay>[],
       ),
       micros: needMicros ? await loadMicros(intakesBetween, dates) : null,
-      measurements: widget.ids.contains('sides')
+      measurements: widget.ids.contains('sides') || widget.ids.contains('waist')
           ? await TrendsOverview.loadMeasurements().catchError(
               (Object _) => <Measurement>[],
             )
           : const <Measurement>[],
       goal: widget.ids.contains('goal') ? await TrendsOverview.goal() : null,
+      frame: widget.ids.contains('waist') ? await loadBodyFrame() : null,
     );
   }
 
@@ -154,6 +157,7 @@ class _HomeTrendTilesState extends State<HomeTrendTiles> {
               micros: extras.micros,
               measurements: extras.measurements,
               goal: extras.goal,
+              frame: extras.frame,
               open: (m) => openTrendFromHome(context, m),
             );
             return widget.builder(

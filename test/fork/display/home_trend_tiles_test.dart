@@ -1,3 +1,5 @@
+import 'package:opennutritracker/core/domain/entity/user_gender_entity.dart';
+import 'package:opennutritracker/fork/body/waist_ratio.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -28,6 +30,7 @@ void main() {
   tearDown(() async {
     layout.value = (order: const [], hidden: const {});
     TrendsOverview.loadMeasurements = () async => const [];
+    loadBodyFrame = () async => null;
     await locator.reset();
   });
 
@@ -115,6 +118,28 @@ void main() {
     await tester.tap(sides);
     await tester.pumpAndSettle();
     expect(find.byType(SideComparePage), findsOne);
+  });
+
+  testWidgets('waist to height reads the height it is taken against', (
+    tester,
+  ) async {
+    loadBodyFrame = () async =>
+        (heightCm: 170.0, gender: UserGenderEntity.female);
+    TrendsOverview.loadMeasurements = () async => [
+      Measurement(id: 'w', date: day(-1), metric: BodyMetric.waist, value: 85),
+    ];
+    layout.value = (
+      order: ['weight', 'expenditure', 'water', 'fasting', 'waist'],
+      hidden: const {},
+    );
+    await pump(tester);
+    final waist = tester.widget<HomeTile>(
+      find.byWidgetPredicate(
+        (w) => w is HomeTile && w.identifier == 'home-trends-tile-waist',
+      ),
+    );
+    expect(waist.value, '0.50');
+    expect(waist.note, 'increased risk');
   });
 
   testWidgets('read again after Home reloads, kept in place meanwhile', (

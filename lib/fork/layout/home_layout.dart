@@ -25,6 +25,7 @@ const homeTrendTileNames = {
   'sodium': 'Sodium',
   'goal': 'Goal',
   'sides': 'Left vs right',
+  'waist': 'Waist to height',
 };
 
 const homeTilesKey = 'homeTiles';

@@ -114,6 +114,10 @@ class CheckIn {
   /// turned into energy at.
   final double? kcalPerKg;
 
+  /// Back after a break in logging (D27): the estimate under the target
+  /// holds at the last check-in's while the weight settles; null otherwise.
+  final BreakHold? breakHold;
+
   /// The first check-in, and no weigh-in and log has shaped the estimate
   /// yet: it is the profile's prior, as for a new user.
   bool get fromProfile => formulaKcal != null;
@@ -136,10 +140,12 @@ class CheckIn {
     this.activityChangeKcal,
     this.formulaKcal,
     this.kcalPerKg,
+    this.breakHold,
   });
 
-  /// MacroFactor's data rule for the week: 4 logged days and a weigh-in.
-  bool get enoughData => loggedDays >= 4 && weighIns >= 1;
+  /// MacroFactor's data rule for the week: 4 logged days and a weigh-in,
+  /// and not a week back from a break.
+  bool get enoughData => loggedDays >= 4 && weighIns >= 1 && breakHold == null;
 
   /// What [proposedTargetKcal] carries of the week's activity: the part the
   /// next check-in's cap leaves out.
@@ -155,7 +161,12 @@ CheckIn computeCheckIn(CheckInInputs inputs) {
     bodyFatPercent: inputs.bodyFatPercent,
     settings: inputs.settings,
   );
-  final base = run.estimates.last;
+  // Back from a break the target moves on nothing new until the weight
+  // settles (D27).
+  final hold = run.breakHold;
+  final base = hold == null
+      ? run.estimates.last
+      : inputs.previousBaseKcal ?? run.estimates.last;
   final trend = smoothedTrend(
     dailyWeights({
       for (final (i, d) in days.indexed)
@@ -227,5 +238,6 @@ CheckIn computeCheckIn(CheckInInputs inputs) {
         : null,
     formulaKcal: run.updates == 0 ? inputs.formulaKcal : null,
     kcalPerKg: kcalPerKg,
+    breakHold: hold,
   );
 }

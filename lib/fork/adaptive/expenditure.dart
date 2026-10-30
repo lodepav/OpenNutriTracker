@@ -106,6 +106,9 @@ class ExpenditureSettings {
 /// logged rather than as a fast (SparkyFitness's safety net).
 const minLoggedKcal = 200.0;
 
+/// Unlogged days in a row, after logging began, that make a break (D27).
+const breakDays = 5;
+
 /// Expenditure estimated each day by energy balance (D13): mean logged
 /// intake over the window less the energy of the trend's change, blended
 /// into the running estimate, which starts at [priorKcal]. A day whose
@@ -134,9 +137,10 @@ List<double> estimateExpenditure(
 ).estimates;
 
 /// [estimateExpenditure], with how many days updated the estimate (under
-/// [ExpenditureSettings.calibrationUpdates] it is still calibrating) and
-/// the first that did, null for none.
-({List<double> estimates, int updates, int? firstUpdate})
+/// [ExpenditureSettings.calibrationUpdates] it is still calibrating), the
+/// first that did, null for none, and [BreakHold] when the last day is
+/// held after a break.
+({List<double> estimates, int updates, int? firstUpdate, BreakHold? breakHold})
 estimateExpenditureRun(
   List<AdaptiveDay> days, {
   required double priorKcal,
@@ -161,20 +165,65 @@ estimateExpenditureRun(
   // The window reaches back no further than logging does: before it, the
   // weight moved on food that was never logged.
   final firstLogged = days.indexWhere(logged);
+  // After a break (D27) the weight came back moved on food nobody logged,
+  // and its first days back swing with water. Each break's last day starts
+  // a trend of its own at the first weigh-in from there (its anchor), and
+  // the estimate holds until a week after it.
+  final restarts = <int, ({List<double?> trend, int? anchor})>{};
+  var unlogged = 0;
+  for (var i = firstLogged + 1; firstLogged >= 0 && i < days.length; i++) {
+    if (!logged(days[i])) {
+      unlogged++;
+      continue;
+    }
+    if (unlogged >= breakDays) {
+      final from = i - 1;
+      final segment = smoothedTrend(
+        dailyWeights({
+          for (var j = from; j < days.length; j++)
+            if (days[j].weightKg != null) j - from: days[j].weightKg!,
+        }, days.length - from),
+        alpha: settings.alpha,
+      );
+      final anchor = segment.indexWhere((t) => t != null);
+      restarts[from] = (
+        trend: [...List<double?>.filled(from, null), ...segment],
+        anchor: anchor < 0 ? null : from + anchor,
+      );
+    }
+    unlogged = 0;
+  }
+  BreakHold? hold;
   final out = <double>[];
   for (var day = 0; day < days.length; day++) {
     if (day == firstActive) {
       estimate -=
           meanActivity(days.sublist(day, min(day + 14, days.length))) ?? 0;
     }
+    final restart = restarts.keys.where((r) => r < day).lastOrNull;
+    final segment = restarts[restart];
     final week = days.sublist((day - 6).clamp(0, day), day + 1);
-    final enoughData =
+    var enoughData =
         firstLogged >= 0 &&
         day - firstLogged + 1 >= settings.warmupDays &&
         week.where(logged).length >= 4 &&
         week.any((d) => d.weightKg != null);
-    final start = max(day - settings.window, firstLogged - 1).clamp(0, day);
-    final from = trend[start], to = trend[day];
+    var start = max(day - settings.window, firstLogged - 1).clamp(0, day);
+    var dayTrend = trend;
+    if (restart != null && segment != null) {
+      final anchor = segment.anchor;
+      final held = anchor == null || day - anchor < settings.warmupDays;
+      if (held && day == days.length - 1) {
+        hold = BreakHold(
+          daysBack: day - restart,
+          resumesIn: anchor == null ? null : anchor + settings.warmupDays - day,
+        );
+      }
+      enoughData = enoughData && !held;
+      start = max(day - settings.window, anchor ?? day).clamp(0, day);
+      dayTrend = segment.trend;
+    }
+    final from = dayTrend[start], to = dayTrend[day];
     final window = days.sublist(start + 1, day + 1);
     final intakes = [
       for (final d in window)
@@ -198,7 +247,24 @@ estimateExpenditureRun(
     }
     out.add(estimate);
   }
-  return (estimates: out, updates: updates, firstUpdate: firstUpdate);
+  return (
+    estimates: out,
+    updates: updates,
+    firstUpdate: firstUpdate,
+    breakHold: hold,
+  );
+}
+
+/// The estimate held after a break in logging (D27): until a week of
+/// weigh-ins and logging after the first weigh-in back.
+class BreakHold {
+  /// Days since the break's last unlogged day: 1 on the first day back.
+  final int daysBack;
+
+  /// Days until the estimate moves again; null until a weigh-in back.
+  final int? resumesIn;
+
+  const BreakHold({required this.daysBack, this.resumesIn});
 }
 
 /// Mean counted activity of the [days] that have it; null when none do.
