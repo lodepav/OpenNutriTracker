@@ -338,6 +338,7 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
       );
     }
     _customPace = !_draft.paces.any((p) => (p - _draft.paceKg).abs() < 0.001);
+    _customWeeks = !maintainWeeksChoices.contains(_draft.maintainWeeks);
   }
 
   @override
@@ -367,6 +368,9 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
   late bool _customPace = !_draft.paces.any(
     (p) => (p - _draft.paceKg).abs() < 0.001,
   );
+
+  /// A maintenance length of the user's own, not one of the three.
+  late bool _customWeeks = !maintainWeeksChoices.contains(_draft.maintainWeeks);
   int _step = 0;
 
   /// A queued goal's target, set from where it starts until picked, gives
@@ -998,6 +1002,69 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
     ];
   }
 
+  /// The last day of a maintenance goal [weeks] long.
+  DateTime _lastDayOf(int weeks) => DateTime(
+    _draft.start.year,
+    _draft.start.month,
+    _draft.start.day + weeks * 7 - 1,
+  );
+
+  /// The custom length's toggle and, when on, its slider.
+  List<Widget> _customWeeksRows(BuildContext context) {
+    const range = customMaintainWeeks;
+    final weeks = _draft.maintainWeeks.clamp(range.min, range.max);
+    final theme = Theme.of(context);
+    return [
+      Padding(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+        child: Semantics(
+          identifier: 'goal-maintain-custom',
+          child: SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('Custom length'),
+            subtitle: Text('From ${_weeks(range.min)} to ${_weeks(range.max)}'),
+            value: _customWeeks,
+            onChanged: (on) => setState(() {
+              _customWeeks = on;
+              if (!on && !maintainWeeksChoices.contains(weeks)) {
+                _draft = _draft.copyWith(maintainWeeks: 8);
+              }
+            }),
+          ),
+        ),
+      ),
+      if (_customWeeks)
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(_weeks(weeks), style: theme.textTheme.titleMedium),
+              Text(
+                'Until ${_date(_lastDayOf(weeks))}',
+                style: theme.textTheme.bodySmall,
+              ),
+              Semantics(
+                identifier: 'goal-maintain-slider',
+                child: Slider(
+                  value: weeks.toDouble(),
+                  min: range.min.toDouble(),
+                  max: range.max.toDouble(),
+                  divisions: range.max - range.min,
+                  // The length above shows it; a label would be read out
+                  // with the value, twice.
+                  semanticFormatterCallback: (v) => _weeks(v.round()),
+                  onChanged: (v) => setState(
+                    () => _draft = _draft.copyWith(maintainWeeks: v.round()),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+    ];
+  }
+
   List<Widget> _paceStep(BuildContext context) {
     final plan = _planOf(_draft);
     final end = _dayBefore(plan.end);
@@ -1013,13 +1080,15 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
         for (final w in maintainWeeksChoices)
           _OptionCard(
             identifier: 'goal-maintain-$w',
-            selected: _draft.maintainWeeks == w,
+            selected: !_customWeeks && _draft.maintainWeeks == w,
             title: _weeks(w),
-            subtitle:
-                'Until ${_date(DateTime(_draft.start.year, _draft.start.month, _draft.start.day + w * 7 - 1))}',
-            onTap: () =>
-                setState(() => _draft = _draft.copyWith(maintainWeeks: w)),
+            subtitle: 'Until ${_date(_lastDayOf(w))}',
+            onTap: () => setState(() {
+              _customWeeks = false;
+              _draft = _draft.copyWith(maintainWeeks: w);
+            }),
           ),
+        ..._customWeeksRows(context),
       ];
     }
     final cut = _draft.kind == PhaseKind.cut;

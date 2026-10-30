@@ -720,6 +720,46 @@ void main() {
     expect(find.textContaining('Step 2 of 4 · Length'), findsOneWidget);
   });
 
+  testWidgets('a maintenance goal takes a length of its own', (tester) async {
+    PhasePlan? queued;
+    await _pump(
+      tester,
+      GoalPlannerScreen(
+        setup: PlannerSetup(
+          nowKg: 85,
+          unit: BodyWeightUnit.kg,
+          expenditureKcal: 2870,
+          bodyFatPercent: 22,
+          running: _cut(breaks: false),
+        ),
+        draft: GoalDraft.fresh(85, DateTime(2026, 10, 29), targetKg: 76),
+        onStart: (_) async => true,
+        onQueue: (_, plan) async {
+          queued = plan;
+          return true;
+        },
+        today: DateTime(2026, 10, 29),
+      ),
+    );
+    await tester.tap(find.text('Maintain'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Next'));
+    await tester.pumpAndSettle();
+    expect(find.byType(Slider), findsNothing);
+    await tester.tap(find.text('Custom length'));
+    await tester.pumpAndSettle();
+    tester.widget<Slider>(find.byType(Slider)).onChanged!(6);
+    await tester.pumpAndSettle();
+    expect(find.text('6 weeks'), findsOneWidget);
+    await tester.tap(find.text('Next'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Keep all and go on'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Add to the plan'));
+    await tester.pumpAndSettle();
+    expect(queued!.phases.single.weeks, 6);
+  });
+
   testWidgets('with no program, the macros step shows the split in grams', (
     tester,
   ) async {

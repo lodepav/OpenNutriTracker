@@ -13,6 +13,9 @@ const customPaceStepKg = 0.05;
 /// A maintenance goal's lengths, in weeks.
 const maintainWeeksChoices = [4, 8, 12];
 
+/// A custom maintenance length's range, in weeks.
+const customMaintainWeeks = (min: 1, max: 52);
+
 /// Diet breaks: [breakWeeks] at maintenance after every [breakEveryWeeks]
 /// of cutting.
 const breakEveryWeeks = 6;
