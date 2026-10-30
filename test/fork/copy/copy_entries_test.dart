@@ -199,6 +199,7 @@ void main() {
       intakeOf('oats', 50, type: IntakeTypeEntity.breakfast),
       DateTime(2026, 10, 22, 8, 30),
     );
+    intakes.stored[oats.id] = oats;
     final from = DateTime(2026, 10, 22);
     final placed = await copier().placeIntakes(
       [oats],
@@ -228,6 +229,55 @@ void main() {
     expect(intakes.added.last, oats);
     expect(days.kcal[from], 0);
     expect(days.kcal[_oct23], 0);
+  });
+
+  test('an undo takes off what is stored: a moved entry edited since '
+      'leaves both days right', () async {
+    final oats = at(
+      intakeOf('oats', 50, type: IntakeTypeEntity.breakfast),
+      DateTime(2026, 10, 22, 8, 30),
+    );
+    intakes.stored[oats.id] = oats;
+    final from = DateTime(2026, 10, 22);
+    final placed = await copier().placeIntakes(
+      [oats],
+      CopySameTimes(from),
+      type: IntakeTypeEntity.lunch,
+      movedFrom: from,
+    );
+    // The edit dialog then doubles its amount, as the Diary would.
+    final doubled = intakes.stored[oats.id]!;
+    intakes.stored[oats.id] = IntakeEntity(
+      id: oats.id,
+      unit: oats.unit,
+      amount: 100,
+      type: doubled.type,
+      meal: oats.meal,
+      dateTime: doubled.dateTime,
+    );
+    days.kcal[from] = days.kcal[from]! + oats.totalKcal;
+
+    await copier().undoPlace(
+      placed!,
+      startedOn: ProfileStamp.now(),
+      moved: [oats],
+      from: from,
+    );
+    expect(intakes.stored.values.single, oats);
+    // As before the move: the doubled amount's kcal all taken back off.
+    expect(days.kcal[from], 0);
+  });
+
+  test('an entry deleted since it was picked is not moved', () async {
+    final oats = at(intakeOf('oats', 50), DateTime(2026, 10, 22, 8));
+    final placed = await copier().placeIntakes(
+      [oats],
+      CopySameTimes(_oct23),
+      movedFrom: DateTime(2026, 10, 22),
+    );
+    expect(placed!.written, isEmpty);
+    expect(intakes.added, isEmpty);
+    expect(days.kcal[_oct23], isNull);
   });
 
   test('a copy\'s undo takes the copies back', () async {
@@ -336,6 +386,7 @@ void main() {
       intakeOf('oats', 50, type: IntakeTypeEntity.breakfast),
       DateTime(2026, 10, 22, 8),
     );
+    intakes.stored[oats.id] = oats;
     final from = DateTime(2026, 10, 22);
     await tester.pumpWidget(
       MaterialApp(
@@ -390,14 +441,25 @@ class _Intakes extends Fake
     implements AddIntakeUsecase, GetIntakeUsecase, DeleteIntakeUsecase {
   final added = <IntakeEntity>[];
   final deleted = <String>[];
+  final stored = <String, IntakeEntity>{};
 
   @override
-  Future<void> deleteIntake(IntakeEntity intake) async =>
-      deleted.add(intake.id);
+  Future<void> deleteIntake(IntakeEntity intake) async {
+    deleted.add(intake.id);
+    stored.remove(intake.id);
+  }
+
   var byMeal = <IntakeTypeEntity, List<IntakeEntity>>{};
 
   @override
-  Future<void> addIntake(IntakeEntity intake) async => added.add(intake);
+  Future<void> addIntake(IntakeEntity intake) async {
+    added.add(intake);
+    stored[intake.id] = intake;
+  }
+
+  @override
+  Future<IntakeEntity?> getIntakeById(String intakeId) async =>
+      stored[intakeId];
 
   Future<List<IntakeEntity>> _of(IntakeTypeEntity meal) async =>
       byMeal[meal] ?? const [];

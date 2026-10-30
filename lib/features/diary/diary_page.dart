@@ -521,6 +521,9 @@ class _DiaryPageState extends State<DiaryPage> with WidgetsBindingObserver {
       if (DateUtils.isSameDay(_pickedDate, today)) _pickedDate = null;
       return;
     }
+    // [fork] S177 copy-move: a selection is of the day it was made on
+    DiarySelection.instance.end();
+    // [/fork]
     _calendarDayBloc.add(LoadCalendarDayEvent(today));
   }
 

@@ -525,7 +525,13 @@ void showGoalUndo(
   final messenger = ScaffoldMessenger.of(context);
   final seen = PhaseStore.changes.value;
   late final ScaffoldFeatureController<SnackBar, SnackBarClosedReason> bar;
-  void changed() => bar.close();
+  // Once is enough; and a bar whose messenger is gone never closes, so
+  // its listener can't wait for that.
+  void changed() {
+    PhaseStore.changes.removeListener(changed);
+    if (messenger.mounted) bar.close();
+  }
+
   bar = (messenger..hideCurrentSnackBar()).showSnackBar(
     SnackBar(
       content: Text(message),
