@@ -22,6 +22,7 @@ import 'package:opennutritracker/core/domain/entity/intake_entity.dart';
 import 'package:opennutritracker/fork/off/off_kinds.dart'; // S117
 import 'package:opennutritracker/fork/units/energy_text.dart';
 import 'package:opennutritracker/fork/units/amount_text.dart' show amountText;
+import 'package:opennutritracker/fork/add/one_tap_log.dart';
 
 class MealItemCard extends StatelessWidget {
   final DateTime day;
@@ -181,7 +182,15 @@ class MealItemCard extends StatelessWidget {
                             b.trim(),
                         ].join(', '),
                       ),
-                  onPressed: () => _onItemPressed(context),
+                  // S179: logs at once; the row opens the page
+                  onPressed: () => logFromRow(
+                    context,
+                    meal: mealEntity,
+                    type: addMealType.getIntakeType(),
+                    day: day,
+                    imperial: usesImperialUnits,
+                    last: forkLastLogged,
+                  ),
                 ),
               ),
             ],
