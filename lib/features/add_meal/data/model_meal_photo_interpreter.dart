@@ -106,6 +106,16 @@ Rules:
         savedDishes: saved,
       );
     }
+    // D25: a note that names the meal and no amount, estimated
+    if (noteStatesNoAmount(note)) {
+      return readEstimatedPlate(
+        _api,
+        photo,
+        note: note!,
+        localeCode: localeCode,
+        savedDishes: saved,
+      );
+    }
     // [/fork]
     final result = await _api.requestItems(
       content: MealPhotoContent(

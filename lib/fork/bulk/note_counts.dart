@@ -9,6 +9,9 @@ bool noteStatesCount(String? note, double? quantity) =>
     quantity != null &&
     _counts(note).contains(_rounded(quantity));
 
+/// Whether [note] states any count, whole or a part ("2", "half", "½").
+bool noteHasCount(String note) => _counts(note).isNotEmpty;
+
 double _rounded(double value) => double.parse(value.toStringAsFixed(2));
 
 const _vulgar = {'½': 0.5, '¼': 0.25, '¾': 0.75, '⅓': 1 / 3, '⅔': 2 / 3};

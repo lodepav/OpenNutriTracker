@@ -620,8 +620,9 @@ void main() {
       );
 
       // [fork] S175: a note with a weight ('100 g rice') takes the weighed
-      // plate's request, test/fork/bulk/weighed_plate_test.dart
-      for (final note in ['the rice is basmati']) {
+      // plate's request, test/fork/bulk/weighed_plate_test.dart, and one
+      // with no amount at all ('the rice is basmati') the estimate (D25)
+      for (final note in ['the rice is basmati, 1 egg']) {
         final result = await interpreterWith(
           client,
         ).interpret(_photo, note: note);

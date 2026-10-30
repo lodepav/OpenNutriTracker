@@ -206,4 +206,58 @@ void main() {
     expect(api.system, startsWith(weighedPlatePrompt));
     expect(result.items.map((i) => i.quantity), [150, 150]);
   });
+
+  group('a note with no amount (D25)', () {
+    final photo = MealPhoto(bytes: Uint8List(1), mediaType: 'image/jpeg');
+
+    test('takes the estimate, at the model\'s grams', () async {
+      final api = _Api([_g('chicken plov', 350)]);
+      final result = await ModelMealPhotoInterpreter(
+        api,
+      ).interpret(photo, note: 'chicken plov');
+      expect(api.system, startsWith(estimatedPlatePrompt));
+      expect(result.items.single, isNot(isA<DishIngredientItem>()));
+      expect(
+        (result.items.single.quantity, result.items.single.unit),
+        (350, 'g'),
+      );
+    });
+
+    test('several foods are one dish, each at its grams', () async {
+      final api = _Api([
+        const ParsedMealItem(query: 'dish=Chicken and rice'),
+        _g('chicken breast, grilled', 120),
+        _g('rice, white, cooked', 180),
+      ]);
+      final result = await ModelMealPhotoInterpreter(
+        api,
+      ).interpret(photo, note: 'chicken and rice');
+      expect(
+        [for (final i in result.items) (i.query, i.quantity)],
+        [('chicken breast, grilled', 120), ('rice, white, cooked', 180)],
+      );
+      expect(result.items.map((i) => (i as DishIngredientItem).dish).toSet(), {
+        'Chicken and rice',
+      });
+    });
+
+    test('a count or a weight in the note is not estimated', () {
+      expect(noteStatesNoAmount('chicken plov'), isTrue);
+      expect(noteStatesNoAmount('2 pork cutlets'), isFalse);
+      expect(noteStatesNoAmount('half a pizza'), isFalse);
+      expect(noteStatesNoAmount('plov 300g'), isFalse);
+      expect(noteStatesNoAmount('  '), isFalse);
+      expect(noteStatesNoAmount(null), isFalse);
+    });
+
+    test(
+      'with no note the photo prompt stays, and its grams are dropped',
+      () async {
+        final api = _Api([_g('rice', 200)]);
+        final result = await ModelMealPhotoInterpreter(api).interpret(photo);
+        expect(api.system, isNot(startsWith(estimatedPlatePrompt)));
+        expect(result.items.single.quantity, isNull);
+      },
+    );
+  });
 }

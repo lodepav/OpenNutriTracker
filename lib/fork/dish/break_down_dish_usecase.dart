@@ -77,7 +77,8 @@ Rules:
   /// serving, or the portion in the photo.
   static String contentFor(String dish, {String? amount, bool photo = false}) {
     final size = amount != null
-        ? 'Amount: $amount'
+        // a bare count next to "amounts in grams" read as 2 g (Haiku)
+        ? 'Amount: $amount${double.tryParse(amount) != null ? ' (a count, not grams)' : ''}'
         : photo
         ? 'The portion in the photo'
         : 'One serving';

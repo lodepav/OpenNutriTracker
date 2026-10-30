@@ -117,6 +117,18 @@ void main() {
     }
   });
 
+  // Haiku read "Amount: 2; amounts in grams" as 2 g of chicken cutlets.
+  test('a bare count says it is not grams', () {
+    expect(
+      BreakDownDishUseCase.contentFor('chicken cutlet', amount: '2'),
+      contains('Amount: 2 (a count, not grams)'),
+    );
+    expect(
+      BreakDownDishUseCase.contentFor('soup', amount: '300 ml'),
+      contains('Amount: 300 ml;'),
+    );
+  });
+
   test('a stated amount is what the breakdown weighs for', () async {
     final api = _Api(reply);
     await BreakDownDishUseCase(

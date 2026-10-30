@@ -34,6 +34,9 @@ import 'package:opennutritracker/fork/food/everyday_row.dart';
 // [fork] S73 unspecified-first: a tie goes to the NFS / "NS as to" row
 import 'package:opennutritracker/fork/food/unspecified_row.dart';
 // [/fork]
+// [fork] S178 own-food-by-name: the user's own food only by its name
+import 'package:opennutritracker/fork/food/own_food_by_name.dart';
+// [/fork]
 
 /// Quality tie-breakers, matching the shared ranker so that near-equal text
 /// matches resolve the same way in both places.
@@ -177,6 +180,9 @@ List<MealEntity> rankForResolution(List<MealEntity> meals, String query) {
     final isOwn =
         meal.source == MealSourceEntity.custom ||
         meal.source == MealSourceEntity.recipe;
+    // [fork] S178 own-food-by-name: the user's own food only by its name
+    if (isOwn && !namesOwnFood(meal.name ?? '', query)) continue;
+    // [/fork]
     (isOwn ? own : rest).add(meal);
   }
   return [..._sorted(own, query), ..._sorted(rest, query)];
