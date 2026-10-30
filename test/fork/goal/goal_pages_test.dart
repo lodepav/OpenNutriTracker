@@ -575,8 +575,8 @@ void main() {
     expect(plan.kind, PhaseKind.bulk);
   });
 
-  testWidgets('a cut after a cut carries its pace over, and opens it on '
-      'Change', (tester) async {
+  testWidgets('a cut after a cut has its own pace, from the one before; '
+      'Carried over opens a step on Change', (tester) async {
     final cut = _cut(breaks: false);
     await _pump(
       tester,
@@ -598,26 +598,29 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Next'));
     await tester.pumpAndSettle();
-    expect(find.textContaining('Step 2 of 3 · Carried over'), findsOneWidget);
-    expect(find.text('0.5 kg a week'), findsOneWidget);
-    await tester.tap(
-      find.descendant(
-        of: find.byWidgetPredicate(
-          (w) =>
-              w is Semantics && w.properties.identifier == 'goal-carried-pace',
-        ),
-        matching: find.text('Change'),
+    expect(find.textContaining('Step 2 of 4 · Pace'), findsOneWidget);
+    expect(find.textContaining('0.5 kg a week'), findsWidgets);
+    await tester.tap(find.text('Next'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Step 3 of 4 · Carried over'), findsOneWidget);
+    final macros = find.descendant(
+      of: find.byWidgetPredicate(
+        (w) =>
+            w is Semantics && w.properties.identifier == 'goal-carried-macros',
       ),
+      matching: find.text('Change'),
     );
+    await tester.ensureVisible(macros);
+    await tester.tap(macros);
     await tester.pumpAndSettle();
     // A detour: the step count stays, and Done comes back to Carried over.
     expect(
-      find.textContaining('Step 2 of 3 · Carried over › Pace'),
+      find.textContaining('Step 3 of 4 · Carried over › Macros'),
       findsOneWidget,
     );
     await tester.tap(find.text('Done'));
     await tester.pumpAndSettle();
-    expect(find.textContaining('Step 2 of 3 · Carried over'), findsOneWidget);
+    expect(find.textContaining('Step 3 of 4 · Carried over'), findsOneWidget);
     expect(find.text('Keep all and go on'), findsOneWidget);
   });
 

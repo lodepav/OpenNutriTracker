@@ -299,14 +299,9 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
         _Step.plan,
       ];
     }
-    // Another kind of goal than the one before has its own pace; the
-    // rest is carried over.
-    return [
-      _Step.goal,
-      if (_draft.kind != _goalBefore(place).kind) _Step.pace,
-      _Step.carried,
-      _Step.plan,
-    ];
+    // Its own pace (from the one before's, the same kind); the rest is
+    // carried over.
+    return const [_Step.goal, _Step.pace, _Step.carried, _Step.plan];
   }
 
   _Step get _at => _detour ?? _steps[_step];
@@ -714,7 +709,7 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
     final problem = _draft.problem;
     final monday = _nextMonday(DateTime.now());
     final today = DateTime.now();
-    final breaks = _draft.kind == PhaseKind.cut && _steps.contains(_Step.pace)
+    final breaks = _draft.kind == PhaseKind.cut
         ? ' Diet breaks come in the next step.'
         : '';
     return [
@@ -1295,16 +1290,6 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
       _Panel(
         padding: const EdgeInsets.symmetric(vertical: 4),
         children: [
-          if (!steps.contains(_Step.pace))
-            _ChangeRow(
-              identifier: 'goal-carried-pace',
-              title: _label(_Step.pace),
-              subtitle: _draft.kind == PhaseKind.maintain
-                  ? _weeks(_draft.maintainWeeks)
-                  : '${_rate(_draft.paceKg)}'
-                        '${_draft.breaks ? ' · diet breaks' : ''}',
-              onChange: () => _goTo(_Step.pace),
-            ),
           if (!steps.contains(_Step.burn))
             _ChangeRow(
               identifier: 'goal-carried-burn',

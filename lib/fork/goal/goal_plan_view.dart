@@ -255,32 +255,49 @@ class GoalPlanSection extends StatelessWidget {
     final last = plan.startOf(i + 1).subtract(const Duration(hours: 12));
     final now = plan.indexOn(today) == i;
     final until = p.untilKg;
-    return ListTile(
-      leading: _Square(color: phaseColor(context, p.kind)),
-      title: Text(
-        '${phaseName(p.kind, inCut: plan.kind == PhaseKind.cut)}'
-        '${until == null ? '' : ' to ${weightText(until, unit)}'}',
-      ),
-      subtitle: Text(
-        '${_day(context, first)} – ${until == null ? '' : 'about '}'
-        '${_day(context, last)}',
-      ),
-      trailing: now
-          ? Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.secondaryContainer,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                'Now',
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.onSecondaryContainer,
-                  fontWeight: FontWeight.w600,
+    // Any of its phases opens the goal: edit, complete now or remove.
+    return Semantics(
+      identifier: 'goal-phase-$i',
+      child: ListTile(
+        onTap: () => showRunningGoal(
+          context,
+          plan: plan,
+          next: upcoming.firstOrNull,
+          unit: unit,
+          nowKg: nowKg,
+          today: today,
+          actions: actions(),
+          changed: onChanged,
+        ),
+        leading: _Square(color: phaseColor(context, p.kind)),
+        title: Text(
+          '${phaseName(p.kind, inCut: plan.kind == PhaseKind.cut)}'
+          '${until == null ? '' : ' to ${weightText(until, unit)}'}',
+        ),
+        subtitle: Text(
+          '${_day(context, first)} – ${until == null ? '' : 'about '}'
+          '${_day(context, last)}',
+        ),
+        trailing: now
+            ? Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
                 ),
-              ),
-            )
-          : null,
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.secondaryContainer,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  'Now',
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSecondaryContainer,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              )
+            : null,
+      ),
     );
   }
 }

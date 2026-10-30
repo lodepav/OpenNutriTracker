@@ -155,6 +155,24 @@ void main() {
     expect(store.saved, same(_cut));
   });
 
+  testWidgets('the running goal opens on a tap: complete it now', (
+    tester,
+  ) async {
+    final store = _MemoryPhases(_cut, [_hold]);
+    var changed = 0;
+    await _pump(tester, section(store, onChanged: () => changed++));
+    await tester.scrollUntilVisible(_id('goal-phase-0'), 200);
+    await tester.tap(_id('goal-phase-0'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Complete it now'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Complete'));
+    await tester.pumpAndSettle();
+    expect(store.goals.single.kind, PhaseKind.cut);
+    expect(store.saved!.kind, PhaseKind.maintain);
+    expect(changed, greaterThan(0));
+  });
+
   testWidgets('an Undo goes once the goals change again', (tester) async {
     final store = _MemoryPhases(_cut, [_hold, _bulk]);
     await _pump(tester, section(store));

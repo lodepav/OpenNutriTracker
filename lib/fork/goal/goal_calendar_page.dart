@@ -339,37 +339,16 @@ class _GoalCalendarPageState extends State<GoalCalendarPage> {
   ) async {
     final plan = goals.plan;
     if (day.current && plan != null) {
-      await showModalBottomSheet<void>(
-        context: context,
-        showDragHandle: true,
-        isScrollControlled: true,
-        builder: (sheet) => _NowSheet(
-          plan: plan,
-          next: goals.upcoming.firstOrNull,
-          unit: widget.unit,
-          nowKg: widget.nowKg,
-          today: _today,
-          onEdit: () => _edit(sheet, null),
-          onComplete: () => _act(
-            sheet,
-            confirm: (
-              title: 'Complete the goal now?',
-              body: 'It is kept among your completed goals.',
-              action: 'Complete',
-            ),
-            () => _actions.complete(plan, widget.nowKg),
-          ),
-          onRemove: () => _act(
-            sheet,
-            confirm: (
-              title: 'Remove the goal?',
-              body: 'It is not saved in your completed goals.',
-              action: 'Remove',
-            ),
-            undo: 'Removed',
-            () => _actions.remove(widget.nowKg),
-          ),
-        ),
+      await showRunningGoal(
+        context,
+        plan: plan,
+        next: goals.upcoming.firstOrNull,
+        unit: widget.unit,
+        nowKg: widget.nowKg,
+        today: _today,
+        actions: _actions,
+        changed: _load,
+        edit: widget.edit ?? _editGoal,
       );
     } else if (day.queued case final i?) {
       await showModalBottomSheet<void>(
@@ -415,49 +394,121 @@ class _GoalCalendarPageState extends State<GoalCalendarPage> {
     await (widget.edit ?? _editGoal)(context, upcomingIndex);
   }
 
-  /// Runs [action] from the sheet, once [confirm]ed, and closes it; with
-  /// [undo], says so with an Undo.
   Future<void> _act(
     BuildContext sheet,
     Future<bool> Function() action, {
     ({String title, String body, String action})? confirm,
     String? undo,
-  }) async {
-    if (confirm != null) {
-      final sure = await showDialog<bool>(
-        context: sheet,
-        builder: (dialog) => AlertDialog(
-          title: Text(confirm.title),
-          content: Text(confirm.body),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialog).pop(false),
-              child: const Text('Cancel'),
+  }) => _actOn(
+    context,
+    sheet,
+    _actions,
+    _load,
+    action,
+    confirm: confirm,
+    undo: undo,
+  );
+}
+
+/// The running goal's sheet: edit it, complete it now or remove it;
+/// [changed] once the goals change.
+Future<void> showRunningGoal(
+  BuildContext context, {
+  required PhasePlan plan,
+  required PhasePlan? next,
+  required BodyWeightUnit unit,
+  required double? nowKg,
+  required DateTime today,
+  required GoalActions actions,
+  required VoidCallback changed,
+  EditGoal edit = _editGoal,
+}) => showModalBottomSheet<void>(
+  context: context,
+  showDragHandle: true,
+  isScrollControlled: true,
+  builder: (sheet) => _NowSheet(
+    plan: plan,
+    next: next,
+    unit: unit,
+    nowKg: nowKg,
+    today: today,
+    onEdit: () async {
+      Navigator.of(sheet).pop();
+      if (await edit(context, null)) changed();
+    },
+    onComplete: () => _actOn(
+      context,
+      sheet,
+      actions,
+      changed,
+      confirm: (
+        title: 'Complete the goal now?',
+        body: 'It is kept among your completed goals.',
+        action: 'Complete',
+      ),
+      () => actions.complete(plan, nowKg),
+    ),
+    onRemove: () => _actOn(
+      context,
+      sheet,
+      actions,
+      changed,
+      confirm: (
+        title: 'Remove the goal?',
+        body: 'It is not saved in your completed goals.',
+        action: 'Remove',
+      ),
+      undo: 'Removed',
+      () => actions.remove(nowKg),
+    ),
+  ),
+);
+
+/// Runs [action] from the sheet, once [confirm]ed, and closes it; with
+/// [undo], says so with an Undo.
+Future<void> _actOn(
+  BuildContext context,
+  BuildContext sheet,
+  GoalActions actions,
+  VoidCallback changed,
+  Future<bool> Function() action, {
+  ({String title, String body, String action})? confirm,
+  String? undo,
+}) async {
+  if (confirm != null) {
+    final sure = await showDialog<bool>(
+      context: sheet,
+      builder: (dialog) => AlertDialog(
+        title: Text(confirm.title),
+        content: Text(confirm.body),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialog).pop(false),
+            child: const Text('Cancel'),
+          ),
+          Semantics(
+            identifier: 'goal-calendar-confirm',
+            child: TextButton(
+              onPressed: () => Navigator.of(dialog).pop(true),
+              child: Text(confirm.action),
             ),
-            Semantics(
-              identifier: 'goal-calendar-confirm',
-              child: TextButton(
-                onPressed: () => Navigator.of(dialog).pop(true),
-                child: Text(confirm.action),
-              ),
-            ),
-          ],
-        ),
-      );
-      if (sure != true) return;
-    }
-    final was = undo == null ? null : await _actions.snapshot();
-    final done = await action();
-    if (!mounted) return;
-    if (sheet.mounted) Navigator.of(sheet).pop();
-    if (done) {
-      if (was != null) showGoalUndo(context, undo!, _actions, was, _load);
-      await _load();
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Not saved: the profile changed.')),
-      );
-    }
+          ),
+        ],
+      ),
+    );
+    if (sure != true) return;
+  }
+  final was = undo == null ? null : await actions.snapshot();
+  final done = await action();
+  if (!context.mounted) return;
+  if (sheet.mounted) Navigator.of(sheet).pop();
+  if (done) {
+    if (was != null) showGoalUndo(context, undo!, actions, was, changed);
+    changed();
+  } else {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Not saved: the profile changed.')),
+    );
   }
 }
 
@@ -476,25 +527,23 @@ void showGoalUndo(
   late final ScaffoldFeatureController<SnackBar, SnackBarClosedReason> bar;
   void changed() => bar.close();
   bar = (messenger..hideCurrentSnackBar()).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        action: SnackBarAction(
-          label: 'Undo',
-          onPressed: () async {
-            if (PhaseStore.changes.value != seen) return;
-            if (await actions.restore(was)) {
-              undone();
-            } else {
-              messenger.showSnackBar(
-                const SnackBar(
-                  content: Text('Not undone: the profile changed.'),
-                ),
-              );
-            }
-          },
-        ),
+    SnackBar(
+      content: Text(message),
+      action: SnackBarAction(
+        label: 'Undo',
+        onPressed: () async {
+          if (PhaseStore.changes.value != seen) return;
+          if (await actions.restore(was)) {
+            undone();
+          } else {
+            messenger.showSnackBar(
+              const SnackBar(content: Text('Not undone: the profile changed.')),
+            );
+          }
+        },
       ),
-    );
+    ),
+  );
   PhaseStore.changes.addListener(changed);
   bar.closed.whenComplete(() => PhaseStore.changes.removeListener(changed));
 }
