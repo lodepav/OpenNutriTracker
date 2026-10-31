@@ -18,7 +18,7 @@ import 'package:opennutritracker/fork/trends/trends_widgets.dart';
 const microLabels = {
   TrendMetric.fibre: 'Fibre',
   TrendMetric.sugars: 'Sugars',
-  TrendMetric.sodium: 'Sodium',
+  TrendMetric.sodium: 'Salt',
 };
 
 ExplorerNutrient microNutrient(TrendMetric m) =>
@@ -150,12 +150,12 @@ class _MicroDetailState extends State<MicroDetail> {
             stats: [
               (
                 label: 'Average',
-                value: mean == null ? '–' : '${mean.round()}',
+                value: mean == null ? '–' : nutrient.text(mean),
                 unit: unit,
               ),
               (
                 label: nutrient.isLimit ? 'Limit' : 'Goal',
-                value: goal == null ? '–' : '${goal.round()}',
+                value: goal == null ? '–' : nutrient.text(goal),
                 unit: unit,
               ),
               (
@@ -176,6 +176,7 @@ class _MicroDetailState extends State<MicroDetail> {
               color: Theme.of(context).colorScheme.primary,
               goal: goal,
               unit: unit,
+              format: nutrient.text,
               label: '${nutrient.label} chart',
             ),
           ),
@@ -203,7 +204,7 @@ class _MicroDetailState extends State<MicroDetail> {
                   (
                     label: 'Highest',
                     value:
-                        '${high.v.round()} $unit, ${high.on == widget.dates.last ? 'today' : format.format(high.on)}',
+                        '${nutrient.text(high.v)} $unit, ${high.on == widget.dates.last ? 'today' : format.format(high.on)}',
                   ),
               ],
             ),
@@ -213,7 +214,7 @@ class _MicroDetailState extends State<MicroDetail> {
             TrendRows(
               rows: [
                 for (final f in shown)
-                  (label: f.name, value: '${f.amount.round()} $unit'),
+                  (label: f.name, value: '${nutrient.text(f.amount)} $unit'),
               ],
             ),
             if (foods.length > microTopFoods)

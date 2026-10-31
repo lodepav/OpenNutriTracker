@@ -17,6 +17,7 @@ enum TrendMetric {
   protein,
   fibre,
   sugars,
+  // shown as salt; the id stays, as saved tile layouts name it
   sodium,
   water,
 }

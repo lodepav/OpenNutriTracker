@@ -232,7 +232,7 @@ class _SwingNotesState extends State<_SwingNotes> {
       return nutrientByDay(
         await widget.load(widget.dates.first, widget.dates.last),
         widget.dates,
-        explorerNutrients.firstWhere((n) => n.label == 'Sodium'),
+        explorerNutrients.firstWhere((n) => n.label == 'Salt'),
         dayStartMinutes: await dayStartMinutes(),
       );
     } catch (_) {

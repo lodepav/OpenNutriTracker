@@ -420,7 +420,7 @@ void main() {
   });
 
   test('a nutrient each day, by the Diary\'s day', () {
-    final sodium = explorerNutrients.firstWhere((n) => n.label == 'Sodium');
+    final salt = explorerNutrients.firstWhere((n) => n.label == 'Salt');
     final days = [_d(-1), _d(0)];
     expect(
       nutrientByDay(
@@ -432,10 +432,11 @@ void main() {
           _ate(DateTime.utc(2026, 10, 26), sodium: 50),
         ],
         days,
-        sodium,
+        salt,
         dayStartMinutes: 240,
       ),
-      [500, 50],
+      // Salt in g: sodium (mg) times 2.5 / 1000.
+      [1.25, 0.125],
     );
   });
 }

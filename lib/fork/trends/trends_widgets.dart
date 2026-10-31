@@ -446,6 +446,9 @@ class DailyBarChart extends StatelessWidget {
   final Color? negativeColor;
   final double? goal;
   final String unit;
+
+  /// A bar's figure as its tooltip shows it; whole numbers when null.
+  final String Function(double value)? format;
   final String label;
 
   /// A tap on a day's bar; [selected] is the day picked, the others dimmed.
@@ -460,6 +463,7 @@ class DailyBarChart extends StatelessWidget {
     this.negativeColor,
     this.goal,
     required this.unit,
+    this.format,
     required this.label,
     this.onTap,
     this.selected,
@@ -509,7 +513,7 @@ class DailyBarChart extends StatelessWidget {
                   fitInsideHorizontally: true,
                   fitInsideVertically: true,
                   getTooltipItem: (group, _, rod, _) => BarTooltipItem(
-                    '${rod.toY.round()} $unit\n${dayLabel(group.x)}',
+                    '${format?.call(rod.toY) ?? rod.toY.round()} $unit\n${dayLabel(group.x)}',
                     TextStyle(color: scheme.onInverseSurface),
                   ),
                 ),

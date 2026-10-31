@@ -22,7 +22,7 @@ const homeTrendTileNames = {
   'protein': 'Protein',
   'fibre': 'Fibre',
   'sugars': 'Sugars',
-  'sodium': 'Sodium',
+  'sodium': 'Salt',
   'goal': 'Goal',
   'sides': 'Left vs right',
   'waist': 'Waist to height',
