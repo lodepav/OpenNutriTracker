@@ -63,6 +63,9 @@ class MainActivity : FlutterFragmentActivity() {
         // [fork] S180 health-grants: the fork's imports check their grants here
         com.opennutritracker.ont.opennutritracker.fork.HealthGrantsChannel(this, flutterEngine)
         // [/fork]
+        // [fork] S183 strength-signal: what Go Hevier reports about strength (D29)
+        com.opennutritracker.ont.opennutritracker.fork.StrengthChannel(this, flutterEngine)
+        // [/fork]
         // [fork] S76 updater: hands a checked release APK to the installer (D16)
         com.opennutritracker.ont.opennutritracker.fork.UpdateInstallChannel(this, flutterEngine)
         // [/fork]

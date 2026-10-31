@@ -40,6 +40,9 @@ import 'package:opennutritracker/generated/l10n.dart';
 import 'package:opennutritracker/fork/leftovers/group_leftovers.dart';
 // [/fork]
 // [fork] S13 adaptive-check-in: the weekly check-in card (D13)
+// [fork] S183 strength-signal
+import 'package:opennutritracker/fork/strength/strength_card.dart';
+// [/fork]
 import 'package:opennutritracker/fork/adaptive/adaptive_ui.dart';
 // [/fork]
 // [fork] S43 meal-plan
@@ -230,8 +233,20 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
               waterGoalMl: waterGoalMl,
             ),
             // S13 adaptive-check-in
-            'checkIn': AdaptiveCheckInCard(
-              onAccepted: () => _homeBloc.add(const LoadItemsEvent()),
+            'checkIn': Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                AdaptiveCheckInCard(
+                  onAccepted: () => _homeBloc.add(const LoadItemsEvent()),
+                ),
+                // [fork] S183 strength-signal: a calorie change to apply or
+                // put off, from what Go Hevier reports
+                StrengthCard(
+                  unit: bodyWeightUnit,
+                  onApplied: () => _homeBloc.add(const LoadItemsEvent()),
+                ),
+                // [/fork]
+              ],
             ),
             // S43 meal-plan: today's planned foods, to tick off
             'plan': PlannedFoodsCard(day: _homeBloc.currentDay),

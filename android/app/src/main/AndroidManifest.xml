@@ -62,7 +62,19 @@
         </intent>
     </queries>
 
-   <application
+   <!-- [fork] S182 shared-phase: only apps signed with OpenBite's key -->
+    <permission
+        android:name="${applicationId}.permission.READ_PHASE"
+        android:protectionLevel="signature" />
+    <!-- [fork] S183 strength-signal: Go Hevier's report, the develop build reading its debug
+         package; Go Hevier defines the permission, for apps signed with the same key -->
+    <uses-permission android:name="ch.duartesantos.opengym.hevier.permission.READ_STRENGTH" />
+    <uses-permission android:name="ch.duartesantos.opengym.hevier.test.permission.READ_STRENGTH" />
+    <queries>
+        <provider android:authorities="ch.duartesantos.opengym.hevier.strength" />
+        <provider android:authorities="ch.duartesantos.opengym.hevier.test.strength" />
+    </queries>
+    <application
         android:label="@string/app_name"
         android:localeConfig="@xml/locales_config"
         android:name="${applicationName}"
@@ -122,6 +134,12 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+        <!-- [fork] S182 shared-phase: cutting, maintaining or bulking, for Go Hevier -->
+        <provider
+            android:name=".fork.PhaseProvider"
+            android:authorities="${applicationId}.phase"
+            android:exported="true"
+            android:permission="${applicationId}.permission.READ_PHASE" />
         <!-- [fork] S50 macro-widget: today's calories and macros, and the trend
              weight, on the home screen (android/app/src/fork) -->
         <receiver
