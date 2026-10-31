@@ -37,4 +37,4 @@ A clean pass is remembered by commit: merge, then push, and the hook doesn't run
 
 ## Before a release
 
-`fork/tools/release-apk.sh` runs `verify.sh --strict` itself (plain `flutter test`, a process a file, about 6 min), then builds and runs `fork/tools/release-check.sh` on the APK. Its gates block.
+`fork/tools/release-apk.sh` runs `verify.sh --strict` itself (plain `flutter test`, a process a file, about 8.5 min), then builds and runs `fork/tools/release-check.sh` on the APK. Its gates block.

@@ -1,6 +1,6 @@
 # Replay: a Claude Code subagent plays the model
 
-The real-model checks (PLAN.md phase 4) run first on answers written by a Haiku subagent
+The real-model checks (archive/PLAN-phases.md, phase 4) run first on answers written by a Haiku subagent
 of Claude Code, not on a paid API call. The app's code runs unchanged from the request it
 builds to the screen; only the HTTP call is swapped for `ReplayAiClient`
 (`lib/fork/dev/replay_ai.dart`), which answers from files.

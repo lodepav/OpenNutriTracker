@@ -13,7 +13,7 @@ Everything that belongs only to the fork lives in this `fork/` folder or in `lib
 | File | What it is |
 |---|---|
 | [DECISIONS.md](DECISIONS.md) | Agreed decisions, numbered D1, D2, … They override PLAN.md where the two differ. Change a decision here first, with the date, before changing the code. |
-| [PLAN.md](PLAN.md) | The phases, open questions and backlog. |
+| [PLAN.md](PLAN.md) | The backlog, open questions and risks. The finished phases are in [archive/PLAN-phases.md](archive/PLAN-phases.md). |
 | [SEAMS.md](SEAMS.md) | Every place the fork edits an upstream file. Keep it current: it is what makes conflicts predictable. |
 | [tools/emulator.sh](tools/emulator.sh) | Builds the debug APK, boots the Android 16 emulator, installs and launches it. Drive the app with upstream's `tools/adb/adb-driver.sh`. |
 
