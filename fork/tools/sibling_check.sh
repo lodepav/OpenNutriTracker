@@ -5,7 +5,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
-if [[ "$(basename "$ROOT")" == openGym-Hevier ]]; then
+if [[ -d "$ROOT/hevier/tools" ]]; then
   ours=hevier/tools; theirs="$ROOT/../OpenNutriTracker/fork/tools"
 else
   ours=fork/tools; theirs="$ROOT/../openGym-Hevier/hevier/tools"
