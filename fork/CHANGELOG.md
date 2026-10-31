@@ -2,6 +2,18 @@
 
 Written by fork/tools/release_notes.dart at each release (D16).
 
+## 0.6.1 · 2026-10-31
+
+Based on OpenNutriTracker 2.6.0.
+
+### Fixes and changes
+
+- a known vulnerability shows up with the next push
+- food on a plate logs cooked, not a packet's dry values
+- CI on fork/main, and every screen has a UX check or a reason
+- checks run before every push, and each release's data stays readable
+- the emulator boots on the host GPU
+
 ## 0.6.0 · 2026-10-31
 
 Based on OpenNutriTracker 2.6.0.
