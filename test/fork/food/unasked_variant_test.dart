@@ -12,6 +12,27 @@ void main() {
       unaskedVariant('Baby Toddler sweet potatoes', 'baby potatoes'),
       unaskedVariantPenalty,
     );
+    for (final (name, query) in [
+      ('Carrots, glazed, cooked', 'carrots, cooked'),
+      ('Salmon, in puff pastry baked', 'salmon, baked'),
+      ('Spaghetti, spinach, cooked', 'spaghetti, cooked'),
+      ('Rice, white, cooked, glutinous', 'rice, white, cooked'),
+      (
+        'Babyfood, dinner, vegetables and dumplings and beef, junior',
+        'dumplings, vegetable, cooked',
+      ),
+      (
+        'Spaghetti, protein-fortified, cooked, enriched (n x 6.25)',
+        'spaghetti, cooked',
+      ),
+    ]) {
+      expect(unaskedVariant(name, query), unaskedVariantPenalty, reason: name);
+    }
+    expect(unaskedVariant('Spinach, raw', 'spinach'), 0);
+    expect(
+      unaskedVariant('Rice, white, cooked, glutinous', 'rice, glutinous'),
+      0,
+    );
   });
 
   test('the variant the query names, and plain rows, keep their score', () {
@@ -101,6 +122,8 @@ void main() {
       ),
       ('Canadian bacon, cooked, pan-fried', 'bacon, cooked, pan-fried'),
       ('Wheat flour, white, tortilla mix, enriched', 'tortilla, wheat flour'),
+      ('Mayonnaise, light', 'mayonnaise'),
+      ('Ice creams, vanilla, light', 'ice cream, vanilla'),
     ]) {
       expect(unaskedVariant(name, query), unaskedVariantPenalty, reason: name);
     }
@@ -112,6 +135,13 @@ void main() {
       ('Salad dressing, caesar dressing, regular', 'caesar dressing'),
       ('Beef, ground, 80% lean meat / 20% fat, raw', 'ground beef'),
       ('Potato, scalloped, from dry mix', 'potato'),
+      (
+        'Puddings, chocolate, dry mix, instant, prepared with 2% milk',
+        'chocolate pudding',
+      ),
+      ('Mayonnaise, light', 'light mayonnaise'),
+      // light meat is a cut, not a make
+      ('Turkey, whole, light meat, meat and skin, cooked, roasted', 'turkey'),
     ]) {
       expect(unaskedVariant(name, query), 0, reason: name);
     }

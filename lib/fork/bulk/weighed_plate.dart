@@ -65,10 +65,16 @@ is sulguni"), but states no weight. Rules:
 - Then one item per food in it, as served (cooked, as eaten, not raw),
   a named dish too: a pizza is its crust, sauce, cheese and each topping;
   a soup or stew is its broth or base and each solid in it, so none of it
-  goes missing. A salad or slaw lists its dressing as a food: the oil,
+  goes missing. The base is the liquid alone ("chicken broth", "coconut
+  milk", "tomato puree"), never the soup itself ("soup, lentil"): that
+  counts its solids twice. A salad or slaw lists its dressing as a food: the oil,
   vinaigrette, mayonnaise or sour cream the note or the photo shows, and
   when it looks dressed with nothing to say what, oil, a tablespoon (14 g)
-  for each 150 g of salad. Every food the note names is among them; the
+  for each 150 g of salad. Fat a food was cooked in that its own query
+  does not name is a food too: the butter a grilled cheese or toast was
+  fried in (10 g a sandwich), the oil a soup's, stew's or sauce's
+  vegetables were softened in (5 g a serving). A query that says "fried"
+  already holds its fat. Every food the note names is among them; the
   rest are what the photo shows, a food the note says what it is taken to
   be that.
   "query" is the nearest generic food in English, named the way a food
