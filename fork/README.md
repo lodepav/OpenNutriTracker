@@ -38,7 +38,8 @@ Everything that belongs only to the fork lives in this `fork/` folder or in `lib
    is skipped between markers and the fork's version lives in `test/fork/`; fork tests never
    go into upstream test files (`test/fork/cases/` mirrors upstream's paths for the ones
    that share an upstream file's harness).
-   Before a merge, `fork/tools/test-fast.sh` runs the whole suite bundled, in about a
-   minute and a quarter rather than six; plain `flutter test`, a file a process, stays the
-   strict check before a release.
+   Before a merge, `fork/tools/verify.sh` runs the seams, analyze and the whole suite bundled,
+   in about 2.5 minutes; a push to `fork/main` runs it too (`fork/hooks/`, turned on once a
+   clone with `fork/tools/install-hooks.sh`). A release runs `verify.sh --strict`: plain
+   `flutter test`, a file a process.
 5. **Merge upstream, never rebase.** `fork/main` merges each upstream release tag (D6); `develop` mirrors `upstream/develop` for upstream PRs.

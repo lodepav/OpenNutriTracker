@@ -34,7 +34,7 @@ if [[ "${1:-}" != "--no-build" ]]; then
   target=()
   [[ -n "${SEED:-}" ]] && target=(-t lib/dev/main_dev.dart)
   [[ -n "${FAKE_AI:-}" ]] && target+=(--dart-define=FORK_FAKE_AI="$FAKE_AI")
-  flutter build apk --flavor develop --debug "${target[@]}"
+  fork/tools/heavy.sh flutter build apk --flavor develop --debug "${target[@]}"
 fi
 
 if ! adb get-state >/dev/null 2>&1; then
