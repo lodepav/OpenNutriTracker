@@ -204,7 +204,7 @@ String withoutDescribing(String query) => nameWords(
 /// Foods a plate holds cooked, whose dry row a bare name lists after the
 /// cooked one ("egg noodles" listed "Noodles, egg, dry" at 384 kcal first,
 /// against 138 cooked). Not oats, weighed dry for porridge.
-const _eatenCooked = {
+const eatenCooked = {
   'rice',
   'longgrain',
   'mediumgrain',
@@ -250,7 +250,7 @@ Set<SpFoodDTO> listedAfter(List<SpFoodDTO> rows, String query) {
   double? leanestCooked;
   if (!_stateWords.hasMatch(asked) &&
       content.isNotEmpty &&
-      _eatenCooked.contains(content.last)) {
+      eatenCooked.contains(content.last)) {
     for (final row in rows) {
       final kcal = row.energyKcal100;
       if (kcal != null &&

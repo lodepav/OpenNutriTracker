@@ -37,6 +37,9 @@ import 'package:opennutritracker/fork/food/unspecified_row.dart';
 // [fork] S178 own-food-by-name: the user's own food only by its name
 import 'package:opennutritracker/fork/food/own_food_by_name.dart';
 // [/fork]
+// [fork] S186 cooked-on-plate: a food eaten cooked, not its dry product
+import 'package:opennutritracker/fork/food/cooked_on_plate.dart';
+// [/fork]
 
 /// Quality tie-breakers, matching the shared ranker so that near-equal text
 /// matches resolve the same way in both places.
@@ -234,7 +237,12 @@ List<MealEntity> rankForResolution(
     // [/fork]
     (isOwn ? own : rest).add(meal);
   }
-  return [..._sorted(own, query, counted), ..._sorted(rest, query, counted)];
+  return [
+    ..._sorted(own, query, counted),
+    // [fork] S186 cooked-on-plate
+    ...dryRowsLast(_sorted(rest, query, counted), query),
+    // [/fork]
+  ];
 }
 
 /// Highest score first; among equal scores, the shortest description
