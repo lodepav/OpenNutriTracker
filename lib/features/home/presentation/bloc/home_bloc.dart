@@ -31,6 +31,9 @@ import 'package:opennutritracker/core/utils/widget/calorie_widget_writer.dart';
 // [fork] S50 macro-widget
 import 'package:opennutritracker/fork/widget/macro_widget.dart';
 // [/fork]
+// [fork] S182 shared-phase
+import 'package:opennutritracker/fork/phase/shared_phase.dart';
+// [/fork]
 import 'package:opennutritracker/core/utils/calc/macro_calc.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/core/utils/tracked_day_lock.dart';
@@ -286,6 +289,12 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       );
       await publishWeightWidget(
         bodyWeightUnit,
+        stillCurrent: () => _calorieWidgetStore.generation == widgetGeneration,
+      );
+      // [/fork]
+      // [fork] S182 shared-phase: cutting, maintaining or bulking, for Go Hevier
+      await publishSharedPhase(
+        SharedPhase.of(user, targetKcal: totalKcalGoal, now: DateTime.now()),
         stillCurrent: () => _calorieWidgetStore.generation == widgetGeneration,
       );
       // [/fork]
