@@ -2,6 +2,16 @@
 
 Written by fork/tools/release_notes.dart at each release (D16).
 
+## 0.5.2 · 2026-10-31
+
+Based on OpenNutriTracker 2.6.0.
+
+### Fixes and changes
+
+- cards for check-in history, expenditure settings, planner target
+- water and fasting off by default, check-in sections
+- salt instead of sodium in the stats
+
 ## 0.5.1 · 2026-10-31
 
 Based on OpenNutriTracker 2.6.0.
