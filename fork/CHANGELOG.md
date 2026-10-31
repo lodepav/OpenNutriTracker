@@ -2,6 +2,14 @@
 
 Written by fork/tools/release_notes.dart at each release (D16).
 
+## 0.6.0 · 2026-10-31
+
+Based on OpenNutriTracker 2.6.0.
+
+### New
+
+- phase sharing and strength suggestions with Go Hevier
+
 ## 0.5.2 · 2026-10-31
 
 Based on OpenNutriTracker 2.6.0.
