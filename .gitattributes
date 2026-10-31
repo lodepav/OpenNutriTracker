@@ -1,0 +1,3 @@
+# Rows are appended by every branch: keep both sides. fork/tools/seam_check.py catches a seam id
+# two branches both took.
+fork/SEAMS.md merge=union

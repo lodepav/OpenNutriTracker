@@ -146,9 +146,8 @@ class UserDataMaskEntity {
       gender: userGender,
       goal: userGoal,
       pal: userPal,
-      caloriesProfile: userGender == UserGenderEntity.nonBinary
-          ? caloriesProfile
-          : null,
+      caloriesProfile:
+          userGender == UserGenderEntity.nonBinary ? caloriesProfile : null,
       targetWeightKg: targetWeight,
     );
   }
