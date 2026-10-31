@@ -17,6 +17,8 @@ import 'package:opennutritracker/features/add_meal/domain/entity/meal_nutriments
 import 'package:opennutritracker/features/add_meal/util/food_emoji_resolver.dart';
 import 'package:opennutritracker/core/domain/entity/recipe_ingredient_entity.dart';
 import 'package:opennutritracker/features/meal_detail/presentation/bloc/meal_detail_bloc.dart';
+import 'package:opennutritracker/fork/add/logged_bar.dart';
+import 'package:opennutritracker/fork/copy/copy_entries.dart' show Placed;
 import 'package:opennutritracker/fork/screens/recipes/recipe_list_item.dart';
 import 'package:opennutritracker/fork/recipe/recipe_list.dart';
 import 'package:opennutritracker/generated/l10n.dart';
@@ -220,6 +222,18 @@ void main() {
       await tester.pumpAndSettle();
       expect(bloc.logged, [(IntakeTypeEntity.lunch, 'g', '200.0')]);
       expect(find.text('1 serving of Bowl added to Lunch'), findsOneWidget);
+
+      Placed? undone;
+      final undo = undoLogged;
+      undoLogged = (placed, {required startedOn}) async {
+        undone = placed;
+        return true;
+      };
+      addTearDown(() => undoLogged = undo);
+      await tester.tap(find.text('Undo'));
+      await tester.pumpAndSettle();
+      expect(undone!.written.single, isA<_Written>());
+      expect(undone!.day, DateUtils.dateOnly(DateTime.now()));
     });
 
     testWidgets('with a meal given, logs to it without asking', (tester) async {

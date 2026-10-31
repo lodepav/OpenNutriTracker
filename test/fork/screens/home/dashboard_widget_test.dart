@@ -106,6 +106,31 @@ void main() {
     semantics.dispose();
   });
 
+  testWidgets('at 2x the ring\'s figure and label stay inside its stroke', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MediaQuery(
+        data: const MediaQueryData(textScaler: TextScaler.linear(2.0)),
+        child: _wrap(dashboardWidget(totalKcalLeft: -1648)),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final ring = tester.getRect(find.byType(CircularPercentIndicator));
+    final inside = ring.deflate(10);
+    for (final text
+        in find
+            .descendant(
+              of: find.byType(CircularPercentIndicator),
+              matching: find.byType(Text),
+            )
+            .evaluate()) {
+      final rect = tester.getRect(find.byWidget(text.widget));
+      expect(rect.left, greaterThanOrEqualTo(inside.left));
+      expect(rect.right, lessThanOrEqualTo(inside.right));
+    }
+  });
+
   testWidgets(
     'kcal gauge uses the error color when intake exceeds the daily goal',
     (tester) async {

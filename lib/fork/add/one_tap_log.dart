@@ -13,10 +13,10 @@ import 'package:opennutritracker/features/meal_detail/meal_detail_screen.dart';
 import 'package:opennutritracker/features/meal_detail/presentation/bloc/meal_detail_bloc.dart';
 import 'package:opennutritracker/features/meal_detail/util/hydrate_off_meal.dart';
 import 'package:opennutritracker/features/meal_detail/util/meal_quantity_converter.dart';
+import 'package:opennutritracker/fork/add/logged_bar.dart';
 import 'package:opennutritracker/fork/amounts/remembered_amounts.dart';
 import 'package:opennutritracker/fork/basket/basket_ui.dart'
     show refreshAfterLogging;
-import 'package:opennutritracker/fork/copy/copy_entries.dart';
 import 'package:opennutritracker/fork/copy/copy_ui.dart' show mealLabel;
 import 'package:opennutritracker/fork/meal_detail/missing_info.dart';
 import 'package:opennutritracker/fork/units/amount_text.dart' show amountText;
@@ -93,8 +93,8 @@ Future<MealEntity> hydratedForLog(
 }
 
 /// Codes being looked up: a second tap on the plus in that wait would log
-/// the food twice.
-final _hydrating = <String>{};
+/// the food twice, and the row shows the wait on its plus.
+final lookingUp = ValueNotifier<Set<String>>(const {});
 
 /// The plus on a food's row (S179's card, a fork-owned copy): logs [meal]
 /// to [type] on [day] at [oneTapAmount] and says so with an Undo. A
@@ -112,8 +112,37 @@ Future<void> Function(
 })
 logFromRow = defaultLogFromRow;
 
+/// The add sheets logging now: a second tap on the sheet's plus while the
+/// first one's log runs would log the food twice, under one bar.
+final _sheetsLogging = <Route<dynamic>>{};
+
 /// The app's [logFromRow].
 Future<void> defaultLogFromRow(
+  BuildContext context, {
+  required MealEntity meal,
+  required IntakeTypeEntity type,
+  required DateTime day,
+  required bool imperial,
+  IntakeEntity? last,
+}) async {
+  final route = ModalRoute.of(context);
+  final sheet = route is PopupRoute;
+  if (sheet && !_sheetsLogging.add(route)) return;
+  try {
+    await _logFromRow(
+      context,
+      meal: meal,
+      type: type,
+      day: day,
+      imperial: imperial,
+      last: last,
+    );
+  } finally {
+    if (sheet) _sheetsLogging.remove(route);
+  }
+}
+
+Future<void> _logFromRow(
   BuildContext context, {
   required MealEntity meal,
   required IntakeTypeEntity type,
@@ -126,12 +155,15 @@ Future<void> defaultLogFromRow(
   final messenger = ScaffoldMessenger.maybeOf(context);
   final stamp = ProfileStamp.now();
   final thin = _isThin(meal);
-  if (thin && !_hydrating.add(meal.code!)) return;
+  if (thin) {
+    if (lookingUp.value.contains(meal.code)) return;
+    lookingUp.value = {...lookingUp.value, meal.code!};
+  }
   final MealEntity food;
   try {
     food = await hydratedForLog(meal, locator(), locator());
   } finally {
-    if (thin) _hydrating.remove(meal.code);
+    if (thin) lookingUp.value = {...lookingUp.value}..remove(meal.code);
   }
   if (!context.mounted) return;
   // The unit only names what is missing, which the page says itself.
@@ -153,7 +185,7 @@ Future<void> defaultLogFromRow(
   );
   if (!context.mounted) return;
   final mealName = mealLabel(context, type);
-  final sheet = ModalRoute.of(context) is PopupRoute;
+  final route = ModalRoute.of(context);
   final written = await locator<MealDetailBloc>().addIntake(
     context,
     amount.unit,
@@ -163,7 +195,10 @@ Future<void> defaultLogFromRow(
     day,
   );
   refreshAfterLogging();
-  if (sheet && context.mounted) Navigator.of(context).pop();
+  // A page opened over the sheet while this logged stays open.
+  if (route is PopupRoute && route.isCurrent && context.mounted) {
+    Navigator.of(context).pop();
+  }
   if (messenger == null) return;
   messenger.removeCurrentSnackBar();
   if (written == null) {
@@ -174,30 +209,13 @@ Future<void> defaultLogFromRow(
   }
   final amountAdded = amountText(written, imperial);
   final name = food.name?.trim() ?? '';
-  messenger.showSnackBar(
-    SnackBar(
-      // An action keeps a bar up until dismissed: this one goes.
-      persist: false,
-      content: Text(
-        name.isEmpty
-            ? 'Added $amountAdded to $mealName'
-            : 'Added $name, $amountAdded, to $mealName',
-      ),
-      action: SnackBarAction(
-        label: 'Undo',
-        onPressed: () async {
-          final undone = await CopyEntries.fromLocator().undoPlace((
-            day: DateUtils.dateOnly(day),
-            written: [written],
-          ), startedOn: stamp);
-          refreshAfterLogging();
-          if (!undone) {
-            messenger.showSnackBar(
-              const SnackBar(content: Text('Not undone: the profile changed.')),
-            );
-          }
-        },
-      ),
-    ),
+  showLoggedBar(
+    messenger,
+    name.isEmpty
+        ? 'Added $amountAdded to $mealName'
+        : 'Added $name, $amountAdded, to $mealName',
+    day: day,
+    written: [written],
+    stamp: stamp,
   );
 }

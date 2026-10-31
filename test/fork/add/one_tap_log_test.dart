@@ -10,6 +10,14 @@ import 'package:opennutritracker/core/domain/entity/config_entity.dart';
 import 'package:opennutritracker/core/domain/entity/intake_entity.dart';
 import 'package:opennutritracker/core/domain/entity/intake_type_entity.dart';
 import 'package:opennutritracker/core/domain/usecase/get_config_usecase.dart';
+import 'package:opennutritracker/core/domain/usecase/add_intake_usecase.dart';
+import 'package:opennutritracker/core/domain/usecase/add_tracked_day_usecase.dart';
+import 'package:opennutritracker/core/domain/usecase/delete_intake_usecase.dart';
+import 'package:opennutritracker/core/domain/usecase/get_intake_usecase.dart';
+import 'package:opennutritracker/core/domain/usecase/get_kcal_goal_usecase.dart';
+import 'package:opennutritracker/core/domain/usecase/get_macro_goal_usecase.dart';
+import 'package:opennutritracker/core/domain/usecase/get_user_activity_usecase.dart';
+import 'package:opennutritracker/core/domain/usecase/log_user_activity_usecase.dart';
 import 'package:opennutritracker/core/utils/navigation_options.dart';
 import 'package:opennutritracker/features/add_meal/data/repository/products_repository.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dart';
@@ -97,6 +105,10 @@ class _Products extends Fake implements ProductsRepository {
 
 class _Bloc extends Fake implements MealDetailBloc {
   final logged = <IntakeEntity>[];
+  // A profile switch stopped the write.
+  var stopped = false;
+  // Holds each write until completed.
+  Completer<void>? gate;
 
   @override
   Future<IntakeEntity?> addIntake(
@@ -107,6 +119,8 @@ class _Bloc extends Fake implements MealDetailBloc {
     MealEntity meal,
     DateTime day,
   ) async {
+    await gate?.future;
+    if (stopped) return null;
     final intake = IntakeEntity(
       id: 'written',
       unit: unit,
@@ -119,6 +133,42 @@ class _Bloc extends Fake implements MealDetailBloc {
     return intake;
   }
 }
+
+/// The entries [CopyEntries] undoes: [_Bloc]'s, by id.
+class _Store extends Fake
+    implements GetIntakeUsecase, DeleteIntakeUsecase, AddTrackedDayUsecase {
+  final _Bloc bloc;
+  final deleted = <String>[];
+
+  _Store(this.bloc);
+
+  @override
+  Future<IntakeEntity?> getIntakeById(String intakeId) async =>
+      bloc.logged.where((i) => i.id == intakeId).firstOrNull;
+
+  @override
+  Future<void> deleteIntake(IntakeEntity intake) async =>
+      deleted.add(intake.id);
+
+  @override
+  Future<void> removeDayCaloriesTracked(DateTime day, double calories) async {}
+
+  @override
+  Future<void> removeDayMacrosTracked(
+    DateTime day, {
+    double? carbsTracked,
+    double? fatTracked,
+    double? proteinTracked,
+  }) async {}
+}
+
+class _Unused extends Fake
+    implements
+        AddIntakeUsecase,
+        GetKcalGoalUsecase,
+        GetMacroGoalUsecase,
+        GetUserActivityUsecase,
+        LogUserActivityUsecase {}
 
 void main() {
   group('the amount the plus logs', () {
@@ -223,6 +273,7 @@ void main() {
     late List<Object?> opened;
     late _Products products;
     late _Bloc bloc;
+    late List<String> deleted;
 
     setUp(() async {
       opened = [];
@@ -238,6 +289,17 @@ void main() {
         ..registerSingleton<RemoteSearchCacheDataSource>(_Cache())
         ..registerSingleton<ProductsRepository>(products)
         ..registerSingleton<MealDetailBloc>(bloc);
+      final store = _Store(bloc);
+      deleted = store.deleted;
+      GetIt.instance
+        ..registerSingleton<GetIntakeUsecase>(store)
+        ..registerSingleton<DeleteIntakeUsecase>(store)
+        ..registerSingleton<AddTrackedDayUsecase>(store)
+        ..registerSingleton<AddIntakeUsecase>(_Unused())
+        ..registerSingleton<GetKcalGoalUsecase>(_Unused())
+        ..registerSingleton<GetMacroGoalUsecase>(_Unused())
+        ..registerSingleton<GetUserActivityUsecase>(_Unused())
+        ..registerSingleton<LogUserActivityUsecase>(_Unused());
       RememberedAmounts.current = RememberedAmounts(
         () async => throw StateError('no box'),
       );
@@ -320,12 +382,83 @@ void main() {
       await pump(tester, _thin());
       await tester.tap(find.byIcon(Icons.add_rounded));
       await tester.pump();
-      await tester.tap(find.byIcon(Icons.add_rounded));
+      // the plus shows the wait, and neither it nor the row takes a tap
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      await tester.tap(find.byTooltip('Add Oats'), warnIfMissed: false);
+      await tester.tap(find.textContaining('Oats', findRichText: true).first);
       await tester.pump();
+      expect(opened, isEmpty);
       lookup.complete(_full());
       await tester.pumpAndSettle();
       expect(products.lookups, 1);
       expect(bloc.logged, hasLength(1));
+    });
+
+    testWidgets('Undo takes the entry off', (tester) async {
+      await pump(tester, _thin());
+      await tapPlus(tester);
+      await tester.tap(find.text('Undo'));
+      await tester.pumpAndSettle();
+      expect(deleted, ['written']);
+    });
+
+    testWidgets('a write a profile switch stopped says so', (tester) async {
+      bloc.stopped = true;
+      await pump(tester, _thin());
+      await tapPlus(tester);
+      expect(find.text('Not added: the profile changed.'), findsOneWidget);
+    });
+
+    group('in the add sheet', () {
+      Future<void> pumpSheet(WidgetTester tester) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            localizationsDelegates: const [S.delegate],
+            home: Scaffold(
+              body: Builder(
+                builder: (context) => TextButton(
+                  onPressed: () => showModalBottomSheet<void>(
+                    context: context,
+                    builder: (_) => MealItemCard(
+                      day: DateTime(2026, 10, 30),
+                      mealEntity: _full(),
+                      addMealType: AddMealType.lunchType,
+                      usesImperialUnits: false,
+                    ),
+                  ),
+                  child: const Text('home'),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.tap(find.text('home'));
+        await tester.pumpAndSettle();
+      }
+
+      testWidgets('the plus closes the sheet and shows the bar', (
+        tester,
+      ) async {
+        await pumpSheet(tester);
+        await tapPlus(tester);
+        expect(find.byType(MealItemCard), findsNothing);
+        expect(find.text('home'), findsOneWidget);
+        expect(find.text('Added Oats, 40 g, to Lunch'), findsOneWidget);
+      });
+
+      testWidgets('a second tap before the first is written logs once and '
+          'pops only the sheet', (tester) async {
+        bloc.gate = Completer();
+        await pumpSheet(tester);
+        await tester.tap(find.byIcon(Icons.add_rounded));
+        await tester.pump();
+        await tester.tap(find.byIcon(Icons.add_rounded));
+        await tester.pump();
+        bloc.gate!.complete();
+        await tester.pumpAndSettle();
+        expect(find.text('home'), findsOneWidget);
+        expect(bloc.logged, hasLength(1));
+      });
     });
   });
 
@@ -380,6 +513,39 @@ void main() {
       await tester.tap(find.byIcon(Icons.add_rounded));
       await tester.pumpAndSettle();
       expect(calls, ['log Oats lunch 45.0']);
+    });
+
+    testWidgets('back from the food\'s page, the search keeps its keyboard '
+        'down', (tester) async {
+      final search = FocusNode();
+      addTearDown(search.dispose);
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: const [S.delegate],
+          onGenerateRoute: (_) =>
+              MaterialPageRoute(builder: (_) => const Scaffold()),
+          home: Scaffold(
+            body: Column(
+              children: [
+                TextField(focusNode: search, autofocus: true),
+                MealItemCard(
+                  day: DateTime(2026, 10, 30),
+                  mealEntity: _food(),
+                  addMealType: AddMealType.lunchType,
+                  usesImperialUnits: false,
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(search.hasFocus, isTrue);
+      await tester.tap(find.textContaining('Oats', findRichText: true).first);
+      await tester.pumpAndSettle();
+      tester.state<NavigatorState>(find.byType(Navigator)).pop();
+      await tester.pumpAndSettle();
+      expect(search.hasFocus, isFalse);
     });
 
     testWidgets('the row opens the food\'s page', (tester) async {

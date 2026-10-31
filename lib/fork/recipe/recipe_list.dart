@@ -4,8 +4,10 @@ import 'package:opennutritracker/core/domain/entity/recipe_entity.dart';
 import 'package:opennutritracker/core/domain/entity/recipe_ingredient_entity.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
+import 'package:opennutritracker/core/utils/tracked_day_lock.dart';
 import 'package:opennutritracker/features/add_meal/util/food_emoji_resolver.dart';
 import 'package:opennutritracker/features/meal_detail/presentation/bloc/meal_detail_bloc.dart';
+import 'package:opennutritracker/fork/add/logged_bar.dart';
 import 'package:opennutritracker/fork/basket/basket_ui.dart';
 import 'package:opennutritracker/fork/copy/copy_ui.dart' show mealLabel;
 import 'package:opennutritracker/fork/display/display_prefs.dart';
@@ -149,6 +151,9 @@ Future<void> logRecipeServing(
 }) async {
   final type = meal ?? await pickMeal(context);
   if (type == null || !context.mounted) return;
+  final messenger = ScaffoldMessenger.of(context);
+  final stamp = ProfileStamp.now();
+  final day = DateTime.now();
   final portion = RecipePortion(recipe, 1);
   final written = await locator<MealDetailBloc>().addIntake(
     context,
@@ -157,16 +162,15 @@ Future<void> logRecipeServing(
     portion.grams.toStringAsFixed(1),
     type,
     recipe.toMealEntity(),
-    DateTime.now(),
+    day,
   );
   if (written == null || !context.mounted) return;
   refreshAfterLogging();
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(
-      content: Text(
-        '${portion.label} of ${recipe.name} added to '
-        '${mealLabel(context, type)}',
-      ),
-    ),
+  showLoggedBar(
+    messenger,
+    '${portion.label} of ${recipe.name} added to ${mealLabel(context, type)}',
+    day: day,
+    written: [written],
+    stamp: stamp,
   );
 }
