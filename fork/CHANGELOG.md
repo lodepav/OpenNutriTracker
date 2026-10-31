@@ -2,6 +2,23 @@
 
 Written by fork/tools/release_notes.dart at each release (D16).
 
+## 0.5.1 · 2026-10-31
+
+Based on OpenNutriTracker 2.6.0.
+
+### Fixes and changes
+
+- more everyday rows, one serving per photo
+- broth, coconut milk, crème brûlée and the goal tile
+- review fixes, Undo on more logs, and world-cuisines rows
+- UX checks a test can run, and large-text fixes they found
+- a food's lighter make, Canadian bacon and a dry mix trail its everyday row
+- a photo named without an amount lists a salad's dressing and a dish's foods
+
+### From OpenNutriTracker
+
+- upstream release v2.6.0
+
 ## 0.5.0 · 2026-10-30
 
 Based on OpenNutriTracker 2.5.0.
