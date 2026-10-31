@@ -90,6 +90,15 @@ void main() {
     });
   });
 
+  // FNDDS's crème brûlée, at 113 kcal per 100 g, is left out of the table
+  // (WRONG_ROWS, build_food_db.py): it shared BLS's name.
+  test('creme brulee resolves to a custard of cream and yolks', () async {
+    final item = await resolve('creme brulee');
+    final row = item.candidates[item.selectedIndex];
+    expect(row.name, 'Creme brulee');
+    expect(row.nutriments.energyKcal100, greaterThan(300));
+  });
+
   // A bare family name lands on the everyday row, not the shortest sibling:
   // the user's log typed these, and "chicken" logged "Chicken, back",
   // "tomato" "Tomato, green, pickled", "salad" "Salmon salad". A fork dish
@@ -125,8 +134,12 @@ void main() {
     ('basmati rice', 'Rice, white, long-grain, regular, enriched, cooked'),
     ('jasmine rice', 'Rice, white, long-grain, regular, enriched, cooked'),
     ('cooked basmati rice', 'Rice, white, long-grain'),
-    ('chicken broth', 'Soup, stock, chicken, home-prepared'),
-    ('beef broth', 'Soup, stock, beef, home-prepared'),
+    ('chicken broth', 'Soup, chicken broth, ready-to-serve'),
+    ('beef broth', 'Soup, beef broth or bouillon canned, ready-to-serve'),
+    (
+      'coconut milk',
+      'Nuts, coconut milk, canned (liquid expressed from grated meat and water)',
+    ),
     ('vegetable stock', 'Soup, vegetable broth, ready to serve'),
     ('sour cream', 'Cream, sour, cultured'),
     ('vegetable lasagna', 'Lasagna, Vegetable'),

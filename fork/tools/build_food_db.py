@@ -13,8 +13,9 @@
     python3 -I fork/tools/build_food_db.py --add-dishes
 
 adds the dishes of fork/data/dishes.json that the built table lacks, worked
-out from its own rows, without the source files; a full build gives them the
-same ids and, up to the table's rounding, the same nutrients.
+out from its own rows, and drops the WRONG_ROWS it still has, without the
+source files; a full build gives them the same ids and, up to the table's
+rounding, the same nutrients.
 
 Downloads (all free):
   USDA FoodData Central (public domain): https://fdc.nal.usda.gov/download-datasets
@@ -105,6 +106,12 @@ BLS_CODES = {
 BLS_ID_BASE = 10_000_000
 FINELI_ID_BASE = 20_000_000
 DISH_ID_BASE = 30_000_000
+
+# Rows whose numbers are wrong, left out (source, code): FNDDS's "Creme
+# brulee" at 113 kcal per 100 g, a third of a custard of cream and yolks
+# (BLS has 351), shares its name with BLS's, so no lookup can pick between
+# them.
+WRONG_ROWS = {('fdc_survey', '2705684')}
 
 
 def num(text):
@@ -343,6 +350,13 @@ def add_dishes(dishes_path, out):
     for food in table['foods']:
         row = dict(zip(columns, food))
         rows.setdefault((row['source'], row['name']), row)
+    kept = [food for food in table['foods']
+            if (food[1], food[2]) not in WRONG_ROWS]
+    dropped = [food[3] for food in table['foods'] if food not in kept]
+    for food in table['foods']:
+        if food not in kept:
+            table['portions'].pop(str(food[0]), None)
+    table['foods'] = kept
     have = {row[2] for row in table['foods'] if row[1] == 'fork_dishes'}
     added = []
     for food_id, src, code, name, nutrients, food_portions, serving in \
@@ -354,13 +368,13 @@ def add_dishes(dishes_path, out):
                               + [rounded(nutrients.get(c)) for c in NUTRIENTS])
         table['portions'][str(food_id)] = [list(p) for p in food_portions]
         added.append(name)
-    if not added:
+    if not added and not dropped:
         print(f'no dishes to add -> {out} unchanged')
         return
     payload = json.dumps(table, ensure_ascii=False, separators=(',', ':'))
     with gzip.open(out, 'wt', encoding='utf-8', compresslevel=9) as f:
         f.write(payload)
-    print(f'added {len(added)} dishes: {added} -> {out}')
+    print(f'added {len(added)} dishes: {added}, dropped {dropped} -> {out}')
 
 
 def main():
@@ -401,6 +415,8 @@ def main():
         for food_id, src, code, name, nutrients, food_portions, serving in source:
             if nutrients.get('energy_kcal_100') is None:
                 skipped += 1
+                continue
+            if (src, code) in WRONG_ROWS:
                 continue
             serving = serving or (None, None)
             foods.append([food_id, src, code, name, serving[0], serving[1],
