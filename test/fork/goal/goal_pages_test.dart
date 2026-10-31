@@ -453,7 +453,7 @@ void main() {
     await tester.tap(find.text('Next'));
     await tester.pumpAndSettle();
     // 0.5 kg a week less is 550 a day.
-    expect(find.textContaining('gives about 2990'), findsOneWidget);
+    expect(find.text('about 2990 kcal a day'), findsOneWidget);
     expect(
       find.byWidgetPredicate(
         (w) =>
@@ -466,7 +466,7 @@ void main() {
       adaptiveTarget: true,
     );
     await tester.pumpAndSettle();
-    expect(find.textContaining('gives about 2495'), findsOneWidget);
+    expect(find.text('about 2495 kcal a day'), findsOneWidget);
     expect(
       find.byWidgetPredicate(
         (w) =>
