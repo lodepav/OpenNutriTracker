@@ -1,0 +1,8 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- [fork] S183 strength-signal: the develop build reads Go Hevier's debug package, signed
+         with the same debug key; a release APK must not ask for this -->
+    <uses-permission android:name="ch.duartesantos.opengym.hevier.test.permission.READ_STRENGTH" />
+    <queries>
+        <package android:name="ch.duartesantos.opengym.hevier.test" />
+    </queries>
+</manifest>

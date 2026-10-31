@@ -16,3 +16,4 @@ android.permission.health.READ_BODY_FAT              # a smart scale's body fat 
 android.permission.health.WRITE_NUTRITION            # the diary's calories and macros to Health Connect (S49)
 android.permission.WAKE_LOCK                         # androidx.work (home_widget → glance-appwidget): the widgets' updates
 android.permission.FOREGROUND_SERVICE                # androidx.work (home_widget → glance-appwidget): long-running work; no foreground service type is declared
+ch.duartesantos.opengym.hevier.permission.READ_STRENGTH  # reads what Go Hevier reports about strength; signature-level, granted only with the same key (S183, D29)

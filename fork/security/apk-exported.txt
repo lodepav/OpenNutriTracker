@@ -7,3 +7,4 @@ service androidx.health.platform.client.impl.sdkservice.HealthDataSdkService  # 
 receiver androidx.work.impl.diagnostics.DiagnosticsReceiver [android.permission.DUMP]  # androidx.work (home_widget → glance): diagnostics; only adb/system hold DUMP
 service androidx.glance.appwidget.GlanceRemoteViewsService [android.permission.BIND_REMOTEVIEWS]  # glance-appwidget (home_widget): the launcher binds it for list widgets; system-held permission
 service androidx.work.impl.background.systemjob.SystemJobService [android.permission.BIND_JOB_SERVICE]  # androidx.work: the job scheduler binds it; system-held permission
+provider com.opennutritracker.ont.opennutritracker.fork.PhaseProvider [io.github.lodepav.openbite.permission.READ_PHASE]  # S182: shares cutting, maintaining or bulking; signature-level, only apps signed with the same key read it (D28)

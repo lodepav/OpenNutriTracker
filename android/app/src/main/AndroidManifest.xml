@@ -66,13 +66,11 @@
     <permission
         android:name="${applicationId}.permission.READ_PHASE"
         android:protectionLevel="signature" />
-    <!-- [fork] S183 strength-signal: Go Hevier's report, the develop build reading its debug
-         package; Go Hevier defines the permission, for apps signed with the same key -->
+    <!-- [fork] S183 strength-signal: Go Hevier's report; Go Hevier defines the permission, for
+         apps signed with the same key. The develop build's own manifest adds its debug package -->
     <uses-permission android:name="ch.duartesantos.opengym.hevier.permission.READ_STRENGTH" />
-    <uses-permission android:name="ch.duartesantos.opengym.hevier.test.permission.READ_STRENGTH" />
     <queries>
         <provider android:authorities="ch.duartesantos.opengym.hevier.strength" />
-        <provider android:authorities="ch.duartesantos.opengym.hevier.test.strength" />
     </queries>
     <application
         android:label="@string/app_name"
