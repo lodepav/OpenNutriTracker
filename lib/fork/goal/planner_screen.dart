@@ -1216,25 +1216,54 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
     final breaks = _planOf(_draft).phases.length > 1;
     final settings = AdaptiveStore.settings.value;
     final base = energyText(context, _baseKcal);
-    final from = _formula
-        ? 'The formula\'s estimate from your age, height, weight and '
-              'activity, $base,'
-        : 'What you burn, $base,';
+    final theme = Theme.of(context);
+    Widget line(String label, String value) => Padding(
+      padding: const EdgeInsets.only(top: 4),
+      child: Wrap(
+        alignment: WrapAlignment.spaceBetween,
+        spacing: 12,
+        children: [
+          Text(label),
+          Text(value, style: const TextStyle(fontWeight: FontWeight.w600)),
+        ],
+      ),
+    );
     return [
-      _question(
-        context,
-        'How the target is set',
-        settings.fixedTarget
-            ? 'A fixed target: '
-                  '${energyText(context, settings.fixedTargetKcal)} a day, '
-                  'whatever the pace.'
-            : pace == 0
-            ? '${_formula ? 'The formula\'s estimate from your age, height, weight and activity' : 'At maintenance the target is what you burn'}, '
-                  'about $base.'
-            : '$from ${pace < 0 ? 'less' : 'plus'} the pace\'s '
-                  '${energyText(context, shift.abs().toDouble())} gives about '
-                  '${energyText(context, _kcalAt(pace))} a day'
-                  '${breaks ? '; on diet breaks, $base.' : '.'}',
+      _question(context, 'How the target is set', null),
+      // The figure and what it is made of, apart from the prose, so the
+      // numbers read at a glance.
+      _Panel(
+        children: [
+          Text(
+            settings.fixedTarget ? 'Fixed target' : 'Target',
+            style: theme.textTheme.labelMedium,
+          ),
+          Text(
+            settings.fixedTarget
+                ? '${energyText(context, settings.fixedTargetKcal)} a day'
+                : 'about ${energyText(context, _kcalAt(pace))} a day',
+            style: theme.textTheme.headlineMedium?.copyWith(
+              color: theme.colorScheme.primary,
+            ),
+          ),
+          if (settings.fixedTarget)
+            Text('Whatever the pace.', style: theme.textTheme.bodySmall)
+          else ...[
+            const SizedBox(height: 4),
+            line(
+              _formula
+                  ? 'Formula estimate (age, height, weight, activity)'
+                  : 'What you burn',
+              base,
+            ),
+            if (pace != 0)
+              line(
+                'Pace, ${weightChangeText(pace, _unit)} a week',
+                energyText(context, shift.toDouble(), signed: true),
+              ),
+            if (breaks && pace != 0) line('On diet breaks', base),
+          ],
+        ],
       ),
       if (_formula && !_setup.onboarding)
         Padding(
@@ -1269,7 +1298,6 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
           showExpenditure: false,
         ),
       ),
-      const Divider(),
       ExpenditureGroups.checkIn(store: _store),
     ];
   }

@@ -5,6 +5,7 @@ import 'package:opennutritracker/core/domain/entity/user_gender_entity.dart';
 import 'package:opennutritracker/core/domain/usecase/get_user_usecase.dart';
 import 'package:opennutritracker/core/utils/calc/unit_calc.dart';
 import 'package:opennutritracker/core/utils/calc/workout_compensation_calc.dart';
+import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/fork/adaptive/activity.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
@@ -14,6 +15,10 @@ import 'package:opennutritracker/fork/adaptive/choice.dart';
 import 'package:opennutritracker/fork/adaptive/expenditure.dart';
 import 'package:opennutritracker/fork/body/measurement_store.dart';
 import 'package:opennutritracker/fork/health/steps.dart';
+import 'package:opennutritracker/fork/goal/phase_colors.dart';
+import 'package:opennutritracker/fork/phases/phases.dart';
+import 'package:opennutritracker/fork/trends/trends_widgets.dart'
+    show waterColor;
 import 'package:opennutritracker/fork/units/energy_text.dart';
 
 /// The row's subtitle in "Trend and calorie target".
@@ -63,11 +68,9 @@ class ExpenditureSettingsScreen extends StatelessWidget {
           bottom: 24 + MediaQuery.paddingOf(context).bottom,
         ),
         children: [
-          _EstimateSection(settings, store, isFemale),
-          const Divider(),
-          _ActivitySection(settings, store, steps ?? StepCounts()),
-          const Divider(),
-          _CheckInSection(settings, store),
+          _Card(_EstimateSection(settings, store, isFemale)),
+          _Card(_ActivitySection(settings, store, steps ?? StepCounts())),
+          _Card(_CheckInSection(settings, store)),
         ],
       ),
     ),
@@ -94,15 +97,16 @@ class ExpenditureGroups extends StatelessWidget {
     builder: (context, settings, _) => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: checkIn
-          ? [_CheckInSection(settings, store)]
+          ? [_Card(_CheckInSection(settings, store))]
           : [
-              _EstimateSection(
-                settings,
-                store,
-                ExpenditureSettingsScreen._readFemale,
+              _Card(
+                _EstimateSection(
+                  settings,
+                  store,
+                  ExpenditureSettingsScreen._readFemale,
+                ),
               ),
-              const Divider(),
-              _ActivitySection(settings, store, steps ?? StepCounts()),
+              _Card(_ActivitySection(settings, store, steps ?? StepCounts())),
             ],
     ),
   );
@@ -113,26 +117,59 @@ Future<void> _save(AdaptiveStore store, AdaptiveSettings value) async {
   await refreshGoals();
 }
 
-class _Heading extends StatelessWidget {
-  final String text;
+/// A group of the screen on a card of its own, in place of a divider
+/// between them.
+class _Card extends StatelessWidget {
+  final Widget child;
 
-  const _Heading(this.text);
+  const _Card(this.child);
 
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-    child: Semantics(
-      header: true,
-      container: true,
-      child: Text(
-        text,
-        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-          color: Theme.of(context).colorScheme.primary,
-        ),
-      ),
-    ),
+    padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+    child: AppCard(padding: const EdgeInsets.only(bottom: 8), child: child),
   );
 }
+
+class _Heading extends StatelessWidget {
+  final String text;
+  final IconData icon;
+
+  /// The icon's tint; the theme's primary colour when null.
+  final Color Function(BuildContext)? color;
+
+  const _Heading(this.text, this.icon, {this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    final tint = color?.call(context) ?? Theme.of(context).colorScheme.primary;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+      child: Semantics(
+        header: true,
+        container: true,
+        child: Row(
+          children: [
+            ExcludeSemantics(
+              child: CircleAvatar(
+                radius: 16,
+                backgroundColor: tint.withValues(alpha: 0.18),
+                child: Icon(icon, size: 18, color: tint),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Flexible(
+              child: Text(text, style: Theme.of(context).textTheme.titleMedium),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+Color _estimateColor(BuildContext context) =>
+    phaseColor(context, PhaseKind.cut);
 
 class _Note extends StatelessWidget {
   final String text;
@@ -170,7 +207,11 @@ class _EstimateSectionState extends State<_EstimateSection> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const _Heading('Estimate'),
+        const _Heading(
+          'Estimate',
+          Icons.local_fire_department_outlined,
+          color: _estimateColor,
+        ),
         StackingChoice<Responsiveness>(
           identifier: 'expenditure-responsiveness',
           values: Responsiveness.values,
@@ -374,7 +415,7 @@ class _ActivitySectionState extends State<_ActivitySection> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const _Heading('Activity'),
+        const _Heading('Activity', Icons.directions_run, color: waterColor),
         StackingChoice<ActivityMode>(
           identifier: 'expenditure-activity-mode',
           values: ActivityMode.values,
@@ -523,7 +564,7 @@ class _CheckInSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const _Heading('Check-in'),
+        const _Heading('Check-in', Icons.event_repeat),
         if (!adaptive)
           const _Note(
             'Used when the calorie target is Adaptive; its settings show '

@@ -77,14 +77,14 @@ void main() {
       'check-in-2026-10-12',
       'check-in-2026-10-05',
     ]);
-    expect(find.text('12 Oct 2026: 2150 kcal'), findsOneWidget);
+    expect(find.text('2150 kcal'), findsNWidgets(2));
     expect(
-      find.text('Expenditure 2550 kcal · proposed 2050 kcal'),
+      find.text('12 Oct 2026 · expenditure 2550 kcal · proposed 2050 kcal'),
       findsOneWidget,
     );
     expect(find.text('+50 kcal'), findsOneWidget);
     expect(find.text('no change'), findsOneWidget);
-    expect(find.text('Expenditure 2600 kcal'), findsOneWidget);
+    expect(find.text('5 Oct 2026 · expenditure 2600 kcal'), findsOneWidget);
   });
 
   testWidgets('says when there are none yet', (tester) async {
