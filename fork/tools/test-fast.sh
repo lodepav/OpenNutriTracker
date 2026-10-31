@@ -11,8 +11,8 @@
 # chosen locale and the service locator, which tests leave behind: left, they
 # break later files. The check
 # before a merge; plain `flutter test`, a file a process, stays the strict
-# one, before a release or when a bundled run fails and you want to know
-# whether a file's own tests do. The bundles (test/_bundle_*.dart) are
+# one, which fork/tools/verify.sh --strict runs before a release, and for when
+# a bundled run fails and you want to know whether a file's own tests do. The bundles (test/_bundle_*.dart) are
 # deleted at the end and ignored by git.
 set -euo pipefail
 
@@ -32,6 +32,8 @@ files = sorted(
     for d, _, fs in os.walk("test")
     for f in fs
     if f.endswith("_test.dart")
+    # It starts the whole app, whose one-time Hive registration needs a process of its own.
+    and f != "upgrade_test.dart"
 )
 for old in os.listdir("test"):
     if old.startswith("_bundle_"):
@@ -70,4 +72,4 @@ EOF
 
 # lib/generated is not committed: a pulled ARB change needs it rebuilt.
 flutter gen-l10n
-flutter test test/_bundle_*.dart "$@"
+fork/tools/heavy.sh flutter test test/_bundle_*.dart test/fork/upgrade/upgrade_test.dart "$@"

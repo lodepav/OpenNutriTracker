@@ -13,6 +13,8 @@ import 'package:opennutritracker/fork/activity/activity_picker.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 import 'package:provider/provider.dart';
 
+import '../../helpers/ux_checks.dart';
+
 // Seam S128: Add activity as MacroFactor's.
 
 final _user = UserEntity(
@@ -352,5 +354,27 @@ void main() {
     expect(find.text('No activity by that name'), findsOneWidget);
     await tester.enterText(find.byType(TextField), 'zz');
     expect(queries, ['zz']);
+  });
+
+  testWidgets('the view at 200% text: nothing cut, the targets and contrast', (
+    tester,
+  ) async {
+    await checkScreen(
+      tester,
+      ActivityPickerView(
+        title: 'Add activity',
+        activities: const [_yoga, _cycling],
+        recent: const [],
+        user: _user,
+        weightText: '80 kg',
+        day: _day,
+        today: _day,
+        onSearch: (_) {},
+        onLog: (_) {},
+        onOpenCustom: (_) {},
+        onQuickAdd: () {},
+        onCustom: () {},
+      ),
+    );
   });
 }

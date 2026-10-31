@@ -27,6 +27,8 @@ import 'package:opennutritracker/fork/adaptive/skip_day.dart';
 import 'package:opennutritracker/fork/health/steps.dart';
 import 'package:provider/provider.dart';
 
+import '../../helpers/ux_checks.dart';
+
 final _today = DateTime(2026, 10, 22);
 
 UserEntity _user() => UserEntity(
@@ -884,6 +886,19 @@ void main() {
       );
     });
   });
+
+  testWidgets(
+    'the settings at 200% text: nothing cut, the targets and contrast',
+    (tester) async {
+      await checkScreen(
+        tester,
+        ExpenditureSettingsScreen(
+          store: _MemoryStore(),
+          isFemale: () async => true,
+        ),
+      );
+    },
+  );
 }
 
 class _SwitchSteps extends Fake implements StepCounts {

@@ -10,6 +10,8 @@ import 'package:opennutritracker/features/add_meal/domain/entity/meal_nutriments
 import 'package:opennutritracker/fork/copy/copy_entries.dart';
 import 'package:opennutritracker/fork/timeline/timeline.dart';
 
+import '../../helpers/ux_checks.dart';
+
 final _day = DateTime(2026, 10, 23);
 
 IntakeEntity _eat(String food, DateTime at, {double grams = 100}) =>
@@ -154,4 +156,22 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(find.text('100 kcal so far'), findsOneWidget);
   });
+
+  testWidgets(
+    'the screen at 200% text: nothing cut, the targets and contrast',
+    (tester) async {
+      await checkScreen(
+        tester,
+        TimelineScreen(
+          day: _day,
+          entries: TimelineEntries(
+            of: (_) async => [],
+            replace: (_) async {},
+            config: () async =>
+                const ConfigEntity(false, false, false, AppThemeEntity.system),
+          ),
+        ),
+      );
+    },
+  );
 }

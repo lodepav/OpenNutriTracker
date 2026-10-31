@@ -6,8 +6,8 @@
 // Runs the app's resolver over the bundled table (eval_model.dart's
 // `tableMatch`), as staple_foods_test.dart does.
 //
-// A known miss is skipped with what it logs now, so a fix shows up as a
-// test to unskip.
+// A name the table has no right row for is pinned to what it logs, not skipped:
+// a skip can't say when it starts passing, and 6 of 26 had, unnoticed.
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -75,52 +75,41 @@ const _right = {
   'herring, pickled': 'Herring, pickled, semi-preserved, drained',
   'cucumber, with peel, raw': 'Cucumber, with peel, raw',
   'pork bacon': 'Pork, cured, bacon, unprepared',
+  // The rows lib/fork/food/everyday_row.dart picks (S75).
+  'egg': 'Egg, whole, raw, fresh',
+  'eggs': 'Eggs, Grade A, Large, egg whole',
+  'rice': 'Rice, white, long-grain, regular, enriched, cooked',
+  'white rice': 'Rice, white, cooked, NS as to fat',
+  'potatoes': 'Potatoes, boiled, cooked without skin, flesh, without salt',
+  'baby potatoes': 'Potatoes, boiled, cooked without skin, flesh, without salt',
+  'potato, raw': 'Potatoes, flesh and skin, raw',
+  'grilled chicken breast':
+      'Chicken breast, grilled without sauce, skin not eaten',
+  'greek yogurt': 'Yogurt, Greek, NS as to type of milk, plain',
+  'coffee': 'Coffee, NS as to type',
+  'cola': 'Soft drink, cola',
+  'coke': 'Soft drink, cola',
+  'granola': 'Cereal, granola',
+  'salad':
+      'Salad, green, without dressing (garden salad, tossed salad, side salad)',
+  'fries': 'Potato, french fries, NFS',
+  'tomato sauce': 'Tomato products, canned, sauce',
+  'mushroom cream sauce':
+      'Button mushroom sauce, from white basic sauce, cream and white wine',
+  'cutlet': 'Veal, leg, top round, cap off, cutlet, boneless, cooked, grilled',
+  'porridge': 'Oatmeal, regular or quick, made with water, no added fat',
+  'bread soup': 'Bread soup (brown bread), with raisins, apple and sour cream',
+  'butter, unsalted': 'Butter, without salt',
 };
 
-/// Model name → (the row it should log, what it logs now).
-const _knownMisses = {
-  // Upstream's tie-break picks the shorter sibling, and pins egg and rice
-  // as its own known misses (resolver_relevance.dart).
-  'egg': ('Egg, whole, boiled or poached', 'Egg, creamed'),
-  'rice': ('Rice, cooked, NFS', 'Rice, fried, NFS'),
-  'white rice': ('Rice, white, cooked, NS as to fat', 'glutinous rice'),
-  'potatoes': ('Potato, boiled, NFS', 'Potatoes, raw, skin: the skin alone'),
-  'potato, raw': ('Potatoes, flesh and skin, raw', 'Potatoes, raw, skin'),
-  'grilled chicken breast': (
-    'Chicken breast, grilled without sauce, skin not eaten',
-    'with sauce, skin eaten',
-  ),
-  'eggs': ('Egg, whole, raw', 'Eggs, Grade A, Large, egg yolk'),
-  'greek yogurt': ('a plain Greek yogurt', 'Yogurt, Greek, with oats'),
-  'coffee': ('a brewed coffee', 'Coffee, Latte'),
-  // A brand row or a diet row wins on the shortest name.
-  'cola': ('Soft drink, cola', 'Beverages, ZEVIA, cola, 0 kcal'),
-  'coke': ('Soft drink, cola', 'nothing'),
-  // A bare word ranks a dish that holds it.
-  'granola': ('a granola cereal', 'Cookie, granola'),
-  'salad': ('Salad, NFS', 'Salmon salad'),
-  'fries': ('Potato, french fries, NFS', 'Yuca fries'),
-  'tomato sauce': ('Tomato sauce, for use with vegetables', 'steak sauce'),
-  'tomato paste': ('Tomato products, canned, paste', 'a pasta dish'),
-  'fried chicken fillet': ('Chicken breast fillet, fried', 'a sandwich'),
-  'mushroom cream sauce': (
-    'Button mushroom sauce, from white basic sauce, cream and white wine',
-    'beef, potatoes and vegetables in a sauce',
-  ),
-  'pancakes with meat': (
-    'Pancakes, filled with meat',
-    'Egg sandwich on griddle/pancake, with meat',
-  ),
-  'potato pie': ('a potato pie', 'Pie, sweet potato'),
-  'cutlet': ('a cooked cutlet', 'Veal, leg, ... cutlet, boneless, raw'),
-  // A variant still wins when it is the only row with every word.
-  'meat dumplings': ('Pelmeni, or a meat dumpling', 'Dumpling, no meat'),
-  'baby potatoes': ('Potatoes, boiled', 'Baby Toddler sweet potatoes'),
-  // The table's porridge and bread soup are savoury BLS rows.
-  'porridge': ('a sweet porridge', 'Porridge, roasted, with vegetable stock'),
-  'bread soup': ('a sweet bread soup', 'with vegetable stock, 43 kcal'),
-  // Every word must match, and the butter row says "without salt".
-  'butter, unsalted': ('Butter, without salt', 'a pretzel, "no butter"'),
+/// Names the table has no right row for, and what they log instead (D11 builds
+/// the table). A row added for one fails its test: move it to [_right].
+const _noRowYet = {
+  'fried chicken fillet': 'Chicken fillet sandwich, fried, on white bun',
+  'pancakes with meat': 'Egg sandwich on griddle/pancake, with meat',
+  'potato pie': 'Pie, sweet potato',
+  'meat dumplings':
+      'Cepelinai, potato dumplings with meat (cepelīni, zeppelins)',
 };
 
 void main() {
@@ -135,13 +124,10 @@ void main() {
           expect((await tableMatch(foods, name))?.name, row);
         });
       }
-      for (final MapEntry(key: name, value: (row, now))
-          in _knownMisses.entries) {
-        test(
-          '"$name" logs "$row"',
-          () async => expect((await tableMatch(foods, name))?.name, row),
-          skip: 'known miss: logs $now',
-        );
+      for (final MapEntry(key: name, value: now) in _noRowYet.entries) {
+        test('"$name" has no row of its own yet, and logs "$now"', () async {
+          expect((await tableMatch(foods, name))?.name, now);
+        });
       }
     },
     skip: File(LocalFoodDataSource.assetPath).existsSync()

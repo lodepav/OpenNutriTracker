@@ -426,19 +426,20 @@ class _ActivityRow extends StatelessWidget {
     final text = Theme.of(context).textTheme;
     final kcal = this.kcal;
     final description = activity.getDescription(context);
-    return Semantics(
-      identifier: 'add-activity-row-${activity.code}',
-      button: true,
-      child: InkWell(
-        onTap: onTap,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 56),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: Dimens.spacing12,
-              vertical: Dimens.spacing8,
-            ),
-            child: MergeSemantics(
+    // Merged at the top, so the button says what it is (A2).
+    return MergeSemantics(
+      child: Semantics(
+        identifier: 'add-activity-row-${activity.code}',
+        button: true,
+        child: InkWell(
+          onTap: onTap,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 56),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: Dimens.spacing12,
+                vertical: Dimens.spacing8,
+              ),
               child: Row(
                 children: [
                   ExcludeSemantics(child: _Thumb(activity)),

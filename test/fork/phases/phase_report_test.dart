@@ -6,6 +6,8 @@ import 'package:opennutritracker/fork/phases/phase_report.dart';
 import 'package:opennutritracker/fork/phases/phases.dart';
 import 'package:opennutritracker/fork/phases/phases_ui.dart';
 
+import '../../helpers/ux_checks.dart';
+
 DateTime day(int month, int d) => DateTime(2026, month, d);
 
 // A four-week cut from Monday 7 September, two weeks of maintenance, then
@@ -161,6 +163,21 @@ void main() {
       await pump(tester, PhasePlan(start: day(11, 2), phases: plan.phases));
       expect(find.byKey(const ValueKey('phases-reports')), findsNothing);
     });
+  });
+
+  testWidgets('the page at 200% text: nothing cut, the targets and contrast', (
+    tester,
+  ) async {
+    await checkScreen(
+      tester,
+      PhaseReportsPage(
+        plan: plan,
+        unit: BodyWeightUnit.kg,
+        today: today,
+        load: () async =>
+            (trendByDay: trend, trackedDays: days, burnByDay: burn),
+      ),
+    );
   });
 }
 

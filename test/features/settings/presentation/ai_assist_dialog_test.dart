@@ -156,7 +156,9 @@ class _Server {
     (_) => http.Response(
       jsonEncode({
         'object': 'list',
-        'data': [for (final id in ids) {'id': id, 'object': 'model'}],
+        'data': [
+          for (final id in ids) {'id': id, 'object': 'model'},
+        ],
       }),
       200,
     ),
@@ -202,27 +204,25 @@ Widget _app(
 /// The dialog on a real dialog route, behind an `open` button, where a
 /// keyboard inset is what shrinks its scroll viewport — [_app] puts it in a
 /// Scaffold body, which no inset reaches.
-Widget _routeApp(
-  AiCredentialStorage storage, {
-  AiModelListApi? modelList,
-}) => MaterialApp(
-  localizationsDelegates: const [
-    S.delegate,
-    GlobalMaterialLocalizations.delegate,
-    GlobalWidgetsLocalizations.delegate,
-    GlobalCupertinoLocalizations.delegate,
-  ],
-  supportedLocales: S.supportedLocales,
-  home: Builder(
-    builder: (context) => Scaffold(
-      body: TextButton(
-        onPressed: () =>
-            AiAssistDialog.show(context, storage, modelList: modelList),
-        child: const Text('open'),
+Widget _routeApp(AiCredentialStorage storage, {AiModelListApi? modelList}) =>
+    MaterialApp(
+      localizationsDelegates: const [
+        S.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: S.supportedLocales,
+      home: Builder(
+        builder: (context) => Scaffold(
+          body: TextButton(
+            onPressed: () =>
+                AiAssistDialog.show(context, storage, modelList: modelList),
+            child: const Text('open'),
+          ),
+        ),
       ),
-    ),
-  ),
-);
+    );
 
 void main() {
   late _MemoryStorage backing;
@@ -345,7 +345,8 @@ void main() {
     expect(
       find.textContaining(l10nEn.aiAssistDisclosureOpenRouter),
       findsNothing,
-      reason: 'naming a destination the user is not configured for is the '
+      reason:
+          'naming a destination the user is not configured for is the '
           'one thing this dialog must never do',
     );
   });
@@ -499,48 +500,54 @@ void main() {
     );
   });
 
-  testWidgets('the default model is the one measurement chose', (tester) async {
-    await storage.setActiveProvider(AiProvider.openrouter);
-    await tester.pumpWidget(_app(storage));
-    await tester.pumpAndSettle();
+  testWidgets(
+    'the default model is the one measurement chose',
+    (tester) async {
+      await storage.setActiveProvider(AiProvider.openrouter);
+      await tester.pumpWidget(_app(storage));
+      await tester.pumpAndSettle();
 
-    final selected = tester
-        .widgetList<RadioListTile<String>>(find.byType(RadioListTile<String>))
-        // ignore: deprecated_member_use
-        .where((tile) => tile.value == tile.groupValue)
-        .single;
-    expect(selected.value, 'anthropic/claude-sonnet-5');
-    // [fork] S77 ai-models-5-5: the fork lists other models; its case is in
-    // test/fork/cases/features/settings/presentation/ai_assist_dialog_test.dart
-  }, skip: true);
+      final selected = tester
+          .widgetList<RadioListTile<String>>(find.byType(RadioListTile<String>))
+          // ignore: deprecated_member_use
+          .where((tile) => tile.value == tile.groupValue)
+          .single;
+      expect(selected.value, 'anthropic/claude-sonnet-5');
+      // [fork] S77 ai-models-5-5: the fork lists other models; its case is in
+      // test/fork/cases/features/settings/presentation/ai_assist_dialog_test.dart
+    },
+    skip: true /* the fork lists other models (S77) */,
+  );
   // [/fork]
 
-  testWidgets('choosing a model stores it against that provider', (
-    tester,
-  ) async {
-    await storage.setActiveProvider(AiProvider.openrouter);
-    await tester.pumpWidget(_app(storage));
-    await tester.pumpAndSettle();
+  testWidgets(
+    'choosing a model stores it against that provider',
+    (tester) async {
+      await storage.setActiveProvider(AiProvider.openrouter);
+      await tester.pumpWidget(_app(storage));
+      await tester.pumpAndSettle();
 
-    // The model section sits below the credential block now, so it can be
-    // off-screen on a phone-sized viewport.
-    await tester.ensureVisible(find.text('anthropic/claude-haiku-4.5'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('anthropic/claude-haiku-4.5'));
-    await tester.pumpAndSettle();
+      // The model section sits below the credential block now, so it can be
+      // off-screen on a phone-sized viewport.
+      await tester.ensureVisible(find.text('anthropic/claude-haiku-4.5'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('anthropic/claude-haiku-4.5'));
+      await tester.pumpAndSettle();
 
-    expect(
-      await storage.readModel(provider: AiProvider.openrouter),
-      'anthropic/claude-haiku-4.5',
-    );
-    expect(
-      await storage.readModel(provider: AiProvider.anthropic),
-      isNull,
-      reason: 'the other provider keeps its own model',
-    );
-    // [fork] S77 ai-models-5-5: the fork lists other models; its case is in
-    // test/fork/cases/features/settings/presentation/ai_assist_dialog_test.dart
-  }, skip: true);
+      expect(
+        await storage.readModel(provider: AiProvider.openrouter),
+        'anthropic/claude-haiku-4.5',
+      );
+      expect(
+        await storage.readModel(provider: AiProvider.anthropic),
+        isNull,
+        reason: 'the other provider keeps its own model',
+      );
+      // [fork] S77 ai-models-5-5: the fork lists other models; its case is in
+      // test/fork/cases/features/settings/presentation/ai_assist_dialog_test.dart
+    },
+    skip: true /* the fork lists other models (S77) */,
+  );
   // [/fork]
 
   testWidgets('names the vendor that will actually serve each row', (
@@ -557,11 +564,10 @@ void main() {
     await tester.pumpAndSettle();
 
     final vendors = AiModelCatalogue.openrouter.map((m) => m.servedBy).toSet();
-    expect(
-      vendors,
-      {'Anthropic', 'OpenAI'},
-      reason: 'the mixed-vendor branch is what this test exists to cover',
-    );
+    expect(vendors, {
+      'Anthropic',
+      'OpenAI',
+    }, reason: 'the mixed-vendor branch is what this test exists to cover');
 
     for (final vendor in vendors) {
       final rows = AiModelCatalogue.openrouter
@@ -603,37 +609,42 @@ void main() {
     );
   });
 
-  testWidgets('no OpenRouter row claims to be cheaper than it is', (
-    tester,
-  ) async {
-    // The label was keyed on the *provider*, so every non-default row on a
-    // list got the same string. That held while each list was two entries
-    // differing the same way. On four it reached `openai/gpt-5.6-terra`,
-    // which matches claude-sonnet-5 on input price and is dearer on output —
-    // the row asserted something the price table contradicts. #726.
-    await storage.setActiveProvider(AiProvider.openrouter);
-    await tester.pumpWidget(_app(storage));
-    await tester.pumpAndSettle();
+  testWidgets(
+    'no OpenRouter row claims to be cheaper than it is',
+    (tester) async {
+      // The label was keyed on the *provider*, so every non-default row on a
+      // list got the same string. That held while each list was two entries
+      // differing the same way. On four it reached `openai/gpt-5.6-terra`,
+      // which matches claude-sonnet-5 on input price and is dearer on output —
+      // the row asserted something the price table contradicts. #726.
+      await storage.setActiveProvider(AiProvider.openrouter);
+      await tester.pumpWidget(_app(storage));
+      await tester.pumpAndSettle();
 
-    expect(
-      find.textContaining(l10nEn.aiAssistModelCheaperLabel),
-      findsOne,
-      reason: 'only claude-haiku-4.5, where #668 measured it',
-    );
-    expect(
-      find.textContaining(l10nEn.aiAssistModelCheapestLabel),
-      findsOne,
-      reason: 'only gpt-5.6-luna, which is 5x below the next on both axes',
-    );
-    expect(
-      find.textContaining(l10nEn.aiAssistModelMoreItemsLabel),
-      findsOne,
-      reason: 'only gpt-5.6-terra, where #686 measured 7 rows against 3',
-    );
-    expect(find.textContaining(l10nEn.aiAssistModelRecommendedLabel), findsOne);
-    // [fork] S77 ai-models-5-5: the fork lists other models; its case is in
-    // test/fork/cases/features/settings/presentation/ai_assist_dialog_test.dart
-  }, skip: true);
+      expect(
+        find.textContaining(l10nEn.aiAssistModelCheaperLabel),
+        findsOne,
+        reason: 'only claude-haiku-4.5, where #668 measured it',
+      );
+      expect(
+        find.textContaining(l10nEn.aiAssistModelCheapestLabel),
+        findsOne,
+        reason: 'only gpt-5.6-luna, which is 5x below the next on both axes',
+      );
+      expect(
+        find.textContaining(l10nEn.aiAssistModelMoreItemsLabel),
+        findsOne,
+        reason: 'only gpt-5.6-terra, where #686 measured 7 rows against 3',
+      );
+      expect(
+        find.textContaining(l10nEn.aiAssistModelRecommendedLabel),
+        findsOne,
+      );
+      // [fork] S77 ai-models-5-5: the fork lists other models; its case is in
+      // test/fork/cases/features/settings/presentation/ai_assist_dialog_test.dart
+    },
+    skip: true /* the fork lists other models (S77) */,
+  );
   // [/fork]
 
   group('a server the user runs', () {
@@ -649,8 +660,10 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text(l10nEn.aiAssistProviderOwnServerLabel), findsOneWidget);
-      expect(l10nEn.aiAssistProviderOwnServerLabel.toLowerCase(),
-          isNot(contains('local')));
+      expect(
+        l10nEn.aiAssistProviderOwnServerLabel.toLowerCase(),
+        isNot(contains('local')),
+      );
     });
 
     testWidgets('takes an address and a typed model name', (tester) async {
@@ -659,10 +672,14 @@ void main() {
       await tester.pumpWidget(_app(storage));
       await tester.pumpAndSettle();
 
-      expect(find.bySemanticsIdentifier('ai-assist-endpoint-field'),
-          findsOneWidget);
-      expect(find.bySemanticsIdentifier('ai-assist-model-field'),
-          findsOneWidget);
+      expect(
+        find.bySemanticsIdentifier('ai-assist-endpoint-field'),
+        findsOneWidget,
+      );
+      expect(
+        find.bySemanticsIdentifier('ai-assist-model-field'),
+        findsOneWidget,
+      );
     });
 
     testWidgets('offers no curated model rows, and no served-by line', (
@@ -676,8 +693,10 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(RadioListTile<String>), findsNothing);
-      expect(find.textContaining(l10nEn.aiAssistModelRecommendedLabel),
-          findsNothing);
+      expect(
+        find.textContaining(l10nEn.aiAssistModelRecommendedLabel),
+        findsNothing,
+      );
       expect(find.textContaining('Served by'), findsNothing);
     });
 
@@ -802,8 +821,10 @@ void main() {
         'http://192.168.1.5:11434/v1/chat/completions',
         reason: 'a base address is completed to the route runtimes answer on',
       );
-      expect(await storage.readModel(provider: AiProvider.ownServer),
-          'gemma3:4b');
+      expect(
+        await storage.readModel(provider: AiProvider.ownServer),
+        'gemma3:4b',
+      );
       expect(
         (await storage.readSummary()).configured,
         isTrue,
@@ -835,7 +856,10 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text(l10nEn.aiAssistEndpointInvalidLabel), findsOneWidget);
-      expect(await storage.readEndpoint(provider: AiProvider.ownServer), isNull);
+      expect(
+        await storage.readEndpoint(provider: AiProvider.ownServer),
+        isNull,
+      );
       expect(
         find.byType(AiAssistDialog),
         findsOneWidget,
@@ -861,7 +885,10 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text(l10nEn.aiAssistModelRequiredLabel), findsOneWidget);
-      expect(await storage.readEndpoint(provider: AiProvider.ownServer), isNull);
+      expect(
+        await storage.readEndpoint(provider: AiProvider.ownServer),
+        isNull,
+      );
       expect(
         await storage.isEnabled(),
         isFalse,
@@ -1117,9 +1144,7 @@ void main() {
       );
     });
 
-    testWidgets('the address stays editable after it is saved', (
-      tester,
-    ) async {
+    testWidgets('the address stays editable after it is saved', (tester) async {
       // The dialog rendered the address and model fields unconditionally but
       // hung OK off "has a credential", which for this provider is true as
       // soon as an address exists. Reopening therefore showed two editable
@@ -1147,8 +1172,10 @@ void main() {
       await tester.tap(find.text(l10nEn.dialogOKLabel));
       await tester.pumpAndSettle();
 
-      expect(await storage.readEndpoint(provider: AiProvider.ownServer),
-          'http://192.168.1.9:11434/v1/chat/completions');
+      expect(
+        await storage.readEndpoint(provider: AiProvider.ownServer),
+        'http://192.168.1.9:11434/v1/chat/completions',
+      );
       expect(
         await storage.readModel(provider: AiProvider.ownServer),
         'qwen3:8b',
@@ -1188,13 +1215,13 @@ void main() {
       await tester.tap(find.text(l10nEn.dialogOKLabel));
       await tester.pumpAndSettle();
 
-      expect(await storage.readEndpoint(provider: AiProvider.ownServer),
-          'http://192.168.1.9:11434/v1/chat/completions');
+      expect(
+        await storage.readEndpoint(provider: AiProvider.ownServer),
+        'http://192.168.1.9:11434/v1/chat/completions',
+      );
     });
 
-    testWidgets('no key stored is not reported as a key saved', (
-      tester,
-    ) async {
+    testWidgets('no key stored is not reported as a key saved', (tester) async {
       // "Key saved ••••••••••••" over a slot holding nothing, in the one
       // dialog whose whole job is to be checkable on sight. `configured` and
       // `has a key` are the same fact for the hosted three and different for
@@ -1210,10 +1237,7 @@ void main() {
       expect(find.textContaining(l10nEn.aiAssistKeySavedLabel), findsNothing);
       // Still offered, because the key here is optional rather than absent —
       // a reverse-proxied server may want one after the address is working.
-      expect(
-        find.bySemanticsIdentifier('ai-assist-key-field'),
-        findsOneWidget,
-      );
+      expect(find.bySemanticsIdentifier('ai-assist-key-field'), findsOneWidget);
     });
 
     testWidgets('OK on an unchanged address does not un-pause it', (
@@ -1295,10 +1319,7 @@ void main() {
     group('the model list', () {
       /// Puts the address on screen without going near the store, so a test
       /// starts where a user who has just typed one does.
-      Future<void> typeEndpoint(
-        WidgetTester tester,
-        String endpoint,
-      ) async {
+      Future<void> typeEndpoint(WidgetTester tester, String endpoint) async {
         await tester.enterText(
           find.bySemanticsIdentifier('ai-assist-endpoint-field'),
           endpoint,
@@ -1365,7 +1386,8 @@ void main() {
         expect(
           server.requests,
           isEmpty,
-          reason: 'a configured server must not be contacted by a dialog '
+          reason:
+              'a configured server must not be contacted by a dialog '
               'simply being opened',
         );
       });
@@ -1461,7 +1483,8 @@ void main() {
         expect(
           find.bySemanticsIdentifier('ai-assist-model-field'),
           findsOneWidget,
-          reason: 'the field a user can type into must survive the fetch '
+          reason:
+              'the field a user can type into must survive the fetch '
               'failing, or the feature is unconfigurable off the network',
         );
 
@@ -1491,9 +1514,7 @@ void main() {
         await pressLoad(tester);
 
         expect(
-          find.text(
-            l10nEn.aiAssistModelsUnreachableLabel('192.168.1.5:11434'),
-          ),
+          find.text(l10nEn.aiAssistModelsUnreachableLabel('192.168.1.5:11434')),
           findsOneWidget,
         );
         expect(
@@ -1512,9 +1533,7 @@ void main() {
           findsOneWidget,
         );
         expect(
-          find.text(
-            l10nEn.aiAssistModelsUnreachableLabel('192.168.1.5:11434'),
-          ),
+          find.text(l10nEn.aiAssistModelsUnreachableLabel('192.168.1.5:11434')),
           findsNothing,
         );
       });
@@ -1969,11 +1988,14 @@ void main() {
         await tester.ensureVisible(button);
         await tester.pumpAndSettle();
         expect(
-          tester.widget<TextButton>(
-            find.descendant(of: button, matching: find.byType(TextButton)),
-          ).onPressed,
+          tester
+              .widget<TextButton>(
+                find.descendant(of: button, matching: find.byType(TextButton)),
+              )
+              .onPressed,
           isNotNull,
-          reason: 'a request nobody wants any more must not disable the '
+          reason:
+              'a request nobody wants any more must not disable the '
               'button for the rest of the dialog',
         );
       });
@@ -2026,7 +2048,8 @@ void main() {
         expect(
           server.requests,
           isEmpty,
-          reason: 'a dialog being dismissed must not contact the address on '
+          reason:
+              'a dialog being dismissed must not contact the address on '
               'its way out',
         );
       });
@@ -2288,7 +2311,8 @@ void main() {
           expect(
             find.text(l10nEn.aiAssistModelsInsecureLabel),
             findsOneWidget,
-            reason: 'the refusal has to be announced at all, or #758 is '
+            reason:
+                'the refusal has to be announced at all, or #758 is '
                 'undone',
           );
           expect(server.requests, isEmpty, reason: 'nothing was sent');
@@ -2298,7 +2322,8 @@ void main() {
           expect(
             find.text(l10nEn.aiAssistModelsInsecureLabel),
             findsNothing,
-            reason: 'the sentence was about an address that is no longer in '
+            reason:
+                'the sentence was about an address that is no longer in '
                 'the field',
           );
         });
@@ -2326,7 +2351,8 @@ void main() {
           expect(
             find.bySemanticsIdentifier('ai-assist-model-picker'),
             findsNothing,
-            reason: 'the list belonged to the address that was just edited '
+            reason:
+                'the list belonged to the address that was just edited '
                 'away',
           );
         });
@@ -2438,11 +2464,17 @@ void main() {
           await tester.ensureVisible(button);
           await tester.pumpAndSettle();
           expect(
-            tester.widget<TextButton>(
-              find.descendant(of: button, matching: find.byType(TextButton)),
-            ).onPressed,
+            tester
+                .widget<TextButton>(
+                  find.descendant(
+                    of: button,
+                    matching: find.byType(TextButton),
+                  ),
+                )
+                .onPressed,
             isNotNull,
-            reason: 'the button has to be pressable against the address that '
+            reason:
+                'the button has to be pressable against the address that '
                 'replaced the one being fetched for',
           );
         });
@@ -2648,7 +2680,8 @@ void main() {
         expect(
           noAnswer,
           isNot(contains(Icons.error_outline_rounded)),
-          reason: 'nothing failed: a server that did not answer is not a '
+          reason:
+              'nothing failed: a server that did not answer is not a '
               'model that cannot see, and an error icon says it did',
         );
         expect(
@@ -2701,17 +2734,12 @@ void main() {
         await tapRetry(tester);
 
         expect(find.text(l10nEn.aiAssistProbePassedLabel), findsOneWidget);
-        expect(
-          find.text(l10nEn.aiAssistProbePhotoFailedLabel),
-          findsOneWidget,
-        );
+        expect(find.text(l10nEn.aiAssistProbePhotoFailedLabel), findsOneWidget);
         expect(find.text(l10nEn.aiAssistProbeNoAnswerLabel), findsNothing);
         expect(find.text(l10nEn.aiAssistProbeUnknownLabel), findsNothing);
       });
 
-      testWidgets('the wait it quotes covers both legs (#851)', (
-        tester,
-      ) async {
+      testWidgets('the wait it quotes covers both legs (#851)', (tester) async {
         // The copy invites the user to walk away, so the number in it is what
         // they use to decide when to come back. Two legs of the own-server
         // budget run back to back — measured at 4m00s on a Pixel 6 — under a
@@ -2837,7 +2865,9 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(
-          find.text(l10nEn.aiAssistProbeRunningLabel(aiProbeWorstCaseMinutes())),
+          find.text(
+            l10nEn.aiAssistProbeRunningLabel(aiProbeWorstCaseMinutes()),
+          ),
           findsOneWidget,
         );
         final retry = tester.widget<TextButton>(
@@ -2852,7 +2882,9 @@ void main() {
         prober.gate!.complete();
         await tester.pumpAndSettle();
         expect(
-          find.text(l10nEn.aiAssistProbeRunningLabel(aiProbeWorstCaseMinutes())),
+          find.text(
+            l10nEn.aiAssistProbeRunningLabel(aiProbeWorstCaseMinutes()),
+          ),
           findsNothing,
         );
         expect(find.text(l10nEn.aiAssistProbePassedLabel), findsOneWidget);
@@ -2885,8 +2917,10 @@ void main() {
           find.text(l10nEn.aiAssistEndpointPublicPlaintextLabel),
           findsOneWidget,
         );
-        expect(await storage.readEndpoint(provider: AiProvider.ownServer),
-            isNull);
+        expect(
+          await storage.readEndpoint(provider: AiProvider.ownServer),
+          isNull,
+        );
         expect(prober.calls, 0, reason: 'nothing was configured to check');
       });
 
@@ -3020,12 +3054,14 @@ void main() {
     await tester.pumpAndSettle();
 
     final field = tester.getRect(find.byType(TextField));
-    final viewport = tester.view.physicalSize.height / tester.view.devicePixelRatio;
+    final viewport =
+        tester.view.physicalSize.height / tester.view.devicePixelRatio;
 
     expect(
       field.bottom,
       lessThanOrEqualTo(viewport),
-      reason: 'the key field must be reachable without scrolling: it is the '
+      reason:
+          'the key field must be reachable without scrolling: it is the '
           'one thing this dialog exists for',
     );
   });
@@ -3050,7 +3086,8 @@ void main() {
     expect(
       scrollbar.thumbVisibility,
       isTrue,
-      reason: 'a disclosure that silently continues below the fold is a '
+      reason:
+          'a disclosure that silently continues below the fold is a '
           'disclosure the reader thinks they have finished',
     );
   });
@@ -3176,7 +3213,8 @@ void main() {
       expect(
         await storage.activeProvider(),
         AiProvider.openai,
-        reason: 'the selection still persists on the way in — the reload '
+        reason:
+            'the selection still persists on the way in — the reload '
             'below the selector reads the store for whoever is now active',
       );
 
@@ -3222,7 +3260,8 @@ void main() {
       expect(
         find.bySemanticsIdentifier('ai-assist-save-key'),
         findsOneWidget,
-        reason: 'a change with no way to confirm it is a change that cannot '
+        reason:
+            'a change with no way to confirm it is a change that cannot '
             'be made',
       );
 
@@ -3397,9 +3436,9 @@ void main() {
   List<(String, RenderParagraph)> modelTitles(WidgetTester tester) => tester
       .widgetList<RadioListTile<String>>(find.byType(RadioListTile<String>))
       .map((tile) => (tile.title as Text).data!)
-      .map((data) => (data, tester.renderObject<RenderParagraph>(
-            find.text(data),
-          )))
+      .map(
+        (data) => (data, tester.renderObject<RenderParagraph>(find.text(data))),
+      )
       .toList();
 
   test('provider identifiers are kebab-case, and one per provider', () {
@@ -3454,88 +3493,101 @@ void main() {
     }
   });
 
-  testWidgets('a model row stays inside its two-line bound', (tester) async {
-    // 320dp at a 2.0 text scale leaves the title 156dp, which no model id
-    // fits under any setting. What has to hold there is that it stops at the
-    // bound rather than running down the dialog.
-    //
-    // Counted in painted lines rather than checked for overflow stripes: a
-    // wrapping ListTile title throws nothing at all, so the exception check
-    // the test above stays green through exactly this bug.
-    tester.view.physicalSize = const Size(320 * 3, 640 * 3);
-    tester.view.devicePixelRatio = 3.0;
-    addTearDown(tester.view.reset);
+  testWidgets(
+    'a model row stays inside its two-line bound',
+    (tester) async {
+      // 320dp at a 2.0 text scale leaves the title 156dp, which no model id
+      // fits under any setting. What has to hold there is that it stops at the
+      // bound rather than running down the dialog.
+      //
+      // Counted in painted lines rather than checked for overflow stripes: a
+      // wrapping ListTile title throws nothing at all, so the exception check
+      // the test above stays green through exactly this bug.
+      tester.view.physicalSize = const Size(320 * 3, 640 * 3);
+      tester.view.devicePixelRatio = 3.0;
+      addTearDown(tester.view.reset);
 
-    await storage.setActiveProvider(AiProvider.openrouter);
-    await tester.pumpWidget(
-      MediaQuery(
-        data: const MediaQueryData(textScaler: TextScaler.linear(2.0)),
-        child: _app(storage),
-      ),
-    );
-    await tester.pumpAndSettle();
+      await storage.setActiveProvider(AiProvider.openrouter);
+      await tester.pumpWidget(
+        MediaQuery(
+          data: const MediaQueryData(textScaler: TextScaler.linear(2.0)),
+          child: _app(storage),
+        ),
+      );
+      await tester.pumpAndSettle();
 
-    final titles = modelTitles(tester);
-    expect(titles, hasLength(AiModelCatalogue.openrouter.length));
+      final titles = modelTitles(tester);
+      expect(titles, hasLength(AiModelCatalogue.openrouter.length));
 
-    for (final (data, paragraph) in titles) {
-      final lines = paragraph
-          .getBoxesForSelection(
-            TextSelection(baseOffset: 0, extentOffset: data.length),
-          )
-          .map((box) => box.top)
-          .toSet();
-      expect(lines.length, lessThanOrEqualTo(2), reason: '$data ran past two');
-    }
-    expect(tester.takeException(), isNull);
-    // [fork] S77 ai-models-5-5: the fork lists other models; its case is in
-    // test/fork/cases/features/settings/presentation/ai_assist_dialog_test.dart
-  }, skip: true);
+      for (final (data, paragraph) in titles) {
+        final lines = paragraph
+            .getBoxesForSelection(
+              TextSelection(baseOffset: 0, extentOffset: data.length),
+            )
+            .map((box) => box.top)
+            .toSet();
+        expect(
+          lines.length,
+          lessThanOrEqualTo(2),
+          reason: '$data ran past two',
+        );
+      }
+      expect(tester.takeException(), isNull);
+      // [fork] S77 ai-models-5-5: the fork lists other models; its case is in
+      // test/fork/cases/features/settings/presentation/ai_assist_dialog_test.dart
+    },
+    skip: true /* the fork lists other models (S77) */,
+  );
   // [/fork]
 
-  testWidgets('on a real phone the ids are whole and tell the rows apart', (
-    tester,
-  ) async {
-    // A Pixel 6, which is the phone this was driven on. The ellipsis eats
-    // the *end* of the string and the curated ids are identical until their
-    // last few characters, so a title with too little room fails by painting
-    // the same visible text in both rows — worse than wrapping, and just as
-    // silent.
-    //
-    // This is what pins the vendor prefix in place. Dropping it looks like
-    // it buys width and instead removes the `/`, which is the only point in
-    // a model id where a line can break at all — so the shortened form
-    // cannot use the second line, and truncates here where the full id fits.
-    tester.view.physicalSize = const Size(1080, 2400);
-    tester.view.devicePixelRatio = 2.625;
-    addTearDown(tester.view.reset);
+  testWidgets(
+    'on a real phone the ids are whole and tell the rows apart',
+    (tester) async {
+      // A Pixel 6, which is the phone this was driven on. The ellipsis eats
+      // the *end* of the string and the curated ids are identical until their
+      // last few characters, so a title with too little room fails by painting
+      // the same visible text in both rows — worse than wrapping, and just as
+      // silent.
+      //
+      // This is what pins the vendor prefix in place. Dropping it looks like
+      // it buys width and instead removes the `/`, which is the only point in
+      // a model id where a line can break at all — so the shortened form
+      // cannot use the second line, and truncates here where the full id fits.
+      tester.view.physicalSize = const Size(1080, 2400);
+      tester.view.devicePixelRatio = 2.625;
+      addTearDown(tester.view.reset);
 
-    await storage.setActiveProvider(AiProvider.openrouter);
-    await tester.pumpWidget(_app(storage));
-    await tester.pumpAndSettle();
+      await storage.setActiveProvider(AiProvider.openrouter);
+      await tester.pumpWidget(_app(storage));
+      await tester.pumpAndSettle();
 
-    final titles = modelTitles(tester);
-    for (final (data, paragraph) in titles) {
+      final titles = modelTitles(tester);
+      for (final (data, paragraph) in titles) {
+        expect(
+          paragraph.didExceedMaxLines,
+          isFalse,
+          reason: '$data was truncated on the phone this app is developed on',
+        );
+      }
       expect(
-        paragraph.didExceedMaxLines,
-        isFalse,
-        reason: '$data was truncated on the phone this app is developed on',
+        titles.map((title) => title.$1).toSet(),
+        hasLength(titles.length),
+        reason: 'two rows painted the same text',
       );
-    }
-    expect(
-      titles.map((title) => title.$1).toSet(),
-      hasLength(titles.length),
-      reason: 'two rows painted the same text',
-    );
-    // [fork] S77 ai-models-5-5: the fork lists other models; its case is in
-    // test/fork/cases/features/settings/presentation/ai_assist_dialog_test.dart
-  }, skip: true);
+      // [fork] S77 ai-models-5-5: the fork lists other models; its case is in
+      // test/fork/cases/features/settings/presentation/ai_assist_dialog_test.dart
+    },
+    skip: true /* the fork lists other models (S77) */,
+  );
   // [/fork]
 
   group('agreeing before anything is stored', () {
     setUp(() async => storage.setTermsAccepted(false));
 
-    Future<void> typeKeyAndSave(WidgetTester tester, {String key = 'sk-x'}) async {
+    Future<void> typeKeyAndSave(
+      WidgetTester tester, {
+      String key = 'sk-x',
+    }) async {
       await tester.enterText(find.byType(TextField).first, key);
       await tester.pumpAndSettle();
       await tester.tap(find.bySemanticsIdentifier('ai-assist-save-key'));
@@ -3653,9 +3705,7 @@ void main() {
       expect(find.text(l10nEn.aiConsentChangeProviderNote), findsOneWidget);
     });
 
-    testWidgets('the terms are set at a size meant to be read', (
-      tester,
-    ) async {
+    testWidgets('the terms are set at a size meant to be read', (tester) async {
       await tester.pumpWidget(_app(storage));
       await tester.pumpAndSettle();
       await typeKeyAndSave(tester);
@@ -3663,9 +3713,7 @@ void main() {
       final context = tester.element(find.text(l10nEn.aiConsentTitle));
       final smallest = Theme.of(context).textTheme.bodySmall?.fontSize;
       final rendered = tester
-          .widget<Text>(
-            find.textContaining(l10nEn.aiAssistDisclosureAnthropic),
-          )
+          .widget<Text>(find.textContaining(l10nEn.aiAssistDisclosureAnthropic))
           .style
           ?.fontSize;
 
@@ -3676,7 +3724,8 @@ void main() {
       expect(
         rendered,
         greaterThan(smallest!),
-        reason: 'the terms are set in the same small type they were meant to '
+        reason:
+            'the terms are set in the same small type they were meant to '
             'escape',
       );
     });

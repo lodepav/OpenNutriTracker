@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# fork/main only ever gets what fork/tools/verify.sh passed.
+# Skip it with `git push --no-verify` only when the user says so.
+set -euo pipefail
+unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE
+
+zero=0000000000000000000000000000000000000000
+while read -r _ local_sha remote_ref _; do
+  [[ "$remote_ref" == refs/heads/fork/main && "$local_sha" != "$zero" ]] || continue
+  if [[ "$local_sha" != "$(git rev-parse HEAD)" || -n "$(git status --porcelain)" ]]; then
+    echo "pre-push: check out what you are pushing to fork/main, with a clean tree: the check runs on the working tree" >&2
+    exit 1
+  fi
+  fork/tools/verify.sh </dev/null
+done

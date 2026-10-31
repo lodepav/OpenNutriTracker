@@ -125,19 +125,20 @@ class _SectionRow extends StatelessWidget {
     final palette = paletteOf(context);
     final text = Theme.of(context).textTheme;
     final summary = this.summary;
-    return Semantics(
-      identifier: 'settings-section-${section.name}',
-      button: true,
-      child: InkWell(
-        onTap: onTap,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 64),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: Dimens.spacing12,
-              vertical: Dimens.spacing8,
-            ),
-            child: MergeSemantics(
+    // Merged at the top, so the button says what it is (A2).
+    return MergeSemantics(
+      child: Semantics(
+        identifier: 'settings-section-${section.name}',
+        button: true,
+        child: InkWell(
+          onTap: onTap,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 64),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: Dimens.spacing12,
+                vertical: Dimens.spacing8,
+              ),
               child: Row(
                 children: [
                   ExcludeSemantics(

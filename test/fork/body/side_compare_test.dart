@@ -5,6 +5,8 @@ import 'package:intl/intl.dart';
 import 'package:opennutritracker/fork/body/measurement_store.dart';
 import 'package:opennutritracker/fork/body/side_compare.dart';
 
+import '../../helpers/ux_checks.dart';
+
 DateTime _day(int offset) {
   final now = DateTime.now();
   return DateTime(now.year, now.month, now.day + offset);
@@ -135,6 +137,24 @@ void main() {
         '${DateFormat.yMMM().format(_day(-60))}.',
       ),
       findsOne,
+    );
+  });
+
+  testWidgets('the page at 200% text: nothing cut, the targets and contrast', (
+    tester,
+  ) async {
+    await checkScreen(
+      tester,
+      SideComparePage(
+        imperial: false,
+        rangeDays: 30,
+        load: () async => [
+          _m(-10, BodyMetric.leftArm, 35),
+          _m(-10, BodyMetric.rightArm, 35.6),
+          _m(-1, BodyMetric.leftArm, 35.4),
+          _m(-1, BodyMetric.rightArm, 36.4),
+        ],
+      ),
     );
   });
 }

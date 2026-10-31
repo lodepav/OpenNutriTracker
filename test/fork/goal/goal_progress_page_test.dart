@@ -11,6 +11,8 @@ import 'package:opennutritracker/fork/goal/goal_progress_page.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 import 'package:provider/provider.dart';
 
+import '../../helpers/ux_checks.dart';
+
 final t = DateTime.now();
 final today = DateTime(t.year, t.month, t.day);
 
@@ -128,5 +130,18 @@ void main() {
     expect(chartDay(origin, DateTime(2026, 3, 29)), 1);
     expect(chartDay(DateTime(2026, 10, 24), DateTime(2026, 10, 26, 1)), 2);
     expect(chartDay(origin, origin), 0);
+  });
+
+  testWidgets('the page at 200% text: nothing cut, the targets and contrast', (
+    tester,
+  ) async {
+    await checkScreen(
+      tester,
+      GoalProgressPage(
+        unit: BodyWeightUnit.kg,
+        loadGoal: () async => (inputs: inputs([82]), progress: null),
+        loadCalories: () async => (goalKcal: null, meanKcal: null),
+      ),
+    );
   });
 }

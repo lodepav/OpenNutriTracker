@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+# A merge into fork/main needs "Merge fork/<branch>: what it does": the release
+# notes are those subjects. A bare "Merge branch ..." shipped 0.4.2 with the wrong note.
+set -euo pipefail
+
+[[ -f "$(git rev-parse --git-dir)/MERGE_HEAD" ]] || exit 0
+[[ "$(git branch --show-current)" == fork/main ]] || exit 0
+subject="$(sed -n '1p' "$1")"
+if [[ "$subject" =~ ^Merge\ fork/[^:[:space:]]+:\ .+ \
+   || "$subject" =~ ^Merge\ upstream\ release\  \
+   || "$subject" == "Merge remote-tracking branch 'origin/fork/main'"* \
+   || "$subject" == "Merge branch 'fork/main' of "* ]]; then
+  exit 0
+fi
+echo "commit-msg: a merge into fork/main needs the subject \"Merge fork/<branch>: what it does\"; it was:" >&2
+echo "  $subject" >&2
+exit 1

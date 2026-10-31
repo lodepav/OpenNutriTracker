@@ -3,6 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:opennutritracker/fork/layout/arrange_screen.dart';
 import 'package:opennutritracker/fork/layout/layout_store.dart';
 
+import '../../helpers/ux_checks.dart';
+
 /// In memory, as real Hive hangs under `testWidgets`.
 class _Memory extends LayoutStore {
   _Memory(super.key);
@@ -137,4 +139,23 @@ void main() {
     expect(on('p'), isFalse);
     expect(LayoutStore.current('one').value.hidden, {'p'});
   });
+
+  testWidgets(
+    'the editor at 200% text: nothing cut, the targets and contrast',
+    (tester) async {
+      await checkScreen(
+        tester,
+        ArrangeScreen(
+          title: 'Arrange',
+          lists: [
+            ArrangeList(
+              title: 'Tiles',
+              store: _Memory('one'),
+              names: const {'a': 'A', 'b': 'B', 'c': 'C'},
+            ),
+          ],
+        ),
+      );
+    },
+  );
 }

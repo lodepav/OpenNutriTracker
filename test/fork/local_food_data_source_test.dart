@@ -331,7 +331,7 @@ void main() {
         );
       });
 
-      test('finds the staples the plan names (PLAN.md phase 1b)', () async {
+      test('finds the staples the plan names (phase 1b)', () async {
         for (final query in [
           'rye bread',
           'kefir',

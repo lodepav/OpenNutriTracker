@@ -274,21 +274,22 @@ class YouRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
     final muted = paletteOf(context).textMuted;
-    return Semantics(
-      identifier: identifier,
-      button: true,
-      child: InkWell(
-        onTap: onTap,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 48),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: Dimens.spacing16,
-              vertical: Dimens.spacing8,
-            ),
-            // The label takes what the value leaves, the value at most
-            // half, so every chevron sits at the right edge (H4).
-            child: MergeSemantics(
+    // Merged at the top, so the button says what it is (A2).
+    return MergeSemantics(
+      child: Semantics(
+        identifier: identifier,
+        button: true,
+        child: InkWell(
+          onTap: onTap,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 48),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: Dimens.spacing16,
+                vertical: Dimens.spacing8,
+              ),
+              // The label takes what the value leaves, the value at most
+              // half, so every chevron sits at the right edge (H4).
               child: LayoutBuilder(
                 builder: (context, constraints) => Row(
                   children: [

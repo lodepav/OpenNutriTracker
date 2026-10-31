@@ -112,34 +112,38 @@ void main() {
 
   tearDown(() async => locator.reset());
 
-  testWidgets('kJ: today\'s point, tooltip and goal line are in kJ', (
-    tester,
-  ) async {
-    final chart = await _pumpCaloriesChart(tester, usesKilojoules: true);
-    final today = chart.data.lineBarsData.first.spots.last;
+  testWidgets(
+    'kJ: today\'s point, tooltip and goal line are in kJ',
+    (tester) async {
+      final chart = await _pumpCaloriesChart(tester, usesKilojoules: true);
+      final today = chart.data.lineBarsData.first.spots.last;
 
-    expect(today.y, closeTo(UnitCalc.kcalToKj(_trackedKcal), 0.001));
-    expect(_tooltipFor(chart, today), '4347');
-    expect(
-      chart.data.extraLinesData.horizontalLines.single.y,
-      closeTo(UnitCalc.kcalToKj(_goalKcal), 0.001),
-    );
-    // [fork] S120 trends-tiles: the chart is the Calories tile's page; its case is in
-    // test/fork/trends/trends_calorie_chart_energy_unit_test.dart
-  }, skip: true);
+      expect(today.y, closeTo(UnitCalc.kcalToKj(_trackedKcal), 0.001));
+      expect(_tooltipFor(chart, today), '4347');
+      expect(
+        chart.data.extraLinesData.horizontalLines.single.y,
+        closeTo(UnitCalc.kcalToKj(_goalKcal), 0.001),
+      );
+      // [fork] S120 trends-tiles: the chart is the Calories tile's page; its case is in
+      // test/fork/trends/trends_calorie_chart_energy_unit_test.dart
+    },
+    skip: true /* the chart is the Calories tile's page (S120) */,
+  );
   // [/fork]
 
-  testWidgets('kcal: today\'s point, tooltip and goal line stay in kcal', (
-    tester,
-  ) async {
-    final chart = await _pumpCaloriesChart(tester, usesKilojoules: false);
-    final today = chart.data.lineBarsData.first.spots.last;
+  testWidgets(
+    'kcal: today\'s point, tooltip and goal line stay in kcal',
+    (tester) async {
+      final chart = await _pumpCaloriesChart(tester, usesKilojoules: false);
+      final today = chart.data.lineBarsData.first.spots.last;
 
-    expect(today.y, _trackedKcal);
-    expect(_tooltipFor(chart, today), '1039');
-    expect(chart.data.extraLinesData.horizontalLines.single.y, _goalKcal);
-    // [fork] S120 trends-tiles: the chart is the Calories tile's page; its case is in
-    // test/fork/trends/trends_calorie_chart_energy_unit_test.dart
-  }, skip: true);
+      expect(today.y, _trackedKcal);
+      expect(_tooltipFor(chart, today), '1039');
+      expect(chart.data.extraLinesData.horizontalLines.single.y, _goalKcal);
+      // [fork] S120 trends-tiles: the chart is the Calories tile's page; its case is in
+      // test/fork/trends/trends_calorie_chart_energy_unit_test.dart
+    },
+    skip: true /* the chart is the Calories tile's page (S120) */,
+  );
   // [/fork]
 }

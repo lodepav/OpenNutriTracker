@@ -22,6 +22,14 @@ const _everyday = {
   'fries': _fries,
   'french fries': _fries,
   'chips': _fries,
+  // A dish that holds the words won: chicken "with sauce, skin eaten", a beef
+  // stew in a sauce, a baby food.
+  'grilled chicken breast':
+      'Chicken breast, grilled without sauce, skin not eaten',
+  'mushroom cream sauce':
+      'Button mushroom sauce, from white basic sauce, cream and white wine',
+  'baby potatoes': _boiledPotato,
+  'cutlet': 'Veal, leg, top round, cap off, cutlet, boneless, cooked, grilled',
   'tomato sauce': 'Tomato products, canned, sauce',
   'tomato paste': _tomatoPaste,
   'potato': _boiledPotato,

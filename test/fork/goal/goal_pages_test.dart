@@ -17,6 +17,8 @@ import 'package:opennutritracker/fork/phases/phases.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 import 'package:provider/provider.dart';
 
+import '../../helpers/ux_checks.dart';
+
 // Monday 5 October 2026.
 final _start = DateTime(2026, 10, 5);
 
@@ -897,4 +899,80 @@ void main() {
     expect(find.textContaining('Oct 5'), findsOneWidget);
     expect(find.textContaining('Jan 17, 2027'), findsWidgets);
   });
+
+  testWidgets(
+    'the planner at 200% text: nothing cut, the targets and contrast',
+    (tester) async {
+      await checkScreen(
+        tester,
+        GoalPlannerScreen(
+          setup: const PlannerSetup(
+            nowKg: 86.4,
+            unit: BodyWeightUnit.kg,
+            expenditureKcal: 2600,
+            bodyFatPercent: 22,
+          ),
+          draft: GoalDraft.fresh(86.4, _start, targetKg: 80),
+          onStart: (_) async => true,
+        ),
+      );
+    },
+  );
+
+  testWidgets(
+    'completed goals at 200% text: nothing cut, the targets and contrast',
+    (tester) async {
+      await checkScreen(
+        tester,
+        CompletedGoalsPage(
+          unit: BodyWeightUnit.kg,
+          load: () async => (
+            history: [
+              GoalRecord(
+                kind: PhaseKind.cut,
+                start: DateTime(2026, 1, 5),
+                end: DateTime(2026, 4, 6),
+                startKg: 88,
+                endKg: 81.2,
+                targetKg: 81,
+                extensions: 1,
+              ),
+              _bulk,
+            ],
+            running: _cut(),
+            trend: [for (var i = 0; i < 300; i++) 85 + (i % 30) / 10],
+            today: DateTime(2026, 10, 29),
+          ),
+        ),
+      );
+    },
+  );
+
+  testWidgets(
+    'a reached goal at 200% text: nothing cut, the targets and contrast',
+    (tester) async {
+      await checkScreen(
+        tester,
+        GoalReachedPage(
+          plan: _cut(breaks: false),
+          nowKg: 79.9,
+          unit: BodyWeightUnit.kg,
+          today: DateTime(2027, 1, 4),
+          load: (_) async => GoalRun(
+            trend: [for (var i = 0; i < 91; i++) 86.4 - 6.5 * i / 90],
+            first: _start,
+            meanKcal: 2010,
+            loggedShare: 0.92,
+            onTargetShare: 0.8,
+            expenditureKcal: 2560,
+          ),
+          actions: GoalActions(
+            store: _MemoryPhases(_cut(breaks: false)),
+            save: (_, _) async => true,
+            clock: () => DateTime(2027, 1, 4),
+          ),
+        ),
+      );
+    },
+  );
 }

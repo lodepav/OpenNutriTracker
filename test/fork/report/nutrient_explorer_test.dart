@@ -9,6 +9,8 @@ import 'package:opennutritracker/features/add_meal/domain/entity/meal_nutriments
 import 'package:opennutritracker/fork/report/nutrient_explorer.dart';
 import 'package:opennutritracker/fork/report/weekly_report.dart';
 
+import '../../helpers/ux_checks.dart';
+
 IntakeEntity _eat(
   String food,
   int day,
@@ -177,4 +179,21 @@ void main() {
     expect(find.text('16 g in the range'), findsOneWidget);
     expect(find.text('52%'), findsOneWidget);
   });
+
+  testWidgets(
+    'the screen at 200% text: nothing cut, the targets and contrast',
+    (tester) async {
+      await checkScreen(
+        tester,
+        NutrientExplorerScreen(
+          days: [_day(20), _day(21)],
+          first: DateTime(2026, 10, 20),
+          last: DateTime(2026, 10, 21),
+          load: (first, last) async => _intakes,
+          user: () async => null,
+          editGoals: (context, first, last) async => [_day(20), _day(21)],
+        ),
+      );
+    },
+  );
 }

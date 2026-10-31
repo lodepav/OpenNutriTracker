@@ -3,7 +3,10 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:opennutritracker/core/utils/energy_unit_provider.dart';
+import 'package:provider/provider.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/styles/app_theme.dart';
 import 'package:opennutritracker/generated/l10n.dart';
@@ -13,7 +16,7 @@ import 'package:opennutritracker/generated/l10n.dart';
 
 var _fontLoaded = false;
 
-/// The app's font, so text measures as it does on a phone: the test font's
+/// The app's fonts, so text measures as it does on a phone: the test font's
 /// square glyphs would clip what fits.
 Future<void> _loadFont(WidgetTester tester) async {
   if (_fontLoaded) return;
@@ -24,6 +27,10 @@ Future<void> _loadFont(WidgetTester tester) async {
       loader.addFont(Future.value(ByteData.sublistView(bytes)));
     }
     await loader.load();
+    final headings = FontLoader('Nunito');
+    final bytes = await File('fonts/Nunito.ttf').readAsBytes();
+    headings.addFont(Future.value(ByteData.sublistView(bytes)));
+    await headings.load();
   });
   _fontLoaded = true;
 }
@@ -45,7 +52,12 @@ Future<void> pumpOnPhone(
   await tester.pumpWidget(
     MaterialApp(
       theme: buildAppTheme(dark ? AppPalette.dark : AppPalette.light),
-      localizationsDelegates: const [S.delegate],
+      localizationsDelegates: const [
+        S.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
       supportedLocales: S.supportedLocales,
       home: Scaffold(body: body),
     ),
@@ -78,4 +90,29 @@ Future<void> expectAccessible(WidgetTester tester) async {
   await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
   await expectLater(tester, meetsGuideline(textContrastGuideline));
   semantics.dispose();
+}
+
+/// A whole screen against the checks: at 200% text, in the app's theme, on a
+/// screen tall enough to build what a phone would scroll to.
+Future<void> checkScreen(
+  WidgetTester tester,
+  Widget page, {
+  bool settle = true,
+}) async {
+  await pumpOnPhone(
+    tester,
+    ChangeNotifierProvider(
+      create: (_) => EnergyUnitProvider(usesKilojoules: false),
+      child: page,
+    ),
+  );
+  tester.view.physicalSize = const Size(1080, 7020);
+  await tester.pump();
+  if (settle) {
+    await tester.pumpAndSettle();
+  } else {
+    await tester.pump();
+  }
+  expect(cutText(tester), isEmpty);
+  await expectAccessible(tester);
 }
