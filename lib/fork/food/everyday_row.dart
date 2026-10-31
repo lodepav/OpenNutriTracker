@@ -158,6 +158,54 @@ const _everyday = {
   // one made from a dry mix
   'flan': 'Flan',
   'flan, caramel custard': 'Flan',
+  // the brain, a Mexican stew of ground meat, or a frozen meal
+  'beef, stewed': _stewBeef,
+  'beef, cooked, simmered': _stewBeef,
+  'beef, sliced, cooked': 'Beef, NFS',
+  'pork and beef, ground, cooked':
+      'Beef, ground, unspecified fat content, cooked',
+  // chorizo
+  'pork, ground, cooked, fried': 'Pork, fresh, ground, cooked',
+  // rye bread, or a cracker at 412 kcal per 100 g
+  'flatbread': _flatbread,
+  'bread, flatbread': _flatbread,
+  'bread, italian or french': 'Bread, Italian',
+  // the low carbohydrate one, by the word regular
+  'ice cream, vanilla, regular': 'Ice cream, vanilla',
+  // red cabbage
+  'cabbage, cooked': 'Cabbage, green, cooked, no added fat',
+  // shark, the one batter-dipped fish
+  'fish, battered, fried': _batteredFish,
+  'fish, breaded, fried': _batteredFish,
+  // Italian ice, at 128 kcal per 100 g; a shaved ice's syrup is its own
+  'ice, shaved': 'Water, tap',
+  // a pasta dish with fried onions
+  'onions, cooked, fried': _sauteedOnions,
+  // a lotus-seed pastry, or puff pastry
+  'pastry, phyllo, baked': _phyllo,
+  'pastry dough, phyllo, baked': _phyllo,
+  'pastry, phyllo, dough': _phyllo,
+  'phyllo dough, baked': _phyllo,
+  'pastry, pie crust, baked': _pieCrust,
+  // salt pork, at 748 kcal per 100 g
+  'pork, cured, prosciutto': _prosciutto,
+  'prosciutto': _prosciutto,
+  // a pork chop with cheese
+  'pork, cutlet, breaded, fried': _schnitzel,
+  'pork schnitzel': _schnitzel,
+  // frozen, unprepared
+  'potatoes, french fried': _fries,
+  'potatoes, french fried, salted': _fries,
+  // dry rice noodles, at three times the energy
+  'rice noodles, stir-fried': _cookedRiceNoodles,
+  'noodles, rice, stir-fried': _cookedRiceNoodles,
+  // nothing
+  'snow peas, cooked': _cookedSnowPeas,
+  'snow peas, stir-fried': _cookedSnowPeas,
+  'soy sauce made from soybeans and wheat': 'Soy sauce',
+  // frozen, unprepared
+  'wontons, pork, cooked': _steamedDumpling,
+  'wontons, cooked': _steamedDumpling,
 };
 
 const _cheesePizza =
@@ -198,3 +246,14 @@ const _tzatziki = 'Tzatziki dip';
 const _meatballs = 'Meatballs, frozen, Italian style';
 const _cookedEggplant = 'Eggplant, cooked, fat added';
 const _greekYogurt = 'Yogurt, Greek, NS as to type of milk, plain';
+const _stewBeef = 'Beef, stew meat';
+const _flatbread = 'Wheat flatbread';
+const _batteredFish =
+    'Restaurant, family style, fish fillet, battered or breaded, fried';
+const _sauteedOnions = 'Onions, yellow, sauteed';
+const _phyllo = 'Phyllo dough';
+const _pieCrust = 'Pie crust, refrigerated, regular, baked';
+const _prosciutto = 'Ham, prosciutto';
+const _schnitzel = 'Pork schnitzel breaded, fried';
+const _cookedRiceNoodles = 'Rice noodles, cooked';
+const _cookedSnowPeas = 'Snowpeas, fresh, cooked, no added fat';
