@@ -1,0 +1,43 @@
+# OpenBite's trunk gets the checks the pre-push hook runs, the strict way (a process a file),
+# on a machine that isn't this one: a push with --no-verify, or from a clone without the hooks,
+# still gets checked, and a failure only a strict run shows appears the day it comes in.
+# A nightly run wouldn't work here: schedules run on the default branch, which is upstream's main.
+name: Fork checks
+
+on:
+  push:
+    branches: [fork/main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fork-checks
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Upstream, for the seam check
+        run: |
+          git remote add upstream https://github.com/simonoppowa/OpenNutriTracker.git
+          git fetch -q upstream main
+      - name: Install Flutter
+        run: |
+          version="$(python3 -c 'import json; print(json.load(open(".fvmrc"))["flutter"])')"
+          git clone -q --depth 1 -b "$version" https://github.com/flutter/flutter.git "$HOME/flutter"
+          "$HOME/flutter/bin/flutter" --version
+      - name: Stub keys and generated code
+        run: |
+          export PATH="$HOME/flutter/bin:$PATH"
+          cp .env.example .env
+          flutter pub get
+          dart run build_runner build --delete-conflicting-outputs
+          flutter gen-l10n
+      - run: fork/tools/verify.sh --strict
