@@ -12,7 +12,8 @@
 #   Flutter 3.44.6  ~/flutter          (the version in .fvmrc)
 #   JDK             ~/.jdks/openjdk-24.0.1 (needs javac and jlink; Java 25 is too new for Gradle 8.14)
 #   Android SDK     ~/Android/Sdk with platform-tools, emulator, system-images;android-36
-#   AVD             xperia1vi_api36 (1080x2340, 420 dpi), shared with openGym-Hevier
+#   AVD             xperia1vi_api36 (1080x2340, 420 dpi, hw.ramSize 3072), shared with openGym-Hevier;
+#                   keep the -gpu flag the same in its launcher, or each switch drops the snapshot
 #   .env            copied from .env.example (placeholders build; the USDA/BLS search needs real values)
 set -euo pipefail
 
@@ -39,7 +40,7 @@ fi
 if ! adb get-state >/dev/null 2>&1; then
   echo "booting $AVD..."
   setsid nohup "$ANDROID_HOME/emulator/emulator" -avd "$AVD" -no-audio -no-boot-anim \
-    $([[ -n "${WINDOW:-}" ]] || echo -no-window) -gpu swiftshader_indirect >/tmp/ont-fork-emulator.log 2>&1 &
+    $([[ -n "${WINDOW:-}" ]] || echo -no-window) -gpu host >/tmp/ont-fork-emulator.log 2>&1 &
   adb wait-for-device
 fi
 adb shell 'while [ "$(getprop sys.boot_completed)" != 1 ]; do sleep 2; done'
