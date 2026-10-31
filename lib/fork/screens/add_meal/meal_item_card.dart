@@ -163,38 +163,52 @@ class MealItemCard extends StatelessWidget {
                 meal: mealEntity,
                 semanticsIdentifier: favouriteSemanticsIdentifier,
               ),
-              Semantics(
-                identifier: 'meal-item-add',
-                child: IconButton(
-                  style: IconButton.styleFrom(
-                    foregroundColor: accent,
-                    side: BorderSide(color: accent, width: 1.5),
-                    shape: const CircleBorder(),
-                    minimumSize: const Size(32, 32),
-                    padding: EdgeInsets.zero,
-                  ),
-                  icon: const Icon(Icons.add_rounded, size: 20),
-                  //; S142: the brand tells like-named foods apart (A4)
-                  tooltip: S
-                      .of(context)
-                      .addFoodLabel(
-                        [
-                          mealEntity.name ?? '',
-                          if (mealEntity.brands case final b?
-                              when b.trim().isNotEmpty)
-                            b.trim(),
-                        ].join(', '),
+              ValueListenableBuilder(
+                valueListenable: lookingUp,
+                builder: (context, codes, _) {
+                  // Its record is being fetched: the plus shows it waits.
+                  final waiting = codes.contains(mealEntity.code);
+                  return Semantics(
+                    identifier: 'meal-item-add',
+                    child: IconButton(
+                      style: IconButton.styleFrom(
+                        foregroundColor: accent,
+                        side: BorderSide(color: accent, width: 1.5),
+                        shape: const CircleBorder(),
+                        minimumSize: const Size(32, 32),
+                        padding: EdgeInsets.zero,
                       ),
-                  // S179: logs at once; the row opens the page
-                  onPressed: () => logFromRow(
-                    context,
-                    meal: mealEntity,
-                    type: addMealType.getIntakeType(),
-                    day: day,
-                    imperial: usesImperialUnits,
-                    last: forkLastLogged,
-                  ),
-                ),
+                      icon: waiting
+                          ? const SizedBox.square(
+                              dimension: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.add_rounded, size: 20),
+                      //; S142: the brand tells like-named foods apart (A4)
+                      tooltip: S
+                          .of(context)
+                          .addFoodLabel(
+                            [
+                              mealEntity.name ?? '',
+                              if (mealEntity.brands case final b?
+                                  when b.trim().isNotEmpty)
+                                b.trim(),
+                            ].join(', '),
+                          ),
+                      // S179: logs at once; the row opens the page
+                      onPressed: waiting
+                          ? null
+                          : () => logFromRow(
+                              context,
+                              meal: mealEntity,
+                              type: addMealType.getIntakeType(),
+                              day: day,
+                              imperial: usesImperialUnits,
+                              last: forkLastLogged,
+                            ),
+                    ),
+                  );
+                },
               ),
             ],
           ),
@@ -268,6 +282,11 @@ class MealItemCard extends StatelessWidget {
   }
 
   void _onItemPressed(BuildContext context) {
+    // The plus is logging it: its page would not count that entry yet.
+    if (lookingUp.value.contains(mealEntity.code)) return;
+    // Else the search takes focus back on return, and its keyboard covers
+    // the basket bar.
+    FocusManager.instance.primaryFocus?.unfocus();
     Navigator.of(context).pushNamed(
       NavigationOptions.mealDetailRoute,
       arguments: MealDetailScreenArguments(

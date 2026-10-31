@@ -494,7 +494,13 @@ class _CheckInScreenState extends State<CheckInScreen> {
                 ),
             ],
             const Divider(height: 32),
-            _row('Expenditure', _kcal(checkIn.expenditureKcal)),
+            // Trends' expenditure holds the window's average activity; this
+            // one the week's, or none, so it is named for it.
+            _row(switch (settings.activityMode) {
+              ActivityMode.off => 'Expenditure',
+              ActivityMode.weekly => 'Expenditure with this week\'s activity',
+              ActivityMode.daily => 'Expenditure before activity',
+            }, _kcal(checkIn.expenditureKcal)),
             if (checkIn.activityKcal case final activity?)
               _row('Of it, counted activity', '${_kcal(activity)} a day'),
             if (current != null)

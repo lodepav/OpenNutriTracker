@@ -71,6 +71,8 @@ class DeletedEntries {
         // An action keeps a bar up until dismissed: this one goes, so later
         // bars are not held behind it and a later delete starts its own.
         persist: false,
+        // Twice the default: a delete is easy to miss undoing.
+        duration: const Duration(seconds: 8),
         content: Text(
           entries.length == 1
               ? 'Food deleted'

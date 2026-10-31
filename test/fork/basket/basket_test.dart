@@ -6,10 +6,13 @@ import 'package:opennutritracker/generated/l10n.dart';
 import 'package:opennutritracker/core/data/repository/config_repository.dart';
 import 'package:opennutritracker/core/domain/entity/app_theme_entity.dart';
 import 'package:opennutritracker/core/domain/entity/config_entity.dart';
+import 'package:opennutritracker/core/domain/entity/intake_entity.dart';
 import 'package:opennutritracker/core/domain/entity/intake_type_entity.dart';
 import 'package:opennutritracker/core/domain/usecase/get_config_usecase.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
+import 'package:opennutritracker/fork/add/logged_bar.dart';
 import 'package:opennutritracker/fork/basket/basket.dart';
+import 'package:opennutritracker/fork/copy/copy_entries.dart' show Placed;
 import 'package:opennutritracker/fork/basket/basket_ui.dart';
 import 'package:opennutritracker/fork/plan/plan_store.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dart';
@@ -17,12 +20,22 @@ import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dar
 import '../../fixture/meal_entity_fixtures.dart';
 
 final _day = DateTime(2026, 10, 23);
+final _undoLogged = undoLogged;
 
 BasketItem _item(double kcal) => BasketItem(
   meal: MealEntityFixtures.mealOne,
   unit: 'g',
   amountText: '150.0',
   kcal: kcal,
+);
+
+IntakeEntity _written(BasketItem item) => IntakeEntity(
+  id: 'id-${item.kcal}',
+  unit: item.unit,
+  amount: 150,
+  type: IntakeTypeEntity.lunch,
+  meal: item.meal,
+  dateTime: _day,
 );
 
 /// Days start at 04:00.
@@ -118,7 +131,7 @@ void main() {
             basket: basket,
             log: (_, item, type, day) async {
               logged.add(item.kcal);
-              return true;
+              return _written(item);
             },
           ),
         ),
@@ -142,6 +155,18 @@ void main() {
     expect(logged, [100, 250]);
     expect(basket.items, isEmpty);
     expect(find.text('home'), findsOneWidget);
+
+    // Undo takes back every entry the log wrote, off the basket's day.
+    Placed? undone;
+    undoLogged = (placed, {required startedOn}) async {
+      undone = placed;
+      return true;
+    };
+    addTearDown(() => undoLogged = _undoLogged);
+    await tester.tap(find.text('Undo'));
+    await tester.pumpAndSettle();
+    expect(undone!.day, _day);
+    expect(undone!.written.map((i) => i.id), ['id-100.0', 'id-250.0']);
   });
 
   testWidgets('a write a profile switch dropped stops "Log all" and keeps '
@@ -170,7 +195,7 @@ void main() {
             basket: basket,
             log: (_, item, _, _) async {
               logged.add(item.kcal);
-              return logged.length < 2;
+              return logged.length < 2 ? _written(item) : null;
             },
           ),
         ),
@@ -205,11 +230,11 @@ void main() {
             basket: basket,
             log: (context, item, _, _) async {
               logged.add(item.kcal);
-              if (logged.length > 1) return true;
+              if (logged.length > 1) return _written(item);
               // The user swipes the sheet away while the first one logs.
               Navigator.of(context).pop();
               await firstWritten.future;
-              return true;
+              return _written(item);
             },
           ),
         ),
@@ -239,9 +264,9 @@ void main() {
             day: _day,
             basket: basket,
             plans: plans,
-            log: (_, _, _, _) async {
+            log: (_, item, _, _) async {
               logged++;
-              return true;
+              return _written(item);
             },
           ),
         ),

@@ -82,7 +82,7 @@ void main() {
       restore: restore,
     );
     await tester.pumpAndSettle();
-    await tester.pump(const Duration(seconds: 5));
+    await tester.pump(const Duration(seconds: 9));
     await tester.pumpAndSettle();
     expect(find.text('Food deleted'), findsNothing);
 
@@ -95,7 +95,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.text('Food deleted'), findsOneWidget);
-    await tester.pump(const Duration(seconds: 5));
+    await tester.pump(const Duration(seconds: 9));
     await tester.pumpAndSettle();
   });
 

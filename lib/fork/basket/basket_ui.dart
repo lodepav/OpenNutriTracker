@@ -1,45 +1,46 @@
 import 'package:flutter/material.dart';
 import 'package:opennutritracker/fork/copy/copy_ui.dart' show mealLabel;
+import 'package:opennutritracker/core/domain/entity/intake_entity.dart';
 import 'package:opennutritracker/core/domain/entity/intake_type_entity.dart';
 import 'package:opennutritracker/core/domain/usecase/get_config_usecase.dart';
 import 'package:opennutritracker/core/utils/calc/day_boundary_calc.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/core/utils/navigation_options.dart';
 import 'package:opennutritracker/core/utils/navigation_predicates.dart';
+import 'package:opennutritracker/core/utils/tracked_day_lock.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dart';
 import 'package:opennutritracker/features/diary/presentation/bloc/calendar_day_bloc.dart';
 import 'package:opennutritracker/features/diary/presentation/bloc/diary_bloc.dart';
 import 'package:opennutritracker/features/home/presentation/bloc/home_bloc.dart';
 import 'package:opennutritracker/features/meal_detail/presentation/bloc/meal_detail_bloc.dart';
+import 'package:opennutritracker/fork/add/logged_bar.dart';
 import 'package:opennutritracker/fork/basket/basket.dart';
 import 'package:opennutritracker/fork/plan/plan_store.dart';
 import 'package:opennutritracker/fork/units/energy_text.dart';
 
-/// Writes one basket item; upstream's meal detail add in the app. False
+/// Writes one basket item; upstream's meal detail add in the app. Null
 /// when it was not written (a profile switch).
 typedef LogBasketItem =
-    Future<bool> Function(
+    Future<IntakeEntity?> Function(
       BuildContext context,
       BasketItem item,
       IntakeTypeEntity type,
       DateTime day,
     );
 
-Future<bool> _logWithMealDetail(
+Future<IntakeEntity?> _logWithMealDetail(
   BuildContext context,
   BasketItem item,
   IntakeTypeEntity type,
   DateTime day,
-) async =>
-    await locator<MealDetailBloc>().addIntake(
-      context,
-      item.unit,
-      item.amountText,
-      type,
-      item.meal,
-      day,
-    ) !=
-    null;
+) => locator<MealDetailBloc>().addIntake(
+  context,
+  item.unit,
+  item.amountText,
+  type,
+  item.meal,
+  day,
+);
 
 /// Home and the Diary, after entries were written outside upstream's
 /// screens; skipped where the app's blocs are not registered (tests).
@@ -224,25 +225,29 @@ class _BasketSheetState extends State<BasketSheet> {
   Future<void> _logAll() async {
     setState(() => _logging = true);
     final items = widget.basket.itemsFor(widget.type, widget.day);
-    var logged = 0;
+    final messenger = ScaffoldMessenger.of(context);
+    final stamp = ProfileStamp.now();
+    final written = <IntakeEntity>[];
     for (final item in items) {
       if (!mounted) break;
+      final intake = await widget.log(context, item, widget.type, widget.day);
       // Not written (a profile switch): it and the rest stay in the basket.
-      if (!await widget.log(context, item, widget.type, widget.day)) break;
+      if (intake == null) break;
       // Out of the basket once logged: a sheet closed partway leaves only
       // what was not, so logging again adds nothing twice.
       widget.basket.remove(item);
-      logged++;
+      written.add(intake);
     }
     refreshAfterLogging();
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Logged $logged ${logged == 1 ? 'food' : 'foods'} to '
-          '${mealLabel(context, widget.type)}.',
-        ),
-      ),
+    final logged = written.length;
+    showLoggedBar(
+      messenger,
+      'Logged $logged ${logged == 1 ? 'food' : 'foods'} to '
+      '${mealLabel(context, widget.type)}.',
+      day: widget.day,
+      written: written,
+      stamp: stamp,
     );
     Navigator.of(
       context,

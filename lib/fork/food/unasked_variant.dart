@@ -11,23 +11,30 @@
 const unaskedVariantPenalty = 0.3;
 
 /// The words that make a row a different food from the one named: meat
-/// left out, a baby food, or Canadian bacon (a loin: "bacon, cooked,
-/// pan-fried" logged it at a third of bacon's energy). Not "unprepared":
+/// left out, a baby food, Canadian bacon (a loin: "bacon, cooked,
+/// pan-fried" logged it at a third of bacon's energy), or a food glazed,
+/// wrapped in pastry or made with spinach: "carrots, cooked" logged glazed
+/// ones at three times the energy, "salmon, baked" salmon in puff pastry and
+/// "spaghetti, cooked" a spinach one; glutinous rice, which "rice, white,
+/// cooked" found at three quarters of white rice's energy; a pasta
+/// fortified with protein. Not "unprepared":
 /// USDA's word for a food as sold, the raw row a recipe ingredient wants
 /// ("Pork, cured, bacon, unprepared").
 final _variantWords = RegExp(
   r'\b(meatless|no meat|without meat|vegan|vegetarian|imitation|substitute|'
-  r'baby food|toddler|infant|canadian)\b',
+  r'baby ?food|toddler|infant|canadian|glazed|in puff pastry|spinach|'
+  r'glutinous|protein-fortified)\b',
   caseSensitive: false,
 );
 
 /// A lighter make of the food: a wrap's caesar dressing logged "Salad
 /// dressing, caesar, fat-free" at a quarter of the regular one's energy,
-/// and a burger's "beef patty" the 97% lean one. Any wording of lighter in
-/// the query asks for one.
+/// a burger's "beef patty" the 97% lean one, and a sandwich's "mayonnaise"
+/// "Mayonnaise, light". "Light" counts only as a make of its own (", light"),
+/// not light meat or syrup. Any wording of lighter in the query asks for one.
 final _lighter = RegExp(
   r'\b(fat[- ]free|non-?fat|(reduced|low)[- ]?(fat|calorie|sodium)|lowfat|'
-  r'9\d% lean)',
+  r'9\d% lean)|, (light|lite)(?=,|$| \()',
   caseSensitive: false,
 );
 final _asksLighter = RegExp(
@@ -36,8 +43,12 @@ final _asksLighter = RegExp(
 );
 
 /// A dry mix as sold, not a dish made from one: "tortilla, wheat flour"
-/// logged the tortilla mix. "Potato, scalloped, from dry mix" is the dish.
-final _mix = RegExp(r'(?<!from |from dry )\bmix\b', caseSensitive: false);
+/// logged the tortilla mix. "Potato, scalloped, from dry mix" and
+/// "Puddings, chocolate, dry mix, instant, prepared with 2% milk" are dishes.
+final _mix = RegExp(
+  r'(?<!from |from dry )\bmix\b(?!.*\bprepared\b)',
+  caseSensitive: false,
+);
 
 /// A query naming the skin to say it is left off: "potatoes, boiled, cooked
 /// without skin" logged the boiled peel.

@@ -294,7 +294,6 @@ extension _BulkAddBody on _BulkAddScreenState {
                                 foregroundColor: emphasised
                                     ? scheme.onErrorContainer
                                     : null,
-                                visualDensity: VisualDensity.compact,
                               ),
                               child: Text(
                                 actionLabel ?? S.of(context).settingsLabel,

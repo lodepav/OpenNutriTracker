@@ -228,25 +228,36 @@ class _DashboardWidgetState extends State<DashboardWidget> {
                             circularStrokeCap: CircularStrokeCap.round,
                             backgroundColor: palette.surfaceMuted,
                             progressColor: progressColor,
-                            center: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                AnimatedFlipCounter(
-                                  duration: const Duration(milliseconds: 800),
-                                  curve: AppMotion.emphasized,
-                                  value: ringValue.round(),
-                                  textStyle: textTheme.headlineSmall?.copyWith(
-                                    height: 1,
-                                    fontWeight: FontWeight.w700,
-                                  ),
+                            // Large text shrinks to stay inside the stroke.
+                            center: SizedBox(
+                              // the label sits low, where the ring is narrower
+                              width: 72,
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    AnimatedFlipCounter(
+                                      duration: const Duration(
+                                        milliseconds: 800,
+                                      ),
+                                      curve: AppMotion.emphasized,
+                                      value: ringValue.round(),
+                                      textStyle: textTheme.headlineSmall
+                                          ?.copyWith(
+                                            height: 1,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                    ),
+                                    Text(
+                                      ringLabel,
+                                      style: textTheme.labelSmall?.copyWith(
+                                        color: palette.textMuted,
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                Text(
-                                  ringLabel,
-                                  style: textTheme.labelSmall?.copyWith(
-                                    color: palette.textMuted,
-                                  ),
-                                ),
-                              ],
+                              ),
                             ),
                           ),
                         ),

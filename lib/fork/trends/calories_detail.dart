@@ -248,7 +248,7 @@ class MacroEnergyChart extends StatelessWidget {
                           getTooltipColor: (_) => scheme.inverseSurface,
                           fitInsideHorizontally: true,
                           fitInsideVertically: true,
-                          // Cut, as energyValue is everywhere (S114).
+                          // Rounded, as energyValue is everywhere (S114).
                           getTooltipItem: (group, _, rod, _) => BarTooltipItem(
                             '${rod.toY.round()} $unit\n${dayLabel(group.x)}',
                             TextStyle(color: scheme.onInverseSurface),

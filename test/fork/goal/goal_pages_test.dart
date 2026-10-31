@@ -87,6 +87,13 @@ Future<void> _pump(WidgetTester tester, Widget home) async {
   await tester.pumpAndSettle();
 }
 
+/// Saves to the settings in use, as the store does for the active profile.
+class _Settings extends Fake implements AdaptiveStore {
+  @override
+  Future<void> save(AdaptiveSettings value) async =>
+      AdaptiveStore.settings.value = value;
+}
+
 void main() {
   testWidgets('the plan: a grid, this week, its phases, the one now', (
     tester,
@@ -124,28 +131,24 @@ void main() {
     tester,
   ) async {
     final cut = _cut();
-    final queue = reflowed(
-      cut,
-      [
-        GoalDraft(
-          kind: PhaseKind.maintain,
-          startKg: 80,
-          start: _start,
-          paceKg: 0,
-          breaks: false,
-          maintainWeeks: 4,
-        ).toPlan(),
-        GoalDraft(
-          kind: PhaseKind.bulk,
-          startKg: 80,
-          targetKg: 84,
-          start: _start,
-          paceKg: 0.25,
-          breaks: false,
-        ).toPlan(),
-      ],
-      fromKg: 86.4,
-    );
+    final queue = reflowed(cut, [
+      GoalDraft(
+        kind: PhaseKind.maintain,
+        startKg: 80,
+        start: _start,
+        paceKg: 0,
+        breaks: false,
+        maintainWeeks: 4,
+      ).toPlan(),
+      GoalDraft(
+        kind: PhaseKind.bulk,
+        startKg: 80,
+        targetKg: 84,
+        start: _start,
+        paceKg: 0.25,
+        breaks: false,
+      ).toPlan(),
+    ], fromKg: 86.4);
     await _pump(
       tester,
       Scaffold(
@@ -472,6 +475,34 @@ void main() {
       ),
       findsNothing,
     );
+  });
+
+  testWidgets('leaving puts back the settings a step changed', (tester) async {
+    addTearDown(() => AdaptiveStore.settings.value = const AdaptiveSettings());
+    await _pump(
+      tester,
+      GoalPlannerScreen(
+        setup: const PlannerSetup(
+          nowKg: 86.4,
+          unit: BodyWeightUnit.kg,
+          expenditureKcal: 3045,
+          formulaKcal: 3540,
+          bodyFatPercent: 22,
+        ),
+        draft: GoalDraft.fresh(86.4, _start, targetKg: 80),
+        onStart: (_) async => true,
+        store: _Settings(),
+      ),
+    );
+    AdaptiveStore.settings.value = AdaptiveStore.settings.value.copyWith(
+      adaptiveTarget: true,
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Close'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Leave'));
+    await tester.pumpAndSettle();
+    expect(AdaptiveStore.settings.value.adaptiveTarget, isFalse);
   });
 
   testWidgets('the check-in settings show only on Adaptive', (tester) async {

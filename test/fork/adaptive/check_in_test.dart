@@ -810,6 +810,8 @@ void main() {
       ),
       findsOneWidget,
     );
+    // not Trends' expenditure, which holds the average activity
+    expect(find.text("Expenditure with this week's activity"), findsOneWidget);
   });
 
   test('each changed setting is a sentence', () {

@@ -254,8 +254,9 @@ class GoalPlannerScreen extends StatefulWidget {
 
 class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
   late final _store = widget.store ?? AdaptiveStore();
-  late final _before = AdaptiveStore.settings.value;
-  late final _macrosBefore = OnboardingMacros.pending.value;
+  // Not late: read when the planner opens, before a step changes them.
+  final _before = AdaptiveStore.settings.value;
+  final _macrosBefore = OnboardingMacros.pending.value;
   late GoalDraft _draft = widget.draft;
 
   DateTime get _today => widget.today ?? DateTime.now();

@@ -457,7 +457,7 @@ List<TrendTile> trendTiles(
     tile(
       TrendMetric.calories,
       label: '${energyTitle(context)} · avg',
-      // Cut, as energyValue is everywhere (S114).
+      // Rounded, as energyValue is everywhere (S114).
       value: energyMean == null ? '–' : '${energyValue(context, energyMean)}',
       suffix: energyGoal == null
           ? unit

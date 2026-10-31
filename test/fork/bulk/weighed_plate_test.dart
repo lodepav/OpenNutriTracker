@@ -267,6 +267,10 @@ void main() {
         estimatedPlatePrompt,
         contains('A salad or slaw lists its dressing'),
       );
+      // and so is the butter or oil a dish was cooked in
+      expect(estimatedPlatePrompt, contains('Fat a food was cooked in'));
+      // a soup's base is its liquid, not the soup, or its solids count twice
+      expect(estimatedPlatePrompt, contains('never the soup itself'));
     });
 
     test(
