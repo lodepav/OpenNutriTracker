@@ -123,6 +123,16 @@ class _CountedCardState extends State<_CountedCard> {
 }
 
 void main() {
+  // Water and fasting are off until switched on; these tests show them.
+  setUp(() {
+    DisplayPrefs.showWater.value = true;
+    DisplayPrefs.showFasting.value = true;
+  });
+  tearDown(() {
+    DisplayPrefs.showWater.value = false;
+    DisplayPrefs.showFasting.value = false;
+  });
+
   tearDown(() async {
     TrendsOverview.loadIntakes = intakesBetween;
     TrendsOverview.loadGoal = () => GoalStartStore().load();
@@ -140,7 +150,6 @@ void main() {
   testWidgets('water hidden in Settings: no tile, no row in the table', (
     tester,
   ) async {
-    addTearDown(() => DisplayPrefs.showWater.value = true);
     await pumpTrends(
       tester,
       loaded(days: [_logged(0)], waterByDay: {day(0): 1200}),

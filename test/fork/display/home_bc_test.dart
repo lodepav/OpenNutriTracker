@@ -68,6 +68,16 @@ DashboardWidget _dashboard() => DashboardWidget(
 );
 
 void main() {
+  // Water and fasting are off until switched on; these tests show them.
+  setUp(() {
+    DisplayPrefs.showWater.value = true;
+    DisplayPrefs.showFasting.value = true;
+  });
+  tearDown(() {
+    DisplayPrefs.showWater.value = false;
+    DisplayPrefs.showFasting.value = false;
+  });
+
   testWidgets('the week: six stored days, then today as Home has it', (
     tester,
   ) async {
@@ -208,11 +218,6 @@ void main() {
   });
 
   group('water and fasting hidden in Settings', () {
-    tearDown(() {
-      DisplayPrefs.showWater.value = true;
-      DisplayPrefs.showFasting.value = true;
-    });
-
     testWidgets('one hidden: the other fills the row; both: no row', (
       tester,
     ) async {

@@ -33,9 +33,10 @@ abstract final class DisplayPrefs {
   static final homeShowsEaten = ValueNotifier<bool>(false);
 
   /// Whether water and fasting show at all (S144): off, their tiles, rows
-  /// and cards go; what was logged stays.
-  static final showWater = ValueNotifier<bool>(true);
-  static final showFasting = ValueNotifier<bool>(true);
+  /// and cards go; what was logged stays. Off until switched on (the user,
+  /// 2026-10-31).
+  static final showWater = ValueNotifier<bool>(false);
+  static final showFasting = ValueNotifier<bool>(false);
 
   static Future<Box<dynamic>> _box() => AdaptiveStore.openActiveBox();
 
@@ -51,8 +52,8 @@ abstract final class DisplayPrefs {
     macroOrder.value = parseOrder(box.get(_orderKey));
     diaryByHour.value = box.get(_byHourKey) == true;
     homeShowsEaten.value = box.get(_homeEatenKey) == true;
-    showWater.value = box.get(_showWaterKey) != false;
-    showFasting.value = box.get(_showFastingKey) != false;
+    showWater.value = box.get(_showWaterKey) == true;
+    showFasting.value = box.get(_showFastingKey) == true;
   }
 
   static Future<void> setMacroOrder(List<Macro> order) async {

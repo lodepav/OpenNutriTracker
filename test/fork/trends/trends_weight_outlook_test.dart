@@ -10,6 +10,7 @@ import 'package:opennutritracker/core/domain/usecase/get_water_intake_usecase.da
 import 'package:opennutritracker/core/domain/usecase/get_weight_log_usecase.dart';
 import 'package:opennutritracker/core/utils/energy_unit_provider.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
+import 'package:opennutritracker/fork/display/display_prefs.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/fork/adaptive/expenditure.dart';
 import 'package:opennutritracker/fork/adaptive/goal_plan.dart';
@@ -100,6 +101,16 @@ Future<void> _pump(WidgetTester tester, List<WeightLogEntity> weight) async {
 }
 
 void main() {
+  // Water and fasting are off until switched on; these tests show them.
+  setUp(() {
+    DisplayPrefs.showWater.value = true;
+    DisplayPrefs.showFasting.value = true;
+  });
+  tearDown(() {
+    DisplayPrefs.showWater.value = false;
+    DisplayPrefs.showFasting.value = false;
+  });
+
   tearDown(() async => locator.reset());
 
   testWidgets('two weigh-ins in the range: the trend, labelled as one', (

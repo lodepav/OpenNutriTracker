@@ -4,6 +4,7 @@ import 'package:opennutritracker/core/data/repository/user_repository.dart';
 import 'package:opennutritracker/core/domain/entity/body_weight_unit_entity.dart';
 import 'package:opennutritracker/core/domain/usecase/get_config_usecase.dart';
 import 'package:opennutritracker/core/domain/usecase/get_kcal_goal_usecase.dart';
+import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/core/utils/reload_diary_and_trends.dart';
 import 'package:opennutritracker/features/home/presentation/bloc/home_bloc.dart';
@@ -20,6 +21,10 @@ import 'package:opennutritracker/fork/adaptive/choice.dart';
 import 'package:opennutritracker/fork/adaptive/expenditure.dart';
 import 'package:opennutritracker/fork/adaptive/expenditure_settings_ui.dart';
 import 'package:opennutritracker/fork/units/energy_text.dart';
+import 'package:opennutritracker/fork/goal/phase_colors.dart';
+import 'package:opennutritracker/fork/phases/phases.dart';
+import 'package:opennutritracker/fork/trends/trends_widgets.dart'
+    show waterColor;
 import 'package:opennutritracker/fork/display/display_prefs.dart';
 import 'package:opennutritracker/fork/display/settings_tile.dart';
 
@@ -467,110 +472,149 @@ class _CheckInScreenState extends State<CheckInScreen> {
             ],
             if (checkIn.fromProfile)
               Text(_fromProfileText(checkIn))
-            else ...[
-              Text('Past week', style: theme.textTheme.titleMedium),
-              _row(
-                'Average logged',
-                checkIn.averageIntakeKcal == null
-                    ? 'nothing logged'
-                    : '${_kcal(checkIn.averageIntakeKcal!)} '
-                          '(${checkIn.loggedDays} of 7 days)',
-              ),
-              _row('Weigh-ins', '${checkIn.weighIns}'),
-              if (checkIn.trendKg != null) _row('Trend', _kg(checkIn.trendKg!)),
-              if (checkIn.weekChangeKg != null)
-                _row('Trend change', _kg(checkIn.weekChangeKg!, signed: true)),
-              if (!checkIn.enoughData)
-                Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: Text(
-                    checkIn.breakHold == null
-                        ? 'Not enough data this week (4 logged days and a '
-                              'weigh-in are needed), so the expenditure '
-                              'carries from before.'
-                        : _breakHoldText(checkIn.breakHold!),
-                    style: TextStyle(color: theme.colorScheme.tertiary),
+            else
+              _card(
+                context,
+                Icons.event_note,
+                waterColor(context),
+                'Past week',
+                [
+                  _row(
+                    'Average logged',
+                    checkIn.averageIntakeKcal == null
+                        ? 'nothing logged'
+                        : '${_kcal(checkIn.averageIntakeKcal!)} '
+                              '(${checkIn.loggedDays} of 7 days)',
                   ),
-                ),
-            ],
-            const Divider(height: 32),
-            // Trends' expenditure holds the window's average activity; this
-            // one the week's, or none, so it is named for it.
-            _row(switch (settings.activityMode) {
-              ActivityMode.off => 'Expenditure',
-              ActivityMode.weekly => 'Expenditure with this week\'s activity',
-              ActivityMode.daily => 'Expenditure before activity',
-            }, _kcal(checkIn.expenditureKcal)),
-            if (checkIn.activityKcal case final activity?)
-              _row('Of it, counted activity', '${_kcal(activity)} a day'),
-            if (current != null)
-              _row(switch ((daily, last == null)) {
-                // Before the first check-in it is the formula's, which
-                // Home adds the day's activity to.
-                (true, true) => 'Formula target before activity',
-                (false, true) => 'Formula target without activity',
-                (true, false) => 'Current target before activity',
-                (false, false) => 'Current target',
-              }, _kcal(current)),
-            _row(
-              daily ? 'Proposed target before activity' : 'Proposed target',
-              _kcal(checkIn.proposedTargetKcal),
+                  _row('Weigh-ins', '${checkIn.weighIns}'),
+                  if (checkIn.trendKg != null)
+                    _row('Trend', _kg(checkIn.trendKg!)),
+                  if (checkIn.weekChangeKg != null)
+                    _row(
+                      'Trend change',
+                      _kg(checkIn.weekChangeKg!, signed: true),
+                      color: _towardGoalColor(
+                        context,
+                        checkIn.weekChangeKg!,
+                        checkIn.goalRateKgPerWeek,
+                      ),
+                    ),
+                  if (!checkIn.enoughData)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Text(
+                        checkIn.breakHold == null
+                            ? 'Not enough data this week (4 logged days and a '
+                                  'weigh-in are needed), so the expenditure '
+                                  'carries from before.'
+                            : _breakHoldText(checkIn.breakHold!),
+                        style: TextStyle(color: theme.colorScheme.tertiary),
+                      ),
+                    ),
+                ],
+              ),
+            const SizedBox(height: 12),
+            _card(
+              context,
+              Icons.local_fire_department_outlined,
+              phaseColor(context, PhaseKind.cut),
+              'Expenditure',
+              [
+                // Trends' expenditure holds the window's average activity; this
+                // one the week's, or none, so it is named for it.
+                _row(switch (settings.activityMode) {
+                  ActivityMode.off => 'Estimated per day',
+                  ActivityMode.weekly =>
+                    'Expenditure with this week\'s activity',
+                  ActivityMode.daily => 'Expenditure before activity',
+                }, _kcal(checkIn.expenditureKcal)),
+                if (checkIn.activityKcal case final activity?)
+                  _row('Of it, counted activity', '${_kcal(activity)} a day'),
+              ],
             ),
-            if (current != null)
-              _row(
-                'Change',
-                _shownDiff(checkIn.proposedTargetKcal, current, signed: true),
-              ),
-            if (last == null &&
-                !daily &&
-                !capped &&
-                !checkIn.fromProfile &&
-                checkIn.goalRateKgPerWeek != 0)
-              Text(
-                'That is the expenditure '
-                '${checkIn.goalRateKgPerWeek < 0 ? 'less' : 'plus'} '
-                '${_shownDiff(checkIn.expenditureKcal, checkIn.proposedTargetKcal)} '
-                'for ${_kg(checkIn.goalRateKgPerWeek, signed: true)} a week'
-                '${_perKg(checkIn, settings)}.',
-                style: theme.textTheme.bodySmall,
-              ),
-            if (daily)
-              Text(
-                "Each day's counted activity is added to it, at most "
-                '${_kcal(maxDailyActivityKcal)}.',
-                style: theme.textTheme.bodySmall,
-              ),
-            if (checkIn.activityChangeKcal case final change?
-                when change.abs() >= 1)
-              Text(
-                "The past week's activity moves the target "
-                '${energyText(context, change, signed: true)} from the last '
-                "check-in's; the check-in limit doesn't hold it back.",
-                style: theme.textTheme.bodySmall,
-              ),
-            if (capped && cap != null)
-              Text(
-                'A check-in moves the expenditure under the target at most '
-                '${_kcal(cap)}; the full change would put the target at '
-                '${_kcal(checkIn.uncappedTargetKcal)}.',
-                style: theme.textTheme.bodySmall,
-              )
-            else if (cap != null && last != null && !checkIn.fromProfile)
-              Text(
-                'The expenditure moved less than the check-in limit of '
-                '${_kcal(cap)}, so none of the change is held back.',
-                style: theme.textTheme.bodySmall,
-              ),
-            if (checkIn.daysToTargetAtGoal != null)
-              _row(
-                'Target weight, chosen pace',
-                _eta(checkIn.daysToTargetAtGoal!),
-              ),
-            if (checkIn.daysToTargetAtTrend != null)
-              _row(
-                'Target weight, current trend',
-                _eta(checkIn.daysToTargetAtTrend!),
-              ),
+            const SizedBox(height: 12),
+            _card(
+              context,
+              Icons.flag_outlined,
+              theme.colorScheme.primary,
+              'Target',
+              [
+                if (current != null)
+                  _row(switch ((daily, last == null)) {
+                    // Before the first check-in it is the formula's, which
+                    // Home adds the day's activity to.
+                    (true, true) => 'Formula target before activity',
+                    (false, true) => 'Formula target without activity',
+                    (true, false) => 'Current target before activity',
+                    (false, false) => 'Current target',
+                  }, _kcal(current)),
+                _row(
+                  daily ? 'Proposed target before activity' : 'Proposed target',
+                  _kcal(checkIn.proposedTargetKcal),
+                  color: theme.colorScheme.primary,
+                  large: true,
+                ),
+                if (current != null)
+                  _row(
+                    'Change',
+                    _shownDiff(
+                      checkIn.proposedTargetKcal,
+                      current,
+                      signed: true,
+                    ),
+                  ),
+                if (last == null &&
+                    !daily &&
+                    !capped &&
+                    !checkIn.fromProfile &&
+                    checkIn.goalRateKgPerWeek != 0)
+                  Text(
+                    'That is the expenditure '
+                    '${checkIn.goalRateKgPerWeek < 0 ? 'less' : 'plus'} '
+                    '${_shownDiff(checkIn.expenditureKcal, checkIn.proposedTargetKcal)} '
+                    'for ${_kg(checkIn.goalRateKgPerWeek, signed: true)} a week'
+                    '${_perKg(checkIn, settings)}.',
+                    style: theme.textTheme.bodySmall,
+                  ),
+                if (daily)
+                  Text(
+                    "Each day's counted activity is added to it, at most "
+                    '${_kcal(maxDailyActivityKcal)}.',
+                    style: theme.textTheme.bodySmall,
+                  ),
+                if (checkIn.activityChangeKcal case final change?
+                    when change.abs() >= 1)
+                  Text(
+                    "The past week's activity moves the target "
+                    '${energyText(context, change, signed: true)} from the last '
+                    "check-in's; the check-in limit doesn't hold it back.",
+                    style: theme.textTheme.bodySmall,
+                  ),
+                if (capped && cap != null)
+                  Text(
+                    'A check-in moves the expenditure under the target at most '
+                    '${_kcal(cap)}; the full change would put the target at '
+                    '${_kcal(checkIn.uncappedTargetKcal)}.',
+                    style: theme.textTheme.bodySmall,
+                  )
+                else if (cap != null && last != null && !checkIn.fromProfile)
+                  Text(
+                    'The expenditure moved less than the check-in limit of '
+                    '${_kcal(cap)}, so none of the change is held back.',
+                    style: theme.textTheme.bodySmall,
+                  ),
+                if (checkIn.daysToTargetAtGoal != null)
+                  _row(
+                    'Target weight, chosen pace',
+                    _eta(checkIn.daysToTargetAtGoal!),
+                  ),
+                if (checkIn.daysToTargetAtTrend != null)
+                  _row(
+                    'Target weight, current trend',
+                    _eta(checkIn.daysToTargetAtTrend!),
+                  ),
+              ],
+            ),
             const SizedBox(height: 16),
             TextField(
               key: const ValueKey('check-in-target'),
@@ -645,17 +689,71 @@ class _CheckInScreenState extends State<CheckInScreen> {
   }
 
   // Wraps at large text rather than squeezing the label a letter a line.
-  Widget _row(String label, String value) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 4),
-    child: Wrap(
-      alignment: WrapAlignment.spaceBetween,
-      spacing: 12,
+  Widget _row(String label, String value, {Color? color, bool large = false}) =>
+      Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Wrap(
+          alignment: WrapAlignment.spaceBetween,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          spacing: 12,
+          children: [
+            Text(label),
+            Text(
+              value,
+              style: TextStyle(
+                fontWeight: large ? FontWeight.w700 : FontWeight.w600,
+                fontSize: large ? 20 : null,
+                color: color,
+              ),
+            ),
+          ],
+        ),
+      );
+
+  /// A section of the check-in: a tinted icon and title over its rows, so
+  /// the week, the expenditure and the target read apart at a glance.
+  Widget _card(
+    BuildContext context,
+    IconData icon,
+    Color color,
+    String title,
+    List<Widget> children,
+  ) => AppCard(
+    padding: const EdgeInsets.all(16),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(label),
-        Text(value, style: const TextStyle(fontWeight: FontWeight.w600)),
+        Row(
+          children: [
+            CircleAvatar(
+              radius: 16,
+              backgroundColor: color.withValues(alpha: 0.18),
+              child: Icon(icon, size: 18, color: color),
+            ),
+            const SizedBox(width: 12),
+            Flexible(
+              child: Text(
+                title,
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        ...children,
       ],
     ),
   );
+
+  /// The week's trend change toward the goal's direction in green, away
+  /// from it in orange; at maintenance, uncoloured.
+  Color? _towardGoalColor(BuildContext context, double change, double goal) {
+    if (goal == 0 || change.abs() < 0.05) return null;
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    return change.sign == goal.sign
+        ? (dark ? const Color(0xFF81C784) : const Color(0xFF2E7D32))
+        : phaseColor(context, PhaseKind.cut);
+  }
 }
 
 /// Where the kcal goal comes from; stored as the two switches.

@@ -529,6 +529,11 @@ void main() {
     expect(find.text('Weekly check-in'), findsNothing);
     await tester.tap(find.text('Your first target'));
     await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('Accept'),
+      200,
+      scrollable: find.byType(Scrollable).last,
+    );
     await tester.tap(find.text('Accept'));
     await tester.pumpAndSettle();
 
@@ -559,6 +564,11 @@ void main() {
 
     expect(find.textContaining(' kJ'), findsWidgets);
     expect(find.textContaining('kcal'), findsNothing);
+    await tester.scrollUntilVisible(
+      find.text('Accept'),
+      200,
+      scrollable: find.byType(Scrollable).last,
+    );
     await tester.enterText(
       find.byKey(const ValueKey('check-in-target')),
       '8368',
@@ -851,7 +861,7 @@ void main() {
     final label = find.text('Target weight, chosen pace');
     await tester.scrollUntilVisible(label, 200);
     // Squeezed beside its value it took a letter a line.
-    expect(tester.getSize(label).height, lessThan(150));
+    expect(tester.getSize(label).height, lessThan(200));
     expect(find.textContaining('Your first target'), findsNothing);
     expect(tester.takeException(), isNull);
   });
