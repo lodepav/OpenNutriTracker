@@ -64,7 +64,8 @@ class GoalYouTile extends StatefulWidget {
   final String? note;
   final String? below;
 
-  /// Whether the profile has a pace or a target weight of its own.
+  /// Whether the profile has a target weight of its own; its weekly rate
+  /// alone is no goal (the user, 2026-10-31).
   final bool profileGoal;
   final String title;
   final VoidCallback onTap;

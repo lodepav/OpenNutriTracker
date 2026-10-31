@@ -53,13 +53,20 @@ const _everyday = {
   'basmati rice': _longGrainRice,
   'jasmine rice': _longGrainRice,
   // A soup's broth, which found canned chicken "with broth" and a dry
-  // bouillon cube at 170 kcal per 100 g, tripling a bowl of soup.
+  // bouillon cube at 170 kcal per 100 g, tripling a bowl of soup. Ready to
+  // serve, not home-made stock (36 kcal per 100 ml): on 17 soups the median
+  // miss fell from 24% to 20%.
   'chicken broth': _chickenStock,
   'chicken stock': _chickenStock,
   'beef broth': _beefStock,
   'beef stock': _beefStock,
   'vegetable broth': 'Soup, vegetable broth, ready to serve',
   'vegetable stock': 'Soup, vegetable broth, ready to serve',
+  // a curry's or soup's coconut milk, which found the carton drink at 31
+  // kcal per 100 ml; the photo path is for meals, not drinks
+  'coconut milk': _cannedCoconutMilk,
+  'coconut milk, canned': _cannedCoconutMilk,
+  'coconut milk, full fat': _cannedCoconutMilk,
   // a burger's bun, which found a whole hamburger
   'hamburger bun': _burgerBun,
   'hamburger bun, plain': _burgerBun,
@@ -166,8 +173,10 @@ const _unsaltedButter = 'Butter, without salt';
 const _cola = 'Soft drink, cola';
 const _longGrainRice = 'Rice, white, long-grain, regular, enriched, cooked';
 const _dietCola = 'Soft drink, cola, diet';
-const _chickenStock = 'Soup, stock, chicken, home-prepared';
-const _beefStock = 'Soup, stock, beef, home-prepared';
+const _chickenStock = 'Soup, chicken broth, ready-to-serve';
+const _cannedCoconutMilk =
+    'Nuts, coconut milk, canned (liquid expressed from grated meat and water)';
+const _beefStock = 'Soup, beef broth or bouillon canned, ready-to-serve';
 const _burgerBun = 'Roll, white, hamburger bun';
 const _pasta = 'Pasta, cooked';
 const _wholeWheatPasta =
