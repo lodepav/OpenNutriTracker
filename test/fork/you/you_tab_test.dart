@@ -112,6 +112,16 @@ Future<List<String?>> _pump(WidgetTester tester, UserEntity user) async {
 }
 
 void main() {
+  // Water and fasting are off until switched on; these tests show them.
+  setUp(() {
+    DisplayPrefs.showWater.value = true;
+    DisplayPrefs.showFasting.value = true;
+  });
+  tearDown(() {
+    DisplayPrefs.showWater.value = false;
+    DisplayPrefs.showFasting.value = false;
+  });
+
   tearDown(() => GetIt.instance.reset());
 
   testWidgets('who is active, with a Switch button', (tester) async {
@@ -152,10 +162,6 @@ void main() {
   testWidgets('water and fasting hidden in Settings: their tools go', (
     tester,
   ) async {
-    addTearDown(() {
-      DisplayPrefs.showWater.value = true;
-      DisplayPrefs.showFasting.value = true;
-    });
     await _pump(tester, _user(gender: UserGenderEntity.nonBinary));
     final fasting = find.bySemanticsIdentifier('profile-fasting-entry');
     final water = find.bySemanticsIdentifier('profile-water-goal');
