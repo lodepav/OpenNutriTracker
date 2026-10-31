@@ -4,6 +4,8 @@ import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_ui.dart';
 import 'package:opennutritracker/fork/adaptive/check_in_history.dart';
 
+import '../../helpers/ux_checks.dart';
+
 class _Store extends Fake implements AdaptiveStore {
   final List<CheckInRecord> records;
 
@@ -91,4 +93,19 @@ void main() {
     await open(tester, _Store([]));
     expect(find.textContaining('No check-ins yet'), findsOneWidget);
   });
+
+  testWidgets(
+    'the history at 200% text: nothing cut, the targets and contrast',
+    (tester) async {
+      await checkScreen(
+        tester,
+        CheckInHistoryScreen(
+          store: _Store([
+            _record(20, 2500, 2100, 2000),
+            _record(13, 2480, 2050, 2050),
+          ]),
+        ),
+      );
+    },
+  );
 }

@@ -10,6 +10,8 @@ import 'package:provider/provider.dart';
 
 import '../../fixture/intake_entity_fixtures.dart';
 
+import '../../helpers/ux_checks.dart';
+
 // Seam S124: the foods behind a total, with a switch between them.
 
 Future<void> _pump(
@@ -137,5 +139,19 @@ void main() {
       IntakeTypeEntity.lunch,
       IntakeTypeEntity.dinner,
     ]);
+  });
+
+  testWidgets('the page at 200% text: nothing cut, the targets and contrast', (
+    tester,
+  ) async {
+    await checkScreen(
+      tester,
+      MacroFoodsPage(
+        initial: FoodsMetric.protein,
+        intakes: [oats, chicken, apple],
+        totals: const {},
+        day: DateTime(2026, 10, 25),
+      ),
+    );
   });
 }

@@ -4,6 +4,8 @@ import 'package:opennutritracker/core/domain/entity/user_gender_entity.dart';
 import 'package:opennutritracker/fork/body/measurement_store.dart';
 import 'package:opennutritracker/fork/body/waist_ratio.dart';
 
+import '../../helpers/ux_checks.dart';
+
 DateTime _day(int offset) {
   final now = DateTime.now();
   return DateTime(now.year, now.month, now.day + offset);
@@ -95,5 +97,23 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.textContaining('Set your height in your profile'), findsOne);
+  });
+
+  testWidgets('the page at 200% text: nothing cut, the targets and contrast', (
+    tester,
+  ) async {
+    await checkScreen(
+      tester,
+      WaistRatioPage(
+        imperial: false,
+        rangeDays: 30,
+        frame: () async => (heightCm: 180.0, gender: UserGenderEntity.female),
+        load: () async => [
+          _m(-12, BodyMetric.waist, 91.44),
+          _m(-1, BodyMetric.waist, 86),
+          _m(-1, BodyMetric.hips, 98),
+        ],
+      ),
+    );
   });
 }

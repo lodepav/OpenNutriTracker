@@ -8,6 +8,8 @@ import 'package:opennutritracker/core/domain/entity/weight_log_entity.dart';
 import 'package:opennutritracker/fork/weight/weight_history_view.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 
+import '../../helpers/ux_checks.dart';
+
 // Seam S122: Weight history's chart, stats and rows.
 
 final _today = DateTime(2026, 10, 25);
@@ -180,5 +182,24 @@ void main() {
     expect(weightWindowDays(0, entries.take(2).toList(), _today), 30);
     expect(weightWindowDays(0, const [], _today), 30);
     expect(weightWindowDays(90, entries, _today), 90);
+  });
+
+  testWidgets('the view at 200% text: nothing cut, the targets and contrast', (
+    tester,
+  ) async {
+    await checkScreen(
+      tester,
+      WeightHistoryView(
+        entries: [
+          for (var i = 0; i < 6; i++)
+            WeightLogEntity(date: _ago(i * 3), weightKg: 80.0 + i),
+        ],
+        unit: BodyWeightUnit.kg,
+        targetWeightKg: 75,
+        onAdd: () {},
+        onDelete: (_) {},
+        today: _today,
+      ),
+    );
   });
 }

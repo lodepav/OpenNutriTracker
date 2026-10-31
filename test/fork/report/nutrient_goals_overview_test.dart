@@ -9,6 +9,8 @@ import 'package:opennutritracker/features/add_meal/domain/entity/meal_nutriments
 import 'package:opennutritracker/fork/report/nutrient_explorer.dart';
 import 'package:opennutritracker/fork/report/nutrient_goals_overview.dart';
 
+import '../../helpers/ux_checks.dart';
+
 IntakeEntity _eat(int day, double grams, {double? fiber, double? sodium}) =>
     IntakeEntity(
       id: '$day-$grams',
@@ -165,4 +167,23 @@ void main() {
     expect(edits, 1);
     expect(asked.length, before + 1);
   });
+
+  testWidgets(
+    'the screen at 200% text: nothing cut, the targets and contrast',
+    (tester) async {
+      await checkScreen(
+        tester,
+        NutrientGoalsOverview(
+          today: () async => DateTime(2026, 10, 25),
+          load: (first, last) async => _intakes,
+          days: (first, last) async => [
+            _day(25, fibreGoal: 30, sodiumGoal: 2300),
+          ],
+          user: () async => null,
+          dayStart: () async => 0,
+          onEdit: (_) async {},
+        ),
+      );
+    },
+  );
 }

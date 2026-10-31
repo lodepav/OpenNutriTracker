@@ -267,8 +267,6 @@ class _StatTile extends StatelessWidget {
           children: [
             Text(
               label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
               style: text.labelMedium?.copyWith(
                 color: paletteOf(context).textMuted,
               ),

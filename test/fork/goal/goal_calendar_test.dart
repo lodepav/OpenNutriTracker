@@ -14,6 +14,8 @@ import 'package:opennutritracker/fork/phases/phases.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 import 'package:provider/provider.dart';
 
+import '../../helpers/ux_checks.dart';
+
 // Monday 5 October 2026; the cut runs 13 weeks, to Jan 3.
 final _cut = GoalDraft(
   kind: PhaseKind.cut,
@@ -340,6 +342,26 @@ void main() {
     expect(find.text('6.8 kg'), findsOneWidget);
     expect(find.textContaining('bulking'), findsNothing);
   });
+
+  testWidgets(
+    'the calendar at 200% text: nothing cut, the targets and contrast',
+    (tester) async {
+      await checkScreen(
+        tester,
+        GoalCalendarPage(
+          unit: BodyWeightUnit.kg,
+          nowKg: 85.1,
+          today: DateTime(2026, 10, 29),
+          store: _MemoryPhases(_cut, [_hold, _bulk]),
+          actions: GoalActions(
+            store: _MemoryPhases(_cut, [_hold, _bulk]),
+            save: (_, _) async => true,
+            clock: () => DateTime(2026, 10, 29),
+          ),
+        ),
+      );
+    },
+  );
 }
 
 extension on DateTime {
