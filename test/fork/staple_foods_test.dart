@@ -171,6 +171,20 @@ void main() {
     ('tzatziki sauce', 'Tzatziki dip'),
     ('flan', 'Flan'),
     ('spaghetti, cooked, enriched', 'Pasta, cooked'),
+    ('beef, stewed', 'Beef, stew meat'),
+    ('bread, flatbread', 'Wheat flatbread'),
+    ('bread, italian or french', 'Bread, Italian'),
+    ('cabbage, cooked', 'Cabbage, green, cooked'),
+    ('fish, battered, fried', 'Restaurant, family style, fish fillet'),
+    ('ice cream, vanilla, regular', 'Ice cream, vanilla'),
+    ('onions, cooked, fried', 'Onions, yellow, sauteed'),
+    ('pastry, phyllo, baked', 'Phyllo dough'),
+    ('pork, cured, prosciutto', 'Ham, prosciutto'),
+    ('pork, cutlet, breaded, fried', 'Pork schnitzel breaded, fried'),
+    ('potatoes, french fried', 'Potato, french fries, NFS'),
+    ('rice noodles, stir-fried', 'Rice noodles, cooked'),
+    ('snow peas, cooked', 'Snowpeas, fresh, cooked'),
+    ('wontons, pork, cooked', 'Wonton, dumpling or pot sticker, steamed'),
   ]) {
     test('bare "$query" resolves to "$expected..."', () async {
       final item = await resolve(query);
