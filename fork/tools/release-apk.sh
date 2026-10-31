@@ -107,9 +107,10 @@ publish() {  # version, apk
 [[ -f "$KS" ]] || { echo "no keystore at $KS" >&2; exit 2; }
 [[ -z "$(git status --porcelain)" ]] || { echo "uncommitted changes: a release is built from a commit" >&2; exit 2; }
 up_to_date || catch_up || exit 2
-# release_notes.dart numbers the release and writes its notes: its tests first.
-flutter test test/fork/tools/ >/dev/null || { echo "the release tools' tests fail: flutter test test/fork/tools/" >&2; exit 2; }
-took "release tools' tests"
+# What is released has passed everything, a process a file. Its tests include release_notes.dart's,
+# which numbers the release and writes its notes.
+fork/tools/verify.sh --strict || { echo "the checks fail: nothing released" >&2; exit 2; }
+took "checks"
 
 # The version: from the merges since the last release, or the one fork/VERSION holds when it has no
 # tag yet (the first release, or a run that did not get published), which is released as it is.
@@ -124,8 +125,9 @@ if ! git rev-parse -q --verify "refs/tags/openbite-v$VER" >/dev/null; then
     echo "$NOTES" > "$NF"
     notes_tool changelog "$VER" "$(date +%F)" "$UP" "$NF"
     rm -f "$NF"
-    git add fork/CHANGELOG.md
-    git commit -q -m "chore(fork): OpenBite $VER" -- fork/CHANGELOG.md
+    fork/tools/upgrade_fixture.sh "$VER"
+    git add fork/CHANGELOG.md "test/fork/upgrade/fixtures/$VER.tar.gz"
+    git commit -q -m "chore(fork): OpenBite $VER" -- fork/CHANGELOG.md "test/fork/upgrade/fixtures/$VER.tar.gz"
   fi
 else
   NEXT="$(notes_tool next)"
@@ -146,8 +148,9 @@ else
   json "$NEXT" notes > "$NF"
   notes_tool changelog "$NEW" "$(date +%F)" "$UP" "$NF"
   rm -f "$NF"
-  git add fork/VERSION fork/CHANGELOG.md
-  git commit -q -m "chore(fork): OpenBite $NEW" -- fork/VERSION fork/CHANGELOG.md
+  fork/tools/upgrade_fixture.sh "$NEW"
+  git add fork/VERSION fork/CHANGELOG.md "test/fork/upgrade/fixtures/$NEW.tar.gz"
+  git commit -q -m "chore(fork): OpenBite $NEW" -- fork/VERSION fork/CHANGELOG.md "test/fork/upgrade/fixtures/$NEW.tar.gz"
   VER="$NEW"
 fi
 
@@ -172,7 +175,7 @@ else
   git worktree add -q --detach "$SRC" HEAD
 fi
 cp lib/core/utils/env.g.dart "$SRC/lib/core/utils/"
-(cd "$SRC" && flutter gen-l10n && nice -n 19 flutter build apk --flavor full --release --target-platform android-arm64)
+(cd "$SRC" && flutter gen-l10n && nice -n 19 "$ROOT/fork/tools/heavy.sh" flutter build apk --flavor full --release --target-platform android-arm64)
 UNSIGNED="$SRC/build/app/outputs/flutter-apk/app-full-release.apk"
 # Its daemon would sit on some 4 GB for three hours, enough to get the emulator OOM-killed.
 (cd "$SRC/android" && ./gradlew --stop -q) || true
