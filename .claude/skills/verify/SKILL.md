@@ -38,3 +38,5 @@ A clean pass is remembered by commit: merge, then push, and the hook doesn't run
 ## Before a release
 
 `fork/tools/release-apk.sh` runs `verify.sh --strict` itself (plain `flutter test`, a process a file, about 8.5 min), then builds and runs `fork/tools/release-check.sh` on the APK. Its gates block.
+
+`.github/workflows/fork-checks.yml` runs the strict level on every push to `fork/main`, once Actions is on for the repo. `fork/tools/release-apk.sh` is local only, not in git.

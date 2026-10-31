@@ -27,6 +27,11 @@ already_checked() {
   ! git diff --name-only "$last" HEAD | grep -qvE '\.md$|^fork/VERSION$'
 }
 
+# git doesn't carry core.hooksPath over a clone: without it nothing guards fork/main.
+if [[ -z "${CI:-}" && "$(git config core.hooksPath)" != fork/hooks ]]; then
+  echo "verify: warning: the hooks are off in this clone; run fork/tools/install-hooks.sh" >&2
+fi
+
 if already_checked; then
   echo "verify: passed at $(git rev-parse --short "$(cat "$STAMP")"), and only docs changed since"
   exit 0
@@ -41,6 +46,7 @@ if git grep -nE '^(<{7}|>{7})( |$)' -- 'fork/*.md' '*.md'; then
   exit 1
 fi
 python3 fork/tools/seam_check.py
+fork/tools/sibling_check.sh
 flutter analyze lib test
 if [[ -n "$strict" ]]; then
   flutter gen-l10n

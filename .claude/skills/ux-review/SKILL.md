@@ -12,7 +12,7 @@ Modelled on `implement-review`. The reviewer is the `ux-reviewer` agent (`.claud
 ## 0. Set up
 
 1. Run `fork/tools/verify.sh` once; record the baseline. It can run beside the emulator (the `verify` skill).
-2. Run `fork/tools/ux_words.py` and fix what it lists, or add it to its `ALLOWED` with the reason. Findings a tool can catch don't need a reviewer. The same goes for 200% text, targets, labels and contrast: `checkScreen` in `test/helpers/ux_checks.dart` runs in each fork screen's test file, so a new screen gets one line there.
+2. Run `fork/tools/ux_words.py` and fix what it lists, or add it to its `ALLOWED` with the reason. Findings a tool can catch don't need a reviewer. The same goes for 200% text, targets, labels and contrast: `checkScreen` in `test/helpers/ux_checks.dart` runs in each fork screen's test file, so a new screen gets one line there; `test/fork/ux_coverage_test.dart` fails until it has one or a stated reason.
 3. Boot and install: `SEED=1 FAKE_AI=true fork/tools/emulator.sh` (headless). Push the sample import files if `/sdcard/Download` lacks them.
 4. Read the **ledger**, `fork/UX_LEDGER.md`: what earlier reviews decided. New rows go at its end.
 5. Set the **focus**, which every round's prompt must carry: the screens named in the arguments, or else the screens the change under review touches, by name and with no opinion of them. A sweep of the whole app takes about an hour; pass `full sweep` only when the user asks for one.
