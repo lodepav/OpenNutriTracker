@@ -56,7 +56,7 @@ class TrendsOverview extends StatefulWidget {
     this.service,
   });
 
-  /// Where the fibre, sugars and sodium tiles and pages read the intakes;
+  /// Where the fibre, sugars and salt tiles and pages read the intakes;
   /// tests swap it.
   @visibleForTesting
   static IntakeLoader loadIntakes = intakesBetween;
@@ -441,10 +441,10 @@ List<TrendTile> trendTiles(
     return tile(
       m,
       label: '${metricTitle(context, m)} · avg',
-      value: mean == null ? '–' : '${mean.round()}',
+      value: mean == null ? '–' : nutrient.text(mean),
       suffix: goal == null
           ? nutrient.unit
-          : '/ ${goal.round()} ${nutrient.unit}',
+          : '/ ${nutrient.text(goal)} ${nutrient.unit}',
       spark: micro?.series ?? [for (final _ in dates) null],
       sparkColor: color,
     );

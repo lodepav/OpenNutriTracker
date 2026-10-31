@@ -581,9 +581,7 @@ void main() {
     expect(find.textContaining('saltier'), findsNothing);
   });
 
-  testWidgets('fibre, sugars and sodium: tiles and their pages', (
-    tester,
-  ) async {
+  testWidgets('fibre, sugars and salt: tiles and their pages', (tester) async {
     TrendsOverview.loadIntakes = (first, last) async => [
       _ate(0, 'Oats', amount: 200, fibre: 10, sodium: 400),
       _ate(-1, 'Soup', sodium: 1500),
@@ -594,7 +592,8 @@ void main() {
     await showTile(tester, 'sodium');
     expect(tileText(tester, 'fibre'), contains('20 / 30 g'));
     expect(tileText(tester, 'sugars'), contains('–'));
-    expect(tileText(tester, 'sodium'), contains('1150 / 2300 mg'));
+    // Salt from the stored sodium: 1150 mg is 2.9 g, 2300 mg 5.75 g.
+    expect(tileText(tester, 'sodium'), contains('2.9 / 5.8 g'));
 
     await openTile(tester, 'sodium');
     expect(find.text('Limit'), findsOneWidget);
@@ -605,7 +604,7 @@ void main() {
       scrollable: find.byType(Scrollable).first,
     );
     expect(find.text('Soup'), findsOneWidget);
-    expect(find.text('1500 mg'), findsOneWidget);
+    expect(find.text('3.8 g'), findsOneWidget);
     expect(find.text('Crisps'), findsNothing);
     await tester.pageBack();
     await tester.pumpAndSettle();

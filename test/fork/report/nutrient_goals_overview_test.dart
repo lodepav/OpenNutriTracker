@@ -100,8 +100,8 @@ void main() {
           foods: const [],
           foodsWithout: 0,
         );
-    expect(standingOf(s('Sodium', 2301, 2300)), GoalStanding.over);
-    expect(standingOf(s('Sodium', 2300, 2300)), GoalStanding.under);
+    expect(standingOf(s('Salt', 5.76, 5.75)), GoalStanding.over);
+    expect(standingOf(s('Salt', 5.75, 5.75)), GoalStanding.under);
     expect(standingOf(s('Fibre', 90, 30)), GoalStanding.toReach);
     expect(standingOf(s('Fibre', 1, 30)), GoalStanding.toReach);
   });
@@ -122,14 +122,15 @@ void main() {
     await tester.pumpAndSettle();
     expect(asked.single, (DateTime(2026, 10, 25), DateTime(2026, 10, 25)));
     expect(label(tester, 'Fibre'), 'Fibre, 20 of 30 g');
-    expect(label(tester, 'Sodium'), 'Sodium, 3000 of 2300 mg, over the limit');
+    // 3000 mg of sodium is 7.5 g of salt, against 2300 mg's 5.75 g.
+    expect(label(tester, 'Salt'), 'Salt, 7.5 of 5.8 g, over the limit');
 
     await tester.tap(find.bySemanticsIdentifier('nutrient-goals-week'));
     await tester.pumpAndSettle();
     expect(asked.last, (DateTime(2026, 10, 19), DateTime(2026, 10, 25)));
-    // A mean over the two days with food: 30 g, 1500 mg.
+    // A mean over the two days with food: 30 g, 1500 mg of sodium.
     expect(label(tester, 'Fibre'), 'Fibre, 30 of 30 g, reached');
-    expect(label(tester, 'Sodium'), 'Sodium, 1500 of 2300 mg');
+    expect(label(tester, 'Salt'), 'Salt, 3.8 of 5.8 g');
     expect(find.textContaining('days with food logged'), findsOneWidget);
     semantics.dispose();
   });
@@ -149,7 +150,7 @@ void main() {
         .color;
     final context = tester.element(find.byType(NutrientGoalsOverview));
     expect(bar('Fibre'), AppPalette.light.accent);
-    expect(bar('Sodium'), Theme.of(context).colorScheme.error);
+    expect(bar('Salt'), Theme.of(context).colorScheme.error);
     expect(bar('Sugars'), AppPalette.light.textMuted);
   });
 

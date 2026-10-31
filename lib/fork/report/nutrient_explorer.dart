@@ -32,6 +32,13 @@ class ExplorerNutrient {
   /// A limit rather than a target: above it is the miss.
   final bool isLimit;
 
+  /// Shown as [per100], its goal and its DRI times this: salt is the
+  /// stored sodium (mg) times 2.5 / 1000, in g.
+  final double scale;
+
+  /// Decimals its amounts show with: salt's few grams need one.
+  final int decimals;
+
   /// Energy and the macros follow a plan that may be under or over on
   /// purpose, so their bars are not marked as missed.
   bool get marksMiss => fallbackGoal != null;
@@ -44,13 +51,24 @@ class ExplorerNutrient {
     this.driKey,
     this.fallbackGoal,
     this.isLimit = false,
+    this.scale = 1,
+    this.decimals = 0,
   });
 
   /// Upstream's own sum (`NutrientPanelTotals`): amount times per 100 / 100.
   double? of(IntakeEntity intake) {
     final value = per100(intake.meal.nutriments);
-    return value == null ? null : intake.amount * value / 100;
+    return value == null ? null : intake.amount * value / 100 * scale;
   }
+
+  /// The goal [d] keeps, in the unit shown.
+  double? goalOf(TrackedDayEntity d) {
+    final goal = dayGoal(d);
+    return goal == null ? null : goal * scale;
+  }
+
+  /// [value] as its amounts show.
+  String text(double value) => value.toStringAsFixed(decimals);
 }
 
 /// Energy, the macros, and the nutrients of upstream's diary panel.
@@ -88,14 +106,18 @@ final explorerNutrients = [
     fallbackGoal: DailyNutrientPanel.defaultSaturatedFatRefG,
     isLimit: true,
   ),
+  // Salt, as labels in Europe give it, from the stored sodium (the user,
+  // 2026-10-31).
   ExplorerNutrient(
-    'Sodium',
-    'mg',
+    'Salt',
+    'g',
     (n) => n.sodium100,
     (d) => d.sodiumGoal,
     driKey: NutrientPanelKeys.sodium,
     fallbackGoal: DailyNutrientPanel.defaultSodiumRefMg,
     isLimit: true,
+    scale: 2.5 / 1000,
+    decimals: 1,
   ),
   ExplorerNutrient(
     'Potassium',
@@ -218,21 +240,22 @@ List<NutrientSummary> summarizeNutrients(
 
     final latestSet = [
       for (final d in [...days]..sort((a, b) => b.day.compareTo(a.day)))
-        nutrient.dayGoal(d),
+        nutrient.goalOf(d),
     ].whereType<double>().firstOrNull;
     double? fallback() => latestSet != null && nutrient.marksMiss
         ? latestSet
         : nutrient.fallbackGoal == null
         ? null
-        : nutrient.driKey == null
-        ? nutrient.fallbackGoal
-        : DailyNutrientPanel.defaultReferenceFor(
-            nutrient.driKey!,
-            user,
-            nutrient.fallbackGoal!,
-          );
+        : nutrient.scale *
+              (nutrient.driKey == null
+                  ? nutrient.fallbackGoal!
+                  : DailyNutrientPanel.defaultReferenceFor(
+                      nutrient.driKey!,
+                      user,
+                      nutrient.fallbackGoal!,
+                    ));
     final goals = [
-      for (final d in goalDays) nutrient.dayGoal(d) ?? fallback(),
+      for (final d in goalDays) nutrient.goalOf(d) ?? fallback(),
     ].whereType<double>().toList();
     final goal = goals.isNotEmpty
         ? goals.reduce((a, b) => a + b) / goals.length
