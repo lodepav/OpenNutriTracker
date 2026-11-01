@@ -96,7 +96,8 @@ Future<void> moveToMeal(
 
 /// Copies [intakes] to [moment] into [meal], or with [movedFrom] moves
 /// them, then says where with an Undo that takes the copies back or puts
-/// the moved entries back where they were.
+/// the moved entries back where they were. [verb] names the deed in that
+/// message when it is not a plain copy or move.
 Future<void> placeWithUndo(
   BuildContext context,
   List<IntakeEntity> intakes,
@@ -104,6 +105,7 @@ Future<void> placeWithUndo(
   IntakeTypeEntity? meal,
   DateTime? movedFrom,
   CopyEntries? copier,
+  String? verb,
 }) async {
   final entries = copier ?? CopyEntries.fromLocator();
   final messenger = ScaffoldMessenger.maybeOf(context);
@@ -117,12 +119,12 @@ Future<void> placeWithUndo(
   );
   refreshAfterCopy();
   if (messenger == null) return;
-  final verb = movedFrom == null ? 'Copied' : 'Moved';
+  final done = verb ?? (movedFrom == null ? 'Copied' : 'Moved');
   messenger.removeCurrentSnackBar();
   if (placed == null) {
     messenger.showSnackBar(
       SnackBar(
-        content: Text('Nothing ${verb.toLowerCase()}: the profile changed.'),
+        content: Text('Nothing ${done.toLowerCase()}: the profile changed.'),
       ),
     );
     return;
@@ -138,7 +140,7 @@ Future<void> placeWithUndo(
       // An action keeps a bar up until dismissed: this one goes.
       persist: false,
       content: Text(
-        '$verb${count == 1 ? '' : ' $count foods'}'
+        '$done${count == 1 ? '' : ' $count foods'}'
         '${to.isEmpty ? '' : ' to ${to.join(', ')}'}',
       ),
       action: SnackBarAction(

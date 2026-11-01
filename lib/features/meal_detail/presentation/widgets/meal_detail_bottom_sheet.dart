@@ -34,7 +34,8 @@ import 'package:opennutritracker/fork/copy/copy_ui.dart' show mealLabel;
 // [/fork]
 // [fork] S125 food-page
 import 'package:opennutritracker/fork/widget/meal_picker_chip.dart';
-import 'package:opennutritracker/fork/units/amount_text.dart' show servingTextAgrees; // [fork] S142
+import 'package:opennutritracker/fork/units/amount_text.dart'
+    show servingTextAgrees; // [fork] S142
 import 'package:opennutritracker/core/utils/extensions.dart'; // [fork] S142
 import 'package:opennutritracker/fork/meal_detail/unit_change.dart'; // [fork] S164
 // [/fork]
@@ -163,10 +164,7 @@ class _MealDetailBottomSheetState extends State<MealDetailBottomSheet> {
         // the row entirely when nothing applies (no orphan SizedBox).
         final quickOptions = productMissingRequiredInfo
             ? const <QuickServingOption>[]
-            : quickServingOptionsFor(
-                widget.product,
-                S.of(context).gramUnit,
-              );
+            : quickServingOptionsFor(widget.product, S.of(context).gramUnit);
         return Container(
           decoration: BoxDecoration(
             border: Border(
@@ -251,12 +249,14 @@ class _MealDetailBottomSheetState extends State<MealDetailBottomSheet> {
                                         widget.product,
                                       );
                                 if (converted != null) {
-                                  widget.quantityTextController
-                                      .removeListener(_onQuantityChanged);
+                                  widget.quantityTextController.removeListener(
+                                    _onQuantityChanged,
+                                  );
                                   widget.quantityTextController.text =
                                       converted;
-                                  widget.quantityTextController
-                                      .addListener(_onQuantityChanged);
+                                  widget.quantityTextController.addListener(
+                                    _onQuantityChanged,
+                                  );
                                 }
                                 // [/fork]
                                 widget.onQuantityOrUnitChanged(
@@ -270,9 +270,7 @@ class _MealDetailBottomSheetState extends State<MealDetailBottomSheet> {
                       ),
                       if (quickOptions.isNotEmpty)
                         Padding(
-                          padding: const EdgeInsets.only(
-                            top: Dimens.spacing12,
-                          ),
+                          padding: const EdgeInsets.only(top: Dimens.spacing12),
                           child: Align(
                             alignment: Alignment.centerLeft,
                             child: Wrap(
@@ -280,8 +278,7 @@ class _MealDetailBottomSheetState extends State<MealDetailBottomSheet> {
                               children: [
                                 for (final option in quickOptions)
                                   Semantics(
-                                    identifier:
-                                        'meal-detail-chip-${option.id}',
+                                    identifier: 'meal-detail-chip-${option.id}',
                                     child: ActionChip(
                                       label: Text(option.label),
                                       onPressed: () =>
@@ -297,76 +294,51 @@ class _MealDetailBottomSheetState extends State<MealDetailBottomSheet> {
                       // amount, and the basket on one line
                       Row(
                         children: [
-                          MealPickerChip(
-                            key: const ValueKey('meal-detail-meal'),
-                            type: _type,
-                            onChanged: (type) => setState(() => _type = type),
-                          ),
-                          const SizedBox(width: Dimens.spacing8),
-                          Expanded(
-                            child: Semantics(
-                              identifier: 'meal-detail-add',
-                              child: FilledButton.icon(
-                                onPressed:
-                                    !productMissingRequiredInfo && !_submitting
-                                    ? () {
-                                        onAddButtonPressed(context);
-                                      }
-                                    : null,
-                                style: FilledButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: Dimens.spacing16,
+                          // The meal plan's search only fills the basket: no
+                          // Add, and the meal is the one being planned.
+                          if (FoodBasket.instance.planning != null &&
+                              !productMissingRequiredInfo)
+                            Expanded(child: _basketButton(compact: false))
+                          else ...[
+                            MealPickerChip(
+                              key: const ValueKey('meal-detail-meal'),
+                              type: _type,
+                              onChanged: (type) => setState(() => _type = type),
+                            ),
+                            const SizedBox(width: Dimens.spacing8),
+                            Expanded(
+                              child: Semantics(
+                                identifier: 'meal-detail-add',
+                                child: FilledButton.icon(
+                                  onPressed:
+                                      !productMissingRequiredInfo &&
+                                          !_submitting
+                                      ? () {
+                                          onAddButtonPressed(context);
+                                        }
+                                      : null,
+                                  style: FilledButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: Dimens.spacing16,
+                                    ),
+                                    shape: const StadiumBorder(),
                                   ),
-                                  shape: const StadiumBorder(),
-                                ),
-                                icon: const Icon(Icons.add_rounded),
-                                label: ValueListenableBuilder(
-                                  valueListenable:
-                                      widget.quantityTextController,
-                                  builder: (context, value, _) => Text(
-                                    _addLabel(context, value.text),
-                                    overflow: TextOverflow.ellipsis,
+                                  icon: const Icon(Icons.add_rounded),
+                                  label: ValueListenableBuilder(
+                                    valueListenable:
+                                        widget.quantityTextController,
+                                    builder: (context, value, _) => Text(
+                                      _addLabel(context, value.text),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
                                   ),
                                 ),
                               ),
                             ),
-                          ),
-                          if (!productMissingRequiredInfo) ...[
-                            const SizedBox(width: Dimens.spacing8),
-                            AddToBasketButton(
-                              compact: true,
-                              meal: widget.product,
-                              type: _type,
-                              day: widget.day,
-                              current: () {
-                                final quantity = double.tryParse(
-                                  widget.quantityTextController.text
-                                      .replaceAll(',', '.'),
-                                );
-                                if (quantity == null ||
-                                    quantity <= 0 ||
-                                    quantity > 10000) {
-                                  return null;
-                                }
-                                final state = widget.mealDetailBloc.state;
-                                // S45: the amount picked is the one to remember
-                                RememberedAmounts.current.remember(
-                                  widget.product,
-                                  state.selectedUnit,
-                                  widget.quantityTextController.text.trim(),
-                                );
-                                return BasketItem(
-                                  meal: widget.product,
-                                  unit: state.selectedUnit,
-                                  amountText: state.totalQuantityConverted,
-                                  kcal: state.totalKcal,
-                                  picked: pickedLabel(
-                                    widget.quantityTextController.text.trim(),
-                                    state.selectedUnit,
-                                  ),
-                                );
-                              },
-                            ),
+                            if (!productMissingRequiredInfo) ...[
+                              const SizedBox(width: Dimens.spacing8),
+                              _basketButton(compact: true),
+                            ],
                           ],
                         ],
                       ),
@@ -398,6 +370,41 @@ class _MealDetailBottomSheetState extends State<MealDetailBottomSheet> {
       },
     );
   }
+
+  // [fork] S125 food-page
+  Widget _basketButton({required bool compact}) => AddToBasketButton(
+    compact: compact,
+    planning: !compact,
+    meal: widget.product,
+    type: _type,
+    day: widget.day,
+    current: () {
+      final quantity = double.tryParse(
+        widget.quantityTextController.text.replaceAll(',', '.'),
+      );
+      if (quantity == null || quantity <= 0 || quantity > 10000) {
+        return null;
+      }
+      final state = widget.mealDetailBloc.state;
+      // S45: the amount picked is the one to remember
+      RememberedAmounts.current.remember(
+        widget.product,
+        state.selectedUnit,
+        widget.quantityTextController.text.trim(),
+      );
+      return BasketItem(
+        meal: widget.product,
+        unit: state.selectedUnit,
+        amountText: state.totalQuantityConverted,
+        kcal: state.totalKcal,
+        picked: pickedLabel(
+          widget.quantityTextController.text.trim(),
+          state.selectedUnit,
+        ),
+      );
+    },
+  );
+  // [/fork]
 
   // [fork] S125 food-page
   /// "Add 640 g", or plain "Add" while the amount is not a positive number.
@@ -539,16 +546,12 @@ class _MealDetailBottomSheetState extends State<MealDetailBottomSheet> {
 
     if (!context.mounted) return;
     // Show snackbar and return to dashboard
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(
+    ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
           // [fork] S110 meal-named: which meal it went to, which a large
           // font can squeeze off the add screen's title
-          S.of(context).quickAddAddedSnack(
-            mealLabel(context, _type),
-          ),
+          S.of(context).quickAddAddedSnack(mealLabel(context, _type)),
         ),
       ),
     );
@@ -620,11 +623,13 @@ class _MealDetailBottomSheetState extends State<MealDetailBottomSheet> {
     final servingSize = widget.product.servingSize;
     // Serving labels are stored in English (see MealEntity._spServingLabel);
     // translate the common household units at display time.
-    final servingLabel = (servingSize != null && servingSize.trim().isNotEmpty &&
+    final servingLabel =
+        (servingSize != null &&
+            servingSize.trim().isNotEmpty &&
             // [fork] S142 serving-weight: a text naming another weight
             // than the one added says the wrong amount (H4)
             servingTextAgrees(servingSize, widget.product.servingQuantity))
-            // [/fork]
+        // [/fork]
         ? localizeServingLabel(S.of(context), servingSize)
         // [fork] S142: "45 g", not "45.0 gml"
         : '${S.of(context).servingLabel} (${widget.product.servingQuantity.toStringOrEmpty()} ${widget.product.servingUnit == 'gml' ? 'g' : widget.product.servingUnit})';

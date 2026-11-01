@@ -287,21 +287,21 @@ class _AddSheetState extends State<AddSheet> {
   }
 }
 
-/// The tiles on one row, or two rows of two with large text, so their
-/// names do not break mid-word (A6).
-Widget actionTiles(BuildContext context, List<Widget> tiles) {
+/// The tiles on one row or rows of [perRow], or rows of two with large text,
+/// so their names do not break mid-word (A6).
+Widget actionTiles(BuildContext context, List<Widget> tiles, {int? perRow}) {
   final large = MediaQuery.textScalerOf(context).scale(10) > 13;
-  final perRow = large ? 2 : tiles.length;
+  final inRow = large ? 2 : perRow ?? tiles.length;
   return Column(
     spacing: Dimens.spacing8,
     children: [
-      for (var i = 0; i < tiles.length; i += perRow)
+      for (var i = 0; i < tiles.length; i += inRow)
         Row(
           spacing: Dimens.spacing8,
           children: [
-            ...tiles.skip(i).take(perRow),
-            // An odd last tile keeps its half.
-            if (tiles.length - i < perRow) const Spacer(),
+            ...tiles.skip(i).take(inRow),
+            // A short last row keeps its tiles' width.
+            for (var gap = tiles.length - i; gap < inRow; gap++) const Spacer(),
           ],
         ),
     ],

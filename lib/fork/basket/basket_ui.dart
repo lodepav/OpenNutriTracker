@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:opennutritracker/fork/copy/copy_ui.dart' show mealLabel;
 import 'package:opennutritracker/core/domain/entity/intake_entity.dart';
 import 'package:opennutritracker/core/domain/entity/intake_type_entity.dart';
@@ -16,6 +17,7 @@ import 'package:opennutritracker/features/meal_detail/presentation/bloc/meal_det
 import 'package:opennutritracker/fork/add/logged_bar.dart';
 import 'package:opennutritracker/fork/basket/basket.dart';
 import 'package:opennutritracker/fork/plan/plan_store.dart';
+import 'package:opennutritracker/fork/plan/plan_ui.dart';
 import 'package:opennutritracker/fork/units/energy_text.dart';
 
 /// Writes one basket item; upstream's meal detail add in the app. Null
@@ -66,6 +68,9 @@ class AddToBasketButton extends StatelessWidget {
   /// Only the basket icon, for a row beside Add (S125).
   final bool compact;
 
+  /// "Add to plan" rather than "Add to basket", while planning.
+  final bool planning;
+
   const AddToBasketButton({
     super.key,
     required this.meal,
@@ -74,6 +79,7 @@ class AddToBasketButton extends StatelessWidget {
     required this.current,
     this.basket,
     this.compact = false,
+    this.planning = false,
   });
 
   @override
@@ -90,8 +96,10 @@ class AddToBasketButton extends StatelessWidget {
       width: double.infinity,
       child: OutlinedButton.icon(
         key: const ValueKey('add-to-basket'),
-        icon: const Icon(Icons.shopping_basket_outlined),
-        label: const Text('Add to basket'),
+        icon: Icon(
+          planning ? Icons.event_note_rounded : Icons.shopping_basket_outlined,
+        ),
+        label: Text(planning ? 'Add to plan' : 'Add to basket'),
         onPressed: () => _add(context),
       ),
     );
@@ -196,8 +204,9 @@ class BasketSheet extends StatefulWidget {
 class _BasketSheetState extends State<BasketSheet> {
   bool _logging = false;
 
-  /// Puts the foods on the day's plan (`PlanStore`) instead of the diary.
-  Future<void> _plan() async {
+  /// Puts the foods on the day's plan (`PlanStore`) instead of the diary,
+  /// repeating on [weekdays] if any.
+  Future<void> _plan({Set<int> weekdays = const {}}) async {
     setState(() => _logging = true);
     final items = widget.basket.itemsFor(widget.type, widget.day);
     // Home passes the moment: after midnight but before the day starts it
@@ -211,15 +220,42 @@ class _BasketSheetState extends State<BasketSheet> {
       ],
       widget.type,
       DayBoundaryCalc.dayLabelOf(widget.day, offset),
+      weekdays: weekdays,
     );
+    final planning = widget.basket.planning != null;
     widget.basket.clear();
     if (!mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text('Planned ${items.length} foods.')));
-    Navigator.of(
-      context,
-    ).popUntil(namedRouteOrFirst(NavigationOptions.mainRoute));
+    final count = items.length == 1 ? '1 food' : '${items.length} foods';
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          weekdays.isEmpty ? 'Planned $count.' : 'Repeating $count.',
+        ),
+      ),
+    );
+    final navigator = Navigator.of(context);
+    if (planning) {
+      // The sheet and search, back to the meal plan they came from.
+      navigator
+        ..pop()
+        ..pop();
+    } else {
+      navigator.popUntil(namedRouteOrFirst(NavigationOptions.mainRoute));
+    }
+  }
+
+  /// Asks which days, from the day picked on, then plans the foods on them.
+  Future<void> _repeat() async {
+    final weekdays = await showDialog<Set<int>>(
+      context: context,
+      builder: (_) => RepeatDialog(
+        name: mealLabel(context, widget.type),
+        initial: {widget.day.weekday},
+      ),
+    );
+    if (weekdays != null && weekdays.isNotEmpty && mounted) {
+      await _plan(weekdays: weekdays);
+    }
   }
 
   Future<void> _logAll() async {
@@ -303,18 +339,34 @@ class _BasketSheetState extends State<BasketSheet> {
                 textAlign: TextAlign.end,
               ),
               const SizedBox(height: 12),
-              FilledButton(
-                onPressed: _logging || items.isEmpty ? null : _logAll,
-                child: Text(
-                  'Log all ${items.length} to '
-                  '${mealLabel(context, widget.type)}',
+              if (widget.basket.planning == null) ...[
+                FilledButton(
+                  onPressed: _logging || items.isEmpty ? null : _logAll,
+                  child: Text(
+                    'Log all ${items.length} to '
+                    '${mealLabel(context, widget.type)}',
+                  ),
                 ),
-              ),
-              OutlinedButton(
-                key: const ValueKey('basket-plan'),
-                onPressed: _logging || items.isEmpty ? null : _plan,
-                child: const Text('Plan, don\'t log'),
-              ),
+                OutlinedButton(
+                  key: const ValueKey('basket-plan'),
+                  onPressed: _logging || items.isEmpty ? null : _plan,
+                  child: const Text('Plan, don\'t log'),
+                ),
+              ] else ...[
+                if (widget.basket.planning == PlanMode.once)
+                  FilledButton(
+                    key: const ValueKey('basket-plan'),
+                    onPressed: _logging || items.isEmpty ? null : _plan,
+                    child: Text(
+                      'Plan for ${DateFormat.MMMEd().format(widget.day)}',
+                    ),
+                  ),
+                OutlinedButton(
+                  key: const ValueKey('basket-repeat'),
+                  onPressed: _logging || items.isEmpty ? null : _repeat,
+                  child: const Text('Repeat on set days…'),
+                ),
+              ],
               TextButton(
                 onPressed: _logging
                     ? null

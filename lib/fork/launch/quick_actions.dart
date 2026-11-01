@@ -6,7 +6,8 @@ import 'package:opennutritracker/fork/launch/launch_actions.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 
 /// Home's way straight to the frequent actions (seam S162): search, then the
-/// launcher shortcuts by the same names, each for today and the time's meal.
+/// launcher shortcuts by the same names, each for today and the time's meal,
+/// and the meal plan.
 /// Photo log shows while AI meal assistance is on, as on the + sheet.
 class QuickActions extends StatefulWidget {
   const QuickActions({super.key});
@@ -67,7 +68,13 @@ class _QuickActionsState extends State<QuickActions> {
           'Weigh in',
           const WeighInAction(),
         ),
-      ]),
+        _tile(
+          'meal-plan',
+          Icons.event_note_rounded,
+          'Meal plan',
+          const PlanAction(),
+        ),
+      ], perRow: 3),
     ),
   );
 }

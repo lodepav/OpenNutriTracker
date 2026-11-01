@@ -41,11 +41,19 @@ class BasketItem {
   });
 }
 
+/// What the basket is filled for while the meal plan's search is open:
+/// planning foods on a day, or a meal to repeat on set days.
+enum PlanMode { once, recurring }
+
 /// Several foods picked from search and logged together (MacroFactor's
 /// multi-add). It holds one meal of one day; picking for another empties
 /// it first, so nothing is logged where it was not picked.
 class FoodBasket extends ChangeNotifier {
   static final instance = FoodBasket();
+
+  /// Set while search is open for the meal plan: search and the food's page
+  /// then only fill the basket, and nothing they do writes to the diary.
+  PlanMode? planning;
 
   final _items = <BasketItem>[];
   IntakeTypeEntity? _type;

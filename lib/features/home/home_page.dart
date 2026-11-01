@@ -49,8 +49,10 @@ import 'package:opennutritracker/fork/adaptive/adaptive_ui.dart';
 import 'package:opennutritracker/fork/plan/plan_ui.dart';
 // [/fork]
 // [fork] S162 arrange-home
+import 'package:opennutritracker/fork/copy/repeat_meal_card.dart';
 import 'package:opennutritracker/fork/launch/quick_actions.dart';
 import 'package:opennutritracker/fork/layout/home_layout.dart';
+import 'package:opennutritracker/fork/recents/recent_foods_card.dart';
 // [/fork]
 // [fork] S52 undo-delete
 import 'package:opennutritracker/fork/copy/copy_ui.dart';
@@ -228,6 +230,16 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
               ),
             ),
             'quickActions': const QuickActions(),
+            'repeatMeal': RepeatMealCard(
+              day: _homeBloc.currentDay,
+              today: [
+                ...breakfastIntakeList,
+                ...lunchIntakeList,
+                ...dinnerIntakeList,
+                ...snackIntakeList,
+              ],
+            ),
+            'recentFoods': const RecentFoodsCard(),
             'tiles': HomeTiles(
               weightKg: userWeightKg,
               bodyWeightUnit: bodyWeightUnit,
@@ -251,7 +263,10 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
               ],
             ),
             // S43 meal-plan: today's planned foods, to tick off
-            'plan': PlannedFoodsCard(day: _homeBloc.currentDay),
+            'plan': PlannedFoodsCard(
+              day: _homeBloc.currentDay,
+              showUpNext: true,
+            ),
             'notices': Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [

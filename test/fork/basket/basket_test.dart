@@ -52,14 +52,17 @@ class _Config extends Fake implements ConfigRepository {
 
 class _Plans extends Fake implements PlanStore {
   final planned = <(String?, IntakeTypeEntity, DateTime)>[];
+  Set<int>? repeatsOn;
 
   @override
   Future<void> add(
     Iterable<({MealEntity meal, String unit, String amountText, double kcal})>
     foods,
     IntakeTypeEntity type,
-    DateTime day,
-  ) async {
+    DateTime day, {
+    Set<int> weekdays = const {},
+  }) async {
+    repeatsOn = weekdays;
     for (final f in foods) {
       planned.add((f.meal.name, type, day));
     }
@@ -282,6 +285,87 @@ void main() {
       (MealEntityFixtures.mealOne.name, IntakeTypeEntity.dinner, _day),
     ]);
     expect(basket.items, isEmpty);
+  });
+
+  group('from the meal plan', () {
+    Future<void> open(
+      WidgetTester tester,
+      FoodBasket basket,
+      _Plans plans,
+    ) async {
+      // The plan screen, search over it, the sheet over that.
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: const [S.delegate],
+          home: Builder(
+            builder: (context) => TextButton(
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => Scaffold(
+                    bottomNavigationBar: BasketBar(
+                      type: IntakeTypeEntity.dinner,
+                      day: _day,
+                      basket: basket,
+                      plans: plans,
+                    ),
+                  ),
+                ),
+              ),
+              child: const Text('plan screen'),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('plan screen'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('basket-bar')));
+      await tester.pumpAndSettle();
+    }
+
+    FoodBasket filled(PlanMode mode) => FoodBasket()
+      ..planning = mode
+      ..add(_item(100), IntakeTypeEntity.dinner, _day);
+
+    testWidgets('offers no logging, and plans back to the plan screen', (
+      tester,
+    ) async {
+      final plans = _Plans();
+      await open(tester, filled(PlanMode.once), plans);
+      expect(find.textContaining('Log all'), findsNothing);
+
+      await tester.tap(find.byKey(const ValueKey('basket-plan')));
+      await tester.pumpAndSettle();
+      expect(plans.planned, hasLength(1));
+      expect(plans.repeatsOn, isEmpty);
+      expect(find.text('plan screen'), findsOneWidget);
+    });
+
+    testWidgets('a recurring meal only asks which days', (tester) async {
+      final plans = _Plans();
+      await open(tester, filled(PlanMode.recurring), plans);
+      expect(find.byKey(const ValueKey('basket-plan')), findsNothing);
+
+      await tester.tap(find.byKey(const ValueKey('basket-repeat')));
+      await tester.pumpAndSettle();
+      // The day picked starts ticked.
+      await tester.tap(find.byKey(const ValueKey('repeat-every-day')));
+      await tester.pump();
+      await tester.tap(find.byKey(const ValueKey('repeat-save')));
+      await tester.pumpAndSettle();
+      expect(plans.repeatsOn, {1, 2, 3, 4, 5, 6, 7});
+      expect(plans.planned, hasLength(1));
+      expect(find.text('plan screen'), findsOneWidget);
+    });
+
+    testWidgets('Cancel on the days plans nothing', (tester) async {
+      final plans = _Plans();
+      await open(tester, filled(PlanMode.recurring), plans);
+      await tester.tap(find.byKey(const ValueKey('basket-repeat')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+      expect(plans.planned, isEmpty);
+    });
   });
 
   testWidgets('a plan made after midnight, before the day starts, is the '

@@ -33,6 +33,7 @@ import 'package:opennutritracker/features/edit_meal/presentation/edit_meal_scree
 import 'package:opennutritracker/features/scanner/scanner_screen.dart';
 import 'package:opennutritracker/features/scanner/util/barcode_check_digit.dart';
 import 'package:opennutritracker/generated/l10n.dart';
+import 'package:opennutritracker/fork/basket/basket.dart';
 import 'package:opennutritracker/fork/basket/basket_ui.dart';
 import 'package:opennutritracker/fork/screens/add_meal/result_sections.dart';
 import 'package:opennutritracker/fork/bulk/ai_add.dart';
@@ -73,6 +74,8 @@ class _AddMealScreenState extends State<AddMealScreen> {
   // case still upgrades to All on first keystroke, matching existing
   // behavior for someone who never touched the chips).
   bool _stickOnRecent = false;
+
+  bool get _planning => FoodBasket.instance.planning != null;
 
   @override
   void initState() {
@@ -115,20 +118,22 @@ class _AddMealScreenState extends State<AddMealScreen> {
         type: _mealType.getIntakeType(),
         day: _day,
       ),
-      floatingActionButton: _aiAddFab(),
+      // While planning (the meal plan's search) nothing here may log.
+      floatingActionButton: _planning ? null : _aiAddFab(),
       appBar: AppBar(
         title: Text(_mealType.getTypeName(context)),
         actions: [
-          Semantics(
-            identifier: 'add-meal-quick-add',
-            // an icon, as the actions beside it, so the meal
-            // in the title has room (A6); Quick add is a tile on the + sheet
-            child: IconButton(
-              onPressed: _onQuickAddPressed,
-              icon: const Icon(Icons.bolt_rounded),
-              tooltip: S.of(context).quickAddCardLabel,
+          if (!_planning)
+            Semantics(
+              identifier: 'add-meal-quick-add',
+              // an icon, as the actions beside it, so the meal
+              // in the title has room (A6); Quick add is a tile on the + sheet
+              child: IconButton(
+                onPressed: _onQuickAddPressed,
+                icon: const Icon(Icons.bolt_rounded),
+                tooltip: S.of(context).quickAddCardLabel,
+              ),
             ),
-          ),
           BlocBuilder<AddMealBloc, AddMealState>(
             bloc: _addMealBloc,
             builder: (BuildContext context, AddMealState state) {
@@ -138,7 +143,7 @@ class _AddMealScreenState extends State<AddMealScreen> {
                   children: [
                     FutureBuilder<bool>(
                       future: _aiAdd,
-                      builder: (context, ai) => ai.data == false
+                      builder: (context, ai) => ai.data == false && !_planning
                           ? Semantics(
                               identifier: 'add-meal-bulk-add',
                               child: IconButton(
