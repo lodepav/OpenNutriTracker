@@ -117,7 +117,7 @@ void main() {
     expect(paces, isEmpty);
     expect(applied, 0);
     final answered = StrengthAnswered.decode(store.keys['strengthAnswered']);
-    expect(answered?.key, 'falling|Chest');
+    expect(answered?.key, 'falling|warning|Chest');
     // Back after Home rebuilds or the app restarts: still quiet.
     await pump(tester, key: UniqueKey());
     await tester.pumpAndSettle();

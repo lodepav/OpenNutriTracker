@@ -363,6 +363,7 @@ void main() {
         expect(_withIdentifier('add-meal-bulk-add'), findsNothing);
         expect(_withIdentifier('add-meal-ai-add'), findsNothing);
         expect(find.textContaining('Planning '), findsOneWidget);
+        expect(find.byKey(const ValueKey('add-meal-fits-left')), findsNothing);
       });
     }
 

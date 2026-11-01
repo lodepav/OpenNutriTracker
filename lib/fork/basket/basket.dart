@@ -96,4 +96,21 @@ class FoodBasket extends ChangeNotifier {
     _items.clear();
     notifyListeners();
   }
+
+  /// Empties the basket for now; call what it returns to put back what it held
+  /// in place of anything added since.
+  VoidCallback setAside() {
+    final items = [..._items];
+    final type = _type;
+    final day = _day;
+    clear();
+    return () {
+      _items
+        ..clear()
+        ..addAll(items);
+      _type = type;
+      _day = day;
+      notifyListeners();
+    };
+  }
 }

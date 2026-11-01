@@ -52,6 +52,7 @@ Map<String, String> homeSectionNames(BuildContext context) => {
   'recentFoods': 'Recent foods',
   'tiles': 'Tiles',
   'checkIn': 'Weekly check-in',
+  'strength': 'Strength',
   'plan': 'Meal plan',
   'diaryActivity': S.of(context).activityLabel,
   'diaryBreakfast': S.of(context).breakfastLabel,

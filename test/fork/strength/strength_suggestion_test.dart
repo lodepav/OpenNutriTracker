@@ -157,6 +157,17 @@ void main() {
       );
     });
 
+    test('a warning turning clear is a new signal', () {
+      expect(
+        suggest(
+          signal(level: 'clear'),
+          rate: -0.5,
+          answered: StrengthAnswered(signal(level: 'warning').key, now),
+        ),
+        isNotNull,
+      );
+    });
+
     test('the order of the muscles is not a change', () {
       expect(
         signal(muscles: ['Back', 'Chest']).key,
