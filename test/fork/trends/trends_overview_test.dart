@@ -628,6 +628,11 @@ void main() {
     await openTile(tester, 'sodium');
     expect(find.text('Limit'), findsOneWidget);
     expect(find.text('Under it'), findsOneWidget);
+    // Today is not over, so of the two days logged only yesterday counts.
+    expect(
+      tester.getSemantics(find.text('Under it')).label,
+      contains('of 1 day'),
+    );
     await tester.scrollUntilVisible(
       find.text('Where it came from'),
       200,
@@ -878,7 +883,8 @@ void main() {
     );
     String row(String label) =>
         tester.widget<TrendRow>(find.widgetWithText(TrendRow, label)).value;
-    expect(row('In deficit'), '4 of 4 days');
+    // Day 0 is today, not over yet.
+    expect(row('In deficit'), '3 of 3 days');
     expect(row('In surplus'), '0 days');
     expect(row('Eaten a day'), '2500 kcal');
     expect(row('Burnt a day'), '2970 kcal');

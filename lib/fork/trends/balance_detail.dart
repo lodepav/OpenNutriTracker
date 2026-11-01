@@ -29,7 +29,7 @@ List<Widget> balanceBody(
   final unit = energyUnit(context);
   final series = balanceSeries(history, dates);
   final mean = meanOf(series);
-  final sum = balanceSummary(history, dates);
+  final sum = balanceSummary(history, dates, today: state.logicalToday);
   String signed(double kcal) =>
       signedText(energyValue(context, kcal).toDouble());
   return [
@@ -79,7 +79,10 @@ List<Widget> balanceBody(
       trendSection(context, 'How the days went'),
       TrendRows(
         rows: [
-          (label: 'In deficit', value: '${sum.deficit} of ${days(sum.logged)}'),
+          (
+            label: 'In deficit',
+            value: '${sum.deficit} of ${days(sum.finished)}',
+          ),
           (label: 'In surplus', value: days(sum.surplus)),
           (label: 'Eaten a day', value: energyText(context, sum.eaten)),
           (label: 'Burnt a day', value: energyText(context, sum.burnt)),

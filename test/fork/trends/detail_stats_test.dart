@@ -272,6 +272,18 @@ void main() {
       expect(s.surplus, 1);
     });
 
+    test('today counts in the means but not as a day in deficit', () {
+      final s = balanceSummary(
+        [_spent(-1, 3000, ate: 2500), _spent(0, 3000, ate: 300)],
+        windowDates(_today, 7),
+        today: _today,
+      )!;
+      expect(s.logged, 2);
+      expect(s.finished, 1);
+      expect(s.deficit, 1);
+      expect(s.eaten, 1400);
+    });
+
     test('null with no day logged in the window', () {
       expect(
         balanceSummary([_spent(-9, 3000, ate: 2000)], windowDates(_today, 7)),

@@ -274,7 +274,8 @@ macroShares(List<TrackedDayEntity> days, List<DateTime> dates) {
 }
 
 /// The window's logged days of energy balance: eaten and burnt a day, the
-/// total eaten less burnt, and how many days ran in deficit or surplus.
+/// total eaten less burnt, and how many finished days ran in deficit or
+/// surplus, of [finished]: [today] is not over, so it is not one of them.
 /// Null with no day logged.
 ({
   double eaten,
@@ -282,19 +283,26 @@ macroShares(List<TrackedDayEntity> days, List<DateTime> dates) {
   double total,
   int deficit,
   int surplus,
+  int finished,
   int logged,
 })?
-balanceSummary(List<ExpenditureDay> history, List<DateTime> dates) {
+balanceSummary(
+  List<ExpenditureDay> history,
+  List<DateTime> dates, {
+  DateTime? today,
+}) {
   final window = dates.toSet();
   final logged = [
     for (final d in history)
       if (d.intakeKcal != null && window.contains(_date(d.date))) d,
   ];
   if (logged.isEmpty) return null;
-  var eaten = 0.0, burnt = 0.0, deficit = 0, surplus = 0;
+  var eaten = 0.0, burnt = 0.0, deficit = 0, surplus = 0, finished = 0;
   for (final d in logged) {
     eaten += d.intakeKcal!;
     burnt += d.expenditureKcal;
+    if (_date(d.date) == today) continue;
+    finished++;
     final balance = d.intakeKcal! - d.expenditureKcal;
     if (balance < 0) deficit++;
     if (balance > 0) surplus++;
@@ -305,6 +313,7 @@ balanceSummary(List<ExpenditureDay> history, List<DateTime> dates) {
     total: eaten - burnt,
     deficit: deficit,
     surplus: surplus,
+    finished: finished,
     logged: logged.length,
   );
 }

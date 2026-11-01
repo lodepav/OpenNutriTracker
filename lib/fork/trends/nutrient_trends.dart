@@ -135,9 +135,16 @@ class _MicroDetailState extends State<MicroDetail> {
       final mean = micro == null ? null : microMean(micro);
       final goal = micro?.summary.goal;
       final known = series.whereType<double>().toList();
+      // Today is not over yet, so it is not counted as met or short.
+      final counted = [
+        for (final (i, v) in series.indexed)
+          if (v != null && widget.dates[i] != widget.state.logicalToday) v,
+      ];
       final good = goal == null
           ? null
-          : known.where((v) => nutrient.isLimit ? v <= goal : v >= goal).length;
+          : counted
+                .where((v) => nutrient.isLimit ? v <= goal : v >= goal)
+                .length;
       final format = intl.DateFormat.MMMd(
         Localizations.localeOf(context).toLanguageTag(),
       );
@@ -169,7 +176,7 @@ class _MicroDetailState extends State<MicroDetail> {
               (
                 label: nutrient.isLimit ? 'Under it' : 'Met',
                 value: good == null ? '–' : '$good',
-                unit: 'of ${days(known.length)}',
+                unit: 'of ${days(counted.length)}',
               ),
             ],
           ),
@@ -206,7 +213,7 @@ class _MicroDetailState extends State<MicroDetail> {
                     label: nutrient.isLimit
                         ? 'Over the limit'
                         : 'Short of the goal',
-                    value: days(known.length - good),
+                    value: days(counted.length - good),
                   ),
                 if (high != null)
                   (
