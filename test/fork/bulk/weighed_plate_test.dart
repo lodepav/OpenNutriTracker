@@ -40,6 +40,11 @@ void main() {
       'fries with pork 150g',
       'fries with pork - 150g',
       'fries with pork\n150g',
+      '150g chicken, rice, broccoli',
+      '150g chicken and rice',
+      'chicken, rice, broccoli 150g',
+      'chicken and rice 150g',
+      'chicken\nrice 150g',
       '150g',
       '150 g total',
       '0.15 kg',
@@ -95,10 +100,16 @@ void main() {
       ]);
     });
 
-    test('a weight after a list with no separator is the last food\'s', () {
-      final w = noteWeights('chicken, rice, spinach 350g')!;
+    test('a weight before one food is that food\'s', () {
+      final w = noteWeights('200g rice')!;
       expect(w.totalGrams, isNull);
-      expect(w.foods, [(name: 'spinach', grams: 350.0)]);
+      expect(w.foods, [(name: 'rice', grams: 200.0)]);
+    });
+
+    test('a weight in the middle of the note is that food\'s', () {
+      final w = noteWeights('rice, chicken 150g, spinach')!;
+      expect(w.totalGrams, isNull);
+      expect(w.foods, [(name: 'chicken', grams: 150.0)]);
     });
 
     test('counts and names alone state no weight', () {
@@ -195,6 +206,15 @@ void main() {
       ], noteWeights('dirty fries with pork 430g')!);
       expect(items.map((i) => i.quantity), [280, 150]);
       expect(items.every((i) => i.unit == 'g'), isTrue);
+    });
+
+    test('a weight before a dish the model splits is the whole dish\'s', () {
+      final items = weighedPlateItems([
+        const ParsedMealItem(query: 'dish=Plov'),
+        _g('rice, white, cooked', 200),
+        _g('lamb, cooked', 100),
+      ], noteWeights('300g plov')!);
+      expect(items.map((i) => i.quantity), [200, 100]);
     });
 
     test('one food is a plain row at the plate\'s weight', () {

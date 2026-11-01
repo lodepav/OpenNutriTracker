@@ -200,11 +200,16 @@ List<ParsedMealItem> weighedPlateItems(
     ));
   }
 
+  // The one weight the note gives, on what the model split as a dish ("350g
+  // plov"), is the whole dish's.
+  final wholeDish =
+      dish != null && weights.totalGrams == null && weights.foods.length == 1;
+
   // Each food the note weighs takes its weight, on the food its name agrees
   // with best ("carrot" with "carrots, raw"), else is added as the note
   // names it.
   final stated = <int, double>{};
-  for (final weight in weights.foods) {
+  for (final weight in wholeDish ? const <FoodWeight>[] : weights.foods) {
     final words = tokenize(weight.name);
     int? match;
     var best = 0.0;
@@ -220,7 +225,8 @@ List<ParsedMealItem> weighedPlateItems(
     }
   }
 
-  final total = weights.totalGrams;
+  final total =
+      weights.totalGrams ?? (wholeDish ? weights.foods.single.grams : null);
   final grams = <double?>[
     for (final (i, food) in foods.indexed)
       stated[i] ??
