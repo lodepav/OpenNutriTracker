@@ -21,7 +21,8 @@ in a table of generic foods (USDA, BLS). You do not estimate nutrition.
 The user's note states weights. Rules:
 - If the note names one plain food and nothing else ("a banana", "greek
   yogurt 200g"), return just that one item: "query" its name as the note
-  writes it, with the note's weight as "quantity" and "unit".
+  writes it, with the note's weight as "quantity" and "unit". Food on the
+  bone is not plain: see bones below.
 - Otherwise the first item names the plate: "query" is "dish=" and the name
   the note gives it, without its weight, in the user's app language; when
   the note gives no name for the whole meal, a short one ("dish=Chicken
@@ -34,12 +35,17 @@ The user's note states weights. Rules:
   the photo shows. "query" is the nearest generic food in English, named
   the way a food table names it: the food, then its form and state after
   commas ("chicken breast, grilled", "rice, white, cooked", "potatoes,
-  roasted", "spinach, raw").
+  roasted", "spinach, raw"). Fries from a kitchen are "french fries, fast
+  food".
 - Every food has "quantity" in grams with "unit" "g".
 - A weight the note gives a food is copied exactly.
 - A total weight in the note is the whole plate: give each food without a
   weight of its own its share of what remains, judged from the photo, so
   that all the foods add up to the total.
+- The scale weighed the bones, nobody eats them: food on the bone (ribs,
+  wings, drumsticks, a bone-in chop) is the meat as eaten and one more item,
+  "bones", with their share of the weight: about 35% of ribs, 45% of wings,
+  30% of a drumstick, thigh or chop.
 - Leave out water, salt and garnish nobody eats.
 - If the photo contains no food, return an empty list.''';
 
@@ -84,7 +90,7 @@ is sulguni"), but states no weight. Rules:
   "query" is the nearest generic food in English, named the way a food
   table names it: the food, then its form and state after commas
   ("chicken breast, grilled", "rice, white, cooked", "potatoes, roasted",
-  "spinach, raw").
+  "spinach, raw"). Fries from a kitchen are "french fries, fast food".
 - Every food has "quantity" in grams with "unit" "g" (a drink or soup may
   use "ml"): your estimate of what the photo shows. Judge it by what the
   food sits in, how much of it the food fills and how high it is piled.
@@ -94,12 +100,16 @@ is sulguni"), but states no weight. Rules:
   A size the note gives ("a 23 cm pizza") is the dish's size: weigh its
   foods by that, not by the plate.
   Weigh pieces by their size: a cutlet or chop about 80-150 g, a slice of
-  bread 30 g, an egg 50 g. Restaurant and recipe photos are often generous:
+  bread 30 g, an egg 50 g, a whole pizza of any shape at least 350 g even if
+  small, 30 cm across 450-550 g, a thick pan pizza twice that for its area.
+  Food on the bone is weighed without its
+  bones. Restaurant and recipe photos are often generous:
   do not shrink a full plate to a diet portion.
 - Leave out water, salt and garnish nobody eats.
 - If the photo contains no food, return an empty list.''';
 
 const _dishKey = 'dish=';
+const _bones = 'bones';
 
 /// Reads [photo] as a weighed plate; [weights] is what [note] states.
 Future<MealTextParseResult> readWeighedPlate(
@@ -200,10 +210,13 @@ List<ParsedMealItem> weighedPlateItems(
     ));
   }
 
-  // The one weight the note gives, on what the model split as a dish ("350g
-  // plov"), is the whole dish's.
+  // The one weight a note naming one thing gives, on what the model split as
+  // a dish ("350g plov"), is the whole dish's.
   final wholeDish =
-      dish != null && weights.totalGrams == null && weights.foods.length == 1;
+      dish != null &&
+      weights.totalGrams == null &&
+      weights.namesOneThing &&
+      weights.foods.length == 1;
 
   // Each food the note weighs takes its weight, on the food its name agrees
   // with best ("carrot" with "carrots, raw"), else is added as the note
@@ -236,23 +249,29 @@ List<ParsedMealItem> weighedPlateItems(
   ];
   if (total != null) _sizeToTotal(grams, stated.keys.toSet(), total);
 
-  if (foods.isEmpty) return const [];
-  if (foods.length == 1) {
-    final weight = grams.single ?? total;
+  // Bones took their share of the total above; nobody eats them.
+  final eaten = [
+    for (final (i, food) in foods.indexed)
+      if (food.query.toLowerCase() != _bones) i,
+  ];
+  if (eaten.isEmpty) return const [];
+  if (eaten.length == 1) {
+    final only = foods[eaten.single];
+    final weight = grams[eaten.single] ?? total;
     return [
       ParsedMealItem(
-        query: foods.single.query,
-        quantity: weight ?? foods.single.count,
+        query: only.query,
+        quantity: weight ?? only.count,
         unit: weight == null ? null : 'g',
       ),
     ];
   }
   final group = Object();
   return [
-    for (final (i, food) in foods.indexed)
+    for (final i in eaten)
       DishIngredientItem(
-        query: food.query,
-        quantity: grams[i] ?? food.count,
+        query: foods[i].query,
+        quantity: grams[i] ?? foods[i].count,
         unit: grams[i] == null ? null : 'g',
         dish: dish == null || dish.isEmpty ? 'Meal' : dish,
         group: group,

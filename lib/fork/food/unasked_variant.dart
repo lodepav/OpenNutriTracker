@@ -30,11 +30,12 @@ final _variantWords = RegExp(
 /// A lighter make of the food: a wrap's caesar dressing logged "Salad
 /// dressing, caesar, fat-free" at a quarter of the regular one's energy,
 /// a burger's "beef patty" the 97% lean one, and a sandwich's "mayonnaise"
-/// "Mayonnaise, light". "Light" counts only as a make of its own (", light"),
+/// "Mayonnaise, light", and restaurant pork "separable lean only", its fat
+/// trimmed off, at three quarters of the whole cut's. "Light" counts only as a make of its own (", light"),
 /// not light meat or syrup. Any wording of lighter in the query asks for one.
 final _lighter = RegExp(
   r'\b(fat[- ]free|non-?fat|(reduced|low)[- ]?(fat|calorie|sodium)|lowfat|'
-  r'9\d% lean)|, (light|lite)(?=,|$| \()',
+  r'9\d% lean|separable lean only)|, (light|lite)(?=,|$| \()',
   caseSensitive: false,
 );
 final _asksLighter = RegExp(
@@ -81,6 +82,11 @@ final _lacks = RegExp(
   caseSensitive: false,
 );
 
+/// Fries from the freezer: "potatoes, french fried, fast food style" logged
+/// oven-heated steak fries at half a fryer's energy.
+final _frozenFries = RegExp(r'french fried,.*\bfrozen\b', caseSensitive: false);
+final _asksFrozen = RegExp(r'\b(frozen|oven)', caseSensitive: false);
+
 /// [unaskedVariantPenalty] when [name] carries one of the variant words, or
 /// is only a skin, pickled, lighter or made with turkey, and [query] does
 /// not say so, or lacks a food [query] names; else 0.
@@ -94,6 +100,9 @@ double unaskedVariant(String? name, String query) {
     return unaskedVariantPenalty;
   }
   if (_lighter.hasMatch(row) && !_asksLighter.hasMatch(asked)) {
+    return unaskedVariantPenalty;
+  }
+  if (_frozenFries.hasMatch(row) && !_asksFrozen.hasMatch(asked)) {
     return unaskedVariantPenalty;
   }
   if (_mix.hasMatch(row) && !asked.contains('mix')) {

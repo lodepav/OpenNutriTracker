@@ -13,7 +13,15 @@ class NoteWeights {
 
   final List<FoodWeight> foods;
 
-  const NoteWeights({this.totalGrams, this.foods = const []});
+  /// The note names one thing ("300g plov"), so a dish the model splits it
+  /// into weighs what the note says. "chicken 150g, rice" names two.
+  final bool namesOneThing;
+
+  const NoteWeights({
+    this.totalGrams,
+    this.foods = const [],
+    this.namesOneThing = false,
+  });
 }
 
 final _amount = RegExp(
@@ -28,8 +36,16 @@ final _totalWord = RegExp(
   caseSensitive: false,
 );
 
-/// More than one food named: "chicken, rice", "fries with pork".
-final _list = RegExp(r',|;|\+|&|\n|\band\b|\bwith\b', caseSensitive: false);
+/// More than one food named: "chicken, rice", "fries with pork", and the
+/// Latvian a note may be typed in.
+final _list = RegExp(r',|;|\+|&|\n|\b(and|with|un|ar)\b', caseSensitive: false);
+
+/// A weight in the middle of a name: "panini with 200g beef". The parser reads
+/// weights only at an item's ends, so the word before it becomes a comma.
+final _withWeight = RegExp(
+  r'\b(with|ar)\s+(?=\d+(?:[.,]\d+)?\s*(?:kg|grams?|gr|g|ml|l|oz|lb)\b)',
+  caseSensitive: false,
+);
 
 const _separators = '-–—:=';
 
@@ -78,10 +94,13 @@ NoteWeights? noteWeights(String? note) {
             .replaceAll(_totalWord, '');
   return NoteWeights(
     totalGrams: total == null ? null : _grams(total),
+    namesOneThing: !_list.hasMatch(text),
     foods: [
       for (final item in parseMealText(
         // "spinach 30g." and "spinach 30g -" read as no weight at all
-        rest.replaceAllMapped(_markAfterWeight, (m) => m[1]!),
+        rest
+            .replaceAll(_withWeight, ', ')
+            .replaceAllMapped(_markAfterWeight, (m) => m[1]!),
       ).items)
         if (item.quantity != null && item.unit != null)
           if (_name(item.query) case final name when name.isNotEmpty)
