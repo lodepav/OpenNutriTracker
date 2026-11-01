@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:opennutritracker/fork/adaptive/activity.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:opennutritracker/core/domain/entity/tracked_day_entity.dart';
 import 'package:opennutritracker/core/domain/entity/user_entity.dart';
@@ -418,6 +419,30 @@ void main() {
         expect(accepted!.belowRecommendedFloor, isFalse);
         expect(memory.records, hasLength(1));
       });
+
+      test(
+        'refuses one whose activity could not be read, and says so',
+        () async {
+          AdaptiveStore.settings.value = const AdaptiveSettings(
+            adaptiveTarget: true,
+            autoAcceptCheckIn: true,
+            activityMode: ActivityMode.weekly,
+          );
+          final memory = _MemoryStore();
+          final due = AdaptiveService(
+            _User.pacedTo(1800),
+            _Weights(),
+            _TrackedDays(),
+            memory,
+            () => _today.add(const Duration(hours: 9)),
+            null,
+            _UnreadableActivity(),
+          );
+          expect((await due.checkIn()).activityUnreadable, isTrue);
+          expect(await due.autoAcceptIfDue(), isNull);
+          expect(memory.records, isEmpty);
+        },
+      );
 
       test('refuses one under the floor, and it stays due', () async {
         AdaptiveStore.settings.value = auto;
@@ -1597,4 +1622,16 @@ class _PacedService extends Fake implements AdaptiveService {
       paceKgPerWeek: pace,
     );
   }
+}
+
+class _UnreadableActivity extends Fake implements ActivityCounter {
+  @override
+  Future<Map<DateTime, double>> daily({
+    required DateTime first,
+    required DateTime today,
+    required AdaptiveSettings settings,
+    required UserEntity user,
+    double? bodyFatPercent,
+    bool readHealth = true,
+  }) async => throw StateError('The steps grant is gone');
 }

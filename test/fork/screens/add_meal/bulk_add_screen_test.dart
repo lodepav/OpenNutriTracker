@@ -1905,6 +1905,45 @@ void main() {
       expect(_mealDetailBloc.writes.map((w) => '$w'), ['Chicken bowl 175.0 g']);
     });
 
+    testWidgets('a food skipped during a portion edit: the field and the next '
+        'edit follow the foods left', (tester) async {
+      await readDish(tester);
+      await tester.enterText(portion(), '350');
+      await tester.pump();
+      await tester.tap(find.text(l10nEn.bulkAddSkipLabel).last);
+      await tester.pumpAndSettle();
+      expect(tester.widget<TextField>(portion()).controller!.text, '200');
+      await tester.enterText(portion(), '700');
+      await tester.pumpAndSettle();
+      await tester.tap(_submitButton());
+      await tester.pumpAndSettle();
+      expect(
+        _mealDetailBloc.writes.map((w) => '$w'),
+        contains('Chicken bowl 700.0 g'),
+      );
+    });
+
+    testWidgets('a breakdown landing leaves no field typing into another '
+        'food', (tester) async {
+      await readDish(
+        tester,
+        above: const [ParsedMealItem(query: 'soup', quantity: 100, unit: 'g')],
+      );
+      await tester.enterText(portion(), '175');
+      await tester.pump();
+      expect(FocusManager.instance.primaryFocus?.context, isNotNull);
+      final focused = FocusManager.instance.primaryFocus;
+
+      final soup = (dishBloc.state as BulkAddLoadedState).rows.first.resolved;
+      dishBloc.add(
+        ReplaceRowWithBreakdownEvent(soup, DishBreakdown('soup', [soup, soup])),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      expect(focused!.hasFocus, isFalse);
+    });
+
     testWidgets('a breakdown landing above a dish leaves its portion scaling '
         'its own foods', (tester) async {
       await readDish(

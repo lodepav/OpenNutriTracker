@@ -10,6 +10,7 @@ import 'package:opennutritracker/core/utils/reload_diary_and_trends.dart';
 import 'package:opennutritracker/features/home/presentation/bloc/home_bloc.dart';
 import 'package:opennutritracker/features/settings/presentation/bloc/settings_bloc.dart';
 import 'package:opennutritracker/fork/adaptive/activity.dart';
+import 'package:opennutritracker/fork/adaptive/goal_plan.dart' show maxPlanDays;
 import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
 import 'package:opennutritracker/fork/adaptive/macro_program.dart';
 import 'package:opennutritracker/fork/adaptive/macro_program_ui.dart';
@@ -365,6 +366,8 @@ class _CheckInScreenState extends State<CheckInScreen> {
       : '${_kcal(kcalPerKg / 2.20462)} a lb';
 
   static String _eta(int days) {
+    // A trend about flat reaches nothing in a date worth showing.
+    if (days > maxPlanDays) return 'over a year';
     final now = DateTime.now();
     final date = DateTime(now.year, now.month, now.day + days);
     final weeks = (days / 7).round();
@@ -572,6 +575,18 @@ class _CheckInScreenState extends State<CheckInScreen> {
                   'Change',
                   _shownDiff(checkIn.proposedTargetKcal, current, signed: true),
                 ),
+              if (checkIn.activityUnreadable)
+                Text(
+                  key: const ValueKey('check-in-activity-unreadable'),
+                  "Your activity couldn't be read this time, so this leaves "
+                  'it out'
+                  '${settings.autoAcceptCheckIn ? " and wasn't set on its own" : ''}. '
+                  'Check the Health Connect permission, or keep your target '
+                  'for now.',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.error,
+                  ),
+                ),
               if (checkIn.belowRecommendedFloor)
                 Text(
                   key: const ValueKey('check-in-below-floor'),
@@ -604,7 +619,7 @@ class _CheckInScreenState extends State<CheckInScreen> {
                   style: theme.textTheme.bodySmall,
                 ),
               if (checkIn.activityChangeKcal case final change?
-                  when change.abs() >= 1)
+                  when change.abs() >= 1 && !checkIn.activityUnreadable)
                 Text(
                   "The past week's activity moves the target "
                   '${energyText(context, change, signed: true)} from the last '
@@ -839,8 +854,8 @@ class AdaptiveSettingsTile extends StatelessWidget {
       // Not registered in the tests that open the dialog.
       final perLb =
           locator.isRegistered<GetConfigUsecase>() &&
-          (await locator<GetConfigUsecase>().getConfig()).bodyWeightUnit ==
-              BodyWeightUnit.lb;
+          (await locator<GetConfigUsecase>().getConfig()).bodyWeightUnit !=
+              BodyWeightUnit.kg;
       if (!context.mounted) return;
       await showDialog<void>(
         context: context,

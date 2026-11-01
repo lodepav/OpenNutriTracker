@@ -160,10 +160,26 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
 
   // runs breakdowns and marks the rows (D12)
   late final _dishBreakdown =
-      DishBreakdownController(_bloc, photo: () => _forkMealPhoto)
+      DishBreakdownController(
+          _bloc,
+          photo: () => _forkMealPhoto,
+          onRowsMoved: _onRowsMoved,
+        )
         ..addListener(() {
           if (mounted) setState(() {});
         });
+
+  /// A field keeps its place in the list while its row moves, so typing on
+  /// would go to another food; the refusal marks and portion bases are by
+  /// index.
+  void _onRowsMoved() {
+    if (!mounted) return;
+    FocusManager.instance.primaryFocus?.unfocus();
+    setState(() {
+      _quantityErrors.clear();
+      _portionBase.clear();
+    });
+  }
 
   Future<void> _breakDown(BulkAddRow row) async {
     final outcome = await _dishBreakdown.breakDown(row);
@@ -179,8 +195,6 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
         context,
       ).showSnackBar(SnackBar(content: Text(message)));
     }
-    // Keyed by row index, which the swap moves.
-    _quantityErrors.clear();
   }
 
   Future<void> _saveDishRecipe(Object group) async {

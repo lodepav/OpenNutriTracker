@@ -258,7 +258,11 @@ void main() {
       now = DateTime(2026, 11, 30, 9);
       await run().run();
 
-      expect((await store.plan())?.toJson(), next.toJson());
+      // As planned, from the weight it really begins at.
+      expect((await store.plan())?.toJson(), {
+        ...next.toJson(),
+        'startKg': 80.4,
+      });
       expect(await store.upcoming(), isEmpty);
       final kept = (await store.history()).single;
       expect(

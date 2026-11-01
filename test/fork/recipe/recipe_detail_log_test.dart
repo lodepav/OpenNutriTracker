@@ -126,6 +126,12 @@ void main() {
     tester,
   ) async {
     await pump(tester);
+    await tester.tap(find.byTooltip('More'));
+    await tester.pump();
+    await tester.tap(find.text('Dinner').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Lunch').last);
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('recipe-log')));
     await tester.pump();
     // The write is still running: a second tap adds nothing.
@@ -134,7 +140,7 @@ void main() {
       warnIfMissed: false,
     );
     await tester.pump();
-    expect(log.calls, [('g', '100.0', IntakeTypeEntity.dinner)]);
+    expect(log.calls, [('g', '150.0', IntakeTypeEntity.lunch)]);
   });
 
   testWidgets('a failed write says so and Add works again', (tester) async {

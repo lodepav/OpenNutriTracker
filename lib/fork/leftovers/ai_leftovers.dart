@@ -36,7 +36,7 @@ String leftoversSystemPrompt(
       'For each entry with anything left, record one item: query is the '
       "entry's name exactly as written above, quantity is how much of it is "
       "left in the entry's own unit, and unit is that unit. Count what can "
-      'be counted: 2 of 5 dumplings logged as 5 serving is 2 serving. '
+      'be counted: 2 of 5 dumplings listed as 150 g is 60 g. '
       'Leave out an entry with nothing left. Never record a food that is '
       'not listed.';
 }

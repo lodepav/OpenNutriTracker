@@ -151,6 +151,7 @@ class AdaptiveService {
     return computeCheckIn(
       CheckInInputs(
         days: days,
+        activityUnreadable: _activityUnreadable,
         priorKcal: _priorKcal(user),
         formulaKcal: previous == null ? CalorieGoalCalc.getTdee(user) : null,
         goalRateKgPerWeek: rate,
@@ -189,7 +190,7 @@ class AdaptiveService {
     if (!AdaptiveStore.settings.value.autoAcceptCheckIn) return null;
     if (!await checkInDue()) return null;
     final due = await checkIn();
-    if (due.belowRecommendedFloor) return null;
+    if (due.belowRecommendedFloor || due.activityUnreadable) return null;
     await accept(due, due.proposedTargetKcal);
     return due;
   }
@@ -309,6 +310,7 @@ class AdaptiveService {
     final first = weighIns.keys
         .where((d) => !d.isBefore(start))
         .fold(today, (a, b) => b.isBefore(a) ? b : a);
+    _activityUnreadable = false;
     final activity = await _countedActivity(first, today);
     // A new user's only day: the health store's days before it are whole
     // ones where today's are still coming in, the better guess of the
@@ -348,6 +350,9 @@ class AdaptiveService {
     return days.values.reduce((a, b) => a + b) / days.length;
   }
 
+  /// The last [_countedActivity] found the health store would not answer.
+  var _activityUnreadable = false;
+
   /// Counted activity per day, or null when none is counted (D17). A
   /// health store that will not answer counts none rather than failing the
   /// check-in.
@@ -376,6 +381,7 @@ class AdaptiveService {
           : days;
     } catch (e) {
       _log.warning('Activity unreadable, none counted: $e');
+      _activityUnreadable = true;
       return null;
     }
   }

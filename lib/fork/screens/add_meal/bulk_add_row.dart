@@ -216,7 +216,12 @@ extension _BulkAddRow on _BulkAddScreenState {
       label: row.skipped
           ? S.of(context).bulkAddIncludeLabel
           : S.of(context).bulkAddSkipLabel,
-      onPressed: () => _bloc.add(ToggleRowSkippedEvent(index)),
+      onPressed: () {
+        // The portion typed is no longer the dish's: its field follows the
+        // rows again, and the next edit scales those left.
+        _portionBase.remove(row.dishIngredient?.group);
+        _bloc.add(ToggleRowSkippedEvent(index));
+      },
     ),
   ];
 

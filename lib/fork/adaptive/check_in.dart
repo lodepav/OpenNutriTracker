@@ -31,6 +31,10 @@ class CheckInInputs {
   /// of and not accepted on its own. Null for no check.
   final double? recommendedFloorKcal;
 
+  /// The health store would not answer, so no activity is counted in this
+  /// check-in; it is not one to set on its own.
+  final bool activityUnreadable;
+
   /// The estimate the last check-in's target was built on (its
   /// [CheckIn.baseKcal]); null before the first.
   final double? previousBaseKcal;
@@ -65,6 +69,7 @@ class CheckInInputs {
     this.targetWeightKg,
     this.fallbackWeightKg = 70,
     this.recommendedFloorKcal,
+    this.activityUnreadable = false,
     this.settings = const ExpenditureSettings(),
     this.maxChangeKcal = AdaptiveSettings.defaultMaxCheckInChangeKcal,
     this.activityMode = ActivityMode.off,
@@ -131,6 +136,9 @@ class CheckIn {
   /// [CheckInInputs.recommendedFloorKcal].
   final double? recommendedFloorKcal;
 
+  /// [CheckInInputs.activityUnreadable].
+  final bool activityUnreadable;
+
   /// The estimate is still calibrating, so the check-in limit is not applied.
   final bool capCalibrating;
 
@@ -161,6 +169,7 @@ class CheckIn {
     this.kcalPerKg,
     this.breakHold,
     this.recommendedFloorKcal,
+    this.activityUnreadable = false,
     this.capCalibrating = false,
     this.movedWithinCap = false,
   });
@@ -261,6 +270,7 @@ CheckIn computeCheckIn(CheckInInputs inputs) {
     kcalPerKg: kcalPerKg,
     breakHold: hold,
     recommendedFloorKcal: inputs.recommendedFloorKcal,
+    activityUnreadable: inputs.activityUnreadable,
     capCalibrating: cap != null && calibrating,
     movedWithinCap:
         cap != null &&

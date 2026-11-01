@@ -74,6 +74,12 @@ class MealDetailBloc extends Bloc<MealDetailEvent, MealDetailState> {
         final selectedUnit = event.selectedUnit ?? state.selectedUnit;
 
         if (selectedUnit.isEmpty || selectedTotalQuantity.isEmpty) {
+          // [fork] S192 unit-blank-amount: a unit picked with the amount
+          // blank is the one the amount typed next is in
+          if (event.selectedUnit != null) {
+            emit(state.copyWith(selectedUnit: event.selectedUnit));
+          }
+          // [/fork]
           return;
         }
 
