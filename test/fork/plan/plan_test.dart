@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:opennutritracker/core/domain/entity/intake_entity.dart';
 import 'package:opennutritracker/core/domain/entity/intake_type_entity.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_nutriments_entity.dart';
@@ -14,6 +15,16 @@ import 'package:opennutritracker/fork/plan/plan_ui.dart';
 import '../../fixture/meal_entity_fixtures.dart';
 
 final _sunday = DateTime(2026, 10, 25);
+
+/// What a log wrote; the card only hands it to Undo.
+final _written = IntakeEntity(
+  id: 'written',
+  unit: 'g',
+  amount: 100,
+  type: IntakeTypeEntity.lunch,
+  meal: MealEntityFixtures.mealOne,
+  dateTime: _sunday,
+);
 
 void main() {
   late Directory dir;
@@ -86,6 +97,58 @@ void main() {
     expect(await store.forDay(DateTime(2026, 10, 20)), isEmpty); // before it
     expect(await store.forDay(DateTime(2026, 10, 27)), hasLength(1));
     expect(await store.forDay(DateTime(2026, 10, 28)), isEmpty);
+  });
+
+  test('putBack brings back a repeating food removed whole', () async {
+    await store.add(
+      [
+        (
+          meal: MealEntityFixtures.mealOne,
+          unit: 'g',
+          amountText: '100',
+          kcal: 100.0,
+        ),
+      ],
+      IntakeTypeEntity.dinner,
+      _sunday,
+      weekdays: {DateTime.tuesday, DateTime.friday},
+    );
+    final rule = (await store.all()).single;
+    await store.remove(rule.id);
+    expect(await store.all(), isEmpty);
+    await store.putBack(rule);
+    expect((await store.all()).single.weekdays, {
+      DateTime.tuesday,
+      DateTime.friday,
+    });
+  });
+
+  test('putBack undoes a drop: a one-day food and a repeating day', () async {
+    final food = (
+      meal: MealEntityFixtures.mealOne,
+      unit: 'g',
+      amountText: '100',
+      kcal: 100.0,
+    );
+    await store.add([food], IntakeTypeEntity.lunch, _sunday);
+    final once = (await store.forDay(_sunday)).single;
+    await store.remove(once.id);
+    expect(await store.forDay(_sunday), isEmpty);
+    await store.putBack(once);
+    expect((await store.forDay(_sunday)).single.id, once.id);
+
+    final tuesday = DateTime(2026, 10, 27);
+    await store.add(
+      [food],
+      IntakeTypeEntity.dinner,
+      _sunday,
+      weekdays: {DateTime.tuesday},
+    );
+    final day = (await store.forDay(tuesday)).single;
+    await store.remove(day.id);
+    expect(await store.forDay(tuesday), isEmpty);
+    await store.putBack(day);
+    expect((await store.forDay(tuesday)).single.id, day.id);
   });
 
   test('a plan reads back once the box is reopened', () async {
@@ -212,7 +275,7 @@ void main() {
             store: memory,
             log: (_, food) async {
               logged.add(food.id);
-              return true;
+              return _written;
             },
           ),
         ),
@@ -250,7 +313,7 @@ void main() {
           body: PlannedFoodsCard(
             day: _sunday,
             store: memory,
-            log: (_, _) async => true,
+            log: (_, _) async => _written,
           ),
         ),
       ),
@@ -304,7 +367,7 @@ void main() {
             store: memory,
             log: (_, food) async {
               logged.add(food.id);
-              return false;
+              return null;
             },
           ),
         ),

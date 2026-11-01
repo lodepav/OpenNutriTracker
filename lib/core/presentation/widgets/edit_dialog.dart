@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:opennutritracker/core/domain/entity/intake_entity.dart';
 import 'package:opennutritracker/core/utils/calc/unit_calc.dart';
 import 'package:opennutritracker/core/utils/custom_text_input_formatter.dart';
+import 'package:opennutritracker/fork/units/amount_text.dart' show isEnergyOnly; // [fork] S142
 import 'package:opennutritracker/fork/units/energy_text.dart'; // [fork] S142
 // [fork] S177 copy-move
 import 'package:opennutritracker/core/domain/entity/intake_type_entity.dart';
@@ -51,14 +52,9 @@ class _EditDialogState extends State<EditDialog> {
 
   static double? _energyOnlyKcalPerUnit(IntakeEntity intake) {
     final meal = intake.meal;
-    final kcal100 = meal.nutriments.energyKcal100 ?? 0;
-    final energyOnly =
-        meal.mealUnit == 'gml' &&
-        meal.mealQuantity == '100' &&
-        meal.servingQuantity == null &&
-        (meal.servingSize ?? '').isEmpty &&
-        kcal100 > 0;
-    return energyOnly ? kcal100 / 100 : null;
+    return isEnergyOnly(meal)
+        ? (meal.nutriments.energyKcal100 ?? 0) / 100
+        : null;
   }
 
   double _shownEnergy(double kcal) =>

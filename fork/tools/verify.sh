@@ -24,7 +24,8 @@ already_checked() {
   local last
   last="$(cat "$STAMP")"
   git merge-base --is-ancestor "$last" HEAD 2>/dev/null || return 1
-  ! git diff --name-only "$last" HEAD | grep -qvE '\.md$|^fork/VERSION$'
+  # No grep -q here: exiting early kills git, which pipefail reads as no match.
+  [[ -z "$(git diff --name-only "$last" HEAD | grep -vE '\.md$|^fork/VERSION$')" ]]
 }
 
 # git doesn't carry core.hooksPath over a clone: without it nothing guards fork/main.
@@ -41,7 +42,7 @@ if git grep -nE '^(<{7}|>{7}|\|{7})( |$)' -- . ':!test/fixture' ':!*.md'; then
   echo "verify: a conflict marker was left behind" >&2
   exit 1
 fi
-if git grep -nE '^(<{7}|>{7})( |$)' -- 'fork/*.md' '*.md'; then
+if git grep -nE '^(<{7}|>{7})( |$)' -- '*.md'; then
   echo "verify: a conflict marker was left behind" >&2
   exit 1
 fi

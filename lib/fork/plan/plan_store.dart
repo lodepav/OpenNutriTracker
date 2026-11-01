@@ -190,6 +190,19 @@ class PlanStore {
     ]);
   }
 
+  /// Undoes [remove] of [food], as [forDay] gave it.
+  Future<void> putBack(PlannedFood food) async {
+    final ruleId = food.repeatOf;
+    if (ruleId == null) return merge([food]);
+    await _write([
+      for (final f in await all())
+        if (f.id == ruleId)
+          f._copy(doneDays: {...f.doneDays}..remove(_date(food.day)))
+        else
+          f,
+    ]);
+  }
+
   /// Makes the food [id] (planned, or one day of a repeating one) repeat
   /// on [weekdays] from its day on; empty [weekdays] stops it repeating
   /// and keeps it planned on the day shown, as a one-day food.

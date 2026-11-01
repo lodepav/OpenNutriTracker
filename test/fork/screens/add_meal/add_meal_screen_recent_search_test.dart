@@ -20,6 +20,7 @@ import 'package:opennutritracker/features/add_meal/presentation/bloc/favourite_t
 import 'package:opennutritracker/features/add_meal/presentation/bloc/food_bloc.dart';
 import 'package:opennutritracker/features/add_meal/presentation/bloc/products_bloc.dart';
 import 'package:opennutritracker/features/add_meal/presentation/bloc/recent_meal_bloc.dart';
+import 'package:opennutritracker/fork/basket/basket.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 
 import '../../../helpers/fake_favourites.dart';
@@ -344,6 +345,66 @@ void main() {
       expect(_withIdentifier('add-meal-bulk-add'), findsNothing);
       expect(_withIdentifier('add-meal-ai-add'), findsOneWidget);
       expect(find.text('Log with AI'), findsOneWidget);
+    });
+  });
+
+  group('while the meal plan\'s search is open', () {
+    tearDown(() => FoodBasket.instance.planning = null);
+
+    for (final ai in [false, true]) {
+      testWidgets('nothing logs, AI add ${ai ? 'on' : 'off'}', (tester) async {
+        FoodBasket.instance.planning = PlanMode.once;
+        await _register(const []);
+        getIt.registerSingleton<AiCredentialStorage>(_AiCredentials(ai));
+        await tester.pumpWidget(_app());
+        await tester.pumpAndSettle();
+
+        expect(_withIdentifier('add-meal-quick-add'), findsNothing);
+        expect(_withIdentifier('add-meal-bulk-add'), findsNothing);
+        expect(_withIdentifier('add-meal-ai-add'), findsNothing);
+        expect(find.textContaining('Planning '), findsOneWidget);
+      });
+    }
+
+    testWidgets('Back says what was picked is not planned yet', (tester) async {
+      addTearDown(FoodBasket.instance.clear);
+      FoodBasket.instance.planning = PlanMode.once;
+      await _register(const []);
+      getIt.registerSingleton<AiCredentialStorage>(_AiCredentials(false));
+      await tester.pumpWidget(_app());
+      await tester.pumpAndSettle();
+      FoodBasket.instance.add(
+        BasketItem(
+          meal: _intake('Apple').meal,
+          unit: 'g',
+          amountText: '100',
+          kcal: 50,
+        ),
+        IntakeTypeEntity.lunch,
+        DateTime(2026, 11, 1),
+      );
+      await tester.pump();
+
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(find.text('Leave without planning?'), findsOneWidget);
+      await tester.tap(find.text('Stay'));
+      await tester.pumpAndSettle();
+      expect(FoodBasket.instance.items, hasLength(1));
+
+      FoodBasket.instance.clear();
+      await tester.pump();
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(find.text('Leave without planning?'), findsNothing);
+    });
+
+    testWidgets('Quick add is there otherwise', (tester) async {
+      await _register(const []);
+      getIt.registerSingleton<AiCredentialStorage>(_AiCredentials(false));
+      await tester.pumpWidget(_app());
+      await tester.pumpAndSettle();
+      expect(_withIdentifier('add-meal-quick-add'), findsOneWidget);
     });
   });
 }

@@ -511,6 +511,15 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
     }
   }
 
+  /// Why Next is off, said beside it: at large text its cause is off screen.
+  String? get _whyNotOn => switch (_at) {
+    _Step.goal when _draft.problem != null =>
+      _draft.targetKg == null
+          ? 'Set the target weight to go on.'
+          : 'Change the target weight to go on.',
+    _ => null,
+  };
+
   bool get _canGoOn => switch (_at) {
     _Step.goal => _draft.problem == null,
     _Step.macros => _macrosValid,
@@ -613,64 +622,83 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
         bottomNavigationBar: SafeArea(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-            child: Row(
-              children: [
-                if (_step > 0 || _detour != null) ...[
-                  Semantics(
-                    identifier: 'goal-planner-back',
-                    child: OutlinedButton(
-                      onPressed: () => setState(() {
-                        if (_detour != null) {
-                          _detour = null;
-                        } else {
-                          _step--;
-                        }
-                      }),
-                      child: const Text('Back'),
+            child: _withWhyNotOn(
+              theme,
+              Row(
+                children: [
+                  if (_step > 0 || _detour != null) ...[
+                    Semantics(
+                      identifier: 'goal-planner-back',
+                      child: OutlinedButton(
+                        onPressed: () => setState(() {
+                          if (_detour != null) {
+                            _detour = null;
+                          } else {
+                            _step--;
+                          }
+                        }),
+                        child: const Text('Back'),
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                ],
-                Expanded(
-                  child: Semantics(
-                    identifier: _detour != null
-                        ? 'goal-planner-done'
-                        : last
-                        ? 'goal-planner-start'
-                        : 'goal-planner-next',
-                    child: FilledButton(
-                      onPressed: !_canGoOn || _saving
-                          ? null
-                          : _detour != null
-                          ? () => setState(() => _detour = null)
+                    const SizedBox(width: 8),
+                  ],
+                  Expanded(
+                    child: Semantics(
+                      identifier: _detour != null
+                          ? 'goal-planner-done'
                           : last
-                          ? _start
-                          : () => setState(() => _step++),
-                      child: Text(
-                        _detour != null
-                            ? 'Done'
-                            : _at == _Step.carried
-                            ? 'Keep all and go on'
-                            : !last
-                            ? 'Next'
-                            : widget.queuedAt != null
-                            ? 'Save goal'
-                            : _queued
-                            ? 'Add to the plan'
-                            : _setup.onboarding
-                            ? 'Use this plan'
-                            : widget.editing != null
-                            ? 'Save plan'
-                            : 'Start plan',
+                          ? 'goal-planner-start'
+                          : 'goal-planner-next',
+                      child: FilledButton(
+                        onPressed: !_canGoOn || _saving
+                            ? null
+                            : _detour != null
+                            ? () => setState(() => _detour = null)
+                            : last
+                            ? _start
+                            : () => setState(() => _step++),
+                        child: Text(
+                          _detour != null
+                              ? 'Done'
+                              : _at == _Step.carried
+                              ? 'Keep all and go on'
+                              : !last
+                              ? 'Next'
+                              : widget.queuedAt != null
+                              ? 'Save goal'
+                              : _queued
+                              ? 'Add to the plan'
+                              : _setup.onboarding
+                              ? 'Use this plan'
+                              : widget.editing != null
+                              ? 'Save plan'
+                              : 'Start plan',
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
       ),
+    );
+  }
+
+  Widget _withWhyNotOn(ThemeData theme, Widget buttons) {
+    final why = _whyNotOn;
+    if (why == null) return buttons;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: Text(why, style: theme.textTheme.bodySmall),
+        ),
+        buttons,
+      ],
     );
   }
 
@@ -1570,7 +1598,11 @@ class _OptionCard extends StatelessWidget {
               title,
               style: const TextStyle(fontWeight: FontWeight.w600),
             ),
-            subtitle: Text(subtitle),
+            // The tile's muted colour is too faint on a selected card (A2).
+            subtitle: Text(
+              subtitle,
+              style: selected ? TextStyle(color: scheme.onSurface) : null,
+            ),
             trailing: ExcludeSemantics(
               child: Icon(
                 selected

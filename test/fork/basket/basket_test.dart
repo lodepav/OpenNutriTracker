@@ -332,6 +332,7 @@ void main() {
       final plans = _Plans();
       await open(tester, filled(PlanMode.once), plans);
       expect(find.textContaining('Log all'), findsNothing);
+      expect(find.textContaining('1 to plan'), findsOneWidget);
 
       await tester.tap(find.byKey(const ValueKey('basket-plan')));
       await tester.pumpAndSettle();

@@ -122,11 +122,24 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
         name: food.meal.name ?? '',
         initial: food.weekdays,
         repeating: true,
+        stopLabel: 'Remove',
       ),
     );
     if (weekdays == null) return;
     if (weekdays.isEmpty) {
       await _store.remove(food.id);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          // An action keeps a bar up until dismissed: this one goes.
+          persist: false,
+          content: Text('Removed ${food.meal.name ?? 'food'}'),
+          action: SnackBarAction(
+            label: 'Undo',
+            onPressed: () => _store.putBack(food),
+          ),
+        ),
+      );
     } else {
       await _store.setRepeat(food.id, weekdays);
     }
@@ -145,10 +158,7 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
           padding: const EdgeInsets.only(bottom: 48),
           children: [
             _days(first, day),
-            FutureBuilder<List<PlannedFood>>(
-              future: _foods,
-              builder: (context, foods) => _nothingPlanned(foods.data, day),
-            ),
+            _nothingPlanned(day),
             PlannedFoodsCard(key: ValueKey(day), day: day, store: _store),
             Padding(
               padding: const EdgeInsets.all(16),
@@ -156,17 +166,23 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
                 spacing: 8,
                 runSpacing: 8,
                 children: [
-                  FilledButton.icon(
-                    key: const ValueKey('plan-add-foods'),
-                    icon: const Icon(Icons.add_rounded),
-                    label: const Text('Plan foods'),
-                    onPressed: () => _add(day, PlanMode.once),
+                  Semantics(
+                    identifier: 'plan-add-foods',
+                    child: FilledButton.icon(
+                      key: const ValueKey('plan-add-foods'),
+                      icon: const Icon(Icons.add_rounded),
+                      label: const Text('Plan foods'),
+                      onPressed: () => _add(day, PlanMode.once),
+                    ),
                   ),
-                  OutlinedButton.icon(
-                    key: const ValueKey('plan-add-recurring'),
-                    icon: const Icon(Icons.repeat_rounded),
-                    label: const Text('Add recurring meal'),
-                    onPressed: () => _add(day, PlanMode.recurring),
+                  Semantics(
+                    identifier: 'plan-add-recurring',
+                    child: OutlinedButton.icon(
+                      key: const ValueKey('plan-add-recurring'),
+                      icon: const Icon(Icons.repeat_rounded),
+                      label: const Text('Add recurring meal'),
+                      onPressed: () => _add(day, PlanMode.recurring),
+                    ),
                   ),
                 ],
               ),
@@ -205,28 +221,29 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
   );
 
   /// Said only once the day is known to be empty; the card then shows nothing.
-  Widget _nothingPlanned(List<PlannedFood>? foods, DateTime day) {
-    if (foods == null) return const SizedBox.shrink();
-    return FutureBuilder<List<PlannedFood>>(
-      // forDay and not [foods]: it works out a repeating food's days.
-      future: _store.forDay(day),
-      builder: (context, planned) => planned.data?.isEmpty ?? false
-          ? const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Text('Nothing planned for this day.'),
-            )
-          : const SizedBox.shrink(),
-    );
-  }
+  Widget _nothingPlanned(DateTime day) => FutureBuilder<List<PlannedFood>>(
+    // forDay and not [_foods]: it works out a repeating food's days.
+    future: _store.forDay(day),
+    builder: (context, planned) => planned.data?.isEmpty ?? false
+        ? const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Text('Nothing planned for this day.'),
+          )
+        : const SizedBox.shrink(),
+  );
 
   Widget _recurring(List<PlannedFood> foods) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
       Padding(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-        child: Text(
-          'Recurring meals',
-          style: Theme.of(context).textTheme.titleMedium,
+        child: Semantics(
+          container: true,
+          header: true,
+          child: Text(
+            'Recurring meals',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
         ),
       ),
       if (foods.isEmpty)

@@ -294,7 +294,14 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       // [/fork]
       // [fork] S182 shared-phase: cutting, maintaining or bulking, for Go Hevier
       await publishSharedPhase(
-        SharedPhase.of(user, targetKcal: totalKcalGoal, now: DateTime.now()),
+        SharedPhase.of(
+          user,
+          targetKcal: await _getKcalGoalUsecase.getKcalGoal(
+            userEntity: user,
+            totalKcalActivitiesParam: 0,
+          ),
+          now: DateTime.now(),
+        ),
         stillCurrent: () => _calorieWidgetStore.generation == widgetGeneration,
       );
       // [/fork]

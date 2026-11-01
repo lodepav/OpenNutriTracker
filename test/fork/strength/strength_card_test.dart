@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:opennutritracker/core/domain/entity/body_weight_unit_entity.dart';
@@ -25,6 +27,7 @@ void main() {
   late List<double> paces;
   late int applied;
   late int refreshed;
+  Completer<void>? refreshHeld;
   late int reads;
 
   setUp(() {
@@ -32,6 +35,7 @@ void main() {
     paces = [];
     applied = 0;
     refreshed = 0;
+    refreshHeld = null;
     reads = 0;
     AdaptiveStore.settings.value = const AdaptiveSettings();
   });
@@ -74,7 +78,10 @@ void main() {
                 paces.add(kgPerWeek);
                 return saved;
               },
-              refresh: () async => refreshed++,
+              refresh: () async {
+                refreshed++;
+                await refreshHeld?.future;
+              },
             ),
           ),
         ),
@@ -165,6 +172,26 @@ void main() {
     await tester.pumpAndSettle();
     expect(AdaptiveStore.settings.value.fixedKcal, 2000);
     expect(refreshed, 2);
+  });
+
+  testWidgets('a second tap on Apply does not add the calories again', (
+    tester,
+  ) async {
+    AdaptiveStore.settings.value = const AdaptiveSettings(
+      fixedTarget: true,
+      fixedKcal: 2000,
+    );
+    await pump(tester);
+    await tester.pumpAndSettle();
+    final held = refreshHeld = Completer<void>();
+    await tester.tap(find.text('Apply'));
+    await tester.pump();
+    expect(AdaptiveStore.settings.value.fixedKcal, 2055);
+    await tester.tap(find.text('Apply'));
+    await tester.pump();
+    held.complete();
+    await tester.pumpAndSettle();
+    expect(AdaptiveStore.settings.value.fixedKcal, 2055);
   });
 
   testWidgets('a target set by macros gets advice but no Apply', (

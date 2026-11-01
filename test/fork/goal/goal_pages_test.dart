@@ -378,6 +378,81 @@ void main() {
     expect(tester.getSize(boxes.first).height, 14);
   });
 
+  testWidgets('Next asks to change a target that is set but will not do', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      GoalPlannerScreen(
+        setup: const PlannerSetup(
+          nowKg: 86.4,
+          unit: BodyWeightUnit.kg,
+          expenditureKcal: 2600,
+          bodyFatPercent: 22,
+        ),
+        draft: GoalDraft(
+          kind: PhaseKind.cut,
+          startKg: 86.4,
+          start: _start,
+          targetKg: 90,
+        ),
+        onStart: (_) async => true,
+      ),
+    );
+    expect(find.text('Change the target weight to go on.'), findsOneWidget);
+  });
+
+  testWidgets('Next says why it is off, beside it', (tester) async {
+    await _pump(
+      tester,
+      GoalPlannerScreen(
+        setup: const PlannerSetup(
+          nowKg: 86.4,
+          unit: BodyWeightUnit.kg,
+          expenditureKcal: 2600,
+          bodyFatPercent: 22,
+        ),
+        draft: GoalDraft.fresh(86.4, _start),
+        onStart: (_) async => true,
+      ),
+    );
+    final bar = tester.widget<Scaffold>(find.byType(Scaffold).last);
+    expect(
+      find.descendant(
+        of: find.byWidget(bar.bottomNavigationBar!),
+        matching: find.text('Set the target weight to go on.'),
+      ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('a selected card keeps its subtitle readable (A2)', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      GoalPlannerScreen(
+        setup: const PlannerSetup(
+          nowKg: 86.4,
+          unit: BodyWeightUnit.kg,
+          expenditureKcal: 2600,
+          bodyFatPercent: 22,
+        ),
+        draft: GoalDraft.fresh(86.4, _start, targetKg: 80),
+        onStart: (_) async => true,
+      ),
+    );
+    await expectLater(tester, meetsGuideline(textContrastGuideline));
+    final selected = find.bySemanticsIdentifier('goal-kind-cut');
+    final subtitle = find
+        .descendant(of: selected, matching: find.byType(Text))
+        .at(1);
+    expect(
+      tester.widget<Text>(subtitle).style?.color,
+      Theme.of(tester.element(subtitle)).colorScheme.onSurface,
+    );
+  });
+
   testWidgets('a custom pace: the three, or a slider when toggled', (
     tester,
   ) async {

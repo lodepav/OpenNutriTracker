@@ -16,6 +16,8 @@ class _Config extends Fake implements GetConfigUsecase {
 class _ImperialOff extends Fake implements ConfigEntity {
   @override
   bool get usesImperialFoodUnits => false;
+  @override
+  Map<String, int> get mealKcalSharesPct => const {};
 }
 
 class _Ai extends Fake implements AiCredentialStorage {

@@ -6,6 +6,8 @@ import 'package:opennutritracker/core/domain/entity/intake_entity.dart';
 import 'package:opennutritracker/core/domain/entity/intake_type_entity.dart';
 import 'package:opennutritracker/core/domain/usecase/get_config_usecase.dart';
 import 'package:opennutritracker/core/utils/meal_type_suggester.dart';
+import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dart';
+import 'package:opennutritracker/features/add_meal/domain/entity/meal_nutriments_entity.dart';
 import 'package:opennutritracker/fork/copy/copy_entries.dart';
 import 'package:opennutritracker/fork/copy/repeat_meal_card.dart';
 import 'package:opennutritracker/generated/l10n.dart';
@@ -56,14 +58,29 @@ class _Copier extends Fake implements CopyEntries {
   }
 }
 
-IntakeEntity _intake(String id, IntakeTypeEntity type) => IntakeEntity(
-  id: id,
-  unit: 'g',
-  amount: 100,
-  type: type,
-  meal: MealEntityFixtures.mealOne,
-  dateTime: DateTime(2026, 10, 31, 12),
+/// What a history import writes for a day's totals.
+MealEntity _totals(String code) => MealEntity(
+  code: code,
+  name: 'Day logged in MacroFactor',
+  url: null,
+  mealQuantity: null,
+  mealUnit: 'g',
+  servingQuantity: null,
+  servingUnit: 'g',
+  servingSize: null,
+  nutriments: MealNutrimentsEntity.empty(),
+  source: MealSourceEntity.custom,
 );
+
+IntakeEntity _intake(String id, IntakeTypeEntity type, {String? code}) =>
+    IntakeEntity(
+      id: id,
+      unit: 'g',
+      amount: 100,
+      type: type,
+      meal: code == null ? MealEntityFixtures.mealOne : _totals(code),
+      dateTime: DateTime(2026, 10, 31, 12),
+    );
 
 /// A meal other than [meal].
 IntakeTypeEntity _other(IntakeTypeEntity meal) =>
@@ -137,6 +154,13 @@ void main() {
       today: [_intake('t', _other(meal))],
     );
     expect(log, findsOneWidget);
+  });
+
+  testWidgets('never a day\'s imported totals, as if they were a food', (
+    tester,
+  ) async {
+    await pump(tester, _Copier([_intake('h', meal, code: 'history-day')]));
+    expect(log, findsNothing);
   });
 
   testWidgets('not when yesterday had nothing for that meal', (tester) async {
