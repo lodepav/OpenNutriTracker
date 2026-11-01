@@ -178,7 +178,12 @@ void main() {
         trackedDay.rangeCalls.first.start,
         today.subtract(const Duration(days: 29)),
       );
-    });
+    },
+    // [fork] S190 logical-today: the window is counted in calendar days; its
+    // case is in test/fork/trends/logical_today_test.dart
+    skip: 'the window is counted in calendar days (S190)',
+    // [/fork]
+    );
 
     test('RefreshTrendsEvent before the first load does nothing', () async {
       final emitted = await load(const RefreshTrendsEvent());
@@ -197,14 +202,22 @@ void main() {
       expect(trackedDay.rangeCalls[1].start,
           today.subtract(const Duration(days: 13)));
       expect(trackedDay.rangeCalls[1].end, endOfPriorWeek);
-    });
+    },
+    // [fork] S190 logical-today: as above
+    skip: 'the window is counted in calendar days (S190)',
+    // [/fork]
+    );
 
     test('a 90-day window pulls 90 days of calories', () async {
       final emitted = await load(const LoadTrendsEvent(rangeDays: 90));
       expect((emitted.last as TrendsLoaded).rangeDays, 90);
       expect(trackedDay.rangeCalls.first.start,
           today.subtract(const Duration(days: 89)));
-    });
+    },
+    // [fork] S190 logical-today: as above
+    skip: 'the window is counted in calendar days (S190)',
+    // [/fork]
+    );
 
     test('weight uses the full history, not a windowed range', () async {
       await load(const LoadTrendsEvent());

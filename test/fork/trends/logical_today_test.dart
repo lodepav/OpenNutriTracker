@@ -123,6 +123,36 @@ void main() {
       expect(state.logicalToday, _logicalToday);
       expect(state.waterByDay, {_logicalToday: 300});
     });
+
+    // Riga's clocks go back on the 25th: the same day in another offset.
+    test('counts its windows in calendar days across a clock change', () async {
+      DayBoundaryCalc.clock = () => DateTime(2026, 11, 1, 9);
+      final tracked = _TrackedDays();
+      final bloc = TrendsBloc(
+        tracked,
+        _Weights(),
+        _User(),
+        _Config(),
+        _Water(),
+      );
+      addTearDown(bloc.close);
+      Future<TrendsLoaded> load(TrendsEvent event) async {
+        tracked.calls.clear();
+        final done = bloc.stream.firstWhere((s) => s is TrendsLoaded);
+        bloc.add(event);
+        return await done as TrendsLoaded;
+      }
+
+      await load(const LoadTrendsEvent(rangeDays: 7));
+      expect(tracked.calls[0].start, DateTime(2026, 10, 26));
+      expect(tracked.calls[1].start, DateTime(2026, 10, 19));
+      await load(const LoadTrendsEvent(rangeDays: 90));
+      expect(tracked.calls[0].start, DateTime(2026, 8, 4));
+      await load(const LoadTrendsEvent(rangeDays: 30));
+      final again = await load(const RefreshTrendsEvent());
+      expect(again.rangeDays, 30);
+      expect(tracked.calls[0].start, DateTime(2026, 10, 3));
+    });
   });
 
   group('the pages', () {
