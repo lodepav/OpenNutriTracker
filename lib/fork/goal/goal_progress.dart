@@ -311,6 +311,9 @@ class GoalStartStore {
 
   Future<void> save(GoalStart start) => _store.writeKey(key, start.toJson());
 
+  /// What is stored, for [putBack].
+  Future<Object?> stored() => _store.readKey(key);
+
   /// Forgets the start of a goal that is over: the next target, the same
   /// one too, starts the day it is set. What was stored, for [putBack].
   Future<Object?> forget() async {

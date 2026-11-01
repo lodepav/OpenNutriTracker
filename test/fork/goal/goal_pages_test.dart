@@ -453,6 +453,56 @@ void main() {
     );
   });
 
+  test('a weight corrected after planning: the plan runs from it', () async {
+    final store = _MemoryPhases();
+    final actions = GoalActions(store: store, save: (_, _) async => true);
+    OnboardingGoal.pending.value = _cut();
+    await OnboardingGoal.save(weightKg: 83, actions: actions);
+    expect(store.saved!.startKg, 83);
+    expect(store.saved!.end.isBefore(_cut().end), isTrue);
+    expect(OnboardingGoal.pending.value, isNull);
+  });
+
+  test('a weight past the target: the plan goes', () async {
+    final store = _MemoryPhases();
+    final actions = GoalActions(store: store, save: (_, _) async => true);
+    OnboardingGoal.pending.value = _cut();
+    await OnboardingGoal.save(weightKg: 78, actions: actions);
+    expect(store.saved, isNull);
+    expect(OnboardingGoal.pending.value, isNull);
+  });
+
+  testWidgets('tapping the kind it already is keeps a custom pace', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      GoalPlannerScreen(
+        setup: const PlannerSetup(
+          nowKg: 86.4,
+          unit: BodyWeightUnit.kg,
+          expenditureKcal: 2600,
+          bodyFatPercent: 22,
+        ),
+        draft: GoalDraft.fresh(
+          86.4,
+          _start,
+          targetKg: 80,
+        ).copyWith(kind: PhaseKind.cut, paceKg: 0.35),
+        onStart: (_) async => true,
+      ),
+    );
+    await tester.tap(find.bySemanticsIdentifier('goal-kind-cut'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Next'));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(find.byType(Slider), 200);
+    expect(
+      tester.widget<Slider>(find.byType(Slider)).value,
+      closeTo(0.35, 1e-9),
+    );
+  });
+
   testWidgets('a custom pace: the three, or a slider when toggled', (
     tester,
   ) async {

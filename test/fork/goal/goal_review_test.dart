@@ -470,6 +470,18 @@ void main() {
       expect((await resolved()).date, today);
     });
 
+    test('removed for a queued goal, Undo finds the start', () async {
+      store.queue.add(_cutFrom(today));
+      final a = actions();
+      final was = await a.snapshot();
+      expect(await a.remove(84), isTrue);
+      await starts.save(
+        GoalStart(date: today, kg: 84, targetKg: 75, paceKgPerWeek: -0.5),
+      );
+      expect(await a.restore(was), isTrue);
+      expect((await starts.read())!.date, DateTime(2026, 10, 5));
+    });
+
     test('a save that fails leaves the goal its start', () async {
       saves = false;
       expect(await actions().complete(goal, 84), isFalse);
@@ -681,6 +693,21 @@ void main() {
         reflowed(far.toPlan(), [next], fromKg: 110).single.startKg,
         closeTo(97, 1e-9),
       );
+    });
+
+    test('after a goal already over, the next starts today', () {
+      final over = _cutFrom(DateTime(2026, 1, 5));
+      final next = GoalDraft(
+        kind: PhaseKind.maintain,
+        startKg: 80,
+        start: over.end,
+      ).toPlan();
+      final today = over.end.add(const Duration(days: 21));
+      expect(
+        reflowed(over, [next], fromKg: 80, today: today).single.start,
+        today,
+      );
+      expect(reflowed(over, [next], fromKg: 80).single.start, over.end);
     });
 
     testWidgets('the pace and plan steps say so', (tester) async {

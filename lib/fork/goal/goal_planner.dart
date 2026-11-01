@@ -431,13 +431,16 @@ PhasePlan restarted(PhasePlan plan, DateTime start, double startKg) =>
 
 /// The goals in [upcoming], each [restarted] the day after the one before
 /// ends, from the weight it ends at (or [fromKg]): the first after
-/// [current].
+/// [current], and not before [today] when that one is already over.
 List<PhasePlan> reflowed(
   PhasePlan current,
   List<PhasePlan> upcoming, {
   required double fromKg,
+  DateTime? today,
 }) {
-  var start = current.end;
+  var start = today != null && current.end.isBefore(today)
+      ? today
+      : current.end;
   var kg = endKgOf(current) ?? fromKg;
   final out = <PhasePlan>[];
   for (final p in upcoming) {

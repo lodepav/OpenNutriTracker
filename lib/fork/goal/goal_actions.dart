@@ -9,7 +9,11 @@ DateTime _date(DateTime t) => DateTime(t.year, t.month, t.day);
 
 /// The running goal and the queue after it, as they were: what Undo puts
 /// back.
-typedef GoalSnapshot = ({PhasePlan? plan, List<PhasePlan> upcoming});
+typedef GoalSnapshot = ({
+  PhasePlan? plan,
+  List<PhasePlan> upcoming,
+  Object? start,
+});
 
 /// Starting, completing and extending the profile's goal: its plan in the
 /// phase store, and the pace and target weight in the profile, which the
@@ -101,14 +105,20 @@ class GoalActions {
   );
 
   /// The running goal and the queue now, for [restore].
-  Future<GoalSnapshot> snapshot() async =>
-      (plan: await _store.plan(), upcoming: await _store.upcoming());
+  Future<GoalSnapshot> snapshot() async => (
+    plan: await _store.plan(),
+    upcoming: await _store.upcoming(),
+    start: await _starts?.stored(),
+  );
 
   /// Puts back the running goal (its pace and target in the profile) and
   /// the queue as [was]: Undo after a move or a removal.
   Future<bool> restore(GoalSnapshot was) => _onProfile(() async {
     final plan = was.plan;
     final pace = plan == null ? 0.0 : plan.paceOn(_clock());
+    // First, so the save's sync finds the goal's start: a queued goal that
+    // took over has replaced it.
+    await _starts?.putBack(was.start);
     if (!await _saveGoal(pace, plan?.targetKg)) return false;
     await _store.save(plan);
     await _store.saveUpcoming(was.upcoming);
@@ -137,8 +147,17 @@ class GoalActions {
         completedGoal(plan, nowKg, _date(next.start)),
       ]);
     }
-    // It begins the day it was planned to, so the rest stay as planned.
-    await _store.save(next);
+    // It begins the day it was planned to, so the rest stay as planned,
+    // from the weight it really begins at.
+    await _store.save(
+      PhasePlan(
+        start: next.start,
+        phases: next.phases,
+        startKg: nowKg ?? next.startKg,
+        targetKg: next.targetKg,
+        extensions: next.extensions,
+      ),
+    );
     await _store.saveUpcoming(queue.skip(1).toList());
     return true;
   });
@@ -204,7 +223,12 @@ class GoalActions {
     List<PhasePlan> queue,
     double? nowKg,
   ) => _store.saveUpcoming(
-    reflowed(current, queue, fromKg: nowKg ?? current.startKg ?? 0),
+    reflowed(
+      current,
+      queue,
+      fromKg: nowKg ?? current.startKg ?? 0,
+      today: _date(_clock()),
+    ),
   );
 
   /// [action] on the actions' profile; false when a switch overtook it.

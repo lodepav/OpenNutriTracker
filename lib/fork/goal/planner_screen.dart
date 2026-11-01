@@ -280,7 +280,8 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
       widget.queuedAt ??
       (widget.onQueue != null &&
               widget.editing == null &&
-              _setup.running != null
+              _setup.running != null &&
+              _setup.running!.end.isAfter(_today)
           ? _setup.upcoming.length
           : null);
 
@@ -340,9 +341,11 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
   /// weight it ends at, with its pace when it is the same kind.
   void _moveTo(int place) {
     final before = _goalBefore(place);
-    final kg = endKgOf(before) ?? _setup.nowKg;
+    // A goal already over leads nowhere: this one starts today, from now.
+    final over = !before.end.isAfter(_today);
+    final kg = over ? _setup.nowKg : endKgOf(before) ?? _setup.nowKg;
     _place = place;
-    _draft = _draft.copyWith(start: before.end, startKg: kg);
+    _draft = _draft.copyWith(start: over ? _today : before.end, startKg: kg);
     if (_draft.kind == before.kind) {
       final same = GoalDraft.of(before, kg);
       _draft = _draft.copyWith(
@@ -788,6 +791,8 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
           title: title,
           subtitle: text,
           onTap: () => setState(() {
+            // The kind it is already: a custom pace stays.
+            if (_draft.kind == kind) return;
             _customPace = false;
             _draft = _draft.copyWith(
               kind: kind,

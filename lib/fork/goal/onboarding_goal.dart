@@ -21,13 +21,23 @@ abstract final class OnboardingGoal {
   /// dropped.
   static Future<void> save({
     UserGoalSelectionEntity? chosen,
+    double? weightKg,
     GoalActions? actions,
   }) async {
-    final plan = pending.value;
+    var plan = pending.value;
     if (plan == null) return;
     if (chosen != null && chosen != choiceFor(plan.kind)) {
       pending.value = null;
       return;
+    }
+    // The weight corrected after planning: the plan runs from it, or goes
+    // if its target is no longer ahead.
+    if (weightKg != null && plan.startKg != weightKg) {
+      plan = restarted(plan, plan.start, weightKg);
+      if (queuedProblem(plan) != null) {
+        pending.value = null;
+        return;
+      }
     }
     if (await (actions ?? GoalActions()).start(plan)) pending.value = null;
   }
@@ -64,7 +74,7 @@ class OnboardingPlanRow extends StatelessWidget {
     );
     final pending = OnboardingGoal.pending.value;
     final draft = pending != null
-        ? GoalDraft.of(pending, setup.nowKg)
+        ? GoalDraft.of(pending, setup.nowKg).copyWith(startKg: setup.nowKg)
         : GoalDraft.fresh(
             setup.nowKg,
             DateTime.now(),
