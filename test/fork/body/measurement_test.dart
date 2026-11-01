@@ -141,6 +141,50 @@ void main() {
     expect(memory.entries.single.value, 80);
   });
 
+  testWidgets("a picked metric's last entry gone, the card shows one left", (
+    tester,
+  ) async {
+    final memory = _Memory()
+      ..entries.addAll([
+        Measurement(
+          id: 'b',
+          date: DateTime.now(),
+          metric: BodyMetric.bodyFat,
+          value: 20,
+        ),
+        Measurement(
+          id: 'w',
+          date: DateTime.now(),
+          metric: BodyMetric.waist,
+          value: 80,
+        ),
+      ]);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: BodyMeasurementsCard(
+              rangeDays: 30,
+              palette: AppPalette.light,
+              imperial: false,
+              store: memory,
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Waist'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Waist entries'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('measure-delete-w')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Waist entries'), findsNothing);
+    expect(find.text('Body fat entries'), findsOneWidget);
+  });
+
   testWidgets('a value out of range is refused', (tester) async {
     final memory = _Memory();
     await tester.pumpWidget(

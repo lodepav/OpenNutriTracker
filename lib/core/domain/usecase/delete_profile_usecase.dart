@@ -3,6 +3,9 @@ import 'package:opennutritracker/core/domain/entity/profile_entity.dart';
 import 'package:opennutritracker/core/domain/usecase/switch_profile_usecase.dart';
 import 'package:opennutritracker/core/utils/hive_db_provider.dart';
 import 'package:opennutritracker/core/utils/user_image_storage.dart';
+// [fork] S191 profile-photos
+import 'package:opennutritracker/fork/photos/photo_store.dart';
+// [/fork]
 
 class DeleteProfileUsecase {
   final ProfileRepository _profileRepository;
@@ -31,6 +34,12 @@ class DeleteProfileUsecase {
       await _switchProfileUsecase.switchProfile(fallback);
     }
 
+    // [fork] S191 profile-photos: read from the box deleted next
+    await deleteProfilePhotos(_hiveDBProvider, profile, [
+      for (final p in all)
+        if (p.id != profile.id) p,
+    ]);
+    // [/fork]
     await _hiveDBProvider.deleteProfileBoxes(profile.boxSuffix);
     final imagePath = profile.imagePath;
     if (imagePath != null) {

@@ -2,6 +2,8 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
+import 'package:opennutritracker/core/domain/entity/profile_entity.dart';
+import 'package:opennutritracker/core/utils/hive_db_provider.dart';
 import 'package:opennutritracker/core/utils/id_generator.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:path_provider/path_provider.dart';
@@ -106,4 +108,36 @@ class PhotoStore {
     await (await _box()).put(_key, [for (final p in photos) p.toJson()]);
     changes.value++;
   }
+}
+
+/// Deletes the images of [profile], which is about to go, while its index
+/// can still be read. A backup restored into two profiles has them share
+/// ids and so files: an image in one of [others]' index stays. Anything
+/// unreadable leaves the images, and never stops the profile's delete.
+Future<void> deleteProfilePhotos(
+  HiveDBProvider db,
+  ProfileEntity profile,
+  List<ProfileEntity> others,
+) async {
+  PhotoStore storeOf(ProfileEntity p) => PhotoStore(
+    () => db.openScopedBox<dynamic>(AdaptiveStore.boxName, p.boxSuffix),
+  );
+  try {
+    final kept = <String>{};
+    for (final other in others) {
+      kept.addAll((await storeOf(other).all()).map((p) => p.id));
+      if (other.id != db.activeProfileId) {
+        await db.closeScopedBox<dynamic>(
+          AdaptiveStore.boxName,
+          other.boxSuffix,
+        );
+      }
+    }
+    final store = storeOf(profile);
+    for (final photo in await store.all()) {
+      if (kept.contains(photo.id)) continue;
+      final image = await store.file(photo);
+      if (await image.exists()) await image.delete();
+    }
+  } catch (_) {}
 }

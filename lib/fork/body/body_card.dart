@@ -116,12 +116,13 @@ class _BodyMeasurementsCardState extends State<BodyMeasurementsCard> {
   Widget _card(BuildContext context, List<Measurement> all) {
     final theme = Theme.of(context);
     final measured = {for (final m in all) m.metric};
-    final metric =
-        _picked ??
-        BodyMetric.values.firstWhere(
-          measured.contains,
-          orElse: () => BodyMetric.bodyFat,
-        );
+    // The picked metric's last entry can go, by a delete or a restore.
+    final metric = measured.contains(_picked)
+        ? _picked!
+        : BodyMetric.values.firstWhere(
+            measured.contains,
+            orElse: () => BodyMetric.bodyFat,
+          );
     final now = DateTime.now();
     // Not a Duration: across a clock change it lands an hour off midnight.
     final from = DateTime(

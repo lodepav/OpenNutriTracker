@@ -109,10 +109,30 @@ class _ProgressPhotosCardState extends State<ProgressPhotosCard> {
         ),
       ),
     );
-    if (source == null) return;
-    final bytes = await widget.pick(source);
-    if (bytes == null) return;
-    await _store.add(DateTime.now(), bytes);
+    if (source == null || !mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final bytes = await widget.pick(source);
+      if (bytes == null || !mounted) return;
+      var date = DateTime.now();
+      // A photo from the gallery can be of any day.
+      if (source == ImageSource.gallery) {
+        final picked = await showDatePicker(
+          context: context,
+          initialDate: date,
+          firstDate: DateTime(2000),
+          lastDate: date,
+          helpText: 'Photo taken on',
+        );
+        if (picked == null) return;
+        date = picked;
+      }
+      await _store.add(date, bytes);
+    } catch (_) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text("Couldn't add the photo. Try again.")),
+      );
+    }
   }
 
   Future<void> _open(ShownPhoto shown) async {

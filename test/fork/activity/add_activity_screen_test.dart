@@ -229,4 +229,17 @@ void main() {
     expect(calendar.deleted, [(logged, day)]);
     expect(home.loads, 2);
   });
+
+  testWidgets('the Undo goes after a while, not onto every screen', (
+    tester,
+  ) async {
+    await open(tester);
+    await tester.tap(find.bySemanticsIdentifier('add-activity-recent-02160'));
+    await tester.pumpAndSettle();
+    expect(find.text('Added 45 min yoga'), findsOneWidget);
+
+    await tester.pump(const Duration(seconds: 10));
+    await tester.pumpAndSettle();
+    expect(find.text('Added 45 min yoga'), findsNothing);
+  });
 }

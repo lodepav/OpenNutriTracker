@@ -14,6 +14,7 @@ import 'package:opennutritracker/core/utils/reload_diary_and_trends.dart';
 import 'package:opennutritracker/features/profile/presentation/widgets/body_weight_input.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 import 'package:opennutritracker/fork/health/weight_import_ui.dart';
+import 'package:opennutritracker/fork/weight/weigh_in_log.dart';
 import 'package:opennutritracker/fork/weight/weight_history_view.dart'; // S122 weight-history
 
 /// Screen for browsing and adding weight log entries.
@@ -153,10 +154,23 @@ class _WeightHistoryScreenState extends State<WeightHistoryScreen> {
         bodyWeightUnit: _bodyWeightUnit,
       ),
     );
-    if (result == null) return;
-    if (editing != null && !DateUtils.isSameDay(editing.date, result.date)) {
-      await _deleteUsecase.deleteEntry(editing);
-    }
+    if (result == null || !mounted) return;
+    // Its row is found by the filed day: the date can show a neighbour.
+    final inPlace =
+        editing != null &&
+        DateUtils.isSameDay(editing.filedDay ?? editing.date, result.date);
+    // A day holds one weigh-in, so a save takes the place of the one there.
+    final replaced = inPlace
+        ? null
+        : _entries
+              .where(
+                (e) => DateUtils.isSameDay(e.filedDay ?? e.date, result.date),
+              )
+              .firstOrNull;
+    final messenger = ScaffoldMessenger.of(context);
+    final message = replaced == null
+        ? null
+        : 'Replaced ${replacedText(context, _asFiled(replaced), _bodyWeightUnit, DateTime.now())}';
 
     await _addUsecase.addEntry(
       WeightLogEntity(
@@ -165,10 +179,44 @@ class _WeightHistoryScreenState extends State<WeightHistoryScreen> {
         note: result.note,
       ),
     );
+    // After the add: a delete of today's sets the profile to the newest left.
+    if (editing != null && !inPlace) {
+      await _deleteUsecase.deleteEntry(editing);
+    }
     await _load();
     reloadDiaryAndTrends();
     refreshAfterWeightImport(); //: today's sets the weight
+    if (replaced == null) return;
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          // Goes after its time, as the other undos.
+          persist: false,
+          content: Text(message!),
+          action: SnackBarAction(
+            label: 'Undo',
+            onPressed: () async {
+              await _addUsecase.addEntry(_asFiled(replaced));
+              if (editing != null) {
+                await _addUsecase.addEntry(_asFiled(editing));
+              }
+              await _load();
+              reloadDiaryAndTrends();
+              refreshAfterWeightImport();
+            },
+          ),
+        ),
+      );
   }
+
+  /// [entry] dated on the day it is filed under, so adding it back puts it
+  /// in its own row after a time-zone change.
+  WeightLogEntity _asFiled(WeightLogEntity entry) => WeightLogEntity(
+    date: entry.filedDay ?? entry.date,
+    weightKg: entry.weightKg,
+    note: entry.note,
+  );
 
   Future<void> _onDelete(WeightLogEntity entry) async {
     await _deleteUsecase.deleteEntry(entry);

@@ -32,6 +32,12 @@ class _MemoryPhotos extends PhotoStore {
   }
 }
 
+class _FailingPhotos extends _MemoryPhotos {
+  @override
+  Future<ProgressPhoto> add(DateTime date, List<int> bytes) async =>
+      throw const FileSystemException('disk full');
+}
+
 void main() {
   group('store', () {
     late Directory dir;
@@ -104,9 +110,100 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const ValueKey('photo-gallery')));
       await tester.pumpAndSettle();
+      // From the gallery it asks the day, as it may not be today's.
+      await tester.tap(find.text('OK'));
+      await tester.pumpAndSettle();
 
       expect(store.photos, hasLength(1));
       expect(find.byKey(const ValueKey('photo-p0')), findsOneWidget);
+    });
+
+    Future<void> addFrom(WidgetTester tester, String source) async {
+      await tester.tap(find.byKey(const ValueKey('photo-add')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(ValueKey(source)));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('a gallery photo is dated today unless another day is asked', (
+      tester,
+    ) async {
+      final store = await pump(tester, picked: [1]);
+      final now = DateTime.now();
+
+      await addFrom(tester, 'photo-gallery');
+      expect(find.text('Photo taken on'), findsOneWidget);
+      await tester.tap(find.text('OK'));
+      await tester.pumpAndSettle();
+      expect(DateUtils.isSameDay(store.photos.single.date, now), isTrue);
+
+      await addFrom(tester, 'photo-gallery');
+      await tester.tap(find.byTooltip('Switch to input'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), '03/05/2025');
+      await tester.tap(find.text('OK'));
+      await tester.pumpAndSettle();
+      expect(store.photos.last.date, DateTime(2025, 3, 5));
+    });
+
+    testWidgets('a gallery photo with the date cancelled adds nothing', (
+      tester,
+    ) async {
+      final store = await pump(tester, picked: [1]);
+
+      await addFrom(tester, 'photo-gallery');
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+
+      expect(store.photos, isEmpty);
+    });
+
+    testWidgets('a camera photo is of today, without asking', (tester) async {
+      final store = await pump(tester, picked: [1]);
+
+      await addFrom(tester, 'photo-camera');
+
+      expect(find.text('Photo taken on'), findsNothing);
+      expect(
+        DateUtils.isSameDay(store.photos.single.date, DateTime.now()),
+        isTrue,
+      );
+    });
+
+    testWidgets('a pick that fails says so', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: ProgressPhotosCard(
+              store: _MemoryPhotos(),
+              pick: (_) async => throw Exception('no permission'),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await addFrom(tester, 'photo-camera');
+
+      expect(find.text("Couldn't add the photo. Try again."), findsOneWidget);
+    });
+
+    testWidgets('a save that fails says so', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: ProgressPhotosCard(
+              store: _FailingPhotos(),
+              pick: (_) async => [1],
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await addFrom(tester, 'photo-camera');
+
+      expect(find.text("Couldn't add the photo. Try again."), findsOneWidget);
     });
 
     testWidgets('a cancelled pick adds nothing', (tester) async {
