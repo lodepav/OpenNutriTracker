@@ -30,9 +30,13 @@ The user's note states weights. Rules:
 - Then one item per food on the plate, as served (cooked, as eaten, not
   raw), a named dish too: a pizza is its crust, sauce, cheese and each
   topping; loaded fries are the fries, each topping and each sauce on them;
+  melted cheese poured over them is "cheese sauce", not a block of cheese;
   a soup or stew is its broth or base and each solid in it. A sauce poured
-  over is a food. Every food the note names is among them; the rest are what
-  the photo shows. "query" is the nearest generic food in English, named
+  over is a food. A salad lists its dressing: the oil, vinaigrette or
+  mayonnaise the note or the photo shows, and when it looks dressed with
+  nothing to say what, oil, a tablespoon (14 g) for each 150 g of salad.
+  Every food the note names is among them; the rest are what the photo
+  shows. "query" is the nearest generic food in English, named
   the way a food table names it: the food, then its form and state after
   commas ("chicken breast, grilled", "rice, white, cooked", "potatoes,
   roasted", "spinach, raw"). Fries from a kitchen are "french fries, fast
@@ -77,6 +81,8 @@ is sulguni"), but states no weight. Rules:
   ("dish=Chicken rice bowl"). It has no quantity.
 - Then one item per food in it, as served (cooked, as eaten, not raw),
   a named dish too: a pizza is its crust, sauce, cheese and each topping;
+  loaded fries are the fries and each topping, melted cheese poured over them
+  "cheese sauce", not a block of cheese;
   a soup or stew is its broth or base and each solid in it, so none of it
   goes missing. The base is the liquid alone ("chicken broth", "coconut
   milk", "tomato puree"), never the soup itself ("soup, lentil"): that
@@ -103,7 +109,7 @@ is sulguni"), but states no weight. Rules:
   A size the note gives ("a 23 cm pizza") is the dish's size: weigh its
   foods by that, not by the plate.
   Weigh pieces by their size: a cutlet or chop about 80-150 g, a slice of
-  bread 30 g, an egg 50 g, a whole pizza of any shape at least 350 g even if
+  bread 30 g, an egg 50 g, a taco's tortilla 40 g, a wrap's 70 g, a whole pizza of any shape at least 350 g even if
   small, 30 cm across 450-550 g, a thick pan pizza twice that for its area.
   A number of patties the note gives ("with 3 patties", "3 patty burger",
   "double") is how many there are, whatever the photo shows, about 90 g each.

@@ -109,6 +109,11 @@ class HealthStoreWeights implements WeightSource {
 /// it is released.
 class WeightImport {
   static const boxName = 'ForkHealthWeightBox';
+
+  /// The import [start] set going, so a test can wait for it before it closes
+  /// Hive: left running, it opens its box in a folder already gone.
+  @visibleForTesting
+  static Future<void> startupRun = Future.value();
   static const backfill = Duration(days: 30);
 
   /// Read back past the last run, for readings a scale's app syncs late.
@@ -155,7 +160,7 @@ class WeightImport {
       if (await import.runIfDue() > 0) onChanged();
     }
 
-    unawaited(run());
+    unawaited(startupRun = run());
     WidgetsBinding.instance.addObserver(_Lifecycle(() => unawaited(run())));
   }
 

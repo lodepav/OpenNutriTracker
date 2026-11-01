@@ -55,10 +55,50 @@ void main() {
     expect(item.quantity, 3);
   });
 
-  test('a count of burgers is a count of burgers', () {
-    final item = kept('2 burgers with 3 patties', const [
-      ParsedMealItem(query: 'burgers', quantity: 2),
+  test('a count of burgers is a count of burgers, with its patties', () {
+    for (final input in [
+      '2 burgers with 3 patties',
+      'two burgers with 3 patties',
+    ]) {
+      final item = kept(input, const [
+        ParsedMealItem(query: 'burgers', quantity: 2),
+      ]).single;
+      expect(item.query, 'burgers with 3 patties');
+      expect(item.quantity, 2);
+    }
+  });
+
+  test('patties listed beside their burger are not counted twice', () {
+    final items = kept('2 burgers with 3 patties', const [
+      ParsedMealItem(query: 'burger', quantity: 2),
+      ParsedMealItem(query: 'beef patty', quantity: 6, portion: 'patty'),
+    ]);
+    expect(items.single.query, 'burgers with 3 patties');
+    expect(items.single.quantity, 2);
+  });
+
+  test('a burger whose patties the model left out gets them back', () {
+    final item = kept('burger with 3 patties', const [
+      ParsedMealItem(query: 'burger'),
     ]).single;
-    expect(item.quantity, 2);
+    expect(item.query, 'burger with 3 patties');
+    expect(item.quantity, isNull);
+  });
+
+  test('a food after the burger is its own', () {
+    final items = kept('burger with 3 patties with 2 cokes', const [
+      ParsedMealItem(query: 'burger', quantity: 3),
+      ParsedMealItem(query: 'cokes', quantity: 2),
+    ]);
+    expect(items.last.query, 'cokes');
+    expect(items.last.quantity, 2);
+  });
+
+  test('a weighed item keeps its weight', () {
+    final item = kept('200g burger with 3 patties', const [
+      ParsedMealItem(query: 'burger', quantity: 200, unit: 'g'),
+    ]).single;
+    expect(item.query, 'burger');
+    expect(item.quantity, 200);
   });
 }
