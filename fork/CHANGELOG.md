@@ -2,6 +2,21 @@
 
 Written by fork/tools/release_notes.dart at each release (D16).
 
+## 0.7.0 · 2026-11-01
+
+Based on OpenNutriTracker 2.6.0.
+
+### New
+
+- Home gets recent foods, repeat a meal, up next and a way into the meal plan and recurring meals
+- a tap selects on the Diary, and Home leads with quick actions, today's diary off by default
+
+### Fixes and changes
+
+- code and UX review fixes for Home's quick sections and the meal plan
+- a shared meal's code is not imported while choosing foods for the plan
+- the APK carries arm64 libraries only, 11 MB smaller
+
 ## 0.6.1 · 2026-10-31
 
 Based on OpenNutriTracker 2.6.0.
