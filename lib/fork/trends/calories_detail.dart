@@ -530,9 +530,11 @@ class WeekendCard extends StatelessWidget {
         energyText(context, weekdays.kcal),
         energyText(context, weekend.kcal),
       ),
-      ('Carbs', grams(weekdays.carbs), grams(weekend.carbs)),
-      ('Fat', grams(weekdays.fat), grams(weekend.fat)),
-      ('Protein', grams(weekdays.protein), grams(weekend.protein)),
+      ...inMacroOrder(
+        carbs: ('Carbs', grams(weekdays.carbs), grams(weekend.carbs)),
+        fat: ('Fat', grams(weekdays.fat), grams(weekend.fat)),
+        protein: ('Protein', grams(weekdays.protein), grams(weekend.protein)),
+      ),
       if (weekdays.balance != null || weekend.balance != null)
         ('Balance', balance(weekdays.balance), balance(weekend.balance)),
     ];

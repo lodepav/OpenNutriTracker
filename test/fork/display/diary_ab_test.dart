@@ -16,6 +16,7 @@ import 'package:opennutritracker/features/meal_detail/presentation/bloc/meal_det
 import 'package:opennutritracker/fork/display/day_ring.dart';
 import 'package:opennutritracker/fork/display/day_totals_card.dart';
 import 'package:opennutritracker/fork/display/diary_timeline.dart';
+import 'package:opennutritracker/fork/display/display_prefs.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 import 'package:provider/provider.dart';
 
@@ -237,6 +238,25 @@ void main() {
       [for (final b in bars) b.color == error],
       [false, false, true, false],
     );
+  });
+
+  testWidgets('the day totals list the macros in the picked order', (
+    tester,
+  ) async {
+    DisplayPrefs.macroOrder.value = const [
+      Macro.protein,
+      Macro.carbs,
+      Macro.fat,
+    ];
+    addTearDown(
+      () => DisplayPrefs.macroOrder.value = DisplayPrefs.upstreamOrder,
+    );
+    await tester.pumpWidget(
+      _app(DayTotalsCard(trackedDay: _tracked(), intakes: const [])),
+    );
+    double x(String label) => tester.getTopLeft(find.text(label)).dx;
+    expect(x('protein g'), lessThan(x('carbs g')));
+    expect(x('carbs g'), lessThan(x('fat g')));
   });
 
   test('a ring fills with the energy eaten against the goal', () {

@@ -665,20 +665,22 @@ class _IntakeVerticalListState extends State<IntakeVerticalList> {
             checked: current == DiarySortType.kcal,
             child: Text(S.of(context).diarySortByKcal),
           ),
-          CheckedPopupMenuItem<DiarySortType>(
-            value: DiarySortType.protein,
-            checked: current == DiarySortType.protein,
-            child: Text(S.of(context).diarySortByProtein),
-          ),
-          CheckedPopupMenuItem<DiarySortType>(
-            value: DiarySortType.carbs,
-            checked: current == DiarySortType.carbs,
-            child: Text(S.of(context).diarySortByCarbs),
-          ),
-          CheckedPopupMenuItem<DiarySortType>(
-            value: DiarySortType.fat,
-            checked: current == DiarySortType.fat,
-            child: Text(S.of(context).diarySortByFat),
+          ...inMacroOrder<PopupMenuEntry<DiarySortType>>(
+            carbs: CheckedPopupMenuItem<DiarySortType>(
+              value: DiarySortType.carbs,
+              checked: current == DiarySortType.carbs,
+              child: Text(S.of(context).diarySortByCarbs),
+            ),
+            fat: CheckedPopupMenuItem<DiarySortType>(
+              value: DiarySortType.fat,
+              checked: current == DiarySortType.fat,
+              child: Text(S.of(context).diarySortByFat),
+            ),
+            protein: CheckedPopupMenuItem<DiarySortType>(
+              value: DiarySortType.protein,
+              checked: current == DiarySortType.protein,
+              child: Text(S.of(context).diarySortByProtein),
+            ),
           ),
         ],
       ),
