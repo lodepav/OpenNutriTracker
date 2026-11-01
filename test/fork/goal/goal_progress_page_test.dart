@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:opennutritracker/core/domain/entity/body_weight_unit_entity.dart';
 import 'package:opennutritracker/core/utils/energy_unit_provider.dart';
 import 'package:opennutritracker/fork/adaptive/goal_plan.dart';
-import 'package:opennutritracker/fork/adaptive/goal_plan_card.dart'
+import 'package:opennutritracker/fork/adaptive/goal_saving.dart'
     show paceChanges;
 import 'package:opennutritracker/fork/goal/goal_progress.dart';
 import 'package:opennutritracker/fork/goal/goal_progress_page.dart';

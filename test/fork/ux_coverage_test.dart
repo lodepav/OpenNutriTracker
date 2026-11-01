@@ -8,8 +8,6 @@ const _notYet = {
   'lib/fork/adaptive/adaptive_ui.dart':
       'its Scaffolds are sub-pages of the settings tile',
   'lib/fork/backup/auto_backup_ui.dart': 'needs an AutoBackup over a Hive box',
-  'lib/fork/phases/phases_ui.dart':
-      'its Scaffolds are sub-pages of the phases card',
   'lib/fork/photos/photo_card.dart':
       'a full-screen photo, opened from the card',
   'lib/fork/screens/add_meal/add_meal_screen.dart': 'blocs from the locator',

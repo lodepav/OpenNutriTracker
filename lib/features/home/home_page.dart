@@ -45,6 +45,9 @@ import 'package:opennutritracker/fork/strength/strength_card.dart';
 // [/fork]
 import 'package:opennutritracker/fork/adaptive/adaptive_ui.dart';
 // [/fork]
+// [fork] S193 phase-goal-notice
+import 'package:opennutritracker/fork/phases/phase_goal_notice.dart';
+// [/fork]
 // [fork] S43 meal-plan
 import 'package:opennutritracker/fork/plan/plan_ui.dart';
 // [/fork]
@@ -265,6 +268,11 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
             'notices': Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                // [fork] S193 phase-goal-notice: the goal moved by itself
+                PhaseGoalNoticeCard(
+                  onShown: () => _homeBloc.add(const LoadItemsEvent()),
+                ),
+                // [/fork]
                 // Day-one / empty-day guidance: when nothing is logged yet, point
                 // the way to the centre + rather than leaving a silent dashboard.
                 if (breakfastIntakeList.isEmpty &&

@@ -4,7 +4,6 @@ import 'package:opennutritracker/core/domain/entity/body_weight_unit_entity.dart
 import 'package:opennutritracker/core/domain/entity/tracked_day_entity.dart';
 import 'package:opennutritracker/fork/phases/phase_report.dart';
 import 'package:opennutritracker/fork/phases/phases.dart';
-import 'package:opennutritracker/fork/phases/phases_ui.dart';
 
 import '../../helpers/ux_checks.dart';
 
@@ -133,38 +132,6 @@ void main() {
     expect(find.text('2600 kcal → 2500 kcal'), findsOneWidget);
   });
 
-  group('the card\'s way to them', () {
-    Future<void> pump(WidgetTester tester, PhasePlan p) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: SingleChildScrollView(
-              child: DietPhasesCard(
-                store: _Memory(p),
-                clock: () => DateTime(2026, 10, 26, 10),
-              ),
-            ),
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-    }
-
-    testWidgets('once a phase has begun', (tester) async {
-      await pump(tester, plan);
-      await tester.tap(find.byKey(const ValueKey('phases-reports')));
-      await tester.pumpAndSettle();
-      expect(find.text('Phase reports'), findsOneWidget);
-      // Nothing to read here, no locator: said, not a spinner.
-      expect(find.text('Your history could not be read.'), findsOneWidget);
-    });
-
-    testWidgets('none before', (tester) async {
-      await pump(tester, PhasePlan(start: day(11, 2), phases: plan.phases));
-      expect(find.byKey(const ValueKey('phases-reports')), findsNothing);
-    });
-  });
-
   testWidgets('the page at 200% text: nothing cut, the targets and contrast', (
     tester,
   ) async {
@@ -179,13 +146,4 @@ void main() {
       ),
     );
   });
-}
-
-class _Memory extends PhaseStore {
-  final PhasePlan saved;
-
-  _Memory(this.saved);
-
-  @override
-  Future<PhasePlan?> plan() async => saved;
 }

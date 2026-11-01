@@ -9,7 +9,7 @@ import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_ui.dart'
     show refreshGoals;
-import 'package:opennutritracker/fork/adaptive/goal_plan_card.dart'
+import 'package:opennutritracker/fork/adaptive/goal_saving.dart'
     show savePace;
 import 'package:opennutritracker/fork/strength/strength_signal.dart';
 import 'package:opennutritracker/fork/strength/strength_suggestion.dart';

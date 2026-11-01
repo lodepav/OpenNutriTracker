@@ -10,7 +10,7 @@ import 'package:opennutritracker/core/utils/tracked_day_lock.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/fork/adaptive/goal_plan.dart';
-import 'package:opennutritracker/fork/adaptive/goal_plan_card.dart';
+import 'package:opennutritracker/fork/adaptive/goal_saving.dart';
 import 'package:opennutritracker/fork/goal/goal_actions.dart';
 
 enum PhaseKind {
@@ -169,12 +169,16 @@ class PhasePlan {
 
 /// The plan, per profile in the fork's box beside the adaptive state, and
 /// which phase was last put into the profile.
+/// Home's goal moved by itself, as a phase or a queued goal came due.
+typedef PhaseGoalNotice = ({String title, double fromKcal, double toKcal});
+
 class PhaseStore {
   static const planKey = 'phasePlan';
 
   /// The goals completed, oldest first ([GoalRecord]).
   static const historyKey = 'goalHistory';
   static const _appliedKey = 'phaseApplied';
+  static const _goalNoticeKey = 'phaseGoalNotice';
 
   /// The goals planned to follow the running one, in order ([PhasePlan]).
   static const upcomingKey = 'goalsUpcoming';
@@ -185,6 +189,9 @@ class PhaseStore {
 
   /// Bumped when the plan changes, so the Trends card reloads.
   static final changes = ValueNotifier(0);
+
+  /// The active profile's notice for Home, as of the last [PhaseRunner] run.
+  static final goalNotice = ValueNotifier<PhaseGoalNotice?>(null);
 
   final Future<Box<dynamic>> Function() _box;
 
@@ -258,6 +265,28 @@ class PhaseStore {
 
   Future<void> markApplied(String key) async =>
       (await _box()).put(_appliedKey, key);
+
+  Future<PhaseGoalNotice?> savedGoalNotice() async {
+    final json = (await _box()).get(_goalNoticeKey);
+    if (json is! Map) return null;
+    return (
+      title: json['title'] as String,
+      fromKcal: (json['fromKcal'] as num).toDouble(),
+      toKcal: (json['toKcal'] as num).toDouble(),
+    );
+  }
+
+  Future<void> saveGoalNotice(PhaseGoalNotice notice) async =>
+      (await _box()).put(_goalNoticeKey, {
+        'title': notice.title,
+        'fromKcal': notice.fromKcal,
+        'toKcal': notice.toKcal,
+      });
+
+  Future<void> dismissGoalNotice() async {
+    await (await _box()).delete(_goalNoticeKey);
+    goalNotice.value = null;
+  }
 }
 
 /// A goal's length from [start] to [end] in whole weeks, rounded, at
@@ -336,15 +365,20 @@ class PhaseRunner {
   final Future<bool> Function(PhaseStore store, ProfileStamp startedOn)
   _startNext;
 
+  /// Home's goal under the formula; null when a target sets it.
+  final Future<double?> Function() _homeGoal;
+
   PhaseRunner({
     PhaseStore? store,
     Future<bool> Function(double kgPerWeek, ProfileStamp startedOn)? setPace,
     DateTime Function()? clock,
     Future<bool> Function(PhaseStore store, ProfileStamp startedOn)? startNext,
+    Future<double?> Function()? homeGoal,
   }) : _store = store ?? PhaseStore(),
        _setPace = setPace ?? _savePaceIfProfile,
        _clock = clock ?? DateTime.now,
-       _startNext = startNext ?? _startNextIfProfile;
+       _startNext = startNext ?? _startNextIfProfile,
+       _homeGoal = homeGoal ?? _homeGoalIfProfile;
 
   static Future<bool> _startNextIfProfile(
     PhaseStore store,
@@ -365,6 +399,9 @@ class PhaseRunner {
       await locator<GetUserUsecase>().hasUserData() &&
       await savePace(kgPerWeek, startedOn);
 
+  static Future<double?> _homeGoalIfProfile() async =>
+      await locator<GetUserUsecase>().hasUserData() ? formulaGoal() : null;
+
   /// Returns whether a pace was set; failures are logged. It runs whole
   /// under the tracked-day lock, and from outside it: called while a goal
   /// is saved (a listener of [PhaseStore.changes]), it waits for the save
@@ -374,10 +411,11 @@ class PhaseRunner {
     final startedOn = ProfileStamp.now();
     return Zone.root.run(
       () async =>
-          await withTrackedDayLockOnProfile(
-            () => _run(startedOn),
-            startedOn: startedOn,
-          ) ??
+          await withTrackedDayLockOnProfile(() async {
+            final applied = await _run(startedOn);
+            await _publishGoalNotice();
+            return applied;
+          }, startedOn: startedOn) ??
           false,
     );
   }
@@ -385,17 +423,25 @@ class PhaseRunner {
   Future<bool> _run(ProfileStamp startedOn) async {
     try {
       final now = _clock();
-      await _startDue(now, startedOn);
+      final wasApplied = await _store.applied();
+      final goalBefore = await _readHomeGoal();
+      final startedQueued = await _startDue(now, startedOn);
       final plan = await _store.plan();
       if (plan == null) return false;
       final pace = plan.paceOn(now);
       if (pace == null) return false;
-      final key = '${plan.start.toIso8601String()}#${plan.indexOn(now)}';
+      final planKey = plan.start.toIso8601String();
+      final key = '$planKey#${plan.indexOn(now)}';
       if (await _store.applied() == key) return false;
       // Unsaved (no profile yet, or a profile switch dropped it), it is
       // tried again on the next resume.
       if (!await _setPace(pace, startedOn)) return false;
       await _store.markApplied(key);
+      // Saving a plan clears the mark: only a change the calendar made, not
+      // one the user just saved, is news on Home.
+      if (startedQueued || (wasApplied?.startsWith('$planKey#') ?? false)) {
+        await _noteGoalChange(plan, now, goalBefore);
+      }
       return true;
     } catch (error, stack) {
       _log.warning('Could not apply the diet phase', error, stack);
@@ -403,16 +449,55 @@ class PhaseRunner {
     }
   }
 
+  /// The goal is news, not worth failing a phase over.
+  Future<double?> _readHomeGoal() async {
+    try {
+      return await _homeGoal();
+    } catch (error, stack) {
+      _log.warning('Could not read the goal', error, stack);
+      return null;
+    }
+  }
+
+  Future<void> _noteGoalChange(
+    PhasePlan plan,
+    DateTime now,
+    double? before,
+  ) async {
+    final after = await _readHomeGoal();
+    if (before == null || after == null) return;
+    if (before.round() == after.round()) return;
+    final i = plan.indexOn(now);
+    await _store.saveGoalNotice((
+      title: i < plan.phases.length
+          ? 'New phase: ${plan.phases[i].kind.label}'
+          : 'Plan finished: Maintenance',
+      fromKcal: before,
+      toKcal: after,
+    ));
+  }
+
+  Future<void> _publishGoalNotice() async {
+    try {
+      PhaseStore.goalNotice.value = await _store.savedGoalNotice();
+    } catch (error, stack) {
+      _log.warning('Could not read the goal notice', error, stack);
+    }
+  }
+
   /// The queued goals whose day has come started in turn, each keeping
-  /// the one before as completed.
-  Future<void> _startDue(DateTime now, ProfileStamp startedOn) async {
+  /// the one before as completed; whether any was.
+  Future<bool> _startDue(DateTime now, ProfileStamp startedOn) async {
     final day = DateTime(now.year, now.month, now.day);
+    var started = false;
     for (var queue = await _store.upcoming(); queue.isNotEmpty;) {
       final plan = await _store.plan();
-      if (plan != null && day.isBefore(queue.first.start)) return;
-      if (!await _startNext(_store, startedOn)) return;
+      if (plan != null && day.isBefore(queue.first.start)) return started;
+      if (!await _startNext(_store, startedOn)) return started;
+      started = true;
       queue = await _store.upcoming();
     }
+    return started;
   }
 
   /// Run at start-up (seam S6): now, on every resume, on a profile switch

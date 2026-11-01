@@ -5,7 +5,7 @@ import 'package:opennutritracker/core/utils/calc/calendar_day_calc.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/fork/adaptive/goal_plan.dart';
-import 'package:opennutritracker/fork/adaptive/goal_plan_card.dart'
+import 'package:opennutritracker/fork/adaptive/goal_saving.dart'
     show paceChanges;
 
 /// Where a goal began: the day its target was set and the trend weight

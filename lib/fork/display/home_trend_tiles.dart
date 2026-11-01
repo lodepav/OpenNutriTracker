@@ -8,7 +8,7 @@ import 'package:opennutritracker/features/trends/presentation/bloc/trends_bloc.d
 import 'package:opennutritracker/features/trends/presentation/trends_page.dart'
     show openTrendFromHome;
 import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
-import 'package:opennutritracker/fork/adaptive/goal_plan_card.dart'
+import 'package:opennutritracker/fork/adaptive/goal_saving.dart'
     show paceChanges;
 import 'package:opennutritracker/fork/body/measurement_store.dart';
 import 'package:opennutritracker/fork/body/side_compare.dart';
