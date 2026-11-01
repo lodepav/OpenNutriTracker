@@ -86,6 +86,9 @@ extension _GoalsSettings on _SettingsScreenState {
     final config = _goalsConfig;
     if (config == null) return null;
     final kcal = config.userKcalAdjustment ?? 0;
+    if (kcal != 0 && adjustmentOverridden(AdaptiveStore.settings.value)) {
+      return '${energyText(context, kcal, signed: true)}. $_notUsed';
+    }
     return kcal == 0 ? 'None' : energyText(context, kcal, signed: true);
   }
 
@@ -100,7 +103,10 @@ extension _GoalsSettings on _SettingsScreenState {
       fat: 'Fat ${pct(config.userFatGoalPct, 25)}',
       protein: 'Protein ${pct(config.userProteinGoalPct, 15)}',
     );
-    return '${parts.join(' · ')} %';
+    final split = '${parts.join(' · ')} %';
+    return splitOverridden(AdaptiveStore.settings.value)
+        ? '$split. $_notUsed'
+        : split;
   }
 
   String? _mealSharesText() {
@@ -188,6 +194,17 @@ extension _GoalsSettings on _SettingsScreenState {
     );
   }
 }
+
+const _notUsed = 'Not used: your target sets this';
+
+/// Whether a target of the fork's stands in for the kcal adjustment.
+bool adjustmentOverridden(AdaptiveSettings settings) =>
+    settings.fixedTarget || settings.adaptiveTarget;
+
+/// Whether grams of the fork's stand in for the macro split.
+bool splitOverridden(AdaptiveSettings settings) =>
+    settings.macroProgram != null ||
+    (settings.fixedTarget && settings.fixedMacros != null);
 
 /// The Goal planner row: the goal running, or what the planner does.
 class _GoalPlannerTile extends StatefulWidget {

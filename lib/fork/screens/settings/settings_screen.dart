@@ -54,6 +54,7 @@ import 'package:opennutritracker/core/utils/ai_credential_storage.dart';
 import 'package:opennutritracker/features/add_meal/domain/usecase/run_ai_endpoint_probe_usecase.dart';
 import 'package:opennutritracker/features/settings/presentation/widgets/ai_assist_dialog.dart';
 import 'package:opennutritracker/generated/l10n.dart';
+import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/fork/leftovers/meal_photo_cache.dart';
 // The trend and target switches (D13)
 import 'package:opennutritracker/fork/adaptive/adaptive_ui.dart';
@@ -394,6 +395,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return [
       e(s.settingsKcalGoalInfoLabel, goals),
       e(s.settingsKcalAdjustmentLabel, goals),
+      e('Goal planner', goals, 'plan cut bulk maintain pace target weight'),
       e(
         'Trend and calorie target',
         goals,

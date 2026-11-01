@@ -11,6 +11,10 @@ import 'package:opennutritracker/core/domain/entity/user_gender_entity.dart';
 import 'package:opennutritracker/core/domain/entity/user_pal_entity.dart';
 import 'package:opennutritracker/core/domain/entity/user_weight_goal_entity.dart';
 import 'package:opennutritracker/core/domain/usecase/get_macro_goal_usecase.dart';
+import 'package:opennutritracker/core/utils/calc/calorie_goal_calc.dart';
+import 'package:opennutritracker/fork/goal/goal_planner.dart';
+import 'package:opennutritracker/fork/goal/onboarding_goal.dart';
+import 'package:opennutritracker/fork/phases/phases.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_ui.dart';
 import 'package:opennutritracker/fork/adaptive/macro_program.dart';
@@ -373,6 +377,31 @@ void main() {
       );
       expect(result!.program!.style, MacroStyle.keto);
     });
+  });
+
+  test('the onboarding overview shows the goal a planned pace will set', () {
+    final user = UserEntity(
+      birthday: DateTime(1990, 1, 1),
+      heightCM: 180,
+      weightKG: 90,
+      gender: UserGenderEntity.male,
+      goal: UserWeightGoalEntity.loseWeight,
+      pal: UserPALEntity.active,
+    );
+    expect(OnboardingMacros.overviewKcal(user), isNull);
+    OnboardingGoal.pending.value = GoalDraft(
+      kind: PhaseKind.cut,
+      startKg: 90,
+      targetKg: 80,
+      start: DateTime.now(),
+      paceKg: 1,
+      breaks: false,
+    ).toPlan();
+    addTearDown(() => OnboardingGoal.pending.value = null);
+    expect(
+      OnboardingMacros.overviewKcal(user),
+      closeTo(CalorieGoalCalc.getTdee(user) - 1100, 1e-6),
+    );
   });
 
   test('the onboarding overview shows the grams of the program chosen', () {

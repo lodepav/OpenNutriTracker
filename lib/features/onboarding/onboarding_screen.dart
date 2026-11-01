@@ -327,7 +327,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         image: _defaultImageWidget,
         bodyWidget: OnboardingOverviewPageBody(
           calorieGoalDayString:
-              OnboardingMacros.overviewKcal()
+              OnboardingMacros.overviewKcal(
+                    _onboardingBloc.userSelection.toUserEntity(),
+                  )
                   ?.round()
                   .toString() ?? // [fork] S89
               _onboardingBloc.getOverviewCalorieGoal()?.round().toString() ??
@@ -346,7 +348,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               "?",
           setButtonActive: _setOverviewPageContent,
           breakdown:
-              OnboardingMacros.overviewKcal() !=
+              OnboardingMacros.overviewKcal(
+                    _onboardingBloc.userSelection.toUserEntity(),
+                  ) !=
                   null // [fork] S89
               ? null // a fixed target, not the formula's
               : _onboardingBloc.getOverviewBreakdown(),
@@ -472,8 +476,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   // [fork] S89 onboarding-macros: a fixed target is held to the same floor
   // as the formula's; null without one
   bool? _forkBelowFloor() {
-    final kcal = OnboardingMacros.overviewKcal();
     final user = _onboardingBloc.userSelection.toUserEntity();
+    final kcal = OnboardingMacros.overviewKcal(user);
     if (kcal == null || user == null) return null;
     return CalorieGoalCalc.isBelowRecommendedDailyKcalFloor(
       goalKcal: kcal,

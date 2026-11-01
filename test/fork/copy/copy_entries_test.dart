@@ -467,6 +467,53 @@ void main() {
     expect(find.text('Moved 2 foods to Lunch'), findsOneWidget);
   });
 
+  testWidgets('Copy day says how many, and its Undo takes them back', (
+    tester,
+  ) async {
+    final from = DateTime(2026, 10, 22);
+    final to = DateTime(2026, 10, 23);
+    intakes.byMeal = {
+      IntakeTypeEntity.breakfast: [
+        at(
+          intakeOf('oats', 50, type: IntakeTypeEntity.breakfast),
+          DateTime(2026, 10, 22, 8),
+        ),
+        at(
+          intakeOf('egg', 60, type: IntakeTypeEntity.breakfast),
+          DateTime(2026, 10, 22, 9),
+        ),
+      ],
+    };
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: const [S.delegate],
+        home: Scaffold(
+          body: Builder(
+            builder: (context) => TextButton(
+              onPressed: () => placeWithUndo(
+                context,
+                const [],
+                CopySameTimes(to),
+                copier: copier(),
+                place: (entries) => entries.copyDay(from, to),
+              ),
+              child: const Text('copy day'),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('copy day'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Copied 2 foods'), findsOneWidget);
+    expect(intakes.added, hasLength(2));
+    expect(days.kcal[to], greaterThan(0));
+
+    await tester.tap(find.text('Undo'));
+    await tester.pumpAndSettle();
+    expect(days.kcal[to], 0);
+  });
+
   testWidgets('a move says where, and its Undo puts the entry back', (
     tester,
   ) async {

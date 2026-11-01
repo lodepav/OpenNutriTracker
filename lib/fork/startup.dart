@@ -8,9 +8,11 @@ import 'package:opennutritracker/features/add_meal/data/model_meal_photo_interpr
 import 'package:opennutritracker/features/add_meal/domain/usecase/read_meal_photo_usecase.dart';
 import 'package:opennutritracker/core/domain/usecase/delete_weight_log_usecase.dart';
 import 'package:opennutritracker/core/utils/ai_credential_storage.dart';
+import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:opennutritracker/core/utils/hive_db_provider.dart';
 import 'package:opennutritracker/core/utils/hive_storage_integrity_exception.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
+import 'package:opennutritracker/core/utils/secure_app_storage_provider.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/fork/backup/auto_backup.dart';
 import 'package:opennutritracker/fork/backup/backup_extras.dart';
@@ -75,6 +77,14 @@ BackupExtras forkBackupExtras(HiveDBProvider hiveDBProvider) => BackupExtras(
   config: locator(),
   profiles: ProfilesBackup(hiveDBProvider),
 );
+
+/// Seam S6: back to nothing started, when the recovery screen's Retry runs
+/// the bootstrap again; a second registration would throw.
+Future<void> forkResetForRetry() async {
+  if (!locator.isRegistered<SecureAppStorageProvider>()) return;
+  await Hive.close();
+  await locator.reset();
+}
 
 /// Seam S6: the fork's stores and background jobs, after upstream's
 /// bootstrap. Returns the integrity failure of a fork box, for upstream's
