@@ -144,8 +144,9 @@ class PlanStore {
     Iterable<({MealEntity meal, String unit, String amountText, double kcal})>
     foods,
     IntakeTypeEntity type,
-    DateTime day,
-  ) async => _write([
+    DateTime day, {
+    Set<int> weekdays = const {},
+  }) async => _write([
     ...await all(),
     for (final f in foods)
       PlannedFood(
@@ -156,6 +157,7 @@ class PlanStore {
         unit: f.unit,
         amountText: f.amountText,
         kcal: f.kcal,
+        weekdays: weekdays,
       ),
   ]);
 

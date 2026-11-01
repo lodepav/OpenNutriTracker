@@ -9,6 +9,7 @@ import 'package:opennutritracker/features/add_meal/presentation/add_meal_screen.
 import 'package:opennutritracker/features/add_meal/presentation/add_meal_type.dart';
 import 'package:opennutritracker/features/add_meal/presentation/widgets/quick_add_bottom_sheet.dart';
 import 'package:opennutritracker/features/scanner/scanner_screen.dart';
+import 'package:opennutritracker/fork/plan/plan_screen.dart';
 import 'package:opennutritracker/fork/screens/add_meal/bulk_add_screen.dart';
 import 'package:opennutritracker/fork/screens/profile/weight_history_screen.dart';
 
@@ -36,6 +37,11 @@ sealed class LaunchAction {
 /// Food search, from Home's quick actions.
 class SearchAction extends LaunchAction {
   const SearchAction();
+}
+
+/// The meal plan, from Home's quick actions.
+class PlanAction extends LaunchAction {
+  const PlanAction();
 }
 
 class ScanAction extends LaunchAction {
@@ -148,6 +154,10 @@ Future<void> openLaunchAction(BuildContext context, LaunchAction action) async {
           AddMealExtension.fromIntakeTypeEntity(type),
           now,
         ),
+      );
+    case PlanAction():
+      navigator.push(
+        MaterialPageRoute<void>(builder: (_) => const MealPlanScreen()),
       );
     case ScanAction():
       navigator.pushNamed(

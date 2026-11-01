@@ -48,6 +48,8 @@ const homeDiarySections = {
 Map<String, String> homeSectionNames(BuildContext context) => {
   'dashboard': 'Summary',
   'quickActions': 'Quick actions',
+  'repeatMeal': 'Repeat a meal',
+  'recentFoods': 'Recent foods',
   'tiles': 'Tiles',
   'checkIn': 'Weekly check-in',
   'plan': 'Meal plan',

@@ -69,6 +69,25 @@ void main() {
     expect(await store.forDay(_sunday), hasLength(2));
   });
 
+  test('foods planned with weekdays repeat from the day on', () async {
+    await store.add(
+      [
+        (
+          meal: MealEntityFixtures.mealOne,
+          unit: 'g',
+          amountText: '150.0',
+          kcal: 300,
+        ),
+      ],
+      IntakeTypeEntity.lunch,
+      _sunday,
+      weekdays: {DateTime.tuesday},
+    );
+    expect(await store.forDay(DateTime(2026, 10, 20)), isEmpty); // before it
+    expect(await store.forDay(DateTime(2026, 10, 27)), hasLength(1));
+    expect(await store.forDay(DateTime(2026, 10, 28)), isEmpty);
+  });
+
   test('a plan reads back once the box is reopened', () async {
     // Hive hands nested maps back as Map<dynamic, dynamic> after a reopen;
     // before it, the very objects written.

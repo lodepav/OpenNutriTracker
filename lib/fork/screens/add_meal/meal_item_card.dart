@@ -17,6 +17,7 @@ import 'package:opennutritracker/features/add_meal/presentation/widgets/favourit
 // food_emoji_resolver.dart's import went to OffKinds
 import 'package:opennutritracker/features/meal_detail/meal_detail_screen.dart';
 import 'package:opennutritracker/generated/l10n.dart';
+import 'package:opennutritracker/fork/basket/basket.dart';
 import 'package:opennutritracker/fork/display/meal_macros_line.dart';
 import 'package:opennutritracker/core/domain/entity/intake_entity.dart';
 import 'package:opennutritracker/fork/off/off_kinds.dart'; // S117
@@ -163,53 +164,57 @@ class MealItemCard extends StatelessWidget {
                 meal: mealEntity,
                 semanticsIdentifier: favouriteSemanticsIdentifier,
               ),
-              ValueListenableBuilder(
-                valueListenable: lookingUp,
-                builder: (context, codes, _) {
-                  // Its record is being fetched: the plus shows it waits.
-                  final waiting = codes.contains(mealEntity.code);
-                  return Semantics(
-                    identifier: 'meal-item-add',
-                    child: IconButton(
-                      style: IconButton.styleFrom(
-                        foregroundColor: accent,
-                        side: BorderSide(color: accent, width: 1.5),
-                        shape: const CircleBorder(),
-                        minimumSize: const Size(32, 32),
-                        padding: EdgeInsets.zero,
-                      ),
-                      icon: waiting
-                          ? const SizedBox.square(
-                              dimension: 16,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Icon(Icons.add_rounded, size: 20),
-                      //; S142: the brand tells like-named foods apart (A4)
-                      tooltip: S
-                          .of(context)
-                          .addFoodLabel(
-                            [
-                              mealEntity.name ?? '',
-                              if (mealEntity.brands case final b?
-                                  when b.trim().isNotEmpty)
-                                b.trim(),
-                            ].join(', '),
-                          ),
-                      // S179: logs at once; the row opens the page
-                      onPressed: waiting
-                          ? null
-                          : () => logFromRow(
-                              context,
-                              meal: mealEntity,
-                              type: addMealType.getIntakeType(),
-                              day: day,
-                              imperial: usesImperialUnits,
-                              last: forkLastLogged,
+              // Logs at once, so not while planning (the row opens the page).
+              if (FoodBasket.instance.planning == null)
+                ValueListenableBuilder(
+                  valueListenable: lookingUp,
+                  builder: (context, codes, _) {
+                    // Its record is being fetched: the plus shows it waits.
+                    final waiting = codes.contains(mealEntity.code);
+                    return Semantics(
+                      identifier: 'meal-item-add',
+                      child: IconButton(
+                        style: IconButton.styleFrom(
+                          foregroundColor: accent,
+                          side: BorderSide(color: accent, width: 1.5),
+                          shape: const CircleBorder(),
+                          minimumSize: const Size(32, 32),
+                          padding: EdgeInsets.zero,
+                        ),
+                        icon: waiting
+                            ? const SizedBox.square(
+                                dimension: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Icon(Icons.add_rounded, size: 20),
+                        //; S142: the brand tells like-named foods apart (A4)
+                        tooltip: S
+                            .of(context)
+                            .addFoodLabel(
+                              [
+                                mealEntity.name ?? '',
+                                if (mealEntity.brands case final b?
+                                    when b.trim().isNotEmpty)
+                                  b.trim(),
+                              ].join(', '),
                             ),
-                    ),
-                  );
-                },
-              ),
+                        // S179: logs at once; the row opens the page
+                        onPressed: waiting
+                            ? null
+                            : () => logFromRow(
+                                context,
+                                meal: mealEntity,
+                                type: addMealType.getIntakeType(),
+                                day: day,
+                                imperial: usesImperialUnits,
+                                last: forkLastLogged,
+                              ),
+                      ),
+                    );
+                  },
+                ),
             ],
           ),
         ),

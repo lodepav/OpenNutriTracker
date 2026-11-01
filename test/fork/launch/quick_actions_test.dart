@@ -80,6 +80,12 @@ void main() {
     expect(opened, [NavigationOptions.addMealRoute]);
   });
 
+  testWidgets('the meal plan is a tile away', (tester) async {
+    await pump(tester);
+    expect(find.bySemanticsIdentifier('home-quick-meal-plan'), findsOneWidget);
+    expect(find.text('Meal plan'), findsOneWidget);
+  });
+
   testWidgets('at 200% text the tiles fit', (tester) async {
     tester.view.physicalSize = const Size(1080, 2340);
     tester.view.devicePixelRatio = 3;

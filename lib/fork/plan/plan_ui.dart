@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:logging/logging.dart';
 import 'package:opennutritracker/core/domain/entity/intake_type_entity.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
+import 'package:opennutritracker/core/utils/meal_type_suggester.dart';
 import 'package:opennutritracker/features/meal_detail/presentation/bloc/meal_detail_bloc.dart';
 import 'package:opennutritracker/fork/basket/basket.dart';
 import 'package:opennutritracker/fork/basket/basket_ui.dart';
@@ -46,18 +47,35 @@ Future<bool> _logWithMealDetail(BuildContext context, PlannedFood food) async =>
   return (protein: protein, carbs: carbs, fat: fat);
 }
 
+/// Of [foods], sorted by meal, those of the meal to eat next: the time's meal
+/// or the first after it, else the first left (one that went past uneaten).
+List<PlannedFood> upNextFoods(List<PlannedFood> foods, DateTime now) {
+  if (foods.isEmpty) return const [];
+  final at = MealTypeSuggester.suggestFromTime(now);
+  final next = foods
+      .firstWhere((f) => f.type.index >= at.index, orElse: () => foods.first)
+      .type;
+  return [
+    for (final f in foods)
+      if (f.type == next) f,
+  ];
+}
+
 /// Seam S43: a day's planned foods on Home and in the Diary, each logged
 /// with a tick (on its planned day and meal) or dropped; "Log all" logs
-/// the lot. Nothing when the day has no plan.
+/// the lot. Nothing when the day has no plan. With [showUpNext] (Home, for
+/// today) the next meal leads, to log with one tap.
 class PlannedFoodsCard extends StatefulWidget {
   final DateTime day;
   final PlanStore? store;
   final LogPlannedFood log;
+  final bool showUpNext;
 
   const PlannedFoodsCard({
     super.key,
     required this.day,
     this.store,
+    this.showUpNext = false,
     this.log = _logWithMealDetail,
   });
 
@@ -120,13 +138,37 @@ class _PlannedFoodsCardState extends State<PlannedFoodsCard> {
   Future<void> _repeat(PlannedFood food) async {
     final weekdays = await showDialog<Set<int>>(
       context: context,
-      builder: (_) => RepeatDialog(food: food),
+      builder: (_) => RepeatDialog(
+        name: food.meal.name ?? '',
+        initial: food.repeats ? food.weekdays : {food.day.weekday},
+        repeating: food.repeats,
+      ),
     );
     if (weekdays != null) await _store.setRepeat(food.id, weekdays);
   }
 
   static String _typeName(IntakeTypeEntity type) =>
       '${type.name[0].toUpperCase()}${type.name.substring(1)}';
+
+  Widget _upNext(List<PlannedFood> foods) {
+    final kcal = foods.fold<double>(0, (sum, f) => sum + f.kcal);
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            'Up next: ${_typeName(foods.first.type)} · '
+            '${energyText(context, kcal)}',
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+        ),
+        FilledButton.tonal(
+          key: const ValueKey('plan-up-next-log'),
+          onPressed: _busy ? null : () => _logAll(foods),
+          child: const Text('Log it'),
+        ),
+      ],
+    );
+  }
 
   @override
   Widget build(BuildContext context) => FutureBuilder<List<PlannedFood>>(
@@ -175,6 +217,8 @@ class _PlannedFoodsCardState extends State<PlannedFoodsCard> {
                   ),
                 ],
               ),
+              if (widget.showUpNext)
+                _upNext(upNextFoods(foods, DateTime.now())),
               for (final food in foods)
                 ListTile(
                   dense: true,
@@ -241,27 +285,33 @@ String repeatTextFor(String locale, Set<int> weekdays) {
   return 'Repeats ${names.join(', ')}';
 }
 
-/// Picks the weekdays [food] repeats on, from its planned day on. Pops
-/// the days, an empty set to stop it repeating, or nothing on Cancel.
+/// Picks the weekdays [name] repeats on, from its planned day on, starting
+/// from [initial]. Pops the days, an empty set to stop one [repeating], or
+/// nothing on Cancel.
 class RepeatDialog extends StatefulWidget {
-  final PlannedFood food;
+  final String name;
+  final Set<int> initial;
+  final bool repeating;
 
-  const RepeatDialog({super.key, required this.food});
+  const RepeatDialog({
+    super.key,
+    required this.name,
+    required this.initial,
+    this.repeating = false,
+  });
 
   @override
   State<RepeatDialog> createState() => _RepeatDialogState();
 }
 
 class _RepeatDialogState extends State<RepeatDialog> {
-  late final Set<int> _days = widget.food.repeats
-      ? {...widget.food.weekdays}
-      : {widget.food.day.weekday};
+  late final Set<int> _days = {...widget.initial};
 
   @override
   Widget build(BuildContext context) {
     final locale = Localizations.localeOf(context).toString();
     return AlertDialog(
-      title: Text('Repeat ${widget.food.meal.name ?? ''}'),
+      title: Text('Repeat ${widget.name}'),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -296,7 +346,7 @@ class _RepeatDialogState extends State<RepeatDialog> {
                     setState(() => _days.addAll([1, 2, 3, 4, 5, 6, 7])),
                 child: const Text('Every day'),
               ),
-              if (widget.food.repeats)
+              if (widget.repeating)
                 TextButton(
                   key: const ValueKey('repeat-stop'),
                   onPressed: () => Navigator.pop(context, <int>{}),
