@@ -162,9 +162,6 @@ class HistoryFile {
   /// The tables food was read from, in order; none when none had it.
   final List<String> foodTables;
 
-  /// The first of [foodTables]; null when none had food.
-  String? get foodTable => foodTables.firstOrNull;
-
   /// The table weights were read from; null when none had them.
   final String? weightTable;
 
@@ -312,11 +309,7 @@ HistoryFile readHistory(
             protein: protein,
             carbs: carbs,
             fat: fat,
-            nutrients: {
-              for (final MapEntry(key: key, value: column)
-                  in layout.nutrients.entries)
-                if (_number(_at(row, column)) case final v? when v > 0) key: v,
-            },
+            nutrients: _nutrientsOf(row, layout.nutrients),
           ),
         );
         // What an earlier import read as the day's weigh-in: the serving
@@ -338,11 +331,7 @@ HistoryFile readHistory(
       for (final row in rows) {
         final day = dates.parse(_at(row, layout.date));
         if (day == null) continue;
-        final values = {
-          for (final MapEntry(key: key, value: column)
-              in layout.nutrients.entries)
-            if (_number(_at(row, column)) case final v? when v > 0) key: v,
-        };
+        final values = _nutrientsOf(row, layout.nutrients);
         if (values.isNotEmpty) dayNutrients[day] = values;
       }
     }
@@ -447,7 +436,9 @@ class _Layout {
   final int? time;
   final int? servingGrams;
   final int? servings;
-  final Map<String, int> nutrients;
+
+  /// The column of each, and the factor to the app's unit.
+  final Map<String, (int, double)> nutrients;
 
   /// Body fat % and body measurements: the column, and the factor to cm.
   final Map<BodyMetric, (int, double)> measures;
@@ -486,10 +477,7 @@ class _Layout {
         (c) => c == 'date' || c == 'day' || c.startsWith('date '),
       );
       if (date < 0) continue;
-      int? first(bool Function(String) test) {
-        final i = h.indexWhere(test);
-        return i < 0 ? null : i;
-      }
+      int? first(bool Function(String) test) => _col(h, test);
 
       final kcal = first(
         (c) =>
@@ -504,10 +492,7 @@ class _Layout {
         headerRow: r,
         date: date,
         kcal: kcal,
-        kcalFactor:
-            kcal != null && h[kcal].contains('kj') && !h[kcal].contains('kcal')
-            ? 1 / 4.184
-            : 1,
+        kcalFactor: kcal == null ? 1 : _kcalFactor(h[kcal]),
         protein: first((c) => c.contains('protein') && !_any(c, _notEaten)),
         carbs:
             first(
@@ -522,6 +507,7 @@ class _Layout {
               (c == 'fat' ||
                   c.startsWith('fat ') ||
                   c.startsWith('fat(') ||
+                  c.startsWith('fat_') ||
                   c.contains('total fat')) &&
               !_any(c, ['saturated', 'trans', 'mono', 'poly', ..._notEaten]),
         ),
@@ -545,13 +531,7 @@ class _Layout {
         servings: first(
           (c) => c == 'serving qty' || c == 'servings' || c == 'quantity',
         ),
-        nutrients: {
-          for (final MapEntry(key: key, value: starts)
-              in nutrientColumns.entries)
-            key: ?first(
-              (c) => starts.any((s) => _names(c, s)) && !c.contains('added'),
-            ),
-        },
+        nutrients: _nutrientsIn(h),
         measures: _measures(h),
         weight: weight,
         weightUnit: weight == null || metric != null
@@ -625,33 +605,98 @@ FoodRow? Function(List<String> row, String name, double? grams)? _foodColumns(
     (c) => _names(c, 'calories') || c == 'kcal' || c.startsWith('energy'),
   );
   if (kcal == null) return null;
+  final kcalFactor = _kcalFactor(h[kcal]);
   final protein = _col(h, (c) => _names(c, 'protein'));
   final carbs = _col(
     h,
     (c) => _names(c, 'carbs') || _names(c, 'carbohydrates'),
   );
   final fat = _col(h, (c) => _names(c, 'fat'));
-  final nutrients = {
-    for (final MapEntry(key: key, value: starts) in nutrientColumns.entries)
-      key: ?_col(
-        h,
-        (c) => starts.any((s) => _names(c, s)) && !c.contains('added'),
-      ),
-  };
+  final nutrients = _nutrientsIn(h);
   return (row, name, grams) => switch (_number(_at(row, kcal))) {
     final k? when k >= 0 => FoodRow(
       name: name,
       grams: grams,
-      kcal: k,
+      kcal: k * kcalFactor,
       protein: _number(_at(row, protein)),
       carbs: _number(_at(row, carbs)),
       fat: _number(_at(row, fat)),
-      nutrients: {
-        for (final MapEntry(key: key, value: column) in nutrients.entries)
-          if (_number(_at(row, column)) case final v? when v > 0) key: v,
-      },
+      nutrients: _nutrientsOf(row, nutrients),
     ),
     _ => null,
+  };
+}
+
+/// [nutrientColumns] found in headers [h], each with the factor from the
+/// unit its header states to the app's. One in a unit that cannot be
+/// converted is left out rather than read as the app's.
+Map<String, (int, double)> _nutrientsIn(List<String> h) => {
+  for (final MapEntry(key: key, value: starts) in nutrientColumns.entries)
+    if (_col(
+          h,
+          (c) =>
+              starts.any((s) => _names(c, s)) &&
+              !c.contains('added') &&
+              nutrientFactor(key, c) != null,
+        )
+        case final column?)
+      if (nutrientFactor(key, h[column]) case final factor?)
+        key: (column, factor),
+};
+
+/// What is above zero of [columns] in [row], in the app's units.
+Map<String, double> _nutrientsOf(
+  List<String> row,
+  Map<String, (int, double)> columns,
+) => {
+  for (final MapEntry(key: key, value: column) in columns.entries)
+    if (_number(_at(row, column.$1)) case final v? when v > 0)
+      key: v * column.$2,
+};
+
+/// What takes a figure under energy header [header] to kcal.
+double _kcalFactor(String header) =>
+    header.contains('kj') && !header.contains('kcal') ? 1 / 4.184 : 1;
+
+/// The app's unit of each nutrient, in mg; the rest are in g.
+const _mgOfAppUnit = <String, double>{
+  'cholesterol': 1,
+  'sodium': 1,
+  'potassium': 1,
+  'magnesium': 1,
+  'calcium': 1,
+  'iron': 1,
+  'zinc': 1,
+  'phosphorus': 1,
+  'vitaminC': 1,
+  'vitaminB6': 1,
+  'niacin': 1,
+  'vitaminA': 0.001,
+  'vitaminD': 0.001,
+  'vitaminB12': 0.001,
+};
+
+/// µg per IU, where the conversion is a known one.
+const _ugPerIu = {'vitaminD': 0.025, 'vitaminA': 0.3};
+
+final _headerUnit = RegExp(r'(?:^|[^a-z0-9µμ])(iu|mcg|µg|μg|ug|mg|g)\b');
+
+/// What to multiply nutrient [key]'s [header] column by for the app's unit:
+/// 1 when the header states none, null for a unit it cannot convert, as a
+/// share of a daily value.
+double? nutrientFactor(String key, String header) {
+  if (header.contains('%') || RegExp(r'\bdv\b').hasMatch(header)) return null;
+  final unit = _headerUnit.firstMatch(header)?.group(1);
+  final appMg = _mgOfAppUnit[key] ?? 1000;
+  return switch (unit) {
+    null => 1,
+    'iu' => switch (_ugPerIu[key]) {
+      final ug? => ug / 1000 / appMg,
+      null => null,
+    },
+    'g' => 1000 / appMg,
+    'mg' => 1 / appMg,
+    _ => 0.001 / appMg,
   };
 }
 

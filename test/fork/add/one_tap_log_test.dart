@@ -107,6 +107,7 @@ class _Bloc extends Fake implements MealDetailBloc {
   final logged = <IntakeEntity>[];
   // A profile switch stopped the write.
   var stopped = false;
+  var fails = false;
   // Holds each write until completed.
   Completer<void>? gate;
 
@@ -121,6 +122,7 @@ class _Bloc extends Fake implements MealDetailBloc {
   ) async {
     await gate?.future;
     if (stopped) return null;
+    if (fails) throw StateError('disk full');
     final intake = IntakeEntity(
       id: 'written',
       unit: unit,
@@ -409,6 +411,14 @@ void main() {
       expect(find.text('Not added: the profile changed.'), findsOneWidget);
     });
 
+    testWidgets('a failed write says it was not added', (tester) async {
+      bloc.fails = true;
+      await pump(tester, _thin());
+      await tapPlus(tester);
+      expect(find.text("Not added: it couldn't be saved."), findsOneWidget);
+      expect(find.text('Undo'), findsNothing);
+    });
+
     group('in the add sheet', () {
       Future<void> pumpSheet(WidgetTester tester) async {
         await tester.pumpWidget(
@@ -435,6 +445,19 @@ void main() {
         await tester.tap(find.text('home'));
         await tester.pumpAndSettle();
       }
+
+      testWidgets('a failed write closes the sheet, so what it says shows', (
+        tester,
+      ) async {
+        bloc.fails = true;
+        await pumpSheet(tester);
+        await tapPlus(tester);
+        expect(find.byType(MealItemCard), findsNothing);
+        expect(
+          find.text("Not added: it couldn't be saved.").hitTestable(),
+          findsOneWidget,
+        );
+      });
 
       testWidgets('the plus closes the sheet and shows the bar', (
         tester,

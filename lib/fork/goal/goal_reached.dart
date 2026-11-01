@@ -674,7 +674,7 @@ class _ExtendSheetState extends State<ExtendSheet> {
               PhaseBar(extended),
               const SizedBox(height: 6),
               Text(
-                'Ends about ${format.format(extended.end)}.',
+                'Ends about ${format.format(extended.lastDay)}.',
                 style: theme.textTheme.bodySmall,
               ),
             ],

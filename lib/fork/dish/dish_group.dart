@@ -1,3 +1,4 @@
+import 'package:opennutritracker/core/utils/id_generator.dart';
 import 'package:opennutritracker/core/domain/usecase/compute_recipe_nutrition_usecase.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dart';
 import 'package:opennutritracker/features/add_meal/presentation/bloc/bulk_add_bloc.dart';
@@ -78,6 +79,8 @@ double? rowGrams(BulkAddRow row) {
 double _rowsGrams(List<BulkAddRow> rows, List<int> members) =>
     members.fold(0, (sum, i) => sum + (rowGrams(rows[i]) ?? 0));
 
+const _weighed = {'g', 'ml', 'g/ml'};
+
 /// Grams as eaten per gram of the rows: a breakdown's rows are raw, and
 /// "plov 350g" may come back as 300 g of rice, meat and carrots. One for a
 /// weighed plate, whose foods are as served.
@@ -85,7 +88,7 @@ double _yield(List<BulkAddRow> rows, List<int> members) {
   final eaten = rows[members.first].dishIngredient?.dishGrams;
   final raw = members.fold<double>(0, (sum, i) {
     final parsed = rows[i].resolved.parsed;
-    return sum + (parsed.unit == 'g' ? parsed.quantity ?? 0 : 0);
+    return sum + (_weighed.contains(parsed.unit) ? parsed.quantity ?? 0 : 0);
   });
   return eaten == null || raw <= 0 ? 1 : eaten / raw;
 }
@@ -138,9 +141,14 @@ Map<int, double> portionBase(List<BulkAddRow> rows, List<int> members) => {
 
 String _amountText(double amount, String unit) {
   // whole grams and millilitres; a tenth of anything larger
-  final rounded = unit == 'g' || unit == 'ml'
+  var rounded = unit == 'g' || unit == 'ml'
       ? amount.roundToDouble()
       : (amount * 10).roundToDouble() / 10;
+  // A pinch stays a pinch: a 0 would refuse the whole batch.
+  if (rounded <= 0 && amount > 0) {
+    rounded = double.parse(amount.toStringAsFixed(2));
+    if (rounded <= 0) rounded = 0.01;
+  }
   return rounded == rounded.roundToDouble()
       ? rounded.toInt().toString()
       : rounded.toString();
@@ -161,6 +169,9 @@ MealEntity? dishMeal(List<BulkAddRow> rows, Object group) {
   );
   return recipe
       .copyWith(
+        // Its own food: readers key recents, favourites and shares on the
+        // code, so dishes must not share the builder's empty id.
+        id: IdGenerator.getUniqueID(),
         totalWeightG: nutrition.totalWeightG,
         aggregatedNutrimentsPer100: nutrition.perHundredG,
       )

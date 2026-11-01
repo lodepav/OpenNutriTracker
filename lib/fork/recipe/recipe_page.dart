@@ -299,7 +299,7 @@ class RecipeLogBar extends StatelessWidget {
   final ValueChanged<double> onCount;
   final IntakeTypeEntity meal;
   final ValueChanged<IntakeTypeEntity> onMeal;
-  final VoidCallback onLog;
+  final VoidCallback? onLog;
 
   const RecipeLogBar({
     super.key,

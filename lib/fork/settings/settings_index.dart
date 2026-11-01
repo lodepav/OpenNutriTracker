@@ -24,7 +24,7 @@ enum SettingsSection {
 
   /// The accent for the first card, muted for the second: not the macro
   /// colours, which mean carbs, fat and protein everywhere else (H4).
-  Color colorIn(AppPalette palette, ColorScheme scheme) =>
+  Color colorIn(AppPalette palette) =>
       isFirstCard ? palette.accent : palette.textMuted;
 }
 
@@ -146,10 +146,7 @@ class _SectionRow extends StatelessWidget {
                       width: 38,
                       height: 38,
                       decoration: BoxDecoration(
-                        color: section.colorIn(
-                          palette,
-                          Theme.of(context).colorScheme,
-                        ),
+                        color: section.colorIn(palette),
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Icon(section.icon, color: Colors.white, size: 22),

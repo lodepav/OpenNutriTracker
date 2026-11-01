@@ -79,8 +79,34 @@ class _BodyMeasurementsCardState extends State<BodyMeasurementsCard> {
       builder: (_) => _AddMeasurementsDialog(imperial: widget.imperial),
     );
     if (values == null || values.$2.isEmpty) return;
-    await _store.addDay(values.$1, values.$2);
-    if (mounted) setState(() => _picked = values.$2.keys.first);
+    final saved = await _store.addDay(values.$1, values.$2);
+    if (!mounted) return;
+    setState(() => _picked = values.$2.keys.first);
+    if (saved.replaced.isEmpty) return;
+    final only = saved.replaced.length == 1 ? saved.replaced.single : null;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          persist: false,
+          content: Text(
+            only == null
+                ? 'Replaced ${saved.replaced.length} measurements '
+                      'from ${_date(values.$1)}'
+                : 'Replaced ${only.metric.label} ${_text(only.metric, only.value)} '
+                      'from ${_date(values.$1)}',
+          ),
+          action: SnackBarAction(
+            label: 'Undo',
+            onPressed: () async {
+              for (final m in saved.added) {
+                await _store.remove(m.id);
+              }
+              await _store.merge(saved.replaced);
+            },
+          ),
+        ),
+      );
   }
 
   /// Deleted at once, with Undo, as diary entries and weigh-ins are.
@@ -116,12 +142,13 @@ class _BodyMeasurementsCardState extends State<BodyMeasurementsCard> {
   Widget _card(BuildContext context, List<Measurement> all) {
     final theme = Theme.of(context);
     final measured = {for (final m in all) m.metric};
-    final metric =
-        _picked ??
-        BodyMetric.values.firstWhere(
-          measured.contains,
-          orElse: () => BodyMetric.bodyFat,
-        );
+    // The picked metric's last entry can go, by a delete or a restore.
+    final metric = measured.contains(_picked)
+        ? _picked!
+        : BodyMetric.values.firstWhere(
+            measured.contains,
+            orElse: () => BodyMetric.bodyFat,
+          );
     final now = DateTime.now();
     // Not a Duration: across a clock change it lands an hour off midnight.
     final from = DateTime(

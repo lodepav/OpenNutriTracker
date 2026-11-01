@@ -19,7 +19,8 @@ import 'package:opennutritracker/fork/basket/basket_ui.dart'
     show refreshAfterLogging;
 import 'package:opennutritracker/fork/copy/copy_ui.dart' show mealLabel;
 import 'package:opennutritracker/fork/meal_detail/missing_info.dart';
-import 'package:opennutritracker/fork/units/amount_text.dart' show amountText;
+import 'package:opennutritracker/fork/units/amount_text.dart'
+    show amountText, isEnergyOnly;
 
 /// What a food row's plus logs at once: the unit and the amount in grams
 /// or millilitres, as an entry stores them.
@@ -186,34 +187,39 @@ Future<void> _logFromRow(
   if (!context.mounted) return;
   final mealName = mealLabel(context, type);
   final route = ModalRoute.of(context);
-  final written = await locator<MealDetailBloc>().addIntake(
-    context,
-    amount.unit,
-    amount.amount.toString(),
-    type,
-    food,
-    day,
-  );
-  refreshAfterLogging();
+  IntakeEntity? written;
+  var failed = false;
+  try {
+    written = await locator<MealDetailBloc>().addIntake(
+      context,
+      amount.unit,
+      amount.amount.toString(),
+      type,
+      food,
+      day,
+    );
+  } catch (error, stack) {
+    _log.warning('One-tap write failed for ${meal.code}', error, stack);
+    failed = true;
+  }
+  if (!failed) refreshAfterLogging();
   // A page opened over the sheet while this logged stays open.
   if (route is PopupRoute && route.isCurrent && context.mounted) {
     Navigator.of(context).pop();
   }
   if (messenger == null) return;
-  messenger.removeCurrentSnackBar();
   if (written == null) {
-    messenger.showSnackBar(
-      const SnackBar(content: Text('Not added: the profile changed.')),
-    );
+    showNotAdded(messenger, failed: failed);
     return;
   }
-  final amountAdded = amountText(written, imperial);
+  final amountAdded = isEnergyOnly(food) ? '' : amountText(written, imperial);
   final name = food.name?.trim() ?? '';
   showLoggedBar(
     messenger,
     name.isEmpty
-        ? 'Added $amountAdded to $mealName'
-        : 'Added $name, $amountAdded, to $mealName',
+        ? 'Added ${amountAdded.isEmpty ? 'it' : amountAdded} to $mealName'
+        : 'Added $name${amountAdded.isEmpty ? '' : ', $amountAdded,'} to '
+              '$mealName',
     day: day,
     written: [written],
     stamp: stamp,

@@ -470,6 +470,34 @@ void main() {
       expect(workoutsOnly[yesterday], closeTo(500 * share, 0.01));
     });
 
+    test(
+      'with workouts not counted, an imported workout\'s steps count',
+      () async {
+        final steps = StepCounts(
+          _Steps({_today: 10000}, duringWorkout: 3000),
+          () async => box,
+        );
+        await steps.turnOn();
+        final counted =
+            await ActivityCounter(
+              activities: () async => [
+                _workout(
+                  _today.add(const Duration(hours: 7)),
+                  externalId: 'run',
+                ),
+              ],
+              steps: steps,
+              dayStartOffsetMinutes: () async => 0,
+            ).daily(
+              first: _today,
+              today: _today,
+              settings: const AdaptiveSettings(countWorkouts: false),
+              user: _user(),
+            );
+        expect(counted[_today], closeTo(10000 * kcalPerStep(80, 180), 0.01));
+      },
+    );
+
     test('the suggested workout share is the 5% step the slider shows', () {
       expect(toShareStep(0.7249), 0.7);
       expect(toShareStep(0.7251), 0.75);

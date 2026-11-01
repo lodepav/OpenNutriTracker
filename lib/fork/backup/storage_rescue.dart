@@ -61,29 +61,29 @@ class StorageRescue {
     return Hive.openBox<dynamic>(AutoBackup.boxName);
   }
 
-  /// The newest automatic backup, or null when there is none to be had:
-  /// the first profile's when it has one, as the app starts again with
-  /// only that profile, whose backups another's would then prune.
+  /// The newest automatic backup, or null when there is none to be had.
+  /// Every backup holds all the profiles, so another profile's newer one
+  /// beats the first profile's older one, which it does on a tie.
   Future<({String name, DateTime day})?> latestBackup() async {
     try {
       final uri = (await _box()).get('folderUri') as String?;
       if (uri == null) return null;
-      ({String name, DateTime day})? first, other;
+      ({String name, DateTime day})? newest;
+      var newestTagged = false;
       for (final name in await _folder.list(uri)) {
         final match = _backupFile.firstMatch(name);
         if (match == null) continue;
         final date = DateTime.parse(match.group(2)!);
         final tagged = match.group(1) != null;
-        final newest = tagged ? other : first;
-        if (newest != null && !date.isAfter(newest.day)) continue;
-        final found = (name: name, day: date);
-        if (tagged) {
-          other = found;
-        } else {
-          first = found;
-        }
+        final beats =
+            newest == null ||
+            date.isAfter(newest.day) ||
+            (date == newest.day && newestTagged && !tagged);
+        if (!beats) continue;
+        newest = (name: name, day: date);
+        newestTagged = tagged;
       }
-      return first ?? other;
+      return newest;
     } catch (error, stackTrace) {
       _log.warning('No automatic backup to offer', error, stackTrace);
       return null;
@@ -101,7 +101,12 @@ class StorageRescue {
     final keep = AutoBackup.boxName.toLowerCase();
     for (final file in dir.listSync().whereType<File>()) {
       final name = file.uri.pathSegments.last;
-      if (!name.endsWith('.hive') && !name.endsWith('.lock')) continue;
+      // .hivec, a compaction's leftover, Hive would take for the box.
+      if (!name.endsWith('.hive') &&
+          !name.endsWith('.hivec') &&
+          !name.endsWith('.lock')) {
+        continue;
+      }
       if (name.startsWith('$keep.')) continue;
       await file.rename('${aside.path}/$name');
     }

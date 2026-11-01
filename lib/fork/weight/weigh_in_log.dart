@@ -10,11 +10,20 @@ import 'package:opennutritracker/fork/units/weight_text.dart'
 
 DateTime _dayOf(DateTime d) => DateTime(d.year, d.month, d.day);
 
-/// The weigh-ins by their day. A day holds one: a second replaces it.
+/// The weigh-ins by the day they are filed under, which a time-zone change
+/// can part from the date they show. A day holds one: a second replaces it.
 Future<Map<DateTime, WeightLogEntity>> weighInsByDay() async => {
   for (final e in await locator<GetWeightLogUsecase>().getAllEntries())
-    _dayOf(e.date): e,
+    _dayOf(e.filedDay ?? e.date): e,
 };
+
+/// [entry] dated on the day it is filed under, so adding it back puts it in
+/// its own row after a time-zone change.
+WeightLogEntity asFiled(WeightLogEntity entry) => WeightLogEntity(
+  date: entry.filedDay ?? entry.date,
+  weightKg: entry.weightKg,
+  note: entry.note,
+);
 
 /// "today's 87.0 kg", "Oct 25's 87.0 kg": the weigh-in a new one replaces.
 String replacedText(
@@ -23,7 +32,7 @@ String replacedText(
   BodyWeightUnit unit,
   DateTime today,
 ) =>
-    '${_dayName(context, replaced.date, today)}\'s ${bodyWeightText(context, replaced.weightKg, unit)}';
+    '${_dayName(context, replaced.filedDay ?? replaced.date, today)}\'s ${bodyWeightText(context, replaced.weightKg, unit)}';
 
 String _dayName(BuildContext context, DateTime day, DateTime today) =>
     DateUtils.isSameDay(day, today)
@@ -60,7 +69,7 @@ Future<void> logWeighIn(
           label: 'Undo',
           onPressed: () async {
             if (replaced != null) {
-              await locator<AddWeightLogUsecase>().addEntry(replaced);
+              await locator<AddWeightLogUsecase>().addEntry(asFiled(replaced));
             } else {
               await locator<DeleteWeightLogUsecase>().deleteEntry(entry);
             }

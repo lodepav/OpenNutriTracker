@@ -56,6 +56,10 @@ class PlannerSetup {
   /// profile.
   final bool onboarding;
 
+  /// The least a day's target is recommended to be, for this body; null
+  /// when not known.
+  final double? kcalFloor;
+
   const PlannerSetup({
     required this.nowKg,
     required this.unit,
@@ -67,6 +71,7 @@ class PlannerSetup {
     this.split = defaultSplit,
     this.targetKg,
     this.onboarding = false,
+    this.kcalFloor,
   }) : formulaKcal = formulaKcal ?? expenditureKcal;
 
   static const defaultSplit = (carbs: 0.6, fat: 0.25, protein: 0.15);
@@ -92,7 +97,14 @@ class PlannerSetup {
     upcoming: upcoming,
     split: split,
     onboarding: onboarding,
+    kcalFloor: _floorOf(user),
   );
+
+  static double _floorOf(UserEntity user) =>
+      CalorieGoalCalc.recommendedDailyKcalFloor(
+        gender: user.gender,
+        caloriesProfile: user.caloriesProfile,
+      );
 
   /// The active profile's.
   static Future<PlannerSetup> load() async {
@@ -128,6 +140,7 @@ class PlannerSetup {
       running: running,
       upcoming: upcoming,
       split: split,
+      kcalFloor: _floorOf(user),
     );
   }
 }
@@ -267,7 +280,8 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
       widget.queuedAt ??
       (widget.onQueue != null &&
               widget.editing == null &&
-              _setup.running != null
+              _setup.running != null &&
+              _setup.running!.end.isAfter(_today)
           ? _setup.upcoming.length
           : null);
 
@@ -327,9 +341,11 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
   /// weight it ends at, with its pace when it is the same kind.
   void _moveTo(int place) {
     final before = _goalBefore(place);
-    final kg = endKgOf(before) ?? _setup.nowKg;
+    // A goal already over leads nowhere: this one starts today, from now.
+    final over = !before.end.isAfter(_today);
+    final kg = over ? _setup.nowKg : endKgOf(before) ?? _setup.nowKg;
     _place = place;
-    _draft = _draft.copyWith(start: before.end, startKg: kg);
+    _draft = _draft.copyWith(start: over ? _today : before.end, startKg: kg);
     if (_draft.kind == before.kind) {
       final same = GoalDraft.of(before, kg);
       _draft = _draft.copyWith(
@@ -421,8 +437,16 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
   double get _baseKcal =>
       _formula ? _setup.formulaKcal : _setup.expenditureKcal;
 
-  double _kcalAt(double kgPerWeek) =>
-      _baseKcal + kgPerWeek * AdaptiveSettings.commonKcalPerKg / 7;
+  /// kcal in a kg of weight: on Adaptive, what its check-in goes by; else
+  /// the flat figure the Formula's pace comes to.
+  double get _kcalPerKg {
+    final s = AdaptiveStore.settings.value;
+    return s.adaptiveTarget
+        ? s.expenditure.kcalPerKgAt(_setup.nowKg, _setup.bodyFatPercent)
+        : AdaptiveSettings.commonKcalPerKg;
+  }
+
+  double _kcalAt(double kgPerWeek) => _baseKcal + kgPerWeek * _kcalPerKg / 7;
 
   /// The grams at the main phase's target: by weight with a program,
   /// else the macro split's shares.
@@ -749,7 +773,7 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
       _question(
         context,
         'What do you want to do?',
-        _queued
+        _queued && _goalBefore(_place!).end.isAfter(_today)
             ? 'It starts from ${_kg(_draft.startKg)}, where '
                   '${_goalName(_goalBefore(_place!))} ends.$breaks'
             : 'Your ${_setup.running == null ? 'weight' : 'trend weight'} '
@@ -767,6 +791,8 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
           title: title,
           subtitle: text,
           onTap: () => setState(() {
+            // The kind it is already: a custom pace stays.
+            if (_draft.kind == kind) return;
             _customPace = false;
             _draft = _draft.copyWith(
               kind: kind,
@@ -850,6 +876,12 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
             'as they were; a change applies from the end of this week.',
           ),
         )
+      else if (_begun)
+        // Another kind of goal, once one is begun, starts anew today.
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Text('Starts today, replacing ${_goalName(widget.editing!)}.'),
+        )
       else
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -886,13 +918,16 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
                         '${_setup.running != null && widget.onQueue != null ? ', replacing ${_goalName(_setup.running!)}' : ''}',
                     monday,
                   ),
-                if (_setup.running != null &&
-                    !_sameDay(_setup.running!.start, today) &&
-                    !_sameDay(_setup.running!.start, monday))
+                // Only the goal edited, not begun yet: a new goal started
+                // on the running one's day would cover its past.
+                if (widget.editing != null &&
+                    !_begun &&
+                    !_sameDay(widget.editing!.start, today) &&
+                    !_sameDay(widget.editing!.start, monday))
                   (
                     'kept',
-                    'As planned, ${_date(_setup.running!.start)}',
-                    _setup.running!.start,
+                    'As planned, ${_date(widget.editing!.start)}',
+                    widget.editing!.start,
                   ),
               ])
                 Semantics(
@@ -961,7 +996,7 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
   List<Widget> _customPaceRows(BuildContext context, bool cut) {
     final range = cut ? cutCustomPaceKg : bulkCustomPaceKg;
     final pace = _draft.paceKg.clamp(range.min, range.max);
-    final kcal = pace * AdaptiveSettings.commonKcalPerKg / 7;
+    final kcal = pace * _kcalPerKg / 7;
     final percent = pace / _draft.startKg * 100;
     final end = _planOf(_draft.copyWith(paceKg: pace)).end;
     final theme = Theme.of(context);
@@ -1016,27 +1051,70 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
                   ),
                 ),
               ),
-              if (percent > (cut ? 1 : 0.5))
-                Text(
-                  cut
-                      ? 'Over 1% a week: more hunger and more muscle lost.'
-                      : 'Over 0.5% a week: more of the gain is fat.',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.error,
-                  ),
-                ),
             ],
           ),
+        ),
+      // On a preset too: the fast ones can be over.
+      if (percent > (cut ? 1 : 0.5))
+        _warning(
+          context,
+          cut
+              ? 'Over 1% a week: more hunger and more muscle lost.'
+              : 'Over 0.5% a week: more of the gain is fat.',
         ),
     ];
   }
 
-  /// The last day of a maintenance goal [weeks] long.
-  DateTime _lastDayOf(int weeks) => DateTime(
-    _draft.start.year,
-    _draft.start.month,
-    _draft.start.day + weeks * 7 - 1,
-  );
+  /// [text] in the error colour: worth knowing, and no bar to going on.
+  Widget _warning(BuildContext context, String text) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+      child: Text(
+        text,
+        style: theme.textTheme.bodySmall?.copyWith(
+          color: theme.colorScheme.error,
+        ),
+      ),
+    );
+  }
+
+  /// A warning when the main phase's target is under the recommended least
+  /// a day; a fixed target is the user's own figure.
+  List<Widget> _floorWarning(BuildContext context) {
+    final floor = _setup.kcalFloor;
+    final kcal = _kcalAt(_draft.signedPace);
+    if (floor == null ||
+        AdaptiveStore.settings.value.fixedTarget ||
+        kcal >= floor) {
+      return const [];
+    }
+    return [
+      _warning(
+        context,
+        'About ${energyText(context, kcal)} a day is below the '
+        '${energyText(context, floor)} a day recommended as a minimum.',
+      ),
+    ];
+  }
+
+  /// A warning when the target is further than a phase runs at this pace.
+  List<Widget> _capWarning(BuildContext context) {
+    if (!_draft.capped) return const [];
+    final plan = _draft.toPlan();
+    return [
+      _warning(
+        context,
+        'At this pace it takes over $longestPhaseWeeks weeks, the longest a '
+        'phase runs: about ${_kg(plan.weightAt(plan.phases.length)!)} by '
+        'then, not ${_kg(_draft.targetKg!)}.',
+      ),
+    ];
+  }
+
+  /// The last day of a maintenance goal [weeks] long, as it would be saved.
+  DateTime _lastDayOf(int weeks) =>
+      _planOf(_draft.copyWith(maintainWeeks: weeks)).lastDay;
 
   /// The custom length's toggle and, when on, its slider.
   List<Widget> _customWeeksRows(BuildContext context) {
@@ -1135,7 +1213,7 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
         Builder(
           builder: (context) {
             final at = _planOf(_draft.copyWith(paceKg: pace));
-            final kcal = (pace * AdaptiveSettings.commonKcalPerKg / 7).round();
+            final kcal = (pace * _kcalPerKg / 7).round();
             return _OptionCard(
               identifier: 'goal-pace-$i',
               selected: !_customPace && _draft.paceKg == pace,
@@ -1153,6 +1231,8 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
           },
         ),
       ..._customPaceRows(context, cut),
+      ..._floorWarning(context),
+      ..._capWarning(context),
       if (cut)
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
@@ -1240,7 +1320,7 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
 
   List<Widget> _targetStep(BuildContext context) {
     final pace = _draft.signedPace;
-    final shift = (pace * AdaptiveSettings.commonKcalPerKg / 7).round();
+    final shift = (pace * _kcalPerKg / 7).round();
     final breaks = _planOf(_draft).phases.length > 1;
     final settings = AdaptiveStore.settings.value;
     final base = energyText(context, _baseKcal);
@@ -1460,12 +1540,12 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
     final program = _setup.onboarding
         ? OnboardingMacros.pending.value
         : settings.macroProgram;
+    final weeks = plan.phases.fold(0, (w, p) => w + p.weeks);
     final title = switch (plan.kind) {
       PhaseKind.cut => 'Cut to ${_kg(plan.targetKg!)}',
       PhaseKind.bulk => 'Bulk to ${_kg(plan.targetKg!)}',
-      PhaseKind.maintain => 'Maintain for ${_weeks(_draft.maintainWeeks)}',
+      PhaseKind.maintain => 'Maintain for ${_weeks(weeks)}',
     };
-    final weeks = plan.phases.fold(0, (w, p) => w + p.weeks);
     return [
       _question(
         context,
@@ -1474,6 +1554,8 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
         '${_weeks(weeks)}'
         '${_draft.paceKg > 0 && plan.kind != PhaseKind.maintain ? ' · ${_rate(_draft.paceKg)}' : ''}',
       ),
+      ..._floorWarning(context),
+      ..._capWarning(context),
       _Panel(
         children: [
           PhaseBar(plan),

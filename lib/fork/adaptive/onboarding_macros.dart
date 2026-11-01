@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:opennutritracker/core/domain/entity/user_entity.dart';
+import 'package:opennutritracker/core/domain/entity/user_weight_goal_entity.dart';
+import 'package:opennutritracker/core/utils/calc/calorie_goal_calc.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/fork/adaptive/macro_program.dart';
+import 'package:opennutritracker/fork/goal/onboarding_goal.dart';
+import 'package:opennutritracker/fork/phases/phases.dart';
 
 /// Onboarding's protein and fat (seams S88, S89): chosen on the goal page,
 /// held here, and written with the rest of onboarding when it completes,
@@ -11,10 +15,25 @@ abstract final class OnboardingMacros {
   static final pending = ValueNotifier<MacroProgram?>(null);
 
   /// The overview page's energy: a fixed target set on the goal page, or
-  /// null for upstream's formula.
-  static double? overviewKcal() {
+  /// [user]'s at the pace of a goal planned there, which is what Start will
+  /// set; else null for upstream's formula.
+  static double? overviewKcal([UserEntity? user]) {
     final settings = AdaptiveStore.settings.value;
-    return settings.fixedTarget ? settings.fixedTargetKcal : null;
+    if (settings.fixedTarget) return settings.fixedTargetKcal;
+    final plan = OnboardingGoal.pending.value;
+    if (plan == null || user == null) return null;
+    // Another goal picked since: Start drops the plan.
+    final planned = switch (plan.kind) {
+      PhaseKind.cut => UserWeightGoalEntity.loseWeight,
+      PhaseKind.maintain => UserWeightGoalEntity.maintainWeight,
+      PhaseKind.bulk => UserWeightGoalEntity.gainWeight,
+    };
+    if (user.goal != planned) return null;
+    return CalorieGoalCalc.getTdee(user) +
+        CalorieGoalCalc.getKcalGoalAdjustment(
+          user.goal,
+          weeklyWeightGoalKg: plan.paceOn(DateTime.now()),
+        );
   }
 
   /// The overview page's grams, as the app will set them: a fixed
@@ -30,7 +49,7 @@ abstract final class OnboardingMacros {
     if (settings.fixedTarget && settings.fixedMacros != null) {
       return settings.fixedMacros;
     }
-    final kcal = overviewKcal() ?? formulaKcal;
+    final kcal = overviewKcal(user) ?? formulaKcal;
     final program = pending.value;
     if (program != null && user != null && kcal != null) {
       return program.macrosFor(
@@ -39,7 +58,7 @@ abstract final class OnboardingMacros {
         bodyFatPercent: bodyFatPercent(user),
       );
     }
-    if (overviewKcal() case final fixed?
+    if (overviewKcal(user) case final fixed?
         when split != null && formulaKcal != null && formulaKcal > 0) {
       final f = fixed / formulaKcal;
       return FixedMacros(

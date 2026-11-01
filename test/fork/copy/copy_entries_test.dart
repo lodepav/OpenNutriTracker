@@ -127,12 +127,16 @@ void main() {
     final switching = withProfileSwitchLock(() => switched.future);
     final copies = [
       copier().copyIntakes([oats], DateTime(2026, 10, 23)),
-      copier().copyDay(DateTime(2026, 10, 22), DateTime(2026, 10, 23)),
     ];
+    final day = copier().copyDay(
+      DateTime(2026, 10, 22),
+      DateTime(2026, 10, 23),
+    );
     switched.complete();
     await switching;
 
-    expect(await Future.wait(copies), [false, false]);
+    expect(await copies.first, isFalse);
+    expect(await day, isNull);
     expect(intakes.added, isEmpty);
   });
 
@@ -318,6 +322,36 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  testWidgets('a whole day cannot be copied onto itself', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) => ElevatedButton(
+            onPressed: () => showModalBottomSheet<WhereTo>(
+              context: context,
+              isScrollControlled: true,
+              builder: (_) => WhereToSheet(
+                today: _oct23,
+                now: DateTime(2026, 10, 23, 12, 30),
+                from: _oct23,
+                count: 1,
+                wholeDay: true,
+              ),
+            ),
+            child: const Text('open'),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+    final done = find.byKey(const Key('fork-where-done'));
+    expect(tester.widget<FilledButton>(done).onPressed, isNull);
+    await tester.tap(find.byKey(const Key('fork-where-day1')));
+    await tester.pumpAndSettle();
+    expect(tester.widget<FilledButton>(done).onPressed, isNotNull);
+  });
+
   testWidgets('the sheet picks move, tomorrow and lunch with chips', (
     tester,
   ) async {
@@ -431,6 +465,53 @@ void main() {
     await tester.tap(find.text('move'));
     await tester.pumpAndSettle();
     expect(find.text('Moved 2 foods to Lunch'), findsOneWidget);
+  });
+
+  testWidgets('Copy day says how many, and its Undo takes them back', (
+    tester,
+  ) async {
+    final from = DateTime(2026, 10, 22);
+    final to = DateTime(2026, 10, 23);
+    intakes.byMeal = {
+      IntakeTypeEntity.breakfast: [
+        at(
+          intakeOf('oats', 50, type: IntakeTypeEntity.breakfast),
+          DateTime(2026, 10, 22, 8),
+        ),
+        at(
+          intakeOf('egg', 60, type: IntakeTypeEntity.breakfast),
+          DateTime(2026, 10, 22, 9),
+        ),
+      ],
+    };
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: const [S.delegate],
+        home: Scaffold(
+          body: Builder(
+            builder: (context) => TextButton(
+              onPressed: () => placeWithUndo(
+                context,
+                const [],
+                CopySameTimes(to),
+                copier: copier(),
+                place: (entries) => entries.copyDay(from, to),
+              ),
+              child: const Text('copy day'),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('copy day'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Copied 2 foods'), findsOneWidget);
+    expect(intakes.added, hasLength(2));
+    expect(days.kcal[to], greaterThan(0));
+
+    await tester.tap(find.text('Undo'));
+    await tester.pumpAndSettle();
+    expect(days.kcal[to], 0);
   });
 
   testWidgets('a move says where, and its Undo puts the entry back', (

@@ -15,6 +15,11 @@ import 'package:opennutritracker/fork/units/amount_text.dart';
 
 /// English only, like the rest of the fork's strings.
 abstract final class LeftoverStrings {
+  /// Some of the reply fit no food, so a food may read as eaten up wrongly.
+  static String unplaced(int count) =>
+      "AI estimate: $count ${count == 1 ? 'item' : 'items'} didn't match a "
+      'food. Check each amount.';
+
   static const chooseTitle = 'Edit';
   static const justThis = 'Just this item';
   static const justThisHint = 'Its amount and details';
@@ -152,7 +157,7 @@ class GroupLeftoversDialog extends StatefulWidget {
 
   /// Reads a photo of the leftovers into the amount left of each entry,
   /// or null when none was taken. Absent when no model is set up.
-  final Future<Map<String, double>?> Function()? readLeftoverPhoto;
+  final Future<LeftoversReading?> Function()? readLeftoverPhoto;
   final bool usesImperialUnits;
 
   const GroupLeftoversDialog({
@@ -213,8 +218,9 @@ class _GroupLeftoversDialogState extends State<GroupLeftoversDialog> {
     });
     String? note;
     try {
-      final left = await widget.readLeftoverPhoto!();
-      if (left != null) {
+      final reading = await widget.readLeftoverPhoto!();
+      if (reading != null) {
+        final left = reading.left;
         // An entry the model left out has nothing left.
         _fraction = 0;
         _overrides
@@ -226,7 +232,9 @@ class _GroupLeftoversDialogState extends State<GroupLeftoversDialog> {
             _overrides[intake.id]!,
           );
         }
-        note = LeftoverStrings.aiEstimate;
+        note = reading.unplaced > 0
+            ? LeftoverStrings.unplaced(reading.unplaced)
+            : LeftoverStrings.aiEstimate;
       }
     } catch (e, stackTrace) {
       _log.warning('Reading a leftovers photo failed', e, stackTrace);
@@ -298,7 +306,9 @@ class _GroupLeftoversDialogState extends State<GroupLeftoversDialog> {
                   ChoiceChip(
                     label: Text(label),
                     selected: _fraction == fraction,
-                    onSelected: (_) => _pickFraction(fraction),
+                    onSelected: _reading
+                        ? null
+                        : (_) => _pickFraction(fraction),
                   ),
               ],
             ),
@@ -330,6 +340,8 @@ class _GroupLeftoversDialogState extends State<GroupLeftoversDialog> {
                       child: TextField(
                         key: ValueKey('left-${intake.id}'),
                         controller: _controllers[intake.id],
+                        // A reply would replace what is typed while it comes.
+                        enabled: !_reading,
                         keyboardType: const TextInputType.numberWithOptions(
                           decimal: true,
                         ),

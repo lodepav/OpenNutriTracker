@@ -443,7 +443,9 @@ Future<void> showRunningGoal(
       changed,
       confirm: (
         title: 'Complete the goal now?',
-        body: 'It is kept among your completed goals.',
+        body: plan.start.isAfter(today)
+            ? 'It has not begun, so it is not kept.'
+            : 'It is kept among your completed goals.',
         action: 'Complete',
       ),
       () => actions.complete(plan, nowKg),

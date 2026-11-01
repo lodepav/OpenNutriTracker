@@ -148,6 +148,25 @@ void main() {
     expect(stats.trend.every((t) => t != null), isTrue);
   });
 
+  test('no weigh-in in the range: the trend stands, no change or rate', () {
+    final stats = WeightTrendStats.of([
+      WeightLogEntity(date: _d(-30), weightKg: 84),
+      WeightLogEntity(date: _d(-20), weightKg: 83),
+    ], week);
+    expect(stats.nowKg, isNotNull);
+    expect(stats.changeKg, isNull);
+    expect(stats.perWeekKg, isNull);
+  });
+
+  test('a weigh-in on the range\'s first day counts as in it', () {
+    final stats = WeightTrendStats.of([
+      WeightLogEntity(date: _d(-30), weightKg: 84),
+      WeightLogEntity(date: week.first, weightKg: 83),
+    ], week);
+    expect(stats.changeKg, isNotNull);
+    expect(stats.perWeekKg, isNotNull);
+  });
+
   test('no weigh-ins: no trend', () {
     final stats = WeightTrendStats.of(const [], week);
     expect(stats.nowKg, isNull);

@@ -5,6 +5,9 @@ import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:opennutritracker/core/utils/hive_db_provider.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/fork/adaptive/expenditure.dart';
+import 'package:opennutritracker/fork/display/display_prefs.dart';
+import 'package:opennutritracker/fork/health/steps.dart';
+import 'package:opennutritracker/fork/layout/layout_store.dart';
 import 'package:opennutritracker/fork/adaptive/macro_program.dart';
 
 /// Fixed daily macros in grams; their energy is the fixed target.
@@ -493,6 +496,65 @@ class AdaptiveStore {
       '${d.day.toString().padLeft(2, '0')}';
 
   static const skippedKey = 'skippedDays';
+
+  /// What else of this box a backup carries, as stored: step counts and
+  /// their switch and goal, where the goal began and whether its phase was
+  /// applied (else a restore redates the one and reapplies the other), and
+  /// how the app shows and arranges things.
+  static const keptKeys = [
+    ..._dayMaps,
+    'goalStart',
+    'goalStartNoTarget',
+    'phaseApplied',
+    'stepsOn',
+    'stepGoal',
+    'macroOrder',
+    'diaryByHour',
+    'homeShowsEaten',
+    'showWater',
+    'showFasting',
+    'homeTiles',
+    'homeSections',
+    'trendsLayout',
+    'trendsTiles',
+  ];
+
+  /// By day or workout: what this box already read stays, as the newer.
+  static const _dayMaps = ['steps', 'workoutSteps'];
+
+  /// [keptKeys] this box holds, ready for JSON.
+  Future<Map<String, Object?>> kept() async {
+    final box = await _box();
+    return {
+      for (final key in keptKeys)
+        if (box.get(key) case final value?)
+          key: value is Map
+              ? {for (final e in value.entries) '${e.key}': e.value}
+              : value,
+    };
+  }
+
+  /// Writes what [kept] gave.
+  Future<void> restoreKept(Map<String, dynamic> kept) async {
+    final box = await _box();
+    for (final key in keptKeys) {
+      if (!kept.containsKey(key)) continue;
+      final value = kept[key];
+      await box.put(
+        key,
+        _dayMaps.contains(key)
+            ? {...value as Map, ...box.get(key, defaultValue: {}) as Map}
+            : value,
+      );
+    }
+    if (_active) {
+      StepCounts.changes.value++;
+      if (locator.isRegistered<HiveDBProvider>()) {
+        await DisplayPrefs.reload();
+        await LayoutStore.reload();
+      }
+    }
+  }
 
   /// The active profile's [skippedDays] in memory, as [settings], for the
   /// estimate, the Diary's switch and the Trends card.

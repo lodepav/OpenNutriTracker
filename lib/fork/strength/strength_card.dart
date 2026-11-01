@@ -156,6 +156,8 @@ class _StrengthCardState extends State<StrengthCard> {
       await _store.save(settings.copyWith(fixedKcal: kcal));
       await widget.refresh();
       undo = () async {
+        // The settings read are the active profile's, maybe no longer this.
+        if (!startedOn.isCurrent) return false;
         await _store.save(
           AdaptiveStore.settings.value.copyWith(fixedKcal: before),
         );

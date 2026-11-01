@@ -163,8 +163,10 @@ class ProfilesBackup {
   /// Decodes `profiles.json` and checks every folder before anything is
   /// written, and returns the writes: each folder into the profile with its
   /// id, created when the device lacks it. Null for a zip without
-  /// `profiles.json`. A backup whose other profiles include the active one
-  /// is refused, since its top level would land in the wrong diary.
+  /// `profiles.json`. A backup is refused while another of its profiles
+  /// that the device has is active, or a profile other than its main one
+  /// while the device has that one: its top level would land in the wrong
+  /// diary. A main profile the device lacks, as on a new phone, is fine.
   Future<void> Function()? prepareRestore(Archive archive) {
     final file = archive.findFile(profilesFileName);
     if (file == null) return null;
@@ -176,7 +178,11 @@ class ProfilesBackup {
       for (final p in profiles)
         if (p.id != mainId) p,
     ];
-    if (others.any((p) => p.id == _db.activeProfileId)) {
+    final active = _db.activeProfileId;
+    if (others.any((p) => p.id == active) ||
+        (mainId != null &&
+            mainId != active &&
+            _db.profileBox.get(mainId) != null)) {
       throw ExportImportFailure(
         ExportImportFailureReason.unreadableOrWrongFormat,
         'The active profile is not the main profile of this backup; switch '

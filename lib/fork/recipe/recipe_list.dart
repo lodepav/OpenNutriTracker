@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:logging/logging.dart';
+import 'package:opennutritracker/core/domain/entity/intake_entity.dart';
 import 'package:opennutritracker/core/domain/entity/intake_type_entity.dart';
 import 'package:opennutritracker/core/domain/entity/recipe_entity.dart';
 import 'package:opennutritracker/core/domain/entity/recipe_ingredient_entity.dart';
@@ -142,6 +144,8 @@ Future<IntakeTypeEntity?> pickMeal(BuildContext context) =>
       ),
     );
 
+var _loggingServing = false;
+
 /// Logs one serving of [recipe] today to [meal], or to the meal the user
 /// picks when none is given.
 Future<void> logRecipeServing(
@@ -149,28 +153,46 @@ Future<void> logRecipeServing(
   RecipeEntity recipe, {
   IntakeTypeEntity? meal,
 }) async {
-  final type = meal ?? await pickMeal(context);
-  if (type == null || !context.mounted) return;
-  final messenger = ScaffoldMessenger.of(context);
-  final stamp = ProfileStamp.now();
-  final day = DateTime.now();
-  final portion = RecipePortion(recipe, 1);
-  final written = await locator<MealDetailBloc>().addIntake(
-    context,
-    'g',
-    // One decimal: "91.3 g" in the Diary, not "91.25" (H2)
-    portion.grams.toStringAsFixed(1),
-    type,
-    recipe.toMealEntity(),
-    day,
-  );
-  if (written == null || !context.mounted) return;
-  refreshAfterLogging();
-  showLoggedBar(
-    messenger,
-    '${portion.label} of ${recipe.name} added to ${mealLabel(context, type)}',
-    day: day,
-    written: [written],
-    stamp: stamp,
-  );
+  // A second tap would log it twice: with the meal given, no picker stops it.
+  if (_loggingServing) return;
+  _loggingServing = true;
+  try {
+    final type = meal ?? await pickMeal(context);
+    if (type == null || !context.mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    final mealName = mealLabel(context, type);
+    final stamp = ProfileStamp.now();
+    final day = DateTime.now();
+    final portion = RecipePortion(recipe, 1);
+    final IntakeEntity? written;
+    try {
+      written = await locator<MealDetailBloc>().addIntake(
+        context,
+        'g',
+        // One decimal: "91.3 g" in the Diary, not "91.25" (H2)
+        portion.grams.toStringAsFixed(1),
+        type,
+        recipe.toMealEntity(),
+        day,
+      );
+    } catch (error, stack) {
+      Logger('RecipeList').warning('Log failed', error, stack);
+      showNotAdded(messenger, failed: true);
+      return;
+    }
+    if (written == null) {
+      showNotAdded(messenger, failed: false);
+      return;
+    }
+    refreshAfterLogging();
+    showLoggedBar(
+      messenger,
+      '${portion.label} of ${recipe.name} added to $mealName',
+      day: day,
+      written: [written],
+      stamp: stamp,
+    );
+  } finally {
+    _loggingServing = false;
+  }
 }

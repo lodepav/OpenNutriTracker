@@ -3,11 +3,15 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
+import 'package:opennutritracker/core/data/data_source/user_activity_dbo.dart';
+import 'package:opennutritracker/core/data/dbo/physical_activity_dbo.dart';
+import 'package:opennutritracker/core/data/dbo/profile_dbo.dart';
 import 'package:opennutritracker/core/data/repository/config_repository.dart';
 import 'package:opennutritracker/core/data/repository/tracked_day_repository.dart';
 import 'package:opennutritracker/core/data/repository/user_activity_repository.dart';
 import 'package:opennutritracker/core/data/repository/user_repository.dart';
 import 'package:opennutritracker/core/domain/entity/app_theme_entity.dart';
+import 'package:opennutritracker/core/domain/entity/physical_activity_entity.dart';
 import 'package:opennutritracker/core/domain/entity/config_entity.dart';
 import 'package:opennutritracker/core/domain/entity/user_activity_entity.dart';
 import 'package:opennutritracker/core/domain/entity/user_entity.dart';
@@ -18,12 +22,19 @@ import 'package:opennutritracker/core/domain/usecase/add_tracked_day_usecase.dar
 import 'package:opennutritracker/core/domain/usecase/get_config_usecase.dart';
 import 'package:opennutritracker/core/domain/usecase/get_kcal_goal_usecase.dart';
 import 'package:opennutritracker/core/domain/usecase/get_macro_goal_usecase.dart';
+import 'package:opennutritracker/core/domain/usecase/get_tracked_day_usecase.dart';
+import 'package:opennutritracker/core/domain/usecase/get_user_usecase.dart';
+import 'package:opennutritracker/core/domain/usecase/get_weight_log_usecase.dart';
 import 'package:opennutritracker/core/utils/calc/day_boundary_calc.dart';
+import 'package:opennutritracker/core/utils/hive_db_provider.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/fork/adaptive/macro_program.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_ui.dart';
+
+import '../../helpers/fake_hive_db_provider.dart';
+import '../../helpers/hive_test_setup.dart';
 
 /// A Saturday.
 final _saturday = DateTime(2026, 10, 24);
@@ -64,7 +75,35 @@ class _Activities extends Fake implements UserActivityRepository {
     int dayStartOffsetHours = 0,
     int dayStartOffsetMinutes = 0,
   }) async => [];
+
+  /// 300 kcal on Thursday and 100 on Friday, none on Saturday.
+  @override
+  Future<List<UserActivityDBO>> getAllUserActivityDBO() async => [
+    _workoutDbo(DateTime(2026, 10, 22, 8), 300),
+    _workoutDbo(DateTime(2026, 10, 23, 8), 100),
+  ];
 }
+
+UserActivityDBO _workoutDbo(DateTime at, double kcal) => UserActivityDBO(
+  'a-$at',
+  30,
+  kcal,
+  at,
+  PhysicalActivityDBO.fromPhysicalActivityEntity(PhysicalActivityEntity.custom),
+);
+
+/// The active profile's box as a plain box on disk.
+class _Provider extends FakeHiveDBProvider {
+  _Provider({required super.profileBox}) : super(activeProfileId: 'a');
+
+  @override
+  Future<Box<E>> openScopedBox<E>(String baseName, String boxSuffix) =>
+      Hive.openBox<E>(HiveDBProvider.boxNameFor(baseName, boxSuffix));
+}
+
+class _WeightLog extends Fake implements GetWeightLogUsecase {}
+
+class _TrackedDays extends Fake implements GetTrackedDayUsecase {}
 
 /// Records the goal moves an activity makes.
 class _Rows extends Fake implements TrackedDayRepository {
@@ -360,6 +399,91 @@ void main() {
         expect(await forkGoalOnDay(2000, early), 2000);
       },
     );
+
+    group('in the daily activity mode', () {
+      const daily = AdaptiveSettings(
+        adaptiveTarget: true,
+        activityMode: ActivityMode.daily,
+        countSteps: false,
+        workoutSharePct: 100,
+      );
+      final thursday = DateTime(2026, 10, 22);
+      final friday = DateTime(2026, 10, 23);
+
+      setUp(() async {
+        registerHiveAdaptersOnce();
+        locator.registerSingleton<HiveDBProvider>(
+          _Provider(profileBox: await Hive.openBox<ProfileDBO>('profiles')),
+        );
+        locator.registerSingleton<GetConfigUsecase>(
+          GetConfigUsecase(_Config()),
+        );
+        locator.registerSingleton<GetUserUsecase>(GetUserUsecase(_Users()));
+        locator.registerSingleton<GetWeightLogUsecase>(_WeightLog());
+        locator.registerSingleton<GetTrackedDayUsecase>(_TrackedDays());
+        locator.registerSingleton<UserActivityRepository>(_Activities());
+        addTearDown(locator.reset);
+        // Friday noon, its goal 2000 with 100 of activity.
+        DayBoundaryCalc.clock = () => DateTime(2026, 10, 23, 12);
+      });
+
+      Future<void> checkedIn() => AdaptiveStore().addCheckIn(
+        CheckInRecord(
+          date: thursday,
+          expenditureKcal: 2500,
+          proposedKcal: 2000,
+          acceptedKcal: 2000,
+        ),
+      );
+
+      test('a row for another day carries that day\'s activity', () async {
+        await checkedIn();
+        AdaptiveStore.settings.value = daily;
+        expect((await forkKcalGoal(friday)).target, 2100);
+        expect(await forkGoalOnDay(2100, friday), 2100);
+        expect(await forkGoalOnDay(2100, thursday), 2300);
+        expect(await forkGoalOnDay(2100, _saturday), 2000);
+      });
+
+      test('with the weekday\'s shift too', () async {
+        await checkedIn();
+        AdaptiveStore.settings.value = daily.copyWith(
+          weekdayOffsets: _weekendUp,
+        );
+        // Friday's -100 and 100 of activity out, Saturday's +250 in.
+        expect(await forkGoalOnDay(2000, _saturday), 2250);
+      });
+
+      test('a goal holding no activity is left alone', () async {
+        await checkedIn();
+        // A fixed target adds none.
+        AdaptiveStore.settings.value = daily.copyWith(
+          fixedTarget: true,
+          fixedKcal: 1800,
+        );
+        expect(await forkGoalOnDay(1800, thursday), 1800);
+        // Nor does another profile's.
+        AdaptiveStore.settings.value = const AdaptiveSettings();
+        final other = AdaptiveStore.otherProfile(
+          () => Hive.openBox<dynamic>('other'),
+        );
+        await other.save(daily);
+        expect(
+          await forkGoalOnDay(
+            2100,
+            thursday,
+            store: other,
+            config: () => _Config().getConfig(),
+          ),
+          2100,
+        );
+      });
+
+      test('nor before the first check-in, under the formula', () async {
+        AdaptiveStore.settings.value = daily;
+        expect(await forkGoalOnDay(2847, thursday), 2847);
+      });
+    });
 
     test('a row made in another profile takes that profile\'s shift', () async {
       final other = AdaptiveStore.otherProfile(

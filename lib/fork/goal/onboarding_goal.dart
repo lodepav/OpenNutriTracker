@@ -21,15 +21,27 @@ abstract final class OnboardingGoal {
   /// dropped.
   static Future<void> save({
     UserGoalSelectionEntity? chosen,
+    double? weightKg,
     GoalActions? actions,
   }) async {
-    final plan = pending.value;
-    if (plan == null) return;
-    if (chosen != null && chosen != choiceFor(plan.kind)) {
+    final picked = pending.value;
+    if (picked == null) return;
+    final plan = chosen != null && chosen != choiceFor(picked.kind)
+        ? null
+        : replanned(picked, weightKg);
+    if (plan == null) {
       pending.value = null;
       return;
     }
     if (await (actions ?? GoalActions()).start(plan)) pending.value = null;
+  }
+
+  /// [plan] from a weight corrected after planning; null when its target is
+  /// no longer ahead of it.
+  static PhasePlan? replanned(PhasePlan plan, double? weightKg) {
+    if (weightKg == null || plan.startKg == weightKg) return plan;
+    final moved = restarted(plan, plan.start, weightKg);
+    return queuedProblem(moved) == null ? moved : null;
   }
 
   /// Upstream's goal choice for [kind].
@@ -64,7 +76,7 @@ class OnboardingPlanRow extends StatelessWidget {
     );
     final pending = OnboardingGoal.pending.value;
     final draft = pending != null
-        ? GoalDraft.of(pending, setup.nowKg)
+        ? GoalDraft.of(pending, setup.nowKg).copyWith(startKg: setup.nowKg)
         : GoalDraft.fresh(
             setup.nowKg,
             DateTime.now(),
@@ -88,12 +100,20 @@ class OnboardingPlanRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final unit = locator.isRegistered<OnboardingBloc>()
-        ? locator<OnboardingBloc>().userSelection.bodyWeightUnit
+    final selection = locator.isRegistered<OnboardingBloc>()
+        ? locator<OnboardingBloc>().userSelection
         : null;
+    final unit = selection?.bodyWeightUnit;
     return ValueListenableBuilder(
       valueListenable: OnboardingGoal.pending,
-      builder: (context, plan, _) {
+      builder: (context, picked, _) {
+        // As it will be saved, from the weight as it now stands.
+        final plan = picked == null
+            ? null
+            : OnboardingGoal.replanned(
+                picked,
+                selection?.toUserEntity()?.weightKG,
+              );
         final target = plan?.targetKg;
         return Semantics(
           identifier: 'onboarding-plan-goal',
@@ -107,12 +127,14 @@ class OnboardingPlanRow extends StatelessWidget {
                   ),
             title: Text(plan == null ? 'Plan your goal' : 'Your plan'),
             subtitle: Text(
-              plan == null
+              picked != null && plan == null
+                  ? 'Its target is behind your weight now: plan again.'
+                  : plan == null
                   ? 'The pace, what you burn, the calorie target and macros, '
                         'a screen each.'
                   : '${plan.kind.label}'
                         '${target == null || unit == null ? '' : ' to ${weightText(target, unit)}'}'
-                        ' · until ${intl.DateFormat.yMMMd(Localizations.localeOf(context).toLanguageTag()).format(plan.end)}',
+                        ' · until ${intl.DateFormat.yMMMd(Localizations.localeOf(context).toLanguageTag()).format(plan.lastDay)}',
             ),
             trailing: Icon(
               plan == null ? Icons.chevron_right_rounded : Icons.edit_rounded,

@@ -81,6 +81,7 @@ Future<void> main() async {
 
 Future<void> _bootstrapApp() async {
   final log = Logger('main');
+  await forkResetForRetry(); // [fork] S6 fork-startup
   try {
     await initLocator();
   } on HiveStorageIntegrityException catch (error, stackTrace) {

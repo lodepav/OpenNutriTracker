@@ -55,6 +55,7 @@ class NutrientGoalsOverview extends StatefulWidget {
   final TrackedDayLoader days;
   final Future<UserEntity?> Function() user;
   final Future<int> Function() dayStart;
+  final Future<List<TrackedDayEntity>?> Function() goalHistory;
 
   /// Opens the goal list; the bars are read again when it closes.
   final Future<void> Function(BuildContext context) onEdit;
@@ -67,6 +68,7 @@ class NutrientGoalsOverview extends StatefulWidget {
     this.days = _trackedDays,
     this.user = loadUser,
     this.dayStart = dayStartMinutes,
+    this.goalHistory = allTrackedDays,
   });
 
   @override
@@ -83,9 +85,11 @@ class _NutrientGoalsOverviewState extends State<NutrientGoalsOverview> {
     return goalRows(
       summarizeNutrients(
         await widget.load(first, last),
-        await widget.days(first, last),
+        await widget.days(first, endOfDay(last)),
         await widget.user(),
         dayStartMinutes: await widget.dayStart(),
+        // Today keeps to its own row, as the Diary's panel does.
+        goalHistory: _week ? await widget.goalHistory() : null,
       ),
     );
   }

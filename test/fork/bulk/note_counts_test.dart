@@ -32,6 +32,8 @@ void main() {
         ('one and a half cutlets', 1.5),
         ('2 and a half pancakes', 2.5),
         ('⅓ of the cake', 0.33),
+        ('1/2 pizza', 0.5),
+        ('3 / 4 of a tortilla', 0.75),
       ]) {
         expect(noteStatesCount(note, count), isTrue, reason: note);
       }
@@ -39,6 +41,7 @@ void main() {
 
     test('a count the note does not state, or no note', () {
       expect(noteStatesCount('2 pancakes', 1.5), isFalse);
+      expect(noteStatesCount('1/0 pizza', 0.5), isFalse);
       expect(noteStatesCount('halves of peaches', 0.5), isFalse);
       expect(noteStatesCount(null, 0.5), isFalse);
       expect(noteStatesCount('half a pizza', null), isFalse);

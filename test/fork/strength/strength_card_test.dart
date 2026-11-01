@@ -174,6 +174,32 @@ void main() {
     expect(refreshed, 2);
   });
 
+  testWidgets("a fixed target's Undo after a profile switch changes nothing", (
+    tester,
+  ) async {
+    AdaptiveStore.settings.value = const AdaptiveSettings(
+      fixedTarget: true,
+      fixedKcal: 2000,
+    );
+    await pump(tester);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Apply'));
+    await tester.pumpAndSettle();
+    await withProfileSwitchLock(() async {
+      // The other profile's settings are loaded by now.
+      AdaptiveStore.settings.value = const AdaptiveSettings(
+        fixedTarget: true,
+        fixedKcal: 1500,
+      );
+    });
+
+    await tester.tap(find.text('Undo'));
+    await tester.pumpAndSettle();
+
+    expect(AdaptiveStore.settings.value.fixedKcal, 1500);
+    expect(find.text('Not undone: the profile changed.'), findsOneWidget);
+  });
+
   testWidgets('a second tap on Apply does not add the calories again', (
     tester,
   ) async {

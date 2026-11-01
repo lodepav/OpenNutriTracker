@@ -92,7 +92,7 @@ class _NutrientGoalsScreenState extends State<NutrientGoalsScreen> {
   bool _loaded = false;
 
   // [fork] S135 nutrient-goals: Back asks before it drops a change
-  List<double?> _forkSaved = const [];
+  List<double?> _forkSaved = List.filled(10, null);
 
   List<double?> get _forkGoals => [
         _fibre,

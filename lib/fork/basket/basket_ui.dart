@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:logging/logging.dart';
 import 'package:opennutritracker/fork/copy/copy_ui.dart' show mealLabel;
 import 'package:opennutritracker/core/domain/entity/intake_entity.dart';
 import 'package:opennutritracker/core/domain/entity/intake_type_entity.dart';
@@ -19,6 +20,8 @@ import 'package:opennutritracker/fork/basket/basket.dart';
 import 'package:opennutritracker/fork/plan/plan_store.dart';
 import 'package:opennutritracker/fork/plan/plan_ui.dart';
 import 'package:opennutritracker/fork/units/energy_text.dart';
+
+final _log = Logger('Basket');
 
 /// Writes one basket item; upstream's meal detail add in the app. Null
 /// when it was not written (a profile switch).
@@ -44,9 +47,14 @@ Future<IntakeEntity?> _logWithMealDetail(
   day,
 );
 
+/// Ticks when [refreshAfterLogging] runs, for what reads the day's totals
+/// outside the blocs.
+final entriesChanged = ValueNotifier<int>(0);
+
 /// Home and the Diary, after entries were written outside upstream's
 /// screens; skipped where the app's blocs are not registered (tests).
 void refreshAfterLogging() {
+  entriesChanged.value++;
   if (!locator.isRegistered<HomeBloc>()) return;
   locator<HomeBloc>().add(const LoadItemsEvent());
   locator<DiaryBloc>().add(const LoadDiaryYearEvent());
@@ -206,6 +214,10 @@ class BasketSheet extends StatefulWidget {
 class _BasketSheetState extends State<BasketSheet> {
   bool _logging = false;
 
+  /// Why the last "Log all" wrote nothing: said here, as a bar would show
+  /// under this sheet, which stays open for another go.
+  String? _failed;
+
   /// Puts the foods on the day's plan (`PlanStore`) instead of the diary,
   /// repeating on [weekdays] if any.
   Future<void> _plan({Set<int> weekdays = const {}}) async {
@@ -261,32 +273,58 @@ class _BasketSheetState extends State<BasketSheet> {
   }
 
   Future<void> _logAll() async {
-    setState(() => _logging = true);
+    setState(() {
+      _logging = true;
+      _failed = null;
+    });
     final items = widget.basket.itemsFor(widget.type, widget.day);
     final messenger = ScaffoldMessenger.of(context);
     final stamp = ProfileStamp.now();
     final written = <IntakeEntity>[];
-    for (final item in items) {
-      if (!mounted) break;
-      final intake = await widget.log(context, item, widget.type, widget.day);
-      // Not written (a profile switch): it and the rest stay in the basket.
-      if (intake == null) break;
-      // Out of the basket once logged: a sheet closed partway leaves only
-      // what was not, so logging again adds nothing twice.
-      widget.basket.remove(item);
-      written.add(intake);
+    var failed = false;
+    try {
+      for (final item in items) {
+        if (!mounted) break;
+        final intake = await widget.log(context, item, widget.type, widget.day);
+        // Not written (a profile switch): it and the rest stay in the basket.
+        if (intake == null) break;
+        // Out of the basket once logged: a sheet closed partway leaves only
+        // what was not, so logging again adds nothing twice.
+        widget.basket.remove(item);
+        written.add(intake);
+      }
+    } catch (error, stack) {
+      _log.warning('Log all stopped by a failed write', error, stack);
+      failed = true;
     }
     refreshAfterLogging();
     if (!mounted) return;
     final logged = written.length;
-    showLoggedBar(
-      messenger,
-      'Logged $logged ${logged == 1 ? 'food' : 'foods'} to '
-      '${mealLabel(context, widget.type)}.',
-      day: widget.day,
-      written: written,
-      stamp: stamp,
-    );
+    final unwritten = failed
+        ? "The rest couldn't be saved and stay in the basket."
+        : 'Not all added: the profile changed.';
+    if (logged == 0) {
+      if (failed) {
+        setState(() {
+          _logging = false;
+          _failed = unwritten;
+        });
+        return;
+      }
+      messenger
+        ..removeCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text(unwritten)));
+    } else {
+      showLoggedBar(
+        messenger,
+        'Logged $logged ${logged == 1 ? 'food' : 'foods'} to '
+        '${mealLabel(context, widget.type)}.'
+        '${logged < items.length ? ' $unwritten' : ''}',
+        day: widget.day,
+        written: written,
+        stamp: stamp,
+      );
+    }
     Navigator.of(
       context,
     ).popUntil(namedRouteOrFirst(NavigationOptions.mainRoute));
@@ -340,6 +378,16 @@ class _BasketSheetState extends State<BasketSheet> {
                 'Total ${energyText(context, widget.basket.totalKcal)}',
                 textAlign: TextAlign.end,
               ),
+              if (_failed case final failed?)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(
+                    failed,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                  ),
+                ),
               const SizedBox(height: 12),
               if (widget.basket.planning == null) ...[
                 FilledButton(

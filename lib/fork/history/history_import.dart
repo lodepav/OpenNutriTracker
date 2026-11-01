@@ -282,11 +282,17 @@ HistoryPlan planImport(
     intakes[day] = entries;
   }
 
-  bool misreadOn(WeightLogEntity w) =>
-      file.misreadKg[_date(w.date)]?.any(
-        (kg) => (kg - w.weightKg).abs() < 1e-6,
-      ) ??
-      false;
+  // Only on a day an earlier import wrote, and not the weight this file
+  // itself gives: a real weigh-in can equal a serving's grams.
+  bool misreadOn(WeightLogEntity w) {
+    final day = _date(w.date);
+    if (!existing.importedDays.containsKey(day)) return false;
+    final own = file.weightsKg[day];
+    if (own != null && (own - w.weightKg).abs() < 1e-6) return false;
+    return file.misreadKg[day]?.any((kg) => (kg - w.weightKg).abs() < 1e-6) ??
+        false;
+  }
+
   final misread = [
     for (final w in existing.weighIns)
       if (misreadOn(w)) w,
@@ -452,31 +458,12 @@ MealEntity _meal(
     servingQuantity: food.grams,
     servingUnit: 'g',
     servingSize: food.grams == null ? '' : '${_amount(grams)} g',
-    nutriments: MealNutrimentsEntity(
-      energyKcal100: per100(food.kcal),
-      carbohydrates100: per100(food.carbs),
-      fat100: per100(food.fat),
-      proteins100: per100(food.protein),
-      sugars100: n('sugars'),
-      saturatedFat100: n('saturatedFat'),
-      fiber100: n('fiber'),
-      monounsaturatedFat100: n('monounsaturatedFat'),
-      polyunsaturatedFat100: n('polyunsaturatedFat'),
-      transFat100: n('transFat'),
-      cholesterol100: n('cholesterol'),
-      sodium100: n('sodium'),
-      potassium100: n('potassium'),
-      magnesium100: n('magnesium'),
-      calcium100: n('calcium'),
-      iron100: n('iron'),
-      zinc100: n('zinc'),
-      phosphorus100: n('phosphorus'),
-      vitaminA100: n('vitaminA'),
-      vitaminC100: n('vitaminC'),
-      vitaminD100: n('vitaminD'),
-      vitaminB6100: n('vitaminB6'),
-      vitaminB12100: n('vitaminB12'),
-      niacin100: n('niacin'),
+    nutriments: _nutriments(
+      kcal: per100(food.kcal),
+      carbs: per100(food.carbs),
+      fat: per100(food.fat),
+      protein: per100(food.protein),
+      n: n,
     ),
     source: source,
   );
@@ -552,31 +539,12 @@ IntakeEntity _intake(
       servingQuantity: null,
       servingUnit: 'gml',
       servingSize: '',
-      nutriments: MealNutrimentsEntity(
-        energyKcal100: totals.kcal,
-        carbohydrates100: totals.carbs,
-        fat100: totals.fat,
-        proteins100: totals.protein,
-        sugars100: n('sugars'),
-        saturatedFat100: n('saturatedFat'),
-        fiber100: n('fiber'),
-        monounsaturatedFat100: n('monounsaturatedFat'),
-        polyunsaturatedFat100: n('polyunsaturatedFat'),
-        transFat100: n('transFat'),
-        cholesterol100: n('cholesterol'),
-        sodium100: n('sodium'),
-        potassium100: n('potassium'),
-        magnesium100: n('magnesium'),
-        calcium100: n('calcium'),
-        iron100: n('iron'),
-        zinc100: n('zinc'),
-        phosphorus100: n('phosphorus'),
-        vitaminA100: n('vitaminA'),
-        vitaminC100: n('vitaminC'),
-        vitaminD100: n('vitaminD'),
-        vitaminB6100: n('vitaminB6'),
-        vitaminB12100: n('vitaminB12'),
-        niacin100: n('niacin'),
+      nutriments: _nutriments(
+        kcal: totals.kcal,
+        carbs: totals.carbs,
+        fat: totals.fat,
+        protein: totals.protein,
+        n: n,
       ),
       // Not custom: Settings' custom meals would list every day, and their
       // merge and edit would rewrite the history.
@@ -1027,3 +995,37 @@ class _HistoryImportDialogState extends State<HistoryImportDialog> {
     );
   }
 }
+
+/// A food's nutriments, each of [nutrientColumns] read through [n].
+MealNutrimentsEntity _nutriments({
+  required double? kcal,
+  required double? carbs,
+  required double? fat,
+  required double? protein,
+  required double? Function(String) n,
+}) => MealNutrimentsEntity(
+  energyKcal100: kcal,
+  carbohydrates100: carbs,
+  fat100: fat,
+  proteins100: protein,
+  sugars100: n('sugars'),
+  saturatedFat100: n('saturatedFat'),
+  fiber100: n('fiber'),
+  monounsaturatedFat100: n('monounsaturatedFat'),
+  polyunsaturatedFat100: n('polyunsaturatedFat'),
+  transFat100: n('transFat'),
+  cholesterol100: n('cholesterol'),
+  sodium100: n('sodium'),
+  potassium100: n('potassium'),
+  magnesium100: n('magnesium'),
+  calcium100: n('calcium'),
+  iron100: n('iron'),
+  zinc100: n('zinc'),
+  phosphorus100: n('phosphorus'),
+  vitaminA100: n('vitaminA'),
+  vitaminC100: n('vitaminC'),
+  vitaminD100: n('vitaminD'),
+  vitaminB6100: n('vitaminB6'),
+  vitaminB12100: n('vitaminB12'),
+  niacin100: n('niacin'),
+);

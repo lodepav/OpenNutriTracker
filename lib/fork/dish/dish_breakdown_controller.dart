@@ -42,6 +42,7 @@ class DishBreakdownController extends ChangeNotifier {
     BreakDown? breakDown,
     Future<bool> Function()? modelConfigured,
     MealPhoto? Function()? photo,
+    this.onRowsMoved,
   }) : _breakDown =
            breakDown ??
            ((dish, {amount, photo}) => BreakDownDishUseCase.fromLocator()(
@@ -60,6 +61,11 @@ class DishBreakdownController extends ChangeNotifier {
       _onState(_bloc.state);
     });
   }
+
+  /// The rows' count changed under what the screen holds by index or by
+  /// list place: a breakdown landed.
+  final VoidCallback? onRowsMoved;
+  int _rowCount = 0;
 
   /// Read through the locator only when it holds the storage: upstream's
   /// screen tests build the screen without it.
@@ -94,7 +100,7 @@ class DishBreakdownController extends ChangeNotifier {
       if (breakdown == null) return DishBreakdownOutcome.noModel;
       if (breakdown.ingredients.isEmpty) return DishBreakdownOutcome.empty;
       if (!_bloc.isClosed) {
-        _bloc.add(ReplaceRowWithBreakdownEvent(target, breakdown));
+        _bloc.add(ReplaceRowWithBreakdownEvent(target, breakdown, asked: row));
       }
       return DishBreakdownOutcome.replaced;
     } on MealInterpreterException catch (e) {
@@ -115,7 +121,13 @@ class DishBreakdownController extends ChangeNotifier {
   /// being asked. Not for the parser's rows: there the model was not used,
   /// or failed, and asking it again per row would repeat that.
   void _onState(BulkAddState state) {
-    if (state is! BulkAddLoadedState || !_modelReady) return;
+    if (state is! BulkAddLoadedState) return;
+    if (state.rows.length != _rowCount) {
+      final moved = _rowCount > 0;
+      _rowCount = state.rows.length;
+      if (moved) onRowsMoved?.call();
+    }
+    if (!_modelReady) return;
     if (state.source == BulkAddReadSource.parser) return;
     for (final row in state.rows) {
       if (!row.isResolved &&

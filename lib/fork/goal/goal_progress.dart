@@ -214,13 +214,9 @@ class GoalProgress {
 
   /// The day the target is reached at [kgPerWeek] from today; null when
   /// that leads away from it, or there.
-  DateTime? arrivalAt(double? kgPerWeek) {
-    if (kgPerWeek == null) return null;
-    final days = daysToTarget(nowKg, targetKg, kgPerWeek / 7);
-    return days == null
-        ? null
-        : DateTime(today.year, today.month, today.day + days);
-  }
+  DateTime? arrivalAt(double? kgPerWeek) => kgPerWeek == null
+      ? null
+      : _dayAt(daysToTarget(nowKg, targetKg, kgPerWeek / 7));
 
   /// The milestones from the start to the target every [step] (in a unit
   /// [perKg] times a kg), each with the day the trend reached it (null
@@ -236,7 +232,11 @@ class GoalProgress {
       today.day - (trend.length - 1),
     );
     final down = totalKg < 0;
-    bool past(double kg, double m) => down ? kg <= m : kg >= m;
+    // The target counts from within 0.1 kg, as [toGoKg] does.
+    bool past(double kg, double m) => m == targetKg
+        ? (down ? m - kg > -0.1 : m - kg < 0.1)
+        : (down ? kg <= m : kg >= m);
+
     return [
       for (final m in [
         ...milestonesKg(start.kg, targetKg, step, perKg: perKg, max: 50),
@@ -260,8 +260,10 @@ class GoalProgress {
     DateTime firstDay,
     bool Function(double, double) past,
   ) {
-    for (final (i, kg) in trend.indexed) {
-      if (past(kg, m)) {
+    // Only the goal's own days: the trend also holds those before it.
+    final since = CalendarDayCalc.daysBetween(firstDay, start.date);
+    for (var i = since < 0 ? 0 : since; i < trend.length; i++) {
+      if (past(trend[i], m)) {
         return i == 0
             ? null
             : DateTime(firstDay.year, firstDay.month, firstDay.day + i);
@@ -304,6 +306,21 @@ class GoalStartStore {
   }
 
   Future<void> save(GoalStart start) => _store.writeKey(key, start.toJson());
+
+  /// What is stored, for [putBack].
+  Future<Object?> stored() => _store.readKey(key);
+
+  /// Forgets the start of a goal that is over: the next target, the same
+  /// one too, starts the day it is set. What was stored, for [putBack].
+  Future<Object?> forget() async {
+    final was = await _store.readKey(key);
+    await _store.writeKey(key, null);
+    await _store.writeKey(noTargetKey, true);
+    return was;
+  }
+
+  /// Undoes [forget], given what it returned.
+  Future<void> putBack(Object? was) => _store.writeKey(key, was);
 
   /// Reads the goal and keeps its start: the one stored, or a new one
   /// when the target changed.

@@ -148,11 +148,7 @@ class TrendDetailPage extends StatelessWidget {
     TrendsLoaded state,
     List<ExpenditureDay> history,
   ) {
-    final now = DateTime.now();
-    final dates = windowDates(
-      DateTime(now.year, now.month, now.day),
-      state.windowDays,
-    );
+    final dates = windowDates(state.logicalToday, state.windowDays);
     final pills = RangePills(
       rangeDays: state.rangeDays,
       onChanged: (d) =>
@@ -208,6 +204,7 @@ class TrendDetailPage extends StatelessWidget {
                 dates,
                 eaten: macro.eaten,
                 goal: macro.goal,
+                today: state.logicalToday,
               )
               case final o when o.logged > 0) ...[
             trendSection(context, 'How the days went'),

@@ -301,6 +301,65 @@ void main() {
     expect(find.textContaining('Planned'), findsNothing);
   });
 
+  test('a planned amount reads as it was picked', () {
+    final bar = MealEntity(
+      code: 'bar',
+      name: 'Bar',
+      url: null,
+      mealQuantity: null,
+      mealUnit: 'g',
+      servingQuantity: 180,
+      servingUnit: 'g',
+      servingSize: null,
+      nutriments: MealNutrimentsEntity.empty(),
+      source: MealSourceEntity.custom,
+    );
+    String label(String unit, String amount) => plannedAmountLabel(
+      PlannedFood(
+        id: 'x',
+        day: _sunday,
+        type: IntakeTypeEntity.lunch,
+        meal: bar,
+        unit: unit,
+        amountText: amount,
+        kcal: 300,
+      ),
+    );
+    expect(label('serving', '180.0'), '1 serving');
+    expect(label('serving', '360.0'), '2 servings');
+    expect(label('g', '150.0'), '150 g');
+  });
+
+  testWidgets('Log all that fails midway reports what was logged', (
+    tester,
+  ) async {
+    final memory = _MemoryPlan([
+      _planned('a', MealEntityFixtures.mealOne, 300),
+      _planned('b', MealEntityFixtures.mealTwo, 120),
+    ]);
+    var calls = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: PlannedFoodsCard(
+            day: _sunday,
+            store: memory,
+            log: (_, _) async {
+              if (++calls == 2) throw StateError('disk');
+              return _written;
+            },
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('plan-log-all')));
+    await tester.pumpAndSettle();
+    expect(find.textContaining("couldn't be saved"), findsOneWidget);
+    expect(find.text('Undo'), findsOneWidget);
+    expect(memory.foods, hasLength(1));
+  });
+
   testWidgets('"Repeat" picks the days; a repeating food says so', (
     tester,
   ) async {

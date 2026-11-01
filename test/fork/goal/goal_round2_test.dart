@@ -400,6 +400,22 @@ void main() {
       expect(find.textContaining('in 0 days'), findsNothing);
     });
 
+    testWidgets('a plan capped short of its target promises no date', (
+      tester,
+    ) async {
+      final plan = GoalDraft(
+        kind: PhaseKind.cut,
+        startKg: 86.4,
+        targetKg: 40,
+        start: now,
+        paceKg: 0.25,
+      ).toPlan();
+      await pumpProgress(tester, daysIn: 14, plan: plan);
+      await tester.scrollUntilVisible(find.text('When you get there'), 200);
+      expect(find.text('By your plan'), findsNothing);
+      expect(find.text('From today at your plan’s pace'), findsOneWidget);
+    });
+
     testWidgets("the plan's line reaches the target on the plan's end", (
       tester,
     ) async {
@@ -425,6 +441,10 @@ void main() {
         ),
         isTrue,
       );
+      final line = chart.data.lineBarsData.firstWhere(
+        (b) => b.spots.length == 2 && b.spots.last.x == last,
+      );
+      expect(line.spots.last.y, closeTo(80, 0.01));
       final exact = daysToTarget(86.4, 80, -0.5 / 7)!;
       expect(last, greaterThan(exact));
     });

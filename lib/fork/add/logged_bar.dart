@@ -43,3 +43,19 @@ void showLoggedBar(
     ),
   );
 }
+
+/// Says a food was not added: the write [failed], or a profile switch
+/// stopped it.
+void showNotAdded(ScaffoldMessengerState messenger, {required bool failed}) {
+  messenger
+    ..removeCurrentSnackBar()
+    ..showSnackBar(
+      SnackBar(
+        content: Text(
+          failed
+              ? "Not added: it couldn't be saved."
+              : 'Not added: the profile changed.',
+        ),
+      ),
+    );
+}

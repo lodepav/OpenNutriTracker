@@ -9,6 +9,9 @@ import 'package:opennutritracker/core/domain/usecase/get_user_usecase.dart';
 import 'package:opennutritracker/core/domain/usecase/get_water_intake_usecase.dart';
 import 'package:opennutritracker/core/domain/usecase/get_weight_log_usecase.dart';
 import 'package:opennutritracker/core/utils/calc/calendar_day_calc.dart';
+// [fork] S190 logical-today
+import 'package:opennutritracker/core/utils/calc/day_boundary_calc.dart';
+// [/fork]
 
 part 'trends_event.dart';
 part 'trends_state.dart';
@@ -40,7 +43,12 @@ class TrendsBloc extends Bloc<TrendsEvent, TrendsState> {
       _rangeDays = event.rangeDays;
       emit(const TrendsLoading());
       try {
-        final now = DateTime.now();
+        // [fork] S190 logical-today: the range ends on the Diary's today, not
+        // the wall clock's date
+        final config = await _getConfigUsecase.getConfig();
+        final dayStart = config.dayStartOffsetTotalMinutes;
+        final now = DayBoundaryCalc.currentLogicalDayMinutes(dayStart);
+        // [/fork]
         final today = DateTime(now.year, now.month, now.day);
         // Today's tracked day is stamped with the time it was created, so the
         // range end must cover the whole day or today drops out of the result
@@ -51,7 +59,9 @@ class TrendsBloc extends Bloc<TrendsEvent, TrendsState> {
         final isAll = event.rangeDays == 0;
         final fetchDays = isAll ? 3650 : event.rangeDays;
         final days = await _getTrackedDayUsecase.getTrackedDaysByRange(
-          today.subtract(Duration(days: fetchDays - 1)),
+          // [fork] S190 logical-today: calendar days, as a clock change leaves them
+          DateTime(today.year, today.month, today.day - (fetchDays - 1)),
+          // [/fork]
           endOfToday,
         );
         // The full weight history; the chart windows it for display. This
@@ -61,17 +71,22 @@ class TrendsBloc extends Bloc<TrendsEvent, TrendsState> {
         weight.sort((a, b) => a.date.compareTo(b.date));
         // The 7 days before this week, for a week-over-week consistency delta.
         final priorWeek = await _getTrackedDayUsecase.getTrackedDaysByRange(
-          today.subtract(const Duration(days: 13)),
+          // [fork] S190 logical-today: calendar days
+          DateTime(today.year, today.month, today.day - 13),
+          // [/fork]
           DateTime(now.year, now.month, now.day - 7, 23, 59, 59),
         );
         final user = await _getUserUsecase.getUserData();
-        final config = await _getConfigUsecase.getConfig();
+        // [fork] S190 logical-today: the config is read above
+        // [/fork]
 
         // Water totalled per calendar day; the card fills missing days with 0.
         final waterEntries = await _getWaterIntakeUsecase.getAllEntries();
         final waterByDay = <DateTime, int>{};
         for (final e in waterEntries) {
-          final d = DateTime(e.dateTime.year, e.dateTime.month, e.dateTime.day);
+          // [fork] S190 logical-today: on its logical day, as Home counts it
+          final d = DayBoundaryCalc.logicalDayOfMinutes(e.dateTime, dayStart);
+          // [/fork]
           waterByDay[d] = (waterByDay[d] ?? 0) + e.amountMl;
         }
 
@@ -120,6 +135,9 @@ class TrendsBloc extends Bloc<TrendsEvent, TrendsState> {
             user.gender,
             caloriesProfile: user.caloriesProfile,
           ),
+          // [fork] S190 logical-today
+          dayStartMinutes: dayStart,
+          // [/fork]
         ));
       } catch (e) {
         emit(TrendsFailed(e.toString()));

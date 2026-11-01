@@ -29,8 +29,8 @@ class CheckInHistoryScreen extends StatelessWidget {
             child: Padding(
               padding: EdgeInsets.all(24),
               child: Text(
-                'No check-ins yet. The first comes a week after the '
-                'adaptive target is turned on.',
+                'No check-ins yet. The first is ready on Home once the '
+                'adaptive target is on.',
                 textAlign: TextAlign.center,
               ),
             ),

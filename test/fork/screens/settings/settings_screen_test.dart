@@ -17,6 +17,7 @@ import 'package:opennutritracker/features/home/presentation/bloc/home_bloc.dart'
 import 'package:opennutritracker/features/profile/presentation/bloc/profile_bloc.dart';
 import 'package:opennutritracker/features/settings/presentation/bloc/settings_bloc.dart';
 import 'package:opennutritracker/features/settings/presentation/widgets/ai_assist_dialog.dart';
+import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/fork/screens/settings/settings_screen.dart';
 import 'package:opennutritracker/features/trends/presentation/bloc/trends_bloc.dart';
 import 'package:opennutritracker/generated/l10n.dart';
@@ -144,6 +145,25 @@ Widget _app({Object? arguments, SettingsSection? section}) => MaterialApp(
 );
 
 void main() {
+  test('the rows a target or macro program stands in for say so', () {
+    const off = AdaptiveSettings();
+    expect(adjustmentOverridden(off, hasCheckIn: true), isFalse);
+    expect(splitOverridden(off), isFalse);
+    const adaptive = AdaptiveSettings(adaptiveTarget: true);
+    expect(adjustmentOverridden(adaptive, hasCheckIn: true), isTrue);
+    // Until its first check-in the formula's goal stands, adjustment and all.
+    expect(adjustmentOverridden(adaptive, hasCheckIn: false), isFalse);
+    expect(
+      adjustmentOverridden(
+        const AdaptiveSettings(fixedTarget: true),
+        hasCheckIn: false,
+      ),
+      isTrue,
+    );
+    // Fixed energy with the formula's split still uses the split.
+    expect(splitOverridden(const AdaptiveSettings(fixedTarget: true)), isFalse);
+  });
+
   // A handset, because the point of #852 is where the AI row sits on one.
   setUp(() => _register());
   tearDown(() async => locator.reset());

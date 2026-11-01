@@ -141,6 +141,108 @@ void main() {
     expect(memory.entries.single.value, 80);
   });
 
+  testWidgets("a picked metric's last entry gone, the card shows one left", (
+    tester,
+  ) async {
+    final memory = _Memory()
+      ..entries.addAll([
+        Measurement(
+          id: 'b',
+          date: DateTime.now(),
+          metric: BodyMetric.bodyFat,
+          value: 20,
+        ),
+        Measurement(
+          id: 'w',
+          date: DateTime.now(),
+          metric: BodyMetric.waist,
+          value: 80,
+        ),
+      ]);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: BodyMeasurementsCard(
+              rangeDays: 30,
+              palette: AppPalette.light,
+              imperial: false,
+              store: memory,
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Waist'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Waist entries'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('measure-delete-w')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Waist entries'), findsNothing);
+    expect(find.text('Body fat entries'), findsOneWidget);
+  });
+
+  testWidgets('saving over a day says what went, and Undo brings it back', (
+    tester,
+  ) async {
+    final memory = _Memory()
+      ..entries.add(
+        Measurement(
+          id: 'old',
+          date: DateTime.now(),
+          metric: BodyMetric.waist,
+          value: 80,
+        ),
+      );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: BodyMeasurementsCard(
+              rangeDays: 30,
+              palette: AppPalette.light,
+              imperial: false,
+              store: memory,
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('measure-add')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const ValueKey('measure-waist')), '75');
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Replaced Waist 80.0 cm'), findsOneWidget);
+    expect(memory.entries.single.value, 75);
+
+    await tester.tap(find.text('Undo'));
+    await tester.pumpAndSettle();
+    expect(memory.entries.single.id, 'old');
+    expect(memory.entries.single.value, 80);
+  });
+
+  test('addDay reports what it added and replaced', () async {
+    Hive.init(Directory.systemTemp.createTempSync('m').path);
+    final box = await Hive.openBox<dynamic>('addDay');
+    addTearDown(box.deleteFromDisk);
+    final store = MeasurementStore(() async => box);
+    final day = DateTime(2026, 10, 25);
+    await store.addDay(day, {BodyMetric.waist: 80});
+    final saved = await store.addDay(day, {
+      BodyMetric.waist: 75,
+      BodyMetric.hips: 100,
+    });
+    expect(saved.replaced.single.value, 80);
+    expect(saved.added.map((m) => m.value), [75, 100]);
+    expect((await store.all()).length, 2);
+  });
+
   testWidgets('a value out of range is refused', (tester) async {
     final memory = _Memory();
     await tester.pumpWidget(
@@ -177,14 +279,24 @@ class _Memory extends Fake implements MeasurementStore {
   Future<List<Measurement>> all() async => [...entries];
 
   @override
-  Future<void> addDay(DateTime date, Map<BodyMetric, double> values) async {
+  Future<({List<Measurement> added, List<Measurement> replaced})> addDay(
+    DateTime date,
+    Map<BodyMetric, double> values,
+  ) async {
     saved.addAll(values);
-    for (final e in values.entries) {
-      entries.add(
+    final replaced = [
+      for (final m in entries)
+        if (values.containsKey(m.metric) && DateUtils.isSameDay(m.date, date))
+          m,
+    ];
+    entries.removeWhere(replaced.contains);
+    final added = [
+      for (final e in values.entries)
         Measurement(id: e.key.name, date: date, metric: e.key, value: e.value),
-      );
-    }
+    ];
+    entries.addAll(added);
     MeasurementStore.changes.value++;
+    return (added: added, replaced: replaced);
   }
 
   @override

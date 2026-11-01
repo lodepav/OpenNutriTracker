@@ -74,6 +74,7 @@ void main() {
     WidgetTester tester,
     OffContributionClient offClient, {
     Uint8List? photo,
+    bool withNutrients = true,
   }) async {
     await tester.pumpWidget(
       MaterialApp(
@@ -84,6 +85,7 @@ void main() {
                 context,
                 _crispbread(),
                 labelPhoto: photo,
+                withNutrients: withNutrients,
                 store: store,
                 client: offClient,
               ),
@@ -117,6 +119,24 @@ void main() {
     expect(post.bodyFields.containsKey('nutriment_proteins'), isFalse);
     expect(post.bodyFields.containsKey('product_name'), isFalse);
     expect(find.text('Added to Open Food Facts. Thank you!'), findsOneWidget);
+  });
+
+  testWidgets('a food saved per serving offers its name, no figures', (
+    tester,
+  ) async {
+    await offer(tester, client({}), withNutrients: false);
+
+    expect(find.byKey(const Key('fork-off-name')), findsOneWidget);
+    expect(find.byKey(const Key('fork-off-fat')), findsNothing);
+    await tester.tap(find.byKey(const Key('fork-off-send')));
+    await tester.pumpAndSettle();
+
+    final post = sent.last as http.Request;
+    expect(post.bodyFields['product_name'], 'Rye crispbread');
+    expect(
+      post.bodyFields.keys.where((k) => k.startsWith('nutriment_')),
+      isEmpty,
+    );
   });
 
   testWidgets('the label photo is sent only when kept ticked', (tester) async {

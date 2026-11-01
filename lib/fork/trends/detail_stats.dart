@@ -49,11 +49,8 @@ expenditureBreakdown(List<ExpenditureDay> history, {int days = 30}) {
       if (d.intakeKcal != null) d,
   ];
   if (logged.isEmpty) return null;
-  final eaten =
-      logged.map((d) => d.intakeKcal!).reduce((a, b) => a + b) / logged.length;
-  final burnt =
-      logged.map((d) => d.expenditureKcal).reduce((a, b) => a + b) /
-      logged.length;
+  final eaten = meanOf([for (final d in logged) d.intakeKcal])!;
+  final burnt = meanOf([for (final d in logged) d.expenditureKcal])!;
   return (
     eaten: eaten,
     fromWeight: burnt - eaten,
@@ -72,7 +69,8 @@ typedef DayValue = ({double value, DateTime date});
 
 /// How the logged days of the window went against their goals, and the
 /// highest and lowest of them: the energy's, or [eaten] and [goal]'s, a
-/// macro's grams.
+/// macro's grams. [today], still being eaten, is left out: its breakfast is
+/// neither under the goal nor the lowest day.
 ({
   int onTarget,
   int under,
@@ -86,8 +84,9 @@ dayOutcomes(
   List<DateTime> dates, {
   double? Function(TrackedDayEntity) eaten = _calories,
   double? Function(TrackedDayEntity) goal = _calorieGoal,
+  DateTime? today,
 }) {
-  final window = dates.toSet();
+  final window = dates.toSet()..remove(today);
   final logged = [
     for (final d in days)
       if (isLogged(d) && window.contains(_date(d.day)) && eaten(d) != null) d,
@@ -124,13 +123,14 @@ dayOutcomes(
 double? _calories(TrackedDayEntity d) => d.caloriesTracked;
 double? _calorieGoal(TrackedDayEntity d) => d.calorieGoal;
 
-/// Means over the logged days of a part of the week.
+/// Means over the logged days of a part of the week; a macro's over those
+/// that have it, null with none.
 typedef WeekPart = ({
   int days,
   double kcal,
-  double carbs,
-  double fat,
-  double protein,
+  double? carbs,
+  double? fat,
+  double? protein,
   double? balance,
 });
 
@@ -152,12 +152,12 @@ typedef WeekPart = ({
           d,
     ];
     if (logged.isEmpty) return null;
-    double mean(double? Function(TrackedDayEntity) of) =>
-        logged.map((d) => of(d) ?? 0).reduce((a, b) => a + b) / logged.length;
+    double? mean(double? Function(TrackedDayEntity) of) =>
+        meanOf(logged.map(of));
     final balances = [for (final d in logged) ?balance[_date(d.day)]];
     return (
       days: logged.length,
-      kcal: mean((d) => d.caloriesTracked),
+      kcal: mean((d) => d.caloriesTracked)!,
       carbs: mean((d) => d.carbsTracked),
       fat: mean((d) => d.fatTracked),
       protein: mean((d) => d.proteinTracked),
@@ -196,7 +196,7 @@ typedef WeekPart = ({
   final goal = last!.proteinGoal;
   final latestKg = trendByDay[_date(last.day)]!;
   return (
-    perKg: ratios.reduce((a, b) => a + b) / ratios.length,
+    perKg: meanOf(ratios)!,
     goalPerKg: goal == null || goal <= 0 ? null : goal / latestKg,
     days: ratios.length,
   );
@@ -219,9 +219,7 @@ typedef WeekPart = ({
       for (final MapEntry(:key, :value) in sums.entries)
         key: value.$1 / value.$2,
     },
-    mean:
-        logged.map((d) => d.caloriesTracked).reduce((a, b) => a + b) /
-        logged.length,
+    mean: meanOf([for (final d in logged) d.caloriesTracked])!,
   );
 }
 
@@ -271,7 +269,8 @@ macroShares(List<TrackedDayEntity> days, List<DateTime> dates) {
 }
 
 /// The window's logged days of energy balance: eaten and burnt a day, the
-/// total eaten less burnt, and how many days ran in deficit or surplus.
+/// total eaten less burnt, and how many finished days ran in deficit or
+/// surplus, of [finished]: [today] is not over, so it is not one of them.
 /// Null with no day logged.
 ({
   double eaten,
@@ -279,19 +278,26 @@ macroShares(List<TrackedDayEntity> days, List<DateTime> dates) {
   double total,
   int deficit,
   int surplus,
+  int finished,
   int logged,
 })?
-balanceSummary(List<ExpenditureDay> history, List<DateTime> dates) {
+balanceSummary(
+  List<ExpenditureDay> history,
+  List<DateTime> dates, {
+  DateTime? today,
+}) {
   final window = dates.toSet();
   final logged = [
     for (final d in history)
       if (d.intakeKcal != null && window.contains(_date(d.date))) d,
   ];
   if (logged.isEmpty) return null;
-  var eaten = 0.0, burnt = 0.0, deficit = 0, surplus = 0;
+  var eaten = 0.0, burnt = 0.0, deficit = 0, surplus = 0, finished = 0;
   for (final d in logged) {
     eaten += d.intakeKcal!;
     burnt += d.expenditureKcal;
+    if (_date(d.date) == today) continue;
+    finished++;
     final balance = d.intakeKcal! - d.expenditureKcal;
     if (balance < 0) deficit++;
     if (balance > 0) surplus++;
@@ -302,6 +308,7 @@ balanceSummary(List<ExpenditureDay> history, List<DateTime> dates) {
     total: eaten - burnt,
     deficit: deficit,
     surplus: surplus,
+    finished: finished,
     logged: logged.length,
   );
 }
@@ -386,8 +393,7 @@ scaleNoise(List<WeightLogEntity> entries, List<DateTime> dates) {
     (a, b) => b.value.abs() > a.value.abs() ? b : a,
   );
   return (
-    meanKg:
-        byDay.values.map((v) => v.abs()).reduce((a, b) => a + b) / byDay.length,
+    meanKg: meanOf([for (final v in byDay.values) v.abs()])!,
     largest: (kg: largest.value, on: largest.key),
     byDay: byDay,
   );

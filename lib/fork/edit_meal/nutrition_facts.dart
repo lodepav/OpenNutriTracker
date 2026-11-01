@@ -119,6 +119,13 @@ class _NutritionFactsCardState extends State<NutritionFactsCard> {
   late bool _moreOpen = widget.moreOpen;
 
   @override
+  void didUpdateWidget(NutritionFactsCard old) {
+    super.didUpdateWidget(old);
+    // A label filled some in: they are to be checked, not hidden.
+    if (widget.moreOpen && !old.moreOpen) _moreOpen = true;
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final divider = Divider(height: 1, color: theme.colorScheme.outlineVariant);

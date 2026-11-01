@@ -19,6 +19,7 @@ import 'package:opennutritracker/core/utils/hive_storage_integrity_exception.dar
 import 'package:opennutritracker/hive_registrar.g.dart';
 // [fork] S16 adaptive-profiles
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
+import 'package:opennutritracker/fork/health/weight_import.dart';
 // [/fork]
 
 /// Owns every Hive box the app uses.
@@ -94,6 +95,7 @@ class HiveDBProvider extends ChangeNotifier {
     fastingBoxName,
     // [fork] S16 adaptive-profiles: check-ins are per-profile data (D13)
     AdaptiveStore.boxName,
+    WeightImport.boxName, // what Health Connect's weight import filed
     // [/fork]
     favouriteMealBoxName,
   ];

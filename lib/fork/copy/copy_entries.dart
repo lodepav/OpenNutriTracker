@@ -235,32 +235,31 @@ class CopyEntries {
 
   /// Copies every intake of the logical day [from] to [to], each in its own
   /// meal, and the day's activities when [activities] is set. Read and
-  /// written in one profile: false when a profile switch stopped it.
-  Future<bool> copyDay(
+  /// written in one profile: null when a profile switch stopped it, else
+  /// the foods written.
+  Future<Placed?> copyDay(
     DateTime from,
     DateTime to, {
     bool activities = false,
-  }) async =>
-      await withTrackedDayLockOnProfile(() async {
-        final config = await _config.getConfig();
-        final hours = config.dayStartOffsetHours;
-        final minutes = config.dayStartOffsetMinutes;
-        final source = _dateOf(from);
-        final intakes = await intakesOf(from);
-        await copyIntakes(intakes, to);
-        if (activities) {
-          await copyActivities(
-            await _activities.getUserActivityByDay(
-              source,
-              dayStartOffsetHours: hours,
-              dayStartOffsetMinutes: minutes,
-            ),
-            to,
-          );
-        }
-        return true;
-      }) ??
-      false;
+  }) => withTrackedDayLockOnProfile<Placed?>(() async {
+    final config = await _config.getConfig();
+    final hours = config.dayStartOffsetHours;
+    final minutes = config.dayStartOffsetMinutes;
+    final source = _dateOf(from);
+    final intakes = await intakesOf(from);
+    final placed = await placeIntakes(intakes, CopySameTimes(to));
+    if (activities) {
+      await copyActivities(
+        await _activities.getUserActivityByDay(
+          source,
+          dayStartOffsetHours: hours,
+          dayStartOffsetMinutes: minutes,
+        ),
+        to,
+      );
+    }
+    return placed;
+  });
 
   static DateTime _dateOf(DateTime day) =>
       DateTime(day.year, day.month, day.day);

@@ -25,8 +25,6 @@ class FastingScreen extends StatefulWidget {
 
 class _FastingScreenState extends State<FastingScreen> {
   late FastingBloc _bloc;
-  final int _selectedHours = 16;
-  int? _customHours;
   bool _warningHandled = false;
 
   // every session, for the last seven fasts; and a
@@ -156,11 +154,9 @@ class _FastingScreenState extends State<FastingScreen> {
 
   // upstream's _buildIdle went with FastingView
   // from the plan shown, and returns the hours picked
-  Future<int?> _pickCustomHours(BuildContext context, {int? from}) async {
-    final controller = TextEditingController(
-      text: (from ?? _customHours ?? _selectedHours).toString(),
-    );
-    final result = await showDialog<int>(
+  Future<int?> _pickCustomHours(BuildContext context, {required int from}) {
+    final controller = TextEditingController(text: from.toString());
+    return showDialog<int>(
       context: context,
       builder: (ctx) {
         return AlertDialog(
@@ -193,12 +189,6 @@ class _FastingScreenState extends State<FastingScreen> {
         );
       },
     );
-    if (result != null) {
-      setState(() {
-        _customHours = result;
-      });
-    }
-    return result;
   }
 
   // upstream's _buildActive went with FastingView

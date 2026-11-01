@@ -9,7 +9,10 @@ import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/features/add_meal/presentation/add_meal_type.dart';
 import 'package:opennutritracker/fork/screens/add_meal/meal_item_card.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
+import 'package:opennutritracker/fork/basket/basket_ui.dart'
+    show entriesChanged;
 import 'package:opennutritracker/fork/display/display_prefs.dart';
+import 'package:opennutritracker/fork/units/amount_text.dart';
 import 'package:opennutritracker/fork/units/energy_text.dart';
 
 /// What is left of a day's budget: energy and each macro, in kcal and
@@ -128,6 +131,21 @@ class _FitsLeftSwitchState extends State<FitsLeftSwitch> {
 
   Future<FitsLeftData> get _loaded => _data ??= widget.load(widget.day);
 
+  /// A food logged from a row here, or undone, changes what is left.
+  void _reload() => setState(() => _data = null);
+
+  @override
+  void initState() {
+    super.initState();
+    entriesChanged.addListener(_reload);
+  }
+
+  @override
+  void dispose() {
+    entriesChanged.removeListener(_reload);
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
@@ -188,9 +206,11 @@ class _FitsLeftSwitchState extends State<FitsLeftSwitch> {
               mealEntity: food.meal,
               addMealType: widget.addMealType,
               usesImperialUnits: data.imperial,
+              forkLastLogged: food,
             ),
             Text(
-              '${_amount(food)}: ${energyText(context, food.totalKcal)}, '
+              '${isEnergyOnly(food.meal) ? '' : '${amountText(food, data.imperial)}: '}'
+              '${energyText(context, food.totalKcal)}, '
               '${food.totalProteinsGram.round()} g protein',
               key: ValueKey('fits-${food.id}'),
               style: theme.textTheme.bodySmall,
@@ -200,12 +220,4 @@ class _FitsLeftSwitchState extends State<FitsLeftSwitch> {
       );
     },
   );
-
-  static String _amount(IntakeEntity food) {
-    final n = food.amount;
-    final text = n == n.roundToDouble()
-        ? n.toInt().toString()
-        : n.toStringAsFixed(1);
-    return '$text ${food.unit}';
-  }
 }

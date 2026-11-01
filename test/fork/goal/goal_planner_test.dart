@@ -431,11 +431,7 @@ void main() {
     ).toPlan();
 
     test('each starts as the one before ends, from its weight', () {
-      final queue = reflowed(
-        cut,
-        [maintain, bulk],
-        fromKg: 85,
-      );
+      final queue = reflowed(cut, [maintain, bulk], fromKg: 85);
       expect(queue[0].start, cut.end);
       expect(queue[0].startKg, 80);
       expect(queue[0].phases.single.weeks, 4);
@@ -446,13 +442,8 @@ void main() {
       expect(queue[1].targetKg, 84);
     });
 
-
     test("the calendar has each upcoming goal's days", () {
-      final queue = reflowed(
-        cut,
-        [maintain, bulk],
-        fromKg: 85,
-      );
+      final queue = reflowed(cut, [maintain, bulk], fromKg: 85);
       PhaseKind? on(DateTime d) => kindOn(d, cut, [], upcoming: queue);
       expect(on(cut.end.subtract(const Duration(days: 1))), PhaseKind.cut);
       expect(on(cut.end), PhaseKind.maintain);

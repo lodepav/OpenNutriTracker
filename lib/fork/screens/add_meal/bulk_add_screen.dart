@@ -160,10 +160,25 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
 
   // runs breakdowns and marks the rows (D12)
   late final _dishBreakdown =
-      DishBreakdownController(_bloc, photo: () => _forkMealPhoto)
-        ..addListener(() {
-          if (mounted) setState(() {});
-        });
+      DishBreakdownController(
+        _bloc,
+        photo: () => _forkMealPhoto,
+        onRowsMoved: _onRowsMoved,
+      )..addListener(() {
+        if (mounted) setState(() {});
+      });
+
+  /// A field keeps its place in the list while its row moves, so typing on
+  /// would go to another food; the refusal marks and portion bases are by
+  /// index.
+  void _onRowsMoved() {
+    if (!mounted) return;
+    FocusManager.instance.primaryFocus?.unfocus();
+    setState(() {
+      _quantityErrors.clear();
+      _portionBase.clear();
+    });
+  }
 
   Future<void> _breakDown(BulkAddRow row) async {
     final outcome = await _dishBreakdown.breakDown(row);
@@ -179,8 +194,6 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
         context,
       ).showSnackBar(SnackBar(content: Text(message)));
     }
-    // Keyed by row index, which the swap moves.
-    _quantityErrors.clear();
   }
 
   Future<void> _saveDishRecipe(Object group) async {
@@ -1036,13 +1049,23 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
     final note = _textController.text.trim();
     _photoNote = note.isEmpty ? null : note;
     _textController.clear();
+    // These rows are the photo's, not a page's read before.
+    _forkLinkedRecipe = null;
+    _sendPhoto(photo);
+  }
+
+  /// Reads [photo] with [_photoNote], in place of the rows there. A failure
+  /// keeps the photo, to send again.
+  void _sendPhoto(MealPhoto photo) {
     // the subscription starts with the first read
     _stagedRead;
-    setState(() => _readingStaged = true);
+    setState(() {
+      _stagedPhoto = photo;
+      _readingStaged = true;
+    });
     // A photo replaces the previous batch, so the old controllers go with it.
     _resetAmountControllers();
     _forkMealPhoto = photo;
-
     _bloc.add(
       ReadMealPhotoEvent(
         photo: photo,
@@ -1076,15 +1099,7 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
     final note = await askDishName(context, initial: _photoNote ?? '');
     if (note == null || !mounted) return;
     _photoNote = note;
-    _resetAmountControllers();
-    _bloc.add(
-      ReadMealPhotoEvent(
-        photo: photo,
-        usesImperialUnits: _args.usesImperialUnits,
-        localeCode: Localizations.localeOf(context).languageCode,
-        note: note,
-      ),
-    );
+    _sendPhoto(photo);
   }
 
   void _resetAmountControllers() {
@@ -1140,7 +1155,8 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
     if (chosen != null) _bloc.add(ChangeRowCandidateEvent(index, chosen));
   }
 
-  void _showQuickAdd() {
+  /// Quick add for [row]: the other rows stay to review, and [row] is done.
+  void _showQuickAdd(BulkAddRow row) {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -1148,6 +1164,16 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
       builder: (_) => QuickAddBottomSheet(
         intakeType: _args.intakeTypeEntity,
         day: _args.day,
+        onAdded: () {
+          if (_bloc.state case BulkAddLoadedState(:final rows)) {
+            final index = rows.indexWhere(
+              (r) => identical(r.resolved, row.resolved),
+            );
+            if (index >= 0 && !rows[index].skipped) {
+              _bloc.add(ToggleRowSkippedEvent(index));
+            }
+          }
+        },
       ),
     );
   }

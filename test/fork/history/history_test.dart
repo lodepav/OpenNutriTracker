@@ -79,7 +79,7 @@ void main() {
     expect(file.food[DateTime(2024, 1, 13)]!.keys, [IntakeTypeEntity.dinner]);
     expect(file.weightsKg[DateTime(2024, 1, 5)], closeTo(81.87, 0.01));
     expect(file.weightUnitStated, isFalse);
-    expect(file.foodTable, 'Nutrition-Summary.csv');
+    expect(file.foodTables.first, 'Nutrition-Summary.csv');
     expect(file.weightTable, 'Measurement-Summary.csv');
   });
 
@@ -113,7 +113,7 @@ void main() {
     expect(file.weightsKg, {DateTime(2024, 1, 1): 80.9});
     expect(file.weightUnitStated, isTrue);
     expect(file.weightUnit, BodyWeightUnit.kg);
-    expect(file.foodTable, 'Quick Export');
+    expect(file.foodTables.first, 'Quick Export');
   });
 
   test('Cronometer zip: the daily summary, and weight among biometrics in '
@@ -158,6 +158,29 @@ void main() {
     expect(file.food[DateTime(2024, 1, 5)]![null]!.protein, 95.5);
     expect(file.food[DateTime(2024, 1, 6)]![null]!.kcal, closeTo(250, 0.1));
     expect(file.weightsKg, isEmpty); // "Gewicht" is no weight header
+  });
+
+  test('a custom food in kJ is stored in kcal', () {
+    final file = readHistory(
+      readTables(
+        'Custom Foods.csv',
+        _bytes('Food Name,Energy (kJ),Protein (g)\nOats,1500,12\n'),
+      ),
+    );
+    expect(file.customFoods.single.kcal, closeTo(358.5, 0.1));
+  });
+
+  test('a % DV column gives way to the amount beside it', () {
+    final file = readHistory(
+      readTables(
+        'log.csv',
+        _bytes(
+          'date,food,calories,vitamin c (% dv),vitamin c (mg)\n'
+          '2024-01-01,Orange,60,90,70\n',
+        ),
+      ),
+    );
+    expect(file.foods.single.nutrients['vitaminC'], 70);
   });
 
   test('a scale weight column is the weight', () {
@@ -409,6 +432,21 @@ void main() {
       expect(again.intakes, isEmpty);
       expect(again.keptDays, 0);
       expect(again.keptImportedDays, 2);
+    });
+
+    test('a weigh-in equal to a serving weight stays on a day no import '
+        'wrote', () {
+      final plan = planImport(
+        file,
+        existing: HistoryExisting(
+          weighIns: [
+            WeightLogEntity(date: DateTime(2025, 5, 16), weightKg: 200),
+          ],
+        ),
+        today: DateTime(2026, 10, 24),
+        source: 'MacroFactor',
+      );
+      expect(plan.misread, isEmpty);
     });
   });
 
@@ -939,5 +977,95 @@ void main() {
       source: 'MacroFactor',
     );
     expect(plan.keptCustomFoods, 1);
+  });
+
+  test('a nutrient header\'s unit is converted to the app\'s', () {
+    expect(nutrientFactor('vitaminD', 'vitamin d (iu)'), closeTo(0.025, 1e-9));
+    expect(nutrientFactor('vitaminA', 'vitamin a (iu)'), closeTo(0.3, 1e-9));
+    expect(nutrientFactor('vitaminD', 'vitamin d (µg)'), closeTo(1, 1e-9));
+    expect(nutrientFactor('vitaminD', 'vitamin d (mcg)'), closeTo(1, 1e-9));
+    expect(nutrientFactor('sodium', 'sodium (mg)'), closeTo(1, 1e-9));
+    expect(nutrientFactor('sodium', 'sodium (g)'), closeTo(1000, 1e-9));
+    expect(nutrientFactor('fiber', 'fiber (g)'), closeTo(1, 1e-9));
+    expect(nutrientFactor('fiber', 'fiber_g'), closeTo(1, 1e-9));
+    expect(nutrientFactor('vitaminD', 'vitamin d'), 1);
+    expect(nutrientFactor('iron', 'iron (iu)'), isNull);
+  });
+
+  test('a fat_g column is the fat, as protein_g and carbs_g are', () {
+    final file = readHistory(
+      readTables(
+        'foods.csv',
+        _bytes(
+          'date,food,calories,protein_g,carbs_g,fat_g\n'
+          '2025-05-16,Toast,300,10,40,7\n',
+        ),
+      ),
+    );
+    expect(file.foods.single.fat, 7);
+  });
+
+  group('a header\'s unit reaches what is stored', () {
+    test('a food log', () {
+      final file = readHistory(
+        readTables(
+          'foods.csv',
+          _bytes(
+            'date,food,calories,vitamin d (iu),sodium (g),vitamin c (% dv)\n'
+            '2025-05-16,Toast,300,400,2,50\n',
+          ),
+        ),
+      );
+      final nutrients = file.foods.single.nutrients;
+      expect(nutrients['vitaminD'], closeTo(10, 1e-9));
+      expect(nutrients['sodium'], closeTo(2000, 1e-9));
+      expect(nutrients.containsKey('vitaminC'), isFalse);
+    });
+
+    test('a file of day totals', () {
+      final file = readHistory(
+        readTables(
+          'Micronutrients.csv',
+          _bytes(
+            'Date,Fiber (g),Sodium (g),Vitamin D (IU)\n'
+            '2025-05-16,20,2,400\n',
+          ),
+        ),
+      );
+      final day = file.dayNutrients[DateTime(2025, 5, 16)]!;
+      expect(day['sodium'], closeTo(2000, 1e-9));
+      expect(day['vitaminD'], closeTo(10, 1e-9));
+    });
+  });
+
+  test('a weigh-in the file itself gives is no misreading', () {
+    final file = readHistory(
+      readTables(
+        'log.csv',
+        _bytes(
+          'Date,Food Name,Calories,Serving Weight (g),Weight (kg)\n'
+          '2025-05-16,Toast,300,80,80\n',
+        ),
+      ),
+    );
+    expect(file.weightsKg[DateTime(2025, 5, 16)], 80);
+    final earlier = planImport(
+      readHistory(
+        readTables('old.csv', _bytes('Date,Calories\n2025-05-16,395\n')),
+      ),
+      existing: const HistoryExisting(),
+      today: DateTime(2026, 10, 24),
+      source: 'MacroFactor',
+    ).intakes;
+    final plan = planImport(
+      file,
+      existing: HistoryExisting(
+        importedDays: earlier,
+        weighIns: [WeightLogEntity(date: DateTime(2025, 5, 16), weightKg: 80)],
+      ),
+      today: DateTime(2026, 10, 24),
+      source: 'MacroFactor',
+    );
+    expect(plan.misread, isEmpty);
   });
 }

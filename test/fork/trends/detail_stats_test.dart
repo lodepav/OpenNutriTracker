@@ -168,6 +168,32 @@ void main() {
       expect(o.lowest, (value: 150.0, date: _d(-1)));
     });
 
+    test('today, still being eaten, is left out', () {
+      final o = dayOutcomes(
+        [
+          _tracked(-1, kcal: 2000),
+          _tracked(-2, kcal: 1500),
+          // Breakfast so far.
+          _tracked(0, kcal: 300),
+        ],
+        windowDates(_today, 7),
+        today: _today,
+      );
+      expect((o.logged, o.onTarget, o.under, o.over), (2, 1, 1, 0));
+      expect(o.lowest, (value: 1500.0, date: _d(-2)));
+      expect(o.highest, (value: 2000.0, date: _d(-1)));
+    });
+
+    test('only today logged: nothing to report yet', () {
+      final o = dayOutcomes(
+        [_tracked(0, kcal: 300)],
+        windowDates(_today, 7),
+        today: _today,
+      );
+      expect(o.logged, 0);
+      expect(o.lowest, isNull);
+    });
+
     test('no highest or lowest without a logged day', () {
       final o = dayOutcomes(const [], windowDates(_today, 7));
       expect(o.logged, 0);
@@ -246,6 +272,18 @@ void main() {
       expect(s.surplus, 1);
     });
 
+    test('today counts in the means but not as a day in deficit', () {
+      final s = balanceSummary(
+        [_spent(-1, 3000, ate: 2500), _spent(0, 3000, ate: 300)],
+        windowDates(_today, 7),
+        today: _today,
+      )!;
+      expect(s.logged, 2);
+      expect(s.finished, 1);
+      expect(s.deficit, 1);
+      expect(s.eaten, 1400);
+    });
+
     test('null with no day logged in the window', () {
       expect(
         balanceSummary([_spent(-9, 3000, ate: 2000)], windowDates(_today, 7)),
@@ -282,6 +320,18 @@ void main() {
       expect(split.weekend.kcal, 2800);
       expect(split.weekend.carbs, 320);
       expect(split.weekend.balance, 200);
+    });
+
+    test('a macro averages only the days that have it', () {
+      final split = weekendSplit([
+        _tracked(0, protein: 120),
+        // Energy with no protein figure: not a day of none.
+        _tracked(-3),
+        _tracked(-1),
+      ], week)!;
+      expect(split.weekdays.days, 2);
+      expect(split.weekdays.protein, 120);
+      expect(split.weekend.protein, isNull);
     });
 
     test('none without a logged day in each part', () {

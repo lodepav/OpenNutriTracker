@@ -74,4 +74,8 @@ void main() {
       expect((await db.openScopedBox<dynamic>(name, '_b')).get('k'), 1);
     }
   });
+
+  test('deleting a profile takes all of its fork boxes', () {
+    expect(HiveDBProvider.perProfileBoxNames, containsAll(forkProfileBoxes));
+  });
 }

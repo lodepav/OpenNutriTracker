@@ -54,6 +54,7 @@ import 'package:opennutritracker/core/utils/ai_credential_storage.dart';
 import 'package:opennutritracker/features/add_meal/domain/usecase/run_ai_endpoint_probe_usecase.dart';
 import 'package:opennutritracker/features/settings/presentation/widgets/ai_assist_dialog.dart';
 import 'package:opennutritracker/generated/l10n.dart';
+import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/fork/leftovers/meal_photo_cache.dart';
 // The trend and target switches (D13)
 import 'package:opennutritracker/fork/adaptive/adaptive_ui.dart';
@@ -143,6 +144,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   /// What Goals & nutrition shows under its rows (H6); null until read.
   ConfigEntity? _goalsConfig;
+  bool _hasCheckIn = false;
 
   /// Null when the stored name is unrecognised — see #753.
   AiProvider? _aiProvider;
@@ -394,6 +396,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return [
       e(s.settingsKcalGoalInfoLabel, goals),
       e(s.settingsKcalAdjustmentLabel, goals),
+      e('Goal planner', goals, 'plan cut bulk maintain pace target weight'),
       e(
         'Trend and calorie target',
         goals,
@@ -471,7 +474,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _refreshGoalsConfig() async {
     if (!locator.isRegistered<GetConfigUsecase>()) return; // widget tests
     final config = await locator<GetConfigUsecase>().getConfig();
-    if (mounted) setState(() => _goalsConfig = config);
+    final checkIn = await AdaptiveStore().lastCheckIn();
+    if (mounted) {
+      setState(() {
+        _goalsConfig = config;
+        _hasCheckIn = checkIn != null;
+      });
+    }
   }
 
   Future<void> _refreshAiAssistState() async {

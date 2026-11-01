@@ -105,6 +105,7 @@ void main() {
     showGoalUndo(context, 'Goal saved', GoalActions(store: _MemoryPhases()), (
       plan: null,
       upcoming: const [],
+      start: null,
     ), () {});
     await tester.pump();
     await tester.pumpWidget(const SizedBox());
@@ -256,29 +257,43 @@ void main() {
     });
 
     test('the next goal starts on its day, the one before kept', () async {
-      store.queue.addAll(
-        reflowed(_plan, [_hold, _bulk], fromKg: 80),
-      );
+      store.queue.addAll(reflowed(_plan, [_hold, _bulk], fromKg: 80));
       expect(await actions().startNextIfDue(81), isFalse);
       today = DateTime(2027, 1, 4, 7);
       expect(await actions().startNextIfDue(80.2), isTrue);
       expect(store.saved!.kind, PhaseKind.maintain);
       expect(store.saved!.start, DateTime(2027, 1, 4));
       expect(store.goals.single.endKg, 80.2);
+      // From the weight it really begins at; its dates stay as planned.
+      expect(store.saved!.startKg, 80.2);
       expect(queued(), [(PhaseKind.bulk, DateTime(2027, 2, 1))]);
       expect(saved, [(0.0, null)]);
     });
 
     test('started late, the one before still ends the day the next '
         'began', () async {
-      store.queue.addAll(
-        reflowed(_plan, [_hold, _bulk], fromKg: 80),
-      );
+      store.queue.addAll(reflowed(_plan, [_hold, _bulk], fromKg: 80));
       // The app first opened three days after the hold was due.
       today = DateTime(2027, 1, 7, 9);
       expect(await actions().startNextIfDue(80.4), isTrue);
       expect(store.saved!.start, DateTime(2027, 1, 4));
       expect(store.goals.single.end, DateTime(2027, 1, 4));
+    });
+
+    test('a queued cut due takes the weeks its real weight needs', () async {
+      final cut = GoalDraft(
+        kind: PhaseKind.cut,
+        startKg: 75,
+        targetKg: 70,
+        paceKg: 0.5,
+        start: DateTime(2027, 1, 4),
+      ).toPlan();
+      store.queue.add(cut);
+      today = DateTime(2027, 1, 4, 9);
+      expect(await actions().startNextIfDue(78), isTrue);
+      expect(store.saved!.startKg, 78);
+      expect(store.saved!.start, cut.start);
+      expect(store.saved!.end.isAfter(cut.end), isTrue);
     });
 
     test('a move that leaves a goal behind its target flags it', () async {
@@ -290,9 +305,7 @@ void main() {
         targetKg: 81,
         start: DateTime(2027, 5, 3),
       ).toPlan();
-      store.queue.addAll(
-        reflowed(_plan, [_bulk, cut], fromKg: 80),
-      );
+      store.queue.addAll(reflowed(_plan, [_bulk, cut], fromKg: 80));
       expect(store.queue.map(queuedProblem), [null, null]);
       await actions().moveUpcoming(1, 0);
       expect(queuedProblem(store.queue.first), isNotNull);

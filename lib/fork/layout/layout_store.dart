@@ -47,6 +47,13 @@ class LayoutStore {
   static final _current = <String, ValueNotifier<Layout>>{};
   static var _listening = false;
 
+  /// After a restore wrote them.
+  static Future<void> reload() async {
+    for (final k in [..._current.keys]) {
+      await _load(k);
+    }
+  }
+
   /// [key]'s layout for the active profile, read the first time it is
   /// asked for and again on a profile switch; screens rebuild on it.
   static ValueNotifier<Layout> current(String key) {
@@ -57,11 +64,7 @@ class LayoutStore {
     if (!_listening) {
       _listening = true;
       try {
-        locator<HiveDBProvider>().addListener(() {
-          for (final k in _current.keys) {
-            _load(k);
-          }
-        });
+        locator<HiveDBProvider>().addListener(reload);
       } catch (_) {
         // No locator in widget tests.
       }

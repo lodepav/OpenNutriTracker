@@ -219,11 +219,7 @@ class _TrendsOverviewState extends State<TrendsOverview> {
   @override
   Widget build(BuildContext context) {
     final state = widget.state;
-    final now = DateTime.now();
-    final dates = windowDates(
-      DateTime(now.year, now.month, now.day),
-      state.windowDays,
-    );
+    final dates = windowDates(state.logicalToday, state.windowDays);
     return ListenableBuilder(
       listenable: _layouts,
       builder: (context, _) => ValueListenableBuilder(
@@ -277,6 +273,7 @@ class _TrendsOverviewState extends State<TrendsOverview> {
                             _Streak(
                               days: state.days,
                               windowDays: state.windowDays,
+                              today: state.logicalToday,
                             ),
                             const SizedBox(height: Dimens.spacing8),
                             RangePills(
@@ -435,7 +432,7 @@ List<TrendTile> trendTiles(
   TrendTile microTile(TrendMetric m) {
     final nutrient = microNutrient(m);
     final micro = micros == null ? null : microOf(micros, state.days, dates, m);
-    final mean = micro == null ? null : meanOf(micro.series);
+    final mean = micro == null ? null : microMean(micro);
     final goal = micro?.summary.goal;
     final color = Theme.of(context).colorScheme.primary;
     return tile(
@@ -638,16 +635,19 @@ class _GoalBar extends StatelessWidget {
 class _Streak extends StatelessWidget {
   final List<TrackedDayEntity> days;
   final int windowDays;
+  final DateTime today;
 
-  const _Streak({required this.days, required this.windowDays});
+  const _Streak({
+    required this.days,
+    required this.windowDays,
+    required this.today,
+  });
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final text = Theme.of(context).textTheme;
     final palette = paletteOf(context);
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
     final start = DateTime(
       today.year,
       today.month,

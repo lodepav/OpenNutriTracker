@@ -52,8 +52,8 @@ double toShareStep(double share) => (share * 20).round() / 20;
 
 /// The activity counted on each day (D17): logged workouts, imported ones
 /// at the calories the device reported, times [workoutShare]; and steps at
-/// [kcalPerStep], less those taken within an imported workout, whose own
-/// calories hold them.
+/// [kcalPerStep], less those taken within a counted imported workout, whose
+/// own calories hold them.
 class ActivityCounter {
   final Future<List<UserActivityEntity>> Function() _activities;
   final StepCounts _steps;
@@ -115,13 +115,14 @@ class ActivityCounter {
         workouts[label] =
             (workouts[label] ?? 0) +
             (a.sourceReportedKcal ?? a.burnedKcal) * share;
-      }
-      final id = a.externalId;
-      if (steps != null && id != null && a.duration > 0) {
-        final end = a.date.add(Duration(seconds: (a.duration * 60).round()));
-        workoutSteps[label] =
-            (workoutSteps[label] ?? 0) +
-            await _steps.duringWorkout(id, a.date, end, ask: readHealth);
+        // Its calories hold these steps; uncounted, the steps stand alone.
+        final id = a.externalId;
+        if (steps != null && id != null && a.duration > 0) {
+          final end = a.date.add(Duration(seconds: (a.duration * 60).round()));
+          workoutSteps[label] =
+              (workoutSteps[label] ?? 0) +
+              await _steps.duringWorkout(id, a.date, end, ask: readHealth);
+        }
       }
     }
     final perStep = kcalPerStep(user.weightKG, user.heightCM);

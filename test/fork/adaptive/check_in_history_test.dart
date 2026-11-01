@@ -92,6 +92,11 @@ void main() {
   testWidgets('says when there are none yet', (tester) async {
     await open(tester, _Store([]));
     expect(find.textContaining('No check-ins yet'), findsOneWidget);
+    // The first is due as soon as the target is on, not a week later.
+    expect(
+      find.textContaining('The first is ready on Home once the adaptive'),
+      findsOneWidget,
+    );
   });
 
   testWidgets(

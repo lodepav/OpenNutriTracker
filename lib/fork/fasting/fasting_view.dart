@@ -18,17 +18,34 @@ typedef PastFast = ({
   bool ongoing,
 });
 
+/// When [s] ended, or null if it has not. A fast is marked complete when the
+/// app next runs, so one that reached its target ended there. Of those never
+/// ended only [current] is under way: an older one is an old crash.
+DateTime? _endOf(
+  FastingSessionEntity s,
+  FastingSessionEntity? current,
+  DateTime now,
+) {
+  if (s.completedAt case final completed?) {
+    final reached = s.startedAt.add(s.targetDuration);
+    return completed.isAfter(reached) ? reached : completed;
+  }
+  return s.cancelledAt ?? (s.id == current?.id ? now : null);
+}
+
 /// The last [count] fasts, oldest first: those ended, by how long they ran
-/// to their end, and the one under way at [now].
+/// to their end, and the one under way at [now], the newest not ended.
 List<PastFast> recentFasts(
   List<FastingSessionEntity> sessions,
   DateTime now, {
   int count = 7,
 }) {
+  final active = sessions.where((s) => s.isActive).toList()
+    ..sort((a, b) => b.startedAt.compareTo(a.startedAt));
+  final current = active.firstOrNull;
   final fasts = [
     for (final s in sessions)
-      if ((s.completedAt ?? s.cancelledAt ?? (s.isActive ? now : null))
-          case final end?)
+      if (_endOf(s, current, now) case final end?)
         (
           start: s.startedAt,
           length: end.difference(s.startedAt),
@@ -39,13 +56,18 @@ List<PastFast> recentFasts(
   return fasts.length > count ? fasts.sublist(fasts.length - count) : fasts;
 }
 
-/// The last [time] at or before [now]: one still to come today was
-/// yesterday's.
-DateTime fastStartAt(TimeOfDay time, DateTime now) {
-  final today = DateTime(now.year, now.month, now.day, time.hour, time.minute);
-  return today.isAfter(now)
-      ? DateTime(now.year, now.month, now.day - 1, time.hour, time.minute)
-      : today;
+/// The [time] closest to [near], not after [now]: a long fast's start moves
+/// within its own day and keeps its days. Without [near], the last [time]
+/// at or before [now]: one still to come today was yesterday's.
+DateTime fastStartAt(TimeOfDay time, DateTime now, {DateTime? near}) {
+  final from = near == null || near.isAfter(now) ? now : near;
+  final options = [
+    for (final day in [from.day - 1, from.day, from.day + 1])
+      DateTime(from.year, from.month, day, time.hour, time.minute),
+  ].where((t) => !t.isAfter(now));
+  return options.reduce(
+    (a, b) => b.difference(from).abs() < a.difference(from).abs() ? b : a,
+  );
 }
 
 /// "10h 59m".
@@ -131,7 +153,7 @@ class _FastingViewState extends State<FastingView> {
       helpText: 'Fast started at',
     );
     if (picked == null || !mounted) return;
-    final start = fastStartAt(picked, DateTime.now());
+    final start = fastStartAt(picked, DateTime.now(), near: s.startedAt);
     if (start == s.startedAt) return;
     widget.onChange(
       FastingSessionEntity(

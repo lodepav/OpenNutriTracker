@@ -13,6 +13,7 @@ import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/fork/adaptive/goal_plan.dart';
 import 'package:opennutritracker/fork/adaptive/goal_plan_card.dart';
 import 'package:opennutritracker/fork/goal/goal_plan_view.dart';
+import 'package:opennutritracker/fork/goal/goal_planner.dart';
 import 'package:opennutritracker/fork/goal/goal_progress.dart';
 import 'package:opennutritracker/fork/phases/phases.dart';
 import 'package:opennutritracker/fork/report/chart_touch.dart';
@@ -238,6 +239,12 @@ class _GoalProgressPageState extends State<GoalProgressPage> {
     final recent = p.recentPace();
     final atPace = p.arrivalAt(recent?.kgPerWeek);
     final atPlan = p.arrivalAt(p.paceKgPerWeek);
+    // The plan's own last day, while that is still ahead and reaches the
+    // target: a capped plan stops short of it.
+    final planEnds =
+        plan?.targetKg != null &&
+        endKgOf(plan!) == plan.targetKg &&
+        plan.end.isAfter(DateTime.now());
     const gap = SizedBox(height: Dimens.spacing16);
 
     return [
@@ -261,9 +268,7 @@ class _GoalProgressPageState extends State<GoalProgressPage> {
           progress: p,
           unit: widget.unit,
           atPace: recent?.kgPerWeek,
-          planLastDay: plan?.targetKg == null
-              ? null
-              : plan!.end.subtract(const Duration(hours: 12)),
+          planLastDay: planEnds ? plan.lastDay : null,
         ),
       ),
       trendSection(context, 'Pace'),
@@ -281,11 +286,8 @@ class _GoalProgressPageState extends State<GoalProgressPage> {
         TrendRows(
           rows: [
             // The plan's own end counts its diet breaks.
-            if (plan?.targetKg != null)
-              (
-                label: 'By your plan',
-                value: date(plan!.end.subtract(const Duration(hours: 12))),
-              )
+            if (planEnds)
+              (label: 'By your plan', value: date(plan.lastDay))
             else
               (
                 label: 'From today at your plan’s pace',

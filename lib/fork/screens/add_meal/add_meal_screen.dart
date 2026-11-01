@@ -774,7 +774,6 @@ class _AddMealScreenState extends State<AddMealScreen> {
                   day: _day,
                   addMealType: _mealType,
                   usesImperialUnits: state.usesImperialUnits,
-                  history: state.recentMeals,
                   entries: state.forkIntakes,
                   favourites: _favouriteMealBloc,
                 );
@@ -791,9 +790,7 @@ class _AddMealScreenState extends State<AddMealScreen> {
                         mealEntity: state.recentMeals[index],
                         addMealType: _mealType,
                         usesImperialUnits: state.usesImperialUnits,
-                        forkLastLogged: index < state.forkIntakes.length
-                            ? state.forkIntakes[index]
-                            : null,
+                        forkLastLogged: state.forkIntakes[index],
                       );
                     },
                   ),

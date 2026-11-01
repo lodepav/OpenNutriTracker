@@ -1,18 +1,10 @@
 import 'package:opennutritracker/core/domain/entity/weight_log_entity.dart';
 import 'package:opennutritracker/core/utils/calc/calendar_day_calc.dart';
 import 'package:opennutritracker/core/utils/calc/weight_moving_average.dart';
-import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/fork/adaptive/expenditure.dart';
 import 'package:opennutritracker/fork/adaptive/trend.dart';
 
-/// Seam S15: the smoothed trend for the weight chart, one point a day from
-/// the first weigh-in to the last, computed on the whole log; null while
-/// the setting keeps upstream's 7-day average.
-List<WeightMovingAveragePoint>? smoothedTrendPoints(
-  List<WeightLogEntity> entries,
-) => AdaptiveStore.settings.value.smoothedTrend ? trendPoints(entries) : null;
-
-/// The smoothed trend whatever the chart shows, one point a day from the
+/// Seam S15: the smoothed trend, one point a day from the
 /// first weigh-in to the last, or on to [until] with the last weigh-in held
 /// as the Goal planner's is; empty without weigh-ins.
 List<WeightMovingAveragePoint> trendPoints(

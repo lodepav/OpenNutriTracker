@@ -7,6 +7,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:opennutritracker/core/domain/entity/tracked_day_entity.dart';
 import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
+import 'package:opennutritracker/core/utils/calc/day_boundary_calc.dart';
 import 'package:opennutritracker/core/utils/calc/unit_calc.dart';
 import 'package:opennutritracker/features/trends/presentation/bloc/trends_bloc.dart';
 import 'package:intl/intl.dart' as intl;
@@ -39,11 +40,7 @@ class CaloriesDetailPage extends StatelessWidget {
         if (state is! TrendsLoaded) {
           return const Center(child: CircularProgressIndicator());
         }
-        final now = DateTime.now();
-        final dates = windowDates(
-          DateTime(now.year, now.month, now.day),
-          state.windowDays,
-        );
+        final dates = windowDates(state.logicalToday, state.windowDays);
         return ListView(
           padding: EdgeInsets.fromLTRB(
             Dimens.spacing16,
@@ -69,12 +66,12 @@ class CaloriesDetailPage extends StatelessWidget {
               color: Theme.of(context).colorScheme.primary,
               load: deps.loadIntakes,
             ),
-            if (dayOutcomes(state.days, dates) case final o
-                when o.logged > 0) ...[
+            if (dayOutcomes(state.days, dates, today: state.logicalToday)
+                case final o when o.logged > 0) ...[
               trendSection(context, 'How the days went'),
               DaysWentCard(outcomes: o, week: dates.length <= 7),
             ],
-            const WeekdayCard(),
+            WeekdayCard(dayStartMinutes: state.dayStartMinutes),
             ValueListenableBuilder(
               valueListenable: deps.expenditure,
               builder: (context, future, _) => FutureBuilder(
@@ -124,15 +121,10 @@ List<Widget> _header(
   List<DateTime> dates,
 ) {
   final unit = energyUnit(context);
-  final mean = meanOf(
-    nutritionSeries(state.days, dates, (d) => d.caloriesTracked),
-  );
+  final energy = nutritionSeries(state.days, dates, (d) => d.caloriesTracked);
+  final mean = meanOf(energy);
   final goal = goalOf(state.days, dates, (d) => d.calorieGoal);
-  final logged = nutritionSeries(
-    state.days,
-    dates,
-    (d) => d.caloriesTracked,
-  ).whereType<double>().length;
+  final logged = energy.whereType<double>().length;
   final format = intl.DateFormat.MMMd(
     Localizations.localeOf(context).toLanguageTag(),
   );
@@ -390,10 +382,13 @@ class DaysWentCard extends StatelessWidget {
 /// The mean energy by weekday over the last three months, whatever the
 /// range, the weekday that stands out marked.
 class WeekdayCard extends StatefulWidget {
-  /// Today; the clock in tests.
-  final DateTime Function() now;
+  /// The clock; the app's when null.
+  final DateTime Function()? now;
 
-  const WeekdayCard({super.key, this.now = DateTime.now});
+  /// Where the day starts, for the logical today the months end on.
+  final int dayStartMinutes;
+
+  const WeekdayCard({super.key, this.now, this.dayStartMinutes = 0});
 
   @override
   State<WeekdayCard> createState() => _WeekdayCardState();
@@ -403,7 +398,10 @@ class _WeekdayCardState extends State<WeekdayCard> {
   late final Future<List<TrackedDayEntity>> _days = _load();
 
   Future<List<TrackedDayEntity>> _load() async {
-    final now = widget.now();
+    final clock = widget.now;
+    final now = clock == null
+        ? DayBoundaryCalc.currentLogicalDayMinutes(widget.dayStartMinutes)
+        : DayBoundaryCalc.logicalDayOfMinutes(clock(), widget.dayStartMinutes);
     try {
       return await locator<GetTrackedDayUsecase>().getTrackedDaysByRange(
         DateTime(now.year, now.month, now.day - 89),
@@ -520,7 +518,7 @@ class WeekendCard extends StatelessWidget {
     final (:weekdays, :weekend) = split;
     final text = Theme.of(context).textTheme;
     final muted = paletteOf(context).textMuted;
-    String grams(double g) => '${g.round()} g';
+    String grams(double? g) => g == null ? '–' : '${g.round()} g';
     String balance(double? b) =>
         b == null ? '–' : energyText(context, b, signed: true);
     final off = weekend.kcal - weekdays.kcal;

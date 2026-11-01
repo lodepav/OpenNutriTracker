@@ -91,16 +91,27 @@ void main() {
     await dir.delete(recursive: true);
   });
 
-  test("the first profile's newest backup, as the app starts again with "
-      'only that profile', () async {
+  test('the newest backup of any profile, as each holds them all', () async {
     final latest = await rescue([
       'openbite-2026-10-22.zip',
       'openbite-1a2b3c4d-2026-10-24.zip',
       'openbite-2026-10-23.zip',
       'notes.txt',
     ]).latestBackup();
-    expect(latest?.name, 'openbite-2026-10-23.zip');
-    expect(latest?.day, DateTime(2026, 10, 23));
+    expect(latest?.name, 'openbite-1a2b3c4d-2026-10-24.zip');
+    expect(latest?.day, DateTime(2026, 10, 24));
+  });
+
+  test("the first profile's on a tie", () async {
+    for (final files in [
+      ['openbite-1a2b3c4d-2026-10-24.zip', 'openbite-2026-10-24.zip'],
+      ['openbite-2026-10-24.zip', 'openbite-1a2b3c4d-2026-10-24.zip'],
+    ]) {
+      expect(
+        (await rescue(files).latestBackup())?.name,
+        'openbite-2026-10-24.zip',
+      );
+    }
   });
 
   test("another profile's newest when the first has none", () async {

@@ -279,11 +279,11 @@ class _Summary extends StatelessWidget {
     // As the dashboard tile shows it, so the two agree.
     final eaten = energy
         ? '${energyValue(context, total.eaten)}'
-        : '${total.eaten.toInt()}';
+        : '${total.eaten.round()}';
     final hasGoal = total.goal > 0;
     final goal = energy
         ? '${energyValue(context, total.goal)} $label'
-        : '${total.goal.toInt()} g ${label.toLowerCase()}';
+        : '${total.goal.round()} g ${label.toLowerCase()}';
     final of = hasGoal
         ? 'of $goal'
         : (energy ? label : 'g ${label.toLowerCase()}');

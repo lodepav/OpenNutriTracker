@@ -212,7 +212,87 @@ void main() {
 
     expect(logged, [100, 250]);
     expect(basket.items.map((i) => i.kcal), [250, 40]);
-    expect(find.text('Logged 1 food to Lunch.'), findsOneWidget);
+    expect(
+      find.text('Logged 1 food to Lunch. Not all added: the profile changed.'),
+      findsOneWidget,
+    );
+  });
+
+  Future<void> logAllFailing(
+    WidgetTester tester,
+    FoodBasket basket,
+    Future<IntakeEntity?> Function(BasketItem) log,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: const [S.delegate],
+        initialRoute: 'main',
+        routes: {'main': (_) => const Scaffold(body: Text('home'))},
+        onGenerateRoute: (_) => null,
+      ),
+    );
+    tester
+        .state<NavigatorState>(find.byType(Navigator))
+        .push(
+          MaterialPageRoute<void>(
+            builder: (_) => Scaffold(
+              body: const Text('search'),
+              bottomNavigationBar: BasketBar(
+                type: IntakeTypeEntity.lunch,
+                day: _day,
+                basket: basket,
+                log: (_, item, _, _) => log(item),
+              ),
+            ),
+          ),
+        );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('basket-bar')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.textContaining('to Lunch').last);
+    await tester.pumpAndSettle();
+  }
+
+  testWidgets('a failed write partway offers Undo for what was written and '
+      'keeps the rest', (tester) async {
+    final basket = FoodBasket()
+      ..add(_item(100), IntakeTypeEntity.lunch, _day)
+      ..add(_item(250), IntakeTypeEntity.lunch, _day);
+    await logAllFailing(tester, basket, (item) async {
+      if (item.kcal == 250) throw StateError('disk full');
+      return _written(item);
+    });
+    expect(basket.items.map((i) => i.kcal), [250]);
+    expect(
+      find.text(
+        "Logged 1 food to Lunch. The rest couldn't be saved and stay in the "
+        'basket.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Undo'), findsOneWidget);
+  });
+
+  testWidgets('a first write failing keeps the sheet open to try again', (
+    tester,
+  ) async {
+    final basket = FoodBasket()..add(_item(100), IntakeTypeEntity.lunch, _day);
+    await logAllFailing(
+      tester,
+      basket,
+      (item) async => throw StateError('disk full'),
+    );
+    expect(basket.items, hasLength(1));
+    // In the sheet, not in a bar under it.
+    expect(
+      find.textContaining("couldn't be saved").hitTestable(),
+      findsOneWidget,
+    );
+    expect(find.text('Undo'), findsNothing);
+    final button = tester.widget<FilledButton>(
+      find.widgetWithText(FilledButton, 'Log all 1 to Lunch'),
+    );
+    expect(button.onPressed, isNotNull);
   });
 
   testWidgets('a sheet closed partway through "Log all" leaves only what '

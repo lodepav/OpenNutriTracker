@@ -8,6 +8,7 @@ import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/fork/goal/goal_progress_page.dart';
 import 'package:opennutritracker/fork/goal/goal_you_tile.dart' show noGoalText;
 import 'package:opennutritracker/fork/goal/phase_colors.dart';
+import 'package:opennutritracker/fork/goal/goal_planner.dart';
 import 'package:opennutritracker/fork/goal/planner_screen.dart';
 import 'package:opennutritracker/fork/phases/phases.dart';
 import 'package:opennutritracker/fork/units/weight_text.dart';
@@ -94,7 +95,7 @@ class _GoalCardState extends State<GoalCard> {
                           'macros, step by step.'
                     : '${plan.kind.label}'
                           '${target == null ? '' : ' to ${weightText(target, widget.unit)}'}'
-                          ', until ${format.format(plan.end)}'
+                          ', until ${format.format(plan.lastDay)}'
                           '${now == null ? '' : ' · now: ${now.toLowerCase()}'}',
               ),
               if (plan != null) ...[

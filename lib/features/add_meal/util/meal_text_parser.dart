@@ -198,6 +198,7 @@ final _unitInPhrase = RegExp(
   r'(?<![\d.,]|(?!' '$_unspacedScript' r')\p{L})' '$_number'
   r'\s*(?:(?:kg|lb|ml|oz|g|l)(?![\p{L}\d])|毫升|千克|克|升)',
   unicode: true,
+  caseSensitive: false,
 );
 // [/fork]
 
