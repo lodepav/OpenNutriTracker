@@ -214,6 +214,10 @@ class BasketSheet extends StatefulWidget {
 class _BasketSheetState extends State<BasketSheet> {
   bool _logging = false;
 
+  /// Why the last "Log all" wrote nothing: said here, as a bar would show
+  /// under this sheet, which stays open for another go.
+  String? _failed;
+
   /// Puts the foods on the day's plan (`PlanStore`) instead of the diary,
   /// repeating on [weekdays] if any.
   Future<void> _plan({Set<int> weekdays = const {}}) async {
@@ -269,7 +273,10 @@ class _BasketSheetState extends State<BasketSheet> {
   }
 
   Future<void> _logAll() async {
-    setState(() => _logging = true);
+    setState(() {
+      _logging = true;
+      _failed = null;
+    });
     final items = widget.basket.itemsFor(widget.type, widget.day);
     final messenger = ScaffoldMessenger.of(context);
     final stamp = ProfileStamp.now();
@@ -297,13 +304,16 @@ class _BasketSheetState extends State<BasketSheet> {
         ? "The rest couldn't be saved and stay in the basket."
         : 'Not all added: the profile changed.';
     if (logged == 0) {
+      if (failed) {
+        setState(() {
+          _logging = false;
+          _failed = unwritten;
+        });
+        return;
+      }
       messenger
         ..removeCurrentSnackBar()
         ..showSnackBar(SnackBar(content: Text(unwritten)));
-      if (failed) {
-        setState(() => _logging = false);
-        return;
-      }
     } else {
       showLoggedBar(
         messenger,
@@ -368,6 +378,16 @@ class _BasketSheetState extends State<BasketSheet> {
                 'Total ${energyText(context, widget.basket.totalKcal)}',
                 textAlign: TextAlign.end,
               ),
+              if (_failed case final failed?)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(
+                    failed,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                  ),
+                ),
               const SizedBox(height: 12),
               if (widget.basket.planning == null) ...[
                 FilledButton(

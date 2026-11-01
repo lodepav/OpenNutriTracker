@@ -31,6 +31,7 @@ import 'package:opennutritracker/features/add_meal/domain/usecase/resolve_parsed
 import 'package:opennutritracker/features/add_meal/domain/usecase/search_products_usecase.dart';
 import 'package:opennutritracker/features/add_meal/presentation/bloc/bulk_add_bloc.dart';
 import 'package:opennutritracker/features/add_meal/util/meal_text_parser.dart';
+import 'package:opennutritracker/fork/dish/break_down_dish_usecase.dart';
 import 'package:opennutritracker/fork/dish/dish_breakdown_rows.dart';
 import 'package:opennutritracker/fork/dish/dish_strings.dart';
 import 'package:opennutritracker/fork/screens/add_meal/bulk_add_screen.dart';
@@ -1815,6 +1816,7 @@ void main() {
 
   group('a dish the photo read (D24)', () {
     final group = Object();
+    late BulkAddBloc dishBloc;
     DishIngredientItem item(String query, double grams, double? eaten) =>
         DishIngredientItem(
           query: query,
@@ -1830,6 +1832,7 @@ void main() {
       double chicken = 200,
       double rice = 150,
       double? eaten,
+      List<ParsedMealItem> above = const [],
     }) async {
       // the heading, both rows and the dish's actions on one screen
       tester.view.physicalSize = const Size(800, 2000);
@@ -1838,15 +1841,21 @@ void main() {
       final bloc = await _registerWithPhotoReading(
         MealPhotoRead(
           MealTextParseResult(
-            items: [item('chicken', chicken, eaten), item('rice', rice, eaten)],
+            items: [
+              ...above,
+              item('chicken', chicken, eaten),
+              item('rice', rice, eaten),
+            ],
             errors: const [],
           ),
         ),
         results: {
+          'soup': [_meal('Soup')],
           'chicken': [_meal('Chicken')],
           'rice': [_meal('Rice')],
         },
       );
+      dishBloc = bloc;
       await tester.pumpWidget(_app());
       tester.state<NavigatorState>(find.byType(Navigator)).pushNamed('/bulk');
       await tester.pumpAndSettle();
@@ -1894,6 +1903,32 @@ void main() {
       await tester.tap(_submitButton());
       await tester.pumpAndSettle();
       expect(_mealDetailBloc.writes.map((w) => '$w'), ['Chicken bowl 175.0 g']);
+    });
+
+    testWidgets('a breakdown landing above a dish leaves its portion scaling '
+        'its own foods', (tester) async {
+      await readDish(
+        tester,
+        above: const [ParsedMealItem(query: 'soup', quantity: 100, unit: 'g')],
+      );
+      await tester.enterText(portion(), '175');
+      await tester.pump();
+
+      final soup = (dishBloc.state as BulkAddLoadedState).rows.first.resolved;
+      dishBloc.add(
+        ReplaceRowWithBreakdownEvent(soup, DishBreakdown('soup', [soup, soup])),
+      );
+      await tester.pump();
+      await tester.pump();
+      await tester.enterText(portion().last, '350');
+      await tester.pumpAndSettle();
+
+      await tester.tap(_submitButton());
+      await tester.pumpAndSettle();
+      expect(
+        _mealDetailBloc.writes.map((w) => '$w'),
+        contains('Chicken bowl 350.0 g'),
+      );
     });
 
     testWidgets('a food changed changes the portion', (tester) async {

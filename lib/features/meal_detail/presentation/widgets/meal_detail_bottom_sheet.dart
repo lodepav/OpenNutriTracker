@@ -32,6 +32,10 @@ import 'package:opennutritracker/fork/amounts/remembered_amounts.dart';
 // [fork] S110 meal-named
 import 'package:opennutritracker/fork/copy/copy_ui.dart' show mealLabel;
 // [/fork]
+// [fork] S189 add-says-failure
+import 'package:logging/logging.dart';
+import 'package:opennutritracker/fork/add/logged_bar.dart';
+// [/fork]
 // [fork] S125 food-page
 import 'package:opennutritracker/fork/widget/meal_picker_chip.dart';
 import 'package:opennutritracker/fork/units/amount_text.dart' show servingTextAgrees; // [fork] S142
@@ -531,14 +535,29 @@ class _MealDetailBottomSheetState extends State<MealDetailBottomSheet> {
 
     // The refreshes below only see the intake once it is stored, which
     // can wait for the tracked-day lock (#1317).
-    await widget.mealDetailBloc.addIntake(
-      context,
-      widget.mealDetailBloc.state.selectedUnit,
-      widget.mealDetailBloc.state.totalQuantityConverted,
-      _type,
-      widget.product,
-      widget.day,
-    );
+    // [fork] S189 add-says-failure: a failed or dropped write says so and
+    // stays on the page, not "Added"
+    final messenger = ScaffoldMessenger.of(context);
+    final IntakeEntity? written;
+    try {
+      written = await widget.mealDetailBloc.addIntake(
+        context,
+        widget.mealDetailBloc.state.selectedUnit,
+        widget.mealDetailBloc.state.totalQuantityConverted,
+        _type,
+        widget.product,
+        widget.day,
+      );
+    } catch (error, stack) {
+      Logger('MealDetailBottomSheet').warning('Add failed', error, stack);
+      showNotAdded(messenger, failed: true);
+      return;
+    }
+    if (written == null) {
+      showNotAdded(messenger, failed: false);
+      return;
+    }
+    // [/fork]
 
     // Refresh Home Page
     locator<HomeBloc>().add(const LoadItemsEvent());

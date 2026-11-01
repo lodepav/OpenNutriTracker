@@ -162,9 +162,10 @@ class _PlannedFoodsCardState extends State<PlannedFoodsCard> {
         final intake = await widget.log(context, food);
         // Not written (a profile switch): it and the rest stay planned.
         if (intake == null) break;
-        await _store.remove(food.id);
+        // Before the removal: written, it has an Undo whatever that does.
         logged.add(food);
         written.add(intake);
+        await _store.remove(food.id);
       }
     } catch (error, stack) {
       _log.warning('Log all stopped by a failed write', error, stack);

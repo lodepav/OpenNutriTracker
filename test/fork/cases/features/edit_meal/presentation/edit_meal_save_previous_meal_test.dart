@@ -2,6 +2,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get_it/get_it.dart';
 import 'package:opennutritracker/core/data/data_source/custom_meal_data_source.dart';
@@ -171,6 +172,43 @@ void main() {
     expect(dataSource.saves, isEmpty);
   });
 
+  group('a food the per-serving form cannot hold', () {
+    MealEntity shaped(MealSourceEntity source) => MealEntity(
+      code: 'granola',
+      name: 'Granola',
+      url: null,
+      mealQuantity: '500',
+      mealUnit: 'g',
+      servingQuantity: 40,
+      servingUnit: 'g',
+      servingSize: '',
+      nutriments: const MealNutrimentsEntity(
+        energyKcal100: 415,
+        carbohydrates100: 60,
+        fat100: 15,
+        proteins100: 10,
+        sugars100: null,
+        saturatedFat100: null,
+        fiber100: null,
+      ),
+      source: source,
+    );
+
+    for (final source in [MealSourceEntity.custom, MealSourceEntity.off]) {
+      testWidgets('keeps its serving when saved: ${source.name}', (
+        tester,
+      ) async {
+        getIt.registerSingleton<CacheManager>(_NoCache());
+        await pumpEditor(tester, shaped(source));
+        await save(tester);
+        final (saved, _) = dataSource.saves.single;
+        expect(saved.servingQuantity, 40);
+        expect(saved.mealQuantity, '500');
+        expect(saved.nutriments.energyKcal100, 415);
+      });
+    }
+  });
+
   testWidgets('Back does not ask once the text is as it was', (tester) async {
     await pumpEditor(tester, customMeal(code: 'uuid-oats', name: 'Oats'));
     await tester.enterText(
@@ -260,3 +298,5 @@ class _FakeFavouriteMealRepository implements FavouriteMealRepository {
   dynamic noSuchMethod(Invocation invocation) =>
       throw UnimplementedError('Unexpected call: ${invocation.memberName}');
 }
+
+class _NoCache extends Fake implements CacheManager {}

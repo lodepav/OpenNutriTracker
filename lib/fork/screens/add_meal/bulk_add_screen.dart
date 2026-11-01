@@ -212,6 +212,10 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
   /// that each keystroke scales from them and not from the last rounding.
   final _portionBase = <Object, Map<int, double>>{};
 
+  /// The batch's size when [_portionBase] was taken: it is keyed by row
+  /// index, which a breakdown landing above a dish moves.
+  int _portionBaseRows = 0;
+
   void _toggleDishFolded(Object group) =>
       setState(() => _foldedDishes.remove(group) || _foldedDishes.add(group));
 

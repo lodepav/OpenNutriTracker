@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -51,9 +52,10 @@ class _Reader implements ReadLeftoversUseCase {
   final AiSelection? selected;
   final Map<String, double>? answer;
   final int unplaced;
+  final Completer<void>? gate;
   MealPhoto? sawMeal;
 
-  _Reader({this.selected, this.answer, this.unplaced = 0});
+  _Reader({this.selected, this.answer, this.unplaced = 0, this.gate});
 
   @override
   Future<AiSelection?> get selection async => selected;
@@ -65,6 +67,7 @@ class _Reader implements ReadLeftoversUseCase {
     MealPhoto? meal,
   }) async {
     sawMeal = meal;
+    await gate?.future;
     final left = answer;
     return left == null ? null : (left: left, unplaced: unplaced);
   }
@@ -260,6 +263,35 @@ void main() {
 
       expect(await handled, isTrue);
       expect(updates, isEmpty);
+    });
+
+    testWidgets('what is left cannot be typed while the photo is read', (
+      tester,
+    ) async {
+      final gate = Completer<void>();
+      final reader = _Reader(
+        selected: const AiSelection(provider: AiProvider.anthropic),
+        answer: {'rice': 50},
+        gate: gate,
+      );
+      await tap(tester, _rice, reader: reader);
+      await tester.tap(find.text(LeftoverStrings.wholeMeal(3)));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(LeftoverStrings.readPhoto));
+      await tester.runAsync(() => Future.delayed(Duration(milliseconds: 50)));
+      await tester.pump();
+      expect(
+        tester.widget<TextField>(find.byType(TextField).first).enabled,
+        isFalse,
+      );
+
+      gate.complete();
+      await tester.runAsync(() => Future.delayed(Duration(milliseconds: 50)));
+      await tester.pumpAndSettle();
+      expect(
+        tester.widget<TextField>(find.byType(TextField).first).enabled,
+        isTrue,
+      );
     });
 
     testWidgets('a reply it could not place says so', (tester) async {

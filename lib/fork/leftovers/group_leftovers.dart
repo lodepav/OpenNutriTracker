@@ -306,7 +306,9 @@ class _GroupLeftoversDialogState extends State<GroupLeftoversDialog> {
                   ChoiceChip(
                     label: Text(label),
                     selected: _fraction == fraction,
-                    onSelected: (_) => _pickFraction(fraction),
+                    onSelected: _reading
+                        ? null
+                        : (_) => _pickFraction(fraction),
                   ),
               ],
             ),
@@ -338,6 +340,8 @@ class _GroupLeftoversDialogState extends State<GroupLeftoversDialog> {
                       child: TextField(
                         key: ValueKey('left-${intake.id}'),
                         controller: _controllers[intake.id],
+                        // A reply would replace what is typed while it comes.
+                        enabled: !_reading,
                         keyboardType: const TextInputType.numberWithOptions(
                           decimal: true,
                         ),

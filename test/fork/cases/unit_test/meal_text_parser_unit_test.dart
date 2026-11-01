@@ -9,6 +9,7 @@ void main() {
       '1 apple and 30 g almonds',
       'pelēkie zirņi ar speķi, 300 g',
       'a 1.5l bottle of water',
+      'a 0.5 L beer',
       'kefīrs 500 ml',
       '一碗200克米饭',
     ]) {

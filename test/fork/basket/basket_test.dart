@@ -283,7 +283,11 @@ void main() {
       (item) async => throw StateError('disk full'),
     );
     expect(basket.items, hasLength(1));
-    expect(find.textContaining("couldn't be saved"), findsOneWidget);
+    // In the sheet, not in a bar under it.
+    expect(
+      find.textContaining("couldn't be saved").hitTestable(),
+      findsOneWidget,
+    );
     expect(find.text('Undo'), findsNothing);
     final button = tester.widget<FilledButton>(
       find.widgetWithText(FilledButton, 'Log all 1 to Lunch'),

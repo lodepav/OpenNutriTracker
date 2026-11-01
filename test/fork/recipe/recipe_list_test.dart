@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -82,6 +84,8 @@ class _RecordingBloc extends MealDetailBloc {
       );
 
   final logged = <(IntakeTypeEntity, String, String)>[];
+  Completer<void>? gate;
+  bool fails = false;
 
   @override
   Future<IntakeEntity> addIntake(
@@ -93,6 +97,8 @@ class _RecordingBloc extends MealDetailBloc {
     DateTime day,
   ) async {
     logged.add((type, unit, amountText));
+    await gate?.future;
+    if (fails) throw StateError('disk full');
     return _Written();
   }
 }
@@ -255,6 +261,41 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Lunch'), findsNothing);
       expect(bloc.logged, [(IntakeTypeEntity.dinner, 'g', '200.0')]);
+    });
+
+    Future<void> pumpLog(WidgetTester tester) => tester.pumpWidget(
+      _app(
+        Builder(
+          builder: (context) => TextButton(
+            onPressed: () => logRecipeServing(
+              context,
+              _bowl(),
+              meal: IntakeTypeEntity.lunch,
+            ),
+            child: const Text('log'),
+          ),
+        ),
+      ),
+    );
+
+    testWidgets('a second tap while it is written logs once', (tester) async {
+      bloc.gate = Completer();
+      await pumpLog(tester);
+      await tester.tap(find.text('log'));
+      await tester.pump();
+      await tester.tap(find.text('log'));
+      await tester.pump();
+      bloc.gate!.complete();
+      await tester.pumpAndSettle();
+      expect(bloc.logged, hasLength(1));
+    });
+
+    testWidgets('a failed write says so', (tester) async {
+      bloc.fails = true;
+      await pumpLog(tester);
+      await tester.tap(find.text('log'));
+      await tester.pumpAndSettle();
+      expect(find.text("Not added: it couldn't be saved."), findsOneWidget);
     });
 
     testWidgets('closing the meals logs nothing', (tester) async {

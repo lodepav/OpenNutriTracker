@@ -209,7 +209,8 @@ class _FitsLeftSwitchState extends State<FitsLeftSwitch> {
               forkLastLogged: food,
             ),
             Text(
-              '${amountText(food, data.imperial)}: ${energyText(context, food.totalKcal)}, '
+              '${isEnergyOnly(food.meal) ? '' : '${amountText(food, data.imperial)}: '}'
+              '${energyText(context, food.totalKcal)}, '
               '${food.totalProteinsGram.round()} g protein',
               key: ValueKey('fits-${food.id}'),
               style: theme.textTheme.bodySmall,

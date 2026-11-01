@@ -19,7 +19,8 @@ import 'package:opennutritracker/fork/basket/basket_ui.dart'
     show refreshAfterLogging;
 import 'package:opennutritracker/fork/copy/copy_ui.dart' show mealLabel;
 import 'package:opennutritracker/fork/meal_detail/missing_info.dart';
-import 'package:opennutritracker/fork/units/amount_text.dart' show amountText;
+import 'package:opennutritracker/fork/units/amount_text.dart'
+    show amountText, isEnergyOnly;
 
 /// What a food row's plus logs at once: the unit and the amount in grams
 /// or millilitres, as an entry stores them.
@@ -198,10 +199,11 @@ Future<void> _logFromRow(
     );
   } catch (error, stack) {
     _log.warning('One-tap write failed for ${meal.code}', error, stack);
-    messenger?.removeCurrentSnackBar();
-    messenger?.showSnackBar(
-      const SnackBar(content: Text("Not added: it couldn't be saved.")),
-    );
+    // As below: a bar would show under the sheet.
+    if (route is PopupRoute && route.isCurrent && context.mounted) {
+      Navigator.of(context).pop();
+    }
+    if (messenger != null) showNotAdded(messenger, failed: true);
     return;
   }
   refreshAfterLogging();
@@ -210,20 +212,19 @@ Future<void> _logFromRow(
     Navigator.of(context).pop();
   }
   if (messenger == null) return;
-  messenger.removeCurrentSnackBar();
   if (written == null) {
-    messenger.showSnackBar(
-      const SnackBar(content: Text('Not added: the profile changed.')),
-    );
+    showNotAdded(messenger, failed: false);
     return;
   }
-  final amountAdded = amountText(written, imperial);
+  messenger.removeCurrentSnackBar();
+  final amountAdded = isEnergyOnly(food) ? '' : amountText(written, imperial);
   final name = food.name?.trim() ?? '';
   showLoggedBar(
     messenger,
     name.isEmpty
-        ? 'Added $amountAdded to $mealName'
-        : 'Added $name, $amountAdded, to $mealName',
+        ? 'Added ${amountAdded.isEmpty ? 'it' : amountAdded} to $mealName'
+        : 'Added $name${amountAdded.isEmpty ? '' : ', $amountAdded,'} to '
+              '$mealName',
     day: day,
     written: [written],
     stamp: stamp,

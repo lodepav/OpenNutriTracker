@@ -446,6 +446,19 @@ void main() {
         await tester.pumpAndSettle();
       }
 
+      testWidgets('a failed write closes the sheet, so what it says shows', (
+        tester,
+      ) async {
+        bloc.fails = true;
+        await pumpSheet(tester);
+        await tapPlus(tester);
+        expect(find.byType(MealItemCard), findsNothing);
+        expect(
+          find.text("Not added: it couldn't be saved.").hitTestable(),
+          findsOneWidget,
+        );
+      });
+
       testWidgets('the plus closes the sheet and shows the bar', (
         tester,
       ) async {

@@ -47,6 +47,7 @@ import 'package:opennutritracker/generated/l10n.dart';
 import 'package:provider/provider.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:opennutritracker/fork/widget/toolbar_height.dart'; // [fork] S132
+import 'package:opennutritracker/fork/edit_meal/simple_form.dart'; // [fork] S188
 
 class EditMealScreen extends StatefulWidget {
   const EditMealScreen({super.key});
@@ -395,8 +396,9 @@ class _EditMealScreenState extends State<EditMealScreen> {
               if (!_formModeHydrated) {
                 // [fork] S188 edit-keeps-serving: only a custom food has the
                 // switch back, and the per-serving form would reset a
-                // product's serving to 100
-                _formMode = _mealEntity.source == MealSourceEntity.custom
+                // food's serving to 100
+                _formMode = _mealEntity.source == MealSourceEntity.custom &&
+                        simpleFormKeeps(_mealEntity)
                     ? state.formMode
                     : CustomMealFormMode.advanced;
                 // [/fork]
