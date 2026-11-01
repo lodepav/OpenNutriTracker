@@ -102,6 +102,15 @@ void main() {
     expect(delete.deleted, isEmpty);
   });
 
+  testWidgets('Undo files it back under its own day', (tester) async {
+    final filed = _today.add(const Duration(days: 1));
+    await log(
+      tester,
+      WeightLogEntity(date: _today, weightKg: 87, filedDay: filed),
+    );
+    expect(add.entries.last.date, filed);
+  });
+
   testWidgets('Undo takes it off where there was none', (tester) async {
     await log(tester, null);
     expect(delete.deleted.single.weightKg, 86.6);

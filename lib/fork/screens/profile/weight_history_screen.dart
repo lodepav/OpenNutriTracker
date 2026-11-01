@@ -156,9 +156,14 @@ class _WeightHistoryScreenState extends State<WeightHistoryScreen> {
     );
     if (result == null || !mounted) return;
     // Its row is found by the filed day: the date can show a neighbour.
+    // A date left as it opened is the row's own, whichever day that shows.
+    final dateKept =
+        editing != null && DateUtils.isSameDay(editing.date, result.date);
     final inPlace =
-        editing != null &&
-        DateUtils.isSameDay(editing.filedDay ?? editing.date, result.date);
+        dateKept ||
+        (editing != null &&
+            DateUtils.isSameDay(editing.filedDay ?? editing.date, result.date));
+    final day = dateKept ? editing.filedDay ?? editing.date : result.date;
     // A day holds one weigh-in, so a save takes the place of the one there.
     final replaced = inPlace
         ? null
@@ -170,11 +175,11 @@ class _WeightHistoryScreenState extends State<WeightHistoryScreen> {
     final messenger = ScaffoldMessenger.of(context);
     final message = replaced == null
         ? null
-        : 'Replaced ${replacedText(context, _asFiled(replaced), _bodyWeightUnit, DateTime.now())}';
+        : 'Replaced ${replacedText(context, replaced, _bodyWeightUnit, DateTime.now())}';
 
     await _addUsecase.addEntry(
       WeightLogEntity(
-        date: DateTime(result.date.year, result.date.month, result.date.day),
+        date: DateTime(day.year, day.month, day.day),
         weightKg: result.weightKg,
         note: result.note,
       ),
@@ -197,9 +202,9 @@ class _WeightHistoryScreenState extends State<WeightHistoryScreen> {
           action: SnackBarAction(
             label: 'Undo',
             onPressed: () async {
-              await _addUsecase.addEntry(_asFiled(replaced));
+              await _addUsecase.addEntry(asFiled(replaced));
               if (editing != null) {
-                await _addUsecase.addEntry(_asFiled(editing));
+                await _addUsecase.addEntry(asFiled(editing));
               }
               await _load();
               reloadDiaryAndTrends();
@@ -209,14 +214,6 @@ class _WeightHistoryScreenState extends State<WeightHistoryScreen> {
         ),
       );
   }
-
-  /// [entry] dated on the day it is filed under, so adding it back puts it
-  /// in its own row after a time-zone change.
-  WeightLogEntity _asFiled(WeightLogEntity entry) => WeightLogEntity(
-    date: entry.filedDay ?? entry.date,
-    weightKg: entry.weightKg,
-    note: entry.note,
-  );
 
   Future<void> _onDelete(WeightLogEntity entry) async {
     await _deleteUsecase.deleteEntry(entry);
@@ -238,7 +235,7 @@ class _WeightHistoryScreenState extends State<WeightHistoryScreen> {
           action: SnackBarAction(
             label: 'Undo',
             onPressed: () async {
-              await _addUsecase.addEntry(entry);
+              await _addUsecase.addEntry(asFiled(entry));
               await _load();
               reloadDiaryAndTrends();
               refreshAfterWeightImport();

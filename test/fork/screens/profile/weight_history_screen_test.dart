@@ -428,6 +428,30 @@ void main() {
     expect(reloads.log, containsAll(['LoadProfileEvent', 'updateHomePage']));
   });
 
+  testWidgets('Undo of a delete files it under its own day', (tester) async {
+    ReloadRecorder()
+      ..register()
+      ..registerProfile();
+    addTearDown(locator.reset);
+    final addUsecase = _FakeAddWeightLogUsecase();
+    final entry = WeightLogEntity(
+      date: DateTime(2026, 3, 10),
+      weightKg: 80,
+      filedDay: DateTime(2026, 3, 11),
+    );
+    await tester.pumpWidget(
+      _wrap(_buildScreen([entry], addUsecase: addUsecase)),
+    );
+    await tester.pumpAndSettle();
+
+    await _swipe(tester, find.text('Mar 10, 2026'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Undo'));
+    await tester.pumpAndSettle();
+
+    expect(addUsecase.added.single.date, DateTime(2026, 3, 11));
+  });
+
   // a tap opens a weigh-in in the dialog, its
   // weight and note filled in; saved on its day, it is not deleted
   testWidgets('a tapped weigh-in opens to edit, filled in', (tester) async {
@@ -631,7 +655,26 @@ void main() {
       await edit(tester, 'Mar 11, 2026');
       await save(tester);
 
-      expect(log.rows.keys, [DateTime(2026, 3, 11)]);
+      // Its date left alone, it stays in its own row.
+      expect(log.rows.keys, [DateTime(2026, 3, 10)]);
+      expect(find.text('Undo'), findsNothing);
+    });
+
+    testWidgets('an edit after a time-zone change leaves the next row alone', (
+      tester,
+    ) async {
+      log.file(DateTime(2026, 3, 11), 80, shownAs: DateTime(2026, 3, 10));
+      log.file(DateTime(2026, 3, 10), 70, shownAs: DateTime(2026, 3, 9));
+      await open(tester);
+
+      await edit(tester, 'Mar 10, 2026');
+      await save(tester);
+
+      expect(log.rows.keys.toSet(), {
+        DateTime(2026, 3, 10),
+        DateTime(2026, 3, 11),
+      });
+      expect(log.rows[DateTime(2026, 3, 10)]!.weightKg, 70);
       expect(find.text('Undo'), findsNothing);
     });
 

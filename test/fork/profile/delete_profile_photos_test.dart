@@ -7,12 +7,13 @@ import 'package:opennutritracker/core/domain/entity/profile_entity.dart';
 import 'package:opennutritracker/core/domain/usecase/delete_profile_usecase.dart';
 import 'package:opennutritracker/core/domain/usecase/switch_profile_usecase.dart';
 import 'package:opennutritracker/core/utils/hive_db_provider.dart';
+import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/fork/photos/photo_store.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 
-// Seam S40: a deleted profile's progress photos leave the disk with it.
+// Seam S191: a deleted profile's progress photos leave the disk with it.
 
 class _Paths extends PathProviderPlatform with MockPlatformInterfaceMixin {
   final String root;
@@ -172,5 +173,22 @@ void main() {
 
     expect(db.deleted, ['_gone']);
     expect(profiles.profiles.map((p) => p.id), ['other', 'idle']);
+  });
+
+  test('deleting a photo another profile also holds keeps its image', () async {
+    locator
+      ..registerSingleton<HiveDBProvider>(db)
+      ..registerSingleton<ProfileRepository>(profiles);
+    addTearDown(locator.reset);
+    final shared = await storeOf(other).add(DateTime(2026, 10, 1), [1]);
+    final own = await storeOf(other).add(DateTime(2026, 10, 2), [2]);
+    await storeOf(idle).merge([shared], const {});
+
+    await storeOf(other).remove(shared.id);
+    await storeOf(other).remove(own.id);
+
+    expect(await (await storeOf(idle).file(shared)).exists(), isTrue);
+    expect(await (await storeOf(other).file(own)).exists(), isFalse);
+    expect(await storeOf(other).all(), isEmpty);
   });
 }

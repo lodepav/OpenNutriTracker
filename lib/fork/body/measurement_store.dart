@@ -80,12 +80,16 @@ class MeasurementStore {
   ]..sort((a, b) => a.date.compareTo(b.date));
 
   /// Records [values] on [date]; one already there for a metric that day
-  /// is replaced.
-  Future<void> addDay(DateTime date, Map<BodyMetric, double> values) async {
+  /// is replaced. Returns what it added and what it replaced.
+  Future<({List<Measurement> added, List<Measurement> replaced})> addDay(
+    DateTime date,
+    Map<BodyMetric, double> values,
+  ) async {
     final day = DateTime(date.year, date.month, date.day);
-    await _write([
-      for (final m in await all())
-        if (!(values.containsKey(m.metric) && _sameDay(m.date, day))) m,
+    bool goes(Measurement m) =>
+        values.containsKey(m.metric) && _sameDay(m.date, day);
+    final before = await all();
+    final added = [
       for (final e in values.entries)
         Measurement(
           id: IdGenerator.getUniqueID(),
@@ -93,7 +97,9 @@ class MeasurementStore {
           metric: e.key,
           value: e.value,
         ),
-    ]);
+    ];
+    await _write([...before.where((m) => !goes(m)), ...added]);
+    return (added: added, replaced: before.where(goes).toList());
   }
 
   Future<void> remove(String id) async => _write([

@@ -2,9 +2,11 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
+import 'package:opennutritracker/core/data/repository/profile_repository.dart';
 import 'package:opennutritracker/core/domain/entity/profile_entity.dart';
 import 'package:opennutritracker/core/utils/hive_db_provider.dart';
 import 'package:opennutritracker/core/utils/id_generator.dart';
+import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -33,8 +35,8 @@ class ProgressPhoto {
 }
 
 /// Progress photos (MacroFactor's): the index in the fork's per-profile
-/// box, the images on the device. Ids are unique, so every profile's
-/// images share one folder. Oldest first.
+/// box, the images on the device, in one folder for every profile: a backup
+/// restored into two has them share ids and so files. Oldest first.
 class PhotoStore {
   static const dir = 'progress_photos';
   static const _key = 'progressPhotos';
@@ -78,10 +80,12 @@ class PhotoStore {
 
   Future<void> remove(String id) async {
     final photos = await all();
-    for (final p in photos) {
-      if (p.id != id) continue;
-      final image = await file(p);
-      if (await image.exists()) await image.delete();
+    if (!await _heldByAnotherProfile(id)) {
+      for (final p in photos) {
+        if (p.id != id) continue;
+        final image = await file(p);
+        if (await image.exists()) await image.delete();
+      }
     }
     await _write([
       for (final p in photos)
@@ -119,25 +123,50 @@ Future<void> deleteProfilePhotos(
   ProfileEntity profile,
   List<ProfileEntity> others,
 ) async {
-  PhotoStore storeOf(ProfileEntity p) => PhotoStore(
-    () => db.openScopedBox<dynamic>(AdaptiveStore.boxName, p.boxSuffix),
-  );
   try {
-    final kept = <String>{};
-    for (final other in others) {
-      kept.addAll((await storeOf(other).all()).map((p) => p.id));
-      if (other.id != db.activeProfileId) {
-        await db.closeScopedBox<dynamic>(
-          AdaptiveStore.boxName,
-          other.boxSuffix,
-        );
-      }
-    }
-    final store = storeOf(profile);
+    final kept = await _photoIdsOf(db, others);
+    final store = PhotoStore(
+      () => db.openScopedBox<dynamic>(AdaptiveStore.boxName, profile.boxSuffix),
+    );
     for (final photo in await store.all()) {
       if (kept.contains(photo.id)) continue;
       final image = await store.file(photo);
       if (await image.exists()) await image.delete();
     }
   } catch (_) {}
+}
+
+/// The photo ids in [profiles]' indexes; a box this opens for it is closed
+/// again.
+Future<Set<String>> _photoIdsOf(
+  HiveDBProvider db,
+  List<ProfileEntity> profiles,
+) async {
+  final ids = <String>{};
+  for (final p in profiles) {
+    final store = PhotoStore(
+      () => db.openScopedBox<dynamic>(AdaptiveStore.boxName, p.boxSuffix),
+    );
+    ids.addAll((await store.all()).map((photo) => photo.id));
+    if (p.id != db.activeProfileId) {
+      await db.closeScopedBox<dynamic>(AdaptiveStore.boxName, p.boxSuffix);
+    }
+  }
+  return ids;
+}
+
+/// Whether a profile other than the active one has photo [id]. Anything
+/// unreadable counts as yes: the image stays.
+Future<bool> _heldByAnotherProfile(String id) async {
+  if (!locator.isRegistered<ProfileRepository>()) return false; // widget tests
+  try {
+    final db = locator<HiveDBProvider>();
+    final others = [
+      for (final p in locator<ProfileRepository>().getAllProfiles())
+        if (p.id != db.activeProfileId) p,
+    ];
+    return (await _photoIdsOf(db, others)).contains(id);
+  } catch (_) {
+    return true;
+  }
 }
