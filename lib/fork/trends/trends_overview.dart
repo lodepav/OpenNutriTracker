@@ -16,7 +16,7 @@ import 'package:opennutritracker/fork/report/rate_text.dart';
 import 'package:opennutritracker/fork/layout/arrange_screen.dart';
 import 'package:opennutritracker/fork/layout/layout_store.dart';
 import 'package:opennutritracker/fork/report/trends_layout.dart';
-import 'package:opennutritracker/fork/adaptive/goal_plan_card.dart'
+import 'package:opennutritracker/fork/adaptive/goal_saving.dart'
     show paceChanges;
 import 'package:opennutritracker/fork/goal/goal_progress.dart';
 import 'package:opennutritracker/fork/goal/goal_progress_page.dart';

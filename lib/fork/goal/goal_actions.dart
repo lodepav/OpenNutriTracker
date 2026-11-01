@@ -1,5 +1,5 @@
 import 'package:opennutritracker/core/utils/tracked_day_lock.dart';
-import 'package:opennutritracker/fork/adaptive/goal_plan_card.dart'
+import 'package:opennutritracker/fork/adaptive/goal_saving.dart'
     show saveGoal;
 import 'package:opennutritracker/fork/goal/goal_planner.dart';
 import 'package:opennutritracker/fork/goal/goal_progress.dart';

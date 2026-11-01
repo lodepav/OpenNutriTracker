@@ -1,8 +1,6 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:intl/intl.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:opennutritracker/fork/adaptive/activity.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
@@ -25,12 +23,10 @@ import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_ui.dart';
 import 'package:opennutritracker/fork/adaptive/check_in.dart';
 import 'package:opennutritracker/fork/adaptive/expenditure.dart';
-import 'package:opennutritracker/fork/adaptive/expenditure_card.dart';
 import 'package:opennutritracker/fork/adaptive/goal_plan.dart';
-import 'package:opennutritracker/fork/adaptive/goal_plan_card.dart';
+import 'package:opennutritracker/fork/adaptive/goal_saving.dart';
 import 'package:opennutritracker/fork/body/measurement_store.dart';
 import 'package:opennutritracker/core/domain/entity/body_weight_unit_entity.dart';
-import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/fork/adaptive/trend_points.dart';
 import 'package:opennutritracker/fork/units/weight_text.dart';
 import 'package:opennutritracker/core/utils/energy_unit_provider.dart';
@@ -1319,200 +1315,12 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('the planner moves the date with the pace and saves it', (
-    tester,
-  ) async {
-    final saved = <double>[];
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: SingleChildScrollView(
-            child: GoalPlanCard(
-              palette: AppPalette.light,
-              unit: BodyWeightUnit.kg,
-              service: service,
-              onUsePace: (pace) async {
-                saved.add(pace);
-                return true;
-              },
-            ),
-          ),
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    expect(find.text('Goal planner'), findsOneWidget);
-    expect(find.text('Pace: -0.50 kg a week'), findsOneWidget);
-    expect(find.text('Use this pace'), findsNothing);
-    expect(find.text('Last 7 days'), findsOneWidget);
-    final reached = find.byWidgetPredicate(
-      (w) => w is Text && (w.data ?? '').contains('weeks)'),
-    );
-    final before = (tester.widget(reached.first) as Text).data;
-
-    await tester.drag(
-      find.byKey(const ValueKey('plan-pace')),
-      const Offset(-60, 0),
-    );
-    await tester.pumpAndSettle();
-    expect((tester.widget(reached.first) as Text).data, isNot(before));
-
-    await tester.ensureVisible(find.text('Use this pace'));
-    await tester.tap(find.text('Use this pace'));
-    await tester.pumpAndSettle();
-    expect(saved.single, isNot(closeTo(-0.5, 0.01)));
-  });
-
-  testWidgets('under the formula the planner shows Home\'s goal at the '
-      'pace, and a saved pace says so', (tester) async {
-    final paced = _PacedService(service);
-    final asked = <double>[];
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: SingleChildScrollView(
-            child: GoalPlanCard(
-              palette: AppPalette.light,
-              unit: BodyWeightUnit.kg,
-              service: paced,
-              goalAtPace: (pace) async {
-                asked.add(pace);
-                return 3000 + pace * 1000;
-              },
-              onUsePace: (pace) async {
-                paced.pace = pace;
-                return true;
-              },
-            ),
-          ),
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-    expect(find.text('Your goal becomes'), findsOneWidget);
-    expect(find.text('2500 kcal'), findsOneWidget);
-    expect(find.text('Daily target at this pace'), findsNothing);
-
-    await tester.drag(
-      find.byKey(const ValueKey('plan-pace')),
-      const Offset(60, 0),
-    );
-    await tester.pumpAndSettle();
-    final chosen = find.textContaining('Pace: ');
-    final text = (tester.widget(chosen) as Text).data!;
-    expect(text, isNot('Pace: -0.50 kg a week'));
-    final pace = asked.last;
-    final goal = '${(3000 + pace * 1000).round()} kcal';
-    expect(find.text(goal), findsOneWidget);
-
-    await tester.ensureVisible(find.text('Use this pace'));
-    await tester.tap(find.text('Use this pace'));
-    await tester.pumpAndSettle();
-    expect(
-      find.text('Goal set to ${text.substring(6)}: $goal a day'),
-      findsOneWidget,
-    );
-    expect((tester.widget(chosen) as Text).data, text);
-    expect(find.text('Use this pace'), findsNothing);
-  });
-
-  testWidgets('a set target is changed or cleared from its row', (
-    tester,
-  ) async {
-    final targets = <double?>[];
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: SingleChildScrollView(
-            child: GoalPlanCard(
-              palette: AppPalette.light,
-              unit: BodyWeightUnit.kg,
-              service: _PacedService(service),
-              goalAtPace: (_) async => null,
-              onSetTarget: (_, _, _, target) async {
-                targets.add(target);
-                return false;
-              },
-            ),
-          ),
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-    final row = find.byKey(const ValueKey('plan-target'));
-    expect(tester.getSize(row).height, greaterThanOrEqualTo(48));
-    await tester.tap(row);
-    await tester.pumpAndSettle();
-    expect(targets.single, isNotNull);
-  });
-
-  testWidgets('the planner reloads when a pace is saved elsewhere', (
-    tester,
-  ) async {
-    final paced = _PacedService(service);
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: SingleChildScrollView(
-            child: GoalPlanCard(
-              palette: AppPalette.light,
-              unit: BodyWeightUnit.kg,
-              service: paced,
-            ),
-          ),
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-    expect(find.text('Pace: -0.50 kg a week'), findsOneWidget);
-
-    // A diet phase beginning saves its pace through savePace.
-    paced.pace = -0.25;
-    paceChanges.value++;
-    await tester.pumpAndSettle();
-    expect(find.text('Pace: -0.25 kg a week'), findsOneWidget);
-  });
-
   test('a small pace is still maintaining', () {
     expect(goalOfPace(0.05), UserWeightGoalEntity.maintainWeight);
     expect(goalOfPace(-0.05), UserWeightGoalEntity.maintainWeight);
     expect(goalOfPace(0), UserWeightGoalEntity.maintainWeight);
     expect(goalOfPace(0.1), UserWeightGoalEntity.gainWeight);
     expect(goalOfPace(-0.1), UserWeightGoalEntity.loseWeight);
-  });
-
-  testWidgets('without a target the planner offers to set one', (tester) async {
-    final paced = _PacedService(service)..noTarget = true;
-    var asked = 0;
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: SingleChildScrollView(
-            child: GoalPlanCard(
-              palette: AppPalette.light,
-              unit: BodyWeightUnit.kg,
-              service: paced,
-              onSetTarget: (_, _, _, _) async {
-                asked++;
-                paced.noTarget = false;
-                return true;
-              },
-            ),
-          ),
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-    expect(find.textContaining('No target weight'), findsOneWidget);
-    expect(find.text('Reached'), findsNothing);
-    expect(find.text('Target'), findsNothing);
-
-    await tester.tap(find.byKey(const ValueKey('plan-set-target')));
-    await tester.pumpAndSettle();
-    expect(asked, 1);
-    expect(find.text('Reached'), findsOneWidget);
-    expect(find.textContaining('No target weight'), findsNothing);
   });
 
   test('a measured body fat % changes the expenditure read', () async {
@@ -1562,67 +1370,6 @@ void main() {
         () => _today,
       );
       expect(await none.expenditureHistory(), isEmpty);
-    });
-
-    testWidgets('the Trends card shows expenditure and a deficit', (
-      tester,
-    ) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          localizationsDelegates: GlobalMaterialLocalizations.delegates,
-          home: Scaffold(
-            body: ExpenditureTrendCard(
-              rangeDays: 30,
-              palette: AppPalette.light,
-              service: service,
-            ),
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      expect(find.text('Expenditure'), findsOneWidget);
-      expect(find.text('Balance, logged days'), findsOneWidget);
-      expect(find.textContaining(RegExp(r'^-\d+ kcal a day$')), findsOneWidget);
-      expect(find.textContaining('Energy you burn a day'), findsOneWidget);
-      expect(find.textContaining('Solid: estimated'), findsOneWidget);
-      expect(find.textContaining('Dots: calories logged'), findsOneWidget);
-      // Its span, as the chart has no axes: the last day is today.
-      expect(find.text(DateFormat.MMMd('en').format(_today)), findsOneWidget);
-    });
-
-    testWidgets('a single day names no lines, as none are drawn', (
-      tester,
-    ) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: ExpenditureTrendCard(
-              rangeDays: 30,
-              palette: AppPalette.light,
-              service: AdaptiveService(
-                _User(),
-                _OneWeighIn(),
-                _NoLogs(),
-                _MemoryStore(),
-                () => _today.add(const Duration(hours: 9)),
-              ),
-            ),
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      expect(find.text('Expenditure'), findsOneWidget);
-      expect(find.textContaining('Solid'), findsNothing);
-      expect(find.textContaining('Dashed'), findsNothing);
-      expect(
-        find.text(
-          'Estimated expenditure is still the formula until two weeks of '
-          'weigh-ins and logging.',
-        ),
-        findsOneWidget,
-      );
     });
   });
 }
@@ -1674,27 +1421,6 @@ class _MemoryStore extends AdaptiveStore {
   }
 }
 
-/// [inner]'s plan at a pace set by the test.
-class _PacedService extends Fake implements AdaptiveService {
-  final AdaptiveService inner;
-  double pace = -0.5;
-  bool noTarget = false;
-
-  _PacedService(this.inner);
-
-  @override
-  Future<GoalPlanInputs?> goalPlan({int pastDays = 60}) async {
-    final plan = (await inner.goalPlan(pastDays: pastDays))!;
-    return GoalPlanInputs(
-      pastTrendKg: plan.pastTrendKg,
-      trendKgPerDay: plan.trendKgPerDay,
-      expenditureKcal: plan.expenditureKcal,
-      bodyFatPercent: plan.bodyFatPercent,
-      targetWeightKg: noTarget ? null : plan.targetWeightKg,
-      paceKgPerWeek: pace,
-    );
-  }
-}
 
 class _UnreadableActivity extends Fake implements ActivityCounter {
   @override

@@ -1,17 +1,11 @@
-import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
-import 'package:opennutritracker/core/domain/entity/body_weight_unit_entity.dart';
 import 'package:opennutritracker/core/utils/tracked_day_lock.dart';
-import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
-import 'package:opennutritracker/fork/adaptive/goal_plan.dart';
 import 'package:opennutritracker/fork/goal/goal_actions.dart';
 import 'package:opennutritracker/fork/phases/phases.dart';
-import 'package:opennutritracker/fork/phases/phases_ui.dart';
 
 // Monday 19 October 2026; the clocks change on the 25th.
 final _start = DateTime(2026, 10, 19);
@@ -24,43 +18,6 @@ final _plan = PhasePlan(
     DietPhase(kind: PhaseKind.bulk, kgPerWeek: 0.25, weeks: 3),
   ],
 );
-
-/// In memory, as real Hive hangs under `testWidgets`.
-class _MemoryPhases extends PhaseStore {
-  PhasePlan? saved;
-
-  _MemoryPhases([this.saved]);
-
-  @override
-  Future<PhasePlan?> plan() async => saved;
-
-  @override
-  Future<void> save(PhasePlan? plan) async {
-    saved = plan;
-    PhaseStore.changes.value++;
-  }
-}
-
-/// A trend weight of 90.4 kg today, once [read] completes (at once by
-/// default).
-class _Trend extends Fake implements AdaptiveService {
-  final Future<void>? read;
-
-  _Trend([this.read]);
-
-  @override
-  Future<GoalPlanInputs?> goalPlan({int pastDays = 60}) async {
-    await read;
-    return const GoalPlanInputs(
-      pastTrendKg: [91, 90.4],
-      trendKgPerDay: -0.05,
-      expenditureKcal: 2500,
-      bodyFatPercent: 25,
-      targetWeightKg: 80,
-      paceKgPerWeek: -0.5,
-    );
-  }
-}
 
 void main() {
   group('the plan', () {
@@ -305,6 +262,87 @@ void main() {
       },
     );
 
+    group('the goal notice', () {
+      late double goal;
+      PhaseRunner noticing() => PhaseRunner(
+        store: store,
+        setPace: (kg, startedOn) async {
+          goal = 2500 + kg * 1000;
+          return true;
+        },
+        homeGoal: () async => goal,
+        clock: () => now,
+      );
+
+      setUp(() => goal = 2500);
+      tearDown(() => PhaseStore.goalNotice.value = null);
+
+      test('says the goal moved the day a phase comes due', () async {
+        await store.save(_plan);
+        await noticing().run();
+        expect(await store.savedGoalNotice(), isNull);
+
+        now = DateTime(2026, 11, 3, 9);
+        final phase = _plan.indexOn(now);
+        expect(phase, greaterThan(0));
+        await noticing().run();
+
+        expect(PhaseStore.goalNotice.value, (
+          title: 'New phase: ${_plan.phases[phase].kind.label}',
+          fromKcal: 2000.0,
+          toKcal: 2500 + _plan.phases[phase].kgPerWeek * 1000,
+        ));
+      });
+
+      test('a plan the user just saved is no news', () async {
+        await store.save(_plan);
+        await noticing().run();
+        await store.save(_plan);
+        goal = 2400;
+        await noticing().run();
+        expect(PhaseStore.goalNotice.value, isNull);
+      });
+
+      test('nothing when a target sets the goal', () async {
+        await store.save(_plan);
+        await noticing().run();
+        now = DateTime(2026, 11, 3, 9);
+        await PhaseRunner(
+          store: store,
+          setPace: (kg, startedOn) async => true,
+          homeGoal: () async => null,
+          clock: () => now,
+        ).run();
+        expect(PhaseStore.goalNotice.value, isNull);
+      });
+
+      test('it stays until dismissed, across runs', () async {
+        await store.save(_plan);
+        await noticing().run();
+        now = DateTime(2026, 11, 3, 9);
+        await noticing().run();
+        PhaseStore.goalNotice.value = null;
+
+        await noticing().run();
+        expect(PhaseStore.goalNotice.value, isNotNull);
+
+        await store.dismissGoalNotice();
+        await noticing().run();
+        expect(PhaseStore.goalNotice.value, isNull);
+      });
+
+      test('a goal unread cannot stop the phase', () async {
+        await store.save(_plan);
+        final run = PhaseRunner(
+          store: store,
+          setPace: (kg, startedOn) async => true,
+          homeGoal: () async => throw StateError('no goal'),
+          clock: () => now,
+        );
+        expect(await run.run(), isTrue);
+      });
+    });
+
     test('saving the plan applies its phase afresh', () async {
       await store.save(_plan);
       await runner().run();
@@ -329,339 +367,6 @@ void main() {
       });
       await Future<void>.delayed(Duration.zero);
       expect(stamps, [isTrue]);
-    });
-  });
-
-  group('the card', () {
-    Future<void> pump(
-      WidgetTester tester,
-      _MemoryPhases store, {
-      AdaptiveService? service,
-    }) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: SingleChildScrollView(
-              child: DietPhasesCard(
-                store: store,
-                clock: () => DateTime(2026, 10, 27, 10),
-                unit: BodyWeightUnit.kg,
-                service: service,
-              ),
-            ),
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-    }
-
-    testWidgets('shows the running phase and what follows', (tester) async {
-      await pump(tester, _MemoryPhases(_plan));
-
-      expect(find.text('Now: Cut, 2 weeks at -0.50 kg a week'), findsOneWidget);
-      expect(find.text('Week 2 of 2, until Nov 2, 2026'), findsOneWidget);
-      expect(
-        find.text('Nov 2, 2026: Maintenance, 1 week at maintenance'),
-        findsOneWidget,
-      );
-    });
-
-    testWidgets('a plan is built: a cut, then a diet break', (tester) async {
-      final store = _MemoryPhases();
-      await pump(tester, store);
-
-      await tester.tap(find.byKey(const ValueKey('phases-edit')));
-      await tester.pumpAndSettle();
-      expect(find.byKey(const ValueKey('phase-0')), findsOneWidget);
-      await tester.tap(find.byKey(const ValueKey('phase-0-shorter')));
-      await tester.tap(find.byKey(const ValueKey('phases-add')));
-      await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const ValueKey('phases-save')));
-      await tester.pumpAndSettle();
-
-      final plan = store.saved!;
-      expect(plan.start, DateTime(2026, 10, 27));
-      expect(
-        [for (final p in plan.phases) (p.kind, p.kgPerWeek, p.weeks)],
-        [(PhaseKind.cut, -0.5, 11), (PhaseKind.maintain, 0, 2)],
-      );
-      expect(
-        find.text('Now: Cut, 11 weeks at -0.50 kg a week'),
-        findsOneWidget,
-      );
-    });
-
-    testWidgets('a phase until a weight: weeks from the pace', (tester) async {
-      final store = _MemoryPhases();
-      await pump(tester, store, service: _Trend());
-      Future<void> tap(String key) async {
-        await tester.ensureVisible(find.byKey(ValueKey(key)));
-        await tester.pumpAndSettle();
-        await tester.tap(find.byKey(ValueKey(key)));
-        await tester.pumpAndSettle();
-      }
-
-      String ends(int i) =>
-          tester.widget<Text>(find.byKey(ValueKey('phase-$i-ends'))).data!;
-
-      await tap('phases-edit');
-      // 12 weeks at -0.5 from 90.4.
-      expect(ends(0), 'Ends about Jan 19, 2027, ~84.4 kg');
-      await tap('phase-0-until');
-      expect(find.text('Until 84.5 kg: about 12 weeks'), findsOneWidget);
-      await tap('phase-0-lighter');
-      await tap('phase-0-lighter');
-      expect(find.text('Until 83.5 kg: about 14 weeks'), findsOneWidget);
-      // It says the weight once: it ends at the one it names.
-      expect(ends(0), 'Ends about Feb 2, 2027');
-
-      // A later phase to a weight starts where this one ends.
-      await tap('phase-0-for-time');
-      await tap('phases-add');
-      await tap('phase-1-cut');
-      await tap('phase-1-until');
-      // From ~83.4 after 14 weeks: to 82.5, two weeks.
-      expect(find.text('Until 82.5 kg: about 2 weeks'), findsOneWidget);
-      await tap('phase-0-shorter');
-      // A week less before it: half a kilo more to lose.
-      expect(find.text('Until 82.5 kg: about 3 weeks'), findsOneWidget);
-      expect(ends(1), 'Ends about Feb 16, 2027');
-
-      await tap('phases-save');
-      final plan = store.saved!;
-      expect(plan.startKg, 90.4);
-      expect(
-        [for (final p in plan.phases) (p.weeks, p.untilKg)],
-        [(13, null), (3, 82.5)],
-      );
-      expect(
-        find.text(
-          'Jan 26, 2027: Cut to 82.5 kg, about 3 weeks at -0.50 kg a week',
-        ),
-        findsOneWidget,
-      );
-    });
-
-    testWidgets('a cut at its heaviest says why + is greyed', (tester) async {
-      final store = _MemoryPhases();
-      await pump(tester, store, service: _Trend());
-      Future<void> tap(String key) async {
-        await tester.ensureVisible(find.byKey(ValueKey(key)));
-        await tester.pumpAndSettle();
-        await tester.tap(find.byKey(ValueKey(key)));
-        await tester.pumpAndSettle();
-      }
-
-      await tap('phases-edit');
-      await tap('phase-0-until');
-      final limit = find.byKey(const ValueKey('phase-0-limit'));
-      expect(limit, findsNothing);
-      final heavier = find.byKey(const ValueKey('phase-0-heavier'));
-      for (
-        var n = 0;
-        n < 30 && tester.widget<IconButton>(heavier).onPressed != null;
-        n++
-      ) {
-        await tap('phase-0-heavier');
-      }
-      expect(tester.widget<IconButton>(heavier).onPressed, isNull);
-      expect(
-        tester.widget<Text>(limit).data,
-        'A cut ends below your trend weight (90.4 kg).',
-      );
-    });
-
-    testWidgets('the editor opens before the trend is read', (tester) async {
-      final read = Completer<void>();
-      await pump(tester, _MemoryPhases(), service: _Trend(read.future));
-      await tester.tap(find.byKey(const ValueKey('phases-edit')));
-      await tester.pumpAndSettle();
-      expect(find.byKey(const ValueKey('phase-0')), findsOneWidget);
-      expect(find.byKey(const ValueKey('phase-0-until')), findsNothing);
-
-      read.complete();
-      await tester.pumpAndSettle();
-      expect(find.byKey(const ValueKey('phase-0-until')), findsOneWidget);
-    });
-
-    testWidgets('a plan saved before the trend is read keeps its weight', (
-      tester,
-    ) async {
-      final read = Completer<void>();
-      final store = _MemoryPhases();
-      await pump(tester, store, service: _Trend(read.future));
-      await tester.tap(find.byKey(const ValueKey('phases-edit')));
-      await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const ValueKey('phases-save')));
-      await tester.pumpAndSettle();
-      expect(store.saved, isNull); // waiting on the read
-
-      read.complete();
-      await tester.pumpAndSettle();
-      expect(store.saved?.startKg, 90.4);
-    });
-
-    testWidgets('a phase earlier ones get past runs by time', (tester) async {
-      await pump(tester, _MemoryPhases(), service: _Trend());
-      Future<void> tap(String key) async {
-        await tester.ensureVisible(find.byKey(ValueKey(key)));
-        await tester.pumpAndSettle();
-        await tester.tap(find.byKey(ValueKey(key)));
-        await tester.pumpAndSettle();
-      }
-
-      await tap('phases-edit');
-      await tap('phases-add');
-      await tap('phase-1-cut');
-      await tap('phase-1-until');
-      // From ~84.4 after 12 weeks: to 83.5.
-      expect(find.text('Until 83.5 kg: about 2 weeks'), findsOneWidget);
-      await tap('phase-0-longer');
-      await tap('phase-0-longer');
-      // A week left after the first, then the first ends at ~83.4, past it:
-      // a week by time.
-      expect(
-        tester
-            .widget<ChoiceChip>(find.byKey(const ValueKey('phase-1-for-time')))
-            .selected,
-        isTrue,
-      );
-      expect(find.text('1 week'), findsOneWidget);
-    });
-
-    testWidgets('a first target is past the start, the pace\'s way', (
-      tester,
-    ) async {
-      await pump(tester, _MemoryPhases(), service: _Trend());
-      await tester.tap(find.byKey(const ValueKey('phases-edit')));
-      await tester.pumpAndSettle();
-      for (var i = 0; i < 11; i++) {
-        await tester.tap(find.byKey(const ValueKey('phase-0-shorter')));
-        await tester.pump();
-      }
-      // The slowest pace: a week at -0.1 from 90.4 rounds to 90.5, above;
-      // the next step under it is 90.0.
-      await tester.drag(
-        find.byKey(const ValueKey('phase-0-pace')),
-        const Offset(-1000, 0),
-      );
-      await tester.pumpAndSettle();
-      expect(find.text('Pace -0.10 kg a week'), findsOneWidget);
-      await tester.tap(find.byKey(const ValueKey('phase-0-until')));
-      await tester.pumpAndSettle();
-      expect(find.textContaining('Until 90.0 kg'), findsOneWidget);
-    });
-
-    testWidgets('a phase to a weight past 52 weeks says where it ends', (
-      tester,
-    ) async {
-      await pump(
-        tester,
-        _MemoryPhases(
-          PhasePlan(
-            start: _start,
-            startKg: 90,
-            phases: const [
-              DietPhase(
-                kind: PhaseKind.cut,
-                kgPerWeek: -0.5,
-                weeks: 52,
-                untilKg: 60,
-              ),
-            ],
-          ),
-        ),
-      );
-      expect(
-        find.text(
-          'Now: Cut toward 60.0 kg, 52 weeks (the longest a phase runs) '
-          'at -0.50 kg a week',
-        ),
-        findsOneWidget,
-      );
-      expect(find.textContaining('~64.0 kg'), findsOneWidget);
-    });
-
-    testWidgets('without a weight, phases are by time only', (tester) async {
-      await pump(tester, _MemoryPhases());
-      await tester.tap(find.byKey(const ValueKey('phases-edit')));
-      await tester.pumpAndSettle();
-      expect(find.byKey(const ValueKey('phase-0-until')), findsNothing);
-      expect(
-        tester.widget<Text>(find.byKey(const ValueKey('phase-0-ends'))).data,
-        'Ends Jan 19, 2027',
-      );
-    });
-
-    testWidgets('a plan is deleted', (tester) async {
-      final store = _MemoryPhases(_plan);
-      await pump(tester, store);
-
-      await tester.tap(find.byKey(const ValueKey('phases-edit')));
-      await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const ValueKey('phases-delete')));
-      await tester.pumpAndSettle();
-      // Asked first: cancelled, the plan stays.
-      await tester.tap(find.text('Cancel'));
-      await tester.pumpAndSettle();
-      expect(find.byKey(const ValueKey('phases-save')), findsOneWidget);
-      expect(store.saved, isNotNull);
-
-      await tester.tap(find.byKey(const ValueKey('phases-delete')));
-      await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const ValueKey('phases-confirm')));
-      await tester.pumpAndSettle();
-
-      expect(store.saved, isNull);
-      expect(find.text('Plan'), findsOneWidget);
-    });
-
-    testWidgets('back asks before changes are lost', (tester) async {
-      final store = _MemoryPhases(_plan);
-      await pump(tester, store);
-      final save = find.byKey(const ValueKey('phases-save'));
-
-      // Nothing changed: back just leaves.
-      await tester.tap(find.byKey(const ValueKey('phases-edit')));
-      await tester.pumpAndSettle();
-      await tester.pageBack();
-      await tester.pumpAndSettle();
-      expect(save, findsNothing);
-
-      await tester.tap(find.byKey(const ValueKey('phases-edit')));
-      await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const ValueKey('phase-0-longer')));
-      await tester.pump();
-      await tester.pageBack();
-      await tester.pumpAndSettle();
-      expect(find.text('Discard your changes?'), findsOneWidget);
-      await tester.tap(find.text('Cancel'));
-      await tester.pumpAndSettle();
-      expect(save, findsOneWidget);
-
-      await tester.pageBack();
-      await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const ValueKey('phases-confirm')));
-      await tester.pumpAndSettle();
-      expect(save, findsNothing);
-      expect(store.saved!.phases.first.weeks, _plan.phases.first.weeks);
-    });
-
-    testWidgets('the steppers and the pace are named', (tester) async {
-      await pump(tester, _MemoryPhases(_plan));
-      await tester.tap(find.byKey(const ValueKey('phases-edit')));
-      await tester.pumpAndSettle();
-
-      Finder tip(String key) => find.descendant(
-        of: find.byKey(ValueKey(key)),
-        matching: find.byType(Tooltip),
-      );
-      expect(tester.widget<Tooltip>(tip('phase-0-shorter')).message, 'Shorter');
-      expect(tester.widget<Tooltip>(tip('phase-0-longer')).message, 'Longer');
-      final pace = tester.widget<Slider>(
-        find.byKey(const ValueKey('phase-0-pace')),
-      );
-      expect(pace.semanticFormatterCallback!(0.5), 'Pace, -0.50 kg a week');
     });
   });
 }

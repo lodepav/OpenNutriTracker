@@ -1,5 +1,3 @@
-import 'package:opennutritracker/fork/adaptive/energy.dart';
-
 /// What the goal planner starts from, read by `AdaptiveService.goalPlan`.
 class GoalPlanInputs {
   /// The smoothed trend over the past days, oldest first, the last today.
@@ -42,27 +40,7 @@ Map<int, double> trendChanges(List<double> pastTrendKg) => {
       days: pastTrendKg.last - pastTrendKg[pastTrendKg.length - 1 - days],
 };
 
-/// The plan at one pace.
-class GoalPlan {
-  /// From today on, one a day, at the pace until the target, then held.
-  final List<double> projectedKg;
-
-  /// Days to the target, possibly past the curve's [maxPlanDays]; null
-  /// with no target, at it, or moving away.
-  final int? daysToTarget;
-
-  /// Expenditure plus the pace's energy, before the check-in's cap and
-  /// upstream's taper.
-  final double dailyTargetKcal;
-
-  const GoalPlan({
-    required this.projectedKg,
-    required this.daysToTarget,
-    required this.dailyTargetKcal,
-  });
-}
-
-/// Days the projection runs when the target is out of reach.
+/// Past this many days a target's date reads as over a year.
 const maxPlanDays = 365;
 
 /// Days to [targetKg] from [nowKg] at [kgPerDay]; null when there is no
@@ -74,29 +52,6 @@ int? daysToTarget(double nowKg, double? targetKg, double kgPerDay) {
     return null;
   }
   return (toGo / kgPerDay).ceil();
-}
-
-/// The weight curve and daily target at [paceKgPerWeek].
-GoalPlan planAt(GoalPlanInputs inputs, double paceKgPerWeek) {
-  final perDay = paceKgPerWeek / 7;
-  final now = inputs.nowKg;
-  final days = daysToTarget(now, inputs.targetWeightKg, perDay);
-  final length = days == null
-      ? (inputs.targetWeightKg == null ? 182 : maxPlanDays)
-      : (days + 14).clamp(28, maxPlanDays);
-  final projected = [
-    for (var d = 0; d <= length; d++)
-      days != null && d >= days ? inputs.targetWeightKg! : now + perDay * d,
-  ];
-  return GoalPlan(
-    projectedKg: projected,
-    daysToTarget: days,
-    dailyTargetKcal:
-        inputs.expenditureKcal +
-        perDay *
-            (inputs.kcalPerKg ??
-                energyDensity(fatMassKg(now, inputs.bodyFatPercent))),
-  );
 }
 
 /// The milestone steps offered, in the unit's own numbers: kg for kg, lb

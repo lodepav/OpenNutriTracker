@@ -11,7 +11,7 @@ import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/core/utils/calc/calendar_day_calc.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/fork/adaptive/goal_plan.dart';
-import 'package:opennutritracker/fork/adaptive/goal_plan_card.dart';
+import 'package:opennutritracker/fork/adaptive/goal_saving.dart';
 import 'package:opennutritracker/fork/goal/goal_plan_view.dart';
 import 'package:opennutritracker/fork/goal/goal_planner.dart';
 import 'package:opennutritracker/fork/goal/goal_progress.dart';
