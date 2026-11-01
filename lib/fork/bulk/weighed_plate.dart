@@ -19,14 +19,18 @@ You list the foods on a plate the user has weighed, so each can be looked up
 in a table of generic foods (USDA, BLS). You do not estimate nutrition.
 
 The user's note states weights. Rules:
-- If the note names one dish or food and nothing else, return just that one
-  item: "query" its name as the note writes it, with the note's weight as
-  "quantity" and "unit". Do not split it into ingredients.
-- Otherwise the first item names the plate: "query" is "dish=" and a short
-  name for the whole meal in the user's app language ("dish=Chicken rice
-  bowl"), with no quantity.
+- If the note names one plain food and nothing else ("a banana", "greek
+  yogurt 200g"), return just that one item: "query" its name as the note
+  writes it, with the note's weight as "quantity" and "unit".
+- Otherwise the first item names the plate: "query" is "dish=" and the name
+  the note gives it, without its weight, in the user's app language; when
+  the note gives no name for the whole meal, a short one ("dish=Chicken
+  rice bowl"). It has no quantity.
 - Then one item per food on the plate, as served (cooked, as eaten, not
-  raw): every food the note names, and when the note names none, every food
+  raw), a named dish too: a pizza is its crust, sauce, cheese and each
+  topping; loaded fries are the fries, each topping and each sauce on them;
+  a soup or stew is its broth or base and each solid in it. A sauce poured
+  over is a food. Every food the note names is among them; the rest are what
   the photo shows. "query" is the nearest generic food in English, named
   the way a food table names it: the food, then its form and state after
   commas ("chicken breast, grilled", "rice, white, cooked", "potatoes,
