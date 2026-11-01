@@ -638,6 +638,9 @@ void main() {
       200,
       scrollable: find.byType(Scrollable).first,
     );
+    // Today, over the limit already, is no day over it yet.
+    expect(find.text('Over the limit'), findsOneWidget);
+    expect(find.text('0 days'), findsOneWidget);
     expect(find.text('Soup'), findsOneWidget);
     expect(find.text('3.8 g'), findsOneWidget);
     expect(find.text('Crisps'), findsNothing);

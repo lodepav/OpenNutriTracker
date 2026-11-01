@@ -710,6 +710,42 @@ void main() {
       expect(reflowed(over, [next], fromKg: 80).single.start, over.end);
     });
 
+    test('after a goal already over, the next is planned from now', () {
+      final over = _cutFrom(DateTime(2026, 1, 5));
+      final next = GoalDraft(
+        kind: PhaseKind.cut,
+        startKg: 83,
+        targetKg: 73,
+        start: over.end,
+      ).toPlan();
+      final today = over.end.add(const Duration(days: 21));
+      final moved = reflowed(over, [next], fromKg: 83, today: today).single;
+      expect(moved.startKg, 83);
+      expect(
+        moved.end.difference(moved.start),
+        next.end.difference(next.start),
+      );
+    });
+
+    testWidgets('an After chip on a goal already over starts today from now', (
+      tester,
+    ) async {
+      final over = _cutFrom(_inDays(-200));
+      await _pump(
+        tester,
+        GoalPlannerScreen(
+          setup: _setup(nowKg: 84, running: over),
+          draft: GoalDraft.fresh(84, DateTime.now(), targetKg: 75),
+          onStart: (_) async => true,
+          onQueue: (_, _) async => true,
+        ),
+      );
+      await tester.tap(_start('after-0'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('where'), findsNothing);
+      expect(find.textContaining('is 84'), findsWidgets);
+    });
+
     testWidgets('the pace and plan steps say so', (tester) async {
       await _pump(
         tester,

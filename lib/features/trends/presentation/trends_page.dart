@@ -186,7 +186,9 @@ class _WaterTrendCard extends StatelessWidget {
     var sum = 0;
     var loggedDays = 0;
     for (int i = 0; i < rangeDays; i++) {
-      final day = today.subtract(Duration(days: rangeDays - 1 - i));
+      // [fork] S190 logical-today: calendar days, as _dayLabels counts them
+      final day = DateTime(today.year, today.month, today.day - (rangeDays - 1 - i));
+      // [/fork]
       final ml = waterByDay[DateTime(day.year, day.month, day.day)] ?? 0;
       spots.add(FlSpot(i.toDouble(), ml.toDouble()));
       if (ml > 0) {

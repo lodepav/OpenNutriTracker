@@ -280,6 +280,22 @@ void main() {
       expect(store.goals.single.end, DateTime(2027, 1, 4));
     });
 
+    test('a queued cut due takes the weeks its real weight needs', () async {
+      final cut = GoalDraft(
+        kind: PhaseKind.cut,
+        startKg: 75,
+        targetKg: 70,
+        paceKg: 0.5,
+        start: DateTime(2027, 1, 4),
+      ).toPlan();
+      store.queue.add(cut);
+      today = DateTime(2027, 1, 4, 9);
+      expect(await actions().startNextIfDue(78), isTrue);
+      expect(store.saved!.startKg, 78);
+      expect(store.saved!.start, cut.start);
+      expect(store.saved!.end.isAfter(cut.end), isTrue);
+    });
+
     test('a move that leaves a goal behind its target flags it', () async {
       // A cut to 81 after a bulk to 84; moved first, it starts at the
       // running cut's 80, already under its target.

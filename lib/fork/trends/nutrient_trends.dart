@@ -175,8 +175,8 @@ class _MicroDetailState extends State<MicroDetail> {
               ),
               (
                 label: nutrient.isLimit ? 'Under it' : 'Met',
-                value: good == null ? '–' : '$good',
-                unit: 'of ${days(counted.length)}',
+                value: good == null || counted.isEmpty ? '–' : '$good',
+                unit: counted.isEmpty ? '' : 'of ${days(counted.length)}',
               ),
             ],
           ),
@@ -208,7 +208,7 @@ class _MicroDetailState extends State<MicroDetail> {
             trendSection(context, 'How the days went'),
             TrendRows(
               rows: [
-                if (good != null)
+                if (good != null && counted.isNotEmpty)
                   (
                     label: nutrient.isLimit
                         ? 'Over the limit'

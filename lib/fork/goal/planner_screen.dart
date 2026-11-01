@@ -773,7 +773,7 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
       _question(
         context,
         'What do you want to do?',
-        _queued
+        _queued && _goalBefore(_place!).end.isAfter(_today)
             ? 'It starts from ${_kg(_draft.startKg)}, where '
                   '${_goalName(_goalBefore(_place!))} ends.$breaks'
             : 'Your ${_setup.running == null ? 'weight' : 'trend weight'} '

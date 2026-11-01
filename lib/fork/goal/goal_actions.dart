@@ -147,18 +147,19 @@ class GoalActions {
         completedGoal(plan, nowKg, _date(next.start)),
       ]);
     }
-    // It begins the day it was planned to, so the rest stay as planned,
-    // from the weight it really begins at.
-    await _store.save(
-      PhasePlan(
-        start: next.start,
-        phases: next.phases,
-        startKg: nowKg ?? next.startKg,
-        targetKg: next.targetKg,
-        extensions: next.extensions,
-      ),
-    );
-    await _store.saveUpcoming(queue.skip(1).toList());
+    // It begins the day it was planned to, from the weight it really begins
+    // at, which the weeks to a target and the goals after it follow.
+    final started = nowKg != null && next.targetKg != null
+        ? restarted(next, next.start, nowKg)
+        : PhasePlan(
+            start: next.start,
+            phases: next.phases,
+            startKg: nowKg ?? next.startKg,
+            targetKg: next.targetKg,
+            extensions: next.extensions,
+          );
+    await _store.save(started);
+    await _reflow(started, queue.skip(1).toList(), nowKg);
     return true;
   });
 

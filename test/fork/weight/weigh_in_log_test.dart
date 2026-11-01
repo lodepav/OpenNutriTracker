@@ -5,6 +5,7 @@ import 'package:opennutritracker/core/domain/entity/body_weight_unit_entity.dart
 import 'package:opennutritracker/core/domain/entity/weight_log_entity.dart';
 import 'package:opennutritracker/core/domain/usecase/add_weight_log_usecase.dart';
 import 'package:opennutritracker/core/domain/usecase/delete_weight_log_usecase.dart';
+import 'package:opennutritracker/core/domain/usecase/get_weight_log_usecase.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/features/profile/presentation/widgets/set_weight_dialog.dart';
 import 'package:opennutritracker/fork/weight/weigh_in_log.dart';
@@ -17,6 +18,15 @@ class _Delete extends Fake implements DeleteWeightLogUsecase {
 
   @override
   Future<void> deleteEntry(WeightLogEntity entry) async => deleted.add(entry);
+}
+
+class _Log extends Fake implements GetWeightLogUsecase {
+  final List<WeightLogEntity> entries;
+
+  _Log(this.entries);
+
+  @override
+  Future<List<WeightLogEntity>> getAllEntries() async => entries;
 }
 
 final _today = DateUtils.dateOnly(DateTime.now());
@@ -45,6 +55,19 @@ void main() {
     locator.registerSingleton<DeleteWeightLogUsecase>(delete);
   });
   tearDown(locator.reset);
+
+  test('a row is found by the day it is filed under', () async {
+    final yesterday = DateTime(_today.year, _today.month, _today.day - 1);
+    final moved = WeightLogEntity(
+      date: yesterday,
+      weightKg: 87,
+      filedDay: _today,
+    );
+    locator.registerSingleton<GetWeightLogUsecase>(_Log([moved]));
+    final byDay = await weighInsByDay();
+    expect(byDay[_today], moved);
+    expect(byDay[yesterday], isNull);
+  });
 
   testWidgets("a second weigh-in today says it replaces the first", (
     tester,
