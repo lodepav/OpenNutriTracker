@@ -294,9 +294,6 @@ class BackupExtras {
       for (final meal in customMeals ?? const <MealDBO>[]) {
         await _customMeals.saveCustomMeal(meal);
       }
-      if (adaptive?.kept case final kept?) {
-        await _adaptive().restoreKept(kept);
-      }
       if (adaptive?.plan case final plan?) await _phases().save(plan);
       if (adaptive?.upcoming case final upcoming?) {
         await _phases().saveUpcoming(upcoming);
@@ -306,6 +303,10 @@ class BackupExtras {
       }
       if (adaptive?.goals case final goals? when goals.isNotEmpty) {
         await _phases().addToHistory(goals);
+      }
+      // After the plan: saving one clears the phase already applied.
+      if (adaptive?.kept case final kept?) {
+        await _adaptive().restoreKept(kept);
       }
       if (plans != null) await _plans().merge(plans);
       if (measurements != null) {

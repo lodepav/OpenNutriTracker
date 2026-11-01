@@ -160,6 +160,29 @@ void main() {
     expect(file.weightsKg, isEmpty); // "Gewicht" is no weight header
   });
 
+  test('a custom food in kJ is stored in kcal', () {
+    final file = readHistory(
+      readTables(
+        'Custom Foods.csv',
+        _bytes('Food Name,Energy (kJ),Protein (g)\nOats,1500,12\n'),
+      ),
+    );
+    expect(file.customFoods.single.kcal, closeTo(358.5, 0.1));
+  });
+
+  test('a % DV column gives way to the amount beside it', () {
+    final file = readHistory(
+      readTables(
+        'log.csv',
+        _bytes(
+          'date,food,calories,vitamin c (% dv),vitamin c (mg)\n'
+          '2024-01-01,Orange,60,90,70\n',
+        ),
+      ),
+    );
+    expect(file.foods.single.nutrients['vitaminC'], 70);
+  });
+
   test('a scale weight column is the weight', () {
     final file = readHistory(
       readTables(

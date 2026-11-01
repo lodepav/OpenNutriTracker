@@ -49,7 +49,7 @@ class LayoutStore {
 
   /// After a restore wrote them.
   static Future<void> reload() async {
-    for (final k in _current.keys) {
+    for (final k in [..._current.keys]) {
       await _load(k);
     }
   }

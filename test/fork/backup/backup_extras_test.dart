@@ -136,6 +136,14 @@ void main() {
       'counted here stays', () async {
     final from = device();
     final box = await Hive.openBox<dynamic>('adaptive${boxes - 1}');
+    await from.phases.save(
+      PhasePlan(
+        start: DateTime(2026, 10, 19),
+        phases: const [
+          DietPhase(kind: PhaseKind.cut, kgPerWeek: -0.5, weeks: 8),
+        ],
+      ),
+    );
     await box.putAll({
       'steps': {'2026-10-20': 9000, '2026-10-21': 4000},
       'workoutSteps': {

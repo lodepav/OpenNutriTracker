@@ -624,6 +624,9 @@ FoodRow? Function(List<String> row, String name, double? grams)? _foodColumns(
     (c) => _names(c, 'calories') || c == 'kcal' || c.startsWith('energy'),
   );
   if (kcal == null) return null;
+  final kcalFactor = h[kcal].contains('kj') && !h[kcal].contains('kcal')
+      ? 1 / 4.184
+      : 1.0;
   final protein = _col(h, (c) => _names(c, 'protein'));
   final carbs = _col(
     h,
@@ -635,7 +638,7 @@ FoodRow? Function(List<String> row, String name, double? grams)? _foodColumns(
     final k? when k >= 0 => FoodRow(
       name: name,
       grams: grams,
-      kcal: k,
+      kcal: k * kcalFactor,
       protein: _number(_at(row, protein)),
       carbs: _number(_at(row, carbs)),
       fat: _number(_at(row, fat)),
@@ -657,7 +660,12 @@ Map<String, (int, double)> _nutrientsIn(
   int? Function(bool Function(String)) find,
 ) => {
   for (final MapEntry(key: key, value: starts) in nutrientColumns.entries)
-    if (find((c) => starts.any((s) => _names(c, s)) && !c.contains('added'))
+    if (find(
+          (c) =>
+              starts.any((s) => _names(c, s)) &&
+              !c.contains('added') &&
+              nutrientFactor(key, c) != null,
+        )
         case final column?)
       if (nutrientFactor(key, h[column]) case final factor?)
         key: (column, factor),
