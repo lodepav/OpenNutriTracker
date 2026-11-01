@@ -105,7 +105,6 @@ void main() {
                 day: DateTime(2026, 10, 25),
                 addMealType: AddMealType.dinnerType,
                 usesImperialUnits: false,
-                history: history,
                 entries: [for (final m in history) _entry(m, 640)],
                 favourites: favouritesBloc(),
               ),

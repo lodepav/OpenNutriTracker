@@ -26,8 +26,6 @@ Future<DateTime> logicalToday() async {
   );
 }
 
-void refreshAfterCopy() => refreshAfterLogging();
-
 /// What the "where to" sheet picked: copy or move, the moment, the meal
 /// (null: each its own) and, for a whole day, whether activities go too.
 typedef WhereTo = ({
@@ -117,7 +115,7 @@ Future<void> placeWithUndo(
           type: meal,
           movedFrom: movedFrom,
         );
-  refreshAfterCopy();
+  refreshAfterLogging();
   if (messenger == null) return;
   final done = verb ?? (movedFrom == null ? 'Copied' : 'Moved');
   messenger.removeCurrentSnackBar();
@@ -166,7 +164,7 @@ Future<void> placeWithUndo(
                   ],
             from: movedFrom,
           );
-          refreshAfterCopy();
+          refreshAfterLogging();
           if (!undone) {
             messenger.showSnackBar(
               const SnackBar(content: Text('Not undone: the profile changed.')),
@@ -202,7 +200,7 @@ Future<void> copyActivitiesWithDialog(
     activities,
     day,
   );
-  refreshAfterCopy();
+  refreshAfterLogging();
   if (context.mounted) _copied(context, copied ? day : null);
 }
 

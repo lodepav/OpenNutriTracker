@@ -115,10 +115,6 @@ extension _BulkAddDish on _BulkAddScreenState {
   void _scaleDish(Object group, String text) {
     final state = _bloc.state;
     if (state is! BulkAddLoadedState) return;
-    if (state.rows.length != _portionBaseRows) {
-      _portionBase.clear();
-      _portionBaseRows = state.rows.length;
-    }
     final base = _portionBase.putIfAbsent(
       group,
       () => portionBase(state.rows, dishMembers(state.rows, group)),

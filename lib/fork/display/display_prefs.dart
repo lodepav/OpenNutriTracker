@@ -43,14 +43,12 @@ abstract final class DisplayPrefs {
   /// Run at start-up (seam S6): loads the active profile's, and again on a
   /// profile switch.
   static Future<void> start() async {
-    await _load();
-    locator<HiveDBProvider>().addListener(_load);
+    await reload();
+    locator<HiveDBProvider>().addListener(reload);
   }
 
-  /// After a restore wrote them.
-  static Future<void> reload() => _load();
-
-  static Future<void> _load() async {
+  /// Read now, on a profile switch and after a restore wrote them.
+  static Future<void> reload() async {
     final box = await _box();
     macroOrder.value = parseOrder(box.get(_orderKey));
     diaryByHour.value = box.get(_byHourKey) == true;

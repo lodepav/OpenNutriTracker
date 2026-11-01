@@ -187,7 +187,8 @@ Future<void> _logFromRow(
   if (!context.mounted) return;
   final mealName = mealLabel(context, type);
   final route = ModalRoute.of(context);
-  final IntakeEntity? written;
+  IntakeEntity? written;
+  var failed = false;
   try {
     written = await locator<MealDetailBloc>().addIntake(
       context,
@@ -199,24 +200,18 @@ Future<void> _logFromRow(
     );
   } catch (error, stack) {
     _log.warning('One-tap write failed for ${meal.code}', error, stack);
-    // As below: a bar would show under the sheet.
-    if (route is PopupRoute && route.isCurrent && context.mounted) {
-      Navigator.of(context).pop();
-    }
-    if (messenger != null) showNotAdded(messenger, failed: true);
-    return;
+    failed = true;
   }
-  refreshAfterLogging();
+  if (!failed) refreshAfterLogging();
   // A page opened over the sheet while this logged stays open.
   if (route is PopupRoute && route.isCurrent && context.mounted) {
     Navigator.of(context).pop();
   }
   if (messenger == null) return;
   if (written == null) {
-    showNotAdded(messenger, failed: false);
+    showNotAdded(messenger, failed: failed);
     return;
   }
-  messenger.removeCurrentSnackBar();
   final amountAdded = isEnergyOnly(food) ? '' : amountText(written, imperial);
   final name = food.name?.trim() ?? '';
   showLoggedBar(

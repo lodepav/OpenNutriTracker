@@ -230,11 +230,7 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
       );
     } catch (error, stack) {
       Logger('RecipeDetailScreen').warning('Log failed', error, stack);
-      messenger
-        ..removeCurrentSnackBar()
-        ..showSnackBar(
-          const SnackBar(content: Text("Not added: it couldn't be saved.")),
-        );
+      showNotAdded(messenger, failed: true);
     } finally {
       if (mounted) setState(() => _logging = false);
     }

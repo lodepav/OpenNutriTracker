@@ -18,10 +18,8 @@ class SearchSections extends StatefulWidget {
   final DateTime day;
   final AddMealType addMealType;
   final bool usesImperialUnits;
-  final List<MealEntity> history;
 
-  /// The latest entry of each of [history], in the same order; empty when
-  /// not known, and the rows show the food per 100 g.
+  /// The latest entry of each food in the history.
   final List<IntakeEntity> entries;
   final FavouriteMealBloc favourites;
 
@@ -30,7 +28,6 @@ class SearchSections extends StatefulWidget {
     required this.day,
     required this.addMealType,
     required this.usesImperialUnits,
-    required this.history,
     required this.entries,
     required this.favourites,
   });
@@ -51,10 +48,10 @@ class _SearchSectionsState extends State<SearchSections> {
 
   @override
   Widget build(BuildContext context) {
-    final history = widget.history;
+    final entries = widget.entries;
     final shown = _all
-        ? history.length
-        : history.length.clamp(0, SearchSections.historyShown);
+        ? entries.length
+        : entries.length.clamp(0, SearchSections.historyShown);
     MealItemCard row(MealEntity meal, IntakeEntity? entry, bool imperial) =>
         MealItemCard(
           day: widget.day,
@@ -68,29 +65,29 @@ class _SearchSectionsState extends State<SearchSections> {
       container: true,
       child: CustomScrollView(
         slivers: [
-          if (history.isNotEmpty)
-            SliverToBoxAdapter(
+          if (entries.isNotEmpty)
+            const SliverToBoxAdapter(
               child: SearchSectionHeader(
                 title: 'From your history',
-                note: widget.entries.isEmpty ? null : 'last amount',
+                note: 'last amount',
               ),
             ),
           SliverList.builder(
             itemCount: shown,
             itemBuilder: (context, index) => row(
-              history[index],
-              index < widget.entries.length ? widget.entries[index] : null,
+              entries[index].meal,
+              entries[index],
               widget.usesImperialUnits,
             ),
           ),
-          if (shown < history.length)
+          if (shown < entries.length)
             SliverToBoxAdapter(
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: TextButton(
                   key: const ValueKey('search-history-all'),
                   onPressed: () => setState(() => _all = true),
-                  child: Text('Show all ${history.length}'),
+                  child: Text('Show all ${entries.length}'),
                 ),
               ),
             ),

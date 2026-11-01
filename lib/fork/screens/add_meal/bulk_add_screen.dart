@@ -161,13 +161,12 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
   // runs breakdowns and marks the rows (D12)
   late final _dishBreakdown =
       DishBreakdownController(
-          _bloc,
-          photo: () => _forkMealPhoto,
-          onRowsMoved: _onRowsMoved,
-        )
-        ..addListener(() {
-          if (mounted) setState(() {});
-        });
+        _bloc,
+        photo: () => _forkMealPhoto,
+        onRowsMoved: _onRowsMoved,
+      )..addListener(() {
+        if (mounted) setState(() {});
+      });
 
   /// A field keeps its place in the list while its row moves, so typing on
   /// would go to another food; the refusal marks and portion bases are by
@@ -225,10 +224,6 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
   /// The rows' amounts when the portion being typed was first changed, so
   /// that each keystroke scales from them and not from the last rounding.
   final _portionBase = <Object, Map<int, double>>{};
-
-  /// The batch's size when [_portionBase] was taken: it is keyed by row
-  /// index, which a breakdown landing above a dish moves.
-  int _portionBaseRows = 0;
 
   void _toggleDishFolded(Object group) =>
       setState(() => _foldedDishes.remove(group) || _foldedDishes.add(group));
@@ -1056,13 +1051,21 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
     _textController.clear();
     // These rows are the photo's, not a page's read before.
     _forkLinkedRecipe = null;
+    _sendPhoto(photo);
+  }
+
+  /// Reads [photo] with [_photoNote], in place of the rows there. A failure
+  /// keeps the photo, to send again.
+  void _sendPhoto(MealPhoto photo) {
     // the subscription starts with the first read
     _stagedRead;
-    setState(() => _readingStaged = true);
+    setState(() {
+      _stagedPhoto = photo;
+      _readingStaged = true;
+    });
     // A photo replaces the previous batch, so the old controllers go with it.
     _resetAmountControllers();
     _forkMealPhoto = photo;
-
     _bloc.add(
       ReadMealPhotoEvent(
         photo: photo,
@@ -1096,21 +1099,7 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
     final note = await askDishName(context, initial: _photoNote ?? '');
     if (note == null || !mounted) return;
     _photoNote = note;
-    _resetAmountControllers();
-    // As a first read: a failure keeps the photo, to send again.
-    _stagedRead;
-    setState(() {
-      _stagedPhoto = photo;
-      _readingStaged = true;
-    });
-    _bloc.add(
-      ReadMealPhotoEvent(
-        photo: photo,
-        usesImperialUnits: _args.usesImperialUnits,
-        localeCode: Localizations.localeOf(context).languageCode,
-        note: note,
-      ),
-    );
+    _sendPhoto(photo);
   }
 
   void _resetAmountControllers() {

@@ -64,11 +64,7 @@ class LayoutStore {
     if (!_listening) {
       _listening = true;
       try {
-        locator<HiveDBProvider>().addListener(() {
-          for (final k in _current.keys) {
-            _load(k);
-          }
-        });
+        locator<HiveDBProvider>().addListener(reload);
       } catch (_) {
         // No locator in widget tests.
       }

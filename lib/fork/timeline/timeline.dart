@@ -13,7 +13,8 @@ import 'package:opennutritracker/core/utils/tracked_day_lock.dart';
 import 'package:opennutritracker/features/add_meal/presentation/add_meal_screen.dart';
 import 'package:opennutritracker/features/add_meal/presentation/add_meal_type.dart';
 import 'package:opennutritracker/fork/copy/copy_entries.dart';
-import 'package:opennutritracker/fork/copy/copy_ui.dart' show refreshAfterCopy;
+import 'package:opennutritracker/fork/basket/basket_ui.dart'
+    show refreshAfterLogging;
 import 'package:opennutritracker/fork/units/amount_text.dart';
 import 'package:opennutritracker/fork/units/energy_text.dart';
 
@@ -89,7 +90,7 @@ class TimelineEntries {
           await intakes.addIntake(moved);
         });
         // The Diary lists the day by these times.
-        refreshAfterCopy();
+        refreshAfterLogging();
       },
       config: locator<GetConfigUsecase>().getConfig,
     );

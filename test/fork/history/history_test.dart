@@ -79,7 +79,7 @@ void main() {
     expect(file.food[DateTime(2024, 1, 13)]!.keys, [IntakeTypeEntity.dinner]);
     expect(file.weightsKg[DateTime(2024, 1, 5)], closeTo(81.87, 0.01));
     expect(file.weightUnitStated, isFalse);
-    expect(file.foodTable, 'Nutrition-Summary.csv');
+    expect(file.foodTables.first, 'Nutrition-Summary.csv');
     expect(file.weightTable, 'Measurement-Summary.csv');
   });
 
@@ -113,7 +113,7 @@ void main() {
     expect(file.weightsKg, {DateTime(2024, 1, 1): 80.9});
     expect(file.weightUnitStated, isTrue);
     expect(file.weightUnit, BodyWeightUnit.kg);
-    expect(file.foodTable, 'Quick Export');
+    expect(file.foodTables.first, 'Quick Export');
   });
 
   test('Cronometer zip: the daily summary, and weight among biometrics in '

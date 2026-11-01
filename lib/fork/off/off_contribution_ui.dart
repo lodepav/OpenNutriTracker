@@ -45,14 +45,7 @@ Future<void> offerOffUpload(
   // No client to send with: the app's is missing in widget tests.
   if (client == null && !locator.isRegistered<http.Client>()) return;
   final read = OffUpload.fromMeal(meal);
-  final full = withNutrients
-      ? read
-      : OffUpload(
-          barcode: read.barcode,
-          name: read.name,
-          brand: read.brand,
-          nutrients: const {},
-        );
+  final full = withNutrients ? read : read.copyWith(nutrients: const {});
   if (!isBarcodeFormatValid(full.barcode) || full.isEmpty) return;
   final account = await (store ?? OffAccountStore()).load();
   if (!account.isReady || !context.mounted) return;

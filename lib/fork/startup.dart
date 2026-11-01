@@ -12,7 +12,6 @@ import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:opennutritracker/core/utils/hive_db_provider.dart';
 import 'package:opennutritracker/core/utils/hive_storage_integrity_exception.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
-import 'package:opennutritracker/core/utils/secure_app_storage_provider.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/fork/backup/auto_backup.dart';
 import 'package:opennutritracker/fork/backup/backup_extras.dart';
@@ -81,7 +80,6 @@ BackupExtras forkBackupExtras(HiveDBProvider hiveDBProvider) => BackupExtras(
 /// Seam S6: back to nothing started, when the recovery screen's Retry runs
 /// the bootstrap again; a second registration would throw.
 Future<void> forkResetForRetry() async {
-  if (!locator.isRegistered<SecureAppStorageProvider>()) return;
   await Hive.close();
   await locator.reset();
 }

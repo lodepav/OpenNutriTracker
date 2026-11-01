@@ -11,10 +11,4 @@ void main() {
     await forkResetForRetry();
     expect(locator.isRegistered<SecureAppStorageProvider>(), isFalse);
   });
-
-  test('a first start leaves the locator alone', () async {
-    locator.registerSingleton<int>(1);
-    await forkResetForRetry();
-    expect(locator.isRegistered<int>(), isTrue);
-  });
 }
