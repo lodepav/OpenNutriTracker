@@ -197,6 +197,59 @@ void main() {
       },
     );
 
+    test('a weight in the middle of a name is that food\'s', () {
+      final w = noteWeights('panini with 200g beef')!;
+      expect(w.totalGrams, isNull);
+      expect(w.foods, [(name: 'beef', grams: 200.0)]);
+      expect(
+        noteWeights('burger with 180g beef patty, onion rings, cheddar')!.foods,
+        [(name: 'beef patty', grams: 180.0)],
+      );
+      expect(noteWeights('burgers ar 180g liellopa')!.foods, [
+        (name: 'liellopa', grams: 180.0),
+      ]);
+    });
+
+    test('one food\'s weight among several is not the split dish\'s', () {
+      final items = weighedPlateItems([
+        const ParsedMealItem(query: 'dish=Panini'),
+        _g('beef, ground, cooked', 200),
+        _g('bread, ciabatta', 180),
+      ], noteWeights('panini with 200g beef')!);
+      expect(items.map((i) => (i.query, i.quantity)), [
+        ('beef, ground, cooked', 200),
+        ('bread, ciabatta', null),
+      ]);
+      final chicken = weighedPlateItems([
+        const ParsedMealItem(query: 'dish=Chicken rice'),
+        _g('chicken breast, grilled', 150),
+        _g('rice, white, cooked', 180),
+      ], noteWeights('chicken 150g, rice')!);
+      expect(chicken.first.quantity, 150);
+    });
+
+    test('bones take their share of the weight and are not logged', () {
+      final items = weighedPlateItems([
+        const ParsedMealItem(query: 'dish=BBQ ribs'),
+        _g('pork, spareribs, cooked', 260),
+        _g('coleslaw', 100),
+        _g('Bones', 140),
+      ], noteWeights('bbq pork ribs 500g')!);
+      expect(items.map((i) => (i.query, i.quantity)), [
+        ('pork, spareribs, cooked', 260),
+        ('coleslaw', 100),
+      ]);
+      expect(items.every((i) => i is DishIngredientItem), isTrue);
+      // Only the meat left is a plain row, at its share and not the plate's.
+      final wings = weighedPlateItems([
+        _g('chicken wings, fried', 165),
+        _g('bones', 135),
+      ], noteWeights('chicken wings 300g')!);
+      expect(wings.map((i) => (i.query, i.quantity)), [
+        ('chicken wings, fried', 165),
+      ]);
+    });
+
     test('a dish named and weighed adds up to its weight, split or not', () {
       // Haiku's reply to this note and its photo.
       final items = weighedPlateItems([

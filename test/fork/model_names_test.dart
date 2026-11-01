@@ -22,7 +22,8 @@ const _right = {
   'cabbage salad': 'Cabbage salad, NFS',
   'beef stroganoff': 'Beef stroganoff',
   'rye bread': 'Bread, rye',
-  'borscht': 'Soup, borscht',
+  'borscht':
+      'Borscht, with beef (boršs, borščs, borsch, borshch, borscht soup)',
   'potato pancakes': 'Potato pancakes',
   'stuffed cabbage rolls': 'Stuffed cabbage rolls with beef and rice',
   'cabbage rolls': 'Stuffed cabbage rolls with beef and rice',

@@ -52,6 +52,10 @@ nutrition.
 Rules:
 - One entry per ingredient, weighed as it goes into the dish: raw, uncooked,
   as bought. Include oil, butter and salt when they are used; leave out water.
+- A typical serving is what a restaurant serves, not a diet portion. Grilled
+  or skewered meat as a main is about 300 g of raw meat, of the fatty cut such
+  dishes use (chicken thigh, pork shoulder); a shared plate of cold cuts about
+  300 g in all.
 - "query" is the nearest generic ingredient in English, whatever language
   the dish is written in, named the way a food table names it: the food,
   then its form and state after commas. "egg, whole, raw", "carrot, raw",

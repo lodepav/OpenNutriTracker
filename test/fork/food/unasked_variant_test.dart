@@ -146,4 +146,21 @@ void main() {
       expect(unaskedVariant(name, query), 0, reason: name);
     }
   });
+
+  test('fries from the freezer are a variant unless asked for', () {
+    const row = 'Potatoes, french fried, steak fries, frozen, oven-heated';
+    expect(
+      unaskedVariant(row, 'potatoes, french fried, fast food style'),
+      unaskedVariantPenalty,
+    );
+    expect(unaskedVariant(row, 'french fries, oven baked'), 0);
+    expect(unaskedVariant(row, 'french fries, frozen'), 0);
+    expect(
+      unaskedVariant(
+        'Fast foods, potato, french fried in vegetable oil',
+        'fries',
+      ),
+      0,
+    );
+  });
 }
