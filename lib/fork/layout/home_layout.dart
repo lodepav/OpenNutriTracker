@@ -31,19 +31,31 @@ const homeTrendTileNames = {
 const homeTilesKey = 'homeTiles';
 const homeSectionsKey = 'homeSections';
 
+/// Today's diary on Home, off until switched on in Arrange Home. Named apart
+/// from the ids they had while on by default ('activity', 'breakfast'…), so a
+/// saved layout does not know them and they go off there too.
+const homeDiarySections = {
+  'diaryActivity',
+  'diaryBreakfast',
+  'diaryLunch',
+  'diaryDinner',
+  'diarySnack',
+};
+
 /// Home's sections (S162), by id in their first order. 'notices' (the
 /// empty-day hint and the low-energy warning) is not in the editor: it
 /// keeps its place after the meal plan wherever that goes.
 Map<String, String> homeSectionNames(BuildContext context) => {
   'dashboard': 'Summary',
+  'quickActions': 'Quick actions',
   'tiles': 'Tiles',
   'checkIn': 'Weekly check-in',
   'plan': 'Meal plan',
-  'activity': S.of(context).activityLabel,
-  'breakfast': S.of(context).breakfastLabel,
-  'lunch': S.of(context).lunchLabel,
-  'dinner': S.of(context).dinnerLabel,
-  'snack': S.of(context).snackLabel,
+  'diaryActivity': S.of(context).activityLabel,
+  'diaryBreakfast': S.of(context).breakfastLabel,
+  'diaryLunch': S.of(context).lunchLabel,
+  'diaryDinner': S.of(context).dinnerLabel,
+  'diarySnack': S.of(context).snackLabel,
 };
 
 /// Opens "Arrange Home": its sections, and its tiles but those hidden in
@@ -57,6 +69,7 @@ void openArrangeHome(BuildContext context) => Navigator.of(context).push(
           title: 'Sections',
           store: LayoutStore(homeSectionsKey),
           names: homeSectionNames(context),
+          optional: homeDiarySections,
         ),
         ArrangeList(
           title: 'Tiles',
@@ -88,7 +101,10 @@ class HomeSectionsList extends StatelessWidget {
     valueListenable: LayoutStore.current(homeSectionsKey),
     builder: (context, layout, _) => ListView(
       children: [
-        ...arranged(sections, layout).nonNulls,
+        ...arranged(sections, (
+          order: layout.order,
+          hidden: {...layout.hidden, ...addable(homeDiarySections, layout)},
+        )).nonNulls,
         const SizedBox(height: 16),
         Center(
           child: TextButton.icon(

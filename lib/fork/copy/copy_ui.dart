@@ -45,9 +45,8 @@ typedef WhereTo = ({
 });
 
 /// Copies or moves [intakes], listed under the logical day [from] (one
-/// entry, a meal, or a selection), to where the user picks: seams S24
-/// (an entry) and S25 (a section), in place of upstream's copy-to-today
-/// dialog. [move] opens the sheet on Move.
+/// or more entries of a selection, S177), to where the user picks, in place
+/// of upstream's copy-to-today dialog. [move] opens the sheet on Move.
 Future<void> copyOrMoveIntakes(
   BuildContext context,
   List<IntakeEntity> intakes, {
@@ -81,7 +80,7 @@ Future<void> copyOrMoveIntakes(
 }
 
 /// Moves [intake], listed under the logical day [day], into [meal] at the
-/// same time: the long-press sheet's meal chips and the edit dialog's.
+/// same time: the edit dialog's meal chip.
 Future<void> moveToMeal(
   BuildContext context,
   IntakeEntity intake,

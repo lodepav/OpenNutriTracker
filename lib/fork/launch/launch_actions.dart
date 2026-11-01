@@ -5,6 +5,8 @@ import 'package:opennutritracker/core/domain/usecase/get_config_usecase.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/core/utils/meal_type_suggester.dart';
 import 'package:opennutritracker/core/utils/navigation_options.dart';
+import 'package:opennutritracker/features/add_meal/presentation/add_meal_screen.dart';
+import 'package:opennutritracker/features/add_meal/presentation/add_meal_type.dart';
 import 'package:opennutritracker/features/add_meal/presentation/widgets/quick_add_bottom_sheet.dart';
 import 'package:opennutritracker/features/scanner/scanner_screen.dart';
 import 'package:opennutritracker/fork/screens/add_meal/bulk_add_screen.dart';
@@ -29,6 +31,11 @@ sealed class LaunchAction {
       _ => null,
     };
   }
+}
+
+/// Food search, from Home's quick actions.
+class SearchAction extends LaunchAction {
+  const SearchAction();
 }
 
 class ScanAction extends LaunchAction {
@@ -105,64 +112,74 @@ class _LaunchActionHostState extends State<LaunchActionHost> {
     }
     final action = LaunchAction.parse(payload);
     if (action == null || !mounted) return;
-    await _open(action);
-  }
-
-  Future<void> _open(LaunchAction action) async {
-    final now = DateTime.now();
-    final type = MealTypeSuggester.suggestFromTime(now);
-    final imperial =
-        (await locator<GetConfigUsecase>().getConfig()).usesImperialFoodUnits;
-    if (!mounted) return;
-    final navigator = Navigator.of(context);
-    BulkAddScreenArguments bulk({
-      bool startWithPhoto = false,
-      String? photoPath,
-      String? text,
-    }) => BulkAddScreenArguments(
-      type,
-      now,
-      imperial,
-      startWithPhoto: startWithPhoto,
-      sharedPhotoPath: photoPath,
-      sharedText: text,
-    );
-    switch (action) {
-      case ScanAction():
-        navigator.pushNamed(
-          NavigationOptions.scannerRoute,
-          arguments: ScannerScreenArguments(now, type),
-        );
-      case PhotoAction():
-        navigator.pushNamed(
-          NavigationOptions.bulkAddRoute,
-          arguments: bulk(startWithPhoto: true),
-        );
-      case QuickAddAction():
-        showModalBottomSheet<void>(
-          context: context,
-          isScrollControlled: true,
-          showDragHandle: true,
-          builder: (_) => QuickAddBottomSheet(intakeType: type, day: now),
-        );
-      case WeighInAction():
-        navigator.pushNamed(
-          NavigationOptions.weightHistoryRoute,
-          arguments: const WeighInOnOpen(),
-        );
-      case SharedPhotoAction(:final path):
-        navigator.pushNamed(
-          NavigationOptions.bulkAddRoute,
-          arguments: bulk(photoPath: path),
-        );
-      case SharedTextAction(:final text):
-        navigator.pushNamed(
-          NavigationOptions.bulkAddRoute,
-          arguments: bulk(text: text),
-        );
-    }
+    await openLaunchAction(context, action);
   }
 
   @override
   Widget build(BuildContext context) => widget.child;
+}
+
+/// Opens what [action] asks for, for today and the time's meal: a shortcut,
+/// a share, or one of Home's quick actions.
+Future<void> openLaunchAction(BuildContext context, LaunchAction action) async {
+  final now = DateTime.now();
+  final type = MealTypeSuggester.suggestFromTime(now);
+  final imperial =
+      (await locator<GetConfigUsecase>().getConfig()).usesImperialFoodUnits;
+  if (!context.mounted) return;
+  final navigator = Navigator.of(context);
+  BulkAddScreenArguments bulk({
+    bool startWithPhoto = false,
+    String? photoPath,
+    String? text,
+  }) => BulkAddScreenArguments(
+    type,
+    now,
+    imperial,
+    startWithPhoto: startWithPhoto,
+    sharedPhotoPath: photoPath,
+    sharedText: text,
+  );
+  switch (action) {
+    case SearchAction():
+      navigator.pushNamed(
+        NavigationOptions.addMealRoute,
+        arguments: AddMealScreenArguments(
+          AddMealExtension.fromIntakeTypeEntity(type),
+          now,
+        ),
+      );
+    case ScanAction():
+      navigator.pushNamed(
+        NavigationOptions.scannerRoute,
+        arguments: ScannerScreenArguments(now, type),
+      );
+    case PhotoAction():
+      navigator.pushNamed(
+        NavigationOptions.bulkAddRoute,
+        arguments: bulk(startWithPhoto: true),
+      );
+    case QuickAddAction():
+      showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        showDragHandle: true,
+        builder: (_) => QuickAddBottomSheet(intakeType: type, day: now),
+      );
+    case WeighInAction():
+      navigator.pushNamed(
+        NavigationOptions.weightHistoryRoute,
+        arguments: const WeighInOnOpen(),
+      );
+    case SharedPhotoAction(:final path):
+      navigator.pushNamed(
+        NavigationOptions.bulkAddRoute,
+        arguments: bulk(photoPath: path),
+      );
+    case SharedTextAction(:final text):
+      navigator.pushNamed(
+        NavigationOptions.bulkAddRoute,
+        arguments: bulk(text: text),
+      );
+  }
 }

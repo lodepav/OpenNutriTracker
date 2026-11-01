@@ -49,6 +49,7 @@ import 'package:opennutritracker/fork/adaptive/adaptive_ui.dart';
 import 'package:opennutritracker/fork/plan/plan_ui.dart';
 // [/fork]
 // [fork] S162 arrange-home
+import 'package:opennutritracker/fork/launch/quick_actions.dart';
 import 'package:opennutritracker/fork/layout/home_layout.dart';
 // [/fork]
 // [fork] S52 undo-delete
@@ -226,6 +227,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                 forkDay: _homeBloc.currentDay, // [fork] S119
               ),
             ),
+            'quickActions': const QuickActions(),
             'tiles': HomeTiles(
               weightKg: userWeightKg,
               bodyWeightUnit: bodyWeightUnit,
@@ -277,7 +279,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                   ),
               ],
             ),
-            'activity': showActivityTracking
+            'diaryActivity': showActivityTracking
                 ? ActivityVerticalList(
                     day: DateTime.now(),
                     title: S.of(context).activityLabel,
@@ -291,7 +293,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
             // empty section so the home view doesn't carry a header the user
             // explicitly opted out of. A section that holds intakes always
             // shows, so they stay editable and deletable (#1305).
-            'breakfast':
+            'diaryBreakfast':
                 IntakeVerticalList.isShown(
                   sharePct: breakfastSharePct,
                   intakes: breakfastIntakeList,
@@ -310,7 +312,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                     mealKcalTarget: breakfastKcalTarget,
                   )
                 : null,
-            'lunch':
+            'diaryLunch':
                 IntakeVerticalList.isShown(
                   sharePct: lunchSharePct,
                   intakes: lunchIntakeList,
@@ -329,7 +331,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                     mealKcalTarget: lunchKcalTarget,
                   )
                 : null,
-            'dinner':
+            'diaryDinner':
                 IntakeVerticalList.isShown(
                   sharePct: dinnerSharePct,
                   intakes: dinnerIntakeList,
@@ -348,7 +350,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                     mealKcalTarget: dinnerKcalTarget,
                   )
                 : null,
-            'snack':
+            'diarySnack':
                 IntakeVerticalList.isShown(
                   sharePct: snackSharePct,
                   intakes: snackIntakeList,

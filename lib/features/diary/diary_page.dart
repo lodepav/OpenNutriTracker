@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:logging/logging.dart';
 import 'package:opennutritracker/core/domain/entity/intake_entity.dart';
-import 'package:opennutritracker/core/domain/entity/intake_type_entity.dart';
+// [fork] S177 copy-move: unused since _onCopyIntakeItem went
+// import 'package:opennutritracker/core/domain/entity/intake_type_entity.dart';
+// [/fork]
 import 'package:opennutritracker/core/domain/entity/tracked_day_entity.dart';
 import 'package:opennutritracker/core/domain/entity/user_activity_entity.dart';
 import 'package:opennutritracker/core/presentation/widgets/edit_activity_dialog.dart';
@@ -12,7 +14,9 @@ import 'package:opennutritracker/core/utils/calc/met_calc.dart';
 import 'package:opennutritracker/core/domain/usecase/get_user_usecase.dart';
 import 'package:opennutritracker/features/activity_detail/presentation/bloc/activity_detail_bloc.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
-import 'package:opennutritracker/features/add_meal/presentation/add_meal_type.dart';
+// [fork] S177 copy-move: unused since _onCopyIntakeItem went
+// import 'package:opennutritracker/features/add_meal/presentation/add_meal_type.dart';
+// [/fork]
 import 'package:opennutritracker/features/diary/presentation/bloc/calendar_day_bloc.dart';
 import 'package:opennutritracker/features/diary/presentation/bloc/diary_bloc.dart';
 import 'package:opennutritracker/features/diary/presentation/widgets/diary_table_calendar.dart';
@@ -20,7 +24,9 @@ import 'package:opennutritracker/features/diary/presentation/widgets/diary_table
 // import 'package:opennutritracker/features/diary/presentation/widgets/day_info_widget.dart';
 import 'package:opennutritracker/fork/screens/diary/day_info_widget.dart';
 // [/fork]
-import 'package:opennutritracker/features/meal_detail/presentation/bloc/meal_detail_bloc.dart';
+// [fork] S177 copy-move: unused since _onCopyIntakeItem went
+// import 'package:opennutritracker/features/meal_detail/presentation/bloc/meal_detail_bloc.dart';
+// [/fork]
 import 'package:opennutritracker/generated/l10n.dart';
 // [fork] S9 meal-groups: leftovers of a whole meal (D14)
 import 'package:opennutritracker/fork/leftovers/group_leftovers.dart';
@@ -46,7 +52,9 @@ class _DiaryPageState extends State<DiaryPage> with WidgetsBindingObserver {
 
   late DiaryBloc _diaryBloc;
   late CalendarDayBloc _calendarDayBloc;
-  late MealDetailBloc _mealDetailBloc;
+  // [fork] S177 copy-move: unused since _onCopyIntakeItem went
+  // late MealDetailBloc _mealDetailBloc;
+  // [/fork]
   late ActivityDetailBloc _activityDetailBloc;
 
   // #292: Extended from 356 days (~1 year) to 5 years so old entries are never truncated
@@ -79,7 +87,9 @@ class _DiaryPageState extends State<DiaryPage> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     _diaryBloc = locator<DiaryBloc>();
     _calendarDayBloc = locator<CalendarDayBloc>();
-    _mealDetailBloc = locator<MealDetailBloc>();
+    // [fork] S177 copy-move
+    // _mealDetailBloc = locator<MealDetailBloc>();
+    // [/fork]
     _activityDetailBloc = locator<ActivityDetailBloc>();
     if (_diaryBloc.state is DiaryLoadedState) _loadedToday = _currentDate;
     super.initState();
@@ -221,7 +231,8 @@ class _DiaryPageState extends State<DiaryPage> with WidgetsBindingObserver {
                 snackIntake: state.snackIntakeList,
                 onDeleteIntake: _onDeleteIntakeItem,
                 onDeleteActivity: _onDeleteActivityItem,
-                onCopyIntake: _onCopyIntakeItem,
+                // [fork] S177 copy-move: onCopyIntake went
+                // [/fork]
                 onCopyActivity: _onCopyActivityItem,
                 onEditIntake: _onEditIntakeItem,
                 onEditActivity: _onEditActivityItem,
@@ -254,6 +265,8 @@ class _DiaryPageState extends State<DiaryPage> with WidgetsBindingObserver {
             selection: selection,
             day: _selectedDate,
             onDelete: _onDeleteIntakeItem,
+            onEdit: (context, intake) =>
+                _onEditIntakeItem(context, intake, usesImperialUnits),
           ),
         ],
       ),
@@ -326,27 +339,8 @@ class _DiaryPageState extends State<DiaryPage> with WidgetsBindingObserver {
     }
   }
 
-  void _onCopyIntakeItem(
-    IntakeEntity intakeEntity,
-    TrackedDayEntity? trackedDayEntity,
-    AddMealType? type,
-  ) async {
-    IntakeTypeEntity finalType;
-    if (type == null) {
-      finalType = intakeEntity.type;
-    } else {
-      finalType = type.getIntakeType();
-    }
-    await _mealDetailBloc.addIntake(
-      context,
-      intakeEntity.unit,
-      intakeEntity.amount.toString(),
-      finalType,
-      intakeEntity.meal,
-      DateTime.now(),
-    );
-    _diaryBloc.updateHomePage();
-  }
+  // [fork] S177 copy-move: _onCopyIntakeItem went with the section menu's copy
+  // [/fork]
 
   void _onCopyActivityItem(
     UserActivityEntity userActivityEntity,
@@ -426,7 +420,9 @@ class _DiaryPageState extends State<DiaryPage> with WidgetsBindingObserver {
     );
     // [fork] S83 tap-delete
     if (changeIntakeAmount == EditDialog.deleteResult) {
-      if (context.mounted) _onDeleteIntakeItem(intakeEntity, day);
+      // Even when the list moved on to a new day while the dialog was open
+      // (#1360): the row's context is gone, this page's is not.
+      _onDeleteIntakeItem(intakeEntity, day);
       return;
     }
     // [/fork]

@@ -1,15 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:opennutritracker/core/domain/entity/intake_entity.dart';
-import 'package:opennutritracker/core/domain/entity/intake_type_entity.dart';
-import 'package:opennutritracker/core/utils/energy_display.dart';
 import 'package:opennutritracker/fork/copy/copy_ui.dart';
-import 'package:opennutritracker/fork/units/amount_text.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 
 /// The Diary's entries picked to copy, move or delete together, on the
 /// Diary's own rows (seam S177), in place of a screen of their own. On
-/// while [active], with none picked yet when started from the date's
-/// "Select" button; the Diary ends it when the day changes.
+/// while [active]: a tap on a food or a section starts it with those picked,
+/// the date's "Select" button with none, and taking the last one back ends
+/// it, so a stray tap costs one more tap. The Diary ends it when the day
+/// changes.
 class DiarySelection extends ChangeNotifier {
   static final instance = DiarySelection();
 
@@ -29,12 +28,13 @@ class DiarySelection extends ChangeNotifier {
     notifyListeners();
   }
 
-  void toggle(IntakeEntity intake) => setAll([intake], !isPicked(intake));
-
-  void setAll(Iterable<IntakeEntity> intakes, bool on) {
+  /// Picks all of [intakes], or takes them back when all are picked.
+  void toggleAll(Iterable<IntakeEntity> intakes) {
+    final on = stateOf(intakes) != true;
     for (final intake in intakes) {
       on ? _picked[intake.id] = intake : _picked.remove(intake.id);
     }
+    _active = _picked.isNotEmpty;
     notifyListeners();
   }
 
@@ -53,20 +53,22 @@ class DiarySelection extends ChangeNotifier {
   }
 }
 
-/// The bar under the Diary while selecting: how many, and Copy, Move and
-/// Delete for them all.
+/// The bar under the Diary while selecting: how many, Copy, Move and Delete
+/// for them all, and Edit for one, the tap path beside a food's long-press.
 class DiarySelectionBar extends StatelessWidget {
   final DiarySelection selection;
 
   /// The logical day the entries are listed under.
   final DateTime day;
   final void Function(IntakeEntity intake, DateTime day) onDelete;
+  final void Function(BuildContext context, IntakeEntity intake) onEdit;
 
   const DiarySelectionBar({
     super.key,
     required this.selection,
     required this.day,
     required this.onDelete,
+    required this.onEdit,
   });
 
   @override
@@ -102,6 +104,14 @@ class DiarySelectionBar extends StatelessWidget {
                 ),
               ),
               for (final (key, label, icon, action) in [
+                if (count == 1)
+                  (
+                    'edit',
+                    'Edit',
+                    Icons.edit_outlined,
+                    (List<IntakeEntity> picked) =>
+                        onEdit(context, picked.single),
+                  ),
                 (
                   'copy',
                   'Copy',
@@ -139,106 +149,4 @@ class DiarySelectionBar extends StatelessWidget {
       );
     },
   );
-}
-
-/// A long-pressed food's actions (seam S24): its meal as chips, one tap
-/// moving it there at the same time, then copy or move it anywhere, start
-/// selecting with it, or delete it.
-Future<void> showEntryActions(
-  BuildContext context,
-  IntakeEntity intake,
-  DateTime day, {
-  required bool usesImperialUnits,
-  required void Function(IntakeEntity intake, DateTime day) onDelete,
-  DiarySelection? selection,
-}) async {
-  final action = await showModalBottomSheet<Object>(
-    context: context,
-    isScrollControlled: true,
-    showDragHandle: true,
-    builder: (sheet) {
-      final textTheme = Theme.of(sheet).textTheme;
-      return SafeArea(
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Text(
-                  intake.meal.name ?? '?',
-                  style: textTheme.titleLarge,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 2, 16, 12),
-                child: Text(
-                  '${amountText(intake, usesImperialUnits)} · '
-                  '${EnergyDisplay.formatWithUnit(sheet, intake.totalKcal)}',
-                  style: textTheme.bodyMedium,
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Text('Meal', style: textTheme.titleSmall),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-                child: Wrap(
-                  spacing: 8,
-                  runSpacing: 4,
-                  children: [
-                    for (final meal in IntakeTypeEntity.values)
-                      ChoiceChip(
-                        key: Key('fork-entry-meal-${meal.name}'),
-                        label: Text(mealLabel(sheet, meal)),
-                        selected: meal == intake.type,
-                        // the current one stays as it is, but reads as on
-                        onSelected: (_) => meal == intake.type
-                            ? null
-                            : Navigator.of(sheet).pop(meal),
-                      ),
-                  ],
-                ),
-              ),
-              const Divider(),
-              for (final (key, icon, label) in [
-                ('copy', Icons.copy_rounded, 'Copy to…'),
-                ('move', Icons.drive_file_move_outline, 'Move to…'),
-                if (selection != null)
-                  ('select', Icons.checklist_rounded, 'Select more'),
-                (
-                  'delete',
-                  Icons.delete_outline_rounded,
-                  S.of(sheet).dialogDeleteLabel,
-                ),
-              ])
-                ListTile(
-                  key: Key('fork-entry-$key'),
-                  leading: Icon(icon),
-                  title: Text(label),
-                  onTap: () => Navigator.of(sheet).pop(key),
-                ),
-            ],
-          ),
-        ),
-      );
-    },
-  );
-  // The delete asks nothing more, so it goes ahead even when the Diary
-  // moved on while the sheet was open (#1360); the Diary shows the Undo.
-  if (action == 'delete') return onDelete(intake, day);
-  if (action == 'select') return selection?.start(intake);
-  if (!context.mounted) return;
-  switch (action) {
-    case final IntakeTypeEntity meal:
-      await moveToMeal(context, intake, day, meal);
-    case 'copy':
-      await copyOrMoveIntakes(context, [intake], from: day);
-    case 'move':
-      await copyOrMoveIntakes(context, [intake], from: day, move: true);
-  }
 }

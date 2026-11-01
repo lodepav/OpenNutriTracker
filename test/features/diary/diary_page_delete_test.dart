@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:opennutritracker/core/presentation/widgets/edit_dialog.dart';
 import 'package:opennutritracker/features/diary/presentation/widgets/diary_table_calendar.dart'; // [fork] S176
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -373,14 +374,41 @@ void main() {
   // [fork] S177 copy-move
   IntakeTypeDBO toastMeal() => intakeBox.values.single.type;
 
-  testWidgets('a long-press moves a food to another meal in one tap, and '
+  testWidgets('a tap selects: the bar has Edit for one food, and taking it '
+      'back ends the selection', (tester) async {
+    await setUpDiary(yesterdayHasRow: false, entriesToday: true);
+    await pumpDiary(tester);
+
+    await tester.tap(find.text('Toast'));
+    await settle(tester);
+    expect(find.text('1 selected'), findsOneWidget);
+    expect(find.byType(EditDialog), findsNothing);
+    await tester.tap(find.byKey(const Key('fork-selection-edit')));
+    await settle(tester);
+    expect(find.byType(EditDialog), findsOneWidget);
+    expect(find.text('1 selected'), findsNothing, reason: 'selection ended');
+    await tester.tap(find.text(l10nEn.dialogCancelLabel));
+    await settle(tester);
+
+    await tester.tap(find.text('Toast'));
+    await settle(tester);
+    await tester.tap(find.text('Toast'));
+    await settle(tester);
+    expect(find.byKey(const Key('fork-selection-end')), findsNothing);
+  });
+
+  testWidgets('a long-press opens the edit: another meal moves the food, and '
       'Undo puts it back', (tester) async {
     await setUpDiary(yesterdayHasRow: false, entriesToday: true);
     await pumpDiary(tester);
 
     await tester.longPress(find.text('Toast'));
     await settle(tester);
-    await tester.tap(find.byKey(const Key('fork-entry-meal-lunch')));
+    await tester.tap(find.byKey(const Key('fork-edit-meal')));
+    await settle(tester);
+    await tester.tap(find.text(l10nEn.lunchLabel).last);
+    await settle(tester);
+    await tester.tap(find.text(l10nEn.dialogOKLabel));
     await settle(tester);
 
     expect(toastMeal(), IntakeTypeDBO.lunch);
@@ -424,7 +452,7 @@ void main() {
     await setUpDiary(yesterdayHasRow: false, entriesToday: true);
     await pumpDiary(tester);
 
-    await tester.tap(find.text('Toast'));
+    await tester.longPress(find.text('Toast'));
     await settle(tester);
     await tester.tap(find.byKey(const Key('fork-edit-meal')));
     await settle(tester);
@@ -443,7 +471,7 @@ void main() {
     await setUpDiary(yesterdayHasRow: false, entriesToday: true);
     await pumpDiary(tester);
 
-    await tester.tap(find.text('Toast'));
+    await tester.longPress(find.text('Toast'));
     await settle(tester);
     await tester.enterText(find.byType(TextFormField).first, '200');
     await tester.tap(find.byKey(const Key('fork-edit-meal')));
@@ -537,7 +565,7 @@ void main() {
     ) async {
       await openToday(tester);
 
-      await tester.tap(find.text('Toast'));
+      await tester.longPress(find.text('Toast'));
       await settle(tester);
       // [fork] feat/leftovers: the dialog's first field is the amount
       await tester.enterText(find.byType(TextFormField).first, '50');
@@ -558,9 +586,9 @@ void main() {
 
       await tester.longPress(find.text('Toast'));
       await settle(tester);
-      // [fork] S24 copy-anywhere: today's entries open their actions;
-      // S52 undo-delete: no confirmation follows, so midnight passes while
-      // the choice is open
+      // [fork] S24 copy-anywhere: a long-press opens the edit dialog with its
+      // Delete; S52 undo-delete: no confirmation follows, so midnight passes
+      // while the choice is open
       await passMidnight(tester);
       await tester.tap(find.text(l10nEn.dialogDeleteLabel)); // [fork] S81
       await settle(tester);

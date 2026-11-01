@@ -51,7 +51,6 @@ Future<void> _pumpToday(
               showActivityTracking: true,
               onDeleteIntake: (_, _) {},
               onDeleteActivity: (activity, _) => onDelete(activity),
-              onCopyIntake: (_, _, _) {},
               onCopyActivity: (_, _) {},
             ),
           ),

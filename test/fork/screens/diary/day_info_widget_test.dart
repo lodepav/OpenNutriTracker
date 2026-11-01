@@ -10,6 +10,7 @@ import 'package:opennutritracker/core/domain/usecase/get_profiles_usecase.dart';
 import 'package:opennutritracker/core/utils/energy_unit_provider.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_nutriments_entity.dart';
+import 'package:opennutritracker/fork/copy/diary_selection.dart';
 import 'package:opennutritracker/fork/screens/diary/day_info_widget.dart';
 import 'package:opennutritracker/features/home/presentation/bloc/home_bloc.dart';
 import 'package:opennutritracker/features/meal_detail/presentation/bloc/meal_detail_bloc.dart';
@@ -75,10 +76,7 @@ final _dinner = _intake(IntakeTypeEntity.dinner, 'Dinner Stew');
 Future<void> _pumpOmadDay(
   WidgetTester tester, {
   required List<IntakeEntity> breakfastIntake,
-  void Function(IntakeEntity intake, DateTime day)? onDeleteIntake,
-  void Function(IntakeEntity intake)? onCopyIntake,
-  // A past day unless a test says otherwise.
-  DateTime? currentDay,
+  void Function(IntakeEntity intake)? onEditIntake,
 }) async {
   await tester.pumpWidget(
     ChangeNotifierProvider<EnergyUnitProvider>(
@@ -90,7 +88,7 @@ Future<void> _pumpOmadDay(
           body: SingleChildScrollView(
             child: DayInfoWidget(
               selectedDay: DateTime(2026, 6, 15),
-              currentDay: currentDay ?? DateTime(2026, 6, 16),
+              currentDay: DateTime(2026, 6, 16),
               trackedDayEntity: null,
               userActivities: const [],
               breakfastIntake: breakfastIntake,
@@ -99,9 +97,9 @@ Future<void> _pumpOmadDay(
               snackIntake: const [],
               usesImperialUnits: false,
               showActivityTracking: false,
-              onDeleteIntake: onDeleteIntake ?? (_, _) {},
+              onDeleteIntake: (_, _) {},
               onDeleteActivity: (_, _) {},
-              onCopyIntake: (intake, _, _) => onCopyIntake?.call(intake),
+              onEditIntake: (_, intake, _) => onEditIntake?.call(intake),
               onCopyActivity: (_, _) {},
               breakfastSharePct: 0,
               lunchSharePct: 0,
@@ -130,6 +128,8 @@ void main() {
     GetIt.instance.reset();
   });
 
+  tearDown(DiarySelection.instance.end);
+
   // #1305: OMAD puts breakfast, lunch and snack at 0 %. Food that still lands
   // in breakfast must get a section, or it counts toward the day with no way
   // to see, edit or delete it. Empty 0 % sections stay hidden.
@@ -148,29 +148,23 @@ void main() {
     expect(find.text(l10nEn.snackLabel), findsNothing);
   });
 
-  // #1305: showing the entry is half the fix; it must also be deletable
-  // through the same long-press flow as any other entry. Once it is gone the
-  // empty 0 % section hides again.
-  testWidgets('an entry in a 0 % meal section can be deleted', (
+  // #1305: showing the entry is half the fix; it must also be editable, and
+  // so deletable, through the same long-press as any other entry. Once it is
+  // gone the empty 0 % section hides again.
+  testWidgets('an entry in a 0 % meal section opens its edit on a long-press', (
     WidgetTester tester,
   ) async {
     final porridge = _intake(IntakeTypeEntity.breakfast, 'Hidden Porridge');
-    final deleted = <IntakeEntity>[];
+    final edited = <IntakeEntity>[];
     await _pumpOmadDay(
       tester,
       breakfastIntake: [porridge],
-      onDeleteIntake: (intake, _) => deleted.add(intake),
+      onEditIntake: edited.add,
     );
 
-    // The long-press opens the entry's actions.
     await tester.longPress(find.text('Hidden Porridge'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text(l10nEn.dialogDeleteLabel));
-    await tester.pumpAndSettle();
-    // no confirmation; Undo on the snackbar instead
-    expect(find.text(l10nEn.deleteTimeDialogTitle), findsNothing);
-
-    expect(deleted, [porridge]);
+    expect(edited, [porridge]);
 
     // The page reloads without the deleted entry.
     await _pumpOmadDay(tester, breakfastIntake: const []);
@@ -181,61 +175,31 @@ void main() {
     expect(find.text('Dinner Stew'), findsOneWidget);
   });
 
-  // #1360: with "Day starts at" still ahead, the Diary's today is
-  // yesterday's date. Copying goes to that day, so it must not be offered
-  // there, whatever DateTime.now() says.
-  group('on the Diary\'s today', () {
-    // today's entries copy too
-    testWidgets('a long-press offers copy or delete, deleting on today', (
-      WidgetTester tester,
-    ) async {
-      final deleted = <DateTime>[];
-      final copied = <IntakeEntity>[];
-      await _pumpOmadDay(
-        tester,
-        breakfastIntake: const [],
-        currentDay: DateTime(2026, 6, 15),
-        onDeleteIntake: (_, day) => deleted.add(day),
-        onCopyIntake: copied.add,
-      );
+  testWidgets('a tap selects; no actions sheet opens', (tester) async {
+    await _pumpOmadDay(tester, breakfastIntake: const []);
 
-      await tester.longPress(find.text('Dinner Stew'));
-      await tester.pumpAndSettle();
-      // today's entries copy and move too
-      expect(find.text('Copy to…'), findsOneWidget);
-      expect(find.text('Move to…'), findsOneWidget);
-      await tester.tap(find.text(l10nEn.dialogDeleteLabel));
-      await tester.pumpAndSettle();
-      // no confirmation; Undo on the snackbar instead
-      expect(find.text(l10nEn.deleteTimeDialogTitle), findsNothing);
-
-      expect(deleted, [DateTime(2026, 6, 15)]);
-      expect(copied, isEmpty);
-    });
-
-    // today's sections copy too
-    testWidgets('the section menu offers Copy', (WidgetTester tester) async {
-      await _pumpOmadDay(
-        tester,
-        breakfastIntake: const [],
-        currentDay: DateTime(2026, 6, 15),
-      );
-
-      await tester.tap(find.bySemanticsIdentifier('intake-section-menu'));
-      await tester.pumpAndSettle();
-      // today's sections copy too
-      expect(find.text('Copy or move…'), findsOneWidget);
-    });
+    await tester.tap(find.text('Dinner Stew'));
+    await tester.pumpAndSettle();
+    expect(DiarySelection.instance.isPicked(_dinner), isTrue);
+    expect(find.text('Copy to…'), findsNothing);
   });
 
-  testWidgets('a past day\'s section menu offers Copy', (
-    WidgetTester tester,
+  testWidgets('a tap on the header selects the whole meal', (tester) async {
+    await _pumpOmadDay(tester, breakfastIntake: const []);
+
+    await tester.tap(find.text(l10nEn.dinnerLabel));
+    await tester.pumpAndSettle();
+    expect(DiarySelection.instance.isPicked(_dinner), isTrue);
+  });
+
+  testWidgets('the section menu no longer offers to copy or move', (
+    tester,
   ) async {
     await _pumpOmadDay(tester, breakfastIntake: const []);
 
     await tester.tap(find.bySemanticsIdentifier('intake-section-menu'));
     await tester.pumpAndSettle();
-    // the item asks where, so it is "Copy or move…"
-    expect(find.text('Copy or move…'), findsOneWidget);
+    expect(find.text(l10nEn.deleteAllLabel), findsOneWidget);
+    expect(find.text('Copy or move…'), findsNothing);
   });
 }

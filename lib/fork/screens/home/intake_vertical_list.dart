@@ -33,7 +33,6 @@ import 'package:opennutritracker/features/home/presentation/screens/import_meal_
 import 'package:opennutritracker/features/home/presentation/widgets/shared_meal_import_dialogs.dart';
 import 'package:opennutritracker/features/home/presentation/widgets/shared_meal_importer.dart';
 import 'package:opennutritracker/features/meal_detail/presentation/bloc/meal_detail_bloc.dart';
-import 'package:opennutritracker/fork/copy/copy_ui.dart';
 import 'package:opennutritracker/fork/copy/diary_selection.dart';
 import 'package:opennutritracker/fork/units/energy_text.dart';
 import 'package:opennutritracker/fork/timeline/timeline.dart';
@@ -50,15 +49,8 @@ class IntakeVerticalList extends StatefulWidget {
   final bool showMealMacros;
   final Function(IntakeEntity intake, TrackedDayEntity? trackedDayEntity)
   onDeleteIntakeCallback;
-  final Function(BuildContext, IntakeEntity)? onItemLongPressedCallback;
   final Function(bool)? onItemDragCallback;
   final Function(BuildContext, IntakeEntity, bool)? onItemTappedCallback;
-  final Function(
-    IntakeEntity intake,
-    TrackedDayEntity? trackedDayEntity,
-    AddMealType? type,
-  )?
-  onCopyIntakeCallback;
   final TrackedDayEntity? trackedDayEntity;
   // #150: optional recommended kcal target for this meal section. When
   // supplied and > 0, the section header shows "consumed / target kcal" so
@@ -85,8 +77,10 @@ class IntakeVerticalList extends StatefulWidget {
   // timeline, shown in place of its icon; its add button is in the header
   final DateTime? forkTime;
 
-  /// The Diary's selection: while on, a tap or long-press picks an entry
-  /// and the header picks the section (S177).
+  /// The Diary's selection (S177). With it a tap picks an entry, starting
+  /// the selection, the header picks the section, and a long-press edits
+  /// through [onItemTappedCallback]; while selecting a long-press picks too.
+  /// Without it, as on Home, a tap edits.
   final DiarySelection? selection;
 
   const IntakeVerticalList({
@@ -99,10 +93,8 @@ class IntakeVerticalList extends StatefulWidget {
     required this.usesImperialUnits,
     this.showMealMacros = true,
     required this.onDeleteIntakeCallback,
-    this.onItemLongPressedCallback,
     this.onItemDragCallback,
     this.onItemTappedCallback,
-    this.onCopyIntakeCallback,
     this.trackedDayEntity,
     this.mealKcalTarget,
     this.sortType,
@@ -207,7 +199,10 @@ class _IntakeVerticalListState extends State<IntakeVerticalList> {
 
   // the summary on a line of its own under
   // the header's row, lined up with the title
-  Widget _forkTimelineHeader(BuildContext context, Widget row) {
+  Widget _forkTimelineHeader(BuildContext context, Widget row) =>
+      _selectableHeader(context, _timelineHeaderBody(context, row));
+
+  Widget _timelineHeaderBody(BuildContext context, Widget row) {
     final time = widget.forkTime;
     final above = _timeAbove(context);
     if (time == null || (totalKcal <= 0 && !above)) return row;
@@ -334,10 +329,7 @@ class _IntakeVerticalListState extends State<IntakeVerticalList> {
                         value: selection!.stateOf(widget.intakeList),
                         onChanged: widget.intakeList.isEmpty
                             ? null
-                            : (_) => selection.setAll(
-                                widget.intakeList,
-                                selection.stateOf(widget.intakeList) != true,
-                              ),
+                            : (_) => selection.toggleAll(widget.intakeList),
                       ),
                     ),
                   )
@@ -442,14 +434,9 @@ class _IntakeVerticalListState extends State<IntakeVerticalList> {
                           final onDeleteIntake = widget.onDeleteIntakeCallback;
                           final trackedDay = widget.trackedDayEntity;
                           switch (selection) {
+                            // Not offered: the selection's bar copies and
+                            // moves. The value is upstream's.
                             case VerticalListPopupMenuSelections.onCopy:
-                              // any day and meal, one
-                              // entry after another (fork/copy)
-                              await copyOrMoveIntakes(
-                                context,
-                                intakes,
-                                from: widget.day,
-                              );
                               break;
                             case VerticalListPopupMenuSelections.onDelete:
                               // deleted at once, in
@@ -523,13 +510,6 @@ class _IntakeVerticalListState extends State<IntakeVerticalList> {
                         },
                     itemBuilder: (BuildContext context) =>
                         <PopupMenuEntry<VerticalListPopupMenuSelections>>[
-                          if (widget.onCopyIntakeCallback != null &&
-                              totalKcal > 0)
-                            PopupMenuItem<VerticalListPopupMenuSelections>(
-                              value: VerticalListPopupMenuSelections.onCopy,
-                              // it asks where, and copies or moves
-                              child: const Text('Copy or move…'),
-                            ),
                           if (totalKcal > 0)
                             PopupMenuItem<VerticalListPopupMenuSelections>(
                               value: VerticalListPopupMenuSelections.onDelete,
@@ -612,12 +592,17 @@ class _IntakeVerticalListState extends State<IntakeVerticalList> {
                       selected: selecting
                           ? selection!.isPicked(intakeEntity)
                           : null,
-                      onItemLongPressed: selecting
-                          ? (_, intake) => selection!.toggle(intake)
-                          : widget.onItemLongPressedCallback,
-                      onItemTapped: selecting
-                          ? (_, intake, _) => selection!.toggle(intake)
-                          : widget.onItemTappedCallback,
+                      onItemLongPressed: switch (selection) {
+                        null => null,
+                        final selection when selecting =>
+                          (_, intake) => selection.toggleAll([intake]),
+                        _ =>
+                          (context, intake) => widget.onItemTappedCallback
+                              ?.call(context, intake, widget.usesImperialUnits),
+                      },
+                      onItemTapped: selection == null
+                          ? widget.onItemTappedCallback
+                          : (_, intake, _) => selection.toggleAll([intake]),
                       firstListElement: false,
                       usesImperialUnits: widget.usesImperialUnits,
                       sortType: widget.sortType,
@@ -637,6 +622,22 @@ class _IntakeVerticalListState extends State<IntakeVerticalList> {
           },
         ),
       ],
+    );
+  }
+
+  /// On the Diary a tap on the header, its buttons aside, picks the section,
+  /// or takes it back when all of it is picked. An empty one has none to pick.
+  Widget _selectableHeader(BuildContext context, Widget header) {
+    final selection = widget.selection;
+    if (selection == null) return header;
+    return Semantics(
+      identifier: 'diary-section-select',
+      child: InkWell(
+        onTap: widget.intakeList.isEmpty
+            ? null
+            : () => selection.toggleAll(widget.intakeList),
+        child: header,
+      ),
     );
   }
 
