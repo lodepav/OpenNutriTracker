@@ -708,12 +708,8 @@ void main() {
     });
   });
 
-  test('the chart gets a smoothed point a day only when chosen', () async {
-    final entries = await _Weights().getAllEntries();
-    expect(smoothedTrendPoints(entries), isNull);
-
-    AdaptiveStore.settings.value = const AdaptiveSettings(smoothedTrend: true);
-    final points = smoothedTrendPoints(entries)!;
+  test('the chart gets a smoothed point a day', () async {
+    final points = trendPoints(await _Weights().getAllEntries());
 
     expect(points, hasLength(59));
     expect(points.first.weightKg, 90);

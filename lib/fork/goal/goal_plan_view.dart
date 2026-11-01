@@ -397,7 +397,7 @@ class _UpNext extends StatelessWidget {
                     ? Text(
                         '${day(context, p.start)} – '
                         '${p.targetKg == null ? '' : 'about '}'
-                        '${day(context, p.end.subtract(const Duration(hours: 12)))}',
+                        '${day(context, p.lastDay)}',
                       )
                     : Text(
                         'Its target is behind where it now starts: edit it.',

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart' as intl;
+import 'package:opennutritracker/fork/goal/goal_planner.dart';
 import 'package:opennutritracker/fork/phases/phases.dart';
 import 'package:opennutritracker/fork/you/you_widgets.dart';
 
@@ -33,7 +34,7 @@ String _sinceText(BuildContext context, DateTime since) =>
   if (plan != null) {
     final until = intl.DateFormat.MMMd(
       Localizations.localeOf(context).toLanguageTag(),
-    ).format(plan.end.subtract(const Duration(hours: 12)));
+    ).format(plan.lastDay);
     return (
       value: switch (plan.kind) {
         PhaseKind.cut => 'Cut',

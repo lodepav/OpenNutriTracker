@@ -55,11 +55,9 @@ class GoalDraft {
   /// A new goal from [nowKg]: [targetKg] decides the kind, a cut at the
   /// steady pace without one.
   factory GoalDraft.fresh(double nowKg, DateTime today, {double? targetKg}) {
-    final kind = targetKg == null || (targetKg - nowKg).abs() < 0.1
-        ? PhaseKind.cut
-        : targetKg < nowKg
-        ? PhaseKind.cut
-        : PhaseKind.bulk;
+    final kind = targetKg != null && targetKg - nowKg >= 0.1
+        ? PhaseKind.bulk
+        : PhaseKind.cut;
     return GoalDraft(
       kind: kind,
       startKg: nowKg,
@@ -94,9 +92,7 @@ class GoalDraft {
                   phases[i - 1].kind == PhaseKind.cut &&
                   phases[i - 1].weeks == breakEveryWeeks,
           ].any((b) => b),
-      maintainWeeks: kind == PhaseKind.maintain
-          ? plan.phases.fold(0, (w, p) => w + p.weeks)
-          : 8,
+      maintainWeeks: kind == PhaseKind.maintain ? _weeksOf(phases) : 8,
     );
   }
 

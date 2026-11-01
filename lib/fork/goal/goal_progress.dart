@@ -214,13 +214,9 @@ class GoalProgress {
 
   /// The day the target is reached at [kgPerWeek] from today; null when
   /// that leads away from it, or there.
-  DateTime? arrivalAt(double? kgPerWeek) {
-    if (kgPerWeek == null) return null;
-    final days = daysToTarget(nowKg, targetKg, kgPerWeek / 7);
-    return days == null
-        ? null
-        : DateTime(today.year, today.month, today.day + days);
-  }
+  DateTime? arrivalAt(double? kgPerWeek) => kgPerWeek == null
+      ? null
+      : _dayAt(daysToTarget(nowKg, targetKg, kgPerWeek / 7));
 
   /// The milestones from the start to the target every [step] (in a unit
   /// [perKg] times a kg), each with the day the trend reached it (null

@@ -23,7 +23,6 @@ DateTime _date(DateTime t) => DateTime(t.year, t.month, t.day);
 /// How one phase of a plan went, from its first day to its last, or to
 /// today while it runs.
 class PhaseReport {
-  final int index;
   final DietPhase phase;
   final DateTime first;
   final DateTime last;
@@ -48,7 +47,6 @@ class PhaseReport {
   final double? endBurnKcal;
 
   const PhaseReport({
-    required this.index,
     required this.phase,
     required this.first,
     required this.last,
@@ -116,7 +114,6 @@ List<PhaseReport> phaseReports(
     ];
     reports.add(
       PhaseReport(
-        index: i,
         phase: phase,
         first: first,
         last: last,

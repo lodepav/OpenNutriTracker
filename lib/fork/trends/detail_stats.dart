@@ -49,11 +49,8 @@ expenditureBreakdown(List<ExpenditureDay> history, {int days = 30}) {
       if (d.intakeKcal != null) d,
   ];
   if (logged.isEmpty) return null;
-  final eaten =
-      logged.map((d) => d.intakeKcal!).reduce((a, b) => a + b) / logged.length;
-  final burnt =
-      logged.map((d) => d.expenditureKcal).reduce((a, b) => a + b) /
-      logged.length;
+  final eaten = meanOf([for (final d in logged) d.intakeKcal])!;
+  final burnt = meanOf([for (final d in logged) d.expenditureKcal])!;
   return (
     eaten: eaten,
     fromWeight: burnt - eaten,
@@ -199,7 +196,7 @@ typedef WeekPart = ({
   final goal = last!.proteinGoal;
   final latestKg = trendByDay[_date(last.day)]!;
   return (
-    perKg: ratios.reduce((a, b) => a + b) / ratios.length,
+    perKg: meanOf(ratios)!,
     goalPerKg: goal == null || goal <= 0 ? null : goal / latestKg,
     days: ratios.length,
   );
@@ -222,9 +219,7 @@ typedef WeekPart = ({
       for (final MapEntry(:key, :value) in sums.entries)
         key: value.$1 / value.$2,
     },
-    mean:
-        logged.map((d) => d.caloriesTracked).reduce((a, b) => a + b) /
-        logged.length,
+    mean: meanOf([for (final d in logged) d.caloriesTracked])!,
   );
 }
 
@@ -398,8 +393,7 @@ scaleNoise(List<WeightLogEntity> entries, List<DateTime> dates) {
     (a, b) => b.value.abs() > a.value.abs() ? b : a,
   );
   return (
-    meanKg:
-        byDay.values.map((v) => v.abs()).reduce((a, b) => a + b) / byDay.length,
+    meanKg: meanOf([for (final v in byDay.values) v.abs()])!,
     largest: (kg: largest.value, on: largest.key),
     byDay: byDay,
   );

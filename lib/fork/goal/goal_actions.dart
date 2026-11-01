@@ -55,9 +55,7 @@ class GoalActions {
       _onProfile(() async {
         Future<bool> save() => _saveGoal(plan.paceOn(_clock()), plan.targetKg);
         // With none running, one removed may have left its start for Undo.
-        final isNew =
-            replacing != null ||
-            (_starts != null && await _store.plan() == null);
+        final isNew = replacing != null || await _store.plan() == null;
         if (!await (isNew ? _forgettingStart(save) : save())) return false;
         if (replacing != null) await _keep(replacing, nowKg);
         await _store.save(plan);

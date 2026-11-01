@@ -246,26 +246,10 @@ class BodyComparison {
   }
 }
 
-/// Asks [api] to compare [earlier] and [later], side by side in one image
-/// as the leftovers photo is, since upstream's clients carry one photo.
-/// Raises [MealInterpreterException] when the call fails or its answer
-/// cannot be read.
-Future<BodyComparison> compareBodies(
-  MealItemsApi api, {
-  required MealPhoto earlier,
-  required MealPhoto later,
-  required BodyDay earlierDay,
-  required BodyDay laterDay,
-  required MealPhotoFormat format,
-}) async => compareJoinedBodies(
-  api,
-  photo: await sideBySide(earlier, later, format),
-  earlierDay: earlierDay,
-  laterDay: laterDay,
-);
-
-/// [compareBodies] on a [photo] already holding the earlier day on its
-/// left and the later on its right.
+/// Asks [api] to compare a [photo] holding the earlier day on its left and
+/// the later on its right, side by side as the leftovers photo is, since
+/// upstream's clients carry one photo. Raises [MealInterpreterException]
+/// when the call fails or its answer cannot be read.
 Future<BodyComparison> compareJoinedBodies(
   MealItemsApi api, {
   required MealPhoto photo,
@@ -304,13 +288,15 @@ class CompareBodiesUseCase {
   }) async {
     final selection = await _credentials.readSelection();
     if (selection == null) return null;
-    return compareBodies(
+    return compareJoinedBodies(
       mealItemsApiFor(_client, selection),
-      earlier: earlier,
-      later: later,
+      photo: await sideBySide(
+        earlier,
+        later,
+        MealPhotoFormat.forProvider(selection.provider),
+      ),
       earlierDay: earlierDay,
       laterDay: laterDay,
-      format: MealPhotoFormat.forProvider(selection.provider),
     );
   }
 }

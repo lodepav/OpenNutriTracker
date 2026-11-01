@@ -423,10 +423,10 @@ class AdaptiveService {
       expenditureKcal: checkIn.expenditureKcal,
       proposedKcal: checkIn.proposedTargetKcal,
       acceptedKcal: targetKcal,
-      activityKcal: known != null
-          ? known.activityKcal
-          : checkIn.activityInTarget(AdaptiveStore.settings.value.activityMode),
-      baseKcal: known != null ? known.baseKcal : checkIn.baseKcal,
+      activityKcal:
+          known?.activityKcal ??
+          checkIn.activityInTarget(AdaptiveStore.settings.value.activityMode),
+      baseKcal: known?.baseKcal ?? checkIn.baseKcal,
       goalRateKgPerWeek: checkIn.goalRateKgPerWeek,
       targetWeightKg: checkIn.targetWeightKg,
       basis: AdaptiveStore.settings.value.targetBasis,

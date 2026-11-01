@@ -268,9 +268,7 @@ class _GoalProgressPageState extends State<GoalProgressPage> {
           progress: p,
           unit: widget.unit,
           atPace: recent?.kgPerWeek,
-          planLastDay: planEnds
-              ? plan.end.subtract(const Duration(hours: 12))
-              : null,
+          planLastDay: planEnds ? plan.lastDay : null,
         ),
       ),
       trendSection(context, 'Pace'),
@@ -289,10 +287,7 @@ class _GoalProgressPageState extends State<GoalProgressPage> {
           rows: [
             // The plan's own end counts its diet breaks.
             if (planEnds)
-              (
-                label: 'By your plan',
-                value: date(plan.end.subtract(const Duration(hours: 12))),
-              )
+              (label: 'By your plan', value: date(plan.lastDay))
             else
               (
                 label: 'From today at your plan’s pace',

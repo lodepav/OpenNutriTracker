@@ -16,7 +16,6 @@ import 'package:opennutritracker/features/trends/presentation/bloc/trends_bloc.d
 import 'package:opennutritracker/features/trends/presentation/trends_calc.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 // [fork] S97 chart-touch
-import 'package:intl/intl.dart' as intl;
 import 'package:opennutritracker/fork/report/chart_touch.dart';
 // [/fork]
 // [fork] S93 weight-outlook
@@ -41,7 +40,8 @@ import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
 import 'package:opennutritracker/fork/trends/trend_detail.dart';
 import 'package:opennutritracker/fork/trends/trend_stats.dart';
 // [fork] S161 chart-fit
-import 'package:opennutritracker/fork/trends/trends_widgets.dart' show fittedRange;
+import 'package:opennutritracker/fork/trends/trends_widgets.dart'
+    show dayLabels, fittedRange, noData;
 // [/fork]
 // [/fork]
 
@@ -128,36 +128,6 @@ class _TrendsView extends StatelessWidget {
   }
 }
 
-// [fork] S97 chart-touch: the day a chart's x stands for, as "Oct 3";
-// made in the build, as the tooltip is built outside it
-String Function(double x) _dayLabels(
-  BuildContext context,
-  DateTime today,
-  int rangeDays,
-) {
-  final format =
-      intl.DateFormat.MMMd(Localizations.localeOf(context).toLanguageTag());
-  return (x) => format.format(
-        DateTime(today.year, today.month,
-            today.day - (rangeDays - 1 - x.round())),
-      );
-}
-
-/// In place of a chart with nothing to draw, at its height.
-Widget _noData(BuildContext context, String message) => SizedBox(
-      height: 140,
-      child: Center(
-        child: Text(
-          message,
-          textAlign: TextAlign.center,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-        ),
-      ),
-    );
-// [/fork]
-
 class _WaterTrendCard extends StatelessWidget {
   final Map<DateTime, int> waterByDay;
   final int goalMl;
@@ -186,7 +156,7 @@ class _WaterTrendCard extends StatelessWidget {
     var sum = 0;
     var loggedDays = 0;
     for (int i = 0; i < rangeDays; i++) {
-      // [fork] S190 logical-today: calendar days, as _dayLabels counts them
+      // [fork] S190 logical-today: calendar days, as the labels count them
       final day = DateTime(today.year, today.month, today.day - (rangeDays - 1 - i));
       // [/fork]
       final ml = waterByDay[DateTime(day.year, day.month, day.day)] ?? 0;
@@ -200,7 +170,7 @@ class _WaterTrendCard extends StatelessWidget {
     final avg = loggedDays == 0 ? 0 : (sum / loggedDays).round();
     // [/fork]
     // [fork] S97 chart-touch
-    final dayLabel = _dayLabels(context, today, rangeDays);
+    final dayLabel = dayLabels(context, windowDates(today, rangeDays));
     // [/fork]
     // [fork] S161 chart-fit: the period's own lowest to highest
     final range = fittedRange([
@@ -234,7 +204,7 @@ class _WaterTrendCard extends StatelessWidget {
           const SizedBox(height: Dimens.spacing20),
           // [fork] S97 chart-touch
           if (loggedDays == 0)
-            _noData(context, 'No water logged in this range.')
+            noData(context, 'No water logged in this range.')
           else
           // [/fork]
           Semantics(
@@ -256,7 +226,7 @@ class _WaterTrendCard extends StatelessWidget {
                   lineTouchData: labelledTouch(
                     context,
                     (s) => '${s.y.round()}',
-                    after: (s) => ' ml\n${dayLabel(s.x)}',
+                    after: (s) => ' ml\n${dayLabel(s.x.round())}',
                   ),
                   // [/fork]
                   extraLinesData: goalMl <= 0

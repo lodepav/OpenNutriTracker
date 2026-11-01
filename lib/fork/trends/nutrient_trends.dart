@@ -140,7 +140,7 @@ class _MicroDetailState extends State<MicroDetail> {
         for (final (i, v) in series.indexed)
           if (v != null && widget.dates[i] != widget.state.logicalToday) v,
       ];
-      final good = goal == null
+      final good = goal == null || counted.isEmpty
           ? null
           : counted
                 .where((v) => nutrient.isLimit ? v <= goal : v >= goal)
@@ -175,7 +175,7 @@ class _MicroDetailState extends State<MicroDetail> {
               ),
               (
                 label: nutrient.isLimit ? 'Under it' : 'Met',
-                value: good == null || counted.isEmpty ? '–' : '$good',
+                value: good == null ? '–' : '$good',
                 unit: counted.isEmpty ? '' : 'of ${days(counted.length)}',
               ),
             ],
@@ -208,7 +208,7 @@ class _MicroDetailState extends State<MicroDetail> {
             trendSection(context, 'How the days went'),
             TrendRows(
               rows: [
-                if (good != null && counted.isNotEmpty)
+                if (good != null)
                   (
                     label: nutrient.isLimit
                         ? 'Over the limit'

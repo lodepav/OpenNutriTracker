@@ -121,15 +121,10 @@ List<Widget> _header(
   List<DateTime> dates,
 ) {
   final unit = energyUnit(context);
-  final mean = meanOf(
-    nutritionSeries(state.days, dates, (d) => d.caloriesTracked),
-  );
+  final energy = nutritionSeries(state.days, dates, (d) => d.caloriesTracked);
+  final mean = meanOf(energy);
   final goal = goalOf(state.days, dates, (d) => d.calorieGoal);
-  final logged = nutritionSeries(
-    state.days,
-    dates,
-    (d) => d.caloriesTracked,
-  ).whereType<double>().length;
+  final logged = energy.whereType<double>().length;
   final format = intl.DateFormat.MMMd(
     Localizations.localeOf(context).toLanguageTag(),
   );
