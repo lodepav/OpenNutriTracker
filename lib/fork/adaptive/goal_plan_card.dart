@@ -16,6 +16,7 @@ import 'package:opennutritracker/features/profile/presentation/widgets/set_targe
 import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/fork/adaptive/goal_plan.dart';
+import 'package:opennutritracker/fork/phase/shared_phase.dart';
 import 'package:opennutritracker/fork/phases/phases.dart';
 import 'package:opennutritracker/fork/units/energy_text.dart';
 import 'package:opennutritracker/fork/units/weight_text.dart';
@@ -24,7 +25,7 @@ import 'package:opennutritracker/fork/units/weight_text.dart';
 /// goal planner reloads.
 final paceChanges = ValueNotifier(0);
 
-/// Saves [kgPerWeek] as the profile's pace, the goal following its sign,
+/// Saves [kgPerWeek] as the profile's pace, the goal following its phase,
 /// through upstream's profile update (which rewrites today's goal). False
 /// when a profile switch dropped the update: the user is read and written
 /// for the profile current at [startedOn] (by default, as it begins).
@@ -61,14 +62,19 @@ Future<bool> saveGoal(
   return true;
 }
 
-/// [kgPerWeek] as [user]'s pace, the goal following its sign.
+/// The goal a pace of [kgPerWeek] is: a small pace either way is still
+/// maintaining ([phaseOfRate]), though its calories still count.
+UserWeightGoalEntity goalOfPace(double kgPerWeek) =>
+    switch (phaseOfRate(kgPerWeek)) {
+      'cutting' => UserWeightGoalEntity.loseWeight,
+      'bulking' => UserWeightGoalEntity.gainWeight,
+      _ => UserWeightGoalEntity.maintainWeight,
+    };
+
+/// [kgPerWeek] as [user]'s pace, the goal following it.
 void _setPace(UserEntity user, double kgPerWeek) => user
   ..weeklyWeightGoalKg = kgPerWeek
-  ..goal = kgPerWeek < 0
-      ? UserWeightGoalEntity.loseWeight
-      : kgPerWeek > 0
-      ? UserWeightGoalEntity.gainWeight
-      : UserWeightGoalEntity.maintainWeight;
+  ..goal = goalOfPace(kgPerWeek);
 
 /// Home's goal today were [kgPerWeek] the profile's pace, worked out as
 /// Home works it out; null when a fixed or adaptive target sets Home's

@@ -247,21 +247,16 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
               waterGoalMl: waterGoalMl,
             ),
             // S13 adaptive-check-in
-            'checkIn': Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                AdaptiveCheckInCard(
-                  onAccepted: () => _homeBloc.add(const LoadItemsEvent()),
-                ),
-                // [fork] S183 strength-signal: a calorie change to apply or
-                // put off, from what Go Hevier reports
-                StrengthCard(
-                  unit: bodyWeightUnit,
-                  onApplied: () => _homeBloc.add(const LoadItemsEvent()),
-                ),
-                // [/fork]
-              ],
+            'checkIn': AdaptiveCheckInCard(
+              onAccepted: () => _homeBloc.add(const LoadItemsEvent()),
             ),
+            // [fork] S183 strength-signal: a calorie change to apply or
+            // put off, from what Go Hevier reports
+            'strength': StrengthCard(
+              unit: bodyWeightUnit,
+              onApplied: () => _homeBloc.add(const LoadItemsEvent()),
+            ),
+            // [/fork]
             // S43 meal-plan: today's planned foods, to tick off
             'plan': PlannedFoodsCard(
               day: _homeBloc.currentDay,

@@ -15,15 +15,16 @@ const planDaysAhead = 14;
 /// Opens search for [meal] on [day] with the basket planning as [mode].
 /// Search logs nothing meanwhile (`FoodBasket.planning`); what was picked and
 /// not planned goes when it closes, so it cannot be logged later by mistake.
+/// A basket already being filled for the diary waits, and comes back then.
 Future<void> _pickFoods(
   BuildContext context,
   IntakeTypeEntity meal,
   DateTime day,
   PlanMode mode,
 ) async {
-  final basket = FoodBasket.instance
-    ..clear()
-    ..planning = mode;
+  final basket = FoodBasket.instance;
+  final putBack = basket.setAside();
+  basket.planning = mode;
   try {
     await Navigator.of(context).pushNamed(
       NavigationOptions.addMealRoute,
@@ -33,9 +34,8 @@ Future<void> _pickFoods(
       ),
     );
   } finally {
-    basket
-      ..planning = null
-      ..clear();
+    basket.planning = null;
+    putBack();
   }
 }
 

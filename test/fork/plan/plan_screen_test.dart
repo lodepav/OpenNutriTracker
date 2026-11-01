@@ -181,6 +181,46 @@ void main() {
     expect(basket.items, isEmpty);
   });
 
+  testWidgets('a basket filled for the diary waits while planning', (
+    tester,
+  ) async {
+    final basket = FoodBasket.instance;
+    addTearDown(basket.clear);
+    BasketItem item(double kcal) => BasketItem(
+      meal: MealEntityFixtures.mealOne,
+      unit: 'g',
+      amountText: '100',
+      kcal: kcal,
+    );
+    basket.add(item(50), IntakeTypeEntity.snack, _today);
+    List<BasketItem>? during;
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: const [S.delegate],
+        supportedLocales: S.supportedLocales,
+        routes: {
+          NavigationOptions.addMealRoute: (_) {
+            during = basket.items;
+            basket.add(item(100), IntakeTypeEntity.lunch, _today);
+            return const Scaffold(body: BackButton());
+          },
+        },
+        home: MealPlanScreen(today: _today, store: _Memory([])),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('plan-add-foods')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('plan-meal-lunch')));
+    await tester.pumpAndSettle();
+    expect(during, isEmpty);
+
+    await tester.tap(find.byType(BackButton));
+    await tester.pumpAndSettle();
+    expect(basket.itemsFor(IntakeTypeEntity.snack, _today).single.kcal, 50);
+    expect(basket.items, hasLength(1));
+  });
+
   testWidgets('Add recurring meal searches to repeat', (tester) async {
     final picks = await pump(tester, _Memory([]));
     await tester.tap(find.byKey(const ValueKey('plan-add-recurring')));

@@ -39,6 +39,30 @@ void main() {
   double y(WidgetTester tester, String text) =>
       tester.getTopLeft(find.text(text)).dy;
 
+  testWidgets('strength is a section of its own, apart from the check-in', (
+    tester,
+  ) async {
+    late Map<String, String> names;
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: const [
+          S.delegate,
+          ...GlobalMaterialLocalizations.delegates,
+        ],
+        supportedLocales: S.supportedLocales,
+        home: Builder(
+          builder: (context) {
+            names = homeSectionNames(context);
+            return const SizedBox();
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(names, containsPair('strength', 'Strength'));
+    expect(names, containsPair('checkIn', 'Weekly check-in'));
+  });
+
   testWidgets('the sections as arranged; the notices follow the plan', (
     tester,
   ) async {

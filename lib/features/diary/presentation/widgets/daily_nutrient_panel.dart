@@ -322,10 +322,12 @@ class _DailyNutrientPanelState extends State<DailyNutrientPanel> {
       ),
       _PanelRow(
         key: NutrientPanelKeys.sodium,
-        label: s.sodiumLabel,
-        value: sodiumMg,
-        reference: sodiumRefMg,
-        unit: 'mg',
+        // [fork] S135 nutrient-goals: salt in g, as Trends and the goals' list
+        label: 'Salt',
+        value: sodiumMg * 2.5 / 1000,
+        reference: sodiumRefMg * 2.5 / 1000,
+        unit: 'g',
+        // [/fork]
         excessMatters: true,
       ),
       _PanelRow(

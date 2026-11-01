@@ -4,6 +4,7 @@ import 'package:opennutritracker/core/domain/usecase/get_user_usecase.dart';
 import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/core/utils/tracked_day_lock.dart';
+import 'package:opennutritracker/fork/adaptive/macro_program.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_ui.dart'
@@ -19,7 +20,7 @@ const _answeredKey = 'strengthAnswered';
 /// "-0.35 kg/week": a suggestion's step is finer than a weight change's text.
 String _paceText(double kgPerWeek, BodyWeightUnit unit) {
   final kg = unit == BodyWeightUnit.kg;
-  final shown = kg ? kgPerWeek : kgPerWeek * 2.20462;
+  final shown = kg ? kgPerWeek : kgPerWeek * MacroProgram.lbPerKg;
   return '${shown > 0 ? '+' : ''}${shown.toStringAsFixed(2)} '
       '${kg ? 'kg' : 'lb'}/week';
 }

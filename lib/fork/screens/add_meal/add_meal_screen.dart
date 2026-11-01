@@ -825,7 +825,8 @@ class _AddMealScreenState extends State<AddMealScreen> {
             return const SizedBox();
           },
         );
-        return query.trim().isNotEmpty
+        // While planning, what is left of the day says nothing yet.
+        return query.trim().isNotEmpty || _planning
             ? recents
             : FitsLeftSwitch(
                 day: _day,

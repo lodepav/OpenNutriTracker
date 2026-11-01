@@ -1021,6 +1021,14 @@ void main() {
     expect(find.text('Pace: -0.25 kg a week'), findsOneWidget);
   });
 
+  test('a small pace is still maintaining', () {
+    expect(goalOfPace(0.05), UserWeightGoalEntity.maintainWeight);
+    expect(goalOfPace(-0.05), UserWeightGoalEntity.maintainWeight);
+    expect(goalOfPace(0), UserWeightGoalEntity.maintainWeight);
+    expect(goalOfPace(0.1), UserWeightGoalEntity.gainWeight);
+    expect(goalOfPace(-0.1), UserWeightGoalEntity.loseWeight);
+  });
+
   testWidgets('without a target the planner offers to set one', (tester) async {
     final paced = _PacedService(service)..noTarget = true;
     var asked = 0;

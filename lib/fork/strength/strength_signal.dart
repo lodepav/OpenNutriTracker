@@ -61,9 +61,9 @@ class StrengthSignal {
     );
   }
 
-  /// What a dismissal holds to: a change in the trend or the muscle groups is
-  /// a new signal.
-  String get key => '$trend|${([...muscles]..sort()).join(',')}';
+  /// What a dismissal holds to: a change in the trend, the level or the muscle
+  /// groups is a new signal.
+  String get key => '$trend|$level|${([...muscles]..sort()).join(',')}';
 }
 
 /// What a dismissed or applied suggestion was about, and when.
