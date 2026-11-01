@@ -445,6 +445,8 @@ class _IntakeVerticalListState extends State<IntakeVerticalList> {
                               for (IntakeEntity intake in intakes) {
                                 onDeleteIntake(intake, trackedDay);
                               }
+                              // What is gone can't stay picked.
+                              widget.selection?.end();
                             case VerticalListPopupMenuSelections.onShare:
                               if (context.mounted) {
                                 final code = SharedMealPayload.fromIntakeList(

@@ -105,8 +105,50 @@ class _AddMealScreenState extends State<AddMealScreen> {
     super.dispose();
   }
 
+  /// While planning, what was picked is not planned until reviewed: Back
+  /// says so before it goes.
+  Future<void> _leavePlanning() async {
+    final count = FoodBasket.instance.items.length;
+    final leave = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Leave without planning?'),
+        content: Text(
+          count == 1
+              ? 'The food you picked is not planned yet and will be dropped.'
+              : 'The $count foods you picked are not planned yet and will be '
+                    'dropped.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Stay'),
+          ),
+          TextButton(
+            key: const ValueKey('plan-leave'),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Leave'),
+          ),
+        ],
+      ),
+    );
+    if (leave == true && mounted) Navigator.of(context).pop();
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: FoodBasket.instance,
+    builder: (context, child) => PopScope(
+      canPop: !_planning || FoodBasket.instance.items.isEmpty,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _leavePlanning();
+      },
+      child: child!,
+    ),
+    child: _screen(context),
+  );
+
+  Widget _screen(BuildContext context) {
     final palette = paletteOf(context);
     return Scaffold(
       // Let the keyboard overlay the results rather than compress the body.
@@ -121,7 +163,11 @@ class _AddMealScreenState extends State<AddMealScreen> {
       // While planning (the meal plan's search) nothing here may log.
       floatingActionButton: _planning ? null : _aiAddFab(),
       appBar: AppBar(
-        title: Text(_mealType.getTypeName(context)),
+        title: Text(
+          _planning
+              ? 'Planning ${_mealType.getTypeName(context).toLowerCase()}'
+              : _mealType.getTypeName(context),
+        ),
         actions: [
           if (!_planning)
             Semantics(

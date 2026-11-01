@@ -33,11 +33,18 @@ List<MealEntity> dryRowsLast(List<MealEntity> ranked, String query) {
     return ranked;
   }
   final named = tokenize(query);
+  // The whole brand: "red lentils" does not name Bob's Red Mill. Only the
+  // first, as a listing often adds its owner ("Barilla, Barilla G.e.R.").
+  bool brandNamed(MealEntity meal) {
+    final brand = tokenize(meal.brands?.split(',').first);
+    return brand.isNotEmpty && brand.every(named.contains);
+  }
+
   bool dry(MealEntity meal) {
     final food = meal.nutriments;
     return (food.energyKcal100 ?? 0) > _dryKcal &&
         (food.carbohydrates100 ?? 0) > 50 &&
-        !tokenize(meal.brands).any(named.contains);
+        !brandNamed(meal);
   }
 
   return [...ranked.where((m) => !dry(m)), ...ranked.where(dry)];
@@ -47,8 +54,8 @@ List<MealEntity> dryRowsLast(List<MealEntity> ranked, String query) {
 /// first comma: "penne pasta, cooked" and "rice, white" do; "rice cakes" and
 /// "rice flour", a different food, do not.
 bool _namesFoodEatenCooked(String query) {
-  final words = nameWords(query.split(',').first).where(
-    (w) => !describingWords.contains(w) && !_stateWords.contains(w),
-  );
+  final words = nameWords(
+    query.split(',').first,
+  ).where((w) => !describingWords.contains(w) && !_stateWords.contains(w));
   return words.isNotEmpty && eatenCooked.contains(spelling(words.last));
 }

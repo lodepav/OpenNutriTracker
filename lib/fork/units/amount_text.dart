@@ -1,5 +1,6 @@
 import 'package:opennutritracker/core/domain/entity/intake_entity.dart';
 import 'package:opennutritracker/core/utils/calc/unit_calc.dart';
+import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dart';
 
 /// The unit [intake]'s amounts are shown in, and the factor from its stored
 /// amount, as the entry dialog shows them: the food's unit, ounces for grams
@@ -47,3 +48,12 @@ bool servingTextAgrees(String text, double? quantity) {
   if (value == null || quantity == null) return true;
   return (value - quantity).abs() < 0.5;
 }
+
+/// A Quick add with only its energy: 100 "gml" of a made-up food, whose amount
+/// is no quantity to show.
+bool isEnergyOnly(MealEntity meal) =>
+    meal.mealUnit == 'gml' &&
+    meal.mealQuantity == '100' &&
+    meal.servingQuantity == null &&
+    (meal.servingSize ?? '').isEmpty &&
+    (meal.nutriments.energyKcal100 ?? 0) > 0;

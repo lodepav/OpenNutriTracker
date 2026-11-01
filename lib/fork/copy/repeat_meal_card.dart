@@ -6,6 +6,7 @@ import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/core/utils/meal_type_suggester.dart';
 import 'package:opennutritracker/fork/copy/copy_entries.dart';
 import 'package:opennutritracker/fork/copy/copy_ui.dart';
+import 'package:opennutritracker/fork/history/history_file.dart';
 import 'package:opennutritracker/fork/units/energy_text.dart';
 
 /// Seam S162: "Same lunch as yesterday" on Home, while the time's meal is
@@ -78,7 +79,7 @@ class _RepeatMealCardState extends State<RepeatMealCard> {
       );
       final foods = [
         for (final intake in yesterday)
-          if (intake.type == meal) intake,
+          if (intake.type == meal && !isImportedHistory(intake)) intake,
       ];
       if (foods.isEmpty || widget.today.any((i) => i.type == meal)) {
         return const SizedBox.shrink();
@@ -93,10 +94,13 @@ class _RepeatMealCardState extends State<RepeatMealCard> {
             'Same ${mealLabel(context, meal).toLowerCase()} as yesterday',
           ),
           subtitle: Text('$count · ${energyText(context, kcal)}'),
-          trailing: FilledButton.tonal(
-            key: const ValueKey('home-repeat-meal-log'),
-            onPressed: _busy ? null : () => _repeat(foods, meal),
-            child: const Text('Log it'),
+          trailing: Semantics(
+            identifier: 'home-repeat-meal-log',
+            child: FilledButton.tonal(
+              key: const ValueKey('home-repeat-meal-log'),
+              onPressed: _busy ? null : () => _repeat(foods, meal),
+              child: const Text('Log it'),
+            ),
           ),
         ),
       );

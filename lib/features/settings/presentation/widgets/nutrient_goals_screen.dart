@@ -462,7 +462,13 @@ class _NutrientGoalsScreenState extends State<NutrientGoalsScreen> {
                 ),
                 _NutrientRow(
                   label: s.settingsSodiumGoalLabel,
-                  description: s.settingsSodiumGoalDescription,
+                  // [fork] S135 nutrient-goals: what it is in the salt shown
+                  // on Trends and the goals' list
+                  description:
+                      '${s.settingsSodiumGoalDescription} '
+                      '${(_sodium ?? DailyNutrientPanel.defaultSodiumRefMg).round()} mg '
+                      'is ${((_sodium ?? DailyNutrientPanel.defaultSodiumRefMg) * 2.5 / 1000).toStringAsFixed(1)} g of salt.',
+                  // [/fork]
                   value: _sodium ?? DailyNutrientPanel.defaultSodiumRefMg,
                   min: _sodiumMin,
                   max: _sodiumMax,

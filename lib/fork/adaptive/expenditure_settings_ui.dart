@@ -634,8 +634,8 @@ class _CheckInSection extends StatelessWidget {
             ),
           ),
           const _Note(
-            'A limit keeps one odd week from moving the expenditure under the '
-            'target far. A goal you change applies in full at once.',
+            'A limit stops one odd week from moving your target far. A goal '
+            'you change applies in full at once.',
           ),
           // Round steps in the display unit; a limit set in the other unit
           // shows as its nearest step.

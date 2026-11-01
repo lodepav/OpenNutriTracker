@@ -116,8 +116,11 @@ class _StrengthCardState extends State<StrengthCard> {
     }
   }
 
+  bool _applying = false;
+
   Future<void> _answered(StrengthSuggestion suggestion) async {
-    setState(() => _suggestion = null);
+    // Home's reload may have closed the card meanwhile.
+    if (mounted) setState(() => _suggestion = null);
     await _store.writeKey(
       _answeredKey,
       StrengthAnswered(suggestion.signal.key, DateTime.now()).encode(),
@@ -126,6 +129,20 @@ class _StrengthCardState extends State<StrengthCard> {
 
   /// [targetAfter] is a fixed target's text once applied, in the display unit.
   Future<void> _apply(StrengthSuggestion suggestion, String targetAfter) async {
+    // A second tap would add a fixed target's calories again.
+    if (_applying) return;
+    _applying = true;
+    try {
+      await _applyOnce(suggestion, targetAfter);
+    } finally {
+      _applying = false;
+    }
+  }
+
+  Future<void> _applyOnce(
+    StrengthSuggestion suggestion,
+    String targetAfter,
+  ) async {
     final messenger = ScaffoldMessenger.of(context);
     final startedOn = ProfileStamp.now();
     final Future<bool> Function() undo;

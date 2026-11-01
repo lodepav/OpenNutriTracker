@@ -404,6 +404,33 @@ void main() {
       expect(selection.active, isFalse);
     });
 
+    testWidgets('a profile switch ends it', (tester) async {
+      final profile = ChangeNotifier();
+      addTearDown(profile.dispose);
+      final ofProfile = DiarySelection(profile: profile);
+      addTearDown(ofProfile.dispose);
+      ofProfile.toggleAll(intakes);
+      profile.notifyListeners();
+      expect(ofProfile.active, isFalse);
+      expect(ofProfile.picked, isEmpty);
+    });
+
+    testWidgets('the section\'s Delete all ends it: what is gone stays unpicked',
+        (tester) async {
+      await pump(tester, intakes);
+      await tester.tap(find.text('Test Meal'));
+      await tester.pump();
+      expect(selection.active, isTrue);
+
+      await tester.tap(
+        find.byType(PopupMenuButton<VerticalListPopupMenuSelections>),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(l10nEn.deleteAllLabel));
+      await tester.pumpAndSettle();
+      expect(selection.active, isFalse);
+    });
+
     testWidgets('a long-press edits, and while selecting picks', (
       tester,
     ) async {
@@ -575,7 +602,7 @@ void main() {
     });
 
     testWidgets('selecting at 200% the macros wrap, not cut', (tester) async {
-      final selection = DiarySelection()..start(intakes.single);
+      final selection = DiarySelection()..toggleAll(intakes);
       await pump(tester, 2, selection: selection);
       expect(tester.takeException(), isNull);
       final macros = tester.renderObject<RenderParagraph>(

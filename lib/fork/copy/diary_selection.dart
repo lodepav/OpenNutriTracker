@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:opennutritracker/core/domain/entity/intake_entity.dart';
+import 'package:opennutritracker/core/utils/hive_db_provider.dart';
+import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/fork/copy/copy_ui.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 
@@ -8,9 +10,18 @@ import 'package:opennutritracker/generated/l10n.dart';
 /// while [active]: a tap on a food or a section starts it with those picked,
 /// the date's "Select" button with none, and taking the last one back ends
 /// it, so a stray tap costs one more tap. The Diary ends it when the day
-/// changes.
+/// changes, and a profile switch does: its entries are not the new profile's.
 class DiarySelection extends ChangeNotifier {
-  static final instance = DiarySelection();
+  static final instance = DiarySelection(
+    // No locator in widget tests.
+    profile: locator.isRegistered<HiveDBProvider>()
+        ? locator<HiveDBProvider>()
+        : null,
+  );
+
+  DiarySelection({Listenable? profile}) {
+    profile?.addListener(end);
+  }
 
   final _picked = <String, IntakeEntity>{};
   var _active = false;
@@ -21,10 +32,9 @@ class DiarySelection extends ChangeNotifier {
 
   bool isPicked(IntakeEntity intake) => _picked.containsKey(intake.id);
 
-  /// Starts selecting, with [intake] picked when given.
-  void start([IntakeEntity? intake]) {
+  /// Starts selecting, with none picked.
+  void start() {
     _active = true;
-    if (intake != null) _picked[intake.id] = intake;
     notifyListeners();
   }
 

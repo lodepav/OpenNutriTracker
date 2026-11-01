@@ -129,9 +129,12 @@ class _LaunchActionHostState extends State<LaunchActionHost> {
 /// a share, or one of Home's quick actions.
 Future<void> openLaunchAction(BuildContext context, LaunchAction action) async {
   final now = DateTime.now();
-  final type = MealTypeSuggester.suggestFromTime(now);
-  final imperial =
-      (await locator<GetConfigUsecase>().getConfig()).usesImperialFoodUnits;
+  final config = await locator<GetConfigUsecase>().getConfig();
+  final type = MealTypeSuggester.suggestFromTime(
+    now,
+    mealSharesPct: config.mealKcalSharesPct,
+  );
+  final imperial = config.usesImperialFoodUnits;
   if (!context.mounted) return;
   final navigator = Navigator.of(context);
   BulkAddScreenArguments bulk({

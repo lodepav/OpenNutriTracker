@@ -113,8 +113,10 @@ class AddToBasketButton extends StatelessWidget {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          '${meal.name ?? 'Food'} is in the basket '
-          '(${target.items.length}).',
+          target.planning != null
+              ? '${meal.name ?? 'Food'} is picked. Review to plan it.'
+              : '${meal.name ?? 'Food'} is in the basket '
+                    '(${target.items.length}).',
         ),
       ),
     );
@@ -156,7 +158,7 @@ class BasketBar extends StatelessWidget {
               key: const ValueKey('basket-bar'),
               leading: const Icon(Icons.shopping_basket_rounded),
               title: Text(
-                '${items.length} in the basket · '
+                '${items.length} ${target.planning != null ? 'to plan' : 'in the basket'} · '
                 '${energyText(context, target.totalKcal)}',
               ),
               trailing: const Text('Review'),

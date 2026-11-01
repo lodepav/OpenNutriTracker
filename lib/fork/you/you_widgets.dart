@@ -150,7 +150,16 @@ class BudgetTile extends StatelessWidget {
       note: energyUnit(context),
       hint: 'How it is worked out',
       onTap: onTap,
-      below: macros == null ? null : _Below('$macros g'),
+      below: macros == null
+          ? null
+          : _Below(
+              '$macros g',
+              semanticsLabel: inMacroOrder(
+                carbs: '${state!.totalCarbsGoal.round()} grams carbs',
+                fat: '${state.totalFatsGoal.round()} grams fat',
+                protein: '${state.totalProteinsGoal.round()} grams protein',
+              ).join(', '),
+            ),
     );
   }
 }
@@ -158,12 +167,14 @@ class BudgetTile extends StatelessWidget {
 /// A tile's line under its value.
 class _Below extends StatelessWidget {
   final String text;
+  final String? semanticsLabel;
 
-  const _Below(this.text);
+  const _Below(this.text, {this.semanticsLabel});
 
   @override
   Widget build(BuildContext context) => Text(
     text,
+    semanticsLabel: semanticsLabel,
     style: Theme.of(
       context,
     ).textTheme.bodySmall?.copyWith(color: paletteOf(context).textMuted),

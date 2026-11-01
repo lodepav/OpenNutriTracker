@@ -21,13 +21,11 @@ const _kcalPerRate = 1100.0;
 /// A calorie change to offer. Nothing changes until the user applies it.
 class StrengthSuggestion {
   final StrengthSignal signal;
-  final String phase;
   final double fromRate;
   final double toRate;
 
   const StrengthSuggestion({
     required this.signal,
-    required this.phase,
     required this.fromRate,
     required this.toRate,
   });
@@ -47,7 +45,7 @@ class StrengthSuggestion {
               ? "hasn't risen in weeks"
               : "haven't risen in weeks")
         : (names.length < 2 ? 'is falling' : 'are falling');
-    final change = switch (phase) {
+    final change = switch (phaseOfRate(fromRate)) {
       'cutting' => 'a smaller deficit',
       'bulking' => 'more calories',
       _ => 'a small calorie increase',
@@ -107,10 +105,5 @@ StrengthSuggestion? suggestFromStrength(
   if (rate >= limit) return null;
   final raised = rate + step;
   final to = raised > limit ? limit : (raised * 100).round() / 100;
-  return StrengthSuggestion(
-    signal: signal,
-    phase: phase,
-    fromRate: rate,
-    toRate: to,
-  );
+  return StrengthSuggestion(signal: signal, fromRate: rate, toRate: to);
 }

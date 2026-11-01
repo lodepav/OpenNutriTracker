@@ -107,16 +107,30 @@ void main() {
       final item = (await resolver.resolve([
         ParsedMealItem(query: query),
       ])).single;
-      expect(
-        item.candidates.first.nutriments.energyKcal100,
-        greaterThan(250),
-      );
+      expect(item.candidates.first.nutriments.energyKcal100, greaterThan(250));
     });
   }
 
   test('a product named by its brand stays first', () {
     final cooked = _product('Pasta, cooked', 'Table', 158, 31);
     expect(dryRowsLast([_barilla, cooked], 'barilla pasta').first, _barilla);
+  });
+
+  test('a word the brand shares with the food does not name it', () {
+    final cooked = _product('Lentils, cooked', 'Table', 116, 20);
+    final dry = _product('Red Lentils', "Bob's Red Mill", 340, 60);
+    expect(dryRowsLast([dry, cooked], 'red lentils').first, cooked);
+    expect(dryRowsLast([dry, cooked], "bob's red mill lentils").first, dry);
+
+    final zara = _product('Penne', 'Pasta Zara', 355, 72);
+    final pasta = _product('Pasta, cooked', 'Table', 158, 31);
+    expect(dryRowsLast([zara, pasta], 'penne pasta').first, pasta);
+  });
+
+  test('a listing that adds the brand\'s owner still names it', () {
+    final cooked = _product('Pasta, cooked', 'Table', 158, 31);
+    final listed = _product('Penne', 'Barilla, Barilla G.e.R.', 357, 71);
+    expect(dryRowsLast([listed, cooked], 'barilla pasta').first, listed);
   });
 
   test('dry rows trail the cooked ones and stay candidates', () {

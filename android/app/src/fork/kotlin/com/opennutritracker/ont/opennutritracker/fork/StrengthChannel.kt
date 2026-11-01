@@ -47,9 +47,8 @@ class StrengthChannel(private val context: Context, engine: FlutterEngine) {
             context.contentResolver
                 .query(Uri.parse("content://$authority/current"), null, null, null, null)
                 ?.use { if (it.moveToFirst()) row(it) else null }
-        } catch (e: SecurityException) {
-            null
-        } catch (e: IllegalArgumentException) {
+        } catch (e: Exception) {
+            // Whatever Go Hevier's provider throws, Home goes on without it.
             null
         }
     }
