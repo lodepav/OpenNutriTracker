@@ -9,6 +9,9 @@ import 'package:opennutritracker/core/domain/usecase/get_kcal_goal_usecase.dart'
 import 'package:opennutritracker/core/domain/usecase/get_macro_goal_usecase.dart';
 import 'package:opennutritracker/core/domain/usecase/get_tracked_day_usecase.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
+import 'package:opennutritracker/fork/add/one_tap_log.dart';
+import 'package:opennutritracker/fork/basket/basket_ui.dart'
+    show entriesChanged;
 import 'package:opennutritracker/core/domain/entity/intake_entity.dart';
 import 'package:opennutritracker/core/domain/entity/intake_type_entity.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dart';
@@ -239,5 +242,87 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('add-meal-fits-left')));
     await tester.pumpAndSettle();
     expect(find.text('All recents'), findsOneWidget);
+  });
+
+  group('a row', () {
+    late int loads;
+
+    // The chip outlives the widget; off again for the next test.
+    Future<void> chipOff(WidgetTester tester) async {
+      await tester.tap(find.byKey(const ValueKey('add-meal-fits-left')));
+      await tester.pumpAndSettle();
+    }
+
+    Future<void> pumpOn(WidgetTester tester, {bool imperial = false}) async {
+      await GetIt.instance.reset();
+      final favourites = FakeFavourites();
+      GetIt.instance.registerFactory<FavouriteToggleBloc>(
+        () => FavouriteToggleBloc(favourites.get, favourites.toggle),
+      );
+      loads = 0;
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: const [S.delegate],
+          home: Scaffold(
+            body: FitsLeftSwitch(
+              day: DateTime(2026, 10, 25),
+              addMealType: AddMealType.lunchType,
+              recents: const Text('All recents'),
+              load: (_) async {
+                loads++;
+                return (
+                  left: loads == 1
+                      ? _left
+                      : (kcal: 300.0, protein: 0.0, carbs: 0.0, fat: 0.0),
+                  recents: [_chicken],
+                  imperial: imperial,
+                );
+              },
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.byKey(const ValueKey('add-meal-fits-left')));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('the plus logs the amount the caption shows', (tester) async {
+      await pumpOn(tester);
+      IntakeEntity? passed;
+      logFromRow =
+          (
+            context, {
+            required meal,
+            required type,
+            required day,
+            required imperial,
+            IntakeEntity? last,
+          }) async => passed = last;
+      addTearDown(() => logFromRow = defaultLogFromRow);
+      await tester.tap(find.byIcon(Icons.add_rounded));
+      await tester.pumpAndSettle();
+      expect(passed, same(_chicken));
+      await chipOff(tester);
+    });
+
+    testWidgets('the caption shows the amount in the units foods show in', (
+      tester,
+    ) async {
+      await pumpOn(tester, imperial: true);
+      expect(find.text('3.5 oz: 200 kcal, 40 g protein'), findsOneWidget);
+      await chipOff(tester);
+    });
+
+    testWidgets('what is left is read again once entries change', (
+      tester,
+    ) async {
+      await pumpOn(tester);
+      expect(find.textContaining('500 kcal left'), findsOneWidget);
+      entriesChanged.value++;
+      await tester.pumpAndSettle();
+      expect(loads, 2);
+      expect(find.textContaining('300 kcal left'), findsOneWidget);
+      await chipOff(tester);
+    });
   });
 }

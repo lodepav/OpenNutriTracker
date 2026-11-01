@@ -186,14 +186,24 @@ Future<void> _logFromRow(
   if (!context.mounted) return;
   final mealName = mealLabel(context, type);
   final route = ModalRoute.of(context);
-  final written = await locator<MealDetailBloc>().addIntake(
-    context,
-    amount.unit,
-    amount.amount.toString(),
-    type,
-    food,
-    day,
-  );
+  final IntakeEntity? written;
+  try {
+    written = await locator<MealDetailBloc>().addIntake(
+      context,
+      amount.unit,
+      amount.amount.toString(),
+      type,
+      food,
+      day,
+    );
+  } catch (error, stack) {
+    _log.warning('One-tap write failed for ${meal.code}', error, stack);
+    messenger?.removeCurrentSnackBar();
+    messenger?.showSnackBar(
+      const SnackBar(content: Text("Not added: it couldn't be saved.")),
+    );
+    return;
+  }
   refreshAfterLogging();
   // A page opened over the sheet while this logged stays open.
   if (route is PopupRoute && route.isCurrent && context.mounted) {
