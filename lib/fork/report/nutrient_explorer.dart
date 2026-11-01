@@ -11,6 +11,7 @@ import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_nutriments_entity.dart';
 import 'package:opennutritracker/features/diary/presentation/widgets/daily_nutrient_panel.dart';
 import 'package:opennutritracker/features/settings/presentation/widgets/nutrient_goals_screen.dart';
+import 'package:opennutritracker/fork/display/display_prefs.dart';
 import 'package:opennutritracker/fork/units/energy_text.dart';
 
 /// One nutrient the explorer follows.
@@ -71,17 +72,26 @@ class ExplorerNutrient {
   String text(double value) => value.toStringAsFixed(decimals);
 }
 
-/// Energy, the macros, and the nutrients of upstream's diary panel.
-final explorerNutrients = [
-  ExplorerNutrient(
-    'Energy',
-    'kcal',
-    (n) => n.energyKcal100,
-    (d) => d.calorieGoal,
-  ),
-  ExplorerNutrient('Protein', 'g', (n) => n.proteins100, (d) => d.proteinGoal),
-  ExplorerNutrient('Carbs', 'g', (n) => n.carbohydrates100, (d) => d.carbsGoal),
-  ExplorerNutrient('Fat', 'g', (n) => n.fat100, (d) => d.fatGoal),
+final _energy = ExplorerNutrient(
+  'Energy',
+  'kcal',
+  (n) => n.energyKcal100,
+  (d) => d.calorieGoal,
+);
+final _carbs = ExplorerNutrient(
+  'Carbs',
+  'g',
+  (n) => n.carbohydrates100,
+  (d) => d.carbsGoal,
+);
+final _fat = ExplorerNutrient('Fat', 'g', (n) => n.fat100, (d) => d.fatGoal);
+final _protein = ExplorerNutrient(
+  'Protein',
+  'g',
+  (n) => n.proteins100,
+  (d) => d.proteinGoal,
+);
+final _others = [
   ExplorerNutrient(
     'Fibre',
     'g',
@@ -167,6 +177,14 @@ final explorerNutrients = [
     driKey: NutrientPanelKeys.vitaminB12,
     fallbackGoal: DailyNutrientPanel.defaultVitaminB12RefUg,
   ),
+];
+
+/// Energy, the macros in the user's order, and the nutrients of upstream's
+/// diary panel. The same objects each time: nutrient trends compares them.
+List<ExplorerNutrient> get explorerNutrients => [
+  _energy,
+  ...inMacroOrder(carbs: _carbs, fat: _fat, protein: _protein),
+  ..._others,
 ];
 
 /// A food's part of a nutrient over the range.

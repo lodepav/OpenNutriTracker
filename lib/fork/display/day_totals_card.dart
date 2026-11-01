@@ -4,6 +4,7 @@ import 'package:opennutritracker/core/domain/entity/tracked_day_entity.dart';
 import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
+import 'package:opennutritracker/fork/display/display_prefs.dart';
 import 'package:opennutritracker/fork/units/energy_text.dart';
 
 /// The Diary's day at a glance (seam S118, MacroFactor's diary header):
@@ -56,23 +57,25 @@ class DayTotalsCard extends StatelessWidget {
                   label: unit,
                   color: palette.accent,
                 ),
-                _Total(
-                  value: _sum((i) => i.totalCarbsGram).round(),
-                  goal: (trackedDay.carbsGoal ?? 0).round(),
-                  label: 'carbs g',
-                  color: palette.carbsColor,
-                ),
-                _Total(
-                  value: _sum((i) => i.totalFatsGram).round(),
-                  goal: (trackedDay.fatGoal ?? 0).round(),
-                  label: 'fat g',
-                  color: palette.fatColor,
-                ),
-                _Total(
-                  value: _sum((i) => i.totalProteinsGram).round(),
-                  goal: (trackedDay.proteinGoal ?? 0).round(),
-                  label: 'protein g',
-                  color: palette.proteinColor,
+                ...inMacroOrder(
+                  carbs: _Total(
+                    value: _sum((i) => i.totalCarbsGram).round(),
+                    goal: (trackedDay.carbsGoal ?? 0).round(),
+                    label: 'carbs g',
+                    color: palette.carbsColor,
+                  ),
+                  fat: _Total(
+                    value: _sum((i) => i.totalFatsGram).round(),
+                    goal: (trackedDay.fatGoal ?? 0).round(),
+                    label: 'fat g',
+                    color: palette.fatColor,
+                  ),
+                  protein: _Total(
+                    value: _sum((i) => i.totalProteinsGram).round(),
+                    goal: (trackedDay.proteinGoal ?? 0).round(),
+                    label: 'protein g',
+                    color: palette.proteinColor,
+                  ),
                 ),
               ],
             ),

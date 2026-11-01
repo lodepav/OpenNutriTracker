@@ -6,6 +6,7 @@ import 'package:opennutritracker/features/add_meal/domain/entity/meal_nutriments
 import 'package:opennutritracker/features/add_meal/presentation/add_meal_type.dart';
 import 'package:opennutritracker/fork/display/diary_by_hour.dart';
 import 'package:opennutritracker/fork/display/display_prefs.dart';
+import 'package:opennutritracker/fork/report/nutrient_explorer.dart';
 
 IntakeEntity _eat(String food, DateTime at, IntakeTypeEntity type) =>
     IntakeEntity(
@@ -47,6 +48,20 @@ void main() {
       macroOrderLabel(DisplayPrefs.macroOrder.value),
       'Protein, fat, carbs',
     );
+  });
+
+  test('the nutrient explorer lists the macros in the picked order, as the '
+      'same nutrients', () {
+    final before = explorerNutrients;
+    DisplayPrefs.macroOrder.value = [Macro.protein, Macro.fat, Macro.carbs];
+    final after = explorerNutrients;
+    expect(after.take(4).map((n) => n.label), [
+      'Energy',
+      'Protein',
+      'Fat',
+      'Carbs',
+    ]);
+    expect(after.toSet(), before.toSet());
   });
 
   test('six orders, and a stored one that is not all three reads as '
