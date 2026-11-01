@@ -235,3 +235,4 @@ merge brings it in and its row goes.
 | S191 | `lib/core/domain/usecase/delete_profile_usecase.dart` | Deleting a profile also deletes its progress photos' images, except any another profile's index holds (`deleteProfilePhotos`, `lib/fork/photos/photo_store.dart`). | active |
 | S192 | `lib/features/meal_detail/presentation/bloc/meal_detail_bloc.dart` | A unit picked while the amount is blank is kept, so the amount typed next is in it. |
 | S193 | `lib/features/home/home_page.dart` | Under the formula, the day a phase or a queued goal moves the goal by itself, Home says so from what to what until dismissed (`PhaseGoalNoticeCard`, `lib/fork/phases/phase_goal_notice.dart`). | active |
+| S194 | `android/Gemfile.lock`, `ios/Gemfile.lock` | `addressable` 2.9.2, ahead of upstream, for the release check's vulnerability scan (seven advisories fixed from 2.9.1). A lock file takes no markers; on an upstream merge, keep whichever version is newer. | active |
