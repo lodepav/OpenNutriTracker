@@ -1,4 +1,5 @@
 import 'package:opennutritracker/features/add_meal/util/meal_text_parser.dart';
+import 'package:opennutritracker/fork/bulk/note_counts.dart';
 
 /// A weight the user's note gives one food among others: "chicken 120g, rice",
 /// "rice - 80 g, chicken", "spinach: 30g, rice".
@@ -58,7 +59,7 @@ NoteWeights? noteWeights(String? note) {
   if (amounts.isEmpty) return null;
   // "200g rice, 2 eggs": a count stays the photo read's to keep (S170)
   if (parseMealText(
-    text.replaceAll(_amount, ''),
+    withoutPartCounts(text).replaceAll(_amount, ''),
   ).items.any((i) => i.quantity != null)) {
     return null;
   }

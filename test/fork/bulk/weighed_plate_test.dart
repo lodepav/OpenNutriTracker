@@ -181,21 +181,18 @@ void main() {
       ]);
     });
 
-    test(
-      'without a total, the model\'s grams for an unweighed food are dropped',
-      () {
-        final items = weighedPlateItems([
-          _g('chicken', 100),
-          _g('rice', 200),
-          const ParsedMealItem(query: 'egg', quantity: 2),
-        ], const NoteWeights(foods: [(name: 'chicken', grams: 120)]));
-        expect(items.map((i) => (i.quantity, i.unit)), [
-          (120, 'g'),
-          (null, null),
-          (2, null),
-        ]);
-      },
-    );
+    test('without a total, an unweighed food keeps the model\'s grams', () {
+      final items = weighedPlateItems([
+        _g('chicken', 100),
+        _g('rice', 200),
+        const ParsedMealItem(query: 'egg', quantity: 2),
+      ], const NoteWeights(foods: [(name: 'chicken', grams: 120)]));
+      expect(items.map((i) => (i.quantity, i.unit)), [
+        (120, 'g'),
+        (200, 'g'),
+        (2, null),
+      ]);
+    });
 
     test('a weight in the middle of a name is that food\'s', () {
       final w = noteWeights('panini with 200g beef')!;
@@ -218,7 +215,7 @@ void main() {
       ], noteWeights('panini with 200g beef')!);
       expect(items.map((i) => (i.query, i.quantity)), [
         ('beef, ground, cooked', 200),
-        ('bread, ciabatta', null),
+        ('bread, ciabatta', 180),
       ]);
       final chicken = weighedPlateItems([
         const ParsedMealItem(query: 'dish=Chicken rice'),
@@ -321,6 +318,22 @@ void main() {
       expect(result.items.map((i) => (i as DishIngredientItem).dish).toSet(), {
         'Chicken and rice',
       });
+    });
+
+    test('a count of patties is the dish\'s part, not a count of dishes', () {
+      for (final note in [
+        'smash burger with 3 patties',
+        '3 patty smash burger',
+        '3-patty burger',
+        'burgers ar 2x kotletēm',
+      ]) {
+        expect(noteStatesNoAmount(note), isTrue, reason: note);
+      }
+      expect(noteStatesNoAmount('2 burgers with 3 patties'), isFalse);
+      final w = noteWeights('smash burger with 3 patties 400g')!;
+      expect(w.totalGrams, 400);
+      expect(estimatedPlatePrompt, contains('with 3 patties'));
+      expect(weighedPlatePrompt, contains('with 3 patties'));
     });
 
     test('a count or a weight in the note is not estimated', () {

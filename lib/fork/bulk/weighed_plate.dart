@@ -11,9 +11,9 @@ import 'package:opennutritracker/fork/dish/dish_breakdown_rows.dart';
 /// A photo whose note states weights (S175, D24): the user weighed the
 /// plate, or some of its foods. The model lists the plate's foods as served
 /// with grams, and [weighedPlateItems] holds them to what the note states:
-/// a food's own weight exactly, and the rest sized to the total. The model
-/// only judges the split, from the photo, of a weight the user gave; a
-/// weight nobody gave is still never taken from a photograph (#250).
+/// a food's own weight exactly, the rest sized to the total, and with no total
+/// the rest at the model's estimate (the user, 2026-11-01): a default serving
+/// logged a burger's 25 g of bacon as 85 g.
 const weighedPlatePrompt = '''
 You list the foods on a plate the user has weighed, so each can be looked up
 in a table of generic foods (USDA, BLS). You do not estimate nutrition.
@@ -42,6 +42,9 @@ The user's note states weights. Rules:
 - A total weight in the note is the whole plate: give each food without a
   weight of its own its share of what remains, judged from the photo, so
   that all the foods add up to the total.
+- A number of patties the note gives ("with 3 patties", "3 patty burger",
+  "double") is how many there are, whatever the photo shows: their share of
+  the weight is for that many, about 90 g each when the total allows it.
 - The scale weighed the bones, nobody eats them: food on the bone (ribs,
   wings, drumsticks, a bone-in chop) is the meat as eaten and one more item,
   "bones", with their share of the weight: about 35% of ribs, 45% of wings,
@@ -102,8 +105,9 @@ is sulguni"), but states no weight. Rules:
   Weigh pieces by their size: a cutlet or chop about 80-150 g, a slice of
   bread 30 g, an egg 50 g, a whole pizza of any shape at least 350 g even if
   small, 30 cm across 450-550 g, a thick pan pizza twice that for its area.
-  Food on the bone is weighed without its
-  bones. Restaurant and recipe photos are often generous:
+  A number of patties the note gives ("with 3 patties", "3 patty burger",
+  "double") is how many there are, whatever the photo shows, about 90 g each.
+  Food on the bone is weighed without its bones. Restaurant and recipe photos are often generous:
   do not shrink a full plate to a diet portion.
 - Leave out water, salt and garnish nobody eats.
 - If the photo contains no food, return an empty list.''';
@@ -136,9 +140,9 @@ Future<MealTextParseResult> readWeighedPlate(
 bool noteStatesNoAmount(String? note) =>
     note != null &&
     note.trim().isNotEmpty &&
-    !noteHasCount(note) &&
+    !noteHasCount(withoutPartCounts(note)) &&
     parseMealText(
-      withoutSizes(note),
+      withoutSizes(withoutPartCounts(note)),
     ).items.every((item) => item.quantity == null);
 
 /// Reads [photo] with a [note] that states no amount: every food at the
@@ -153,7 +157,7 @@ Future<MealTextParseResult> readEstimatedPlate(
   api,
   photo,
   estimatedPlatePrompt,
-  (items) => weighedPlateItems(items, const NoteWeights(), estimated: true),
+  (items) => weighedPlateItems(items, const NoteWeights()),
   note: note,
   localeCode: localeCode,
   savedDishes: savedDishes,
@@ -186,13 +190,11 @@ Future<MealTextParseResult> _readPlate(
 
 /// The model's [items] held to [weights]: one food comes back as a plain
 /// row at the plate's weight; several, as one dish's ingredients in grams
-/// that add up to the total. [estimated] keeps the model's grams with no
-/// total to hold them to.
+/// that add up to the total, or at the model's grams with none.
 List<ParsedMealItem> weighedPlateItems(
   List<ParsedMealItem> items,
-  NoteWeights weights, {
-  bool estimated = false,
-}) {
+  NoteWeights weights,
+) {
   String? dish;
   final foods = <({String query, double? grams, double? count})>[];
   for (final item in items) {
@@ -241,11 +243,7 @@ List<ParsedMealItem> weighedPlateItems(
   final total =
       weights.totalGrams ?? (wholeDish ? weights.foods.single.grams : null);
   final grams = <double?>[
-    for (final (i, food) in foods.indexed)
-      stated[i] ??
-          // the model's split of a weight the user gave, never its own
-          // estimate of one nobody gave
-          (total != null || estimated ? food.grams : null),
+    for (final (i, food) in foods.indexed) stated[i] ?? food.grams,
   ];
   if (total != null) _sizeToTotal(grams, stated.keys.toSet(), total);
 
