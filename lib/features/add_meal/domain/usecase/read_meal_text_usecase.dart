@@ -2,6 +2,8 @@ import 'package:logging/logging.dart';
 import 'package:opennutritracker/core/utils/ai_credential_storage.dart';
 import 'package:opennutritracker/features/add_meal/domain/meal_text_interpreter.dart';
 import 'package:opennutritracker/features/add_meal/util/meal_text_parser.dart';
+// [fork] S187 patty-counts
+import 'package:opennutritracker/fork/bulk/typed_part_counts.dart';
 
 /// A model failure the user can act on, and which will not fix itself.
 ///
@@ -96,7 +98,8 @@ class ReadMealTextUseCase {
   ReadMealTextUseCase(this._credentials, this._interpreterFactory);
 
   Future<MealTextReading> read(String input, {String? localeCode}) async {
-    final parsed = parseMealText(input);
+    // [fork] S187 patty-counts: 3 patties are not 3 burgers, whoever read it
+    final parsed = keepPattyCounts(input, parseMealText(input));
 
     final selection = await _credentials.readSelection();
     if (selection == null) {
@@ -116,7 +119,11 @@ class ReadMealTextUseCase {
       //
       // The fallback below is for a model that could not answer. This is a
       // model that did.
-      return MealTextReading(interpreted, usedModel: true);
+      // [fork] S187 patty-counts
+      return MealTextReading(
+        keepPattyCounts(input, interpreted),
+        usedModel: true,
+      );
     } on MealInterpreterException catch (e) {
       // Logged without the input: the line the user typed is the one thing
       // in this flow that should not reach a log.

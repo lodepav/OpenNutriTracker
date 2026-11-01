@@ -228,3 +228,4 @@ merge brings it in and its row goes.
 | S184 | `lib/core/styles/app_palette.dart` | `paletteOf(context)`, the palette for the theme's brightness, beside the palettes it picks between. | active |
 | S185 | `justfile` | `test_dst` also runs the fork's two tests that move the clock. There is no comment inside a line-continued list, so it has no marker. | active |
 | S186 | `lib/features/add_meal/util/resolver_relevance.dart` | The resolver lists the dry rows of a food eaten cooked last, so food on a plate is not logged at a packet's dry values, unless the name asks for it dry or gives the brand: `dryRowsLast`, `lib/fork/food/cooked_on_plate.dart`. |
+| S187 | `lib/features/add_meal/domain/usecase/read_meal_text_usecase.dart` | A typed count of a burger's patties stays one dish: an item read as that many burgers goes back to the words the user typed, with no quantity, whichever reader produced it (`keepPattyCounts`, `lib/fork/bulk/typed_part_counts.dart`). | active |

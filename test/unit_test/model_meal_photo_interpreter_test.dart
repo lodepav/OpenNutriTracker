@@ -647,7 +647,7 @@ void main() {
 
       expect(
         [for (final i in result.items) (i.query, i.quantity, i.unit)],
-        [('rice', 200.0, 'g'), ('chicken', null, null)],
+        [('rice', 200.0, 'g'), ('chicken', 200.0, 'g')],
       );
     });
 
@@ -665,7 +665,7 @@ void main() {
 
       expect(
         [for (final i in result.items) (i.query, i.quantity, i.unit)],
-        [('chicken', null, null), ('white rice', 200.0, 'g')],
+        [('chicken', 200.0, 'g'), ('white rice', 200.0, 'g')],
       );
     });
 

@@ -26,6 +26,16 @@ const _wholeWords = {'one': 1, 'two': 2, 'three': 3};
 /// are, nor how much it weighs.
 String withoutSizes(String note) => note.replaceAll(_size, ' ');
 
+/// [note] without the patties it counts ("burger with 3 patties", "3 patty
+/// burger", "2x kotletes"): a count of a dish's part, which the model weighs
+/// among its foods, and not how many of the dish there are.
+String withoutPartCounts(String note) => note.replaceAll(_partCount, ' ');
+
+final _partCount = RegExp(
+  r'(?<![\d.,])\d+\s*x?\s*-?\s*(?:patty|patties|kotlet\w*)\b',
+  caseSensitive: false,
+);
+
 final _size = RegExp(
   r'(?<![\d.,])\d+(?:[.,]\d+)?\s*(?:-\s*)?(?:cm|mm|inch(?:es)?|in\.|"|″)(?![a-z])',
   caseSensitive: false,
