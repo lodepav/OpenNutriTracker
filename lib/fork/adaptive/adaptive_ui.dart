@@ -21,6 +21,7 @@ import 'package:opennutritracker/fork/adaptive/choice.dart';
 import 'package:opennutritracker/fork/adaptive/expenditure.dart';
 import 'package:opennutritracker/fork/adaptive/expenditure_settings_ui.dart';
 import 'package:opennutritracker/fork/units/energy_text.dart';
+import 'package:opennutritracker/fork/units/weight_text.dart';
 import 'package:opennutritracker/fork/goal/phase_colors.dart';
 import 'package:opennutritracker/fork/phases/phases.dart';
 import 'package:opennutritracker/fork/trends/trends_widgets.dart'
@@ -333,6 +334,12 @@ class _CheckInScreenState extends State<CheckInScreen> {
     if (shifts.every((s) => s == 0)) return goal;
     return goal - shifts[(await logicalToday()).weekday - 1];
   }();
+
+  /// Not registered in the tests that don't set one.
+  late final Future<BodyWeightUnit> _weightUnit = () async {
+    if (!locator.isRegistered<GetConfigUsecase>()) return BodyWeightUnit.kg;
+    return (await locator<GetConfigUsecase>().getConfig()).bodyWeightUnit;
+  }();
   final _target = TextEditingController();
 
   @override
@@ -351,8 +358,11 @@ class _CheckInScreenState extends State<CheckInScreen> {
     return '${diff > 0 ? '+' : ''}$diff ${energyUnit(context)}';
   }
 
-  static String _kg(double value, {bool signed = false}) =>
-      '${signed && value > 0 ? '+' : ''}${value.toStringAsFixed(1)} kg';
+  /// [kcalPerKg] a kg, or a pound where weight changes are shown in pounds.
+  String _perWeightUnit(double kcalPerKg, BodyWeightUnit unit) =>
+      unit == BodyWeightUnit.kg
+      ? '${_kcal(kcalPerKg)} a kg'
+      : '${_kcal(kcalPerKg / 2.20462)} a lb';
 
   static String _eta(int days) {
     final now = DateTime.now();
@@ -374,7 +384,11 @@ class _CheckInScreenState extends State<CheckInScreen> {
       : const [];
 
   /// Why the expenditure moved under the new settings, for [changed].
-  String? _whyMoved(CheckIn checkIn, List<String> changed) {
+  String? _whyMoved(
+    CheckIn checkIn,
+    List<String> changed,
+    BodyWeightUnit weightUnit,
+  ) {
     final activity = checkIn.activityKcal;
     if (changed.contains('activity')) {
       if (AdaptiveStore.settings.value.activityMode == ActivityMode.off) {
@@ -397,17 +411,21 @@ class _CheckInScreenState extends State<CheckInScreen> {
     }
     if (changed.contains('energy per kg') && checkIn.kcalPerKg != null) {
       return 'So the expenditure is worked out from your weigh-ins at '
-          '${_kcal(checkIn.kcalPerKg!)} a kg.';
+          '${_perWeightUnit(checkIn.kcalPerKg!, weightUnit)}.';
     }
     return null;
   }
 
   /// The energy the pace was turned into, so the goal page's figure for
   /// the same pace at the common one isn't taken for another.
-  String _perKg(CheckIn checkIn, AdaptiveSettings settings) {
+  String _perKg(
+    CheckIn checkIn,
+    AdaptiveSettings settings,
+    BodyWeightUnit weightUnit,
+  ) {
     final kcal = checkIn.kcalPerKg;
     if (kcal == null) return '';
-    return ', at ${_kcal(kcal)} a kg of weight change'
+    return ', at ${_perWeightUnit(kcal, weightUnit)} of weight change'
         '${settings.flatEnergy ? '' : ' (from your body fat)'}';
   }
 
@@ -423,12 +441,13 @@ class _CheckInScreenState extends State<CheckInScreen> {
         ),
       ),
     ),
-    body: FutureBuilder<(CheckIn, CheckInRecord?, double?)>(
-      future: (_checkIn, _last, _goalNow).wait,
+    body: FutureBuilder<(CheckIn, CheckInRecord?, double?, BodyWeightUnit)>(
+      future: (_checkIn, _last, _goalNow, _weightUnit).wait,
       builder: (context, snapshot) {
         final checkIn = snapshot.data?.$1;
         final last = snapshot.data?.$2;
         final current = last?.acceptedKcal ?? snapshot.data?.$3;
+        final weightUnit = snapshot.data?.$4 ?? BodyWeightUnit.kg;
         // read here, not in a button's handler
         final unit = energyUnit(context);
         if (snapshot.hasError) {
@@ -437,9 +456,9 @@ class _CheckInScreenState extends State<CheckInScreen> {
         if (checkIn == null) {
           return const Center(child: CircularProgressIndicator());
         }
-        if (_target.text.isEmpty) {
-          _target.text = '${energyValue(context, checkIn.proposedTargetKcal)}';
-        }
+        // A proposal of nothing or less is no target to offer.
+        final proposed = energyValue(context, checkIn.proposedTargetKcal);
+        if (_target.text.isEmpty && proposed > 0) _target.text = '$proposed';
         final theme = Theme.of(context);
         final capped =
             (checkIn.uncappedTargetKcal - checkIn.proposedTargetKcal).abs() >=
@@ -448,7 +467,7 @@ class _CheckInScreenState extends State<CheckInScreen> {
         final cap = settings.maxCheckInChangeKcal;
         final daily = settings.activityMode == ActivityMode.daily;
         final changed = _changedSince(last);
-        final why = _whyMoved(checkIn, changed);
+        final why = _whyMoved(checkIn, changed, weightUnit);
         return ListView(
           padding: EdgeInsets.fromLTRB(
             16,
@@ -488,11 +507,11 @@ class _CheckInScreenState extends State<CheckInScreen> {
                   ),
                   _row('Weigh-ins', '${checkIn.weighIns}'),
                   if (checkIn.trendKg != null)
-                    _row('Trend', _kg(checkIn.trendKg!)),
+                    _row('Trend', weightText(checkIn.trendKg!, weightUnit)),
                   if (checkIn.weekChangeKg != null)
                     _row(
                       'Trend change',
-                      _kg(checkIn.weekChangeKg!, signed: true),
+                      weightChangeText(checkIn.weekChangeKg!, weightUnit),
                       color: _towardGoalColor(
                         context,
                         checkIn.weekChangeKg!,
@@ -524,97 +543,106 @@ class _CheckInScreenState extends State<CheckInScreen> {
                 // one the week's, or none, so it is named for it.
                 _row(switch (settings.activityMode) {
                   ActivityMode.off => 'Estimated per day',
-                  ActivityMode.weekly =>
+                  ActivityMode.weekly || ActivityMode.daily =>
                     'Expenditure with this week\'s activity',
-                  ActivityMode.daily => 'Expenditure before activity',
                 }, _kcal(checkIn.expenditureKcal)),
                 if (checkIn.activityKcal case final activity?)
                   _row('Of it, counted activity', '${_kcal(activity)} a day'),
               ],
             ),
             const SizedBox(height: 12),
-            _card(
-              context,
-              Icons.flag_outlined,
-              theme.colorScheme.primary,
-              'Target',
-              [
-                if (current != null)
-                  _row(switch ((daily, last == null)) {
-                    // Before the first check-in it is the formula's, which
-                    // Home adds the day's activity to.
-                    (true, true) => 'Formula target before activity',
-                    (false, true) => 'Formula target without activity',
-                    (true, false) => 'Current target before activity',
-                    (false, false) => 'Current target',
-                  }, _kcal(current)),
+            _card(context, Icons.flag_outlined, theme.colorScheme.primary, 'Target', [
+              if (current != null)
+                _row(switch ((daily, last == null)) {
+                  // Before the first check-in it is the formula's, which
+                  // Home adds the day's activity to.
+                  (true, true) => 'Formula target before activity',
+                  (false, true) => 'Formula target without activity',
+                  (true, false) => 'Current target before activity',
+                  (false, false) => 'Current target',
+                }, _kcal(current)),
+              _row(
+                daily ? 'Proposed target before activity' : 'Proposed target',
+                _kcal(checkIn.proposedTargetKcal),
+                color: theme.colorScheme.primary,
+                large: true,
+              ),
+              if (current != null)
                 _row(
-                  daily ? 'Proposed target before activity' : 'Proposed target',
-                  _kcal(checkIn.proposedTargetKcal),
-                  color: theme.colorScheme.primary,
-                  large: true,
+                  'Change',
+                  _shownDiff(checkIn.proposedTargetKcal, current, signed: true),
                 ),
-                if (current != null)
-                  _row(
-                    'Change',
-                    _shownDiff(
-                      checkIn.proposedTargetKcal,
-                      current,
-                      signed: true,
-                    ),
+              if (checkIn.belowRecommendedFloor)
+                Text(
+                  key: const ValueKey('check-in-below-floor'),
+                  'This is under the '
+                  '${_kcal(checkIn.recommendedFloorKcal!)} a day advised as '
+                  'a minimum'
+                  '${settings.autoAcceptCheckIn ? ", so it wasn't set on its own" : ''}. '
+                  'Check your pace, or type the target you want below.',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.error,
                   ),
-                if (last == null &&
-                    !daily &&
-                    !capped &&
-                    !checkIn.fromProfile &&
-                    checkIn.goalRateKgPerWeek != 0)
-                  Text(
-                    'That is the expenditure '
-                    '${checkIn.goalRateKgPerWeek < 0 ? 'less' : 'plus'} '
-                    '${_shownDiff(checkIn.expenditureKcal, checkIn.proposedTargetKcal)} '
-                    'for ${_kg(checkIn.goalRateKgPerWeek, signed: true)} a week'
-                    '${_perKg(checkIn, settings)}.',
-                    style: theme.textTheme.bodySmall,
-                  ),
-                if (daily)
-                  Text(
-                    "Each day's counted activity is added to it, at most "
-                    '${_kcal(maxDailyActivityKcal)}.',
-                    style: theme.textTheme.bodySmall,
-                  ),
-                if (checkIn.activityChangeKcal case final change?
-                    when change.abs() >= 1)
-                  Text(
-                    "The past week's activity moves the target "
-                    '${energyText(context, change, signed: true)} from the last '
-                    "check-in's; the check-in limit doesn't hold it back.",
-                    style: theme.textTheme.bodySmall,
-                  ),
-                if (capped && cap != null)
-                  Text(
-                    'A check-in moves the expenditure under the target at most '
-                    '${_kcal(cap)}; the full change would put the target at '
-                    '${_kcal(checkIn.uncappedTargetKcal)}.',
-                    style: theme.textTheme.bodySmall,
-                  )
-                else if (cap != null && last != null && !checkIn.fromProfile)
-                  Text(
-                    'The expenditure moved less than the check-in limit of '
-                    '${_kcal(cap)}, so none of the change is held back.',
-                    style: theme.textTheme.bodySmall,
-                  ),
-                if (checkIn.daysToTargetAtGoal != null)
-                  _row(
-                    'Target weight, chosen pace',
-                    _eta(checkIn.daysToTargetAtGoal!),
-                  ),
-                if (checkIn.daysToTargetAtTrend != null)
-                  _row(
-                    'Target weight, current trend',
-                    _eta(checkIn.daysToTargetAtTrend!),
-                  ),
-              ],
-            ),
+                ),
+              if (last == null &&
+                  !daily &&
+                  !capped &&
+                  !checkIn.fromProfile &&
+                  checkIn.goalRateKgPerWeek != 0)
+                Text(
+                  'That is the expenditure '
+                  '${checkIn.goalRateKgPerWeek < 0 ? 'less' : 'plus'} '
+                  '${_shownDiff(checkIn.expenditureKcal, checkIn.proposedTargetKcal)} '
+                  'for ${weightChangeText(checkIn.goalRateKgPerWeek, weightUnit)} a week'
+                  '${_perKg(checkIn, settings, weightUnit)}.',
+                  style: theme.textTheme.bodySmall,
+                ),
+              if (daily)
+                Text(
+                  "Each day's counted activity is added to it, at most "
+                  '${_kcal(maxDailyActivityKcal)}.',
+                  style: theme.textTheme.bodySmall,
+                ),
+              if (checkIn.activityChangeKcal case final change?
+                  when change.abs() >= 1)
+                Text(
+                  "The past week's activity moves the target "
+                  '${energyText(context, change, signed: true)} from the last '
+                  "check-in's; the check-in limit doesn't hold it back.",
+                  style: theme.textTheme.bodySmall,
+                ),
+              if (capped && cap != null)
+                Text(
+                  'A check-in moves the expenditure under the target at most '
+                  '${_kcal(cap)}; the full change would put the target at '
+                  '${_kcal(checkIn.uncappedTargetKcal)}.',
+                  style: theme.textTheme.bodySmall,
+                )
+              else if (cap != null && checkIn.movedWithinCap)
+                Text(
+                  'The expenditure moved less than the check-in limit of '
+                  '${_kcal(cap)}, so none of the change is held back.',
+                  style: theme.textTheme.bodySmall,
+                )
+              else if (last != null &&
+                  !checkIn.fromProfile &&
+                  checkIn.capCalibrating)
+                Text(
+                  'The check-in limit does not apply yet, while the '
+                  'expenditure is still calibrating.',
+                  style: theme.textTheme.bodySmall,
+                ),
+              if (checkIn.daysToTargetAtGoal != null)
+                _row(
+                  'Target weight, chosen pace',
+                  _eta(checkIn.daysToTargetAtGoal!),
+                ),
+              if (checkIn.daysToTargetAtTrend != null)
+                _row(
+                  'Target weight, current trend',
+                  _eta(checkIn.daysToTargetAtTrend!),
+                ),
+            ]),
             const SizedBox(height: 16),
             TextField(
               key: const ValueKey('check-in-target'),
@@ -629,7 +657,14 @@ class _CheckInScreenState extends State<CheckInScreen> {
             FilledButton(
               onPressed: () async {
                 final typed = double.tryParse(_target.text.trim());
-                if (typed == null || !typed.isFinite || typed <= 0) return;
+                if (typed == null || !typed.isFinite || typed <= 0) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Enter a daily target above 0 $unit.'),
+                    ),
+                  );
+                  return;
+                }
                 final target = kcalFromInput(context, typed);
                 await widget.service.accept(checkIn, target);
                 if (!context.mounted) return;

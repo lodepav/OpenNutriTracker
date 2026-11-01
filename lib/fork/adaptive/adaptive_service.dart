@@ -156,6 +156,11 @@ class AdaptiveService {
         goalRateKgPerWeek: rate,
         bodyFatPercent: await _bodyFat(user),
         targetWeightKg: user.targetWeightKg,
+        fallbackWeightKg: user.weightKG,
+        recommendedFloorKcal: CalorieGoalCalc.recommendedDailyKcalFloor(
+          gender: user.gender,
+          caloriesProfile: user.caloriesProfile,
+        ),
         // A base built under other settings (one holding activity, say)
         // is no mark to cap against (D20).
         previousBaseKcal: capMark(history, settings)?.baseKcal,
@@ -178,11 +183,13 @@ class AdaptiveService {
   }
 
   /// Accepts a due check-in as proposed when the settings say so; the
-  /// check-in accepted, or null when none was due or it is asked.
+  /// check-in accepted, or null when none was due or it is asked. A proposal
+  /// under the advised floor is left to be done by hand.
   Future<CheckIn?> autoAcceptIfDue() async {
     if (!AdaptiveStore.settings.value.autoAcceptCheckIn) return null;
     if (!await checkInDue()) return null;
     final due = await checkIn();
+    if (due.belowRecommendedFloor) return null;
     await accept(due, due.proposedTargetKcal);
     return due;
   }
@@ -520,8 +527,9 @@ Future<double> _todayActivity(DateTime day) async {
 }
 
 /// Seams S63–S67 and S69: [goal], which carries logical today's weekday
-/// shift, moved to [day]'s, for a row made for another day (a copy, a past
-/// day's log). [store] and [config] are another profile's (S69); its
+/// shift and, in the daily activity mode, today's activity, moved to [day]'s,
+/// for a row made for another day (a copy, a past day's log). [store] and
+/// [config] are another profile's (S69), whose goal holds no activity; its
 /// settings, unreadable, leave [goal] as it is.
 Future<double> forkGoalOnDay(
   double goal,
@@ -529,23 +537,36 @@ Future<double> forkGoalOnDay(
   AdaptiveStore? store,
   Future<ConfigEntity> Function()? config,
 }) async {
-  final List<double> offsets;
+  final AdaptiveSettings settings;
   try {
-    offsets =
-        (store == null ? AdaptiveStore.settings.value : await store.read())
-            .weekdayOffsets;
+    settings = store == null
+        ? AdaptiveStore.settings.value
+        : await store.read();
   } catch (e) {
     _log.warning('Adaptive settings unreadable, no weekday shift: $e');
     return goal;
   } finally {
     await store?.release();
   }
-  if (offsets.every((o) => o == 0)) return goal;
+  final offsets = settings.weekdayOffsets;
+  final daily =
+      store == null &&
+      settings.adaptiveTarget &&
+      !settings.fixedTarget &&
+      settings.activityMode == ActivityMode.daily;
+  if (!daily && offsets.every((o) => o == 0)) return goal;
   final read = await (config ?? locator<GetConfigUsecase>().getConfig)();
   final offset = read.dayStartOffsetTotalMinutes;
   final today = DayBoundaryCalc.currentLogicalDayMinutes(offset);
   final label = DayBoundaryCalc.dayLabelOf(day, offset);
-  return goal - offsets[today.weekday - 1] + offsets[label.weekday - 1];
+  final activity = daily
+      ? (await forkKcalGoal(label)).activityKcal -
+            (await forkKcalGoal(today)).activityKcal
+      : 0.0;
+  return goal -
+      offsets[today.weekday - 1] +
+      offsets[label.weekday - 1] +
+      activity;
 }
 
 /// Seam S62: whether [day]'s goal leaves logged activities out (a fixed

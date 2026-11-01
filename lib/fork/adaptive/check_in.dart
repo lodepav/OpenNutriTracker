@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/fork/adaptive/expenditure.dart';
+import 'package:opennutritracker/fork/adaptive/goal_plan.dart';
 import 'package:opennutritracker/fork/adaptive/trend.dart';
 
 /// What a check-in needs, gathered by `AdaptiveService` from upstream's
@@ -22,6 +23,13 @@ class CheckInInputs {
   final double goalRateKgPerWeek;
   final double bodyFatPercent;
   final double? targetWeightKg;
+
+  /// The weight to work from with no weigh-in in the history: the profile's.
+  final double fallbackWeightKg;
+
+  /// The least advised a day for this profile; a proposal under it is warned
+  /// of and not accepted on its own. Null for no check.
+  final double? recommendedFloorKcal;
 
   /// The estimate the last check-in's target was built on (its
   /// [CheckIn.baseKcal]); null before the first.
@@ -55,6 +63,8 @@ class CheckInInputs {
     this.previousActivityKcal,
     required this.taper,
     this.targetWeightKg,
+    this.fallbackWeightKg = 70,
+    this.recommendedFloorKcal,
     this.settings = const ExpenditureSettings(),
     this.maxChangeKcal = AdaptiveSettings.defaultMaxCheckInChangeKcal,
     this.activityMode = ActivityMode.off,
@@ -118,6 +128,15 @@ class CheckIn {
   /// holds at the last check-in's while the weight settles; null otherwise.
   final BreakHold? breakHold;
 
+  /// [CheckInInputs.recommendedFloorKcal].
+  final double? recommendedFloorKcal;
+
+  /// The estimate is still calibrating, so the check-in limit is not applied.
+  final bool capCalibrating;
+
+  /// The limit was compared and the estimate moved no more than it.
+  final bool movedWithinCap;
+
   /// The first check-in, and no weigh-in and log has shaped the estimate
   /// yet: it is the profile's prior, as for a new user.
   bool get fromProfile => formulaKcal != null;
@@ -141,7 +160,16 @@ class CheckIn {
     this.formulaKcal,
     this.kcalPerKg,
     this.breakHold,
+    this.recommendedFloorKcal,
+    this.capCalibrating = false,
+    this.movedWithinCap = false,
   });
+
+  /// Whether [proposedTargetKcal] is under [recommendedFloorKcal].
+  bool get belowRecommendedFloor {
+    final floor = recommendedFloorKcal;
+    return floor != null && proposedTargetKcal < floor;
+  }
 
   /// MacroFactor's data rule for the week: 4 logged days and a weigh-in,
   /// and not a week back from a break.
@@ -162,9 +190,10 @@ CheckIn computeCheckIn(CheckInInputs inputs) {
     settings: inputs.settings,
   );
   // Back from a break the target moves on nothing new until the weight
-  // settles (D27).
+  // settles (D27). With no update in the history the estimate is only the
+  // prior, so the last check-in's carries over too.
   final hold = run.breakHold;
-  final base = hold == null
+  final base = hold == null && run.updates > 0
       ? run.estimates.last
       : inputs.previousBaseKcal ?? run.estimates.last;
   final trend = smoothedTrend(
@@ -186,7 +215,7 @@ CheckIn computeCheckIn(CheckInInputs inputs) {
       ? null
       : meanActivity(week);
 
-  final weight = now ?? 70.0;
+  final weight = now ?? inputs.fallbackWeightKg;
   final kcalPerKg = inputs.settings.kcalPerKgAt(weight, inputs.bodyFatPercent);
   final goalKcal = inputs.goalRateKgPerWeek * kcalPerKg / 7;
   final goalEnergy = inputs.taper(goalKcal, weight);
@@ -194,23 +223,15 @@ CheckIn computeCheckIn(CheckInInputs inputs) {
   final cap = inputs.maxChangeKcal;
   // While calibrating the estimate leaves the formula's prior fast, as it
   // should; the cap is for a settled one's odd week (D18).
-  final cappedBase =
-      cap == null ||
-          previous == null ||
-          run.updates < inputs.settings.calibrationUpdates
+  final calibrating = run.updates < inputs.settings.calibrationUpdates;
+  final cappedBase = cap == null || previous == null || calibrating
       ? base
       : base.clamp(previous - cap, previous + cap);
   final weekly = inputs.activityMode == ActivityMode.weekly ? activity ?? 0 : 0;
 
-  int? daysAt(double? kgPerDay) {
-    final target = inputs.targetWeightKg;
-    if (target == null || now == null || kgPerDay == null) return null;
-    final toGo = target - now;
-    if (toGo.abs() < 0.1 || kgPerDay == 0 || toGo.sign != kgPerDay.sign) {
-      return null;
-    }
-    return (toGo / kgPerDay).round();
-  }
+  int? daysAt(double? kgPerDay) => now == null || kgPerDay == null
+      ? null
+      : daysToTarget(now, inputs.targetWeightKg, kgPerDay);
 
   return CheckIn(
     averageIntakeKcal: logged.isEmpty
@@ -239,5 +260,13 @@ CheckIn computeCheckIn(CheckInInputs inputs) {
     formulaKcal: run.updates == 0 ? inputs.formulaKcal : null,
     kcalPerKg: kcalPerKg,
     breakHold: hold,
+    recommendedFloorKcal: inputs.recommendedFloorKcal,
+    capCalibrating: cap != null && calibrating,
+    movedWithinCap:
+        cap != null &&
+        previous != null &&
+        !calibrating &&
+        hold == null &&
+        (base - previous).abs() <= cap,
   );
 }

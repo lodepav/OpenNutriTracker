@@ -31,6 +31,7 @@ import 'package:opennutritracker/fork/body/measurement_store.dart';
 import 'package:opennutritracker/core/domain/entity/body_weight_unit_entity.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/fork/adaptive/trend_points.dart';
+import 'package:opennutritracker/fork/units/weight_text.dart';
 import 'package:opennutritracker/core/utils/energy_unit_provider.dart';
 import 'package:provider/provider.dart';
 
@@ -52,6 +53,9 @@ class _User extends Fake implements GetUserUsecase {
 
   _User({this.rate = -0.5});
 
+  /// A pace that leaves about [kcal] of a target from the 60 days below.
+  _User.pacedTo(double kcal) : rate = (kcal - 2500) * 7 / 7000;
+
   @override
   Future<UserEntity> getUserData() async => _user()
     ..weeklyWeightGoalKg = rate
@@ -68,6 +72,22 @@ class _Weights extends Fake implements GetWeightLogUsecase {
       WeightLogEntity(
         date: _today.subtract(Duration(days: d)),
         weightKg: 90 - 0.5 * (59 - d) / 7,
+      ),
+  ];
+}
+
+/// As [_Weights], over the last [days] only: the estimate still calibrates.
+class _RecentWeights extends Fake implements GetWeightLogUsecase {
+  final int days;
+
+  _RecentWeights(this.days);
+
+  @override
+  Future<List<WeightLogEntity>> getAllEntries() async => [
+    for (var d = days - 1; d >= 0; d--)
+      WeightLogEntity(
+        date: _today.subtract(Duration(days: d)),
+        weightKg: 90 - 0.5 * (days - 1 - d) / 7,
       ),
   ];
 }
@@ -226,6 +246,93 @@ void main() {
       expect(c.proposedTargetKcal, c.uncappedTargetKcal);
     });
 
+    test('with no weigh-in the goal\'s energy is at the fallback weight', () {
+      final c = computeCheckIn(
+        CheckInInputs(
+          days: [const AdaptiveDay(intakeKcal: 2000)],
+          priorKcal: 2500,
+          goalRateKgPerWeek: -0.5,
+          bodyFatPercent: 25,
+          previousBaseKcal: null,
+          fallbackWeightKg: 120,
+          taper: (adjustment, weight) {
+            expect(weight, 120);
+            return adjustment;
+          },
+        ),
+      );
+      expect(c.kcalPerKg, const ExpenditureSettings().kcalPerKgAt(120, 25));
+    });
+
+    group('with no update in the history', () {
+      CheckIn aged({double? previous}) => computeCheckIn(
+        CheckInInputs(
+          days: [for (var d = 0; d < 30; d++) const AdaptiveDay()],
+          priorKcal: 2500,
+          goalRateKgPerWeek: -0.5,
+          bodyFatPercent: 25,
+          previousBaseKcal: previous,
+          taper: (adjustment, _) => adjustment,
+        ),
+      );
+
+      test('the last check-in\'s base carries over, not the prior', () {
+        final c = aged(previous: 2200);
+        expect(c.baseKcal, 2200);
+        expect(c.expenditureKcal, 2200);
+        expect(c.proposedTargetKcal, c.uncappedTargetKcal);
+        expect(c.proposedTargetKcal, lessThan(2200));
+      });
+
+      test('before any check-in it is the prior', () {
+        expect(aged().baseKcal, 2500);
+      });
+    });
+
+    group('whether the check-in limit was compared', () {
+      test('it was, and the estimate moved no more than it', () {
+        final free = run().baseKcal;
+        final c = run(previous: free - 100);
+        expect(c.movedWithinCap, isTrue);
+        expect(c.capCalibrating, isFalse);
+      });
+
+      test('it was, and it held the estimate back', () {
+        final free = run().baseKcal;
+        expect(run(previous: free - 500).movedWithinCap, isFalse);
+      });
+
+      test('no mark to compare with', () {
+        expect(run().movedWithinCap, isFalse);
+      });
+
+      test('still calibrating: not compared', () {
+        final c = run(previous: 2400, days: 20);
+        expect(c.movedWithinCap, isFalse);
+        expect(c.capCalibrating, isTrue);
+      });
+    });
+
+    test('days to the target weight round up, as the planner\'s do', () {
+      final c = computeCheckIn(
+        CheckInInputs(
+          days: [
+            for (var d = 0; d < 10; d++)
+              const AdaptiveDay(intakeKcal: 2000, weightKg: 90),
+          ],
+          priorKcal: 2500,
+          goalRateKgPerWeek: -0.3,
+          bodyFatPercent: 25,
+          targetWeightKg: 89,
+          previousBaseKcal: null,
+          taper: (adjustment, _) => adjustment,
+        ),
+      );
+      // 1 kg at 0.3 a week is 23.3 days.
+      expect(c.daysToTargetAtGoal, 24);
+      expect(c.daysToTargetAtGoal, daysToTarget(90, 89, -0.3 / 7));
+    });
+
     test('the target weight is about 13 weeks off at either pace', () {
       final checkIn = run();
 
@@ -271,6 +378,59 @@ void main() {
       await other.save(const AdaptiveSettings(adaptiveTarget: true));
       expect((await forkKcalGoal(_today, other)).target, isNull);
       expect((await forkKcalGoal(_today, store)).target, 2100);
+    });
+
+    test('with no weigh-in the profile\'s weight sets the energy of the '
+        'goal', () async {
+      final c = await AdaptiveService(
+        _User(),
+        _NoWeights(),
+        _NoLogs(),
+        store,
+        () => _today.add(const Duration(hours: 9)),
+      ).checkIn();
+      expect(c.trendKg, isNull);
+      expect(
+        c.kcalPerKg,
+        const ExpenditureSettings().kcalPerKgAt(90, bodyFatPercent(_user())),
+      );
+    });
+
+    group('auto-accept', () {
+      const auto = AdaptiveSettings(
+        adaptiveTarget: true,
+        autoAcceptCheckIn: true,
+      );
+      AdaptiveService paced(double kcal, AdaptiveStore into) => AdaptiveService(
+        _User.pacedTo(kcal),
+        _Weights(),
+        _TrackedDays(),
+        into,
+        () => _today.add(const Duration(hours: 9)),
+      );
+
+      test('takes a proposal at the floor or over it', () async {
+        AdaptiveStore.settings.value = auto;
+        final memory = _MemoryStore();
+        final due = paced(1800, memory);
+        final accepted = await due.autoAcceptIfDue();
+        expect(accepted, isNotNull);
+        expect(accepted!.belowRecommendedFloor, isFalse);
+        expect(memory.records, hasLength(1));
+      });
+
+      test('refuses one under the floor, and it stays due', () async {
+        AdaptiveStore.settings.value = auto;
+        final memory = _MemoryStore();
+        final due = paced(1000, memory);
+        final proposal = await due.checkIn();
+        // The male floor; the proposal is not clamped to it.
+        expect(proposal.recommendedFloorKcal, 1500);
+        expect(proposal.proposedTargetKcal, lessThan(1500));
+        expect(await due.autoAcceptIfDue(), isNull);
+        expect(memory.records, isEmpty);
+        expect(await due.checkInDue(), isTrue);
+      });
     });
 
     test('a check-in is due a week after the last', () async {
@@ -709,6 +869,202 @@ void main() {
     final cap = find.textContaining(RegExp('check-in limit|A check-in moves'));
     await tester.scrollUntilVisible(cap, 200);
     expect(cap, findsOneWidget);
+  });
+
+  group('the check-in limit\'s line', () {
+    AdaptiveService limited(GetWeightLogUsecase weights) => AdaptiveService(
+      _User(),
+      weights,
+      _TrackedDays(),
+      _MemoryStore(),
+      () => _today.add(const Duration(hours: 9)),
+    );
+    Future<void> pumpTall(WidgetTester tester, AdaptiveService service) async {
+      tester.view.physicalSize = const Size(1000, 4000);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        MaterialApp(home: CheckInScreen(service: service)),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    final within = find.textContaining('moved less than');
+    final notYet = find.textContaining('does not apply yet');
+
+    testWidgets('says the change is within it only once compared', (
+      tester,
+    ) async {
+      final service = limited(_Weights());
+      await service.accept(await service.checkIn(), 2000);
+      await pumpTall(tester, service);
+      expect(within, findsOneWidget);
+      expect(notYet, findsNothing);
+    });
+
+    testWidgets('while calibrating says it does not apply yet', (tester) async {
+      final service = limited(_RecentWeights(20));
+      await service.accept(await service.checkIn(), 2000);
+      await pumpTall(tester, service);
+      expect(within, findsNothing);
+      expect(notYet, findsOneWidget);
+    });
+
+    testWidgets('with no record of these settings claims nothing', (
+      tester,
+    ) async {
+      final service = limited(_Weights());
+      final due = await service.checkIn();
+      // Accepted under other settings: no mark for these.
+      AdaptiveStore.settings.value = const AdaptiveSettings(flatEnergy: true);
+      await service.accept(due, 2000);
+      AdaptiveStore.settings.value = const AdaptiveSettings();
+      await pumpTall(tester, service);
+      expect(within, findsNothing);
+      expect(notYet, findsNothing);
+    });
+  });
+
+  testWidgets('in the daily mode the expenditure row says it holds the '
+      'activity the row below names', (tester) async {
+    AdaptiveStore.settings.value = const AdaptiveSettings(
+      activityMode: ActivityMode.daily,
+    );
+    final service = AdaptiveService(
+      _User(),
+      _Weights(),
+      _TrackedDays(),
+      _MemoryStore(),
+      () => _today.add(const Duration(hours: 9)),
+    );
+    await tester.pumpWidget(MaterialApp(home: CheckInScreen(service: service)));
+    await tester.pumpAndSettle();
+    expect(find.text('Expenditure before activity'), findsNothing);
+    expect(find.text("Expenditure with this week's activity"), findsOneWidget);
+  });
+
+  group('a proposal under the advised floor', () {
+    AdaptiveService paced(double kcal, [_MemoryStore? memory]) =>
+        AdaptiveService(
+          _User.pacedTo(kcal),
+          _Weights(),
+          _TrackedDays(),
+          memory ?? _MemoryStore(),
+          () => _today.add(const Duration(hours: 9)),
+        );
+    Future<void> pumpTall(WidgetTester tester, AdaptiveService service) async {
+      tester.view.physicalSize = const Size(1000, 4000);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        MaterialApp(home: CheckInScreen(service: service)),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    final warning = find.byKey(const ValueKey('check-in-below-floor'));
+    TextField field(WidgetTester tester) =>
+        tester.widget<TextField>(find.byKey(const ValueKey('check-in-target')));
+
+    testWidgets('is warned of and still offered, not clamped', (tester) async {
+      final service = paced(1000);
+      final proposed = (await service.checkIn()).proposedTargetKcal;
+      await pumpTall(tester, service);
+      expect(warning, findsOneWidget);
+      expect(find.textContaining('1500 kcal a day'), findsOneWidget);
+      expect(field(tester).controller!.text, '${proposed.round()}');
+    });
+
+    testWidgets('over it, no warning', (tester) async {
+      await pumpTall(tester, paced(1800));
+      expect(warning, findsNothing);
+    });
+
+    testWidgets('of nothing or less is not prefilled, and Accept says why', (
+      tester,
+    ) async {
+      final memory = _MemoryStore();
+      final service = paced(-500, memory);
+      expect(
+        (await service.checkIn()).proposedTargetKcal,
+        lessThanOrEqualTo(0),
+      );
+      await pumpTall(tester, service);
+      expect(warning, findsOneWidget);
+      expect(field(tester).controller!.text, isEmpty);
+
+      await tester.tap(find.text('Accept'));
+      await tester.pump();
+      expect(find.text('Enter a daily target above 0 kcal.'), findsOneWidget);
+      expect(memory.records, isEmpty);
+    });
+
+    testWidgets('with auto-accept on, the card stays to be done by hand', (
+      tester,
+    ) async {
+      AdaptiveStore.settings.value = const AdaptiveSettings(
+        adaptiveTarget: true,
+        autoAcceptCheckIn: true,
+      );
+      final memory = _MemoryStore();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: AdaptiveCheckInCard(
+              service: paced(1000, memory),
+              onAccepted: () {},
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(memory.records, isEmpty);
+      expect(find.text('Your first target'), findsOneWidget);
+      expect(find.text('Your first target is set'), findsNothing);
+    });
+  });
+
+  group('a user who weighs in pounds', () {
+    setUp(() {
+      locator.registerSingleton<GetConfigUsecase>(
+        _Config(unit: BodyWeightUnit.lb),
+      );
+    });
+    tearDown(() => locator.unregister<GetConfigUsecase>());
+
+    testWidgets('reads the check-in in pounds, not kg', (tester) async {
+      tester.view.physicalSize = const Size(1000, 4000);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final service = AdaptiveService(
+        _User(),
+        _Weights(),
+        _TrackedDays(),
+        _MemoryStore(),
+        () => _today.add(const Duration(hours: 9)),
+      );
+      final checkIn = await tester.runAsync(service.checkIn);
+      await tester.pumpWidget(
+        MaterialApp(home: CheckInScreen(service: service)),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text(weightText(checkIn!.trendKg!, BodyWeightUnit.lb)),
+        findsOneWidget,
+      );
+      expect(
+        find.text(weightChangeText(checkIn.weekChangeKg!, BodyWeightUnit.lb)),
+        findsOneWidget,
+      );
+      expect(find.textContaining('for -1.1 lb a week'), findsOneWidget);
+      final perLb = (checkIn.kcalPerKg! / 2.20462).round();
+      expect(
+        find.textContaining('at $perLb kcal a lb of weight change'),
+        findsOneWidget,
+      );
+      expect(find.textContaining(RegExp(r'\bkg\b')), findsNothing);
+    });
   });
 
   testWidgets('Keep current target records the check-in at it', (tester) async {
@@ -1175,9 +1531,18 @@ void main() {
 }
 
 class _Config extends Fake implements GetConfigUsecase {
+  final BodyWeightUnit unit;
+
+  _Config({this.unit = BodyWeightUnit.kg});
+
   @override
-  Future<ConfigEntity> getConfig() async =>
-      ConfigEntity(true, true, false, AppThemeEntity.system);
+  Future<ConfigEntity> getConfig() async => ConfigEntity(
+    true,
+    true,
+    false,
+    AppThemeEntity.system,
+    bodyWeightUnit: unit,
+  );
 }
 
 class _Goal extends Fake implements GetKcalGoalUsecase {
