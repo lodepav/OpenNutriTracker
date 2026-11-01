@@ -1036,6 +1036,8 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
     final note = _textController.text.trim();
     _photoNote = note.isEmpty ? null : note;
     _textController.clear();
+    // These rows are the photo's, not a page's read before.
+    _forkLinkedRecipe = null;
     // the subscription starts with the first read
     _stagedRead;
     setState(() => _readingStaged = true);
@@ -1077,6 +1079,12 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
     if (note == null || !mounted) return;
     _photoNote = note;
     _resetAmountControllers();
+    // As a first read: a failure keeps the photo, to send again.
+    _stagedRead;
+    setState(() {
+      _stagedPhoto = photo;
+      _readingStaged = true;
+    });
     _bloc.add(
       ReadMealPhotoEvent(
         photo: photo,
@@ -1140,7 +1148,8 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
     if (chosen != null) _bloc.add(ChangeRowCandidateEvent(index, chosen));
   }
 
-  void _showQuickAdd() {
+  /// Quick add for [row]: the other rows stay to review, and [row] is done.
+  void _showQuickAdd(BulkAddRow row) {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -1148,6 +1157,16 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
       builder: (_) => QuickAddBottomSheet(
         intakeType: _args.intakeTypeEntity,
         day: _args.day,
+        onAdded: () {
+          if (_bloc.state case BulkAddLoadedState(:final rows)) {
+            final index = rows.indexWhere(
+              (r) => identical(r.resolved, row.resolved),
+            );
+            if (index >= 0 && !rows[index].skipped) {
+              _bloc.add(ToggleRowSkippedEvent(index));
+            }
+          }
+        },
       ),
     );
   }

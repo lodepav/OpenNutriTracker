@@ -32,16 +32,27 @@ const _nutrientLabels = {
 /// form was filled from one (S29), and sends nothing until the user does.
 /// Returns once the user decided; the upload carries on and reports through
 /// the app's snackbar, with a retry.
+/// [withNutrients] off for a food whose values are not per 100 g (the form's
+/// per-serving mode), which only offers its name and brand.
 Future<void> offerOffUpload(
   BuildContext context,
   MealEntity meal, {
   Uint8List? labelPhoto,
+  bool withNutrients = true,
   OffAccountStore? store,
   OffContributionClient? client,
 }) async {
   // No client to send with: the app's is missing in widget tests.
   if (client == null && !locator.isRegistered<http.Client>()) return;
-  final full = OffUpload.fromMeal(meal);
+  final read = OffUpload.fromMeal(meal);
+  final full = withNutrients
+      ? read
+      : OffUpload(
+          barcode: read.barcode,
+          name: read.name,
+          brand: read.brand,
+          nutrients: const {},
+        );
   if (!isBarcodeFormatValid(full.barcode) || full.isEmpty) return;
   final account = await (store ?? OffAccountStore()).load();
   if (!account.isReady || !context.mounted) return;

@@ -39,11 +39,17 @@ class QuickAddBottomSheet extends StatefulWidget {
   /// which would drop everything already on the list.
   final LogTray? logTray;
 
+  // [fork] S133 quick-add: from a review screen, whose other rows must not
+  // be thrown away by going Home
+  final VoidCallback? onAdded;
+  // [/fork]
+
   const QuickAddBottomSheet({
     super.key,
     required this.intakeType,
     required this.day,
     this.logTray,
+    this.onAdded, // [fork] S133 quick-add
   });
 
   @override
@@ -187,6 +193,14 @@ class _QuickAddBottomSheetState extends State<QuickAddBottomSheet> {
       // removes every route (including this sheet's), so reading from
       // context afterwards would be looking up a deactivated widget.
       final addedMessage = S.of(context).quickAddAddedSnack(mealTypeLabel);
+      // [fork] S133 quick-add: only the sheet closes
+      if (widget.onAdded case final onAdded?) {
+        Navigator.of(context).pop();
+        onAdded();
+        scaffoldMessenger.showSnackBar(SnackBar(content: Text(addedMessage)));
+        return;
+      }
+      // [/fork]
       Navigator.of(context, rootNavigator: true).pushNamedAndRemoveUntil(
         NavigationOptions.mainRoute,
         (route) => false,

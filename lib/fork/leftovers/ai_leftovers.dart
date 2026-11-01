@@ -68,6 +68,10 @@ Map<String, double> leftoversFromItems(
   return left;
 }
 
+/// What a model read off a leftovers photo: [left] by entry, and how many of
+/// its items could not be placed on one, whose entries read as eaten up.
+typedef LeftoversReading = ({Map<String, double> left, int unplaced});
+
 /// Asks the chosen model how much of each entry is left. Null when no
 /// model is set up; raises [MealInterpreterException] when the call fails.
 class ReadLeftoversUseCase {
@@ -78,7 +82,7 @@ class ReadLeftoversUseCase {
 
   Future<AiSelection?> get selection => _credentials.readSelection();
 
-  Future<Map<String, double>?> read(
+  Future<LeftoversReading?> read(
     List<IntakeEntity> entries,
     MealPhoto leftovers, {
     MealPhoto? meal,
@@ -99,7 +103,11 @@ class ReadLeftoversUseCase {
       ),
       system: leftoversSystemPrompt(entries, withMealPhoto: meal != null),
     );
-    return leftoversFromItems(entries, result.items);
+    final left = leftoversFromItems(entries, result.items);
+    return (
+      left: left,
+      unplaced: result.items.length - left.length + result.errors.length,
+    );
   }
 }
 

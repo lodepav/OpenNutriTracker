@@ -450,7 +450,11 @@ class _MealDetailScreenState extends State<MealDetailScreen> {
                       meal: meal,
                       displayUnit:
                           selectedUnit == UnitDropdownItem.serving.toString()
-                              ? meal.servingUnit
+                              // [fork] S142: "45 g", not "45 gml"
+                              ? (meal.servingUnit == 'gml'
+                                    ? 'g'
+                                    : meal.servingUnit)
+                              // [/fork]
                               : selectedUnit,
                       usesImperialUnits: _usesImperialUnits,
                       textStyle: Theme.of(context).textTheme.bodySmall

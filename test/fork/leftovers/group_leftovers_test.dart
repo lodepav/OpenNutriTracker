@@ -50,21 +50,23 @@ final _photo = MealPhoto(
 class _Reader implements ReadLeftoversUseCase {
   final AiSelection? selected;
   final Map<String, double>? answer;
+  final int unplaced;
   MealPhoto? sawMeal;
 
-  _Reader({this.selected, this.answer});
+  _Reader({this.selected, this.answer, this.unplaced = 0});
 
   @override
   Future<AiSelection?> get selection async => selected;
 
   @override
-  Future<Map<String, double>?> read(
+  Future<LeftoversReading?> read(
     List<IntakeEntity> entries,
     MealPhoto leftovers, {
     MealPhoto? meal,
   }) async {
     sawMeal = meal;
-    return answer;
+    final left = answer;
+    return left == null ? null : (left: left, unplaced: unplaced);
   }
 }
 
@@ -258,6 +260,22 @@ void main() {
 
       expect(await handled, isTrue);
       expect(updates, isEmpty);
+    });
+
+    testWidgets('a reply it could not place says so', (tester) async {
+      final reader = _Reader(
+        selected: const AiSelection(provider: AiProvider.anthropic),
+        answer: {'rice': 50},
+        unplaced: 2,
+      );
+      await tap(tester, _rice, reader: reader);
+      await tester.tap(find.text(LeftoverStrings.wholeMeal(3)));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(LeftoverStrings.readPhoto));
+      await tester.runAsync(() => Future.delayed(Duration(milliseconds: 50)));
+      await tester.pumpAndSettle();
+      expect(find.text(LeftoverStrings.unplaced(2)), findsOneWidget);
+      expect(find.text(LeftoverStrings.aiEstimate), findsNothing);
     });
 
     testWidgets('a photo of the leftovers fills in what is left', (

@@ -393,7 +393,13 @@ class _EditMealScreenState extends State<EditMealScreen> {
               return _getLoadingContent();
             } else if (state is EditMealLoadedState) {
               if (!_formModeHydrated) {
-                _formMode = state.formMode;
+                // [fork] S188 edit-keeps-serving: only a custom food has the
+                // switch back, and the per-serving form would reset a
+                // product's serving to 100
+                _formMode = _mealEntity.source == MealSourceEntity.custom
+                    ? state.formMode
+                    : CustomMealFormMode.advanced;
+                // [/fork]
                 _formModeHydrated = true;
               }
               return _getLoadedContent(state.usesImperialUnits, usesKj);
@@ -1079,7 +1085,13 @@ class _EditMealScreenState extends State<EditMealScreen> {
 
       // [fork] S33 off-contributions: offer the saved food to Open Food Facts
       if (newMealEntity.source == MealSourceEntity.custom && mounted) {
-        await offerOffUpload(context, newMealEntity, labelPhoto: _forkLabelPhoto);
+        await offerOffUpload(
+          context,
+          newMealEntity,
+          labelPhoto: _forkLabelPhoto,
+          // Per serving, with blanks as 0: not figures for the database.
+          withNutrients: _formMode != CustomMealFormMode.simple,
+        );
       }
       // [/fork]
 

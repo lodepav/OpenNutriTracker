@@ -83,10 +83,14 @@ class ReplaceRowWithBreakdownEvent extends BulkAddEvent {
   final ResolvedMealItem row;
   final DishBreakdown breakdown;
 
-  const ReplaceRowWithBreakdownEvent(this.row, this.breakdown);
+  /// The row as it was asked about: edited since, it stays as the user left
+  /// it, since the reply was to another amount or food.
+  final BulkAddRow? asked;
+
+  const ReplaceRowWithBreakdownEvent(this.row, this.breakdown, {this.asked});
 
   @override
-  List<Object?> get props => [row, breakdown];
+  List<Object?> get props => [row, breakdown, asked];
 }
 
 /// The rows after [event]: the target row replaced by one row per
@@ -101,6 +105,14 @@ BulkAddLoadedState replaceRowWithBreakdown(
   if (index < 0 ||
       state.rows[index].skipped ||
       event.breakdown.ingredients.isEmpty) {
+    return state;
+  }
+  final asked = event.asked;
+  final now = state.rows[index];
+  if (asked != null &&
+      (asked.amountText != now.amountText ||
+          asked.unit != now.unit ||
+          asked.selectedIndex != now.selectedIndex)) {
     return state;
   }
 

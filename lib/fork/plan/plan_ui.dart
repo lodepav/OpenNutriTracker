@@ -7,6 +7,7 @@ import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/core/utils/meal_type_suggester.dart';
 import 'package:opennutritracker/core/utils/tracked_day_lock.dart';
 import 'package:opennutritracker/features/meal_detail/presentation/bloc/meal_detail_bloc.dart';
+import 'package:opennutritracker/features/meal_detail/util/meal_quantity_converter.dart';
 import 'package:opennutritracker/fork/basket/basket.dart';
 import 'package:opennutritracker/fork/basket/basket_ui.dart';
 import 'package:opennutritracker/fork/copy/copy_entries.dart';
@@ -15,6 +16,18 @@ import 'package:opennutritracker/fork/units/energy_text.dart';
 import 'package:opennutritracker/fork/display/display_prefs.dart';
 
 final _log = Logger('PlannedFoodsCard');
+
+/// The amount as picked: [PlannedFood.amountText] is in the food's own unit,
+/// so a serving of 180 g reads "1 serving", not "180 serving".
+String plannedAmountLabel(PlannedFood food) {
+  final base = double.tryParse(food.amountText);
+  final perOne = convertQuantityToBaseUnit(1, food.unit, food.meal);
+  if (base == null || perOne <= 0) {
+    return '${amountLabel(food.amountText)} ${food.unit}';
+  }
+  final picked = double.parse((base / perOne).toStringAsFixed(1));
+  return pickedLabel('$picked', food.unit);
+}
 
 /// Writes one planned food to the diary; upstream's meal detail add in
 /// the app. What it wrote, or null when it was not written (a profile
@@ -141,6 +154,7 @@ class _PlannedFoodsCardState extends State<PlannedFoodsCard> {
     final startedOn = ProfileStamp.now();
     final logged = <PlannedFood>[];
     final written = <IntakeEntity>[];
+    var failed = false;
     setState(() => _busy = true);
     try {
       for (final food in foods) {
@@ -152,11 +166,22 @@ class _PlannedFoodsCardState extends State<PlannedFoodsCard> {
         logged.add(food);
         written.add(intake);
       }
-      refreshAfterLogging();
+    } catch (error, stack) {
+      _log.warning('Log all stopped by a failed write', error, stack);
+      failed = true;
     } finally {
       if (mounted) setState(() => _busy = false);
     }
-    if (logged.isEmpty) return;
+    refreshAfterLogging();
+    if (logged.isEmpty) {
+      if (failed) {
+        messenger?.removeCurrentSnackBar();
+        messenger?.showSnackBar(
+          const SnackBar(content: Text("Not logged: it couldn't be saved.")),
+        );
+      }
+      return;
+    }
     final undoLog = widget.undoLog;
     final meals = logged.map((f) => f.type).toSet();
     final to = [
@@ -166,7 +191,8 @@ class _PlannedFoodsCardState extends State<PlannedFoodsCard> {
     _showWithUndo(
       messenger,
       'Logged${logged.length == 1 ? '' : ' ${logged.length} foods'} '
-      'to ${to.join(', ')}',
+      'to ${to.join(', ')}'
+      "${failed ? ". The rest couldn't be saved and stay planned." : ''}",
       () async {
         final undone = await undoLog((
           day: logged.first.day,
@@ -329,8 +355,8 @@ class _PlannedFoodsCardState extends State<PlannedFoodsCard> {
                   contentPadding: EdgeInsets.zero,
                   title: Text(food.meal.name ?? ''),
                   subtitle: Text(
-                    '${_typeName(food.type)} · ${amountLabel(food.amountText)} '
-                    '${food.unit} · ${energyText(context, food.kcal)}'
+                    '${_typeName(food.type)} · ${plannedAmountLabel(food)} · '
+                    '${energyText(context, food.kcal)}'
                     '${food.repeats ? '\n${repeatText(context, food.weekdays)}' : ''}',
                   ),
                   trailing: Row(

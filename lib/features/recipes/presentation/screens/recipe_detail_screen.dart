@@ -18,6 +18,9 @@ import 'package:opennutritracker/fork/basket/basket_ui.dart';
 import 'package:opennutritracker/fork/recipe/recipe_page.dart';
 import 'package:opennutritracker/core/utils/meal_type_suggester.dart';
 import 'package:opennutritracker/fork/copy/copy_ui.dart' show mealLabel;
+import 'package:logging/logging.dart';
+import 'package:opennutritracker/core/utils/tracked_day_lock.dart';
+import 'package:opennutritracker/fork/add/logged_bar.dart';
 // [/fork]
 import 'package:opennutritracker/generated/l10n.dart';
 
@@ -45,6 +48,7 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
   bool _initialized = false;
   // [fork] S126 recipe-page: servings, or whole recipes, to log
   double _count = 1;
+  bool _logging = false; // [fork] S126 recipe-page
   // The meal Log goes to: the + sheet's, else the time of day's (U7).
   late IntakeTypeEntity _meal;
   // [/fork]
@@ -190,7 +194,9 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
         onCount: (count) => setState(() => _count = count),
         meal: _meal,
         onMeal: (meal) => setState(() => _meal = meal),
-        onLog: () => _logPortion(context, RecipePortion(recipe, _count)),
+        onLog: _logging
+            ? null
+            : () => _logPortion(context, RecipePortion(recipe, _count)),
       ),
       // [/fork]
     );
@@ -199,24 +205,39 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
   // [fork] S126 recipe-page: the portion straight into the meal picked
   Future<void> _logPortion(BuildContext context, RecipePortion portion) async {
     final type = _meal;
-    final written = await locator<MealDetailBloc>().addIntake(
-      context,
-      'g',
-      portion.grams.toStringAsFixed(1), // [fork] S142 one decimal
-      type,
-      portion.recipe.toMealEntity(),
-      DateTime.now(),
-    );
-    if (written == null || !context.mounted) return;
-    refreshAfterLogging();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          '${portion.label} of ${portion.recipe.name} added to '
-          '${mealLabel(context, type)}',
-        ),
-      ),
-    );
+    final messenger = ScaffoldMessenger.of(context);
+    final mealName = mealLabel(context, type);
+    final stamp = ProfileStamp.now();
+    final today = DateTime.now();
+    setState(() => _logging = true);
+    try {
+      final written = await locator<MealDetailBloc>().addIntake(
+        context,
+        'g',
+        portion.grams.toStringAsFixed(1), // [fork] S142 one decimal
+        type,
+        portion.recipe.toMealEntity(),
+        today,
+      );
+      if (written == null) return;
+      refreshAfterLogging();
+      showLoggedBar(
+        messenger,
+        '${portion.label} of ${portion.recipe.name} added to $mealName',
+        day: today,
+        written: [written],
+        stamp: stamp,
+      );
+    } catch (error, stack) {
+      Logger('RecipeDetailScreen').warning('Log failed', error, stack);
+      messenger
+        ..removeCurrentSnackBar()
+        ..showSnackBar(
+          const SnackBar(content: Text("Not added: it couldn't be saved.")),
+        );
+    } finally {
+      if (mounted) setState(() => _logging = false);
+    }
   }
   // [/fork]
 

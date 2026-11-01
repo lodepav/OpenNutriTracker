@@ -6,6 +6,9 @@ import 'package:opennutritracker/core/domain/entity/intake_type_entity.dart';
 import 'package:opennutritracker/core/domain/usecase/add_intake_usecase.dart';
 import 'package:opennutritracker/core/domain/usecase/add_tracked_day_usecase.dart';
 import 'package:opennutritracker/features/add_meal/presentation/widgets/quick_add_bottom_sheet.dart';
+import 'package:opennutritracker/features/diary/presentation/bloc/calendar_day_bloc.dart';
+import 'package:opennutritracker/features/diary/presentation/bloc/diary_bloc.dart';
+import 'package:opennutritracker/features/home/presentation/bloc/home_bloc.dart';
 import 'package:opennutritracker/fork/add/quick_add.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 
@@ -19,6 +22,29 @@ class _FakeAdd extends Fake implements AddIntakeUsecase {
 }
 
 class _FakeTracked extends Fake implements AddTrackedDayUsecase {}
+
+class _SavedTracked implements AddTrackedDayUsecase {
+  @override
+  Future<bool> hasTrackedDay(DateTime day) async => true;
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => Future<void>.value();
+}
+
+class _Home extends Fake implements HomeBloc {
+  @override
+  void add(HomeEvent event) {}
+}
+
+class _Diary extends Fake implements DiaryBloc {
+  @override
+  void add(DiaryEvent event) {}
+}
+
+class _Calendar extends Fake implements CalendarDayBloc {
+  @override
+  void add(CalendarDayEvent event) {}
+}
 
 Widget _app() => MaterialApp(
   localizationsDelegates: const [S.delegate],
@@ -51,6 +77,48 @@ void main() {
     expect(quickAddKcal(carbs: 50, fat: 10, protein: 20), 50 * 4 + 90 + 80);
     expect(quickAddKcal(typedKcal: 0, fat: 2), 18);
     expect(quickAddKcal(), isNull);
+  });
+
+  testWidgets('from a review screen only the sheet closes', (tester) async {
+    GetIt.I
+      ..registerSingleton<AddIntakeUsecase>(_FakeAdd())
+      ..registerSingleton<AddTrackedDayUsecase>(_SavedTracked())
+      ..registerSingleton<HomeBloc>(_Home())
+      ..registerSingleton<DiaryBloc>(_Diary())
+      ..registerSingleton<CalendarDayBloc>(_Calendar());
+    addTearDown(GetIt.I.reset);
+    var added = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: const [S.delegate],
+        supportedLocales: S.supportedLocales,
+        home: Scaffold(
+          body: Builder(
+            builder: (context) => TextButton(
+              onPressed: () => showModalBottomSheet<void>(
+                context: context,
+                isScrollControlled: true,
+                builder: (_) => QuickAddBottomSheet(
+                  intakeType: IntakeTypeEntity.dinner,
+                  day: DateTime(2026, 10, 26),
+                  onAdded: () => added++,
+                ),
+              ),
+              child: const Text('review'),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('review'));
+    await tester.pumpAndSettle();
+    await tester.enterText(_field('quick-add-energy'), '450');
+    await tester.pump();
+    await tester.tap(_submit());
+    await tester.pumpAndSettle();
+    expect(added, 1);
+    expect(find.byType(QuickAddBottomSheet), findsNothing);
+    expect(find.text('review'), findsOneWidget);
   });
 
   testWidgets('macros alone add up the energy on Add and in the field', (

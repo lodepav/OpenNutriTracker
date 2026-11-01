@@ -190,7 +190,10 @@ extension _BulkAddRow on _BulkAddScreenState {
     BulkAddRow row,
   ) => [
     if (!row.isResolved)
-      (label: S.of(context).quickAddCardLabel, onPressed: _showQuickAdd),
+      (
+        label: S.of(context).quickAddCardLabel,
+        onPressed: () => _showQuickAdd(row),
+      ),
     // on demand, for a doubtful row; and once per
     // breakdown, saving it as a recipe
     if (_dishBreakdown.canBreakDown(row))

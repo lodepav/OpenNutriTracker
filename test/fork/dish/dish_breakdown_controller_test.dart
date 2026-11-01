@@ -13,6 +13,7 @@ import 'package:opennutritracker/features/add_meal/util/meal_text_parser.dart';
 import 'package:opennutritracker/fork/dish/break_down_dish_usecase.dart';
 import 'package:opennutritracker/fork/dish/dish_breakdown_controller.dart';
 import 'package:opennutritracker/fork/dish/dish_breakdown_rows.dart';
+import 'package:opennutritracker/fork/dish/dish_group.dart';
 import 'package:opennutritracker/fork/dish/dish_recipe.dart';
 
 MealEntity _meal(
@@ -70,6 +71,21 @@ class _ModelReader implements ReadMealTextUseCase {
             ParsedMealItem(query: 'khachapuri', quantity: 1),
             ParsedMealItem(query: 'egg, whole, raw', quantity: 2),
           ],
+          errors: [],
+        ),
+        usedModel: true,
+      );
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class _GramsReader implements ReadMealTextUseCase {
+  @override
+  Future<MealTextReading> read(String input, {String? localeCode}) async =>
+      const MealTextReading(
+        MealTextParseResult(
+          items: [ParsedMealItem(query: 'borscht', quantity: 500, unit: 'g')],
           errors: [],
         ),
         usedModel: true,
@@ -179,6 +195,91 @@ void main() {
     expect(state.rows[0].dishIngredient, isNull);
     expect(state.rows[0].willBeLogged, isFalse);
     controller.dispose();
+  });
+
+  test('a row edited while it is broken down keeps the edit', () async {
+    final gate = Completer<void>();
+    final controller = DishBreakdownController(
+      bloc,
+      breakDown: (dish, {amount, photo}) async {
+        await gate.future;
+        return breakDown(dish);
+      },
+      modelConfigured: () async => true,
+    );
+    bloc.add(const ParseBulkTextEvent(text: 'x', usesImperialUnits: false));
+    await settle();
+    bloc.add(const ChangeRowAmountEvent(0, '200'));
+    await settle();
+    gate.complete();
+    final state = await settle();
+
+    expect(state.rows[0].amountText, '200');
+    expect(state.rows[0].dishIngredient, isNull);
+    controller.dispose();
+  });
+
+  group('a dish', () {
+    Future<(List<BulkAddRow>, Object)> dishOf(
+      List<ParsedMealItem> ingredients, {
+      ReadMealTextUseCase? reader,
+    }) async {
+      final dishBloc = BulkAddBloc(
+        _Resolver(),
+        reader ?? _ModelReader(),
+        _PhotoReader(),
+      );
+      addTearDown(dishBloc.close);
+      final controller = DishBreakdownController(
+        dishBloc,
+        breakDown: (dish, {amount, photo}) async =>
+            DishBreakdown(dish, await _Resolver().resolve(ingredients)),
+        modelConfigured: () async => true,
+      );
+      addTearDown(controller.dispose);
+      dishBloc.add(
+        const ParseBulkTextEvent(text: 'x', usesImperialUnits: false),
+      );
+      await pumpEventQueue();
+      await pumpEventQueue();
+      final rows = (dishBloc.state as BulkAddLoadedState).rows;
+      return (rows, rows[0].dishIngredient!.group);
+    }
+
+    const flour = 'wheat flour, white';
+    const cheese = 'cheese, sulguni';
+
+    test('logged has a code of its own, so two are two foods', () async {
+      final (rows, group) = await dishOf(const [
+        ParsedMealItem(query: flour, quantity: 100, unit: 'g'),
+      ]);
+      final first = dishMeal(rows, group)!.code;
+      expect(first, isNotEmpty);
+      expect(dishMeal(rows, group)!.code, isNot(first));
+    });
+
+    test('a liquid in ml counts toward the weight it was stated at', () async {
+      final (rows, group) = await dishOf(const [
+        ParsedMealItem(query: flour, quantity: 100, unit: 'g'),
+        ParsedMealItem(query: cheese, quantity: 300, unit: 'ml'),
+      ], reader: _GramsReader());
+      final members = dishMembers(rows, group);
+      expect(dishPortion(rows, members), closeTo(500, 1e-9));
+      final amounts = scaledAmounts(rows, portionBase(rows, members), 500)!;
+      expect(amounts[members[0]], '100');
+      expect(amounts[members[1]], '300');
+    });
+
+    test('a pinch scaled down stays above 0', () async {
+      final (rows, group) = await dishOf(const [
+        ParsedMealItem(query: flour, quantity: 1, unit: 'g'),
+        ParsedMealItem(query: cheese, quantity: 349, unit: 'g'),
+      ]);
+      final members = dishMembers(rows, group);
+      final amounts = scaledAmounts(rows, portionBase(rows, members), 100)!;
+      expect(amounts[members[0]], '0.29');
+      expect(amounts[members[1]], '100');
+    });
   });
 
   test('a stated count goes with the breakdown, and its recipe has as many '

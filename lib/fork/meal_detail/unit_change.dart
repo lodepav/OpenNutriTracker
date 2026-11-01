@@ -5,8 +5,8 @@ import 'package:opennutritracker/features/meal_detail/util/meal_quantity_convert
 
 /// The amount in [toUnit] that weighs what [text] in [fromUnit] does, so a
 /// unit change keeps the food's amount: 180 g becomes 1 serving, not 180
-/// servings (S164). Grams and millilitres whole, other units to a tenth;
-/// null when [text] is no amount.
+/// servings (S164). Grams and millilitres whole, other units to a tenth, and
+/// never rounded to nothing; null when [text] is no amount.
 String? amountInUnit(
   String text,
   String fromUnit,
@@ -24,8 +24,12 @@ String? amountInUnit(
     UnitDropdownItem.ml.toString(),
     UnitDropdownItem.gml.toString(),
   }.contains(storedUnit(toUnit));
-  final rounded = whole ? value.roundToDouble() : (value * 10).round() / 10;
-  if (rounded <= 0) return null;
+  var rounded = whole ? value.roundToDouble() : (value * 10).round() / 10;
+  // Too little to round: the field's smallest step, never the old number.
+  if (rounded <= 0) {
+    rounded = whole ? 1 : (value * 100).round() / 100;
+    if (rounded <= 0) rounded = 0.01;
+  }
   return rounded == rounded.roundToDouble()
       ? rounded.toInt().toString()
       : rounded.toString();

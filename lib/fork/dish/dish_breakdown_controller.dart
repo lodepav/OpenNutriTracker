@@ -94,7 +94,7 @@ class DishBreakdownController extends ChangeNotifier {
       if (breakdown == null) return DishBreakdownOutcome.noModel;
       if (breakdown.ingredients.isEmpty) return DishBreakdownOutcome.empty;
       if (!_bloc.isClosed) {
-        _bloc.add(ReplaceRowWithBreakdownEvent(target, breakdown));
+        _bloc.add(ReplaceRowWithBreakdownEvent(target, breakdown, asked: row));
       }
       return DishBreakdownOutcome.replaced;
     } on MealInterpreterException catch (e) {
