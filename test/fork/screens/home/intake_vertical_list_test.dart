@@ -298,39 +298,37 @@ void main() {
   // Regression: the QR-share/import options were dropped from the popup
   // menu when the macros toggle PR landed on a stale base. Lock in the
   // expected items so it can't happen again silently.
-  testWidgets(
-    'popup menu shows Copy/Delete/Share/Import for non-empty section',
-    (WidgetTester tester) async {
-      await tester.pumpWidget(
-        _wrapWithMaterial(
-          IntakeVerticalList(
-            day: DateTime(2026, 1, 1),
-            title: 'Breakfast',
-            listIcon: Icons.bakery_dining_outlined,
-            addMealType: AddMealType.breakfastType,
-            intakeList: intakes,
-            usesImperialUnits: false,
-            showMealMacros: true,
-            onCopyIntakeCallback: (_, _, _) {},
-            onDeleteIntakeCallback: (_, _) {},
-          ),
+  testWidgets('popup menu shows Delete/Share/Import for non-empty section', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      _wrapWithMaterial(
+        IntakeVerticalList(
+          day: DateTime(2026, 1, 1),
+          title: 'Breakfast',
+          listIcon: Icons.bakery_dining_outlined,
+          addMealType: AddMealType.breakfastType,
+          intakeList: intakes,
+          usesImperialUnits: false,
+          showMealMacros: true,
+          onDeleteIntakeCallback: (_, _) {},
         ),
-      );
-      await tester.pump();
+      ),
+    );
+    await tester.pump();
 
-      await tester.tap(
-        find.byType(PopupMenuButton<VerticalListPopupMenuSelections>),
-      );
-      await tester.pumpAndSettle();
+    await tester.tap(
+      find.byType(PopupMenuButton<VerticalListPopupMenuSelections>),
+    );
+    await tester.pumpAndSettle();
 
-      // the item reads Copy or move…, as it asks where
-      expect(find.text('Copy or move…'), findsOneWidget);
-      expect(find.text(l10nEn.deleteAllLabel), findsOneWidget);
-      expect(find.text(l10nEn.shareMealLabel), findsOneWidget);
-      expect(find.text(l10nEn.importMealLabel), findsOneWidget);
-      expect(find.text(l10nEn.pasteCodeLabel), findsOneWidget);
-    },
-  );
+    // Copying and moving are on the selection's bar.
+    expect(find.text('Copy or move…'), findsNothing);
+    expect(find.text(l10nEn.deleteAllLabel), findsOneWidget);
+    expect(find.text(l10nEn.shareMealLabel), findsOneWidget);
+    expect(find.text(l10nEn.importMealLabel), findsOneWidget);
+    expect(find.text(l10nEn.pasteCodeLabel), findsOneWidget);
+  });
 
   testWidgets('popup menu shows only Import when section is empty', (
     WidgetTester tester,
@@ -356,13 +354,122 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    // Empty section: no Copy/Delete/Share — nothing to act on. Import is
+    // Empty section: no Delete/Share — nothing to act on. Import is
     // always available so the user can scan a QR to populate the section.
-    expect(find.text('Copy or move…'), findsNothing); // copy-menu
     expect(find.text(l10nEn.deleteAllLabel), findsNothing);
     expect(find.text(l10nEn.shareMealLabel), findsNothing);
     expect(find.text(l10nEn.importMealLabel), findsOneWidget);
     expect(find.text(l10nEn.pasteCodeLabel), findsOneWidget);
+  });
+
+  group('with a selection, on the Diary', () {
+    final edited = <IntakeEntity>[];
+    late DiarySelection selection;
+    setUp(() {
+      edited.clear();
+      selection = DiarySelection();
+      addTearDown(selection.dispose);
+    });
+
+    Future<void> pump(WidgetTester tester, List<IntakeEntity> list) async {
+      await tester.pumpWidget(
+        _wrapWithMaterial(
+          IntakeVerticalList(
+            day: DateTime(2026, 1, 1),
+            title: 'Breakfast',
+            listIcon: Icons.bakery_dining_outlined,
+            addMealType: AddMealType.breakfastType,
+            intakeList: list,
+            usesImperialUnits: false,
+            selection: selection,
+            onItemTappedCallback: (_, intake, _) => edited.add(intake),
+            onDeleteIntakeCallback: (_, _) {},
+          ),
+        ),
+      );
+      await tester.pump();
+    }
+
+    testWidgets('a tap picks a food at once, a second takes it back and ends '
+        'the selection', (tester) async {
+      await pump(tester, intakes);
+      await tester.tap(find.text('Test Meal'));
+      await tester.pump();
+      expect(selection.active, isTrue);
+      expect(selection.isPicked(intakes.single), isTrue);
+      expect(edited, isEmpty);
+
+      await tester.tap(find.text('Test Meal'));
+      await tester.pump();
+      expect(selection.active, isFalse);
+    });
+
+    testWidgets('a long-press edits, and while selecting picks', (
+      tester,
+    ) async {
+      await pump(tester, intakes);
+      await tester.longPress(find.text('Test Meal'));
+      await tester.pump();
+      expect(edited, intakes);
+      expect(selection.active, isFalse);
+
+      selection.start();
+      await tester.pump();
+      await tester.longPress(find.text('Test Meal'));
+      await tester.pump();
+      expect(edited, hasLength(1), reason: 'no second edit');
+      expect(selection.isPicked(intakes.single), isTrue);
+    });
+
+    testWidgets('a tap on the header picks the section; on its menu does not', (
+      tester,
+    ) async {
+      await pump(tester, intakes);
+      await tester.tap(
+        find.byType(PopupMenuButton<VerticalListPopupMenuSelections>),
+      );
+      await tester.pumpAndSettle();
+      expect(selection.active, isFalse);
+      await tester.tapAt(Offset.zero);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Breakfast'));
+      await tester.pump();
+      expect(selection.isPicked(intakes.single), isTrue);
+
+      await tester.tap(find.text('Breakfast'));
+      await tester.pump();
+      expect(selection.active, isFalse);
+    });
+
+    testWidgets('the header of an empty section does nothing', (tester) async {
+      await pump(tester, const []);
+      await tester.tap(find.text('Breakfast'));
+      await tester.pump();
+      expect(selection.active, isFalse);
+    });
+  });
+
+  testWidgets('without a selection, as on Home, a tap edits', (tester) async {
+    final edited = <IntakeEntity>[];
+    await tester.pumpWidget(
+      _wrapWithMaterial(
+        IntakeVerticalList(
+          day: DateTime(2026, 1, 1),
+          title: 'Breakfast',
+          listIcon: Icons.bakery_dining_outlined,
+          addMealType: AddMealType.breakfastType,
+          intakeList: intakes,
+          usesImperialUnits: false,
+          onItemTappedCallback: (_, intake, _) => edited.add(intake),
+          onDeleteIntakeCallback: (_, _) {},
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.tap(find.text('Test Meal'));
+    await tester.pump();
+    expect(edited, intakes);
   });
 
   // the target string has "kcal" written into it

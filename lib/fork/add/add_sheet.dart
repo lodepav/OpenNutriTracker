@@ -202,32 +202,32 @@ class _AddSheetState extends State<AddSheet> {
                     )
                   : const SizedBox.shrink(),
             ),
-            _tiles(context, [
-              _tile(
+            actionTiles(context, [
+              actionTile(
                 context,
-                id: 'quick-add',
+                id: 'add-item-quick-add',
                 icon: Icons.bolt_rounded,
                 label: s.quickAddCardLabel,
                 onTap: _openQuickAdd,
               ),
-              _tile(
+              actionTile(
                 context,
-                id: 'scan',
+                id: 'add-item-scan',
                 icon: Icons.qr_code_scanner_rounded,
                 label: 'Scan',
                 onTap: _openScanner,
               ),
-              _tile(
+              actionTile(
                 context,
-                id: 'recipes',
+                id: 'add-item-recipes',
                 icon: Icons.menu_book_outlined,
                 label: s.recipesLabel,
                 onTap: _openRecipes,
               ),
               if (widget.showActivityTracking)
-                _tile(
+                actionTile(
                   context,
-                  id: 'activity',
+                  id: 'add-item-activity',
                   icon: UserActivityEntity.getIconData(),
                   label: s.activityLabel,
                   onTap: _openActivity,
@@ -285,73 +285,73 @@ class _AddSheetState extends State<AddSheet> {
       },
     );
   }
+}
 
-  /// The tiles on one row, or two rows of two with large text, so their
-  /// names do not break mid-word (A6).
-  Widget _tiles(BuildContext context, List<Widget> tiles) {
-    final large = MediaQuery.textScalerOf(context).scale(10) > 13;
-    final perRow = large ? 2 : tiles.length;
-    return Column(
-      spacing: Dimens.spacing8,
-      children: [
-        for (var i = 0; i < tiles.length; i += perRow)
-          Row(
-            spacing: Dimens.spacing8,
-            children: [
-              ...tiles.skip(i).take(perRow),
-              // An odd last tile keeps its half.
-              if (tiles.length - i < perRow) const Spacer(),
-            ],
-          ),
-      ],
-    );
-  }
+/// The tiles on one row, or two rows of two with large text, so their
+/// names do not break mid-word (A6).
+Widget actionTiles(BuildContext context, List<Widget> tiles) {
+  final large = MediaQuery.textScalerOf(context).scale(10) > 13;
+  final perRow = large ? 2 : tiles.length;
+  return Column(
+    spacing: Dimens.spacing8,
+    children: [
+      for (var i = 0; i < tiles.length; i += perRow)
+        Row(
+          spacing: Dimens.spacing8,
+          children: [
+            ...tiles.skip(i).take(perRow),
+            // An odd last tile keeps its half.
+            if (tiles.length - i < perRow) const Spacer(),
+          ],
+        ),
+    ],
+  );
+}
 
-  Widget _tile(
-    BuildContext context, {
-    required String id,
-    required IconData icon,
-    required String label,
-    required VoidCallback onTap,
-  }) {
-    final theme = Theme.of(context);
-    final palette = paletteOf(context);
-    return Expanded(
-      child: Semantics(
-        identifier: 'add-item-$id',
-        button: true,
-        child: Material(
-          color: palette.surfaceMuted,
+Widget actionTile(
+  BuildContext context, {
+  required String id,
+  required IconData icon,
+  required String label,
+  required VoidCallback onTap,
+}) {
+  final theme = Theme.of(context);
+  final palette = paletteOf(context);
+  return Expanded(
+    child: Semantics(
+      identifier: id,
+      button: true,
+      child: Material(
+        color: palette.surfaceMuted,
+        borderRadius: Dimens.borderRadiusM,
+        child: InkWell(
           borderRadius: Dimens.borderRadiusM,
-          child: InkWell(
-            borderRadius: Dimens.borderRadiusM,
-            onTap: onTap,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(minHeight: 72),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  vertical: Dimens.spacing12,
-                  horizontal: Dimens.spacing4,
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(icon, color: theme.colorScheme.primary),
-                    const SizedBox(height: Dimens.spacing4),
-                    Text(
-                      label,
-                      textAlign: TextAlign.center,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.labelMedium,
-                    ),
-                  ],
-                ),
+          onTap: onTap,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 72),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                vertical: Dimens.spacing12,
+                horizontal: Dimens.spacing4,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(icon, color: theme.colorScheme.primary),
+                  const SizedBox(height: Dimens.spacing4),
+                  Text(
+                    label,
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.labelMedium,
+                  ),
+                ],
               ),
             ),
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
 }

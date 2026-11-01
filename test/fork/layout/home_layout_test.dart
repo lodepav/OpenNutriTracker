@@ -25,9 +25,9 @@ void main() {
               'tiles': const Text('tiles'),
               'plan': const Text('plan'),
               'notices': const Text('notices'),
-              'activity': null,
-              'breakfast': const Text('breakfast'),
-              'lunch': const Text('lunch'),
+              'diaryActivity': null,
+              'diaryBreakfast': const Text('breakfast'),
+              'diaryLunch': const Text('lunch'),
             },
           ),
         ),
@@ -44,7 +44,14 @@ void main() {
   ) async {
     // As the editor saves it: every section but the notices.
     layout.value = (
-      order: ['lunch', 'plan', 'dashboard', 'tiles', 'activity', 'breakfast'],
+      order: [
+        'diaryLunch',
+        'plan',
+        'dashboard',
+        'tiles',
+        'diaryActivity',
+        'diaryBreakfast',
+      ],
       hidden: {'tiles'},
     );
     await pump(tester);
@@ -53,6 +60,31 @@ void main() {
     expect(y(tester, 'plan'), lessThan(y(tester, 'notices')));
     expect(y(tester, 'notices'), lessThan(y(tester, 'summary')));
     expect(y(tester, 'summary'), lessThan(y(tester, 'breakfast')));
+  });
+
+  testWidgets('today\'s diary is off, also under a layout saved before', (
+    tester,
+  ) async {
+    await pump(tester);
+    expect(find.text('summary'), findsOneWidget);
+    expect(find.text('breakfast'), findsNothing);
+    expect(find.text('lunch'), findsNothing);
+
+    // Saved while the meals were on by default, under their old ids.
+    layout.value = (
+      order: ['dashboard', 'tiles', 'plan', 'activity', 'breakfast', 'lunch'],
+      hidden: const {},
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('breakfast'), findsNothing);
+    expect(find.text('lunch'), findsNothing);
+  });
+
+  testWidgets('a meal switched on in Arrange Home shows', (tester) async {
+    layout.value = (order: ['dashboard', 'diaryLunch'], hidden: const {});
+    await pump(tester);
+    expect(find.text('lunch'), findsOneWidget);
+    expect(find.text('breakfast'), findsNothing);
   });
 
   testWidgets('Arrange Home: sections and tiles; a hidden one added back', (
@@ -70,6 +102,15 @@ void main() {
     expect(tester.widget<SwitchListTile>(tiles).value, isFalse);
     // Tapping saves through the real store; with no box here it only
     // fails to write, so the notifier is what the screen shows.
-    expect(find.byKey(const ValueKey('arrange-snack')), findsOneWidget);
+    final snack = find.byKey(const ValueKey('arrange-diarySnack'));
+    expect(tester.widget<SwitchListTile>(snack).value, isFalse);
+    expect(
+      tester
+          .widget<SwitchListTile>(
+            find.byKey(const ValueKey('arrange-quickActions')),
+          )
+          .value,
+      isTrue,
+    );
   });
 }

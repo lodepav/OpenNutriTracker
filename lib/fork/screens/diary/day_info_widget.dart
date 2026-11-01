@@ -78,18 +78,12 @@ class DayInfoWidget extends StatefulWidget {
   // sort, in which case every section starts on [DiarySortType.timeAdded].
   final Map<String, int>? diarySortPreferences;
   // The delete callbacks get the day the entry was listed under when the
-  // user long-pressed it. [selectedDay] can move while the dialogs are
+  // user acted on it. [selectedDay] can move while the dialogs are
   // open (the Diary follows "today" across a day boundary, #1360), and the
   // row to debit is the entry's day, not the one shown afterwards.
   final Function(IntakeEntity intake, DateTime day) onDeleteIntake;
   final Function(UserActivityEntity userActivityEntity, DateTime day)
   onDeleteActivity;
-  final Function(
-    IntakeEntity intake,
-    TrackedDayEntity? trackedDayEntity,
-    AddMealType? type,
-  )
-  onCopyIntake;
   final Function(
     UserActivityEntity userActivityEntity,
     TrackedDayEntity? trackedDayEntity,
@@ -120,7 +114,6 @@ class DayInfoWidget extends StatefulWidget {
     this.diarySortPreferences,
     required this.onDeleteIntake,
     required this.onDeleteActivity,
-    required this.onCopyIntake,
     required this.onCopyActivity,
     this.onEditIntake,
     this.onEditActivity,
@@ -312,10 +305,8 @@ class _DayInfoWidgetState extends State<DayInfoWidget> {
                   addMealType: section.addMealType,
                   intakeList: section.intakes,
                   onDeleteIntakeCallback: _deleteIntakeOnShownDay,
-                  onItemLongPressedCallback: onIntakeItemLongPressed,
                   selection: DiarySelection.instance,
                   onItemTappedCallback: widget.onEditIntake,
-                  onCopyIntakeCallback: widget.onCopyIntake,
                   usesImperialUnits: widget.usesImperialUnits,
                   showMealMacros: widget.showMealMacros,
                   trackedDayEntity: trackedDay,
@@ -350,11 +341,8 @@ class _DayInfoWidgetState extends State<DayInfoWidget> {
                       intakeList: _sortByMeal[IntakeTypeEntity.breakfast]!
                           .apply(widget.breakfastIntake),
                       onDeleteIntakeCallback: _deleteIntakeOnShownDay,
-                      onItemLongPressedCallback: onIntakeItemLongPressed,
                       selection: DiarySelection.instance,
                       onItemTappedCallback: widget.onEditIntake,
-                      // today's entries copy too
-                      onCopyIntakeCallback: widget.onCopyIntake,
                       usesImperialUnits: widget.usesImperialUnits,
                       showMealMacros: widget.showMealMacros,
                       trackedDayEntity: trackedDay,
@@ -385,13 +373,10 @@ class _DayInfoWidgetState extends State<DayInfoWidget> {
                         widget.lunchIntake,
                       ),
                       onDeleteIntakeCallback: _deleteIntakeOnShownDay,
-                      onItemLongPressedCallback: onIntakeItemLongPressed,
                       selection: DiarySelection.instance,
                       onItemTappedCallback: widget.onEditIntake,
                       usesImperialUnits: widget.usesImperialUnits,
                       showMealMacros: widget.showMealMacros,
-                      // today's entries copy too
-                      onCopyIntakeCallback: widget.onCopyIntake,
                       trackedDayEntity: trackedDay,
                       mealKcalTarget: widget.lunchKcalTarget,
                       sortType: _sortByMeal[IntakeTypeEntity.lunch],
@@ -420,11 +405,8 @@ class _DayInfoWidgetState extends State<DayInfoWidget> {
                         widget.dinnerIntake,
                       ),
                       onDeleteIntakeCallback: _deleteIntakeOnShownDay,
-                      onItemLongPressedCallback: onIntakeItemLongPressed,
                       selection: DiarySelection.instance,
                       onItemTappedCallback: widget.onEditIntake,
-                      // today's entries copy too
-                      onCopyIntakeCallback: widget.onCopyIntake,
                       usesImperialUnits: widget.usesImperialUnits,
                       showMealMacros: widget.showMealMacros,
                       mealKcalTarget: widget.dinnerKcalTarget,
@@ -454,13 +436,10 @@ class _DayInfoWidgetState extends State<DayInfoWidget> {
                         widget.snackIntake,
                       ),
                       onDeleteIntakeCallback: _deleteIntakeOnShownDay,
-                      onItemLongPressedCallback: onIntakeItemLongPressed,
                       selection: DiarySelection.instance,
                       onItemTappedCallback: widget.onEditIntake,
                       usesImperialUnits: widget.usesImperialUnits,
                       showMealMacros: widget.showMealMacros,
-                      // today's entries copy too
-                      onCopyIntakeCallback: widget.onCopyIntake,
                       trackedDayEntity: trackedDay,
                       mealKcalTarget: widget.snackKcalTarget,
                       sortType: _sortByMeal[IntakeTypeEntity.snack],
@@ -494,22 +473,6 @@ class _DayInfoWidgetState extends State<DayInfoWidget> {
   Function(IntakeEntity, TrackedDayEntity?) get _deleteIntakeOnShownDay {
     final day = widget.selectedDay;
     return (intake, _) => widget.onDeleteIntake(intake, day);
-  }
-
-  void onIntakeItemLongPressed(
-    BuildContext context,
-    IntakeEntity intakeEntity,
-  ) {
-    // the meal chips, copy or move anywhere, select more, delete; today's
-    // entries too
-    showEntryActions(
-      context,
-      intakeEntity,
-      widget.selectedDay,
-      usesImperialUnits: widget.usesImperialUnits,
-      onDelete: (intake, day) => widget.onDeleteIntake(intake, day),
-      selection: DiarySelection.instance,
-    );
   }
 
   void onActivityItemLongPressed(
