@@ -180,7 +180,9 @@ class ProfilesBackup {
     ];
     final active = _db.activeProfileId;
     if (others.any((p) => p.id == active) ||
-        (mainId != active && _db.profileBox.get(mainId) != null)) {
+        (mainId != null &&
+            mainId != active &&
+            _db.profileBox.get(mainId) != null)) {
       throw ExportImportFailure(
         ExportImportFailureReason.unreadableOrWrongFormat,
         'The active profile is not the main profile of this backup; switch '

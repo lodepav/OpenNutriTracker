@@ -981,4 +981,68 @@ void main() {
     );
     expect(file.foods.single.fat, 7);
   });
+
+  group('a header\'s unit reaches what is stored', () {
+    test('a food log', () {
+      final file = readHistory(
+        readTables(
+          'foods.csv',
+          _bytes(
+            'date,food,calories,vitamin d (iu),sodium (g),vitamin c (% dv)\n'
+            '2025-05-16,Toast,300,400,2,50\n',
+          ),
+        ),
+      );
+      final nutrients = file.foods.single.nutrients;
+      expect(nutrients['vitaminD'], closeTo(10, 1e-9));
+      expect(nutrients['sodium'], closeTo(2000, 1e-9));
+      expect(nutrients.containsKey('vitaminC'), isFalse);
+    });
+
+    test('a file of day totals', () {
+      final file = readHistory(
+        readTables(
+          'Micronutrients.csv',
+          _bytes(
+            'Date,Fiber (g),Sodium (g),Vitamin D (IU)\n'
+            '2025-05-16,20,2,400\n',
+          ),
+        ),
+      );
+      final day = file.dayNutrients[DateTime(2025, 5, 16)]!;
+      expect(day['sodium'], closeTo(2000, 1e-9));
+      expect(day['vitaminD'], closeTo(10, 1e-9));
+    });
+  });
+
+  test('a weigh-in the file itself gives is no misreading', () {
+    final file = readHistory(
+      readTables(
+        'log.csv',
+        _bytes(
+          'Date,Food Name,Calories,Serving Weight (g),Weight (kg)\n'
+          '2025-05-16,Toast,300,80,80\n',
+        ),
+      ),
+    );
+    expect(file.weightsKg[DateTime(2025, 5, 16)], 80);
+    final earlier = planImport(
+      readHistory(
+        readTables('old.csv', _bytes('Date,Calories\n2025-05-16,395\n')),
+      ),
+      existing: const HistoryExisting(),
+      today: DateTime(2026, 10, 24),
+      source: 'MacroFactor',
+    ).intakes;
+    final plan = planImport(
+      file,
+      existing: HistoryExisting(
+        importedDays: earlier,
+        weighIns: [WeightLogEntity(date: DateTime(2025, 5, 16), weightKg: 80)],
+      ),
+      today: DateTime(2026, 10, 24),
+      source: 'MacroFactor',
+    );
+    expect(plan.misread, isEmpty);
+  });
 }

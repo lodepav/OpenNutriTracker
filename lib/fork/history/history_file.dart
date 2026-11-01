@@ -687,8 +687,10 @@ const _ugPerIu = {'vitaminD': 0.025, 'vitaminA': 0.3};
 final _headerUnit = RegExp(r'(?:^|[^a-z0-9µμ])(iu|mcg|µg|μg|ug|mg|g)\b');
 
 /// What to multiply nutrient [key]'s [header] column by for the app's unit:
-/// 1 when the header states none, null for a unit it cannot convert.
+/// 1 when the header states none, null for a unit it cannot convert, as a
+/// share of a daily value.
 double? nutrientFactor(String key, String header) {
+  if (header.contains('%') || RegExp(r'\bdv\b').hasMatch(header)) return null;
   final unit = _headerUnit.firstMatch(header)?.group(1);
   final appMg = _mgOfAppUnit[key] ?? 1000;
   return switch (unit) {

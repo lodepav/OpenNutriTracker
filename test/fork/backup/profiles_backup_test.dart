@@ -161,6 +161,16 @@ void main() {
     expect(Hive.isBoxOpen('WeightLogBoxkid'), isFalse);
   });
 
+  test('a new phone, whose active profile is new, restores it all', () async {
+    final archive = await exportWithKid(await _device());
+    await Hive.close();
+    final phone = await _device(active: 'new');
+    await phone.profileBox.delete('me');
+    await phone.profileBox.delete('kid');
+    await ProfilesBackup(phone, openBox: _plain).prepareRestore(archive)!();
+    expect(phone.profileBox.get('kid')?.name, 'Kid');
+  });
+
   test('a new phone gets the other profile back, once', () async {
     final db = await _device();
     final archive = await exportWithKid(db);

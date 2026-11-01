@@ -142,6 +142,8 @@ void main() {
         'w1': {'steps': 500, 'final': true},
       },
       'stepsOn': true,
+      'goalStart': {'kg': 80.0},
+      'phaseApplied': 'cut-1',
       'macroOrder': ['protein', 'carbs', 'fat'],
       'showWater': true,
     });
@@ -151,10 +153,14 @@ void main() {
     final to = device();
     final target = await Hive.openBox<dynamic>('adaptive${boxes - 1}');
     await target.put('steps', {'2026-10-21': 7000});
+    await target.put('goalStart', {'kg': 70.0, 'old': true});
     await to.extras.prepareRestore(archive)();
 
     expect(target.get('steps'), {'2026-10-20': 9000, '2026-10-21': 7000});
     expect(target.get('stepsOn'), isTrue);
+    // Not by day: the backup's stands whole.
+    expect(target.get('goalStart'), {'kg': 80.0});
+    expect(target.get('phaseApplied'), 'cut-1');
     expect(target.get('macroOrder'), ['protein', 'carbs', 'fat']);
     expect(target.get('showWater'), isTrue);
     expect((target.get('workoutSteps') as Map)['w1'], {

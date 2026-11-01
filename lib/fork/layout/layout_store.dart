@@ -47,6 +47,13 @@ class LayoutStore {
   static final _current = <String, ValueNotifier<Layout>>{};
   static var _listening = false;
 
+  /// After a restore wrote them.
+  static Future<void> reload() async {
+    for (final k in _current.keys) {
+      await _load(k);
+    }
+  }
+
   /// [key]'s layout for the active profile, read the first time it is
   /// asked for and again on a profile switch; screens rebuild on it.
   static ValueNotifier<Layout> current(String key) {
