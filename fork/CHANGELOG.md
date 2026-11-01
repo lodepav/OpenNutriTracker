@@ -2,6 +2,19 @@
 
 Written by fork/tools/release_notes.dart at each release (D16).
 
+## 0.8.0 · 2026-11-02
+
+Based on OpenNutriTracker 2.6.0.
+
+### New
+
+- Home says when a phase moved your goal, from what to what, and the unused pace, phases and expenditure cards are gone
+
+### Fixes and changes
+
+- a review of every part of the fork, screen by screen; figures, dates and goals say what they do, failures say so, Undo holds, and dead code is gone
+- the macro order now reaches the Diary's day totals and sort menu, the nutrient explorer and the weekday table
+
 ## 0.7.1 · 2026-11-01
 
 Based on OpenNutriTracker 2.6.0.
