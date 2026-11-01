@@ -7,9 +7,8 @@ typedef FoodWeight = ({String name, double grams});
 /// The weights a photo's note states (S175): a total for the whole plate,
 /// each food's own, or both.
 class NoteWeights {
-  /// The whole plate in grams: "350g total", "chicken, rice - 350g",
-  /// "350g: chicken, rice", a note that is only "350g", or one thing named
-  /// and weighed, "plov 350g", "fries with pork 350g".
+  /// The whole plate in grams: "350g total", "350g chicken, rice", "chicken,
+  /// rice 350g", "plov - 350g", or a note that is only "350g".
   final double? totalGrams;
 
   final List<FoodWeight> foods;
@@ -29,11 +28,8 @@ final _totalWord = RegExp(
   caseSensitive: false,
 );
 
-/// A food list: more than one food in the rest of the note.
-final _list = RegExp(r',|;|\+|&|\band\b|\bwith\b', caseSensitive: false);
-
-/// Foods apart: unlike [_list], "with" keeps "fries with pork" one thing.
-final _apart = RegExp(r',|;|\+|&|\band\b|\n', caseSensitive: false);
+/// More than one food named: "chicken, rice", "fries with pork".
+final _list = RegExp(r',|;|\+|&|\n|\band\b|\bwith\b', caseSensitive: false);
 
 const _separators = '-–—:=';
 
@@ -62,27 +58,13 @@ NoteWeights? noteWeights(String? note) {
   }
   if (total == null && amounts.length == 1) {
     final m = amounts.single;
-    final rawBefore = text.substring(0, m.start);
-    final before = rawBefore.trim();
     final after = text.substring(m.end).trim();
-    if (before.isEmpty &&
-        (after.isEmpty || _separators.contains(after[0]) || after[0] == ',')) {
-      // "350g", "350g: chicken, rice"
-      total = m;
-    } else if (_onlySeparators(after) &&
-        (_trailSeparator.hasMatch(rawBefore) || _plate.hasMatch(before))) {
-      // "chicken, rice - 350g", "plov - 350g", "chicken, rice (350g)",
-      // "chicken, rice" and the weight on a line of its own, "whole plate
-      // 350g": the whole of what comes before, one food or several
-      total = m;
-    } else if (_onlySeparators(after) &&
-        after.isNotEmpty &&
-        _list.hasMatch(before)) {
-      // "chicken, rice, spinach 350g:"
-      total = m;
-    } else if (_onlySeparators(after) && !_apart.hasMatch(before)) {
-      // "plov 350g", "fries with pork 350g": one thing named, however the
-      // model splits it
+    // Last, it weighs all the note names: "chicken, rice 350g", "plov - 350g",
+    // "whole plate 350g". First, all of several: "350g chicken, rice", "350g:
+    // chicken". Else it is a food's: "200g rice", "chicken 150g, rice".
+    if (_onlySeparators(after) ||
+        text.substring(0, m.start).trim().isEmpty &&
+            (_separators.contains(after[0]) || _list.hasMatch(after))) {
       total = m;
     }
   }
@@ -110,18 +92,6 @@ NoteWeights? noteWeights(String? note) {
 
 final _markAfterWeight = RegExp(
   r'(\d\s*(?:kg|grams?|gr|g|ml|l|oz|lb))\b[ \t]*[-–—:=.)]+',
-  caseSensitive: false,
-);
-
-/// What may stand between a list and the weight of all of it: a separator,
-/// a comma, a full stop, an opening bracket, or a new line.
-final _trailSeparator = RegExp(r'([-–—:=,.(]|\n)\s*$');
-
-/// A note that names the plate rather than a food: "whole plate 350g",
-/// "weighed 350g", "bowl - 350g".
-final _plate = RegExp(
-  r'^(the |my )?(whole |entire )?(plate|bowl|portion|meal|everything|all|'
-  r'weighed|weight)\b[\s\-–—:=,(]*$',
   caseSensitive: false,
 );
 
