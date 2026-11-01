@@ -12,6 +12,7 @@ import 'package:opennutritracker/core/data/repository/user_repository.dart';
 import 'package:opennutritracker/core/utils/hive_db_provider.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
+import 'package:opennutritracker/fork/health/weight_import.dart';
 import 'package:opennutritracker/fork/startup.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -34,6 +35,7 @@ void main() {
     test('$version: its data survives the update', () async {
       final dir = await Directory.systemTemp.createTemp('upgrade_$version');
       addTearDown(() async {
+        await WeightImport.startupRun.catchError((_) {});
         await Hive.close();
         try {
           await Supabase.instance.dispose();
