@@ -36,3 +36,13 @@ android {
         developRelease.res.srcDirs += ['src/fork/develop/res', 'src/fork/icon/res']
     }
 }
+
+// A release is for arm64 phones only (fork/tools/release-apk.sh). --target-platform limits
+// Flutter's own libraries; this drops the plugins', which come in three architectures. An
+// abiFilters line does not hold here: Flutter's Gradle plugin sets the filters itself. Debug
+// builds keep them all: the emulator is x86_64.
+androidComponents {
+    onVariants(selector().withBuildType('release')) { variant ->
+        variant.packaging.jniLibs.excludes.addAll('lib/armeabi-v7a/**', 'lib/x86_64/**')
+    }
+}
