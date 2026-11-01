@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:opennutritracker/core/domain/entity/user_entity.dart';
+import 'package:opennutritracker/core/domain/entity/user_weight_goal_entity.dart';
 import 'package:opennutritracker/core/utils/calc/calorie_goal_calc.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/fork/adaptive/macro_program.dart';
 import 'package:opennutritracker/fork/goal/onboarding_goal.dart';
+import 'package:opennutritracker/fork/phases/phases.dart';
 
 /// Onboarding's protein and fat (seams S88, S89): chosen on the goal page,
 /// held here, and written with the rest of onboarding when it completes,
@@ -20,6 +22,13 @@ abstract final class OnboardingMacros {
     if (settings.fixedTarget) return settings.fixedTargetKcal;
     final plan = OnboardingGoal.pending.value;
     if (plan == null || user == null) return null;
+    // Another goal picked since: Start drops the plan.
+    final planned = switch (plan.kind) {
+      PhaseKind.cut => UserWeightGoalEntity.loseWeight,
+      PhaseKind.maintain => UserWeightGoalEntity.maintainWeight,
+      PhaseKind.bulk => UserWeightGoalEntity.gainWeight,
+    };
+    if (user.goal != planned) return null;
     return CalorieGoalCalc.getTdee(user) +
         CalorieGoalCalc.getKcalGoalAdjustment(
           user.goal,

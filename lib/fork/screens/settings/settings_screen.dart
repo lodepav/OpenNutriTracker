@@ -144,6 +144,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   /// What Goals & nutrition shows under its rows (H6); null until read.
   ConfigEntity? _goalsConfig;
+  bool _hasCheckIn = false;
 
   /// Null when the stored name is unrecognised — see #753.
   AiProvider? _aiProvider;
@@ -473,7 +474,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _refreshGoalsConfig() async {
     if (!locator.isRegistered<GetConfigUsecase>()) return; // widget tests
     final config = await locator<GetConfigUsecase>().getConfig();
-    if (mounted) setState(() => _goalsConfig = config);
+    final checkIn = await AdaptiveStore().lastCheckIn();
+    if (mounted) {
+      setState(() {
+        _goalsConfig = config;
+        _hasCheckIn = checkIn != null;
+      });
+    }
   }
 
   Future<void> _refreshAiAssistState() async {

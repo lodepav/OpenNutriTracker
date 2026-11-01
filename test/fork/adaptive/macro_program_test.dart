@@ -402,6 +402,20 @@ void main() {
       OnboardingMacros.overviewKcal(user),
       closeTo(CalorieGoalCalc.getTdee(user) - 1100, 1e-6),
     );
+    // Another goal picked since: Start drops the plan, so the overview does.
+    expect(
+      OnboardingMacros.overviewKcal(
+        UserEntity(
+          birthday: DateTime(1990, 1, 1),
+          heightCM: 180,
+          weightKG: 90,
+          gender: UserGenderEntity.male,
+          goal: UserWeightGoalEntity.maintainWeight,
+          pal: UserPALEntity.active,
+        ),
+      ),
+      isNull,
+    );
   });
 
   test('the onboarding overview shows the grams of the program chosen', () {

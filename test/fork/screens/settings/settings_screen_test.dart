@@ -147,14 +147,17 @@ Widget _app({Object? arguments, SettingsSection? section}) => MaterialApp(
 void main() {
   test('the rows a target or macro program stands in for say so', () {
     const off = AdaptiveSettings();
-    expect(adjustmentOverridden(off), isFalse);
+    expect(adjustmentOverridden(off, hasCheckIn: true), isFalse);
     expect(splitOverridden(off), isFalse);
+    const adaptive = AdaptiveSettings(adaptiveTarget: true);
+    expect(adjustmentOverridden(adaptive, hasCheckIn: true), isTrue);
+    // Until its first check-in the formula's goal stands, adjustment and all.
+    expect(adjustmentOverridden(adaptive, hasCheckIn: false), isFalse);
     expect(
-      adjustmentOverridden(const AdaptiveSettings(adaptiveTarget: true)),
-      isTrue,
-    );
-    expect(
-      adjustmentOverridden(const AdaptiveSettings(fixedTarget: true)),
+      adjustmentOverridden(
+        const AdaptiveSettings(fixedTarget: true),
+        hasCheckIn: false,
+      ),
       isTrue,
     );
     // Fixed energy with the formula's split still uses the split.

@@ -86,7 +86,11 @@ extension _GoalsSettings on _SettingsScreenState {
     final config = _goalsConfig;
     if (config == null) return null;
     final kcal = config.userKcalAdjustment ?? 0;
-    if (kcal != 0 && adjustmentOverridden(AdaptiveStore.settings.value)) {
+    if (kcal != 0 &&
+        adjustmentOverridden(
+          AdaptiveStore.settings.value,
+          hasCheckIn: _hasCheckIn,
+        )) {
       return '${energyText(context, kcal, signed: true)}. $_notUsed';
     }
     return kcal == 0 ? 'None' : energyText(context, kcal, signed: true);
@@ -197,9 +201,13 @@ extension _GoalsSettings on _SettingsScreenState {
 
 const _notUsed = 'Not used: your target sets this';
 
-/// Whether a target of the fork's stands in for the kcal adjustment.
-bool adjustmentOverridden(AdaptiveSettings settings) =>
-    settings.fixedTarget || settings.adaptiveTarget;
+/// Whether a target of the fork's stands in for the kcal adjustment: the
+/// adaptive one only from its first check-in, until then the formula's goal
+/// stands, adjustment and all.
+bool adjustmentOverridden(
+  AdaptiveSettings settings, {
+  required bool hasCheckIn,
+}) => settings.fixedTarget || (settings.adaptiveTarget && hasCheckIn);
 
 /// Whether grams of the fork's stand in for the macro split.
 bool splitOverridden(AdaptiveSettings settings) =>
