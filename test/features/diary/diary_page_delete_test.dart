@@ -448,6 +448,28 @@ void main() {
     expect(find.text('Toast'), findsNothing, reason: 'gone from today');
   });
 
+  testWidgets('a reload under the edit dialog still moves the food', (
+    tester,
+  ) async {
+    await setUpDiary(yesterdayHasRow: false, entriesToday: true);
+    await pumpDiary(tester);
+
+    await tester.longPress(find.text('Toast'));
+    await settle(tester);
+    await tester.tap(find.byKey(const Key('fork-edit-meal')));
+    await settle(tester);
+    await tester.tap(find.text(l10nEn.dinnerLabel).last);
+    await settle(tester);
+    // Back from another app: the page reloads, and the row's context goes.
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await settle(tester);
+    await tester.tap(find.text(l10nEn.dialogOKLabel));
+    await settle(tester);
+
+    expect(toastMeal(), IntakeTypeDBO.dinner);
+  });
+
   testWidgets('the edit dialog changes the meal', (tester) async {
     await setUpDiary(yesterdayHasRow: false, entriesToday: true);
     await pumpDiary(tester);

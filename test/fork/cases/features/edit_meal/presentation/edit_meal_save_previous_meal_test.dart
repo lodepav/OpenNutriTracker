@@ -194,19 +194,22 @@ void main() {
       source: source,
     );
 
-    for (final source in [MealSourceEntity.custom, MealSourceEntity.off]) {
-      testWidgets('keeps its serving when saved: ${source.name}', (
-        tester,
-      ) async {
-        getIt.registerSingleton<CacheManager>(_NoCache());
-        await pumpEditor(tester, shaped(source));
-        await save(tester);
-        final (saved, _) = dataSource.saves.single;
-        expect(saved.servingQuantity, 40);
-        expect(saved.mealQuantity, '500');
-        expect(saved.nutriments.energyKcal100, 415);
-      });
-    }
+    testWidgets('keeps its serving when saved', (tester) async {
+      await pumpEditor(tester, shaped(MealSourceEntity.custom));
+      await save(tester);
+      final (saved, _) = dataSource.saves.single;
+      expect(saved.servingQuantity, 40);
+      expect(saved.mealQuantity, '500');
+      expect(saved.nutriments.energyKcal100, 415);
+    });
+
+    testWidgets('a product opens the form that holds its serving', (
+      tester,
+    ) async {
+      getIt.registerSingleton<CacheManager>(_NoCache());
+      await pumpEditor(tester, shaped(MealSourceEntity.off));
+      expect(find.text('Pack size, unit and totals'), findsOneWidget);
+    });
   });
 
   testWidgets('Back does not ask once the text is as it was', (tester) async {

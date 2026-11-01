@@ -7,8 +7,8 @@ import 'package:opennutritracker/core/domain/usecase/get_config_usecase.dart';
 import 'package:opennutritracker/core/utils/calc/day_boundary_calc.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/core/utils/tracked_day_lock.dart';
-import 'package:opennutritracker/features/diary/presentation/bloc/calendar_day_bloc.dart';
-import 'package:opennutritracker/features/diary/presentation/bloc/diary_bloc.dart';
+import 'package:opennutritracker/fork/basket/basket_ui.dart'
+    show refreshAfterLogging;
 import 'package:opennutritracker/fork/copy/copy_entries.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 
@@ -26,14 +26,7 @@ Future<DateTime> logicalToday() async {
   );
 }
 
-void refreshAfterCopy() {
-  // Widget tests copy without the diary's blocs.
-  if (!locator.isRegistered<DiaryBloc>()) return;
-  locator<DiaryBloc>()
-    ..add(const LoadDiaryYearEvent())
-    ..updateHomePage();
-  locator<CalendarDayBloc>().add(const RefreshCalendarDayEvent());
-}
+void refreshAfterCopy() => refreshAfterLogging();
 
 /// What the "where to" sheet picked: copy or move, the moment, the meal
 /// (null: each its own) and, for a whole day, whether activities go too.
@@ -56,6 +49,9 @@ Future<void> copyOrMoveIntakes(
   if (intakes.isEmpty) return;
   final today = await logicalToday();
   if (!context.mounted) return;
+  // A reload under the sheet can take the row with it: what was picked is
+  // still done, and said.
+  final lasting = Navigator.of(context, rootNavigator: true).context;
   final where = await showModalBottomSheet<WhereTo>(
     context: context,
     isScrollControlled: true,
@@ -69,9 +65,10 @@ Future<void> copyOrMoveIntakes(
       count: intakes.length,
     ),
   );
-  if (where == null || !context.mounted) return;
+  if (where == null || !lasting.mounted) return;
   await placeWithUndo(
-    context,
+    // ignore: use_build_context_synchronously
+    lasting,
     intakes,
     where.moment,
     meal: where.meal,

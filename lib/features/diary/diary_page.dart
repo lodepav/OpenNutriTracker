@@ -398,7 +398,7 @@ class _DiaryPageState extends State<DiaryPage> with WidgetsBindingObserver {
     if (handled) {
       if (!mealEdited) return;
       _diaryBloc.add(const LoadDiaryYearEvent());
-      _calendarDayBloc.add(LoadCalendarDayEvent(day));
+      _calendarDayBloc.add(LoadCalendarDayEvent(_selectedDate));
       _diaryBloc.updateHomePage();
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -431,8 +431,9 @@ class _DiaryPageState extends State<DiaryPage> with WidgetsBindingObserver {
     // has its Undo
     if (changeIntakeAmount != null &&
         meal.value != intakeEntity.type &&
-        context.mounted) {
-      await moveToMeal(context, intakeEntity, day, meal.value);
+        mounted) {
+      // This page's context: a reload under the dialog takes the row's.
+      await moveToMeal(this.context, intakeEntity, day, meal.value);
       if (changeIntakeAmount == intakeEntity.amount) return;
     }
     // [/fork]
