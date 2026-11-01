@@ -394,6 +394,7 @@ class _CheckInScreenState extends State<CheckInScreen> {
   ) {
     final activity = checkIn.activityKcal;
     if (changed.contains('activity')) {
+      if (checkIn.activityUnreadable) return null;
       if (AdaptiveStore.settings.value.activityMode == ActivityMode.off) {
         return 'So the expenditure is the plain estimate again: no average '
             "activity taken off, no week's activity added.";
@@ -544,11 +545,13 @@ class _CheckInScreenState extends State<CheckInScreen> {
               [
                 // Trends' expenditure holds the window's average activity; this
                 // one the week's, or none, so it is named for it.
-                _row(switch (settings.activityMode) {
-                  ActivityMode.off => 'Estimated per day',
-                  ActivityMode.weekly || ActivityMode.daily =>
-                    'Expenditure with this week\'s activity',
-                }, _kcal(checkIn.expenditureKcal)),
+                _row(
+                  settings.activityMode == ActivityMode.off ||
+                          checkIn.activityUnreadable
+                      ? 'Estimated per day'
+                      : 'Expenditure with this week\'s activity',
+                  _kcal(checkIn.expenditureKcal),
+                ),
                 if (checkIn.activityKcal case final activity?)
                   _row('Of it, counted activity', '${_kcal(activity)} a day'),
               ],

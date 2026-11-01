@@ -444,6 +444,39 @@ void main() {
         },
       );
 
+      test(
+        'an unread check-in kept leaves the last known base and activity',
+        () async {
+          AdaptiveStore.settings.value = const AdaptiveSettings(
+            adaptiveTarget: true,
+            activityMode: ActivityMode.weekly,
+          );
+          final memory = _MemoryStore()
+            ..records.add(
+              CheckInRecord(
+                date: _today.subtract(const Duration(days: 8)),
+                expenditureKcal: 2300,
+                proposedKcal: 1800,
+                acceptedKcal: 1800,
+                activityKcal: 300,
+                baseKcal: 2000,
+              ),
+            );
+          final due = AdaptiveService(
+            _User.pacedTo(1800),
+            _Weights(),
+            _TrackedDays(),
+            memory,
+            () => _today.add(const Duration(hours: 9)),
+            null,
+            _UnreadableActivity(),
+          );
+          await due.accept(await due.checkIn(), 1800);
+          expect(memory.records.last.activityKcal, 300);
+          expect(memory.records.last.baseKcal, 2000);
+        },
+      );
+
       test('refuses one under the floor, and it stays due', () async {
         AdaptiveStore.settings.value = auto;
         final memory = _MemoryStore();
@@ -726,6 +759,49 @@ void main() {
     expect(find.text('Your first target'), findsNothing);
     expect(memory.records, hasLength(1));
     expect(find.textContaining('Daily target set to'), findsOneWidget);
+  });
+
+  testWidgets('says activity went unread, and names no activity move', (
+    tester,
+  ) async {
+    AdaptiveStore.settings.value = const AdaptiveSettings(
+      adaptiveTarget: true,
+      activityMode: ActivityMode.weekly,
+    );
+    final memory = _MemoryStore()
+      ..records.add(
+        CheckInRecord(
+          date: _today.subtract(const Duration(days: 8)),
+          expenditureKcal: 2300,
+          proposedKcal: 1800,
+          acceptedKcal: 1800,
+          activityKcal: 300,
+          baseKcal: 2000,
+        ),
+      );
+    final service = AdaptiveService(
+      _User(),
+      _Weights(),
+      _TrackedDays(),
+      memory,
+      () => _today.add(const Duration(hours: 9)),
+      null,
+      _UnreadableActivity(),
+    );
+    await tester.pumpWidget(MaterialApp(home: CheckInScreen(service: service)));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(
+        const ValueKey('check-in-activity-unreadable'),
+        skipOffstage: false,
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.textContaining("week's activity", skipOffstage: false),
+      findsNothing,
+    );
   });
 
   testWidgets('a kilojoule user reads and types the target in kJ', (

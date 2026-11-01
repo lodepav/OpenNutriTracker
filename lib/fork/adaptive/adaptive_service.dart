@@ -143,7 +143,8 @@ class AdaptiveService {
 
   Future<CheckIn> checkIn() async {
     final user = await _user.getUserData();
-    final days = (await _history()).days;
+    final read = await _history();
+    final days = read.days;
     final rate = goalRateKgPerWeek(user);
     final history = await _store.history();
     final previous = history.lastOrNull;
@@ -151,7 +152,7 @@ class AdaptiveService {
     return computeCheckIn(
       CheckInInputs(
         days: days,
-        activityUnreadable: _activityUnreadable,
+        activityUnreadable: read.activityUnreadable,
         priorKcal: _priorKcal(user),
         formulaKcal: previous == null ? CalorieGoalCalc.getTdee(user) : null,
         goalRateKgPerWeek: rate,
@@ -288,7 +289,8 @@ class AdaptiveService {
 
   /// The days a check-in reads, from the first weigh-in in the last
   /// [_historyDays] (today when there is none) to today.
-  Future<({DateTime first, List<AdaptiveDay> days})> _history() async {
+  Future<({DateTime first, List<AdaptiveDay> days, bool activityUnreadable})>
+  _history() async {
     final today = _today();
     final start = DateTime(
       today.year,
@@ -310,13 +312,14 @@ class AdaptiveService {
     final first = weighIns.keys
         .where((d) => !d.isBefore(start))
         .fold(today, (a, b) => b.isBefore(a) ? b : a);
-    _activityUnreadable = false;
-    final activity = await _countedActivity(first, today);
+    var unreadable = false;
+    void onUnreadable() => unreadable = true;
+    final activity = await _countedActivity(first, today, onUnreadable);
     // A new user's only day: the health store's days before it are whole
     // ones where today's are still coming in, the better guess of the
     // activity the prior holds (D19).
     final firstDay = first == today && AdaptiveStore.settings.value.countSteps
-        ? await _meanActivityBefore(today)
+        ? await _meanActivityBefore(today, onUnreadable)
         : null;
     final days = [
       for (
@@ -336,29 +339,31 @@ class AdaptiveService {
               : activity?[d],
         ),
     ];
-    return (first: first, days: days);
+    return (first: first, days: days, activityUnreadable: unreadable);
   }
 
   /// The mean counted activity of the 14 days before [today], null when
   /// none has a count.
-  Future<double?> _meanActivityBefore(DateTime today) async {
+  Future<double?> _meanActivityBefore(
+    DateTime today,
+    void Function() onUnreadable,
+  ) async {
     final days = await _countedActivity(
       DateTime(today.year, today.month, today.day - 14),
       DateTime(today.year, today.month, today.day - 1),
+      onUnreadable,
     );
     if (days == null || days.isEmpty) return null;
     return days.values.reduce((a, b) => a + b) / days.length;
   }
 
-  /// The last [_countedActivity] found the health store would not answer.
-  var _activityUnreadable = false;
-
   /// Counted activity per day, or null when none is counted (D17). A
   /// health store that will not answer counts none rather than failing the
-  /// check-in.
+  /// check-in, and [onUnreadable] hears of it.
   Future<Map<DateTime, double>?> _countedActivity(
     DateTime first,
     DateTime today,
+    void Function() onUnreadable,
   ) async {
     final settings = AdaptiveStore.settings.value;
     final counter = _activity;
@@ -381,7 +386,7 @@ class AdaptiveService {
           : days;
     } catch (e) {
       _log.warning('Activity unreadable, none counted: $e');
-      _activityUnreadable = true;
+      onUnreadable();
       return null;
     }
   }
@@ -410,15 +415,18 @@ class AdaptiveService {
   /// it stay the cap's marks ([capMark]). The first record stays.
   Future<void> accept(CheckIn checkIn, double targetKcal) async {
     final history = await _store.history();
+    // An unread week says nothing of the activity: what the next check-in
+    // compares with stays the last known.
+    final known = checkIn.activityUnreadable ? history.lastOrNull : null;
     final record = CheckInRecord(
       date: _now(),
       expenditureKcal: checkIn.expenditureKcal,
       proposedKcal: checkIn.proposedTargetKcal,
       acceptedKcal: targetKcal,
-      activityKcal: checkIn.activityInTarget(
-        AdaptiveStore.settings.value.activityMode,
-      ),
-      baseKcal: checkIn.baseKcal,
+      activityKcal: known != null
+          ? known.activityKcal
+          : checkIn.activityInTarget(AdaptiveStore.settings.value.activityMode),
+      baseKcal: known != null ? known.baseKcal : checkIn.baseKcal,
       goalRateKgPerWeek: checkIn.goalRateKgPerWeek,
       targetWeightKg: checkIn.targetWeightKg,
       basis: AdaptiveStore.settings.value.targetBasis,
