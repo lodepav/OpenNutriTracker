@@ -1,14 +1,15 @@
 import 'package:opennutritracker/features/add_meal/util/meal_text_parser.dart';
 
-/// A weight the user's note gives one food: "chicken 120g", "rice - 80 g",
-/// "spinach: 30g".
+/// A weight the user's note gives one food among others: "chicken 120g, rice",
+/// "rice - 80 g, chicken", "spinach: 30g, rice".
 typedef FoodWeight = ({String name, double grams});
 
 /// The weights a photo's note states (S175): a total for the whole plate,
 /// each food's own, or both.
 class NoteWeights {
   /// The whole plate in grams: "350g total", "chicken, rice - 350g",
-  /// "350g: chicken, rice", or a note that is only "350g".
+  /// "350g: chicken, rice", a note that is only "350g", or one thing named
+  /// and weighed, "plov 350g", "fries with pork 350g".
   final double? totalGrams;
 
   final List<FoodWeight> foods;
@@ -30,6 +31,9 @@ final _totalWord = RegExp(
 
 /// A food list: more than one food in the rest of the note.
 final _list = RegExp(r',|;|\+|&|\band\b|\bwith\b', caseSensitive: false);
+
+/// Foods apart: unlike [_list], "with" keeps "fries with pork" one thing.
+final _apart = RegExp(r',|;|\+|&|\band\b|\n', caseSensitive: false);
 
 const _separators = '-–—:=';
 
@@ -75,6 +79,10 @@ NoteWeights? noteWeights(String? note) {
         after.isNotEmpty &&
         _list.hasMatch(before)) {
       // "chicken, rice, spinach 350g:"
+      total = m;
+    } else if (_onlySeparators(after) && !_apart.hasMatch(before)) {
+      // "plov 350g", "fries with pork 350g": one thing named, however the
+      // model splits it
       total = m;
     }
   }

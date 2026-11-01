@@ -36,6 +36,10 @@ void main() {
       'chicken, rice, broccoli 150g:',
       '150g: chicken, rice, broccoli',
       'plov - 150g',
+      'plov 150g',
+      'fries with pork 150g',
+      'fries with pork - 150g',
+      'fries with pork\n150g',
       '150g',
       '150 g total',
       '0.15 kg',
@@ -95,12 +99,6 @@ void main() {
       final w = noteWeights('chicken, rice, spinach 350g')!;
       expect(w.totalGrams, isNull);
       expect(w.foods, [(name: 'spinach', grams: 350.0)]);
-    });
-
-    test('one food and its weight is that food\'s', () {
-      final w = noteWeights('plov 350g')!;
-      expect(w.totalGrams, isNull);
-      expect(w.foods, [(name: 'plov', grams: 350.0)]);
     });
 
     test('counts and names alone state no weight', () {
@@ -187,6 +185,17 @@ void main() {
         ]);
       },
     );
+
+    test('a dish named and weighed adds up to its weight, split or not', () {
+      // Haiku's reply to this note and its photo.
+      final items = weighedPlateItems([
+        const ParsedMealItem(query: 'dish=Dirty fries with pork'),
+        _g('potatoes, french fried', 280),
+        _g('pork, cooked, pulled', 150),
+      ], noteWeights('dirty fries with pork 430g')!);
+      expect(items.map((i) => i.quantity), [280, 150]);
+      expect(items.every((i) => i.unit == 'g'), isTrue);
+    });
 
     test('one food is a plain row at the plate\'s weight', () {
       final items = weighedPlateItems([
