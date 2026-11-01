@@ -222,15 +222,19 @@ String _foodKey(IntakeEntity i) => i.meal.code ?? i.meal.name ?? '';
 /// something logged (an empty day is not a day of eating nothing), against
 /// those days' goals in [days]. Upstream's Nutrient goals keeps a goal on
 /// the day it was set, so a day keeping none takes the latest goal set in
-/// [days], else the DRI for [user]. Each intake counts on the logical day
-/// the Diary lists it under, for a day starting [dayStartMinutes] after
-/// midnight.
+/// [goalHistory] (all the tracked days, so the range does not change it;
+/// [days] without one), else the DRI for [user]. Each intake counts on the
+/// logical day the Diary lists it under, for a day starting [dayStartMinutes]
+/// after midnight.
 List<NutrientSummary> summarizeNutrients(
   List<IntakeEntity> intakes,
   List<TrackedDayEntity> days,
   UserEntity? user, {
   int dayStartMinutes = 0,
+  List<TrackedDayEntity>? goalHistory,
 }) {
+  final newest = [...(goalHistory ?? days)]
+    ..sort((a, b) => b.day.compareTo(a.day));
   final logged = {
     for (final i in intakes)
       DayBoundaryCalc.dayKeyOf(i.dateTime, dayStartMinutes),
@@ -256,10 +260,10 @@ List<NutrientSummary> summarizeNutrients(
     without.removeAll(byFood.keys);
     final total = byFood.values.fold<double>(0, (s, f) => s + f.amount);
 
-    final latestSet = [
-      for (final d in [...days]..sort((a, b) => b.day.compareTo(a.day)))
-        nutrient.goalOf(d),
-    ].whereType<double>().firstOrNull;
+    final latestSet = newest
+        .map(nutrient.goalOf)
+        .whereType<double>()
+        .firstOrNull;
     double? fallback() => latestSet != null && nutrient.marksMiss
         ? latestSet
         : nutrient.fallbackGoal == null
@@ -311,6 +315,26 @@ Future<List<IntakeEntity>> intakesBetween(DateTime first, DateTime last) async {
   ];
 }
 
+/// The range's end for a tracked-day read: a row from the Diary is labelled
+/// at UTC midnight, later than local midnight east of Greenwich, so the end
+/// takes in the whole of [day].
+DateTime endOfDay(DateTime day) =>
+    DateTime(day.year, day.month, day.day, 23, 59, 59);
+
+/// Every tracked day, for the latest goal set; null without a database, in
+/// widget tests.
+Future<List<TrackedDayEntity>?> allTrackedDays() async {
+  try {
+    return [
+      for (final dbo
+          in await locator<TrackedDayRepository>().getAllTrackedDaysDBO())
+        TrackedDayEntity.fromTrackedDayDBO(dbo),
+    ];
+  } catch (_) {
+    return null;
+  }
+}
+
 Future<int> dayStartMinutes() async => locator.isRegistered<GetConfigUsecase>()
     ? (await locator<GetConfigUsecase>().getConfig()).dayStartOffsetTotalMinutes
     : 0;
@@ -332,6 +356,7 @@ class NutrientExplorerScreen extends StatefulWidget {
   final DateTime last;
   final IntakeLoader? load;
   final Future<UserEntity?> Function() user;
+  final Future<List<TrackedDayEntity>?> Function() goalHistory;
 
   /// Opens upstream's Nutrient goals and returns the range's tracked days
   /// read again after it closes.
@@ -349,6 +374,7 @@ class NutrientExplorerScreen extends StatefulWidget {
     required this.last,
     this.load,
     this.user = loadUser,
+    this.goalHistory = allTrackedDays,
     this.editGoals = _openNutrientGoals,
   });
 
@@ -369,7 +395,10 @@ class NutrientExplorerScreen extends StatefulWidget {
         ),
       ),
     );
-    return locator<TrackedDayRepository>().getTrackedDayByRange(first, last);
+    return locator<TrackedDayRepository>().getTrackedDayByRange(
+      first,
+      endOfDay(last),
+    );
   }
 
   @override
@@ -385,6 +414,7 @@ class _NutrientExplorerScreenState extends State<NutrientExplorerScreen> {
     _days,
     await widget.user(),
     dayStartMinutes: await dayStartMinutes(),
+    goalHistory: await widget.goalHistory(),
   );
 
   Future<void> _editGoals() async {

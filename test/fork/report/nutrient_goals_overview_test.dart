@@ -137,6 +137,57 @@ void main() {
     semantics.dispose();
   });
 
+  testWidgets('today\'s row is read to the end of the day', (tester) async {
+    DateTime? end;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: NutrientGoalsOverview(
+          today: () async => DateTime(2026, 10, 25),
+          load: (first, last) async => _intakes,
+          days: (first, last) async {
+            end = last;
+            return [_day(25, fibreGoal: 30)];
+          },
+          user: () async => null,
+          dayStart: () async => 0,
+          onEdit: (_) async {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    // A row from the Diary is labelled at UTC midnight: past local midnight
+    // east of Greenwich.
+    expect(end, DateTime(2026, 10, 25, 23, 59, 59));
+  });
+
+  testWidgets(
+    'the week takes the latest goal from all the days; today its own',
+    (tester) async {
+      final semantics = tester.ensureSemantics();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: NutrientGoalsOverview(
+            today: () async => DateTime(2026, 10, 25),
+            load: (first, last) async => _intakes,
+            days: (first, last) async => [_day(20), _day(25)],
+            goalHistory: () async => [_day(2, fibreGoal: 45), _day(25)],
+            user: () async => null,
+            dayStart: () async => 0,
+            onEdit: (_) async {},
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      // The Diary's panel: the day's own, else the reference.
+      expect(label(tester, 'Fibre'), contains('of 30 g'));
+
+      await tester.tap(find.bySemanticsIdentifier('nutrient-goals-week'));
+      await tester.pumpAndSettle();
+      expect(label(tester, 'Fibre'), contains('of 45 g'));
+      semantics.dispose();
+    },
+  );
+
   testWidgets('the bars take their colour from where they stand', (
     tester,
   ) async {

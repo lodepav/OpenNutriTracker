@@ -139,11 +139,7 @@ class _HomeTrendTilesState extends State<HomeTrendTiles> {
       bloc: _bloc,
       builder: (context, state) {
         if (state is! TrendsLoaded) return widget.builder(_last);
-        final now = DateTime.now();
-        final dates = windowDates(
-          DateTime(now.year, now.month, now.day),
-          state.windowDays,
-        );
+        final dates = windowDates(state.logicalToday, state.windowDays);
         return FutureBuilder(
           future: _extrasOf(state, dates),
           builder: (context, snapshot) {

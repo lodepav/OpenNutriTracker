@@ -103,12 +103,14 @@ class _TrendsView extends StatelessWidget {
             goalMl: state.waterGoalMl,
             rangeDays: state.windowDays,
             palette: palette,
+            today: state.logicalToday, // S190
           ),
           cards: {
             'weekly': WeeklyReportCard(
               days: state.days,
               rangeDays: state.windowDays,
               palette: palette,
+              dayStartMinutes: state.dayStartMinutes, // S190
             ),
             'goalPlan': GoalCard(unit: state.bodyWeightUnit),
             'body': BodyMeasurementsCard(
@@ -161,19 +163,25 @@ class _WaterTrendCard extends StatelessWidget {
   final int goalMl;
   final int rangeDays;
   final AppPalette palette;
+  // [fork] S190 logical-today: the window ends where the page's header does
+  final DateTime today;
+  // [/fork]
   const _WaterTrendCard({
     required this.waterByDay,
     required this.goalMl,
     required this.rangeDays,
     required this.palette,
+    // [fork] S190 logical-today
+    required this.today,
+    // [/fork]
   });
 
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
     final color = palette.proteinColor;
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
+    // [fork] S190 logical-today: today is the field, not the wall clock's
+    // [/fork]
     final spots = <FlSpot>[];
     var sum = 0;
     var loggedDays = 0;
@@ -186,7 +194,9 @@ class _WaterTrendCard extends StatelessWidget {
         loggedDays++;
       }
     }
-    final avg = loggedDays == 0 ? 0 : (sum / rangeDays).round();
+    // [fork] S190 water-average: over the logged days, as the page's header
+    final avg = loggedDays == 0 ? 0 : (sum / loggedDays).round();
+    // [/fork]
     // [fork] S97 chart-touch
     final dayLabel = _dayLabels(context, today, rangeDays);
     // [/fork]
@@ -475,6 +485,7 @@ void openTrendFromHome(BuildContext context, TrendMetric metric) {
         goalMl: state.waterGoalMl,
         rangeDays: state.windowDays,
         palette: palette,
+        today: state.logicalToday, // S190
       ),
     ),
     bloc: bloc,

@@ -72,7 +72,8 @@ typedef DayValue = ({double value, DateTime date});
 
 /// How the logged days of the window went against their goals, and the
 /// highest and lowest of them: the energy's, or [eaten] and [goal]'s, a
-/// macro's grams.
+/// macro's grams. [today], still being eaten, is left out: its breakfast is
+/// neither under the goal nor the lowest day.
 ({
   int onTarget,
   int under,
@@ -86,8 +87,9 @@ dayOutcomes(
   List<DateTime> dates, {
   double? Function(TrackedDayEntity) eaten = _calories,
   double? Function(TrackedDayEntity) goal = _calorieGoal,
+  DateTime? today,
 }) {
-  final window = dates.toSet();
+  final window = dates.toSet()..remove(today);
   final logged = [
     for (final d in days)
       if (isLogged(d) && window.contains(_date(d.day)) && eaten(d) != null) d,
@@ -124,13 +126,14 @@ dayOutcomes(
 double? _calories(TrackedDayEntity d) => d.caloriesTracked;
 double? _calorieGoal(TrackedDayEntity d) => d.calorieGoal;
 
-/// Means over the logged days of a part of the week.
+/// Means over the logged days of a part of the week; a macro's over those
+/// that have it, null with none.
 typedef WeekPart = ({
   int days,
   double kcal,
-  double carbs,
-  double fat,
-  double protein,
+  double? carbs,
+  double? fat,
+  double? protein,
   double? balance,
 });
 
@@ -152,12 +155,12 @@ typedef WeekPart = ({
           d,
     ];
     if (logged.isEmpty) return null;
-    double mean(double? Function(TrackedDayEntity) of) =>
-        logged.map((d) => of(d) ?? 0).reduce((a, b) => a + b) / logged.length;
+    double? mean(double? Function(TrackedDayEntity) of) =>
+        meanOf(logged.map(of));
     final balances = [for (final d in logged) ?balance[_date(d.day)]];
     return (
       days: logged.length,
-      kcal: mean((d) => d.caloriesTracked),
+      kcal: mean((d) => d.caloriesTracked)!,
       carbs: mean((d) => d.carbsTracked),
       fat: mean((d) => d.fatTracked),
       protein: mean((d) => d.proteinTracked),

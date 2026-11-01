@@ -171,6 +171,12 @@ class WeightTrendStats {
     final trend = [for (final d in dates) byDate[d]];
     final present = trend.whereType<double>().toList();
     if (present.isEmpty) return WeightTrendStats(trend: trend);
+    // A weigh-in held from before the range is where the trend stands, not
+    // a change in it.
+    final window = dates.toSet();
+    if (!entries.any((e) => window.contains(_date(e.date)))) {
+      return WeightTrendStats(trend: trend, nowKg: present.last);
+    }
     // From the day before the window, as S93's outlook: a week's range
     // spans seven days of change.
     final from = DateTime(

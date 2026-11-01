@@ -270,8 +270,37 @@ void main() {
     ]);
   });
 
-  testWidgets('Calories: the days stacked by macro, how they went, the '
-      'macro shares', (tester) async {
+  testWidgets('Calories: how the days went, leaving out today, still being '
+      'eaten', (tester) async {
+    await pumpTrends(
+      tester,
+      loaded(
+        days: [
+          _logged(-1, carbs: 100, fat: 20, protein: 50, kcal: 1560),
+          _logged(0, carbs: 10, fat: 2, protein: 5, kcal: 100),
+        ],
+      ),
+    );
+    await openTile(tester, 'calories');
+    String row(String label) => tester
+        .widget<TrendRow>(
+          find.ancestor(of: find.text(label), matching: find.byType(TrendRow)),
+        )
+        .value;
+    await tester.scrollUntilVisible(
+      find.widgetWithText(TrendRow, 'Highest'),
+      200,
+      scrollable: find.byType(Scrollable).last,
+    );
+    expect(row('On target (within 10%)'), '0 of 1 day');
+    expect(row('Under'), '1 day');
+    expect(row('Over'), '0 days');
+    expect(row('Highest'), startsWith('1560 kcal · '));
+  });
+
+  testWidgets('Calories: the days stacked by macro and the macro shares', (
+    tester,
+  ) async {
     await pumpTrends(
       tester,
       loaded(
@@ -317,15 +346,6 @@ void main() {
       return tester.widget<TrendRow>(r).value;
     }
 
-    await tester.scrollUntilVisible(
-      find.widgetWithText(TrendRow, 'Highest'),
-      200,
-      scrollable: find.byType(Scrollable).last,
-    );
-    expect(row('On target (within 10%)'), '0 of 1 day');
-    expect(row('Under'), '1 day');
-    expect(row('Over'), '0 days');
-    expect(row('Highest'), startsWith('1560 kcal · '));
     // 400, 180 and 200 kcal of 780; the goals' 1036, 729 and 440 of 2205.
     await tester.scrollUntilVisible(
       find.widgetWithText(TrendRow, 'Protein'),
@@ -427,7 +447,7 @@ void main() {
     );
     await openTile(tester, 'protein');
     // 110 g a day: 80 under, 160 over.
-    await tester.scrollUntilVisible(find.text('0 of 2 days'), 200);
+    await tester.scrollUntilVisible(find.text('0 of 1 day'), 200);
     await tester.scrollUntilVisible(find.text('1.4 g/kg'), 200);
     expect(find.text('1.5 g/kg'), findsOneWidget);
     expect(find.text('1.4 g/kg'), findsOneWidget);
@@ -599,7 +619,8 @@ void main() {
     ].where((i) => !i.dateTime.isBefore(first)).toList();
     await pumpTrends(tester, loaded(days: [_logged(0), _logged(-1)]));
     await showTile(tester, 'sodium');
-    expect(tileText(tester, 'fibre'), contains('20 / 30 g'));
+    // Over the two days logged, as the explorer has it.
+    expect(tileText(tester, 'fibre'), contains('10 / 30 g'));
     expect(tileText(tester, 'sugars'), contains('–'));
     // Salt from the stored sodium: 1150 mg is 2.9 g, 2300 mg 5.75 g.
     expect(tileText(tester, 'sodium'), contains('2.9 / 5.8 g'));
@@ -752,6 +773,42 @@ void main() {
       contains('1500 ml'),
     );
     expect(find.byType(LineChart), findsOneWidget);
+  });
+
+  testWidgets('Water: the card\'s average is the header\'s', (tester) async {
+    await pumpTrends(
+      tester,
+      loaded(waterByDay: {day(0): 1500, day(-1): 500}, waterGoalMl: 2000),
+    );
+    await openTile(tester, 'water');
+    expect(
+      tester.getSemantics(find.text('Average')).label,
+      contains('1000 ml'),
+    );
+    // Over the two logged days; over the week it read 286.
+    expect(find.text('1000 / 2000 ml'), findsOneWidget);
+  });
+
+  testWidgets('a nutrient\'s average is the explorer\'s, on tile and page', (
+    tester,
+  ) async {
+    final intakes = [
+      _ate(0, 'Oats', amount: 200, fibre: 10),
+      // Food with no fibre figure: a logged day all the same.
+      _ate(-1, 'Soup'),
+    ];
+    TrendsOverview.loadIntakes = (first, last) async => intakes;
+    await pumpTrends(tester, loaded(days: [_logged(0), _logged(-1)]));
+    final explorer = summarizeNutrients(intakes, [
+      _logged(0),
+      _logged(-1),
+    ], null).firstWhere((s) => s.nutrient.label == 'Fibre');
+    expect(explorer.perDay, 10);
+
+    await showTile(tester, 'fibre');
+    expect(tileText(tester, 'fibre'), contains('10 / 30 g'));
+    await openTile(tester, 'fibre');
+    expect(tester.getSemantics(find.text('Average')).label, contains('10 g'));
   });
 
   testWidgets('nothing logged: the pages say so', (tester) async {

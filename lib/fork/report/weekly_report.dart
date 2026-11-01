@@ -4,6 +4,7 @@ import 'package:opennutritracker/core/domain/entity/tracked_day_entity.dart';
 import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
+import 'package:opennutritracker/core/utils/calc/day_boundary_calc.dart';
 import 'package:opennutritracker/fork/report/nutrient_explorer.dart';
 import 'package:opennutritracker/fork/units/energy_text.dart';
 import 'package:opennutritracker/fork/display/display_prefs.dart';
@@ -102,7 +103,12 @@ class WeeklyReportCard extends StatelessWidget {
   final List<TrackedDayEntity> days;
   final int rangeDays;
   final AppPalette palette;
-  final DateTime Function() clock;
+
+  /// The clock; the app's when null.
+  final DateTime Function()? clock;
+
+  /// Where the day starts, for the logical today the range ends on.
+  final int dayStartMinutes;
 
   /// The explorer's intakes; the intake box in the app.
   final IntakeLoader? load;
@@ -112,13 +118,17 @@ class WeeklyReportCard extends StatelessWidget {
     required this.days,
     required this.rangeDays,
     required this.palette,
-    this.clock = DateTime.now,
+    this.clock,
+    this.dayStartMinutes = 0,
     this.load,
   });
 
   @override
   Widget build(BuildContext context) {
-    final today = clock();
+    final now = clock;
+    final today = now == null
+        ? DayBoundaryCalc.currentLogicalDayMinutes(dayStartMinutes)
+        : DayBoundaryCalc.logicalDayOfMinutes(now(), dayStartMinutes);
     final first = DateTime(today.year, today.month, today.day - rangeDays + 1);
     final weeks = weeklyReports(days, first, today);
     if (weeks.isEmpty) return const SizedBox.shrink();

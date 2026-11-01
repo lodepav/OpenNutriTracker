@@ -29,6 +29,7 @@ typedef MicroData = ({
   List<IntakeEntity> intakes,
   int dayStartMinutes,
   UserEntity? user,
+  List<TrackedDayEntity>? goalHistory,
 });
 
 /// [dates]' intakes through [load]; null without a database, in widget
@@ -40,6 +41,7 @@ Future<MicroData?> loadMicros(IntakeLoader load, List<DateTime> dates) async {
       intakes: await load(dates.first, dates.last),
       dayStartMinutes: await dayStartMinutes(),
       user: await loadUser(),
+      goalHistory: await allTrackedDays(),
     );
   } catch (_) {
     return null;
@@ -67,9 +69,15 @@ Future<MicroData?> loadMicros(IntakeLoader load, List<DateTime> dates) async {
       days,
       data.user,
       dayStartMinutes: data.dayStartMinutes,
+      goalHistory: data.goalHistory,
     ).firstWhere((s) => s.nutrient == nutrient),
   );
 }
+
+/// The average a tile and a page show: the explorer's mean a logged day, so
+/// the three agree; null while nothing logged has a figure.
+double? microMean(({DaySeries series, NutrientSummary summary}) micro) =>
+    micro.series.any((v) => v != null) ? micro.summary.perDay : null;
 
 /// The foods a page lists before "Show all".
 const microTopFoods = 5;
@@ -124,7 +132,7 @@ class _MicroDetailState extends State<MicroDetail> {
           ? null
           : microOf(data, widget.state.days, widget.dates, widget.metric);
       final series = micro?.series ?? [for (final _ in widget.dates) null];
-      final mean = meanOf(series);
+      final mean = micro == null ? null : microMean(micro);
       final goal = micro?.summary.goal;
       final known = series.whereType<double>().toList();
       final good = goal == null

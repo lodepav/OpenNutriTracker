@@ -108,6 +108,35 @@ void main() {
     expect(all.firstWhere((s) => s.nutrient.label == 'Fibre').goal, 30);
   });
 
+  test('the latest goal set is found outside the range', () {
+    final all = summarizeNutrients(
+      _intakes,
+      [_day(20), _day(21)],
+      null,
+      goalHistory: [_day(2, fibreGoal: 25), _day(20), _day(21)],
+    );
+    expect(all.firstWhere((s) => s.nutrient.label == 'Fibre').goal, 25);
+  });
+
+  testWidgets('the explorer\'s goal does not depend on the range', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: NutrientExplorerScreen(
+          days: [_day(20), _day(21)],
+          first: DateTime(2026, 10, 20),
+          last: DateTime(2026, 10, 21),
+          load: (first, last) async => _intakes,
+          user: () async => null,
+          goalHistory: () async => [_day(2, fibreGoal: 25)],
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.textContaining('goal 25 g'), findsOneWidget);
+  });
+
   testWidgets('Edit goals measures against the goals set there', (
     tester,
   ) async {

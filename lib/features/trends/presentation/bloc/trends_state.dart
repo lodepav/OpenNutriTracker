@@ -25,6 +25,9 @@ class TrendsLoaded extends TrendsState {
   final double? targetWeightKg; // user's #119 target, for the chart reference
   final Map<DateTime, int> waterByDay; // ml logged per calendar day
   final int waterGoalMl;
+  // [fork] S190 logical-today: where the day starts, for the windows' today
+  final int dayStartMinutes;
+  // [/fork]
 
   const TrendsLoaded({
     required this.rangeDays,
@@ -36,7 +39,15 @@ class TrendsLoaded extends TrendsState {
     required this.targetWeightKg,
     required this.waterByDay,
     required this.waterGoalMl,
+    // [fork] S190 logical-today
+    this.dayStartMinutes = 0,
+    // [/fork]
   });
+
+  // [fork] S190 logical-today: the Diary's today, which every window ends on
+  DateTime get logicalToday =>
+      DayBoundaryCalc.currentLogicalDayMinutes(dayStartMinutes);
+  // [/fork]
 
   @override
   List<Object?> get props => [
@@ -49,6 +60,9 @@ class TrendsLoaded extends TrendsState {
         targetWeightKg,
         waterByDay,
         waterGoalMl,
+        // [fork] S190 logical-today
+        dayStartMinutes,
+        // [/fork]
       ];
 }
 
