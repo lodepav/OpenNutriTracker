@@ -21,6 +21,9 @@ import 'package:opennutritracker/features/meal_detail/meal_detail_screen.dart';
 import 'package:opennutritracker/features/recipes/presentation/screens/import_recipe_scanner_screen.dart';
 import 'package:opennutritracker/features/scanner/presentation/scanner_bloc.dart';
 import 'package:opennutritracker/features/scanner/util/barcode_check_digit.dart';
+// [fork] S43 meal-plan
+import 'package:opennutritracker/fork/basket/basket.dart';
+// [/fork]
 // [fork] S36 missing-product: a barcode nobody knows becomes a custom food
 import 'package:opennutritracker/fork/scan/missing_product.dart';
 // [/fork]
@@ -245,7 +248,10 @@ class _ScannerScreenState extends State<ScannerScreen>
                   // off would silently abandon the recipe builder mid-edit,
                   // and a shared meal/recipe/activity isn't a single
                   // ingredient anyway.
-                  if (!_pickMode) {
+                  // [fork] S43 meal-plan: importing a shared meal logs it, which
+                  // choosing foods for the plan must not
+                  if (!_pickMode && FoodBasket.instance.planning == null) {
+                    // [/fork]
                     final kind = classifySharedPayload(raw);
                     if (kind != null) {
                       _scannedBarcode = raw;
