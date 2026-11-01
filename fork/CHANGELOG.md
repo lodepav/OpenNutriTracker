@@ -2,6 +2,19 @@
 
 Written by fork/tools/release_notes.dart at each release (D16).
 
+## 0.7.1 · 2026-11-01
+
+Based on OpenNutriTracker 2.6.0.
+
+### Fixes and changes
+
+- burgers count their patties once, cheese sauce and tortillas read closer to the menu, and the upgrade test no longer flakes
+- a note weighing one food keeps the other foods' estimates, and a count of patties stays one burger with that many patties
+- restaurant meals read closer to their menus: weights inside a name, bones, kitchen fries, whole pizzas, grilled meat portions, beef borscht
+- a photo note's weight first or last is the total of the several things it names
+- a dish named with a weight in a photo note is split into its foods and adds up to that weight
+- strength gets its own Home section, salt on the Diary, a small pace stays Maintain, a diary basket survives planning
+
 ## 0.7.0 · 2026-11-01
 
 Based on OpenNutriTracker 2.6.0.
