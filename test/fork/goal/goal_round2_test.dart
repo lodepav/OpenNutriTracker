@@ -425,6 +425,10 @@ void main() {
         ),
         isTrue,
       );
+      final line = chart.data.lineBarsData.firstWhere(
+        (b) => b.spots.length == 2 && b.spots.last.x == last,
+      );
+      expect(line.spots.last.y, closeTo(80, 0.01));
       final exact = daysToTarget(86.4, 80, -0.5 / 7)!;
       expect(last, greaterThan(exact));
     });

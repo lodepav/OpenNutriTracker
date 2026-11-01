@@ -543,7 +543,7 @@ void main() {
       adaptiveTarget: true,
     );
     await tester.pumpAndSettle();
-    expect(find.text('about 2495 kcal a day'), findsOneWidget);
+    expect(find.text('about 2563 kcal a day'), findsOneWidget);
     expect(
       find.byWidgetPredicate(
         (w) =>

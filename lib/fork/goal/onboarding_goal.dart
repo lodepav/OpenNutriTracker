@@ -112,7 +112,7 @@ class OnboardingPlanRow extends StatelessWidget {
                         'a screen each.'
                   : '${plan.kind.label}'
                         '${target == null || unit == null ? '' : ' to ${weightText(target, unit)}'}'
-                        ' · until ${intl.DateFormat.yMMMd(Localizations.localeOf(context).toLanguageTag()).format(plan.end)}',
+                        ' · until ${intl.DateFormat.yMMMd(Localizations.localeOf(context).toLanguageTag()).format(plan.lastDay)}',
             ),
             trailing: Icon(
               plan == null ? Icons.chevron_right_rounded : Icons.edit_rounded,

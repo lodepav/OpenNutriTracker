@@ -16,6 +16,9 @@ const maintainWeeksChoices = [2, 4, 8];
 /// A custom maintenance length's range, in weeks.
 const customMaintainWeeks = (min: 1, max: 52);
 
+/// The longest a phase to a weight runs ([DietPhase.weeksTo]), in weeks.
+const longestPhaseWeeks = 52;
+
 /// Diet breaks: [breakWeeks] at maintenance after every [breakEveryWeeks]
 /// of cutting.
 const breakEveryWeeks = 6;
@@ -129,6 +132,16 @@ class GoalDraft {
     PhaseKind.maintain => 0,
   };
 
+  /// True when the pace needs longer than [longestPhaseWeeks] to the
+  /// target, so the plan stops short of it.
+  bool get capped {
+    final target = targetKg;
+    if (kind == PhaseKind.maintain || target == null || paceKg == 0) {
+      return false;
+    }
+    return (target - startKg) / signedPace > longestPhaseWeeks;
+  }
+
   /// Why the goal cannot be planned yet; null when it can.
   String? get problem {
     if (kind == PhaseKind.maintain) return null;
@@ -208,11 +221,15 @@ GoalStatus goalStatus(PhasePlan plan, double nowKg, DateTime today) {
   final target = plan.targetKg;
   if (target != null) {
     final from = plan.startKg;
-    final way = from != null && (target - from).abs() >= 0.1
-        ? (target - from).sign
-        : plan.kind == PhaseKind.bulk
-        ? 1.0
-        : -1.0;
+    // A cut goes down and a bulk up, wherever the target was edited to.
+    final way = switch (plan.kind) {
+      PhaseKind.cut => -1.0,
+      PhaseKind.bulk => 1.0,
+      PhaseKind.maintain =>
+        from != null && (target - from).abs() >= 0.1
+            ? (target - from).sign
+            : -1.0,
+    };
     final left = target - nowKg;
     if (left.abs() < 0.1 || left.sign != way) return GoalStatus.reached;
   }
@@ -258,6 +275,12 @@ List<DietPhase> _ranUntil(PhasePlan plan, DateTime day) {
     }
   }
   return kept;
+}
+
+/// The days of a [PhasePlan], for showing.
+extension PlanLastDay on PhasePlan {
+  /// The goal's last day; [end] is the day after it.
+  DateTime get lastDay => DateTime(end.year, end.month, end.day - 1);
 }
 
 /// [plan] extended from [today] at the trend [nowKg]: until [untilKg]
@@ -338,7 +361,8 @@ PhaseKind? kindOn(
 /// [plan] edited as [draft] has it, on [today] at the trend [nowKg]: once
 /// begun, the phases run so far stay as they were, and [draft]'s follow
 /// from the end of this week; not begun yet, [draft]'s plan. Either keeps
-/// [plan]'s extensions.
+/// [plan]'s extensions. A begun maintenance goal's length is the whole
+/// goal's, the weeks so far included; unchanged, the plan stays as it is.
 PhasePlan editedPlan(
   PhasePlan plan,
   GoalDraft draft, {
@@ -358,7 +382,14 @@ PhasePlan editedPlan(
   }
   final kept = _ranUntil(plan, day);
   final from = PhasePlan(start: plan.start, phases: kept).end;
-  final ahead = draft.copyWith(start: from, startKg: nowKg).toPlan();
+  var weeksAhead = draft.maintainWeeks;
+  if (draft.kind == PhaseKind.maintain && plan.kind == PhaseKind.maintain) {
+    if (weeksAhead == _weeksOf(plan.phases)) return plan;
+    weeksAhead = (weeksAhead - _weeksOf(kept)).clamp(1, weeksAhead);
+  }
+  final ahead = draft
+      .copyWith(start: from, startKg: nowKg, maintainWeeks: weeksAhead)
+      .toPlan();
   return PhasePlan(
     start: plan.start,
     startKg: plan.startKg,
@@ -368,9 +399,20 @@ PhasePlan editedPlan(
   );
 }
 
-/// The weight [plan] ends at: its target, else where its paces lead.
-double? endKgOf(PhasePlan plan) =>
-    plan.targetKg ?? plan.weightAt(plan.phases.length);
+int _weeksOf(Iterable<DietPhase> phases) =>
+    phases.fold(0, (w, p) => w + p.weeks);
+
+/// The weight [plan] ends at: its target, else where its paces lead, as
+/// also when its target is beyond the longest a phase runs.
+double? endKgOf(PhasePlan plan) {
+  final target = plan.targetKg;
+  final led = plan.weightAt(plan.phases.length);
+  if (target == null || led == null) return target ?? led;
+  final weeks = _weeksOf(plan.phases.where((p) => p.kind == plan.kind));
+  return weeks >= longestPhaseWeeks && (led - target).abs() >= 0.1
+      ? led
+      : target;
+}
 
 /// What is wrong with queued goal [plan] where it now starts: a target it
 /// has passed, after a goal before it moved, went or changed.

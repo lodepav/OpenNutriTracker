@@ -2,6 +2,7 @@ import 'package:opennutritracker/core/utils/tracked_day_lock.dart';
 import 'package:opennutritracker/fork/adaptive/goal_plan_card.dart'
     show saveGoal;
 import 'package:opennutritracker/fork/goal/goal_planner.dart';
+import 'package:opennutritracker/fork/goal/goal_progress.dart';
 import 'package:opennutritracker/fork/phases/phases.dart';
 
 DateTime _date(DateTime t) => DateTime(t.year, t.month, t.day);
@@ -27,43 +28,50 @@ class GoalActions {
   final Future<bool> Function(double? kgPerWeek, double? targetKg) _saveGoal;
   final DateTime Function() _clock;
 
+  /// Where the goal's start is kept. An injected save with no store here
+  /// has no profile behind it, so keeps no start.
+  final GoalStartStore? _starts;
+
   GoalActions({
     PhaseStore? store,
     Future<bool> Function(double? kgPerWeek, double? targetKg)? save,
     DateTime Function()? clock,
     ProfileStamp? startedOn,
+    GoalStartStore? starts,
   }) : _store = store ?? PhaseStore(),
+       _starts = starts ?? (save == null ? GoalStartStore() : null),
        _startedOn = startedOn ?? ProfileStamp.now(),
        _saveGoal = save ?? ((pace, target) => saveGoal(pace, target)),
        _clock = clock ?? DateTime.now;
 
   /// Starts [plan]; a plan starting later leaves today's pace as it is.
-  /// A running goal [replacing] another is kept as completed first. The
-  /// queued goals follow it.
-  Future<bool> start(
-    PhasePlan plan, {
-    PhasePlan? replacing,
-    double? nowKg,
-  }) => _onProfile(() async {
-    if (!await _saveGoal(plan.paceOn(_clock()), plan.targetKg)) return false;
-    if (replacing != null) {
-      await _store.addToHistory([completedGoal(replacing, nowKg, _clock())]);
-    }
-    await _store.save(plan);
-    await _reflow(plan, await _store.upcoming(), nowKg);
-    return true;
-  });
+  /// A running goal [replacing] another is kept as completed first, unless
+  /// it never began. The queued goals follow it.
+  Future<bool> start(PhasePlan plan, {PhasePlan? replacing, double? nowKg}) =>
+      _onProfile(() async {
+        Future<bool> save() => _saveGoal(plan.paceOn(_clock()), plan.targetKg);
+        // With none running, one removed may have left its start for Undo.
+        final isNew =
+            replacing != null ||
+            (_starts != null && await _store.plan() == null);
+        if (!await (isNew ? _forgettingStart(save) : save())) return false;
+        if (replacing != null) await _keep(replacing, nowKg);
+        await _store.save(plan);
+        await _reflow(plan, await _store.upcoming(), nowKg);
+        return true;
+      });
 
-  /// Keeps [plan] among the completed goals; the first queued goal starts
-  /// today at [nowKg], else maintenance holds.
+  /// Keeps [plan] among the completed goals, unless it never began; the
+  /// first queued goal starts today at [nowKg], else maintenance holds.
   Future<bool> complete(PhasePlan plan, double? nowKg) => _onProfile(() async {
-    if (!await _startNext(nowKg)) return false;
-    await _store.addToHistory([completedGoal(plan, nowKg, _clock())]);
+    if (!await _forgettingStart(() => _startNext(nowKg))) return false;
+    await _keep(plan, nowKg);
     return true;
   });
 
   /// Drops the running goal, kept nowhere; the first queued goal starts
-  /// today at [nowKg], else maintenance holds.
+  /// today at [nowKg], else maintenance holds. Its start stays for
+  /// [restore] until the next goal starts.
   Future<bool> remove(double? nowKg) => _onProfile(() => _startNext(nowKg));
 
   /// Runs [plan], the goal extended; the queued goals move after it.
@@ -118,7 +126,10 @@ class GoalActions {
     final today = _date(_clock());
     if (plan != null && today.isBefore(_date(queue.first.start))) return false;
     final next = queue.first;
-    if (!await _saveGoal(next.paceOn(today), next.targetKg)) return false;
+    final saved = await _forgettingStart(
+      () => _saveGoal(next.paceOn(today), next.targetKg),
+    );
+    if (!saved) return false;
     // The one before ended the day the next began, though the app
     // opened later.
     if (plan != null) {
@@ -131,6 +142,25 @@ class GoalActions {
     await _store.saveUpcoming(queue.skip(1).toList());
     return true;
   });
+
+  /// [plan] among the completed goals. One still to start ran no days:
+  /// its record would end before it began.
+  Future<void> _keep(PhasePlan plan, double? nowKg) async {
+    if (_date(plan.start).isAfter(_date(_clock()))) return;
+    await _store.addToHistory([completedGoal(plan, nowKg, _clock())]);
+  }
+
+  /// [save], the goal after the one over, with that one's start forgotten
+  /// first: a save starts a sync of the start, which must not find it.
+  /// Back if nothing was saved.
+  Future<bool> _forgettingStart(Future<bool> Function() save) async {
+    final starts = _starts;
+    if (starts == null) return save();
+    final was = await starts.forget();
+    if (await save()) return true;
+    await starts.putBack(was);
+    return false;
+  }
 
   /// [change] made to the queue, reflowed after the running goal; with
   /// none running, the first starts today.
