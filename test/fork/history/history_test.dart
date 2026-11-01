@@ -410,6 +410,21 @@ void main() {
       expect(again.keptDays, 0);
       expect(again.keptImportedDays, 2);
     });
+
+    test('a weigh-in equal to a serving weight stays on a day no import '
+        'wrote', () {
+      final plan = planImport(
+        file,
+        existing: HistoryExisting(
+          weighIns: [
+            WeightLogEntity(date: DateTime(2025, 5, 16), weightKg: 200),
+          ],
+        ),
+        today: DateTime(2026, 10, 24),
+        source: 'MacroFactor',
+      );
+      expect(plan.misread, isEmpty);
+    });
   });
 
   test('MacroFactor workbook sheets: the day\'s micronutrients, body fat '
@@ -939,5 +954,31 @@ void main() {
       source: 'MacroFactor',
     );
     expect(plan.keptCustomFoods, 1);
+  });
+
+  test('a nutrient header\'s unit is converted to the app\'s', () {
+    expect(nutrientFactor('vitaminD', 'vitamin d (iu)'), closeTo(0.025, 1e-9));
+    expect(nutrientFactor('vitaminA', 'vitamin a (iu)'), closeTo(0.3, 1e-9));
+    expect(nutrientFactor('vitaminD', 'vitamin d (µg)'), closeTo(1, 1e-9));
+    expect(nutrientFactor('vitaminD', 'vitamin d (mcg)'), closeTo(1, 1e-9));
+    expect(nutrientFactor('sodium', 'sodium (mg)'), closeTo(1, 1e-9));
+    expect(nutrientFactor('sodium', 'sodium (g)'), closeTo(1000, 1e-9));
+    expect(nutrientFactor('fiber', 'fiber (g)'), closeTo(1, 1e-9));
+    expect(nutrientFactor('fiber', 'fiber_g'), closeTo(1, 1e-9));
+    expect(nutrientFactor('vitaminD', 'vitamin d'), 1);
+    expect(nutrientFactor('iron', 'iron (iu)'), isNull);
+  });
+
+  test('a fat_g column is the fat, as protein_g and carbs_g are', () {
+    final file = readHistory(
+      readTables(
+        'foods.csv',
+        _bytes(
+          'date,food,calories,protein_g,carbs_g,fat_g\n'
+          '2025-05-16,Toast,300,10,40,7\n',
+        ),
+      ),
+    );
+    expect(file.foods.single.fat, 7);
   });
 }

@@ -132,6 +132,37 @@ void main() {
     },
   );
 
+  test('step counts and how the app shows things travel; a day already '
+      'counted here stays', () async {
+    final from = device();
+    final box = await Hive.openBox<dynamic>('adaptive${boxes - 1}');
+    await box.putAll({
+      'steps': {'2026-10-20': 9000, '2026-10-21': 4000},
+      'workoutSteps': {
+        'w1': {'steps': 500, 'final': true},
+      },
+      'stepsOn': true,
+      'macroOrder': ['protein', 'carbs', 'fat'],
+      'showWater': true,
+    });
+    final archive = Archive();
+    await from.extras.addTo(archive);
+
+    final to = device();
+    final target = await Hive.openBox<dynamic>('adaptive${boxes - 1}');
+    await target.put('steps', {'2026-10-21': 7000});
+    await to.extras.prepareRestore(archive)();
+
+    expect(target.get('steps'), {'2026-10-20': 9000, '2026-10-21': 7000});
+    expect(target.get('stepsOn'), isTrue);
+    expect(target.get('macroOrder'), ['protein', 'carbs', 'fat']);
+    expect(target.get('showWater'), isTrue);
+    expect((target.get('workoutSteps') as Map)['w1'], {
+      'steps': 500,
+      'final': true,
+    });
+  });
+
   test('what one device backs up, another restores, twice without '
       'duplicates', () async {
     final from = device();

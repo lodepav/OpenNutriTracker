@@ -106,17 +106,20 @@ Future<void> placeWithUndo(
   DateTime? movedFrom,
   CopyEntries? copier,
   String? verb,
+  Future<Placed?> Function(CopyEntries entries)? place,
 }) async {
   final entries = copier ?? CopyEntries.fromLocator();
   final messenger = ScaffoldMessenger.maybeOf(context);
   final mealName = meal == null ? null : mealLabel(context, meal);
   final stamp = ProfileStamp.now();
-  final placed = await entries.placeIntakes(
-    intakes,
-    moment,
-    type: meal,
-    movedFrom: movedFrom,
-  );
+  final placed = place != null
+      ? await place(entries)
+      : await entries.placeIntakes(
+          intakes,
+          moment,
+          type: meal,
+          movedFrom: movedFrom,
+        );
   refreshAfterCopy();
   if (messenger == null) return;
   final done = verb ?? (movedFrom == null ? 'Copied' : 'Moved');
@@ -135,6 +138,13 @@ Future<void> placeWithUndo(
       DateFormat.MMMEd().format(placed.day),
   ];
   final count = placed.written.length;
+  // A day of activities only: no foods to take back.
+  if (count == 0) {
+    messenger.showSnackBar(
+      SnackBar(content: Text('$done to ${to.join(', ')}')),
+    );
+    return;
+  }
   messenger.showSnackBar(
     SnackBar(
       // An action keeps a bar up until dismissed: this one goes.
@@ -230,17 +240,18 @@ class CopyDayButton extends StatelessWidget {
         now: DateTime.now(),
         count: 1,
         wholeDay: true,
+        from: day,
       ),
     );
-    if (where == null) return;
-    final to = (where.moment as CopySameTimes).day;
-    final copied = await CopyEntries.fromLocator().copyDay(
-      day,
-      to,
-      activities: where.activities,
+    if (where == null || !context.mounted) return;
+    final moment = where.moment as CopySameTimes;
+    await placeWithUndo(
+      context,
+      const [],
+      moment,
+      place: (entries) =>
+          entries.copyDay(day, moment.day, activities: where.activities),
     );
-    refreshAfterCopy();
-    if (context.mounted) _copied(context, copied ? to : null);
   }
 
   @override
@@ -341,12 +352,14 @@ class _WhereToSheetState extends State<WhereToSheet> {
     _When.picked => CopyAt(_day, time: _time),
   };
 
-  /// A move to where the foods already are.
-  bool get _changesNothing =>
-      _move &&
-      _when == _When.same &&
-      DateUtils.isSameDay(_day, widget.from) &&
-      (_meal == null || widget.meals!.every((meal) => meal == _meal));
+  /// A move to where the foods already are, or a whole day onto itself,
+  /// which would only double it.
+  bool get _changesNothing => widget.wholeDay
+      ? DateUtils.isSameDay(_day, widget.from)
+      : _move &&
+            _when == _When.same &&
+            DateUtils.isSameDay(_day, widget.from) &&
+            (_meal == null || widget.meals!.every((meal) => meal == _meal));
 
   Widget _label(BuildContext context, String text) => Padding(
     padding: const EdgeInsets.only(top: 16, bottom: 4),

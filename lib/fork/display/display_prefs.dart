@@ -47,6 +47,9 @@ abstract final class DisplayPrefs {
     locator<HiveDBProvider>().addListener(_load);
   }
 
+  /// After a restore wrote them.
+  static Future<void> reload() => _load();
+
   static Future<void> _load() async {
     final box = await _box();
     macroOrder.value = parseOrder(box.get(_orderKey));

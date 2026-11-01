@@ -282,11 +282,17 @@ HistoryPlan planImport(
     intakes[day] = entries;
   }
 
-  bool misreadOn(WeightLogEntity w) =>
-      file.misreadKg[_date(w.date)]?.any(
-        (kg) => (kg - w.weightKg).abs() < 1e-6,
-      ) ??
-      false;
+  // Only on a day an earlier import wrote, and not the weight this file
+  // itself gives: a real weigh-in can equal a serving's grams.
+  bool misreadOn(WeightLogEntity w) {
+    final day = _date(w.date);
+    if (!existing.importedDays.containsKey(day)) return false;
+    final own = file.weightsKg[day];
+    if (own != null && (own - w.weightKg).abs() < 1e-6) return false;
+    return file.misreadKg[day]?.any((kg) => (kg - w.weightKg).abs() < 1e-6) ??
+        false;
+  }
+
   final misread = [
     for (final w in existing.weighIns)
       if (misreadOn(w)) w,

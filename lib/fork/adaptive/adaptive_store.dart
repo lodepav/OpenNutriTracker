@@ -5,6 +5,7 @@ import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:opennutritracker/core/utils/hive_db_provider.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/fork/adaptive/expenditure.dart';
+import 'package:opennutritracker/fork/display/display_prefs.dart';
 import 'package:opennutritracker/fork/adaptive/macro_program.dart';
 
 /// Fixed daily macros in grams; their energy is the fixed target.
@@ -493,6 +494,51 @@ class AdaptiveStore {
       '${d.day.toString().padLeft(2, '0')}';
 
   static const skippedKey = 'skippedDays';
+
+  /// What else of this box a backup carries, as stored: step counts and
+  /// their switch and goal, and how the app shows things.
+  static const keptKeys = [
+    'steps',
+    'workoutSteps',
+    'stepsOn',
+    'stepGoal',
+    'macroOrder',
+    'diaryByHour',
+    'homeShowsEaten',
+    'showWater',
+    'showFasting',
+  ];
+
+  /// [keptKeys] this box holds, ready for JSON.
+  Future<Map<String, Object?>> kept() async {
+    final box = await _box();
+    return {
+      for (final key in keptKeys)
+        if (box.get(key) case final value?)
+          key: value is Map
+              ? {for (final e in value.entries) '${e.key}': e.value}
+              : value,
+    };
+  }
+
+  /// Writes what [kept] gave. A count this box already has for a day stays,
+  /// as it is the newer read.
+  Future<void> restoreKept(Map<String, dynamic> kept) async {
+    final box = await _box();
+    for (final key in keptKeys) {
+      if (!kept.containsKey(key)) continue;
+      final value = kept[key];
+      await box.put(
+        key,
+        value is Map
+            ? {...value, ...box.get(key, defaultValue: {}) as Map}
+            : value,
+      );
+    }
+    if (_active && locator.isRegistered<HiveDBProvider>()) {
+      await DisplayPrefs.reload();
+    }
+  }
 
   /// The active profile's [skippedDays] in memory, as [settings], for the
   /// estimate, the Diary's switch and the Trends card.

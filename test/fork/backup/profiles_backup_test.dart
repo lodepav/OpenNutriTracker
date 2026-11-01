@@ -231,6 +231,18 @@ void main() {
     );
   });
 
+  test('a backup is refused in a third profile while the device has its '
+      'main one', () async {
+    final archive = await exportWithKid(await _device());
+    await Hive.close();
+    final third = await _device(active: 'third');
+    expect(third.profileBox.get('me'), isNotNull);
+    expect(
+      () => ProfilesBackup(third, openBox: _plain).prepareRestore(archive),
+      throwsA(isA<ExportImportFailure>()),
+    );
+  });
+
   test('a zip without profiles.json restores nothing here', () async {
     expect(
       ProfilesBackup(

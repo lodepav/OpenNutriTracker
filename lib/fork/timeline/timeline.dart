@@ -7,18 +7,20 @@ import 'package:opennutritracker/core/domain/entity/intake_type_entity.dart';
 import 'package:opennutritracker/core/domain/usecase/get_config_usecase.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/core/utils/meal_type_suggester.dart';
+import 'package:opennutritracker/core/utils/calc/day_boundary_calc.dart';
 import 'package:opennutritracker/core/utils/navigation_options.dart';
+import 'package:opennutritracker/core/utils/tracked_day_lock.dart';
 import 'package:opennutritracker/features/add_meal/presentation/add_meal_screen.dart';
 import 'package:opennutritracker/features/add_meal/presentation/add_meal_type.dart';
 import 'package:opennutritracker/fork/copy/copy_entries.dart';
+import 'package:opennutritracker/fork/copy/copy_ui.dart' show refreshAfterCopy;
 import 'package:opennutritracker/fork/units/amount_text.dart';
 import 'package:opennutritracker/fork/units/energy_text.dart';
 
-/// An entry added to a day with no time picked sits at its midnight.
-bool hasNoTime(IntakeEntity intake) {
-  final at = intake.dateTime;
-  return at.hour == 0 && at.minute == 0 && at.second == 0;
-}
+/// An entry added to a day with no time picked sits at its midnight; one
+/// placed at 00:00 is a microsecond past it (`momentOn`).
+bool hasNoTime(IntakeEntity intake) =>
+    DayBoundaryCalc.isDayLabel(intake.dateTime);
 
 /// [at]'s time of day as the phone shows times: 12 or 24 hours (H2).
 String clockText(BuildContext context, DateTime at) =>
@@ -81,8 +83,13 @@ class TimelineEntries {
     return TimelineEntries(
       of: copier.intakesOf,
       replace: (moved) async {
-        await intakes.deleteIntake(moved);
-        await intakes.addIntake(moved);
+        // Together, so no reconciliation counts the day without the entry.
+        await withTrackedDayLockOnProfile(() async {
+          await intakes.deleteIntake(moved);
+          await intakes.addIntake(moved);
+        });
+        // The Diary lists the day by these times.
+        refreshAfterCopy();
       },
       config: locator<GetConfigUsecase>().getConfig,
     );

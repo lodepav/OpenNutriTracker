@@ -76,6 +76,12 @@ void main() {
     expect(DayBoundaryCalc.dayLabelOf(midnight, 240), DateTime(2026, 10, 23));
   });
 
+  test('a food placed at 00:00 has a time; a date-only entry has none', () {
+    final midnight = momentOn(_day, const TimeOfDay(hour: 0, minute: 0), 0);
+    expect(hasNoTime(_eat('Toast', midnight)), isFalse);
+    expect(hasNoTime(_eat('Toast', DateTime(2026, 10, 23))), isTrue);
+  });
+
   testWidgets('a running total; an entry moved; a food added at a time', (
     tester,
   ) async {

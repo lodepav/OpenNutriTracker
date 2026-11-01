@@ -36,6 +36,7 @@ class BackupExtras {
   static const fastingFileName = 'fasting_sessions.json';
   static const customMealsFileName = 'custom_meals.json';
   static const adaptiveFileName = 'fork_adaptive.json';
+  static const keptKey = 'kept';
   static const planFileName = 'fork_plan.json';
   static const measurementsFileName = 'fork_measurements.json';
   static const photosFileName = 'fork_photos.json';
@@ -135,6 +136,7 @@ class BackupExtras {
       PhaseStore.upcomingKey: [
         for (final p in await _phases().upcoming()) p.toJson(),
       ],
+      keptKey: await adaptive.kept(),
     });
     _addJson(archive, planFileName, [
       for (final food in await _plans().all()) food.toJson(),
@@ -192,6 +194,7 @@ class BackupExtras {
     int? milestoneStep,
     List<GoalRecord> goals,
     List<PhasePlan>? upcoming,
+    Map<String, dynamic>? kept,
   })?
   _decodeAdaptive(Archive archive) =>
       _decode(archive, adaptiveFileName, (json) {
@@ -217,6 +220,8 @@ class BackupExtras {
           upcoming: upcoming == null
               ? null
               : [for (final p in upcoming) PhasePlan.fromJson(p as Map)],
+          // Absent in a backup from before it carried them.
+          kept: map[keptKey] as Map<String, dynamic>?,
         );
       });
 
@@ -288,6 +293,9 @@ class BackupExtras {
       }
       for (final meal in customMeals ?? const <MealDBO>[]) {
         await _customMeals.saveCustomMeal(meal);
+      }
+      if (adaptive?.kept case final kept?) {
+        await _adaptive().restoreKept(kept);
       }
       if (adaptive?.plan case final plan?) await _phases().save(plan);
       if (adaptive?.upcoming case final upcoming?) {
