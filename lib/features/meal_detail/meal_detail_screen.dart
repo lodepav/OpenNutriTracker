@@ -23,6 +23,9 @@ import 'package:opennutritracker/generated/l10n.dart';
 // [fork] S45 remembered-amounts
 import 'package:opennutritracker/fork/amounts/remembered_amounts.dart';
 // [/fork]
+// [fork] S195 amount-picker
+import 'package:opennutritracker/fork/amounts/own_portions.dart';
+// [/fork]
 // [fork] S125 food-page
 import 'package:opennutritracker/fork/meal_detail/food_page.dart';
 // [/fork]
@@ -64,8 +67,14 @@ class _MealDetailScreenState extends State<MealDetailScreen> {
   RememberedAmount? _forkRemembered;
 
   Future<void> _forkLoadRemembered() async {
-    final remembered = await RememberedAmounts.current.of(meal);
-    if (remembered == null || !mounted || _userChangedSelection) return;
+    // S195: the user's own portions first, so one remembered by name is
+    // found among them
+    await _forkLoadOwn();
+    final stored = await RememberedAmounts.current.of(meal);
+    if (stored == null || !mounted || _userChangedSelection) return;
+    final unit = unitFromRemembered(meal, stored.unit);
+    if (unit == null) return;
+    final remembered = (unit: unit, quantity: stored.quantity);
     _forkRemembered = remembered;
     _initialUnit = "";
     _initialQuantity = "";
@@ -79,11 +88,46 @@ class _MealDetailScreenState extends State<MealDetailScreen> {
     final remembered = _forkRemembered;
     if (remembered == null) return null;
     if (remembered.unit == UnitDropdownItem.serving.toString() &&
-        meal.scalableServingQuantity == null) {
+        meal.scalableServingQuantity == null &&
+        meal.portions.isEmpty) {
       return null;
     }
     final quantity = double.tryParse(remembered.quantity.replaceAll(',', '.'));
     return quantity == null || quantity <= 0 ? null : remembered;
+  }
+  // [/fork]
+
+  // [fork] S195 amount-picker: the user's own portions of this food, after
+  // its own, kept across hydration
+  List<OwnPortionEntity> _forkOwn = const [];
+
+  Future<void> _forkLoadOwn() async {
+    final own = await OwnPortions.current.of(meal);
+    if (!mounted || own.isEmpty) return;
+    setState(() {
+      _forkOwn = own;
+      meal = withOwnPortions(meal, own);
+    });
+  }
+
+  Future<MealEntity?> _forkReloadOwn() async {
+    final own = await OwnPortions.current.of(meal);
+    if (!mounted) return null;
+    setState(() {
+      _forkOwn = own;
+      meal = withOwnPortions(meal, own);
+    });
+    return meal;
+  }
+
+  Future<MealEntity?> _forkAddPortion(String label, double grams) async {
+    await OwnPortions.current.add(meal, label, grams);
+    return _forkReloadOwn();
+  }
+
+  Future<MealEntity?> _forkRemovePortion(String label) async {
+    await OwnPortions.current.remove(meal, label);
+    return _forkReloadOwn();
   }
   // [/fork]
 
@@ -292,6 +336,7 @@ class _MealDetailScreenState extends State<MealDetailScreen> {
   /// against the fuller nutriments while keeping the user's selection.
   void _onMealHydrated(MealEntity full) {
     setState(() => meal = full);
+    meal = withOwnPortions(full, _forkOwn); // [fork] S195 amount-picker
     if (_userChangedSelection) {
       _mealDetailBloc.add(
         UpdateKcalEvent(
@@ -356,6 +401,10 @@ class _MealDetailScreenState extends State<MealDetailScreen> {
               quantityTextController: quantityTextController,
               onQuantityOrUnitChanged: onQuantityOrUnitChanged,
               logTray: _logTray,
+              // [fork] S195 amount-picker
+              forkOnAddPortion: _forkAddPortion,
+              forkOnRemovePortion: _forkRemovePortion,
+              // [/fork]
             );
           },
           ),

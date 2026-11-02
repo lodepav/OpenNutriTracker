@@ -35,6 +35,9 @@ import 'package:provider/provider.dart';
 
 import '../../helpers/fake_favourites.dart';
 import '../../helpers/test_l10n.dart';
+// [fork] S195 amount-picker: these test upstream's Unit menu and chips
+import 'package:opennutritracker/fork/amounts/amount_picker.dart';
+// [/fork]
 
 // #1216: "Seabrook sea salted crisps" opened from the search list shows
 // "N/A" in the unit dropdown, and when the user picks the 31.8 g serving
@@ -143,6 +146,7 @@ MealEntity _full(Map<String, dynamic> product) =>
     MealEntity.fromOFFProduct(OFFProductDTO.fromJson(product), detailed: true);
 
 void main() {
+  forkAmountPicker = false; // [fork] S195 amount-picker
   final getIt = GetIt.instance;
   MealDetailBloc? bloc;
   late Completer<MealEntity> hydration;
