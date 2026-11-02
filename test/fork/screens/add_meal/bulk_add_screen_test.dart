@@ -34,6 +34,7 @@ import 'package:opennutritracker/features/add_meal/util/meal_text_parser.dart';
 import 'package:opennutritracker/fork/dish/break_down_dish_usecase.dart';
 import 'package:opennutritracker/fork/dish/dish_breakdown_rows.dart';
 import 'package:opennutritracker/fork/dish/dish_strings.dart';
+import 'package:opennutritracker/fork/amounts/own_portions.dart';
 import 'package:opennutritracker/fork/screens/add_meal/bulk_add_screen.dart';
 import 'package:opennutritracker/features/add_meal/presentation/widgets/own_server_wait_indicator.dart';
 import 'package:opennutritracker/features/diary/presentation/bloc/calendar_day_bloc.dart';
@@ -815,24 +816,23 @@ void main() {
       reason: 'something on this row does not fit the space it is given',
     );
 
-    // The dropdown shows one unit but sizes itself to its widest, so this is
-    // the width the row has to find even while "g" is the one on screen. Its
-    // other items are not in the tree to be found, only measured against.
+    // The unit is a button that opens the amount picker (S195); it shows
+    // the one unit chosen, which must not clip.
     final de = lookupS(const Locale('de'));
-    final dropdown = find.byType(DropdownButton<String>);
+    final button = find.byKey(const ValueKey('bulk-add-unit-0'));
     final needed = (TextPainter(
       text: TextSpan(
-        text: de.servingLabel,
-        style: Theme.of(tester.element(dropdown)).textTheme.titleMedium,
+        text: de.gramMilliliterUnit,
+        style: Theme.of(tester.element(button)).textTheme.labelLarge,
       ),
       textDirection: TextDirection.ltr,
       textScaler: const TextScaler.linear(2.0),
     )..layout()).width;
     expect(
-      tester.getSize(dropdown).width,
+      tester.getSize(button).width,
       greaterThanOrEqualTo(needed),
       reason:
-          'the unit dropdown is narrower than the unit it has to show, '
+          'the unit button is narrower than the unit it has to show, '
           'and a clipped unit reads as a different one',
     );
   });
@@ -1034,10 +1034,13 @@ void main() {
     await tester.pumpWidget(_app());
     await _parse(tester, '3 bread');
 
-    // Pick the second portion, then log.
-    await tester.tap(find.byType(DropdownButton<String>).first);
+    // Pick the second portion in the amount picker, then log: the count
+    // stays 3, as the photo or the user gave it.
+    await tester.tap(find.byKey(const ValueKey('bulk-add-unit-0')));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('slice').last);
+    await tester.tap(find.byKey(const ValueKey('amount-unit-serving#1')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('bulk-add-amount-done')));
     await tester.pumpAndSettle();
 
     await tester.tap(_submitButton());
@@ -2276,6 +2279,40 @@ void main() {
     expect(_mealDetailBloc.writes.map((w) => w.mealName), ['Toast']);
   });
 
+  testWidgets("a row in the user's own portion is written as its weight", (
+    tester,
+  ) async {
+    final before = OwnPortions.current;
+    OwnPortions.current = _MemoryPortions();
+    addTearDown(() => OwnPortions.current = before);
+    await _register({
+      'rye bread': [_meal('Rye bread', mealUnit: 'g')],
+    });
+    await tester.pumpWidget(_app());
+    await _parse(tester, '70g rye bread');
+
+    await tester.tap(find.byKey(const ValueKey('bulk-add-unit-0')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('amount-add-portion')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const ValueKey('portion-name')), 'slice');
+    await tester.enterText(find.byKey(const ValueKey('portion-grams')), '35');
+    await tester.pump();
+    await tester.tap(find.byKey(const ValueKey('portion-save')));
+    await tester.pumpAndSettle();
+    expect(find.text('2 × slice = 70 g · 70 kcal'), findsOneWidget);
+    await tester.tap(find.byIcon(Icons.add));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('bulk-add-amount-done')));
+    await tester.pumpAndSettle();
+
+    await tester.tap(_submitButton());
+    await tester.pumpAndSettle();
+    final write = _mealDetailBloc.writes.single;
+    expect(write.unit, 'g');
+    expect(double.parse(write.amount), 105, reason: '3 slices of 35 g');
+  });
+
   testWidgets('choosing a unit lets a flagged row be written', (tester) async {
     // Excluding the row is only defensible because the way back is one tap
     // on the control the warning already points at.
@@ -2285,9 +2322,12 @@ void main() {
     await tester.pumpWidget(_app());
     await _parse(tester, '2 eggs');
 
-    await tester.tap(find.byType(DropdownButton<String>).first);
+    // The unit shown, chosen in the amount picker, confirms it.
+    await tester.tap(find.byKey(const ValueKey('bulk-add-unit-0')));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('g').last);
+    await tester.tap(find.byKey(const ValueKey('amount-unit-g/ml')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('bulk-add-amount-done')));
     await tester.pumpAndSettle();
 
     expect(find.text(l10nEn.bulkAddCheckAmountLabel), findsNothing);
@@ -3323,4 +3363,20 @@ class _EmptyStorage implements FlutterSecureStorage {
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+/// The user's own portions in memory, for the amount picker's sheet.
+class _MemoryPortions extends OwnPortions {
+  final _kept = <String, List<OwnPortionEntity>>{};
+
+  @override
+  Future<List<OwnPortionEntity>> of(MealEntity meal) async =>
+      List.of(_kept[meal.name] ?? const []);
+
+  @override
+  Future<void> add(MealEntity meal, String label, double grams) async {
+    (_kept[meal.name!] ??= []).add(
+      OwnPortionEntity(label: label, gramWeight: grams),
+    );
+  }
 }

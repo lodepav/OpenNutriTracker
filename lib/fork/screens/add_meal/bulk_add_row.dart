@@ -307,15 +307,27 @@ extension _BulkAddRow on _BulkAddScreenState {
       },
     );
 
-    final unit = DropdownButton<String>(
-      value: row.effectiveUnit,
-      items: _unitItems(context, row),
-      // Only when it has a line to fill; on a shared line it takes the width
-      // its longest unit needs, which is what `stacked` was measured against.
-      isExpanded: stacked,
-      onChanged: (value) {
-        if (value != null) _bloc.add(ChangeRowUnitEvent(index, value));
-      },
+    // The unit opens the food page's amount picker (S195): the food's
+    // portions with their weights, the user's own, − and +.
+    final unit = OutlinedButton(
+      key: ValueKey('bulk-add-unit-$index'),
+      onPressed: () => _openAmountPicker(index, state.usesImperialUnits),
+      style: OutlinedButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+      ),
+      child: Row(
+        mainAxisSize: stacked ? MainAxisSize.max : MainAxisSize.min,
+        children: [
+          Flexible(
+            child: Text(
+              _unitLabel(context, row.effectiveUnit, row),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const Icon(Icons.arrow_drop_down_rounded),
+        ],
+      ),
     );
 
     // A count of portions, and the weight it was taken to be.
@@ -398,21 +410,135 @@ extension _BulkAddRow on _BulkAddScreenState {
       S.of(context).bulkAddRowQuantityTooLarge(bulkAddMaxQuantity),
   };
 
-  /// What the unit dropdown needs to show its longest unit without clipping
-  /// it: the dropdown sizes itself to its widest item, plus its arrow.
-  double _unitDropdownWidth(BuildContext context, BulkAddRow row) {
-    final style = Theme.of(context).textTheme.titleMedium;
-    var widest = 0.0;
-    for (final unit in row.allowedUnits) {
-      widest = math.max(
-        widest,
-        _textWidth(context, _unitLabel(context, unit, row), style),
-      );
-    }
-    return widest + _dropdownArrowWidth;
-  }
+  /// What the unit button needs to show its unit without clipping it: the
+  /// label, its arrow and the button's padding.
+  double _unitDropdownWidth(BuildContext context, BulkAddRow row) =>
+      _textWidth(
+        context,
+        _unitLabel(context, row.effectiveUnit, row),
+        Theme.of(context).textTheme.labelLarge,
+      ) +
+      _dropdownArrowWidth +
+      _buttonPadding;
 
   static const _dropdownArrowWidth = 24.0;
+
+  /// The row's amount in the food page's picker, in a sheet: each change
+  /// reaches the row as it is made. The user's own portions are not among
+  /// the row's units, so one of those reaches it as its weight.
+  Future<void> _openAmountPicker(int index, bool imperial) async {
+    final start = _bloc.state;
+    if (start is! BulkAddLoadedState || index >= start.rows.length) return;
+    final row = start.rows[index];
+    final base = row.meal;
+    if (base == null) return;
+    var meal = withOwnPortions(base, await OwnPortions.current.of(base));
+    if (!mounted) return;
+    var unit = row.effectiveUnit;
+    final controller = TextEditingController(text: row.amountText);
+
+    /// The amount to the row; with [unitChosen], the unit too, which
+    /// answers the row's "check the amount" even when it is the one shown.
+    void send({bool unitChosen = false}) {
+      final current = _bloc.state;
+      if (current is! BulkAddLoadedState || index >= current.rows.length) {
+        return;
+      }
+      final allowed = current.rows[index].allowedUnits;
+      var (text, to) = (controller.text, unit);
+      if (!allowed.contains(to)) {
+        final weight = meal.isLiquid
+            ? UnitDropdownItem.ml.toString()
+            : UnitDropdownItem.g.toString();
+        to = allowed.contains(weight)
+            ? weight
+            : UnitDropdownItem.gml.toString();
+        text = amountInUnit(text, unit, to, meal) ?? text;
+      }
+      if (unitChosen || current.rows[index].effectiveUnit != to) {
+        _bloc.add(ChangeRowUnitEvent(index, to));
+      }
+      if (_quantityErrors.containsKey(index)) _clearQuantityError(index);
+      _bloc.add(ChangeRowAmountEvent(index, text));
+    }
+
+    var setting = false;
+    void typed() {
+      if (!setting) send();
+    }
+
+    controller.addListener(typed);
+    Future<MealEntity> reload() async {
+      meal = withOwnPortions(base, await OwnPortions.current.of(base));
+      return meal;
+    }
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      showDragHandle: true,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setSheet) => Padding(
+          padding: EdgeInsets.fromLTRB(
+            16,
+            0,
+            16,
+            16 + MediaQuery.viewInsetsOf(context).bottom,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                base.name ?? '',
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 16),
+              AmountPicker(
+                meal: meal,
+                unit: unit,
+                controller: controller,
+                imperial: imperial,
+                keepCountBetweenPortions: true,
+                onSet: (text, to) {
+                  unit = to;
+                  setting = true;
+                  controller.text = text;
+                  setting = false;
+                  send(unitChosen: true);
+                  setSheet(() {});
+                },
+                onAddPortion: (label, grams) async {
+                  await OwnPortions.current.add(base, label, grams);
+                  final updated = await reload();
+                  setSheet(() {});
+                  return updated;
+                },
+                onRemovePortion: (label) async {
+                  await OwnPortions.current.remove(base, label);
+                  final updated = await reload();
+                  setSheet(() {});
+                  return updated;
+                },
+              ),
+              const SizedBox(height: 16),
+              FilledButton(
+                key: const ValueKey('bulk-add-amount-done'),
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Done'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    controller
+      ..removeListener(typed)
+      ..dispose();
+  }
 
   /// "≈ 120 g" under a count of portions; empty for a weight or volume.
   String _portionWeightLabel(BuildContext context, BulkAddRow row) {
@@ -434,21 +560,6 @@ extension _BulkAddRow on _BulkAddScreenState {
     final kcal = kcalForQuantity(quantity, row.effectiveUnit, meal);
     return kcal == null ? '' : EnergyDisplay.formatWithUnit(context, kcal);
   }
-
-  List<DropdownMenuItem<String>> _unitItems(
-    BuildContext context,
-    BulkAddRow row,
-  ) => [
-    for (final unit in row.allowedUnits)
-      DropdownMenuItem(
-        value: unit,
-        child: Text(
-          _unitLabel(context, unit, row),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-      ),
-  ];
 
   /// Takes the row because one of the six units is not a fixed word: the
   /// food names its own portion, and "3 slice" says what "3 serving" only

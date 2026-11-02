@@ -43,6 +43,11 @@ class AmountPicker extends StatelessWidget {
   final Future<MealEntity?> Function(String label, double grams)? onAddPortion;
   final Future<MealEntity?> Function(String label)? onRemovePortion;
 
+  /// Keeps the number when one portion is swapped for another, for a count
+  /// the user or a photo gave ("3 bread" read as cups is 3 slices, not 19);
+  /// a portion to a weight and back still converts.
+  final bool keepCountBetweenPortions;
+
   const AmountPicker({
     super.key,
     required this.meal,
@@ -55,6 +60,7 @@ class AmountPicker extends StatelessWidget {
     this.onFieldTap,
     this.onAddPortion,
     this.onRemovePortion,
+    this.keepCountBetweenPortions = false,
   });
 
   double? get _quantity =>
@@ -205,9 +211,14 @@ class AmountPicker extends StatelessWidget {
     onSet(amountText(steppedAmount(quantity, step, up: up)), unit);
   }
 
-  /// To [to], keeping the amount: 64 g becomes 2 slices, not 64.
+  /// To [to], keeping the amount: 64 g becomes 2 slices, not 64. The unit
+  /// already chosen, chosen again, confirms it.
   void _choose(String to, MealEntity on) {
-    if (to == unit) return;
+    if (to == unit ||
+        keepCountBetweenPortions && isPortionUnit(unit) && isPortionUnit(to)) {
+      onSet(controller.text, to);
+      return;
+    }
     final converted = amountInUnit(controller.text, unit, to, on);
     final fallback = isPortionUnit(to)
         ? '1'

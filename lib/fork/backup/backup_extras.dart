@@ -16,6 +16,7 @@ import 'package:opennutritracker/core/data/dbo/water_intake_dbo.dart';
 import 'package:opennutritracker/core/data/repository/water_intake_repository.dart';
 import 'package:opennutritracker/features/fasting/data/data_source/fasting_data_source.dart';
 import 'package:opennutritracker/features/settings/domain/export_import_failure.dart';
+import 'package:opennutritracker/fork/amounts/own_portions.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/fork/body/measurement_store.dart';
 import 'package:opennutritracker/fork/phases/phases.dart';
@@ -40,6 +41,7 @@ class BackupExtras {
   static const planFileName = 'fork_plan.json';
   static const measurementsFileName = 'fork_measurements.json';
   static const photosFileName = 'fork_photos.json';
+  static const ownPortionsFileName = 'fork_own_portions.json';
   static const profileFileName = 'user_profile.json';
   static const appSettingsFileName = 'app_settings.json';
 
@@ -81,6 +83,7 @@ class BackupExtras {
   final MeasurementStore Function() _measurements;
   final PhotoStore Function() _photos;
   final PhaseStore Function() _phases;
+  final OwnPortions Function() _ownPortions;
 
   /// Null leaves the profile, and the app settings, out of the backup.
   final UserDataSource? _user;
@@ -98,6 +101,7 @@ class BackupExtras {
     MeasurementStore Function()? measurements,
     PhotoStore Function()? photos,
     PhaseStore Function()? phases,
+    OwnPortions Function()? ownPortions,
     UserDataSource? user,
     ConfigDataSource? config,
     ProfilesBackup? profiles,
@@ -106,6 +110,7 @@ class BackupExtras {
        _measurements = measurements ?? MeasurementStore.new,
        _photos = photos ?? PhotoStore.new,
        _phases = phases ?? PhaseStore.new,
+       _ownPortions = ownPortions ?? OwnPortions.new,
        _user = user,
        _config = config,
        _profiles = profiles;
@@ -144,6 +149,7 @@ class BackupExtras {
     _addJson(archive, measurementsFileName, [
       for (final m in await _measurements().all()) m.toJson(),
     ]);
+    _addJson(archive, ownPortionsFileName, await _ownPortions().all());
     final photos = _photos();
     final photoIndex = await photos.all();
     _addJson(archive, photosFileName, [for (final p in photoIndex) p.toJson()]);
@@ -256,6 +262,18 @@ class BackupExtras {
       measurementsFileName,
       (json) => [for (final m in json as List) Measurement.fromJson(m)],
     );
+    final ownPortions = _decode(archive, ownPortionsFileName, (json) {
+      return {
+        for (final MapEntry(:key, :value) in (json as Map).entries)
+          key as String: [
+            for (final p in value as List)
+              {
+                'label': (p as Map)['label'] as String,
+                'grams': p['grams'] as num,
+              },
+          ],
+      };
+    });
     final photos = _decode(archive, photosFileName, (json) {
       final index = [
         for (final p in json as List) ProgressPhoto.fromJson(p as Map),
@@ -313,6 +331,7 @@ class BackupExtras {
         await _measurements().merge(measurements);
       }
       if (photos != null) await _photos().merge(photos.index, photos.images);
+      if (ownPortions != null) await _ownPortions().merge(ownPortions);
       if (profile != null) await _user?.saveUserData(profile);
       if ((_config, settings) case (final config?, final settings?)) {
         final current = (await config.getConfig()).toJson();

@@ -15,8 +15,15 @@ class _Host extends StatefulWidget {
   final String unit;
   final String text;
   final List<(String, String)> sets;
+  final bool keepCounts;
 
-  const _Host(this.meal, this.unit, this.text, this.sets);
+  const _Host(
+    this.meal,
+    this.unit,
+    this.text,
+    this.sets, {
+    this.keepCounts = false,
+  });
 
   @override
   State<_Host> createState() => _HostState();
@@ -32,6 +39,7 @@ class _HostState extends State<_Host> {
     meal: meal,
     unit: unit,
     controller: controller,
+    keepCountBetweenPortions: widget.keepCounts,
     onSet: (text, to) {
       widget.sets.add((text, to));
       setState(() {
@@ -55,6 +63,7 @@ Future<List<(String, String)>> _pump(
   MealEntity meal, {
   String unit = 'g',
   String text = '64',
+  bool keepCounts = false,
 }) async {
   final sets = <(String, String)>[];
   await tester.pumpWidget(
@@ -65,7 +74,9 @@ Future<List<(String, String)>> _pump(
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      home: Scaffold(body: _Host(meal, unit, text, sets)),
+      home: Scaffold(
+        body: _Host(meal, unit, text, sets, keepCounts: keepCounts),
+      ),
     ),
   );
   return sets;
@@ -156,5 +167,26 @@ void main() {
     expect(find.text('slice · 35 g'), findsOneWidget);
     expect(sets.last, ('2', 'serving'));
     expect(_summary(tester), startsWith('2 × slice = 70 g'));
+  });
+
+  testWidgets('on Log with AI a count stays when the portion changes, and '
+      'the unit shown, chosen again, is confirmed', (tester) async {
+    final sets = await _pump(
+      tester,
+      bread(),
+      unit: 'serving#1',
+      text: '3',
+      keepCounts: true,
+    );
+    await tester.tap(find.text('slice · 32 g'));
+    await tester.pump();
+    expect(sets.last, ('3', 'serving'));
+    await tester.tap(find.text('slice · 32 g'));
+    await tester.pump();
+    expect(sets.length, 2);
+    // To grams it still converts.
+    await tester.tap(find.widgetWithText(ChoiceChip, 'g'));
+    await tester.pump();
+    expect(sets.last, ('96', 'g'));
   });
 }

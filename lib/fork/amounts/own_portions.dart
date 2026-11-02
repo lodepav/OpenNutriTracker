@@ -127,6 +127,40 @@ class OwnPortions {
     }
   }
 
+  /// Every food's portions, as the backup carries them: the food's key
+  /// (`code:…` or `name:…`) to its portions, `label` and `grams`.
+  Future<Map<String, List<Map<String, Object>>>> all() async {
+    final all = (await _box()).get(_key, defaultValue: {}) as Map;
+    return {
+      for (final MapEntry(:key, :value) in all.entries)
+        if (key is String && value is List)
+          key: [
+            for (final p in value.whereType<Map>())
+              if (p['label'] is String && p['grams'] is num)
+                {'label': p['label'] as String, 'grams': p['grams'] as num},
+          ],
+    };
+  }
+
+  /// Adds [restored] (as [all] gives them) to the portions kept: a name a
+  /// food already has takes the restored weight, the rest stay.
+  Future<void> merge(Map<String, List<Map<String, Object>>> restored) async {
+    if (restored.isEmpty) return;
+    final box = await _box();
+    final all = Map<dynamic, dynamic>.of(
+      box.get(_key, defaultValue: {}) as Map,
+    );
+    for (final MapEntry(key: id, value: portions) in restored.entries) {
+      final names = {for (final p in portions) p['label']};
+      all[id] = [
+        for (final p in (all[id] as List?) ?? const [])
+          if (p is Map && !names.contains(p['label'])) p,
+        ...portions,
+      ];
+    }
+    await box.put(_key, all);
+  }
+
   /// Removes [label] from [meal]'s own portions.
   Future<void> remove(MealEntity meal, String label) async {
     final id = _id(meal);
