@@ -42,7 +42,7 @@ class AutoBackupState {
 /// concurrent calls, rotation by file name, the error stored, never thrown),
 /// without its WebDAV target.
 class AutoBackup {
-  static const keep = 14;
+  static const keep = 5;
   static const interval = Duration(hours: 1);
   static const boxName = 'ForkAutoBackupBox';
 
