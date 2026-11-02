@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -61,6 +63,62 @@ void main() {
       expect(m.proteinG, closeTo(1.6 * 80, 0.001));
       expect(m.fatG, closeTo(0.8 * 80, 0.001));
       expectEnergy(m, 2500);
+    });
+
+    test('fat per kg is the level at maintenance; a cut or a bulk moves it '
+        'with the energy left after protein, and protein holds', () {
+      const program = MacroProgram();
+      // 80 kg: protein 128 g (512 kcal), fat 64 g at a maintenance of 2,500.
+      final cut = program.macrosFor(
+        kcal: 2000,
+        weightKg: 80,
+        bodyFatPercent: 20,
+        goalKcal: -500,
+      );
+      expect(cut.proteinG, closeTo(128, 0.001));
+      expect(cut.fatG, closeTo(64 * 1488 / 1988, 0.001));
+      expectEnergy(cut, 2000);
+      // Carbs and fat each lose the same share.
+      final maintenance = program.macrosFor(
+        kcal: 2500,
+        weightKg: 80,
+        bodyFatPercent: 20,
+      );
+      expect(maintenance.fatG, closeTo(64, 0.001));
+      expect(
+        cut.carbsG / maintenance.carbsG,
+        closeTo(cut.fatG / maintenance.fatG, 0.001),
+      );
+
+      final bulk = program.macrosFor(
+        kcal: 2900,
+        weightKg: 80,
+        bodyFatPercent: 20,
+        goalKcal: 400,
+      );
+      expect(bulk.proteinG, closeTo(128, 0.001));
+      expect(bulk.fatG, closeTo(64 * 2388 / 1988, 0.001));
+      expectEnergy(bulk, 2900);
+    });
+
+    test('a deep cut keeps fat at 20% of the energy, or the level when '
+        'that is lower', () {
+      final deep = const MacroProgram().macrosFor(
+        kcal: 1500,
+        weightKg: 80,
+        bodyFatPercent: 20,
+        goalKcal: -1000,
+      );
+      expect(deep.fatG, closeTo(1500 * 0.2 / 9, 0.001));
+      expectEnergy(deep, 1500);
+
+      final low = const MacroProgram(fatGPerKg: 0.3).macrosFor(
+        kcal: 1500,
+        weightKg: 80,
+        bodyFatPercent: 20,
+        goalKcal: -1000,
+      );
+      expect(low.fatG, closeTo(24, 0.001), reason: 'the level, 0.3 × 80');
     });
 
     test('fat per kg goes only as far as the energy left after protein', () {
@@ -170,6 +228,35 @@ void main() {
       final goals = GetMacroGoalUsecase(_Config(), other, _user);
       expect(await goals.getProteinsGoal(2400), closeTo(160, 0.001));
       expect(await goals.getFatsGoal(2400), closeTo(0.8 * 80, 0.001));
+    });
+
+    test("a profile's cut takes fat down with the day's energy", () async {
+      final other = AdaptiveStore.otherProfile(
+        () => Hive.openBox<dynamic>('cut'),
+      );
+      await other.save(const AdaptiveSettings(macroProgram: MacroProgram()));
+      // 80 kg losing 0.5 kg a week: the formula's 550 kcal a day under.
+      Future<UserEntity> cutting() async => UserEntity(
+        birthday: DateTime(1990, 1, 1),
+        heightCM: 180,
+        weightKG: 80,
+        gender: UserGenderEntity.male,
+        goal: UserWeightGoalEntity.loseWeight,
+        pal: UserPALEntity.active,
+        weeklyWeightGoalKg: -0.5,
+      );
+      final goalKcal = CalorieGoalCalc.getKcalGoalAdjustment(
+        UserWeightGoalEntity.loseWeight,
+        weeklyWeightGoalKg: -0.5,
+      );
+      final goals = GetMacroGoalUsecase(_Config(), other, cutting);
+      expect(await goals.getProteinsGoal(2000), closeTo(128, 0.001));
+      // Protein 512 kcal; 1,488 left today, against 1,488 less the goal at
+      // maintenance; above the 20% floor (44 g).
+      final fat = await goals.getFatsGoal(2000);
+      expect(fat, closeTo(64 * 1488 / (1488 - goalKcal), 0.001));
+      expect(fat, lessThan(64));
+      expect(fat, greaterThan(2000 * 0.2 / 9));
     });
 
     test('the fixed grams win over the program', () async {
@@ -437,8 +524,16 @@ void main() {
     addTearDown(() => OnboardingMacros.pending.value = null);
     final macros = OnboardingMacros.overview(user, 2937)!;
     expect(macros.proteinG, 180);
-    expect(macros.fatG, closeTo(72, 0.01));
-    expect(macros.carbsG, closeTo((2937 - 720 - 648) / 4, 0.01));
+    // 0.8 g/kg is the fat at maintenance; the cut takes it down with the
+    // energy left after protein, never under 20% of the energy (D34).
+    final maintenance = CalorieGoalCalc.getTdee(user);
+    final fat = math.max(
+      72 * (2937 - 720) / (maintenance - 720),
+      2937 * 0.2 / 9,
+    );
+    expect(macros.fatG, closeTo(fat, 0.01));
+    expect(macros.fatG, lessThan(72));
+    expect(macros.carbsG, closeTo((2937 - 720 - 9 * fat) / 4, 0.01));
   });
 
   test('the onboarding overview follows a fixed target', () {

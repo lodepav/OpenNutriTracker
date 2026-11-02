@@ -455,6 +455,8 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
         kcal: kcal,
         weightKg: _setup.nowKg,
         bodyFatPercent: _setup.bodyFatPercent,
+        // the phase's pace: fat moves with it (D34)
+        goalKcal: kcal - _baseKcal,
       ) ??
       FixedMacros(
         proteinG: kcal * _setup.split.protein / 4,

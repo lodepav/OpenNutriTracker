@@ -56,6 +56,11 @@ abstract final class OnboardingMacros {
         kcal: kcal,
         weightKg: user.weightKG,
         bodyFatPercent: bodyFatPercent(user),
+        // What the goal adds to the formula's maintenance (D34); a fixed
+        // target holds the level.
+        goalKcal: settings.fixedTarget
+            ? 0
+            : kcal - CalorieGoalCalc.getTdee(user),
       );
     }
     if (overviewKcal(user) case final fixed?
