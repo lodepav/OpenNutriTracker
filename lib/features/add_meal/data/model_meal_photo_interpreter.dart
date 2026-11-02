@@ -53,7 +53,8 @@ class ModelMealPhotoInterpreter implements MealPhotoInterpreter {
   // [/fork]
 
   // [fork] S60 photo-counts: count every countable piece (phase 4 replay:
-  // smaller models left dumplings, khinkali and one whole pizza uncounted)
+  // smaller models left dumplings, khinkali and one whole pizza uncounted);
+  // and name each food as cooked: a plate's red cabbage found a raw row
   static const _systemPrompt = '''
 You identify the foods visible in a photograph of a meal so they can be
 looked up in a food database. You do not estimate nutrition, and you do not
@@ -65,6 +66,9 @@ Rules:
   its ingredients.
 - "query" is the food name alone, with no amount in it, in the user's app
   language. Keep a brand only if it is legible in the photo.
+- Name a food the way it was cooked when the photo shows it was:
+  "braised red cabbage", "boiled potatoes", "roast pork", "fried egg". A
+  food eaten raw ("lettuce", "apple") needs no such word.
 - Include "quantity" whenever you can count discrete items, and count
   them: 2 eggs, 3 sausages, 1 banana, 14 dumplings, 1 whole pizza. A dish
   served as pieces (dumplings, pancakes, tarts, rolls) is counted, roughly

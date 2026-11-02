@@ -87,9 +87,42 @@ final _lacks = RegExp(
 final _frozenFries = RegExp(r'french fried,.*\bfrozen\b', caseSensitive: false);
 final _asksFrozen = RegExp(r'\b(frozen|oven)', caseSensitive: false);
 
+/// A food as sold dry or powdered, not as it is eaten: a photo's "gravy,
+/// brown" logged "Gravy, brown, dry", the granules, at 367 kcal per 100 g
+/// against about 50 for gravy. Not a dish made from one ("prepared",
+/// "from flakes") or dry-roasted nuts. Asked for by naming the form.
+final _dryForm = RegExp(
+  r',\s*dry\b(?!\s+roasted)|\b(powder(ed)?|dehydrated|granules)\b',
+  caseSensitive: false,
+);
+final _madeFromDry = RegExp(
+  r'\bprepared\b|\bfrom (granules|flakes|powder|dry)\b',
+  caseSensitive: false,
+);
+final _asksDry = RegExp(
+  r'\b(dry|dried|powder(ed)?|dehydrated|granules|instant|mix|uncooked)\b',
+  caseSensitive: false,
+);
+
+/// A sauce, seasoning or soup named after the food the query asks for: a
+/// photo's "roast pork" logged Open Food Facts' "Roast pork gravy", which
+/// holds both words, at 100 g. A food that comes with one ("Ham or pork
+/// with gravy", "Chicken, with sauce") is still that food. Each word is
+/// asked for by its stem, so "gravies" and "sauces" ask too.
+final _condiment = RegExp(
+  r'\b(gravy|sauce|seasoning|marinade|stock|broth|bouillon|rub|dressing|'
+  r'crisps|soup)\b',
+  caseSensitive: false,
+);
+final _comesWith = RegExp(
+  r'\b(with|in|without|no)\b[^,]*',
+  caseSensitive: false,
+);
+
 /// [unaskedVariantPenalty] when [name] carries one of the variant words, or
-/// is only a skin, pickled, lighter or made with turkey, and [query] does
-/// not say so, or lacks a food [query] names; else 0.
+/// is only a skin, pickled, lighter, dry, a sauce of the food or made with
+/// turkey, and [query] does not say so, or lacks a food [query] names; else
+/// 0.
 double unaskedVariant(String? name, String query) {
   final asked = query.toLowerCase();
   final row = name ?? '';
@@ -104,6 +137,18 @@ double unaskedVariant(String? name, String query) {
   }
   if (_frozenFries.hasMatch(row) && !_asksFrozen.hasMatch(asked)) {
     return unaskedVariantPenalty;
+  }
+  if (_dryForm.hasMatch(row) &&
+      !_madeFromDry.hasMatch(row) &&
+      !_asksDry.hasMatch(asked)) {
+    return unaskedVariantPenalty;
+  }
+  final condiment = _condiment.firstMatch(row.replaceAll(_comesWith, ''));
+  if (condiment != null) {
+    final word = condiment[0]!.toLowerCase();
+    if (!asked.contains(word.substring(0, word.length < 4 ? 3 : 4))) {
+      return unaskedVariantPenalty;
+    }
   }
   if (_mix.hasMatch(row) && !asked.contains('mix')) {
     return unaskedVariantPenalty;

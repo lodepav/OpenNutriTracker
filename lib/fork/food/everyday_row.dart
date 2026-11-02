@@ -55,6 +55,11 @@ const _everyday = {
   'greek yogurt': _greekYogurt,
   'greek yoghurt': _greekYogurt,
   'granola': 'Cereal, granola',
+  // "gravy, brown" logged the dry granules, then a brown rice with gravy,
+  // which holds both words.
+  'gravy, brown': _gravy,
+  'brown gravy': _gravy,
+  'gravy, meat': _gravy,
   // fried rice, by the shorter name
   'rice': _longGrainRice,
   'rice, cooked': _longGrainRice,
@@ -240,7 +245,9 @@ const _wholeWheatPasta =
     'Program)';
 const _friedRice = 'Rice, fried, NFS';
 const _roastPotato = 'Potato, roasted, NFS';
-const _gravy = 'Gravy, beef, canned, ready-to-serve';
+// Not "Gravy, beef, canned" (the same energy): its serving is the 233 g
+// can, which a plate's gravy logged with no amount stated.
+const _gravy = 'Gravy, NFS';
 const _vinaigrette = 'Salad dressing, home recipe, vinegar and oil';
 const _bechamel = 'Bechamel sauce';
 const _cookedLentils = 'Lentils, mature seeds, cooked, boiled, with salt';

@@ -17,6 +17,9 @@ import 'package:opennutritracker/fork/dish/dish_breakdown_rows.dart';
 // [fork] S61 recipe-count: a count past a recipe's batch is flagged
 import 'package:opennutritracker/fork/dish/recipe_count.dart';
 // [/fork]
+// [fork] S98 default-amount: a sauce starts at a ladle
+import 'package:opennutritracker/fork/food/sauce_serving.dart';
+// [/fork]
 
 part 'bulk_add_event.dart';
 part 'bulk_add_state.dart';
@@ -605,10 +608,14 @@ class BulkAddBloc extends Bloc<BulkAddEvent, BulkAddState> {
 
     if (meal != null && meal.hasServingValues) {
       final serving = meal.servingQuantity;
-      if (serving != null) return _amountText(serving);
+      // [fork] S98 default-amount: a sauce at most a ladle, not a can
+      if (serving != null) return _amountText(sauceDefault(meal.name, serving));
+      // [/fork]
     }
     // [fork] S98 default-amount: the 100 g in ounces. Upstream's 1 oz is
-    // 28 g, so an AI-read dish with no stated amount came in as a bite.
+    // 28 g, so an AI-read dish with no stated amount came in as a bite. A
+    // sauce at a ladle, 60 g or 2 oz.
+    if (isSauce(meal?.name)) return usesImperialUnits ? '2' : '60';
     return usesImperialUnits ? '3.5' : '100';
     // [/fork]
   }
