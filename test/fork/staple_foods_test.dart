@@ -12,6 +12,7 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:opennutritracker/features/meal_detail/util/meal_quantity_converter.dart';
 import 'package:opennutritracker/features/add_meal/data/data_sources/off_data_source.dart';
 import 'package:opennutritracker/features/add_meal/data/repository/products_repository.dart';
 import 'package:opennutritracker/features/add_meal/util/meal_text_parser.dart';
@@ -193,6 +194,34 @@ void main() {
       expect(item.confidence, greaterThanOrEqualTo(kResolutionConfidenceFloor));
     });
   }
+
+  // A photo's 8 meatballs: an Open Food Facts "meatball and sausage
+  // marinara" won over a row with no piece, or a 3 oz serving made 680 g.
+  for (final query in ['meatballs', 'meatball', 'fried meatballs']) {
+    test('$query, counted, are that many 30 g meatballs', () async {
+      final item = (await resolver.resolve([
+        ParsedMealItem(query: query, quantity: 8),
+      ])).single;
+      final meal = item.candidates[item.selectedIndex];
+      expect(meal.name, 'Meatballs, fried');
+      expect(meal.servingQuantity, 30);
+      expect(convertQuantityToBaseUnit(8, 'serving', meal), 240);
+    });
+  }
+  test(
+    'a kind of meatball takes a piece too; a small one is smaller',
+    () async {
+      for (final (query, name, grams) in [
+        ('pork meatballs', 'Pork meatballs, fried', 30.0),
+        ('small meatballs', 'Small meatballs', 12.0),
+      ]) {
+        final item = await resolve(query);
+        final meal = item.candidates[item.selectedIndex];
+        expect(meal.name, name);
+        expect(meal.servingQuantity, grams);
+      }
+    },
+  );
 
   // Phase 1c: the ingredient names the breakdown prompt asks for
   // (BreakDownDishUseCase.systemPrompt) land on the plain raw row.

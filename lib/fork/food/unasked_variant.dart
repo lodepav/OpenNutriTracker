@@ -106,12 +106,13 @@ final _asksDry = RegExp(
 
 /// A sauce, seasoning or soup named after the food the query asks for: a
 /// photo's "roast pork" logged Open Food Facts' "Roast pork gravy", which
-/// holds both words, at 100 g. A food that comes with one ("Ham or pork
+/// holds both words, at 100 g, and its "meatballs" a "meatball and sausage
+/// marinara". A food that comes with one ("Ham or pork
 /// with gravy", "Chicken, with sauce") is still that food. Each word is
 /// asked for by its stem, so "gravies" and "sauces" ask too.
 final _condiment = RegExp(
-  r'\b(gravy|sauce|seasoning|marinade|stock|broth|bouillon|rub|dressing|'
-  r'crisps|soup)\b',
+  r'\b(gravy|sauce|seasoning|marinade|marinara|stock|broth|bouillon|rub|'
+  r'dressing|crisps|soup)\b',
   caseSensitive: false,
 );
 final _comesWith = RegExp(

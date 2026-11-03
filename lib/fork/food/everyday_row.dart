@@ -58,6 +58,10 @@ const _everyday = {
   // "gravy, brown" logged the dry granules, then a brown rice with gravy,
   // which holds both words.
   'gravy, brown': _gravy,
+  // "meatball" logged a dish in sauce; see _meatballs.
+  'meatball': _meatballs,
+  'fried meatballs': _meatballs,
+  'meatballs, fried': _meatballs,
   'brown gravy': _gravy,
   'gravy, meat': _gravy,
   // fried rice, by the shorter name
@@ -258,7 +262,10 @@ const _friedChicken =
 const _steamedDumpling = 'Wonton, dumpling or pot sticker, steamed';
 const _friedDumpling = 'Wonton, dumpling or pot sticker, fried';
 const _tzatziki = 'Tzatziki dip';
-const _meatballs = 'Meatballs, frozen, Italian style';
+// Not "Meatballs, frozen, Italian style" (286 kcal, by now 269): its
+// serving is 3 oz, so a photo's 8 meatballs read as 8 × 85 g. This row
+// takes a 30 g piece (`addedPieces`).
+const _meatballs = 'Meatballs, fried';
 const _cookedEggplant = 'Eggplant, cooked, fat added';
 const _greekYogurt = 'Yogurt, Greek, NS as to type of milk, plain';
 const _stewBeef = 'Beef, stew meat';

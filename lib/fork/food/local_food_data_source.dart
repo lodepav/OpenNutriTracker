@@ -377,6 +377,39 @@ List<SpFoodDTO> _servedNotDry(
   ];
 }
 
+/// A piece for rows the table gives no portion, so a count is that many
+/// pieces: a photo's 8 meatballs found "Meatballs, fried" (BLS, by weight
+/// only) at the 100 g default, and a frozen row's "3 oz" serving made them
+/// 8 × 85 g. A home or canteen meatball of about 3.5 cm weighs about 30 g.
+const addedPieces = <String, (String, double)>{
+  'Meatballs, fried': ('1 meatball', 30),
+  'Pork meatballs, fried': ('1 meatball', 30),
+  'Beef meatballs, fried': ('1 meatball', 30),
+  'Veal meatballs, fried': ('1 meatball', 30),
+  'Game meatballs, fried': ('1 meatball', 30),
+  'Meatballs of turkey, fried': ('1 meatball', 30),
+  'Chicken meatballs, with button mushrooms, fried': ('1 meatball', 30),
+  // Bite-sized, as for soup or a buffet: about 2.5 cm.
+  'Small meatballs': ('1 meatball', 12),
+  'Small meatballs (pork/veal mince), fried': ('1 meatball', 12),
+  'Small veal meatballs, fried in oven': ('1 meatball', 12),
+  'Small lamb meatballs, cooked': ('1 meatball', 12),
+  'Small game meatballs': ('1 meatball', 12),
+  'Small sausage meatballs': ('1 meatball', 12),
+};
+
+/// [row] with its [addedPieces] serving, where the table gives it none.
+Map<String, Object?> _withAddedPiece(Map<String, Object?> row) {
+  final piece = addedPieces[row['name']];
+  if (piece == null || row['serving_gram_weight'] != null) return row;
+  return {
+    ...row,
+    'serving_size': piece.$1,
+    'serving_gram_weight': piece.$2,
+    'has_portion': true,
+  };
+}
+
 /// The decoded asset: rows and their portions by food id.
 class LocalFoodTable {
   final List<SpFoodDTO> foods;
@@ -414,9 +447,12 @@ class LocalFoodTable {
     final columns = (json['columns'] as List).cast<String>();
     final foods = [
       for (final row in json['foods'] as List)
-        SpFoodDTO.fromJson({
-          for (var i = 0; i < columns.length; i++) columns[i]: (row as List)[i],
-        }),
+        SpFoodDTO.fromJson(
+          _withAddedPiece({
+            for (var i = 0; i < columns.length; i++)
+              columns[i]: (row as List)[i],
+          }),
+        ),
     ];
     final portions = {
       for (final MapEntry(:key, :value) in (json['portions'] as Map).entries)
@@ -429,6 +465,17 @@ class LocalFoodTable {
             ),
         ],
     };
+    for (final food in foods) {
+      final (id, piece) = (food.foodId, addedPieces[food.name]);
+      if (id == null || piece == null || portions.containsKey(id)) continue;
+      portions[id] = [
+        MealPortionEntity(
+          label: piece.$1,
+          gramWeight: piece.$2,
+          localized: false,
+        ),
+      ];
+    }
     // "1 serving" scales by the first portion, so a food's own serving
     // leads its list: oats' 10 g serving logged an 80 g cup.
     for (final food in foods) {

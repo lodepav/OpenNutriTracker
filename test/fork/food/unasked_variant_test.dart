@@ -171,6 +171,8 @@ void main() {
     expect(unaskedVariant('Chicken soup', 'chicken'), p);
     expect(unaskedVariant('Pork chop seasoning', 'pork chop'), p);
     expect(unaskedVariant('Salad dressing, ranch', 'salad'), p);
+    expect(unaskedVariant('Meatball and sausage marinara', 'meatballs'), p);
+    expect(unaskedVariant('Meatball and sausage marinara', 'marinara'), 0);
     // Asked for, or a food that comes with one.
     expect(unaskedVariant('Roast pork gravy', 'gravy'), 0);
     expect(unaskedVariant('Gravy, beef, canned', 'gravies'), 0);
