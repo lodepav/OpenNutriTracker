@@ -398,8 +398,19 @@ const addedPieces = <String, (String, double)>{
   'Small sausage meatballs': ('1 meatball', 12),
 };
 
-/// [row] with its [addedPieces] serving, where the table gives it none.
+/// A serving that replaces the table's, so a count is of the thing a
+/// person counts: bacon's 16 g "serving" made a photo's 4 slices 64 g;
+/// a medium slice cooked is 8 g. Its other portions stay.
+const servingOverrides = <String, (String, double)>{
+  'Bacon, NS as to type of meat, cooked': ('1 slice', 8),
+};
+
+/// [row] with its [servingOverrides] serving, or its [addedPieces] one
+/// where the table gives it none.
 Map<String, Object?> _withAddedPiece(Map<String, Object?> row) {
+  if (servingOverrides[row['name']] case (final size, final grams)) {
+    return {...row, 'serving_size': size, 'serving_gram_weight': grams};
+  }
   final piece = addedPieces[row['name']];
   if (piece == null || row['serving_gram_weight'] != null) return row;
   return {

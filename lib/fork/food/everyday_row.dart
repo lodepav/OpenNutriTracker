@@ -110,6 +110,26 @@ const _everyday = {
   // a frozen bag, unprepared
   'potatoes, fried': _fries,
   'potato, fried': _fries,
+  // A photo's pan-fried potatoes, as a person names them, logged french
+  // fries (the table's names above stay fries).
+  'fried potato': _homeFries,
+  'fried potatoes': _homeFries,
+  'pan-fried potatoes': _homeFries,
+  'pan fried potatoes': _homeFries,
+  'potatoes, pan-fried': _homeFries,
+  'sauteed potatoes': _homeFries,
+  'sautéed potatoes': _homeFries,
+  'potatoes, sauteed': _homeFries,
+  'home fries': _homeFries,
+  // A photo's bacon logged a pan-fried row by its 3 oz serving; this one
+  // counts in slices (`servingOverrides`).
+  'fried bacon': _bacon,
+  'bacon, fried': _bacon,
+  'crispy bacon': _bacon,
+  'bacon, crispy': _bacon,
+  'bacon rashers': _bacon,
+  'bacon strips': _bacon,
+  'bacon slices': _bacon,
   // the only onion gravy is a dry mix, at six times the energy
   'gravy, onion': _gravy,
   'onion gravy': _gravy,
@@ -228,6 +248,8 @@ const _everyday = {
 const _cheesePizza =
     'Pizza, cheese, from restaurant or fast food, NS as to type of crust';
 const _fries = 'Potato, french fries, NFS';
+const _homeFries = 'Potato, home fries, from fresh';
+const _bacon = 'Bacon, NS as to type of meat, cooked';
 const _tomatoPaste =
     'Tomato products, canned, paste, without salt added (Includes foods for '
     "USDA's Food Distribution Program)";

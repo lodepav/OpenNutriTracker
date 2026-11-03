@@ -223,6 +223,45 @@ void main() {
     },
   );
 
+  test(
+    "a photo's fried bacon counts in 8 g slices, not a 3 oz serving",
+    () async {
+      for (final query in ['fried bacon', 'bacon', 'crispy bacon']) {
+        final item = (await resolver.resolve([
+          ParsedMealItem(query: query, quantity: 4),
+        ])).single;
+        final meal = item.candidates[item.selectedIndex];
+        expect(
+          meal.name,
+          'Bacon, NS as to type of meat, cooked',
+          reason: query,
+        );
+        expect(convertQuantityToBaseUnit(4, 'serving', meal), 32);
+      }
+    },
+  );
+
+  test("a photo's fried potatoes are home fries; the table's name stays "
+      'fries', () async {
+    for (final query in [
+      'fried potato',
+      'fried potatoes',
+      'sauteed potatoes',
+    ]) {
+      final item = await resolve(query);
+      expect(
+        item.candidates[item.selectedIndex].name,
+        'Potato, home fries, from fresh',
+        reason: query,
+      );
+    }
+    final fries = await resolve('potatoes, fried');
+    expect(
+      fries.candidates[fries.selectedIndex].name,
+      startsWith('Potato, french fries'),
+    );
+  });
+
   // Phase 1c: the ingredient names the breakdown prompt asks for
   // (BreakDownDishUseCase.systemPrompt) land on the plain raw row.
   for (final (query, expected) in [

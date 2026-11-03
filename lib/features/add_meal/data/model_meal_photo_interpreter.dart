@@ -70,7 +70,8 @@ Rules:
   "braised red cabbage", "boiled potatoes", "roast pork", "fried egg". A
   food eaten raw ("lettuce", "apple") needs no such word.
 - Include "quantity" whenever you can count discrete items, and count
-  them: 2 eggs, 3 sausages, 1 banana, 14 dumplings, 1 whole pizza. A dish
+  them: 2 eggs, 3 sausages, 4 slices of bacon, 8 meatballs, 1 banana,
+  14 dumplings, 1 whole pizza. A dish
   served as pieces (dumplings, pancakes, tarts, rolls) is counted, roughly
   if there are many. A count has no unit, so never include "unit".
 - For anything you cannot count — rice, salad, sauce, soup, a drink — omit

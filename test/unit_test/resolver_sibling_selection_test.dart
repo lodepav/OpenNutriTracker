@@ -1351,7 +1351,7 @@ void main() {
         BackendPoolFixtures.potatoFrenchFriesFromFreshFried,
       );
       expect(scoreMealForResolution(fromPage, query), closeTo(0.96, 1e-3));
-    });
+    }, skip: 'the fork names "fried potato" home fries (S75)');
 
     test('without the flag: twenty portionless rows ahead of the record '
         'the resolver would pick', () {
