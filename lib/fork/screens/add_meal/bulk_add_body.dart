@@ -215,58 +215,36 @@ extension _BulkAddBody on _BulkAddScreenState {
     );
   }
 
-  /// The meal's card (D36): what the Log button logs, its energy and its
-  /// protein, carbs and fat, and below them today's energy and macros
-  /// with the meal added, against their goals.
+  /// The meal's card, as the Diary's day card reads (D37): what Log logs,
+  /// its energy and its macros on the Diary's line, and that day's energy
+  /// and macros with the meal added, against their goals.
   Widget _buildMealSummary(BuildContext context, BulkAddLoadedState state) {
     final theme = Theme.of(context);
     final palette = paletteOf(context);
     final meal = mealMacros(state.rows);
-    final big = theme.textTheme.headlineSmall?.copyWith(
-      fontWeight: FontWeight.w700,
-    );
-    Widget macro(String label, double grams, Color color) => Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          '${grams.round()} g',
-          style: theme.textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.w700,
-            color: color,
-          ),
-        ),
-        Text(
-          label,
-          style: theme.textTheme.bodySmall?.copyWith(color: palette.textMuted),
-        ),
-      ],
+    final foods = state.rows.where((row) => row.willBeLogged).length;
+    final muted = theme.textTheme.labelMedium?.copyWith(
+      color: palette.textMuted,
     );
     return Semantics(
       container: true,
       identifier: 'bulk-add-meal-summary',
-      child: Container(
+      child: AppCard(
         key: const ValueKey('bulk-add-meal-summary'),
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-        decoration: BoxDecoration(
-          color: palette.surface,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: palette.border),
-        ),
+        padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'This meal',
-              style: theme.textTheme.labelMedium?.copyWith(
-                color: palette.textMuted,
-              ),
-            ),
-            const SizedBox(height: 2),
-            Wrap(
-              spacing: 20,
-              runSpacing: 8,
-              crossAxisAlignment: WrapCrossAlignment.end,
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.baseline,
+              textBaseline: TextBaseline.alphabetic,
               children: [
+                Expanded(
+                  child: Text(
+                    'This meal · $foods ${foods == 1 ? 'food' : 'foods'}',
+                    style: muted,
+                  ),
+                ),
                 // summed as the rows show it, as the Log button is (#1469)
                 Text(
                   EnergyDisplay.formatSumWithUnit(context, [
@@ -274,23 +252,20 @@ extension _BulkAddBody on _BulkAddScreenState {
                       if (row.willBeLogged) ?rowMacros(row)?.kcal,
                   ]),
                   key: const ValueKey('bulk-add-meal-kcal'),
-                  style: big,
-                ),
-                ...inMacroOrder(
-                  carbs: macro('carbs', meal.carbs, palette.carbsColor),
-                  fat: macro('fat', meal.fat, palette.fatColor),
-                  protein: macro('protein', meal.protein, palette.proteinColor),
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: palette.textStrong,
+                  ),
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            MacrosLine(carbs: meal.carbs, fat: meal.fat, protein: meal.protein),
+            const SizedBox(height: 10),
             Text(
               DateUtils.isSameDay(_args.day, DateTime.now())
                   ? 'Today with this meal'
                   : 'That day with this meal',
-              style: theme.textTheme.labelMedium?.copyWith(
-                color: palette.textMuted,
-              ),
+              style: muted,
             ),
             const SizedBox(height: 6),
             TodayAfterAdding(

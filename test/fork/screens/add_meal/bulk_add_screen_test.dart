@@ -2278,7 +2278,7 @@ void main() {
     });
   });
 
-  testWidgets('− and + move a row by a portion, or by 10 g (D35)', (
+  testWidgets("a row's amount sheet moves it by a portion, or by 10 g", (
     tester,
   ) async {
     await _register({
@@ -2290,12 +2290,24 @@ void main() {
     await tester.pumpWidget(_app());
     await _parse(tester, '3 bread, 64g toast');
 
-    await tester.tap(find.byKey(const ValueKey('bulk-add-more-0')));
-    await tester.pumpAndSettle();
+    Future<void> step(int row, IconData icon) async {
+      await _show(tester, find.byKey(ValueKey('bulk-add-unit-$row')));
+      await tester.tap(find.byKey(ValueKey('bulk-add-unit-$row')));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.descendant(
+          of: find.byType(AmountPicker),
+          matching: find.byIcon(icon),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('bulk-add-amount-done')));
+      await tester.pumpAndSettle();
+    }
+
+    await step(0, Icons.add);
     expect(find.text('4 × slice · 152 g'), findsOneWidget);
-    await _show(tester, find.byKey(const ValueKey('bulk-add-less-1')));
-    await tester.tap(find.byKey(const ValueKey('bulk-add-less-1')));
-    await tester.pumpAndSettle();
+    await step(1, Icons.remove);
     expect(find.text('60 g'), findsOneWidget);
 
     await tester.tap(_submitButton());
@@ -2615,7 +2627,10 @@ void main() {
     await tester.pumpWidget(_app());
     await _parse(tester, '2 eggs');
 
+    // from the row's amount sheet (D37)
     await tester.tap(find.text('Egg'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('bulk-add-other-match')));
     await tester.pumpAndSettle();
     expect(find.text(l10nEn.bulkAddChooseFoodLabel), findsOneWidget);
 

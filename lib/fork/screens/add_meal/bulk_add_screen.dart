@@ -46,7 +46,10 @@ import 'package:opennutritracker/fork/dish/dish_recipe.dart';
 import 'package:opennutritracker/fork/dish/dish_strings.dart';
 import 'package:opennutritracker/fork/bulk/discard_guard.dart';
 import 'package:opennutritracker/fork/bulk/review_totals.dart';
-import 'package:opennutritracker/fork/display/display_prefs.dart';
+import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
+import 'package:opennutritracker/core/styles/dimens.dart';
+import 'package:opennutritracker/fork/display/meal_macros_line.dart';
+import 'package:opennutritracker/fork/off/off_kinds.dart';
 import 'package:opennutritracker/fork/meal_detail/food_page.dart'
     show TodayAfterAdding, DayTotals, loadDayTotals;
 import 'package:opennutritracker/fork/amounts/amount_picker.dart';
