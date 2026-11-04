@@ -105,26 +105,6 @@ extension _BulkAddRow on _BulkAddScreenState {
                       fontWeight: FontWeight.w700,
                     ),
                   ),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Flexible(
-                      child: Text(
-                        _amountLabel(context, row),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: textTheme.bodySmall?.copyWith(
-                          color: palette.textMuted,
-                        ),
-                      ),
-                    ),
-                    Icon(
-                      Icons.arrow_drop_down_rounded,
-                      size: 18,
-                      color: palette.textMuted,
-                    ),
-                  ],
-                ),
               ],
             ),
           ),
@@ -146,7 +126,6 @@ extension _BulkAddRow on _BulkAddScreenState {
             color: Colors.transparent,
             borderRadius: radius,
             child: InkWell(
-              key: ValueKey('bulk-add-unit-$index'),
               borderRadius: radius,
               onTap: faded
                   ? null
@@ -164,6 +143,12 @@ extension _BulkAddRow on _BulkAddScreenState {
               ),
             ),
           ),
+          // − [the amount] +, under the name, as the proposal had it
+          if (!faded)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(52, 0, 12, 6),
+              child: _buildAmountRow(context, state, index, row),
+            ),
           if (row.skipped || error != null || actions.isNotEmpty)
             Padding(
               padding: const EdgeInsets.fromLTRB(52, 0, 12, 4),
@@ -375,6 +360,74 @@ extension _BulkAddRow on _BulkAddScreenState {
       ),
     ],
   ];
+
+  /// − [the amount] +: the amount as the food page says it ("3 × potato ·
+  /// 234 g", "150 g"), a tap opening the amount picker, − and + moving it
+  /// by a portion or 10 g.
+  Widget _buildAmountRow(
+    BuildContext context,
+    BulkAddLoadedState state,
+    int index,
+    BulkAddRow row,
+  ) {
+    final quantity = double.tryParse(row.amountText.replaceAll(',', '.'));
+    final unit = row.effectiveUnit;
+    final label = _amountLabel(context, row);
+    void step({required bool up}) {
+      final from = quantity ?? 0;
+      final next = steppedAmount(from, amountStep(unit, from), up: up);
+      if (_quantityErrors.containsKey(index)) _clearQuantityError(index);
+      _bloc.add(ChangeRowAmountEvent(index, amountText(next)));
+    }
+
+    return Padding(
+      padding: EdgeInsets.zero,
+      child: Row(
+        children: [
+          IconButton.filledTonal(
+            key: ValueKey('bulk-add-less-$index'),
+            tooltip: 'Less',
+            visualDensity: VisualDensity.compact,
+            onPressed: quantity == null ? null : () => step(up: false),
+            icon: const Icon(Icons.remove),
+          ),
+          const SizedBox(width: 4),
+          Flexible(
+            child: OutlinedButton(
+              key: ValueKey('bulk-add-unit-$index'),
+              onPressed: () =>
+                  _openAmountPicker(index, state.usesImperialUnits),
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                shape: const StadiumBorder(),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Flexible(
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  const Icon(Icons.arrow_drop_down_rounded),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(width: 4),
+          IconButton.filledTonal(
+            key: ValueKey('bulk-add-more-$index'),
+            tooltip: 'More',
+            visualDensity: VisualDensity.compact,
+            onPressed: () => step(up: true),
+            icon: const Icon(Icons.add),
+          ),
+        ],
+      ),
+    );
+  }
 
   /// Says which of the three failures this is. They used to render
   /// identically, as the field's own name.
