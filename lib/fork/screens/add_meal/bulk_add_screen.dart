@@ -5,6 +5,7 @@ import 'dart:io';
 
 import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/presentation/widgets/badged_title.dart';
 import 'package:flutter/services.dart';
@@ -44,6 +45,10 @@ import 'package:opennutritracker/fork/dish/dish_group.dart';
 import 'package:opennutritracker/fork/dish/dish_recipe.dart';
 import 'package:opennutritracker/fork/dish/dish_strings.dart';
 import 'package:opennutritracker/fork/bulk/discard_guard.dart';
+import 'package:opennutritracker/fork/bulk/review_totals.dart';
+import 'package:opennutritracker/fork/display/display_prefs.dart';
+import 'package:opennutritracker/fork/meal_detail/food_page.dart'
+    show TodayAfterAdding, DayTotals, loadDayTotals;
 import 'package:opennutritracker/fork/amounts/amount_picker.dart';
 import 'package:opennutritracker/fork/amounts/amount_units.dart';
 import 'package:opennutritracker/fork/amounts/own_portions.dart';
@@ -94,6 +99,9 @@ class BulkAddScreen extends StatefulWidget {
   @override
   State<BulkAddScreen> createState() => _BulkAddScreenState();
 }
+
+/// Today's totals for the review's meal card (D36); tests swap it.
+Future<DayTotals> Function(DateTime day) forkDayTotals = loadDayTotals;
 
 class _BulkAddScreenState extends State<BulkAddScreen> {
   final _log = Logger('BulkAddScreen');
@@ -591,12 +599,18 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
                 ),
                 const Divider(height: 1),
                 Expanded(child: _buildBody(context, state)),
-                if (state is BulkAddLoadedState)
-                  _buildSubmitBar(context, state),
               ],
             ),
           ),
         ),
+      ),
+      // In the bar's slot, so a snackbar (a left-out food's Undo, D36)
+      // shows above Log rather than over it.
+      bottomNavigationBar: BlocBuilder<BulkAddBloc, BulkAddState>(
+        bloc: _bloc,
+        builder: (context, state) => state is BulkAddLoadedState
+            ? _buildSubmitBar(context, state)
+            : const SizedBox.shrink(),
       ),
     );
   }

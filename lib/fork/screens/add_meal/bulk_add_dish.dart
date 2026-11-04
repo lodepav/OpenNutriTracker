@@ -151,7 +151,10 @@ extension _BulkAddDish on _BulkAddScreenState {
       ),
     );
     return Container(
-      color: scheme.secondaryContainer,
+      decoration: BoxDecoration(
+        color: scheme.secondaryContainer,
+        borderRadius: BorderRadius.circular(14),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [title, portion],

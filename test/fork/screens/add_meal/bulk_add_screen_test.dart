@@ -600,8 +600,31 @@ Future<void> _parse(WidgetTester tester, String text) async {
 
 Finder _submitButton() => find.widgetWithIcon(FilledButton, Icons.add_rounded);
 
+/// The review's list, which scrolls under the meal's card (D36).
+Finder _rowList() => find
+    .descendant(
+      of: find.bySemanticsIdentifier('bulk-add-row-list'),
+      matching: find.byType(Scrollable),
+    )
+    .first;
+
+/// Scrolls the review's list until [finder] is built and on screen.
+Future<void> _show(WidgetTester tester, Finder finder) async {
+  await tester.scrollUntilVisible(finder, 150, scrollable: _rowList());
+  await tester.pumpAndSettle();
+}
+
+/// Leaves row [row] out with a swipe to the left (D36).
+Future<void> _leaveOut(WidgetTester tester, int row) async {
+  final card = find.byKey(ValueKey('bulk-add-row-$row'));
+  await _show(tester, card);
+  await tester.drag(card, const Offset(-600, 0));
+  await tester.pumpAndSettle();
+}
+
 /// Types [amount] for row [row] in its amount sheet (D35), and closes it.
 Future<void> _typeRowAmount(WidgetTester tester, int row, String amount) async {
+  await _show(tester, find.byKey(ValueKey('bulk-add-unit-$row')));
   await tester.tap(find.byKey(ValueKey('bulk-add-unit-$row')));
   await tester.pumpAndSettle();
   await tester.enterText(find.byKey(const ValueKey('amount-field')), amount);
@@ -831,6 +854,7 @@ void main() {
     // the one unit chosen, which must not clip.
     final de = lookupS(const Locale('de'));
     final button = find.byKey(const ValueKey('bulk-add-unit-0'));
+    await _show(tester, button);
     final needed = (TextPainter(
       text: TextSpan(
         text: de.gramMilliliterUnit,
@@ -970,20 +994,29 @@ void main() {
     await _parse(tester, 'toast');
     final en = lookupS(const Locale('en'));
     expect(find.text(en.breakfastLabel), findsOneWidget);
-    // Skip is the row's check (D35)
-    final keep = find.byKey(const ValueKey('bulk-add-keep-0'));
-    await tester.tap(keep);
-    await tester.pumpAndSettle();
-    expect(tester.widget<Checkbox>(keep).value, isFalse);
-    // faded is the name, not the check
+    // A swipe leaves it out, with Undo; the card says so (D36).
+    await _leaveOut(tester, 0);
+    expect(find.text('Left out: Toast'), findsOneWidget);
+    final putBack = find.byKey(const ValueKey('bulk-add-put-back-0'));
+    expect(putBack, findsOneWidget);
+    // faded is the name, not Put back
     expect(
-      find.ancestor(of: keep, matching: find.byType(Opacity)),
+      find.ancestor(of: putBack, matching: find.byType(Opacity)),
       findsNothing,
     );
     expect(
       find.ancestor(of: find.text('Toast'), matching: find.byType(Opacity)),
       findsOneWidget,
     );
+
+    // Undo puts it back, and so does Put back after a second swipe.
+    await tester.tap(find.text('Undo'));
+    await tester.pumpAndSettle();
+    expect(putBack, findsNothing);
+    await _leaveOut(tester, 0);
+    await tester.tap(putBack);
+    await tester.pumpAndSettle();
+    expect(putBack, findsNothing);
   });
 
   testWidgets('a defaulted amount is marked, quietly', (tester) async {
@@ -1108,6 +1141,7 @@ void main() {
 
     // The amount is a button now (D35); it shows the largest amount whole.
     final button = find.byKey(const ValueKey('bulk-add-unit-0'));
+    await _show(tester, button);
     final needed = (TextPainter(
       text: TextSpan(
         text: '10000 g',
@@ -1538,6 +1572,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(reader.notes, hasLength(3));
     expect(staged, findsNothing);
+    await _show(tester, find.text('Egg'));
     expect(find.text('Egg'), findsOneWidget);
     expect(find.widgetWithText(TextField, 'two eggs'), findsNothing);
   });
@@ -1961,8 +1996,7 @@ void main() {
         'next edit follow the foods left', (tester) async {
       await readDish(tester);
       await setPortion(tester, '350');
-      await tester.tap(find.byKey(const ValueKey('bulk-add-keep-1')));
-      await tester.pumpAndSettle();
+      await _leaveOut(tester, 1);
       expectPortion('200');
       await setPortion(tester, '700');
       await tester.tap(_submitButton());
@@ -2259,6 +2293,7 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('bulk-add-more-0')));
     await tester.pumpAndSettle();
     expect(find.text('4 × slice · 152 g'), findsOneWidget);
+    await _show(tester, find.byKey(const ValueKey('bulk-add-less-1')));
     await tester.tap(find.byKey(const ValueKey('bulk-add-less-1')));
     await tester.pumpAndSettle();
     expect(find.text('60 g'), findsOneWidget);
@@ -2269,6 +2304,37 @@ void main() {
       ('Bread', '152.0'),
       ('Toast', '60.0'),
     ]);
+  });
+
+  testWidgets("the meal's card: what Log logs, and that day with it (D36)", (
+    tester,
+  ) async {
+    final before = forkDayTotals;
+    forkDayTotals = (_) async => (
+      eaten: (kcal: 400.0, carbs: 50.0, fat: 12.0, protein: 25.0),
+      goal: (kcal: 2200.0, carbs: 240.0, fat: 75.0, protein: 140.0),
+    );
+    addTearDown(() => forkDayTotals = before);
+    await _register({
+      'toast': [_meal('Toast')],
+      'milk': [_meal('Milk')],
+    });
+    await tester.pumpWidget(_app());
+    await _parse(tester, '100g toast, 200g milk');
+
+    final kcal = find.byKey(const ValueKey('bulk-add-meal-kcal'));
+    expect(tester.widget<Text>(kcal).data, '300 kcal');
+    // the screen's day is not today
+    expect(find.text('That day with this meal'), findsOneWidget);
+    expect(
+      find.text('700 / 2200', findRichText: true),
+      findsOneWidget,
+      reason: '400 eaten + 300',
+    );
+
+    // a food left out leaves the meal
+    await _leaveOut(tester, 1);
+    expect(tester.widget<Text>(kcal).data, '100 kcal');
   });
 
   testWidgets('a skipped row is not written', (tester) async {
@@ -2282,8 +2348,7 @@ void main() {
     await tester.pumpWidget(_app());
     await _parse(tester, '100g toast, 2 eggs');
 
-    await tester.tap(find.byKey(const ValueKey('bulk-add-keep-0')));
-    await tester.pumpAndSettle();
+    await _leaveOut(tester, 0);
     await tester.tap(_submitButton());
     await tester.pumpAndSettle();
 
