@@ -99,11 +99,15 @@ extension _BulkAddBody on _BulkAddScreenState {
       );
     }
 
-    final entries = dishListEntries(
-      state.rows,
-      folded: _foldedDishes,
-      separate: _separateDishes,
-    );
+    // A dish's actions are in its heading's menu (D35).
+    final entries = [
+      for (final entry in dishListEntries(
+        state.rows,
+        folded: _foldedDishes,
+        separate: _separateDishes,
+      ))
+        if (entry is! DishActions) entry,
+    ];
     // The list is the labelled surface, not each child — row identifiers
     // would churn every time the row count changes.
     final list = Semantics(
@@ -118,7 +122,7 @@ extension _BulkAddBody on _BulkAddScreenState {
           }
           return switch (entries[index]) {
             DishHeading heading => _buildDishHeading(context, state, heading),
-            DishActions(:final group) => _buildDishActions(context, group),
+            DishActions() => const SizedBox.shrink(),
             DishRowEntry(:final index, inDish: true) => Padding(
               padding: const EdgeInsets.only(left: 16),
               child: _buildRow(context, state, index),

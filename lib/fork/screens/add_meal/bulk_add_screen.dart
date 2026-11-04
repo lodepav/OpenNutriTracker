@@ -2,7 +2,6 @@
 // are ported by hand: fork/tools/upstream-copies.sh.
 import 'dart:async';
 import 'dart:io';
-import 'dart:math' as math;
 
 import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/material.dart';
@@ -46,6 +45,7 @@ import 'package:opennutritracker/fork/dish/dish_recipe.dart';
 import 'package:opennutritracker/fork/dish/dish_strings.dart';
 import 'package:opennutritracker/fork/bulk/discard_guard.dart';
 import 'package:opennutritracker/fork/amounts/amount_picker.dart';
+import 'package:opennutritracker/fork/amounts/amount_units.dart';
 import 'package:opennutritracker/fork/amounts/own_portions.dart';
 import 'package:opennutritracker/fork/meal_detail/unit_change.dart';
 // remember which entries one save wrote (D14)

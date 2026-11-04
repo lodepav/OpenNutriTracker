@@ -34,6 +34,7 @@ import 'package:opennutritracker/features/add_meal/util/meal_text_parser.dart';
 import 'package:opennutritracker/fork/dish/break_down_dish_usecase.dart';
 import 'package:opennutritracker/fork/dish/dish_breakdown_rows.dart';
 import 'package:opennutritracker/fork/dish/dish_strings.dart';
+import 'package:opennutritracker/fork/amounts/amount_picker.dart';
 import 'package:opennutritracker/fork/amounts/own_portions.dart';
 import 'package:opennutritracker/fork/screens/add_meal/bulk_add_screen.dart';
 import 'package:opennutritracker/features/add_meal/presentation/widgets/own_server_wait_indicator.dart';
@@ -599,6 +600,16 @@ Future<void> _parse(WidgetTester tester, String text) async {
 
 Finder _submitButton() => find.widgetWithIcon(FilledButton, Icons.add_rounded);
 
+/// Types [amount] for row [row] in its amount sheet (D35), and closes it.
+Future<void> _typeRowAmount(WidgetTester tester, int row, String amount) async {
+  await tester.tap(find.byKey(ValueKey('bulk-add-unit-$row')));
+  await tester.pumpAndSettle();
+  await tester.enterText(find.byKey(const ValueKey('amount-field')), amount);
+  await tester.pumpAndSettle();
+  await tester.tap(find.byKey(const ValueKey('bulk-add-amount-done')));
+  await tester.pumpAndSettle();
+}
+
 void main() {
   // The save records its meal and the photo sheet reads the keep-photos
   // flag, both in Hive. Their boxes open here, outside the widget tests'
@@ -856,7 +867,8 @@ void main() {
       _meal('Bread', servingQuantity: 38, servingSize: '1 slice (38 g)'),
     )!.round();
     expect(find.text('Log 1 item · $kcal kcal'), findsOneWidget);
-    expect(find.text('≈ 114 g'), findsOneWidget);
+    // the amount says the count and the grams it is (D35)
+    expect(find.text('3 × slice · 114 g'), findsOneWidget);
   });
 
   testWidgets('a weight has no grams line, and 2x has no total on the button', (
@@ -895,8 +907,11 @@ void main() {
     await tester.pumpAndSettle();
     await _parse(tester, '3 bread');
 
-    expect(find.text('slice'), findsOneWidget);
-    expect(find.text(lookupS(const Locale('en')).servingLabel), findsNothing);
+    expect(find.textContaining('× slice'), findsOneWidget);
+    expect(
+      find.textContaining('× ${lookupS(const Locale('en')).servingLabel}'),
+      findsNothing,
+    );
   });
 
   testWidgets('and never in a locale that word is not written in', (
@@ -916,8 +931,11 @@ void main() {
     await tester.pumpAndSettle();
     await _parse(tester, '3 bread');
 
-    expect(find.text('slice'), findsNothing);
-    expect(find.text(lookupS(const Locale('de')).servingLabel), findsOneWidget);
+    expect(find.textContaining('× slice'), findsNothing);
+    expect(
+      find.textContaining('× ${lookupS(const Locale('de')).servingLabel}'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('and keeps "serving" when the record names no measure', (
@@ -934,7 +952,10 @@ void main() {
     await tester.pumpAndSettle();
     await _parse(tester, '2 yoghurt');
 
-    expect(find.text(lookupS(const Locale('en')).servingLabel), findsOneWidget);
+    expect(
+      find.textContaining('× ${lookupS(const Locale('en')).servingLabel}'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('names the meal it adds to; a skipped row keeps Include clear', (
@@ -949,13 +970,14 @@ void main() {
     await _parse(tester, 'toast');
     final en = lookupS(const Locale('en'));
     expect(find.text(en.breakfastLabel), findsOneWidget);
-    await tester.tap(find.text(en.bulkAddSkipLabel));
+    // Skip is the row's check (D35)
+    final keep = find.byKey(const ValueKey('bulk-add-keep-0'));
+    await tester.tap(keep);
     await tester.pumpAndSettle();
-    final include = find.text(en.bulkAddIncludeLabel);
-    expect(include, findsOneWidget);
-    // faded is the name, not the button
+    expect(tester.widget<Checkbox>(keep).value, isFalse);
+    // faded is the name, not the check
     expect(
-      find.ancestor(of: include, matching: find.byType(Opacity)),
+      find.ancestor(of: keep, matching: find.byType(Opacity)),
       findsNothing,
     );
     expect(
@@ -1084,20 +1106,21 @@ void main() {
     await tester.pumpAndSettle();
     await _parse(tester, '10000g toast');
 
-    final field = find.byType(TextField).last;
+    // The amount is a button now (D35); it shows the largest amount whole.
+    final button = find.byKey(const ValueKey('bulk-add-unit-0'));
     final needed = (TextPainter(
       text: TextSpan(
-        text: '10000',
-        style: Theme.of(tester.element(field)).textTheme.bodyLarge,
+        text: '10000 g',
+        style: Theme.of(tester.element(button)).textTheme.labelLarge,
       ),
       textDirection: TextDirection.ltr,
       textScaler: const TextScaler.linear(2.0),
     )..layout()).width;
 
     expect(
-      tester.getSize(field).width,
+      tester.getSize(button).width,
       greaterThan(needed),
-      reason: 'the amount box cannot show the largest amount it accepts',
+      reason: 'the amount button cannot show the largest amount it accepts',
     );
   });
 
@@ -1874,50 +1897,74 @@ void main() {
       await tester.pumpAndSettle();
     }
 
-    Finder portion() => find.widgetWithText(TextField, DishStrings.portion);
+    // The portion is a button over a sheet, and each food's amount a
+    // button too (D35).
+    Finder portion() => find.byKey(const ValueKey('bulk-add-dish-portion'));
+    Finder portionField() =>
+        find.byKey(const ValueKey('bulk-add-dish-portion-field'));
+    void expectPortion(String grams) =>
+        expect(find.text('${DishStrings.portion} $grams g'), findsOneWidget);
+    Future<void> setPortion(WidgetTester tester, String grams) async {
+      await tester.tap(portion().last);
+      await tester.pumpAndSettle();
+      await tester.enterText(portionField(), grams);
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(const ValueKey('bulk-add-dish-portion-done')),
+      );
+      await tester.pumpAndSettle();
+    }
 
     testWidgets('its portion scales the foods; it logs as one', (tester) async {
       await readDish(tester);
       expect(find.text('Chicken bowl'), findsOneWidget);
       final l10n = await S.delegate.load(const Locale('en'));
       expect(find.textContaining(l10n.bulkAddSubmitLabel(1)), findsOneWidget);
-      expect(tester.widget<TextField>(portion()).controller!.text, '350');
+      expectPortion('350');
 
-      await tester.enterText(portion(), '175');
-      await tester.pumpAndSettle();
-      expect(find.widgetWithText(TextField, '100'), findsOneWidget);
-      expect(find.widgetWithText(TextField, '75'), findsOneWidget);
+      await setPortion(tester, '175');
+      expect(find.text('100 g'), findsOneWidget);
+      expect(find.text('75 g'), findsOneWidget);
 
       await tester.tap(_submitButton());
       await tester.pumpAndSettle();
       expect(_mealDetailBloc.writes.map((w) => '$w'), ['Chicken bowl 175.0 g']);
+    });
+
+    testWidgets('− and + move the portion, the foods with it', (tester) async {
+      await readDish(tester);
+      await tester.tap(find.byKey(const ValueKey('bulk-add-dish-less')));
+      await tester.pumpAndSettle();
+      expectPortion('325');
+      await tester.tap(find.byKey(const ValueKey('bulk-add-dish-more')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('bulk-add-dish-more')));
+      await tester.pumpAndSettle();
+      expectPortion('375');
     });
 
     testWidgets('a breakdown\'s portion is in grams as eaten', (tester) async {
       // 300 g of raw ingredients for a 350 g dish
       await readDish(tester, chicken: 200, rice: 100, eaten: 350);
-      expect(tester.widget<TextField>(portion()).controller!.text, '350');
+      expectPortion('350');
 
-      await tester.enterText(portion(), '175');
-      await tester.pumpAndSettle();
-      expect(find.widgetWithText(TextField, '100'), findsOneWidget);
-      expect(find.widgetWithText(TextField, '50'), findsOneWidget);
+      await setPortion(tester, '175');
+      expect(find.text('100 g'), findsOneWidget);
+      expect(find.text('50 g'), findsOneWidget);
 
       await tester.tap(_submitButton());
       await tester.pumpAndSettle();
       expect(_mealDetailBloc.writes.map((w) => '$w'), ['Chicken bowl 175.0 g']);
     });
 
-    testWidgets('a food skipped during a portion edit: the field and the next '
-        'edit follow the foods left', (tester) async {
+    testWidgets('a food skipped after a portion edit: the portion and the '
+        'next edit follow the foods left', (tester) async {
       await readDish(tester);
-      await tester.enterText(portion(), '350');
-      await tester.pump();
-      await tester.tap(find.text(l10nEn.bulkAddSkipLabel).last);
+      await setPortion(tester, '350');
+      await tester.tap(find.byKey(const ValueKey('bulk-add-keep-1')));
       await tester.pumpAndSettle();
-      expect(tester.widget<TextField>(portion()).controller!.text, '200');
-      await tester.enterText(portion(), '700');
-      await tester.pumpAndSettle();
+      expectPortion('200');
+      await setPortion(tester, '700');
       await tester.tap(_submitButton());
       await tester.pumpAndSettle();
       expect(
@@ -1926,34 +1973,15 @@ void main() {
       );
     });
 
-    testWidgets('a breakdown landing leaves no field typing into another '
-        'food', (tester) async {
+    testWidgets('a breakdown landing while the portion is open leaves it '
+        'scaling its own foods', (tester) async {
       await readDish(
         tester,
         above: const [ParsedMealItem(query: 'soup', quantity: 100, unit: 'g')],
       );
-      await tester.enterText(portion(), '175');
-      await tester.pump();
-      expect(FocusManager.instance.primaryFocus?.context, isNotNull);
-      final focused = FocusManager.instance.primaryFocus;
-
-      final soup = (dishBloc.state as BulkAddLoadedState).rows.first.resolved;
-      dishBloc.add(
-        ReplaceRowWithBreakdownEvent(soup, DishBreakdown('soup', [soup, soup])),
-      );
-      await tester.pump();
-      await tester.pump();
-
-      expect(focused!.hasFocus, isFalse);
-    });
-
-    testWidgets('a breakdown landing above a dish leaves its portion scaling '
-        'its own foods', (tester) async {
-      await readDish(
-        tester,
-        above: const [ParsedMealItem(query: 'soup', quantity: 100, unit: 'g')],
-      );
-      await tester.enterText(portion(), '175');
+      await tester.tap(portion());
+      await tester.pumpAndSettle();
+      await tester.enterText(portionField(), '175');
       await tester.pump();
 
       final soup = (dishBloc.state as BulkAddLoadedState).rows.first.resolved;
@@ -1962,7 +1990,11 @@ void main() {
       );
       await tester.pump();
       await tester.pump();
-      await tester.enterText(portion().last, '350');
+      await tester.enterText(portionField(), '350');
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(const ValueKey('bulk-add-dish-portion-done')),
+      );
       await tester.pumpAndSettle();
 
       await tester.tap(_submitButton());
@@ -1975,15 +2007,21 @@ void main() {
 
     testWidgets('a food changed changes the portion', (tester) async {
       await readDish(tester);
-      await tester.enterText(find.widgetWithText(TextField, '150'), '50');
+      await tester.tap(find.byKey(const ValueKey('bulk-add-unit-1')));
       await tester.pumpAndSettle();
-      expect(tester.widget<TextField>(portion()).controller!.text, '250');
+      await tester.enterText(find.byKey(const ValueKey('amount-field')), '50');
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('bulk-add-amount-done')));
+      await tester.pumpAndSettle();
+      expectPortion('250');
     });
 
     testWidgets('logged separately, its foods are their own entries', (
       tester,
     ) async {
       await readDish(tester);
+      await tester.tap(find.byIcon(Icons.more_vert_rounded));
+      await tester.pumpAndSettle();
       await tester.tap(find.text(DishStrings.logSeparately));
       await tester.pumpAndSettle();
       expect(portion(), findsNothing);
@@ -2057,8 +2095,7 @@ void main() {
     await tester.pumpWidget(_app());
     await _parse(tester, '100g toast, 2 eggs');
 
-    await tester.enterText(find.byType(TextField).at(1), '0');
-    await tester.pumpAndSettle();
+    await _typeRowAmount(tester, 0, '0');
     await tester.tap(_submitButton());
     await tester.pumpAndSettle();
 
@@ -2086,14 +2123,8 @@ void main() {
       await _parse(tester, '100g toast, 200g milk, 50g rice');
     }
 
-    /// The amount field on row [row] — field 0 is the text box the batch was
-    /// typed into.
-    Finder amountField(int row) => find.byType(TextField).at(row + 1);
-
-    Future<void> typeAmount(WidgetTester tester, int row, String amount) async {
-      await tester.enterText(amountField(row), amount);
-      await tester.pumpAndSettle();
-    }
+    Future<void> typeAmount(WidgetTester tester, int row, String amount) =>
+        _typeRowAmount(tester, row, amount);
 
     testWidgets('two bad rows are both reported, not just the first', (
       tester,
@@ -2213,6 +2244,33 @@ void main() {
     });
   });
 
+  testWidgets('− and + move a row by a portion, or by 10 g (D35)', (
+    tester,
+  ) async {
+    await _register({
+      'bread': [
+        _meal('Bread', servingQuantity: 38, servingSize: '1 slice (38 g)'),
+      ],
+      'toast': [_meal('Toast')],
+    });
+    await tester.pumpWidget(_app());
+    await _parse(tester, '3 bread, 64g toast');
+
+    await tester.tap(find.byKey(const ValueKey('bulk-add-more-0')));
+    await tester.pumpAndSettle();
+    expect(find.text('4 × slice · 152 g'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('bulk-add-less-1')));
+    await tester.pumpAndSettle();
+    expect(find.text('60 g'), findsOneWidget);
+
+    await tester.tap(_submitButton());
+    await tester.pumpAndSettle();
+    expect(_mealDetailBloc.writes.map((w) => (w.mealName, w.amount)), [
+      ('Bread', '152.0'),
+      ('Toast', '60.0'),
+    ]);
+  });
+
   testWidgets('a skipped row is not written', (tester) async {
     await _register({
       'toast': [_meal('Toast')],
@@ -2224,7 +2282,7 @@ void main() {
     await tester.pumpWidget(_app());
     await _parse(tester, '100g toast, 2 eggs');
 
-    await tester.tap(find.text(l10nEn.bulkAddSkipLabel).first);
+    await tester.tap(find.byKey(const ValueKey('bulk-add-keep-0')));
     await tester.pumpAndSettle();
     await tester.tap(_submitButton());
     await tester.pumpAndSettle();
@@ -2301,7 +2359,12 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('portion-save')));
     await tester.pumpAndSettle();
     expect(find.text('2 × slice = 70 g · 70 kcal'), findsOneWidget);
-    await tester.tap(find.byIcon(Icons.add));
+    await tester.tap(
+      find.descendant(
+        of: find.byType(AmountPicker),
+        matching: find.byIcon(Icons.add),
+      ),
+    );
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('bulk-add-amount-done')));
     await tester.pumpAndSettle();

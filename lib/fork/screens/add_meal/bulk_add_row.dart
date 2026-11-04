@@ -3,178 +3,188 @@ part of 'bulk_add_screen.dart';
 /// One parsed row of the bulk-add list: its match, amount, unit and
 /// energy.
 extension _BulkAddRow on _BulkAddScreenState {
+  /// One food (D35): a check to keep it, its name (a tap picks another
+  /// match) and energy, what is doubtful about it, and its amount as the
+  /// food page shows one, − and + either side of a button that opens the
+  /// amount picker.
   Widget _buildRow(BuildContext context, BulkAddLoadedState state, int index) {
     final row = state.rows[index];
     final theme = Theme.of(context);
+    final palette = paletteOf(context);
     final meal = row.meal;
-
-    final title = _rowTitle(row);
     final faded = row.skipped || !row.isResolved;
+    final energy = _energyLabel(context, row);
+    final note = _rowNote(context, row);
+    final actions = _rowActions(context, index, row);
+    final error = _quantityErrors[index];
 
-    // Both rows below decide between one line and two, so they need the width
-    // they were actually given rather than the screen's.
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final available = constraints.maxWidth;
-          final actions = _rowActions(context, index, row);
-          // A `TextButton` is its label plus Material's padding, floored at
-          // its minimum size. At 2x on a 320dp screen the German "skip"
-          // alone measures 353px of the 288 this row gets, and a `Row`
-          // answers that by squeezing the name to nothing and overflowing
-          // by 65 anyway. #824.
-          final actionsWidth = actions.fold<double>(
-            0,
-            (sum, action) => sum + _actionWidth(context, action.label),
-          );
-          // Below this the name has no share of the line worth reading, so
-          // the controls take a line of their own and leave it the width.
-          final stacked =
-              available - actionsWidth <
-              MediaQuery.textScalerOf(context).scale(72);
-
-          final buttons = [
-            for (final action in actions)
-              TextButton(
-                onPressed: action.onPressed,
-                child: Text(action.label),
-              ),
-          ];
-
-          final titleBlock = InkWell(
-            onTap: row.isResolved
-                ? () => _showCandidatePicker(index, row)
-                : null,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // User content: shrink to fit before ellipsizing; a long
-                // database name takes up to three lines (A6)
-                AutoSizeText(
-                  title,
-                  maxLines: 3,
-                  minFontSize: 12,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    decoration: row.skipped ? TextDecoration.lineThrough : null,
-                  ),
-                ),
-                // The brand names *which* food this is; a warning only
-                // qualifies it. They were alternatives, and that inverted
-                // the intent below: the more doubtful a row looked, the
-                // less identifying detail it showed. #847 found the cost
-                // on a Pixel 6 — "Spiegeleier" resolved to Haribo's gummy
-                // sweets, and because the row also carried a unit warning,
-                // the word "Haribo" never reached the screen. The one
-                // field that gives the mistake away is the one a warning
-                // used to hide, so it is now unconditional.
-                if (meal?.brands != null)
-                  Text(meal!.brands!, style: theme.textTheme.bodySmall),
-                // in progress, or an AI ingredient
-                if (_dishBreakdown.isPending(row))
-                  Text(
-                    DishStrings.breakingDown,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.tertiary,
-                    ),
-                  )
-                // under its dish's heading it needs no line of its own
-                else if (row.dishIngredient case final ingredient?
-                    when _separateDishes.contains(ingredient.group))
-                  Text(
-                    DishStrings.ingredientOf(ingredient.dish),
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.tertiary,
-                    ),
-                  ),
-                if (!row.isResolved)
-                  Text(
-                    S.of(context).bulkAddNoMatchLabel,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.error,
-                    ),
-                  )
-                else if (row.isLowConfidence)
-                  // orange text is too faint
-                  // to read on the light theme, so the orange goes on an
-                  // icon and the words are in the body colour
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.warning_amber_rounded,
-                        size: 16,
-                        color: theme.colorScheme.tertiary,
+      padding: const EdgeInsets.fromLTRB(4, 6, 16, 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Checkbox(
+            key: ValueKey('bulk-add-keep-$index'),
+            value: !row.skipped,
+            onChanged: (_) => _toggleSkipped(index, row),
+          ),
+          Expanded(
+            child: Opacity(
+              opacity: row.skipped ? 0.5 : 1,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // the name is a 48 dp tap target that picks another match
+                  InkWell(
+                    onTap: row.isResolved
+                        ? () => _showCandidatePicker(index, row)
+                        : null,
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(minHeight: 48),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // User content: shrinks before ellipsizing;
+                                // a long database name takes up to three
+                                // lines (A6)
+                                AutoSizeText(
+                                  _rowTitle(row),
+                                  maxLines: 3,
+                                  minFontSize: 12,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: theme.textTheme.titleSmall?.copyWith(
+                                    decoration: row.skipped
+                                        ? TextDecoration.lineThrough
+                                        : null,
+                                  ),
+                                ),
+                                // The brand says which food this is, and
+                                // shows even beside a warning (#847).
+                                if (meal?.brands != null)
+                                  Text(
+                                    meal!.brands!,
+                                    style: theme.textTheme.bodySmall?.copyWith(
+                                      color: palette.textMuted,
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                          if (energy.isNotEmpty && !faded) ...[
+                            const SizedBox(width: 8),
+                            Text(energy, style: theme.textTheme.titleSmall),
+                          ],
+                        ],
                       ),
-                      const SizedBox(width: 4),
-                      Flexible(
-                        child: Text(
-                          S.of(context).bulkAddUncertainLabel,
-                          style: theme.textTheme.bodySmall,
+                    ),
+                  ),
+                  ?note,
+                  if (!faded) _buildAmountRow(context, state, index, row),
+                  if (error != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(
+                        _quantityErrorText(context, error),
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.error,
                         ),
                       ),
-                    ],
-                  )
-                // A bare count the app could not interpret. Shown
-                // below a doubtful match, because a wrong food
-                // matters more than a wrong unit on the right one.
-                else if (row.amountNeedsCheck)
-                  Text(
-                    S.of(context).bulkAddCheckAmountLabel,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.tertiary,
                     ),
-                  )
-                // Last, and the quietest of the four. The others say
-                // something is probably wrong; this only says the number
-                // is the app's rather than the user's, so it takes the
-                // muted surface colour instead of an accent. #864.
-                else if (row.amountIsProvisional)
-                  Text(
-                    S.of(context).bulkAddDefaultAmountLabel,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
+                  if (actions.isNotEmpty)
+                    Wrap(
+                      spacing: 4,
+                      children: [
+                        for (final action in actions)
+                          TextButton(
+                            onPressed: action.onPressed,
+                            child: Text(action.label),
+                          ),
+                      ],
                     ),
-                  ),
-              ],
+                ],
+              ),
             ),
-          );
-          // the name is a 48 dp tap target; a skipped one fades, but not
-          // its Include, which has to stay readable
-          final forkTitle = Opacity(
-            opacity: row.skipped ? 0.5 : 1.0,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(minHeight: 48),
-              child: titleBlock,
-            ),
-          );
-
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (stacked)
-                // Stretched, so each label is bounded by the line rather
-                // than by whatever is left of it.
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [forkTitle, ...buttons],
-                )
-              else
-                // Unchanged wherever they fit, which is every ordinary
-                // text size: name on the left, controls on the right.
-                Row(
-                  children: [
-                    Expanded(child: forkTitle),
-                    ...buttons,
-                  ],
-                ),
-              if (!faded)
-                _buildAmountRow(context, state, index, row, available),
-            ],
-          );
-        },
+          ),
+        ],
       ),
     );
+  }
+
+  /// What is doubtful about the row, the gravest first: no match, an
+  /// uncertain one, a count the app could not read, an amount the app
+  /// chose. A breakdown under way, or the dish an ingredient belongs to,
+  /// when nothing is.
+  Widget? _rowNote(BuildContext context, BulkAddRow row) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    Widget line(String text, Color color, [IconData? icon]) => Padding(
+      padding: const EdgeInsets.only(bottom: 2),
+      child: Row(
+        children: [
+          if (icon != null) ...[
+            Icon(icon, size: 16, color: color),
+            const SizedBox(width: 4),
+          ],
+          Flexible(
+            child: Text(
+              text,
+              style: theme.textTheme.bodySmall?.copyWith(
+                // orange text is too faint on the light theme: the colour
+                // goes on the icon, the words stay in the body colour
+                color: icon == null ? color : null,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (!row.isResolved) {
+      return line(S.of(context).bulkAddNoMatchLabel, scheme.error);
+    }
+    if (_dishBreakdown.isPending(row)) {
+      return line(DishStrings.breakingDown, scheme.tertiary);
+    }
+    if (row.isLowConfidence) {
+      return line(
+        S.of(context).bulkAddUncertainLabel,
+        scheme.tertiary,
+        Icons.warning_amber_rounded,
+      );
+    }
+    if (row.amountNeedsCheck) {
+      return line(
+        S.of(context).bulkAddCheckAmountLabel,
+        scheme.tertiary,
+        Icons.straighten_rounded,
+      );
+    }
+    // Only that the number is the app's, not the user's (#864): muted.
+    if (row.amountIsProvisional) {
+      return line(
+        S.of(context).bulkAddDefaultAmountLabel,
+        scheme.onSurfaceVariant,
+      );
+    }
+    // under its dish's heading it needs no line of its own
+    if (row.dishIngredient case final ingredient?
+        when !_separateDishes.contains(ingredient.group)) {
+      return null;
+    } else if (row.dishIngredient case final ingredient?) {
+      return line(DishStrings.ingredientOf(ingredient.dish), scheme.tertiary);
+    }
+    return null;
+  }
+
+  void _toggleSkipped(int index, BulkAddRow row) {
+    // The portion typed is no longer the dish's: its field follows the
+    // rows again, and the next edit scales those left.
+    _portionBase.remove(row.dishIngredient?.group);
+    _bloc.add(ToggleRowSkippedEvent(index));
   }
 
   /// What the row is called, on screen and in any message about it: the
@@ -182,8 +192,8 @@ extension _BulkAddRow on _BulkAddScreenState {
   String _rowTitle(BulkAddRow row) =>
       row.meal?.name ?? row.resolved.parsed.query;
 
-  /// The controls on a row, as label and action rather than as widgets, so
-  /// that what is measured cannot drift from what is drawn.
+  /// The row's actions besides keeping it: a quick add for no match, the
+  /// breakdown of a doubtful dish, and a separate dish's recipe and undo.
   List<({String label, VoidCallback onPressed})> _rowActions(
     BuildContext context,
     int index,
@@ -196,7 +206,7 @@ extension _BulkAddRow on _BulkAddScreenState {
       ),
     // on demand, for a doubtful row; and once per
     // breakdown, saving it as a recipe
-    if (_dishBreakdown.canBreakDown(row))
+    if (_dishBreakdown.canBreakDown(row) && !row.skipped)
       (label: DishStrings.breakDownAction, onPressed: () => _breakDown(row)),
     // a dish logged as one has these under its rows instead
     if (_bloc.state case BulkAddLoadedState(:final rows)
@@ -212,187 +222,76 @@ extension _BulkAddRow on _BulkAddScreenState {
             _logDishSeparately(row.dishIngredient!.group, separately: false),
       ),
     ],
-    (
-      label: row.skipped
-          ? S.of(context).bulkAddIncludeLabel
-          : S.of(context).bulkAddSkipLabel,
-      onPressed: () {
-        // The portion typed is no longer the dish's: its field follows the
-        // rows again, and the next edit scales those left.
-        _portionBase.remove(row.dishIngredient?.group);
-        _bloc.add(ToggleRowSkippedEvent(index));
-      },
-    ),
   ];
 
-  /// The width a text button needs for [label]: the label itself, Material's
-  /// horizontal padding at its widest, and never less than the narrowest a
-  /// button is allowed to be.
-  double _actionWidth(BuildContext context, String label) => math.max(
-    _minButtonWidth,
-    _textWidth(context, label, Theme.of(context).textTheme.labelLarge) +
-        _buttonPadding,
-  );
-
-  static const _buttonPadding = 24.0;
-  static const _minButtonWidth = 64.0;
-
-  /// The width [text] needs at the current text scale.
-  ///
-  /// Measured rather than estimated. These rows have to choose between one
-  /// line and two, and an estimate wide enough to be safe for the widest
-  /// possible glyphs is about twice too wide for a real font — it would
-  /// stack the controls on screens where they comfortably fit.
-  double _textWidth(BuildContext context, String text, TextStyle? style) =>
-      (TextPainter(
-        text: TextSpan(text: text, style: style),
-        textDirection: Directionality.of(context),
-        textScaler: MediaQuery.textScalerOf(context),
-      )..layout()).width;
-
+  /// − [the amount] +: the amount as the food page says it ("3 × potato ·
+  /// 234 g", "150 g"), a tap opening the amount picker, − and + moving it
+  /// by a portion or 10 g.
   Widget _buildAmountRow(
     BuildContext context,
     BulkAddLoadedState state,
     int index,
     BulkAddRow row,
-    double available,
   ) {
-    final controller = _amountControllers.putIfAbsent(
-      index,
-      () => TextEditingController(text: row.amountText),
-    );
-    if (controller.text != row.amountText) {
-      controller.text = row.amountText;
+    final quantity = double.tryParse(row.amountText.replaceAll(',', '.'));
+    final unit = row.effectiveUnit;
+    final label = quantity == null || quantity <= 0
+        ? 'Set the amount'
+        : isPortionUnit(unit)
+        ? '${amountText(quantity)} × ${_unitLabel(context, unit, row)}'
+              '${_portionWeightLabel(context, row).replaceFirst('≈', ' ·')}'
+        : '${amountText(quantity)} ${_unitLabel(context, unit, row)}';
+    void step({required bool up}) {
+      final from = quantity ?? 0;
+      final next = steppedAmount(from, amountStep(unit, from), up: up);
+      if (_quantityErrors.containsKey(index)) _clearQuantityError(index);
+      _bloc.add(ChangeRowAmountEvent(index, amountText(next)));
     }
 
-    final theme = Theme.of(context);
-    // The quantity box was a flat 110px while every label beside it grew with
-    // the text scale, so at 2x on a 320dp screen this row wanted 532px of a
-    // 288px slot and overflowed by 244. It scales now, like the other fixed
-    // widths in the app. #824.
-    final fieldWidth = MediaQuery.textScalerOf(context).scale(110);
-    final unitWidth = _unitDropdownWidth(context, row);
-    final energyText = _energyLabel(context, row);
-    final energyWidth = _textWidth(
-      context,
-      energyText,
-      theme.textTheme.titleSmall,
-    );
-    // Nothing flexes 532px into 288px. Where the three do not fit, they take
-    // a line each rather than share one: the unit is a whole word in some
-    // locales, and a clipped unit is not a narrower reading of the amount,
-    // it is a wrong one.
-    final stacked = available < fieldWidth + 12 + unitWidth + 8 + energyWidth;
-
-    final field = TextField(
-      controller: controller,
-      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-      // Same shape the manual-entry field enforces, so the two paths accept
-      // exactly the same input.
-      inputFormatters: [
-        FilteringTextInputFormatter.allow(bulkAddQuantityPattern),
-      ],
-      decoration: InputDecoration(
-        labelText: S.of(context).quantityLabel,
-        isDense: true,
-        border: const OutlineInputBorder(),
-      ),
-      onChanged: (value) {
-        // The complaint belonged to the text that is no longer there.
-        // Re-checking as they type would put it back mid-keystroke, which
-        // is the thing `amountText` is a String to avoid; the next submit
-        // asks again.
-        if (_quantityErrors.containsKey(index)) _clearQuantityError(index);
-        _bloc.add(ChangeRowAmountEvent(index, value));
-      },
-    );
-
-    // The unit opens the food page's amount picker (S195): the food's
-    // portions with their weights, the user's own, − and +.
-    final unit = OutlinedButton(
-      key: ValueKey('bulk-add-unit-$index'),
-      onPressed: () => _openAmountPicker(index, state.usesImperialUnits),
-      style: OutlinedButton.styleFrom(
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-      ),
+    return Padding(
+      padding: const EdgeInsets.only(top: 2, bottom: 4),
       child: Row(
-        mainAxisSize: stacked ? MainAxisSize.max : MainAxisSize.min,
         children: [
+          IconButton.filledTonal(
+            key: ValueKey('bulk-add-less-$index'),
+            tooltip: 'Less',
+            visualDensity: VisualDensity.compact,
+            onPressed: quantity == null ? null : () => step(up: false),
+            icon: const Icon(Icons.remove),
+          ),
+          const SizedBox(width: 4),
           Flexible(
-            child: Text(
-              _unitLabel(context, row.effectiveUnit, row),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+            child: OutlinedButton(
+              key: ValueKey('bulk-add-unit-$index'),
+              onPressed: () =>
+                  _openAmountPicker(index, state.usesImperialUnits),
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                shape: const StadiumBorder(),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Flexible(
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  const Icon(Icons.arrow_drop_down_rounded),
+                ],
+              ),
             ),
           ),
-          const Icon(Icons.arrow_drop_down_rounded),
-        ],
-      ),
-    );
-
-    // A count of portions, and the weight it was taken to be.
-    final grams = _portionWeightLabel(context, row);
-    final energy = grams.isEmpty
-        ? Text(energyText, style: theme.textTheme.titleSmall)
-        : Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(energyText, style: theme.textTheme.titleSmall),
-              Text(
-                grams,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ],
-          );
-
-    final error = _quantityErrors[index];
-
-    return Padding(
-      padding: const EdgeInsets.only(top: 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (stacked)
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                field,
-                const SizedBox(height: 8),
-                unit,
-                const SizedBox(height: 4),
-                Align(alignment: AlignmentDirectional.centerEnd, child: energy),
-              ],
-            )
-          // Unchanged wherever it fits, which is every ordinary text size:
-          // the figure stays on the same line, pushed to the trailing edge.
-          else
-            Row(
-              children: [
-                SizedBox(width: fieldWidth, child: field),
-                const SizedBox(width: 12),
-                unit,
-                const Spacer(),
-                energy,
-              ],
-            ),
-          // The whole width, not the field's. `errorText` would put this
-          // inside a 110px box, where every one of the three sentences
-          // ellipsizes to nothing worth reading — and the decimal rule, the
-          // one constraint stated nowhere else in the UI, is the longest of
-          // them.
-          if (error != null)
-            Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Text(
-                _quantityErrorText(context, error),
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.error,
-                ),
-              ),
-            ),
+          const SizedBox(width: 4),
+          IconButton.filledTonal(
+            key: ValueKey('bulk-add-more-$index'),
+            tooltip: 'More',
+            visualDensity: VisualDensity.compact,
+            onPressed: () => step(up: true),
+            icon: const Icon(Icons.add),
+          ),
         ],
       ),
     );
@@ -410,19 +309,6 @@ extension _BulkAddRow on _BulkAddScreenState {
       S.of(context).bulkAddRowQuantityTooLarge(bulkAddMaxQuantity),
   };
 
-  /// What the unit button needs to show its unit without clipping it: the
-  /// label, its arrow and the button's padding.
-  double _unitDropdownWidth(BuildContext context, BulkAddRow row) =>
-      _textWidth(
-        context,
-        _unitLabel(context, row.effectiveUnit, row),
-        Theme.of(context).textTheme.labelLarge,
-      ) +
-      _dropdownArrowWidth +
-      _buttonPadding;
-
-  static const _dropdownArrowWidth = 24.0;
-
   /// The row's amount in the food page's picker, in a sheet: each change
   /// reaches the row as it is made. The user's own portions are not among
   /// the row's units, so one of those reaches it as its weight.
@@ -432,20 +318,18 @@ extension _BulkAddRow on _BulkAddScreenState {
     final row = start.rows[index];
     final base = row.meal;
     if (base == null) return;
-    var meal = withOwnPortions(base, await OwnPortions.current.of(base));
+    final meal = withOwnPortions(base, await OwnPortions.current.of(base));
     if (!mounted) return;
-    var unit = row.effectiveUnit;
-    final controller = TextEditingController(text: row.amountText);
 
     /// The amount to the row; with [unitChosen], the unit too, which
     /// answers the row's "check the amount" even when it is the one shown.
-    void send({bool unitChosen = false}) {
+    void send(String text, String unit, MealEntity meal, bool unitChosen) {
       final current = _bloc.state;
       if (current is! BulkAddLoadedState || index >= current.rows.length) {
         return;
       }
       final allowed = current.rows[index].allowedUnits;
-      var (text, to) = (controller.text, unit);
+      var (amount, to) = (text, unit);
       if (!allowed.contains(to)) {
         final weight = meal.isLiquid
             ? UnitDropdownItem.ml.toString()
@@ -453,24 +337,13 @@ extension _BulkAddRow on _BulkAddScreenState {
         to = allowed.contains(weight)
             ? weight
             : UnitDropdownItem.gml.toString();
-        text = amountInUnit(text, unit, to, meal) ?? text;
+        amount = amountInUnit(text, unit, to, meal) ?? text;
       }
       if (unitChosen || current.rows[index].effectiveUnit != to) {
         _bloc.add(ChangeRowUnitEvent(index, to));
       }
       if (_quantityErrors.containsKey(index)) _clearQuantityError(index);
-      _bloc.add(ChangeRowAmountEvent(index, text));
-    }
-
-    var setting = false;
-    void typed() {
-      if (!setting) send();
-    }
-
-    controller.addListener(typed);
-    Future<MealEntity> reload() async {
-      meal = withOwnPortions(base, await OwnPortions.current.of(base));
-      return meal;
+      _bloc.add(ChangeRowAmountEvent(index, amount));
     }
 
     await showModalBottomSheet<void>(
@@ -478,66 +351,15 @@ extension _BulkAddRow on _BulkAddScreenState {
       isScrollControlled: true,
       useSafeArea: true,
       showDragHandle: true,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setSheet) => Padding(
-          padding: EdgeInsets.fromLTRB(
-            16,
-            0,
-            16,
-            16 + MediaQuery.viewInsetsOf(context).bottom,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                base.name ?? '',
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              const SizedBox(height: 16),
-              AmountPicker(
-                meal: meal,
-                unit: unit,
-                controller: controller,
-                imperial: imperial,
-                keepCountBetweenPortions: true,
-                onSet: (text, to) {
-                  unit = to;
-                  setting = true;
-                  controller.text = text;
-                  setting = false;
-                  send(unitChosen: true);
-                  setSheet(() {});
-                },
-                onAddPortion: (label, grams) async {
-                  await OwnPortions.current.add(base, label, grams);
-                  final updated = await reload();
-                  setSheet(() {});
-                  return updated;
-                },
-                onRemovePortion: (label) async {
-                  await OwnPortions.current.remove(base, label);
-                  final updated = await reload();
-                  setSheet(() {});
-                  return updated;
-                },
-              ),
-              const SizedBox(height: 16),
-              FilledButton(
-                key: const ValueKey('bulk-add-amount-done'),
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Done'),
-              ),
-            ],
-          ),
-        ),
+      builder: (context) => _RowAmountSheet(
+        base: base,
+        meal: meal,
+        unit: row.effectiveUnit,
+        text: row.amountText,
+        imperial: imperial,
+        send: send,
       ),
     );
-    controller
-      ..removeListener(typed)
-      ..dispose();
   }
 
   /// "≈ 120 g" under a count of portions; empty for a weight or volume.
@@ -589,7 +411,8 @@ extension _BulkAddRow on _BulkAddScreenState {
       switch (UnitDropdownItem.g.fromString(storedUnit(unit))) {
         UnitDropdownItem.g => S.of(context).gramUnit,
         UnitDropdownItem.ml => S.of(context).milliliterUnit,
-        UnitDropdownItem.gml => S.of(context).gramMilliliterUnit,
+        // "g", as the food page's picker says it (S195)
+        UnitDropdownItem.gml => S.of(context).gramUnit,
         UnitDropdownItem.oz => S.of(context).ozUnit,
         UnitDropdownItem.flOz => S.of(context).flOzUnit,
         UnitDropdownItem.serving =>
@@ -600,4 +423,111 @@ extension _BulkAddRow on _BulkAddScreenState {
               ) ??
               S.of(context).servingLabel,
       };
+}
+
+/// The row's amount in the food page's picker (S195, D35). The sheet holds
+/// its own field, disposed with it rather than while it closes.
+class _RowAmountSheet extends StatefulWidget {
+  final MealEntity base;
+  final MealEntity meal;
+  final String unit;
+  final String text;
+  final bool imperial;
+  final void Function(String text, String unit, MealEntity meal, bool chosen)
+  send;
+
+  const _RowAmountSheet({
+    required this.base,
+    required this.meal,
+    required this.unit,
+    required this.text,
+    required this.imperial,
+    required this.send,
+  });
+
+  @override
+  State<_RowAmountSheet> createState() => _RowAmountSheetState();
+}
+
+class _RowAmountSheetState extends State<_RowAmountSheet> {
+  late final _controller = TextEditingController(text: widget.text);
+  late String _unit = widget.unit;
+  late MealEntity _meal = widget.meal;
+  var _setting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller.addListener(_typed);
+  }
+
+  @override
+  void dispose() {
+    _controller
+      ..removeListener(_typed)
+      ..dispose();
+    super.dispose();
+  }
+
+  void _typed() {
+    if (!_setting) widget.send(_controller.text, _unit, _meal, false);
+  }
+
+  Future<MealEntity> _reload() async {
+    final own = await OwnPortions.current.of(widget.base);
+    if (mounted) setState(() => _meal = withOwnPortions(widget.base, own));
+    return _meal;
+  }
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: EdgeInsets.fromLTRB(
+      16,
+      0,
+      16,
+      16 + MediaQuery.viewInsetsOf(context).bottom,
+    ),
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          widget.base.name ?? '',
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+        const SizedBox(height: 16),
+        AmountPicker(
+          meal: _meal,
+          unit: _unit,
+          controller: _controller,
+          imperial: widget.imperial,
+          keepCountBetweenPortions: true,
+          onSet: (text, to) {
+            _unit = to;
+            _setting = true;
+            _controller.text = text;
+            _setting = false;
+            widget.send(text, to, _meal, true);
+            setState(() {});
+          },
+          onAddPortion: (label, grams) async {
+            await OwnPortions.current.add(widget.base, label, grams);
+            return _reload();
+          },
+          onRemovePortion: (label) async {
+            await OwnPortions.current.remove(widget.base, label);
+            return _reload();
+          },
+        ),
+        const SizedBox(height: 16),
+        FilledButton(
+          key: const ValueKey('bulk-add-amount-done'),
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Done'),
+        ),
+      ],
+    ),
+  );
 }

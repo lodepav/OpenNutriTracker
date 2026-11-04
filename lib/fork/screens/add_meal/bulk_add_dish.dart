@@ -24,9 +24,8 @@ extension _BulkAddDish on _BulkAddScreenState {
       if (controller.text != text) controller.text = text;
     }
     final dish = state.rows[heading.members.first].dishIngredient!.dish;
-    return Container(
-      color: scheme.secondaryContainer,
-      padding: const EdgeInsets.fromLTRB(4, 8, 16, 8),
+    final title = Padding(
+      padding: const EdgeInsets.fromLTRB(4, 8, 4, 0),
       child: Row(
         children: [
           Semantics(
@@ -69,45 +68,161 @@ extension _BulkAddDish on _BulkAddScreenState {
               ],
             ),
           ),
-          const SizedBox(width: 8),
-          SizedBox(
-            width: MediaQuery.textScalerOf(context).scale(110),
-            child: Semantics(
-              identifier: 'bulk-add-dish-portion',
-              child: Focus(
-                onFocusChange: (focused) {
-                  if (!focused) return _endPortionEdit(group);
-                  // a new portion replaces the old, not a digit of it
-                  controller.selection = TextSelection(
-                    baseOffset: 0,
-                    extentOffset: controller.text.length,
-                  );
-                },
-                child: TextField(
-                  controller: controller,
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                  ),
-                  inputFormatters: [
-                    FilteringTextInputFormatter.allow(bulkAddQuantityPattern),
-                  ],
-                  decoration: InputDecoration(
-                    labelText: DishStrings.portion,
-                    suffixText: 'g',
-                    isDense: true,
-                    // a field, not more of the heading's tint
-                    filled: true,
-                    fillColor: scheme.surface,
-                    border: const OutlineInputBorder(),
-                  ),
-                  onChanged: (value) => _scaleDish(group, value),
-                ),
+          Semantics(
+            identifier: 'bulk-add-dish-menu',
+            child: PopupMenuButton<VoidCallback>(
+              tooltip: 'Dish actions',
+              icon: Icon(
+                Icons.more_vert_rounded,
+                color: scheme.onSecondaryContainer,
               ),
+              onSelected: (action) => action(),
+              itemBuilder: (_) => [
+                PopupMenuItem(
+                  value: () => _saveDishRecipe(group),
+                  child: const Text(DishStrings.saveAsRecipe),
+                ),
+                PopupMenuItem(
+                  value: () => _logDishSeparately(group),
+                  child: const Text(DishStrings.logSeparately),
+                ),
+              ],
             ),
           ),
         ],
       ),
     );
+    final portion = Padding(
+      padding: const EdgeInsets.only(left: 44, bottom: 8),
+      child: Row(
+        children: [
+          IconButton.filledTonal(
+            key: const ValueKey('bulk-add-dish-less'),
+            style: IconButton.styleFrom(backgroundColor: scheme.surface),
+            tooltip: 'Less',
+            visualDensity: VisualDensity.compact,
+            onPressed: grams > 0
+                ? () => _stepDish(group, grams, up: false)
+                : null,
+            icon: const Icon(Icons.remove),
+          ),
+          const SizedBox(width: 4),
+          Flexible(
+            child: Semantics(
+              identifier: 'bulk-add-dish-portion',
+              child: OutlinedButton(
+                key: const ValueKey('bulk-add-dish-portion'),
+                onPressed: () => _editDishPortion(group, controller),
+                style: OutlinedButton.styleFrom(
+                  backgroundColor: scheme.surface,
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  shape: const StadiumBorder(),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Flexible(
+                      child: Text(
+                        grams > 0
+                            ? '${DishStrings.portion} ${grams.round()} g'
+                            : DishStrings.portion,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const Icon(Icons.arrow_drop_down_rounded),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 4),
+          IconButton.filledTonal(
+            key: const ValueKey('bulk-add-dish-more'),
+            style: IconButton.styleFrom(backgroundColor: scheme.surface),
+            tooltip: 'More',
+            visualDensity: VisualDensity.compact,
+            onPressed: grams > 0
+                ? () => _stepDish(group, grams, up: true)
+                : null,
+            icon: const Icon(Icons.add),
+          ),
+        ],
+      ),
+    );
+    return Container(
+      color: scheme.secondaryContainer,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [title, portion],
+      ),
+    );
+  }
+
+  /// The dish's portion moved by 10 g, or 25 g from 200 g, its foods
+  /// scaled with it.
+  void _stepDish(Object group, double grams, {required bool up}) {
+    final next = steppedAmount(grams, grams < 200 ? 10 : 25, up: up);
+    _scaleDish(group, amountText(next));
+    _endPortionEdit(group);
+  }
+
+  /// The dish's portion typed, in a sheet: each figure scales its foods as
+  /// it is typed.
+  Future<void> _editDishPortion(
+    Object group,
+    TextEditingController controller,
+  ) async {
+    controller.selection = TextSelection(
+      baseOffset: 0,
+      extentOffset: controller.text.length,
+    );
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      showDragHandle: true,
+      builder: (context) => Padding(
+        padding: EdgeInsets.fromLTRB(
+          16,
+          0,
+          16,
+          16 + MediaQuery.viewInsetsOf(context).bottom,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            TextField(
+              key: const ValueKey('bulk-add-dish-portion-field'),
+              controller: controller,
+              autofocus: true,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.headlineSmall,
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(bulkAddQuantityPattern),
+              ],
+              decoration: const InputDecoration(
+                labelText: DishStrings.portion,
+                suffixText: 'g',
+                border: OutlineInputBorder(),
+              ),
+              onChanged: (value) => _scaleDish(group, value),
+            ),
+            const SizedBox(height: 16),
+            FilledButton(
+              key: const ValueKey('bulk-add-dish-portion-done'),
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Done'),
+            ),
+          ],
+        ),
+      ),
+    );
+    _endPortionEdit(group);
   }
 
   /// Sets each of the dish's rows to its share of a portion of [text]
@@ -128,24 +243,4 @@ extension _BulkAddDish on _BulkAddScreenState {
       _bloc.add(ChangeRowAmountEvent(key, value));
     }
   }
-
-  Widget _buildDishActions(BuildContext context, Object group) => Padding(
-    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-    child: Wrap(
-      spacing: 4,
-      children: [
-        TextButton(
-          onPressed: () => _saveDishRecipe(group),
-          child: const Text(DishStrings.saveAsRecipe),
-        ),
-        Semantics(
-          identifier: 'bulk-add-dish-separate',
-          child: TextButton(
-            onPressed: () => _logDishSeparately(group),
-            child: const Text(DishStrings.logSeparately),
-          ),
-        ),
-      ],
-    ),
-  );
 }
