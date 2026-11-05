@@ -62,6 +62,12 @@ class EvalModels {
       'anthropic/claude-sonnet-5.5@anthropic';
 
   final String key = Platform.environment['FORK_EVAL_OPENROUTER_KEY'] ?? '';
+
+  /// An Anthropic API key for `direct:<model>` specs, which call Anthropic
+  /// with the app's own client (AnthropicMealItemsApi), as the app's
+  /// Anthropic provider does: `direct:claude-haiku-5-5`.
+  final String anthropicKey =
+      Platform.environment['FORK_EVAL_ANTHROPIC_KEY'] ?? '';
   final List<String> replays = (Platform.environment['FORK_EVAL_REPLAY'] ?? '')
       .split(',')
       .map((s) => s.trim())
@@ -88,9 +94,9 @@ class EvalModels {
   bool runs(String spec, String read) => _only?[spec]?.contains(read) ?? true;
 
   /// Why the tests are skipped, or false when they run.
-  Object get skip => key.isEmpty && replays.isEmpty
-      ? 'set FORK_EVAL_OPENROUTER_KEY (or FORK_EVAL_REPLAY) to run the '
-            'model comparison'
+  Object get skip => key.isEmpty && anthropicKey.isEmpty && replays.isEmpty
+      ? 'set FORK_EVAL_OPENROUTER_KEY, FORK_EVAL_ANTHROPIC_KEY (or '
+            'FORK_EVAL_REPLAY) to run the model comparison'
       : false;
 
   List<String> get specs => replays.isNotEmpty
@@ -101,6 +107,9 @@ class EvalModels {
           'screen' => _screenModels,
           'mid' => _midModels,
           final models? => models,
+          // an Anthropic key alone runs the app's Anthropic default
+          null when key.isEmpty && anthropicKey.isNotEmpty =>
+            'direct:${AiModelCatalogue.anthropic.first.id}',
           null => _defaultModels,
         }.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toList();
 
@@ -124,6 +133,22 @@ class EvalModels {
       return AnthropicMealItemsApi(
         ReplayAiClient(client, () async => Directory(dir)),
         () => 'replay',
+      );
+    }
+    if (spec.startsWith('direct:')) {
+      final model = spec.substring('direct:'.length);
+      // The app's tool call for a model it lists; unforced for one it does
+      // not, as Sonnet 5.5 refuses a forced one.
+      final listed = AiModelCatalogue.anthropic.where((m) => m.id == model);
+      return AnthropicMealItemsApi(
+        BackoffClient(
+          client,
+          onLimited: () => limited[spec] = (limited[spec] ?? 0) + 1,
+        ),
+        () => anthropicKey,
+        model: model,
+        timeout: BackoffClient.budget,
+        toolCall: listed.isEmpty ? AiToolCall.auto : listed.first.toolCall,
       );
     }
     final [route, ...flags] = spec.split('#');
