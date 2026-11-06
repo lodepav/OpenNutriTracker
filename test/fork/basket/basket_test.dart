@@ -16,6 +16,9 @@ import 'package:opennutritracker/fork/copy/copy_entries.dart' show Placed;
 import 'package:opennutritracker/fork/basket/basket_ui.dart';
 import 'package:opennutritracker/fork/plan/plan_store.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dart';
+import 'package:opennutritracker/features/add_meal/domain/entity/meal_nutriments_entity.dart';
+import 'package:opennutritracker/fork/meal_detail/food_page.dart'
+    show loadDayTotals;
 
 import '../../fixture/meal_entity_fixtures.dart';
 
@@ -150,7 +153,11 @@ void main() {
     expect(find.text('150 g · 250 kcal'), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('basket-remove-2')));
     await tester.pumpAndSettle();
-    expect(find.text('Total 350 kcal'), findsOneWidget);
+    // the meal card sums what is left
+    expect(
+      tester.widget<Text>(find.byKey(const ValueKey('basket-meal-kcal'))).data,
+      '350 kcal',
+    );
 
     await tester.tap(find.text('Log all 2 to Lunch'));
     await tester.pumpAndSettle();
@@ -170,6 +177,111 @@ void main() {
     await tester.pumpAndSettle();
     expect(undone!.day, _day);
     expect(undone!.written.map((i) => i.id), ['id-100.0', 'id-250.0']);
+  });
+
+  group('the meal card (D39)', () {
+    MealEntity food(String name, double c, double f, double p) => MealEntity(
+      code: name,
+      name: name,
+      url: null,
+      mealQuantity: null,
+      mealUnit: 'g',
+      servingQuantity: 60,
+      servingUnit: 'g',
+      servingSize: '1 roll (60 g)',
+      nutriments: MealNutrimentsEntity(
+        energyKcal100: 4 * c + 9 * f + 4 * p,
+        carbohydrates100: c,
+        fat100: f,
+        proteins100: p,
+        sugars100: null,
+        saturatedFat100: null,
+        fiber100: null,
+      ),
+      source: MealSourceEntity.custom,
+    );
+
+    FoodBasket filled(DateTime day) => FoodBasket()
+      // picked as a serving: the amount is its 60 g all the same
+      ..add(
+        BasketItem(
+          meal: food('Roll', 50, 5, 10),
+          unit: 'serving',
+          amountText: '60.0',
+          kcal: 207,
+          picked: pickedLabel('1', 'serving'),
+        ),
+        IntakeTypeEntity.lunch,
+        day,
+      )
+      ..add(
+        BasketItem(
+          meal: food('Ham', 0, 10, 20),
+          unit: 'g',
+          amountText: '50.0',
+          kcal: 85,
+        ),
+        IntakeTypeEntity.lunch,
+        day,
+      );
+
+    late List<DateTime> asked;
+    setUp(() {
+      asked = [];
+      basketDayTotals = (day) async {
+        asked.add(day);
+        return (
+          eaten: (kcal: 1000.0, carbs: 100.0, fat: 70.0, protein: 50.0),
+          goal: (kcal: 2000.0, carbs: 250.0, fat: 75.0, protein: 140.0),
+        );
+      };
+    });
+    tearDown(() => basketDayTotals = loadDayTotals);
+
+    Future<void> pump(WidgetTester tester, FoodBasket basket, DateTime day) =>
+        tester.pumpWidget(
+          MaterialApp(
+            localizationsDelegates: const [S.delegate],
+            home: Scaffold(
+              body: BasketSheet(
+                type: IntakeTypeEntity.lunch,
+                day: day,
+                basket: basket,
+                log: (_, _, _, _) async => null,
+              ),
+            ),
+          ),
+        );
+
+    testWidgets('sums the foods and shows the day with them', (tester) async {
+      final today = DateUtils.dateOnly(DateTime.now());
+      await pump(tester, filled(today), today);
+      await tester.pumpAndSettle();
+
+      expect(find.text('This meal · 2 foods'), findsOneWidget);
+      expect(
+        tester
+            .widget<Text>(find.byKey(const ValueKey('basket-meal-kcal')))
+            .data,
+        '292 kcal',
+      );
+      // 30 + 0 g carbs, 3 + 5 g fat, 6 + 10 g protein
+      expect(find.text('C 30 · F 8 · P 16'), findsOneWidget);
+      expect(find.text('Today with this meal'), findsOneWidget);
+      expect(asked, [today]);
+      // fat goes over: 70 + 8 of 75
+      expect(find.text('78 / 75'), findsOneWidget);
+    });
+
+    testWidgets('a meal repeated on set days shows no one day', (tester) async {
+      final basket = filled(_day)..planning = PlanMode.recurring;
+      await pump(tester, basket, _day);
+      await tester.pumpAndSettle();
+
+      expect(find.text('This meal · 2 foods'), findsOneWidget);
+      expect(find.text('That day with this meal'), findsNothing);
+      expect(asked, isEmpty);
+    });
   });
 
   testWidgets('a write a profile switch dropped stops "Log all" and keeps '

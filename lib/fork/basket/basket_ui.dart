@@ -17,6 +17,11 @@ import 'package:opennutritracker/features/home/presentation/bloc/home_bloc.dart'
 import 'package:opennutritracker/features/meal_detail/presentation/bloc/meal_detail_bloc.dart';
 import 'package:opennutritracker/fork/add/logged_bar.dart';
 import 'package:opennutritracker/fork/basket/basket.dart';
+import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
+import 'package:opennutritracker/core/styles/app_palette.dart';
+import 'package:opennutritracker/fork/display/meal_macros_line.dart';
+import 'package:opennutritracker/fork/meal_detail/food_page.dart'
+    show DayTotals, TodayAfterAdding, loadDayTotals;
 import 'package:opennutritracker/fork/plan/plan_store.dart';
 import 'package:opennutritracker/fork/plan/plan_ui.dart';
 import 'package:opennutritracker/fork/units/energy_text.dart';
@@ -189,6 +194,21 @@ class BasketBar extends StatelessWidget {
   }
 }
 
+/// The day's totals for the basket's meal card; tests swap it.
+Future<DayTotals> Function(DateTime day) basketDayTotals = loadDayTotals;
+
+/// [item]'s carbs, fat and protein in grams: its amount is stored as an
+/// entry's is, in grams or millilitres whatever unit it was picked in.
+({double carbs, double fat, double protein}) basketItemMacros(BasketItem item) {
+  final amount = double.tryParse(item.amountText.replaceAll(',', '.')) ?? 0;
+  final n = item.meal.nutriments;
+  return (
+    carbs: amount * (n.carbohydratesPerUnit ?? 0),
+    fat: amount * (n.fatPerUnit ?? 0),
+    protein: amount * (n.proteinsPerUnit ?? 0),
+  );
+}
+
 /// The basket's foods, each removable, and "Log all", which writes them
 /// one after another (each takes the tracked-day lock) and goes home.
 class BasketSheet extends StatefulWidget {
@@ -330,6 +350,79 @@ class _BasketSheetState extends State<BasketSheet> {
     ).popUntil(namedRouteOrFirst(NavigationOptions.mainRoute));
   }
 
+  /// What the foods come to together, and the day with them added (D39),
+  /// as Log with AI's review shows its meal. A meal repeated on set days
+  /// has no one day to show.
+  Widget _mealCard(BuildContext context, List<BasketItem> items) {
+    final theme = Theme.of(context);
+    final palette = paletteOf(context);
+    final muted = theme.textTheme.labelMedium?.copyWith(
+      color: palette.textMuted,
+    );
+    var carbs = 0.0, fat = 0.0, protein = 0.0;
+    for (final item in items) {
+      final m = basketItemMacros(item);
+      carbs += m.carbs;
+      fat += m.fat;
+      protein += m.protein;
+    }
+    final kcal = items.fold(0.0, (sum, i) => sum + i.kcal);
+    final showDay = widget.basket.planning != PlanMode.recurring;
+    return AppCard(
+      key: const ValueKey('basket-meal-card'),
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
+            children: [
+              Expanded(
+                child: Text(
+                  'This meal · ${items.length} '
+                  '${items.length == 1 ? 'food' : 'foods'}',
+                  style: muted,
+                ),
+              ),
+              // summed as the rows show it (#1469)
+              Text(
+                '${items.fold(0, (sum, i) => sum + energyValue(context, i.kcal))} '
+                '${energyUnit(context)}',
+                key: const ValueKey('basket-meal-kcal'),
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: palette.textStrong,
+                ),
+              ),
+            ],
+          ),
+          MacrosLine(carbs: carbs, fat: fat, protein: protein),
+          if (showDay) ...[
+            const SizedBox(height: 10),
+            Text(
+              DateUtils.isSameDay(widget.day, DateTime.now())
+                  ? 'Today with this meal'
+                  : 'That day with this meal',
+              style: muted,
+            ),
+            const SizedBox(height: 6),
+            TodayAfterAdding(
+              day: widget.day,
+              kcal: kcal,
+              carbs: carbs,
+              fat: fat,
+              protein: protein,
+              load: basketDayTotals,
+              framed: false,
+            ),
+          ] else
+            const SizedBox(height: 8),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) => ListenableBuilder(
     listenable: widget.basket,
@@ -343,6 +436,10 @@ class _BasketSheetState extends State<BasketSheet> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text('Basket', style: Theme.of(context).textTheme.titleLarge),
+              if (items.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                _mealCard(context, items),
+              ],
               Flexible(
                 child: ListView(
                   shrinkWrap: true,
@@ -374,10 +471,6 @@ class _BasketSheetState extends State<BasketSheet> {
                 ),
               ),
               const Divider(),
-              Text(
-                'Total ${energyText(context, widget.basket.totalKcal)}',
-                textAlign: TextAlign.end,
-              ),
               if (_failed case final failed?)
                 Padding(
                   padding: const EdgeInsets.only(top: 8),

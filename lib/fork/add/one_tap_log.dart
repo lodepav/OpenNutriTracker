@@ -13,6 +13,8 @@ import 'package:opennutritracker/features/meal_detail/meal_detail_screen.dart';
 import 'package:opennutritracker/features/meal_detail/presentation/bloc/meal_detail_bloc.dart';
 import 'package:opennutritracker/features/meal_detail/util/hydrate_off_meal.dart';
 import 'package:opennutritracker/features/meal_detail/util/meal_quantity_converter.dart';
+import 'package:opennutritracker/features/add_meal/util/portion_unit.dart'
+    show isPortionUnit;
 import 'package:opennutritracker/fork/add/logged_bar.dart';
 import 'package:opennutritracker/fork/amounts/remembered_amounts.dart';
 import 'package:opennutritracker/fork/basket/basket_ui.dart'
@@ -62,6 +64,58 @@ OneTapAmount oneTapAmount(
   return of(
     unit.toString(),
     imperial && unit != UnitDropdownItem.gml ? 1 : 100,
+  );
+}
+
+/// The amount the plus logs for [meal] once its record is in: the user's
+/// raw-units choice and the food's remembered amount read as the log
+/// reads them, so the plus's label and what it logs agree.
+Future<OneTapAmount> rowAmount(
+  MealEntity meal, {
+  IntakeEntity? last,
+  bool imperial = false,
+}) async {
+  final rawUnits =
+      (await locator<GetConfigUsecase>().getConfig()).defaultToRawFoodUnits;
+  return oneTapAmount(
+    meal,
+    last: last,
+    remembered: last == null ? await RememberedAmounts.current.of(meal) : null,
+    imperial: imperial,
+    rawUnits: rawUnits,
+  );
+}
+
+/// What the plus says it adds (D39): "1 roll" when it adds one of the
+/// food's servings and the serving names itself, else the amount as the
+/// Diary will show it, "60 g". Null when the amount is not known before
+/// the tap: a text-search hit's serving comes with its record, and a
+/// Quick add of energy alone has no amount to name.
+String? oneTapLabel(
+  MealEntity meal,
+  OneTapAmount amount, {
+  bool imperial = false,
+}) {
+  if (_isThin(meal) || isEnergyOnly(meal) || amount.amount <= 0) return null;
+  final serving = meal.scalableServingQuantity;
+  if (isPortionUnit(amount.unit) &&
+      serving != null &&
+      (amount.amount - serving).abs() < 0.01) {
+    final named = RegExp(
+      r'^\s*1\s+([^\d(),]{1,12}?)\s*(?:\(|$)',
+    ).firstMatch(meal.servingSize ?? '');
+    if (named != null) return '1 ${named.group(1)}';
+  }
+  return amountText(
+    IntakeEntity(
+      id: '',
+      unit: amount.unit,
+      amount: amount.amount,
+      type: IntakeTypeEntity.snack,
+      meal: meal,
+      dateTime: DateTime(2000),
+    ),
+    imperial,
   );
 }
 
@@ -175,15 +229,7 @@ Future<void> _logFromRow(
     );
     return;
   }
-  final rawUnits =
-      (await locator<GetConfigUsecase>().getConfig()).defaultToRawFoodUnits;
-  final amount = oneTapAmount(
-    food,
-    last: last,
-    remembered: last == null ? await RememberedAmounts.current.of(food) : null,
-    imperial: imperial,
-    rawUnits: rawUnits,
-  );
+  final amount = await rowAmount(food, last: last, imperial: imperial);
   if (!context.mounted) return;
   final mealName = mealLabel(context, type);
   final route = ModalRoute.of(context);
