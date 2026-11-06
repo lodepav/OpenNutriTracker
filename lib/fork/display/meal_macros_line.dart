@@ -108,6 +108,31 @@ class MacrosLine extends StatelessWidget {
   }
 }
 
+/// The macros as [MacrosLine] colours them, "C 20 · F 3 · P 4" in the
+/// user's order, for a line that keeps its own style: the Diary's meal
+/// header.
+List<InlineSpan> macroSpans(
+  AppPalette palette, {
+  required double carbs,
+  required double fat,
+  required double protein,
+}) {
+  final macros = inMacroOrder(
+    carbs: ('C', carbs, palette.carbsColor),
+    fat: ('F', fat, palette.fatColor),
+    protein: ('P', protein, palette.proteinColor),
+  );
+  return [
+    for (final (i, (letter, value, color)) in macros.indexed) ...[
+      if (i > 0) const TextSpan(text: ' · '),
+      TextSpan(
+        text: '$letter ${value.round()}',
+        style: TextStyle(color: mutedMacroColor(color, palette)),
+      ),
+    ],
+  ];
+}
+
 /// [macro] halfway to the muted text colour: quiet beside a food's name
 /// and still its own colour, readable as small text on the cards it sits
 /// on (4.6:1 or more on the light theme's surface, 6.5:1 on the dark).

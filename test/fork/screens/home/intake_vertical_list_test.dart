@@ -23,6 +23,8 @@ import 'package:opennutritracker/features/diary/presentation/bloc/calendar_day_b
 import 'package:opennutritracker/features/diary/presentation/bloc/diary_bloc.dart';
 import 'package:opennutritracker/features/home/presentation/bloc/home_bloc.dart';
 import 'package:opennutritracker/fork/screens/home/intake_vertical_list.dart';
+import 'package:opennutritracker/core/styles/app_palette.dart';
+import 'package:opennutritracker/fork/display/meal_macros_line.dart';
 import 'package:opennutritracker/features/meal_detail/presentation/bloc/meal_detail_bloc.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 import 'package:provider/provider.dart';
@@ -226,6 +228,19 @@ void main() {
     await tester.pump();
 
     expect(find.text(headerWithMacros()), findsOneWidget);
+    // each macro in a muted shade of its own colour, as the rows have (D38)
+    final header = tester.widget<Text>(find.text(headerWithMacros()));
+    final colours = <String, Color?>{};
+    header.textSpan!.visitChildren((span) {
+      if (span is TextSpan && span.text != null && span.text!.length > 2) {
+        colours[span.text!] = span.style?.color;
+      }
+      return true;
+    });
+    final palette = paletteOf(tester.element(find.text(headerWithMacros())));
+    expect(colours['C 20'], mutedMacroColor(palette.carbsColor, palette));
+    expect(colours['F 10'], mutedMacroColor(palette.fatColor, palette));
+    expect(colours['P 5'], mutedMacroColor(palette.proteinColor, palette));
   });
 
   testWidgets('shows only kcal when showMealMacros is false', (
@@ -415,21 +430,23 @@ void main() {
       expect(ofProfile.picked, isEmpty);
     });
 
-    testWidgets('the section\'s Delete all ends it: what is gone stays unpicked',
-        (tester) async {
-      await pump(tester, intakes);
-      await tester.tap(find.text('Test Meal'));
-      await tester.pump();
-      expect(selection.active, isTrue);
+    testWidgets(
+      'the section\'s Delete all ends it: what is gone stays unpicked',
+      (tester) async {
+        await pump(tester, intakes);
+        await tester.tap(find.text('Test Meal'));
+        await tester.pump();
+        expect(selection.active, isTrue);
 
-      await tester.tap(
-        find.byType(PopupMenuButton<VerticalListPopupMenuSelections>),
-      );
-      await tester.pumpAndSettle();
-      await tester.tap(find.text(l10nEn.deleteAllLabel));
-      await tester.pumpAndSettle();
-      expect(selection.active, isFalse);
-    });
+        await tester.tap(
+          find.byType(PopupMenuButton<VerticalListPopupMenuSelections>),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(l10nEn.deleteAllLabel));
+        await tester.pumpAndSettle();
+        expect(selection.active, isFalse);
+      },
+    );
 
     testWidgets('a long-press edits, and while selecting picks', (
       tester,

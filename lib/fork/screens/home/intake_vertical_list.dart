@@ -38,6 +38,7 @@ import 'package:opennutritracker/fork/units/energy_text.dart';
 import 'package:opennutritracker/fork/timeline/timeline.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 import 'package:opennutritracker/fork/display/display_prefs.dart';
+import 'package:opennutritracker/fork/display/meal_macros_line.dart';
 
 class IntakeVerticalList extends StatefulWidget {
   final DateTime day;
@@ -176,7 +177,7 @@ class _IntakeVerticalListState extends State<IntakeVerticalList> {
 
   bool get _shouldShowHeaderSummary => totalKcal > 0 || _hasMealKcalTarget;
 
-  String _buildHeaderSummary(BuildContext context) {
+  TextSpan _buildHeaderSummary(BuildContext context) {
     final consumed = EnergyDisplay.formatValue(context, totalKcal);
     final kcalLine = _hasMealKcalTarget
         // the string has "kcal" written into it
@@ -191,11 +192,23 @@ class _IntakeVerticalListState extends State<IntakeVerticalList> {
           )
         : EnergyDisplay.formatWithUnit(context, totalKcal);
     if (widget.showMealMacros && totalKcal > 0) {
-      // as each food's row writes them, "C 20 · F 3 · P 4"
-      return '$kcalLine\n${inMacroOrder(carbs: 'C ${totalCarbsGram.round()}', fat: 'F ${totalFatsGram.round()}', protein: 'P ${totalProteinsGram.round()}').join(' · ')}';
+      // as each food's row writes them, "C 20 · F 3 · P 4", in their colours
+      return TextSpan(
+        children: [
+          TextSpan(text: '$kcalLine\n'),
+          ..._macroSpans(context),
+        ],
+      );
     }
-    return kcalLine;
+    return TextSpan(text: kcalLine);
   }
+
+  List<InlineSpan> _macroSpans(BuildContext context) => macroSpans(
+    paletteOf(context),
+    carbs: totalCarbsGram,
+    fat: totalFatsGram,
+    protein: totalProteinsGram,
+  );
 
   // the summary on a line of its own under
   // the header's row, lined up with the title
@@ -208,7 +221,7 @@ class _IntakeVerticalListState extends State<IntakeVerticalList> {
     if (time == null || (totalKcal <= 0 && !above)) return row;
     final palette = paletteOf(context);
     final textTheme = Theme.of(context).textTheme;
-    final summary = Text(
+    final summary = Text.rich(
       _timelineSummary(context),
       semanticsLabel: _headerSummaryLabel(context),
       style: textTheme.labelMedium?.copyWith(color: palette.textMuted),
@@ -248,17 +261,17 @@ class _IntakeVerticalListState extends State<IntakeVerticalList> {
   // the summary on one line,
   // "1166 kcal · C 215 · F 15 · P 39"; the meal's target is left to the
   // spoken label, the day's to the card above
-  String _timelineSummary(BuildContext context) {
+  TextSpan _timelineSummary(BuildContext context) {
     final kcalLine = EnergyDisplay.formatWithUnit(context, totalKcal);
-    if (!widget.showMealMacros || totalKcal <= 0) return kcalLine;
-    return [
-      kcalLine,
-      ...inMacroOrder(
-        carbs: 'C ${totalCarbsGram.round()}',
-        fat: 'F ${totalFatsGram.round()}',
-        protein: 'P ${totalProteinsGram.round()}',
-      ),
-    ].join(' · ');
+    if (!widget.showMealMacros || totalKcal <= 0) {
+      return TextSpan(text: kcalLine);
+    }
+    return TextSpan(
+      children: [
+        TextSpan(text: '$kcalLine · '),
+        ..._macroSpans(context),
+      ],
+    );
   }
 
   // the summary in words, not "22 p 41 f 175 c"
@@ -388,7 +401,7 @@ class _IntakeVerticalListState extends State<IntakeVerticalList> {
                     constraints: BoxConstraints(
                       maxWidth: MediaQuery.sizeOf(context).width / 2,
                     ),
-                    child: Text(
+                    child: Text.rich(
                       _buildHeaderSummary(context),
                       // read as words; at a large font
                       // the macros wrap as far as they need rather than cut off
