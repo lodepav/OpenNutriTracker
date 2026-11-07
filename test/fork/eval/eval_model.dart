@@ -2,8 +2,13 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
+import 'package:package_info_plus/package_info_plus.dart';
+import 'package:opennutritracker/core/data/data_source/remote_search_cache_data_source.dart';
+import 'package:opennutritracker/core/data/dbo/meal_dbo.dart';
 import 'package:opennutritracker/core/utils/ai_model_catalogue.dart';
+import 'package:opennutritracker/features/meal_detail/util/hydrate_off_meal.dart';
 import 'package:opennutritracker/features/add_meal/data/anthropic_meal_items_api.dart';
 import 'package:opennutritracker/features/add_meal/data/openai_compatible_meal_items_api.dart';
 import 'package:opennutritracker/features/add_meal/data/data_sources/off_data_source.dart';
@@ -267,17 +272,30 @@ Future<MealEntity?> tableMatch(LocalFoodDataSource foods, String query) async {
 }
 
 /// Upstream's search over the bundled table alone, as phase 1b's staple
-/// check runs it (staple_foods_test.dart).
+/// check runs it (staple_foods_test.dart). With `FORK_EVAL_ONLINE=1` it
+/// also searches Open Food Facts as the app does, and fetches a counted
+/// hit's full record, so a branded product can win a row as it does on a
+/// phone. No search cache: each run asks Open Food Facts afresh.
 class TableOnlySearch implements SearchProductsUseCase {
   final ProductsRepository repository;
+  final bool online;
 
-  TableOnlySearch(this.repository);
+  TableOnlySearch(this.repository, {bool? online})
+    : online = online ?? evalSearchesOnline {
+    if (this.online) _allowOffSearch();
+  }
 
   @override
   Future<SearchProductsResult> searchOFFProductsByString(
     String searchString, {
     bool skipRemote = false,
-  }) async => SearchProductsResult(meals: const [], remoteSourceEmpty: true);
+  }) async {
+    if (!online || skipRemote) {
+      return SearchProductsResult(meals: const [], remoteSourceEmpty: true);
+    }
+    final meals = await repository.getOFFProductsByString(searchString);
+    return SearchProductsResult(meals: meals, remoteSourceEmpty: meals.isEmpty);
+  }
 
   @override
   Future<SearchProductsResult> searchFDCFoodByString(
@@ -291,6 +309,39 @@ class TableOnlySearch implements SearchProductsUseCase {
     ),
     remoteSourceEmpty: false,
   );
+
+  @override
+  Future<MealEntity?> fetchFullOffRecord(MealEntity meal) =>
+      fetchDetailedOffMeal(meal, _NoSearchCache(), repository);
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+/// What Open Food Facts' client needs in a test: a binding for the
+/// locale, the app's version for its User-Agent, and the real network,
+/// which the test binding stubs out.
+void _allowOffSearch() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+  HttpOverrides.global = null;
+  PackageInfo.setMockInitialValues(
+    appName: 'OpenBite',
+    packageName: 'eval',
+    version: 'eval',
+    buildNumber: '0',
+    buildSignature: '',
+  );
+}
+
+/// `FORK_EVAL_ONLINE=1`: the evals search Open Food Facts too.
+final evalSearchesOnline = Platform.environment['FORK_EVAL_ONLINE'] == '1';
+
+class _NoSearchCache implements RemoteSearchCacheDataSource {
+  @override
+  MealDBO? getDetailedByBarcode(String barcode) => null;
+
+  @override
+  Future<void> cache(MealDBO meal) async {}
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);

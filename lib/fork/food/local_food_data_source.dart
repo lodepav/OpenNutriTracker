@@ -203,8 +203,10 @@ String withoutDescribing(String query) => nameWords(
 
 /// Foods a plate holds cooked, whose dry row a bare name lists after the
 /// cooked one ("egg noodles" listed "Noodles, egg, dry" at 384 kcal first,
-/// against 138 cooked). Not oats, weighed dry for porridge.
+/// against 138 cooked). Not oats, weighed dry for porridge; porridge itself
+/// is the cooked dish, and its dry mixes are 350 kcal per 100 g.
 const eatenCooked = {
+  'porridge',
   'rice',
   'longgrain',
   'mediumgrain',

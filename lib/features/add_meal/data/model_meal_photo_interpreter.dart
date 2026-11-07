@@ -54,7 +54,9 @@ class ModelMealPhotoInterpreter implements MealPhotoInterpreter {
 
   // [fork] S60 photo-counts: count every countable piece (phase 4 replay:
   // smaller models left dumplings, khinkali and one whole pizza uncounted);
-  // and name each food as cooked: a plate's red cabbage found a raw row
+  // name each food as cooked: a plate's red cabbage found a raw row; and
+  // count halves as the whole items: 5 roast potato halves read as 4
+  // medium potatoes, 680 g
   static const _systemPrompt = '''
 You identify the foods visible in a photograph of a meal so they can be
 looked up in a food database. You do not estimate nutrition, and you do not
@@ -74,6 +76,10 @@ Rules:
   14 dumplings, 1 whole pizza. A dish
   served as pieces (dumplings, pancakes, tarts, rolls) is counted, roughly
   if there are many. A count has no unit, so never include "unit".
+- A food cut in halves or wedges is counted as the whole items it came
+  from, rounded to a whole number: 2 tomato halves are 1 tomato, 5 potato
+  halves are 3 potatoes, 4 apple wedges are 1 apple. Never count the
+  halves as items.
 - For anything you cannot count — rice, salad, sauce, soup, a drink — omit
   "quantity". Do not guess grams or millilitres from a photograph. The app
   asks the user for the amount, and a guess they cannot check is worse than

@@ -17,7 +17,8 @@ import 'package:opennutritracker/fork/dish/dish_breakdown_rows.dart';
 // [fork] S61 recipe-count: a count past a recipe's batch is flagged
 import 'package:opennutritracker/fork/dish/recipe_count.dart';
 // [/fork]
-// [fork] S98 default-amount: a sauce starts at a ladle
+// [fork] S98 default-amount: a sauce starts at a ladle, a drink at a glass
+import 'package:opennutritracker/fork/food/drink_serving.dart';
 import 'package:opennutritracker/fork/food/sauce_serving.dart';
 // [/fork]
 
@@ -559,7 +560,12 @@ class BulkAddBloc extends Bloc<BulkAddEvent, BulkAddState> {
     }
 
     try {
-      final resolved = await _resolveParsedMealsUseCase.resolve(parsed.items);
+      // [fork] S196 unnamed-brand: a photo's foods are the foods as eaten
+      final resolved = await _resolveParsedMealsUseCase.resolve(
+        parsed.items,
+        fromPhoto: source == BulkAddReadSource.photo,
+      );
+      // [/fork]
       if (emit.isDone || _superseded(attempt)) return;
 
       emit(
@@ -614,8 +620,11 @@ class BulkAddBloc extends Bloc<BulkAddEvent, BulkAddState> {
     }
     // [fork] S98 default-amount: the 100 g in ounces. Upstream's 1 oz is
     // 28 g, so an AI-read dish with no stated amount came in as a bite. A
-    // sauce at a ladle, 60 g or 2 oz.
+    // sauce at a ladle, 60 g or 2 oz. A drink at a glass, 250 ml or 8 oz.
     if (isSauce(meal?.name)) return usesImperialUnits ? '2' : '60';
+    if (isDrink(meal?.name) || isDrink(parsed.query)) {
+      return _amountText(usesImperialUnits ? drinkServingFlOz : drinkServingMl);
+    }
     return usesImperialUnits ? '3.5' : '100';
     // [/fork]
   }

@@ -47,6 +47,13 @@ that.
 
 The key is a hash of the request body, so a changed prompt, photo or note is a new request.
 
+### Online search
+
+The evals search only the bundled table by default. `FORK_EVAL_ONLINE=1` adds
+Open Food Facts, as the app searches it, so a packaged product can win a row as
+it does on a phone (D40). It needs `search.openfoodfacts.org` and
+`world.openfoodfacts.org` reachable, and each run asks afresh.
+
 ### Photo test set
 
 ```sh

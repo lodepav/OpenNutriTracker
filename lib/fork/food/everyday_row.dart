@@ -16,6 +16,12 @@ bool isEverydayRow(String? name, String query) =>
 
 const _everyday = {
   'egg': 'Egg, whole, raw, fresh',
+  // a frozen mixture at 1 oz, 37 kcal for a plate's eggs
+  'scrambled eggs': _scrambledEgg,
+  'scrambled egg': _scrambledEgg,
+  // "Tea, ginger" is the shortest tea
+  'tea': _blackTea,
+  'black tea': _blackTea,
   'eggs': 'Eggs, Grade A, Large, egg whole',
   'pizza': _cheesePizza,
   'cheese pizza': _cheesePizza,
@@ -39,6 +45,10 @@ const _everyday = {
   'porridge': _oatmeal,
   'oatmeal': _oatmeal,
   'oat porridge': _oatmeal,
+  'oatmeal porridge': _oatmeal,
+  // a Nordic and Baltic breakfast: rice cooked in milk, often with jam
+  'rice porridge': 'Rice pudding sweetened, with milk 3.5 % fat',
+  'milk rice porridge': 'Rice pudding sweetened, with milk 3.5 % fat',
   // Latvian maizes zupa: rye bread soup with raisins and apple, served with
   // cream.
   'bread soup': 'Bread soup (brown bread), with raisins, apple and sour cream',
@@ -255,6 +265,8 @@ const _tomatoPaste =
     "USDA's Food Distribution Program)";
 const _boiledPotato =
     'Potatoes, boiled, cooked without skin, flesh, without salt';
+const _scrambledEgg = 'Egg, whole, cooked, scrambled';
+const _blackTea = 'Tea, hot, leaf, black';
 const _oatmeal = 'Oatmeal, regular or quick, made with water, no added fat';
 const _unsaltedButter = 'Butter, without salt';
 const _cola = 'Soft drink, cola';
