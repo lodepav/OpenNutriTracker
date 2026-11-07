@@ -24,6 +24,9 @@
 library;
 
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_portion_entity.dart';
+// [fork] S197 unnamed-variety
+import 'package:opennutritracker/fork/food/unnamed_variety.dart';
+// [/fork]
 
 /// A parenthetical: "1 cup (8 fl oz)".
 final _parenthetical = RegExp(r'\([^)]*\)');
@@ -115,6 +118,13 @@ int? _match(
   var bestScore = 0;
   final tied = <int>[];
   for (var i = 0; i < portions.length; i++) {
+    // [fork] S197 unnamed-variety: "2 tomatoes" tied "1 grape tomato", "1
+    // plum tomato" and "1 Italian tomato" on the food's own word, and the
+    // first logged 16 g. A row naming a kind the text did not is no match.
+    if (namesUnaskedKind(_englishLabelOf(portions[i]), tokens, _matches)) {
+      continue;
+    }
+    // [/fork]
     var score = 0;
     for (final term in _termsOf(labelOf(portions[i]))) {
       if (tokens.any((t) => _matches(t, term))) score += term.length;

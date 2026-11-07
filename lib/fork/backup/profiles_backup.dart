@@ -45,6 +45,7 @@ import 'package:opennutritracker/features/settings/domain/export_import_failure.
 import 'package:opennutritracker/features/settings/domain/tracked_day_boundary_record.dart';
 import 'package:opennutritracker/features/settings/domain/usecase/export_data_usecase.dart';
 import 'package:opennutritracker/features/settings/domain/usecase/import_data_usecase.dart';
+import 'package:opennutritracker/fork/amounts/own_portions.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/fork/body/measurement_store.dart';
 import 'package:opennutritracker/fork/phases/phases.dart';
@@ -313,6 +314,9 @@ class ProfilesBackup {
       () => open<dynamic>(AdaptiveStore.boxName, profile.boxSuffix),
     ),
     phases: () => PhaseStore(
+      () => open<dynamic>(AdaptiveStore.boxName, profile.boxSuffix),
+    ),
+    ownPortions: () => OwnPortions(
       () => open<dynamic>(AdaptiveStore.boxName, profile.boxSuffix),
     ),
     user: UserDataSource(scope),

@@ -44,8 +44,13 @@ class MacroProgram {
 
   /// Low, moderate and high: about what physique athletes eat (0.8 to 1.0
   /// g/kg). Under 20% of energy from fat is not advised (ADA/ACSM 2009).
+  /// The level is fat at maintenance; a goal moves it (D34).
   static const fatPresets = [0.6, 0.8, 1.0];
   static const defaultFatPerKg = 0.8;
+
+  /// A cut takes fat no lower than this share of the day's energy, nor
+  /// below the level when the level is lower still.
+  static const minFatShare = 0.2;
 
   /// Protein's share of energy is held to this, so a small target still
   /// leaves room for carbs and fat.
@@ -87,11 +92,15 @@ class MacroProgram {
   );
 
   /// The grams for a day's [kcal], for a body of [weightKg] at
-  /// [bodyFatPercent].
+  /// [bodyFatPercent]. [goalKcal] is what the goal adds to maintenance
+  /// (negative on a cut): fat per kg is the level at maintenance, and
+  /// moves by the same share as the energy left after protein, so a cut
+  /// takes from carbs and fat alike and protein holds (D34).
   FixedMacros macrosFor({
     required double kcal,
     required double weightKg,
     required double bodyFatPercent,
+    double goalKcal = 0,
   }) {
     final energy = max(kcal, 0.0);
     final basisKg = leanMass ? weightKg * (1 - bodyFatPercent / 100) : weightKg;
@@ -102,7 +111,13 @@ class MacroProgram {
     final (carbsG, fatG) = switch (style) {
       // Protein first, then fat, as far as the energy goes.
       MacroStyle.perKg => () {
-        final fat = min(fatGPerKg * weightKg, rest / 9);
+        final level = fatGPerKg * weightKg;
+        final restAtMaintenance = rest - goalKcal;
+        final scaled = goalKcal == 0 || restAtMaintenance <= 0
+            ? level
+            : level * rest / restAtMaintenance;
+        final floor = min(level, energy * minFatShare / 9);
+        final fat = min(max(scaled, floor), max(rest, 0.0) / 9);
         return ((rest - 9 * fat) / 4, fat);
       }(),
       MacroStyle.balanced || MacroStyle.lowFat => () {

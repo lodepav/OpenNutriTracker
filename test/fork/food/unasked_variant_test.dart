@@ -163,4 +163,47 @@ void main() {
       0,
     );
   });
+
+  test('a sauce named after the food trails the food: a canteen photo\'s '
+      '"roast pork" logged "Roast pork gravy"', () {
+    const p = unaskedVariantPenalty;
+    expect(unaskedVariant('Roast pork gravy', 'roast pork'), p);
+    expect(unaskedVariant('Chicken soup', 'chicken'), p);
+    expect(unaskedVariant('Pork chop seasoning', 'pork chop'), p);
+    expect(unaskedVariant('Salad dressing, ranch', 'salad'), p);
+    expect(unaskedVariant('Meatball and sausage marinara', 'meatballs'), p);
+    expect(unaskedVariant('Meatball and sausage marinara', 'marinara'), 0);
+    // Asked for, or a food that comes with one.
+    expect(unaskedVariant('Roast pork gravy', 'gravy'), 0);
+    expect(unaskedVariant('Gravy, beef, canned', 'gravies'), 0);
+    expect(unaskedVariant('Ham or pork with gravy', 'pork'), 0);
+    expect(
+      unaskedVariant('Chicken breast, grilled without sauce', 'chicken'),
+      0,
+    );
+    expect(unaskedVariant('Tomato products, canned, sauce', 'tomato sauce'), 0);
+  });
+
+  test('a dry or powdered form trails the food as eaten: a photo\'s '
+      '"gravy, brown" logged the granules', () {
+    const p = unaskedVariantPenalty;
+    expect(unaskedVariant('Gravy, brown, dry', 'gravy, brown'), p);
+    expect(unaskedVariant('Milk, dry, whole', 'milk'), p);
+    expect(unaskedVariant('Curry powder', 'curry'), p);
+    expect(unaskedVariant('Gravy, brown, dry', 'gravy mix'), 0);
+    expect(unaskedVariant('Pasta, dry, unenriched', 'dry pasta'), 0);
+    expect(unaskedVariant('Milk, dry, whole', 'powdered milk'), 0);
+    // Not a dish made from one, nor nuts roasted dry.
+    expect(
+      unaskedVariant('Nuts, almonds, dry roasted, with salt added', 'almonds'),
+      0,
+    );
+    expect(
+      unaskedVariant(
+        'Potatoes, mashed, dehydrated, prepared from flakes without milk',
+        'mashed potatoes',
+      ),
+      0,
+    );
+  });
 }

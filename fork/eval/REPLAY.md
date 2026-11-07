@@ -10,6 +10,33 @@ API (one live call per client does that), and models other than Claude's current
 (OpenRouter does that). The subagent also runs under Claude Code's own instructions, so its
 answers are close to the raw API's, not identical.
 
+## Live runs with an Anthropic key
+
+The same tests make real calls through the app's own Anthropic client
+(`AnthropicMealItemsApi`) when `FORK_EVAL_ANTHROPIC_KEY` is set. A spec
+`direct:<model>` names the Anthropic model; with only that key set, the app's
+Anthropic default runs (`direct:claude-haiku-5-5`). A model the app does not
+list for Anthropic, such as `claude-sonnet-5-5`, is asked unforced, as Sonnet
+5.5 refuses a forced tool call.
+
+Run these on your own computer: a Claude Code cloud session authenticates
+`api.anthropic.com` with the session's account and stores no key for it.
+
+```sh
+python3 -m pip install pillow                     # for the photo fetch
+python3 -I fork/tools/fetch_eval_photos.py
+export FORK_EVAL_ANTHROPIC_KEY=sk-ant-...         # set a spend limit in the Console first
+flutter test test/fork/eval/calorie_eval_test.dart     # kcal against known meals
+flutter test test/fork/eval/portion_eval_test.dart     # the same photos with a typed name
+flutter test test/fork/eval/photo_eval_test.dart       # which foods each photo names
+FORK_EVAL_MODELS=direct:claude-haiku-5-5,direct:claude-sonnet-5-5 \
+  flutter test test/fork/eval/calorie_eval_test.dart   # both, side by side
+```
+
+Each run writes its report under `build/fork-eval/<time>-<kind>/report.md`.
+A Haiku 5.5 pass of one test file is cents; Sonnet 5.5 about twenty times
+that.
+
 ## The loop
 
 1. **Record.** Run the app or the harness in replay mode. Every request with no answer is
@@ -19,6 +46,13 @@ answers are close to the raw API's, not identical.
 3. **Replay.** Run the same thing again; the same requests now get the answers.
 
 The key is a hash of the request body, so a changed prompt, photo or note is a new request.
+
+### Online search
+
+The evals search only the bundled table by default. `FORK_EVAL_ONLINE=1` adds
+Open Food Facts, as the app searches it, so a packaged product can win a row as
+it does on a phone (D40). It needs `search.openfoodfacts.org` and
+`world.openfoodfacts.org` reachable, and each run asks afresh.
 
 ### Photo test set
 

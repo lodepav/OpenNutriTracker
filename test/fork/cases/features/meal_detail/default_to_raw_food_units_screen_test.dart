@@ -203,19 +203,18 @@ void main() {
     expect(bloc!.state.totalQuantityConverted, '30.0');
     String field() =>
         tester.widget<TextField>(find.byType(TextField).first).controller!.text;
-    Future<void> pick(Finder item) async {
-      await tester.tap(find.byType(DropdownButton<String>));
-      await tester.pumpAndSettle();
-      await tester.tap(item.last);
+    // S195: the unit is a chip of the amount picker
+    Future<void> pick(String unit) async {
+      await tester.tap(find.byKey(ValueKey('amount-unit-$unit')));
       await tester.pumpAndSettle();
     }
 
-    await pick(find.text('g'));
+    await pick('g');
     expect(bloc!.state.selectedUnit, 'g');
     expect(field(), '30');
     expect(bloc!.state.totalQuantityConverted, '30.0');
 
-    await pick(find.textContaining('30'));
+    await pick('serving');
     expect(bloc!.state.selectedUnit, 'serving');
     expect(field(), '1');
     expect(bloc!.state.totalQuantityConverted, '30.0');
@@ -244,9 +243,9 @@ void main() {
       );
       expect(
         tester
-            .widget<DropdownButton<String>>(find.byType(DropdownButton<String>))
-            .value,
-        'g',
+            .widget<ChoiceChip>(find.byKey(const ValueKey('amount-unit-g')))
+            .selected,
+        isTrue,
       );
     });
 
@@ -269,9 +268,9 @@ void main() {
       );
       expect(
         tester
-            .widget<DropdownButton<String>>(find.byType(DropdownButton<String>))
-            .value,
-        'g',
+            .widget<ChoiceChip>(find.byKey(const ValueKey('amount-unit-g')))
+            .selected,
+        isTrue,
       );
     });
 

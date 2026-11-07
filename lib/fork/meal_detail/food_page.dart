@@ -347,6 +347,10 @@ class TodayAfterAdding extends StatefulWidget {
   final double protein;
   final Future<DayTotals> Function(DateTime day) load;
 
+  /// In its own card with its title, as on the food page; false for the
+  /// bars alone, under a heading of the caller's (D36).
+  final bool framed;
+
   const TodayAfterAdding({
     super.key,
     required this.day,
@@ -355,6 +359,7 @@ class TodayAfterAdding extends StatefulWidget {
     required this.fat,
     required this.protein,
     this.load = loadDayTotals,
+    this.framed = true,
   });
 
   @override
@@ -487,11 +492,10 @@ class _TodayAfterAddingState extends State<TodayAfterAdding> {
         );
 
         final e = totals.eaten, g = totals.goal;
-        return AppCard(
-          padding: const EdgeInsets.all(Dimens.spacing16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+        final body = Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (widget.framed) ...[
               Text(
                 DateUtils.isSameDay(widget.day, DateTime.now())
                     ? 'Today after adding'
@@ -501,45 +505,50 @@ class _TodayAfterAddingState extends State<TodayAfterAdding> {
                 ),
               ),
               const SizedBox(height: Dimens.spacing8),
-              for (final row in _afterAddingRows(context, [
-                column(
-                  label: energyUnit(context),
-                  figure: '${energyValue(context, e.kcal + widget.kcal)}',
-                  goal: '${energyValue(context, g.kcal)}',
-                  eaten: e.kcal,
-                  added: widget.kcal,
-                  target: g.kcal,
-                  color: theme.colorScheme.primary,
-                  spoken: energyUnit(context),
-                ),
-                ...inMacroOrder(
-                  carbs: macro(
-                    s.carbsLabel,
-                    e.carbs,
-                    widget.carbs,
-                    g.carbs,
-                    palette.carbs,
-                  ),
-                  fat: macro(s.fatLabel, e.fat, widget.fat, g.fat, palette.fat),
-                  protein: macro(
-                    s.proteinLabel,
-                    e.protein,
-                    widget.protein,
-                    g.protein,
-                    palette.protein,
-                  ),
-                ),
-              ]))
-                Padding(
-                  padding: const EdgeInsets.only(bottom: Dimens.spacing8),
-                  child: Row(
-                    spacing: Dimens.spacing12,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: row,
-                  ),
-                ),
             ],
-          ),
+            for (final row in _afterAddingRows(context, [
+              column(
+                label: energyUnit(context),
+                figure: '${energyValue(context, e.kcal + widget.kcal)}',
+                goal: '${energyValue(context, g.kcal)}',
+                eaten: e.kcal,
+                added: widget.kcal,
+                target: g.kcal,
+                color: theme.colorScheme.primary,
+                spoken: energyUnit(context),
+              ),
+              ...inMacroOrder(
+                carbs: macro(
+                  s.carbsLabel,
+                  e.carbs,
+                  widget.carbs,
+                  g.carbs,
+                  palette.carbs,
+                ),
+                fat: macro(s.fatLabel, e.fat, widget.fat, g.fat, palette.fat),
+                protein: macro(
+                  s.proteinLabel,
+                  e.protein,
+                  widget.protein,
+                  g.protein,
+                  palette.protein,
+                ),
+              ),
+            ]))
+              Padding(
+                padding: const EdgeInsets.only(bottom: Dimens.spacing8),
+                child: Row(
+                  spacing: Dimens.spacing12,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: row,
+                ),
+              ),
+          ],
+        );
+        if (!widget.framed) return body;
+        return AppCard(
+          padding: const EdgeInsets.all(Dimens.spacing16),
+          child: body,
         );
       },
     );

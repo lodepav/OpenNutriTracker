@@ -99,26 +99,34 @@ extension _BulkAddBody on _BulkAddScreenState {
       );
     }
 
-    final entries = dishListEntries(
-      state.rows,
-      folded: _foldedDishes,
-      separate: _separateDishes,
-    );
+    // A dish's actions are in its heading's menu (D35); the foods that
+    // need a look come first (D36).
+    final entries = needsLookFirst([
+      for (final entry in dishListEntries(
+        state.rows,
+        folded: _foldedDishes,
+        separate: _separateDishes,
+      ))
+        if (entry is! DishActions) entry,
+    ], state.rows);
     // The list is the labelled surface, not each child — row identifiers
     // would churn every time the row count changes.
     final list = Semantics(
       identifier: 'bulk-add-row-list',
       child: ListView.separated(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        itemCount: entries.length + (state.parseErrors.isEmpty ? 0 : 1),
-        separatorBuilder: (_, _) => const Divider(height: 1),
-        itemBuilder: (context, index) {
+        padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+        // the meal's card, the entries, and any parse errors
+        itemCount: 1 + entries.length + (state.parseErrors.isEmpty ? 0 : 1),
+        separatorBuilder: (_, _) => const SizedBox(height: 8),
+        itemBuilder: (context, at) {
+          if (at == 0) return _buildMealSummary(context, state);
+          final index = at - 1;
           if (index == entries.length) {
             return _buildParseErrors(context, state.parseErrors);
           }
           return switch (entries[index]) {
             DishHeading heading => _buildDishHeading(context, state, heading),
-            DishActions(:final group) => _buildDishActions(context, group),
+            DishActions() => const SizedBox.shrink(),
             DishRowEntry(:final index, inDish: true) => Padding(
               padding: const EdgeInsets.only(left: 16),
               child: _buildRow(context, state, index),
@@ -204,6 +212,74 @@ extension _BulkAddBody on _BulkAddScreenState {
       // a wrong dish name is the costliest photo error, and a note fixes it
       action: photo && _forkMealPhoto != null ? _rereadPhotoWithNote : null,
       actionLabel: 'Name the dish',
+    );
+  }
+
+  /// The meal's card, as the Diary's day card reads (D37): what Log logs,
+  /// its energy and its macros on the Diary's line, and that day's energy
+  /// and macros with the meal added, against their goals.
+  Widget _buildMealSummary(BuildContext context, BulkAddLoadedState state) {
+    final theme = Theme.of(context);
+    final palette = paletteOf(context);
+    final meal = mealMacros(state.rows);
+    final foods = state.rows.where((row) => row.willBeLogged).length;
+    final muted = theme.textTheme.labelMedium?.copyWith(
+      color: palette.textMuted,
+    );
+    return Semantics(
+      container: true,
+      identifier: 'bulk-add-meal-summary',
+      child: AppCard(
+        key: const ValueKey('bulk-add-meal-summary'),
+        padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.baseline,
+              textBaseline: TextBaseline.alphabetic,
+              children: [
+                Expanded(
+                  child: Text(
+                    'This meal · $foods ${foods == 1 ? 'food' : 'foods'}',
+                    style: muted,
+                  ),
+                ),
+                // summed as the rows show it, as the Log button is (#1469)
+                Text(
+                  EnergyDisplay.formatSumWithUnit(context, [
+                    for (final row in state.rows)
+                      if (row.willBeLogged) ?rowMacros(row)?.kcal,
+                  ]),
+                  key: const ValueKey('bulk-add-meal-kcal'),
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: palette.textStrong,
+                  ),
+                ),
+              ],
+            ),
+            MacrosLine(carbs: meal.carbs, fat: meal.fat, protein: meal.protein),
+            const SizedBox(height: 10),
+            Text(
+              DateUtils.isSameDay(_args.day, DateTime.now())
+                  ? 'Today with this meal'
+                  : 'That day with this meal',
+              style: muted,
+            ),
+            const SizedBox(height: 6),
+            TodayAfterAdding(
+              day: _args.day,
+              kcal: meal.kcal,
+              carbs: meal.carbs,
+              fat: meal.fat,
+              protein: meal.protein,
+              load: forkDayTotals,
+              framed: false,
+            ),
+          ],
+        ),
+      ),
     );
   }
 

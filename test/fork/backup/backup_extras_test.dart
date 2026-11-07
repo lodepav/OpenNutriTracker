@@ -19,6 +19,7 @@ import 'package:opennutritracker/core/data/dbo/water_intake_dbo.dart';
 import 'package:opennutritracker/core/data/repository/water_intake_repository.dart';
 import 'package:opennutritracker/features/fasting/data/data_source/fasting_data_source.dart';
 import 'package:opennutritracker/features/settings/domain/export_import_failure.dart';
+import 'package:opennutritracker/fork/amounts/own_portions.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/fork/body/measurement_store.dart';
 import 'package:opennutritracker/fork/phases/phases.dart';
@@ -56,6 +57,7 @@ void main() {
     MeasurementStore measurements,
     PhotoStore photos,
     PhaseStore phases,
+    OwnPortions ownPortions,
     _User user,
     _Config config,
   })
@@ -69,6 +71,7 @@ void main() {
       () async => Directory('${dir.path}/$name'),
     );
     final phases = PhaseStore(() => Hive.openBox<dynamic>(name));
+    final ownPortions = OwnPortions(() => Hive.openBox<dynamic>(name));
     final water = _Water();
     final fasting = _Fasting();
     final meals = _Meals();
@@ -84,6 +87,7 @@ void main() {
         measurements: () => measurements,
         photos: () => photos,
         phases: () => phases,
+        ownPortions: () => ownPortions,
         user: user,
         config: config,
       ),
@@ -95,6 +99,7 @@ void main() {
       measurements: measurements,
       photos: photos,
       phases: phases,
+      ownPortions: ownPortions,
       user: user,
       config: config,
     );
@@ -280,6 +285,28 @@ void main() {
       2,
       3,
     ]);
+  });
+
+  test("the user's own portions travel; a name the other device has takes "
+      'the backed-up weight, and twice adds nothing', () async {
+    final from = device();
+    final bread = MealEntityFixtures.mealOne;
+    await from.ownPortions.add(bread, 'slice', 35);
+    await from.ownPortions.add(bread, 'heel', 20);
+
+    final archive = Archive();
+    await from.extras.addTo(archive);
+
+    final to = device();
+    await to.ownPortions.add(bread, 'slice', 30);
+    await to.ownPortions.add(bread, 'toast', 28);
+    for (var i = 0; i < 2; i++) {
+      await to.extras.prepareRestore(archive)();
+    }
+    expect(
+      (await to.ownPortions.of(bread)).map((p) => (p.label, p.gramWeight)),
+      [('toast', 28.0), ('slice', 35.0), ('heel', 20.0)],
+    );
   });
 
   test('a photo id that would leave its folder is refused', () async {

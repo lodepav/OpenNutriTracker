@@ -46,7 +46,10 @@ class _Api implements MealItemsApi {
 
 class _Resolver implements ResolveParsedMealsUseCase {
   @override
-  Future<List<ResolvedMealItem>> resolve(List<ParsedMealItem> items) async => [
+  Future<List<ResolvedMealItem>> resolve(
+    List<ParsedMealItem> items, {
+    bool fromPhoto = false,
+  }) async => [
     for (final item in items)
       ResolvedMealItem(
         parsed: item,

@@ -653,10 +653,15 @@ Future<FixedMacros?> forkMacroGoal(
     final measured = store == null
         ? await MeasurementStore().recentBodyFat(DateTime.now())
         : null;
+    final bodyFat = measured ?? bodyFatPercent(profile);
     return program.macrosFor(
       kcal: kcalGoal,
       weightKg: profile.weightKG,
-      bodyFatPercent: measured ?? bodyFatPercent(profile),
+      bodyFatPercent: bodyFat,
+      // A fixed target is no goal's; it holds the level.
+      goalKcal: settings.fixedTarget
+          ? 0
+          : goalKcalOf(profile, settings, bodyFat),
     );
   } catch (e) {
     if (store == null) rethrow;
@@ -666,6 +671,29 @@ Future<FixedMacros?> forkMacroGoal(
     await store?.release();
   }
 }
+
+/// What [user]'s goal adds to maintenance a day, negative on a cut (D34):
+/// the formula's adjustment, or on Adaptive the pace at the energy a kg of
+/// [user] holds, as its target is built; both tapered near the target
+/// weight as the target is.
+double goalKcalOf(
+  UserEntity user,
+  AdaptiveSettings settings,
+  double bodyFatPercent,
+) => CalorieGoalCalc.applyTargetWeightTaper(
+  baseAdjustment: settings.adaptiveTarget
+      ? goalRateKgPerWeek(user) *
+            settings.expenditure.kcalPerKgAt(user.weightKG, bodyFatPercent) /
+            7
+      : CalorieGoalCalc.getKcalGoalAdjustment(
+          user.goal,
+          weeklyWeightGoalKg: user.weeklyWeightGoalKg,
+        ),
+  currentWeightKg: user.weightKG,
+  targetWeightKg: user.targetWeightKg,
+  goal: user.goal,
+  taperEnabled: user.caloriesTaperEnabled,
+);
 
 /// The chosen pace in kg/week, negative to lose; upstream's ±500 kcal
 /// goal read as 0.5 kg/week when no pace was set.

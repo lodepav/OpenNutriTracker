@@ -24,6 +24,8 @@ import 'package:opennutritracker/fork/off/off_kinds.dart'; // S117
 import 'package:opennutritracker/fork/units/energy_text.dart';
 import 'package:opennutritracker/fork/units/amount_text.dart' show amountText;
 import 'package:opennutritracker/fork/add/one_tap_log.dart';
+import 'package:opennutritracker/fork/basket/basket_ui.dart'
+    show entriesChanged;
 
 class MealItemCard extends StatelessWidget {
   final DateTime day;
@@ -166,54 +168,92 @@ class MealItemCard extends StatelessWidget {
               ),
               // Logs at once, so not while planning (the row opens the page).
               if (FoodBasket.instance.planning == null)
-                ValueListenableBuilder(
-                  valueListenable: lookingUp,
-                  builder: (context, codes, _) {
-                    // Its record is being fetched: the plus shows it waits.
-                    final waiting = codes.contains(mealEntity.code);
-                    return Semantics(
-                      identifier: 'meal-item-add',
-                      child: IconButton(
-                        style: IconButton.styleFrom(
-                          foregroundColor: accent,
-                          side: BorderSide(color: accent, width: 1.5),
-                          shape: const CircleBorder(),
-                          minimumSize: const Size(32, 32),
-                          padding: EdgeInsets.zero,
-                        ),
-                        icon: waiting
-                            ? const SizedBox.square(
-                                dimension: 16,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
+                _OneTapLabel(
+                  meal: mealEntity,
+                  last: forkLastLogged,
+                  imperial: usesImperialUnits,
+                  builder: (context, label) => ValueListenableBuilder(
+                    valueListenable: lookingUp,
+                    builder: (context, codes, _) {
+                      // Its record is being fetched: the plus shows it waits.
+                      final waiting = codes.contains(mealEntity.code);
+                      return Semantics(
+                        identifier: 'meal-item-add',
+                        child: IconButton(
+                          style: IconButton.styleFrom(
+                            foregroundColor: accent,
+                            side: BorderSide(color: accent, width: 1.5),
+                            // D39: names what it adds, "+ 1 roll"
+                            shape: label == null
+                                ? const CircleBorder()
+                                : const StadiumBorder(),
+                            minimumSize: const Size(32, 32),
+                            padding: label == null
+                                ? EdgeInsets.zero
+                                : const EdgeInsetsDirectional.fromSTEB(
+                                    6,
+                                    0,
+                                    10,
+                                    0,
+                                  ),
+                          ),
+                          icon: waiting
+                              ? const SizedBox.square(
+                                  dimension: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : label == null
+                              ? const Icon(Icons.add_rounded, size: 20)
+                              : ConstrainedBox(
+                                  constraints: const BoxConstraints(
+                                    maxWidth: 112,
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(Icons.add_rounded, size: 18),
+                                      const SizedBox(width: 2),
+                                      Flexible(
+                                        child: Text(
+                                          label,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: textTheme.labelMedium
+                                              ?.copyWith(color: accent),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                              )
-                            : const Icon(Icons.add_rounded, size: 20),
-                        //; S142: the brand tells like-named foods apart (A4)
-                        tooltip: S
-                            .of(context)
-                            .addFoodLabel(
-                              [
-                                mealEntity.name ?? '',
-                                if (mealEntity.brands case final b?
-                                    when b.trim().isNotEmpty)
-                                  b.trim(),
-                              ].join(', '),
-                            ),
-                        // S179: logs at once; the row opens the page
-                        onPressed: waiting
-                            ? null
-                            : () => logFromRow(
-                                context,
-                                meal: mealEntity,
-                                type: addMealType.getIntakeType(),
-                                day: day,
-                                imperial: usesImperialUnits,
-                                last: forkLastLogged,
+                          //; S142: the brand tells like-named foods apart (A4)
+                          tooltip: S
+                              .of(context)
+                              .addFoodLabel(
+                                [
+                                  mealEntity.name ?? '',
+                                  if (mealEntity.brands case final b?
+                                      when b.trim().isNotEmpty)
+                                    b.trim(),
+                                  ?label,
+                                ].join(', '),
                               ),
-                      ),
-                    );
-                  },
+                          // S179: logs at once; the row opens the page
+                          onPressed: waiting
+                              ? null
+                              : () => logFromRow(
+                                  context,
+                                  meal: mealEntity,
+                                  type: addMealType.getIntakeType(),
+                                  day: day,
+                                  imperial: usesImperialUnits,
+                                  last: forkLastLogged,
+                                ),
+                        ),
+                      );
+                    },
+                  ),
                 ),
             ],
           ),
@@ -302,4 +342,79 @@ class MealItemCard extends StatelessWidget {
       ),
     );
   }
+}
+
+/// The plus's label for [meal]: [oneTapLabel] of the amount it would log,
+/// read again after each log, since a log changes the food's remembered
+/// amount. Null, the plain plus, until it is read or when it cannot be,
+/// and on a recent, whose row says its amount.
+class _OneTapLabel extends StatefulWidget {
+  final MealEntity meal;
+  final IntakeEntity? last;
+  final bool imperial;
+  final Widget Function(BuildContext context, String? label) builder;
+
+  const _OneTapLabel({
+    required this.meal,
+    required this.last,
+    required this.imperial,
+    required this.builder,
+  });
+
+  @override
+  State<_OneTapLabel> createState() => _OneTapLabelState();
+}
+
+class _OneTapLabelState extends State<_OneTapLabel> {
+  String? _label;
+  int _asked = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    entriesChanged.addListener(_read);
+    _read();
+  }
+
+  @override
+  void didUpdateWidget(_OneTapLabel old) {
+    super.didUpdateWidget(old);
+    if (old.meal != widget.meal ||
+        old.last != widget.last ||
+        old.imperial != widget.imperial) {
+      _read();
+    }
+  }
+
+  @override
+  void dispose() {
+    entriesChanged.removeListener(_read);
+    super.dispose();
+  }
+
+  Future<void> _read() async {
+    final asked = ++_asked;
+    String? label;
+    // a recent's row shows the amount it adds already, beside its energy
+    if (widget.last != null) {
+      label = null;
+    } else {
+      try {
+        final amount = await rowAmount(
+          widget.meal,
+          last: widget.last,
+          imperial: widget.imperial,
+        );
+        label = oneTapLabel(widget.meal, amount, imperial: widget.imperial);
+      } catch (_) {
+        // where the settings cannot be read (tests): the plain plus
+        label = null;
+      }
+    }
+    if (!mounted || asked != _asked || label == _label) return;
+    setState(() => _label = label);
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.builder(context, _label);
 }

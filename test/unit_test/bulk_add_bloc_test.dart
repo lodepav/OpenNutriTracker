@@ -215,10 +215,29 @@ void main() {
 
       final state = await parse(bloc, 'black coffee');
 
-      expect(state.rows.single.amountText, '100');
+      // [fork] S98 default-amount: a drink at a glass, not 100
+      expect(state.rows.single.amountText, '250');
+      // [/fork]
       expect(state.rows.single.unit, 'g/ml');
     },
   );
+
+  // [fork] S98 default-amount: a food that is no drink starts at 100 g,
+  // 3.5 oz imperial
+  test('a food with no stated amount starts at 100 g, 3.5 oz', () async {
+    final bloc = blocWith({
+      'bean stew': [meal('Bean stew')],
+    });
+    expect((await parse(bloc, 'bean stew')).rows.single.amountText, '100');
+    final imperial = blocWith({
+      'bean stew': [meal('Bean stew')],
+    });
+    expect(
+      (await parse(imperial, 'bean stew', imperial: true)).rows.single.amountText,
+      '3.5',
+    );
+  });
+  // [/fork]
 
   test('the imperial default is used when the profile is imperial', () async {
     final bloc = blocWith({
@@ -227,8 +246,8 @@ void main() {
 
     final state = await parse(bloc, 'black coffee', imperial: true);
 
-    // [fork] S98 default-amount: 100 g in ounces, not 1 oz
-    expect(state.rows.single.amountText, '3.5');
+    // [fork] S98 default-amount: a drink at a cup, 8 oz, not 1 oz
+    expect(state.rows.single.amountText, '8');
     // [/fork]
     expect(state.rows.single.unit, 'oz');
   });
