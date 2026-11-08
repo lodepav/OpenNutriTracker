@@ -101,7 +101,7 @@ Future<void> _pumpSheet(
 }
 
 void main() {
-  forkAmountPicker = false; // [fork] S195 amount-picker
+  setUpAll(() { forkAmountPicker = false; addTearDown(() => forkAmountPicker = true); }); // [fork] S195 amount-picker
   testWidgets('renders one chip per option with a stable ASCII identifier', (
     tester,
   ) async {

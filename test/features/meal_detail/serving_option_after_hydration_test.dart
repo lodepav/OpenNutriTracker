@@ -146,7 +146,7 @@ MealEntity _full(Map<String, dynamic> product) =>
     MealEntity.fromOFFProduct(OFFProductDTO.fromJson(product), detailed: true);
 
 void main() {
-  forkAmountPicker = false; // [fork] S195 amount-picker
+  setUpAll(() { forkAmountPicker = false; addTearDown(() => forkAmountPicker = true); }); // [fork] S195 amount-picker
   final getIt = GetIt.instance;
   MealDetailBloc? bloc;
   late Completer<MealEntity> hydration;

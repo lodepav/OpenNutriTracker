@@ -66,7 +66,7 @@ MealEntity _solidThirtyGramServing() => MealEntity(
     );
 
 void main() {
-  forkAmountPicker = false; // [fork] S195 amount-picker
+  setUpAll(() { forkAmountPicker = false; addTearDown(() => forkAmountPicker = true); }); // [fork] S195 amount-picker
   final getIt = GetIt.instance;
   MealDetailBloc? bloc;
   late FakeFavourites favourites;
