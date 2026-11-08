@@ -252,30 +252,32 @@ void main() {
         '2 hard-boiled eggs, 2 apples, 2 cookies, 2 waffles',
       );
 
-      expect([for (final r in state.rows) r.unit], [
-        'serving#2',
-        'serving#2',
-        'serving',
-        'serving',
-      ]);
+      expect(
+        [for (final r in state.rows) r.unit],
+        ['serving#2', 'serving#2', 'serving', 'serving'],
+      );
       expect(state.rows.first.amountText, '2');
       expect(state.rows.first.amountNeedsCheck, isFalse);
     });
   });
 
-  test('a soup with no amount and no serving starts at a bowl', () async {
-    // A photo's borscht and chłodnik logged 100 g, a third of a bowl.
-    final bloc = blocWith({
-      'borscht': [meal('Beetroot soup, with apple and horseradish')],
-      'stock cubes': [meal('Beef bouillon/stock/soup (stock cubes, powder)')],
-    });
+  test(
+    'a soup with no amount and no serving starts at a bowl, croutons at a handful',
+    () async {
+      // A photo's borscht and chłodnik logged 100 g, a third of a bowl.
+      final bloc = blocWith({
+        'borscht': [meal('Beetroot soup, with apple and horseradish')],
+        'stock cubes': [meal('Beef bouillon/stock/soup (stock cubes, powder)')],
+        'croutons': [meal('Croutons, white bread cubes toasted in butter')],
+      });
 
-    final metric = await parse(bloc, 'borscht, stock cubes');
-    expect([for (final r in metric.rows) r.amountText], ['300', '100']);
+      final metric = await parse(bloc, 'borscht, stock cubes, croutons');
+      expect([for (final r in metric.rows) r.amountText], ['300', '100', '15']);
 
-    final imperial = await parse(bloc, 'borscht', imperial: true);
-    expect(imperial.rows.single.amountText, '10.5');
-  });
+      final imperial = await parse(bloc, 'borscht, croutons', imperial: true);
+      expect([for (final r in imperial.rows) r.amountText], ['10.5', '0.5']);
+    },
+  );
 }
 
 /// A keystore with nothing in it, so the read use case always takes the

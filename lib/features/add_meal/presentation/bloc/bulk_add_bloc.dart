@@ -625,10 +625,15 @@ class BulkAddBloc extends Bloc<BulkAddEvent, BulkAddState> {
     // [fork] S98 default-amount: the 100 g in ounces. Upstream's 1 oz is
     // 28 g, so an AI-read dish with no stated amount came in as a bite. A
     // sauce at a ladle, 60 g or 2 oz. A drink at a glass, 250 ml or 8 oz.
-    // A soup at a bowl, 300 g or 10.5 oz.
+    // A soup at a bowl, 300 g or 10.5 oz; its croutons at 15 g or 0.5 oz.
     if (isSauce(meal?.name)) return usesImperialUnits ? '2' : '60';
     if (isDrink(meal?.name) || isDrink(parsed.query)) {
       return _amountText(usesImperialUnits ? drinkServingFlOz : drinkServingMl);
+    }
+    if (isCroutons(meal?.name)) {
+      return _amountText(
+        usesImperialUnits ? croutonServingOz : croutonServingGrams,
+      );
     }
     if (isSoup(meal?.name)) {
       return _amountText(usesImperialUnits ? soupServingOz : soupServingGrams);

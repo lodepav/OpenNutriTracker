@@ -30,4 +30,13 @@ void main() {
       expect(isSoup(name), isFalse, reason: name);
     }
   });
+
+  test('croutons are croutons, a soup with croutons is a soup', () {
+    expect(isCroutons('Croutons, white bread cubes toasted in butter'), isTrue);
+    expect(isCroutons('Croûtons nature aux céréales'), isTrue);
+    expect(isCroutons('Rye bread croutons'), isTrue);
+    expect(isCroutons('Cheese soup "Allgäuer", with croutons'), isFalse);
+    expect(isSoup('Cheese soup "Allgäuer", with croutons'), isTrue);
+    expect(isCroutons(null), isFalse);
+  });
 }
