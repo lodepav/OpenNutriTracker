@@ -168,9 +168,7 @@ class AmountPicker extends StatelessWidget {
                     key: ValueKey('amount-unit-${option.unit}'),
                     label: Text(_chipLabel(context, option)),
                     selected: option.unit == unit,
-                    onSelected: enabled
-                        ? (_) => _choose(option.unit, meal)
-                        : null,
+                    onSelected: enabled ? (_) => _choose(option.unit) : null,
                   ),
                 ),
               ),
@@ -213,13 +211,13 @@ class AmountPicker extends StatelessWidget {
 
   /// To [to], keeping the amount: 64 g becomes 2 slices, not 64. The unit
   /// already chosen, chosen again, confirms it.
-  void _choose(String to, MealEntity on) {
+  void _choose(String to) {
     if (to == unit ||
         keepCountBetweenPortions && isPortionUnit(unit) && isPortionUnit(to)) {
       onSet(controller.text, to);
       return;
     }
-    final converted = amountInUnit(controller.text, unit, to, on);
+    final converted = amountInUnit(controller.text, unit, to, meal);
     final fallback = isPortionUnit(to)
         ? '1'
         : (to == UnitDropdownItem.oz.toString() ||

@@ -380,52 +380,48 @@ extension _BulkAddRow on _BulkAddScreenState {
       _bloc.add(ChangeRowAmountEvent(index, amountText(next)));
     }
 
-    return Padding(
-      padding: EdgeInsets.zero,
-      child: Row(
-        children: [
-          IconButton.filledTonal(
-            key: ValueKey('bulk-add-less-$index'),
-            tooltip: 'Less',
-            visualDensity: VisualDensity.compact,
-            onPressed: quantity == null ? null : () => step(up: false),
-            icon: const Icon(Icons.remove),
-          ),
-          const SizedBox(width: 4),
-          Flexible(
-            child: OutlinedButton(
-              key: ValueKey('bulk-add-unit-$index'),
-              onPressed: () =>
-                  _openAmountPicker(index, state.usesImperialUnits),
-              style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                shape: const StadiumBorder(),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Flexible(
-                    child: Text(
-                      label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
+    return Row(
+      children: [
+        IconButton.filledTonal(
+          key: ValueKey('bulk-add-less-$index'),
+          tooltip: 'Less',
+          visualDensity: VisualDensity.compact,
+          onPressed: quantity == null ? null : () => step(up: false),
+          icon: const Icon(Icons.remove),
+        ),
+        const SizedBox(width: 4),
+        Flexible(
+          child: OutlinedButton(
+            key: ValueKey('bulk-add-unit-$index'),
+            onPressed: () => _openAmountPicker(index, state.usesImperialUnits),
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              shape: const StadiumBorder(),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Flexible(
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  const Icon(Icons.arrow_drop_down_rounded),
-                ],
-              ),
+                ),
+                const Icon(Icons.arrow_drop_down_rounded),
+              ],
             ),
           ),
-          const SizedBox(width: 4),
-          IconButton.filledTonal(
-            key: ValueKey('bulk-add-more-$index'),
-            tooltip: 'More',
-            visualDensity: VisualDensity.compact,
-            onPressed: () => step(up: true),
-            icon: const Icon(Icons.add),
-          ),
-        ],
-      ),
+        ),
+        const SizedBox(width: 4),
+        IconButton.filledTonal(
+          key: ValueKey('bulk-add-more-$index'),
+          tooltip: 'More',
+          visualDensity: VisualDensity.compact,
+          onPressed: () => step(up: true),
+          icon: const Icon(Icons.add),
+        ),
+      ],
     );
   }
 

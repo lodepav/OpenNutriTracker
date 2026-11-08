@@ -69,7 +69,7 @@ class _MealDetailScreenState extends State<MealDetailScreen> {
   Future<void> _forkLoadRemembered() async {
     // S195: the user's own portions first, so one remembered by name is
     // found among them
-    await _forkLoadOwn();
+    await _forkReloadOwn();
     final stored = await RememberedAmounts.current.of(meal);
     if (stored == null || !mounted || _userChangedSelection) return;
     // kept as stored: an own portion is found by name on each pick, since
@@ -101,15 +101,6 @@ class _MealDetailScreenState extends State<MealDetailScreen> {
   // [fork] S195 amount-picker: the user's own portions of this food, after
   // its own, kept across hydration
   List<OwnPortionEntity> _forkOwn = const [];
-
-  Future<void> _forkLoadOwn() async {
-    final own = await OwnPortions.current.of(meal);
-    if (!mounted || own.isEmpty) return;
-    setState(() {
-      _forkOwn = own;
-      meal = withOwnPortions(meal, own);
-    });
-  }
 
   Future<MealEntity?> _forkReloadOwn() async {
     final own = await OwnPortions.current.of(meal);
