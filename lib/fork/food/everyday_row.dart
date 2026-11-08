@@ -253,6 +253,39 @@ const _everyday = {
   // frozen, unprepared
   'wontons, pork, cooked': _steamedDumpling,
   'wontons, cooked': _steamedDumpling,
+  // A photo's herbs found "Pickles, dill" and Open Food Facts rows with no
+  // serving, at 100 g.
+  'dill': _dill,
+  'fresh dill': _dill,
+  'dill weed': _dill,
+  'parsley': _parsley,
+  'fresh parsley': _parsley,
+  'cilantro': _cilantro,
+  'fresh cilantro': _cilantro,
+  'coriander': _cilantro,
+  'fresh coriander': _cilantro,
+  'green onion': _greenOnion,
+  'green onions': _greenOnion,
+  'spring onion': _greenOnion,
+  'spring onions': _greenOnion,
+  'scallion': _greenOnion,
+  'scallions': _greenOnion,
+  // an Open Food Facts tub with no serving, at 100 g
+  'parmesan': _parmesan,
+  'parmesan cheese': _parmesan,
+  'grated parmesan': _parmesan,
+  'grated parmesan cheese': _parmesan,
+  // an Open Food Facts product with no serving: 3 peppers were 3 g
+  'stuffed pepper': _stuffedPepper,
+  'stuffed peppers': _stuffedPepper,
+  'stuffed bell pepper': _stuffedPepper,
+  'stuffed bell peppers': _stuffedPepper,
+  // a butter product at 357 kcal per 100 g
+  'mashed potatoes with butter': _butterMash,
+  'mashed potato with butter': _butterMash,
+  // no row names a baguette
+  'baguette': _baguette,
+  'toasted baguette': _toastedBaguette,
 };
 
 const _cheesePizza =
@@ -291,6 +324,16 @@ const _bechamel = 'Bechamel sauce';
 const _cookedLentils = 'Lentils, mature seeds, cooked, boiled, with salt';
 const _cookedNoodles = 'Noodles, cooked';
 const _mint = 'Spearmint, fresh';
+const _dill = 'Dill weed, fresh';
+const _parsley = 'Parsley, raw';
+const _cilantro = 'Coriander (cilantro) leaves, raw';
+const _greenOnion = 'Onions, green, raw';
+const _parmesan = 'Cheese, parmesan, grated';
+const _stuffedPepper = 'Stuffed pepper, with rice and meat';
+const _butterMash =
+    'Potatoes, mashed, home-prepared, whole milk and butter added';
+const _baguette = 'Bread, French or Vienna';
+const _toastedBaguette = 'Bread, French or Vienna, toasted';
 const _friedChicken =
     'Chicken, broilers or fryers, meat and skin, cooked, fried, batter';
 const _steamedDumpling = 'Wonton, dumpling or pot sticker, steamed';

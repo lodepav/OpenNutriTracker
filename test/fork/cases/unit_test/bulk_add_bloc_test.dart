@@ -261,6 +261,33 @@ void main() {
     });
   });
 
+  test('a garnish starts at a pinch or a spoon, not a cup', () async {
+    // A photo's parsley came in at 100 g, grated parmesan at USDA's cup.
+    final bloc = blocWith({
+      'parsley': [meal('Parsley')],
+      'parmesan': [
+        meal(
+          'Cheese, parmesan, grated',
+          servingQuantity: 100,
+          servingUnit: 'g',
+          servingSize: '1 cup',
+        ),
+      ],
+      'dill': [
+        meal(
+          'Dill weed, fresh',
+          servingQuantity: 1,
+          servingUnit: 'g',
+          servingSize: '5 sprigs',
+        ),
+      ],
+    });
+
+    final state = await parse(bloc, 'parsley, parmesan, dill');
+
+    expect([for (final r in state.rows) r.amountText], ['5', '10', '1']);
+  });
+
   test('a food named with its shape is found by the food', () async {
     // A photo's "1 lemon slice" found no row; "Lemon, raw" has the slice.
     final bloc = blocWith({

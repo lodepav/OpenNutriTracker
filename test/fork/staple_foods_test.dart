@@ -187,6 +187,14 @@ void main() {
     ('rice noodles, stir-fried', 'Rice noodles, cooked'),
     ('snow peas, cooked', 'Snowpeas, fresh, cooked'),
     ('wontons, pork, cooked', 'Wonton, dumpling or pot sticker, steamed'),
+    ('dill', 'Dill weed, fresh'),
+    ('parsley', 'Parsley, raw'),
+    ('cilantro', 'Coriander (cilantro) leaves, raw'),
+    ('green onion', 'Onions, green, raw'),
+    ('grated parmesan cheese', 'Cheese, parmesan, grated'),
+    ('stuffed bell pepper', 'Stuffed pepper, with rice and meat'),
+    ('mashed potatoes with butter', 'Potatoes, mashed, home-prepared'),
+    ('toasted baguette', 'Bread, French or Vienna, toasted'),
   ]) {
     test('bare "$query" resolves to "$expected..."', () async {
       final item = await resolve(query);

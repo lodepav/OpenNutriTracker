@@ -22,6 +22,7 @@ import 'package:opennutritracker/fork/dish/recipe_count.dart';
 // [/fork]
 // [fork] S98 default-amount: a sauce starts at a ladle, a drink at a glass
 import 'package:opennutritracker/fork/food/drink_serving.dart';
+import 'package:opennutritracker/fork/food/garnish_serving.dart';
 import 'package:opennutritracker/fork/food/sauce_serving.dart';
 import 'package:opennutritracker/fork/food/soup_serving.dart';
 // [/fork]
@@ -618,14 +619,28 @@ class BulkAddBloc extends Bloc<BulkAddEvent, BulkAddState> {
 
     if (meal != null && meal.hasServingValues) {
       final serving = meal.servingQuantity;
-      // [fork] S98 default-amount: a sauce at most a ladle, not a can
-      if (serving != null) return _amountText(sauceDefault(meal.name, serving));
+      // [fork] S98 default-amount: a sauce at most a ladle, not a can; a
+      // garnish at most a pinch or a spoon, not USDA's cup
+      if (serving != null) {
+        final garnish = garnishGrams(meal.name);
+        return _amountText(
+          garnish != null && serving > garnish
+              ? garnish
+              : sauceDefault(meal.name, serving),
+        );
+      }
       // [/fork]
     }
     // [fork] S98 default-amount: the 100 g in ounces. Upstream's 1 oz is
     // 28 g, so an AI-read dish with no stated amount came in as a bite. A
     // sauce at a ladle, 60 g or 2 oz. A drink at a glass, 250 ml or 8 oz.
     // A soup at a bowl, 300 g or 10.5 oz; its croutons at 15 g or 0.5 oz.
+    // A herb at 5 g, grated cheese at 10 g.
+    if (garnishGrams(meal?.name) case final grams?) {
+      return _amountText(
+        usesImperialUnits ? garnishOunces(meal?.name)! : grams,
+      );
+    }
     if (isSauce(meal?.name)) return usesImperialUnits ? '2' : '60';
     if (isDrink(meal?.name) || isDrink(parsed.query)) {
       return _amountText(usesImperialUnits ? drinkServingFlOz : drinkServingMl);
