@@ -1,6 +1,8 @@
 source 'https://rubygems.org'
 
 gem 'fastlane', '~> 2.241'
-gem 'cocoapods', '~> 1.17.0'
+# [fork] S201 cocoapods dropped: it pins activesupport below 8, and 7.x has a DoS advisory
+# (GHSA-8474-xrp6-wh69) with no fix. On a Mac, install CocoaPods on its own (brew install cocoapods).
+# [/fork]
 gem 'rexml', '>= 3.3.6'
 gem 'ffi', '>= 1.15.0'
