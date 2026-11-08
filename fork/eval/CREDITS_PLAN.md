@@ -1,7 +1,9 @@
 # Spending the Anthropic promo credits on real evals
 
 Plan agreed 2026-11-05 (about $100 of personal Anthropic API credits),
-revised 2026-11-08 with measured call counts and a step 0. The photo and
+revised 2026-11-08 with measured call counts and a step 0. Steps 0, 1, 5
+and 6 ran on 2026-11-08 (Results below). The credits expire on
+**2026-11-26**. The photo and
 text evals in `test/fork/eval/` have run on answers a Claude Code subagent
 wrote (`REPLAY.md`). This spends the credits on the same tests with real API
 calls, through the app's own Anthropic client.
@@ -35,8 +37,9 @@ picker, review list, macro colours, fat following the goal, the basket's
 meal card) can be checked in the running app too (`tools/adb/`). A Claude
 session can drive both through Remote Control, from the Claude desktop app
 or `claude remote-control` in the project folder; the key stays local.
-Whether the app on the emulator may use this key, rather than the fake AI
-emulator tests use, is an open question below.
+The app on the emulator may use this key (decided 2026-11-08), so those
+screens can be checked with real answers rather than the fake AI. The
+OpenRouter key stays off the emulator, and the fake AI stays the default.
 
 ## Setup
 
@@ -89,22 +92,25 @@ thousand out: well under a tenth of a cent on Haiku, $0.01-0.02 on Sonnet.
 
 One pass of the four main suites is about **280 calls**: calorie about 100
 (65 photos, a second read where a photo has a note), portion 65, photo 65,
-iLunch 26. That is about **$0.30 on Haiku** and **$6-8 on Sonnet** a pass.
-The first run's Usage section replaces these estimates; rescale the plan
-to it.
+iLunch 26. That was estimated at $0.30 on Haiku and $6-8 on Sonnet a pass.
+
+Measured (2026-11-08): about **$0.08 a pass on Haiku** and **$1.40 on
+Sonnet** (photo $0.69, iLunch $0.39, calorie $0.15, portion $0.15). Step 5's
+four suites cost $0.24 over three passes on Haiku.
 
 ## The plan, in order
 
-| Step | What | Runs | About |
+| Step | What | Runs | Spent or about |
 |---|---|---|---|
-| 0 | Harness: usage, split, merge (done 2026-11-08) | - | $0 |
-| 1 | Baseline on Haiku 5.5 | 3 × the four main suites | $1 |
+| 0 | Harness: usage, split, merge | - | done, $0 |
+| 1 | Baseline on Haiku 5.5 | 3 × the four main suites | done, about $0.25 |
 | 2 | Replay against live, same photos | 1 replay + step 1 | $0 |
 | 3 | Your own meals | each, a few times | cents |
-| 4 | Tune the photo prompts on `tune`, check on `held` | as needed | $5-10 |
-| 5 | Typed meals and the harder cases | 3 × | $1-2 |
-| 6 | Sonnet 5.5, three passes | 3 × the four main suites | $20-25 |
-| | Spare, for repeats after fixes | | ~$60 |
+| 4 | Tune the photo prompts on `tune`, check on `held` | as needed | $1-10 |
+| 5 | Typed meals and the harder cases | 3 × | done, $0.24 |
+| 6 | Sonnet 5.5, three passes | 3 × the four main suites | done, $4.17 |
+| | Spent by 2026-11-08, with the fix checks | | about $4.40 |
+| | Left, for steps 2-4, the emulator and repeats | | about $95 |
 
 **1. Baseline (Haiku, three times).** Where the photo path stands and how
 much it varies, and a check that the recent prompt changes (foods named as
@@ -145,6 +151,46 @@ and `dish_eval_test`, each three times. Text calls are cheap.
 worth offering, and how much better it reads hard plates. Three passes, not
 one, so a lucky run is not mistaken for a better model.
 
+## Results (2026-11-08)
+
+All on `FORK_EVAL_ONLINE=1`, three passes each. Steps 1 and 6 ran on the
+same code (`514c07c0`), so they compare directly. The merged reports'
+"median off" is the three runs' mean against the reference.
+
+| Suite | Haiku 5.5 (step 1) | Sonnet 5.5 (step 6) |
+|---|---|---|
+| Photo: dish named | 57/65 | 60-61/65 |
+| Photo: set-meal parts named | 46-47/55 | 48-49/55 |
+| Photo: count right | 14-15/20 | 17-18/20 |
+| Photo: median time a read | 2.2-2.3 s | 3.2-3.3 s |
+| iLunch: dish named, no note / with note | 23-25 / 21-23 of 26 | 25 / 25 of 26 |
+| Calorie: median off, merged | 52% | 56% |
+| Calorie: median spread between runs | 10% | 43% |
+| Calorie: within 25% every run | 5/22 | 2/22 |
+| Portion: median off, merged | 23% | 36% |
+| Portion: within 25% every run | 3/17 | 4/17 |
+
+- **Sonnet recognises better and logs no better.** It names more dishes,
+  parts and counts, but its kcal are no closer and move more between runs.
+  The kcal error comes mostly from which row a food finds and the amount it
+  starts at, not from what the model sees. Haiku stays the default; Sonnet
+  is worth offering only as the better recogniser.
+- **Step 5 (Haiku).** Typed meals are the weakest: English 7/24 within 25%
+  (median off 45-63%), Latvian 2-4/13 (76-111%). Hard notes held, 45-51 of
+  about 50 rows right. Weighed plates all passed but one bolognese read.
+  Dishes found the recipe 9/9 but only 1/5 landed within 25% (50-57% off).
+- **Fixes from step 1's misses** (merged as `b4537ae3` and `05a65fbf`: soup
+  and crouton defaults, a count picking a piece, a soup's contents kept in
+  the soup, shape words such as "slice" dropped from a search, herb and
+  cheese garnish amounts). Over three Haiku calorie passes after them,
+  `tune` went from 58% to 16% median off (10/30 to 18/30 within 25%), and
+  `held` stayed level (29% to 31%, 14/36 both times): they mended the
+  photos they came from without helping or harming the rest.
+- **Left for step 4:** pork cutlet and meat patty find Open Food Facts
+  products that change between searches; spaghetti bolognese starts at
+  100 g; "pizza slice" logs a whole pizza; chłodnik was once split into its
+  ingredients; typed Latvian meals and dishes, above.
+
 ## What the tests measure
 
 Each sends real photos or typed meals through the app's logging code,
@@ -180,10 +226,9 @@ Claude session). The misses become fixes, and the same suites, re-run,
 confirm them. A fix is done when it holds across the three repeats, not
 one.
 
-## Open questions
+## Decided
 
-- **The key on the emulator.** Emulator AI testing uses the fake AI and
-  never the OpenRouter key. Whether this Anthropic key may be used in the
-  app on the emulator, for checking the new screens with real answers, is
-  yours to decide.
-- **When the credits expire.** If soon, steps 1, 4 and 6 come first.
+- **The key on the emulator** (2026-11-08): allowed, for checking the new
+  screens with real answers. The OpenRouter key never; the fake AI stays
+  the default.
+- **When the credits expire:** 2026-11-26.
