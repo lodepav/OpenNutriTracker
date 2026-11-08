@@ -27,6 +27,7 @@ import 'package:opennutritracker/features/add_meal/presentation/bloc/favourite_t
 import 'package:opennutritracker/features/meal_detail/meal_detail_screen.dart';
 import 'package:opennutritracker/features/meal_detail/presentation/bloc/meal_detail_bloc.dart';
 import 'package:opennutritracker/fork/add/one_tap_log.dart';
+import 'package:opennutritracker/fork/amounts/own_portions.dart';
 import 'package:opennutritracker/fork/amounts/remembered_amounts.dart';
 import 'package:opennutritracker/fork/screens/add_meal/meal_item_card.dart';
 import 'package:opennutritracker/generated/l10n.dart';
@@ -173,6 +174,32 @@ class _Unused extends Fake
         LogUserActivityUsecase {}
 
 void main() {
+  test('the plus logs a remembered own portion at its weight (S195)', () async {
+    GetIt.instance.registerSingleton<GetConfigUsecase>(_Config());
+    final keptAmounts = RememberedAmounts.current;
+    final keptOwn = OwnPortions.current;
+    addTearDown(() async {
+      RememberedAmounts.current = keptAmounts;
+      OwnPortions.current = keptOwn;
+      await GetIt.instance.reset();
+    });
+    RememberedAmounts.current = _Remembered((unit: 'own:scoop', quantity: '2'));
+    OwnPortions.current = _Own(const [
+      OwnPortionEntity(label: 'scoop', gramWeight: 35),
+    ]);
+    final oats = _food(serving: 40);
+
+    expect((await rowAmount(oats)).amount, 70);
+    // removed since: the serving, as for a food never logged
+    OwnPortions.current = _Own(const []);
+    expect((await rowAmount(oats)).amount, 40);
+    // a food with neither a serving nor portions, which own portions are for
+    OwnPortions.current = _Own(const [
+      OwnPortionEntity(label: 'scoop', gramWeight: 35),
+    ]);
+    expect((await rowAmount(_food())).amount, 70);
+  });
+
   group('the amount the plus logs', () {
     test('a recent at its latest entry, as logged', () {
       final last = intakeOf('oats', 45);
@@ -664,4 +691,22 @@ void main() {
       expect(calls, ['open ${NavigationOptions.mealDetailRoute}']);
     });
   });
+}
+
+class _Remembered extends RememberedAmounts {
+  final RememberedAmount? amount;
+
+  _Remembered(this.amount);
+
+  @override
+  Future<RememberedAmount?> of(MealEntity meal) async => amount;
+}
+
+class _Own extends OwnPortions {
+  final List<OwnPortionEntity> own;
+
+  _Own(this.own);
+
+  @override
+  Future<List<OwnPortionEntity>> of(MealEntity meal) async => own;
 }

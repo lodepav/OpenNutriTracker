@@ -16,6 +16,7 @@ import 'package:opennutritracker/features/meal_detail/util/meal_quantity_convert
 import 'package:opennutritracker/features/add_meal/util/portion_unit.dart'
     show isPortionUnit;
 import 'package:opennutritracker/fork/add/logged_bar.dart';
+import 'package:opennutritracker/fork/amounts/own_portions.dart';
 import 'package:opennutritracker/fork/amounts/remembered_amounts.dart';
 import 'package:opennutritracker/fork/basket/basket_ui.dart'
     show refreshAfterLogging;
@@ -49,7 +50,9 @@ OneTapAmount oneTapAmount(
     final serving = remembered.unit == UnitDropdownItem.serving.toString();
     if (quantity != null &&
         quantity > 0 &&
-        (!serving || meal.scalableServingQuantity != null)) {
+        (!serving ||
+            meal.scalableServingQuantity != null ||
+            meal.portions.isNotEmpty)) {
       return of(remembered.unit, quantity);
     }
   }
@@ -69,7 +72,9 @@ OneTapAmount oneTapAmount(
 
 /// The amount the plus logs for [meal] once its record is in: the user's
 /// raw-units choice and the food's remembered amount read as the log
-/// reads them, so the plus's label and what it logs agree.
+/// reads them, so the plus's label and what it logs agree. A remembered
+/// own portion is found by its name among the user's portions (S195), and
+/// is passed over once removed.
 Future<OneTapAmount> rowAmount(
   MealEntity meal, {
   IntakeEntity? last,
@@ -77,10 +82,15 @@ Future<OneTapAmount> rowAmount(
 }) async {
   final rawUnits =
       (await locator<GetConfigUsecase>().getConfig()).defaultToRawFoodUnits;
+  final stored = last == null ? await RememberedAmounts.current.of(meal) : null;
+  final own = stored?.unit.startsWith(ownUnitPrefix) == true
+      ? withOwnPortions(meal, await OwnPortions.current.of(meal))
+      : meal;
+  final unit = stored == null ? null : unitFromRemembered(own, stored.unit);
   return oneTapAmount(
-    meal,
+    own,
     last: last,
-    remembered: last == null ? await RememberedAmounts.current.of(meal) : null,
+    remembered: unit == null ? null : (unit: unit, quantity: stored!.quantity),
     imperial: imperial,
     rawUnits: rawUnits,
   );

@@ -90,9 +90,9 @@ final _asksFrozen = RegExp(r'\b(frozen|oven)', caseSensitive: false);
 /// A food as sold dry or powdered, not as it is eaten: a photo's "gravy,
 /// brown" logged "Gravy, brown, dry", the granules, at 367 kcal per 100 g
 /// against about 50 for gravy. Not a dish made from one ("prepared",
-/// "from flakes") or dry-roasted nuts. Asked for by naming the form.
+/// "from flakes"), dry-roasted nuts or fish cooked by dry heat. Asked for by naming the form.
 final _dryForm = RegExp(
-  r',\s*dry\b(?!\s+roasted)|\b(powder(ed)?|dehydrated|granules)\b',
+  r',\s*dry\b(?!\s+(roasted|heat))|\b(powder(ed)?|dehydrated|granules)\b',
   caseSensitive: false,
 );
 final _madeFromDry = RegExp(

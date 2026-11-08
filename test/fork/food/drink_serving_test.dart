@@ -26,6 +26,10 @@ void main() {
       'Instant coffee',
       'Rice, cooked in water',
       'Chicken with beer sauce',
+      'Beer-battered fish',
+      'Fish, beer batter, fried',
+      'tea-smoked duck',
+      'Apple cider vinegar',
       'jam',
       null,
     ]) {

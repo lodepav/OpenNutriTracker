@@ -193,7 +193,9 @@ void main() {
     expect(unaskedVariant('Gravy, brown, dry', 'gravy mix'), 0);
     expect(unaskedVariant('Pasta, dry, unenriched', 'dry pasta'), 0);
     expect(unaskedVariant('Milk, dry, whole', 'powdered milk'), 0);
-    // Not a dish made from one, nor nuts roasted dry.
+    // Not a dish made from one, nor nuts roasted dry, nor fish cooked by
+    // dry heat.
+    expect(unaskedVariant('Fish, cod, Atlantic, cooked, dry heat', 'cod'), 0);
     expect(
       unaskedVariant('Nuts, almonds, dry roasted, with salt added', 'almonds'),
       0,

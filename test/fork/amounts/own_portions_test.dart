@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
+import 'package:opennutritracker/features/add_meal/util/portion_unit.dart';
 import 'package:opennutritracker/fork/amounts/own_portions.dart';
 
 import 'amount_test_foods.dart';
@@ -43,5 +44,20 @@ void main() {
     await portions.add(rye(), 'crumb', 0);
     await portions.remove(rye(), 'slice');
     expect(await portions.of(rye()), isEmpty);
+  });
+
+  test('an own portion is remembered by name, and found again by it', () {
+    final own = withOwnPortions(bread(), const [
+      OwnPortionEntity(label: 'heel', gramWeight: 20),
+    ]);
+    // the food's slice and roll, then the heel
+    expect(rememberedUnitOf(own, portionUnit(2)), 'own:heel');
+    expect(rememberedUnitOf(own, portionUnit(0)), portionUnit(0));
+    expect(rememberedUnitOf(own, 'g'), 'g');
+
+    expect(unitFromRemembered(own, 'own:heel'), portionUnit(2));
+    expect(unitFromRemembered(own, 'g'), 'g');
+    // removed since: no unit, so the page opens at its default
+    expect(unitFromRemembered(bread(), 'own:heel'), isNull);
   });
 }

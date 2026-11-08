@@ -69,13 +69,12 @@ class _MealDetailScreenState extends State<MealDetailScreen> {
   Future<void> _forkLoadRemembered() async {
     // S195: the user's own portions first, so one remembered by name is
     // found among them
-    await _forkLoadOwn();
+    await _forkReloadOwn();
     final stored = await RememberedAmounts.current.of(meal);
     if (stored == null || !mounted || _userChangedSelection) return;
-    final unit = unitFromRemembered(meal, stored.unit);
-    if (unit == null) return;
-    final remembered = (unit: unit, quantity: stored.quantity);
-    _forkRemembered = remembered;
+    // kept as stored: an own portion is found by name on each pick, since
+    // hydration can add portions before it and move its index
+    _forkRemembered = stored;
     _initialUnit = "";
     _initialQuantity = "";
     _applyInitialSelection();
@@ -85,8 +84,10 @@ class _MealDetailScreenState extends State<MealDetailScreen> {
   /// only once the record has a scalable one (a thin search hit gets it
   /// with hydration, which re-picks).
   RememberedAmount? get _forkUsableRemembered {
-    final remembered = _forkRemembered;
-    if (remembered == null) return null;
+    final stored = _forkRemembered;
+    final unit = stored == null ? null : unitFromRemembered(meal, stored.unit);
+    if (stored == null || unit == null) return null;
+    final remembered = (unit: unit, quantity: stored.quantity);
     if (remembered.unit == UnitDropdownItem.serving.toString() &&
         meal.scalableServingQuantity == null &&
         meal.portions.isEmpty) {
@@ -100,15 +101,6 @@ class _MealDetailScreenState extends State<MealDetailScreen> {
   // [fork] S195 amount-picker: the user's own portions of this food, after
   // its own, kept across hydration
   List<OwnPortionEntity> _forkOwn = const [];
-
-  Future<void> _forkLoadOwn() async {
-    final own = await OwnPortions.current.of(meal);
-    if (!mounted || own.isEmpty) return;
-    setState(() {
-      _forkOwn = own;
-      meal = withOwnPortions(meal, own);
-    });
-  }
 
   Future<MealEntity?> _forkReloadOwn() async {
     final own = await OwnPortions.current.of(meal);

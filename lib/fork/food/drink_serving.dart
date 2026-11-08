@@ -13,10 +13,11 @@ final _drink = RegExp(
 );
 
 /// What a drink's name holds when it is not the drink: a cake, the dry
-/// leaves or beans, a powder.
+/// leaves or beans, a powder, a beer batter, tea-smoked duck, cider vinegar.
 final _notTheDrink = RegExp(
   r'\b(cakes?|biscuits?|cookies?|buns?|bread|ice cream|jelly|powder|'
-  r'granules|beans|leaves|bags?|chestnuts?|crackers?|ground|instant)\b',
+  r'granules|beans|leaves|bags?|chestnuts?|crackers?|ground|instant|'
+  r'batter(ed)?|smoked|vinegar)\b',
   caseSensitive: false,
 );
 
