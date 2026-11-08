@@ -150,8 +150,8 @@ Rules:
       // [/fork]
     );
 
-    // [fork] S199 soup-contents: a soup's own meat is not listed beside it
-    return withoutSoupMeats(_sizesOnly(_countsOnly(result, note)), note);
+    // [fork] S199 soup-contents: what a soup was cooked with is the soup
+    return withoutSoupContents(_sizesOnly(_countsOnly(result, note)), note);
     // [/fork]
   }
 

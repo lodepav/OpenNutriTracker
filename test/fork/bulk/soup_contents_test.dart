@@ -4,7 +4,7 @@ import 'package:opennutritracker/features/add_meal/util/meal_text_parser.dart';
 import 'package:opennutritracker/fork/bulk/soup_contents.dart';
 
 List<String> _kept(List<String> queries, {String? note}) => [
-  for (final item in withoutSoupMeats(
+  for (final item in withoutSoupContents(
     MealTextParseResult(
       items: [for (final q in queries) ParsedMealItem(query: q)],
       errors: const [],
@@ -23,10 +23,13 @@ void main() {
         'beef',
         'smoked meat',
         'black olives',
+        'pickled cucumber',
+        'pickles',
         'sour cream',
         'bread croutons',
+        'lemon slice',
       ]),
-      ['solyanka soup', 'black olives', 'sour cream', 'bread croutons'],
+      ['solyanka soup', 'sour cream', 'bread croutons', 'lemon slice'],
     );
   });
 
@@ -36,9 +39,15 @@ void main() {
       'roast beef',
       'pork chop',
     ]);
-    expect(_kept(['mashed potatoes', 'sausage']), [
+    expect(_kept(['mashed potatoes', 'sausage', 'pickled cucumber']), [
       'mashed potatoes',
       'sausage',
+      'pickled cucumber',
+    ]);
+    expect(_kept(['rassolnik', 'cucumber salad', 'olive bread']), [
+      'rassolnik',
+      'cucumber salad',
+      'olive bread',
     ]);
   });
 
