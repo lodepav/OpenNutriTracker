@@ -440,7 +440,7 @@ class _MealDetailBottomSheetState extends State<MealDetailBottomSheet> {
       // S45: the amount picked is the one to remember
       RememberedAmounts.current.remember(
         widget.product,
-        state.selectedUnit,
+        rememberedUnitOf(widget.product, state.selectedUnit), // S195
         widget.quantityTextController.text.trim(),
       );
       return BasketItem(
