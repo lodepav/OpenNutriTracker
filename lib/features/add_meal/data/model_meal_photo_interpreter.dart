@@ -4,10 +4,12 @@ import 'package:opennutritracker/features/add_meal/domain/meal_items_api.dart';
 import 'package:opennutritracker/features/add_meal/domain/meal_photo_interpreter.dart';
 import 'package:opennutritracker/features/add_meal/util/meal_text_parser.dart';
 import 'package:opennutritracker/features/add_meal/util/soft_text_score.dart';
-// [fork] S170 note-fractions, S172 saved-dishes, S175 weighed-plate
+// [fork] S170 note-fractions, S172 saved-dishes, S175 weighed-plate,
+// S199 soup-contents
 import 'package:opennutritracker/fork/bulk/note_counts.dart';
 import 'package:opennutritracker/fork/bulk/note_weights.dart';
 import 'package:opennutritracker/fork/bulk/saved_dishes.dart';
+import 'package:opennutritracker/fork/bulk/soup_contents.dart';
 import 'package:opennutritracker/fork/bulk/weighed_plate.dart';
 // [/fork]
 
@@ -148,7 +150,9 @@ Rules:
       // [/fork]
     );
 
-    return _sizesOnly(_countsOnly(result, note));
+    // [fork] S199 soup-contents: what a soup was cooked with is the soup
+    return withoutSoupContents(_sizesOnly(_countsOnly(result, note)), note);
+    // [/fork]
   }
 
   /// Drops any amount that is not a whole count of visible things.

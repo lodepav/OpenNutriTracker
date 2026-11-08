@@ -5,8 +5,9 @@ import 'package:opennutritracker/features/add_meal/util/meal_relevance_ranker.da
 import 'package:opennutritracker/features/add_meal/util/meal_text_parser.dart';
 import 'package:opennutritracker/features/add_meal/util/portion_unit.dart';
 import 'package:opennutritracker/features/add_meal/util/resolver_relevance.dart';
-// [fork] S75 everyday-row
+// [fork] S75 everyday-row, S200 shape-words
 import 'package:opennutritracker/fork/food/everyday_row.dart';
+import 'package:opennutritracker/fork/food/portion_words.dart';
 // [/fork]
 
 /// Below this the top candidate is a guess rather than an answer, and the
@@ -173,6 +174,35 @@ class ResolveParsedMealsUseCase {
         counted: true,
         fromPhoto: fromPhoto,
       );
+    }
+    // [/fork]
+
+    // [fork] S200 shape-words: "lemon slice" finds nothing, "lemon" does,
+    // and "bread slice" found "Garlic bread slices" where "bread" finds bread
+    final bare = withoutShapeWords(query);
+    if (bare != null) {
+      final found = await _resolveOne(
+        ParsedMealItem(
+          query: bare,
+          quantity: item.quantity,
+          unit: item.unit,
+          portion: item.portion,
+        ),
+        fromPhoto,
+      );
+      final own = ranked.isEmpty
+          ? -1.0
+          : isEverydayRow(ranked.first.name, query)
+          ? 1.0
+          : scoreMealForResolution(ranked.first, query);
+      if (found.candidates.isNotEmpty && found.confidence > own) {
+        return ResolvedMealItem(
+          parsed: item,
+          candidates: found.candidates,
+          selectedIndex: found.selectedIndex,
+          confidence: found.confidence,
+        );
+      }
     }
     // [/fork]
 

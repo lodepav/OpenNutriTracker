@@ -24,3 +24,21 @@ final _notTheSoup = RegExp(
 /// Whether [name] is a soup a bowl of is the usual amount.
 bool isSoup(String? name) =>
     name != null && _soup.hasMatch(name) && !_notTheSoup.hasMatch(name);
+
+/// What croutons with no stated amount and no serving start at: a soup's
+/// handful, USDA's half-ounce serving. A photo's croutons on a solyanka
+/// logged at the 100 g default, 408 to 492 kcal.
+const croutonServingGrams = 15.0;
+
+/// The same in ounces, for an imperial profile.
+const croutonServingOz = 0.5;
+
+final _croutons = RegExp(r'\bcro[uû]tons?\b', caseSensitive: false);
+
+/// A food that comes with croutons is the food ("Cheese soup, with
+/// croutons").
+final _withCroutons = RegExp(r'\bwith\b[^,]*', caseSensitive: false);
+
+/// Whether [name] is croutons, not a dish served with them.
+bool isCroutons(String? name) =>
+    name != null && _croutons.hasMatch(name.replaceAll(_withCroutons, ''));

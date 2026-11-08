@@ -252,30 +252,91 @@ void main() {
         '2 hard-boiled eggs, 2 apples, 2 cookies, 2 waffles',
       );
 
-      expect([for (final r in state.rows) r.unit], [
-        'serving#2',
-        'serving#2',
-        'serving',
-        'serving',
-      ]);
+      expect(
+        [for (final r in state.rows) r.unit],
+        ['serving#2', 'serving#2', 'serving', 'serving'],
+      );
       expect(state.rows.first.amountText, '2');
       expect(state.rows.first.amountNeedsCheck, isFalse);
     });
   });
 
-  test('a soup with no amount and no serving starts at a bowl', () async {
-    // A photo's borscht and chłodnik logged 100 g, a third of a bowl.
+  test('a garnish starts at a pinch or a spoon, not a cup', () async {
+    // A photo's parsley came in at 100 g, grated parmesan at USDA's cup.
     final bloc = blocWith({
-      'borscht': [meal('Beetroot soup, with apple and horseradish')],
-      'stock cubes': [meal('Beef bouillon/stock/soup (stock cubes, powder)')],
+      'parsley': [meal('Parsley')],
+      'parmesan': [
+        meal(
+          'Cheese, parmesan, grated',
+          servingQuantity: 100,
+          servingUnit: 'g',
+          servingSize: '1 cup',
+        ),
+      ],
+      'dill': [
+        meal(
+          'Dill weed, fresh',
+          servingQuantity: 1,
+          servingUnit: 'g',
+          servingSize: '5 sprigs',
+        ),
+      ],
     });
 
-    final metric = await parse(bloc, 'borscht, stock cubes');
-    expect([for (final r in metric.rows) r.amountText], ['300', '100']);
+    final state = await parse(bloc, 'parsley, parmesan, dill');
 
-    final imperial = await parse(bloc, 'borscht', imperial: true);
-    expect(imperial.rows.single.amountText, '10.5');
+    expect([for (final r in state.rows) r.amountText], ['5', '10', '1']);
   });
+
+  test('a food named with its shape is found by the food', () async {
+    // A photo's "1 lemon slice" found no row; "Lemon, raw" has the slice.
+    final bloc = blocWith({
+      'lemon': [
+        meal(
+          'Lemon, raw',
+          servingQuantity: 65,
+          servingUnit: 'g',
+          servingSize: '1 fruit',
+          portions: [
+            MealPortionEntity(
+              label: '1 fruit',
+              gramWeight: 65,
+              localized: false,
+            ),
+            MealPortionEntity(
+              label: '1 slice or wedge',
+              gramWeight: 8,
+              localized: false,
+            ),
+          ],
+        ),
+      ],
+    });
+
+    final row = (await parse(bloc, '1 lemon slice')).rows.single;
+
+    expect(row.meal?.name, 'Lemon, raw');
+    expect(row.resolved.parsed.query, 'lemon slice');
+    expect(row.unit, 'serving#1');
+  });
+
+  test(
+    'a soup with no amount and no serving starts at a bowl, croutons at a handful',
+    () async {
+      // A photo's borscht and chłodnik logged 100 g, a third of a bowl.
+      final bloc = blocWith({
+        'borscht': [meal('Beetroot soup, with apple and horseradish')],
+        'stock cubes': [meal('Beef bouillon/stock/soup (stock cubes, powder)')],
+        'croutons': [meal('Croutons, white bread cubes toasted in butter')],
+      });
+
+      final metric = await parse(bloc, 'borscht, stock cubes, croutons');
+      expect([for (final r in metric.rows) r.amountText], ['300', '100', '15']);
+
+      final imperial = await parse(bloc, 'borscht, croutons', imperial: true);
+      expect([for (final r in imperial.rows) r.amountText], ['10.5', '0.5']);
+    },
+  );
 }
 
 /// A keystore with nothing in it, so the read use case always takes the
