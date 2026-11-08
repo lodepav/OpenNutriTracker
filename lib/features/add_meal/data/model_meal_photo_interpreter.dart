@@ -56,7 +56,8 @@ class ModelMealPhotoInterpreter implements MealPhotoInterpreter {
   // smaller models left dumplings, khinkali and one whole pizza uncounted);
   // name each food as cooked: a plate's red cabbage found a raw row; and
   // count halves as the whole items: 5 roast potato halves read as 4
-  // medium potatoes, 680 g
+  // medium potatoes, 680 g; a soup with what was cooked in it: a
+  // solyanka's beef, sausage and smoked meat were listed beside it
   static const _systemPrompt = '''
 You identify the foods visible in a photograph of a meal so they can be
 looked up in a food database. You do not estimate nutrition, and you do not
@@ -66,6 +67,10 @@ Rules:
 - One entry per distinct food you can see. A composed dish a person would
   log as one thing ("lasagne", "chicken curry") is one entry, not a list of
   its ingredients.
+- A soup or stew is one entry with what was cooked in it: the meat,
+  sausage, olives, pickles and vegetables of a solyanka or a borscht are
+  the soup, never entries of their own. List apart only what was added
+  as it was served: a boiled egg, a spoon of sour cream, croutons, bread.
 - "query" is the food name alone, with no amount in it, in the user's app
   language. Keep a brand only if it is legible in the photo.
 - Name a food the way it was cooked when the photo shows it was:

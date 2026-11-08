@@ -194,6 +194,87 @@ void main() {
       expect(state.rows[1].amountNeedsCheck, isFalse);
       expect(state.loggableCount, 1);
     });
+
+    test('a count of eggs is eggs, not cups of chopped egg', () async {
+      // A photo's 2 hard-boiled eggs logged 2 × "1 cup, chopped", 272 g.
+      MealPortionEntity p(String label, double grams) =>
+          MealPortionEntity(label: label, gramWeight: grams, localized: false);
+      final bloc = blocWith({
+        'hard-boiled eggs': [
+          meal(
+            'Egg, whole, cooked, hard-boiled',
+            servingQuantity: 136,
+            servingUnit: 'g',
+            servingSize: '1 cup, chopped',
+            portions: [
+              p('1 cup, chopped', 136),
+              p('1 tbsp', 8.5),
+              p('1 large', 50),
+            ],
+          ),
+        ],
+        'apples': [
+          meal(
+            'Apples, raw',
+            servingQuantity: 125,
+            servingUnit: 'g',
+            servingSize: '1 cup, sliced',
+            portions: [
+              p('1 cup, sliced', 125),
+              p('1 large (3-1/4" dia)', 223),
+              p('1 medium (3" dia)', 182),
+              p('1 package', 400),
+            ],
+          ),
+        ],
+        'cookies': [
+          meal(
+            'Cookies',
+            servingQuantity: 30,
+            servingUnit: 'g',
+            servingSize: '30 g',
+            portions: [p('30 g', 30), p('1 package', 300)],
+          ),
+        ],
+        'waffles': [
+          meal(
+            'Waffle',
+            servingQuantity: 28,
+            servingUnit: 'g',
+            servingSize: '1 waffle',
+            portions: [p('1 waffle', 28), p('1 large', 40)],
+          ),
+        ],
+      });
+
+      final state = await parse(
+        bloc,
+        '2 hard-boiled eggs, 2 apples, 2 cookies, 2 waffles',
+      );
+
+      expect([for (final r in state.rows) r.unit], [
+        'serving#2',
+        'serving#2',
+        'serving',
+        'serving',
+      ]);
+      expect(state.rows.first.amountText, '2');
+      expect(state.rows.first.amountNeedsCheck, isFalse);
+    });
+  });
+
+  test('a soup with no amount and no serving starts at a bowl', () async {
+    // A photo's borscht and chłodnik logged 100 g, a third of a bowl.
+    final bloc = blocWith({
+      'borscht': [meal('Beetroot soup, with apple and horseradish')],
+      'stock cubes': [meal('Beef bouillon/stock/soup (stock cubes, powder)')],
+    });
+
+    final metric = await parse(bloc, 'borscht, stock cubes');
+    expect([for (final r in metric.rows) r.amountText], ['300', '100']);
+
+    final imperial = await parse(bloc, 'borscht', imperial: true);
+    expect(imperial.rows.single.amountText, '10.5');
   });
 }
 
