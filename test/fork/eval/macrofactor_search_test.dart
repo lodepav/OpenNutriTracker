@@ -92,6 +92,7 @@ void main() {
       '# MacroFactor foods to titles, ${DateTime.now()}\n\n'
       'Weighted: by how often the food is in the log.\n\n$summary\n$rows',
     );
+    models.addUsage(runDir);
     // ignore: avoid_print
     print('report: ${runDir.path}/report.md');
   });

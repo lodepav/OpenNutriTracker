@@ -84,6 +84,7 @@ void main() {
     File(
       '${runDir.path}/report.md',
     ).writeAsStringSync('# Dish checks, ${DateTime.now()}\n\n$summary$out');
+    models.addUsage(runDir);
     // ignore: avoid_print
     print('report: ${runDir.path}/report.md');
   });

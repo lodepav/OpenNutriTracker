@@ -150,6 +150,7 @@ void main() {
       '|---|---|---|---|---|---|\n$cases'
       '\n## Rows, Latvian locale\n\n$rows',
     );
+    models.addUsage(runDir);
     // ignore: avoid_print
     print('report: ${runDir.path}/report.md');
   });

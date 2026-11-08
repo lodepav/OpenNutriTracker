@@ -190,6 +190,7 @@ void main() {
       '| Model | Photo | Note | Asks | Right | Rows (→ table row) |\n'
       '|---|---|---|---|---|---|\n$out',
     );
+    models.addUsage(runDir);
     // ignore: avoid_print
     print('report: ${runDir.path}/report.md');
   });
