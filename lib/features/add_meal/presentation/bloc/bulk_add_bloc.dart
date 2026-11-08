@@ -11,6 +11,9 @@ import 'package:opennutritracker/features/add_meal/util/portion_match.dart';
 import 'package:opennutritracker/features/add_meal/util/portion_unit.dart';
 import 'package:opennutritracker/features/meal_detail/presentation/bloc/meal_detail_bloc.dart';
 import 'package:opennutritracker/features/meal_detail/util/meal_quantity_converter.dart';
+// [fork] S198 count-piece: the portion a bare count means
+import 'package:opennutritracker/fork/bulk/count_piece.dart';
+// [/fork]
 // [fork] S3 dish-breakdown: the ingredient-row swap (D12)
 import 'package:opennutritracker/fork/dish/dish_breakdown_rows.dart';
 // [/fork]
@@ -20,6 +23,7 @@ import 'package:opennutritracker/fork/dish/recipe_count.dart';
 // [fork] S98 default-amount: a sauce starts at a ladle, a drink at a glass
 import 'package:opennutritracker/fork/food/drink_serving.dart';
 import 'package:opennutritracker/fork/food/sauce_serving.dart';
+import 'package:opennutritracker/fork/food/soup_serving.dart';
 // [/fork]
 
 part 'bulk_add_event.dart';
@@ -621,9 +625,13 @@ class BulkAddBloc extends Bloc<BulkAddEvent, BulkAddState> {
     // [fork] S98 default-amount: the 100 g in ounces. Upstream's 1 oz is
     // 28 g, so an AI-read dish with no stated amount came in as a bite. A
     // sauce at a ladle, 60 g or 2 oz. A drink at a glass, 250 ml or 8 oz.
+    // A soup at a bowl, 300 g or 10.5 oz.
     if (isSauce(meal?.name)) return usesImperialUnits ? '2' : '60';
     if (isDrink(meal?.name) || isDrink(parsed.query)) {
       return _amountText(usesImperialUnits ? drinkServingFlOz : drinkServingMl);
+    }
+    if (isSoup(meal?.name)) {
+      return _amountText(usesImperialUnits ? soupServingOz : soupServingGrams);
     }
     return usesImperialUnits ? '3.5' : '100';
     // [/fork]
@@ -660,6 +668,11 @@ class BulkAddBloc extends Bloc<BulkAddEvent, BulkAddState> {
           matchPortionToKey(parsed.portion, meal.portions) ??
           matchPortionToQuery(parsed.query, meal.portions);
       if (named != null) return portionUnit(named);
+      // [fork] S198 count-piece: a count of eggs is eggs, not cups chopped
+      if (pieceForCount(meal, parsed.query) case final piece?) {
+        return portionUnit(piece);
+      }
+      // [/fork]
     }
 
     // A bare count means "N of them", and when the record's serving can be

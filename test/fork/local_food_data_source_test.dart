@@ -450,6 +450,10 @@ void main() {
           ('Liver patties', ['liver patties', 'aknu pankūkas']),
           ('Kimchi pancake', ['kimchi pancake', 'kimchijeon']),
           ('Fish cutlets', ['fish cutlets', 'zivju kotletes']),
+          (
+            'Chicken cutlets',
+            ['chicken cutlet', 'chicken cutlets', 'cāļa kotletes'],
+          ),
           ('Caesar wrap', ['chicken caesar wrap', 'caesar wrap']),
           ('Rassolnik', ['rassolnik', 'rasolnik']),
           ('Olivier salad', ['olivier salad', 'olivier', 'rasols']),
