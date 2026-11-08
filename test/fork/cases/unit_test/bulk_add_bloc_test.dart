@@ -261,6 +261,38 @@ void main() {
     });
   });
 
+  test('a food named with its shape is found by the food', () async {
+    // A photo's "1 lemon slice" found no row; "Lemon, raw" has the slice.
+    final bloc = blocWith({
+      'lemon': [
+        meal(
+          'Lemon, raw',
+          servingQuantity: 65,
+          servingUnit: 'g',
+          servingSize: '1 fruit',
+          portions: [
+            MealPortionEntity(
+              label: '1 fruit',
+              gramWeight: 65,
+              localized: false,
+            ),
+            MealPortionEntity(
+              label: '1 slice or wedge',
+              gramWeight: 8,
+              localized: false,
+            ),
+          ],
+        ),
+      ],
+    });
+
+    final row = (await parse(bloc, '1 lemon slice')).rows.single;
+
+    expect(row.meal?.name, 'Lemon, raw');
+    expect(row.resolved.parsed.query, 'lemon slice');
+    expect(row.unit, 'serving#1');
+  });
+
   test(
     'a soup with no amount and no serving starts at a bowl, croutons at a handful',
     () async {
