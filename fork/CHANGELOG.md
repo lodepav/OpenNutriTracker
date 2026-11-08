@@ -2,6 +2,22 @@
 
 Written by fork/tools/release_notes.dart at each release (D16).
 
+## 0.9.0 · 2026-11-08
+
+Based on OpenNutriTracker 2.6.0.
+
+### New
+
+- the amount picker and own portions, Log with AI's review read as the Diary, fat follows the goal, a visual weekly report, photo foods as eaten, 5 automatic backups
+
+### Fixes and changes
+
+- the credits plan gives its results, measured costs and decisions
+- a photo's soup keeps its sausage, olives and pickles, croutons and herbs start at a pinch, a lemon or bread slice finds the food
+- a photo's eggs log as eggs, a soup as one bowl with what is in it, chicken cutlets by the cutlet
+- the credits plan for live AI evals, and runs that report their cost, a tune/held photo split and a merge of repeated runs
+- the plus logs your own portion at its weight, a remembered portion survives hydration, cooked fish ranks above raw
+
 ## 0.8.0 · 2026-11-02
 
 Based on OpenNutriTracker 2.6.0.
