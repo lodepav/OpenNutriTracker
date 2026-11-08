@@ -34,6 +34,7 @@ import 'package:opennutritracker/generated/l10n.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../helpers/fake_favourites.dart';
+import 'package:opennutritracker/fork/amounts/own_portions.dart';
 import 'package:opennutritracker/fork/amounts/remembered_amounts.dart';
 
 class _MemoryAmounts extends RememberedAmounts {
@@ -49,6 +50,16 @@ class _MemoryAmounts extends RememberedAmounts {
   @override
   Future<void> remember(MealEntity meal, String unit, String quantity) async =>
       amounts[meal.code!] = (unit: unit, quantity: quantity);
+}
+
+class _MemoryPortions extends OwnPortions {
+  final Map<String, List<OwnPortionEntity>> kept;
+
+  _MemoryPortions(this.kept);
+
+  @override
+  Future<List<OwnPortionEntity>> of(MealEntity meal) async =>
+      List.of(kept[meal.code] ?? const []);
 }
 
 // #1126: when the user has opted into raw units in Settings, the meal-detail
@@ -118,11 +129,15 @@ void main() {
   MealDetailBloc? bloc;
   late bool defaultToRawFoodUnits;
   MealEntity? hydratedFor;
+  // How long hydration takes; the network usually answers after the page
+  // has read its remembered amount.
+  var hydrateAfter = Duration.zero;
 
   setUp(() {
     bloc = null;
     defaultToRawFoodUnits = false;
     hydratedFor = null;
+    hydrateAfter = Duration.zero;
     getIt.registerLazySingleton<MealDetailBloc>(
       () => bloc = MealDetailBloc(
         _FakeAddIntakeUsecase(),
@@ -130,7 +145,7 @@ void main() {
         _FakeGetKcalGoalUsecase(),
         _FakeGetMacroGoalUsecase(),
         _FakeGetTrackedDayUsecase(),
-        _FakeProductsRepository(() => hydratedFor),
+        _FakeProductsRepository(() => hydratedFor, () => hydrateAfter),
         _FakeRemoteSearchCacheDataSource(),
       ),
     );
@@ -285,6 +300,26 @@ void main() {
       expect(bloc!.state.totalQuantityConverted, '500.0');
     });
 
+    testWidgets('an own portion is found by name again once hydration adds '
+        'the serving before it', (tester) async {
+      final before = OwnPortions.current;
+      OwnPortions.current = _MemoryPortions({
+        'thin-off-liquid': const [
+          OwnPortionEntity(label: 'glass', gramWeight: 200),
+        ],
+      });
+      addTearDown(() => OwnPortions.current = before);
+      amounts.amounts['thin-off-liquid'] = (unit: 'own:glass', quantity: '2');
+      hydratedFor = _liquidHydratedOff();
+      hydrateAfter = const Duration(milliseconds: 200);
+      await pumpMealDetail(tester, _liquidThinOff());
+      expect(bloc!.state.totalQuantityConverted, '400.0');
+
+      await tester.pumpAndSettle(const Duration(milliseconds: 300));
+      // [serving 250 ml, glass]: still 2 glasses, not 2 servings
+      expect(bloc!.state.totalQuantityConverted, '400.0');
+    });
+
     testWidgets('a food never logged opens at the default', (tester) async {
       await pumpMealDetail(tester, _solidWithServing());
 
@@ -378,14 +413,16 @@ class _FakeGetTrackedDayUsecase implements GetTrackedDayUsecase {
 
 class _FakeProductsRepository implements ProductsRepository {
   final MealEntity? Function() hydratedProvider;
+  final Duration Function() delay;
 
-  _FakeProductsRepository(this.hydratedProvider);
+  _FakeProductsRepository(this.hydratedProvider, this.delay);
 
   @override
   Future<MealEntity> getOFFProductByBarcode(
     String barcode, {
     String? knownName,
   }) async {
+    await Future<void>.delayed(delay());
     final hydrated = hydratedProvider();
     if (hydrated == null) {
       throw StateError('No hydrated product configured for barcode $barcode');
