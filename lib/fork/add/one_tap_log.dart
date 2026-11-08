@@ -50,7 +50,9 @@ OneTapAmount oneTapAmount(
     final serving = remembered.unit == UnitDropdownItem.serving.toString();
     if (quantity != null &&
         quantity > 0 &&
-        (!serving || meal.scalableServingQuantity != null)) {
+        (!serving ||
+            meal.scalableServingQuantity != null ||
+            meal.portions.isNotEmpty)) {
       return of(remembered.unit, quantity);
     }
   }

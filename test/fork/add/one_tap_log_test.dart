@@ -193,6 +193,11 @@ void main() {
     // removed since: the serving, as for a food never logged
     OwnPortions.current = _Own(const []);
     expect((await rowAmount(oats)).amount, 40);
+    // a food with neither a serving nor portions, which own portions are for
+    OwnPortions.current = _Own(const [
+      OwnPortionEntity(label: 'scoop', gramWeight: 35),
+    ]);
+    expect((await rowAmount(_food())).amount, 70);
   });
 
   group('the amount the plus logs', () {
