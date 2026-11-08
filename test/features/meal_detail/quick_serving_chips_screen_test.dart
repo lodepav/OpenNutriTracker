@@ -31,6 +31,9 @@ import 'package:provider/provider.dart';
 
 import '../../helpers/fake_favourites.dart';
 import '../../helpers/test_l10n.dart';
+// [fork] S195 amount-picker: these test upstream's Unit menu and chips
+import 'package:opennutritracker/fork/amounts/amount_picker.dart';
+// [/fork]
 
 // Screen-level counterpart to `quick_serving_chips_widget_test.dart`.
 // Drives the real [MealDetailScreen] with a scalable-serving solid product
@@ -63,6 +66,7 @@ MealEntity _solidThirtyGramServing() => MealEntity(
     );
 
 void main() {
+  setUpAll(() { forkAmountPicker = false; addTearDown(() => forkAmountPicker = true); }); // [fork] S195 amount-picker
   final getIt = GetIt.instance;
   MealDetailBloc? bloc;
   late FakeFavourites favourites;

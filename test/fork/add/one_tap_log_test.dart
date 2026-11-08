@@ -215,6 +215,48 @@ void main() {
     });
   });
 
+  group('what the plus says it adds (D39)', () {
+    MealEntity roll({String? size = '1 roll (60 g)', bool thin = false}) =>
+        MealEntity(
+          code: 'roll',
+          name: 'Roll',
+          url: null,
+          mealQuantity: null,
+          mealUnit: 'g',
+          servingQuantity: 60,
+          servingUnit: 'g',
+          servingSize: size,
+          nutriments: _food().nutriments,
+          source: thin ? MealSourceEntity.off : MealSourceEntity.custom,
+          detailed: !thin,
+        );
+
+    test('one serving by its name', () {
+      expect(oneTapLabel(roll(), (unit: 'serving', amount: 60)), '1 roll');
+    });
+
+    test('else the amount as the Diary shows it', () {
+      expect(oneTapLabel(roll(), (unit: 'serving', amount: 90)), '90 g');
+      expect(
+        oneTapLabel(roll(size: '60 g'), (unit: 'serving', amount: 60)),
+        '60 g',
+      );
+      expect(oneTapLabel(_food(), (unit: 'g', amount: 100)), '100 g');
+      expect(
+        oneTapLabel(
+          _food(),
+          oneTapAmount(_food(), imperial: true),
+          imperial: true,
+        ),
+        '1 oz',
+      );
+    });
+
+    test('nothing for a search hit whose serving is not fetched yet', () {
+      expect(oneTapLabel(roll(thin: true), (unit: 'g', amount: 100)), isNull);
+    });
+  });
+
   group('the record the plus logs', () {
     late _Cache cache;
     late _Products products;
@@ -530,6 +572,50 @@ void main() {
         ),
       ),
     );
+
+    testWidgets('the plus names what it adds (D39)', (tester) async {
+      GetIt.instance.registerSingleton<GetConfigUsecase>(_Config());
+      final kept = RememberedAmounts.current;
+      RememberedAmounts.current = RememberedAmounts(
+        () async => throw StateError('no box'),
+        () async => [],
+      );
+      addTearDown(() => RememberedAmounts.current = kept);
+      final roll = MealEntity(
+        code: 'roll',
+        name: 'Roll',
+        url: null,
+        mealQuantity: null,
+        mealUnit: 'g',
+        servingQuantity: 60,
+        servingUnit: 'g',
+        servingSize: '1 roll (60 g)',
+        nutriments: _food().nutriments,
+        source: MealSourceEntity.custom,
+      );
+      Widget row(IntakeEntity? last) => MaterialApp(
+        localizationsDelegates: const [S.delegate],
+        home: Scaffold(
+          body: MealItemCard(
+            day: DateTime(2026, 10, 30),
+            mealEntity: roll,
+            addMealType: AddMealType.lunchType,
+            usesImperialUnits: false,
+            forkLastLogged: last,
+          ),
+        ),
+      );
+      await tester.pumpWidget(row(null));
+      await tester.pumpAndSettle();
+      expect(find.text('1 roll'), findsOneWidget);
+      expect(find.byTooltip('Add Roll, 1 roll'), findsOneWidget);
+
+      // a recent's row says its amount already
+      await tester.pumpWidget(row(intakeOf('roll', 45)));
+      await tester.pumpAndSettle();
+      expect(find.text('1 roll'), findsNothing);
+      expect(find.text('45 g'), findsOneWidget);
+    });
 
     testWidgets('the plus logs at once and stays', (tester) async {
       await pump(tester);

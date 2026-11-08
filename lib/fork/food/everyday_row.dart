@@ -16,6 +16,12 @@ bool isEverydayRow(String? name, String query) =>
 
 const _everyday = {
   'egg': 'Egg, whole, raw, fresh',
+  // a frozen mixture at 1 oz, 37 kcal for a plate's eggs
+  'scrambled eggs': _scrambledEgg,
+  'scrambled egg': _scrambledEgg,
+  // "Tea, ginger" is the shortest tea
+  'tea': _blackTea,
+  'black tea': _blackTea,
   'eggs': 'Eggs, Grade A, Large, egg whole',
   'pizza': _cheesePizza,
   'cheese pizza': _cheesePizza,
@@ -39,6 +45,10 @@ const _everyday = {
   'porridge': _oatmeal,
   'oatmeal': _oatmeal,
   'oat porridge': _oatmeal,
+  'oatmeal porridge': _oatmeal,
+  // a Nordic and Baltic breakfast: rice cooked in milk, often with jam
+  'rice porridge': 'Rice pudding sweetened, with milk 3.5 % fat',
+  'milk rice porridge': 'Rice pudding sweetened, with milk 3.5 % fat',
   // Latvian maizes zupa: rye bread soup with raisins and apple, served with
   // cream.
   'bread soup': 'Bread soup (brown bread), with raisins, apple and sour cream',
@@ -55,6 +65,15 @@ const _everyday = {
   'greek yogurt': _greekYogurt,
   'greek yoghurt': _greekYogurt,
   'granola': 'Cereal, granola',
+  // "gravy, brown" logged the dry granules, then a brown rice with gravy,
+  // which holds both words.
+  'gravy, brown': _gravy,
+  // "meatball" logged a dish in sauce; see _meatballs.
+  'meatball': _meatballs,
+  'fried meatballs': _meatballs,
+  'meatballs, fried': _meatballs,
+  'brown gravy': _gravy,
+  'gravy, meat': _gravy,
   // fried rice, by the shorter name
   'rice': _longGrainRice,
   'rice, cooked': _longGrainRice,
@@ -101,6 +120,26 @@ const _everyday = {
   // a frozen bag, unprepared
   'potatoes, fried': _fries,
   'potato, fried': _fries,
+  // A photo's pan-fried potatoes, as a person names them, logged french
+  // fries (the table's names above stay fries).
+  'fried potato': _homeFries,
+  'fried potatoes': _homeFries,
+  'pan-fried potatoes': _homeFries,
+  'pan fried potatoes': _homeFries,
+  'potatoes, pan-fried': _homeFries,
+  'sauteed potatoes': _homeFries,
+  'sautéed potatoes': _homeFries,
+  'potatoes, sauteed': _homeFries,
+  'home fries': _homeFries,
+  // A photo's bacon logged a pan-fried row by its 3 oz serving; this one
+  // counts in slices (`servingOverrides`).
+  'fried bacon': _bacon,
+  'bacon, fried': _bacon,
+  'crispy bacon': _bacon,
+  'bacon, crispy': _bacon,
+  'bacon rashers': _bacon,
+  'bacon strips': _bacon,
+  'bacon slices': _bacon,
   // the only onion gravy is a dry mix, at six times the energy
   'gravy, onion': _gravy,
   'onion gravy': _gravy,
@@ -219,11 +258,15 @@ const _everyday = {
 const _cheesePizza =
     'Pizza, cheese, from restaurant or fast food, NS as to type of crust';
 const _fries = 'Potato, french fries, NFS';
+const _homeFries = 'Potato, home fries, from fresh';
+const _bacon = 'Bacon, NS as to type of meat, cooked';
 const _tomatoPaste =
     'Tomato products, canned, paste, without salt added (Includes foods for '
     "USDA's Food Distribution Program)";
 const _boiledPotato =
     'Potatoes, boiled, cooked without skin, flesh, without salt';
+const _scrambledEgg = 'Egg, whole, cooked, scrambled';
+const _blackTea = 'Tea, hot, leaf, black';
 const _oatmeal = 'Oatmeal, regular or quick, made with water, no added fat';
 const _unsaltedButter = 'Butter, without salt';
 const _cola = 'Soft drink, cola';
@@ -240,7 +283,9 @@ const _wholeWheatPasta =
     'Program)';
 const _friedRice = 'Rice, fried, NFS';
 const _roastPotato = 'Potato, roasted, NFS';
-const _gravy = 'Gravy, beef, canned, ready-to-serve';
+// Not "Gravy, beef, canned" (the same energy): its serving is the 233 g
+// can, which a plate's gravy logged with no amount stated.
+const _gravy = 'Gravy, NFS';
 const _vinaigrette = 'Salad dressing, home recipe, vinegar and oil';
 const _bechamel = 'Bechamel sauce';
 const _cookedLentils = 'Lentils, mature seeds, cooked, boiled, with salt';
@@ -251,7 +296,10 @@ const _friedChicken =
 const _steamedDumpling = 'Wonton, dumpling or pot sticker, steamed';
 const _friedDumpling = 'Wonton, dumpling or pot sticker, fried';
 const _tzatziki = 'Tzatziki dip';
-const _meatballs = 'Meatballs, frozen, Italian style';
+// Not "Meatballs, frozen, Italian style" (286 kcal, by now 269): its
+// serving is 3 oz, so a photo's 8 meatballs read as 8 × 85 g. This row
+// takes a 30 g piece (`addedPieces`).
+const _meatballs = 'Meatballs, fried';
 const _cookedEggplant = 'Eggplant, cooked, fat added';
 const _greekYogurt = 'Yogurt, Greek, NS as to type of milk, plain';
 const _stewBeef = 'Beef, stew meat';

@@ -86,13 +86,43 @@ void main() {
     await pump([_day(10, 17, 1800), _day(10, 19, 1900), _day(10, 22, 2300)]);
     expect(find.byKey(const ValueKey('week-2026-10-19')), findsOneWidget);
     expect(find.text('Oct 19 – Oct 25'), findsOneWidget);
-    expect(find.text('2/5 days'), findsOneWidget);
-    expect(find.text('2100 kcal of 2000 kcal (+100 kcal)'), findsOneWidget);
-    expect(
-      find.text('C 180/200 g · F 60/70 g · P 150/140 g'),
-      findsNWidgets(2),
-    );
+    expect(find.text('This week'), findsOneWidget);
+    expect(find.text('2 of 5 days logged'), findsOneWidget);
+    expect(find.text('2100 / 2000 kcal'), findsOneWidget);
+    expect(find.text('+100 kcal · On target'), findsOneWidget);
+    // Carbs, fat, protein, each against its goal, in both weeks.
+    expect(find.text('Carbs'), findsNWidgets(2));
+    expect(find.text('180 / 200 g'), findsNWidgets(2));
+    expect(find.text('60 / 70 g'), findsNWidgets(2));
+    expect(find.text('150 / 140 g'), findsNWidgets(2));
     // The range starts on Saturday the 17th.
-    expect(find.text('1/2 days'), findsOneWidget);
+    expect(find.text('1 of 2 days logged'), findsOneWidget);
+    expect(find.text('-200 kcal · On target'), findsOneWidget);
+    // One card read aloud per week.
+    expect(
+      tester.getSemantics(find.byKey(const ValueKey('week-2026-10-19'))).label,
+      startsWith('Oct 19 – Oct 25, this week, 2 of 5 days logged, '),
+    );
+  });
+
+  test('each day of the week is marked logged, missed or outside the '
+      'range', () {
+    final weeks = weeklyReports(
+      [_day(10, 17, 1800), _day(10, 19, 1900), _day(10, 22, 2300)],
+      DateTime(2026, 10, 17),
+      _today,
+    );
+    const l = WeekDayMark.logged,
+        m = WeekDayMark.missed,
+        o = WeekDayMark.outside;
+    expect(weeks[0].marks, [l, m, m, l, m, o, o]);
+    expect(weeks[1].marks, [o, o, o, o, o, l, m]);
+  });
+
+  test('energy within 10% of the goal is on target', () {
+    expect(energyStanding((eaten: 2200, goal: 2000)), EnergyStanding.onTarget);
+    expect(energyStanding((eaten: 1800, goal: 2000)), EnergyStanding.onTarget);
+    expect(energyStanding((eaten: 2201, goal: 2000)), EnergyStanding.over);
+    expect(energyStanding((eaten: 1799, goal: 2000)), EnergyStanding.under);
   });
 }

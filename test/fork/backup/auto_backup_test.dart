@@ -61,28 +61,25 @@ void main() {
     expect(folder.files.length, 1);
   });
 
-  test(
-    'keeps the newest 14 of the profile and leaves the rest alone',
-    () async {
-      folder.files['openbite-p2-2026-01-01.zip'] = Uint8List(0);
-      folder.files['notes.txt'] = Uint8List(0);
-      final b = backup();
-      await b.chooseFolder();
-      for (var i = 1; i <= 20; i++) {
-        now = now.add(const Duration(days: 1));
-        await b.runNow();
-      }
-      final ours =
-          folder.files.keys
-              .where((n) => RegExp(r'^openbite-\d').hasMatch(n))
-              .toList()
-            ..sort();
-      expect(ours.length, AutoBackup.keep);
-      expect(ours.last, 'openbite-2026-11-12.zip');
-      expect(folder.files, contains('openbite-p2-2026-01-01.zip'));
-      expect(folder.files, contains('notes.txt'));
-    },
-  );
+  test('keeps the newest 5 of the profile and leaves the rest alone', () async {
+    folder.files['openbite-p2-2026-01-01.zip'] = Uint8List(0);
+    folder.files['notes.txt'] = Uint8List(0);
+    final b = backup();
+    await b.chooseFolder();
+    for (var i = 1; i <= 20; i++) {
+      now = now.add(const Duration(days: 1));
+      await b.runNow();
+    }
+    final ours =
+        folder.files.keys
+            .where((n) => RegExp(r'^openbite-\d').hasMatch(n))
+            .toList()
+          ..sort();
+    expect(ours.length, AutoBackup.keep);
+    expect(ours.last, 'openbite-2026-11-12.zip');
+    expect(folder.files, contains('openbite-p2-2026-01-01.zip'));
+    expect(folder.files, contains('notes.txt'));
+  });
 
   test('a clock set back never prunes the file just written', () async {
     final b = backup();

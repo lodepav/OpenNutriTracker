@@ -107,8 +107,9 @@ class _MacroProgramFormState extends State<MacroProgramForm> {
           contentPadding: EdgeInsets.zero,
           title: Text('Protein and fat per $per'),
           subtitle: const Text(
-            'In place of the percentages. Protein holds steady; carbs '
-            'and fat take a weekday\'s shift.',
+            'In place of the percentages. Protein holds steady. Fat is '
+            'set for maintenance and moves with a cut or a bulk; carbs '
+            'take the rest and a weekday\'s shift.',
           ),
           value: _on,
           onChanged: (v) => setState(() => _on = v),
@@ -241,8 +242,10 @@ class _MacroProgramFormState extends State<MacroProgramForm> {
           Text(
             style == MacroStyle.perKg
                 ? '${shown(_program.fatGPerKg)} g per $per of '
-                      'body weight, the rest carbs. Under about 20% of '
-                      'your energy from fat is not advised.'
+                      'body weight at maintenance, the rest carbs. A cut '
+                      'takes from fat and carbs alike, and a bulk adds to '
+                      'both; fat stays at 20% of your energy or more, '
+                      'under which it is not advised.'
                 : style.explanation,
             style: theme.textTheme.bodySmall,
           ),

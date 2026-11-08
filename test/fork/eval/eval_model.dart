@@ -2,8 +2,13 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
+import 'package:package_info_plus/package_info_plus.dart';
+import 'package:opennutritracker/core/data/data_source/remote_search_cache_data_source.dart';
+import 'package:opennutritracker/core/data/dbo/meal_dbo.dart';
 import 'package:opennutritracker/core/utils/ai_model_catalogue.dart';
+import 'package:opennutritracker/features/meal_detail/util/hydrate_off_meal.dart';
 import 'package:opennutritracker/features/add_meal/data/anthropic_meal_items_api.dart';
 import 'package:opennutritracker/features/add_meal/data/openai_compatible_meal_items_api.dart';
 import 'package:opennutritracker/features/add_meal/data/data_sources/off_data_source.dart';
@@ -62,6 +67,12 @@ class EvalModels {
       'anthropic/claude-sonnet-5.5@anthropic';
 
   final String key = Platform.environment['FORK_EVAL_OPENROUTER_KEY'] ?? '';
+
+  /// An Anthropic API key for `direct:<model>` specs, which call Anthropic
+  /// with the app's own client (AnthropicMealItemsApi), as the app's
+  /// Anthropic provider does: `direct:claude-haiku-5-5`.
+  final String anthropicKey =
+      Platform.environment['FORK_EVAL_ANTHROPIC_KEY'] ?? '';
   final List<String> replays = (Platform.environment['FORK_EVAL_REPLAY'] ?? '')
       .split(',')
       .map((s) => s.trim())
@@ -88,9 +99,9 @@ class EvalModels {
   bool runs(String spec, String read) => _only?[spec]?.contains(read) ?? true;
 
   /// Why the tests are skipped, or false when they run.
-  Object get skip => key.isEmpty && replays.isEmpty
-      ? 'set FORK_EVAL_OPENROUTER_KEY (or FORK_EVAL_REPLAY) to run the '
-            'model comparison'
+  Object get skip => key.isEmpty && anthropicKey.isEmpty && replays.isEmpty
+      ? 'set FORK_EVAL_OPENROUTER_KEY, FORK_EVAL_ANTHROPIC_KEY (or '
+            'FORK_EVAL_REPLAY) to run the model comparison'
       : false;
 
   List<String> get specs => replays.isNotEmpty
@@ -101,6 +112,9 @@ class EvalModels {
           'screen' => _screenModels,
           'mid' => _midModels,
           final models? => models,
+          // an Anthropic key alone runs the app's Anthropic default
+          null when key.isEmpty && anthropicKey.isNotEmpty =>
+            'direct:${AiModelCatalogue.anthropic.first.id}',
           null => _defaultModels,
         }.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toList();
 
@@ -124,6 +138,22 @@ class EvalModels {
       return AnthropicMealItemsApi(
         ReplayAiClient(client, () async => Directory(dir)),
         () => 'replay',
+      );
+    }
+    if (spec.startsWith('direct:')) {
+      final model = spec.substring('direct:'.length);
+      // The app's tool call for a model it lists; unforced for one it does
+      // not, as Sonnet 5.5 refuses a forced one.
+      final listed = AiModelCatalogue.anthropic.where((m) => m.id == model);
+      return AnthropicMealItemsApi(
+        BackoffClient(
+          client,
+          onLimited: () => limited[spec] = (limited[spec] ?? 0) + 1,
+        ),
+        () => anthropicKey,
+        model: model,
+        timeout: BackoffClient.budget,
+        toolCall: listed.isEmpty ? AiToolCall.auto : listed.first.toolCall,
       );
     }
     final [route, ...flags] = spec.split('#');
@@ -242,17 +272,30 @@ Future<MealEntity?> tableMatch(LocalFoodDataSource foods, String query) async {
 }
 
 /// Upstream's search over the bundled table alone, as phase 1b's staple
-/// check runs it (staple_foods_test.dart).
+/// check runs it (staple_foods_test.dart). With `FORK_EVAL_ONLINE=1` it
+/// also searches Open Food Facts as the app does, and fetches a counted
+/// hit's full record, so a branded product can win a row as it does on a
+/// phone. No search cache: each run asks Open Food Facts afresh.
 class TableOnlySearch implements SearchProductsUseCase {
   final ProductsRepository repository;
+  final bool online;
 
-  TableOnlySearch(this.repository);
+  TableOnlySearch(this.repository, {bool? online})
+    : online = online ?? evalSearchesOnline {
+    if (this.online) _allowOffSearch();
+  }
 
   @override
   Future<SearchProductsResult> searchOFFProductsByString(
     String searchString, {
     bool skipRemote = false,
-  }) async => SearchProductsResult(meals: const [], remoteSourceEmpty: true);
+  }) async {
+    if (!online || skipRemote) {
+      return SearchProductsResult(meals: const [], remoteSourceEmpty: true);
+    }
+    final meals = await repository.getOFFProductsByString(searchString);
+    return SearchProductsResult(meals: meals, remoteSourceEmpty: meals.isEmpty);
+  }
 
   @override
   Future<SearchProductsResult> searchFDCFoodByString(
@@ -266,6 +309,39 @@ class TableOnlySearch implements SearchProductsUseCase {
     ),
     remoteSourceEmpty: false,
   );
+
+  @override
+  Future<MealEntity?> fetchFullOffRecord(MealEntity meal) =>
+      fetchDetailedOffMeal(meal, _NoSearchCache(), repository);
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+/// What Open Food Facts' client needs in a test: a binding for the
+/// locale, the app's version for its User-Agent, and the real network,
+/// which the test binding stubs out.
+void _allowOffSearch() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+  HttpOverrides.global = null;
+  PackageInfo.setMockInitialValues(
+    appName: 'OpenBite',
+    packageName: 'eval',
+    version: 'eval',
+    buildNumber: '0',
+    buildSignature: '',
+  );
+}
+
+/// `FORK_EVAL_ONLINE=1`: the evals search Open Food Facts too.
+final evalSearchesOnline = Platform.environment['FORK_EVAL_ONLINE'] == '1';
+
+class _NoSearchCache implements RemoteSearchCacheDataSource {
+  @override
+  MealDBO? getDetailedByBarcode(String barcode) => null;
+
+  @override
+  Future<void> cache(MealDBO meal) async {}
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);

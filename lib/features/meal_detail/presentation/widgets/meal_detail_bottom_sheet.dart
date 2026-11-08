@@ -29,6 +29,10 @@ import 'package:opennutritracker/fork/units/energy_text.dart';
 // [fork] S45 remembered-amounts
 import 'package:opennutritracker/fork/amounts/remembered_amounts.dart';
 // [/fork]
+// [fork] S195 amount-picker
+import 'package:opennutritracker/fork/amounts/amount_picker.dart';
+import 'package:opennutritracker/fork/amounts/own_portions.dart';
+// [/fork]
 // [fork] S110 meal-named
 import 'package:opennutritracker/fork/copy/copy_ui.dart' show mealLabel;
 // [/fork]
@@ -62,6 +66,13 @@ class MealDetailBottomSheet extends StatefulWidget {
   /// The button then adds to the list instead of logging.
   final LogTray? logTray;
 
+  // [fork] S195 amount-picker: saves or removes the user's own portion
+  // and returns the food with its portions as they now are
+  final Future<MealEntity?> Function(String label, double grams)?
+  forkOnAddPortion;
+  final Future<MealEntity?> Function(String label)? forkOnRemovePortion;
+  // [/fork]
+
   const MealDetailBottomSheet({
     super.key,
     required this.product,
@@ -73,6 +84,10 @@ class MealDetailBottomSheet extends StatefulWidget {
     required this.selectedUnit,
     this.usesImperialUnits = false,
     this.logTray,
+    // [fork] S195 amount-picker
+    this.forkOnAddPortion,
+    this.forkOnRemovePortion,
+    // [/fork]
   });
 
   @override
@@ -144,6 +159,16 @@ class _MealDetailBottomSheetState extends State<MealDetailBottomSheet> {
     widget.onQuantityOrUnitChanged(quantityText, option.unit);
   }
 
+  // [fork] S195 amount-picker: the amount and its unit in one change, the
+  // listener off for the write as in _onQuickServingSelected
+  void _forkSet(String text, String unit) {
+    widget.quantityTextController.removeListener(_onQuantityChanged);
+    widget.quantityTextController.text = text;
+    widget.quantityTextController.addListener(_onQuantityChanged);
+    widget.onQuantityOrUnitChanged(text, unit);
+  }
+  // [/fork]
+
   String _formatQuantity(double value) {
     if (value == value.roundToDouble()) {
       return value.toInt().toString();
@@ -190,6 +215,23 @@ class _MealDetailBottomSheetState extends State<MealDetailBottomSheet> {
                   padding: const EdgeInsets.fromLTRB(16.0, 32.0, 16.0, 8.0),
                   child: Column(
                     children: [
+                      // [fork] S195 amount-picker: chips and − + in place
+                      // of the Quantity field and the Unit menu
+                      if (forkAmountPicker)
+                        AmountPicker(
+                          meal: widget.product,
+                          unit: widget.selectedUnit,
+                          controller: widget.quantityTextController,
+                          focusNode: _quantityFocusNode,
+                          imperial: widget.usesImperialUnits,
+                          enabled: !productMissingRequiredInfo,
+                          onFieldTap: _selectAllQuantityText,
+                          onSet: _forkSet,
+                          onAddPortion: widget.forkOnAddPortion,
+                          onRemovePortion: widget.forkOnRemovePortion,
+                        )
+                      else
+                      // [/fork]
                       Row(
                         children: [
                           Expanded(
@@ -272,7 +314,9 @@ class _MealDetailBottomSheetState extends State<MealDetailBottomSheet> {
                           ),
                         ],
                       ),
-                      if (quickOptions.isNotEmpty)
+                      // [fork] S195 amount-picker: its chips hold these
+                      if (quickOptions.isNotEmpty && !forkAmountPicker)
+                      // [/fork]
                         Padding(
                           padding: const EdgeInsets.only(
                             top: Dimens.spacing12,
@@ -498,7 +542,11 @@ class _MealDetailBottomSheetState extends State<MealDetailBottomSheet> {
     // time; not awaited, as it never fails and the log should not wait
     RememberedAmounts.current.remember(
       widget.product,
-      widget.mealDetailBloc.state.selectedUnit,
+      // S195: an own portion by its name
+      rememberedUnitOf(
+        widget.product,
+        widget.mealDetailBloc.state.selectedUnit,
+      ),
       widget.quantityTextController.text.trim(),
     );
     // [/fork]

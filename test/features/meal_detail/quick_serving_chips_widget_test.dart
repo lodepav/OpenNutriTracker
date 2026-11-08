@@ -13,6 +13,9 @@ import 'package:opennutritracker/features/add_meal/domain/entity/meal_nutriments
 import 'package:opennutritracker/features/meal_detail/presentation/bloc/meal_detail_bloc.dart';
 import 'package:opennutritracker/features/meal_detail/presentation/widgets/meal_detail_bottom_sheet.dart';
 import 'package:opennutritracker/generated/l10n.dart';
+// [fork] S195 amount-picker: these test upstream's Unit menu and chips
+import 'package:opennutritracker/fork/amounts/amount_picker.dart';
+// [/fork]
 
 // Widget-side counterpart to `quick_serving_option_test.dart`. Drives the
 // real MealDetailBottomSheet with a scalable-serving solid product,
@@ -98,6 +101,7 @@ Future<void> _pumpSheet(
 }
 
 void main() {
+  setUpAll(() { forkAmountPicker = false; addTearDown(() => forkAmountPicker = true); }); // [fork] S195 amount-picker
   testWidgets('renders one chip per option with a stable ASCII identifier', (
     tester,
   ) async {

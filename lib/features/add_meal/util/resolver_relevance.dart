@@ -37,6 +37,9 @@ import 'package:opennutritracker/fork/food/unspecified_row.dart';
 // [fork] S178 own-food-by-name: the user's own food only by its name
 import 'package:opennutritracker/fork/food/own_food_by_name.dart';
 // [/fork]
+// [fork] S196 unnamed-brand
+import 'package:opennutritracker/fork/food/unnamed_brand.dart';
+// [/fork]
 // [fork] S186 cooked-on-plate: a food eaten cooked, not its dry product
 import 'package:opennutritracker/fork/food/cooked_on_plate.dart';
 // [/fork]
@@ -203,8 +206,13 @@ double rankScoreForResolution(
   MealEntity meal,
   String query, {
   bool counted = false,
+  // [fork] S196 unnamed-brand: on a photo, a packet the name did not ask for
+  bool fromPhoto = false,
 }) {
-  final score = scoreMealForResolution(meal, query);
+  final score =
+      scoreMealForResolution(meal, query) -
+      (fromPhoto ? unnamedBrandOf(meal, query) : 0);
+  // [/fork]
   return counted && cannotHonourCount(meal) ? score - noPortionsPenalty : score;
 }
 
@@ -225,6 +233,9 @@ List<MealEntity> rankForResolution(
   List<MealEntity> meals,
   String query, {
   bool counted = false,
+  // [fork] S196 unnamed-brand
+  bool fromPhoto = false,
+  // [/fork]
 }) {
   final own = <MealEntity>[];
   final rest = <MealEntity>[];
@@ -238,9 +249,11 @@ List<MealEntity> rankForResolution(
     (isOwn ? own : rest).add(meal);
   }
   return [
-    ..._sorted(own, query, counted),
+    // [fork] S196 unnamed-brand: fromPhoto
+    ..._sorted(own, query, counted, fromPhoto),
+    // [/fork]
     // [fork] S186 cooked-on-plate
-    ...dryRowsLast(_sorted(rest, query, counted), query),
+    ...dryRowsLast(_sorted(rest, query, counted, fromPhoto), query),
     // [/fork]
   ];
 }
@@ -337,7 +350,14 @@ List<MealEntity> rankForResolution(
 /// page did not return ties on it with everything, whatever the backend has
 /// for it — see [noPortionsPenalty]. (A record the page did return reaches
 /// here as the fresh entity, portions and all.)
-List<MealEntity> _sorted(List<MealEntity> meals, String query, bool counted) {
+// [fork] S196 unnamed-brand: fromPhoto
+List<MealEntity> _sorted(
+  List<MealEntity> meals,
+  String query,
+  bool counted,
+  bool fromPhoto,
+) {
+  // [/fork]
   // Parallel (meal, score) records rather than a map: MealEntity's Equatable
   // props are just [code, name], so two rows from different sources can
   // compare equal and would collide on a map key.
@@ -345,7 +365,14 @@ List<MealEntity> _sorted(List<MealEntity> meals, String query, bool counted) {
     for (final meal in meals)
       (
         meal: meal,
-        score: rankScoreForResolution(meal, query, counted: counted),
+        // [fork] S196 unnamed-brand: fromPhoto
+        score: rankScoreForResolution(
+          meal,
+          query,
+          counted: counted,
+          fromPhoto: fromPhoto,
+        ),
+        // [/fork]
       ),
   ];
   mergeSort(decorated, compare: (a, b) {

@@ -41,7 +41,10 @@ class _Resolver implements ResolveParsedMealsUseCase {
   };
 
   @override
-  Future<List<ResolvedMealItem>> resolve(List<ParsedMealItem> items) async => [
+  Future<List<ResolvedMealItem>> resolve(
+    List<ParsedMealItem> items, {
+    bool fromPhoto = false,
+  }) async => [
     for (final item in items)
       table.contains(item.query)
           ? ResolvedMealItem(

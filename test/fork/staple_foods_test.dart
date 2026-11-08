@@ -12,6 +12,7 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:opennutritracker/features/meal_detail/util/meal_quantity_converter.dart';
 import 'package:opennutritracker/features/add_meal/data/data_sources/off_data_source.dart';
 import 'package:opennutritracker/features/add_meal/data/repository/products_repository.dart';
 import 'package:opennutritracker/features/add_meal/util/meal_text_parser.dart';
@@ -154,7 +155,8 @@ void main() {
     ('spaghetti, cooked', 'Pasta, cooked'),
     ('rice, white, cooked, fried', 'Rice, fried, NFS'),
     ('potatoes, roasted', 'Potato, roasted, NFS'),
-    ('gravy, onion', 'Gravy, beef, canned, ready-to-serve'),
+    ('gravy, onion', 'Gravy, NFS'),
+    ('gravy, brown', 'Gravy, NFS'),
     ('salad dressing, vinaigrette', 'Salad dressing, home recipe, vinegar'),
     ('carrots, cooked', 'Carrots, NS as to form, cooked'),
     ('salmon, baked', 'Fish, salmon, baked or broiled'),
@@ -192,6 +194,73 @@ void main() {
       expect(item.confidence, greaterThanOrEqualTo(kResolutionConfidenceFloor));
     });
   }
+
+  // A photo's 8 meatballs: an Open Food Facts "meatball and sausage
+  // marinara" won over a row with no piece, or a 3 oz serving made 680 g.
+  for (final query in ['meatballs', 'meatball', 'fried meatballs']) {
+    test('$query, counted, are that many 30 g meatballs', () async {
+      final item = (await resolver.resolve([
+        ParsedMealItem(query: query, quantity: 8),
+      ])).single;
+      final meal = item.candidates[item.selectedIndex];
+      expect(meal.name, 'Meatballs, fried');
+      expect(meal.servingQuantity, 30);
+      expect(convertQuantityToBaseUnit(8, 'serving', meal), 240);
+    });
+  }
+  test(
+    'a kind of meatball takes a piece too; a small one is smaller',
+    () async {
+      for (final (query, name, grams) in [
+        ('pork meatballs', 'Pork meatballs, fried', 30.0),
+        ('small meatballs', 'Small meatballs', 12.0),
+      ]) {
+        final item = await resolve(query);
+        final meal = item.candidates[item.selectedIndex];
+        expect(meal.name, name);
+        expect(meal.servingQuantity, grams);
+      }
+    },
+  );
+
+  test(
+    "a photo's fried bacon counts in 8 g slices, not a 3 oz serving",
+    () async {
+      for (final query in ['fried bacon', 'bacon', 'crispy bacon']) {
+        final item = (await resolver.resolve([
+          ParsedMealItem(query: query, quantity: 4),
+        ])).single;
+        final meal = item.candidates[item.selectedIndex];
+        expect(
+          meal.name,
+          'Bacon, NS as to type of meat, cooked',
+          reason: query,
+        );
+        expect(convertQuantityToBaseUnit(4, 'serving', meal), 32);
+      }
+    },
+  );
+
+  test("a photo's fried potatoes are home fries; the table's name stays "
+      'fries', () async {
+    for (final query in [
+      'fried potato',
+      'fried potatoes',
+      'sauteed potatoes',
+    ]) {
+      final item = await resolve(query);
+      expect(
+        item.candidates[item.selectedIndex].name,
+        'Potato, home fries, from fresh',
+        reason: query,
+      );
+    }
+    final fries = await resolve('potatoes, fried');
+    expect(
+      fries.candidates[fries.selectedIndex].name,
+      startsWith('Potato, french fries'),
+    );
+  });
 
   // Phase 1c: the ingredient names the breakdown prompt asks for
   // (BreakDownDishUseCase.systemPrompt) land on the plain raw row.

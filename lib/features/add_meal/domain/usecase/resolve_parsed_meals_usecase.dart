@@ -91,10 +91,16 @@ class ResolveParsedMealsUseCase {
   /// each already degrades to local-only results on failure inside
   /// `SearchProductsUseCase`, so one source being down does not fail the
   /// batch — it just narrows the candidate list.
-  Future<List<ResolvedMealItem>> resolve(List<ParsedMealItem> items) async {
+  // [fork] S196 unnamed-brand: [fromPhoto] for a photo's foods, where a
+  // packet the name did not ask for trails the generic food
+  Future<List<ResolvedMealItem>> resolve(
+    List<ParsedMealItem> items, {
+    bool fromPhoto = false,
+  }) async {
     if (items.isEmpty) return const [];
-    return Future.wait(items.map(_resolveOne));
+    return Future.wait(items.map((item) => _resolveOne(item, fromPhoto)));
   }
+  // [/fork]
 
   /// A source that fails contributes nothing instead of failing the item.
   Future<List<MealEntity>> _search(
@@ -112,7 +118,12 @@ class ResolveParsedMealsUseCase {
     }
   }
 
-  Future<ResolvedMealItem> _resolveOne(ParsedMealItem item) async {
+  // [fork] S196 unnamed-brand: fromPhoto
+  Future<ResolvedMealItem> _resolveOne(
+    ParsedMealItem item,
+    bool fromPhoto,
+  ) async {
+    // [/fork]
     final query = item.query;
 
     // Both entry points run in parallel. `searchFDCFoodByString` queries
@@ -148,14 +159,22 @@ class ResolveParsedMealsUseCase {
     // this class auto-selects the top candidate, so its ordering alone is
     // not safe to log from. See resolver_relevance.dart.
     final counted = _isCounted(item);
-    var ranked = rankForResolution(merged, query, counted: counted);
+    // [fork] S196 unnamed-brand: fromPhoto
+    var ranked = rankForResolution(
+      merged,
+      query,
+      counted: counted,
+      fromPhoto: fromPhoto,
+    );
     if (counted) {
       ranked = rankForResolution(
         await _withFullOffRecords(ranked, query),
         query,
         counted: true,
+        fromPhoto: fromPhoto,
       );
     }
+    // [/fork]
 
     if (ranked.isEmpty) {
       return ResolvedMealItem(

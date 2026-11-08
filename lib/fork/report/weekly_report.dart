@@ -6,11 +6,38 @@ import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/core/utils/calc/day_boundary_calc.dart';
 import 'package:opennutritracker/fork/report/nutrient_explorer.dart';
+import 'package:opennutritracker/fork/trends/detail_stats.dart';
 import 'package:opennutritracker/fork/units/energy_text.dart';
 import 'package:opennutritracker/fork/display/display_prefs.dart';
 
 /// Eaten against the goal, each a mean over a week's logged days.
 typedef Versus = ({double eaten, double goal});
+
+/// How one day of a week stands in the report.
+enum WeekDayMark {
+  /// Food logged.
+  logged,
+
+  /// In the range, nothing logged.
+  missed,
+
+  /// Before the range or after today.
+  outside,
+}
+
+/// How a week's mean energy stands against its goal: within
+/// [onTargetShare] of it, or under, or over.
+enum EnergyStanding { under, onTarget, over }
+
+EnergyStanding energyStanding(Versus kcal) {
+  if (kcal.goal <= 0) return EnergyStanding.onTarget;
+  final share = (kcal.eaten - kcal.goal) / kcal.goal;
+  return share > onTargetShare
+      ? EnergyStanding.over
+      : share < -onTargetShare
+      ? EnergyStanding.under
+      : EnergyStanding.onTarget;
+}
 
 /// One Monday-to-Sunday week, as MacroFactor's weekly nutrition report.
 class WeekReport {
@@ -23,6 +50,9 @@ class WeekReport {
   /// The week's days within the range up to today: fewer than 7 for this
   /// week and for one the range cuts.
   final int daysShown;
+
+  /// Monday to Sunday, each day's mark.
+  final List<WeekDayMark> marks;
   final Versus kcal;
   final Versus? protein;
   final Versus? carbs;
@@ -33,6 +63,7 @@ class WeekReport {
     required this.daysLogged,
     required this.daysShown,
     required this.kcal,
+    this.marks = const [],
     this.protein,
     this.carbs,
     this.fat,
@@ -50,11 +81,11 @@ List<WeekReport> weeklyReports(
   int day(DateTime d) =>
       DateTime.utc(d.year, d.month, d.day).millisecondsSinceEpoch ~/
       Duration.millisecondsPerDay;
-  int shown(DateTime monday) {
-    final from = day(monday) < day(first) ? day(first) : day(monday);
-    final to = day(monday) + 6 > day(last) ? day(last) : day(monday) + 6;
-    return to - from + 1;
-  }
+  bool inRange(int d) => d >= day(first) && d <= day(last);
+  int shown(DateTime monday) => [
+    for (var i = 0; i < 7; i++)
+      if (inRange(day(monday) + i)) i,
+  ].length;
 
   final byWeek = <DateTime, List<TrackedDayEntity>>{};
   for (final d in days) {
@@ -82,11 +113,24 @@ List<WeekReport> weeklyReports(
     return (eaten: e / logged.length, goal: g / logged.length);
   }
 
+  List<WeekDayMark> marks(DateTime monday, List<TrackedDayEntity> logged) {
+    final weekdays = {for (final d in logged) d.day.weekday};
+    return [
+      for (var i = 0; i < 7; i++)
+        weekdays.contains(i + 1)
+            ? WeekDayMark.logged
+            : inRange(day(monday) + i)
+            ? WeekDayMark.missed
+            : WeekDayMark.outside,
+    ];
+  }
+
   WeekReport report(DateTime monday, List<TrackedDayEntity> logged) =>
       WeekReport(
         monday: monday,
         daysLogged: logged.length,
         daysShown: shown(monday),
+        marks: marks(monday, logged),
         kcal: mean(logged, (d) => d.caloriesTracked, (d) => d.calorieGoal)!,
         protein: mean(logged, (d) => d.proteinTracked, (d) => d.proteinGoal),
         carbs: mean(logged, (d) => d.carbsTracked, (d) => d.carbsGoal),
@@ -97,8 +141,9 @@ List<WeekReport> weeklyReports(
   return [for (final monday in mondays) report(monday, byWeek[monday]!)];
 }
 
-/// Seam S40: on Trends, each week of the range: days logged, and the
-/// mean energy and macros of those days against their goals.
+/// Seam S40: on Trends, each week of the range: which days were logged,
+/// the mean energy of those days against its goal with a bar and how far
+/// off, and each macro's mean against its goal with a bar in its colour.
 class WeeklyReportCard extends StatelessWidget {
   final List<TrackedDayEntity> days;
   final int rangeDays;
@@ -133,10 +178,20 @@ class WeeklyReportCard extends StatelessWidget {
     final weeks = weeklyReports(days, first, today);
     if (weeks.isEmpty) return const SizedBox.shrink();
     final theme = Theme.of(context);
+    final thisMonday = DateTime(
+      today.year,
+      today.month,
+      today.day - today.weekday + 1,
+    );
     return Padding(
       padding: const EdgeInsets.only(top: Dimens.spacing16),
       child: AppCard(
-        padding: const EdgeInsets.all(Dimens.spacing20),
+        padding: const EdgeInsets.fromLTRB(
+          Dimens.spacing16,
+          Dimens.spacing12,
+          Dimens.spacing16,
+          Dimens.spacing16,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -146,40 +201,70 @@ class WeeklyReportCard extends StatelessWidget {
                   child: Text(
                     'Weekly report',
                     style: theme.textTheme.titleMedium,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                TextButton(
-                  key: const ValueKey('nutrient-explorer'),
-                  onPressed: () => Navigator.push(
-                    context,
-                    MaterialPageRoute<void>(
-                      builder: (_) => NutrientExplorerScreen(
-                        days: days,
-                        first: first,
-                        last: today,
-                        load: load,
+                Semantics(
+                  identifier: 'weekly-report-nutrients',
+                  child: TextButton.icon(
+                    key: const ValueKey('nutrient-explorer'),
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute<void>(
+                        builder: (_) => NutrientExplorerScreen(
+                          days: days,
+                          first: first,
+                          last: today,
+                          load: load,
+                        ),
                       ),
                     ),
+                    icon: const Icon(Icons.science_outlined, size: 18),
+                    label: const Text('Nutrients'),
                   ),
-                  child: const Text('Nutrients'),
                 ),
               ],
             ),
             Text(
-              'Means of the logged days, against their goals',
+              'Daily averages of the days with food logged',
               style: theme.textTheme.bodySmall?.copyWith(
                 color: palette.textMuted,
               ),
             ),
-            for (final week in weeks) _week(context, week),
+            for (final (i, week) in weeks.indexed) ...[
+              if (i > 0)
+                Divider(height: Dimens.spacing24, color: palette.border)
+              else
+                const SizedBox(height: Dimens.spacing12),
+              _Week(
+                week: week,
+                palette: palette,
+                current: week.monday == thisMonday,
+              ),
+            ],
           ],
         ),
       ),
     );
   }
+}
 
-  Widget _week(BuildContext context, WeekReport week) {
+class _Week extends StatelessWidget {
+  final WeekReport week;
+  final AppPalette palette;
+  final bool current;
+
+  const _Week({
+    required this.week,
+    required this.palette,
+    required this.current,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final text = theme.textTheme;
     // The locale's short date, as the weight chart's axis writes it.
     final format = DateFormat.MMMd(
       Localizations.localeOf(context).toLanguageTag(),
@@ -189,17 +274,45 @@ class WeeklyReportCard extends StatelessWidget {
       week.monday.month,
       week.monday.day + 6,
     );
-    String grams(String name, Versus? v) =>
-        v == null ? '' : '$name ${v.eaten.round()}/${v.goal.round()} g';
-    final macros = inMacroOrder(
-      protein: grams('P', week.protein),
-      carbs: grams('C', week.carbs),
-      fat: grams('F', week.fat),
-    ).where((m) => m.isNotEmpty).join(' · ');
-    final off = week.kcal.eaten - week.kcal.goal;
-    return Padding(
+    final dates = '${format.format(week.monday)} – ${format.format(sunday)}';
+    final days =
+        '${week.daysLogged} of ${week.daysShown} '
+        '${week.daysShown == 1 ? 'day' : 'days'} logged';
+
+    final kcal = week.kcal;
+    final standing = energyStanding(kcal);
+    final error = theme.colorScheme.error;
+    final (standingColor, standingWord) = switch (standing) {
+      EnergyStanding.onTarget => (palette.accent, 'On target'),
+      EnergyStanding.over => (error, 'Over'),
+      EnergyStanding.under => (palette.textMuted, 'Under'),
+    };
+    final off = kcal.eaten - kcal.goal;
+    final offText = energyText(context, off, signed: true);
+    final unit = energyUnit(context);
+
+    final macros = inMacroOrder<(String, Versus?, Color)>(
+      carbs: ('Carbs', week.carbs, palette.carbsColor),
+      fat: ('Fat', week.fat, palette.fatColor),
+      protein: ('Protein', week.protein, palette.proteinColor),
+    ).where((m) => m.$2 != null).toList();
+
+    final spoken = [
+      dates,
+      if (current) 'this week',
+      days,
+      '${energyText(context, kcal.eaten)} a day of '
+          '${energyText(context, kcal.goal)}, $offText, '
+          '${standingWord.toLowerCase()}',
+      for (final (name, v, _) in macros)
+        '$name ${v!.eaten.round()} of ${v.goal.round()} g',
+    ].join(', ');
+
+    return Semantics(
       key: ValueKey('week-${DateFormat('yyyy-MM-dd').format(week.monday)}'),
-      padding: const EdgeInsets.only(top: Dimens.spacing12),
+      container: true,
+      label: spoken,
+      excludeSemantics: true,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -207,32 +320,246 @@ class WeeklyReportCard extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  '${format.format(week.monday)} – ${format.format(sunday)}',
-                  style: theme.textTheme.titleSmall,
+                  dates,
+                  style: text.titleSmall,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
-              Text(
-                '${week.daysLogged}/${week.daysShown} days',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: palette.textMuted,
+              if (current) ...[
+                _Badge(
+                  label: 'This week',
+                  color: palette.accent,
+                  palette: palette,
                 ),
+                const SizedBox(width: Dimens.spacing8),
+              ],
+              _DayDots(marks: week.marks, palette: palette),
+            ],
+          ),
+          const SizedBox(height: Dimens.spacing8),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Expanded(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: AlignmentDirectional.centerStart,
+                  child: Text.rich(
+                    maxLines: 1,
+                    TextSpan(
+                      children: [
+                        TextSpan(
+                          text: '${energyValue(context, kcal.eaten)}',
+                          style: text.headlineSmall?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color: palette.textStrong,
+                          ),
+                        ),
+                        TextSpan(
+                          text: ' / ${energyValue(context, kcal.goal)} $unit',
+                          style: text.bodyMedium?.copyWith(
+                            color: palette.textMuted,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: Dimens.spacing8),
+              _Badge(
+                label: '$offText · $standingWord',
+                color: standingColor,
+                palette: palette,
               ),
             ],
           ),
-          Text(
-            '${energyText(context, week.kcal.eaten)} of '
-            '${energyText(context, week.kcal.goal)} '
-            '(${energyText(context, off, signed: true)})',
+          const SizedBox(height: Dimens.spacing8),
+          _Bar(
+            share: kcal.goal <= 0 ? 0 : kcal.eaten / kcal.goal,
+            color: standingColor,
+            palette: palette,
+            height: 8,
           ),
-          if (macros.isNotEmpty)
-            Text(
-              macros,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: palette.textMuted,
-              ),
+          const SizedBox(height: Dimens.spacing4),
+          Text(days, style: text.bodySmall?.copyWith(color: palette.textMuted)),
+          if (macros.isNotEmpty) ...[
+            const SizedBox(height: Dimens.spacing12),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                for (final (i, (name, v, color)) in macros.indexed) ...[
+                  if (i > 0) const SizedBox(width: Dimens.spacing12),
+                  Expanded(
+                    child: _Macro(
+                      name: name,
+                      versus: v!,
+                      color: color,
+                      palette: palette,
+                    ),
+                  ),
+                ],
+              ],
             ),
+          ],
         ],
       ),
     );
   }
+}
+
+/// A macro's name in its colour, its grams against the goal, and a bar.
+class _Macro extends StatelessWidget {
+  final String name;
+  final Versus versus;
+  final Color color;
+  final AppPalette palette;
+
+  const _Macro({
+    required this.name,
+    required this.versus,
+    required this.color,
+    required this.palette,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    final eaten = versus.eaten.round();
+    final goal = versus.goal.round();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          name,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: text.labelMedium?.copyWith(
+            color: color,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: AlignmentDirectional.centerStart,
+          child: Text.rich(
+            maxLines: 1,
+            TextSpan(
+              children: [
+                TextSpan(
+                  text: '$eaten',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    color: palette.textStrong,
+                  ),
+                ),
+                TextSpan(text: ' / $goal g'),
+              ],
+            ),
+            style: text.bodySmall?.copyWith(color: palette.textMuted),
+          ),
+        ),
+        const SizedBox(height: Dimens.spacing4),
+        _Bar(
+          share: goal <= 0 ? 0 : versus.eaten / versus.goal,
+          color: color,
+          palette: palette,
+          height: 5,
+        ),
+      ],
+    );
+  }
+}
+
+class _Bar extends StatelessWidget {
+  final double share;
+  final Color color;
+  final AppPalette palette;
+  final double height;
+
+  const _Bar({
+    required this.share,
+    required this.color,
+    required this.palette,
+    required this.height,
+  });
+
+  @override
+  Widget build(BuildContext context) => ClipRRect(
+    borderRadius: BorderRadius.circular(height / 2),
+    child: LinearProgressIndicator(
+      value: share.clamp(0.0, 1.0),
+      minHeight: height,
+      color: color,
+      backgroundColor: palette.surfaceMuted,
+    ),
+  );
+}
+
+/// A small rounded label tinted with [color].
+class _Badge extends StatelessWidget {
+  final String label;
+  final Color color;
+  final AppPalette palette;
+
+  const _Badge({
+    required this.label,
+    required this.color,
+    required this.palette,
+  });
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(
+      horizontal: Dimens.spacing8,
+      vertical: 2,
+    ),
+    decoration: BoxDecoration(
+      color: color.withValues(alpha: 0.12),
+      borderRadius: BorderRadius.circular(999),
+    ),
+    child: Text(
+      label,
+      maxLines: 1,
+      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+        color: color,
+        fontWeight: FontWeight.w600,
+      ),
+    ),
+  );
+}
+
+/// Monday to Sunday: a filled dot for a logged day, a ring for a day in
+/// the range with nothing logged, a faint dot for one outside it.
+class _DayDots extends StatelessWidget {
+  final List<WeekDayMark> marks;
+  final AppPalette palette;
+
+  const _DayDots({required this.marks, required this.palette});
+
+  @override
+  Widget build(BuildContext context) => Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      for (final (i, mark) in marks.indexed) ...[
+        if (i > 0) const SizedBox(width: 3),
+        Container(
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: switch (mark) {
+              WeekDayMark.logged => palette.accent,
+              WeekDayMark.missed => Colors.transparent,
+              WeekDayMark.outside => palette.surfaceMuted,
+            },
+            border: mark == WeekDayMark.missed
+                ? Border.all(color: palette.textMuted, width: 1.2)
+                : null,
+          ),
+        ),
+      ],
+    ],
+  );
 }

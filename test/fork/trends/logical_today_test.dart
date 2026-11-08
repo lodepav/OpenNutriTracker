@@ -245,6 +245,6 @@ void main() {
       ),
     );
     // Monday the 14th is all of this week so far; a wall clock says two days.
-    expect(find.text('1/1 days'), findsOneWidget);
+    expect(find.text('1 of 1 day logged'), findsOneWidget);
   });
 }

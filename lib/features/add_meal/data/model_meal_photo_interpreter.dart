@@ -53,7 +53,10 @@ class ModelMealPhotoInterpreter implements MealPhotoInterpreter {
   // [/fork]
 
   // [fork] S60 photo-counts: count every countable piece (phase 4 replay:
-  // smaller models left dumplings, khinkali and one whole pizza uncounted)
+  // smaller models left dumplings, khinkali and one whole pizza uncounted);
+  // name each food as cooked: a plate's red cabbage found a raw row; and
+  // count halves as the whole items: 5 roast potato halves read as 4
+  // medium potatoes, 680 g
   static const _systemPrompt = '''
 You identify the foods visible in a photograph of a meal so they can be
 looked up in a food database. You do not estimate nutrition, and you do not
@@ -65,10 +68,18 @@ Rules:
   its ingredients.
 - "query" is the food name alone, with no amount in it, in the user's app
   language. Keep a brand only if it is legible in the photo.
+- Name a food the way it was cooked when the photo shows it was:
+  "braised red cabbage", "boiled potatoes", "roast pork", "fried egg". A
+  food eaten raw ("lettuce", "apple") needs no such word.
 - Include "quantity" whenever you can count discrete items, and count
-  them: 2 eggs, 3 sausages, 1 banana, 14 dumplings, 1 whole pizza. A dish
+  them: 2 eggs, 3 sausages, 4 slices of bacon, 8 meatballs, 1 banana,
+  14 dumplings, 1 whole pizza. A dish
   served as pieces (dumplings, pancakes, tarts, rolls) is counted, roughly
   if there are many. A count has no unit, so never include "unit".
+- A food cut in halves or wedges is counted as the whole items it came
+  from, rounded to a whole number: 2 tomato halves are 1 tomato, 5 potato
+  halves are 3 potatoes, 4 apple wedges are 1 apple. Never count the
+  halves as items.
 - For anything you cannot count — rice, salad, sauce, soup, a drink — omit
   "quantity". Do not guess grams or millilitres from a photograph. The app
   asks the user for the amount, and a guess they cannot check is worse than
