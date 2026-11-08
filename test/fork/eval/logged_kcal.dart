@@ -1,5 +1,8 @@
 // What the bulk-add screen would log, in kcal: shared by the photo and the
 // typed-meal calorie checks (calorie_eval_test.dart, text_eval_test.dart).
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:opennutritracker/core/utils/ai_credential_storage.dart';
 import 'package:opennutritracker/features/add_meal/data/model_meal_photo_interpreter.dart';
 import 'package:opennutritracker/features/add_meal/data/model_meal_text_interpreter.dart';
@@ -169,5 +172,29 @@ class KcalScore {
         '| ${offs.where((o) => o <= 0.25).length}/${offs.length} '
         '| ${(sorted[sorted.length ~/ 2] * 100).round()}% '
         '| ${(logged / reference * 100).round()}% | $guessed |';
+  }
+}
+
+/// Each read's logged and reference kcal, written as kcal.json beside
+/// report.md, so fork/tools/eval_merge.dart can set repeated runs side by
+/// side.
+class KcalReads {
+  final reads = <Map<String, Object?>>[];
+
+  void add(String spec, String photo, String? note, double kcal, double ref) =>
+      reads.add({
+        'spec': spec,
+        'photo': photo,
+        'note': note,
+        'kcal': kcal,
+        'reference': ref,
+      });
+
+  void write(Directory runDir) {
+    if (reads.isEmpty) return;
+    runDir.createSync(recursive: true);
+    File(
+      '${runDir.path}/kcal.json',
+    ).writeAsStringSync(const JsonEncoder.withIndent('  ').convert(reads));
   }
 }

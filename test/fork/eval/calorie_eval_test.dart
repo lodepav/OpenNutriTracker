@@ -38,11 +38,15 @@ void main() {
   final photos = [
     for (final photo
         in (manifest['photos'] as List).cast<Map<String, dynamic>>())
-      if (photo['servings_shown'] == 1 && photo['per_serving'] != null) photo,
+      if (photo['servings_shown'] == 1 &&
+          photo['per_serving'] != null &&
+          models.inSplit(photo['id'] as String))
+        photo,
   ];
   final runDir = evalRunDir('-kcal');
   final out = StringBuffer();
   final summary = StringBuffer(KcalScore.header);
+  final reads = KcalReads();
 
   late LocalFoodDataSource foods;
   late ResolveParsedMealsUseCase resolver;
@@ -66,6 +70,8 @@ void main() {
       'Off: |logged / label - 1|. A guessed amount is a row the screen '
       'starts at 100 g, or flags for the user to check.\n\n$summary$out',
     );
+    reads.write(runDir);
+    models.addUsage(runDir);
     // ignore: avoid_print
     print('report: ${runDir.path}/report.md');
   });
@@ -125,6 +131,7 @@ void main() {
             }
             final (:kcal, :guessed, :cells) = logged;
             scores[note == null ? '' : ' + note']!.add(kcal, label, guessed);
+            reads.add(spec, photo['id'] as String, note, kcal, label);
             out.writeln(
               '| ${photo['id']} | ${note ?? ''} | ${kcal.round()} '
               '| ${label.round()} | ${cells.join('; ')} |',

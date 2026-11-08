@@ -40,7 +40,11 @@ void main() {
 
   final manifest =
       jsonDecode(File('fork/eval/photos.json').readAsStringSync()) as Map;
-  final photos = (manifest['photos'] as List).cast<Map<String, dynamic>>();
+  final photos = [
+    for (final photo
+        in (manifest['photos'] as List).cast<Map<String, dynamic>>())
+      if (models.inSplit(photo['id'] as String)) photo,
+  ];
   final runDir = evalRunDir('');
   // Keyed in spec order up front, since the vendors run side by side.
   final report = <String, List<_PhotoResult>>{
@@ -62,6 +66,7 @@ void main() {
     File(
       '${runDir.path}/report.md',
     ).writeAsStringSync(_markdown(report, photos));
+    models.addUsage(runDir);
     // ignore: avoid_print
     print('report: ${runDir.path}/report.md');
   });

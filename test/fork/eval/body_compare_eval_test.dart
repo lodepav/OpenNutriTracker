@@ -54,6 +54,7 @@ void main() {
       'certainty_max. "Lighting named": the control with changed light '
       'got a lighting note other than same.\n\n$summary\n$rows',
     );
+    models.addUsage(runDir);
     // ignore: avoid_print
     print('report: ${runDir.path}/report.md');
   });

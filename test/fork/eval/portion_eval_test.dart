@@ -66,11 +66,15 @@ void main() {
   final photos = [
     for (final photo
         in (manifest['photos'] as List).cast<Map<String, dynamic>>())
-      if (notes.containsKey(photo['id'])) photo,
+      // a private set of your own photos is not in the split
+      if (notes.containsKey(photo['id']) &&
+          (_set != null || models.inSplit(photo['id'] as String)))
+        photo,
   ];
   final runDir = evalRunDir('-portion');
   final out = StringBuffer();
   final summary = StringBuffer(KcalScore.header);
+  final reads = KcalReads();
 
   late LocalFoodDataSource foods;
   late ResolveParsedMealsUseCase resolver;
@@ -93,6 +97,8 @@ void main() {
       '# Photo and name, no weight, to logged kcal, ${DateTime.now()}\n\n'
       'Off: |logged / label - 1|.\n\n$summary$out',
     );
+    reads.write(runDir);
+    models.addUsage(runDir);
     // ignore: avoid_print
     print('report: ${runDir.path}/report.md');
   });
@@ -152,6 +158,7 @@ void main() {
           }
           final (:kcal, :guessed, :cells) = logged;
           score.add(kcal, label, guessed);
+          reads.add(spec, photo['id'] as String, note, kcal, label);
           out.writeln(
             '| ${photo['id']} | $note | ${kcal.round()} '
             '| ${label.round()} | ${cells.join('; ')} |',

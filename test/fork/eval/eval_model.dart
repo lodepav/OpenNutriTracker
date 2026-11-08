@@ -95,6 +95,16 @@ class EvalModels {
   /// Rate-limited answers each spec waited out, by [BackoffClient].
   final Map<String, int> limited = {};
 
+  /// The tokens each live spec's answers used, from their `usage`.
+  final Map<String, EvalUsage> usage = {};
+
+  /// `FORK_EVAL_SPLIT=tune|held`: only that half of the photos (split.json),
+  /// so a prompt tuned on one half is checked on the other.
+  final EvalSplit? split = EvalSplit.fromEnvironment();
+
+  /// Whether the photo [id] runs: always, without a split.
+  bool inSplit(String id) => split?.has(id) ?? true;
+
   /// Whether [spec] runs [read]: always, outside a retry pass.
   bool runs(String spec, String read) => _only?[spec]?.contains(read) ?? true;
 
@@ -149,6 +159,7 @@ class EvalModels {
         BackoffClient(
           client,
           onLimited: () => limited[spec] = (limited[spec] ?? 0) + 1,
+          onAnswer: (body) => usageOf(spec).addAnswer(body),
         ),
         () => anthropicKey,
         model: model,
@@ -165,6 +176,7 @@ class EvalModels {
       BackoffClient(
         client,
         onLimited: () => limited[spec] = (limited[spec] ?? 0) + 1,
+        onAnswer: (body) => usageOf(spec).addAnswer(body),
       ),
       () => key,
       model: model,
@@ -180,12 +192,50 @@ class EvalModels {
     );
   }
 
+  EvalUsage usageOf(String spec) =>
+      usage.putIfAbsent(spec, () => EvalUsage(EvalUsage.pricesOf(spec)));
+
+  /// After a live run's report: a Usage section at the end of report.md,
+  /// and usage.json beside it, which fork/tools/eval_merge.dart adds up.
+  void addUsage(Directory runDir) {
+    final used = {
+      for (final MapEntry(:key, :value) in usage.entries)
+        if (value.calls > 0) key: value,
+    };
+    if (used.isEmpty) return;
+    runDir.createSync(recursive: true);
+    final table = StringBuffer(
+      '\n## Usage\n\n'
+      '| Model | Answers | Input tokens | Output tokens | Cost |\n'
+      '|---|---|---|---|---|\n',
+    );
+    for (final MapEntry(:key, :value) in used.entries) {
+      final usd = value.usd;
+      table.writeln(
+        '| $key | ${value.calls} | ${value.input} | ${value.output} '
+        '| ${usd == null ? 'price not known' : '\$${usd.toStringAsFixed(4)}'} |',
+      );
+    }
+    File(
+      '${runDir.path}/report.md',
+    ).writeAsStringSync('$table', mode: FileMode.append);
+    File('${runDir.path}/usage.json').writeAsStringSync(
+      const JsonEncoder.withIndent(
+        '  ',
+      ).convert({for (final e in used.entries) e.key: e.value.toJson()}),
+    );
+  }
+
   /// Says how many requests still wait for the subagent in replay mode, or
   /// how many reads failed in a live run.
   void reportWaiting(String spec, int waiting) {
     if (limited[spec] case final n?) {
       // ignore: avoid_print
       print('$spec: waited out $n rate-limited answers');
+    }
+    if (usage[spec] case final used? when used.calls > 0) {
+      // ignore: avoid_print
+      print('$spec: ${used.summary}');
     }
     if (waiting == 0) return;
     // ignore: avoid_print
@@ -213,7 +263,10 @@ class BackoffClient extends http.BaseClient {
   final http.Client _inner;
   final void Function() onLimited;
 
-  BackoffClient(this._inner, {required this.onLimited});
+  /// Each answer's body, for its token usage.
+  final void Function(String body)? onAnswer;
+
+  BackoffClient(this._inner, {required this.onLimited, this.onAnswer});
 
   @override
   Future<http.StreamedResponse> send(http.BaseRequest request) async {
@@ -228,6 +281,7 @@ class BackoffClient extends http.BaseClient {
           .then(http.Response.fromStream)
           .timeout(OpenAiCompatibleMealItemsApi.defaultTimeout);
       if (response.statusCode != 429 || attempt == _waits.length) {
+        if (response.statusCode == 200) onAnswer?.call(response.body);
         return http.StreamedResponse(
           Stream.value(response.bodyBytes),
           response.statusCode,
@@ -351,3 +405,98 @@ Directory evalRunDir(String suffix) => Directory(
   'build/fork-eval/'
   '${DateTime.now().toIso8601String().replaceAll(':', '-')}$suffix',
 );
+
+/// The tokens a model's answers used, from each answer's `usage`: the
+/// Messages API's `input_tokens` (with its cache reads and writes) and
+/// `output_tokens`, or OpenRouter's `prompt_tokens` and `completion_tokens`.
+class EvalUsage {
+  /// Dollars per million input and output tokens, for the `direct:` models
+  /// the credits plan runs (fork/eval/CREDITS_PLAN.md); others go without.
+  static const _prices = {
+    'claude-haiku-5-5': (input: 0.10, output: 0.50),
+    'claude-sonnet-5-5': (input: 2.0, output: 10.0),
+  };
+
+  static ({double input, double output})? pricesOf(String spec) =>
+      spec.startsWith('direct:') ? _prices[spec.substring(7)] : null;
+
+  final ({double input, double output})? prices;
+  int calls = 0;
+  int input = 0;
+  int output = 0;
+
+  EvalUsage([this.prices]);
+
+  /// Adds one answer; one without a readable `usage` is left out.
+  void addAnswer(String body) {
+    Object? usage;
+    try {
+      final answer = jsonDecode(body);
+      if (answer is Map) usage = answer['usage'];
+    } on FormatException {
+      return;
+    }
+    if (usage is! Map) return;
+    int n(String key) =>
+        (usage as Map)[key] is num ? (usage[key] as num).toInt() : 0;
+    calls++;
+    if (usage.containsKey('input_tokens')) {
+      input +=
+          n('input_tokens') +
+          n('cache_creation_input_tokens') +
+          n('cache_read_input_tokens');
+      output += n('output_tokens');
+    } else {
+      input += n('prompt_tokens');
+      output += n('completion_tokens');
+    }
+  }
+
+  /// What the tokens cost, or null for a model with no price here. Cache
+  /// reads are counted at the full input price, so this is an upper bound.
+  double? get usd => switch (prices) {
+    final p? => (input * p.input + output * p.output) / 1e6,
+    null => null,
+  };
+
+  String get summary {
+    final cost = usd;
+    return '$calls answers, $input tokens in, $output out'
+        '${cost == null ? '' : ', \$${cost.toStringAsFixed(4)}'}';
+  }
+
+  Map<String, Object?> toJson() => {
+    'calls': calls,
+    'input_tokens': input,
+    'output_tokens': output,
+    'usd': usd,
+  };
+}
+
+/// The photo test sets split in two halves (fork/eval/split.json): `tune`
+/// to change a prompt against, `held` to check it on. A photo in neither
+/// runs in neither.
+class EvalSplit {
+  static const path = 'fork/eval/split.json';
+
+  final String half;
+  final Set<String> ids;
+
+  EvalSplit(this.half, this.ids);
+
+  /// The half `FORK_EVAL_SPLIT` names, or null when it names none.
+  static EvalSplit? fromEnvironment() {
+    final half = Platform.environment['FORK_EVAL_SPLIT'];
+    return half == null || half.isEmpty ? null : read(half);
+  }
+
+  static EvalSplit read(String half, [String file = path]) {
+    final ids = (jsonDecode(File(file).readAsStringSync()) as Map)[half];
+    if (half == 'about' || ids is! List) {
+      throw ArgumentError.value(half, 'FORK_EVAL_SPLIT', 'use tune or held');
+    }
+    return EvalSplit(half, {for (final id in ids) id as String});
+  }
+
+  bool has(String id) => ids.contains(id);
+}

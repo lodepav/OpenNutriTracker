@@ -197,6 +197,7 @@ void main() {
       '100 g, or flags for the user to check.\n\n${KcalScore.header}'
       '${summaries.values.join()}${outs.values.join()}',
     );
+    models.addUsage(runDir);
     // ignore: avoid_print
     print('report: ${runDir.path}/report.md');
   });

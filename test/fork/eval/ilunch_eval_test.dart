@@ -24,11 +24,14 @@ const _photoDir = 'build/fork-eval/photos';
 
 void main() {
   final models = EvalModels();
-  final photos =
-      ((jsonDecode(File('fork/eval/ilunch.json').readAsStringSync())
-                  as Map)['photos']
-              as List)
-          .cast<Map<String, dynamic>>();
+  final photos = [
+    for (final photo
+        in ((jsonDecode(File('fork/eval/ilunch.json').readAsStringSync())
+                    as Map)['photos']
+                as List)
+            .cast<Map<String, dynamic>>())
+      if (models.inSplit(photo['id'] as String)) photo,
+  ];
   final runDir = evalRunDir('-ilunch');
   final summary = StringBuffer(
     '| Model | Note | Dish named | Rows | With a table row |\n'
@@ -47,6 +50,7 @@ void main() {
       '"Dish named": a row holds one of the words fork/eval/ilunch.json '
       'expects for the main dish.\n\n$summary\n$rows',
     );
+    models.addUsage(runDir);
     // ignore: avoid_print
     print('report: ${runDir.path}/report.md');
   });

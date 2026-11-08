@@ -62,6 +62,7 @@ void main() {
     File('${runDir.path}/report.md').writeAsStringSync(
       '# MacroFactor dish photos, ${DateTime.now()}\n\n$summary\n$rows',
     );
+    models.addUsage(runDir);
     // ignore: avoid_print
     print('report: ${runDir.path}/report.md');
   });

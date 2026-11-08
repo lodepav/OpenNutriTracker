@@ -12,6 +12,8 @@ answers are close to the raw API's, not identical.
 
 ## Live runs with an Anthropic key
 
+What to run on the promo credits, in what order, and what it costs: `CREDITS_PLAN.md`.
+
 The same tests make real calls through the app's own Anthropic client
 (`AnthropicMealItemsApi`) when `FORK_EVAL_ANTHROPIC_KEY` is set. A spec
 `direct:<model>` names the Anthropic model; with only that key set, the app's
@@ -25,7 +27,7 @@ Run these on your own computer: a Claude Code cloud session authenticates
 ```sh
 python3 -m pip install pillow                     # for the photo fetch
 python3 -I fork/tools/fetch_eval_photos.py
-export FORK_EVAL_ANTHROPIC_KEY=sk-ant-...         # set a spend limit in the Console first
+export FORK_EVAL_ANTHROPIC_KEY="$(sed -n 's/^ANTHROPIC_KEY=//p' .env)"   # set a spend limit in the Console first
 flutter test test/fork/eval/calorie_eval_test.dart     # kcal against known meals
 flutter test test/fork/eval/portion_eval_test.dart     # the same photos with a typed name
 flutter test test/fork/eval/photo_eval_test.dart       # which foods each photo names
