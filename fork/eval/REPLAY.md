@@ -12,6 +12,8 @@ answers are close to the raw API's, not identical.
 
 ## Live runs with an Anthropic key
 
+What to run on the promo credits, in what order, and what it costs: `CREDITS_PLAN.md`.
+
 The same tests make real calls through the app's own Anthropic client
 (`AnthropicMealItemsApi`) when `FORK_EVAL_ANTHROPIC_KEY` is set. A spec
 `direct:<model>` names the Anthropic model; with only that key set, the app's
