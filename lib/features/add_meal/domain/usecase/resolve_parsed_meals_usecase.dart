@@ -177,8 +177,9 @@ class ResolveParsedMealsUseCase {
     }
     // [/fork]
 
-    // [fork] S200 shape-words: "lemon slice" finds nothing, "lemon" does
-    final bare = ranked.isEmpty ? withoutShapeWords(query) : null;
+    // [fork] S200 shape-words: "lemon slice" finds nothing, "lemon" does,
+    // and "bread slice" found "Garlic bread slices" where "bread" finds bread
+    final bare = withoutShapeWords(query);
     if (bare != null) {
       final found = await _resolveOne(
         ParsedMealItem(
@@ -189,12 +190,19 @@ class ResolveParsedMealsUseCase {
         ),
         fromPhoto,
       );
-      return ResolvedMealItem(
-        parsed: item,
-        candidates: found.candidates,
-        selectedIndex: found.selectedIndex,
-        confidence: found.confidence,
-      );
+      final own = ranked.isEmpty
+          ? -1.0
+          : isEverydayRow(ranked.first.name, query)
+          ? 1.0
+          : scoreMealForResolution(ranked.first, query);
+      if (found.candidates.isNotEmpty && found.confidence > own) {
+        return ResolvedMealItem(
+          parsed: item,
+          candidates: found.candidates,
+          selectedIndex: found.selectedIndex,
+          confidence: found.confidence,
+        );
+      }
     }
     // [/fork]
 
