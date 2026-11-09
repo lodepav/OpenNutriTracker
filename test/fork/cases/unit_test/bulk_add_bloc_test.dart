@@ -337,6 +337,20 @@ void main() {
       expect([for (final r in imperial.rows) r.amountText], ['10.5', '0.5']);
     },
   );
+
+  test('a main dish with no amount and no serving starts at a plate', () async {
+    // A photo's pilaf logged 100 g, 167 kcal against the plov's 753.
+    final bloc = blocWith({
+      'pilaf': [meal('Pilaf (rice, with onions and butter)')],
+      'curry powder': [meal('Curry powder')],
+    });
+
+    final metric = await parse(bloc, 'pilaf, curry powder');
+    expect([for (final r in metric.rows) r.amountText], ['300', '100']);
+
+    final imperial = await parse(bloc, 'pilaf', imperial: true);
+    expect(imperial.rows.single.amountText, '10.5');
+  });
 }
 
 /// A keystore with nothing in it, so the read use case always takes the
