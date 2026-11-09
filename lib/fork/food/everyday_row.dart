@@ -9,22 +9,35 @@
 /// data source adds the row by its name, and the resolver takes it as the
 /// match.
 ///
-/// A key also stands for its other spellings: "boiled" for "cooked"
+/// A key also stands for its other spellings: its words with any commas
+/// ("pork cutlet, breaded, fried" for "pork, cutlet, breaded, fried", a
+/// karbonāde that found minced pork patties), "boiled" for "cooked"
 /// ("spaghetti, boiled" found spaghetti squash, which holds both words), and
 /// the state before the food ("cooked spaghetti" for "spaghetti, cooked").
 String? everydayRowName(String query) {
   final key = query.trim().toLowerCase();
-  if (_everyday[key] case final name?) return name;
-  final cooked = key.replaceAll(_boiled, 'cooked');
-  if (_everyday[cooked] case final name?) return name;
+  final words = _words(key);
+  if (_byWords[words] case final name?) return name;
+  final cooked = words.replaceAll(_boiled, 'cooked');
+  if (_byWords[cooked] case final name?) return name;
   if (_stateFirst.firstMatch(cooked) case final m?) {
-    if (_everyday['${m[2]}, ${m[1]}'] case final name?) return name;
+    if (_byWords['${m[2]} ${m[1]}'] case final name?) return name;
   }
   if (_plainMeat.firstMatch(key) case final m?) {
     return _meats[m[1]! + (m[2] == null ? '' : ' ground')];
   }
   return null;
 }
+
+/// [text]'s words, one space apart.
+String _words(String text) => text
+    .split(RegExp(r'[^\p{L}\p{N}-]+', unicode: true))
+    .where((w) => w.isNotEmpty)
+    .join(' ');
+
+final _byWords = {
+  for (final MapEntry(:key, :value) in _everyday.entries) _words(key): value,
+};
 
 /// A meat named with only how it was cooked or cut: "beef, cooked",
 /// "pork, cooked, roasted", "cooked sliced beef", "beef, ground, cooked,

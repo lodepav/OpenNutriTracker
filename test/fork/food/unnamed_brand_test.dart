@@ -49,6 +49,7 @@ final _products = [
   _product('apple juice', 'Innocent', 45),
   _product('Zorblax crisps', 'Zorb', 520),
   _product('Big Mac', null, 242),
+  _product('Giant, rice pilaf', 'Rice Pilaf', 339),
 ];
 
 class _Search implements SearchProductsUseCase {
@@ -127,6 +128,18 @@ void main() {
   test('typed, a name may mean the packet, as it always did', () async {
     final food = await resolve('pickled gherkins', fromPhoto: false);
     expect(food.brands, 'Dawtona');
+  });
+
+  // A plov's "pilaf with carrots and rice" logged a dry pilaf mix whose
+  // brand field read "Rice Pilaf".
+  test('a brand that is only the product\'s own words is not named', () {
+    expect(
+      unnamedBrandOf(
+        _product('Giant, rice pilaf', 'Rice Pilaf', 339),
+        'pilaf with carrots and rice',
+      ),
+      unnamedBrandPenalty,
+    );
   });
 
   test('a brand the name gives keeps its product', () async {

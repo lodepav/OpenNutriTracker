@@ -44,4 +44,14 @@ void main() {
     expect(everydayRowName('pork chop, breaded, fried'), isNull);
     expect(everydayRowName('beef broth'), isNot('Beef, NFS'));
   });
+
+  // A karbonāde's "pork cutlet, breaded, fried" missed the schnitzel mapped
+  // to "pork, cutlet, breaded, fried" and found minced pork patties.
+  test('a key matches by its words, whatever the commas', () {
+    expect(
+      everydayRowName('pork cutlet, breaded, fried'),
+      everydayRowName('pork, cutlet, breaded, fried'),
+    );
+    expect(everydayRowName('pork cutlet breaded fried'), isNotNull);
+  });
 }
