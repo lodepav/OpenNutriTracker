@@ -23,6 +23,20 @@ Details live in the seam rows ([SEAMS.md](SEAMS.md), `Sxx`) and decisions (`Dxx`
 | A dish served as pieces counted in a photo; a count past a recipe's batch flagged | #1496, merged (2.7.0) |
 | Tests delete their Hive boxes before closing them (no stray `.hive` files, S203) | #1574, open |
 | Automatic backup after diary changes, for Syncthing and Drive sync apps (D10) | issue #1356, open |
+| Changing the unit keeps the amount of food (S164) | #1603, open |
+| Decimal fields take digits and one separator only (S141) | #1604, open |
+| A favourite's starred time exported in UTC (S86) | #1605, open |
+| Deleting today's weigh-in sets the current weight back (S113) | #1606, open |
+| The editor opens the advanced form when the simple one would change the food (S188) | #1607, open |
+| Add says when the food was not stored (S189) | #1608, open |
+| A full Open Food Facts record lookup gives up after 5 s (S181) | #1609, open |
+| Daily average goals over the days that have one, grams rounded (S87, S114) | #1610, open |
+| A unit stated inside a phrase is kept (S169) | #1611, open |
+| One retry after a brief rate limit (S171) | #1612, open |
+| Saved recipe names in the meal photo prompt (S172) | #1613, open |
+| Copy a meal into another meal of the same day (#842, from S177) | #1614, open |
+| Custom meals and recipes found by their words in any order (S5) | #1615, open |
+| Read a nutrition label into a custom food; add an unknown barcode from its label (S29, S36) | #1616, open |
 
 ## Targets and coaching (MacroFactor's)
 
@@ -46,12 +60,12 @@ Details live in the seam rows ([SEAMS.md](SEAMS.md), `Sxx`) and decisions (`Dxx`
 | A dish the database lacks is broken into ingredients with grams; only an unmatched ingredient gets the model's estimate (D9, D12, S3) | Fork only | Upstream forbids model-supplied numbers (#250). |
 | A photo note's weight sizes the plate; a named meal without a weight gets estimated grams (D24, D25, S175) | Fork only | Visual portion estimates, which #250 rules out. |
 | Leftovers: subtract what was left from an entry or a meal (D14, S9, S10) | Candidate (manual) | D14: the manual amount or fraction goes upstream; the AI photo of the leftovers is fork only (#250). |
-| Read a nutrition label into a custom food (S29), and "Add it from its label" when a barcode is not found (S36) | Candidate | Reads printed numbers; it does not estimate them. |
-| Photo prompt: counts of halves and pieces, counts the note states (S60, S170) | Candidate | The first part went upstream as #1496; the note counts are next. |
-| Photo prompt lists the user's saved recipe names (S172) | Candidate | |
-| A 429 from the model is retried once, within the read's timeout (S171) | Candidate | |
-| A counted food's full-record lookup waits 5 s, not 60 s (S181) | Candidate | A slow network holds upstream's review screen. |
-| An amount inside a phrase counts as stated ("a 330 ml can of coke", S169) | Candidate | Extends upstream's #977. |
+| Read a nutrition label into a custom food (S29), and "Add it from its label" when a barcode is not found (S36) | Sent (#1616) | Reads printed numbers; it does not estimate them. |
+| Photo prompt: counts of halves and pieces, counts the note states (S60, S170) | Candidate | The first part went upstream as #1496. The note counts need the photo note upstream first (`feat/photo-note`, not opened). |
+| Photo prompt lists the user's saved recipe names (S172) | Sent (#1613) | |
+| A 429 from the model is retried once, within the read's timeout (S171) | Sent (#1612) | |
+| A counted food's full-record lookup waits 5 s, not 60 s (S181) | Sent (#1609) | A slow network holds upstream's review screen. |
+| An amount inside a phrase counts as stated ("a 330 ml can of coke", S169) | Sent (#1611) | Extends upstream's #977. |
 | Model rows show the fork's eval rating and price tier (S174) | Fork only | From the fork's own eval (`fork/eval/`). |
 | Typed meals queried in English whatever their language (S204) | Fork only | Fits the fork's English tables; upstream searches Open Food Facts in the user's language. |
 | Matching rules for what a model reads: variants trail, everyday rows, dish parts and sides left out, slices as pieces, brands named or not (S70, S73–S75, S178, S187, S196–S200, S202, S205, S206; D26, D40) | Fork only | Tuned on the fork's bundled tables and evals. A rule that also helps Open Food Facts results could be split out later. |
@@ -66,11 +80,11 @@ Details live in the seam rows ([SEAMS.md](SEAMS.md), `Sxx`) and decisions (`Dxx`
 | Offline generic foods: USDA FoodData Central and BLS 4.0 bundled (D11, S1, S2) | Fork only | Replaces upstream's food backend and adds a large asset; a change of upstream's architecture, not a feature PR. |
 | The fork's dishes worked out from recipes (solyanka, cepelinai, kvass…) (S72) | Fork only | Rows of the fork's own table. |
 | Four Latvian starter recipes (D12, S6) | Fork only | Local to the user. |
-| Saved meals and recipes found by their words in any order (S5) | Candidate | Flagged in SEAMS.md as an upstream PR candidate. |
+| Saved meals and recipes found by their words in any order (S5) | Sent (#1615) | Flagged in SEAMS.md as an upstream PR candidate. |
 | Recents put the foods usually logged in this meal first (S19) | Candidate | |
 | Remembered amounts: a food opens at the amount last logged (S45) | Candidate | |
 | Amount picker: units as chips, the food's portions with their weights, − and +, the user's own named portion (D33, S195) | Candidate | A large UI change to upstream's meal detail. |
-| A unit change converts the amount (180 g → 1 serving, S164) | Candidate | A bug fix. |
+| A unit change converts the amount (180 g → 1 serving, S164) | Sent (#1603) | A bug fix. |
 | A food that cannot be logged says what it lacks (S94) | Candidate | |
 | A recipe's serving reads as one serving and its weight (S91) | Candidate | |
 | Contribute a custom food to Open Food Facts (S33) | Candidate | Ported from another fork (theoleuthardt `personal`). |
@@ -81,7 +95,7 @@ Details live in the seam rows ([SEAMS.md](SEAMS.md), `Sxx`) and decisions (`Dxx`
 
 | Feature | Mark | Why / notes |
 |---|---|---|
-| Copy and move: select foods or meals on the Diary and copy, move, share or delete them (S177, D30) | Candidate | The copy writes entries one at a time, which also fixes upstream's meal-section copy under-counting the day. |
+| Copy and move: select foods or meals on the Diary and copy, move, share or delete them (S177, D30) | Candidate | Copying a meal into another meal of the same day went as #1614 (upstream's #842). Upstream's lock (#1319) already fixed the under-count. The selection bar stays fork only for now. |
 | Food basket: gather several foods, review the meal, log them together (S42, D39) | Candidate | |
 | Meal plan and recurring meals (S43, D31) | Candidate | Large; could go in parts. |
 | Diary by the hour (S80) | Candidate | |
@@ -90,9 +104,9 @@ Details live in the seam rows ([SEAMS.md](SEAMS.md), `Sxx`) and decisions (`Dxx`
 | Undo after deleting a food (S52) | Candidate | |
 | Show water and Show fasting switches (S144) | Candidate | Next to upstream's Show activity tracking. |
 | The added-food snackbar names the meal (S110) | Candidate | |
-| The food page's Add says when the write failed (S189) | Candidate | A bug fix. |
-| Editing a food whose serving the simple form cannot hold opens the advanced form (S188) | Candidate | A bug fix. |
-| Number fields take digits and one separator only (S141) | Candidate | A bug fix: "120-" saved an empty value. |
+| The food page's Add says when the write failed (S189) | Sent (#1608) | A bug fix. |
+| Editing a food whose serving the simple form cannot hold opens the advanced form (S188) | Sent (#1607) | A bug fix. |
+| Number fields take digits and one separator only (S141) | Sent (#1604) | A bug fix: "120-" saved an empty value. |
 | A Diary day can be left out of the expenditure estimate (D17) | Fork only | Part of the adaptive target. |
 
 ## The redesign (MacroFactor's look)
@@ -109,11 +123,11 @@ Details live in the seam rows ([SEAMS.md](SEAMS.md), `Sxx`) and decisions (`Dxx`
 
 | Feature | Mark | Why / notes |
 |---|---|---|
-| Health Connect: weight in, body fat in, nutrition out (S27, S48, S49) | Candidate | Next to upstream's workout import. Each needs Play's Health Connect declaration. |
+| Health Connect: weight in, body fat in, nutrition out (S27, S48, S49) | Candidate | Next to upstream's workout import. Each needs Play's Health Connect declaration. Weight import is already open upstream as markprovan's #1296, so the fork doesn't send its own. |
 | Daily steps on Trends (S44) | Fork only | Upstream dropped READ_STEPS after Play called it excessive. |
 | Weight from Health Connect during onboarding (S99) | Candidate | |
 | Health Connect grants checked without the plugin ending the process (S180) | Candidate | A workaround for a plugin crash. |
-| Deleting today's weigh-in sets the profile weight back (S113) | Candidate | A bug fix: the goal kept the deleted weight. |
+| Deleting today's weigh-in sets the profile weight back (S113) | Sent (#1606) | A bug fix: the goal kept the deleted weight. |
 | Body measurements and body fat % on Trends (S40, `lib/fork/body/`) | Candidate | |
 | Progress photos (`lib/fork/photos/`) | Candidate (photos) | The AI comparison of two photos is fork only, as a visual estimate. |
 | Fasting timer's plans and history (S157) | Fork only | A copy of upstream's screen, redesigned. |
@@ -128,7 +142,7 @@ Details live in the seam rows ([SEAMS.md](SEAMS.md), `Sxx`) and decisions (`Dxx`
 | Data that will not open: restore the newest backup or start again, files set aside, never deleted (S112) | Candidate | |
 | Import another app's history, e.g. MacroFactor's export (`lib/fork/history/`) | Candidate | The user's own export never goes in the repo. |
 | CSV export (`lib/fork/export/`) | Candidate | |
-| A favourite's time round-trips an export in UTC (S86) | Candidate | A bug fix: an hour off across a clock change. |
+| A favourite's time round-trips an export in UTC (S86) | Sent (#1605) | A bug fix: an hour off across a clock change. |
 | Deleting a profile's data also empties the fork's boxes and photos (S102, S191) | Fork only | The fork's data. |
 
 ## Android
@@ -148,7 +162,7 @@ Details live in the seam rows ([SEAMS.md](SEAMS.md), `Sxx`) and decisions (`Dxx`
 | Chart touches name each number with its unit and day; an empty range says so (S96, S97) | Candidate | |
 | Charts fit the period shown; dots up to a month (S161, S166) | Candidate | |
 | Trends' windows end on the Diary's logical today (S190) | Candidate | A bug fix past midnight. |
-| Daily averages over the days logged, rounded not cut (S87, S114, now in S120) | Candidate | Bug fixes to upstream's Daily average card. |
+| Daily averages over the days logged, rounded not cut (S87, S114, now in S120) | Sent (#1610) | Bug fixes to upstream's Daily average card. |
 | Screen-reader labels and large-text fixes beyond what 2.7.0 took (S81, S83, S92, S111) | Candidate | Partly upstream via #1494; the typed weigh-in field (S111) and the rest are next. |
 | Lists clear of a 3-button navigation bar (S143) | Candidate | Partly upstream via #1493. |
 
