@@ -139,23 +139,29 @@ List<MealEntity> withoutUnrelatedProducts(
 ) {
   final food = headNoun(query, oneWord: true);
   if (food == null) return ranked;
-  // Every word of the food, not only its last: a photo's "cabbage soup
-  // with carrots and meat" logged a "Carrot & Coriander Soup", 123 kcal
-  // against 626.
-  final words = [
+  // Half the food's other words too, rounded up, not only its last: a
+  // photo's "cabbage soup with carrots and meat" logged a "Carrot &
+  // Coriander Soup", 123 kcal against 626. Every word was too many: "beef
+  // ragu" is a "tomato beef ragu", "Vanilla curd snack" a glazed one.
+  final others = [
     for (final w in nameWords(
       (withoutShapeWords(query) ?? query).split(',').first,
     ).takeWhile((w) => !_joints.contains(w)))
       if (!_howMade.contains(w) && !_describes.contains(w) && w.length > 2)
-        spelling(w),
+        if (!wordsAgree(food, spelling(w))) spelling(w),
   ];
+  final needed = (others.length + 1) ~/ 2;
   return [
     for (final meal in ranked)
       if (meal.source != MealSourceEntity.off ||
           (holdsWord(meal.name ?? '', food) &&
-              words.every(
-                (w) => holdsWord('${meal.name} ${meal.brands ?? ''}', w),
-              )))
+              others
+                      .where(
+                        (w) =>
+                            holdsWord('${meal.name} ${meal.brands ?? ''}', w),
+                      )
+                      .length >=
+                  needed))
         meal,
   ];
 }

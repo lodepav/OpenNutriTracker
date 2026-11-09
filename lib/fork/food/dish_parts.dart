@@ -10,12 +10,17 @@ import 'package:opennutritracker/fork/food/served_with.dart';
 /// came with its spaghetti, a stuffed pepper with a bell pepper. Measured
 /// over 1,255 eval reads (2026-11-09): every food so listed was in the
 /// dish's own name. A dish row is one whose name, brackets aside, has
-/// three words or more; the food is the one its query names ([headNoun]).
+/// three words or more, or an unmatched one whose query has; the food is
+/// the one its query names ([headNoun]).
 /// Two rows of one food ("fried egg" and "egg") leave each other alone.
 List<ResolvedMealItem> withoutDishParts(List<ResolvedMealItem> items) {
   final dishes = [
     for (final item in items)
-      if (item.selected?.name case final name?)
+      // A dish nothing matched is broken down (D9) into the foods it holds,
+      // so its query is the dish: a held-out photo's "buckwheat with meat
+      // and mushrooms" came with beef stew meat and mushrooms besides, 889
+      // kcal against 285.
+      if (item.selected?.name ?? item.parsed.query case final name)
         if (nameWords(name.split('(').first).length >= 3)
           (item, name.split('(').first),
   ];
