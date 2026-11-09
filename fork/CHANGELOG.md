@@ -2,6 +2,31 @@
 
 Written by fork/tools/release_notes.dart at each release (D16).
 
+## 0.9.1 · 2026-11-09
+
+Based on OpenNutriTracker 2.7.0.
+
+### Fixes and changes
+
+- no tips, so no billing permission
+- a drink beside a dish made with it stays
+- a photo's plate size, tried and dropped
+- a broken-down dish's parts go, a product needs half the food's words
+- a dish the read names starts at its plate, four home dishes, mixed salads one entry
+- ready foods before powders, no dish beside its parts, 43 eval photos
+- a bowl's foods fill the bowl; mapped names match by words; brand words are not a brand
+- typed meals in English, whole dish aliases, plain meats, egg halves
+- garlic starts at a clove or two; chłodnik is found under the names a model gives it
+- spaghetti finds pasta, a pizza slice its piece; tests stop leaving .hive files
+- a main dish with no amount and no serving starts at a plate
+- chłodnik and pork cutlets dishes; step 3 and step 4 round 1 results
+- the credits plan gives step 2's result, so step 4 iterates on live calls
+- the updater falls back to GitHub's API link when the download link fails
+
+### From OpenNutriTracker
+
+- upstream release v2.7.0
+
 ## 0.9.0 · 2026-11-08
 
 Based on OpenNutriTracker 2.6.0.
