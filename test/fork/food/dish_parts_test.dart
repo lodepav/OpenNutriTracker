@@ -103,4 +103,27 @@ void main() {
       ['borscht', 'sour cream', 'rye bread'],
     );
   });
+
+  test('a drink beside a dish made with it stays', () {
+    expect(
+      _kept([
+        _item(
+          'mashed potatoes',
+          'Potatoes, mashed, home-prepared, whole milk added',
+        ),
+        _item('glass of milk', 'Milk, whole, 3.25% milkfat'),
+      ]),
+      ['mashed potatoes', 'glass of milk'],
+    );
+    expect(
+      _kept([
+        _item(
+          'oatmeal',
+          'Oatmeal, regular or quick, made with milk, no added fat',
+        ),
+        _item('milk', 'Milk, whole, 3.25% milkfat'),
+      ]),
+      ['oatmeal', 'milk'],
+    );
+  });
 }
