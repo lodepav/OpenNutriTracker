@@ -24,9 +24,21 @@ void main() {
       'Brown bread casserole, with chocolate',
       'Pilaf mix, dry',
       'Spaghetti, cooked',
+      'Pasta sauce with meat, meat',
       null,
     ]) {
       expect(isMainDish(name), isFalse, reason: name);
+    }
+  });
+
+  test('a porridge, stuffed cabbage or pasta with a sauce is a plate', () {
+    for (final name in [
+      'millet porridge with pumpkin',
+      'stuffed cabbage rolls in tomato sauce',
+      'macaroni with minced meat sauce',
+      'spaghetti with tomato sauce',
+    ]) {
+      expect(isMainDish(name), isTrue, reason: name);
     }
   });
 }

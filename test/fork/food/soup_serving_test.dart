@@ -39,4 +39,10 @@ void main() {
     expect(isSoup('Cheese soup "Allgäuer", with croutons'), isTrue);
     expect(isCroutons(null), isFalse);
   });
+
+  test('noodle soups are soups', () {
+    for (final name in ['laksa', 'Tuna Laksa', 'chicken ramen', 'lagman']) {
+      expect(isSoup(name), isTrue, reason: name);
+    }
+  });
 }

@@ -17,9 +17,21 @@ final _comesWith = RegExp(
   caseSensitive: false,
 );
 
+/// A food a sauce word can come before: "Meat sauce macaroni" is the
+/// macaroni. Its 60 g ladle logged a photo's makarony po-flotski at 67 kcal
+/// against 513.
+final _sauceOn = RegExp(
+  r'\b(sauces?|gravy|dressing)\s+[^,]*\b(macaroni|pasta|spaghetti|penne|'
+  r'noodles|rice|potato(es)?|dumplings|meatballs|chicken|pork|beef|fish)\b',
+  caseSensitive: false,
+);
+
 /// Whether [name] is a sauce, gravy or dressing, not a food served in one.
-bool isSauce(String? name) =>
-    name != null && _sauce.hasMatch(name.replaceAll(_comesWith, ''));
+bool isSauce(String? name) {
+  if (name == null) return false;
+  final food = name.replaceAll(_comesWith, '');
+  return _sauce.hasMatch(food) && !_sauceOn.hasMatch(food);
+}
 
 /// [serving], at most [sauceServingGrams] for a sauce: the amount a row of
 /// [name] starts at when none was stated.
