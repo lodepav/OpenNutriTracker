@@ -417,6 +417,32 @@ void main() {
     expect(row.unit, 'serving#1');
   });
 
+  test(
+    'a plate or bowl the read named starts there, whatever the row',
+    () async {
+      // "millet porridge with pumpkin" found a pumpkin porridge and logged its
+      // 100 g, 74 kcal against 357; "Pasta sauce with meat" a 60 g ladle.
+      final bloc = blocWith({
+        'millet porridge with pumpkin': [meal('Pumpkin cream')],
+        'macaroni with meat sauce': [meal('Pasta sauce with meat, meat')],
+        'chicken laksa': [meal('Coconut chicken')],
+        'croutons for soup': [
+          meal('Croutons, white bread cubes toasted in butter'),
+        ],
+      });
+
+      final metric = await parse(
+        bloc,
+        'millet porridge with pumpkin, macaroni with meat sauce, chicken laksa, '
+        'croutons for soup',
+      );
+      expect(
+        [for (final r in metric.rows) r.amountText],
+        ['300', '300', '300', '15'],
+      );
+    },
+  );
+
   test('a main dish with no amount and no serving starts at a plate', () async {
     // A photo's pilaf logged 100 g, 167 kcal against the plov's 753.
     final bloc = blocWith({

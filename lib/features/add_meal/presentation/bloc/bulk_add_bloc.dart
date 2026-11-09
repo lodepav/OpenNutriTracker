@@ -656,14 +656,23 @@ class BulkAddBloc extends Bloc<BulkAddEvent, BulkAddState> {
         usesImperialUnits ? garnishOunces(meal?.name)! : grams,
       );
     }
-    if (isSauce(meal?.name)) return usesImperialUnits ? '2' : '60';
-    if (isDrink(meal?.name) || isDrink(parsed.query)) {
-      return _amountText(usesImperialUnits ? drinkServingFlOz : drinkServingMl);
-    }
     if (isCroutons(meal?.name)) {
       return _amountText(
         usesImperialUnits ? croutonServingOz : croutonServingGrams,
       );
+    }
+    // A bowl or a plate the read named, whatever row it found: a photo's
+    // "millet porridge with pumpkin" found a pumpkin porridge and logged
+    // its 100 g, 74 kcal against 357.
+    if (isSoup(parsed.query) && !isSauce(meal?.name)) {
+      return _amountText(usesImperialUnits ? soupServingOz : soupServingGrams);
+    }
+    if (isMainDish(parsed.query)) {
+      return _amountText(usesImperialUnits ? dishServingOz : dishServingGrams);
+    }
+    if (isSauce(meal?.name)) return usesImperialUnits ? '2' : '60';
+    if (isDrink(meal?.name) || isDrink(parsed.query)) {
+      return _amountText(usesImperialUnits ? drinkServingFlOz : drinkServingMl);
     }
     if (isSoup(meal?.name)) {
       return _amountText(usesImperialUnits ? soupServingOz : soupServingGrams);

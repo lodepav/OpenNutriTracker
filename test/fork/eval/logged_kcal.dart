@@ -13,6 +13,7 @@ import 'package:opennutritracker/features/add_meal/domain/usecase/read_meal_text
 import 'package:opennutritracker/features/add_meal/domain/usecase/resolve_parsed_meals_usecase.dart';
 import 'package:opennutritracker/features/add_meal/presentation/bloc/bulk_add_bloc.dart';
 import 'package:opennutritracker/features/meal_detail/util/meal_quantity_converter.dart';
+import 'package:opennutritracker/features/add_meal/util/meal_text_parser.dart';
 import 'package:opennutritracker/fork/dish/break_down_dish_usecase.dart';
 import 'package:opennutritracker/fork/dish/dish_breakdown_controller.dart';
 import 'package:opennutritracker/fork/dish/dish_breakdown_rows.dart';
@@ -114,7 +115,8 @@ Future<Logged?> loggedKcal(
     final cell =
         '${row.resolved.parsed.query} → ${meal.name} '
         '${_n(amount)} ${row.effectiveUnit.split('.').last}'
-        '${isGuess ? ' (guess)' : ''} ${rowKcal.round()}';
+        '${isGuess ? ' (guess${_read(row.resolved.parsed)})' : ''} '
+        '${rowKcal.round()}';
     if (row.dishIngredient case final ingredient?) {
       (dishRows[ingredient.group] ??= []).add(cell);
       // a dish the read broke down itself, not one the loop above asked for
@@ -153,6 +155,13 @@ class _Configured implements AiCredentialStorage {
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
+
+/// What the read stated for a guessed row, so a report shows why it guessed.
+String _read(ParsedMealItem parsed) => parsed.quantity == null
+    ? ', read no amount'
+    : ', read ${_n(parsed.quantity!)}'
+          '${parsed.unit == null ? '' : ' ${parsed.unit}'}'
+          '${parsed.portion == null ? '' : ' "${parsed.portion}"'}';
 
 String _n(double v) =>
     v == v.roundToDouble() ? '${v.round()}' : v.toStringAsFixed(1);

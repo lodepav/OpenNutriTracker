@@ -60,6 +60,52 @@ void main() {
     expect(_kept([dish], 'sautēti kāposti ar desu'), [dish]);
   });
 
+  test('a food only in a bracket name\'s "with" part is left out', () {
+    // "melted cheese" logged the pork chop at 534 kcal on a French onion
+    // soup.
+    expect(
+      _kept([
+        'Pork chop with cheese, baked (karbonāde ar sieru, pork cutlet '
+            'with melted cheese)',
+        'Cheese, mozzarella, whole milk',
+      ], 'melted cheese'),
+      ['Cheese, mozzarella, whole milk'],
+    );
+  });
+
+  test('a product must hold every word of the food', () {
+    MealEntity off(String name) => MealEntity(
+      code: name,
+      name: name,
+      brands: 'Brand',
+      url: null,
+      mealQuantity: null,
+      mealUnit: 'g',
+      servingQuantity: null,
+      servingUnit: 'g',
+      servingSize: null,
+      nutriments: MealNutrimentsEntity.empty(),
+      source: MealSourceEntity.off,
+    );
+    // A photo's shchi logged a carrot and coriander soup, 123 kcal
+    // against 626.
+    final kept = withoutUnrelatedProducts([
+      off('Carrot & Coriander Soup'),
+      off('Cabbage soup with pork'),
+      _row('Soup, cabbage'),
+    ], 'cabbage soup with carrots and meat');
+    expect(
+      [for (final m in kept) m.name],
+      ['Cabbage soup with pork', 'Soup, cabbage'],
+    );
+    expect(
+      withoutUnrelatedProducts([
+        off('Parmesan cheese'),
+      ], 'grated parmesan cheese'),
+      hasLength(1),
+    );
+  });
+
   test('a one-word name is left alone', () {
     expect(_kept(['Potatoes, mashed, with butter'], 'butter'), [
       'Potatoes, mashed, with butter',

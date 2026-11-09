@@ -449,6 +449,51 @@ logs 491-534.
   kupecheski 671-892 against 285).
 - Cost: about $4-5 of the promo credits.
 
+## Step 7, round 4: a dish's start, home soups, mixed salads (2026-11-09)
+
+The photo prompt asks for no grams, so a dish's amount is the app's
+default; most of round 3's low reads were that default.
+
+- **A bowl or a plate the read names.** A soup or a main dish the read
+  itself names starts at its bowl or plate whatever row it found, and a
+  sauce word before a food ("Meat sauce macaroni") is that food, not a
+  60 g ladle. Porridge, stuffed cabbage and pasta with a sauce are main
+  dishes; laksa, ramen, pho, lagman, kharcho and ukha soups. Millet
+  porridge with pumpkin went from 74 to 359 kcal (357), makarony
+  po-flotski from 68 to 336 (513).
+- **Four home dishes** in `fork/data/dishes.json`: chicken and rice soup,
+  makarony po-flotski, millet porridge with pumpkin, braised cabbage with
+  meat. A home chicken rice soup had found Healthy Choice's canned diet
+  soup, 37 kcal per 100 g: 89 to 256 kcal (427). Ranking canned rows last
+  was tried on paper and dropped: where a canned row won, the table had
+  no other.
+- **Mixed salads and fried rice are one entry** in the photo prompt, as
+  soups were: an Olivier beside its beets, potatoes, sausage and egg went
+  from 848 to 503 kcal (236), chicken fried rice from 680 to 343 (441).
+- **Junk rows.** A product must hold every food word before the query's
+  "with" ("cabbage soup" found a carrot and coriander soup, 123 kcal
+  against 626), and a fork dish's bracketed names count only before their
+  own "with" ("melted cheese" found the pork chop with cheese, 534 kcal).
+- The eval's guessed rows now say what the read stated
+  ("(guess, read no amount)").
+- **Haiku, 3 passes** (median off, total, within 25%):
+
+  | Suite | Tune | Held |
+  |---|---|---|
+  | kcal, round 3 | 32%, 117%, 12/32 | 43%, 113%, 11/33 |
+  | kcal, round 4 | 30%, 113%, 13/32 | 43%, 112%, 11/33 |
+  | portion, round 3 | 28% | 38% |
+  | portion, round 4 | 23% | 36% |
+
+  Lagman went from 1,775 to 489 (555) and chakapuli from 255 to 529
+  (723). Plov, borscht and the bread soup rose with the model's own
+  reads, not a row these rules chose.
+- **Left:** buckwheat kupecheski 825 against 285 (a 128 g cup of carrot
+  beside it); the chicken pot pie soup's three biscuits; the cream in a
+  model's breakdowns at 100 ml; "pasta sauce with meat" for a pasta dish
+  (the table's makarony row wants every word, and the read says "sauce").
+- Cost: about $1 of the promo credits.
+
 ## What the tests measure
 
 Each sends real photos or typed meals through the app's logging code,

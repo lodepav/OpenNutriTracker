@@ -9,7 +9,7 @@ const soupServingOz = 10.5;
 final _soup = RegExp(
   r'\b(soups?|borscht|borschtsch|borsch|broth|bouillon|chowder|bisque|'
   r'gazpacho|solyanka|minestrone|rassolnik|shchi|okroshka|chłodnik|'
-  r'consomm[eé])\b',
+  r'consomm[eé]|laksa|ramen|pho|lagman|kharcho|ukha)\b',
   caseSensitive: false,
 );
 

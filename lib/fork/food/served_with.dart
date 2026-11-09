@@ -1,5 +1,6 @@
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dart';
 import 'package:opennutritracker/fork/food/local_food_data_source.dart';
+import 'package:opennutritracker/fork/food/portion_words.dart';
 
 /// The words that join a dish's main food to what comes with it.
 const _joints = {'with', 'and', 'in', 'ar', 'un', 'su', 'mit', 'z', 'w'};
@@ -21,6 +22,36 @@ const _howMade = {
   'chopped',
   'melted',
   'fresh',
+};
+
+/// Words that describe a food or its portion without naming it, which a
+/// product's name need not hold.
+const _describes = {
+  'grated',
+  'shredded',
+  'diced',
+  'toasted',
+  'creamy',
+  'crispy',
+  'homemade',
+  'hot',
+  'cold',
+  'warm',
+  'small',
+  'large',
+  'whole',
+  'plain',
+  'mixed',
+  'thick',
+  'thin',
+  'bowl',
+  'plate',
+  'cup',
+  'glass',
+  'serving',
+  'portion',
+  'spoon',
+  'handful',
 };
 
 /// The food [query] names: the last word before its first comma or joint
@@ -71,7 +102,29 @@ List<MealEntity> withoutServedWith(List<MealEntity> ranked, String query) {
 
 bool _onlyServedWith(String name, String head) {
   final (food, sides) = _foodAndSides(name);
-  return sides.isNotEmpty && holdsWord(sides, head) && !holdsWord(food, head);
+  return sides.isNotEmpty &&
+      holdsWord(sides, head) &&
+      !_holdsAsFood(food, head);
+}
+
+/// Whether [food], a row's name before its "with", names [word] as its
+/// food: outside its brackets, or in one of the other names they hold
+/// before that name's own joint. "melted cheese" found "Pork chop with
+/// cheese, baked (karbonāde ar sieru, pork cutlet with melted cheese)" and
+/// logged 534 kcal on a photo's French onion soup.
+bool _holdsAsFood(String food, String word) {
+  final open = food.indexOf('(');
+  if (open < 0) return holdsWord(food, word);
+  if (holdsWord(food.substring(0, open), word)) return true;
+  return food
+      .substring(open + 1)
+      .replaceAll(')', '')
+      .split(',')
+      .any(
+        (alias) => nameWords(alias)
+            .takeWhile((w) => !_joints.contains(w))
+            .any((w) => wordsAgree(word, spelling(w))),
+      );
 }
 
 /// [ranked] without the Open Food Facts products that are not the food a
@@ -86,10 +139,23 @@ List<MealEntity> withoutUnrelatedProducts(
 ) {
   final food = headNoun(query, oneWord: true);
   if (food == null) return ranked;
+  // Every word of the food, not only its last: a photo's "cabbage soup
+  // with carrots and meat" logged a "Carrot & Coriander Soup", 123 kcal
+  // against 626.
+  final words = [
+    for (final w in nameWords(
+      (withoutShapeWords(query) ?? query).split(',').first,
+    ).takeWhile((w) => !_joints.contains(w)))
+      if (!_howMade.contains(w) && !_describes.contains(w) && w.length > 2)
+        spelling(w),
+  ];
   return [
     for (final meal in ranked)
       if (meal.source != MealSourceEntity.off ||
-          holdsWord(meal.name ?? '', food))
+          (holdsWord(meal.name ?? '', food) &&
+              words.every(
+                (w) => holdsWord('${meal.name} ${meal.brands ?? ''}', w),
+              )))
         meal,
   ];
 }

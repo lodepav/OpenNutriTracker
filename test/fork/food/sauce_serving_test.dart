@@ -17,4 +17,11 @@ void main() {
     expect(isSauce('Potatoes, boiled'), isFalse);
     expect(isSauce(null), isFalse);
   });
+
+  test('a sauce word before a food is that food, a ladle of it not', () {
+    expect(isSauce('Meat sauce macaroni'), isFalse);
+    expect(sauceDefault('Meat sauce macaroni', 250), 250);
+    expect(isSauce('Pasta sauce with meat, meat'), isTrue);
+    expect(isSauce('Salsa verde'), isTrue);
+  });
 }
