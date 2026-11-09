@@ -2,6 +2,7 @@
 # Upstream's, its plugins', or the fork's (each names its seam). $PKG is the app id.
 android.permission.INTERNET                         # Open Food Facts, the AI providers, Sentry (upstream's manifest)
 android.permission.CAMERA                           # barcode scanning and meal photos (mobile_scanner)
+android.permission.RECORD_AUDIO                     # dictating a meal on the Describe fields and Log with AI (upstream's manifest, speech_to_text; D41)
 android.permission.POST_NOTIFICATIONS               # meal and fasting reminders (upstream's manifest, flutter_local_notifications)
 android.permission.RECEIVE_BOOT_COMPLETED           # reschedules the reminders after a reboot (upstream's manifest)
 android.permission.VIBRATE                          # reminder notifications (flutter_local_notifications)

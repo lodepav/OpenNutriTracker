@@ -4,6 +4,11 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- Voice input: dictate a meal on the Describe fields. -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <!-- [fork] S207 no-billing: the fork shows no Support page, so no tips (D41); the
+         in_app_purchase plugin's billing permission goes -->
+    <uses-permission xmlns:tools="http://schemas.android.com/tools"
+        android:name="com.android.vending.BILLING" tools:node="remove" />
+    <!-- [/fork] -->
     <!-- #312: Notification reminders -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
