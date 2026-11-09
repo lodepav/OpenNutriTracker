@@ -368,6 +368,32 @@ logs 491-534.
   bowl of solids in each soup (solyanka 530-629 against 354, borscht 331
   against 181).
 
+## Step 7, round 2: soups, comma spellings, brand words (2026-11-09)
+
+- **A bowl's foods fill the bowl.** The estimate put 300 g of broth and
+  360 g of solids in one bowl of solyanka, and 490 g in a small chłodnik.
+  It now hears that the solids take the base's place. Solyanka went from
+  731-926 to 494-682 kcal (354), cold beet soup from 117-169 to 118-144
+  (100). The borscht stays near 290 against 181: the recipe's reference
+  leaves out the toasted bread beside the bowl, which the read counts.
+- **A mapped name in other commas.** "pork cutlet, breaded, fried" missed
+  the schnitzel mapped to "pork, cutlet, breaded, fried" and found minced
+  pork patties. Every mapped name now matches by its words alone: the
+  karbonāde went from 389-449 to 330 kcal (262).
+- **A brand made of the product's own words** ("Rice Pilaf", for "Giant,
+  rice pilaf") no longer counts as named: a plov's "pilaf with carrots
+  and rice" logged that dry mix at 339 kcal per 100 g, 1,312 in all.
+- Tried and dropped: "spaghetti bolognese" mapped to a restaurant plate.
+  Its 554 g serving, beside the spaghetti a photo lists too, made 932
+  kcal (510).
+- Typed: 14% off in English, 7-13% in Latvian.
+- **Left, each a row's energy, not a read's:** LIDO's garlic sauce
+  (495 kcal per 100 g on its label) against the table's 683, now that
+  the note's estimate gives its 60 g instead of the 32 g serving; the
+  dill sauce's Open Food Facts product at 607; a stuffed pepper listed
+  beside its own filling; "baked casserole with cheese and tomato" falling
+  back to dry black beans.
+
 ## What the tests measure
 
 Each sends real photos or typed meals through the app's logging code,

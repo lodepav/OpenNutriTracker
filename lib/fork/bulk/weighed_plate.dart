@@ -87,7 +87,10 @@ is sulguni"), but states no weight. Rules:
   a soup or stew is its broth or base and each solid in it, so none of it
   goes missing. The base is the liquid alone ("chicken broth", "coconut
   milk", "tomato puree"), never the soup itself ("soup, lentil"): that
-  counts its solids twice. A salad or slaw lists its dressing as a food: the oil,
+  counts its solids twice. A bowl's foods together, base and solids and
+  what is on top, weigh what the bowl holds: the solids take the base's
+  place and never add to it, so a full 350 ml bowl with 150 g of solids
+  has 200 g of base. A salad or slaw lists its dressing as a food: the oil,
   vinaigrette, mayonnaise or sour cream the note or the photo shows, and
   when it looks dressed with nothing to say what, oil, a tablespoon (14 g)
   for each 150 g of salad. Fat a food was cooked in that its own query

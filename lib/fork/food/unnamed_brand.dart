@@ -15,7 +15,8 @@ final _asSold = RegExp(
 );
 
 /// [unnamedBrandPenalty] for an Open Food Facts product with a brand that
-/// [query] does not name, or with none, else 0 (S196).
+/// [query] does not name apart from the product's own name, or with none,
+/// else 0 (S196).
 ///
 /// A meal read off a photo names foods, not packets, and so does a model's
 /// reading of typed text (S204); the resolver asks for those only, as the
@@ -37,5 +38,12 @@ double unnamedBrandOf(MealEntity meal, String query) {
   // Mac" at no serving beat the table's, and logged 1 g of it.
   if (brand.isEmpty) return unnamedBrandPenalty;
   final named = tokenize(query);
-  return brand.every(named.contains) ? 0 : unnamedBrandPenalty;
+  // A brand the product's own name holds ("Snickers bar" by Snickers, a
+  // "rice pilaf" by "Rice Pilaf") is the food's words, not the user asking
+  // for that packet: a plov's "pilaf with carrots and rice" logged a dry
+  // pilaf mix at 339 kcal per 100 g.
+  final asName = tokenize(meal.name);
+  return brand.every(named.contains) && !brand.every(asName.contains)
+      ? 0
+      : unnamedBrandPenalty;
 }
