@@ -74,26 +74,49 @@ bool _onlyServedWith(String name, String head) {
   return sides.isNotEmpty && holdsWord(sides, head) && !holdsWord(food, head);
 }
 
-/// [ranked] without the Open Food Facts products whose name holds no word
-/// of [query] (S205), for a model's read, which names foods in English: a
-/// photo's "baked casserole with cheese and tomato" logged a "Black beans"
-/// product at 343 kcal, matched on some other field. Table rows always
-/// hold a word the search matched, so only products are read.
+/// [ranked] without the Open Food Facts products that are not the food a
+/// model's [query] names (S205): their name lacks its food ([headNoun]).
+/// A model names foods in English: a photo's "baked casserole with cheese
+/// and tomato" logged a "Black beans" product, and a typed "griķi ar
+/// sēnēm" an Oatly "Creamy oat fraiche", 468 kcal, on "cream". Table rows
+/// always hold the words the search matched, so only products are read.
 List<MealEntity> withoutUnrelatedProducts(
   List<MealEntity> ranked,
   String query,
 ) {
-  final asked = [
-    for (final w in nameWords(query))
-      if (!_joints.contains(w)) spelling(w),
-  ];
-  if (asked.isEmpty) return ranked;
+  final food = headNoun(query, oneWord: true);
+  if (food == null) return ranked;
   return [
     for (final meal in ranked)
       if (meal.source != MealSourceEntity.off ||
-          nameWords(
-            meal.name,
-          ).any((t) => asked.any((q) => wordsAgree(q, spelling(t)))))
+          holdsWord(meal.name ?? '', food))
         meal,
+  ];
+}
+
+/// The words of what a dish [query] names after its first "with", "and"
+/// or "in": "sausage" in "braised cabbage with sausage".
+List<String> _sides(String query) {
+  final words = nameWords(query.split(',').first);
+  final at = words.indexWhere((w) => w == 'with' || w == 'and' || w == 'in');
+  if (at < 1) return const [];
+  return [
+    for (final w in words.skip(at + 1))
+      if (!_joints.contains(w) && !_howMade.contains(w) && w.length > 2)
+        spelling(w),
+  ];
+}
+
+/// [ranked] without the rows that are only part of the dish a model's
+/// [query] names (S205): none of the words after its "with" are in them.
+/// "braised cabbage with sausage" logged M&S's "Braised Red Cabbage", 155
+/// kcal for a plate. With nothing left the dish is broken down (D9), into
+/// the cabbage and the sausage both.
+List<MealEntity> withoutMissingSides(List<MealEntity> ranked, String query) {
+  final sides = _sides(query);
+  if (sides.isEmpty) return ranked;
+  return [
+    for (final meal in ranked)
+      if (sides.any((side) => holdsWord(meal.name ?? '', side))) meal,
   ];
 }

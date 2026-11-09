@@ -83,11 +83,30 @@ void main() {
     final kept = withoutUnrelatedProducts([
       off('Black beans'),
       off('Cheesy tomato bake'),
+      off('Cheese and tomato casserole'),
       _row('Casserole, NFS'),
     ], 'baked casserole with cheese and tomato');
     expect(
       [for (final m in kept) m.name],
-      ['Cheesy tomato bake', 'Casserole, NFS'],
+      ['Cheese and tomato casserole', 'Casserole, NFS'],
+    );
+    expect(
+      withoutUnrelatedProducts([
+        off('Creamy oat fraiche'),
+      ], 'buckwheat with mushrooms and cream'),
+      isEmpty,
+    );
+  });
+
+  test('a row with none of the dish\'s "with" part is only part of it', () {
+    final kept = withoutMissingSides([
+      _row('Braised Red Cabbage'),
+      _row('Cabbage, stewed, with sausage'),
+    ], 'braised cabbage with sausage');
+    expect([for (final m in kept) m.name], ['Cabbage, stewed, with sausage']);
+    expect(
+      withoutMissingSides([_row('Coffee, brewed')], 'coffee'),
+      hasLength(1),
     );
   });
 }

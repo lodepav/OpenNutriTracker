@@ -152,6 +152,24 @@ void main() {
     expect(dryRowsLast([fatty, cooked], 'rice').first, fatty);
   });
 
+  test('a food served with another is still the food', () {
+    final mix = _product('Buckwheat with mushrooms', 'Uvelka', 347, 68);
+    final cooked = _product('Buckwheat groats, cooked', 'Table', 118, 25);
+    expect(
+      dryRowsLast([mix, cooked], 'buckwheat with mushrooms').first,
+      cooked,
+    );
+  });
+
+  test("a model's read with only the dry product has none", () {
+    final mix = _product('Buckwheat with mushrooms', 'Uvelka', 347, 68);
+    expect(
+      dryRowsLast([mix], 'buckwheat with mushrooms', modelRead: true),
+      isEmpty,
+    );
+    expect(dryRowsLast([mix], 'buckwheat with mushrooms'), [mix]);
+  });
+
   test('the same rule holds for rice and lentils', () {
     final dryRice = _product('Basmati Rice', 'Tilda', 350, 78);
     final rice = _product('Rice, cooked', 'Table', 130, 28);

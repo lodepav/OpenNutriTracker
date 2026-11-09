@@ -13,6 +13,8 @@ final _asksForUncooked = RegExp(
 
 /// Words that say how a food was made, not which food it is: the food in
 /// "rice cooked" is still the rice.
+final _with = RegExp(r'\s(with|and|in)\s', caseSensitive: false);
+
 const _stateWords = {'cooked', 'boiled', 'steamed'};
 
 /// [ranked] with the dry rows of a food eaten cooked moved last (S186).
@@ -27,8 +29,13 @@ const _stateWords = {'cooked', 'boiled', 'steamed'};
 /// stands down when the name asks for the food dry or raw, as a recipe's
 /// ingredients do, and for a product whose brand the name gives ("100 g
 /// Barilla penne"): someone naming the packet means the packet. The dry rows
-/// stay among the candidates, one tap away.
-List<MealEntity> dryRowsLast(List<MealEntity> ranked, String query) {
+/// stay among the candidates, one tap away, unless [modelRead] and they are
+/// all there is.
+List<MealEntity> dryRowsLast(
+  List<MealEntity> ranked,
+  String query, {
+  bool modelRead = false,
+}) {
   if (_namesReadyFood(query)) return _mixesLast(ranked, query);
   if (_asksForUncooked.hasMatch(query) || !_namesFoodEatenCooked(query)) {
     return ranked;
@@ -48,7 +55,12 @@ List<MealEntity> dryRowsLast(List<MealEntity> ranked, String query) {
         !brandNamed(meal);
   }
 
-  return [...ranked.where((m) => !dry(m)), ...ranked.where(dry)];
+  final cooked = ranked.where((m) => !dry(m)).toList();
+  // A model's read with nothing but the dry product: none, so the dish is
+  // broken down (D9) into foods as eaten. A typed "griķi ar sēnēm" logged
+  // Uvelka's dry buckwheat-with-mushrooms mix, 347 kcal per 100 g.
+  if (modelRead && cooked.isEmpty) return const [];
+  return [...cooked, ...ranked.where(dry)];
 }
 
 /// Above this per 100 g, a drink, soup or mash is the powder it is made
@@ -101,8 +113,9 @@ List<MealEntity> _mixesLast(List<MealEntity> ranked, String query) {
 /// first comma: "penne pasta, cooked" and "rice, white" do; "rice cakes" and
 /// "rice flour", a different food, do not.
 bool _namesFoodEatenCooked(String query) {
+  // the food before a "with": "buckwheat with mushrooms" is buckwheat
   final words = nameWords(
-    query.split(',').first,
+    query.split(',').first.split(_with).first,
   ).where((w) => !describingWords.contains(w) && !_stateWords.contains(w));
   return words.isNotEmpty && eatenCooked.contains(spelling(words.last));
 }

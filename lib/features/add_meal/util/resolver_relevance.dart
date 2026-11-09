@@ -260,7 +260,12 @@ List<MealEntity> rankForResolution(
       // [fork] S205 served-with
       _sorted(
         withoutServedWith(
-          fromPhoto ? withoutUnrelatedProducts(rest, query) : rest,
+          fromPhoto
+              ? withoutMissingSides(
+                  withoutUnrelatedProducts(rest, query),
+                  query,
+                )
+              : rest,
           query,
         ),
         query,
@@ -269,6 +274,7 @@ List<MealEntity> rankForResolution(
       ),
       // [/fork]
       query,
+      modelRead: fromPhoto,
     ),
     // [/fork]
   ];

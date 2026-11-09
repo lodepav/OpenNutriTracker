@@ -89,10 +89,16 @@ class LocalFoodDataSource extends SpFoodDataSource {
       // and a dish ("spaghetti bolognese" is no sauce) or a food cooked a
       // way the plain row is not ("sautéed mushrooms" are not raw ones)
       // keeps its words, to be broken down (D9)
+      // and a word the table does not know is a brand's ("zorblax
+      // crisps"), whose product is the food, not plain crisps
       final lastAlone =
           !searchString.contains(',') &&
           !isMainDish(searchString) &&
-          !_madeAWay.hasMatch(searchString);
+          !_madeAWay.hasMatch(searchString) &&
+          query
+              .trim()
+              .split(RegExp(r'\s+'))
+              .every((word) => search(word).isNotEmpty);
       for (final shorter in fewerWords(query, lastAlone: lastAlone)) {
         rows = [
           for (final row in search(shorter))
