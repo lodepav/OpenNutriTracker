@@ -56,7 +56,9 @@ import 'package:opennutritracker/features/home/presentation/screens/import_meal_
 import 'package:opennutritracker/features/scanner/scanner_screen.dart';
 import 'package:opennutritracker/features/meal_detail/meal_detail_screen.dart';
 import 'package:opennutritracker/features/settings/presentation/bloc/settings_bloc.dart';
-import 'package:opennutritracker/features/settings/presentation/bloc/tip_jar_cubit.dart';
+// [fork] S207 no-billing
+// import 'package:opennutritracker/features/settings/presentation/bloc/tip_jar_cubit.dart';
+// [/fork]
 import 'package:opennutritracker/features/settings/presentation/widgets/accent_colour_screen.dart';
 import 'package:opennutritracker/features/settings/presentation/widgets/health_sync_screen.dart';
 import 'package:opennutritracker/fork/screens/settings/settings_screen.dart'; // [fork] S153
@@ -104,8 +106,10 @@ Future<void> _bootstrapApp() async {
   // consume leftover tips, before anything else can buy one (#1536).
   // Again on every return to the foreground, for a payment that cleared
   // while the app was in the background.
-  unawaited(locator<TipJarCubit>().start());
-  locator<TipJarCubit>().watchAppResumes();
+  // [fork] S207 no-billing: no Support page, so no tips to finish (D41)
+  // unawaited(locator<TipJarCubit>().start());
+  // locator<TipJarCubit>().watchAppResumes();
+  // [/fork]
 
   // Drop cached remote-search results that haven't been touched in 90
   // days. Done once per app start; no need to schedule a recurring task.
