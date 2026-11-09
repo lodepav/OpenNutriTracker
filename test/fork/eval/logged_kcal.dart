@@ -94,6 +94,8 @@ Future<Logged?> loggedKcal(
   var guessed = 0;
   final cells = <String>[];
   final dishKcal = <Object, double>{};
+  // Each breakdown's ingredient rows, as the other rows' cells read.
+  final dishRows = <Object, List<String>>{};
   for (final row in state.rows) {
     final meal = row.meal;
     // A dish the model returned nothing for: the app keeps the row, which
@@ -109,7 +111,12 @@ Future<Logged?> loggedKcal(
         (row.resolved.parsed.quantity == null && meal.servingQuantity == null);
     if (isGuess) guessed++;
     kcal += rowKcal;
+    final cell =
+        '${row.resolved.parsed.query} → ${meal.name} '
+        '${_n(amount)} ${row.effectiveUnit.split('.').last}'
+        '${isGuess ? ' (guess)' : ''} ${rowKcal.round()}';
     if (row.dishIngredient case final ingredient?) {
+      (dishRows[ingredient.group] ??= []).add(cell);
       // a dish the read broke down itself, not one the loop above asked for
       dishes.putIfAbsent(ingredient.group, () => ingredient.dish);
       dishKcal.update(
@@ -119,14 +126,14 @@ Future<Logged?> loggedKcal(
       );
       continue;
     }
-    cells.add(
-      '${row.resolved.parsed.query} → ${meal.name} '
-      '${_n(amount)} ${row.effectiveUnit.split('.').last}'
-      '${isGuess ? ' (guess)' : ''} ${rowKcal.round()}',
-    );
+    cells.add(cell);
   }
   for (final MapEntry(key: group, value: dish) in dishes.entries) {
-    cells.add('$dish → breakdown ${(dishKcal[group] ?? 0).round()}');
+    final rows = dishRows[group] ?? const [];
+    cells.add(
+      '$dish → breakdown ${(dishKcal[group] ?? 0).round()}'
+      '${rows.isEmpty ? '' : ' [${rows.join(', ')}]'}',
+    );
   }
   return (kcal: kcal, guessed: guessed, cells: cells);
 }

@@ -1,6 +1,9 @@
 import 'package:opennutritracker/features/add_meal/domain/meal_items_api.dart';
 import 'package:opennutritracker/features/add_meal/domain/meal_text_interpreter.dart';
 import 'package:opennutritracker/features/add_meal/util/meal_text_parser.dart';
+// [fork] S204 typed-english-query
+import 'package:opennutritracker/fork/bulk/typed_query_language.dart';
+// [/fork]
 
 /// Reads a free-text meal line with a model, and returns only what the food
 /// search needs: a query per item, plus a quantity when the user stated one.
@@ -61,9 +64,11 @@ Rules:
 
     return _api.requestItems(
       content: MealTextContent(trimmed),
-      system: localeCode == null
-          ? _systemPrompt
-          : '$_systemPrompt\nThe user\'s app language is "$localeCode".',
+      system:
+          '${localeCode == null ? _systemPrompt : '$_systemPrompt\nThe user\'s app language is "$localeCode".'}'
+          // [fork] S204 typed-english-query
+          '\n$typedQueryLanguageRule',
+      // [/fork]
     );
   }
 }

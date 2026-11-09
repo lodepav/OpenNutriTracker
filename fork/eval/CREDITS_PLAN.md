@@ -109,6 +109,7 @@ four suites cost $0.24 over three passes on Haiku.
 | 4 | Tune the photo prompts on `tune`, check on `held` | rounds 1-4 done, $0.45 | $1-10 |
 | 5 | Typed meals and the harder cases | 3 × | done, $0.24 |
 | 6 | Sonnet 5.5, three passes | 3 × the four main suites | done, $4.17 |
+| 7 | Global checks: typed meals, a resolution audit, photo prompt bias, repeated reads, counting | typed 6 ×, audit 1 judge, photos 9 × | done, about $0.15 |
 | | Spent by 2026-11-08, with the fix checks | | about $4.40 |
 | | Left, for steps 2-4, the emulator and repeats | | about $95 |
 
@@ -287,6 +288,85 @@ not reach this default; its medians moved within noise.
   263 kcal (132), the dill sauce from 443 to 244 (238). The portion
   medians went from 50% to 44% on tune and stayed at 27% on held.
 - **Left:** chłodnik's two egg halves log as two eggs (155 of its 263 kcal).
+
+## Step 7: global checks (2026-11-09)
+
+Fixes that move many foods at once, not a dish at a time.
+
+**1. Typed meals.** `text_eval_test` was 53-58% off (median) in English
+and 66-93% in Latvian, logging 166-198% of the references. The prompt
+kept each food in the language it was typed in, and the fork's table is
+English: a Latvian name fell to whatever product shared a word. Orange
+juice became "Rica Sula" at 148 kcal per 100 g, coffee with milk became
+popcorn, butter peanut butter, an omelette 2,295 kcal of "Egg Omletes".
+
+- The typed prompt now asks for each food as its nearest generic English
+  name, keeping a brand, and a named dish as one entry (S204).
+- A model's reading of typed text now ranks a product the name does not
+  brand below the generic row, as a photo's does (S196); the parser's
+  words still may mean the packet.
+- A product with no brand trails too: a brandless "Big Mac" with no
+  serving logged 1 g.
+- Six live Haiku passes, the last two with everything: 16% off in
+  English, 7% in Latvian, logging 99-109% of the references.
+
+| Typed, median off | Before | Prompt | + named dishes | + brandless |
+|---|---|---|---|---|
+| English | 53-58% | 25% | 18-19% | 16% |
+| Latvian | 66-93% | 14-29% | 13% | 7% |
+
+**2. Resolution audit.** The 326 distinct food names in every report
+under `build/fork-eval` were resolved again against the table
+(`resolution_dump_test.dart`), and Haiku judged each name and row: 192
+fine, 33 the wrong food, 24 an odd serving, 10 the wrong form, 8 an
+implausible energy. By how often each name came up, the top four were
+one cause: a single Latvian word matched one word of a fork dish's
+bracketed names. "lasis" (salmon) found a salmon soup made "ar lasi",
+"pankūkas" liver patties ("aknu pankūkas"), "biezpiens" syrniki,
+"speķis" grey peas with bacon, 159 uses in all.
+
+- A dish's bracketed names now count only whole, up to what it is made
+  with, unless the name also shares a word with the dish's own name:
+  "pelēkie zirņi" and "fried pork patties" still find their dishes.
+  "Gyros" is added to the shawarma as a name of its own.
+- Left, each a food or two: cooked carrots at 72 kcal per 100 g, "pork
+  chop" landing on a stuffed chop (fixed under 3), "melted butter" on Brussels sprouts
+  with butter, "meat sauce" on meatballs.
+
+**3. Photo prompt bias.** The note path's estimate (`estimatedPlatePrompt`,
+the portion suite) logged 157% of the labels on tune and 136% on held.
+Dropping "Restaurant and recipe photos are often generous" moved neither
+(157%, 131%), so the line is gone and the plate sizes stay. The ingredient
+rows of each breakdown, now listed in the reports, showed where the excess
+came from: the rows, not the grams. "beef, cooked" found beef bacon at 449
+kcal per 100 g in a stuffed pepper and a solyanka, "pork, cooked, roasted"
+fatty backribs, "pork chop" a stuffed chop. A meat named only by how it
+was cooked or cut now takes its generic row ("Beef, NFS", "Pork, NFS",
+"Pork, chop, NS as to fat eaten"; `everydayRowName`).
+
+**4. Repeated reads.** Three passes of the same code read most photos
+identically (the median spread is 0%), so the median of three reads
+changes little: 25% off against 25% for one read, the mean 34% against
+37%. Not worth three times the cost; the variation between runs comes
+from Open Food Facts' live results more than from the model.
+
+**5. Counting.** The photo prompt's halves rule now starts with "2 egg
+halves are 1 egg" (S60), and the estimate's piece sizes say two halves
+are one egg: chłodnik with no note went from 252 to 180 kcal (132). A
+note naming one plain food now asks for every piece the photo shows:
+"chicken cutlets" had logged one cutlet, 192 kcal against 418, and now
+logs 491-534.
+
+| After 3-5, two live passes | Before | After |
+|---|---|---|
+| Calorie, tune: median, total | 21%, 131% | 19%, 115% |
+| Calorie, held: median, total | 25%, 100% | 24%, 101% |
+| Portion, tune: median, total | 53%, 157% | 31%, 122-141% |
+| Portion, held: median, total | 50%, 136% | 39-40%, 127-128% |
+
+- **Left:** the estimate still puts 100 g of egg in a chłodnik and a full
+  bowl of solids in each soup (solyanka 530-629 against 354, borscht 331
+  against 181).
 
 ## What the tests measure
 

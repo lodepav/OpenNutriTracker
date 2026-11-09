@@ -84,9 +84,9 @@ Rules:
   served as pieces (dumplings, pancakes, tarts, rolls) is counted, roughly
   if there are many. A count has no unit, so never include "unit".
 - A food cut in halves or wedges is counted as the whole items it came
-  from, rounded to a whole number: 2 tomato halves are 1 tomato, 5 potato
-  halves are 3 potatoes, 4 apple wedges are 1 apple. Never count the
-  halves as items.
+  from, rounded to a whole number: 2 egg halves are 1 egg, 2 tomato halves
+  are 1 tomato, 5 potato halves are 3 potatoes, 4 apple wedges are 1 apple.
+  Never count the halves as items.
 - For anything you cannot count — rice, salad, sauce, soup, a drink — omit
   "quantity". Do not guess grams or millilitres from a photograph. The app
   asks the user for the amount, and a guess they cannot check is worse than

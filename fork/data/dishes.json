@@ -253,7 +253,7 @@
     },
     {
       "code": "chicken-shawarma",
-      "name": "Shawarma, chicken, wrap (chicken shawarma, chicken gyros, shawarma wrap)",
+      "name": "Shawarma, chicken, wrap (chicken shawarma, chicken gyros, gyros, shawarma wrap)",
       "basis": "One wrap as the kebab shops make it: grilled chicken thigh in flatbread with cabbage, tomato, cucumber and a garlic sauce of mayonnaise and yogurt.",
       "yield_g": 315,
       "serving": ["1 wrap", 315],

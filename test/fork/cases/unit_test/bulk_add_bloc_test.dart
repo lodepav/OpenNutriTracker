@@ -164,6 +164,53 @@ Future<BulkAddLoadedState> parse(
 }
 
 void main() {
+  // S196, S204: a model's reading of typed text names foods in English, as
+  // a photo's does, so a packet it did not name trails the generic row; the
+  // parser's words may mean the packet.
+  group('a packet the name did not ask for', () {
+    final packet = MealEntity(
+      code: 'packet',
+      name: 'Tomato',
+      brands: 'Maestri',
+      url: null,
+      mealQuantity: null,
+      mealUnit: 'g',
+      servingQuantity: null,
+      servingUnit: 'g',
+      servingSize: null,
+      source: MealSourceEntity.off,
+      nutriments: MealNutrimentsEntity.empty(),
+    );
+    final generic = MealEntity(
+      code: 'generic',
+      name: 'Tomatoes, raw',
+      url: null,
+      mealQuantity: null,
+      mealUnit: 'g',
+      servingQuantity: null,
+      servingUnit: 'g',
+      servingSize: null,
+      source: MealSourceEntity.fdc,
+      nutriments: MealNutrimentsEntity.empty(),
+    );
+    final results = {
+      'tomato': [packet, generic],
+    };
+
+    test('trails the generic food on a model\'s read of typed text', () async {
+      final bloc = blocWithModelReply(results, const [
+        ParsedMealItem(query: 'tomato'),
+      ]);
+      final state = await parse(bloc, 'tomāts');
+      expect(state.rows.single.meal?.code, 'generic');
+    });
+
+    test('keeps its place on the parser\'s read', () async {
+      final state = await parse(blocWith(results), 'tomato');
+      expect(state.rows.single.meal?.code, 'packet');
+    });
+  });
+
   group('a bare count (#622)', () {
     test('flags a count past what a recipe batch makes', () async {
       // A recipe's serving is a share of the batch: "14 pelmeni" against six

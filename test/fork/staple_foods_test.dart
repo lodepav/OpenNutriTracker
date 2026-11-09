@@ -91,6 +91,33 @@ void main() {
     });
   });
 
+  // A fork dish's bracketed names count whole, or beside a word of its
+  // name: a single Latvian word found the dish it is one word of, "lasis"
+  // a salmon soup made "ar lasi", "pankūkas" liver patties ("aknu
+  // pankūkas"), "speķis" grey peas with bacon.
+  for (final query in ['lasis', 'pankūkas', 'speķis', 'biezpiens']) {
+    test('"$query" is not a dish it is one word of', () async {
+      final item = await resolve(query);
+      expect(
+        item.candidates.map((c) => c.backendSource),
+        isNot(contains('fork_dishes')),
+        reason: item.candidates.map((c) => c.name).join('; '),
+      );
+    });
+  }
+
+  for (final (query, dish) in [
+    ('pelēkie zirņi', 'Grey peas with bacon'),
+    ('laša zupa', 'Salmon soup'),
+    ('aknu pankūkas', 'Liver patties'),
+    ('fried pork patties', 'Pork cutlets'),
+  ]) {
+    test('"$query" is still the fork\'s "$dish"', () async {
+      final item = await resolve(query);
+      expect(item.candidates[item.selectedIndex].name, startsWith(dish));
+    });
+  }
+
   // A photo's chłodnik came back under these names, found no row and was
   // broken down by a second call at 263-345 kcal, a bowl being about 110.
   for (final query in [
