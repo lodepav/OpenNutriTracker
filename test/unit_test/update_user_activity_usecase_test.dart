@@ -64,8 +64,9 @@ void main() {
   });
 
   tearDown(() async {
-    await Hive.close();
+    // [fork] S203 hive-test-cleanup: delete the boxes while they are open
     await Hive.deleteFromDisk();
+    // [/fork]
   });
 
   Future<UserActivityEntity> storeActivity({

@@ -206,8 +206,9 @@ void main() {
 
   tearDown(() async {
     ImportWorkoutsUsecase.clock = DateTime.now;
-    await Hive.close();
+    // [fork] S203 hive-test-cleanup: delete the boxes while they are open
     await Hive.deleteFromDisk();
+    // [/fork]
   });
 
   group('ImportWorkoutsUsecase budget invariant', () {

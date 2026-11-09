@@ -20,8 +20,9 @@ void main() {
     });
 
     tearDown(() async {
-      await Hive.close();
-      Hive.deleteFromDisk();
+      // [fork] S203 hive-test-cleanup: delete the boxes while they are open
+      await Hive.deleteFromDisk();
+      // [/fork]
     });
 
     test('addTemplate persists and allTemplates returns it alphabetised',
