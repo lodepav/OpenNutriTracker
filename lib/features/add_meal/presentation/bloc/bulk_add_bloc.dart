@@ -20,7 +20,9 @@ import 'package:opennutritracker/fork/dish/dish_breakdown_rows.dart';
 // [fork] S61 recipe-count: a count past a recipe's batch is flagged
 import 'package:opennutritracker/fork/dish/recipe_count.dart';
 // [/fork]
-// [fork] S98 default-amount: a sauce starts at a ladle, a drink at a glass
+// [fork] S98 default-amount: a sauce starts at a ladle, a drink at a glass,
+// a main dish at a plate
+import 'package:opennutritracker/fork/food/dish_serving.dart';
 import 'package:opennutritracker/fork/food/drink_serving.dart';
 import 'package:opennutritracker/fork/food/garnish_serving.dart';
 import 'package:opennutritracker/fork/food/sauce_serving.dart';
@@ -652,6 +654,10 @@ class BulkAddBloc extends Bloc<BulkAddEvent, BulkAddState> {
     }
     if (isSoup(meal?.name)) {
       return _amountText(usesImperialUnits ? soupServingOz : soupServingGrams);
+    }
+    // A cooked main dish at a plate, 300 g or 10.5 oz.
+    if (isMainDish(meal?.name)) {
+      return _amountText(usesImperialUnits ? dishServingOz : dishServingGrams);
     }
     return usesImperialUnits ? '3.5' : '100';
     // [/fork]
