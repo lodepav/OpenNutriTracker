@@ -141,7 +141,10 @@ void main() {
         '| Resolver on the typed name | $resolved | ${pct(wResolved)} |',
       )
       ..writeln();
-  }, skip: skip);
+  },
+      // live Open Food Facts searches take minutes, not the default 30 s
+      timeout: const Timeout(Duration(minutes: 10)),
+      skip: skip);
 
   for (final spec in models.specs) {
     test(
