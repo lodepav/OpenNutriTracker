@@ -31,6 +31,9 @@ import 'package:opennutritracker/fork/food/soup_serving.dart';
 // [fork] S202 slice-piece
 import 'package:opennutritracker/fork/food/portion_words.dart';
 // [/fork]
+// [fork] S206 dish-parts
+import 'package:opennutritracker/fork/food/dish_parts.dart';
+// [/fork]
 
 part 'bulk_add_event.dart';
 part 'bulk_add_state.dart';
@@ -573,10 +576,15 @@ class BulkAddBloc extends Bloc<BulkAddEvent, BulkAddState> {
       // [fork] S196 unnamed-brand: a photo's foods are the foods as eaten,
       // and so are a model's reading of typed text, in English (S204); the
       // parser's words are the user's own language, which the table lacks
-      final resolved = await _resolveParsedMealsUseCase.resolve(
+      var resolved = await _resolveParsedMealsUseCase.resolve(
         parsed.items,
         fromPhoto: source != BulkAddReadSource.parser,
       );
+      // [/fork]
+      // [fork] S206 dish-parts: a model lists a dish, then what it sees of it
+      if (source != BulkAddReadSource.parser) {
+        resolved = withoutDishParts(resolved);
+      }
       // [/fork]
       if (emit.isDone || _superseded(attempt)) return;
 

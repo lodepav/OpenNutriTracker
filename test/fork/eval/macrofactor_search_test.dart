@@ -106,14 +106,17 @@ void main() {
       ..writeln('| Food | Logged | Search top | Right in 5 | Resolver |')
       ..writeln('|---|---|---|---|---|');
     for (final food in singles) {
-      final found = await repository.getSupabaseFoodsByString(food.typed);
+      // The app's parser takes the amount off first: searched with it, "10 g
+      // butter" found a "10 oz" steak and the resolver nothing at all.
+      final item =
+          parseMealText(food.typed).items.firstOrNull ??
+          ParsedMealItem(query: food.typed);
+      final found = await repository.getSupabaseFoodsByString(item.query);
       final firstRight = found
           .take(5)
           .toList()
           .indexWhere((m) => _right(food, m.name));
-      final pick = (await resolver.resolve([
-        ParsedMealItem(query: food.typed),
-      ])).single.selected;
+      final pick = (await resolver.resolve([item])).single.selected;
       final isTop = firstRight == 0, inFive = firstRight >= 0;
       final isResolved = _right(food, pick?.name);
       wAll += food.logged;
@@ -138,7 +141,10 @@ void main() {
         '| Resolver on the typed name | $resolved | ${pct(wResolved)} |',
       )
       ..writeln();
-  }, skip: skip);
+  },
+      // live Open Food Facts searches take minutes, not the default 30 s
+      timeout: const Timeout(Duration(minutes: 10)),
+      skip: skip);
 
   for (final spec in models.specs) {
     test(

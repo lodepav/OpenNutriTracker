@@ -11,6 +11,7 @@ import 'package:opennutritracker/features/add_meal/data/dto/sp/sp_food_dto.dart'
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_portion_entity.dart';
 import 'package:opennutritracker/features/add_meal/util/backend_title.dart';
 import 'package:opennutritracker/features/add_meal/util/soft_text_score.dart';
+import 'package:opennutritracker/fork/food/dish_serving.dart';
 import 'package:opennutritracker/fork/food/everyday_row.dart';
 import 'package:opennutritracker/fork/food/unasked_variant.dart';
 import 'package:opennutritracker/fork/food/unspecified_row.dart';
@@ -84,7 +85,21 @@ class LocalFoodDataSource extends SpFoodDataSource {
     // Then a dish name with words the table does not use ("blueberry
     // cheesecake", "rice with herbs"): the nearest food it names.
     if (forResolution && rows.isEmpty) {
-      for (final shorter in fewerWords(query)) {
+      // a model's qualifiers after a comma were the food's, not its kind
+      // and a dish ("spaghetti bolognese" is no sauce) or a food cooked a
+      // way the plain row is not ("sautéed mushrooms" are not raw ones)
+      // keeps its words, to be broken down (D9)
+      // and a word the table does not know is a brand's ("zorblax
+      // crisps"), whose product is the food, not plain crisps
+      final lastAlone =
+          !searchString.contains(',') &&
+          !isMainDish(searchString) &&
+          !_madeAWay.hasMatch(searchString) &&
+          query
+              .trim()
+              .split(RegExp(r'\s+'))
+              .every((word) => search(word).isNotEmpty);
+      for (final shorter in fewerWords(query, lastAlone: lastAlone)) {
         rows = [
           for (final row in search(shorter))
             if (_namedFor(row, shorter)) row,
@@ -316,10 +331,12 @@ final _joiner = RegExp(r'\s+(with|in|and|on|ar)\s+', caseSensitive: false);
 /// "chicken rice pilaf" a rice pilaf. Each keeps two words at least: one
 /// word alone is too broad to stand for the dish ("salad", "rice",
 /// "chicken"), and a dish the table cannot name is broken down instead (D9).
+/// Last, the last word alone when it is a food, not a dish ([_dishHeads]),
+/// unless not [lastAlone].
 /// A bracketed part of a name: "(chilled borscht)".
 final _bracketed = RegExp(r'\s*\([^)]*\)?');
 
-List<String> fewerWords(String query) {
+List<String> fewerWords(String query, {bool lastAlone = true}) {
   final shorter = <String>[];
   var words = query.trim().split(RegExp(r'\s+'));
   final joined = _joiner.firstMatch(query.trim());
@@ -330,8 +347,73 @@ List<String> fewerWords(String query) {
   for (var i = 1; i < words.length - 1; i++) {
     shorter.add(words.sublist(i).join(' '));
   }
+  // A single food named with its kind, not a dish: "cherry tomatoes",
+  // "kalamata olives", "red pesto" found nothing, though the Food tab's
+  // search lists "Tomatoes, raw" first. The user's MacroFactor foods missed
+  // eight such (2026-11-09).
+  if (lastAlone && joined == null && words.length >= 2) {
+    final last = words.last.toLowerCase();
+    if (!_dishHeads.contains(last)) shorter.add(last);
+  }
   return shorter;
 }
+
+/// The last words of a dish, too broad alone to stand for it: "chicken
+/// salad" is no salad row, and a dish the table cannot name is broken
+/// down (D9).
+/// How a food was made, which its plain row is not.
+final _madeAWay = RegExp(
+  r'\b(saut[eé]ed|fried|roasted|grilled|baked|braised|stewed|creamed|'
+  r'mashed|pickled|smoked|glazed|candied|caramelized|breaded|stuffed)\b',
+  caseSensitive: false,
+);
+
+const _dishHeads = {
+  'salad',
+  'salads',
+  'soup',
+  'soups',
+  'rice',
+  'chicken',
+  'beef',
+  'pork',
+  'bowl',
+  'sandwich',
+  'sandwiches',
+  'pie',
+  'pies',
+  'cake',
+  'cakes',
+  'pasta',
+  'stew',
+  'curry',
+  'burger',
+  'burgers',
+  'wrap',
+  'wraps',
+  'plate',
+  'casserole',
+  'pilaf',
+  'pizza',
+  'dish',
+  'roll',
+  'rolls',
+  'mix',
+  'balls',
+  'bake',
+  'noodles',
+  'platter',
+  'skewers',
+  'meat',
+  'fish',
+  'sauce',
+  'dumplings',
+  'pancakes',
+  // a kind of sweet or snack, not one: "fruit jelly sweets" found sweet
+  // potato, "curd snack" a berry bar
+  'snack', 'snacks', 'sweets', 'sweet', 'candy', 'candies', 'bar', 'bars',
+  'treat', 'treats', 'dessert', 'delight', 'cookies', 'biscuits', 'drink',
+};
 
 /// Whether [row] is named for [food] itself, its name starting with the
 /// words of [food] ("Cheesecake, plain" for "cheesecake"), rather than

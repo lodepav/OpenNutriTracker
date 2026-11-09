@@ -9,14 +9,20 @@ final _shape = RegExp(
   caseSensitive: false,
 );
 
+final _bracket = RegExp(r'\([^)]*\)');
+
 final _of = RegExp(r'^\s*of\b|\bof\s*$', caseSensitive: false);
 final _spaces = RegExp(r'\s+');
 
 /// [query] without its shape words, or null when it has none or is
-/// nothing else.
+/// nothing else. A name the model gave another in brackets loses those too:
+/// "fresh coriander (cilantro)" found no row where "fresh coriander" finds
+/// the herb, and with nothing found the herb was broken down off the photo
+/// into the whole plate, 1,848 kcal.
 String? withoutShapeWords(String query) {
-  if (!_shape.hasMatch(query)) return null;
+  if (!_shape.hasMatch(query) && !_bracket.hasMatch(query)) return null;
   final bare = query
+      .replaceAll(_bracket, ' ')
       .replaceAll(_shape, ' ')
       .replaceAll(_spaces, ' ')
       .trim()

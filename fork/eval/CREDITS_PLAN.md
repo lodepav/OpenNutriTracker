@@ -394,6 +394,61 @@ logs 491-534.
   beside its own filling; "baked casserole with cheese and tomato" falling
   back to dry black beans.
 
+## Step 7, round 3: more photos, MacroFactor, Sonnet again (2026-11-09)
+
+- **43 more photos** from recipe sites with published nutrition: 22 to
+  tune (now 68), 21 held (now 66).
+- **MacroFactor list** (git-ignored, under `build/fork-eval/macrofactor`):
+  150 logged foods and 22 dish photos. With Open Food Facts live, the
+  122 single foods: search top row 102 (92% weighted by how often they
+  are logged), first 5 111 (96%), resolver on the typed name 119 (99%).
+  The test parsed the amount off first only after this round: searched
+  with "10 g butter" it found a "10 oz" steak. Haiku's describe: 108-110
+  of 122 right, dishes 22-24 of 28. The dish photos: named 16 of 22,
+  right row 15.
+- **Junk rows.** Resolution never used the Food tab's most-words fallback;
+  the junk came from other places, now dropped for a model's read: a row
+  whose food is only in its "with" tail ("rice with chicken" for
+  chicken), an Open Food Facts product without the query's food word
+  (black beans for a casserole), and a row holding none of a dish's sides.
+  A named variety the table lacks falls back to its food ("green apple"
+  to the apple), except after a dish word or a way of cooking it.
+  Brackets are dropped from a searched name ("coriander (cilantro)").
+  Audit of 326 saved queries: 9 changed, all for the better.
+- **Powders.** A ready food (latte, soup, porridge, mash, kissel...) puts
+  powders and dry mixes after its prepared rows, and a model's read
+  drops a dry row with nothing cooked beside it.
+- **A dish beside its parts.** Of 1,255 saved reads, the double counts
+  were khachapuri with its egg and cheese (53 reads), chłodnik's garnish,
+  bolognese with its spaghetti and a stuffed pepper with its filling. A
+  model's read now drops a part a dish row of 3 or more words names,
+  unless the part is the dish's own food.
+- **Emulator, typed Latvian with the real key:** "sautēti kāposti ar desu"
+  found M&S red cabbage and the cream found an oat fraiche at 468 kcal;
+  the cabbage is now broken down (213 kcal). Typed without accents,
+  "griki" reads as yogurt even with a prompt line; "griķi" reads right.
+  That is the model's vocabulary, left. Kefir 300 ml still asks to check
+  the unit.
+- **Sonnet re-run**, 3 passes on the new set (median off, total, within
+  25%):
+
+  | Suite | Model | Tune | Held |
+  |---|---|---|---|
+  | kcal | Haiku | 32%, 117%, 12/32 | 43%, 113%, 11/33 |
+  | kcal | Sonnet | 68%, 97%, 7/32 | 46%, 105%, 13/33 |
+  | portion | Haiku | 28% | 38% |
+  | portion | Sonnet | 30% | 39% |
+
+  Haiku stays the default. On the old photos Haiku held its numbers
+  (tune 14%, held 35%); the new ones are harder (46%, 49%).
+- **Left, from the new photos:** a dish row at a guessed 60-100 g
+  (macaroni with meat 35-69 kcal against 513, millet pumpkin porridge 74
+  against 357); a canned soup product picked for a home soup (chicken rice
+  soup 89 against 427); salads and soups read 2-4 times over (vegetable
+  salad 676-1,180 against 236, lagman up to 1,910 against 555, buckwheat
+  kupecheski 671-892 against 285).
+- Cost: about $4-5 of the promo credits.
+
 ## What the tests measure
 
 Each sends real photos or typed meals through the app's logging code,

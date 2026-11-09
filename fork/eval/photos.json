@@ -1,6 +1,6 @@
 {
  "about": "Photo test set for phase 1.4 (D7). Photos stay on their sites; fork/tools/fetch_eval_photos.py downloads them into build/. Macros are the recipe pages' own per-serving figures (site calculators, not lab values). LIDO photos (lv-lido-*) are the chain's own Wolt menu photos; LIDO publishes no macros for restaurant dishes, so per_serving is null there except where LIDO's packaged label gives them. match_kcal_100g_max: the dish's table row must be at most this energy (a cooked row, not the raw grain). user_note: what a person would type with the photo; the test runs each such photo with and without it. parts: the things on a set-meal plate, each named by any of its words.",
- "collected": "2026-10-18, LIDO and eda.ru 2026-10-23, LIDO set meals 2026-10-24",
+ "collected": "2026-10-18, LIDO and eda.ru 2026-10-23, LIDO set meals 2026-10-24, more photos 2026-11-09",
  "photos": [
   {
    "id": "lv-sklandrausis",
@@ -2433,6 +2433,1661 @@
     "carbs_g": 3.1,
     "fat_g": 26.0
    }
+  },
+  {
+   "id": "sl-okroshka",
+   "cuisine": "slavic",
+   "dish": "Okroshka Recipe: Russian Summer Soup",
+   "recipe_url": "https://natashaskitchen.com/okroshka-recipe-russian-summer-soup/",
+   "image_url": "https://natashaskitchen.com/wp-content/uploads/2010/08/okroshka-1.jpg",
+   "expect_any": [
+    "okroshka",
+    "cold soup",
+    "soup"
+   ],
+   "count": null,
+   "servings_shown": 1,
+   "note": "one bowl",
+   "recipe_yield": [
+    "8",
+    "8 -10 cups"
+   ],
+   "per_serving": {
+    "kcal": 189.0,
+    "protein_g": 11.0,
+    "carbs_g": 18.0,
+    "fat_g": 8.0
+   },
+   "ingredients": [
+    "8 cups cold water",
+    "1/3 cup sour cream",
+    "3 1/2 Tbsp Vinegar divided",
+    "2 1/2 tsp Salt",
+    "3 Tbsp chopped dill (fresh or frozen)",
+    "1/2 cup green onion (finely chopped)",
+    "1/2 lb good ham (diced (we used black forest ham))",
+    "3-4 medium cooked potatoes (peeled and diced)",
+    "3 hard-boiled eggs (diced)",
+    "3-4 cucumbers (diced)"
+   ]
+  },
+  {
+   "id": "sl-red-borsch",
+   "cuisine": "slavic",
+   "dish": "Easy Superfood Borsch Recipe",
+   "recipe_url": "https://natashaskitchen.com/easy-superfood-red-borsch/",
+   "image_url": "https://natashaskitchen.com/wp-content/uploads/2013/05/Easy-Superfood-Red-Borsch-4.jpg",
+   "expect_any": [
+    "borscht",
+    "borsch",
+    "borshch",
+    "beet soup"
+   ],
+   "count": null,
+   "servings_shown": 1,
+   "note": "one bowl with sour cream",
+   "recipe_yield": [
+    "10",
+    "10 people"
+   ],
+   "per_serving": {
+    "kcal": 123.0,
+    "protein_g": 9.0,
+    "carbs_g": 20.0,
+    "fat_g": 2.0
+   },
+   "ingredients": [
+    "12 cups reduced sodium chicken broth (beef or veggie broth is ok)",
+    "1 medium or 1/2 large onion (peeled and cut in half (ends removed))",
+    "3 medium potatoes (sliced)",
+    "1/4 cup quinoa",
+    "3 medium beets (peeled and grated)",
+    "2 good handfuls of chopped kale leaves",
+    "2 bay leaves",
+    "3/4 cup sliced carrots",
+    "1 Tbsp Mrs. Dash",
+    "3 Tbsp ketchup",
+    "1/2 Tbsp lemon juice",
+    "S&P to taste"
+   ]
+  },
+  {
+   "id": "sl-braised-cabbage",
+   "cuisine": "slavic",
+   "dish": "Braised Cabbage",
+   "recipe_url": "https://natashaskitchen.com/braised-cabbage-with-beef/",
+   "image_url": "https://natashaskitchen.com/wp-content/uploads/2025/10/Braised-Cabbage-5.jpg",
+   "expect_any": [
+    "cabbage",
+    "bigos",
+    "tushenaya",
+    "stew"
+   ],
+   "count": null,
+   "servings_shown": 1,
+   "note": "one bowl",
+   "recipe_yield": [
+    "6",
+    "6 -8 Servings"
+   ],
+   "per_serving": {
+    "kcal": 457.0,
+    "protein_g": 27.0,
+    "carbs_g": 26.0,
+    "fat_g": 29.0
+   },
+   "ingredients": [
+    "1.5 - 2 lb chuck roast beef (or top sirloin beef)",
+    "2-3 Tbsp Montreal Steak Seasoning",
+    "2 medium heads of cabbage (20 cups finely chopped)",
+    "1 cup sauerkraut (well drained)",
+    "6 Tbsp olive oil (divided)",
+    "1 large onion (diced)",
+    "2 large carrots (grated)",
+    "4.5 oz tomato paste",
+    "1 1/2 Tbsp brown sugar",
+    "2 Tbsp heavy cream (or half and half, or sour cream)",
+    "1/2 cup water (plus more as needed)",
+    "1 tsp fine sea salt",
+    "1/2 tsp freshly ground black pepper",
+    "2 bay leaves"
+   ]
+  },
+  {
+   "id": "sl-chicken-kiev",
+   "cuisine": "slavic",
+   "dish": "Chicken Kiev Recipe",
+   "recipe_url": "https://natashaskitchen.com/easy-chicken-kiev-recipe/",
+   "image_url": "https://natashaskitchen.com/wp-content/uploads/2025/02/Chicken-Kiev-Recipe-4.jpg",
+   "expect_any": [
+    "kiev",
+    "kyiv",
+    "cutlet",
+    "chicken"
+   ],
+   "count": null,
+   "servings_shown": 1,
+   "note": "one chicken Kiev cut open; 3 breasts make 6 servings, one cutlet each",
+   "recipe_yield": [
+    "6",
+    "6 servings"
+   ],
+   "per_serving": {
+    "kcal": 384.0,
+    "protein_g": 18.0,
+    "carbs_g": 23.0,
+    "fat_g": 24.0
+   },
+   "ingredients": [
+    "6 Tbsp unsalted butter (room temp)",
+    "1 large garlic clove (minced)",
+    "1 Tbsp lemon juice (plus more lemon wedges to squeeze over the finished chicken)",
+    "2 Tbsp chopped fresh parsley (plus more to garnish)",
+    "1/2 tsp salt (we use sea salt)",
+    "1/2 tsp black pepper (freshly ground)",
+    "3 large chicken breasts (12 oz each breast*)",
+    "2 eggs (beaten)",
+    "1/2 cup all-purpose flour",
+    "2 cups Panko bread crumbs",
+    "1/2 tsp Salt and Pepper (or added to taste)",
+    "Extra light olive oil (or Canola oil, to sauté)"
+   ]
+  },
+  {
+   "id": "sl-pork-chop-mushrooms",
+   "cuisine": "slavic",
+   "dish": "Kotleta Pokrestyansky (Belarus)",
+   "recipe_url": "https://www.food.com/recipe/kotleta-pokrestyansky-belarus-475372",
+   "image_url": "https://img.sndimg.com/food/image/upload/q_92,fl_progressive,w_1200,c_scale/v1/img/recipes/47/53/72/picYkUqE3.jpg",
+   "expect_any": [
+    "pork chop",
+    "chop",
+    "kotleta",
+    "pork",
+    "cutlet"
+   ],
+   "count": null,
+   "servings_shown": 1,
+   "note": "one pork chop with mushroom sauce; 4 chops for 4 servings",
+   "recipe_yield": "4 serving(s)",
+   "per_serving": {
+    "kcal": 539.7,
+    "protein_g": 43.8,
+    "carbs_g": 8.1,
+    "fat_g": 24.3
+   },
+   "ingredients": [
+    "7 ounces mushrooms, sliced",
+    "2 garlic cloves, chopped",
+    "1 ounce butter",
+    "1/2 cup sherry wine",
+    "1/2 cup chicken stock or 1/2 cup pork stock",
+    "1 1/2 teaspoons cornstarch",
+    "4 pork chops"
+   ]
+  },
+  {
+   "id": "ev-lasagna",
+   "cuisine": "everyday",
+   "dish": "Lasagna",
+   "recipe_url": "https://www.recipetineats.com/lasagna/",
+   "image_url": "https://www.recipetineats.com/tachyon/2017/05/Lasagne-recipe-3-main-square.jpg",
+   "expect_any": [
+    "lasagna",
+    "lasagne"
+   ],
+   "count": null,
+   "servings_shown": 1,
+   "note": "one slice on a plate; serving 398 g",
+   "recipe_yield": [
+    "10"
+   ],
+   "per_serving": {
+    "kcal": 594.0,
+    "protein_g": 39.0,
+    "carbs_g": 40.0,
+    "fat_g": 29.0
+   },
+   "ingredients": [
+    "1 tbsp olive oil",
+    "1 onion (, finely chopped (white, yellow or brown))",
+    "1 medium carrot (, peeled and very finely diced)",
+    "1 celery stick (, very finely diced)",
+    "2 garlic cloves (, minced)",
+    "1 kg / 2 lb beef mince ((ground beef) (Note 1))",
+    "800g / 28 oz canned crushed tomato",
+    "1/4 cup tomato paste",
+    "1 cup pinot noir red wine (, or other dry red wine (Note 2))",
+    "3 beef bouillon cubes (, crumbled)",
+    "2 bay leaves (, dried or fresh)",
+    "1/2 tsp EACH dried thyme and oregano",
+    "2 tsp Worcestershire Sauce",
+    "1 - 2 tsp sugar ((if needed - Note 3))",
+    "1/2 tsp salt and black pepper",
+    "60g / 4 tbsp butter",
+    "1/2 cup flour",
+    "4 cups milk (, preferably full fat but low fat ok)",
+    "2 cups gruyere or Colby cheese (, shred yourself (or cheddar, Monterey Jack, OR 1 cup / 100g shredded parmesan) (Note 4))",
+    "Pinch of freshly ground nutmeg",
+    "Salt and pepper",
+    "350g/ 12 oz fresh lasagna sheets ((or 250g/8oz dried) (Note 5))",
+    "1 1/2 cups (tightly packed) mozzarella cheese (, shred yourself (Note 4))",
+    "Finely chopped basil or parsley (, for garnish (optional))"
+   ]
+  },
+  {
+   "id": "ev-nasi-goreng",
+   "cuisine": "everyday",
+   "dish": "Nasi Goreng (Indonesian Fried Rice)",
+   "recipe_url": "https://www.recipetineats.com/nasi-goreng-indonesian-fried-rice/",
+   "image_url": "https://www.recipetineats.com/tachyon/2016/03/Nasi-Goreng_1-1.jpg",
+   "expect_any": [
+    "nasi goreng",
+    "fried rice",
+    "rice"
+   ],
+   "count": null,
+   "servings_shown": 1,
+   "note": "one plate with a fried egg, tomato and cucumber",
+   "recipe_yield": [
+    "4"
+   ],
+   "per_serving": {
+    "kcal": 453.0,
+    "protein_g": 23.7,
+    "carbs_g": 58.6,
+    "fat_g": 13.0
+   },
+   "ingredients": [
+    "1 tbsp oil",
+    "5 oz / 150g chicken breast (, thinly sliced (or other protein))",
+    "1 tbsp kecap manis ((sweet soy sauce, Note 1))",
+    "1.5 tbsp oil",
+    "2 garlic cloves (, finely chopped)",
+    "1 tsp red chilli (, finely chopped (Note 2))",
+    "1 onion (, small, diced)",
+    "3 cups cooked white rice (, day old, cold (Note 3))",
+    "2 tbsp kecap manis ((sweet soy sauce, Note 1))",
+    "2 tsp shrimp paste (, optional (Note 4))",
+    "4 eggs (, fried to taste)",
+    "1 green onion (, sliced)",
+    "Tomatos and cucumbers, (cut into wedges/chunks)",
+    "Fried shallots (, store bought (optional) (Note 3))",
+    "Lime wedges"
+   ]
+  },
+  {
+   "id": "ev-penne-arrabbiata",
+   "cuisine": "everyday",
+   "dish": "Penne all'Arrabbiata (spicy tomato pasta)",
+   "recipe_url": "https://www.recipetineats.com/penne-all-arrabbiata-spicy-tomato-pasta/",
+   "image_url": "https://www.recipetineats.com/tachyon/2023/10/Penne-Arrabbiata-4.jpg",
+   "expect_any": [
+    "arrabbiata",
+    "penne",
+    "pasta"
+   ],
+   "count": null,
+   "servings_shown": 1,
+   "note": "one bowl",
+   "recipe_yield": [
+    "4"
+   ],
+   "per_serving": {
+    "kcal": 567.0,
+    "protein_g": 17.0,
+    "carbs_g": 91.0,
+    "fat_g": 16.0
+   },
+   "ingredients": [
+    "400g/ 14oz penne or ziti (, or other pasta of choice (short or long))",
+    "1 tbsp cooking / kosher salt (, for cooking pasta)",
+    "4 tbsp extra virgin olive oil",
+    "3 garlic cloves (, finely minced)",
+    "1 red cayenne pepper chilli (, finely chopped (with seeds) (Note 2))",
+    "1/2 tsp chilli flakes ((red pepper flakes))",
+    "800g / 28 oz canned crushed tomato",
+    "1 1/4 tsp cooking / kosher salt",
+    "1/4 tsp black pepper",
+    "1/2 tsp white sugar (, only if needed (Note 3))",
+    "parmesan (, finely grated)",
+    "2 tsp finely chopped parsley (, optional)"
+   ]
+  },
+  {
+   "id": "ev-chicken-fried-rice",
+   "cuisine": "everyday",
+   "dish": "Chicken Fried Rice",
+   "recipe_url": "https://www.recipetineats.com/chicken-fried-rice/",
+   "image_url": "https://www.recipetineats.com/tachyon/2019/09/Chicken-fried-rice-copy.jpg",
+   "expect_any": [
+    "fried rice",
+    "rice"
+   ],
+   "count": null,
+   "servings_shown": 1,
+   "note": "one bowl",
+   "recipe_yield": [
+    "4",
+    "4 - 5 people as a side"
+   ],
+   "per_serving": {
+    "kcal": 441.0,
+    "protein_g": 21.0,
+    "carbs_g": 36.0,
+    "fat_g": 23.0
+   },
+   "ingredients": [
+    "2 tbsp oil (, peanut, vegetable or canola)",
+    "2 eggs (, lightly whisked)",
+    "150g (5oz) chicken breast (, finely sliced into small pieces)",
+    "2 garlic cloves (, minced)",
+    "1/2 onion (, finely chopped)",
+    "120g (4oz) bacon (, excess fat trimmed, chopped (Note 1))",
+    "1 small carrot* (, peeled and diced 0.75cm / 1/3\")",
+    "1/2 cup frozen corn* ((or can or fresh))",
+    "1/2 cup frozen peas*",
+    "2 cups (packed) cooked white rice (, day old (Note 2))",
+    "3/4 cup green onions (, finely sliced)",
+    "2.5 tbsp Chinese cooking wine or Mirin ((Note 3))",
+    "1 tbsp oyster sauce ((Note 4))",
+    "3 tbsp light soy sauce ((Note 5))",
+    "1/2 tsp sesame oil (, optional)",
+    "1/4 tsp white pepper (, optional)"
+   ]
+  },
+  {
+   "id": "ev-omelette",
+   "cuisine": "everyday",
+   "dish": "Omelette",
+   "recipe_url": "https://www.recipetineats.com/omelette/",
+   "image_url": "https://www.recipetineats.com/tachyon/2017/09/Omelette-with-Mushrooms_0-2.jpg",
+   "expect_any": [
+    "omelette",
+    "omelet",
+    "egg"
+   ],
+   "count": null,
+   "servings_shown": 1,
+   "note": "one omelette in the pan; the recipe makes one",
+   "recipe_yield": [
+    "1"
+   ],
+   "per_serving": {
+    "kcal": 680.0,
+    "protein_g": 31.0,
+    "carbs_g": 7.0,
+    "fat_g": 59.0
+   },
+   "ingredients": [
+    "1 tbsp / 15g butter",
+    "3 eggs",
+    "2 tbsp cream (or 1 ½ tbsp milk) ((Note 1))",
+    "Salt and pepper",
+    "1/3 cup grated cheese ((any melting cheese, I usually use cheddar))",
+    "1 tbsp / 15g butter or olive oil",
+    "150 g / 5 oz mushrooms (, sliced (about 1 ½ cups))",
+    "1 small garlic clove (, minced)",
+    "Pinch of fresh thyme leaves and finely chopped parsley ((optional))"
+   ]
+  },
+  {
+   "id": "ev-mushroom-risotto",
+   "cuisine": "everyday",
+   "dish": "Chicken & Mushroom Risotto",
+   "recipe_url": "https://www.recipetineats.com/chicken-and-mushroom-risotto/",
+   "image_url": "https://www.recipetineats.com/tachyon/2016/08/Chicken-Mushroom-Risotto_8.jpg",
+   "expect_any": [
+    "risotto",
+    "rice"
+   ],
+   "count": null,
+   "servings_shown": 1,
+   "note": "one bowl; serving 571 g",
+   "recipe_yield": [
+    "4"
+   ],
+   "per_serving": {
+    "kcal": 658.0,
+    "protein_g": 41.9,
+    "carbs_g": 59.7,
+    "fat_g": 24.8
+   },
+   "ingredients": [
+    "1 tsp olive oil (, plus more if needed)",
+    "75g / 2 1/2 oz bacon ((preferably streaky / fatty) (optional))",
+    "350g / 12 oz chicken thigh fillets (, cut into bite size pieces)",
+    "400g / 14 oz mushrooms (, sliced (I use Swiss brown))",
+    "30g (2 tbsp) unsalted butter",
+    "2 garlic cloves (, minced)",
+    "1 onion (, finely diced (brown, white, yellow))",
+    "1/2 cup dry white wine ((optional - sub with water or chicken broth))",
+    "1 1/4 cups arborio risotto rice (, uncooked (Note 1))",
+    "4 cups / 1 litre chicken broth/stock (, low sodium)",
+    "1/2 cup / 35 g freshly grated parmesan cheese",
+    "1 - 3 tbsp / 15 - 50 g unsalted butter",
+    "Freshly chopped parsley"
+   ]
+  },
+  {
+   "id": "ev-moussaka",
+   "cuisine": "everyday",
+   "dish": "Moussaka (Greek Eggplant Lasagna)",
+   "recipe_url": "https://www.recipetineats.com/moussaka-greek-eggplant-beef-bake/",
+   "image_url": "https://www.recipetineats.com/tachyon/2019/03/Greek-Moussaka_3-re-edited-SQ.jpg",
+   "expect_any": [
+    "moussaka",
+    "eggplant",
+    "aubergine",
+    "bake"
+   ],
+   "count": null,
+   "servings_shown": 1,
+   "note": "one slice on a plate",
+   "recipe_yield": [
+    "6",
+    "6 people"
+   ],
+   "per_serving": {
+    "kcal": 434.0,
+    "protein_g": 32.0,
+    "carbs_g": 20.0,
+    "fat_g": 24.0
+   },
+   "ingredients": [
+    "1 kg / 2 lb eggplant (aubergines) (, 0.75cm / 0.3\" thick slices)",
+    "1 tsp salt",
+    "2 - 3 tbsp olive oil",
+    "1 tbsp olive oil",
+    "1 onion (, diced (brown, white, yellow))",
+    "3 garlic cloves (, minced)",
+    "1.4 lb / 700 g ground beef or lamb (mince) ((Note 1))",
+    "1/2 cup red wine (, dry (optional))",
+    "14 oz /400g crushed tomatoes",
+    "3 tbsp tomato paste",
+    "1 cup beef broth/stock ((Note 2))",
+    "1 beef bouillon cube (, crumbled (or 1 tsp powder))",
+    "2 bay leaves",
+    "1.5 tsp sugar (any)",
+    "2 tsp dried oregano",
+    "1/2 tsp cinnamon ((or 1 stick, use whole))",
+    "3/4 tsp salt",
+    "4 tbsp (60g) butter",
+    "5 tbsp plain flour",
+    "2 1/2 cups milk ((any fat %))",
+    "1/4 tsp nutmeg, freshly grated (optional)",
+    "1/2 cup parmesan cheese, grated ((or Kefalotiri Cheese) (Note 3))",
+    "1 egg",
+    "1 egg yolk",
+    "1 1/4 tsp Vegeta, vegetable or chicken stock powder ((or salt) (Note 4))",
+    "1/4 tsp pepper",
+    "1/3 cup panko breadcrumbs ((Note 5))"
+   ]
+  },
+  {
+   "id": "ev-chicken-rice-soup",
+   "cuisine": "everyday",
+   "dish": "Chicken and Rice Soup",
+   "recipe_url": "https://www.recipetineats.com/chicken-and-rice-soup/",
+   "image_url": "https://www.recipetineats.com/tachyon/2018/04/Chicken-and-Rice-Soup_8-1.jpg",
+   "expect_any": [
+    "chicken soup",
+    "rice soup",
+    "soup"
+   ],
+   "count": null,
+   "servings_shown": 1,
+   "note": "one bowl; serving 638 g",
+   "recipe_yield": [
+    "5"
+   ],
+   "per_serving": {
+    "kcal": 427.0,
+    "protein_g": null,
+    "carbs_g": null,
+    "fat_g": null
+   },
+   "ingredients": [
+    "1 tbsp olive oil",
+    "1 tbsp butter ((or more oil))",
+    "2 garlic cloves (, minced)",
+    "1 onion (, chopped)",
+    "3 carrots (, halved then cut into 1cm / 2/5\" slices (quarter if really thick))",
+    "3 celery ribs (, cut into 1 cm / 2/5\" slices)",
+    "3 tsp Vegeta stock powder (, or 2 x vegetable or chicken bouillon cube, or 2 tsp powder (Note 2))",
+    "1/2 tsp dried parsley",
+    "1/2 tsp dried thyme, optional",
+    "1/4 tsp black pepper (, finely ground)",
+    "4 cups (1 litre) chicken broth (, low sodium)",
+    "4 cups (1 litre) water",
+    "600 g (1.2 lb) bone in (, skinless chicken thighs, 4 x 150g/5oz (Note 1))",
+    "1 cup (180g) long grain white rice (, uncooked (Note 3))",
+    "Salt, adjust to taste",
+    "1 tbsp finely chopped parsley ((optional))"
+   ]
+  },
+  {
+   "id": "ev-laksa",
+   "cuisine": "everyday",
+   "dish": "Laksa Noodle Soup",
+   "recipe_url": "https://www.recipetineats.com/laksa-soup/",
+   "image_url": "https://www.recipetineats.com/tachyon/2020/07/Laksa_1-SQ.jpg",
+   "expect_any": [
+    "laksa",
+    "noodle soup",
+    "curry soup",
+    "soup"
+   ],
+   "count": null,
+   "servings_shown": 1,
+   "note": "one bowl; the recipe makes two",
+   "recipe_yield": [
+    "2"
+   ],
+   "per_serving": {
+    "kcal": 780.0,
+    "protein_g": 18.9,
+    "carbs_g": 36.8,
+    "fat_g": 62.9
+   },
+   "ingredients": [
+    "2 cups (500 ml) chicken stock / broth",
+    "1 cup (250 ml) water",
+    "3 chicken drumsticks ((Note 1))",
+    "1 1/2 tbsp oil",
+    "2 garlic cloves (, minced)",
+    "2 cm / 4/5\" piece of ginger (, finely grated)",
+    "1 lemongrass (, white part grated, (Note 2))",
+    "2 birds eye chillis (, finely chopped (Note 3))",
+    "1/2 cup (135g) laksa paste ((Note 4))",
+    "400ml can coconut milk ((Note 5))",
+    "2 tsp fish sauce ((sub soy))",
+    "50g / 1.5 oz vermicelli noodles (, dried)",
+    "100g / 3.5oz hokkien noodles ((optional, Note 6))",
+    "80g / 2.5 oz bean sprouts",
+    "80g / 2.5 oz tofu puffs (, cut in half (Note 7))",
+    "1/2 tsp sugar (, white)",
+    "1 1/2 tsp soy sauce (, light or all purpose)",
+    "1/2 garlic clove (, minced)",
+    "1 1/2 tsp Laksa paste ((Note 4))",
+    "1 tbsp Sriracha sauce (, or other chilli sauce)",
+    "1 tbsp chilli paste from jar (, or more Sriracha)",
+    "1 tbsp vegetable oil ((any plain oil))",
+    "Fresh coriander / cilantro ((recommended))",
+    "Lime wedges ((recommended))",
+    "Crispy fried shallots (, optional (Note 8))",
+    "Finely sliced red chilli (, optional )"
+   ]
+  },
+  {
+   "id": "ev-chicken-pot-pie",
+   "cuisine": "everyday",
+   "dish": "Chicken Pot Pie",
+   "recipe_url": "https://www.recipetineats.com/chicken-pot-pie/",
+   "image_url": "https://www.recipetineats.com/tachyon/2018/10/Chicken-Pot-Pie_2.jpg",
+   "expect_any": [
+    "pot pie",
+    "chicken pie",
+    "pie"
+   ],
+   "count": null,
+   "servings_shown": 1,
+   "note": "one individual pie; the recipe fills 4 pots",
+   "recipe_yield": [
+    "4",
+    "4 - 6 people"
+   ],
+   "per_serving": {
+    "kcal": 588.0,
+    "protein_g": 47.0,
+    "carbs_g": 36.0,
+    "fat_g": 26.0
+   },
+   "ingredients": [
+    "600 g/1.2lb chicken breast ((or boneless thighs))",
+    "2 cups milk (, any fat % (Note 1))",
+    "1 cup chicken broth ((stock))",
+    "2 tsp chicken or vegetable stock powder ((Note 2))",
+    "2 sprigs thyme (, optional)",
+    "1 large onion (, chopped)",
+    "2 large carrots ((3 small). chopped)",
+    "3 celery ribs (, chopped)",
+    "2 garlic cloves (, minced)",
+    "50g / 3 tbsp butter",
+    "1 tsp dried thyme",
+    "1/3 cup white wine ((sub more chicken stock))",
+    "1/3 cup flour",
+    "1/2 cup grated parmesan",
+    "1/2 tsp black pepper",
+    "1 cup frozen peas (, no need to thaw)",
+    "2 sheets puff pastry ((enough to cover pots, with drape))",
+    "1 egg (, lightly whisked)"
+   ]
+  },
+  {
+   "id": "ev-french-onion-soup",
+   "cuisine": "everyday",
+   "dish": "French Onion Soup Recipe",
+   "recipe_url": "https://natashaskitchen.com/french-onion-soup/",
+   "image_url": "https://natashaskitchen.com/wp-content/uploads/2020/12/French-Onion-soup-SQ.jpg",
+   "expect_any": [
+    "onion soup",
+    "french onion",
+    "soup"
+   ],
+   "count": null,
+   "servings_shown": 1,
+   "note": "one crock with cheese toast",
+   "recipe_yield": [
+    "6",
+    "6 people"
+   ],
+   "per_serving": {
+    "kcal": 545.0,
+    "protein_g": 26.0,
+    "carbs_g": 58.0,
+    "fat_g": 24.0
+   },
+   "ingredients": [
+    "2 Tbsp olive oil (plus more to brush toasts)",
+    "2 Tbsp unsalted butter",
+    "3 lbs yellow onions (about 6 large onions, halved, peeled and thinly sliced with the grain)",
+    "1/2 tsp granulated sugar",
+    "2 garlic cloves (minced)",
+    "1/2 cup dry sherry wine (or use dry vermouth or dry white wine)",
+    "8 cups beef stock (or broth)",
+    "1 bay leaf",
+    "3 sprigs fresh thyme (plus more to garnish (or 1/4 tsp dried thyme))",
+    "1 1/2 tsp salt (or to taste, divided)",
+    "1/2 tsp black pepper (or to taste)",
+    "12 slices baguette",
+    "8 oz gruyere cheese (1 1/2 cups shredded, divided)"
+   ]
+  },
+  {
+   "id": "ev-spaghetti-meatballs",
+   "cuisine": "everyday",
+   "dish": "Spaghetti and Meatballs Recipe",
+   "recipe_url": "https://natashaskitchen.com/spaghetti-and-meatballs-recipe/",
+   "image_url": "https://natashaskitchen.com/wp-content/uploads/2019/01/Spaghetti-and-Meatballs-SQ.jpg",
+   "expect_any": [
+    "spaghetti",
+    "meatballs",
+    "pasta"
+   ],
+   "count": null,
+   "servings_shown": 1,
+   "note": "one bowl, three meatballs; serving is 2-3 meatballs",
+   "recipe_yield": [
+    "8",
+    "8 (2-3 meatballs per serving)"
+   ],
+   "per_serving": {
+    "kcal": 696.0,
+    "protein_g": 35.0,
+    "carbs_g": 73.0,
+    "fat_g": 29.0
+   },
+   "ingredients": [
+    "3 slices white bread ((crusts removed), diced or torn to pieces)",
+    "2/3 cup cold water",
+    "1 lb lean ground beef ((7%-15% fat))",
+    "1 lb Sweet Ground Italian sausage (casings removed)",
+    "1/4 cup grated parmesan cheese (plus more to serve)",
+    "4 cloves garlic (minced)",
+    "1 tsp sea salt",
+    "1/2 tsp black pepper",
+    "1 large egg",
+    "3/4 cup all-purpose flour (to dredge meatballs)",
+    "3 Tbsp Light olive oil to saute (or use vegetable oil)",
+    "1 medium yellow onion ((1 cup chopped))",
+    "4 cloves garlic (minced)",
+    "56 oz crushed tomatoes ((from 2 - 28 oz cans))",
+    "2 bay leaves (optional)",
+    "Salt & pepper (to taste)",
+    "2 Tbsp basil (finely minced, plus more to garnish)",
+    "1 lb spaghetti"
+   ]
+  },
+  {
+   "id": "ev-tomato-soup",
+   "cuisine": "everyday",
+   "dish": "Creamy Tomato Soup Recipe",
+   "recipe_url": "https://natashaskitchen.com/tomato-soup-recipe/",
+   "image_url": "https://natashaskitchen.com/wp-content/uploads/2021/08/Tomato-Soup-Recipe-SQ.jpg",
+   "expect_any": [
+    "tomato soup",
+    "soup"
+   ],
+   "count": null,
+   "servings_shown": 1,
+   "note": "one bowl",
+   "recipe_yield": [
+    "8",
+    "8 people (1 cup servings)"
+   ],
+   "per_serving": {
+    "kcal": 222.0,
+    "protein_g": 7.0,
+    "carbs_g": 22.0,
+    "fat_g": 14.0
+   },
+   "ingredients": [
+    "4 Tbsp unsalted butter",
+    "2 yellow onions ((3 cups finely chopped) )",
+    "3 garlic cloves ((1 Tbsp minced))",
+    "56 oz crushed tomatoes ((2, 28-oz cans) with their juice, preferably San Marzano)",
+    "2 cups chicken stock",
+    "1/4 cup chopped fresh basil (plus more to serve)",
+    "1 Tbsp sugar (or added to taste)",
+    "1/2 tsp black pepper (or to taste)",
+    "1/2 cup heavy whipping cream (or to taste to combat acidity)",
+    "1/3 cup parmesan cheese (freshly grated, plus more to serve)"
+   ]
+  },
+  {
+   "id": "ev-mushroom-soup",
+   "cuisine": "everyday",
+   "dish": "Mushroom Soup Recipe",
+   "recipe_url": "https://natashaskitchen.com/mushroom-soup-recipe/",
+   "image_url": "https://natashaskitchen.com/wp-content/uploads/2015/02/Mushroom-Soup-Recipe-6.jpg",
+   "expect_any": [
+    "mushroom soup",
+    "soup"
+   ],
+   "count": null,
+   "servings_shown": 1,
+   "note": "one bowl; toasts beside it",
+   "recipe_yield": [
+    "8",
+    "8 servings"
+   ],
+   "per_serving": {
+    "kcal": 236.0,
+    "protein_g": 9.0,
+    "carbs_g": 26.0,
+    "fat_g": 12.0
+   },
+   "ingredients": [
+    "8 cups water",
+    "2 cups chicken stock ( or vegetable broth)",
+    "3-4 potatoes (medium, peeled, diced and rinsed)",
+    "2 lbs mushrooms (sliced)",
+    "2 cups half and half (or 1 cup milk + 1 cup heavy cream)",
+    "4 Tbsp flour (add 5 Tbsp if you like a creamier soup)",
+    "1 onion (medium, finely diced)",
+    "1 large carrot (grated)",
+    "3 Tbsp unsalted butter",
+    "2 Tbsp mushroom seasoning (or 1/2 Tbsp Mrs. Dash, or vegetable seasoning *see note)",
+    "Salt and black pepper to taste",
+    "1/3 cup parsley (or dill or both, finely chopped)"
+   ]
+  },
+  {
+   "id": "ev-italian-wedding-soup",
+   "cuisine": "everyday",
+   "dish": "Italian Wedding Soup Recipe",
+   "recipe_url": "https://natashaskitchen.com/italian-wedding-soup/",
+   "image_url": "https://natashaskitchen.com/wp-content/uploads/2020/09/Italian-Wedding-Soup-5.jpg",
+   "expect_any": [
+    "wedding soup",
+    "meatball soup",
+    "soup"
+   ],
+   "count": null,
+   "servings_shown": 1,
+   "note": "one bowl",
+   "recipe_yield": [
+    "6",
+    "6 servings"
+   ],
+   "per_serving": {
+    "kcal": 341.0,
+    "protein_g": 27.0,
+    "carbs_g": 18.0,
+    "fat_g": 19.0
+   },
+   "ingredients": [
+    "1/2 lb ground pork",
+    "1/2 lb ground beef",
+    "1 large egg",
+    "1 garlic clove (minced)",
+    "1/3 cup parmesan cheese (grated)",
+    "1/4 cup plain breadcrumbs",
+    "3 Tbsp whole milk",
+    "1 tsp salt (or to taste)",
+    "¼ tsp ground black pepper (or to taste)",
+    "½ tsp Italian seasoning",
+    "1 medium onion (finely chopped)",
+    "1 carrot (peeled and thinly sliced)",
+    "5 oz fresh spinach (coarsley chopped)",
+    "2 garlic cloves (minced)",
+    "1 Tbsp unsalted butter",
+    "1/2 cup dry acini de pepe pasta (or orzo)",
+    "8 cups chicken broth",
+    "1 ½ tsp salt (or to taste)",
+    "½ tsp ground black pepper (or to taste)",
+    "1 Tbsp olive oil",
+    "Freshly grated Parmesan cheese (for serving)"
+   ]
+  },
+  {
+   "id": "ev-cabbage-soup",
+   "cuisine": "everyday",
+   "dish": "Cabbage Soup",
+   "recipe_url": "https://natashaskitchen.com/cabbage-soup-recipe/",
+   "image_url": "https://natashaskitchen.com/wp-content/uploads/2025/10/Cabbage-Soup-3.jpg",
+   "expect_any": [
+    "cabbage soup",
+    "soup"
+   ],
+   "count": null,
+   "servings_shown": 1,
+   "note": "one bowl",
+   "recipe_yield": [
+    "6",
+    "6 servings"
+   ],
+   "per_serving": {
+    "kcal": 324.0,
+    "protein_g": 19.0,
+    "carbs_g": 19.0,
+    "fat_g": 20.0
+   },
+   "ingredients": [
+    "1 lb ground beef (80% or 85%)",
+    "2 Tbsp oil (divided)",
+    "1 medium onion ( finely chopped)",
+    "3 garlic cloves (minced)",
+    "4 cups green cabbage (chopped, from ½ large head)",
+    "1 large carrot (sliced)",
+    "1 celery rib (thinly sliced)",
+    "28 oz canned diced tomatoes (with their juice)",
+    "15 oz tomato sauce",
+    "4 cups beef broth",
+    "2 Tbsp brown sugar",
+    "1 tsp salt (or to taste)",
+    "½ tsp ground black pepper (or to taste)",
+    "2 bay leaves",
+    "2 Tbsp chopped fresh herbs (such as dill, parsley, or cilantro)"
+   ]
+  },
+  {
+   "id": "ev-chicken-pot-pie-soup",
+   "cuisine": "everyday",
+   "dish": "Chicken Pot Pie Soup Recipe",
+   "recipe_url": "https://natashaskitchen.com/chicken-pot-pie-soup/",
+   "image_url": "https://natashaskitchen.com/wp-content/uploads/2021/01/Chicken-Pot-Pie-Soup-2.jpg",
+   "expect_any": [
+    "pot pie soup",
+    "chicken soup",
+    "soup"
+   ],
+   "count": null,
+   "servings_shown": 1,
+   "note": "one bowl",
+   "recipe_yield": [
+    "10",
+    "10 people"
+   ],
+   "per_serving": {
+    "kcal": 363.0,
+    "protein_g": 25.0,
+    "carbs_g": 25.0,
+    "fat_g": 18.0
+   },
+   "ingredients": [
+    "6 Tbsp unsalted butter",
+    "1 medium yellow onion (1 cup chopped)",
+    "2 medium carrots (thinly sliced into rings)",
+    "2 celery sticks (finely chopped)",
+    "8 oz white or brown mushrooms (sliced)",
+    "3 garlic cloves (minced)",
+    "1/3 cup all-purpose flour",
+    "6 cups chicken stock",
+    "3-4 tsp salt ((or to taste))",
+    "1/2 tsp black pepper",
+    "1 lb Yukon gold potatoes (peeled and sliced into 1/4” thick pieces.)",
+    "5 cups cooked chicken ((shredded))",
+    "1 cup frozen peas",
+    "1 cup corn ((frozen or canned))",
+    "1/2 cup whipping cream",
+    "1/4 cup parsley (finely chopped, plus more for garnish)"
+   ]
+  },
+  {
+   "id": "ru-tefteli",
+   "cuisine": "russian",
+   "dish": "Тефтели домашние",
+   "recipe_url": "https://eda.rambler.ru/recepty/osnovnye-blyuda/tefteli-domashnie-192437",
+   "image_url": "https://img02.rl0.ru/79ac1b84ac1988d42ea6c6d30820dfff/c1280x960i/s1.eda.ru/StaticContent/Photos/d/02/d023e517289e42238367bb1cb7e8438d.jpg",
+   "expect_any": [
+    "tefteli",
+    "meatball"
+   ],
+   "count": null,
+   "servings_shown": 1,
+   "note": "two meatballs in sauce on a plate",
+   "recipe_yield": "4 servings",
+   "per_serving": {
+    "kcal": 451.0,
+    "protein_g": 28.0,
+    "carbs_g": 26.0,
+    "fat_g": 26.0
+   },
+   "ingredients": [
+    "Фарш, 500 г",
+    "Рис, 50 г",
+    "Репчатый лук, 1 штука",
+    "Куриное яйцо, 1 штука",
+    "Пшеничная мука, 50 г",
+    "Растительное масло, 20 мл",
+    "Вода, 1 стакан",
+    "Томатная паста , 2 столовые ложки",
+    "Сахар, 0.5 чайных ложек",
+    "Соль, по вкусу",
+    "Черный душистый перец, по вкусу",
+    "Зелень, по вкусу"
+   ]
+  },
+  {
+   "id": "ru-buckwheat-mushrooms",
+   "cuisine": "russian",
+   "dish": "Гречка с грибами",
+   "recipe_url": "https://eda.rambler.ru/recepty/osnovnye-blyuda/grechka-s-gribami-191526",
+   "image_url": "https://img02.rl0.ru/4863a79c15d71c9768c9942981a64fed/c1280x960i/s1.eda.ru/StaticContent/Photos/d/34/d34316ec0f3746c2be0792d6deda01da.jpg",
+   "expect_any": [
+    "buckwheat",
+    "grechka",
+    "kasha"
+   ],
+   "count": null,
+   "servings_shown": 1,
+   "note": "one plate",
+   "recipe_yield": "2 servings",
+   "per_serving": {
+    "kcal": 267.0,
+    "protein_g": 7.0,
+    "carbs_g": 36.0,
+    "fat_g": 12.0
+   },
+   "ingredients": [
+    "Гречневая крупа, 100 г",
+    "Вода, 500 мл",
+    "Оливковое масло, 1 столовая ложка",
+    "Тимьян, 3 веточки",
+    "Шампиньоны, 60 г",
+    "Чеснок, 1 зубчик",
+    "Лук, 15 г",
+    "Морская соль, по вкусу",
+    "Молотый черный перец, по вкусу",
+    "Зеленый лук, по вкусу"
+   ]
+  },
+  {
+   "id": "ru-ukha",
+   "cuisine": "russian",
+   "dish": "Уха из красной рыбы",
+   "recipe_url": "https://eda.rambler.ru/recepty/osnovnye-blyuda/uha-iz-krasnoy-ryby-191588",
+   "image_url": "https://img02.rl0.ru/a85f1ecfdc06d21eaa5ecf2dfe123c38/c1280x960i/s1.eda.ru/StaticContent/Photos/1/da/1da9611c350440448cfde086a3695111.jpg",
+   "expect_any": [
+    "ukha",
+    "uha",
+    "fish soup",
+    "soup"
+   ],
+   "count": null,
+   "servings_shown": 1,
+   "note": "one bowl",
+   "recipe_yield": "6 servings",
+   "per_serving": {
+    "kcal": 173.0,
+    "protein_g": 8.0,
+    "carbs_g": 18.0,
+    "fat_g": 8.0
+   },
+   "ingredients": [
+    "Красная рыба, 1 кусок",
+    "Пшено, 100 г",
+    "Картофель, 1 штука",
+    "Морковь, 1 штука",
+    "Лук, 1 головка",
+    "Соль, по вкусу",
+    "Черный перец горошком, по вкусу",
+    "Лавровый лист, 2 штуки",
+    "Сливочное масло, 20 г",
+    "Растительное масло, 2 чайные ложки",
+    "Сливки, по вкусу"
+   ]
+  },
+  {
+   "id": "ru-borscht-chicken",
+   "cuisine": "russian",
+   "dish": "Борщ на курином бульоне",
+   "recipe_url": "https://eda.rambler.ru/recepty/supy/borsch-na-kurinom-bulone-190503",
+   "image_url": "https://img02.rl0.ru/ba987598958ca625defffbf1ac79397a/c1280x960i/s1.eda.ru/StaticContent/Photos/9/a2/9a25a598aac3487786252ef23696a5a2.jpg",
+   "expect_any": [
+    "borscht",
+    "borsch",
+    "borshch",
+    "beet soup"
+   ],
+   "count": null,
+   "servings_shown": 1,
+   "note": "one bowl",
+   "recipe_yield": "8 servings",
+   "per_serving": {
+    "kcal": 194.0,
+    "protein_g": 13.0,
+    "carbs_g": 16.0,
+    "fat_g": 9.0
+   },
+   "ingredients": [
+    "Курица, 500 г",
+    "Капуста, 300 г",
+    "Свекла, 1 штука",
+    "Морковь, 1 штука",
+    "Сладкий перец, 1 штука",
+    "Картофель, 3 штуки",
+    "Лук, 1 штука",
+    "Чеснок, 3 зубчика",
+    "Томатная паста , 2 столовые ложки",
+    "Соль, по вкусу",
+    "Зелень, по вкусу"
+   ]
+  },
+  {
+   "id": "ru-millet-pumpkin",
+   "cuisine": "russian",
+   "dish": "Пшенная каша с тыквой",
+   "recipe_url": "https://eda.rambler.ru/recepty/zavtraki/pshennaya-kasha-s-tykvoy-190331",
+   "image_url": "https://img02.rl0.ru/d7b53e662e5e601796d4645f731e68d7/c1280x960i/s1.eda.ru/StaticContent/Photos/5/ec/5ec7f07e03024150aa62e85126a5c0a0.jpg",
+   "expect_any": [
+    "millet",
+    "pshennaya",
+    "porridge",
+    "kasha",
+    "pumpkin"
+   ],
+   "count": null,
+   "servings_shown": 1,
+   "note": "one bowl",
+   "recipe_yield": "4 servings",
+   "per_serving": {
+    "kcal": 357.0,
+    "protein_g": 10.0,
+    "carbs_g": 51.0,
+    "fat_g": 14.0
+   },
+   "ingredients": [
+    "Пшено, 1 стакан",
+    "Вода, 1 стакан",
+    "Молоко, 2 стакана",
+    "Тыква, 400 г",
+    "Сахар, 1 столовая ложка",
+    "Соль, щепотка",
+    "Ванилин, щепотка",
+    "Сливочное масло, 40 г"
+   ]
+  },
+  {
+   "id": "ru-lagman",
+   "cuisine": "russian",
+   "dish": "Узбекский лагман",
+   "recipe_url": "https://eda.rambler.ru/recepty/osnovnye-blyuda/uzbekskiy-lagman-140467",
+   "image_url": "https://img02.rl0.ru/deac1d2dd3408e5cf4eda558dabc0c77/c1280x960i/s1.eda.ru/StaticContent/Photos/170304220918/210325204846/p_O.jpg",
+   "expect_any": [
+    "lagman",
+    "noodle",
+    "soup"
+   ],
+   "count": null,
+   "servings_shown": 1,
+   "note": "one bowl",
+   "recipe_yield": "10 servings",
+   "per_serving": {
+    "kcal": 555.0,
+    "protein_g": 30.0,
+    "carbs_g": 49.0,
+    "fat_g": 27.0
+   },
+   "ingredients": [
+    "Бараний окорок, 600 г",
+    "Бараньи ребра, 600 г",
+    "Морковь, 2 штуки",
+    "Сладкий перец, 1 штука",
+    "Перец чили, 1 штука",
+    "Помидоры, 500 г",
+    "Картофель, 500 г",
+    "Корень сельдерея, 200 г",
+    "Чеснок, 3 зубчика",
+    "Кинза, 50 г",
+    "Петрушка, 50 г",
+    "Укроп, 50 г",
+    "Растительное масло, 50 мл",
+    "Лапша, 500 г",
+    "Анис (бадьян), 1 штука",
+    "Кумин (зира), 1 чайная ложка",
+    "Семена кориандра, 1 чайная ложка",
+    "Репчатый лук, 2 головки",
+    "Молотый черный перец, по вкусу",
+    "Соль, по вкусу"
+   ]
+  },
+  {
+   "id": "ru-makarony-flotski",
+   "cuisine": "russian",
+   "dish": "Макароны по-флотски",
+   "recipe_url": "https://eda.rambler.ru/recepty/osnovnye-blyuda/makarony-po-flotski-187465",
+   "image_url": "https://img02.rl0.ru/845c25feab7f38f3d5f1aa1f4744a895/c1280x960i/s1.eda.ru/StaticContent/Photos/1/1e/11e72742bfb742fabf0ea259206186e7.jpg",
+   "expect_any": [
+    "makarony",
+    "flotski",
+    "pasta",
+    "macaroni"
+   ],
+   "count": null,
+   "servings_shown": 1,
+   "note": "one plate",
+   "recipe_yield": "4 servings",
+   "per_serving": {
+    "kcal": 513.0,
+    "protein_g": 25.0,
+    "carbs_g": 46.0,
+    "fat_g": 25.0
+   },
+   "ingredients": [
+    "Говяжий фарш, 400 г",
+    "Макароны, 200 г",
+    "Репчатый лук, 2 головки",
+    "Морковь, 1 штука",
+    "Чеснок, 2 зубчика",
+    "Растительное масло, 1 столовая ложка",
+    "Томатная паста , 50 г"
+   ]
+  },
+  {
+   "id": "ru-meatball-soup",
+   "cuisine": "russian",
+   "dish": "Суп с фрикадельками",
+   "recipe_url": "https://eda.rambler.ru/recepty/supy/sup-s-frikadelkami-190542",
+   "image_url": "https://img02.rl0.ru/82cbf01942244c82edbda8ccfe5af716/c1280x960i/s1.eda.ru/StaticContent/Photos/2/6b/26b70934d8ad4a9cbfa7e83d01baaf4c.jpg",
+   "expect_any": [
+    "meatball soup",
+    "frikadel",
+    "soup"
+   ],
+   "count": null,
+   "servings_shown": 1,
+   "note": "one bowl",
+   "recipe_yield": "6 servings",
+   "per_serving": {
+    "kcal": 165.0,
+    "protein_g": 8.0,
+    "carbs_g": 13.0,
+    "fat_g": 9.0
+   },
+   "ingredients": [
+    "Говяжий фарш, 200 г",
+    "Лук, 1 штука",
+    "Морковь, 1 штука",
+    "Помидоры, 1 штука",
+    "Макароны, 80 г",
+    "Соль, по вкусу",
+    "Сливочное масло, 15 г"
+   ]
+  },
+  {
+   "id": "ru-chicken-noodle-soup",
+   "cuisine": "russian",
+   "dish": "Куриный суп с домашней пастой",
+   "recipe_url": "https://eda.rambler.ru/recepty/osnovnye-blyuda/kurinyy-sup-s-domashney-pastoy-190099",
+   "image_url": "https://img02.rl0.ru/cb1c1fdc97bf32b59c742ee9cc64919b/c1280x960i/s1.eda.ru/StaticContent/Photos/3/57/3572a0e781ed4e57b8366dd7c9769b3d.jpg",
+   "expect_any": [
+    "chicken soup",
+    "noodle soup",
+    "soup"
+   ],
+   "count": null,
+   "servings_shown": 1,
+   "note": "one bowl",
+   "recipe_yield": "12 servings",
+   "per_serving": {
+    "kcal": 193.0,
+    "protein_g": 15.0,
+    "carbs_g": 16.0,
+    "fat_g": 8.0
+   },
+   "ingredients": [
+    "Картофель, 500 г",
+    "Растительное масло, 50 мл",
+    "Зеленый лук, по вкусу",
+    "Молодой укроп, по вкусу",
+    "Соль, по вкусу",
+    "Паста, 100 г",
+    "Репчатый лук, 100 г",
+    "Морковь, 100 г",
+    "Вареная курица, 600 г",
+    "Чеснок, 3 зубчика"
+   ]
+  },
+  {
+   "id": "ru-buckwheat-kupecheski",
+   "cuisine": "russian",
+   "dish": "Гречка по-купечески",
+   "recipe_url": "https://eda.rambler.ru/recepty/osnovnye-blyuda/grechka-po-kupecheski-191379",
+   "image_url": "https://img02.rl0.ru/8da0f95287b24b9437376dc78e0cef91/c1280x960i/s1.eda.ru/StaticContent/Photos/7/bc/7bcc7802f1ae48fbb49001b4ada40023.jpg",
+   "expect_any": [
+    "buckwheat",
+    "grechka",
+    "kupecheski",
+    "kasha"
+   ],
+   "count": null,
+   "servings_shown": 1,
+   "note": "one plate",
+   "recipe_yield": "6 servings",
+   "per_serving": {
+    "kcal": 285.0,
+    "protein_g": 20.0,
+    "carbs_g": 32.0,
+    "fat_g": 10.0
+   },
+   "ingredients": [
+    "Гречневая крупа, 1 стакан",
+    "Мясо, 400 г",
+    "Шампиньоны, 300 г",
+    "Лук, 1 штука",
+    "Морковь, 1 штука",
+    "Соль, по вкусу",
+    "Молотый черный перец, по вкусу",
+    "Приправы, по вкусу",
+    "Чеснок, 1 зубчик",
+    "Томатная паста , 1 столовая ложка",
+    "Вода, 500 мл"
+   ]
+  },
+  {
+   "id": "ru-shchi",
+   "cuisine": "russian",
+   "dish": "Суточные щи с телятиной и белыми грибами",
+   "recipe_url": "https://eda.rambler.ru/recepty/supy/sutochnye-schi-s-telyatinoy-i-belymi-gribami-189414",
+   "image_url": "https://img02.rl0.ru/5c8940c2ec21aa71ac78c41f4b14f090/c1280x960i/s1.eda.ru/StaticContent/Photos/a/05/a05ca6819c074f019651b3feb975bc84.jpg",
+   "expect_any": [
+    "shchi",
+    "schi",
+    "cabbage soup",
+    "soup"
+   ],
+   "count": null,
+   "servings_shown": 1,
+   "note": "one bowl",
+   "recipe_yield": "4 servings",
+   "per_serving": {
+    "kcal": 626.0,
+    "protein_g": 57.0,
+    "carbs_g": 24.0,
+    "fat_g": 35.0
+   },
+   "ingredients": [
+    "Репчатый лук, 400 г",
+    "Морковь, 400 г",
+    "Мясо на кости, 1 кг",
+    "Квашеная капуста, 200 г",
+    "Вареная говядина, 80 г",
+    "Белые грибы, 80 г",
+    "Чеснок, 4 зубчика",
+    "Лавровый лист, 1 штука",
+    "Ягоды можжевельника, 20 г",
+    "Зеленый лук, по вкусу"
+   ]
+  },
+  {
+   "id": "ru-oatmeal-apple",
+   "cuisine": "russian",
+   "dish": "Овсяная каша с томленым яблоком и орешками",
+   "recipe_url": "https://eda.rambler.ru/recepty/osnovnye-blyuda/ovsyanaya-kasha-s-yablokom-i-oreshkami-188088",
+   "image_url": "https://img02.rl0.ru/a057c9632b57b921703cab6be6f9fcd1/c1280x960i/s1.eda.ru/StaticContent/Photos/a/89/a89dde44fe844fd082dfa64e1b6934a9.jpg",
+   "expect_any": [
+    "oatmeal",
+    "porridge",
+    "oat",
+    "kasha"
+   ],
+   "count": null,
+   "servings_shown": 1,
+   "note": "one plate",
+   "recipe_yield": "4 servings",
+   "per_serving": {
+    "kcal": 315.0,
+    "protein_g": 7.0,
+    "carbs_g": 41.0,
+    "fat_g": 14.0
+   },
+   "ingredients": [
+    "Молоко, 250 мл",
+    "Вода, 250 мл",
+    "Красные яблоки, 4 штуки",
+    "Кокосовое масло, 1 столовая ложка",
+    "Корица, по вкусу",
+    "Ванилин, по вкусу",
+    "Грецкие орехи, 30 г",
+    "Сахар, по вкусу",
+    "Овсяные хлопья, 100 г"
+   ]
+  },
+  {
+   "id": "ru-cabbage-solyanka",
+   "cuisine": "russian",
+   "dish": "Солянка со свининой",
+   "recipe_url": "https://eda.rambler.ru/recepty/osnovnye-blyuda/solyanka-so-svininoy-191403",
+   "image_url": "https://img02.rl0.ru/21d62aebc8f7e2fb096881e404fc8214/c1280x960i/s1.eda.ru/StaticContent/Photos/4/6d/46db44e78c1e49eca5d5895433f0a8b4.jpg",
+   "expect_any": [
+    "solyanka",
+    "cabbage",
+    "pork"
+   ],
+   "count": null,
+   "servings_shown": 1,
+   "note": "one bowl of stewed cabbage with pork",
+   "recipe_yield": "4 servings",
+   "per_serving": {
+    "kcal": 410.0,
+    "protein_g": 17.0,
+    "carbs_g": 7.0,
+    "fat_g": 34.0
+   },
+   "ingredients": [
+    "Белокочанная капуста, 600 г",
+    "Свиная шея, 430 г",
+    "Оливковое масло, по вкусу",
+    "Вода, 70 мл",
+    "Белый винный уксус, 1 столовая ложка",
+    "Смесь молотых перцев , по вкусу",
+    "Морская соль, по вкусу"
+   ]
+  },
+  {
+   "id": "ge-kharcho",
+   "cuisine": "georgian",
+   "dish": "Суп харчо из баранины",
+   "recipe_url": "https://eda.rambler.ru/recepty/supy/sup-harcho-iz-baraniny-193259",
+   "image_url": "https://img02.rl0.ru/e626cc004fabdd0c2ef48a47919fc6e1/c1280x960i/s1.eda.ru/StaticContent/Photos/d/dc/ddcf9f13731f45ebb7490f3266e19921.jpg",
+   "expect_any": [
+    "kharcho",
+    "harcho",
+    "soup"
+   ],
+   "count": null,
+   "servings_shown": 1,
+   "note": "one bowl",
+   "recipe_yield": "8 servings",
+   "per_serving": {
+    "kcal": 322.0,
+    "protein_g": 23.0,
+    "carbs_g": 16.0,
+    "fat_g": 19.0
+   },
+   "ingredients": [
+    "Бараньи ребра, 1 кг",
+    "Томатная паста , 1 столовая ложка",
+    "Чеснок, 1 головка",
+    "Рис, 100 г",
+    "Смесь перцев, 1 столовая ложка",
+    "Соль, по вкусу",
+    "Репчатый лук, 2 головки",
+    "Вода, 4 л",
+    "Кинза, 1 веточка"
+   ]
+  },
+  {
+   "id": "ge-chakapuli",
+   "cuisine": "georgian",
+   "dish": "Чакапули с бараниной",
+   "recipe_url": "https://eda.rambler.ru/recepty/osnovnye-blyuda/chakapuli-s-baraninoy-125946",
+   "image_url": "https://img02.rl0.ru/fb2cfce32d69581911bd5cee2b825e67/c1280x960i/s1.eda.ru/StaticContent/Photos/Upscaled/120214154125/181021142545/p_O.jpg",
+   "expect_any": [
+    "chakapuli",
+    "lamb",
+    "stew"
+   ],
+   "count": null,
+   "servings_shown": 1,
+   "note": "one plate",
+   "recipe_yield": "4 servings",
+   "per_serving": {
+    "kcal": 723.0,
+    "protein_g": 43.0,
+    "carbs_g": 10.0,
+    "fat_g": 39.0
+   },
+   "ingredients": [
+    "Баранина, 0.5 кг",
+    "Бараньи ребра, 0.5 кг",
+    "Сливы, 200 г",
+    "Эстрагон, 100 г",
+    "Зеленый лук, 70 г",
+    "Петрушка, 70 г",
+    "Кинза, 70 г",
+    "Зеленый перец чили , 25 г",
+    "Белое вино, 1 л",
+    "Чеснок, по вкусу",
+    "Соль, по вкусу"
+   ]
+  },
+  {
+   "id": "ge-ojakhuri",
+   "cuisine": "georgian",
+   "dish": "Оджахури из свинины с кинзой",
+   "recipe_url": "https://eda.rambler.ru/recepty/osnovnye-blyuda/odzhahuri-iz-svininy-s-kinzoy-188485",
+   "image_url": "https://img02.rl0.ru/0182478a94beec61ec686a981a3c4fc0/c1280x960i/s1.eda.ru/StaticContent/Photos/5/ae/5aed91fb3d554b9aa5050c531fc515f1.jpg",
+   "expect_any": [
+    "ojakhuri",
+    "odzhahuri",
+    "pork",
+    "potato"
+   ],
+   "count": null,
+   "servings_shown": 1,
+   "note": "one bowl",
+   "recipe_yield": "4 servings",
+   "per_serving": {
+    "kcal": 422.0,
+    "protein_g": 36.0,
+    "carbs_g": 39.0,
+    "fat_g": 13.0
+   },
+   "ingredients": [
+    "Свинина, 600 г",
+    "Мини-картофель , 640 г",
+    "Оливковое масло, по вкусу",
+    "Репчатый лук, 200 г",
+    "Красный сладкий перец, 200 г",
+    "Чеснок, 40 г",
+    "Помидоры, 260 г",
+    "Сванская соль, 25 г",
+    "Хмели-сунели, 2 чайные ложки",
+    "Сацебели, 200 г",
+    "Кинза, 2 веточки"
+   ]
+  },
+  {
+   "id": "ge-chashushuli",
+   "cuisine": "georgian",
+   "dish": "Чашушули",
+   "recipe_url": "https://eda.rambler.ru/recepty/osnovnye-blyuda/chashushuli-189108",
+   "image_url": "https://img02.rl0.ru/52c2d095110b01f7f86c885d2b64ccc3/c1280x960i/s1.eda.ru/StaticContent/Photos/9/76/97643e1a0a1e4814a85510a2574ff24f.jpg",
+   "expect_any": [
+    "chashushuli",
+    "stew",
+    "beef",
+    "pork"
+   ],
+   "count": null,
+   "servings_shown": 1,
+   "note": "one plate",
+   "recipe_yield": "2 servings",
+   "per_serving": {
+    "kcal": 388.0,
+    "protein_g": 28.0,
+    "carbs_g": 21.0,
+    "fat_g": 21.0
+   },
+   "ingredients": [
+    "Карбонад, 300 г",
+    "Растительное масло, 1 столовая ложка",
+    "Сладкий перец, 1 штука",
+    "Репчатый лук, 1 штука",
+    "Томатная паста , 1 столовая ложка",
+    "Сацебели, 2 столовые ложки",
+    "Вода, 100 мл",
+    "Морская соль, по вкусу",
+    "Молотый черный перец, по вкусу",
+    "Кинза, 0.5 пучков",
+    "Помидоры, 1 штука",
+    "Чеснок, 3 зубчика"
+   ]
+  },
+  {
+   "id": "ge-chkmeruli",
+   "cuisine": "georgian",
+   "dish": "Чкмерули из цыпленка",
+   "recipe_url": "https://eda.rambler.ru/recepty/osnovnye-blyuda/chkmeruli-iz-cyplenka-152609",
+   "image_url": "https://img02.rl0.ru/419738cd63cd627fab30d945f33c1fec/c1280x960i/s1.eda.ru/StaticContent/Photos/f/ed/fed9b0807ad64751af41f1eeec4625b4.jpg",
+   "expect_any": [
+    "chkmeruli",
+    "shkmeruli",
+    "chicken"
+   ],
+   "count": null,
+   "servings_shown": 1,
+   "note": "one clay dish; the recipe makes two",
+   "recipe_yield": "2 servings",
+   "per_serving": {
+    "kcal": 717.0,
+    "protein_g": 40.0,
+    "carbs_g": 7.0,
+    "fat_g": 59.0
+   },
+   "ingredients": [
+    "Цыпленок, 1 штука",
+    "Сливки 35%-ные, 150 мл",
+    "Чеснок, 3 зубчика",
+    "Кинза, 30 г",
+    "Уцхо-сунели, 0.5 чайных ложек",
+    "Молотый красный перец, по вкусу",
+    "Соль, по вкусу"
+   ]
+  },
+  {
+   "id": "ge-chakhokhbili-2",
+   "cuisine": "georgian",
+   "dish": "Чахохбили из курицы с зеленью",
+   "recipe_url": "https://eda.rambler.ru/recepty/osnovnye-blyuda/chahohbili-iz-kuricy-s-zelenyu-192119",
+   "image_url": "https://img02.rl0.ru/290fd45c5754caa71c6ac391658e503a/c1280x960i/s1.eda.ru/StaticContent/Photos/f/1e/f1ecaa3e20a241c5ac37fe7ad7b30a7b.jpg",
+   "expect_any": [
+    "chakhokhbili",
+    "chahohbili",
+    "chicken",
+    "stew"
+   ],
+   "count": null,
+   "servings_shown": 1,
+   "note": "one bowl",
+   "recipe_yield": "6 servings",
+   "per_serving": {
+    "kcal": 759.0,
+    "protein_g": 47.0,
+    "carbs_g": 21.0,
+    "fat_g": 54.0
+   },
+   "ingredients": [
+    "Курица, 1 штука",
+    "Репчатый лук, 4 головки",
+    "Чеснок, 2 головки",
+    "Куриный бульон, 1 л",
+    "Помидоры, 600 г",
+    "Кинза, 100 г",
+    "Укроп, 50 г",
+    "Петрушка, 100 г",
+    "Семена кориандра, 2 чайные ложки",
+    "Хмели-сунели, 2 чайные ложки",
+    "Уцхо-сунели, 1 чайная ложка",
+    "Перец чили, 1 штука",
+    "Сливочное масло, 50 г",
+    "Растительное масло, 60 мл",
+    "Сахар, 1 чайная ложка",
+    "Соль, 2 чайные ложки",
+    "Молотый черный перец, по вкусу"
+   ]
+  },
+  {
+   "id": "bal-milk-soup",
+   "cuisine": "baltic",
+   "dish": "Estonian Milk Soup With Pasta Shapes (Makaroni-Piimasupp)",
+   "recipe_url": "https://www.food.com/recipe/estonian-milk-soup-with-pasta-shapes-makaroni-piimasupp-472483",
+   "image_url": "https://img.sndimg.com/food/image/upload/q_92,fl_progressive,w_1200,c_scale/v1/img/recipes/47/24/83/picTzRNqI.jpg",
+   "expect_any": [
+    "milk soup",
+    "piimasupp",
+    "soup",
+    "pasta"
+   ],
+   "count": null,
+   "servings_shown": 1,
+   "note": "one bowl",
+   "recipe_yield": "4 serving(s)",
+   "per_serving": {
+    "kcal": 229.8,
+    "protein_g": 9.1,
+    "carbs_g": 27.4,
+    "fat_g": 9.2
+   },
+   "ingredients": [
+    "500 ml water (2 cups)",
+    "1 teaspoon salt",
+    "100 g short pasta (1 cup)",
+    "750 ml whole milk (3 cups)",
+    "1 generous pinch sugar",
+    "1 tablespoon butter"
+   ]
+  },
+  {
+   "id": "bal-vegetable-salad",
+   "cuisine": "baltic",
+   "dish": "Lithuanian Mixed Vegetable Salad (Darzoviu Misraine)",
+   "recipe_url": "https://www.food.com/recipe/lithuanian-mixed-vegetable-salad-darzoviu-misraine-151652",
+   "image_url": "https://img.sndimg.com/food/image/upload/q_92,fl_progressive,w_1200,c_scale/v1/img/recipes/15/16/52/dY7Mhu9SXaVw9zBD4WgK_Lithuanian%20Mixed%20Vegetable%20Salad.jpg",
+   "expect_any": [
+    "salad",
+    "misraine",
+    "vinaigrette",
+    "vinegret",
+    "potato salad"
+   ],
+   "count": null,
+   "servings_shown": 1,
+   "note": "one small bowl; size unclear against 6-8 servings",
+   "recipe_yield": "6-8 serving(s)",
+   "per_serving": {
+    "kcal": 236.4,
+    "protein_g": 6.7,
+    "carbs_g": 34.2,
+    "fat_g": 8.7
+   },
+   "ingredients": [
+    "4 medium potatoes, cooked, peeled and diced, about 4 cups",
+    "1 medium beet, roasted, peeled and diced, about 1 cup",
+    "2 carrots, peeled, cooked and diced, about 1 cup",
+    "1 cup peas, cooked",
+    "1 small onion, chopped",
+    "1 small pickle, finely chopped",
+    "1 hard-boiled egg, chopped",
+    "1/2 cup minced fresh dill",
+    "1 cup sour cream",
+    "1 teaspoon salt",
+    "fresh ground black pepper"
+   ]
   }
  ]
 }

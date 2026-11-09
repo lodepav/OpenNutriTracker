@@ -152,6 +152,24 @@ void main() {
     expect(dryRowsLast([fatty, cooked], 'rice').first, fatty);
   });
 
+  test('a food served with another is still the food', () {
+    final mix = _product('Buckwheat with mushrooms', 'Uvelka', 347, 68);
+    final cooked = _product('Buckwheat groats, cooked', 'Table', 118, 25);
+    expect(
+      dryRowsLast([mix, cooked], 'buckwheat with mushrooms').first,
+      cooked,
+    );
+  });
+
+  test("a model's read with only the dry product has none", () {
+    final mix = _product('Buckwheat with mushrooms', 'Uvelka', 347, 68);
+    expect(
+      dryRowsLast([mix], 'buckwheat with mushrooms', modelRead: true),
+      isEmpty,
+    );
+    expect(dryRowsLast([mix], 'buckwheat with mushrooms'), [mix]);
+  });
+
   test('the same rule holds for rice and lentils', () {
     final dryRice = _product('Basmati Rice', 'Tilda', 350, 78);
     final rice = _product('Rice, cooked', 'Table', 130, 28);
@@ -159,5 +177,35 @@ void main() {
     final dryLentils = _product('Red Lentils', 'Bio', 340, 55);
     final lentils = _product('Lentils, cooked', 'Table', 116, 20);
     expect(dryRowsLast([dryLentils, lentils], 'lentils').first, lentils);
+  });
+
+  group('a ready food is not its powder', () {
+    final powder = _product('Latte Macchiato', 'Jacobs', 420, 60);
+    final latte = _product('Coffee, Latte', 'Table', 43, 4);
+    final flakes = _product('Mashed potato flakes', 'Maggi', 350, 75);
+    final mash = _product('Potatoes, mashed', 'Table', 106, 16);
+    final cup = _product('Tomato soup mix', 'Knorr', 90, 12);
+    final soup = _product('Soup, tomato', 'Table', 40, 7);
+
+    test('the made-up drink, mash and soup come first', () {
+      expect(dryRowsLast([powder, latte], 'latte').first, latte);
+      expect(dryRowsLast([flakes, mash], 'mashed potatoes').first, mash);
+      expect(dryRowsLast([cup, soup], 'tomato soup').first, soup);
+      expect(dryRowsLast([powder, latte], 'latte'), [latte, powder]);
+    });
+
+    test('a name that asks for the powder or names the brand keeps it', () {
+      expect(dryRowsLast([powder, latte], 'latte powder').first, powder);
+      expect(
+        dryRowsLast([flakes, mash], 'instant mashed potatoes').first,
+        flakes,
+      );
+      expect(dryRowsLast([powder, latte], 'jacobs latte').first, powder);
+    });
+
+    test('a food only named before the drink is left alone', () {
+      final beans = _product('Coffee beans', 'Roaster', 350, 30);
+      expect(dryRowsLast([beans, latte], 'coffee beans').first, beans);
+    });
   });
 }
