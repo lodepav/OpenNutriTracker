@@ -65,4 +65,29 @@ void main() {
       'Potatoes, mashed, with butter',
     ]);
   });
+
+  test('a product holding no word of the name is left out', () {
+    MealEntity off(String name) => MealEntity(
+      code: name,
+      name: name,
+      brands: 'Brand',
+      url: null,
+      mealQuantity: null,
+      mealUnit: 'g',
+      servingQuantity: null,
+      servingUnit: 'g',
+      servingSize: null,
+      nutriments: MealNutrimentsEntity.empty(),
+      source: MealSourceEntity.off,
+    );
+    final kept = withoutUnrelatedProducts([
+      off('Black beans'),
+      off('Cheesy tomato bake'),
+      _row('Casserole, NFS'),
+    ], 'baked casserole with cheese and tomato');
+    expect(
+      [for (final m in kept) m.name],
+      ['Cheesy tomato bake', 'Casserole, NFS'],
+    );
+  });
 }

@@ -258,7 +258,15 @@ List<MealEntity> rankForResolution(
     // [fork] S186 cooked-on-plate
     ...dryRowsLast(
       // [fork] S205 served-with
-      _sorted(withoutServedWith(rest, query), query, counted, fromPhoto),
+      _sorted(
+        withoutServedWith(
+          fromPhoto ? withoutUnrelatedProducts(rest, query) : rest,
+          query,
+        ),
+        query,
+        counted,
+        fromPhoto,
+      ),
       // [/fork]
       query,
     ),

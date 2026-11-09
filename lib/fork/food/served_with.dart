@@ -73,3 +73,27 @@ bool _onlyServedWith(String name, String head) {
   final (food, sides) = _foodAndSides(name);
   return sides.isNotEmpty && holdsWord(sides, head) && !holdsWord(food, head);
 }
+
+/// [ranked] without the Open Food Facts products whose name holds no word
+/// of [query] (S205), for a model's read, which names foods in English: a
+/// photo's "baked casserole with cheese and tomato" logged a "Black beans"
+/// product at 343 kcal, matched on some other field. Table rows always
+/// hold a word the search matched, so only products are read.
+List<MealEntity> withoutUnrelatedProducts(
+  List<MealEntity> ranked,
+  String query,
+) {
+  final asked = [
+    for (final w in nameWords(query))
+      if (!_joints.contains(w)) spelling(w),
+  ];
+  if (asked.isEmpty) return ranked;
+  return [
+    for (final meal in ranked)
+      if (meal.source != MealSourceEntity.off ||
+          nameWords(
+            meal.name,
+          ).any((t) => asked.any((q) => wordsAgree(q, spelling(t)))))
+        meal,
+  ];
+}
