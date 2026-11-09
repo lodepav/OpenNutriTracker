@@ -15,10 +15,11 @@ final _asSold = RegExp(
 );
 
 /// [unnamedBrandPenalty] for an Open Food Facts product with a brand that
-/// [query] does not name, else 0 (S196).
+/// [query] does not name, or with none, else 0 (S196).
 ///
-/// A meal read off a photo names foods, not packets (the resolver asks only
-/// for a photo's foods; a typed name may mean the packet):
+/// A meal read off a photo names foods, not packets, and so does a model's
+/// reading of typed text (S204); the resolver asks for those only, as the
+/// parser's words may mean the packet:
 /// "tomato" logged Maestri's tinned tomatoes by the cup, "sausages" Naked
 /// Glory's plant-based ones, "oatmeal porridge" a dry porridge mix at 347
 /// kcal per 100 g. The generic row is the food as eaten; a product only
@@ -32,7 +33,9 @@ double unnamedBrandOf(MealEntity meal, String query) {
   }
   // The first brand: a listing often adds its owner ("Freshona, Lidl").
   final brand = tokenize(meal.brands?.split(',').first);
-  if (brand.isEmpty) return 0;
+  // A product with no brand is one no name can ask for: a brandless "Big
+  // Mac" at no serving beat the table's, and logged 1 g of it.
+  if (brand.isEmpty) return unnamedBrandPenalty;
   final named = tokenize(query);
   return brand.every(named.contains) ? 0 : unnamedBrandPenalty;
 }

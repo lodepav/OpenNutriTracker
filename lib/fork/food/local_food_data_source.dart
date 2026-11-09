@@ -445,8 +445,36 @@ class LocalFoodTable {
   final Map<int, List<MealPortionEntity>> portions;
   final List<Set<String>> _tokens;
 
+  /// A fork dish's names in its brackets, by row index: the words that
+  /// match only there.
+  final Map<int, _Aliases> _aliases;
+
   LocalFoodTable(this.foods, this.portions)
-    : _tokens = [for (final food in foods) _nameTokens(food.name)];
+    : _tokens = [for (final food in foods) _nameTokens(food.name)],
+      _aliases = {
+        for (var i = 0; i < foods.length; i++) i: ?_Aliases.of(foods[i]),
+      };
+
+  /// Whether query word [q] (through [spelling]) holds in row [i]'s name,
+  /// for a search for [query]. A fork dish's bracketed names count for a
+  /// query that shares a word with the name outside them ("fried pork
+  /// patties" is "Pork cutlets, fried (..., minced pork patties)"), and
+  /// otherwise only as a whole, up to what one is made with: "pelēkie
+  /// zirņi" is "Grey peas with bacon (pelēkie zirņi ar speķi)", but
+  /// "speķis" is not, nor "pankūkas" "Liver patties (aknu pankūkas, ...)",
+  /// nor "lasis" a salmon soup made "ar lasi". A single Latvian word found
+  /// the dish it is a word of.
+  bool _has(int i, Iterable<String> query, String q) {
+    final aliases = _aliases[i];
+    if (aliases == null) return _agrees(q, _tokens[i]);
+    if (_agrees(q, aliases.outside)) return true;
+    final anchored = query.any((w) => _agrees(w, aliases.outside));
+    return (anchored ? aliases.names.map((n) => n.$1) : aliases.named(query))
+        .any((alias) => _agrees(q, alias));
+  }
+
+  static bool _agrees(String q, Set<String> tokens) =>
+      tokens.any((t) => wordsAgree(q, t));
 
   /// [name]'s words, and each pair of neighbours run together: "KIT KAT"
   /// is found by `kitkat`, as a person types it.
@@ -538,7 +566,7 @@ class LocalFoodTable {
     for (var i = 0; i < foods.length; i++) {
       final food = foods[i];
       if (!isEnabled(food.source)) continue;
-      if (query.every((q) => _tokens[i].any((t) => wordsAgree(q, t)))) {
+      if (query.every((q) => _has(i, query, q))) {
         matches.add(food);
       }
     }
@@ -563,7 +591,7 @@ class LocalFoodTable {
     for (var i = 0; i < foods.length; i++) {
       final food = foods[i];
       if (!isEnabled(food.source)) continue;
-      bool has(String q) => _tokens[i].any((t) => wordsAgree(q, t));
+      bool has(String q) => _has(i, words, q);
       final count = words.toSet().where(has).length;
       if (count == 0) continue;
       final score = (count, has(last));
@@ -607,6 +635,52 @@ class LocalFoodTable {
 
   static bool _titleIs(SpFoodDTO food, String term) =>
       deriveTitle(food.name ?? '').toLowerCase() == term;
+}
+
+/// A fork dish's other names, from the brackets of its row's name:
+/// "Salmon soup, creamy (lohikeitto, laša zupa, zivju zupa ar lasi)".
+class _Aliases {
+  /// The tokens of the name outside the brackets.
+  final Set<String> outside;
+
+  /// Each bracketed name's tokens, with the words of its head: the part
+  /// before what it is made with ("zivju zupa" of "zivju zupa ar lasi").
+  final List<(Set<String>, List<String>)> names;
+
+  _Aliases(this.outside, this.names);
+
+  /// What joins a dish to what it is made with, in the languages the
+  /// dishes' names are in.
+  static const _joints = {'with', 'and', 'in', 'ar', 'un', 'su', 'mit', 'z'};
+
+  static _Aliases? of(SpFoodDTO food) {
+    final name = food.name;
+    if (food.source != 'fork_dishes' || name == null) return null;
+    final open = name.indexOf('(');
+    if (open < 0) return null;
+    final close = name.indexOf(')', open);
+    final inside = name.substring(open + 1, close < 0 ? name.length : close);
+    return _Aliases(
+      LocalFoodTable._nameTokens(
+        name.substring(0, open) + (close < 0 ? '' : name.substring(close + 1)),
+      ),
+      [
+        for (final alias in inside.split(','))
+          if (nameWords(alias) case final words when words.isNotEmpty)
+            (
+              LocalFoodTable._nameTokens(alias),
+              words.takeWhile((w) => !_joints.contains(w)).toList(),
+            ),
+      ],
+    );
+  }
+
+  /// The tokens of each bracketed name whose head [query] gives whole.
+  Iterable<Set<String>> named(Iterable<String> query) => [
+    for (final (tokens, head) in names)
+      if (head.every((h) => query.any((q) => wordsAgree(q, spelling(h)))))
+        tokens,
+  ];
 }
 
 /// [text]'s words in order, lower-cased, as [tokenize] splits them.

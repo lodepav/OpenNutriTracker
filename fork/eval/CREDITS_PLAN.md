@@ -109,6 +109,7 @@ four suites cost $0.24 over three passes on Haiku.
 | 4 | Tune the photo prompts on `tune`, check on `held` | rounds 1-4 done, $0.45 | $1-10 |
 | 5 | Typed meals and the harder cases | 3 × | done, $0.24 |
 | 6 | Sonnet 5.5, three passes | 3 × the four main suites | done, $4.17 |
+| 7 | Global checks: typed meals, a resolution audit, photo prompt bias, repeated reads, counting | typed 6 ×, audit 1 judge | items 1-2 done, $0.08 |
 | | Spent by 2026-11-08, with the fix checks | | about $4.40 |
 | | Left, for steps 2-4, the emulator and repeats | | about $95 |
 
@@ -287,6 +288,50 @@ not reach this default; its medians moved within noise.
   263 kcal (132), the dill sauce from 443 to 244 (238). The portion
   medians went from 50% to 44% on tune and stayed at 27% on held.
 - **Left:** chłodnik's two egg halves log as two eggs (155 of its 263 kcal).
+
+## Step 7: global checks (2026-11-09)
+
+Fixes that move many foods at once, not a dish at a time.
+
+**1. Typed meals.** `text_eval_test` was 53-58% off (median) in English
+and 66-93% in Latvian, logging 166-198% of the references. The prompt
+kept each food in the language it was typed in, and the fork's table is
+English: a Latvian name fell to whatever product shared a word. Orange
+juice became "Rica Sula" at 148 kcal per 100 g, coffee with milk became
+popcorn, butter peanut butter, an omelette 2,295 kcal of "Egg Omletes".
+
+- The typed prompt now asks for each food as its nearest generic English
+  name, keeping a brand, and a named dish as one entry (S204).
+- A model's reading of typed text now ranks a product the name does not
+  brand below the generic row, as a photo's does (S196); the parser's
+  words still may mean the packet.
+- A product with no brand trails too: a brandless "Big Mac" with no
+  serving logged 1 g.
+- Six live Haiku passes, the last two with everything: 16% off in
+  English, 7% in Latvian, logging 99-109% of the references.
+
+| Typed, median off | Before | Prompt | + named dishes | + brandless |
+|---|---|---|---|---|
+| English | 53-58% | 25% | 18-19% | 16% |
+| Latvian | 66-93% | 14-29% | 13% | 7% |
+
+**2. Resolution audit.** The 326 distinct food names in every report
+under `build/fork-eval` were resolved again against the table
+(`resolution_dump_test.dart`), and Haiku judged each name and row: 192
+fine, 33 the wrong food, 24 an odd serving, 10 the wrong form, 8 an
+implausible energy. By how often each name came up, the top four were
+one cause: a single Latvian word matched one word of a fork dish's
+bracketed names. "lasis" (salmon) found a salmon soup made "ar lasi",
+"pankūkas" liver patties ("aknu pankūkas"), "biezpiens" syrniki,
+"speķis" grey peas with bacon, 159 uses in all.
+
+- A dish's bracketed names now count only whole, up to what it is made
+  with, unless the name also shares a word with the dish's own name:
+  "pelēkie zirņi" and "fried pork patties" still find their dishes.
+  "Gyros" is added to the shawarma as a name of its own.
+- Left, each a food or two: cooked carrots at 72 kcal per 100 g, "pork
+  chop" landing on a stuffed chop, "melted butter" on Brussels sprouts
+  with butter, "meat sauce" on meatballs.
 
 ## What the tests measure
 

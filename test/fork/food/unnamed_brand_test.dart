@@ -48,6 +48,7 @@ final _products = [
   _product('Oatmeal porridge', 'Goodwill', 347),
   _product('apple juice', 'Innocent', 45),
   _product('Zorblax crisps', 'Zorb', 520),
+  _product('Big Mac', null, 242),
 ];
 
 class _Search implements SearchProductsUseCase {
@@ -138,8 +139,18 @@ void main() {
     expect(food.brands, 'Zorb');
   });
 
-  test('only a branded Open Food Facts product trails', () {
-    expect(unnamedBrandOf(_product('Tomatoes', null, 20), 'tomato'), 0);
+  // A brandless "Big Mac" at no serving beat the table's, and a typed "1
+  // big mac" logged 1 g of it.
+  test('a product with no brand trails the generic food too', () async {
+    final food = await resolve('Big Mac', count: 1);
+    expect(food.source, MealSourceEntity.fdc, reason: food.name);
+  });
+
+  test('an Open Food Facts product with no brand, or another, trails', () {
+    expect(
+      unnamedBrandOf(_product('Tomatoes', null, 20), 'tomato'),
+      unnamedBrandPenalty,
+    );
     expect(
       unnamedBrandOf(
         _product('Penne', 'Barilla, Barilla G.e.R.', 357),

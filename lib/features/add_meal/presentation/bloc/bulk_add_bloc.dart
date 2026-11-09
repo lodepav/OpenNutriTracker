@@ -570,10 +570,12 @@ class BulkAddBloc extends Bloc<BulkAddEvent, BulkAddState> {
     }
 
     try {
-      // [fork] S196 unnamed-brand: a photo's foods are the foods as eaten
+      // [fork] S196 unnamed-brand: a photo's foods are the foods as eaten,
+      // and so are a model's reading of typed text, in English (S204); the
+      // parser's words are the user's own language, which the table lacks
       final resolved = await _resolveParsedMealsUseCase.resolve(
         parsed.items,
-        fromPhoto: source == BulkAddReadSource.photo,
+        fromPhoto: source != BulkAddReadSource.parser,
       );
       // [/fork]
       if (emit.isDone || _superseded(attempt)) return;
