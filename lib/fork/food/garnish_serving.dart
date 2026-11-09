@@ -1,6 +1,8 @@
 /// The most a garnish starts at when no amount was stated (S98): a photo's
-/// parsley, dill and green onion came in at the 100 g default, and grated
-/// parmesan at USDA's 100 g cup, 420 kcal, where a plate holds a spoon.
+/// parsley, dill and green onion came in at the 100 g default, grated
+/// parmesan at USDA's 100 g cup, 420 kcal, where a plate holds a spoon, and
+/// a sauce's garlic at USDA's 136 g cup, 203 kcal, where it holds a clove
+/// or two.
 const herbServingGrams = 5.0;
 
 /// The same for grated cheese: about two tablespoons.
@@ -9,12 +11,13 @@ const gratedCheeseServingGrams = 10.0;
 const _gramsPerOunce = 28.349523125;
 
 /// A herb by its own name, or a row that names it first: "Dill weed, fresh",
-/// "Parsley, raw", "Coriander (cilantro) leaves, raw", "Green Onion"; never
-/// a food that holds one ("Pickles, dill", "Lemon dill sauce").
+/// "Parsley, raw", "Coriander (cilantro) leaves, raw", "Green Onion",
+/// "Garlic, raw"; never a food that holds one ("Pickles, dill", "Lemon dill
+/// sauce", "Garlic bread").
 final _herb = RegExp(
   r'^(fresh\s+|chopped\s+)*(dill|parsley|cilantro|coriander|chives|basil|'
-  r'mint|spearmint|green onions?|spring onions?|scallions?)'
-  r'(\s+(weed|leaves|sprigs))?$',
+  r'mint|spearmint|green onions?|spring onions?|scallions?|garlic)'
+  r'(\s+(weed|leaves|sprigs|cloves?))?$',
   caseSensitive: false,
 );
 

@@ -91,6 +91,22 @@ void main() {
     });
   });
 
+  // A photo's chłodnik came back under these names, found no row and was
+  // broken down by a second call at 263-345 kcal, a bowl being about 110.
+  for (final query in [
+    'cold beetroot soup (chlodnik)',
+    'cold beetroot soup (chilled borscht)',
+    'cold beetroot soup (chilled borscht with kefir)',
+    'cold beet soup with kefir',
+    'cold beet soup (chilled borscht with kefir or yogurt)',
+    'chłodnik',
+  ]) {
+    test('$query resolves to the fork\'s chłodnik', () async {
+      final item = await resolve(query);
+      expect(item.candidates[item.selectedIndex].name, startsWith('Chłodnik'));
+    });
+  }
+
   // FNDDS's crème brûlée, at 113 kcal per 100 g, is left out of the table
   // (WRONG_ROWS, build_food_db.py): it shared BLS's name.
   test('creme brulee resolves to a custard of cream and yolks', () async {

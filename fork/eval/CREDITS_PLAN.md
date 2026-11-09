@@ -106,7 +106,7 @@ four suites cost $0.24 over three passes on Haiku.
 | 1 | Baseline on Haiku 5.5 | 3 × the four main suites | done, about $0.25 |
 | 2 | Replay against live, same photos | 1 replay + 3 live Haiku | done, $0.05 |
 | 3 | Your own meals | done, $0.02 | cents |
-| 4 | Tune the photo prompts on `tune`, check on `held` | rounds 1-3 done, $0.30 | $1-10 |
+| 4 | Tune the photo prompts on `tune`, check on `held` | rounds 1-4 done, $0.45 | $1-10 |
 | 5 | Typed meals and the harder cases | 3 × | done, $0.24 |
 | 6 | Sonnet 5.5, three passes | 3 × the four main suites | done, $4.17 |
 | | Spent by 2026-11-08, with the fix checks | | about $4.40 |
@@ -272,6 +272,21 @@ not reach this default; its medians moved within noise.
   sauce: in one run the model listed its garlic apart, and "garlic" logged
   raw garlic at 136 g, 203 kcal. That amount is left to look at; the
   portion medians held level (53% to 50%, 27% both).
+
+## Step 4, round 4: garlic and chłodnik (2026-11-09)
+
+- **Garlic** with no amount took USDA's first serving, a 136 g cup: it now
+  starts at no more than 5 g, like a herb (S98, `garnishGrams`).
+- **Chłodnik** came back as "cold beetroot soup (chlodnik)", "chilled
+  borscht" or "cold beet soup (chilled borscht with kefir or yogurt)": no
+  row held every word, so a second call broke it down at 263-351 kcal. The
+  dish's name now holds those words, and a name that finds nothing drops
+  its bracketed part and tries again.
+- Two live Haiku passes against round 3's: the calorie median went from
+  15% to 14% on tune and from 24% to 18% on held; chłodnik from 437 to
+  263 kcal (132), the dill sauce from 443 to 244 (238). The portion
+  medians went from 50% to 44% on tune and stayed at 27% on held.
+- **Left:** chłodnik's two egg halves log as two eggs (155 of its 263 kcal).
 
 ## What the tests measure
 

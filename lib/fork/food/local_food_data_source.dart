@@ -60,6 +60,19 @@ class LocalFoodDataSource extends SpFoodDataSource {
         foods.search(query, isEnabled: (source) => toggles?[source] ?? true);
     var query = searchString;
     var rows = search(query);
+    // A model explains a name in brackets with words the row need not hold
+    // ("cold beet soup (chilled borscht with kefir or yogurt)"): when
+    // nothing has every word, the name before them.
+    if (forResolution && rows.isEmpty && _bracketed.hasMatch(query)) {
+      final plain = query.replaceAll(_bracketed, ' ').trim();
+      if (plain.isNotEmpty) {
+        final found = search(plain);
+        if (found.isNotEmpty) {
+          query = plain;
+          rows = found;
+        }
+      }
+    }
     // A model names foods the table's way, then adds a qualifier the table
     // may not use ("buckwheat groats, raw" against "Buckwheat groats"):
     // when nothing has every word, drop the qualifiers from the end. Only
@@ -303,6 +316,9 @@ final _joiner = RegExp(r'\s+(with|in|and|on|ar)\s+', caseSensitive: false);
 /// "chicken rice pilaf" a rice pilaf. Each keeps two words at least: one
 /// word alone is too broad to stand for the dish ("salad", "rice",
 /// "chicken"), and a dish the table cannot name is broken down instead (D9).
+/// A bracketed part of a name: "(chilled borscht)".
+final _bracketed = RegExp(r'\s*\([^)]*\)?');
+
 List<String> fewerWords(String query) {
   final shorter = <String>[];
   var words = query.trim().split(RegExp(r'\s+'));

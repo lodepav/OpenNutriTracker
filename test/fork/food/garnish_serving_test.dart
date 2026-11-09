@@ -13,6 +13,8 @@ void main() {
       'Green Onion',
       'Fresh cilantro',
       'Chives, raw',
+      'Garlic, raw',
+      'Garlic cloves',
     ]) {
       expect(garnishGrams(name), 5, reason: name);
     }
@@ -23,6 +25,8 @@ void main() {
 
   test('a food that holds a herb or grated cheese is the food', () {
     for (final name in [
+      'Garlic bread',
+      'Garlic powder',
       'Pickles, dill',
       'Lemon dill sauce',
       'Onions, raw',
