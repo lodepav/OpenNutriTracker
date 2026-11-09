@@ -104,7 +104,7 @@ four suites cost $0.24 over three passes on Haiku.
 |---|---|---|---|
 | 0 | Harness: usage, split, merge | - | done, $0 |
 | 1 | Baseline on Haiku 5.5 | 3 × the four main suites | done, about $0.25 |
-| 2 | Replay against live, same photos | 1 replay + step 1 | $0 |
+| 2 | Replay against live, same photos | 1 replay + 3 live Haiku | done, $0.05 |
 | 3 | Your own meals | each, a few times | cents |
 | 4 | Tune the photo prompts on `tune`, check on `held` | as needed | $1-10 |
 | 5 | Typed meals and the harder cases | 3 × | done, $0.24 |
@@ -190,6 +190,33 @@ same code (`514c07c0`), so they compare directly. The merged reports'
   products that change between searches; spaghetti bolognese starts at
   100 g; "pizza slice" logs a whole pizza; chłodnik was once split into its
   ingredients; typed Latvian meals and dishes, above.
+
+### Step 2: the replay against live (2026-11-09)
+
+A Haiku subagent answered the calorie and portion suites' 39 requests
+(`build/fork-eval/replay/step2`), set beside three live Haiku passes on the
+same code (`280d5e4c`, after the fixes above).
+
+| Suite | Live median off | Replay median off | Replay inside the live runs' range | Replay off the live mean (median, of the reference) |
+|---|---|---|---|---|
+| Calorie (22 reads) | 41% | 38% | 3/22 | 49% |
+| Portion (17 reads) | 37% | 24% | 5/17 | 28% |
+
+- **The replay does not stand in for live.** The medians land close, but
+  read by read the replay falls inside the three live runs' range 3 times in
+  22 and 5 in 17, while live itself moves little (median spread 9% and 19%).
+  A replay score says little about what the app's real call does.
+- **The subagent breaks the tool's shape.** 10 of 39 answers were one item
+  instead of `{"items": [...]}`, which a forced tool call cannot return;
+  they were wrapped by hand (originals in `answers-orig`). Others left out
+  quantities, so a row logged at 1 kcal.
+- **So step 4 iterates live.** A Haiku pass of these two suites costs about
+  $0.05, which leaves the spare untouched; the replay stays for tests that
+  need no real model.
+- **Live misses for step 4:** chłodnik at 470-510 kcal against 132 with no
+  note (370-380 with one); the pork cutlets at 7 kcal in one run of each
+  suite; solyanka with its note at 880-960 against 354; plov with its note
+  at 965-980 against 753.
 
 ## What the tests measure
 
