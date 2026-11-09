@@ -61,6 +61,15 @@ void main() {
       expect(fewerWords('salad with burrata'), isEmpty);
       expect(fewerWords('rice with herbs'), isEmpty);
     });
+
+    test('a single food named with its kind falls back to the food', () {
+      expect(fewerWords('cherry tomatoes'), ['tomatoes']);
+      expect(fewerWords('salted roasted peanuts'), [
+        'roasted peanuts',
+        'peanuts',
+      ]);
+      expect(fewerWords('grilled chicken'), isEmpty);
+    });
   });
 
   group('search', () {
@@ -186,8 +195,9 @@ void main() {
       expect(await names('cherry tomatoes'), ['Tomatoes, raw']);
       // One word that is not the food is no match.
       expect(await names('turkish delight'), isEmpty);
-      // The resolver keeps every word, and breaks the dish down (D9).
-      expect(await names('cherry tomatoes', resolve: true), isEmpty);
+      // The resolver falls back to the food a variety names (2026-11-09:
+      // the user's own foods missed eight such); a dish is broken down (D9).
+      expect(await names('cherry tomatoes', resolve: true), ['Tomatoes, raw']);
       // Run-together words and other spellings.
       expect(await names('kitkat'), ['Candies, KIT KAT Wafer Bar']);
       expect(await names('bbq sauce'), ['Sauce, barbecue']);
