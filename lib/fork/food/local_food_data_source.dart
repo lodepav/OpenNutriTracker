@@ -324,6 +324,9 @@ Set<SpFoodDTO> listedAfter(List<SpFoodDTO> rows, String query) {
 
 final _joiner = RegExp(r'\s+(with|in|and|on|ar)\s+', caseSensitive: false);
 
+/// A bracketed part of a name: "(chilled borscht)".
+final _bracketed = RegExp(r'\s*\([^)]*\)?');
+
 /// Shorter forms of [query] to try, nearest first: without what follows
 /// "with", "in", "and" or "on" (Latvian "ar"), then without its first
 /// words one at a time. An English or Latvian dish name puts the food last
@@ -333,9 +336,6 @@ final _joiner = RegExp(r'\s+(with|in|and|on|ar)\s+', caseSensitive: false);
 /// "chicken"), and a dish the table cannot name is broken down instead (D9).
 /// Last, the last word alone when it is a food, not a dish ([_dishHeads]),
 /// unless not [lastAlone].
-/// A bracketed part of a name: "(chilled borscht)".
-final _bracketed = RegExp(r'\s*\([^)]*\)?');
-
 List<String> fewerWords(String query, {bool lastAlone = true}) {
   final shorter = <String>[];
   var words = query.trim().split(RegExp(r'\s+'));
@@ -358,9 +358,6 @@ List<String> fewerWords(String query, {bool lastAlone = true}) {
   return shorter;
 }
 
-/// The last words of a dish, too broad alone to stand for it: "chicken
-/// salad" is no salad row, and a dish the table cannot name is broken
-/// down (D9).
 /// How a food was made, which its plain row is not.
 final _madeAWay = RegExp(
   r'\b(saut[eé]ed|fried|roasted|grilled|baked|braised|stewed|creamed|'
@@ -368,6 +365,9 @@ final _madeAWay = RegExp(
   caseSensitive: false,
 );
 
+/// The last words of a dish, too broad alone to stand for it: "chicken
+/// salad" is no salad row, and a dish the table cannot name is broken
+/// down (D9).
 const _dishHeads = {
   'salad',
   'salads',

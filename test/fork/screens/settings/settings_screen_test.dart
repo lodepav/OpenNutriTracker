@@ -107,11 +107,25 @@ class _EmptyStorage implements FlutterSecureStorage {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
+/// The AI features hidden in Settings › Appearance (#1518).
+class _HiddenStorage extends _EmptyStorage {
+  @override
+  Future<String?> read({
+    required String key,
+    AppleOptions? iOptions,
+    AndroidOptions? aOptions,
+    LinuxOptions? lOptions,
+    WebOptions? webOptions,
+    AppleOptions? mOptions,
+    WindowsOptions? wOptions,
+  }) async => key == 'AiAssistHiddenTag' ? 'true' : null;
+}
+
 /// The runner is real; only the thing that would talk to a server is not.
 /// Nothing here presses the check, so it is never asked anything.
 class _FakeProber extends Fake implements AiEndpointProber {}
 
-void _register() {
+void _register({FlutterSecureStorage? storage}) {
   final getIt = GetIt.instance;
   getIt.registerSingleton<SettingsBloc>(_FakeSettingsBloc());
   getIt.registerSingleton<ProfileBloc>(_FakeProfileBloc());
@@ -119,7 +133,7 @@ void _register() {
   getIt.registerSingleton<DiaryBloc>(_FakeDiaryBloc());
   getIt.registerSingleton<CalendarDayBloc>(_FakeCalendarDayBloc());
   getIt.registerSingleton<TrendsBloc>(_FakeTrendsBloc());
-  final credentials = AiCredentialStorage(_EmptyStorage());
+  final credentials = AiCredentialStorage(storage ?? _EmptyStorage());
   getIt.registerSingleton<AiCredentialStorage>(credentials);
   getIt.registerSingleton<AiEndpointProbeRunner>(
     AiEndpointProbeRunner(credentials, _FakeProber()),
@@ -449,5 +463,43 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(diaryBloc.added, contains(isA<LoadDiaryYearEvent>()));
+  });
+
+  testWidgets('with the AI features hidden, Food has no AI row (#1518)', (
+    tester,
+  ) async {
+    await GetIt.instance.reset();
+    _register(storage: _HiddenStorage());
+    tester.view.physicalSize = const Size(1080, 4000);
+    tester.view.devicePixelRatio = 2.625;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(_app(section: SettingsSection.food));
+    await tester.pumpAndSettle();
+    expect(find.bySemanticsIdentifier('settings-ai-assist'), findsNothing);
+  });
+
+  testWidgets('with the AI features hidden, their switch shows off (#1518)', (
+    tester,
+  ) async {
+    await GetIt.instance.reset();
+    _register(storage: _HiddenStorage());
+    await tester.pumpWidget(_app(section: SettingsSection.appearance));
+    await tester.pumpAndSettle();
+    final toggle = find.bySemanticsIdentifier('settings-show-ai');
+    await tester.scrollUntilVisible(
+      toggle,
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    expect(
+      tester
+          .widget<Switch>(
+            find.descendant(of: toggle, matching: find.byType(Switch)),
+          )
+          .value,
+      isFalse,
+    );
   });
 }
