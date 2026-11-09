@@ -396,7 +396,7 @@
     },
     {
       "code": "chlodnik",
-      "name": "Chłodnik, cold beet soup (aukstā zupa, šaltibarščiai, holodnik, cold borscht)",
+      "name": "Chłodnik, cold beet soup with kefir (chlodnik, cold beetroot soup, chilled borscht, cold borscht, aukstā zupa, šaltibarščiai, holodnik)",
       "basis": "Cold beet soup as Polish, Lithuanian and Latvian kitchens make it: boiled beets, cucumber, radish, dill and green onion in buttermilk or kefir, served with a boiled egg (log the egg as its own row).",
       "yield_g": 1640,
       "serving": ["1 bowl", 300],
