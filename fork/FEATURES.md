@@ -1,0 +1,160 @@
+# OpenBite's own features
+
+What the fork adds to OpenNutriTracker, as of OpenBite 0.9.1 (based on ONT 2.7.0), 2026-11-09.
+Each feature is marked:
+
+- **Fork only**: stays in the fork, for the reason given: it goes against an upstream rule, is
+  the fork's own identity or taste, depends on something only the fork has, or is too large and
+  opinionated for one PR.
+- **Candidate**: any ONT user would want it, so rule 1 of [README.md](README.md) says to offer it
+  upstream. It still needs a branch off `develop` and upstream's yes.
+- **Sent**: already offered upstream (PR or issue number).
+
+The marks are a judgement, not a decision; a decision goes in [DECISIONS.md](DECISIONS.md).
+Details live in the seam rows ([SEAMS.md](SEAMS.md), `Sxx`) and decisions (`Dxx`).
+
+## Sent upstream
+
+| What | Where |
+|---|---|
+| Bottom sheets and the nutrient goals list clear of the navigation bar | #1493, merged (2.7.0) |
+| Labelled icon buttons and sliders, text that wraps at large font sizes | #1494, merged (2.7.0) |
+| Claude 5.5 and GPT-6 models, tool calls the way each accepts | #1495, merged (2.7.0) |
+| A dish served as pieces counted in a photo; a count past a recipe's batch flagged | #1496, merged (2.7.0) |
+| Tests delete their Hive boxes before closing them (no stray `.hive` files, S203) | #1574, open |
+| Automatic backup after diary changes, for Syncthing and Drive sync apps (D10) | issue #1356, open |
+
+## Targets and coaching (MacroFactor's)
+
+| Feature | Mark | Why / notes |
+|---|---|---|
+| Adaptive expenditure and the weekly check-in: estimated expenditure from weigh-ins and intake, a capped target the user accepts (D13, D17–D21, D27; S12, S13, S17) | Fork only | The fork's reason to exist; large and opinionated (smoothing, blend and cap tuned by simulation). Upstream keeps the formula and its fixed target. |
+| Expenditure and check-in settings: responsiveness, steps and workouts counted, check-in day, auto-accept, a day left out (D17) | Fork only | Part of the adaptive target. |
+| Smoothed trend weight beside the 7-day average, chosen by a switch (D13, S15, S93) | Candidate | A pure function and a switch; useful without the adaptive target. |
+| Macro program: protein and fat per kg of body weight or lean mass, the rest carbs; fat moves with the goal (D22, D34, S41) | Candidate | Upstream sets macros as a percentage split. A new way to set macros, so upstream's call. |
+| Goal planner in onboarding and diet phases: goal, pace, phases that move the goal by date, Home saying when it moved (S88, S89, S193, D32) | Fork only | Built on the adaptive target and phases. |
+| Weekday calorie shift, per-day goals kept for copies, imports and activities (S63–S69) | Fork only | Part of the fork's targets. |
+| Activities leave a fixed or adaptive target alone (S62, S68) | Candidate (fixed part) | For upstream's fixed target (#671) a logged activity still moves the goal; the adaptive part is the fork's. |
+| "Allow for a monthly cycle" on a woman's profile only (S146) | Fork only | A setting of the adaptive estimate. |
+| Weigh-in and check-in reminders (S46) | Candidate (weigh-in) | The weigh-in reminder fits upstream's reminders; the check-in one is the fork's. |
+| Strength from Go Hevier suggests a calorie change; OpenBite shares its phase with Go Hevier (D28, D29, S182, S183) | Fork only | Depends on the user's own gym app and signing key. |
+
+## Logging with AI
+
+| Feature | Mark | Why / notes |
+|---|---|---|
+| A dish the database lacks is broken into ingredients with grams; only an unmatched ingredient gets the model's estimate (D9, D12, S3) | Fork only | Upstream forbids model-supplied numbers (#250). |
+| A photo note's weight sizes the plate; a named meal without a weight gets estimated grams (D24, D25, S175) | Fork only | Visual portion estimates, which #250 rules out. |
+| Leftovers: subtract what was left from an entry or a meal (D14, S9, S10) | Candidate (manual) | D14: the manual amount or fraction goes upstream; the AI photo of the leftovers is fork only (#250). |
+| Read a nutrition label into a custom food (S29), and "Add it from its label" when a barcode is not found (S36) | Candidate | Reads printed numbers; it does not estimate them. |
+| Photo prompt: counts of halves and pieces, counts the note states (S60, S170) | Candidate | The first part went upstream as #1496; the note counts are next. |
+| Photo prompt lists the user's saved recipe names (S172) | Candidate | |
+| A 429 from the model is retried once, within the read's timeout (S171) | Candidate | |
+| A counted food's full-record lookup waits 5 s, not 60 s (S181) | Candidate | A slow network holds upstream's review screen. |
+| An amount inside a phrase counts as stated ("a 330 ml can of coke", S169) | Candidate | Extends upstream's #977. |
+| Model rows show the fork's eval rating and price tier (S174) | Fork only | From the fork's own eval (`fork/eval/`). |
+| Typed meals queried in English whatever their language (S204) | Fork only | Fits the fork's English tables; upstream searches Open Food Facts in the user's language. |
+| Matching rules for what a model reads: variants trail, everyday rows, dish parts and sides left out, slices as pieces, brands named or not (S70, S73–S75, S178, S187, S196–S200, S202, S205, S206; D26, D40) | Fork only | Tuned on the fork's bundled tables and evals. A rule that also helps Open Food Facts results could be split out later. |
+| Log with AI's review list as Diary rows with the meal's macros, swipe to leave out (D35–D38) | Fork only | Part of the redesign. |
+| Back on "Add several items" asks before the foods found are lost (S90) | Candidate | |
+| A fake model and replayed answers for emulator runs (`FORK_FAKE_AI`) | Fork only | Development tooling. |
+
+## Food data and search
+
+| Feature | Mark | Why / notes |
+|---|---|---|
+| Offline generic foods: USDA FoodData Central and BLS 4.0 bundled (D11, S1, S2) | Fork only | Replaces upstream's food backend and adds a large asset; a change of upstream's architecture, not a feature PR. |
+| The fork's dishes worked out from recipes (solyanka, cepelinai, kvass…) (S72) | Fork only | Rows of the fork's own table. |
+| Four Latvian starter recipes (D12, S6) | Fork only | Local to the user. |
+| Saved meals and recipes found by their words in any order (S5) | Candidate | Flagged in SEAMS.md as an upstream PR candidate. |
+| Recents put the foods usually logged in this meal first (S19) | Candidate | |
+| Remembered amounts: a food opens at the amount last logged (S45) | Candidate | |
+| Amount picker: units as chips, the food's portions with their weights, − and +, the user's own named portion (D33, S195) | Candidate | A large UI change to upstream's meal detail. |
+| A unit change converts the amount (180 g → 1 serving, S164) | Candidate | A bug fix. |
+| A food that cannot be logged says what it lacks (S94) | Candidate | |
+| A recipe's serving reads as one serving and its weight (S91) | Candidate | |
+| Contribute a custom food to Open Food Facts (S33) | Candidate | Ported from another fork (theoleuthardt `personal`). |
+| Search opens with the keyboard up (S163) | Candidate | |
+| Search rows as short as the Diary's; Open Food Facts products as an emoji, not a photo (S116, S117) | Fork only | Part of the redesign. |
+
+## Diary and logging flow
+
+| Feature | Mark | Why / notes |
+|---|---|---|
+| Copy and move: select foods or meals on the Diary and copy, move, share or delete them (S177, D30) | Candidate | The copy writes entries one at a time, which also fixes upstream's meal-section copy under-counting the day. |
+| Food basket: gather several foods, review the meal, log them together (S42, D39) | Candidate | |
+| Meal plan and recurring meals (S43, D31) | Candidate | Large; could go in parts. |
+| Diary by the hour (S80) | Candidate | |
+| Macro order: carbs, fat and protein in the order picked (S79) | Candidate | |
+| Swipe the Diary a day back or forward, past today (S176) | Candidate | |
+| Undo after deleting a food (S52) | Candidate | |
+| Show water and Show fasting switches (S144) | Candidate | Next to upstream's Show activity tracking. |
+| The added-food snackbar names the meal (S110) | Candidate | |
+| The food page's Add says when the write failed (S189) | Candidate | A bug fix. |
+| Editing a food whose serving the simple form cannot hold opens the advanced form (S188) | Candidate | A bug fix. |
+| Number fields take digits and one separator only (S141) | Candidate | A bug fix: "120-" saved an empty value. |
+| A Diary day can be left out of the expenditure estimate (D17) | Fork only | Part of the adaptive target. |
+
+## The redesign (MacroFactor's look)
+
+| Feature | Mark | Why / notes |
+|---|---|---|
+| Home: one summary card, quick actions, recent foods, repeat a meal, sections arranged by the user (S119, S162, D30, D31) | Fork only | The fork's taste; whole screens copied under D23. |
+| Diary: a week calendar of rings filling with the day's energy, the day card (S118, S149) | Fork only | |
+| Trends: tiles over 1W to All, with a page each (S120) | Fork only | |
+| You tab, the foods behind a macro, the recipe page, accent colour, Health Connect page (S121, S124, S126, S136, S138) | Fork only | |
+| Muted macro colours on every macro line (D38) | Fork only | |
+
+## Health and body
+
+| Feature | Mark | Why / notes |
+|---|---|---|
+| Health Connect: weight in, body fat in, nutrition out (S27, S48, S49) | Candidate | Next to upstream's workout import. Each needs Play's Health Connect declaration. |
+| Daily steps on Trends (S44) | Fork only | Upstream dropped READ_STEPS after Play called it excessive. |
+| Weight from Health Connect during onboarding (S99) | Candidate | |
+| Health Connect grants checked without the plugin ending the process (S180) | Candidate | A workaround for a plugin crash. |
+| Deleting today's weigh-in sets the profile weight back (S113) | Candidate | A bug fix: the goal kept the deleted weight. |
+| Body measurements and body fat % on Trends (S40, `lib/fork/body/`) | Candidate | |
+| Progress photos (`lib/fork/photos/`) | Candidate (photos) | The AI comparison of two photos is fork only, as a visual estimate. |
+| Fasting timer's plans and history (S157) | Fork only | A copy of upstream's screen, redesigned. |
+
+## Backup and data
+
+| Feature | Mark | Why / notes |
+|---|---|---|
+| Automatic backup into a folder a sync app mirrors (D10, S22) | Sent | Issue #1356. |
+| The fork's own data in the backup: water, fasting, check-ins, phases, settings (S21) | Fork only | The fork's boxes. |
+| Restore a backup from onboarding (S37); restored settings apply without a restart (S38) | Candidate | |
+| Data that will not open: restore the newest backup or start again, files set aside, never deleted (S112) | Candidate | |
+| Import another app's history, e.g. MacroFactor's export (`lib/fork/history/`) | Candidate | The user's own export never goes in the repo. |
+| CSV export (`lib/fork/export/`) | Candidate | |
+| A favourite's time round-trips an export in UTC (S86) | Candidate | A bug fix: an hour off across a clock change. |
+| Deleting a profile's data also empties the fork's boxes and photos (S102, S191) | Fork only | The fork's data. |
+
+## Android
+
+| Feature | Mark | Why / notes |
+|---|---|---|
+| Launcher shortcuts (Scan, Photo log, Quick add, Weigh in) and shares into the app: a photo, text, a recipe link (S167) | Candidate | |
+| Home-screen widgets for macros and trend weight, beside upstream's calorie widget (S50, D41) | Candidate | |
+| Its own app id, name, icon and logo: OpenBite (D8, S20, S34, S35) | Fork only | Identity. |
+| GitHub releases with an in-app updater (D16, S76) | Fork only | The fork's distribution. |
+| No tip jar, no billing permission (S207, D41) | Fork only | Upstream's Support page funds upstream. |
+
+## Charts, accessibility and polish
+
+| Feature | Mark | Why / notes |
+|---|---|---|
+| Chart touches name each number with its unit and day; an empty range says so (S96, S97) | Candidate | |
+| Charts fit the period shown; dots up to a month (S161, S166) | Candidate | |
+| Trends' windows end on the Diary's logical today (S190) | Candidate | A bug fix past midnight. |
+| Daily averages over the days logged, rounded not cut (S87, S114, now in S120) | Candidate | Bug fixes to upstream's Daily average card. |
+| Screen-reader labels and large-text fixes beyond what 2.7.0 took (S81, S83, S92, S111) | Candidate | Partly upstream via #1494; the typed weigh-in field (S111) and the rest are next. |
+| Lists clear of a 3-button navigation bar (S143) | Candidate | Partly upstream via #1493. |
+
+## Release checks
+
+| Feature | Mark | Why / notes |
+|---|---|---|
+| Release gate: supply chain, secrets, signing, permissions, exported components, vulnerability scan (`fork/tools/release-check.sh`) | Fork only | The fork's own release process. |
+| `addressable` ahead of upstream; no `cocoapods` gem (S194, S201) | Fork only | For the vulnerability scan. S201 never goes upstream: upstream's iOS job needs the gem. |
