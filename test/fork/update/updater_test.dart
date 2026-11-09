@@ -25,8 +25,12 @@ PackageInfo _package({
 Map<String, Object?> _release(String tag) => {
   'tag_name': tag,
   'assets': [
-    {'name': 'openbite-0.2.0.apk.sha256', 'browser_download_url': 'h'},
-    {'name': 'openbite-0.2.0.apk', 'browser_download_url': 'a'},
+    {
+      'name': 'openbite-0.2.0.apk.sha256',
+      'browser_download_url': 'h',
+      'url': 'hApi',
+    },
+    {'name': 'openbite-0.2.0.apk', 'browser_download_url': 'a', 'url': 'aApi'},
   ],
 };
 
@@ -50,13 +54,15 @@ void main() {
     expect(pickApk(_release('x')['assets'] as List<Object?>), (
       apk: 'a',
       hash: 'h',
+      apkApi: 'aApi',
+      hashApi: 'hApi',
     ));
     expect(
       pickApk([
         {'name': 'other.apk.sha256', 'browser_download_url': 'h'},
         {'name': 'openbite.apk', 'browser_download_url': 'a'},
       ]),
-      (apk: 'a', hash: null),
+      (apk: 'a', hash: null, apkApi: null, hashApi: null),
     );
     expect(parseChecksum('$_hash  openbite-0.2.0.apk\n'), _hash);
     expect(parseChecksum('not a hash'), isNull);
@@ -81,6 +87,7 @@ void main() {
       expect(info.hasUpdate, isTrue);
       expect(info.latestVersion, '0.2.0');
       expect((info.apkUrl, info.hashUrl), ('a', 'h'));
+      expect((info.apkApiUrl, info.hashApiUrl), ('aApi', 'hApi'));
       await updater.check();
       expect(asked, 1);
       // Settings' row asks again when tapped.
@@ -213,6 +220,118 @@ void main() {
       await expectLater(
         updater('nope').install(info),
         throwsA(isA<UpdateException>()),
+      );
+      expect(call, isNull);
+    });
+
+    // github.com's download link answered 504 on 2026-11-09 while the API's
+    // asset link served the file.
+    const withApi = UpdateInfo(
+      hasUpdate: true,
+      latestVersion: '0.2.0',
+      apkUrl: 'https://x/a',
+      hashUrl: 'https://x/h',
+      apkApiUrl: 'https://api/a',
+      hashApiUrl: 'https://api/h',
+    );
+
+    test('the checksum comes from the github.com link alone', () async {
+      final asked = <String>[];
+      final updater = Updater(
+        client: MockClient((req) async {
+          asked.add('${req.url}');
+          return http.Response(_hash, 200);
+        }),
+      );
+      expect(
+        await updater.checksum(withApi.hashUrl, withApi.hashApiUrl),
+        _hash,
+      );
+      expect(asked, ['https://x/h']);
+    });
+
+    test('a 504 from github.com falls back to the API link', () async {
+      final asked = <(String, String?)>[];
+      final updater = Updater(
+        cacheDir: () async => cache,
+        client: MockClient((req) async {
+          asked.add(('${req.url}', req.headers['Accept']));
+          return switch (req.url.host) {
+            'x' => http.Response('', 504),
+            _ when req.url.path == '/h' => http.Response(_hash, 200),
+            _ => http.Response.bytes([4, 5], 200),
+          };
+        }),
+      );
+      await updater.install(withApi);
+      expect(asked, [
+        ('https://x/h', null),
+        ('https://api/h', 'application/octet-stream'),
+        ('https://x/a', null),
+        ('https://api/a', 'application/octet-stream'),
+      ]);
+      expect(call?.arguments, {
+        'fileName': 'openbite-update/openbite.apk',
+        'sha256': _hash,
+      });
+      expect(
+        File('${cache.path}/openbite-update/openbite.apk').readAsBytesSync(),
+        [4, 5],
+      );
+    });
+
+    test('a thrown request falls back too', () async {
+      final updater = Updater(
+        client: MockClient(
+          (req) async => req.url.host == 'x'
+              ? throw http.ClientException('reset')
+              : http.Response(_hash, 200),
+        ),
+      );
+      expect(
+        await updater.checksum(withApi.hashUrl, withApi.hashApiUrl),
+        _hash,
+      );
+    });
+
+    test('both links failing gives no checksum and no install', () async {
+      final updater = Updater(
+        cacheDir: () async => cache,
+        client: MockClient(
+          (req) async => req.url.host == 'x'
+              ? http.Response('', 504)
+              : http.Response('not a hash', 200),
+        ),
+      );
+      expect(
+        await updater.checksum(withApi.hashUrl, withApi.hashApiUrl),
+        isNull,
+      );
+      await expectLater(
+        updater.install(withApi),
+        throwsA(isA<UpdateException>()),
+      );
+      expect(call, isNull);
+    });
+
+    test('an APK neither link serves is not installed', () async {
+      final updater = Updater(
+        cacheDir: () async => cache,
+        client: MockClient(
+          (req) async => req.url.path == '/h'
+              ? http.Response(_hash, 200)
+              : http.Response('', 504),
+        ),
+      );
+      await expectLater(
+        updater.install(withApi),
+        throwsA(
+          isA<UpdateException>().having(
+            (e) => e.message,
+            'message',
+            'Download failed (504)',
+          ),
+        ),
       );
       expect(call, isNull);
     });

@@ -26,6 +26,11 @@ class UpdateInfo {
   final String? apkUrl;
   final String? hashUrl;
 
+  /// The same two assets through GitHub's API, for when github.com's
+  /// download link fails: see [Updater.checksum].
+  final String? apkApiUrl;
+  final String? hashApiUrl;
+
   /// False for a build that never asks (debug, profile, develop).
   final bool checked;
 
@@ -34,6 +39,8 @@ class UpdateInfo {
     required this.latestVersion,
     this.apkUrl,
     this.hashUrl,
+    this.apkApiUrl,
+    this.hashApiUrl,
     this.checked = true,
   });
 
@@ -65,16 +72,24 @@ String tagVersion(String? tag) => tag != null && tag.startsWith(_tagPrefix)
     : '';
 
 /// The release's APK and the checksum named after it, never just the first
-/// `.sha256` in the list.
-({String? apk, String? hash}) pickApk(List<Object?> assets) {
+/// `.sha256` in the list. Each comes with its API link (`url`) too.
+({String? apk, String? hash, String? apkApi, String? hashApi}) pickApk(
+  List<Object?> assets,
+) {
   final named = {
     for (final a in assets)
-      if (a is Map) '${a['name']}': a['browser_download_url'] as String?,
+      if (a is Map) '${a['name']}': a,
   };
   final apk = named.keys
       .where((n) => n.toLowerCase().endsWith('.apk'))
       .firstOrNull;
-  return (apk: named[apk], hash: apk == null ? null : named['$apk.sha256']);
+  final hash = apk == null ? null : named['$apk.sha256'];
+  return (
+    apk: named[apk]?['browser_download_url'] as String?,
+    hash: hash?['browser_download_url'] as String?,
+    apkApi: named[apk]?['url'] as String?,
+    hashApi: hash?['url'] as String?,
+  );
 }
 
 /// The first word of a `sha256sum` line, when it is 64 hex characters.
@@ -148,24 +163,45 @@ class Updater {
       latestVersion: version,
       apkUrl: picked.apk,
       hashUrl: picked.hash,
+      apkApiUrl: picked.apkApi,
+      hashApiUrl: picked.hashApi,
     );
   }
 
-  /// The release's published SHA-256 of its APK, or null.
-  Future<String?> checksum(String? hashUrl) async {
-    if (hashUrl == null) return null;
-    final res = await _client.get(Uri.parse(hashUrl));
-    return res.statusCode == 200 ? parseChecksum(res.body) : null;
+  /// A GET of the asset's github.com link, then of its API link. On
+  /// 2026-11-09 the github.com link answered 504 every time while the API's
+  /// served the same file, so each download falls back to it once.
+  List<http.Request> _requests(String? url, String? apiUrl) => [
+    if (url != null) http.Request('GET', Uri.parse(url)),
+    if (apiUrl != null)
+      http.Request('GET', Uri.parse(apiUrl))
+        ..headers['Accept'] = 'application/octet-stream',
+  ];
+
+  /// The release's published SHA-256 of its APK, or null when neither link
+  /// gives one.
+  Future<String?> checksum(String? hashUrl, [String? hashApiUrl]) async {
+    for (final req in _requests(hashUrl, hashApiUrl)) {
+      try {
+        final res = await http.Response.fromStream(await _client.send(req));
+        final hex = res.statusCode == 200 ? parseChecksum(res.body) : null;
+        if (hex != null) return hex;
+      } on Exception {
+        // Try the next link.
+      }
+    }
+    return null;
   }
 
-  /// Downloads [info]'s APK straight to disk, with [onProgress] (received
+  /// Downloads [info]'s APK straight to disk (from its API link when
+  /// github.com's fails), with [onProgress] (received
   /// bytes, and the total or null), and opens the installer. Refuses a
   /// release without a checksum; the Android side refuses a mismatch.
   Future<void> install(
     UpdateInfo info, {
     void Function(int received, int? total)? onProgress,
   }) async {
-    final hash = await checksum(info.hashUrl);
+    final hash = await checksum(info.hashUrl, info.hashApiUrl);
     if (info.apkUrl == null || hash == null) {
       throw const UpdateException('Checksum not available, so not installing');
     }
@@ -173,12 +209,22 @@ class Updater {
     const name = 'openbite-update/openbite.apk';
     final file = File('${(await _cacheDir()).path}/$name');
     await file.parent.create(recursive: true);
-    final res = await _client.send(
-      http.Request('GET', Uri.parse(info.apkUrl!)),
-    );
-    if (res.statusCode != 200) {
-      throw UpdateException('Download failed (${res.statusCode})');
+    http.StreamedResponse? res;
+    Object? failure;
+    for (final req in _requests(info.apkUrl, info.apkApiUrl)) {
+      try {
+        final r = await _client.send(req);
+        if (r.statusCode == 200) {
+          res = r;
+          break;
+        }
+        failure = r.statusCode;
+        await r.stream.drain<void>();
+      } on Exception catch (e) {
+        failure = e;
+      }
     }
+    if (res == null) throw UpdateException('Download failed ($failure)');
     final sink = file.openWrite();
     var received = 0;
     try {
