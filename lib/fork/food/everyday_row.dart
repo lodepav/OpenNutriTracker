@@ -8,7 +8,25 @@
 /// ("Butter, without salt"), "porridge" a savoury BLS one (oatmeal). The
 /// data source adds the row by its name, and the resolver takes it as the
 /// match.
-String? everydayRowName(String query) => _everyday[query.trim().toLowerCase()];
+///
+/// A key also stands for its other spellings: "boiled" for "cooked"
+/// ("spaghetti, boiled" found spaghetti squash, which holds both words), and
+/// the state before the food ("cooked spaghetti" for "spaghetti, cooked").
+String? everydayRowName(String query) {
+  final key = query.trim().toLowerCase();
+  if (_everyday[key] case final name?) return name;
+  final cooked = key.replaceAll(_boiled, 'cooked');
+  if (_everyday[cooked] case final name?) return name;
+  if (_stateFirst.firstMatch(cooked) case final m?) {
+    return _everyday['${m[2]}, ${m[1]}'];
+  }
+  return null;
+}
+
+final _boiled = RegExp(r'\bboiled\b');
+
+/// "cooked spaghetti": a state word, then the food.
+final _stateFirst = RegExp(r'^(cooked|fried|grilled|baked|roasted) (.+)$');
 
 /// Whether [name] is the row [query] means (see [everydayRowName]).
 bool isEverydayRow(String? name, String query) =>

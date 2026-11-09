@@ -338,6 +338,38 @@ void main() {
     },
   );
 
+  test('a slice of a food with no slice portion is its piece', () async {
+    // "2 slices of pepperoni pizza" took "1 personal size pizza" on the
+    // word pizza: two whole pizzas, 870 kcal against 600.
+    final bloc = blocWith({
+      'pepperoni pizza': [
+        meal(
+          'Pizza with pepperoni, from school lunch, medium crust',
+          servingQuantity: 147,
+          servingUnit: 'g',
+          servingSize: '1 serving',
+          portions: [
+            MealPortionEntity(
+              label: '1 personal size pizza (5-7" diameter)',
+              gramWeight: 170,
+              localized: false,
+            ),
+            MealPortionEntity(
+              label: '1 piece, NFS',
+              gramWeight: 147,
+              localized: false,
+            ),
+          ],
+        ),
+      ],
+    });
+
+    final row = (await parse(bloc, '2 slices of pepperoni pizza')).rows.single;
+
+    expect(row.meal?.name, startsWith('Pizza with pepperoni'));
+    expect(row.unit, 'serving#1');
+  });
+
   test('a main dish with no amount and no serving starts at a plate', () async {
     // A photo's pilaf logged 100 g, 167 kcal against the plov's 753.
     final bloc = blocWith({

@@ -106,7 +106,7 @@ four suites cost $0.24 over three passes on Haiku.
 | 1 | Baseline on Haiku 5.5 | 3 × the four main suites | done, about $0.25 |
 | 2 | Replay against live, same photos | 1 replay + 3 live Haiku | done, $0.05 |
 | 3 | Your own meals | done, $0.02 | cents |
-| 4 | Tune the photo prompts on `tune`, check on `held` | rounds 1-2 done, $0.20 | $1-10 |
+| 4 | Tune the photo prompts on `tune`, check on `held` | rounds 1-3 done, $0.30 | $1-10 |
 | 5 | Typed meals and the harder cases | 3 × | done, $0.24 |
 | 6 | Sonnet 5.5, three passes | 3 × the four main suites | done, $4.17 |
 | | Spent by 2026-11-08, with the fix checks | | about $4.40 |
@@ -243,9 +243,6 @@ Two live Haiku passes of each suite on each half, against step 2's three.
   within noise (tune 41% to 44%, held 29% to 36%).
 - **The report showed no rows** for a dish the read split itself; it now
   names each such dish with its kcal.
-- **Left:**
-  - "spaghetti, boiled" finds spaghetti squash (49 kcal per 100 g) before
-    cooked pasta: a search-scoring fix in the resolver, not a prompt one.
 
 ## Step 4, round 2: a main dish starts at a plate (2026-11-09)
 
@@ -257,6 +254,24 @@ against round 1's: the calorie median went from 34% to 22% on tune and
 from 24% to 18% on held; plov from 405 to 844 kcal, bolognese from 169 to
 339. With a note the model estimates the grams, so the portion suite does
 not reach this default; its medians moved within noise.
+
+## Step 4, round 3: spaghetti, the pizza slice, cutlets (2026-11-09)
+
+- **Spaghetti:** "spaghetti, boiled" found spaghetti squash (49 kcal per
+  100 g), which holds both words. An everyday row's name now also stands
+  for its "boiled" and state-first spellings ("boiled spaghetti", "cooked
+  spaghetti"), so it finds cooked pasta. Bolognese went from 339 to 517
+  kcal against 510.
+- **The pizza slice:** "2 slices of pepperoni pizza" matched the word pizza
+  in "1 personal size pizza" and logged 870 kcal against 600. A slice of a
+  food with no slice portion now takes its piece (S202): 753.
+- **Pork cutlet and meat patty** already find round 1's dish, not Open Food
+  Facts products.
+- Two live Haiku passes against round 2's: the calorie median went from 22%
+  to 15% on tune and from 18% to 24% on held. Held's change is all the dill
+  sauce: in one run the model listed its garlic apart, and "garlic" logged
+  raw garlic at 136 g, 203 kcal. That amount is left to look at; the
+  portion medians held level (53% to 50%, 27% both).
 
 ## What the tests measure
 

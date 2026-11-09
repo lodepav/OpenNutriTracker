@@ -28,6 +28,9 @@ import 'package:opennutritracker/fork/food/garnish_serving.dart';
 import 'package:opennutritracker/fork/food/sauce_serving.dart';
 import 'package:opennutritracker/fork/food/soup_serving.dart';
 // [/fork]
+// [fork] S202 slice-piece
+import 'package:opennutritracker/fork/food/portion_words.dart';
+// [/fork]
 
 part 'bulk_add_event.dart';
 part 'bulk_add_state.dart';
@@ -692,6 +695,12 @@ class BulkAddBloc extends Bloc<BulkAddEvent, BulkAddState> {
       // English label; the user's words go against the localized one.
       final named =
           matchPortionToKey(parsed.portion, meal.portions) ??
+          // [fork] S202 slice-piece: a slice where the food has only pieces
+          matchPortionToKey(
+            sliceAsPiece(parsed.portion, parsed.query),
+            meal.portions,
+          ) ??
+          // [/fork]
           matchPortionToQuery(parsed.query, meal.portions);
       if (named != null) return portionUnit(named);
       // [fork] S198 count-piece: a count of eggs is eggs, not cups chopped

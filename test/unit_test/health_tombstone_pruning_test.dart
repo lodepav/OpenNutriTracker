@@ -127,8 +127,9 @@ void main() {
     });
 
     tearDown(() async {
-      await Hive.close();
+      // [fork] S203 hive-test-cleanup: delete the boxes while they are open
       await Hive.deleteFromDisk();
+      // [/fork]
     });
 
     test('a tombstone older than the cutoff is dropped', () async {
@@ -205,8 +206,9 @@ void main() {
     });
 
     tearDown(() async {
-      await Hive.close();
+      // [fork] S203 hive-test-cleanup: delete the boxes while they are open
       await Hive.deleteFromDisk();
+      // [/fork]
     });
 
     Future<void> seedLegacy(List<String> ids) async {

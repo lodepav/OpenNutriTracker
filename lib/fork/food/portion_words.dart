@@ -24,3 +24,12 @@ String? withoutShapeWords(String query) {
       .trim();
   return bare.isEmpty ? null : bare;
 }
+
+/// A slice of a food whose portions name no slice is its piece (S202):
+/// "2 slices of pepperoni pizza" matched no "slice" row, and the food's own
+/// word then picked "1 personal size pizza", a whole pizza a slice. "piece"
+/// when [portion] or [query] says slice or wedge, else null.
+String? sliceAsPiece(String? portion, String query) =>
+    _slice.hasMatch(portion ?? '') || _slice.hasMatch(query) ? 'piece' : null;
+
+final _slice = RegExp(r'\b(slices?|wedges?)\b', caseSensitive: false);
