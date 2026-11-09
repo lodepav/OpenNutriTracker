@@ -528,6 +528,29 @@ default; most of round 3's low reads were that default.
   breakdowns (the bread soup's base, a solyanka's), not these rules.
 - Cost: about $1.
 
+## Step 7, round 6: a photo's plate size, tried and dropped (2026-11-09)
+
+The photo prompt may not guess grams (#1156), so every uncounted dish
+starts at the same plate or bowl. Tried: the model adds "portion": "small"
+or "large" to a dish it cannot count, against a usual plate or bowl, and
+the row's starting amount is scaled by 0.6 or 1.5. Measured A/B in one
+session, Haiku, one pass each (median off, within 25%, total):
+
+| Variant | kcal tune | kcal held | portion tune | portion held |
+|---|---|---|---|---|
+| A, no sizes | 25%, 16/32, 116% | 38%, 12/33, 119% | 22% | 32% |
+| B, small and large | 37%, 12/32, 118% | 35%, 12/33, 120% | 17% | 39% |
+| C, small only | 34%, 10/32, 102% | 38%, 14/33, 101% | 27% | 38% |
+
+Dropped: no variant made a meal's number better. The model calls a usual
+lasagne, risotto or soup "large" (450 g), and the new prompt line moved
+other reads too (an ukha listed its parts, a mushroom soup's bread came
+as 4 slices). "Small" alone brought the total to about 100% of the
+references, but by pulling some meals down while others stayed over: the
+median and the meals within 25% did not improve. A baseline run an hour
+apart gave 25% and 33% on the same photos, so a gain smaller than that
+cannot be shown with this set.
+
 ## What the tests measure
 
 Each sends real photos or typed meals through the app's logging code,
