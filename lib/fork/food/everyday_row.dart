@@ -18,10 +18,39 @@ String? everydayRowName(String query) {
   final cooked = key.replaceAll(_boiled, 'cooked');
   if (_everyday[cooked] case final name?) return name;
   if (_stateFirst.firstMatch(cooked) case final m?) {
-    return _everyday['${m[2]}, ${m[1]}'];
+    if (_everyday['${m[2]}, ${m[1]}'] case final name?) return name;
+  }
+  if (_plainMeat.firstMatch(key) case final m?) {
+    return _meats[m[1]! + (m[2] == null ? '' : ' ground')];
   }
   return null;
 }
+
+/// A meat named with only how it was cooked or cut: "beef, cooked",
+/// "pork, cooked, roasted", "cooked sliced beef", "beef, ground, cooked,
+/// pan-browned", "pork chop, grilled". Its rows add the part or the
+/// product to those words, and the shortest one picked was the odd one:
+/// "beef, cooked" logged beef bacon at 449 kcal per 100 g in a stuffed
+/// pepper and a solyanka, "pork, cooked, roasted" fatty backribs, "pork
+/// chop" a stuffed one. The generic row is the meat as a dish
+/// holds it.
+final _plainMeat = RegExp(
+  r'^(?:(?:cooked|roasted|boiled|stewed|braised|sliced|grilled|baked)[ ,]+)*'
+  r'(beef|pork chop|pork|lamb|turkey)s?'
+  r'(?:,? (ground|minced|mince))?'
+  r'(?:(?:,\s*| )(?:cooked|roasted|boiled|stewed|braised|sliced|grilled|'
+  r'baked|pan-browned|simmered|meat|lean))*$',
+);
+
+const _meats = {
+  'beef': 'Beef, NFS',
+  'pork': 'Pork, NFS',
+  'pork chop': 'Pork, chop, NS as to fat eaten',
+  'lamb': 'Lamb, NS as to cut',
+  'turkey': 'Turkey, NFS',
+  'beef ground': 'Beef, ground, unspecified fat content, cooked',
+  'pork ground': 'Pork, fresh, ground, cooked',
+};
 
 final _boiled = RegExp(r'\bboiled\b');
 

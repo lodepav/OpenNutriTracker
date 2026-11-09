@@ -19,4 +19,29 @@ void main() {
     expect(everydayRowName('spaghetti squash, boiled'), isNull);
     expect(everydayRowName('boiled egg whites'), isNull);
   });
+
+  // "beef, cooked" logged beef bacon at 449 kcal per 100 g in a stuffed
+  // pepper and a solyanka; "pork chop" a stuffed chop.
+  test('a meat named only by how it was cooked is the generic row', () {
+    for (final (query, row) in [
+      ('beef, cooked', 'Beef, NFS'),
+      ('cooked sliced beef', 'Beef, NFS'),
+      ('beef, cooked, sliced', 'Beef, NFS'),
+      ('pork, cooked, roasted', 'Pork, NFS'),
+      ('pork meat', 'Pork, NFS'),
+      ('turkey, roasted', 'Turkey, NFS'),
+      ('pork chops', 'Pork, chop, NS as to fat eaten'),
+      (
+        'beef, ground, cooked, pan-browned',
+        'Beef, ground, unspecified fat content, cooked',
+      ),
+    ]) {
+      expect(everydayRowName(query), row, reason: query);
+    }
+    // a key of its own still wins, and a cut or a fried coat is its row
+    expect(everydayRowName('beef, stewed'), isNot('Beef, NFS'));
+    expect(everydayRowName('pork belly'), isNull);
+    expect(everydayRowName('pork chop, breaded, fried'), isNull);
+    expect(everydayRowName('beef broth'), isNot('Beef, NFS'));
+  });
 }

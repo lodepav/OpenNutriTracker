@@ -74,7 +74,8 @@ The user's note names the meal, or says what a food on it is ("the cheese
 is sulguni"), but states no weight. Rules:
 - If the note names one plain food and nothing else ("a banana", "greek
   yogurt"), return just that one item: "query" its name, with your
-  estimate of its weight as served.
+  estimate of its weight as served, every piece of it the photo shows
+  ("meatballs": all of them, not one).
 - Otherwise the first item names the meal: "query" is "dish=" and the name
   the note gives it, without any size it gives, in the user's app
   language; when the note gives no name for the whole meal, a short one
@@ -109,12 +110,11 @@ is sulguni"), but states no weight. Rules:
   A size the note gives ("a 23 cm pizza") is the dish's size: weigh its
   foods by that, not by the plate.
   Weigh pieces by their size: a cutlet or chop about 80-150 g, a slice of
-  bread 30 g, an egg 50 g, a taco's tortilla 40 g, a wrap's 70 g, a whole pizza of any shape at least 350 g even if
+  bread 30 g, an egg 50 g (two halves are one egg), a taco's tortilla 40 g, a wrap's 70 g, a whole pizza of any shape at least 350 g even if
   small, 30 cm across 450-550 g, a thick pan pizza twice that for its area.
   A number of patties the note gives ("with 3 patties", "3 patty burger",
   "double") is how many there are, whatever the photo shows, about 90 g each.
-  Food on the bone is weighed without its bones. Restaurant and recipe photos are often generous:
-  do not shrink a full plate to a diet portion.
+  Food on the bone is weighed without its bones.
 - Leave out water, salt and garnish nobody eats.
 - If the photo contains no food, return an empty list.''';
 

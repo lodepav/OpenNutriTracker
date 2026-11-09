@@ -109,7 +109,7 @@ four suites cost $0.24 over three passes on Haiku.
 | 4 | Tune the photo prompts on `tune`, check on `held` | rounds 1-4 done, $0.45 | $1-10 |
 | 5 | Typed meals and the harder cases | 3 × | done, $0.24 |
 | 6 | Sonnet 5.5, three passes | 3 × the four main suites | done, $4.17 |
-| 7 | Global checks: typed meals, a resolution audit, photo prompt bias, repeated reads, counting | typed 6 ×, audit 1 judge | items 1-2 done, $0.08 |
+| 7 | Global checks: typed meals, a resolution audit, photo prompt bias, repeated reads, counting | typed 6 ×, audit 1 judge, photos 9 × | done, about $0.15 |
 | | Spent by 2026-11-08, with the fix checks | | about $4.40 |
 | | Left, for steps 2-4, the emulator and repeats | | about $95 |
 
@@ -330,8 +330,43 @@ bracketed names. "lasis" (salmon) found a salmon soup made "ar lasi",
   "pelēkie zirņi" and "fried pork patties" still find their dishes.
   "Gyros" is added to the shawarma as a name of its own.
 - Left, each a food or two: cooked carrots at 72 kcal per 100 g, "pork
-  chop" landing on a stuffed chop, "melted butter" on Brussels sprouts
+  chop" landing on a stuffed chop (fixed under 3), "melted butter" on Brussels sprouts
   with butter, "meat sauce" on meatballs.
+
+**3. Photo prompt bias.** The note path's estimate (`estimatedPlatePrompt`,
+the portion suite) logged 157% of the labels on tune and 136% on held.
+Dropping "Restaurant and recipe photos are often generous" moved neither
+(157%, 131%), so the line is gone and the plate sizes stay. The ingredient
+rows of each breakdown, now listed in the reports, showed where the excess
+came from: the rows, not the grams. "beef, cooked" found beef bacon at 449
+kcal per 100 g in a stuffed pepper and a solyanka, "pork, cooked, roasted"
+fatty backribs, "pork chop" a stuffed chop. A meat named only by how it
+was cooked or cut now takes its generic row ("Beef, NFS", "Pork, NFS",
+"Pork, chop, NS as to fat eaten"; `everydayRowName`).
+
+**4. Repeated reads.** Three passes of the same code read most photos
+identically (the median spread is 0%), so the median of three reads
+changes little: 25% off against 25% for one read, the mean 34% against
+37%. Not worth three times the cost; the variation between runs comes
+from Open Food Facts' live results more than from the model.
+
+**5. Counting.** The photo prompt's halves rule now starts with "2 egg
+halves are 1 egg" (S60), and the estimate's piece sizes say two halves
+are one egg: chłodnik with no note went from 252 to 180 kcal (132). A
+note naming one plain food now asks for every piece the photo shows:
+"chicken cutlets" had logged one cutlet, 192 kcal against 418, and now
+logs 491-534.
+
+| After 3-5, two live passes | Before | After |
+|---|---|---|
+| Calorie, tune: median, total | 21%, 131% | 19%, 115% |
+| Calorie, held: median, total | 25%, 100% | 24%, 101% |
+| Portion, tune: median, total | 53%, 157% | 31%, 122-141% |
+| Portion, held: median, total | 50%, 136% | 39-40%, 127-128% |
+
+- **Left:** the estimate still puts 100 g of egg in a chłodnik and a full
+  bowl of solids in each soup (solyanka 530-629 against 354, borscht 331
+  against 181).
 
 ## What the tests measure
 
