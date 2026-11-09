@@ -29,6 +29,7 @@ import 'package:opennutritracker/features/add_meal/util/meal_photo_encoder.dart'
 import 'package:opennutritracker/features/add_meal/util/portion_label.dart';
 import 'package:opennutritracker/features/add_meal/util/portion_unit.dart';
 import 'package:opennutritracker/features/add_meal/util/meal_text_parser.dart';
+import 'package:opennutritracker/features/add_meal/presentation/voice/voice_input_button.dart';
 import 'package:opennutritracker/features/add_meal/presentation/widgets/own_server_wait_indicator.dart';
 import 'package:opennutritracker/features/add_meal/presentation/widgets/quick_add_bottom_sheet.dart';
 import 'package:opennutritracker/features/diary/presentation/bloc/calendar_day_bloc.dart';
@@ -110,6 +111,7 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
   final _log = Logger('BulkAddScreen');
   final _bloc = locator<BulkAddBloc>();
   final _textController = TextEditingController();
+  final _voice = GlobalKey<VoiceInputButtonState>();
   // the photo this batch was read from, kept with the meal
   MealPhoto? _forkMealPhoto;
   // taken or picked, waiting for send; kept through the read, so a failed
@@ -299,10 +301,15 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
   /// has not failed to discover it, and this line exists for discovery. The
   /// rule is one sentence: it shows only for someone who has configured
   /// nothing. #844.
+  ///
+  /// And not to someone who hid the AI features (#1518): they have found
+  /// it, and asked not to be offered it.
   late Future<bool> _modelUnknown = _resolveModelUnknown();
 
   Future<bool> _resolveModelUnknown() async {
-    return !await locator<AiCredentialStorage>().hasAnyUsableProvider();
+    final storage = locator<AiCredentialStorage>();
+    if (await storage.isHidden()) return false;
+    return !await storage.hasAnyUsableProvider();
   }
 
   /// Where a photo would actually go, **and the name the sheet gives it**.
@@ -496,14 +503,23 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
     }
   }
 
-  void _showNoPhotoModel() => ScaffoldMessenger.of(context).showSnackBar(
-    const SnackBar(
-      content: Text(
-        'Reading a photo needs a model that sees images: set one up '
-        'in Settings › AI meal logging.',
+  /// No set-up offer to someone who hid the AI features (#1518): only why
+  /// the photo is not read.
+  Future<void> _showNoPhotoModel() async {
+    final hidden = await locator<AiCredentialStorage>().isHidden();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          hidden
+              ? 'Reading a photo needs the AI features, which are hidden '
+                    'in Settings.'
+              : 'Reading a photo needs a model that sees images: set one up '
+                    'in Settings › AI meal logging.',
+        ),
       ),
-    ),
-  );
+    );
+  }
 
   /// A shared photo not read is not kept.
   void _discardShared(String path) {
@@ -757,6 +773,15 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
                         : null,
                     helperMaxLines: 3,
                     border: const OutlineInputBorder(),
+                    // Dictate the meal, then match it straight away; with a
+                    // photo waiting, what is said is its note, sent by hand.
+                    suffixIcon: VoiceInputButton(
+                      key: _voice,
+                      controller: _textController,
+                      onDictated: (_) {
+                        if (_stagedPhoto == null) _onParsePressed();
+                      },
+                    ),
                   ),
                 ),
               ),
@@ -774,7 +799,7 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
                       ? _readStagedPhoto
                       : _textController.text.trim().isEmpty
                       ? null
-                      : _onParsePressed,
+                      : _onParseButtonPressed,
                   icon: Icon(
                     staged != null ? Icons.send_rounded : Icons.search,
                   ),
@@ -909,6 +934,14 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
         ),
       ),
     );
+  }
+
+  /// Find foods pressed by hand. Dictation in progress ends first, or its
+  /// pause timeout would match the text again and reset the rows the user
+  /// may already be correcting.
+  void _onParseButtonPressed() {
+    _voice.currentState?.cancel();
+    _onParsePressed();
   }
 
   void _onParsePressed() {
@@ -1065,6 +1098,8 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
   void _readStagedPhoto() {
     final photo = _stagedPhoto;
     if (photo == null) return;
+    // A note still being dictated would land after the photo went.
+    _voice.currentState?.cancel();
     FocusScope.of(context).unfocus();
     final note = _textController.text.trim();
     _photoNote = note.isEmpty ? null : note;

@@ -134,6 +134,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late CalendarDayBloc _calendarDayBloc;
   late TrendsBloc _trendsBloc;
   late AiCredentialStorage _aiCredentials;
+
+  /// Whether the user hid the AI features (#1518); starts from the value
+  /// read at app start, so the AI row does not show for a frame.
+  bool _aiHidden = false;
   late AiEndpointProbeRunner _aiProbeRunner;
 
   /// Null until the first read completes; the tile shows no subtitle rather
@@ -160,6 +164,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   void initState() {
     _aiCredentials = locator<AiCredentialStorage>();
+    _aiHidden = _aiCredentials.hiddenIfKnown ?? false;
     _aiProbeRunner = locator<AiEndpointProbeRunner>();
     _settingsBloc = locator<SettingsBloc>();
     _profileBloc = locator<ProfileBloc>();
@@ -485,8 +490,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _refreshAiAssistState() async {
     final summary = await _aiCredentials.readSummary();
+    final hidden = await _aiCredentials.isHidden();
     if (!mounted) return;
     setState(() {
+      _aiHidden = hidden;
       _aiConfigured = summary.configured;
       _aiEnabled = summary.enabled;
       _aiEndpoint = summary.endpoint;

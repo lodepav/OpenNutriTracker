@@ -116,9 +116,9 @@ ThemeData buildAppTheme(AppPalette p) {
       surfaceTintColor: Colors.transparent,
       shape: const RoundedRectangleBorder(borderRadius: Dimens.borderRadiusL),
     ),
-    // [fork] S83 switch-contrast: an off switch's thumb and outline in the
-    // muted text colour, 3:1 against the card (WCAG 1.4.11); the hairline
-    // `outline` it took before was about 1.2:1
+    // An off switch's thumb and outline in the muted text colour, 3:1
+    // against the card (WCAG 1.4.11); the hairline `outline` it took before
+    // was about 1.2:1.
     switchTheme: SwitchThemeData(
       thumbColor: WidgetStateProperty.resolveWith(
         (states) => states.contains(WidgetState.selected) || states.contains(WidgetState.disabled)
@@ -131,10 +131,9 @@ ThemeData buildAppTheme(AppPalette p) {
             : p.textMuted,
       ),
     ),
-    // [/fork]
-    // [fork] S83 segment-contrast: the chosen segment in the accent with
-    // its on-colour, so the choice shows without the check mark (WCAG
-    // 1.4.11); it took `secondaryContainer`, about 1.1:1 against the rest
+    // The chosen segment in the accent with its on-colour, so the choice
+    // shows without the check mark (WCAG 1.4.11); `secondaryContainer`, its
+    // default, is about 1.1:1 against the rest.
     segmentedButtonTheme: SegmentedButtonThemeData(
       style: ButtonStyle(
         backgroundColor: WidgetStateProperty.resolveWith(
@@ -148,7 +147,6 @@ ThemeData buildAppTheme(AppPalette p) {
         ),
       ),
     ),
-    // [/fork]
     listTileTheme: const ListTileThemeData(shape: RoundedRectangleBorder(borderRadius: Dimens.borderRadiusM)),
     bottomSheetTheme: BottomSheetThemeData(
       backgroundColor: p.surface,

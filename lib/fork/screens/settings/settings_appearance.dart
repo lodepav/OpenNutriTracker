@@ -107,6 +107,23 @@ extension _AppearanceSettings on _SettingsScreenState {
               _settingsBloc.add(LoadSettingsEvent());
             },
           ),
+          // #1518: one switch for every AI surface — the AI add, Photo
+          // log, the AI badges, the set-up offer and the AI meal
+          // assistance row — and, while off, nothing is sent to a model.
+          // Device-wide, like the keys it sits beside.
+          _SettingsSwitchTile(
+            identifier: 'settings-show-ai',
+            palette: palette,
+            icon: Icons.auto_awesome_rounded,
+            title: S.of(context).settingsShowAiFeaturesLabel,
+            subtitle: S.of(context).settingsShowAiFeaturesSubtitle,
+            value: !_aiHidden,
+            onChanged: (bool value) async {
+              _update(() => _aiHidden = !value);
+              await _aiCredentials.setHidden(!value);
+              await _refreshAiAssistState();
+            },
+          ),
           // #160 follow-up: lets the user pick which nutrients show
           // on the diary's daily nutrient panel. Lives next to the
           // meal-detail micronutrient toggle above; both shape what

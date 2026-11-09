@@ -138,6 +138,7 @@ class TrendsBloc extends Bloc<TrendsEvent, TrendsState> {
           // [fork] S190 logical-today
           dayStartMinutes: dayStart,
           // [/fork]
+          usesImperialFoodUnits: config.usesImperialFoodUnits,
         ));
       } catch (e) {
         emit(TrendsFailed(e.toString()));

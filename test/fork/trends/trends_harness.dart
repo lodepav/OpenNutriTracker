@@ -64,6 +64,7 @@ TrendsLoaded loaded({
   double? targetWeightKg,
   Map<DateTime, int> waterByDay = const {},
   int waterGoalMl = 0,
+  bool imperial = false,
 }) => TrendsLoaded(
   rangeDays: rangeDays,
   windowDays: windowDays ?? rangeDays,
@@ -74,6 +75,7 @@ TrendsLoaded loaded({
   targetWeightKg: targetWeightKg,
   waterByDay: waterByDay,
   waterGoalMl: waterGoalMl,
+  usesImperialFoodUnits: imperial,
 );
 
 /// Trends on [state], the bloc in the locator as the page reads it.

@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:opennutritracker/core/data/repository/recipe_repository.dart';
 import 'package:opennutritracker/core/domain/entity/intake_entity.dart';
+import 'package:opennutritracker/core/domain/usecase/get_profiles_usecase.dart';
+import 'package:opennutritracker/core/presentation/widgets/copy_to_profile_sheet.dart';
+import 'package:opennutritracker/core/presentation/widgets/share_qr_dialog.dart';
 import 'package:opennutritracker/core/utils/hive_db_provider.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
+import 'package:opennutritracker/features/home/domain/entity/shared_meal_payload.dart';
 import 'package:opennutritracker/fork/copy/copy_ui.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 
@@ -63,8 +68,9 @@ class DiarySelection extends ChangeNotifier {
   }
 }
 
-/// The bar under the Diary while selecting: how many, Copy, Move and Delete
-/// for them all, and Edit for one, the tap path beside a food's long-press.
+/// The bar under the Diary while selecting: how many, Copy, Move, Share and
+/// Delete for them all, and Edit for one, the tap path beside a food's
+/// long-press.
 class DiarySelectionBar extends StatelessWidget {
   final DiarySelection selection;
 
@@ -137,6 +143,12 @@ class DiarySelectionBar extends StatelessWidget {
                       copyOrMoveIntakes(context, picked, from: day, move: true),
                 ),
                 (
+                  'share',
+                  'Share',
+                  Icons.share_outlined,
+                  (List<IntakeEntity> picked) => shareIntakes(context, picked),
+                ),
+                (
                   'delete',
                   S.of(context).dialogDeleteLabel,
                   Icons.delete_outline_rounded,
@@ -158,5 +170,30 @@ class DiarySelectionBar extends StatelessWidget {
         ),
       );
     },
+  );
+}
+
+/// Shares [intakes] as upstream's meal QR code (2.7.0's share a single food,
+/// as its intake list's `_shareIntakes`): one food as "Share food", more as
+/// "Share meal", with Copy to profile while there is another profile.
+Future<void> shareIntakes(BuildContext context, List<IntakeEntity> intakes) {
+  final s = S.of(context);
+  final single = intakes.length == 1;
+  final code = SharedMealPayload.fromIntakeList(
+    intakes,
+    recipeRepository: locator<RecipeRepository>(),
+  ).toJsonString();
+  final hasOtherProfiles =
+      locator<GetProfilesUsecase>().getProfiles().length > 1;
+  return showDialog<void>(
+    context: context,
+    builder: (_) => ShareQrDialog(
+      title: single ? s.shareFoodLabel : s.shareMealLabel,
+      code: code,
+      fileBaseName: single ? 'food_qr' : 'meal_qr',
+      onCopyToProfile: hasOtherProfiles
+          ? () => showCopyToProfileSheet(context, intakes)
+          : null,
+    ),
   );
 }

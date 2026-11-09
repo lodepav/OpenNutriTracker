@@ -8,6 +8,7 @@ import 'package:opennutritracker/core/domain/usecase/get_user_usecase.dart';
 import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
+import 'package:opennutritracker/core/utils/calc/unit_calc.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/features/profile/presentation/bloc/profile_bloc.dart';
 import 'package:opennutritracker/features/profile/presentation/widgets/set_weight_dialog.dart';
@@ -104,6 +105,7 @@ class _TrendsView extends StatelessWidget {
             rangeDays: state.windowDays,
             palette: palette,
             today: state.logicalToday, // S190
+            usesImperialUnits: state.usesImperialFoodUnits,
           ),
           cards: {
             'weekly': WeeklyReportCard(
@@ -136,6 +138,7 @@ class _WaterTrendCard extends StatelessWidget {
   // [fork] S190 logical-today: the window ends where the page's header does
   final DateTime today;
   // [/fork]
+  final bool usesImperialUnits;
   const _WaterTrendCard({
     required this.waterByDay,
     required this.goalMl,
@@ -144,7 +147,13 @@ class _WaterTrendCard extends StatelessWidget {
     // [fork] S190 logical-today
     required this.today,
     // [/fork]
+    this.usesImperialUnits = false,
   });
+
+  // #1306: plot, label and tooltip in fl oz with imperial food units, the way
+  // the calorie card follows the energy unit (#1362).
+  double _toUnit(num ml) =>
+      usesImperialUnits ? UnitCalc.mlToFlOz(ml.toDouble()) : ml.toDouble();
 
   @override
   Widget build(BuildContext context) {
@@ -160,23 +169,24 @@ class _WaterTrendCard extends StatelessWidget {
       final day = DateTime(today.year, today.month, today.day - (rangeDays - 1 - i));
       // [/fork]
       final ml = waterByDay[DateTime(day.year, day.month, day.day)] ?? 0;
-      spots.add(FlSpot(i.toDouble(), ml.toDouble()));
+      spots.add(FlSpot(i.toDouble(), _toUnit(ml)));
       if (ml > 0) {
         sum += ml;
         loggedDays++;
       }
     }
     // [fork] S190 water-average: over the logged days, as the page's header
-    final avg = loggedDays == 0 ? 0 : (sum / loggedDays).round();
+    final avgMl = loggedDays == 0 ? 0 : (sum / loggedDays).round();
     // [/fork]
+    final goal = _toUnit(goalMl);
     // [fork] S97 chart-touch
     final dayLabel = dayLabels(context, windowDates(today, rangeDays));
     // [/fork]
     // [fork] S161 chart-fit: the period's own lowest to highest
     final range = fittedRange([
       for (final s in spots) s.y,
-      if (goalMl > 0) goalMl.toDouble(),
-    ], minSpan: 100);
+      if (goalMl > 0) goal,
+    ], minSpan: _toUnit(100));
     final maxY = range.max;
     // [/fork]
 
@@ -195,7 +205,10 @@ class _WaterTrendCard extends StatelessWidget {
                     overflow: TextOverflow.ellipsis),
               ),
               Text(
-                S.of(context).waterChipLabel(avg, goalMl),
+                usesImperialUnits
+                    ? S.of(context).waterChipLabelFlOz(
+                        _toUnit(avgMl).round(), goal.round())
+                    : S.of(context).waterChipLabel(avgMl, goalMl),
                 style: text.bodySmall?.copyWith(
                     color: palette.textMuted, fontWeight: FontWeight.w700),
               ),
@@ -226,14 +239,16 @@ class _WaterTrendCard extends StatelessWidget {
                   lineTouchData: labelledTouch(
                     context,
                     (s) => '${s.y.round()}',
-                    after: (s) => ' ml\n${dayLabel(s.x.round())}',
+                    after: (s) =>
+                        ' ${usesImperialUnits ? S.of(context).flOzUnit : 'ml'}'
+                        '\n${dayLabel(s.x.round())}',
                   ),
                   // [/fork]
                   extraLinesData: goalMl <= 0
                       ? const ExtraLinesData()
                       : ExtraLinesData(horizontalLines: [
                           HorizontalLine(
-                            y: goalMl.toDouble(),
+                            y: goal,
                             color: palette.textMuted,
                             strokeWidth: 1.2,
                             dashArray: const [6, 4],

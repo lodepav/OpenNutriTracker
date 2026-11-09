@@ -227,7 +227,8 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      useSafeArea: true, // [fork] S83 a tall sheet stops below the status bar
+      // A tall sheet (large font) stops below the status bar.
+      useSafeArea: true,
       showDragHandle: true, // [fork] S131 add-sheet
       builder: (BuildContext context) {
         return AddSheet(
