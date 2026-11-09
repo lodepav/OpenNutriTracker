@@ -73,7 +73,7 @@ void main() {
     );
   });
 
-  test('a product must hold every word of the food', () {
+  test('a product must hold the food and half its other words', () {
     MealEntity off(String name) => MealEntity(
       code: name,
       name: name,
@@ -97,6 +97,18 @@ void main() {
     expect(
       [for (final m in kept) m.name],
       ['Cabbage soup with pork', 'Soup, cabbage'],
+    );
+    // Half of them is enough: a MacroFactor log's "glazed vanilla curd
+    // snack" is the vanilla curd snack, its "tomato beef ragu" a beef ragu.
+    expect(
+      withoutUnrelatedProducts([
+        off('Vanilla curd snack'),
+      ], 'glazed vanilla curd snack'),
+      hasLength(1),
+    );
+    expect(
+      withoutUnrelatedProducts([off('beef ragu')], 'tomato beef ragu'),
+      hasLength(1),
     );
     expect(
       withoutUnrelatedProducts([

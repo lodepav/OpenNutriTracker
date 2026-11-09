@@ -494,6 +494,40 @@ default; most of round 3's low reads were that default.
   (the table's makarony row wants every word, and the read says "sauce").
 - Cost: about $1 of the promo credits.
 
+## Step 7, round 5: regression checks, the held-out photos (2026-11-09)
+
+- **Regression checks after round 4**, Haiku live: typed meals 14% off in
+  English and 7% in Latvian, as before. MacroFactor: search 102 and 111
+  of 122, the resolver 118 (99% weighted); its one change, "oat cookies",
+  came from Open Food Facts not returning the Oat Cookies product this
+  time. The stricter product rule of round 4 broke three AI reads ("glazed
+  vanilla curd snack", "tomato beef ragu", "chicken kebab wrap"): a
+  product now needs the food and half its other words, rounded up, not
+  every one. "cabbage soup" still needs the cabbage.
+- **Held-out deep-dive**, the 10 worst: most are a dish the model named
+  with nothing found, so it is broken down, and its parts listed beside
+  it as well ("buckwheat with meat and mushrooms" with beef stew meat and
+  mushrooms, 889 kcal against 285; a chicken stew with its tomato and
+  onion). Such a dish now counts as a dish row by its query, and its parts
+  go. The rest are soups at a full bowl against small references (borscht
+  309-403 against 181) and the model's own breakdowns ("bread soup base"
+  found a dry soup base, 714 kcal): not rules.
+- **One pass per split.** Passes in one session come back the same (0%
+  spread), while between sessions one photo moves by up to ±100% (Italian
+  wedding soup 403 and 834). More passes in a session add nothing, and a
+  one-pass change of 2-3 points is noise.
+
+  | Suite | Tune | Held |
+  |---|---|---|
+  | kcal, round 4 (3 passes) | 30%, 113% | 43%, 112% |
+  | kcal, round 5 (1 pass) | 33%, 119% | 40%, 106% |
+  | portion, round 4 | 23% | 36% |
+  | portion, round 5 | 40% | 43% |
+
+  The portion suite is 8 and 9 photos; its change is the model's
+  breakdowns (the bread soup's base, a solyanka's), not these rules.
+- Cost: about $1.
+
 ## What the tests measure
 
 Each sends real photos or typed meals through the app's logging code,

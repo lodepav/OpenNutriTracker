@@ -69,14 +69,27 @@ void main() {
     );
   });
 
-  test('a row with nothing found, and a short row name, are no dish', () {
+  test('a dish nothing matched is broken down, so its parts go', () {
     expect(
       _kept([
-        _item('cheese bread with egg', null),
+        _item('buckwheat with meat and mushrooms', null),
+        _item('beef stew meat', 'Beef, stew meat'),
+        _item('mushrooms', 'Mushrooms, raw'),
+        _item('fresh dill', 'Dill weed, fresh'),
+      ]),
+      ['buckwheat with meat and mushrooms', 'fresh dill'],
+    );
+  });
+
+  test('a short name, matched or not, is no dish', () {
+    expect(
+      _kept([
+        _item('cheese bread', null),
         _item('egg', 'Egg, raw'),
         _item('cheese', 'Cheese, NFS'),
+        _item('rye bread', 'Bread, rye'),
       ]),
-      ['cheese bread with egg', 'egg', 'cheese'],
+      ['cheese bread', 'egg', 'cheese', 'rye bread'],
     );
   });
 
