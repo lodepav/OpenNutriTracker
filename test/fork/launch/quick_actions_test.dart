@@ -21,7 +21,7 @@ class _ImperialOff extends Fake implements ConfigEntity {
 }
 
 class _Ai extends Fake implements AiCredentialStorage {
-  final bool on;
+  bool on;
   _Ai(this.on);
 
   @override
@@ -64,6 +64,46 @@ void main() {
   testWidgets('Photo log while AI meal assistance is on', (tester) async {
     await pump(tester, ai: true);
     expect(find.text('Photo log'), findsOneWidget);
+  });
+
+  testWidgets('Photo log follows the setting each time Home shows again', (
+    tester,
+  ) async {
+    final ai = _Ai(false);
+    GetIt.instance
+      ..registerSingleton<GetConfigUsecase>(_Config())
+      ..registerSingleton<AiCredentialStorage>(ai);
+    final shown = ValueNotifier(true);
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: const [S.delegate],
+        supportedLocales: S.supportedLocales,
+        home: Scaffold(
+          body: ValueListenableBuilder<bool>(
+            valueListenable: shown,
+            builder: (_, on, child) => TickerMode(enabled: on, child: child!),
+            child: const QuickActions(),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Photo log'), findsNothing);
+
+    // Turned on in Settings, over Home.
+    shown.value = false;
+    await tester.pump();
+    ai.on = true;
+    shown.value = true;
+    await tester.pumpAndSettle();
+    expect(find.text('Photo log'), findsOneWidget);
+
+    shown.value = false;
+    await tester.pump();
+    ai.on = false;
+    shown.value = true;
+    await tester.pumpAndSettle();
+    expect(find.text('Photo log'), findsNothing);
   });
 
   testWidgets('each opens straight away, without the + sheet', (tester) async {
