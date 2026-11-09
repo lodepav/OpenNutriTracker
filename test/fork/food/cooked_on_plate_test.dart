@@ -160,4 +160,34 @@ void main() {
     final lentils = _product('Lentils, cooked', 'Table', 116, 20);
     expect(dryRowsLast([dryLentils, lentils], 'lentils').first, lentils);
   });
+
+  group('a ready food is not its powder', () {
+    final powder = _product('Latte Macchiato', 'Jacobs', 420, 60);
+    final latte = _product('Coffee, Latte', 'Table', 43, 4);
+    final flakes = _product('Mashed potato flakes', 'Maggi', 350, 75);
+    final mash = _product('Potatoes, mashed', 'Table', 106, 16);
+    final cup = _product('Tomato soup mix', 'Knorr', 90, 12);
+    final soup = _product('Soup, tomato', 'Table', 40, 7);
+
+    test('the made-up drink, mash and soup come first', () {
+      expect(dryRowsLast([powder, latte], 'latte').first, latte);
+      expect(dryRowsLast([flakes, mash], 'mashed potatoes').first, mash);
+      expect(dryRowsLast([cup, soup], 'tomato soup').first, soup);
+      expect(dryRowsLast([powder, latte], 'latte'), [latte, powder]);
+    });
+
+    test('a name that asks for the powder or names the brand keeps it', () {
+      expect(dryRowsLast([powder, latte], 'latte powder').first, powder);
+      expect(
+        dryRowsLast([flakes, mash], 'instant mashed potatoes').first,
+        flakes,
+      );
+      expect(dryRowsLast([powder, latte], 'jacobs latte').first, powder);
+    });
+
+    test('a food only named before the drink is left alone', () {
+      final beans = _product('Coffee beans', 'Roaster', 350, 30);
+      expect(dryRowsLast([beans, latte], 'coffee beans').first, beans);
+    });
+  });
 }

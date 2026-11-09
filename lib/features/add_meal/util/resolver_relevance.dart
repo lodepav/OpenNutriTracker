@@ -43,6 +43,9 @@ import 'package:opennutritracker/fork/food/unnamed_brand.dart';
 // [fork] S186 cooked-on-plate: a food eaten cooked, not its dry product
 import 'package:opennutritracker/fork/food/cooked_on_plate.dart';
 // [/fork]
+// [fork] S205 served-with: not the food a row is served with
+import 'package:opennutritracker/fork/food/served_with.dart';
+// [/fork]
 
 /// Quality tie-breakers, matching the shared ranker so that near-equal text
 /// matches resolve the same way in both places.
@@ -253,7 +256,12 @@ List<MealEntity> rankForResolution(
     ..._sorted(own, query, counted, fromPhoto),
     // [/fork]
     // [fork] S186 cooked-on-plate
-    ...dryRowsLast(_sorted(rest, query, counted, fromPhoto), query),
+    ...dryRowsLast(
+      // [fork] S205 served-with
+      _sorted(withoutServedWith(rest, query), query, counted, fromPhoto),
+      // [/fork]
+      query,
+    ),
     // [/fork]
   ];
 }

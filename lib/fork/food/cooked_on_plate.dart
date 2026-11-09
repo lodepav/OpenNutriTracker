@@ -29,6 +29,7 @@ const _stateWords = {'cooked', 'boiled', 'steamed'};
 /// Barilla penne"): someone naming the packet means the packet. The dry rows
 /// stay among the candidates, one tap away.
 List<MealEntity> dryRowsLast(List<MealEntity> ranked, String query) {
+  if (_namesReadyFood(query)) return _mixesLast(ranked, query);
   if (_asksForUncooked.hasMatch(query) || !_namesFoodEatenCooked(query)) {
     return ranked;
   }
@@ -48,6 +49,52 @@ List<MealEntity> dryRowsLast(List<MealEntity> ranked, String query) {
   }
 
   return [...ranked.where((m) => !dry(m)), ...ranked.where(dry)];
+}
+
+/// Above this per 100 g, a drink, soup or mash is the powder it is made
+/// from: a latte is about 40-80 kcal, a soup 20-150, mashed potatoes about
+/// 100; their powders and flakes 350-450.
+const _mixKcal = 250.0;
+
+/// What a powder or a mix's name says it is.
+final _mixWords = RegExp(
+  r'\b(powder|powdered|mix|instant|granules|granulated|dehydrated|'
+  r'concentrate|flakes|cubes?|pulver|sachets?|bouillon cubes?)\b',
+  caseSensitive: false,
+);
+
+/// A food eaten made up from a powder or flakes, by the last word before
+/// the first comma ("latte", "tomato soup", "mashed potatoes").
+final _readyFood = RegExp(
+  r'\b(latte|cappuccino|flat white|mocha|coffee|cocoa|hot chocolate|tea|'
+  r'soup|broth|porridge|oatmeal|mashed potato(es)?|potato mash|mash|'
+  r'pur[eé]e|pudding|custard|kissel|smoothie|milkshake)$',
+  caseSensitive: false,
+);
+
+bool _namesReadyFood(String query) =>
+    _readyFood.hasMatch(query.split(',').first.trim()) &&
+    !_mixWords.hasMatch(query) &&
+    !_asksForUncooked.hasMatch(query);
+
+/// [ranked] with the powders and mixes of a ready food moved last: the
+/// same rule as the dry pasta's, for the powder sold to make a drink, a
+/// soup or a mash. "latte" found a latte powder at 400 kcal per 100 g, so a
+/// 300 ml cup read 1200 kcal. A row is a mix by its name or by an energy
+/// no made-up drink or soup has; the brand the name gives stands it down.
+List<MealEntity> _mixesLast(List<MealEntity> ranked, String query) {
+  final named = tokenize(query);
+  bool brandNamed(MealEntity meal) {
+    final brand = tokenize(meal.brands?.split(',').first);
+    return brand.isNotEmpty && brand.every(named.contains);
+  }
+
+  bool mix(MealEntity meal) =>
+      !brandNamed(meal) &&
+      (_mixWords.hasMatch(meal.name ?? '') ||
+          (meal.nutriments.energyKcal100 ?? 0) > _mixKcal);
+
+  return [...ranked.where((m) => !mix(m)), ...ranked.where(mix)];
 }
 
 /// Whether [query] names a food [eatenCooked], by the last word before its
