@@ -110,6 +110,8 @@ Future<Logged?> loggedKcal(
     if (isGuess) guessed++;
     kcal += rowKcal;
     if (row.dishIngredient case final ingredient?) {
+      // a dish the read broke down itself, not one the loop above asked for
+      dishes.putIfAbsent(ingredient.group, () => ingredient.dish);
       dishKcal.update(
         ingredient.group,
         (k) => k + rowKcal,

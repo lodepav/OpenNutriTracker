@@ -105,8 +105,8 @@ four suites cost $0.24 over three passes on Haiku.
 | 0 | Harness: usage, split, merge | - | done, $0 |
 | 1 | Baseline on Haiku 5.5 | 3 × the four main suites | done, about $0.25 |
 | 2 | Replay against live, same photos | 1 replay + 3 live Haiku | done, $0.05 |
-| 3 | Your own meals | each, a few times | cents |
-| 4 | Tune the photo prompts on `tune`, check on `held` | as needed | $1-10 |
+| 3 | Your own meals | done, $0.02 | cents |
+| 4 | Tune the photo prompts on `tune`, check on `held` | round 1 done, $0.10 | $1-10 |
 | 5 | Typed meals and the harder cases | 3 × | done, $0.24 |
 | 6 | Sonnet 5.5, three passes | 3 × the four main suites | done, $4.17 |
 | | Spent by 2026-11-08, with the fix checks | | about $4.40 |
@@ -217,6 +217,38 @@ same code (`280d5e4c`, after the fixes above).
   note (370-380 with one); the pork cutlets at 7 kcal in one run of each
   suite; solyanka with its note at 880-960 against 354; plov with its note
   at 965-980 against 753.
+
+## Step 3: own meals (2026-11-09)
+
+Six of the user's own canteen and hotel-buffet meals, each with a short
+name as the note (`FORK_EVAL_PHOTOS`, kept under `build/`). Nobody weighed
+them: the reference is Claude's estimate from the photo, so the set checks
+for large misses, not accuracy. Three live Haiku passes: median off 19-35%,
+logged 109-123% of the estimates in total. Most of that is one breakfast
+plate read at 1,925-2,433 kcal against about 1,430, and the chicken plate
+once at 487 against 770.
+
+## Step 4, round 1: two dishes (2026-11-09)
+
+Two live Haiku passes of each suite on each half, against step 2's three.
+
+- **Added to the dishes table:** chłodnik (36 kcal per 100 g, a 300 g bowl;
+  the egg stays its own row) and fried pork cutlets (299, a 90 g cutlet).
+  With no note, chłodnik went from 488 to 227 kcal (reference 132) and the
+  pork cutlets from 336 to 539 (659). Held's calorie median went from 36% to
+  24%, tune's from 30% to 34%, within run-to-run noise.
+- **The table matters only with no note.** With a note the photo goes the
+  estimated-plate way: the model splits a named dish into its foods with
+  grams, so a table dish is not looked up. The portion medians moved
+  within noise (tune 41% to 44%, held 29% to 36%).
+- **The report showed no rows** for a dish the read split itself; it now
+  names each such dish with its kcal.
+- **Left:**
+  - A food with no serving logs at 100 g: "Spaghetti Bolognese" at 85 kcal
+    (510) and "Pilaf" at 167 (plov, 753). It is marked a guess for the
+    user to check.
+  - "spaghetti, boiled" finds spaghetti squash (49 kcal per 100 g) before
+    cooked pasta: a search-scoring fix in the resolver, not a prompt one.
 
 ## What the tests measure
 
