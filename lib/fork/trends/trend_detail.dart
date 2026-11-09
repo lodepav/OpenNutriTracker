@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:opennutritracker/core/utils/calc/unit_calc.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart' show toBeginningOfSentenceCase;
@@ -252,12 +253,18 @@ class TrendDetailPage extends StatelessWidget {
           ),
         ];
       case TrendMetric.water:
-        final series = waterSeries(state.waterByDay, dates);
+        final flOz = state.usesImperialFoodUnits;
+        final series = waterSeries(state.waterByDay, dates, flOz: flOz);
+        final goal = state.waterGoalMl.toDouble();
         return [
           _averageHeader(
             series,
-            state.waterGoalMl > 0 ? state.waterGoalMl.toDouble() : null,
-            'ml',
+            goal <= 0
+                ? null
+                : flOz
+                ? UnitCalc.mlToFlOz(goal).roundToDouble()
+                : goal,
+            flOz ? 'fl oz' : 'ml',
           ),
           gap,
           pills,

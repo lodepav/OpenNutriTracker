@@ -113,10 +113,20 @@ double? goalOf(
   return (carbs: c * k, fat: f * k, protein: p * k);
 }
 
-/// Water a day over the window; null where none was logged.
-DaySeries waterSeries(Map<DateTime, int> byDay, List<DateTime> dates) => [
+/// Water a day over the window; null where none was logged. In fl oz with
+/// [flOz], as the food units ask (#1306).
+DaySeries waterSeries(
+  Map<DateTime, int> byDay,
+  List<DateTime> dates, {
+  bool flOz = false,
+}) => [
   for (final date in dates)
-    if ((byDay[date] ?? 0) > 0) byDay[date]!.toDouble() else null,
+    if ((byDay[date] ?? 0) > 0)
+      flOz
+          ? UnitCalc.mlToFlOz(byDay[date]!.toDouble())
+          : byDay[date]!.toDouble()
+    else
+      null,
 ];
 
 /// The expenditure estimate a day over the window, from [history].

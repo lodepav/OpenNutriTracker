@@ -131,7 +131,8 @@ class _DiaryDayBoundaryDialogState extends State<DiaryDayBoundaryDialog> {
                               divisions: 23,
                               value: _hours.toDouble(),
                               label: '$_hours',
-                              semanticFormatterCallback: (v) => '${v.round()} h', // [fork] S83
+                              semanticFormatterCallback: (v) =>
+                                  '${v.round()} ${s.hourShortLabel}',
                               onChanged: (v) =>
                                   setState(() => _hours = v.round()),
                             ),
@@ -156,7 +157,8 @@ class _DiaryDayBoundaryDialogState extends State<DiaryDayBoundaryDialog> {
                               divisions: 59,
                               value: _minutes.toDouble(),
                               label: _minutes.toString().padLeft(2, '0'),
-                              semanticFormatterCallback: (v) => '${v.round()} min', // [fork] S83
+                              semanticFormatterCallback: (v) =>
+                                  '${v.round()} ${s.minuteShortLabel}',
                               onChanged: (v) =>
                                   setState(() => _minutes = v.round()),
                             ),

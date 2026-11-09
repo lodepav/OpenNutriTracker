@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:opennutritracker/core/utils/calc/unit_calc.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:opennutritracker/core/domain/entity/tracked_day_entity.dart';
@@ -447,7 +448,12 @@ List<TrendTile> trendTiles(
     );
   }
 
-  final water = waterSeries(state.waterByDay, dates);
+  final flOz = state.usesImperialFoodUnits;
+  final water = waterSeries(state.waterByDay, dates, flOz: flOz);
+  final waterUnit = flOz ? 'fl oz' : 'ml';
+  final waterGoal = flOz
+      ? UnitCalc.mlToFlOz(state.waterGoalMl.toDouble()).round()
+      : state.waterGoalMl;
   final waterMean = meanOf(water);
 
   return [
@@ -502,7 +508,7 @@ List<TrendTile> trendTiles(
         TrendMetric.water,
         label: '${metricTitle(context, TrendMetric.water)} · avg',
         value: waterMean == null ? '–' : '${waterMean.round()}',
-        suffix: state.waterGoalMl > 0 ? '/ ${state.waterGoalMl} ml' : 'ml',
+        suffix: state.waterGoalMl > 0 ? '/ $waterGoal $waterUnit' : waterUnit,
         spark: water,
         sparkColor: waterColor(context),
       ),

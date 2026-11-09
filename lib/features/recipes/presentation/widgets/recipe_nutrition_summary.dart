@@ -138,8 +138,8 @@ class _NutrientCell extends StatelessWidget {
           style: textTheme.titleLarge?.copyWith(color: color, fontWeight: FontWeight.w800),
         ),
         const SizedBox(height: 2),
-        // [fork] S92 a11y-labels-2: a word too wide for its cell at a large
-        // font shrinks rather than losing its end ("protei…")
+        // A word too wide for its cell at a large font shrinks rather than
+        // losing its end ("Protei…").
         FittedBox(
           fit: BoxFit.scaleDown,
           child: Text(

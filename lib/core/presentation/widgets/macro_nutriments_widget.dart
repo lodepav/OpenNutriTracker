@@ -34,11 +34,10 @@ class _MacroNutrientsViewState extends State<MacroNutrientsView> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final palette = isDark ? AppPalette.dark : AppPalette.light;
-    // [fork] S79 macro-order: the rings in the user's macro order
-    // [fork] S83 large-text: at large font sizes the rings stack, so the
-    // values are not cut off
+    // At a large font the rings stack, so their values are not cut off.
     final stack = MediaQuery.textScalerOf(context).scale(10) > 13;
     Widget fit(Widget ring) => stack ? ring : Expanded(child: ring);
+    // [fork] S79 macro-order: the rings in the user's macro order
     return MacroOrderBuilder(
       builder: (context) => Flex(
         direction: stack ? Axis.vertical : Axis.horizontal,

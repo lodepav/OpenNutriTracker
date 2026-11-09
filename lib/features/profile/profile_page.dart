@@ -85,6 +85,7 @@ class _ProfilePageState extends State<ProfilePage> {
             state.bodyWeightUnit,
             state.usesImperialHeightUnits,
             state.effectiveWaterGoalMl,
+            state.usesImperialFoodUnits,
           );
         } else {
           return _getLoadingContent();
@@ -104,6 +105,7 @@ class _ProfilePageState extends State<ProfilePage> {
     BodyWeightUnit bodyWeightUnit,
     bool usesImperialHeightUnits,
     int effectiveWaterGoalMl,
+    bool usesImperialFoodUnits,
   ) {
     return ListView(
       padding: const EdgeInsets.fromLTRB(
@@ -304,8 +306,11 @@ class _ProfilePageState extends State<ProfilePage> {
                 YouRow(
                   identifier: 'profile-water-goal',
                   label: S.of(context).settingsWaterGoalLabel,
-                  value: '$effectiveWaterGoalMl ${S.of(context).mlLabel}',
-                  onTap: () => _showWaterGoalDialog(context),
+                  value: usesImperialFoodUnits
+                      ? '${UnitCalc.mlToFlOz(effectiveWaterGoalMl.toDouble()).round()} ${S.of(context).flOzUnit}'
+                      : '$effectiveWaterGoalMl ${S.of(context).mlLabel}',
+                  onTap: () =>
+                      _showWaterGoalDialog(context, usesImperialFoodUnits),
                 ),
               YouRow(
                 identifier: 'profile-recipes',
@@ -574,12 +579,13 @@ class _ProfilePageState extends State<ProfilePage> {
     await _profileBloc.updateUser(userEntity);
   }
 
-  void _showWaterGoalDialog(BuildContext context) {
+  void _showWaterGoalDialog(BuildContext context, bool usesImperialUnits) {
     showDialog(
       context: context,
       builder: (context) => WaterGoalDialog(
         settingsBloc: locator<SettingsBloc>(),
         homeBloc: locator<HomeBloc>(),
+        usesImperialUnits: usesImperialUnits,
       ),
     );
   }

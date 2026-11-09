@@ -38,6 +38,9 @@ class HomeTiles extends StatelessWidget {
   final BodyWeightUnit bodyWeightUnit;
   final int waterMl;
   final int waterGoalMl;
+
+  /// Water in fl oz, as the food units ask (#1306).
+  final bool usesImperialUnits;
   final Future<List<WeightLogEntity>> Function() loadWeights;
   final Future<List<ExpenditureDay>> Function() loadExpenditure;
 
@@ -57,6 +60,7 @@ class HomeTiles extends StatelessWidget {
     required this.bodyWeightUnit,
     required this.waterMl,
     required this.waterGoalMl,
+    this.usesImperialUnits = false,
     this.loadWeights = _weights,
     this.loadExpenditure = _expenditure,
     this.fasting = const FastingTile(),
@@ -102,6 +106,7 @@ class HomeTiles extends StatelessWidget {
           'water': WaterTile(
             ml: waterMl,
             goalMl: waterGoalMl,
+            usesImperialUnits: usesImperialUnits,
             onTap: () => openTrend(context, TrendMetric.water),
           ),
         if (DisplayPrefs.showFasting.value) 'fasting': fasting,
@@ -386,6 +391,9 @@ class WaterTile extends StatelessWidget {
   final int ml;
   final int goalMl;
 
+  /// Shown in fl oz, and logged in it (#1306).
+  final bool usesImperialUnits;
+
   /// Opens the water trend; water is logged from the + (or the tap
   /// without one).
   final VoidCallback? onTap;
@@ -394,6 +402,7 @@ class WaterTile extends StatelessWidget {
     super.key,
     required this.ml,
     required this.goalMl,
+    this.usesImperialUnits = false,
     this.onTap,
   });
 
@@ -402,13 +411,16 @@ class WaterTile extends StatelessWidget {
     final palette = paletteOf(context);
     void logWater() => showDialog<void>(
       context: context,
-      builder: (_) => const LogWaterDialog(),
+      builder: (_) => LogWaterDialog(usesImperialUnits: usesImperialUnits),
     );
+    String shown(int ml) => usesImperialUnits
+        ? '${UnitCalc.mlToFlOz(ml.toDouble()).round()}'
+        : '$ml';
     return HomeTile(
       identifier: 'home-water-chip',
       title: 'Water',
-      value: '$ml',
-      note: '/ $goalMl ml',
+      value: shown(ml),
+      note: '/ ${shown(goalMl)} ${usesImperialUnits ? 'fl oz' : 'ml'}',
       hint: onTap == null ? 'Log water' : 'Open the water trend',
       onTap: onTap ?? logWater,
       onAction: logWater,

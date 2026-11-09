@@ -56,9 +56,9 @@ class DemoModeBanner extends StatelessWidget {
                 children: [
                   Icon(Icons.visibility_outlined, size: 18, color: accent),
                   const SizedBox(width: Dimens.spacing8),
-                  // [fork] S81 a11y-labels: the label and its action wrap,
-                  // the action onto a line of its own when they do not fit
-                  // side by side, rather than either being cut off
+                  // The label and its action wrap, the action onto a line
+                  // of its own when they do not fit side by side, rather
+                  // than either being cut off.
                   Expanded(
                     child: Wrap(
                       spacing: Dimens.spacing8,
@@ -83,7 +83,6 @@ class DemoModeBanner extends StatelessWidget {
                       ],
                     ),
                   ),
-                  // [/fork]
                 ],
               ),
             ),

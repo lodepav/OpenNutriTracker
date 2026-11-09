@@ -32,16 +32,13 @@ enum AiModelNote {
   /// reprices, and nothing in the app checks.
   cheapest,
 
-  // [fork] S77 ai-models-5-5: a price fact, no quality claim
   /// Below the list's head on both the prompt and the completion price, read
   /// off the provider's own endpoint data like [cheapest]. Says nothing of
   /// quality: [cheaper]'s "weaker on poor-quality photos" was measured on
   /// Haiku 4.5, and nothing measured luna's.
   cheaperThanRecommended,
-  // [/fork]
 }
 
-// [fork] S77 ai-models-5-5: how a model is asked for the tool call
 /// How a request asks [AiModel] for its one tool call.
 ///
 /// The Claude 5.5 generation changed what a forced call may carry: Haiku 5.5
@@ -50,7 +47,6 @@ enum AiModelNote {
 /// call outright (400), so they are asked with `auto`, a reply without the
 /// call landing as the existing *no tool call* failure.
 enum AiToolCall { forced, forcedThinkingOff, auto }
-// [/fork]
 
 /// One model the app is willing to send a meal to.
 class AiModel {
@@ -76,18 +72,14 @@ class AiModel {
   /// by position, and on a list of one, which has nothing to compare to.
   final AiModelNote? note;
 
-  // [fork] S77 ai-models-5-5
   final AiToolCall toolCall;
-  // [/fork]
 
   const AiModel({
     required this.id,
     required this.servedBy,
     this.providers = const [],
     this.note,
-    // [fork] S77 ai-models-5-5
     this.toolCall = AiToolCall.forced,
-    // [/fork]
   });
 }
 
@@ -125,10 +117,9 @@ abstract final class AiModelCatalogue {
   /// The direct path has never offered a choice, and this does not add one.
   /// Changing which model an existing user's requests go to is exactly the
   /// silent behaviour change pinning exists to prevent.
-  // [fork] S77 ai-models-5-5: the 5.5 generation (asked 2026-10-24), not
-  // re-screened against the photo corpus; phase 4's live checks cover it.
-  // A stored id no longer listed resolves to the first, so a user on Haiku
-  // 4.5 moves to Haiku 5.5 and stays with Anthropic.
+  /// Haiku 5.5 replaces Haiku 4.5. A stored id no longer listed resolves to
+  /// the first, so a user on Haiku 4.5 moves to Haiku 5.5 and stays with
+  /// Anthropic.
   static const anthropic = <AiModel>[
     AiModel(
       id: 'claude-haiku-5-5',
@@ -136,7 +127,6 @@ abstract final class AiModelCatalogue {
       toolCall: AiToolCall.forcedThinkingOff,
     ),
   ];
-  // [/fork]
 
   /// Ordered: the default is first.
   ///
@@ -169,13 +159,13 @@ abstract final class AiModelCatalogue {
   /// from the direct API. 22 live calls, no invariant violations, and a
   /// withdrawn `openai/*` id answered 404 rather than OpenAI's native 400 —
   /// so the loud-failure promise above needs no `error.code` reader here.
-  // [fork] S77 ai-models-5-5: Sonnet 5.5 and Haiku 5.5 for Sonnet 5 and
-  // Haiku 4.5. Haiku 5.5 ($0.10/$0.50) is the cheapest row, tied with GPT-6
-  // luna: it keeps the cheapest note, and luna one that claims only its
-  // price, since the cheaper note's quality claim was Haiku 4.5's. GPT-6
-  // luna and GPT-6.1 terra for the 5.6 pair (2026-10-28), both run in
-  // phase 4's live eval; terra ($1/$5) still returned more items a photo
-  // than luna (2.71 against 2.58 over 65 photos).
+  /// Sonnet 5.5 and Haiku 5.5 replace Sonnet 5 and Haiku 4.5, and GPT-6
+  /// luna and GPT-6.1 terra the GPT-5.6 pair. Haiku 5.5 ($0.10/$0.50 per
+  /// million tokens) is the cheapest row, tied with GPT-6 luna: it keeps the
+  /// cheapest note, and luna one that claims only its price, since the
+  /// cheaper note's quality claim was measured on Haiku 4.5. Terra ($1/$5)
+  /// still returned more items a photo than luna (2.71 against 2.58 over 65
+  /// photos, 2026-10-28).
   static const openrouter = <AiModel>[
     AiModel(
       id: 'anthropic/claude-sonnet-5.5',
@@ -202,7 +192,6 @@ abstract final class AiModelCatalogue {
       providers: ['openai'],
       note: AiModelNote.moreItems,
     ),
-    // [/fork]
   ];
 
   /// Ordered: the default is first.
@@ -225,7 +214,7 @@ abstract final class AiModelCatalogue {
   ///
   /// `providers` stays empty: that field pins an OpenRouter route, and a
   /// direct path has no broker to constrain.
-  // [fork] S77 ai-models-5-5: GPT-6 luna and GPT-6.1 terra for the 5.6 pair
+  /// GPT-6 luna and GPT-6.1 terra replace the GPT-5.6 pair.
   static const openai = <AiModel>[
     AiModel(id: 'gpt-6-luna', servedBy: 'OpenAI'),
     AiModel(
@@ -234,7 +223,6 @@ abstract final class AiModelCatalogue {
       note: AiModelNote.moreItems,
     ),
   ];
-  // [/fork]
 
   /// Empty for [AiProvider.ownServer], and that is the answer rather than a
   /// gap. Membership of the lists above requires a behavioural screen the
@@ -264,9 +252,7 @@ abstract final class AiModelCatalogue {
   /// after an update that retires a model. Falling back beats leaving them
   /// pointed at an id that can only 404.
   static AiModel? resolve(AiProvider provider, String? id) {
-    // [fork] S77 ai-models-5-5
     id = _successors[id] ?? id;
-    // [/fork]
     final models = forProvider(provider);
     for (final model in models) {
       if (model.id == id) return model;
@@ -274,14 +260,16 @@ abstract final class AiModelCatalogue {
     return models.isEmpty ? null : models.first;
   }
 
-  // [fork] S77 ai-models-5-5: a stored GPT-5.6 choice moves to its
-  // successor, not to the list's head: on OpenRouter that is Sonnet, and the
-  // fallback would send the user's photos to another company (#726).
+  /// A stored GPT-5.6 choice moves to its successor, not to the list's
+  /// head: on OpenRouter that is Sonnet, and the fallback would send the
+  /// user's photos to another company (#726). A stored Haiku 4.5 choice on
+  /// OpenRouter moves to Haiku 5.5 for the same reason in price: the head is
+  /// the dearest row.
   static const _successors = {
+    'anthropic/claude-haiku-4.5': 'anthropic/claude-haiku-5.5',
     'openai/gpt-5.6-luna': 'openai/gpt-6-luna',
     'openai/gpt-5.6-terra': 'openai/gpt-6.1-terra',
     'gpt-5.6-luna': 'gpt-6-luna',
     'gpt-5.6-terra': 'gpt-6.1-terra',
   };
-  // [/fork]
 }

@@ -211,6 +211,8 @@ void main() {
     );
     expect(paths, isNotEmpty);
     for (final m in paths) {
+      // A placeholder ("Settings → {category} → …") is filled in by code.
+      if (m.group(1)!.trim().startsWith('{')) continue;
       expect(titles, contains(m.group(1)!.trim()), reason: m.group(0));
     }
   });

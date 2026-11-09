@@ -111,6 +111,11 @@ class SPConst {
     // [fork] S72: the fork's dishes, recipes over the rows above
     'fork_dishes': 'OpenBite dishes (recipes over FDC and BLS)',
     // [/fork]
+    'ciqual': 'Table de composition nutritionnelle Ciqual (ANSES)',
+    'fineli': 'Fineli – Finnish Food Composition Database (THL)',
+    'frida': 'Danish Food Composition Database (DTU)',
+    'mvt': 'Matvaretabellen (Mattilsynet)',
+    'slv': 'Livsmedelsdatabasen (Livsmedelsverket)',
   };
 
   /// Compact source labels for chips on list items, where the full
@@ -126,11 +131,20 @@ class SPConst {
     // [fork] S72
     'fork_dishes': 'OpenBite',
     // [/fork]
+    'ciqual': 'CIQUAL',
+    'fineli': 'Fineli',
+    'frida': 'DTU FCDB',
+    'mvt': 'Matvaretabellen',
+    'slv': 'Livsmedelsverket',
   };
 
   /// Sources offered in Settings → Food databases. INDB and TBCA exist in
   /// the schema but carry no data yet, so they are not selectable until
-  /// their imports land — add them here once they do.
+  /// their imports land — add them here once they do. The same holds for
+  /// CIQUAL, Fineli, the Danish FCDB, Matvaretabellen and Livsmedelsverket,
+  /// whose importers
+  /// live in the backend repo (OpenNutriTracker-Backend) and whose rows
+  /// reach the hosted database only when the maintainer runs them.
   static const settingsSelectableFoodSources = [
     'fdc_foundation',
     'fdc_sr_legacy',
@@ -154,6 +168,11 @@ class SPConst {
     'fork_dishes':
         'https://github.com/lodepav/OpenNutriTracker/blob/fork/main/fork/data/dishes.json',
     // [/fork]
+    'ciqual': 'https://ciqual.anses.fr',
+    'fineli': 'https://fineli.fi',
+    'frida': 'https://fcdb.fooddata.dk',
+    'mvt': 'https://www.matvaretabellen.no',
+    'slv': 'https://soknaringsinnehall.livsmedelsverket.se',
   };
 
   /// BCP 47 locale used in food_translation for [language], or null when

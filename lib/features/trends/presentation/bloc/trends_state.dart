@@ -28,6 +28,8 @@ class TrendsLoaded extends TrendsState {
   // [fork] S190 logical-today: where the day starts, for the windows' today
   final int dayStartMinutes;
   // [/fork]
+  // #1306: water amounts follow the food unit preference (ml / fl oz).
+  final bool usesImperialFoodUnits;
 
   const TrendsLoaded({
     required this.rangeDays,
@@ -42,6 +44,7 @@ class TrendsLoaded extends TrendsState {
     // [fork] S190 logical-today
     this.dayStartMinutes = 0,
     // [/fork]
+    this.usesImperialFoodUnits = false,
   });
 
   // [fork] S190 logical-today: the Diary's today, which every window ends on
@@ -63,6 +66,7 @@ class TrendsLoaded extends TrendsState {
         // [fork] S190 logical-today
         dayStartMinutes,
         // [/fork]
+        usesImperialFoodUnits,
       ];
 }
 

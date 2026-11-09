@@ -15,9 +15,8 @@ class PlaceholderCard extends StatelessWidget {
   /// the right "add" card can be targeted unambiguously.
   final String semanticIdentifier;
 
-  // [fork] S81 a11y-labels: what a screen reader says for the bare plus
+  /// What a screen reader says for the plus, e.g. "Add to Breakfast".
   final String? label;
-  // [/fork]
 
   const PlaceholderCard({
     super.key,
@@ -25,9 +24,7 @@ class PlaceholderCard extends StatelessWidget {
     required this.onTap,
     required this.firstListElement,
     required this.semanticIdentifier,
-    // [fork] S81 a11y-labels
     this.label,
-    // [/fork]
   });
 
   @override
@@ -42,9 +39,7 @@ class PlaceholderCard extends StatelessWidget {
       child: Semantics(
         identifier: semanticIdentifier,
         button: true,
-        // [fork] S81 a11y-labels
         label: label,
-        // [/fork]
         child: AppCard(
           color: palette.surfaceMuted,
           bordered: false,

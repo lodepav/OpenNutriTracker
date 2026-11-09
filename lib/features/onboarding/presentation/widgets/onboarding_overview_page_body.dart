@@ -72,16 +72,16 @@ class OnboardingOverviewPageBody extends StatelessWidget {
                 Text(
                   displayGoalString,
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
                 ),
                 Text(
                   perDayLabel,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.onSurface.withValues(alpha: 0.6),
-                  ),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withValues(alpha: 0.6),
+                      ),
                 ),
               ],
             ),
@@ -102,69 +102,80 @@ class OnboardingOverviewPageBody extends StatelessWidget {
             S.of(context).onboardingYourMacrosGoalLabel,
             style: Theme.of(context).textTheme.bodyLarge,
           ),
-          const SizedBox(height: 16.0),
-          Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.max,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  '$carbsGoalString g',
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    color: Theme.of(context).colorScheme.secondary,
-                  ),
-                ),
-                const SizedBox(height: 8.0),
-                Text(
-                  S.of(context).carbsLabel,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.onSurface.withValues(alpha: 0.6),
-                  ),
-                ),
-                const SizedBox(height: 8.0),
-                Text(
-                  '$fatGoalString g',
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    color: Theme.of(context).colorScheme.secondary,
-                  ),
-                ),
-                Text(
-                  S.of(context).fatLabel,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.onSurface.withValues(alpha: 0.6),
-                  ),
-                ),
-                const SizedBox(height: 8.0),
-                Text(
-                  '$proteinGoalString g',
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    color: Theme.of(context).colorScheme.secondary,
-                  ),
-                ),
-                Text(
-                  S.of(context).proteinLabel,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.onSurface.withValues(alpha: 0.6),
-                  ),
-                ),
-              ],
-            ),
-          ),
+          const SizedBox(height: 8.0),
+          _buildMacroSummary(context),
           const SizedBox(height: 24.0),
           Center(
             child: TextButton.icon(
-              onPressed: () => Navigator.of(
-                context,
-              ).push(MaterialPageRoute(builder: (_) => const SourcesScreen())),
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const SourcesScreen()),
+              ),
               icon: const Icon(Icons.menu_book_outlined),
               label: Text(S.of(context).settingsSourcesLabel),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// The gram targets as one read-only summary.
+  ///
+  /// They used to be three large accent-coloured numbers, each over its own
+  /// label, which read as input boxes that did nothing when tapped (#1324).
+  /// Laid out like the derivation above and with a pointer to where they can
+  /// be changed, they read as results.
+  Widget _buildMacroSummary(BuildContext context) {
+    final s = S.of(context);
+    return Container(
+      padding: const EdgeInsets.all(12.0),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildMacroRow(context, s.carbsLabel, carbsGoalString),
+          const SizedBox(height: 4.0),
+          _buildMacroRow(context, s.fatLabel, fatGoalString),
+          const SizedBox(height: 4.0),
+          _buildMacroRow(context, s.proteinLabel, proteinGoalString),
+          const SizedBox(height: 8.0),
+          Text(
+            s.onboardingMacrosChangeLaterHint(
+              s.settingsCategoryGoals,
+              s.settingsMacroSplitLabel,
+            ),
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withValues(alpha: 0.6),
+                ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMacroRow(BuildContext context, String label, String grams) {
+    return MergeSemantics(
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: Theme.of(context).textTheme.bodyMedium,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(width: 8.0),
+          Text(
+            '$grams g',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
           ),
         ],
       ),
@@ -244,9 +255,9 @@ class OnboardingOverviewPageBody extends StatelessWidget {
     bool emphasised = false,
   }) {
     final style = emphasised
-        ? Theme.of(
-            context,
-          ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)
+        ? Theme.of(context).textTheme.bodyMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+          )
         : Theme.of(context).textTheme.bodySmall;
     return Row(
       children: [

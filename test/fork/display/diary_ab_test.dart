@@ -278,6 +278,7 @@ void main() {
           currentDate: _day,
           selectedDate: _day,
           trackedDaysMap: const {},
+          daysWithEntries: const {},
         ),
       ),
     );

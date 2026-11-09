@@ -4,9 +4,10 @@ import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/core/utils/extensions.dart';
-import 'package:intl/intl.dart';
+import 'package:opennutritracker/generated/l10n.dart';
 import 'package:table_calendar/table_calendar.dart';
 // [fork] S118 diary-header
+import 'package:intl/intl.dart';
 import 'package:opennutritracker/fork/display/day_ring.dart';
 // [/fork]
 
@@ -19,6 +20,10 @@ class DiaryTableCalendar extends StatefulWidget {
 
   final Map<String, TrackedDayEntity> trackedDaysMap;
 
+  /// The keys of the days with at least one entry logged. Only these are
+  /// marked: a row can outlive its day's entries, kept for its goals.
+  final Set<String> daysWithEntries;
+
   const DiaryTableCalendar({
     super.key,
     required this.onDateSelected,
@@ -27,6 +32,7 @@ class DiaryTableCalendar extends StatefulWidget {
     required this.currentDate,
     required this.selectedDate,
     required this.trackedDaysMap,
+    required this.daysWithEntries,
   });
 
   @override
@@ -58,7 +64,11 @@ class _DiaryTableCalendarState extends State<DiaryTableCalendar> {
           bool outside = false}) =>
       DayRing(
         day: day,
-        trackedDay: widget.trackedDaysMap[day.toParsedDay()],
+        // A day with nothing logged gets no ring, even with a row that
+        // keeps its goals (#1440).
+        trackedDay: widget.daysWithEntries.contains(day.toParsedDay())
+            ? widget.trackedDaysMap[day.toParsedDay()]
+            : null,
         selected: selected,
         today: today,
         outside: outside,
@@ -97,6 +107,13 @@ class _DiaryTableCalendarState extends State<DiaryTableCalendar> {
           onFormatChanged: (format) => setState(() => _format = format),
           rowHeight: 48,
           // [/fork]
+          // Without this, `table_calendar` falls back to `en_US` and the
+          // month header, day-of-week headings and selected-day label stay
+          // English while the rest of the Diary follows the app locale
+          // (#1442). `GlobalMaterialLocalizations` is wired in `main.dart`,
+          // so the intl date symbols for every supported locale are already
+          // loaded by the time this builds.
+          locale: Localizations.localeOf(context).toLanguageTag(),
           headerStyle: HeaderStyle(
             titleCentered: true,
             formatButtonVisible: false,
@@ -111,12 +128,12 @@ class _DiaryTableCalendarState extends State<DiaryTableCalendar> {
                 color: palette.textMuted, size: 26,
                 semanticLabel: _format == CalendarFormat.week
                     ? 'Previous week'
-                    : 'Previous month'),
+                    : S.of(context).calendarPreviousMonthLabel),
             rightChevronIcon: Icon(Icons.chevron_right_rounded,
                 color: palette.textMuted, size: 26,
                 semanticLabel: _format == CalendarFormat.week
                     ? 'Next week'
-                    : 'Next month'),
+                    : S.of(context).calendarNextMonthLabel),
             // [/fork]
             headerPadding: const EdgeInsets.symmetric(vertical: Dimens.spacing8),
           ),
@@ -188,7 +205,9 @@ class _DiaryTableCalendarState extends State<DiaryTableCalendar> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    DateFormat.yMMMM().format(day),
+                    DateFormat.yMMMM(
+                      Localizations.localeOf(context).toLanguageTag(),
+                    ).format(day),
                     style: textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w700,
                       color: palette.textStrong,

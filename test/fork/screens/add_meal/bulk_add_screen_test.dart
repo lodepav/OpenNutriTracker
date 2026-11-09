@@ -432,6 +432,7 @@ class _GatedProber implements AiEndpointProber {
   Future<AiEndpointProbe> probe(
     AiSelection selection, {
     String? localeCode,
+    Future<bool> Function()? stillWanted,
   }) async {
     await gate.future;
     return result;

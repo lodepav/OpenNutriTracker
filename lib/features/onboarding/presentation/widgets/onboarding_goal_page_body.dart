@@ -104,8 +104,8 @@ class _OnboardingGoalPageBodyState extends State<OnboardingGoalPageBody> {
     GoalSuggestionEntity? suggestion,
   ) {
     final isSuggested = suggestion?.goal == goal;
-    // [fork] S83 a Wrap: at a large font the badge moves under the chip
-    // rather than overflowing the row
+    // A Wrap: at a large font the badge moves under the chip rather than
+    // overflowing the row.
     return Wrap(
       crossAxisAlignment: WrapCrossAlignment.center,
       spacing: Dimens.spacing8,
@@ -123,9 +123,7 @@ class _OnboardingGoalPageBodyState extends State<OnboardingGoalPageBody> {
             onSelected: (_) => _onSelected(goal),
           ),
         ),
-        // [fork] S83 the Wrap's spacing, so a wrapped badge starts flush
         if (isSuggested) _buildSuggestedBadge(),
-        // [/fork]
       ],
     );
   }

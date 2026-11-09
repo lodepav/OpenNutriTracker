@@ -248,6 +248,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
               bodyWeightUnit: bodyWeightUnit,
               waterMl: waterMlToday,
               waterGoalMl: waterGoalMl,
+              usesImperialUnits: usesImperialUnits,
             ),
             // S13 adaptive-check-in
             'checkIn': AdaptiveCheckInCard(

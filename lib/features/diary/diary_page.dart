@@ -120,6 +120,7 @@ class _DiaryPageState extends State<DiaryPage> with WidgetsBindingObserver {
             state.usesImperialUnits,
             state.showMealMacros,
             state.showActivityTracking,
+            state.daysWithEntries,
           );
         }
         return const SizedBox();
@@ -145,6 +146,7 @@ class _DiaryPageState extends State<DiaryPage> with WidgetsBindingObserver {
     bool usesImperialUnits,
     bool showMealMacros,
     bool showActivityTracking,
+    Set<String> daysWithEntries,
   ) {
     // [fork] S177 copy-move: the selection's bar under the day, and Back
     // ends the selection
@@ -172,6 +174,7 @@ class _DiaryPageState extends State<DiaryPage> with WidgetsBindingObserver {
       children: [
         DiaryTableCalendar(
           trackedDaysMap: trackedDaysMap,
+          daysWithEntries: daysWithEntries,
           onDateSelected: _onDateSelected,
           calendarDurationDays: _calendarDurationDays,
           currentDate: _currentDate,
