@@ -63,7 +63,8 @@ void main() {
     });
 
     test('still drops one the model made up', () async {
-      expect(await countFor(1.5, null), isNull);
+      // A photo with no note is estimated in grams now (D42), so only a note
+      // that states another count is left to drop the model's part count.
       expect(await countFor(1.5, '2 pork chops'), isNull);
     });
   });

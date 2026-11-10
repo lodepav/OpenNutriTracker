@@ -808,6 +808,10 @@ void main() {
           bytes: Uint8List.fromList([1, 2, 3, 4]),
           mediaType: 'image/webp',
         ),
+        // [fork] S208 photo-estimate-no-note: the counts path reads a photo
+        // whose note states a count; one with no note is estimated (D42)
+        note: '2 eggs',
+        // [/fork]
       );
 
       final rice = result.items.firstWhere((i) => i.query == 'rice');

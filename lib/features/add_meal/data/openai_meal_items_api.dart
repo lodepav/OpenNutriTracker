@@ -4,6 +4,9 @@ import 'package:http/http.dart' as http;
 import 'package:logging/logging.dart';
 import 'package:opennutritracker/features/add_meal/domain/meal_items_api.dart';
 import 'package:opennutritracker/features/add_meal/util/meal_text_parser.dart';
+// [fork] S208 photo-estimate-no-note
+import 'package:opennutritracker/fork/bulk/weighed_plate.dart';
+// [/fork]
 
 /// Asks an OpenAI model for food items, reached directly.
 ///
@@ -69,7 +72,9 @@ class OpenAiMealItemsApi implements MealItemsApi {
           'type': 'function',
           'name': mealItemsToolName,
           'description': mealItemsToolDescription,
-          'parameters': mealItemsToolSchema,
+          // [fork] S208 photo-estimate-no-note: a plate read asks for grams (D42)
+          'parameters': plateItemsSchemaFor(system),
+          // [/fork]
           // **Explicit, and the whole reason this line exists.** Omitting
           // `strict` on Responses does not leave the schema alone — it
           // normalises it into strict mode, which requires every key in

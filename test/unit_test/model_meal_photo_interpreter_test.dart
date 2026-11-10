@@ -71,6 +71,12 @@ final _photo = MealPhoto(
   mediaType: 'image/webp',
 );
 
+// [fork] S208 photo-estimate-no-note: a photo with no note is estimated in
+// grams (D42); the counts-only rules below read a photo whose note states a
+// count, so their tests send one.
+const _countNote = '2 eggs';
+// [/fork]
+
 /// The user message's content blocks from a captured request.
 List<dynamic> contentBlocksOf(FakeClient client) =>
     (client.sentBody!['messages'] as List).first['content'] as List;
@@ -167,7 +173,9 @@ void main() {
       'the photo path shares that one schema, it does not copy it',
       () async {
         final client = FakeClient(body: toolReply([]));
-        await interpreterWith(client).interpret(_photo);
+        // [fork] S208 photo-estimate-no-note: the counts path
+        await interpreterWith(client).interpret(_photo, note: _countNote);
+        // [/fork]
 
         final tool = (client.sentBody!['tools'] as List).single as Map;
         expect(tool['input_schema'], mealItemsToolSchema);
@@ -183,7 +191,9 @@ void main() {
         ]),
       );
 
-      final result = await interpreterWith(client).interpret(_photo);
+      // [fork] S208 photo-estimate-no-note: the counts path
+      final result = await interpreterWith(client).interpret(_photo, note: _countNote);
+      // [/fork]
 
       expect(result.items.single.query, 'egg');
       expect(result.items.single.quantity, 2);
@@ -197,7 +207,9 @@ void main() {
         ]),
       );
 
-      final result = await interpreterWith(client).interpret(_photo);
+      // [fork] S208 photo-estimate-no-note: the counts path
+      final result = await interpreterWith(client).interpret(_photo, note: _countNote);
+      // [/fork]
 
       // Not 200-with-no-unit: downstream that reads as a *count*, and the
       // bulk-add bloc turns a bare count into servings. Estimating 200 g of
@@ -214,7 +226,9 @@ void main() {
         ]),
       );
 
-      final result = await interpreterWith(client).interpret(_photo);
+      // [fork] S208 photo-estimate-no-note: the counts path
+      final result = await interpreterWith(client).interpret(_photo, note: _countNote);
+      // [/fork]
 
       expect(result.items.single.quantity, isNull);
       expect(result.items.single.unit, isNull);
@@ -231,7 +245,9 @@ void main() {
           ]),
         );
 
-        final result = await interpreterWith(client).interpret(_photo);
+        // [fork] S208 photo-estimate-no-note: the counts path
+        final result = await interpreterWith(client).interpret(_photo, note: _countNote);
+        // [/fork]
 
         expect(result.items.map((i) => i.query), ['egg', 'rice', 'toast']);
         expect(result.items.map((i) => i.quantity), [2, null, 1]);
@@ -249,7 +265,9 @@ void main() {
         ]),
       );
 
-      final result = await interpreterWith(client).interpret(_photo);
+      // [fork] S208 photo-estimate-no-note: the counts path
+      final result = await interpreterWith(client).interpret(_photo, note: _countNote);
+      // [/fork]
 
       expect(result.items.single.query, 'pizza');
       expect(result.items.single.quantity, isNull);
@@ -264,7 +282,9 @@ void main() {
         ]),
       );
 
-      final result = await interpreterWith(client).interpret(_photo);
+      // [fork] S208 photo-estimate-no-note: the counts path
+      final result = await interpreterWith(client).interpret(_photo, note: _countNote);
+      // [/fork]
 
       expect(result.items.single.quantity, 2);
     });
@@ -278,7 +298,9 @@ void main() {
         ]),
       );
 
-      final result = await interpreterWith(client).interpret(_photo);
+      // [fork] S208 photo-estimate-no-note: the counts path
+      final result = await interpreterWith(client).interpret(_photo, note: _countNote);
+      // [/fork]
 
       expect(result.items.single.quantity, isNull);
     });
@@ -290,7 +312,9 @@ void main() {
         ]),
       );
 
-      final result = await interpreterWith(client).interpret(_photo);
+      // [fork] S208 photo-estimate-no-note: the counts path
+      final result = await interpreterWith(client).interpret(_photo, note: _countNote);
+      // [/fork]
 
       expect(result.items.single.query, 'salad');
       expect(result.items.single.quantity, isNull);
@@ -300,7 +324,9 @@ void main() {
   group('a photo may size a counted thing, never name a container (#1156)', () {
     Future<ParsedMealItem> readOne(Map<String, dynamic> item) async {
       final client = FakeClient(body: toolReply([item]));
-      return (await interpreterWith(client).interpret(_photo)).items.single;
+      // [fork] S208 photo-estimate-no-note: the counts path
+      return (await interpreterWith(client).interpret(_photo, note: _countNote)).items.single;
+      // [/fork]
     }
 
     test('a size on a whole count is kept', () async {
@@ -415,7 +441,9 @@ void main() {
         ]),
       );
 
-      final result = await interpreterWith(client).interpret(_photo);
+      // [fork] S208 photo-estimate-no-note: the counts path
+      final result = await interpreterWith(client).interpret(_photo, note: _countNote);
+      // [/fork]
 
       expect(result.items.map((i) => i.portion), ['large', null, 'small']);
       expect(result.items.map((i) => i.quantity), [2, 1, 1]);

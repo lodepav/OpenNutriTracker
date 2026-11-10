@@ -369,12 +369,13 @@ void main() {
     });
 
     test(
-      'with no note the photo prompt stays, and its grams are dropped',
+      'with no note the plate is estimated too, and its grams kept (D42)',
       () async {
         final api = _Api([_g('rice', 200)]);
         final result = await ModelMealPhotoInterpreter(api).interpret(photo);
-        expect(api.system, isNot(startsWith(estimatedPlatePrompt)));
-        expect(result.items.single.quantity, isNull);
+        expect(api.system, startsWith(noNotePlatePrompt));
+        expect(result.items.single.quantity, 200);
+        expect(result.items.single.unit, 'g');
       },
     );
   });
