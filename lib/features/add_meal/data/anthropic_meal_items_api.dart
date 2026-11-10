@@ -5,6 +5,9 @@ import 'package:logging/logging.dart';
 import 'package:opennutritracker/core/utils/ai_model_catalogue.dart';
 import 'package:opennutritracker/features/add_meal/domain/meal_items_api.dart';
 import 'package:opennutritracker/features/add_meal/util/meal_text_parser.dart';
+// [fork] S208 photo-estimate-no-note
+import 'package:opennutritracker/fork/bulk/weighed_plate.dart';
+// [/fork]
 
 /// Asks Claude directly, over the Messages API, for a list of food items.
 ///
@@ -69,7 +72,9 @@ class AnthropicMealItemsApi implements MealItemsApi {
         {
           'name': mealItemsToolName,
           'description': mealItemsToolDescription,
-          'input_schema': mealItemsToolSchema,
+          // [fork] S208 photo-estimate-no-note: a plate read asks for grams (D42)
+          'input_schema': plateItemsSchemaFor(system),
+          // [/fork]
         },
       ],
       // Forcing the tool is what makes the reply parseable. Without it the

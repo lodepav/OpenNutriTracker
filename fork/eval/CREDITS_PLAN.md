@@ -551,6 +551,81 @@ median and the meals within 25% did not improve. A baseline run an hour
 apart gave 25% and 33% on the same photos, so a gain smaller than that
 cannot be shown with this set.
 
+## Step 8: a photo with no note estimates grams (2026-11-10)
+
+Three rounds on branch `exp/photo-grams`, Haiku, `FORK_EVAL_ONLINE=1`, on
+51 Nutrition5k plates (CC BY 4.0: lab-weighed, shot from above at
+640×480; `build/n5k/set/photos.json`, built by the scripts in
+`fork/tools/exp_photo_grams/` on that branch) and a second set of 48
+kept unseen to the end. Read by `fresh_eval_test.dart`, with or without a
+2-4 word note. Median off, within 25%, total as % of the reference:
+
+| Read | No note | With note |
+|---|---|---|
+| Counts prompt (as it was, 3 runs) | 64-67%, 7-13/51, 144-156% | (D25's estimate) 34-40%, 14-17/51, 125-130% |
+| Estimate without per-piece weights (F, 3 runs) | 35-43%, 17-19/51, 126-129% | 34-37%, 17-21/51, 120-125% |
+| F, second set (3 runs) | 29-38%, 14-19/48, 127-131% | 37%, 16/48, 127% |
+
+- **Round 1** (seven prompts): every estimating prompt beat the counts
+  prompt without a note; among them nothing separated beyond the noise
+  (up to 6 points of median, 6 plates, 12 points of total). A ten-line
+  prompt with the plate sizes only was worse on the calorie suite (soups
+  broken into raw ingredients). Dropping the per-piece weights (F) did no
+  harm, and meat came at exactly 100 g no more often.
+- **Round 2** (on F): pieces before grams, one entry per thing seen and
+  a matching schema description were within noise. The plate's total
+  first, rows sized to it, was best on the 51 and not on the unseen 48. A
+  code-side shrink fitted to the 51 (24%, 97%) is only a ceiling: given
+  the estimate, small ones are not too high, large ones are.
+- **Round 3**: total-first against F on the second set three times
+  (level) and on the six own meals (step 3), sized as the app sends them:
+  F 10-14% off, 5-6 of 6 within 25%, 87-89% of the total; total-first
+  37-42%, 1-2 of 6, 63-65%: it states a usual plate (620 g) for a full
+  breakfast.
+- **Small portions**: in every variant a food under 35 g comes at a
+  median 2-3× its weight, 35-79 g at 1.4-1.8×, over 79 g at 0.84-1.1×.
+  No prompt moved it below 2×.
+- **Calorie suite**, F: tune 44%, 7-8, 121-132% (level with the counts
+  prompt's 32-38%, 10-13, 113-117% within noise); held 26-34%, 13-14,
+  112% (from 36-43%, 9-11, 116-129%).
+- **A plate of assorted meats** (about 950 kcal): F reads 792-1,898
+  without a note and 950-1,712 with one, against 1,117-1,891 before; the
+  model lists 4-6 meats and seafoods for three or four foods.
+- **Shipped** (D42): F for both a no-note photo and one whose note states
+  no amount; the schema description on those requests; a first item
+  without "dish=" taken as the meal's name (once in 102 reads); one more
+  read when a food comes without grams (5-7 of 51 reads).
+- Cost: about $2.06 for the three rounds.
+
+Left, the wrong rows these reads found (query → row), for their own
+piece of work:
+
+- "vegetable fritters" → Fritter, corn (404 kcal per 100 g)
+- "fried vegetables" and "fried vegetables, battered" → Fast foods,
+  potato, french fried
+- "vegetables, battered and fried" → Vegetables, mixed, canned (36 kcal)
+- "carrots, battered and fried" → Carrots, raw
+- "Carrots, raw, salad" → a row at 213 kcal per 100 g
+- "Zucchini fries" → a row at 0 kcal
+- "Grilled squid" → a row at 300 kcal per 100 g
+- "Chicken shashlik" → a row at 286 kcal per 100 g
+- "chicken sausage, grilled" → Sausage, Polish, beef with chicken
+- "chicken apple sausage" → a pork sausage
+- "pork, cooked, stir-fried" → Pork, cured, bacon (702 kcal at 150 g)
+- "pork, cured" → salt pork (for turkey bacon)
+- "fruit soup base" → Soup base, dry (357 kcal); a cream-based one →
+  Cream soup base (469 kcal)
+- "herbs, fresh, mixed" → Fresh wholemeal egg pasta with anchovy-herb
+  pesto
+- "eggs, scrambled with whole milk and butter" → Egg white omelet with
+  cheese
+- "wheat berries, cooked" → Coffee Whey Protein (322 kcal)
+- "sweet bell pepper, raw" → Roasted Red Bell Pepper Strips
+- "pizza crust, cheese, tomato sauce" → a stuffed-crust pizza; "tomato
+  sauce, pizza" → Pizza margherita
+- "dark leafy greens" → a beef-and-rice row; "roasted mushrooms" → a
+  mushroom pâté
+
 ## What the tests measure
 
 Each sends real photos or typed meals through the app's logging code,

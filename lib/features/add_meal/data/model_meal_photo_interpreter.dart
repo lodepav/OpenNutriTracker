@@ -13,6 +13,14 @@ import 'package:opennutritracker/fork/bulk/soup_contents.dart';
 import 'package:opennutritracker/fork/bulk/weighed_plate.dart';
 // [/fork]
 
+// [fork] S208 photo-estimate-no-note: in the fork a photo with no note, or
+// with a note that states no amount, is no longer read under the rules
+// below: `readEstimatedPlate` (lib/fork/bulk/weighed_plate.dart) asks for
+// every food's grams as an estimate, and the screen asks the user to check
+// each one (D25, D42). The counts-only prompt and its two rules now read
+// only a photo whose note states a count.
+// [/fork]
+
 /// Reads a photograph of a meal with a model and returns the foods it can
 /// identify, so the existing search can resolve each one against Open Food
 /// Facts / USDA / BLS.
@@ -50,8 +58,17 @@ class ModelMealPhotoInterpreter implements MealPhotoInterpreter {
   // [fork] S172 saved-dishes: the user's recipe names, for the prompt
   final List<String> Function()? _savedDishes;
 
-  ModelMealPhotoInterpreter(this._api, {List<String> Function()? savedDishes})
-    : _savedDishes = savedDishes;
+  // S208: whether a plate read that left a food without grams is asked
+  // once more (D42); false for the endpoint probe, whose verdict counts
+  // items and whose quoted wait is two requests
+  final bool _askAgainForGrams;
+
+  ModelMealPhotoInterpreter(
+    this._api, {
+    List<String> Function()? savedDishes,
+    bool askAgainForGrams = true,
+  }) : _savedDishes = savedDishes,
+       _askAgainForGrams = askAgainForGrams;
   // [/fork]
 
   // [fork] S60 photo-counts: count every countable piece (phase 4 replay:
@@ -128,6 +145,7 @@ Rules:
         weights: weights,
         localeCode: localeCode,
         savedDishes: saved,
+        askAgainForGrams: _askAgainForGrams,
       );
     }
     // D25: a note that names the meal and no amount, estimated
@@ -138,6 +156,19 @@ Rules:
         note: note!,
         localeCode: localeCode,
         savedDishes: saved,
+        askAgainForGrams: _askAgainForGrams,
+      );
+    }
+    // [/fork]
+    // [fork] S208 photo-estimate-no-note: no note, estimated too (D42)
+    if (note == null || note.trim().isEmpty) {
+      return readEstimatedPlate(
+        _api,
+        photo,
+        note: null,
+        localeCode: localeCode,
+        savedDishes: saved,
+        askAgainForGrams: _askAgainForGrams,
       );
     }
     // [/fork]

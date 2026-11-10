@@ -49,6 +49,10 @@ Future<BulkAddState> settled(BulkAddBloc bloc) => bloc.stream
 /// The rows of a read as a user who accepts them would log them.
 typedef Logged = ({double kcal, int guessed, List<String> cells});
 
+/// The last [loggedKcal]'s rows, each with the amount the model read, the
+/// row it found, its grams and its kcal, for [KcalReads]' kcal.json.
+List<Map<String, Object?>> lastRows = [];
+
 /// [state]'s rows in kcal, each at the amount the screen starts it at. A
 /// dish the table does not have is broken down (D9) as the app's
 /// `DishBreakdownController` does it: for the amount the row states, with
@@ -94,6 +98,7 @@ Future<Logged?> loggedKcal(
   var kcal = 0.0;
   var guessed = 0;
   final cells = <String>[];
+  lastRows = [];
   final dishKcal = <Object, double>{};
   // Each breakdown's ingredient rows, as the other rows' cells read.
   final dishRows = <Object, List<String>>{};
@@ -102,6 +107,7 @@ Future<Logged?> loggedKcal(
     // A dish the model returned nothing for: the app keeps the row, which
     // logs nothing until the user picks a food.
     if (meal == null) {
+      lastRows.add({'query': row.resolved.parsed.query, 'row': null});
       cells.add('${row.resolved.parsed.query} → no breakdown 0');
       continue;
     }
@@ -112,6 +118,19 @@ Future<Logged?> loggedKcal(
         (row.resolved.parsed.quantity == null && meal.servingQuantity == null);
     if (isGuess) guessed++;
     kcal += rowKcal;
+    final parsed = row.resolved.parsed;
+    lastRows.add({
+      'query': parsed.query,
+      'read_quantity': parsed.quantity,
+      'read_unit': parsed.unit,
+      'row': meal.name,
+      'amount': amount,
+      'unit': row.effectiveUnit,
+      'grams': convertQuantityToBaseUnit(amount, row.effectiveUnit, meal),
+      'kcal': rowKcal,
+      'guess': isGuess,
+      'dish': row.dishIngredient?.dish,
+    });
     final cell =
         '${row.resolved.parsed.query} → ${meal.name} '
         '${_n(amount)} ${row.effectiveUnit.split('.').last}'
@@ -206,6 +225,7 @@ class KcalReads {
         'note': note,
         'kcal': kcal,
         'reference': ref,
+        'rows': lastRows,
       });
 
   void write(Directory runDir) {

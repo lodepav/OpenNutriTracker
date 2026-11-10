@@ -7,6 +7,9 @@ import 'package:opennutritracker/core/utils/ai_model_catalogue.dart';
 import 'package:opennutritracker/core/utils/plaintext_destination_guard.dart';
 import 'package:opennutritracker/features/add_meal/domain/meal_items_api.dart';
 import 'package:opennutritracker/features/add_meal/util/meal_text_parser.dart';
+// [fork] S208 photo-estimate-no-note
+import 'package:opennutritracker/fork/bulk/weighed_plate.dart';
+// [/fork]
 
 /// Asks a model for food items through OpenRouter, which brokers the request
 /// on to whichever provider actually serves it.
@@ -206,7 +209,9 @@ class OpenAiCompatibleMealItemsApi implements MealItemsApi {
           'function': {
             'name': mealItemsToolName,
             'description': mealItemsToolDescription,
-            'parameters': mealItemsToolSchema,
+            // [fork] S208 photo-estimate-no-note: a plate read asks for grams (D42)
+            'parameters': plateItemsSchemaFor(system),
+            // [/fork]
             // **No `strict: true`.** It looks like free rigour and is not.
             //
             // OpenAI's strict mode requires every key in `properties` to

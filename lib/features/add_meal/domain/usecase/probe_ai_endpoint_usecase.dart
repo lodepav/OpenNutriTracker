@@ -175,6 +175,11 @@ class AiEndpointProber {
     try {
       final result = await ModelMealPhotoInterpreter(
         _apiFor(selection),
+        // [fork] S208 photo-estimate-no-note: a food without grams is not
+        // asked for again, so the probe stays at aiProbeLegCount requests
+        // and its verdict, which counts items, is the same either way
+        askAgainForGrams: false,
+        // [/fork]
       ).interpret(photo, localeCode: localeCode);
       return _verdictFor(result.items.length, 'photo');
     } on MealInterpreterException catch (e) {
