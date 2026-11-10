@@ -2,6 +2,22 @@
 
 Written by fork/tools/release_notes.dart at each release (D16).
 
+## 0.10.0 · 2026-11-10
+
+Based on OpenNutriTracker 2.7.0.
+
+### New
+
+- photo foods land on the right rows, and Google Gemini is a choice in AI settings
+- a photo with no note gets estimated grams
+
+### Fixes and changes
+
+- chicken shashlik counted as skinless thigh
+- 14 features marked sent upstream (#1603–#1616)
+- the fork's features, marked fork only or upstream candidate
+- Home's Photo log follows the AI switch
+
 ## 0.9.1 · 2026-11-09
 
 Based on OpenNutriTracker 2.7.0.
