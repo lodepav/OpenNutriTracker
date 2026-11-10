@@ -7,6 +7,7 @@ import 'package:opennutritracker/features/add_meal/domain/entity/meal_nutriments
 import 'package:opennutritracker/features/add_meal/domain/meal_items_api.dart';
 import 'package:opennutritracker/features/add_meal/domain/meal_photo_interpreter.dart';
 import 'package:opennutritracker/features/add_meal/domain/usecase/resolve_parsed_meals_usecase.dart';
+import 'package:opennutritracker/features/add_meal/domain/usecase/search_products_usecase.dart';
 import 'package:opennutritracker/features/add_meal/util/meal_text_parser.dart';
 import 'package:opennutritracker/fork/dish/break_down_dish_usecase.dart';
 
@@ -45,19 +46,48 @@ class _Api implements MealItemsApi {
 }
 
 class _Resolver implements ResolveParsedMealsUseCase {
+  /// The flag the last call asked with.
+  bool? fromPhoto;
+
   @override
   Future<List<ResolvedMealItem>> resolve(
     List<ParsedMealItem> items, {
     bool fromPhoto = false,
-  }) async => [
-    for (final item in items)
-      ResolvedMealItem(
-        parsed: item,
-        candidates: const [],
-        selectedIndex: 0,
-        confidence: 0,
-      ),
-  ];
+  }) async {
+    this.fromPhoto = fromPhoto;
+    return [
+      for (final item in items)
+        ResolvedMealItem(
+          parsed: item,
+          candidates: const [],
+          selectedIndex: 0,
+          confidence: 0,
+        ),
+    ];
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+/// Open Food Facts' answer for every name, and nothing from the table.
+class _ProductsOnly implements SearchProductsUseCase {
+  final List<MealEntity> products;
+
+  _ProductsOnly(this.products);
+
+  @override
+  Future<SearchProductsResult> searchOFFProductsByString(
+    String searchString, {
+    bool skipRemote = false,
+  }) async => SearchProductsResult(meals: products, remoteSourceEmpty: false);
+
+  @override
+  Future<SearchProductsResult> searchFDCFoodByString(
+    String searchString, {
+    bool skipRemote = false,
+    bool forResolution = false,
+  }) async => SearchProductsResult(meals: const [], remoteSourceEmpty: true);
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
@@ -202,6 +232,56 @@ void main() {
       expect(useCase('khinkali'), throwsA(isA<MealInterpreterException>()));
     },
   );
+
+  test(
+    'the ingredients are looked up as a model\'s read, typed or not',
+    () async {
+      final resolver = _Resolver();
+      await BreakDownDishUseCase(
+        _Credentials(selection),
+        (_) => _Api(reply),
+        resolver,
+      )('khachapuri adjaruli');
+      expect(resolver.fromPhoto, isTrue);
+    },
+  );
+
+  test('an ingredient does not log another food\'s product', () async {
+    // "wheat berries, cooked" logged a whey protein on "whey" ≈ "wheat".
+    final whey = MealEntity(
+      code: 'whey',
+      name: 'Coffee Whey Protein',
+      brands: 'Brand',
+      url: null,
+      mealQuantity: null,
+      mealUnit: 'g',
+      servingQuantity: null,
+      servingUnit: 'g',
+      servingSize: null,
+      nutriments: MealNutrimentsEntity(
+        energyKcal100: 322,
+        carbohydrates100: 10,
+        fat100: 5,
+        proteins100: 70,
+        sugars100: 5,
+        saturatedFat100: 2,
+        fiber100: 1,
+      ),
+      source: MealSourceEntity.off,
+    );
+    final breakdown = await BreakDownDishUseCase(
+      _Credentials(selection),
+      (_) => _Api([
+        const ParsedMealItem(
+          query: 'wheat berries, cooked',
+          quantity: 150,
+          unit: 'g',
+        ),
+      ]),
+      ResolveParsedMealsUseCase(_ProductsOnly([whey])),
+    )('wheat berry salad');
+    expect(breakdown!.ingredients.single.selected, isNull);
+  });
 
   group('preferTableRow', () {
     MealEntity meal(String name, MealSourceEntity source) => MealEntity(

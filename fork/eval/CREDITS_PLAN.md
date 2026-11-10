@@ -598,33 +598,54 @@ kept unseen to the end. Read by `fresh_eval_test.dart`, with or without a
 - Cost: about $2.06 for the three rounds.
 
 Left, the wrong rows these reads found (query → row), for their own
-piece of work:
+piece of work (struck: fixed, with what fixed it; `wrong_rows_test.dart`):
 
-- "vegetable fritters" → Fritter, corn (404 kcal per 100 g)
-- "fried vegetables" and "fried vegetables, battered" → Fast foods,
-  potato, french fried
-- "vegetables, battered and fried" → Vegetables, mixed, canned (36 kcal)
-- "carrots, battered and fried" → Carrots, raw
-- "Carrots, raw, salad" → a row at 213 kcal per 100 g
-- "Zucchini fries" → a row at 0 kcal
-- "Grilled squid" → a row at 300 kcal per 100 g
-- "Chicken shashlik" → a row at 286 kcal per 100 g
-- "chicken sausage, grilled" → Sausage, Polish, beef with chicken
-- "chicken apple sausage" → a pork sausage
-- "pork, cooked, stir-fried" → Pork, cured, bacon (702 kcal at 150 g)
-- "pork, cured" → salt pork (for turkey bacon)
-- "fruit soup base" → Soup base, dry (357 kcal); a cream-based one →
-  Cream soup base (469 kcal)
-- "herbs, fresh, mixed" → Fresh wholemeal egg pasta with anchovy-herb
-  pesto
-- "eggs, scrambled with whole milk and butter" → Egg white omelet with
-  cheese
-- "wheat berries, cooked" → Coffee Whey Protein (322 kcal)
-- "sweet bell pepper, raw" → Roasted Red Bell Pepper Strips
-- "pizza crust, cheese, tomato sauce" → a stuffed-crust pizza; "tomato
-  sauce, pizza" → Pizza margherita
-- "dark leafy greens" → a beef-and-rice row; "roasted mushrooms" → a
-  mushroom pâté
+- ~~"vegetable fritters" → Fritter, corn (404 kcal per 100 g)~~ fritters
+  are a dish head, so the read breaks it down
+- ~~"fried vegetables" and "fried vegetables, battered" → Fast foods,
+  potato, french fried~~ what a row was fried in is not its food (Mixed
+  vegetables, fried); a coating is never dropped (broken down)
+- ~~"vegetables, battered and fried" → Vegetables, mixed, canned (36
+  kcal)~~ the coating is kept, so broken down
+- ~~"carrots, battered and fried" → Carrots, raw~~ the coating is kept:
+  Carrots, in frying batter, deep-fried
+- "Carrots, raw, salad" → a row at 213 kcal per 100 g (kept: the survey's
+  row of that name, a dressed carrot salad)
+- ~~"Zucchini fries" → a row at 0 kcal~~ fries are a dish head, and a
+  photo drops a product at 0 kcal
+- "Grilled squid" → a row at 300 kcal per 100 g (online only; the table
+  has no grilled squid and no rule tells the product apart)
+- "Chicken shashlik" → a row at 286 kcal per 100 g (the fork's own dish:
+  skin-on thigh, a quarter lost; `fork/data/dishes.json`)
+- ~~"chicken sausage, grilled" → Sausage, Polish, beef with chicken~~ a
+  row of a meat not named trails: Turkey or chicken sausage
+- ~~"chicken apple sausage" → a pork sausage~~ named: Turkey or chicken
+  sausage
+- ~~"pork, cooked, stir-fried" → Pork, cured, bacon (702 kcal at 150 g)~~
+  fried is a way of cooking a plain meat: Pork, NFS
+- ~~"pork, cured" → salt pork (for turkey bacon)~~ named: ham
+- ~~"fruit soup base" → Soup base, dry (357 kcal); a cream-based one →
+  Cream soup base (469 kcal)~~ a soup base is a soup, and a read with only
+  its mixes has none (broken down)
+- ~~"herbs, fresh, mixed" → Fresh wholemeal egg pasta with anchovy-herb
+  pesto~~ words after a comma make a head, so the pasta is served with
+  herbs; named: parsley
+- ~~"eggs, scrambled with whole milk and butter" → Egg white omelet with
+  cheese~~ what a food is made with is dropped before how it was made,
+  and egg whites are a variant: Egg, whole, cooked, scrambled
+- ~~"wheat berries, cooked" → Coffee Whey Protein (322 kcal)~~ named:
+  Wheat whole grain, boiled
+- ~~"sweet bell pepper, raw" → Roasted Red Bell Pepper Strips~~ named:
+  Peppers, sweet, red, raw
+- ~~"pizza crust, cheese, tomato sauce" → a stuffed-crust pizza; "tomato
+  sauce, pizza" → Pizza margherita~~ a stuffed crust is a variant; a
+  bracketed "(with" starts the sides; named: Sauce, pizza
+- ~~"dark leafy greens" → a beef-and-rice row; "roasted mushrooms" → a
+  mushroom pâté~~ "including"/"excluding" start the sides, and the search
+  goes on to "greens"; a photo drops a product of another kind (pâté,
+  soup, crisps, juice ...) the name does not ask for
+- ~~later rounds: "oil" → Oil, oat; "coleslaw salad" → Salad dressing,
+  coleslaw~~ named: Vegetable oil, NFS; Coleslaw
 
 ## What the tests measure
 

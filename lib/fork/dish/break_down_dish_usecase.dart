@@ -116,7 +116,11 @@ Rules:
             ),
       system: systemPrompt,
     );
-    final resolved = await _resolver.resolve(reply.items);
+    // The ingredients are the model's names, whether the dish was typed or
+    // photographed: a model's read, which a packet the name did not ask
+    // for or another food's product must not win (S196, S205). "wheat
+    // berries, cooked" logged a "Coffee Whey Protein".
+    final resolved = await _resolver.resolve(reply.items, fromPhoto: true);
     return DishBreakdown(dish, [
       for (final item in resolved) preferTableRow(item),
     ]);

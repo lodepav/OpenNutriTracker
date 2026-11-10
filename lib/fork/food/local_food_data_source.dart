@@ -13,6 +13,7 @@ import 'package:opennutritracker/features/add_meal/util/backend_title.dart';
 import 'package:opennutritracker/features/add_meal/util/soft_text_score.dart';
 import 'package:opennutritracker/fork/food/dish_serving.dart';
 import 'package:opennutritracker/fork/food/everyday_row.dart';
+import 'package:opennutritracker/fork/food/served_with.dart';
 import 'package:opennutritracker/fork/food/unasked_variant.dart';
 import 'package:opennutritracker/fork/food/unspecified_row.dart';
 
@@ -57,8 +58,22 @@ class LocalFoodDataSource extends SpFoodDataSource {
   }) async {
     final toggles = await _readToggles();
     final foods = await table;
-    List<SpFoodDTO> search(String query) =>
-        foods.search(query, isEnabled: (source) => toggles?[source] ?? true);
+    List<SpFoodDTO> search(String query) {
+      final found = foods.search(
+        query,
+        isEnabled: (source) => toggles?[source] ?? true,
+      );
+      // A row that is another food served with the one named is no match
+      // (S205), and the resolver would leave it out: the name goes on to
+      // its shorter forms. "dark leafy greens" found only beef-and-rice
+      // dishes "excluding ... dark-green leafy".
+      if (!forResolution) return found;
+      return [
+        for (final row in found)
+          if (!servedWithOnly(row.name, query)) row,
+      ];
+    }
+
     var query = searchString;
     var rows = search(query);
     // A model explains a name in brackets with words the row need not hold
@@ -78,8 +93,41 @@ class LocalFoodDataSource extends SpFoodDataSource {
     // may not use ("buckwheat groats, raw" against "Buckwheat groats"):
     // when nothing has every word, drop the qualifiers from the end. Only
     // for resolution; a person searching sees exactly what they typed.
+    // A last qualifier that is a way of cooking, then what the food is made
+    // with, drops the made-with first, so the way stays: "eggs, scrambled
+    // with whole milk and butter" is scrambled eggs, not raw ones. Only for
+    // rows that name the way as the food's own: "pasta, baked" found a
+    // pasta "with baked pumpkin". A coating is not dropped: "carrots,
+    // battered and fried" found raw carrots, a third of the energy, where
+    // nothing named is better, to be broken down (D9).
     while (forResolution && rows.isEmpty && query.contains(',')) {
-      query = query.substring(0, query.lastIndexOf(','));
+      final cut = query.lastIndexOf(',');
+      final last = query.substring(cut + 1);
+      final joint = _joiner.firstMatch(last);
+      final ways = joint == null
+          ? const <String>[]
+          : nameWords(last.substring(0, joint.start));
+      if (joint != null && ways.isNotEmpty) {
+        // "carrots, fried in batter" keeps its batter too
+        if (_coated.hasMatch(last.substring(joint.start))) break;
+        if (ways.every(_cookedWays.contains)) {
+          final made = query.substring(0, cut + 1 + joint.start);
+          final found = [
+            for (final row in search(made))
+              if (ways.every(
+                (w) => _coated.hasMatch(w) || holdsAsFood(row.name, w),
+              ))
+                row,
+          ];
+          if (found.isNotEmpty) {
+            query = made;
+            rows = found;
+            continue;
+          }
+        }
+      }
+      if (_coated.hasMatch(last)) break;
+      query = query.substring(0, cut);
       rows = search(query);
     }
     // Then a dish name with words the table does not use ("blueberry
@@ -324,6 +372,38 @@ Set<SpFoodDTO> listedAfter(List<SpFoodDTO> rows, String query) {
 
 final _joiner = RegExp(r'\s+(with|in|and|on|ar)\s+', caseSensitive: false);
 
+/// Words for how a food was cooked, which a last qualifier may hold
+/// before what it was made with.
+const _cookedWays = {
+  'scrambled',
+  'fried',
+  'stir',
+  'pan',
+  'deep',
+  'baked',
+  'roasted',
+  'grilled',
+  'boiled',
+  'steamed',
+  'poached',
+  'sauteed',
+  'sautéed',
+  'braised',
+  'stewed',
+  'smoked',
+  'toasted',
+  'cooked',
+  'battered',
+  'breaded',
+  'coated',
+};
+
+/// A coating, which a food's plain row does not have.
+final _coated = RegExp(
+  r'\b(batter|battered|breaded|tempura|crumbed|coated)\b',
+  caseSensitive: false,
+);
+
 /// A bracketed part of a name: "(chilled borscht)".
 final _bracketed = RegExp(r'\s*\([^)]*\)?');
 
@@ -413,6 +493,9 @@ const _dishHeads = {
   // potato, "curd snack" a berry bar
   'snack', 'snacks', 'sweets', 'sweet', 'candy', 'candies', 'bar', 'bars',
   'treat', 'treats', 'dessert', 'delight', 'cookies', 'biscuits', 'drink',
+  // a way of cooking a food, not one: "vegetable fritters" found a corn
+  // fritter at 404 kcal per 100 g, "zucchini fries" a fry sauce
+  'fritter', 'fritters', 'fries',
 };
 
 /// Whether [row] is named for [food] itself, its name starting with the
