@@ -33,6 +33,29 @@ ReviewMacros? rowMacros(BulkAddRow row) {
   );
 }
 
+/// The energy of each of [rows] that will be logged, as its row shows it.
+/// Summed with `EnergyDisplay.formatSumWithUnit` (#1469), so the meal's
+/// card, a dish's heading and the Log button add up the same figures.
+List<double> loggedKcals(Iterable<BulkAddRow> rows) => [
+  for (final row in rows)
+    if (row.willBeLogged) ?rowMacros(row)?.kcal,
+];
+
+/// How the review counts [rows], on the meal's card and a dish's heading
+/// alike: the foods that will be logged, and the ones nothing matched,
+/// which will not be until the user picks or quick-adds one. "8 foods · 1
+/// not matched"; a left-out food is neither, and a zero part is left out
+/// (C3).
+String foodCountText(Iterable<BulkAddRow> rows) {
+  final logged = rows.where((row) => row.willBeLogged).length;
+  final unmatched = rows.where((row) => !row.isResolved && !row.skipped);
+  return [
+    if (logged > 0 || unmatched.isEmpty)
+      '$logged ${logged == 1 ? 'food' : 'foods'}',
+    if (unmatched.isNotEmpty) '${unmatched.length} not matched',
+  ].join(' · ');
+}
+
 /// What the Log button will log, summed: the rows that will be logged.
 ReviewMacros mealMacros(Iterable<BulkAddRow> rows) {
   var (kcal, protein, carbs, fat) = (0.0, 0.0, 0.0, 0.0);

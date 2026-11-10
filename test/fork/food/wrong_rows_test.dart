@@ -39,8 +39,27 @@ MealEntity _product(String name, double kcal, {String brand = 'Brand'}) =>
       source: MealSourceEntity.off,
     );
 
+/// Snack products an emulator photo read logged for fried vegetables.
+final _vegetableSnacks = [
+  _product('Broccoli fries', 475, brand: "Trader Joe's"),
+  _product('Organic carrot fries', 358),
+];
+
+/// Names a model gives a plate's battered or fried vegetables.
+const _friedVegetables = [
+  'broccoli, battered, fried',
+  'broccoli, battered and fried',
+  'fried broccoli',
+  'broccoli fries',
+  'carrots, battered and fried',
+  'carrots, battered, fried',
+  'fried carrots',
+  'carrot fries',
+];
+
 /// The products Open Food Facts answers each query with.
 final _products = <String, List<MealEntity>>{
+  for (final query in _friedVegetables) query: _vegetableSnacks,
   'Zucchini fries': [_product('Zucchini Fries', 0)],
   'fruit soup base': [_product('Soup base, dry', 357)],
   'fruit soup base, cream-based': [_product('Soup Base', 188)],
@@ -107,11 +126,11 @@ void main() {
     'Zucchini fries': ('Zucchini Fries', null),
     'fried vegetables, battered': (
       'Fast foods, potato, french fried in vegetable oil',
-      null,
+      'Vegetable tempura',
     ),
     'vegetables, battered and fried': (
       'Vegetables, mixed, canned, solids and liquids',
-      null,
+      'Vegetable tempura',
     ),
     'carrots, battered and fried': (
       'Carrots, raw',
@@ -222,6 +241,24 @@ void main() {
     });
   }
 
+  for (final query in _friedVegetables) {
+    test('"$query" is no vegetable snack product', () async {
+      final food = await photo(query);
+      if (food == null) return;
+      expect(food.source, isNot(MealSourceEntity.off));
+      expect(food.nutriments.energyKcal100, lessThanOrEqualTo(300));
+    });
+  }
+
+  test('a coated vegetable with no row of its own is the battered '
+      'vegetables', () async {
+    expect(
+      (await photo('bell pepper, battered, fried'))?.name,
+      'Vegetable tempura',
+    );
+    expect((await photo('zucchini, breaded and fried'))?.name, isNotNull);
+  });
+
   test('"dark leafy greens" are greens, not a beef-and-rice dish', () async {
     expect((await photo('dark leafy greens'))!.name, startsWith('Greens'));
   });
@@ -262,6 +299,51 @@ void main() {
         isEmpty,
       );
     });
+
+    test('a vegetable product above a cooked vegetable\'s energy is a '
+        'snack', () {
+      final fries = _product('Broccoli fries', 475);
+      final frozen = _product('Broccoli florets', 35);
+      expect(withoutUnrelatedProducts([fries, frozen], 'broccoli'), [frozen]);
+      final oil = _product('Vegetable oil', 884);
+      expect(withoutUnrelatedProducts([oil], 'vegetable oil'), [oil]);
+    });
+
+    for (final (query, name) in [
+      ('carrot cake', 'Carrot cake'),
+      ('onion rings', 'Onion rings'),
+      ('pepper jack cheese', 'Pepper jack cheese'),
+      ('jelly beans', 'Jelly beans'),
+      ('coffee beans', 'Coffee beans'),
+      ('pumpkin seeds', 'Pumpkin seeds'),
+      ('pumpkin bread', 'Pumpkin bread'),
+      ('zucchini bread', 'Zucchini bread'),
+    ]) {
+      test('"$query" is no vegetable: its product above 300 kcal stays', () {
+        final product = _product(name, 400);
+        expect(withoutUnrelatedProducts([product], query), [product]);
+      });
+    }
+
+    for (final query in [
+      'broccoli, battered, fried',
+      'fried broccoli',
+      'carrot fries',
+      'carrots, battered and fried',
+      'green beans, fried',
+    ]) {
+      test('"$query" is a vegetable: its product above 300 kcal goes', () {
+        final name = query.contains('bean') ? 'Green beans' : 'Broccoli carrot';
+        expect(
+          withoutUnrelatedProducts([_product('$name fries', 400)], query),
+          isEmpty,
+        );
+        expect(
+          withoutUnrelatedProducts([_product('$name mix', 400)], query),
+          isEmpty,
+        );
+      });
+    }
 
     test('a product of another kind stays when the name asks for it', () {
       final soup = _product('Mushroom soup', 50);

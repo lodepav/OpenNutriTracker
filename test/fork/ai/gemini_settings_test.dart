@@ -5,6 +5,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -200,7 +201,11 @@ void main() {
     expect(find.text('Google Gemini API key'), findsOneWidget);
     expect(find.text('gemini-3.8-flash — Served by Google'), findsOneWidget);
     expect(
-      find.text(r'About 13 s and $0.006 a photo (Haiku 5.5: 1.6 s, $0.0005).'),
+      // Non-breaking spaces: "1.6 s" was split over two lines.
+      find.text(
+        'About 13\u00A0s and \$0.006 a photo (Haiku\u00A05.5: 1.6\u00A0s, '
+        '\$0.0005).',
+      ),
       findsOneWidget,
     );
     // One run on lab plates is no accuracy claim (D43).
@@ -212,6 +217,21 @@ void main() {
       expect(tile.groupValue, isNull);
     }
     expect(modelListRequests, isEmpty);
+  });
+
+  testWidgets('a screen reader hears the key field named once', (tester) async {
+    final semantics = tester.ensureSemantics();
+    await chooseGemini(tester);
+
+    final named = find.semantics
+        .byLabel(RegExp('Google Gemini API key'))
+        .evaluate();
+    expect(named, hasLength(1));
+    final data = named.single.getSemanticsData();
+    expect(data.label, 'Google Gemini API key');
+    expect(data.flagsCollection.isTextField, isTrue);
+    expect(data.identifier, 'ai-assist-key-field');
+    semantics.dispose();
   });
 
   testWidgets('the key setup states Google\'s terms', (tester) async {
@@ -229,8 +249,34 @@ void main() {
     expect(find.text(geminiReplacesOwnServer), findsNothing);
   });
 
-  testWidgets('the disclosure names Google', (tester) async {
+  testWidgets('the disclosure names Google, and opens on the key', (
+    tester,
+  ) async {
     await chooseGemini(tester);
+
+    final upstream = l10nEn.aiAssistDisclosureOwnServerGemini(_host);
+    expect(upstream, startsWith('With an address saved, '));
+    expect(
+      find.textContaining(
+        'With a key saved, the text you type on the multi-item add screen, '
+        "and any photo you choose to read there, is sent to Google's Gemini "
+        'API at $_host. This is not a server you run: Google receives it',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('With an address saved'), findsNothing);
+  });
+
+  testWidgets('a Gemini address typed under your own server keeps the '
+      'address wording', (tester) async {
+    await storage.setActiveProvider(AiProvider.ownServer);
+    await storage.writeOwnServerConfiguration(
+      endpoint: geminiPresetEndpoint,
+      model: 'gemini-3.1-pro',
+      provider: AiProvider.ownServer,
+    );
+    await tester.pumpWidget(app());
+    await tester.pumpAndSettle();
 
     expect(
       find.textContaining(l10nEn.aiAssistDisclosureOwnServerGemini(_host)),
@@ -549,5 +595,78 @@ void main() {
       ),
       l10nEn.aiAssistDisclosureOwnServerGemini(_host),
     );
+  });
+
+  group('at twice the font size on a 1080x2340, 420 dpi phone', () {
+    setUp(() {
+      final view =
+          TestWidgetsFlutterBinding.instance.platformDispatcher.views.first;
+      view.physicalSize = const Size(1080, 2340);
+      view.devicePixelRatio = 420 / 160;
+      TestWidgetsFlutterBinding
+              .instance
+              .platformDispatcher
+              .textScaleFactorTestValue =
+          2.0;
+    });
+    tearDown(() {
+      final view =
+          TestWidgetsFlutterBinding.instance.platformDispatcher.views.first;
+      view.resetPhysicalSize();
+      view.resetDevicePixelRatio();
+      TestWidgetsFlutterBinding.instance.platformDispatcher
+          .clearTextScaleFactorTestValue();
+    });
+
+    /// Each text under the key field, and whether it was cut short.
+    Map<String, bool> clipped(WidgetTester tester) => {
+      for (final p in tester.renderObjectList<RenderParagraph>(
+        find.descendant(of: keyField(), matching: find.byType(RichText)),
+      ))
+        p.text.toPlainText(): p.didExceedMaxLines,
+    };
+
+    Future<void> expectWhole(WidgetTester tester) async {
+      final texts = clipped(tester);
+      expect(texts.keys, contains(geminiKeyMissing));
+      expect(texts.values, everyElement(isFalse), reason: '$texts');
+      final label = tester.renderObject<RenderParagraph>(
+        find.text('Google Gemini API key'),
+      );
+      expect(label.didExceedMaxLines, isFalse);
+      expect(tester.takeException(), isNull);
+    }
+
+    testWidgets('the key label and its error are whole', (tester) async {
+      await chooseGemini(tester);
+      await tester.ensureVisible(ok());
+      await tester.tap(ok());
+      await tester.pumpAndSettle();
+
+      await expectWhole(tester);
+      // The error wraps rather than ending in an ellipsis.
+      final error = tester.renderObject<RenderParagraph>(
+        find.text(geminiKeyMissing),
+      );
+      expect(
+        error.size.width,
+        lessThan(error.getMaxIntrinsicWidth(double.infinity)),
+      );
+    });
+
+    testWidgets('and stay whole beside a server the user runs', (tester) async {
+      await storage.setActiveProvider(AiProvider.ownServer);
+      await storage.writeOwnServerConfiguration(
+        endpoint: _ollama,
+        model: 'gemma3:4b',
+        provider: AiProvider.ownServer,
+      );
+      await chooseGemini(tester);
+      await tester.ensureVisible(ok());
+      await tester.tap(ok());
+      await tester.pumpAndSettle();
+
+      await expectWhole(tester);
+    });
   });
 }

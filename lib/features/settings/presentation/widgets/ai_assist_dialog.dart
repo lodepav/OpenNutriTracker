@@ -1270,8 +1270,17 @@ class _AiAssistDialogState extends State<AiAssistDialog> {
                         ),
                       ),
                       const SizedBox(height: 8),
+                      // [fork] S209 gemini-preset: the label above the field,
+                      // where a large font can wrap it (A6)
+                      if (_forkGemini) const GeminiKeyLabel(),
+                      // [/fork]
                       Semantics(
                         identifier: 'ai-assist-key-field',
+                        // [fork] S209 gemini-preset: the field's name, while
+                        // its label is drawn above it
+                        label: _forkGemini ? geminiKeyFieldName(s) : null,
+                        textField: _forkGemini ? true : null,
+                        // [/fork]
                         child: TextField(
                           controller: _apiKeyController,
                           onChanged: _keyTyped,
@@ -1279,14 +1288,16 @@ class _AiAssistDialogState extends State<AiAssistDialog> {
                           enableSuggestions: false,
                           obscureText: true,
                           decoration: InputDecoration(
-                            labelText: s.aiAssistKeyFieldLabel(
-                              // [fork] S209 gemini-preset
-                              _forkGemini ? geminiChoiceLabel :
-                              // [/fork]
+                            labelText:
+                                // [fork] S209 gemini-preset: shown above
+                                _forkGemini ? null :
+                                // [/fork]
+                                s.aiAssistKeyFieldLabel(
                               _providerName(context, _provider),
                             ),
                             // [fork] S209 gemini-preset
                             errorText: _forkKeyError,
+                            errorMaxLines: 3,
                             // [/fork]
                             border: const OutlineInputBorder(),
                           ),
@@ -1364,7 +1375,10 @@ class _AiAssistDialogState extends State<AiAssistDialog> {
                     // which is the fact that changes — then the sentences that
                     // are true whichever provider is chosen.
                     Text(
-                      '${aiDisclosureFor(s, provider: _provider, typedEndpoint: _endpointController.text)}'
+                      // [fork] S209 gemini-preset: the row saves a key
+                      '${_forkGemini ? geminiKeyDisclosure(aiDisclosureFor(s, provider: _provider, typedEndpoint: _endpointController.text)) :
+                      // [/fork]
+                      aiDisclosureFor(s, provider: _provider, typedEndpoint: _endpointController.text)}'
                       '\n\n${s.aiAssistDisclosureCommon}',
                       style: theme.textTheme.bodySmall,
                     ),

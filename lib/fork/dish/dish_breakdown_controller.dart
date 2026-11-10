@@ -76,14 +76,17 @@ class DishBreakdownController extends ChangeNotifier {
   bool isPending(BulkAddRow row) => _pending.contains(row.resolved);
 
   /// Whether to offer "Break into ingredients" on [row]: a model is set up,
-  /// the row is not an ingredient already, and nothing matched or only
-  /// weakly. A confident match stays one food, a product included: a
-  /// "mozzarella" that found a mozzarella is not a dish.
+  /// and nothing matched or only weakly. A confident match stays one food,
+  /// a product included: a "mozzarella" that found a mozzarella is not a
+  /// dish. A food of a dish only when nothing matched it, and never an
+  /// ingredient a breakdown wrote: the dish keeps it, as its ingredients.
   bool canBreakDown(BulkAddRow row) =>
-      _modelReady &&
-      row.dishIngredient == null &&
-      !isPending(row) &&
-      (!row.isResolved || row.isLowConfidence);
+      _modelReady && !isPending(row) && _mayBreakDown(row);
+
+  static bool _mayBreakDown(BulkAddRow row) => switch (row.dishIngredient) {
+    null => !row.isResolved || row.isLowConfidence,
+    final item => !row.isResolved && !item.fromBreakdown,
+  };
 
   Future<DishBreakdownOutcome> breakDown(BulkAddRow row) async {
     final target = row.resolved;
@@ -93,7 +96,8 @@ class DishBreakdownController extends ChangeNotifier {
     try {
       final breakdown = await _breakDown(
         target.parsed.query,
-        amount: statedAmount(row),
+        // the weight the row shows, so the portion stays what it was
+        amount: breakdownAmount(row),
         // The photo a row was read off, so the grams fit the plate shown.
         photo: row.fromPhoto ? _photo() : null,
       );
@@ -131,7 +135,7 @@ class DishBreakdownController extends ChangeNotifier {
     if (state.source == BulkAddReadSource.parser) return;
     for (final row in state.rows) {
       if (!row.isResolved &&
-          row.dishIngredient == null &&
+          _mayBreakDown(row) &&
           !_tried.contains(row.resolved)) {
         breakDown(row);
       }

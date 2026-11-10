@@ -2,6 +2,7 @@ import 'package:opennutritracker/features/add_meal/domain/usecase/resolve_parsed
 import 'package:opennutritracker/features/add_meal/presentation/bloc/bulk_add_bloc.dart';
 import 'package:opennutritracker/features/add_meal/util/portion_unit.dart';
 import 'package:opennutritracker/features/add_meal/util/meal_text_parser.dart';
+import 'package:opennutritracker/features/meal_detail/util/meal_quantity_converter.dart';
 import 'package:opennutritracker/fork/dish/break_down_dish_usecase.dart';
 
 /// An ingredient row the model wrote for [dish] (D12). A subtype of
@@ -19,9 +20,15 @@ class DishIngredientItem extends ParsedMealItem {
   final int servings;
 
   /// The dish's weight as eaten, when a breakdown was asked for an amount
-  /// in grams: its ingredients are raw, so they need not add up to it. The
-  /// dish's portion is in these grams (D24).
+  /// in grams: its ingredients are raw, and a soup's leave its water out,
+  /// so they need not add up to it. The dish's portion is in these grams
+  /// (D24).
   final double? dishGrams;
+
+  /// Written by a breakdown, so an ingredient as bought: one nothing
+  /// matched is not broken down again. A read's food under its dish (a
+  /// weighed plate's) is not, and may be.
+  final bool fromBreakdown;
 
   const DishIngredientItem({
     required super.query,
@@ -31,6 +38,7 @@ class DishIngredientItem extends ParsedMealItem {
     required this.group,
     this.servings = 1,
     this.dishGrams,
+    this.fromBreakdown = false,
   });
 }
 
@@ -53,6 +61,26 @@ String? statedAmount(BulkAddRow row) {
   if (isPortionUnit(unit)) return '$text servings';
   if (unit == 'g/ml') return '$text g';
   return '$text $unit';
+}
+
+/// The grams or millilitres a matched [row] shows ("350 g", "1 × bowl ·
+/// 350 g"), which a breakdown keeps as the dish's portion: the user had
+/// that much before the breakdown and has it after. Null without a match
+/// (its amount is the app's default, never shown) or without an amount
+/// that will be logged.
+double? shownGrams(BulkAddRow row) {
+  final meal = row.meal;
+  if (meal == null || row.amountWouldBeWrong) return null;
+  final quantity = double.tryParse(row.amountText.trim().replaceAll(',', '.'));
+  if (quantity == null || quantity <= 0) return null;
+  return convertQuantityToBaseUnit(quantity, row.effectiveUnit, meal);
+}
+
+/// The amount a breakdown of [row] is asked for: the weight it shows, so
+/// the ingredients are weighed for it, else what was stated.
+String? breakdownAmount(BulkAddRow row) {
+  final grams = shownGrams(row);
+  return grams == null ? statedAmount(row) : '${_amountText(grams)} g';
 }
 
 /// The whole count [statedAmount] states, a bare count or "N servings",
@@ -94,8 +122,10 @@ class ReplaceRowWithBreakdownEvent extends BulkAddEvent {
 }
 
 /// The rows after [event]: the target row replaced by one row per
-/// ingredient, each at the model's grams. Unchanged when the row is gone
-/// (a new search replaced the batch) or the breakdown is empty.
+/// ingredient, each at the model's grams. A food of a dish is replaced
+/// inside that dish, its ingredients joining the dish's foods: the Diary
+/// holds a dish as one recipe, never a dish within one. Unchanged when the
+/// row is gone (a new search replaced the batch) or the breakdown is empty.
 BulkAddLoadedState replaceRowWithBreakdown(
   BulkAddLoadedState state,
   ReplaceRowWithBreakdownEvent event,
@@ -116,10 +146,17 @@ BulkAddLoadedState replaceRowWithBreakdown(
     return state;
   }
 
-  final group = Object();
-  final servings = statedCount(state.rows[index]) ?? 1;
-  final stated = statedAmount(state.rows[index]);
-  final dishGrams = stated != null && stated.endsWith(' g')
+  final parent = now.dishIngredient;
+  final group = parent?.group ?? Object();
+  final dish = parent?.dish ?? event.breakdown.dish;
+  final servings = parent?.servings ?? statedCount(now) ?? 1;
+  final stated = breakdownAmount(now);
+  // The model weighs raw ingredients for this, leaving a soup's water out,
+  // so they are kept as it gave them and the portion holds the weight: a
+  // borscht's 350 g stays 350 g, not its ingredients' 460.
+  final dishGrams = parent != null
+      ? parent.dishGrams
+      : stated != null && stated.endsWith(' g')
       ? double.tryParse(stated.substring(0, stated.length - 2))
       : null;
   final ingredients = [
@@ -130,10 +167,11 @@ BulkAddLoadedState replaceRowWithBreakdown(
             query: item.parsed.query,
             quantity: item.parsed.quantity,
             unit: item.parsed.unit,
-            dish: event.breakdown.dish,
+            dish: dish,
             group: group,
             servings: servings,
             dishGrams: dishGrams,
+            fromBreakdown: true,
           ),
           candidates: item.candidates,
           selectedIndex: item.selectedIndex,

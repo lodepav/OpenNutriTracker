@@ -18,6 +18,9 @@ import 'package:opennutritracker/fork/bulk/count_piece.dart';
 // [fork] S3 dish-breakdown: the ingredient-row swap (D12)
 import 'package:opennutritracker/fork/dish/dish_breakdown_rows.dart';
 // [/fork]
+// [fork] S210 shown-unit: a row stepped in the unit it is shown in
+import 'package:opennutritracker/fork/bulk/shown_unit.dart';
+// [/fork]
 // [fork] S98 default-amount: a sauce starts at a ladle, a drink at a glass,
 // a main dish at a plate
 import 'package:opennutritracker/fork/food/dish_serving.dart';
@@ -455,6 +458,14 @@ class BulkAddBloc extends Bloc<BulkAddEvent, BulkAddState> {
       final current = state;
       if (current is BulkAddLoadedState) {
         emit(replaceRowWithBreakdown(current, event));
+      }
+    });
+    // [/fork]
+    // [fork] S210 shown-unit: + and − in ounces leave the unit unchosen
+    on<SetRowInShownUnitEvent>((event, emit) {
+      final current = state;
+      if (current is BulkAddLoadedState) {
+        emit(setRowInShownUnit(current, event));
       }
     });
     // [/fork]

@@ -14,16 +14,19 @@ extension _BulkAddDish on _BulkAddScreenState {
     final group = heading.group;
     final folded = _foldedDishes.contains(group);
     final grams = dishPortion(state.rows, heading.members);
+    final imperial = state.usesImperialUnits;
     final controller = _portionControllers.putIfAbsent(
       group,
       () => TextEditingController(),
     );
-    // the rows' sum, except while the user is typing the portion
+    // the rows' sum, except while the user is typing the portion; in the
+    // unit it is shown in
     if (!_portionBase.containsKey(group)) {
-      final text = grams > 0 ? grams.round().toString() : '';
+      final text = grams > 0 ? _portionFieldText(grams, imperial) : '';
       if (controller.text != text) controller.text = text;
     }
     final dish = state.rows[heading.members.first].dishIngredient!.dish;
+    final members = [for (final i in heading.members) state.rows[i]];
     final title = Padding(
       padding: const EdgeInsets.fromLTRB(4, 8, 4, 0),
       child: Row(
@@ -54,11 +57,12 @@ extension _BulkAddDish on _BulkAddScreenState {
                   ),
                 ),
                 Text(
+                  // counted and summed as the meal's card is
                   DishStrings.dishSummary(
-                    heading.members.length,
-                    EnergyDisplay.formatWithUnit(
+                    foodCountText(members),
+                    EnergyDisplay.formatSumWithUnit(
                       context,
-                      dishKcal(state.rows, heading.members),
+                      loggedKcals(members),
                     ),
                   ),
                   style: theme.textTheme.bodySmall?.copyWith(
@@ -123,9 +127,13 @@ extension _BulkAddDish on _BulkAddScreenState {
                   children: [
                     Flexible(
                       child: Text(
-                        grams > 0
-                            ? '${DishStrings.portion} ${grams.round()} g'
-                            : DishStrings.portion,
+                        grams <= 0
+                            ? DishStrings.portion
+                            // as the Diary will show the logged dish
+                            : imperial
+                            ? '${DishStrings.portion} '
+                                  '${dishPortionText(grams, true)}'
+                            : '${DishStrings.portion} ${grams.round()} g',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -162,12 +170,22 @@ extension _BulkAddDish on _BulkAddScreenState {
     );
   }
 
-  /// The dish's portion moved by 10 g, or 25 g from 200 g, its foods
-  /// scaled with it.
+  /// The dish's portion moved by 10 g, or 25 g from 200 g (an ounce in
+  /// imperial units), its foods scaled with it.
   void _stepDish(Object group, double grams, {required bool up}) {
-    final next = steppedAmount(grams, grams < 200 ? 10 : 25, up: up);
-    _scaleDish(group, amountText(next));
+    final state = _bloc.state;
+    final imperial = state is BulkAddLoadedState && state.usesImperialUnits;
+    final shown = double.parse(_portionFieldText(grams, imperial));
+    final step = imperial ? 1.0 : (grams < 200 ? 10.0 : 25.0);
+    _scaleDish(group, amountText(steppedAmount(shown, step, up: up)));
     _endPortionEdit(group);
+  }
+
+  /// [grams] as the portion's field holds it: whole grams, or ounces to a
+  /// tenth in imperial units.
+  String _portionFieldText(double grams, bool imperial) {
+    if (!imperial) return grams.round().toString();
+    return amountText((grams * dishPortionUnit(true).factor * 10).round() / 10);
   }
 
   /// The dish's portion typed, in a sheet: each figure scales its foods as
@@ -176,6 +194,8 @@ extension _BulkAddDish on _BulkAddScreenState {
     Object group,
     TextEditingController controller,
   ) async {
+    final state = _bloc.state;
+    final imperial = state is BulkAddLoadedState && state.usesImperialUnits;
     controller.selection = TextSelection(
       baseOffset: 0,
       extentOffset: controller.text.length,
@@ -208,10 +228,10 @@ extension _BulkAddDish on _BulkAddScreenState {
               inputFormatters: [
                 FilteringTextInputFormatter.allow(bulkAddQuantityPattern),
               ],
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: DishStrings.portion,
-                suffixText: 'g',
-                border: OutlineInputBorder(),
+                suffixText: imperial ? S.of(context).ozUnit : 'g',
+                border: const OutlineInputBorder(),
               ),
               onChanged: (value) => _scaleDish(group, value),
             ),
@@ -229,7 +249,7 @@ extension _BulkAddDish on _BulkAddScreenState {
   }
 
   /// Sets each of the dish's rows to its share of a portion of [text]
-  /// grams.
+  /// grams, or ounces in imperial units.
   void _scaleDish(Object group, String text) {
     final state = _bloc.state;
     if (state is! BulkAddLoadedState) return;
@@ -237,8 +257,11 @@ extension _BulkAddDish on _BulkAddScreenState {
       group,
       () => portionBase(state.rows, dishMembers(state.rows, group)),
     );
-    final grams = double.tryParse(text.trim().replaceAll(',', '.'));
-    if (grams == null || grams <= 0) return;
+    final typed = double.tryParse(text.trim().replaceAll(',', '.'));
+    if (typed == null || typed <= 0) return;
+    final grams = state.usesImperialUnits
+        ? typed / dishPortionUnit(true).factor
+        : typed;
     final amounts = scaledAmounts(state.rows, base, grams);
     if (amounts == null) return;
     for (final MapEntry(:key, :value) in amounts.entries) {

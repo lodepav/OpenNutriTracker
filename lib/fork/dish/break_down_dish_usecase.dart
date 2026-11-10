@@ -70,7 +70,8 @@ Rules:
   for it. A bare count is pieces, or servings of a dish not eaten in
   pieces.
 - With a photo, break down only the named dish, sized to the portion the
-  photo shows; leave out the other foods on the plate.
+  photo shows unless an amount is given; leave out the other foods on the
+  plate.
 - A drink is not broken down: kvass, juice, a soft drink, beer, wine,
   coffee, tea, milk, a smoothie or a shake. Return an empty list for it.
   A soup is a dish, a cold one too.

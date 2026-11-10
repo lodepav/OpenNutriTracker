@@ -17,8 +17,9 @@ abstract final class DishStrings {
   static const portion = 'Portion';
   static const showFoods = 'Show the foods';
   static const hideFoods = 'Hide the foods';
-  static String dishSummary(int foods, String energy) =>
-      '$foods ${foods == 1 ? 'food' : 'foods'} · $energy';
+
+  /// [foods] is the review's count of the dish's rows (`foodCountText`).
+  static String dishSummary(String foods, String energy) => '$foods · $energy';
   static const nothingToSave = 'No ingredient row is ready to save.';
   static const saveAllAsRecipe = 'Save all as a recipe';
   static const typedRecipeDescription =

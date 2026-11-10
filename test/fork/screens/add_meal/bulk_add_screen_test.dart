@@ -1895,6 +1895,8 @@ void main() {
       double rice = 150,
       double? eaten,
       List<ParsedMealItem> above = const [],
+      List<ParsedMealItem> alsoInDish = const [],
+      bool imperial = false,
     }) async {
       // the heading, both rows and the dish's actions on one screen
       tester.view.physicalSize = const Size(800, 2000);
@@ -1907,18 +1909,19 @@ void main() {
               ...above,
               item('chicken', chicken, eaten),
               item('rice', rice, eaten),
+              ...alsoInDish,
             ],
             errors: const [],
           ),
         ),
         results: {
           'soup': [_meal('Soup')],
-          'chicken': [_meal('Chicken')],
-          'rice': [_meal('Rice')],
+          'chicken': [_meal('Chicken', mealUnit: 'g')],
+          'rice': [_meal('Rice', mealUnit: 'g')],
         },
       );
       dishBloc = bloc;
-      await tester.pumpWidget(_app());
+      await tester.pumpWidget(_app(imperial: imperial));
       tester.state<NavigatorState>(find.byType(Navigator)).pushNamed('/bulk');
       await tester.pumpAndSettle();
       bloc.add(
@@ -1927,7 +1930,7 @@ void main() {
             bytes: Uint8List.fromList([1, 2, 3]),
             mediaType: 'image/webp',
           ),
-          usesImperialUnits: false,
+          usesImperialUnits: imperial,
         ),
       );
       await tester.pumpAndSettle();
@@ -2072,6 +2075,68 @@ void main() {
       ]);
     });
 
+    testWidgets('its heading counts and sums as the meal\'s card does: what '
+        'will be logged, and what nothing matched', (tester) async {
+      // 80.4 and 14.4 kcal show as 80 and 14: 94, where the exact sum
+      // rounds to 95
+      await readDish(
+        tester,
+        chicken: 80.4,
+        rice: 14.4,
+        alsoInDish: [item('pepper', 50, null)],
+      );
+      expect(find.text('This meal · 2 foods · 1 not matched'), findsOneWidget);
+      expect(find.byKey(const ValueKey('bulk-add-meal-kcal')), findsOneWidget);
+      expect(find.text('94 kcal'), findsOneWidget);
+      expect(find.text('2 foods · 1 not matched · 94 kcal'), findsOneWidget);
+    });
+
+    testWidgets('in imperial units its amounts read as the Diary\'s, and '
+        'what is typed is in them', (tester) async {
+      await readDish(tester, imperial: true);
+      // 200 g, 150 g and 350 g, as the Diary shows them once logged
+      expect(find.text('7.1 oz'), findsOneWidget);
+      expect(find.text('5.3 oz'), findsOneWidget);
+      expect(find.text('${DishStrings.portion} 12.3 oz'), findsOneWidget);
+
+      // + moves an ounce
+      await tester.tap(find.byKey(const ValueKey('bulk-add-more-0')));
+      await tester.pumpAndSettle();
+      expect(find.text('8 oz'), findsOneWidget);
+
+      // the sheet opens in ounces, and the number typed is ounces
+      await tester.tap(find.byKey(const ValueKey('bulk-add-unit-1')));
+      await tester.pumpAndSettle();
+      final field = tester.widget<TextField>(
+        find.byKey(const ValueKey('amount-field')),
+      );
+      expect(field.controller!.text, '5.3');
+      await tester.enterText(find.byKey(const ValueKey('amount-field')), '6');
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('bulk-add-amount-done')));
+      await tester.pumpAndSettle();
+      expect(find.text('6 oz'), findsOneWidget);
+      expect(find.text('${DishStrings.portion} 14 oz'), findsOneWidget);
+
+      // the portion is typed in ounces too
+      await tester.tap(portion().last);
+      await tester.pumpAndSettle();
+      await tester.enterText(portionField(), '7');
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(const ValueKey('bulk-add-dish-portion-done')),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('4 oz'), findsOneWidget);
+      expect(find.text('3 oz'), findsOneWidget);
+
+      await tester.tap(_submitButton());
+      await tester.pumpAndSettle();
+      final write = _mealDetailBloc.writes.single;
+      expect(write.mealName, 'Chicken bowl');
+      expect(double.parse(write.amount), closeTo(7 * 28.3495, 0.01));
+    });
+
     testWidgets('folded, its foods are hidden and still logged', (
       tester,
     ) async {
@@ -2083,6 +2148,55 @@ void main() {
       await tester.tap(_submitButton());
       await tester.pumpAndSettle();
       expect(_mealDetailBloc.writes.map((w) => '$w'), ['Chicken bowl 350.0 g']);
+    });
+  });
+
+  group('in imperial units', () {
+    testWidgets('+ on a row with no amount steps it to an ounce', (
+      tester,
+    ) async {
+      await _register({
+        'steak': [_meal('Steak', mealUnit: 'g')],
+      });
+      await tester.pumpWidget(_app(imperial: true));
+      await _parse(tester, '200g steak');
+      expect(find.text('7.1 oz'), findsOneWidget);
+
+      await _typeRowAmount(tester, 0, '');
+      await tester.tap(find.byKey(const ValueKey('bulk-add-more-0')));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      expect(find.text('1 oz'), findsOneWidget);
+    });
+
+    testWidgets('a step in ounces leaves "check the unit" asking, as in '
+        'grams', (tester) async {
+      // "2 eggs" on a food with no serving weight: 2 g, which needs a look
+      await _register({
+        'eggs': [_meal('Egg', mealUnit: 'g', servingSize: '1 egg')],
+      });
+      final l10n = await S.delegate.load(const Locale('en'));
+      for (final imperial in [false, true]) {
+        await tester.pumpWidget(_app(imperial: imperial));
+        await _parse(tester, '2 eggs');
+        expect(find.text(l10n.bulkAddCheckAmountLabel), findsOneWidget);
+        await tester.tap(find.byKey(const ValueKey('bulk-add-more-0')));
+        await tester.pumpAndSettle();
+        expect(find.text(imperial ? '1 oz' : '10 g'), findsOneWidget);
+        expect(
+          find.text(l10n.bulkAddCheckAmountLabel),
+          findsOneWidget,
+          reason: imperial ? 'imperial' : 'metric',
+        );
+        // typed in the sheet, the same
+        await _typeRowAmount(tester, 0, '3');
+        expect(
+          find.text(l10n.bulkAddCheckAmountLabel),
+          findsOneWidget,
+          reason: imperial ? 'imperial' : 'metric',
+        );
+        await tester.pumpWidget(const SizedBox());
+      }
     });
   });
 

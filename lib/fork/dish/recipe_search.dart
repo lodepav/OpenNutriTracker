@@ -8,39 +8,11 @@ import 'package:opennutritracker/fork/food/local_food_data_source.dart';
 /// match misses.
 ///
 /// Used beside upstream's match, never instead of it, so a half-typed word
-/// ("khach") still finds the recipe.
+/// ("khach") still finds the recipe. Both folded to plain letters, so
+/// "sklandu rausi" typed on an English keyboard finds "Sklandu rauši".
 bool nameHasQueryWords(String? name, String query) {
-  final queryWords = tokenize(_fold(query)).map(spelling);
+  final queryWords = tokenize(foldLetters(query)).map(spelling);
   if (queryWords.isEmpty) return false;
-  final nameWords = tokenize(_fold(name ?? '')).map(spelling);
+  final nameWords = tokenize(foldLetters(name ?? '')).map(spelling);
   return queryWords.every((q) => nameWords.any((t) => wordsAgree(q, t)));
 }
-
-const _plain = {
-  'ā': 'a',
-  'č': 'c',
-  'ē': 'e',
-  'ģ': 'g',
-  'ī': 'i',
-  'ķ': 'k',
-  'ļ': 'l',
-  'ņ': 'n',
-  'š': 's',
-  'ū': 'u',
-  'ž': 'z',
-  'ä': 'a',
-  'ö': 'o',
-  'ü': 'u',
-  'õ': 'o',
-  'ą': 'a',
-  'ę': 'e',
-  'ė': 'e',
-  'į': 'i',
-  'ų': 'u',
-  'ł': 'l',
-};
-
-/// Latvian and neighbouring letters to plain ones, so "sklandu rausi"
-/// typed on an English keyboard finds "Sklandu rauši".
-String _fold(String text) =>
-    text.toLowerCase().split('').map((c) => _plain[c] ?? c).join();
