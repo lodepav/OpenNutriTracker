@@ -24,6 +24,9 @@ String? everydayRowName(String query) {
     if (_byWords['${m[2]} ${m[1]}'] case final name?) return name;
   }
   if (_plainMeat.firstMatch(key) case final m?) {
+    // a chop the table has fried as such: "pork chop, pan-fried" is the
+    // pan-fried chop, not one of any cooking
+    if (m[1] == 'pork chop' && _fried.hasMatch(key)) return null;
     return _meats[m[1]! + (m[2] == null ? '' : ' ground')];
   }
   return null;
@@ -45,14 +48,16 @@ final _byWords = {
 /// product to those words, and the shortest one picked was the odd one:
 /// "beef, cooked" logged beef bacon at 449 kcal per 100 g in a stuffed
 /// pepper and a solyanka, "pork, cooked, roasted" fatty backribs, "pork
-/// chop" a stuffed one. The generic row is the meat as a dish
-/// holds it.
+/// chop" a stuffed one, "pork, cooked, stir-fried" pan-fried bacon. The
+/// generic row is the meat as a dish holds it.
 final _plainMeat = RegExp(
-  r'^(?:(?:cooked|roasted|boiled|stewed|braised|sliced|grilled|baked)[ ,]+)*'
+  r'^(?:(?:cooked|roasted|boiled|stewed|braised|sliced|grilled|baked|'
+  r'fried|stir[- ]fried|pan[- ]fried|saut[eé]ed)[ ,]+)*'
   r'(beef|pork chop|pork|lamb|turkey)s?'
   r'(?:,? (ground|minced|mince))?'
   r'(?:(?:,\s*| )(?:cooked|roasted|boiled|stewed|braised|sliced|grilled|'
-  r'baked|pan-browned|simmered|meat|lean))*$',
+  r'baked|pan-browned|simmered|meat|lean|fried|stir[- ]fried|pan[- ]fried|'
+  r'saut[eé]ed))*$',
 );
 
 const _meats = {
@@ -66,6 +71,7 @@ const _meats = {
 };
 
 final _boiled = RegExp(r'\bboiled\b');
+final _fried = RegExp(r'\bfried\b|saut[eé]ed');
 
 /// "cooked spaghetti": a state word, then the food.
 final _stateFirst = RegExp(r'^(cooked|fried|grilled|baked|roasted) (.+)$');
@@ -346,6 +352,46 @@ const _everyday = {
   // no row names a baguette
   'baguette': _baguette,
   'toasted baguette': _toastedBaguette,
+  // The shortest of each family, which a search for the family found:
+  // salt pork at 748 kcal per 100 g, oat oil, a pasta with herb pesto.
+  'pork, cured': _ham,
+  'cured pork': _ham,
+  'oil': _vegetableOil,
+  'cooking oil': _vegetableOil,
+  'herbs, fresh, mixed': _parsley,
+  'herbs, fresh': _parsley,
+  'fresh herbs': _parsley,
+  'mixed herbs': _parsley,
+  'mixed fresh herbs': _parsley,
+  'fresh mixed herbs': _parsley,
+  // chamomile tea, by "herb"
+  'herbs': _parsley,
+  'herbs, garnish': _parsley,
+  'herbs, fresh, garnish': _parsley,
+  'fresh herbs, garnish': _parsley,
+  'herb garnish': _parsley,
+  // no row names wheat berries; Open Food Facts found a whey protein
+  'wheat berries': _wheatBerries,
+  'wheat berries, cooked': _wheatBerries,
+  'wheat berries, boiled': _wheatBerries,
+  'cooked wheat berries': _wheatBerries,
+  // the table's bell peppers are "sweet" or "bell", never both: nothing
+  // was found, and online a jar of roasted strips
+  'sweet bell pepper': _redPepper,
+  'sweet bell pepper, raw': _redPepper,
+  'sweet bell peppers': _redPepper,
+  'sweet bell peppers, raw': _redPepper,
+  'bell pepper, sweet, raw': _redPepper,
+  // a pizza margherita, made with tomato sauce
+  'tomato sauce, pizza': _pizzaSauce,
+  'pizza sauce': _pizzaSauce,
+  'sauce, pizza': _pizzaSauce,
+  // a coleslaw dressing, which holds both words; "Sausage, NFS" for a
+  // chicken one
+  'coleslaw salad': 'Coleslaw',
+  'salad, coleslaw': 'Coleslaw',
+  'chicken apple sausage': _chickenSausage,
+  'chicken and apple sausage': _chickenSausage,
 };
 
 const _cheesePizza =
@@ -416,3 +462,9 @@ const _prosciutto = 'Ham, prosciutto';
 const _schnitzel = 'Pork schnitzel breaded, fried';
 const _cookedRiceNoodles = 'Rice noodles, cooked';
 const _cookedSnowPeas = 'Snowpeas, fresh, cooked, no added fat';
+const _ham = 'Ham, sliced, regular (approximately 11% fat)';
+const _vegetableOil = 'Vegetable oil, NFS';
+const _wheatBerries = 'Wheat whole grain, boiled';
+const _redPepper = 'Peppers, sweet, red, raw';
+const _pizzaSauce = 'Sauce, pizza, canned, ready-to-serve';
+const _chickenSausage = 'Turkey or chicken sausage';

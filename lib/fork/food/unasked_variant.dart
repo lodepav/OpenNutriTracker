@@ -17,13 +17,14 @@ const unaskedVariantPenalty = 0.3;
 /// ones at three times the energy, "salmon, baked" salmon in puff pastry and
 /// "spaghetti, cooked" a spinach one; glutinous rice, which "rice, white,
 /// cooked" found at three quarters of white rice's energy; a pasta
-/// fortified with protein. Not "unprepared":
+/// fortified with protein; the whites alone, which "eggs, scrambled with
+/// whole milk and butter" found with cheese and meat. Not "unprepared":
 /// USDA's word for a food as sold, the raw row a recipe ingredient wants
 /// ("Pork, cured, bacon, unprepared").
 final _variantWords = RegExp(
   r'\b(meatless|no meat|without meat|vegan|vegetarian|imitation|substitute|'
   r'baby ?food|toddler|infant|canadian|glazed|in puff pastry|spinach|'
-  r'glutinous|protein-fortified)\b',
+  r'glutinous|protein-fortified|egg whites?)\b',
   caseSensitive: false,
 );
 
@@ -120,10 +121,50 @@ final _comesWith = RegExp(
   caseSensitive: false,
 );
 
+final _glutenFree = RegExp(r'\bgluten[- ]free\b', caseSensitive: false);
+
+/// A pizza with cheese baked into its rim: "pizza crust, cheese, tomato
+/// sauce" logged one.
+final _stuffedCrust = RegExp(r'\bstuffed crust\b', caseSensitive: false);
+
+/// Meats a row may be of. A row of one the query does not name, where it
+/// names another, is that other meat's food: "chicken sausage, grilled"
+/// logged "Sausage, Polish, beef with chicken, hot". Not one offered in its
+/// place ("Turkey or chicken sausage").
+const _meats = [
+  'beef',
+  'pork',
+  'chicken',
+  'turkey',
+  'lamb',
+  'veal',
+  'mutton',
+  'duck',
+];
+
+bool _otherMeat(String row, String asked) {
+  bool holds(String text, String meat) =>
+      RegExp('\\b${meat}s?\\b').hasMatch(text);
+  final named = [
+    for (final meat in _meats)
+      if (holds(asked, meat)) meat,
+  ];
+  if (named.isEmpty) return false;
+  final name = row.toLowerCase();
+  for (final meat in _meats) {
+    if (named.contains(meat) || !holds(name, meat)) continue;
+    final instead = named.any(
+      (n) => RegExp('\\b($meat or $n|$n or $meat)\\b').hasMatch(name),
+    );
+    if (!instead) return true;
+  }
+  return false;
+}
+
 /// [unaskedVariantPenalty] when [name] carries one of the variant words, or
-/// is only a skin, pickled, lighter, dry, a sauce of the food or made with
-/// turkey, and [query] does not say so, or lacks a food [query] names; else
-/// 0.
+/// is only a skin, pickled, lighter, dry, a sauce of the food, made with
+/// turkey or a stuffed crust, and [query] does not say so, or lacks a food
+/// [query] names or is of a meat it does not name; else 0.
 double unaskedVariant(String? name, String query) {
   final asked = query.toLowerCase();
   final row = name ?? '';
@@ -155,6 +196,14 @@ double unaskedVariant(String? name, String query) {
     return unaskedVariantPenalty;
   }
   if (_turkeyAfterTitle.hasMatch(row) && !asked.contains('turkey')) {
+    return unaskedVariantPenalty;
+  }
+  if (_stuffedCrust.hasMatch(row) && !asked.contains('stuffed')) {
+    return unaskedVariantPenalty;
+  }
+  if (_otherMeat(row, asked)) return unaskedVariantPenalty;
+  // "bread, whole grain with seeds, roll" logged a gluten-free tapioca bread
+  if (_glutenFree.hasMatch(row) && !asked.contains('gluten')) {
     return unaskedVariantPenalty;
   }
   for (final lack in _lacks.allMatches(row)) {

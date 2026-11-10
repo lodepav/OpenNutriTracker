@@ -2,15 +2,18 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:opennutritracker/core/domain/entity/tracked_day_entity.dart';
 import 'package:opennutritracker/core/domain/entity/weight_log_entity.dart';
 import 'package:opennutritracker/core/utils/ai_credential_storage.dart';
+import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/features/add_meal/domain/meal_items_api.dart';
 import 'package:opennutritracker/features/add_meal/domain/meal_photo_interpreter.dart';
 import 'package:opennutritracker/features/add_meal/util/meal_text_parser.dart';
 import 'package:opennutritracker/fork/body/measurement_store.dart';
 import 'package:opennutritracker/fork/photos/body_compare.dart';
+import 'package:opennutritracker/fork/photos/body_compare_sheet.dart';
 import 'package:opennutritracker/fork/photos/photo_card.dart';
 import 'package:opennutritracker/fork/photos/photo_store.dart';
 
@@ -342,4 +345,129 @@ void main() {
       expect(find.text("Couldn't compare the photos. Try again."), findsOne);
     });
   });
+
+  group('who the confirmation names', () {
+    const google =
+        'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
+
+    test('Google for the own server at Google\'s address', () {
+      expect(aiDestination(AiProvider.ownServer, endpoint: google), 'Google');
+      expect(
+        aiDestination(
+          AiProvider.ownServer,
+          endpoint: 'http://192.168.1.5:11434/v1/chat/completions',
+        ),
+        'your own server',
+      );
+      expect(aiDestination(AiProvider.ownServer), 'your own server');
+      expect(
+        aiDestination(AiProvider.anthropic, endpoint: google),
+        'Anthropic',
+      );
+    });
+
+    testWidgets('the dialog says the photos go to Google', (tester) async {
+      late Future<bool> sent;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Builder(
+            builder: (context) => TextButton(
+              onPressed: () => sent = confirmBodyCompare(
+                context,
+                provider: AiProvider.ownServer,
+                endpoint: google,
+                earlier: BodyDay(date: DateTime(2026, 9, 1)),
+                later: BodyDay(date: DateTime(2026, 10, 1)),
+              ),
+              child: const Text('ask'),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('ask'));
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('these figures to Google.'), findsOne);
+      expect(find.textContaining('your own server'), findsNothing);
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+      expect(await sent, isFalse);
+    });
+
+    testWidgets('with no address given, the stored one decides', (
+      tester,
+    ) async {
+      final storage = AiCredentialStorage(_MapStorage());
+      await tester.runAsync(
+        () => storage.writeOwnServerConfiguration(
+          endpoint: google,
+          model: 'gemini-3.8-flash',
+          provider: AiProvider.ownServer,
+        ),
+      );
+      locator.registerSingleton<AiCredentialStorage>(storage);
+      addTearDown(() => locator.unregister<AiCredentialStorage>());
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Builder(
+            builder: (context) => TextButton(
+              onPressed: () => confirmBodyCompare(
+                context,
+                provider: AiProvider.ownServer,
+                earlier: BodyDay(date: DateTime(2026, 9, 1)),
+                later: BodyDay(date: DateTime(2026, 10, 1)),
+              ),
+              child: const Text('ask'),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('ask'));
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('these figures to Google.'), findsOne);
+    });
+  });
+}
+
+class _MapStorage implements FlutterSecureStorage {
+  final store = <String, String>{};
+
+  @override
+  Future<String?> read({
+    required String key,
+    AppleOptions? iOptions,
+    AndroidOptions? aOptions,
+    LinuxOptions? lOptions,
+    WebOptions? webOptions,
+    AppleOptions? mOptions,
+    WindowsOptions? wOptions,
+  }) async => store[key];
+
+  @override
+  Future<void> write({
+    required String key,
+    required String? value,
+    AppleOptions? iOptions,
+    AndroidOptions? aOptions,
+    LinuxOptions? lOptions,
+    WebOptions? webOptions,
+    AppleOptions? mOptions,
+    WindowsOptions? wOptions,
+  }) async => value == null ? store.remove(key) : store[key] = value;
+
+  @override
+  Future<void> delete({
+    required String key,
+    AppleOptions? iOptions,
+    AndroidOptions? aOptions,
+    LinuxOptions? lOptions,
+    WebOptions? webOptions,
+    AppleOptions? mOptions,
+    WindowsOptions? wOptions,
+  }) async => store.remove(key);
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }

@@ -57,20 +57,34 @@ const _describes = {
 /// The food [query] names: the last word before its first comma or joint
 /// that is not how it was made ("melted butter" → butter, "pork with
 /// vegetables" → pork). Null for a one-word query, which has no other word
-/// to have matched on, unless [oneWord].
+/// to have matched on, unless [oneWord]. Words after a comma count as
+/// others: "herbs, fresh, mixed" found a pasta "with anchovy-herb pesto".
 String? headNoun(String query, {bool oneWord = false}) {
   final words = nameWords(query.split(',').first);
-  if (words.length < (oneWord ? 1 : 2)) return null;
+  if (words.isEmpty || nameWords(query).length < (oneWord ? 1 : 2)) {
+    return null;
+  }
   final head = words.takeWhile((w) => !_joints.contains(w)).toList();
   final food = head.where((w) => !_howMade.contains(w));
   return food.isEmpty ? null : spelling(food.last);
 }
 
-/// [name] split at its first " with ": the food, then what is served with
-/// it. The food keeps the name's brackets, where a fork dish keeps its
+/// Where a row's name turns from its food to what comes with it: "with",
+/// also bracketed ("Pizza margherita (with tomato sauce, mozzarella)"), what
+/// it was cooked in ("potato, french fried in vegetable oil" found "fried
+/// vegetables"), and a survey dish's "including" or "excluding" ("Beef,
+/// rice, and vegetables excluding ... dark-green leafy" found "dark leafy
+/// greens"). Some BLS names kept the German "mit".
+final _sidesStart = RegExp(
+  r',?\s+\(?(with|mit|in|including|excluding)\s+',
+  caseSensitive: false,
+);
+
+/// [name] split at its first [_sidesStart]: the food, then what is served
+/// with it. The food keeps the name's brackets, where a fork dish keeps its
 /// other names.
 (String, String) _foodAndSides(String name) {
-  final at = RegExp(r',?\s+with\s+', caseSensitive: false).firstMatch(name);
+  final at = _sidesStart.firstMatch(name);
   if (at == null) return (name, '');
   final rest = name.substring(at.end);
   final bracket = rest.indexOf('(');
@@ -99,6 +113,19 @@ List<MealEntity> withoutServedWith(List<MealEntity> ranked, String query) {
       if (!_onlyServedWith(meal.name ?? '', head)) meal,
   ];
 }
+
+/// Whether [name] is another food served with the one [query] names, as
+/// [withoutServedWith] leaves out. The table's search asks it too, so a
+/// name whose only rows are such goes on to its shorter forms.
+bool servedWithOnly(String? name, String query) {
+  final head = headNoun(query);
+  return head != null && _onlyServedWith(name ?? '', head);
+}
+
+/// Whether [name] holds [word] in its food, not only in what comes with
+/// it: "Fresh egg pasta, with baked pumpkin" is not baked.
+bool holdsAsFood(String? name, String word) =>
+    _holdsAsFood(_foodAndSides(name ?? '').$1, spelling(word));
 
 bool _onlyServedWith(String name, String head) {
   final (food, sides) = _foodAndSides(name);
@@ -137,6 +164,27 @@ List<MealEntity> withoutUnrelatedProducts(
   List<MealEntity> ranked,
   String query,
 ) {
+  // A product listed at 0 kcal is one whose label was not entered, unless
+  // the food has none: a photo's "Zucchini fries" logged one.
+  if (!_noEnergy.hasMatch(query)) {
+    ranked = [
+      for (final meal in ranked)
+        if (meal.source != MealSourceEntity.off ||
+            meal.nutriments.energyKcal100 != 0)
+          meal,
+    ];
+  }
+  // A product made from the food, as another kind of food: a photo's
+  // "roasted mushrooms" logged a mushroom pâté.
+  final asked = query.toLowerCase().replaceAll('â', 'a');
+  ranked = [
+    for (final meal in ranked)
+      if (meal.source != MealSourceEntity.off ||
+          _productKinds
+              .allMatches((meal.name ?? '').toLowerCase())
+              .every((kind) => asked.contains(_stem(kind[0]!))))
+        meal,
+  ];
   final food = headNoun(query, oneWord: true);
   if (food == null) return ranked;
   // Half the food's other words too, rounded up, not only its last: a
@@ -165,6 +213,28 @@ List<MealEntity> withoutUnrelatedProducts(
         meal,
   ];
 }
+
+/// What makes a product another food than the one it is made from. Not a
+/// sauce, dip or spread, which some foods are (pesto, hummus).
+final _productKinds = RegExp(
+  r'(?<!\p{L})(pât[ée]|pat[ée]|gravy|soup|dressing|seasoning|marinade|'
+  r'crisps|chips|powder|juice)(?!\p{L})',
+  unicode: true,
+);
+
+/// The part of a kind word a query naming it holds: "gravies" asks for a
+/// gravy.
+String _stem(String word) => switch (word) {
+  'pâté' || 'pâte' || 'paté' || 'pate' => 'pat',
+  _ => word.substring(0, 4),
+};
+
+/// Foods and drinks with no energy to speak of, whose product may say 0.
+final _noEnergy = RegExp(
+  r'\b(water|tea|coffee|espresso|americano|diet|zero|sugar[- ]?free|'
+  r'unsweetened|salt|vinegar|sweetener|stevia|ice(?!\s+cream)|gum|seltzer|spices?)\b',
+  caseSensitive: false,
+);
 
 /// The words of what a dish [query] names after its first "with", "and"
 /// or "in": "sausage" in "braised cabbage with sausage".

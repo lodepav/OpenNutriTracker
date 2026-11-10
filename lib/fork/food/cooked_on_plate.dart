@@ -36,7 +36,12 @@ List<MealEntity> dryRowsLast(
   String query, {
   bool modelRead = false,
 }) {
-  if (_namesReadyFood(query)) return _mixesLast(ranked, query);
+  if (_namesReadyFood(query)) {
+    return _mixesLast(ranked, query, modelRead: modelRead);
+  }
+  if (_namesSauce(query)) {
+    return _mixesLast(ranked, query, modelRead: modelRead, byEnergy: false);
+  }
   if (_asksForUncooked.hasMatch(query) || !_namesFoodEatenCooked(query)) {
     return ranked;
   }
@@ -79,10 +84,23 @@ final _mixWords = RegExp(
 /// the first comma ("latte", "tomato soup", "mashed potatoes").
 final _readyFood = RegExp(
   r'\b(latte|cappuccino|flat white|mocha|coffee|cocoa|hot chocolate|tea|'
-  r'soup|broth|porridge|oatmeal|mashed potato(es)?|potato mash|mash|'
+  r'soup|soup base|broth|porridge|oatmeal|mashed potato(es)?|potato mash|mash|'
   r'pur[eé]e|pudding|custard|kissel|smoothie|milkshake)$',
   caseSensitive: false,
 );
+
+/// A gravy or sauce, by the last word before the first comma. Its mixes
+/// go by name only, as a made sauce can be rich: "gravy, brown, from meat
+/// drippings" logged "Gravy, brown, dry" at 367 kcal per 100 g, against
+/// about 50 made, where a hollandaise is 500.
+final _sauce = RegExp(r'\b(gravy|gravies|sauce|sauces)$', caseSensitive: false);
+final _base = RegExp(r'\bbase\b', caseSensitive: false);
+final _dryName = RegExp(r',\s*dry\b(?!\s+roasted)', caseSensitive: false);
+
+bool _namesSauce(String query) =>
+    _sauce.hasMatch(query.split(',').first.trim()) &&
+    !_mixWords.hasMatch(query) &&
+    !_asksForUncooked.hasMatch(query);
 
 bool _namesReadyFood(String query) =>
     _readyFood.hasMatch(query.split(',').first.trim()) &&
@@ -94,19 +112,31 @@ bool _namesReadyFood(String query) =>
 /// soup or a mash. "latte" found a latte powder at 400 kcal per 100 g, so a
 /// 300 ml cup read 1200 kcal. A row is a mix by its name or by an energy
 /// no made-up drink or soup has; the brand the name gives stands it down.
-List<MealEntity> _mixesLast(List<MealEntity> ranked, String query) {
+/// A model's read with nothing but mixes has none, as with dry pasta: a
+/// photo's "fruit soup base" logged a dry soup base at 357 kcal per 100 g.
+List<MealEntity> _mixesLast(
+  List<MealEntity> ranked,
+  String query, {
+  required bool modelRead,
+  bool byEnergy = true,
+}) {
   final named = tokenize(query);
   bool brandNamed(MealEntity meal) {
     final brand = tokenize(meal.brands?.split(',').first);
     return brand.isNotEmpty && brand.every(named.contains);
   }
 
+  // A product sold as a "Soup Base", 188 kcal per 100 g, is the base too.
   bool mix(MealEntity meal) =>
       !brandNamed(meal) &&
       (_mixWords.hasMatch(meal.name ?? '') ||
-          (meal.nutriments.energyKcal100 ?? 0) > _mixKcal);
+          _dryName.hasMatch(meal.name ?? '') ||
+          _base.hasMatch(meal.name ?? '') ||
+          (byEnergy && (meal.nutriments.energyKcal100 ?? 0) > _mixKcal));
 
-  return [...ranked.where((m) => !mix(m)), ...ranked.where(mix)];
+  final made = ranked.where((m) => !mix(m)).toList();
+  if (modelRead && made.isEmpty) return const [];
+  return [...made, ...ranked.where(mix)];
 }
 
 /// Whether [query] names a food [eatenCooked], by the last word before its

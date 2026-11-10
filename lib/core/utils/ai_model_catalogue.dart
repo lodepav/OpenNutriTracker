@@ -113,6 +113,13 @@ class AiModel {
 ///
 /// Google is still out, on the distribution test and on a training clause
 /// that covers free-tier submissions.
+// [fork] S209 gemini-preset: no longer the whole story in the fork. The
+// user asked for Gemini on 2026-11-10 (D43): AI settings offer Gemini 3.8
+// Flash as a preset of the own-server provider (`lib/fork/ai/gemini_preset.dart`),
+// not through this catalogue, and the key setup states the training clause
+// and Google's 18-or-over rule. The OpenRouter lists here still leave
+// Google out.
+// [/fork]
 abstract final class AiModelCatalogue {
   /// The direct path has never offered a choice, and this does not add one.
   /// Changing which model an existing user's requests go to is exactly the
