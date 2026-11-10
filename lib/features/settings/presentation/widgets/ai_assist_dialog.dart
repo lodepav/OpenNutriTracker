@@ -17,6 +17,9 @@ import 'package:opennutritracker/fork/ai/model_ratings.dart';
 // [fork] S209 gemini-preset
 import 'package:opennutritracker/fork/ai/gemini_preset.dart';
 // [/fork]
+// [fork] S211 key-label-above
+import 'package:opennutritracker/fork/ai/key_field_label.dart';
+// [/fork]
 
 /// Where the user chooses a provider, supplies a key for it, picks a model,
 /// and pauses or removes any of it.
@@ -184,6 +187,13 @@ class _AiAssistDialogState extends State<AiAssistDialog> {
         endpoint: _savedEndpoint,
         model: _forkSavedModel,
       );
+  // [/fork]
+
+  // [fork] S211 key-label-above: the key field's name, drawn above it and
+  // given to it as its semantics label
+  String _forkKeyName(S s) => s.aiAssistKeyFieldLabel(
+    _forkGemini ? geminiChoiceLabel : _providerName(context, _provider),
+  );
   // [/fork]
 
   /// This provider has what it needs to be used — a key for the hosted three,
@@ -1270,16 +1280,16 @@ class _AiAssistDialogState extends State<AiAssistDialog> {
                         ),
                       ),
                       const SizedBox(height: 8),
-                      // [fork] S209 gemini-preset: the label above the field,
-                      // where a large font can wrap it (A6)
-                      if (_forkGemini) const GeminiKeyLabel(),
+                      // [fork] S211 key-label-above: above the field, where a
+                      // large font can wrap it (A6)
+                      AiKeyLabel(_forkKeyName(s)),
                       // [/fork]
                       Semantics(
                         identifier: 'ai-assist-key-field',
-                        // [fork] S209 gemini-preset: the field's name, while
+                        // [fork] S211 key-label-above: the field's name, while
                         // its label is drawn above it
-                        label: _forkGemini ? geminiKeyFieldName(s) : null,
-                        textField: _forkGemini ? true : null,
+                        label: _forkKeyName(s),
+                        textField: true,
                         // [/fork]
                         child: TextField(
                           controller: _apiKeyController,
@@ -1288,13 +1298,10 @@ class _AiAssistDialogState extends State<AiAssistDialog> {
                           enableSuggestions: false,
                           obscureText: true,
                           decoration: InputDecoration(
-                            labelText:
-                                // [fork] S209 gemini-preset: shown above
-                                _forkGemini ? null :
-                                // [/fork]
-                                s.aiAssistKeyFieldLabel(
-                              _providerName(context, _provider),
-                            ),
+                            // [fork] S211 key-label-above: no labelText; an
+                            // in-field label stays on one line and was cut
+                            // off at twice the font size (AiKeyLabel above)
+                            // [/fork]
                             // [fork] S209 gemini-preset
                             errorText: _forkKeyError,
                             errorMaxLines: 3,
