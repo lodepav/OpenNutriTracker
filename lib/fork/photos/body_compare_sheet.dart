@@ -5,6 +5,7 @@ import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/core/utils/ai_credential_storage.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
+import 'package:opennutritracker/fork/ai/gemini_preset.dart';
 import 'package:opennutritracker/fork/body/measurement_store.dart';
 import 'package:opennutritracker/fork/photos/body_compare.dart';
 
@@ -33,22 +34,47 @@ Future<BodyDay> loadBodyDay(DateTime date) async {
   );
 }
 
-/// Where the request goes, as Settings names it.
-String aiDestination(AiProvider provider) => switch (provider) {
-  AiProvider.anthropic => 'Anthropic',
-  AiProvider.openrouter => 'OpenRouter',
-  AiProvider.openai => 'OpenAI',
-  AiProvider.ownServer => 'your own server',
-};
+/// Where the request goes, as Settings names it. [endpoint] is the own
+/// server's stored address: Google's is Google, not a server the user runs
+/// (D43).
+String aiDestination(AiProvider provider, {String? endpoint}) =>
+    switch (provider) {
+      AiProvider.anthropic => 'Anthropic',
+      AiProvider.openrouter => 'OpenRouter',
+      AiProvider.openai => 'OpenAI',
+      AiProvider.ownServer =>
+        isGeminiAddress(endpoint) ? 'Google' : 'your own server',
+    };
+
+/// The own server's stored address, read when the caller has none to give.
+Future<String?> _storedEndpoint() async {
+  if (!locator.isRegistered<AiCredentialStorage>()) return null;
+  try {
+    return await locator<AiCredentialStorage>().readEndpoint(
+      provider: AiProvider.ownServer,
+    );
+  } catch (_) {
+    return null;
+  }
+}
 
 /// Asks before anything leaves the phone: both photos and [earlier]'s and
 /// [later]'s figures go to [provider]. True to send.
+///
+/// [endpoint] is where an own-server request goes; when it is not given it
+/// is read from the store, so Google's address is named Google.
 Future<bool> confirmBodyCompare(
   BuildContext context, {
   required AiProvider provider,
   required BodyDay earlier,
   required BodyDay later,
+  String? endpoint,
 }) async {
+  if (provider == AiProvider.ownServer && endpoint == null) {
+    endpoint = await _storedEndpoint();
+    if (!context.mounted) return false;
+  }
+  final destination = aiDestination(provider, endpoint: endpoint);
   final text = Theme.of(context).textTheme;
   Widget day(String name, BodyDay d) => Padding(
     padding: const EdgeInsets.only(top: Dimens.spacing8),
@@ -76,7 +102,7 @@ Future<bool> confirmBodyCompare(
           children: [
             Text(
               'Sends both photos, side by side, and these figures to '
-              '${aiDestination(provider)}. It judges how your body '
+              '$destination. It judges how your body '
               'composition changed and how sure it is.',
             ),
             day('Earlier', earlier),

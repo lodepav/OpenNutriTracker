@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:opennutritracker/core/presentation/ai_assist_summary.dart';
 import 'package:opennutritracker/core/utils/ai_credential_storage.dart';
 import 'package:opennutritracker/generated/l10n.dart';
+// [fork] S209 gemini-preset
+import 'package:opennutritracker/fork/ai/gemini_preset.dart';
+// [/fork]
 
 /// The agreement that stands between pressing OK and a credential being
 /// stored.
@@ -105,6 +108,9 @@ class AiConsentScreen extends StatelessWidget {
             if (provider == AiProvider.ownServer) ...[
               const SizedBox(height: 12),
               Text(
+                // [fork] S209 gemini-preset: Google is not the user's server
+                isGeminiAddress(typedEndpoint) ? geminiCheckNote :
+                // [/fork]
                 s.aiConsentOwnServerCheckNote,
                 style: body?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,

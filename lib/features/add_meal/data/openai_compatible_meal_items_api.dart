@@ -10,6 +10,11 @@ import 'package:opennutritracker/features/add_meal/util/meal_text_parser.dart';
 // [fork] S208 photo-estimate-no-note
 import 'package:opennutritracker/fork/bulk/weighed_plate.dart';
 // [/fork]
+// [fork] S209 gemini-preset
+import 'package:opennutritracker/core/utils/gemini_endpoint.dart';
+import 'package:opennutritracker/fork/ai/cut_off_reply.dart';
+import 'package:opennutritracker/fork/ai/gemini_preset.dart';
+// [/fork]
 
 /// Asks a model for food items through OpenRouter, which brokers the request
 /// on to whichever provider actually serves it.
@@ -193,7 +198,12 @@ class OpenAiCompatibleMealItemsApi implements MealItemsApi {
       'model': model,
       // An unforced model may think first, which the budget has to hold;
       // one that must not think is told so.
-      'max_tokens': toolChoice == ToolChoiceMode.unforced && broker != null
+      'max_tokens':
+          // [fork] S209 gemini-preset: Gemini thinks inside max_tokens (D43)
+          isGeminiEndpoint(endpoint)
+          ? geminiMaxTokens
+          // [/fork]
+          : toolChoice == ToolChoiceMode.unforced && broker != null
           ? 4 * _maxTokens
           : _maxTokens,
       if (reasoningOff) 'reasoning': {'enabled': false},
@@ -434,6 +444,10 @@ class OpenAiCompatibleMealItemsApi implements MealItemsApi {
     }
 
     _throwIfFailedGeneration(choice);
+    // [fork] S209 gemini-preset: a reply cut off at max_tokens is retryable,
+    // not a model that will not call the tool (D43)
+    throwIfCutOff(choice);
+    // [/fork]
 
     final message = choice['message'];
     final toolCalls = message is Map ? message['tool_calls'] : null;

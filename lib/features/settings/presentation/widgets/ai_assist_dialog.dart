@@ -14,6 +14,9 @@ import 'package:opennutritracker/generated/l10n.dart';
 // [fork] S174 model-ratings
 import 'package:opennutritracker/fork/ai/model_ratings.dart';
 // [/fork]
+// [fork] S209 gemini-preset
+import 'package:opennutritracker/fork/ai/gemini_preset.dart';
+// [/fork]
 
 /// Where the user chooses a provider, supplies a key for it, picks a model,
 /// and pauses or removes any of it.
@@ -164,6 +167,24 @@ class _AiAssistDialogState extends State<AiAssistDialog> {
   /// is bound to none yet. A key typed for one server must not follow the
   /// field to another, before Save or by it (#1257).
   String? _typedKeyServer;
+
+  // [fork] S209 gemini-preset: the Google Gemini row is chosen, a preset of
+  // the own-server slot (D43); the model stored there, and a missing key
+  bool _forkGemini = false;
+  String? _forkSavedModel;
+  String? _forkKeyError;
+
+  /// The own-server slot holds something else, which saving Gemini replaces:
+  /// its switch, Remove and setup check are not Gemini's to show.
+  bool get _forkOtherServerSaved =>
+      _forkGemini &&
+      _savedEndpoint != null &&
+      !isGeminiPreset(
+        provider: AiProvider.ownServer,
+        endpoint: _savedEndpoint,
+        model: _forkSavedModel,
+      );
+  // [/fork]
 
   /// This provider has what it needs to be used — a key for the hosted three,
   /// an **address** for a server the user runs.
@@ -387,6 +408,20 @@ class _AiAssistDialogState extends State<AiAssistDialog> {
       _model = AiModelCatalogue.resolve(provider, modelId);
       _endpointController.text = summary.endpoint ?? '';
       _modelController.text = modelId ?? '';
+      // [fork] S209 gemini-preset
+      _forkSavedModel = modelId;
+      _forkKeyError = null;
+      _forkGemini = geminiChosenAfterLoad(
+        provider: provider,
+        endpoint: summary.endpoint,
+        model: modelId,
+        wasChosen: _forkGemini,
+      );
+      if (_forkGemini && summary.endpoint == null) {
+        _endpointController.text = geminiPresetEndpoint;
+        _modelController.text = geminiPresetModel;
+      }
+      // [/fork]
       _unconfirmedModel = null;
       // The stored address counts as already asked-about, so returning to a
       // configured server and leaving the field alone is not a URL change.
@@ -512,6 +547,9 @@ class _AiAssistDialogState extends State<AiAssistDialog> {
   /// A key typed with an address in the field belongs to that server; one
   /// typed before there is an address binds to the first one it is sent to.
   void _keyTyped(String key) {
+    // [fork] S209 gemini-preset
+    if (_forkKeyError != null) setState(() => _forkKeyError = null);
+    // [/fork]
     final address = _endpointController.text.trim();
     _typedKeyServer =
         key.trim().isEmpty ||
@@ -533,6 +571,10 @@ class _AiAssistDialogState extends State<AiAssistDialog> {
   /// `http://ht`, and every other prefix of what someone is typing.
   void _endpointCommitted() {
     if (!mounted || _provider != AiProvider.ownServer) return;
+    // [fork] S209 gemini-preset: the address is Google's, filled in; losing
+    // the hidden field's focus must not ask Google for a model list
+    if (_forkGemini) return;
+    // [/fork]
     // **Leaving is not an explicit ask.** Tearing this route down takes focus
     // off the address field, and answering that with a request would contact
     // a machine on the user's network at the one moment they cannot see the
@@ -660,6 +702,19 @@ class _AiAssistDialogState extends State<AiAssistDialog> {
   }
 
   Future<void> _selectProvider(AiProvider provider) async {
+    // [fork] S209 gemini-preset: from the Google Gemini row to your own
+    // server, the same slot, showing what it holds
+    if (_forkGemini && provider == AiProvider.ownServer) {
+      setState(() {
+        _forkGemini = false;
+        _forkKeyError = null;
+        _endpointController.text = _savedEndpoint ?? '';
+        _modelController.text = _forkSavedModel ?? '';
+      });
+      _endpointChanged();
+      return;
+    }
+    // [/fork]
     if (provider == _provider) return;
     // Written before the reload so the reload sees the new active provider.
     // Selecting one with no key is allowed: the feature goes quietly
@@ -669,6 +724,36 @@ class _AiAssistDialogState extends State<AiAssistDialog> {
     _changed = true;
     await _load();
   }
+
+  // [fork] S209 gemini-preset: the Google Gemini row selects the own-server
+  // slot and fills in Google's address and the model; nothing is written but
+  // the provider until OK
+  Future<void> _forkSelectGemini() async {
+    if (_forkGemini) return;
+    if (_provider != AiProvider.ownServer) {
+      _forkGemini = true;
+      await widget.storage.setActiveProvider(AiProvider.ownServer);
+      _apiKeyController.clear();
+      _changed = true;
+      await _load();
+      if (!mounted || _provider != AiProvider.ownServer) return;
+    }
+    final preset = isGeminiPreset(
+      provider: AiProvider.ownServer,
+      endpoint: _endpointController.text,
+      model: _modelController.text,
+    );
+    setState(() {
+      _forkGemini = true;
+      if (!preset) {
+        _endpointController.text = geminiPresetEndpoint;
+        _modelController.text = geminiPresetModel;
+      }
+      _modelError = null;
+    });
+    _endpointChanged();
+  }
+  // [/fork]
 
   /// The write names the provider explicitly, so it always lands in the right
   /// slot. What needed guarding is the *display*: the selected radio is a
@@ -743,6 +828,14 @@ class _AiAssistDialogState extends State<AiAssistDialog> {
     final provider = _provider;
     var changed = _changed;
     var probe = false;
+
+    // [fork] S209 gemini-preset: Google answers nothing without a key, so OK
+    // asks for one rather than leaving the slot as it was
+    if (_forkGemini && !_keyIsSaved && _apiKeyController.text.trim().isEmpty) {
+      setState(() => _forkKeyError = geminiKeyMissing);
+      return;
+    }
+    // [/fork]
 
     if (provider == AiProvider.ownServer) {
       // The address is this provider's credential, and the model is part of
@@ -1069,15 +1162,29 @@ class _AiAssistDialogState extends State<AiAssistDialog> {
                           title: Text(_providerName(context, provider)),
                           value: provider,
                           // ignore: deprecated_member_use
-                          groupValue: _provider,
+                          groupValue:
+                              // [fork] S209 gemini-preset: Google Gemini is its own row
+                              _forkGemini ? null :
+                              // [/fork]
+                              _provider,
                           // ignore: deprecated_member_use
                           onChanged: (value) =>
                               value == null ? null : _selectProvider(value),
                         ),
                       ),
                     ),
+                    // [fork] S209 gemini-preset
+                    GeminiChoiceTile(
+                      selected: _forkGemini,
+                      onSelect: _forkSelectGemini,
+                    ),
+                    // [/fork]
                     const SizedBox(height: 8),
-                    if (_provider == AiProvider.ownServer) ...[
+                    if (_provider == AiProvider.ownServer &&
+                        // [fork] S209 gemini-preset: the address is filled in
+                        !_forkGemini)
+                      // [/fork]
+                      ...[
                       _label(theme, s.aiAssistEndpointFieldLabel),
                       Semantics(
                         identifier: 'ai-assist-endpoint-field',
@@ -1173,18 +1280,35 @@ class _AiAssistDialogState extends State<AiAssistDialog> {
                           obscureText: true,
                           decoration: InputDecoration(
                             labelText: s.aiAssistKeyFieldLabel(
+                              // [fork] S209 gemini-preset
+                              _forkGemini ? geminiChoiceLabel :
+                              // [/fork]
                               _providerName(context, _provider),
                             ),
+                            // [fork] S209 gemini-preset
+                            errorText: _forkKeyError,
+                            // [/fork]
                             border: const OutlineInputBorder(),
                           ),
                         ),
                       ),
+                      // [fork] S209 gemini-preset: where the key comes from,
+                      // and what Google's terms say
+                      if (_forkGemini)
+                        GeminiKeyNotes(
+                          replacesOwnServer: _forkOtherServerSaved,
+                        ),
+                      // [/fork]
                     ],
                     // Pausing and removing act on the provider as a whole, so
                     // they follow "is it usable" rather than "is there a key".
                     // Identical for the hosted three, where the two are the
                     // same fact.
-                    if (_configured) ...[
+                    if (_configured &&
+                        // [fork] S209 gemini-preset
+                        !_forkOtherServerSaved)
+                      // [/fork]
+                      ...[
                       Semantics(
                         identifier: 'ai-assist-enabled',
                         child: SwitchListTile(
@@ -1226,7 +1350,12 @@ class _AiAssistDialogState extends State<AiAssistDialog> {
                     // would establish that the curated list does not already
                     // carry — and an inert "not checked yet" on the Anthropic
                     // path would imply otherwise.
-                    if (_provider == AiProvider.ownServer && _configured) ...[
+                    if (_provider == AiProvider.ownServer &&
+                        _configured &&
+                        // [fork] S209 gemini-preset
+                        !_forkOtherServerSaved)
+                      // [/fork]
+                      ...[
                       const SizedBox(height: 16),
                       _buildProbeSection(s, theme),
                     ],
@@ -1563,6 +1692,11 @@ class _AiAssistDialogState extends State<AiAssistDialog> {
   /// below is reachable in production for the first time, and the grouped
   /// line is now the special case rather than the rule.
   Widget _buildModelSection(BuildContext context, S s, ThemeData theme) {
+    // [fork] S209 gemini-preset
+    if (_forkGemini) {
+      return GeminiModelLine(model: _modelController.text.trim());
+    }
+    // [/fork]
     final models = AiModelCatalogue.forProvider(_provider);
     if (models.isEmpty) {
       // No curated list, so nothing measured to say about what the user
