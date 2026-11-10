@@ -2,6 +2,15 @@
 
 Written by fork/tools/release_notes.dart at each release (D16).
 
+## 0.10.1 · 2026-11-10
+
+Based on OpenNutriTracker 2.7.0.
+
+### Fixes and changes
+
+- AI key labels readable at large text
+- battered vegetables off branded snack rows, the review agrees with itself and the Diary's units, a breakdown keeps its portion
+
 ## 0.10.0 · 2026-11-10
 
 Based on OpenNutriTracker 2.7.0.
