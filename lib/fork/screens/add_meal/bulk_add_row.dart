@@ -225,16 +225,47 @@ extension _BulkAddRow on _BulkAddScreenState {
   }
 
   /// The amount as the food page says it: "3 × potato · 234 g", "150 g",
-  /// or a prompt to set one.
-  String _amountLabel(BuildContext context, BulkAddRow row) {
+  /// or a prompt to set one. In imperial units a weight reads as the Diary
+  /// will show it once logged, "12.3 oz": the model's grams are the
+  /// app's, not the user's.
+  String _amountLabel(BuildContext context, BulkAddRow row, bool imperial) {
     final quantity = double.tryParse(row.amountText.replaceAll(',', '.'));
     final unit = row.effectiveUnit;
     if (quantity == null || quantity <= 0) return 'Set the amount';
     if (isPortionUnit(unit)) {
       return '${amountText(quantity)} × ${_unitLabel(context, unit, row)}'
-          '${_portionWeightLabel(context, row).replaceFirst('≈', ' ·')}';
+          '${_portionWeightLabel(context, row, imperial).replaceFirst('≈', ' ·')}';
+    }
+    // only where it is edited in that unit too
+    if (row.meal case final meal?
+        when imperial &&
+            (_shownEditUnit(row, true) != null ||
+                diaryUnit(meal, true).unit == unit)) {
+      return diaryAmountText(
+        convertQuantityToBaseUnit(quantity, unit, meal),
+        meal,
+        true,
+      );
     }
     return '${amountText(quantity)} ${_unitLabel(context, unit, row)}';
+  }
+
+  /// The unit an imperial profile edits [row]'s weight in, the one its
+  /// amount is shown in ("oz" for grams); null when the row is shown in
+  /// its own unit. What the user types or steps is in the unit shown.
+  String? _shownEditUnit(BulkAddRow row, bool imperial) {
+    final meal = row.meal;
+    if (!imperial || meal == null || !isWeightUnit(row.effectiveUnit)) {
+      return null;
+    }
+    final shown = diaryUnit(meal, true).unit;
+    if (shown == row.effectiveUnit || !row.allowedUnits.contains(shown)) {
+      return null;
+    }
+    return shown == UnitDropdownItem.oz.toString() ||
+            shown == UnitDropdownItem.flOz.toString()
+        ? shown
+        : null;
   }
 
   /// The amber of a card that needs a look: the tertiary colour, which is
@@ -371,13 +402,27 @@ extension _BulkAddRow on _BulkAddScreenState {
     BulkAddRow row,
   ) {
     final quantity = double.tryParse(row.amountText.replaceAll(',', '.'));
-    final unit = row.effectiveUnit;
-    final label = _amountLabel(context, row);
+    final label = _amountLabel(context, row, state.usesImperialUnits);
     void step({required bool up}) {
-      final from = quantity ?? 0;
-      final next = steppedAmount(from, amountStep(unit, from), up: up);
+      // in the unit shown: an ounce, not 10 g of a row shown in ounces
+      final shown = _shownEditUnit(row, state.usesImperialUnits);
+      final converted = shown == null
+          ? null
+          : amountInUnit(row.amountText, row.effectiveUnit, shown, row.meal!);
+      final unit = shown ?? row.effectiveUnit;
+      // nothing to convert (empty or 0): up from nothing, in the unit shown
+      final from = shown == null
+          ? quantity ?? 0
+          : double.tryParse(converted ?? '') ?? 0;
+      final next = amountText(
+        steppedAmount(from, amountStep(unit, from), up: up),
+      );
       if (_quantityErrors.containsKey(index)) _clearQuantityError(index);
-      _bloc.add(ChangeRowAmountEvent(index, amountText(next)));
+      _bloc.add(
+        shown == null
+            ? ChangeRowAmountEvent(index, next)
+            : SetRowInShownUnitEvent(index, shown, next),
+      );
     }
 
     return Row(
@@ -448,6 +493,13 @@ extension _BulkAddRow on _BulkAddScreenState {
     if (base == null) return;
     final meal = withOwnPortions(base, await OwnPortions.current.of(base));
     if (!mounted) return;
+    // opened in the unit the row is shown in, so the number typed is in it
+    final shown = _shownEditUnit(row, imperial);
+    final unit = shown ?? row.effectiveUnit;
+    final text = shown == null
+        ? row.amountText
+        : amountInUnit(row.amountText, row.effectiveUnit, shown, base) ??
+              row.amountText;
 
     /// The amount to the row; with [unitChosen], the unit too, which
     /// answers the row's "check the amount" even when it is the one shown.
@@ -467,10 +519,18 @@ extension _BulkAddRow on _BulkAddScreenState {
             : UnitDropdownItem.gml.toString();
         amount = amountInUnit(text, unit, to, meal) ?? text;
       }
+      if (_quantityErrors.containsKey(index)) _clearQuantityError(index);
+      // typed in the unit shown, which the user did not choose: the row
+      // asks to check its amount still, as it would in metric units
+      if (!unitChosen &&
+          to == shown &&
+          current.rows[index].effectiveUnit != to) {
+        _bloc.add(SetRowInShownUnitEvent(index, to, amount));
+        return;
+      }
       if (unitChosen || current.rows[index].effectiveUnit != to) {
         _bloc.add(ChangeRowUnitEvent(index, to));
       }
-      if (_quantityErrors.containsKey(index)) _clearQuantityError(index);
       _bloc.add(ChangeRowAmountEvent(index, amount));
     }
 
@@ -482,8 +542,8 @@ extension _BulkAddRow on _BulkAddScreenState {
       builder: (sheet) => _RowAmountSheet(
         base: base,
         meal: meal,
-        unit: row.effectiveUnit,
-        text: row.amountText,
+        unit: unit,
+        text: text,
         imperial: imperial,
         send: send,
         // another of the foods the search found, from the sheet (D37)
@@ -497,13 +557,19 @@ extension _BulkAddRow on _BulkAddScreenState {
     );
   }
 
-  /// "≈ 120 g" under a count of portions; empty for a weight or volume.
-  String _portionWeightLabel(BuildContext context, BulkAddRow row) {
+  /// "≈ 120 g" under a count of portions, "≈ 4.2 oz" as the Diary says it
+  /// in imperial units; empty for a weight or volume.
+  String _portionWeightLabel(
+    BuildContext context,
+    BulkAddRow row,
+    bool imperial,
+  ) {
     final meal = row.meal;
     if (meal == null || !isPortionUnit(row.effectiveUnit)) return '';
     final quantity = double.tryParse(row.amountText.replaceAll(',', '.'));
     if (quantity == null || quantity <= 0) return '';
     final base = convertQuantityToBaseUnit(quantity, row.effectiveUnit, meal);
+    if (imperial) return '≈ ${diaryAmountText(base, meal, true)}';
     final s = S.of(context);
     return '≈ ${base.round()} ${meal.isLiquid ? s.milliliterUnit : s.gramUnit}';
   }

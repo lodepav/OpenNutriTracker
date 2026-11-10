@@ -16,6 +16,7 @@ import 'package:opennutritracker/fork/food/everyday_row.dart';
 import 'package:opennutritracker/fork/food/served_with.dart';
 import 'package:opennutritracker/fork/food/unasked_variant.dart';
 import 'package:opennutritracker/fork/food/unspecified_row.dart';
+import 'package:opennutritracker/fork/food/vegetables.dart';
 
 /// The fork's offline food table (D11): the open USDA and BLS tables bundled
 /// as an asset, answering the three questions upstream asks its Supabase
@@ -157,6 +158,19 @@ class LocalFoodDataSource extends SpFoodDataSource {
           break;
         }
       }
+    }
+    // A coated, fried vegetable the table has no row of ("bell pepper,
+    // battered, fried") is the table's battered vegetables, not nothing:
+    // a model's breakdown of one food finds no dish to split.
+    if (forResolution &&
+        rows.isEmpty &&
+        _coated.hasMatch(searchString) &&
+        namedVegetable(searchString) != null) {
+      final tempura = foods.named(
+        _coatedVegetables,
+        isEnabled: (source) => toggles?[source] ?? true,
+      );
+      if (tempura != null) rows = [tempura];
     }
     // A person's search names the food the way MacroFactor or a label
     // does, with words no row uses: "peach, fresh", "bulgur, home cooked",
@@ -397,6 +411,10 @@ const _cookedWays = {
   'breaded',
   'coated',
 };
+
+/// The table's battered vegetables, fried: 239 kcal per 100 g, where its
+/// battered carrots, broccoli and cauliflower are 231-246.
+const _coatedVegetables = 'Vegetable tempura';
 
 /// A coating, which a food's plain row does not have.
 final _coated = RegExp(
@@ -849,11 +867,75 @@ class _Aliases {
 }
 
 /// [text]'s words in order, lower-cased, as [tokenize] splits them.
-List<String> nameWords(String? text) => (text ?? '')
-    .toLowerCase()
+/// Both sides folded to plain letters ([foldLetters]): "sasliks" typed on
+/// an English keyboard finds "Shashlik, chicken (vistas šašliks, ...)".
+List<String> nameWords(String? text) => foldLetters(text ?? '')
     .split(RegExp(r'[^\p{L}\p{N}]+', unicode: true))
     .where((w) => w.isNotEmpty)
     .toList();
+
+/// [text] lower-cased, its Latvian, Lithuanian, Estonian, Polish, German
+/// and common Latin letters with marks made plain.
+String foldLetters(String text) {
+  final lower = text.toLowerCase();
+  if (!_marked.hasMatch(lower)) return lower;
+  return lower.split('').map((c) => _plainLetters[c] ?? c).join();
+}
+
+final _marked = RegExp(r'[^\x00-\x7f]');
+
+const _plainLetters = {
+  'ā': 'a',
+  'ä': 'a',
+  'á': 'a',
+  'à': 'a',
+  'â': 'a',
+  'ã': 'a',
+  'å': 'a',
+  'ą': 'a',
+  'č': 'c',
+  'ç': 'c',
+  'ć': 'c',
+  'ē': 'e',
+  'é': 'e',
+  'è': 'e',
+  'ê': 'e',
+  'ë': 'e',
+  'ę': 'e',
+  'ė': 'e',
+  'ģ': 'g',
+  'ī': 'i',
+  'í': 'i',
+  'ì': 'i',
+  'î': 'i',
+  'ï': 'i',
+  'į': 'i',
+  'ķ': 'k',
+  'ļ': 'l',
+  'ł': 'l',
+  'ņ': 'n',
+  'ñ': 'n',
+  'ń': 'n',
+  'ō': 'o',
+  'ö': 'o',
+  'ó': 'o',
+  'ò': 'o',
+  'ô': 'o',
+  'õ': 'o',
+  'ø': 'o',
+  'š': 's',
+  'ś': 's',
+  'ß': 'ss',
+  'ū': 'u',
+  'ü': 'u',
+  'ú': 'u',
+  'ù': 'u',
+  'û': 'u',
+  'ų': 'u',
+  'ž': 'z',
+  'ź': 'z',
+  'ż': 'z',
+};
 
 /// The table's word for a query word people spell another way. Recipe
 /// search folds both sides through it too (`recipe_search.dart`): a model

@@ -1,6 +1,7 @@
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dart';
 import 'package:opennutritracker/fork/food/local_food_data_source.dart';
 import 'package:opennutritracker/fork/food/portion_words.dart';
+import 'package:opennutritracker/fork/food/vegetables.dart';
 
 /// The words that join a dish's main food to what comes with it.
 const _joints = {'with', 'and', 'in', 'ar', 'un', 'su', 'mit', 'z', 'w'};
@@ -174,6 +175,19 @@ List<MealEntity> withoutUnrelatedProducts(
           meal,
     ];
   }
+  // A vegetable's product above what any cooked one holds, even battered
+  // and deep-fried (the table's are 220-250 kcal per 100 g), is a dried
+  // snack: a photo's fried vegetables logged Trader Joe's "Broccoli fries"
+  // at 475 and "Organic carrot fries" at 358.
+  if (namedVegetable(query) case final vegetable?) {
+    ranked = [
+      for (final meal in ranked)
+        if (meal.source != MealSourceEntity.off ||
+            !holdsWord(meal.name ?? '', vegetable) ||
+            (meal.nutriments.energyKcal100 ?? 0) <= _cookedVegetableKcal)
+          meal,
+    ];
+  }
   // A product made from the food, as another kind of food: a photo's
   // "roasted mushrooms" logged a mushroom pâté.
   final asked = query.toLowerCase().replaceAll('â', 'a');
@@ -214,11 +228,15 @@ List<MealEntity> withoutUnrelatedProducts(
   ];
 }
 
+/// Above this per 100 g, a vegetable product is a snack, not the vegetable
+/// cooked.
+const _cookedVegetableKcal = 300.0;
+
 /// What makes a product another food than the one it is made from. Not a
 /// sauce, dip or spread, which some foods are (pesto, hummus).
 final _productKinds = RegExp(
   r'(?<!\p{L})(pât[ée]|pat[ée]|gravy|soup|dressing|seasoning|marinade|'
-  r'crisps|chips|powder|juice)(?!\p{L})',
+  r'crisps|chips|powder|juice|fries|sticks|puffs|snacks?)(?!\p{L})',
   unicode: true,
 );
 
@@ -226,6 +244,8 @@ final _productKinds = RegExp(
 /// gravy.
 String _stem(String word) => switch (word) {
   'pâté' || 'pâte' || 'paté' || 'pate' => 'pat',
+  // not "fried", which asks for the food cooked
+  'fries' => 'fries',
   _ => word.substring(0, 4),
 };
 

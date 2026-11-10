@@ -520,4 +520,205 @@ void main() {
       expect(statedCount(servings), 2);
     });
   });
+
+  group('a matched dish broken down', () {
+    // "a bowl of homemade borscht": a weak match at its 350 g serving
+    final borscht = MealEntity(
+      code: 'borscht',
+      name: 'Borscht, with beef',
+      url: null,
+      mealQuantity: null,
+      mealUnit: 'g',
+      servingQuantity: 350,
+      servingUnit: 'g',
+      servingSize: null,
+      nutriments: MealNutrimentsEntity.empty(),
+      source: MealSourceEntity.fdc,
+    );
+
+    test('keeps the weight the row showed, its ingredients as weighed for '
+        'it', () async {
+      final borschtBloc = BulkAddBloc(
+        _WeakResolver(borscht),
+        _OneReader(const ParsedMealItem(query: 'borscht')),
+        _PhotoReader(),
+      );
+      addTearDown(borschtBloc.close);
+      final amounts = <String?>[];
+      final controller = DishBreakdownController(
+        borschtBloc,
+        // a soup's solids, its water left out: less than the bowl
+        breakDown: (dish, {amount, photo}) async {
+          amounts.add(amount);
+          return DishBreakdown(
+            dish,
+            await _Resolver().resolve(const [
+              ParsedMealItem(
+                query: 'wheat flour, white',
+                quantity: 120,
+                unit: 'g',
+              ),
+              ParsedMealItem(
+                query: 'cheese, sulguni',
+                quantity: 80.5,
+                unit: 'g',
+              ),
+            ]),
+          );
+        },
+        modelConfigured: () async => true,
+      );
+      addTearDown(controller.dispose);
+      borschtBloc.add(
+        const ParseBulkTextEvent(text: 'x', usesImperialUnits: false),
+      );
+      await pumpEventQueue();
+      final row = (borschtBloc.state as BulkAddLoadedState).rows.single;
+      expect(row.amountText, '350');
+      expect(controller.canBreakDown(row), isTrue);
+
+      await controller.breakDown(row);
+      await pumpEventQueue();
+      final rows = (borschtBloc.state as BulkAddLoadedState).rows;
+      expect(amounts, ['350 g']);
+      final group = rows.first.dishIngredient!.group;
+      final members = dishMembers(rows, group);
+      // the ingredients as the model weighed them, not scaled up to it
+      expect([for (final i in members) rows[i].amountText], ['120', '80.5']);
+      expect(dishPortion(rows, members), closeTo(350, 1e-9));
+      expect(
+        double.parse(dishMeal(rows, group)!.mealQuantity!),
+        closeTo(350, 1e-6),
+      );
+    });
+  });
+
+  group('a food of a read dish that nothing matched', () {
+    final plate = Object();
+    DishIngredientItem food(String query, double grams) => DishIngredientItem(
+      query: query,
+      quantity: grams,
+      unit: 'g',
+      dish: 'mixed plate',
+      group: plate,
+    );
+
+    Future<(BulkAddBloc, List<(String, String?)>)> read(
+      List<ParsedMealItem> ingredients,
+    ) async {
+      final plateBloc = BulkAddBloc(
+        _Resolver(),
+        _ModelReader(),
+        _ItemsPhotoReader([
+          food('egg, whole, raw', 100),
+          food('bell pepper, battered, fried', 80),
+        ]),
+      );
+      addTearDown(plateBloc.close);
+      final asked = <(String, String?)>[];
+      final controller = DishBreakdownController(
+        plateBloc,
+        breakDown: (dish, {amount, photo}) async {
+          asked.add((dish, amount));
+          return DishBreakdown(dish, await _Resolver().resolve(ingredients));
+        },
+        modelConfigured: () async => true,
+      );
+      addTearDown(controller.dispose);
+      plateBloc.add(
+        ReadMealPhotoEvent(
+          photo: MealPhoto(bytes: Uint8List(1), mediaType: 'image/webp'),
+          usesImperialUnits: false,
+        ),
+      );
+      await pumpEventQueue();
+      await pumpEventQueue();
+      return (plateBloc, asked);
+    }
+
+    test('is broken down once, its ingredients joining the dish', () async {
+      final (plateBloc, asked) = await read(const [
+        ParsedMealItem(query: 'wheat flour, white', quantity: 20, unit: 'g'),
+        ParsedMealItem(query: 'cheese, sulguni', quantity: 55, unit: 'g'),
+      ]);
+      expect(asked, [('bell pepper, battered, fried', '80 g')]);
+      final rows = (plateBloc.state as BulkAddLoadedState).rows;
+      expect(
+        [for (final r in rows) r.meal?.name],
+        ['egg, whole, raw', 'wheat flour, white', 'cheese, sulguni'],
+      );
+      // one dish still, as the Diary holds it: no dish inside a dish
+      expect(dishMembers(rows, plate), [0, 1, 2]);
+      expect(rows[1].dishIngredient!.dish, 'mixed plate');
+    });
+
+    test('an ingredient a breakdown wrote that nothing matched is not broken '
+        'down again', () async {
+      final (plateBloc, asked) = await read(const [
+        ParsedMealItem(query: 'sumac', quantity: 2, unit: 'g'),
+      ]);
+      await pumpEventQueue();
+      expect(asked, hasLength(1));
+      final rows = (plateBloc.state as BulkAddLoadedState).rows;
+      expect(rows.last.isResolved, isFalse);
+      expect(rows.last.dishIngredient!.group, same(plate));
+    });
+  });
+}
+
+/// Finds [meal] for anything, weakly.
+class _WeakResolver implements ResolveParsedMealsUseCase {
+  final MealEntity meal;
+
+  _WeakResolver(this.meal);
+
+  @override
+  Future<List<ResolvedMealItem>> resolve(
+    List<ParsedMealItem> items, {
+    bool fromPhoto = false,
+  }) async => [
+    for (final item in items)
+      ResolvedMealItem(
+        parsed: item,
+        candidates: [meal],
+        selectedIndex: 0,
+        confidence: 0.1,
+      ),
+  ];
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class _OneReader implements ReadMealTextUseCase {
+  final ParsedMealItem item;
+
+  _OneReader(this.item);
+
+  @override
+  Future<MealTextReading> read(String input, {String? localeCode}) async =>
+      MealTextReading(
+        MealTextParseResult(items: [item], errors: const []),
+        usedModel: true,
+      );
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class _ItemsPhotoReader implements ReadMealPhotoUseCase {
+  final List<ParsedMealItem> items;
+
+  _ItemsPhotoReader(this.items);
+
+  @override
+  Future<MealPhotoReadResult> read(
+    MealPhoto photo, {
+    String? localeCode,
+    String? note,
+  }) async =>
+      MealPhotoRead(MealTextParseResult(items: items, errors: const []));
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }

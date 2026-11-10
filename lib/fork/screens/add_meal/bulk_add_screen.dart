@@ -47,6 +47,8 @@ import 'package:opennutritracker/fork/dish/dish_recipe.dart';
 import 'package:opennutritracker/fork/dish/dish_strings.dart';
 import 'package:opennutritracker/fork/bulk/discard_guard.dart';
 import 'package:opennutritracker/fork/bulk/review_totals.dart';
+import 'package:opennutritracker/fork/bulk/review_units.dart';
+import 'package:opennutritracker/fork/bulk/shown_unit.dart';
 import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/fork/display/meal_macros_line.dart';
@@ -907,12 +909,7 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
     // What the button will log, summed as the rows show it (#1469). Not at a
     // large font: a second line on the button comes out of the rows above.
     final showTotal = MediaQuery.textScalerOf(context).scale(1) <= 1.5;
-    final rowKcals = [
-      for (final row in state.loggableRows)
-        if (double.tryParse(row.amountText.replaceAll(',', '.'))
-            case final quantity? when quantity > 0)
-          kcalForQuantity(quantity, row.effectiveUnit, row.meal!) ?? 0,
-    ];
+    final rowKcals = loggedKcals(state.rows);
     return SafeArea(
       top: false,
       child: Padding(

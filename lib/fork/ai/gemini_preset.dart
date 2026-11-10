@@ -90,8 +90,21 @@ const geminiReplacesOwnServer =
 
 /// Speed and cost only, measured on 51 photos (D43). No accuracy claim: one
 /// run on lab plates, and the user's own meals read well under it.
+/// Non-breaking spaces keep each number with its unit and the model's name
+/// whole.
 const geminiMeasured =
-    r'About 13 s and $0.006 a photo (Haiku 5.5: 1.6 s, $0.0005).';
+    'About 13\u00A0s and \$0.006 a photo '
+    '(Haiku\u00A05.5: 1.6\u00A0s, \$0.0005).';
+
+/// The privacy paragraph for the row: the user saves a key there, not an
+/// address, so it opens as the key providers' does. Upstream's Gemini
+/// paragraph is translated; a locale whose wording differs keeps it whole.
+String geminiKeyDisclosure(String paragraph) {
+  const address = 'With an address saved';
+  return paragraph.startsWith(address)
+      ? 'With a key saved${paragraph.substring(address.length)}'
+      : paragraph;
+}
 
 /// The consent screen's own-server note, for Google: it is not the user's
 /// server, and the row asks it for no model list.
@@ -155,6 +168,33 @@ class GeminiKeyNotes extends StatelessWidget {
             Text(geminiReplacesOwnServer, style: style),
           ],
         ],
+      ),
+    );
+  }
+}
+
+/// The key field's name, as the other providers' fields are named.
+String geminiKeyFieldName(S s) => s.aiAssistKeyFieldLabel(geminiChoiceLabel);
+
+/// The key field's label, above the field rather than inside it: a label in
+/// the field stays on one line, and at twice the font size "Google Gemini
+/// API key" was cut to "Google Gemini AP…" (UX A6).
+class GeminiKeyLabel extends StatelessWidget {
+  const GeminiKeyLabel({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      // The field carries the name itself (S209), so it is read once.
+      child: ExcludeSemantics(
+        child: Text(
+          geminiKeyFieldName(S.of(context)),
+          style: theme.textTheme.labelLarge?.copyWith(
+            color: theme.colorScheme.primary,
+          ),
+        ),
       ),
     );
   }

@@ -222,7 +222,6 @@ extension _BulkAddBody on _BulkAddScreenState {
     final theme = Theme.of(context);
     final palette = paletteOf(context);
     final meal = mealMacros(state.rows);
-    final foods = state.rows.where((row) => row.willBeLogged).length;
     final muted = theme.textTheme.labelMedium?.copyWith(
       color: palette.textMuted,
     );
@@ -241,16 +240,16 @@ extension _BulkAddBody on _BulkAddScreenState {
               children: [
                 Expanded(
                   child: Text(
-                    'This meal · $foods ${foods == 1 ? 'food' : 'foods'}',
+                    'This meal · ${foodCountText(state.rows)}',
                     style: muted,
                   ),
                 ),
                 // summed as the rows show it, as the Log button is (#1469)
                 Text(
-                  EnergyDisplay.formatSumWithUnit(context, [
-                    for (final row in state.rows)
-                      if (row.willBeLogged) ?rowMacros(row)?.kcal,
-                  ]),
+                  EnergyDisplay.formatSumWithUnit(
+                    context,
+                    loggedKcals(state.rows),
+                  ),
                   key: const ValueKey('bulk-add-meal-kcal'),
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w700,

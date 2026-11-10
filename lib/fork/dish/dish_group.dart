@@ -97,15 +97,6 @@ double _yield(List<BulkAddRow> rows, List<int> members) {
 double dishPortion(List<BulkAddRow> rows, List<int> members) =>
     _rowsGrams(rows, members) * _yield(rows, members);
 
-/// The dish's energy, of the rows that will be logged.
-double dishKcal(List<BulkAddRow> rows, List<int> members) =>
-    members.fold(0, (sum, i) {
-      final row = rows[i];
-      final amount = rowAmount(row);
-      if (rowGrams(row) == null || amount == null) return sum;
-      return sum + (kcalForQuantity(amount, row.effectiveUnit, row.meal!) ?? 0);
-    });
-
 /// Each row's new amount text for a portion of [portion] grams as eaten,
 /// from the amounts
 /// the rows had when the portion was first changed ([base]), so that the
