@@ -173,33 +173,6 @@ class GeminiKeyNotes extends StatelessWidget {
   }
 }
 
-/// The key field's name, as the other providers' fields are named.
-String geminiKeyFieldName(S s) => s.aiAssistKeyFieldLabel(geminiChoiceLabel);
-
-/// The key field's label, above the field rather than inside it: a label in
-/// the field stays on one line, and at twice the font size "Google Gemini
-/// API key" was cut to "Google Gemini AP…" (UX A6).
-class GeminiKeyLabel extends StatelessWidget {
-  const GeminiKeyLabel({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
-      // The field carries the name itself (S209), so it is read once.
-      child: ExcludeSemantics(
-        child: Text(
-          geminiKeyFieldName(S.of(context)),
-          style: theme.textTheme.labelLarge?.copyWith(
-            color: theme.colorScheme.primary,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 /// The model section for the Google Gemini row: the model and who serves
 /// it, as a single curated model is shown, with its measured speed and cost.
 class GeminiModelLine extends StatelessWidget {
