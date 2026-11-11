@@ -627,15 +627,15 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
         ).isNotEmpty;
   }
 
-  /// [rows] with the earlier meal's amounts on the rows that would take
-  /// them.
+  /// [rows] as "Use your amounts" would leave them: the earlier meal's
+  /// amounts on the rows that would take them, the photo's on the other
+  /// rows the Size changes, and the amounts the user set kept.
   List<BulkAddRow> _withHistory(List<BulkAddRow> rows) {
     final match = _history;
     if (match == null) return rows;
-    final amounts = photoMealAmounts(
+    final amounts = _mealScale.rebaseTargets(
       rows,
-      match.record,
-      canTake: _mealScale.canScale,
+      photoMealAmounts(rows, match.record, canTake: _mealScale.canScale),
     );
     return [
       for (final row in rows)
@@ -647,8 +647,9 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
   }
 
   /// "Use your amounts": each shared row the Size may change takes the
-  /// earlier meal's amount as its new base, unpinned, at "As shown"; the
-  /// question on one of them goes, and the meal's energy is said.
+  /// earlier meal's amount as its new base, unpinned, at "As shown", and
+  /// the other rows it may change go back to the photo's amounts; the
+  /// question on a shared row goes, and the meal's energy is said.
   void _useHistory() {
     final state = _bloc.state;
     final match = _history;
@@ -778,10 +779,11 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
       return;
     }
     final row = state.rows[index];
-    final chip = question.choices[choice];
+    final chip = question.answer(row, choice);
+    if (chip == null) return;
     _mealScale.pin(row);
     if (_quantityErrors.containsKey(index)) _clearQuantityError(index);
-    setState(() => question.answered = choice);
+    setState(() {});
     // said once the row is built: the energy is formatted per profile
     _amountSaid = (
       amount: chip.spoken,

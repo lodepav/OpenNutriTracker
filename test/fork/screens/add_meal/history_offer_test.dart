@@ -377,18 +377,21 @@ void main() {
     expect(_use, findsNothing);
   });
 
-  testWidgets('one tap sets the shared rows as new bases: the others stay, '
-      'none is set by the user, and the Size scales from them', (tester) async {
+  testWidgets('one tap sets the shared rows as new bases at "As shown": the '
+      'others go back to the photo\'s amounts, none is set by the user, and '
+      'the Size scales from them', (tester) async {
     final semantics = tester.ensureSemantics();
     _memory.kept.add(_dinner());
     await _open(tester);
     await _readPhoto(tester);
     await _tap(tester, _chip(1.2));
     expect(_amounts(), ['180', '120', '96']);
+    // what the tap will give: the salad back at the photo's 80
+    expect(find.text('Your amounts then: 580 kcal'), findsOneWidget);
     tester.takeAnnouncements();
 
     await _tap(tester, _use);
-    expect(_amounts(), ['300', '200', '96']);
+    expect(_amounts(), ['300', '200', '80']);
     expect(tester.widget<ChoiceChip>(_chip(1.0)).selected, isTrue);
     final day = DateFormat.MMMEd(
       'en_US',
@@ -397,15 +400,44 @@ void main() {
     expect(_use, findsNothing);
     expect(
       tester.takeAnnouncements().map((a) => a.message),
-      contains('Meal now 596 kcal'),
+      contains('Meal now 580 kcal'),
     );
     final rows = (_bloc.state as BulkAddLoadedState).rows;
     expect(rows.any((row) => row.amountEditedByUser), isFalse);
 
+    // the salad from the photo's 80, not from the 96 it was at
     await _tap(tester, _chip(0.8));
-    expect(_amounts(), ['240', '160', '77']);
+    expect(_amounts(), ['240', '160', '64']);
     expect(find.text(DishStrings.setByYou), findsNothing);
     semantics.dispose();
+  });
+
+  testWidgets('the offer\'s energy is the meal\'s after the tap, with a row '
+      'the user set and a size chosen before', (tester) async {
+    _memory.kept.add(_dinner());
+    await _open(tester);
+    await _readPhoto(tester);
+    await _tap(tester, _chip(1.2));
+    await _tap(tester, find.byKey(const ValueKey('bulk-add-more-2')));
+    final set = _amounts()[2];
+    expect(set, isNot('96'));
+    final line = find.textContaining('Your amounts then: ');
+    final said = int.parse(
+      RegExp(r'(\d+) kcal').firstMatch(tester.widget<Text>(line).data!)![1]!,
+    );
+
+    await _tap(tester, _use);
+    expect(_amounts(), ['300', '200', set]);
+    // 100 kcal per 100 g: the grams are the energy
+    final total = _amounts().map(int.parse).reduce((a, b) => a + b);
+    expect(said, total);
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('bulk-add-meal-summary')),
+        matching: find.textContaining('$total'),
+      ),
+      findsWidgets,
+    );
   });
 
   testWidgets('while your amounts are used the sizes say they scale those; '
@@ -498,7 +530,7 @@ void main() {
     await _tap(tester, _chip(1.2));
     await _tap(tester, _use);
     await _tap(tester, _chip(0.6));
-    expect(_amounts(), ['180', '120', '58']);
+    expect(_amounts(), ['180', '120', '48']);
 
     await _tap(tester, _undo);
     expect(_amounts(), ['180', '120', '96']);
@@ -530,6 +562,37 @@ void main() {
     expect(question, findsNothing);
     await _tap(tester, _undo);
     expect(question, findsNothing);
+  });
+
+  testWidgets('the amount question on a food not in the earlier meal stays, '
+      'around the photo\'s amount the tap gave back', (tester) async {
+    _memory.kept.add(_dinner());
+    await _open(tester);
+    await _readPhoto(tester, const [
+      _rice,
+      _chicken,
+      ParsedMealItem(query: 'pasta', quantity: 200, unit: 'g'),
+    ]);
+    final question = find.byKey(const ValueKey('bulk-add-amount-question-2'));
+    List<String> labels() => [
+      for (var i = 0; i < 4; i++)
+        (tester
+                    .widget<ChoiceChip>(
+                      find.byKey(ValueKey('bulk-add-amount-choice-2-$i')),
+                    )
+                    .label
+                as Text)
+            .data!,
+    ];
+    expect(question, findsOneWidget);
+    await _tap(tester, _chip(1.2));
+    expect(_amounts()[2], '240');
+    expect(labels(), ['120 g', '180 g', '240 g', '350 g']);
+
+    await _tap(tester, _use);
+    expect(_amounts(), ['300', '200', '200']);
+    expect(question, findsOneWidget);
+    expect(labels(), ['100 g', '150 g', '200 g', '300 g']);
   });
 
   testWidgets('the offer goes once fewer than 2 of its foods are left in', (

@@ -366,21 +366,57 @@ void main() {
     expect(find.byKey(const ValueKey('bulk-add-set-by-you-1')), findsOneWidget);
   });
 
-  testWidgets('with a size chosen first the chips stay the photo\'s, and an '
-      'answer pins the row at its amount', (tester) async {
+  testWidgets('with a size chosen first the chips are built around the '
+      'row\'s amount, anew with each size until answered; an answer pins the '
+      'row and the chips stay', (tester) async {
     await _open(tester);
     await _readPhoto(tester);
     await _tap(tester, _size(0.6));
     expect(_row(1).amountText, '60');
-    expect(_labels(tester, 1), ['50 g', '75 g', '100 g', '150 g']);
+    expect(_labels(tester, 1), ['30 g', '45 g', '60 g', '90 g']);
+    expect(_selected(tester, 1), 2);
+
+    await _tap(tester, _size(1.2));
+    expect(_row(1).amountText, '120');
+    expect(_labels(tester, 1), ['60 g', '90 g', '120 g', '180 g']);
     expect(_selected(tester, 1), 2);
 
     await _tap(tester, _choice(1, 1));
-    expect(_row(1).amountText, '75');
+    expect(_row(1).amountText, '90');
     expect(find.byKey(const ValueKey('bulk-add-set-by-you-1')), findsOneWidget);
-    await _tap(tester, _size(1.2));
-    expect(_row(1).amountText, '75');
-    expect(_row(0).amountText, '192');
+    await _tap(tester, _size(0.8));
+    expect(_row(1).amountText, '90');
+    expect(_row(0).amountText, '128');
+    expect(_labels(tester, 1), ['60 g', '90 g', '120 g', '180 g']);
+    expect(_selected(tester, 1), 1);
+  });
+
+  testWidgets('confirming the chosen chip at ×0.6 pins the row at the '
+      'amount shown, its unit unchanged', (tester) async {
+    await _open(tester);
+    await _readPhoto(tester);
+    await _tap(tester, _size(0.6));
+    await _tap(tester, _choice(1, 2));
+    expect(_row(1).amountText, '60');
+    expect(_row(1).unit, 'g');
+    expect(_row(1).unitChosenByUser, isFalse);
+    expect(find.text(DishStrings.amountAnswered), findsOneWidget);
+    await _tap(tester, _size(1.4));
+    expect(_row(0).amountText, '224');
+    expect(_row(1).amountText, '60');
+    expect(find.byKey(const ValueKey('bulk-add-set-by-you-1')), findsOneWidget);
+  });
+
+  testWidgets('counts around the count a size left', (tester) async {
+    await _open(tester);
+    await _readPhoto(tester, const [
+      ParsedMealItem(query: 'salad', quantity: 100, unit: 'g'),
+      ParsedMealItem(query: 'bread', quantity: 2),
+    ]);
+    await _tap(tester, _size(0.6));
+    expect(_row(1).amountText, '1');
+    expect(_labels(tester, 1), ['½ slice', '1 slice', '2 slices', '3 slices']);
+    expect(_selected(tester, 1), 1);
   });
 
   testWidgets('an amount changed another way ends the question for good', (

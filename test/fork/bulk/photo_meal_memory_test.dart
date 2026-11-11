@@ -370,8 +370,9 @@ void main() {
   });
 
   group('the meal\'s Size from the amounts taken', () {
-    test('they are its bases, unpinned, at "As shown"; restore puts the '
-        'photo\'s back at the size before', () {
+    test('they are its bases, unpinned, at "As shown", the other rows back '
+        'at the photo\'s; restore puts the photo\'s back at the size '
+        'before', () {
       var rows = [_row('rice', 150), _row('chicken', 100), _row('salad', 80)];
       final scale = MealScale()..follow(rows);
       scale.factor = 0.8;
@@ -385,14 +386,14 @@ void main() {
       });
       expect(scale.factor, 1);
       rows = _apply(rows, set);
-      expect(rows.map((r) => r.amountText), ['250', '200', '64']);
+      expect(rows.map((r) => r.amountText), ['250', '200', '80']);
       // arriving is not taken for the user's edit
       expect(scale.follow(rows), isEmpty);
       expect(rows.any(scale.isPinned), isFalse);
 
       scale.factor = 1.2;
       rows = _apply(rows, scale.retarget(rows));
-      expect(rows.map((r) => r.amountText), ['300', '240', '77']);
+      expect(rows.map((r) => r.amountText), ['300', '240', '96']);
 
       rows = _apply(rows, scale.restore(rows, before));
       expect(scale.factor, 0.8);

@@ -55,23 +55,47 @@ class AmountQuestion {
   /// The food as the question names it, "chicken breast".
   final String food;
 
-  /// Built from the photo's amount, whatever size is chosen later.
-  final List<AmountChoice> choices;
+  /// Whether weights are offered in ounces where the Diary shows them so.
+  final bool imperial;
 
-  /// The chip the user tapped; null until they answer.
-  int? answered;
+  /// The chips as they were when the user answered, and the one tapped;
+  /// null until they answer.
+  List<AmountChoice>? _answeredChoices;
+  int? _answered;
 
   AmountQuestion({
     required this.item,
     required this.selectedIndex,
     required this.food,
-    required this.choices,
+    required this.imperial,
   });
 
   bool isFor(BulkAddRow row) => identical(row.resolved, item);
 
-  /// The chip shown as chosen: the one tapped, or the model's estimate.
-  int get selected => answered ?? choices.indexWhere((c) => c.estimate);
+  /// The chip the user tapped; null until they answer.
+  int? get answered => _answered;
+
+  /// The chips on [row], its row as it is now: until answered, built
+  /// around the amount it shows (the photo's at the size chosen), so the
+  /// one chosen is that amount; once answered, the chips it was answered
+  /// with, so a mis-tap is corrected among the same.
+  List<AmountChoice> choicesFor(BulkAddRow row) =>
+      _answeredChoices ?? amountChoices(row, imperial: imperial) ?? const [];
+
+  /// The chip of [choices] shown as chosen: the one tapped, or the amount
+  /// the row shows; -1 for none.
+  int selectedIn(List<AmountChoice> choices) =>
+      _answered ?? choices.indexWhere((c) => c.estimate);
+
+  /// Chip [choice] on [row] tapped: the chips stay as they are now. The
+  /// chip, or null when there is no such chip.
+  AmountChoice? answer(BulkAddRow row, int choice) {
+    final choices = choicesFor(row);
+    if (choice < 0 || choice >= choices.length) return null;
+    _answeredChoices = choices;
+    _answered = choice;
+    return choices[choice];
+  }
 
   /// Whether the question still stands among [rows]: its row is there with
   /// the same match. A breakdown or another match ends it for good.
@@ -104,13 +128,12 @@ AmountQuestion? amountQuestionFor(
     }
   }
   if (best == null) return null;
-  final choices = amountChoices(best, imperial: imperial);
-  if (choices == null) return null;
+  if (amountChoices(best, imperial: imperial) == null) return null;
   return AmountQuestion(
     item: best.resolved,
     selectedIndex: best.selectedIndex,
     food: questionFood(best.meal?.name ?? best.resolved.parsed.query),
-    choices: choices,
+    imperial: imperial,
   );
 }
 
@@ -324,7 +347,7 @@ String? _pieceWordOf(MealEntity meal, String unit) {
 }
 
 /// The chips that answer the question on [row], at the amount it has now
-/// (the photo's): counts when it counts a thing, or when its weight is
+/// (the photo's at the size chosen): counts when it counts a thing, or when its weight is
 /// within 15% of a whole or half piece; else weights at about ½, ¾, 1 and
 /// 1½ of it, in the unit the row is shown in. The model's amount is one of
 /// them, and sets the row's amount unchanged. Null without a usable amount.

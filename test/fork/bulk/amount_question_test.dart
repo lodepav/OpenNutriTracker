@@ -6,6 +6,7 @@ import 'package:opennutritracker/features/add_meal/domain/usecase/resolve_parsed
 import 'package:opennutritracker/features/add_meal/presentation/bloc/bulk_add_bloc.dart';
 import 'package:opennutritracker/features/add_meal/util/meal_text_parser.dart';
 import 'package:opennutritracker/fork/bulk/amount_question.dart';
+import 'package:opennutritracker/fork/bulk/meal_scale.dart';
 
 MealEntity _food(
   String name, {
@@ -270,6 +271,126 @@ void main() {
       );
       expect(_estimate(choices).label, '2 medium');
       expect(choices!.last.unit, 'serving#1');
+    });
+  });
+
+  group('following the Size', () {
+    /// [rows] at [factor] on [scale], as the bloc would set them.
+    List<BulkAddRow> sized(
+      MealScale scale,
+      List<BulkAddRow> rows,
+      double factor,
+    ) {
+      scale.factor = factor;
+      final amounts = scale.retarget(rows);
+      return [
+        for (final row in rows)
+          switch (amounts[row.resolved]) {
+            final text? => row.copyWith(amountText: text),
+            null => row,
+          },
+      ];
+    }
+
+    test('chosen from the photo\'s amounts, on the same row at any '
+        'size', () {
+      final rows = [
+        _row('160', 'g', name: 'rice'),
+        _row('100', 'g', name: 'chicken', food: _food('chicken', kcal100: 200)),
+      ];
+      final question = amountQuestionFor(rows, imperial: false)!;
+      final scale = MealScale()..follow(rows);
+      final small = sized(scale, rows, 0.6);
+      expect(question.isFor(small[1]), isTrue);
+      expect(question.isFor(small[0]), isFalse);
+    });
+
+    test('with ×0.6 chosen the chip chosen is the row\'s amount, and '
+        'another size builds them anew while unanswered', () {
+      final rows = [_row('100', 'g')];
+      final question = amountQuestionFor(rows, imperial: false)!;
+      final scale = MealScale()..follow(rows);
+      expect(_labels(question.choicesFor(rows[0])), [
+        '50 g',
+        '75 g',
+        '100 g',
+        '150 g',
+      ]);
+
+      var now = sized(scale, rows, 0.6);
+      expect(now[0].amountText, '60');
+      var choices = question.choicesFor(now[0]);
+      expect(_labels(choices), ['30 g', '45 g', '60 g', '90 g']);
+      expect(choices[question.selectedIn(choices)].label, '60 g');
+      expect(choices[question.selectedIn(choices)].text, '60');
+
+      now = sized(scale, now, 1.2);
+      choices = question.choicesFor(now[0]);
+      expect(_labels(choices), ['60 g', '90 g', '120 g', '180 g']);
+      expect(choices[question.selectedIn(choices)].text, '120');
+    });
+
+    test('confirming at ×0.6 pins the row at the amount shown; answered, '
+        'the Size leaves the row and the chips', () {
+      final rows = [_row('100', 'g')];
+      final question = amountQuestionFor(rows, imperial: false)!;
+      final scale = MealScale()..follow(rows);
+      var now = sized(scale, rows, 0.6);
+      final chip = question.answer(now[0], 2)!;
+      expect(chip.estimate, isTrue);
+      expect(chip.text, '60');
+      expect(chip.unit, 'g');
+      expect(question.answered, 2);
+
+      scale.pin(now[0]);
+      now = sized(scale, now, 1.4);
+      expect(now[0].amountText, '60');
+      final choices = question.choicesFor(now[0]);
+      expect(_labels(choices), ['30 g', '45 g', '60 g', '90 g']);
+      expect(question.selectedIn(choices), 2);
+      // a mis-tap corrected among the same chips
+      expect(question.answer(now[0], 3)!.text, '90');
+      expect(question.selectedIn(question.choicesFor(now[0])), 3);
+      expect(_labels(question.choicesFor(now[0].copyWith(amountText: '90'))), [
+        '30 g',
+        '45 g',
+        '60 g',
+        '90 g',
+      ]);
+    });
+
+    test('counts around the count shown', () {
+      final bread = _food(
+        'bread',
+        portions: [_portion('1 slice (32 g)', 32)],
+        serving: 32,
+        servingSize: '1 slice (32 g)',
+      );
+      final rows = [
+        _row('2', 'serving', food: bread, name: 'bread', parsedUnit: null),
+      ];
+      final question = amountQuestionFor(rows, imperial: false)!;
+      final scale = MealScale()..follow(rows);
+      final now = sized(scale, rows, 0.6);
+      expect(now[0].amountText, '1');
+      final choices = question.choicesFor(now[0]);
+      expect(_labels(choices), ['½ slice', '1 slice', '2 slices', '3 slices']);
+      expect(choices[question.selectedIn(choices)].text, '1');
+      expect(question.answer(now[0], 1)!.unit, 'serving');
+    });
+
+    test('ounces around the scaled grams on an imperial profile, the '
+        'chosen one keeping the row\'s grams', () {
+      final rows = [_row('150', 'g')];
+      final question = amountQuestionFor(rows, imperial: true)!;
+      final scale = MealScale()..follow(rows);
+      final now = sized(scale, rows, 0.6);
+      expect(now[0].amountText, '90');
+      final choices = question.choicesFor(now[0]);
+      expect(_labels(choices), ['1.5 oz', '2.5 oz', '3.2 oz', '5 oz']);
+      final chosen = choices[question.selectedIn(choices)];
+      expect(chosen.unit, 'g');
+      expect(chosen.text, '90');
     });
   });
 }

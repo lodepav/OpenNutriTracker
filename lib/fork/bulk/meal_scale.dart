@@ -182,14 +182,13 @@ class MealScale {
     factor,
   );
 
-  /// Takes [amounts] (by resolved item) as new bases, unpinned, at "As
-  /// shown": every row the size changes has the amount given, or the one it
-  /// shows now, as its base. Returns the amounts to set (`ScaleRowsEvent`).
-  Map<ResolvedMealItem, String> rebase(
+  /// The amount each row the size changes has once [amounts] are taken
+  /// ([rebase]), by resolved item: the one given, or else its base as the
+  /// photo had it, at "As shown". Changes nothing.
+  Map<ResolvedMealItem, String> rebaseTargets(
     List<BulkAddRow> rows,
     Map<ResolvedMealItem, String> amounts,
   ) {
-    factor = 1;
     final out = LinkedHashMap<ResolvedMealItem, String>.identity();
     for (final row in rows) {
       if (!canScale(row)) continue;
@@ -197,8 +196,30 @@ class MealScale {
       for (final MapEntry(:key, :value) in amounts.entries) {
         if (identical(key, row.resolved)) given = value;
       }
-      final text = given ?? row.amountText;
-      setBase(row, amountText: text);
+      final text = given ?? _base[row.resolved]?.text;
+      if (text != null) out[row.resolved] = text;
+    }
+    return out;
+  }
+
+  /// Takes [amounts] (by resolved item) as new bases, unpinned, at "As
+  /// shown": a row the size changes that has an amount given takes it as
+  /// its base; every other one goes back to its base, so a later size
+  /// scales it from the photo's amount, not from the size it was at.
+  /// Returns the amounts to set (`ScaleRowsEvent`).
+  Map<ResolvedMealItem, String> rebase(
+    List<BulkAddRow> rows,
+    Map<ResolvedMealItem, String> amounts,
+  ) {
+    final targets = rebaseTargets(rows, amounts);
+    factor = 1;
+    final out = LinkedHashMap<ResolvedMealItem, String>.identity();
+    for (final row in rows) {
+      final text = targets[row.resolved];
+      if (text == null) continue;
+      if (amounts.keys.any((item) => identical(item, row.resolved))) {
+        setBase(row, amountText: text);
+      }
       _give(row, text, out);
     }
     return out;

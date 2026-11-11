@@ -361,6 +361,71 @@ void main() {
     expect(_amounts(_size(scale, rows, 0.6)), ['120']);
   });
 
+  group('earlier amounts taken (rebase)', () {
+    test('a shared row takes its amount as base; another goes back to the '
+        "photo's, so a later size scales from that", () {
+      final scale = MealScale();
+      var rows = [_row('rice', '150', 'g'), _row('salad', '80', 'g')];
+      scale.follow(rows);
+      rows = _size(scale, rows, 1.2);
+      expect(_amounts(rows), ['180', '96']);
+
+      final taken = {rows[0].resolved: '300'};
+      final said = scale.rebaseTargets(rows, taken);
+      final out = scale.rebase(rows, taken);
+      expect(scale.factor, 1);
+      rows = _apply(rows, out);
+      rows = _apply(rows, scale.follow(rows));
+      expect(_amounts(rows), ['300', '80']);
+      // what the offer says is what the tap gives
+      expect([for (final row in rows) said[row.resolved]], ['300', '80']);
+      expect(rows.any(scale.isPinned), isFalse);
+
+      rows = _size(scale, rows, 0.8);
+      expect(_amounts(rows), ['240', '64']);
+    });
+
+    test('a row the user set keeps its amount, and is left out of the '
+        'targets', () {
+      final scale = MealScale();
+      var rows = [_row('rice', '150', 'g'), _row('salad', '80', 'g')];
+      scale.follow(rows);
+      rows = _size(scale, rows, 1.2);
+      rows = [rows[0], rows[1].copyWith(amountText: '110')];
+      rows = _apply(rows, scale.follow(rows));
+      expect(scale.isPinned(rows[1]), isTrue);
+
+      final taken = {rows[0].resolved: '300'};
+      expect(
+        scale.rebaseTargets(rows, taken).containsKey(rows[1].resolved),
+        isFalse,
+      );
+      rows = _apply(rows, scale.rebase(rows, taken));
+      rows = _apply(rows, scale.follow(rows));
+      expect(_amounts(rows), ['300', '110']);
+      expect(scale.isPinned(rows[1]), isTrue);
+      expect(_amounts(_size(scale, rows, 0.8)), ['240', '110']);
+    });
+
+    test('restore puts back the bases and the size before: 96 at ×1.2', () {
+      final scale = MealScale();
+      var rows = [_row('rice', '150', 'g'), _row('salad', '80', 'g')];
+      scale.follow(rows);
+      rows = _size(scale, rows, 1.2);
+      final before = scale.snapshot();
+      rows = _apply(rows, scale.rebase(rows, {rows[0].resolved: '300'}));
+      rows = _apply(rows, scale.follow(rows));
+      rows = _size(scale, rows, 0.6);
+      expect(_amounts(rows), ['180', '48']);
+
+      rows = _apply(rows, scale.restore(rows, before));
+      rows = _apply(rows, scale.follow(rows));
+      expect(scale.factor, 1.2);
+      expect(_amounts(rows), ['180', '96']);
+      expect(_amounts(_size(scale, rows, 1)), ['150', '80']);
+    });
+  });
+
   group('a breakdown', () {
     BulkAddRow ingredient(String name, double grams, Object group) => _row(
       name,

@@ -170,6 +170,7 @@ extension _BulkAddRow on _BulkAddScreenState {
                   _sayAmountAnswer(context);
                   return AmountQuestionView(
                     question: question,
+                    row: row,
                     index: index,
                     onChosen: (choice) => _answerAmount(index, choice),
                   );
