@@ -76,6 +76,16 @@ import 'package:opennutritracker/features/add_meal/domain/usecase/resolve_parsed
 import 'package:opennutritracker/fork/bulk/photo_meal_memory.dart';
 import 'package:opennutritracker/fork/bulk/photo_meal_memory_store.dart';
 import 'package:opennutritracker/fork/screens/add_meal/history_offer_view.dart';
+// the photo's amounts sized the way the user usually corrects them (D46)
+import 'package:opennutritracker/fork/bulk/usual_sizes.dart';
+import 'package:opennutritracker/fork/screens/add_meal/usual_sizes_view.dart';
+// the fat a meal was cooked in, and the note's chips (D48, D49)
+import 'package:opennutritracker/fork/bulk/cooking_fat.dart';
+import 'package:opennutritracker/fork/bulk/put_row.dart';
+import 'package:opennutritracker/fork/dish/break_down_dish_usecase.dart'
+    show preferTableRow;
+import 'package:opennutritracker/fork/screens/add_meal/cooking_fat_view.dart';
+import 'package:opennutritracker/fork/screens/add_meal/note_chips_view.dart';
 
 part 'bulk_add_body.dart';
 part 'bulk_add_row.dart';
@@ -121,6 +131,30 @@ Future<DayTotals> Function(DateTime day) forkDayTotals = loadDayTotals;
 
 /// The photo meal memory the review reads and Log writes; tests swap it.
 PhotoMealMemoryStore Function() forkPhotoMealMemory = PhotoMealMemoryStore.new;
+
+/// The food table's oil a cooking fat chip adds, at [grams] (D48); null
+/// when nothing matched. Tests swap it.
+Future<ResolvedMealItem?> Function(double grams) forkCookingFatFood =
+    _cookingFatFood;
+
+Future<ResolvedMealItem?> _cookingFatFood(double grams) async {
+  final found = await locator<ResolveParsedMealsUseCase>().resolve([
+    ParsedMealItem(query: cookingFatQuery, quantity: grams, unit: 'g'),
+  ], fromPhoto: true);
+  if (found.isEmpty || !found.first.isResolved) return null;
+  // the table's oil, not a bottle nobody named
+  return preferTableRow(found.first);
+}
+
+/// A row as the photo's read gave it: its food, unit, grams or millilitres
+/// and amount text, and whether a size could change it then.
+typedef _PhotoRow = ({
+  String key,
+  String unit,
+  double? base,
+  String text,
+  bool sizable,
+});
 
 class _BulkAddScreenState extends State<BulkAddScreen> {
   final _log = Logger('BulkAddScreen');
@@ -169,10 +203,46 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
   /// The dish the photo's read arrived as, kept with the meal on Log.
   String? _arrivalDish;
 
+  /// The rows of a photo's read as they arrived, kept so the photo's own
+  /// amounts can come back and be kept with the meal on Log.
+  final _photoRows = LinkedHashMap<ResolvedMealItem, _PhotoRow>.identity();
+
+  /// The usual sizes applied to this read, the rows they changed, and the
+  /// foods the line names; null when none were.
+  UsualSizes? _usual;
+  final _usualRows = Set<ResolvedMealItem>.identity();
+  List<({String name, double factor})> _usualFoods = const [];
+
+  /// The bases before the usual sizes, which "Use the photo's amounts"
+  /// puts back; and, while the photo's amounts are used, the usual ones.
+  MealScaleSnapshot? _photoBases;
+  MealScaleSnapshot? _usualBases;
+
+  /// Whether the usual sizes are what the rows' bases are now.
+  bool get _usualInForce =>
+      _usual != null && _usualBases == null && _historyUndo == null;
+
   /// Each row's grams or millilitres when it first appeared, and whether
   /// the user has changed any amount from it (a row they set that moved).
   final _firstAmounts = LinkedHashMap<ResolvedMealItem, double?>.identity();
   bool _amountChanged = false;
+
+  /// The question about the fat the meal was cooked or dressed with,
+  /// decided once per read as its rows arrive; null when not asked.
+  CookingFatAsk? _fatAsk;
+  bool _fatAsked = false;
+
+  /// Answered None: the question goes.
+  bool _fatClosed = false;
+
+  /// The fat row a chip added, while it is on the review.
+  ResolvedMealItem? _fatItem;
+
+  /// The chip tapped while the table's oil is looked up.
+  int? _fatPending;
+
+  /// The note's field, focused by a chip that wants a number after it.
+  final _noteFocus = FocusNode();
 
   // titled like the buttons that open it while AI meal assistance is on
   final _aiAdd = aiAddEnabled();
@@ -537,12 +607,24 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
       _historyAsked = false;
       _historyUndo = null;
       _arrivalDish = null;
+      _photoRows.clear();
+      _usual = null;
+      _usualRows.clear();
+      _usualFoods = const [];
+      _photoBases = null;
+      _usualBases = null;
       _firstAmounts.clear();
       _amountChanged = false;
+      _fatAsk = null;
+      _fatAsked = false;
+      _fatClosed = false;
+      _fatItem = null;
+      _fatPending = null;
       return;
     }
     if (state.source != BulkAddReadSource.photo) return;
     _followAmountQuestion(state);
+    _askCookingFat(state);
     _askHistory(state);
     final amounts = _mealScale.follow(state.rows);
     _followAmountChanges(state.rows);
@@ -557,6 +639,17 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
     _historyAsked = true;
     _arrivalDish = readDishName(state.rows);
     if (state.modelFailure != null) return;
+    for (final row in state.rows) {
+      final meal = row.meal;
+      if (meal == null) continue;
+      _photoRows[row.resolved] = (
+        key: foodKeyOf(meal),
+        unit: row.effectiveUnit,
+        base: baseAmountOf(row),
+        text: row.amountText,
+        sizable: isScalableRow(row, note: _photoNote),
+      );
+    }
     unawaited(_findHistory(_readSerial, state.rows, _photoNote));
   }
 
@@ -573,13 +666,106 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
       return;
     }
     if (!mounted || read != _readSerial) return;
-    final match = photoMealMatchFor(
-      rows,
-      records,
-      note: note,
-      now: DateTime.now(),
-    );
+    final now = DateTime.now();
+    final match = photoMealMatchFor(rows, records, note: note, now: now);
     if (match != null) setState(() => _history = match);
+    _applyUsual(usualSizesOf(records, now: now));
+  }
+
+  /// The photo's amounts sized the way the user usually corrects them: each
+  /// row the Size may change, still at the photo's amount, takes its usual
+  /// amount as its base, at 1×, which reads "Your usual". Not once a size
+  /// was chosen or earlier amounts used: the user has sized this meal.
+  void _applyUsual(UsualSizes usual) {
+    final state = _bloc.state;
+    if (usual.isEmpty || state is! BulkAddLoadedState) return;
+    if (state.source != BulkAddReadSource.photo) return;
+    if (_mealScale.factor != 1 || _historyUndo != null) return;
+    final amounts = usualAmounts(
+      state.rows,
+      usual,
+      note: _photoNote,
+      canTake: (row) =>
+          _mealScale.canScale(row) &&
+          _photoRows[row.resolved]?.text == row.amountText,
+    );
+    if (amounts.isEmpty) return;
+    final foods = <String, ({String name, double factor})>{};
+    for (final row in state.rows) {
+      if (!amounts.containsKey(row.resolved)) continue;
+      final key = foodKeyOf(row.meal!);
+      if (usual.foods[key] case final factor?) {
+        foods.putIfAbsent(key, () => (name: _rowTitle(row), factor: factor));
+      }
+    }
+    final before = _mealScale.snapshot();
+    final scaled = _mealScale.rebase(state.rows, amounts);
+    setState(() {
+      _usual = usual;
+      _usualRows
+        ..clear()
+        ..addAll(amounts.keys);
+      _usualFoods = [...foods.values];
+      _photoBases = before;
+      _usualBases = null;
+    });
+    // not said: nothing was tapped, and the line is read with the card
+    if (scaled.isNotEmpty) _bloc.add(ScaleRowsEvent(scaled));
+  }
+
+  /// Whether the usual sizes' line is shown: some row they sized is still
+  /// one the Size changes, and no earlier amounts are used.
+  bool _usualShown(List<BulkAddRow> rows) =>
+      _usual != null &&
+      _historyUndo == null &&
+      rows.any(
+        (row) => _usualRows.contains(row.resolved) && _mealScale.canScale(row),
+      );
+
+  /// "Use the photo's amounts": the bases before the usual sizes back, the
+  /// rows the user set left as set.
+  void _usePhotoAmounts() {
+    final state = _bloc.state;
+    final photo = _photoBases;
+    if (state is! BulkAddLoadedState || photo == null || !_usualInForce) {
+      return;
+    }
+    final usual = _mealScale.snapshot();
+    final amounts = _mealScale.restore(state.rows, photo);
+    setState(() => _usualBases = usual);
+    _sendScaled(state.rows, amounts);
+  }
+
+  /// Back to the usual sizes, and the size chosen with them.
+  void _useUsualSizes() {
+    final state = _bloc.state;
+    final usual = _usualBases;
+    if (state is! BulkAddLoadedState || usual == null) return;
+    final amounts = _mealScale.restore(state.rows, usual);
+    setState(() => _usualBases = null);
+    _sendScaled(state.rows, amounts);
+  }
+
+  /// The photo's own grams or millilitres for [row], kept with the meal on
+  /// Log: none for a row the read did not give, nor one whose match or
+  /// unit changed, nor one no size could change (its amount was not the
+  /// photo's estimate).
+  double? _photoAmountOf(BulkAddRow row) {
+    final photo = _photoRows[row.resolved];
+    final meal = row.meal;
+    if (photo == null || !photo.sizable || meal == null) return null;
+    if (foodKeyOf(meal) != photo.key || row.effectiveUnit != photo.unit) {
+      return null;
+    }
+    return photo.base;
+  }
+
+  /// The Size chosen at Log, against the amounts in force (the photo's or
+  /// the usual ones); none when no row of the read could be sized. Kept,
+  /// not learnt from: each food's logged amount already holds it.
+  double? _loggedSize() {
+    if (!_photoRows.values.any((row) => row.sizable)) return null;
+    return _mealScale.factor;
   }
 
   /// Notes each new row's amount, and whether a row the user set has moved
@@ -628,8 +814,9 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
   }
 
   /// [rows] as "Use your amounts" would leave them: the earlier meal's
-  /// amounts on the rows that would take them, the photo's on the other
-  /// rows the Size changes, and the amounts the user set kept.
+  /// amounts on the rows that would take them, the other rows the Size
+  /// changes at their bases (the usual sizes' while in force, else the
+  /// photo's), and the amounts the user set kept.
   List<BulkAddRow> _withHistory(List<BulkAddRow> rows) {
     final match = _history;
     if (match == null) return rows;
@@ -648,7 +835,8 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
 
   /// "Use your amounts": each shared row the Size may change takes the
   /// earlier meal's amount as its new base, unpinned, at "As shown", and
-  /// the other rows it may change go back to the photo's amounts; the
+  /// the other rows it may change go back to their bases: a usual size in
+  /// force is the user's too, so it stays, else the photo's amount. The
   /// question on a shared row goes, and the meal's energy is said.
   void _useHistory() {
     final state = _bloc.state;
@@ -768,9 +956,12 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
     }
   }
 
-  /// Chip [choice] of the question on row [index] tapped: the row takes its
-  /// amount as a typed one, in the unit it is shown in, and the meal's Size
-  /// leaves it.
+  /// Chip [choice] of the question on row [index] tapped. The amount the
+  /// row shows is confirmed as it is: not pinned, so the Size keeps scaling
+  /// it, and not "Set by you"; a pinned confirmed row took the Size's step
+  /// off the meal's biggest food. Another amount is taken as a typed one,
+  /// in the unit it is shown in, and the Size leaves it. Either way the
+  /// amount and the meal's energy are said.
   void _answerAmount(int index, int choice) {
     final state = _bloc.state;
     final question = _amountQuestion;
@@ -781,6 +972,19 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
     final row = state.rows[index];
     final chip = question.answer(row, choice);
     if (chip == null) return;
+    if (chip.unit == row.effectiveUnit && chip.text == row.amountText) {
+      setState(() {});
+      _amountSaid = (amount: chip.spoken, rows: state.rows);
+      return;
+    }
+    _setRowTo(state, index, chip);
+  }
+
+  /// Row [index] of [state] set to [chip] as the user's amount, in the unit
+  /// it is shown in: the meal's Size leaves it, and the amount and the
+  /// meal's energy are said.
+  void _setRowTo(BulkAddLoadedState state, int index, AmountChoice chip) {
+    final row = state.rows[index];
     _mealScale.pin(row);
     if (_quantityErrors.containsKey(index)) _clearQuantityError(index);
     setState(() {});
@@ -801,6 +1005,125 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
         ..add(ChangeRowUnitEvent(index, chip.unit))
         ..add(ChangeRowAmountEvent(index, chip.text));
     }
+  }
+
+  /// The fat question for a photo's rows as they first arrive (D48).
+  void _askCookingFat(BulkAddLoadedState state) {
+    if (_fatAsked || state.rows.isEmpty) return;
+    _fatAsked = true;
+    if (state.modelFailure != null) return;
+    _fatAsk = cookingFatAskFor(state.rows, note: _photoNote);
+  }
+
+  /// The fat row the chips added, as it is on the review; null when none.
+  BulkAddRow? _fatRow(List<BulkAddRow> rows) {
+    final item = _fatItem;
+    if (item == null) return null;
+    for (final row in rows) {
+      if (identical(row.resolved, item)) return row;
+    }
+    return null;
+  }
+
+  /// The chip of the fat question that shows as chosen: the one at the
+  /// added row's amount, or the one tapped while its oil is looked up.
+  /// None while the row is in another unit than the chips' grams.
+  int? _fatChosen(List<BulkAddRow> rows) => switch (_fatRow(rows)) {
+    final row? when row.effectiveUnit == row.resolved.parsed.unit =>
+      cookingFatChipOf(row.amountText),
+    final _? => null,
+    null => _fatPending,
+  };
+
+  /// None (-1) takes the added row off and ends the question; an amount
+  /// adds the table's oil at it, pinned as the user's (the Size leaves
+  /// it), or sets the row it added before to it.
+  Future<void> _chooseCookingFat(int choice) async {
+    final state = _bloc.state;
+    if (state is! BulkAddLoadedState) return;
+    final current = _fatRow(state.rows);
+    if (choice < 0) {
+      setState(() {
+        _fatClosed = true;
+        _fatPending = null;
+      });
+      if (current != null) _bloc.add(PutRowEvent(current.resolved, null));
+      return;
+    }
+    final grams = cookingFatGrams[choice];
+    if (current != null) {
+      // the user's amount, not a correction of the photo's
+      _firstAmounts.remove(current.resolved);
+      _bloc.add(
+        PutRowEvent(
+          current.resolved,
+          // in the grams the row was added in, whatever unit it is in now
+          current.copyWith(
+            amountText: cookingFatText(grams),
+            unit: current.resolved.parsed.unit,
+          ),
+        ),
+      );
+      return;
+    }
+    final looking = _fatPending != null;
+    setState(() => _fatPending = choice);
+    if (looking) return;
+    final read = _readSerial;
+    ResolvedMealItem? found;
+    try {
+      found = await forkCookingFatFood(grams);
+    } catch (e, stackTrace) {
+      _log.warning('Looking up the cooking fat failed', e, stackTrace);
+    }
+    if (!mounted || read != _readSerial) return;
+    final pending = _fatPending;
+    setState(() => _fatPending = null);
+    if (pending == null || _fatClosed) return;
+    if (found == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text(DishStrings.fatNotFound)));
+      return;
+    }
+    final row = _cookingFatRow(found, cookingFatGrams[pending]);
+    _mealScale.pin(row);
+    setState(() => _fatItem = row.resolved);
+    _bloc.add(PutRowEvent(row.resolved, row));
+  }
+
+  /// An ordinary row of [found] at [grams], as the user's amount: in grams,
+  /// or grams-or-millilitres for a food that has no grams.
+  BulkAddRow _cookingFatRow(ResolvedMealItem found, double grams) {
+    final g = UnitDropdownItem.g.toString();
+    final probe = BulkAddRow(
+      resolved: found,
+      selectedIndex: found.selectedIndex,
+      amountText: '',
+      unit: g,
+    );
+    final unit = probe.allowedUnits.contains(g)
+        ? g
+        : UnitDropdownItem.gml.toString();
+    final item = ResolvedMealItem(
+      parsed: ParsedMealItem(
+        query: found.parsed.query,
+        quantity: grams,
+        unit: unit,
+      ),
+      candidates: found.candidates,
+      selectedIndex: found.selectedIndex,
+      // the user asked for it: no "uncertain" on it
+      confidence: 1,
+    );
+    return BulkAddRow(
+      resolved: item,
+      selectedIndex: item.selectedIndex,
+      amountText: cookingFatText(grams),
+      unit: unit,
+      amountEditedByUser: true,
+      fromPhoto: true,
+    );
   }
 
   /// "150 grams. Meal now 450 kcal" to a screen reader, after an answer.
@@ -891,6 +1214,7 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
     _scaleFollow.cancel();
     _bloc.close();
     _textController.dispose();
+    _noteFocus.dispose();
     for (final controller in _amountControllers.values) {
       controller.dispose();
     }
@@ -1110,6 +1434,7 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
                 identifier: 'bulk-add-input',
                 child: TextField(
                   controller: _textController,
+                  focusNode: _noteFocus,
                   minLines: 2,
                   maxLines: 4,
                   textInputAction: TextInputAction.newline,
@@ -1137,6 +1462,11 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
                 ),
               ),
             ),
+            // words for the photo's note (D49)
+            if (staged != null && !busy) ...[
+              const SizedBox(height: 8),
+              NoteChipsView(controller: _textController, focus: _noteFocus),
+            ],
             const SizedBox(height: 12),
             // nothing to send on an empty box, or while a read runs
             ListenableBuilder(
@@ -1691,6 +2021,8 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
             slot: _args.intakeTypeEntity.name,
             dish: _arrivalDish,
             corrected: _photoCorrected(state.rows),
+            photoAmountOf: _photoAmountOf,
+            size: _loggedSize(),
           )
         : null;
 

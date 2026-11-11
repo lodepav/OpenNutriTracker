@@ -265,8 +265,28 @@ extension _BulkAddBody on _BulkAddScreenState {
                 const SizedBox(height: 10),
                 _buildHistoryOffer(context, state),
               ],
+              if (_usualShown(state.rows)) ...[
+                const SizedBox(height: 10),
+                UsualSizesView(
+                  foods: _usualFoods,
+                  inForce: _usualInForce,
+                  onUsePhoto: _usePhotoAmounts,
+                  onUseUsual: _useUsualSizes,
+                ),
+              ],
               const SizedBox(height: 10),
               _buildMealSize(context, state),
+            ],
+            // the fat it was cooked or dressed with, once per read (D48)
+            if (state.source == BulkAddReadSource.photo &&
+                _fatAsk != null &&
+                !_fatClosed) ...[
+              const SizedBox(height: 10),
+              CookingFatView(
+                ask: _fatAsk!,
+                chosen: _fatChosen(state.rows),
+                onChosen: (choice) => unawaited(_chooseCookingFat(choice)),
+              ),
             ],
             const SizedBox(height: 10),
             // its own node, so the day is read last, as it is shown
@@ -328,6 +348,8 @@ extension _BulkAddBody on _BulkAddScreenState {
     final allSet = _mealScale.allSet(state.rows);
     // the user's earlier amounts in use: the sizes scale those
     final own = _historyUndo != null;
+    // the usual sizes in force: the sizes scale those
+    final usual = _usualInForce;
     _sayMealSize(context);
     return Column(
       key: const ValueKey('bulk-add-meal-size'),
@@ -350,10 +372,11 @@ extension _BulkAddBody on _BulkAddScreenState {
                 child: ChoiceChip(
                   key: ValueKey('bulk-add-meal-size-$factor'),
                   label: Text(
-                    DishStrings.sizeChip(factor, own: own),
+                    DishStrings.sizeChip(factor, own: own, usual: usual),
                     semanticsLabel: DishStrings.sizeChipSpoken(
                       factor,
                       own: own,
+                      usual: usual,
                     ),
                   ),
                   materialTapTargetSize: MaterialTapTargetSize.padded,
@@ -368,7 +391,12 @@ extension _BulkAddBody on _BulkAddScreenState {
         Semantics(
           container: true,
           child: Text(
-            allSet ? DishStrings.sizeAllSet : DishStrings.sizeScalesUnset,
+            key: const ValueKey('bulk-add-meal-size-hint'),
+            allSet
+                ? DishStrings.sizeAllSet
+                : usual
+                ? DishStrings.sizesChangeUsual
+                : DishStrings.sizeScalesUnset,
             style: muted,
           ),
         ),

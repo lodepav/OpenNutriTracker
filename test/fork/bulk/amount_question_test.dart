@@ -128,6 +128,32 @@ void main() {
       );
       expect(questionFood('Rice, white'), 'rice, white');
     });
+
+    test('in the model\'s words, not the table\'s', () {
+      final pasta = _food('Pasta, dry, enriched');
+      final rows = [_row('200', 'g', food: pasta, name: 'orecchiette')];
+      expect(amountQuestionFor(rows, imperial: false)!.food, 'orecchiette');
+    });
+
+    test('without amount words, cut at a comma, cased as the others', () {
+      expect(questionFoodOf('Orecchiette', null), 'orecchiette');
+      expect(questionFoodOf('150 g rice', null), 'rice');
+      expect(questionFoodOf('2 eggs, fried', null), 'eggs');
+      expect(
+        questionFoodOf('about 200 g Chicken Breast', null),
+        'chicken breast',
+      );
+      expect(questionFoodOf('~1 cup of rice', null), 'rice');
+      expect(questionFoodOf('pasta (about 200 g)', null), 'pasta');
+      expect(questionFoodOf('salmon 150g', null), 'salmon');
+      expect(questionFoodOf('BBQ ribs', null), 'BBQ ribs');
+      expect(questionFoodOf('7-Up', null), '7-Up');
+    });
+
+    test('the table\'s name when the model\'s says nothing', () {
+      expect(questionFoodOf('', 'Rice, white'), 'rice, white');
+      expect(questionFoodOf('150 g', 'Rice, white'), 'rice, white');
+    });
   });
 
   group('rounding', () {
@@ -330,8 +356,8 @@ void main() {
       expect(choices[question.selectedIn(choices)].text, '120');
     });
 
-    test('confirming at ×0.6 pins the row at the amount shown; answered, '
-        'the Size leaves the row and the chips', () {
+    test('confirming at ×0.6 answers with the amount shown, and the chips '
+        'go on following the row, that amount chosen', () {
       final rows = [_row('100', 'g')];
       final question = amountQuestionFor(rows, imperial: false)!;
       final scale = MealScale()..follow(rows);
@@ -340,14 +366,32 @@ void main() {
       expect(chip.estimate, isTrue);
       expect(chip.text, '60');
       expect(chip.unit, 'g');
-      expect(question.answered, 2);
+      expect(question.isAnswered, isTrue);
+      expect(question.answered, isNull);
+
+      now = sized(scale, now, 1.4);
+      expect(now[0].amountText, '140');
+      final choices = question.choicesFor(now[0]);
+      expect(_labels(choices), ['70 g', '110 g', '140 g', '210 g']);
+      expect(choices[question.selectedIn(choices)].text, '140');
+    });
+
+    test('another amount answered: the Size leaves the row and the chips', () {
+      final rows = [_row('100', 'g')];
+      final question = amountQuestionFor(rows, imperial: false)!;
+      final scale = MealScale()..follow(rows);
+      var now = sized(scale, rows, 0.6);
+      expect(question.answer(now[0], 1)!.text, '45');
+      expect(question.answered, 1);
+      expect(question.isAnswered, isTrue);
+      now = [now[0].copyWith(amountText: '45')];
 
       scale.pin(now[0]);
       now = sized(scale, now, 1.4);
-      expect(now[0].amountText, '60');
+      expect(now[0].amountText, '45');
       final choices = question.choicesFor(now[0]);
       expect(_labels(choices), ['30 g', '45 g', '60 g', '90 g']);
-      expect(question.selectedIn(choices), 2);
+      expect(question.selectedIn(choices), 1);
       // a mis-tap corrected among the same chips
       expect(question.answer(now[0], 3)!.text, '90');
       expect(question.selectedIn(question.choicesFor(now[0])), 3);

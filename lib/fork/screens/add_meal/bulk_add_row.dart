@@ -11,6 +11,8 @@ extension _BulkAddRow on _BulkAddScreenState {
   /// leaves it out, with Undo; a left-out food says so and puts it back.
   Widget _buildRow(BuildContext context, BulkAddLoadedState state, int index) {
     final row = state.rows[index];
+    // an amount set by a chip, said once a row is built
+    _sayAmountAnswer(context);
     final theme = Theme.of(context);
     final textTheme = theme.textTheme;
     final palette = paletteOf(context);
@@ -165,16 +167,11 @@ extension _BulkAddRow on _BulkAddScreenState {
               when !faded && question.isFor(row))
             Padding(
               padding: const EdgeInsets.fromLTRB(52, 0, 12, 6),
-              child: Builder(
-                builder: (context) {
-                  _sayAmountAnswer(context);
-                  return AmountQuestionView(
-                    question: question,
-                    row: row,
-                    index: index,
-                    onChosen: (choice) => _answerAmount(index, choice),
-                  );
-                },
+              child: AmountQuestionView(
+                question: question,
+                row: row,
+                index: index,
+                onChosen: (choice) => _answerAmount(index, choice),
               ),
             ),
           if (row.skipped || error != null || actions.isNotEmpty)

@@ -334,7 +334,7 @@ void main() {
     ).format(DateTime(_today.year, _today.month, _today.day - 7));
     expect(find.text('Like your dinner on $day'), findsOneWidget);
     // rice 300 and chicken 200 then, the salad as the photo shows it
-    expect(find.text('Your amounts then: 580 kcal'), findsOneWidget);
+    expect(find.text('This meal with your amounts: 580 kcal'), findsOneWidget);
     expect(find.text(DishStrings.historyUse), findsOneWidget);
     // above the Size
     expect(
@@ -387,7 +387,7 @@ void main() {
     await _tap(tester, _chip(1.2));
     expect(_amounts(), ['180', '120', '96']);
     // what the tap will give: the salad back at the photo's 80
-    expect(find.text('Your amounts then: 580 kcal'), findsOneWidget);
+    expect(find.text('This meal with your amounts: 580 kcal'), findsOneWidget);
     tester.takeAnnouncements();
 
     await _tap(tester, _use);
@@ -421,7 +421,7 @@ void main() {
     await _tap(tester, find.byKey(const ValueKey('bulk-add-more-2')));
     final set = _amounts()[2];
     expect(set, isNot('96'));
-    final line = find.textContaining('Your amounts then: ');
+    final line = find.textContaining('This meal with your amounts: ');
     final said = int.parse(
       RegExp(r'(\d+) kcal').firstMatch(tester.widget<Text>(line).data!)![1]!,
     );
@@ -507,7 +507,7 @@ void main() {
     }
 
     final order = [
-      at('This meal'),
+      at('This meal ·'),
       at('Like your dinner'),
       at(DishStrings.historyUse),
       at(DishStrings.mealSize),
@@ -733,7 +733,7 @@ void main() {
     expect(tester.getSize(_use).height, greaterThanOrEqualTo(48));
     for (final text in [
       DishStrings.historyUse,
-      'Your amounts then: 580 kcal',
+      'This meal with your amounts: 580 kcal',
     ]) {
       expect(
         tester.renderObject<RenderParagraph>(find.text(text)).didExceedMaxLines,

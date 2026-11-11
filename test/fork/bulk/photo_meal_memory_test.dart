@@ -441,6 +441,42 @@ void main() {
       expect(back.dish, isNull);
     });
 
+    test('holds the photo\'s own amounts and the meal\'s size, and reads '
+        'back with and without them', () {
+      final rows = [_row('rice', 120), _row('chicken', 100)];
+      final record = photoMealRecordOf(
+        rows,
+        day: _now,
+        loggedAt: _now,
+        slot: 'dinner',
+        corrected: false,
+        photoAmountOf: (row) => row.meal!.name == 'rice' ? 150 : null,
+        size: 0.8,
+      )!;
+      expect(record.foods.map((f) => f.photoAmount), [150, null]);
+      expect(record.size, 0.8);
+      final json = record.toJson();
+      expect((json['foods'] as List).first, containsPair('photoAmount', 150));
+      expect((json['foods'] as List).last, isNot(contains('photoAmount')));
+      final back = PhotoMealRecord.fromJson(json);
+      expect(back.toJson(), json);
+      expect(back.size, 0.8);
+      expect(back.foods.first.photoAmount, 150);
+
+      // a record kept before them reads with none
+      final old = Map<String, Object>.of(json)
+        ..remove('size')
+        ..['foods'] = [
+          for (final food in json['foods'] as List)
+            Map<String, Object>.of(food as Map<String, Object>)
+              ..remove('photoAmount'),
+        ];
+      final older = PhotoMealRecord.fromJson(old);
+      expect(older.size, isNull);
+      expect(older.foods.map((f) => f.photoAmount), [null, null]);
+      expect(older.toJson(), old);
+    });
+
     test('none when nothing is logged', () {
       expect(
         photoMealRecordOf(
