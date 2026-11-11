@@ -2,6 +2,14 @@
 
 Written by fork/tools/release_notes.dart at each release (D16).
 
+## 0.12.0 · 2026-11-11
+
+Based on OpenNutriTracker 2.7.0.
+
+### New
+
+- a photo's review takes the whole screen
+
 ## 0.11.0 · 2026-11-11
 
 Based on OpenNutriTracker 2.7.0.
