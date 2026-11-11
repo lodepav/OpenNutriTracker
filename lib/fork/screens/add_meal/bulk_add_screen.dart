@@ -76,6 +76,9 @@ import 'package:opennutritracker/features/add_meal/domain/usecase/resolve_parsed
 import 'package:opennutritracker/fork/bulk/photo_meal_memory.dart';
 import 'package:opennutritracker/fork/bulk/photo_meal_memory_store.dart';
 import 'package:opennutritracker/fork/screens/add_meal/history_offer_view.dart';
+// the photo's amounts sized the way the user usually corrects them (D46)
+import 'package:opennutritracker/fork/bulk/usual_sizes.dart';
+import 'package:opennutritracker/fork/screens/add_meal/usual_sizes_view.dart';
 
 part 'bulk_add_body.dart';
 part 'bulk_add_row.dart';
@@ -121,6 +124,16 @@ Future<DayTotals> Function(DateTime day) forkDayTotals = loadDayTotals;
 
 /// The photo meal memory the review reads and Log writes; tests swap it.
 PhotoMealMemoryStore Function() forkPhotoMealMemory = PhotoMealMemoryStore.new;
+
+/// A row as the photo's read gave it: its food, unit, grams or millilitres
+/// and amount text, and whether a size could change it then.
+typedef _PhotoRow = ({
+  String key,
+  String unit,
+  double? base,
+  String text,
+  bool sizable,
+});
 
 class _BulkAddScreenState extends State<BulkAddScreen> {
   final _log = Logger('BulkAddScreen');
@@ -168,6 +181,25 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
 
   /// The dish the photo's read arrived as, kept with the meal on Log.
   String? _arrivalDish;
+
+  /// The rows of a photo's read as they arrived, kept so the photo's own
+  /// amounts can come back and be kept with the meal on Log.
+  final _photoRows = LinkedHashMap<ResolvedMealItem, _PhotoRow>.identity();
+
+  /// The usual sizes applied to this read, the rows they changed, and the
+  /// foods and whole-meal size the line names; null when none were.
+  UsualSizes? _usual;
+  final _usualRows = Set<ResolvedMealItem>.identity();
+  List<({String name, double factor})> _usualFoods = const [];
+
+  /// The bases before the usual sizes, which "Use the photo's amounts"
+  /// puts back; and, while the photo's amounts are used, the usual ones.
+  MealScaleSnapshot? _photoBases;
+  MealScaleSnapshot? _usualBases;
+
+  /// Whether the usual sizes are what the rows' bases are now.
+  bool get _usualInForce =>
+      _usual != null && _usualBases == null && _historyUndo == null;
 
   /// Each row's grams or millilitres when it first appeared, and whether
   /// the user has changed any amount from it (a row they set that moved).
@@ -537,6 +569,12 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
       _historyAsked = false;
       _historyUndo = null;
       _arrivalDish = null;
+      _photoRows.clear();
+      _usual = null;
+      _usualRows.clear();
+      _usualFoods = const [];
+      _photoBases = null;
+      _usualBases = null;
       _firstAmounts.clear();
       _amountChanged = false;
       return;
@@ -557,6 +595,17 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
     _historyAsked = true;
     _arrivalDish = readDishName(state.rows);
     if (state.modelFailure != null) return;
+    for (final row in state.rows) {
+      final meal = row.meal;
+      if (meal == null) continue;
+      _photoRows[row.resolved] = (
+        key: foodKeyOf(meal),
+        unit: row.effectiveUnit,
+        base: baseAmountOf(row),
+        text: row.amountText,
+        sizable: isScalableRow(row, note: _photoNote),
+      );
+    }
     unawaited(_findHistory(_readSerial, state.rows, _photoNote));
   }
 
@@ -573,13 +622,105 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
       return;
     }
     if (!mounted || read != _readSerial) return;
-    final match = photoMealMatchFor(
-      rows,
-      records,
-      note: note,
-      now: DateTime.now(),
-    );
+    final now = DateTime.now();
+    final match = photoMealMatchFor(rows, records, note: note, now: now);
     if (match != null) setState(() => _history = match);
+    _applyUsual(usualSizesOf(records, now: now));
+  }
+
+  /// The photo's amounts sized the way the user usually corrects them: each
+  /// row the Size may change, still at the photo's amount, takes its usual
+  /// amount as its base, at 1×, which reads "Your usual". Not once a size
+  /// was chosen or earlier amounts used: the user has sized this meal.
+  void _applyUsual(UsualSizes usual) {
+    final state = _bloc.state;
+    if (usual.isEmpty || state is! BulkAddLoadedState) return;
+    if (state.source != BulkAddReadSource.photo) return;
+    if (_mealScale.factor != 1 || _historyUndo != null) return;
+    final amounts = usualAmounts(
+      state.rows,
+      usual,
+      note: _photoNote,
+      canTake: (row) =>
+          _mealScale.canScale(row) &&
+          _photoRows[row.resolved]?.text == row.amountText,
+    );
+    if (amounts.isEmpty) return;
+    final foods = <String, ({String name, double factor})>{};
+    for (final row in state.rows) {
+      if (!amounts.containsKey(row.resolved)) continue;
+      final key = foodKeyOf(row.meal!);
+      if (usual.foods[key] case final factor?) {
+        foods.putIfAbsent(key, () => (name: _rowTitle(row), factor: factor));
+      }
+    }
+    final before = _mealScale.snapshot();
+    final scaled = _mealScale.rebase(state.rows, amounts);
+    setState(() {
+      _usual = usual;
+      _usualRows
+        ..clear()
+        ..addAll(amounts.keys);
+      _usualFoods = [...foods.values];
+      _photoBases = before;
+      _usualBases = null;
+    });
+    // not said: nothing was tapped, and the line is read with the card
+    if (scaled.isNotEmpty) _bloc.add(ScaleRowsEvent(scaled));
+  }
+
+  /// Whether the usual sizes' line is shown: some row they sized is still
+  /// one the Size changes, and no earlier amounts are used.
+  bool _usualShown(List<BulkAddRow> rows) =>
+      _usual != null &&
+      _historyUndo == null &&
+      rows.any(
+        (row) => _usualRows.contains(row.resolved) && _mealScale.canScale(row),
+      );
+
+  /// "Use the photo's amounts": the bases before the usual sizes back, the
+  /// rows the user set left as set.
+  void _usePhotoAmounts() {
+    final state = _bloc.state;
+    final photo = _photoBases;
+    if (state is! BulkAddLoadedState || photo == null || !_usualInForce) {
+      return;
+    }
+    final usual = _mealScale.snapshot();
+    final amounts = _mealScale.restore(state.rows, photo);
+    setState(() => _usualBases = usual);
+    _sendScaled(state.rows, amounts);
+  }
+
+  /// Back to the usual sizes, and the size chosen with them.
+  void _useUsualSizes() {
+    final state = _bloc.state;
+    final usual = _usualBases;
+    if (state is! BulkAddLoadedState || usual == null) return;
+    final amounts = _mealScale.restore(state.rows, usual);
+    setState(() => _usualBases = null);
+    _sendScaled(state.rows, amounts);
+  }
+
+  /// The photo's own grams or millilitres for [row], kept with the meal on
+  /// Log: none for a row the read did not give, nor one whose match or
+  /// unit changed, nor one no size could change (its amount was not the
+  /// photo's estimate).
+  double? _photoAmountOf(BulkAddRow row) {
+    final photo = _photoRows[row.resolved];
+    final meal = row.meal;
+    if (photo == null || !photo.sizable || meal == null) return null;
+    if (foodKeyOf(meal) != photo.key || row.effectiveUnit != photo.unit) {
+      return null;
+    }
+    return photo.base;
+  }
+
+  /// The whole-meal size at Log against the photo's amounts; none when no
+  /// row of the read could be sized.
+  double? _loggedSize() {
+    if (!_photoRows.values.any((row) => row.sizable)) return null;
+    return _mealScale.factor * (_usualInForce ? _usual!.meal : 1);
   }
 
   /// Notes each new row's amount, and whether a row the user set has moved
@@ -635,7 +776,10 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
     if (match == null) return rows;
     final amounts = _mealScale.rebaseTargets(
       rows,
-      photoMealAmounts(rows, match.record, canTake: _mealScale.canScale),
+      _historyTaken(
+        rows,
+        photoMealAmounts(rows, match.record, canTake: _mealScale.canScale),
+      ),
     );
     return [
       for (final row in rows)
@@ -661,7 +805,10 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
     );
     if (taken.isEmpty) return;
     final before = _mealScale.snapshot();
-    final amounts = _mealScale.rebase(state.rows, taken);
+    final amounts = _mealScale.rebase(
+      state.rows,
+      _historyTaken(state.rows, taken),
+    );
     setState(() {
       _historyUndo = before;
       if (_amountQuestion case final question?
@@ -672,6 +819,29 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
       }
     });
     _sendScaled(state.rows, amounts);
+  }
+
+  /// [taken] and, while the usual sizes are in force, the photo's amount
+  /// for each other row they sized: the earlier amounts are the user's own,
+  /// and every other food goes back to the photo's, as without them.
+  Map<ResolvedMealItem, String> _historyTaken(
+    List<BulkAddRow> rows,
+    Map<ResolvedMealItem, String> taken,
+  ) {
+    if (!_usualInForce) return taken;
+    final all = LinkedHashMap<ResolvedMealItem, String>.identity()
+      ..addAll(taken);
+    for (final row in rows) {
+      if (all.containsKey(row.resolved) ||
+          !_usualRows.contains(row.resolved) ||
+          !_mealScale.canScale(row)) {
+        continue;
+      }
+      if (_photoRows[row.resolved]?.text case final text?) {
+        all[row.resolved] = text;
+      }
+    }
+    return all;
   }
 
   /// Undo: the photo's bases and the size before, back.
@@ -1691,6 +1861,8 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
             slot: _args.intakeTypeEntity.name,
             dish: _arrivalDish,
             corrected: _photoCorrected(state.rows),
+            photoAmountOf: _photoAmountOf,
+            size: _loggedSize(),
           )
         : null;
 

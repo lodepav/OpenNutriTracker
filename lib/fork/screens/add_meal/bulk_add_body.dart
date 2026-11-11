@@ -265,6 +265,16 @@ extension _BulkAddBody on _BulkAddScreenState {
                 const SizedBox(height: 10),
                 _buildHistoryOffer(context, state),
               ],
+              if (_usualShown(state.rows)) ...[
+                const SizedBox(height: 10),
+                UsualSizesView(
+                  foods: _usualFoods,
+                  meal: _usual!.meal,
+                  inForce: _usualInForce,
+                  onUsePhoto: _usePhotoAmounts,
+                  onUseUsual: _useUsualSizes,
+                ),
+              ],
               const SizedBox(height: 10),
               _buildMealSize(context, state),
             ],
@@ -328,6 +338,8 @@ extension _BulkAddBody on _BulkAddScreenState {
     final allSet = _mealScale.allSet(state.rows);
     // the user's earlier amounts in use: the sizes scale those
     final own = _historyUndo != null;
+    // the usual sizes in force: the sizes scale those
+    final usual = _usualInForce;
     _sayMealSize(context);
     return Column(
       key: const ValueKey('bulk-add-meal-size'),
@@ -350,10 +362,11 @@ extension _BulkAddBody on _BulkAddScreenState {
                 child: ChoiceChip(
                   key: ValueKey('bulk-add-meal-size-$factor'),
                   label: Text(
-                    DishStrings.sizeChip(factor, own: own),
+                    DishStrings.sizeChip(factor, own: own, usual: usual),
                     semanticsLabel: DishStrings.sizeChipSpoken(
                       factor,
                       own: own,
+                      usual: usual,
                     ),
                   ),
                   materialTapTargetSize: MaterialTapTargetSize.padded,

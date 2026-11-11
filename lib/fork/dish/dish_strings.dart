@@ -35,13 +35,32 @@ abstract final class DishStrings {
   static const mealSize = 'Size';
   static const asShown = 'As shown';
   static const yourAmounts = 'Your amounts';
+  static const yourUsual = 'Your usual';
 
-  /// [own] while the user's earlier amounts are used: the sizes scale those.
-  static String sizeChip(double factor, {bool own = false}) =>
-      factor == 1 ? (own ? yourAmounts : asShown) : '×$factor';
-  static String sizeChipSpoken(double factor, {bool own = false}) => factor == 1
-      ? sizeChip(factor, own: own)
-      : "$factor times ${own ? 'your' : "the photo's"} amounts";
+  /// [own] while the user's earlier amounts are used, [usual] while their
+  /// usual sizes are: the sizes scale those.
+  static String sizeChip(
+    double factor, {
+    bool own = false,
+    bool usual = false,
+  }) => factor == 1
+      ? (own
+            ? yourAmounts
+            : usual
+            ? yourUsual
+            : asShown)
+      : '×$factor';
+  static String sizeChipSpoken(
+    double factor, {
+    bool own = false,
+    bool usual = false,
+  }) => factor == 1
+      ? sizeChip(factor, own: own, usual: usual)
+      : "$factor times ${own
+            ? 'your'
+            : usual
+            ? 'your usual'
+            : "the photo's"} amounts";
   static const sizeScalesUnset = "Scales the amounts you haven't set";
   static const sizeAllSet = 'Every amount is set by you';
   static const setByYou = 'Set by you';
@@ -57,6 +76,31 @@ abstract final class DishStrings {
   static const historyUndo = 'Undo';
   static const today = 'today';
   static const yesterday = 'yesterday';
+
+  // the photo's amounts sized the way the user usually corrects them (D46)
+  static String _factor(double factor) {
+    final rounded = double.parse(factor.toStringAsFixed(2));
+    return rounded == rounded.roundToDouble()
+        ? rounded.toInt().toString()
+        : rounded.toString();
+  }
+
+  static const _wholeMeal = 'whole meal';
+  static String usualSized(
+    List<({String name, double factor})> foods, {
+    double meal = 1,
+    int more = 0,
+  }) =>
+      'Sized the way you usually correct: ${[for (final food in foods) '${food.name} ×${_factor(food.factor)}', if (more > 0) 'and $more more', if (meal != 1) '$_wholeMeal ×${_factor(meal)}'].join(' · ')}';
+  static String usualSizedSpoken(
+    List<({String name, double factor})> foods, {
+    double meal = 1,
+    int more = 0,
+  }) =>
+      'Sized the way you usually correct: ${[for (final food in foods) '${food.name} ${_factor(food.factor)} times', if (more > 0) 'and $more more', if (meal != 1) '$_wholeMeal ${_factor(meal)} times'].join(', ')}';
+  static const usePhotoAmounts = "Use the photo's amounts";
+  static const usingPhotoAmounts = "Using the photo's amounts";
+  static const useUsualSizes = 'Use your usual sizes';
 
   // the one amount a photo's review asks about, on its row
   static String amountQuestion(String food) => 'How much $food was it?';
