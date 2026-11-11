@@ -41,4 +41,21 @@ abstract final class DishStrings {
   static const sizeAllSet = 'Every amount is set by you';
   static const setByYou = 'Set by you';
   static String mealNow(String energy) => 'Meal now $energy';
+
+  // a photo's meal like one the user corrected before
+  /// [day] is "today", "yesterday" or a date, which takes "on".
+  static String historyLike(String slot, String day, {bool date = true}) =>
+      'Like your $slot ${date ? 'on ' : ''}$day';
+  static String historyAmounts(String energy) => 'Your amounts then: $energy';
+  static const historyUse = 'Use your amounts';
+  static String historyUsing(String day) => 'Using your amounts from $day';
+  static const historyUndo = 'Undo';
+  static const today = 'today';
+  static const yesterday = 'yesterday';
+
+  // the one amount a photo's review asks about, on its row
+  static String amountQuestion(String food) => 'How much $food was it?';
+  static const amountAnswered = 'Thanks. Tap another to change it.';
+  static String amountSaid(String amount, String energy) =>
+      '$amount. ${mealNow(energy)}';
 }

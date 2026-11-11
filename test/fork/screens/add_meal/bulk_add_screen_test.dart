@@ -2094,8 +2094,15 @@ void main() {
     testWidgets('in imperial units its amounts read as the Diary\'s, and '
         'what is typed is in them', (tester) async {
       await readDish(tester, imperial: true);
-      // 200 g, 150 g and 350 g, as the Diary shows them once logged
-      expect(find.text('7.1 oz'), findsOneWidget);
+      // 200 g, 150 g and 350 g, as the Diary shows them once logged (and
+      // the first among the chips of the question on its amount)
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('bulk-add-unit-0')),
+          matching: find.text('7.1 oz'),
+        ),
+        findsOneWidget,
+      );
       expect(find.text('5.3 oz'), findsOneWidget);
       expect(find.text('${DishStrings.portion} 12.3 oz'), findsOneWidget);
 

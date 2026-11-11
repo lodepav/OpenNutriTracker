@@ -261,6 +261,10 @@ extension _BulkAddBody on _BulkAddScreenState {
             MacrosLine(carbs: meal.carbs, fat: meal.fat, protein: meal.protein),
             if (state.source == BulkAddReadSource.photo &&
                 _mealScale.offered(state.rows)) ...[
+              if (_historyShown(state.rows)) ...[
+                const SizedBox(height: 10),
+                _buildHistoryOffer(context, state),
+              ],
               const SizedBox(height: 10),
               _buildMealSize(context, state),
             ],
@@ -284,6 +288,23 @@ extension _BulkAddBody on _BulkAddScreenState {
           ],
         ),
       ),
+    );
+  }
+
+  /// The amounts of a meal like this one that the user corrected before:
+  /// what the meal comes to with them, and one tap to use them.
+  Widget _buildHistoryOffer(BuildContext context, BulkAddLoadedState state) {
+    final record = _history!.record;
+    return HistoryOfferView(
+      day: record.day,
+      slot: record.slot,
+      energy: EnergyDisplay.formatSumWithUnit(
+        context,
+        loggedKcals(_withHistory(state.rows)),
+      ),
+      taken: _historyUndo != null,
+      onUse: _useHistory,
+      onUndo: _undoHistory,
     );
   }
 

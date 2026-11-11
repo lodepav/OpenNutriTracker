@@ -193,6 +193,11 @@ Future<void> _readPhoto(
   await tester.pumpAndSettle();
 }
 
+/// A row's amount as its button shows it, not a chip of the question on
+/// the meal's largest food that may read the same.
+Finder _amount(String text) =>
+    find.descendant(of: find.byType(OutlinedButton), matching: find.text(text));
+
 Finder _chip(double factor) =>
     find.byKey(ValueKey('bulk-add-meal-size-$factor'));
 
@@ -239,7 +244,7 @@ void main() {
       await tester.pump();
       await tester.tap(find.widgetWithIcon(FilledButton, Icons.search));
       await tester.pumpAndSettle();
-      expect(find.text('150 g'), findsOneWidget);
+      expect(_amount('150 g'), findsOneWidget);
       expect(find.text(DishStrings.mealSize), findsNothing);
     });
 
@@ -276,8 +281,8 @@ void main() {
     expect(_mealKcal(tester), '250 kcal');
 
     await _tapChip(tester, 0.6);
-    expect(find.text('90 g'), findsOneWidget);
-    expect(find.text('60 g'), findsOneWidget);
+    expect(_amount('90 g'), findsOneWidget);
+    expect(_amount('60 g'), findsOneWidget);
     expect(_mealKcal(tester), '150 kcal');
     expect(
       find.descendant(
@@ -294,12 +299,12 @@ void main() {
     );
 
     await _tapChip(tester, 1.4);
-    expect(find.text('210 g'), findsOneWidget);
-    expect(find.text('140 g'), findsOneWidget);
+    expect(_amount('210 g'), findsOneWidget);
+    expect(_amount('140 g'), findsOneWidget);
 
     await _tapChip(tester, 1.0);
-    expect(find.text('150 g'), findsOneWidget);
-    expect(find.text('100 g'), findsOneWidget);
+    expect(_amount('150 g'), findsOneWidget);
+    expect(_amount('100 g'), findsOneWidget);
     expect(_mealKcal(tester), '250 kcal');
     semantics.dispose();
   });
@@ -309,17 +314,17 @@ void main() {
     await _open(tester);
     await _readPhoto(tester);
     await _step(tester, 0);
-    expect(find.text('160 g'), findsOneWidget);
+    expect(_amount('160 g'), findsOneWidget);
 
     await _tapChip(tester, 0.6);
-    expect(find.text('160 g'), findsOneWidget);
-    expect(find.text('60 g'), findsOneWidget);
+    expect(_amount('160 g'), findsOneWidget);
+    expect(_amount('60 g'), findsOneWidget);
     expect(find.byKey(const ValueKey('bulk-add-set-by-you-0')), findsOneWidget);
     expect(find.byKey(const ValueKey('bulk-add-set-by-you-1')), findsNothing);
 
     await _tapChip(tester, 1.0);
     expect(find.text(DishStrings.setByYou), findsNothing);
-    expect(find.text('160 g'), findsOneWidget);
+    expect(_amount('160 g'), findsOneWidget);
   });
 
   testWidgets('with every amount set by the user the chips rest', (
@@ -408,10 +413,7 @@ void main() {
       );
     }
     await _tapChip(tester, 1.2);
-    expect(
-      tester.getSemantics(_chip(1.2)),
-      isSemantics(isSelected: true),
-    );
+    expect(tester.getSemantics(_chip(1.2)), isSemantics(isSelected: true));
     handle.dispose();
   });
 
@@ -425,10 +427,10 @@ void main() {
 
     await _readPhoto(tester);
     expect(tester.widget<ChoiceChip>(_chip(1.0)).selected, isTrue);
-    expect(find.text('150 g'), findsOneWidget);
+    expect(_amount('150 g'), findsOneWidget);
     await _tapChip(tester, 0.8);
-    expect(find.text('120 g'), findsOneWidget);
-    expect(find.text('80 g'), findsOneWidget);
+    expect(_amount('120 g'), findsOneWidget);
+    expect(_amount('80 g'), findsOneWidget);
     expect(find.text(DishStrings.setByYou), findsNothing);
   });
 
@@ -440,7 +442,7 @@ void main() {
       ParsedMealItem(query: 'salad', quantity: 100, unit: 'g'),
     ]);
     await _tapChip(tester, 0.8);
-    expect(find.text('320 g'), findsOneWidget);
+    expect(_amount('320 g'), findsOneWidget);
 
     final plov = (_bloc.state as BulkAddLoadedState).rows.first;
     // weighed for the 320 g the row shows
@@ -459,15 +461,15 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.text('200 g'), findsOneWidget);
+    expect(_amount('200 g'), findsOneWidget);
     expect(find.text('${DishStrings.portion} 320 g'), findsOneWidget);
     expect(tester.widget<ChoiceChip>(_chip(0.8)).selected, isTrue);
     expect(find.text(DishStrings.setByYou), findsNothing);
 
     await _tapChip(tester, 1.0);
-    expect(find.text('250 g'), findsOneWidget);
-    expect(find.text('150 g'), findsOneWidget);
-    expect(find.text('100 g'), findsOneWidget);
+    expect(_amount('250 g'), findsOneWidget);
+    expect(_amount('150 g'), findsOneWidget);
+    expect(_amount('100 g'), findsOneWidget);
     expect(find.text('${DishStrings.portion} 400 g'), findsOneWidget);
   });
 
@@ -494,7 +496,7 @@ void main() {
 
     await _tapChip(tester, 0.6);
     expect(find.text('${DishStrings.portion} 375 g'), findsOneWidget);
-    expect(find.text('60 g'), findsOneWidget);
+    expect(_amount('60 g'), findsOneWidget);
     expect(find.text(DishStrings.setByYou), findsNWidgets(2));
   });
 }

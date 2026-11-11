@@ -61,6 +61,14 @@ typedef _Given = ({
   double factor,
 });
 
+/// The bases and size a [MealScale] had, which `restore` puts back.
+class MealScaleSnapshot {
+  final Map<ResolvedMealItem, _Base> _base;
+  final double _factor;
+
+  const MealScaleSnapshot._(this._base, this._factor);
+}
+
 /// The meal's Size on a photo's review: the size chosen, each row's base,
 /// and the rows the user set (R1), which a size no longer changes. Rows are
 /// held by their resolved item, which a row keeps through every edit, so a
@@ -158,6 +166,73 @@ class MealScale {
       if (row.amountText != target) amounts[row.resolved] = target;
     }
     return amounts;
+  }
+
+  /// The bases and the size as they are, for [restore].
+  MealScaleSnapshot snapshot() => MealScaleSnapshot._(
+    LinkedHashMap<ResolvedMealItem, _Base>.identity()..addAll(_base),
+    factor,
+  );
+
+  /// Takes [amounts] (by resolved item) as new bases, unpinned, at "As
+  /// shown": every row the size changes has the amount given, or the one it
+  /// shows now, as its base. Returns the amounts to set (`ScaleRowsEvent`).
+  Map<ResolvedMealItem, String> rebase(
+    List<BulkAddRow> rows,
+    Map<ResolvedMealItem, String> amounts,
+  ) {
+    factor = 1;
+    final out = LinkedHashMap<ResolvedMealItem, String>.identity();
+    for (final row in rows) {
+      if (!canScale(row)) continue;
+      String? given;
+      for (final MapEntry(:key, :value) in amounts.entries) {
+        if (identical(key, row.resolved)) given = value;
+      }
+      final text = given ?? row.amountText;
+      setBase(row, amountText: text);
+      _give(row, text, out);
+    }
+    return out;
+  }
+
+  /// Puts back the bases and size of [before]: each row the size changes
+  /// returns to its base at that size. Rows that came since keep theirs, and
+  /// the rows the user set stay set. Returns the amounts to set.
+  Map<ResolvedMealItem, String> restore(
+    List<BulkAddRow> rows,
+    MealScaleSnapshot before,
+  ) {
+    factor = before._factor;
+    final out = LinkedHashMap<ResolvedMealItem, String>.identity();
+    for (final row in rows) {
+      final base = before._base[row.resolved];
+      if (base != null) _base[row.resolved] = base;
+      if (!canScale(row)) continue;
+      final kept = _base[row.resolved];
+      if (kept == null) continue;
+      _give(
+        row,
+        factor == 1
+            ? kept.text
+            : scaledAmountText(kept.amount, row.effectiveUnit, factor),
+        out,
+      );
+    }
+    return out;
+  }
+
+  /// Records [text] as given to [row] at the size chosen, the amount it
+  /// shows still on its way, and adds it to [out] when it is not there.
+  void _give(BulkAddRow row, String text, Map<ResolvedMealItem, String> out) {
+    _given[row.resolved] = (
+      text: text,
+      prior: row.amountText == text ? null : row.amountText,
+      unit: row.unit,
+      selected: row.selectedIndex,
+      factor: factor,
+    );
+    if (row.amountText != text) out[row.resolved] = text;
   }
 
   /// Follows the review's [rows] after any change, and returns the amounts

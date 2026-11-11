@@ -1,11 +1,17 @@
 import 'package:opennutritracker/core/utils/hive_db_provider.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
+import 'package:opennutritracker/fork/bulk/photo_meal_memory_store.dart';
 import 'package:opennutritracker/fork/health/weight_import.dart';
 
 /// The fork's own boxes of a profile: the adaptive settings, check-ins and
-/// body measurements, and what Health Connect's weight import has read.
-const forkProfileBoxes = [AdaptiveStore.boxName, WeightImport.boxName];
+/// body measurements, what Health Connect's weight import has read, and the
+/// photo meals logged (`PhotoMealMemoryStore`).
+const forkProfileBoxes = [
+  AdaptiveStore.boxName,
+  WeightImport.boxName,
+  PhotoMealMemoryStore.boxName,
+];
 
 /// Empties them for the active profile when its data is deleted (seam
 /// S102), as upstream empties its own: else a reset profile, or one set

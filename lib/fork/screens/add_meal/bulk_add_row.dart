@@ -160,6 +160,22 @@ extension _BulkAddRow on _BulkAddScreenState {
               padding: const EdgeInsets.fromLTRB(52, 0, 12, 6),
               child: _buildAmountRow(context, state, index, row),
             ),
+          // the one amount a photo's review asks about
+          if (_amountQuestion case final question?
+              when !faded && question.isFor(row))
+            Padding(
+              padding: const EdgeInsets.fromLTRB(52, 0, 12, 6),
+              child: Builder(
+                builder: (context) {
+                  _sayAmountAnswer(context);
+                  return AmountQuestionView(
+                    question: question,
+                    index: index,
+                    onChosen: (choice) => _answerAmount(index, choice),
+                  );
+                },
+              ),
+            ),
           if (row.skipped || error != null || actions.isNotEmpty)
             Padding(
               padding: const EdgeInsets.fromLTRB(52, 0, 12, 4),
@@ -264,20 +280,8 @@ extension _BulkAddRow on _BulkAddScreenState {
   /// The unit an imperial profile edits [row]'s weight in, the one its
   /// amount is shown in ("oz" for grams); null when the row is shown in
   /// its own unit. What the user types or steps is in the unit shown.
-  String? _shownEditUnit(BulkAddRow row, bool imperial) {
-    final meal = row.meal;
-    if (!imperial || meal == null || !isWeightUnit(row.effectiveUnit)) {
-      return null;
-    }
-    final shown = diaryUnit(meal, true).unit;
-    if (shown == row.effectiveUnit || !row.allowedUnits.contains(shown)) {
-      return null;
-    }
-    return shown == UnitDropdownItem.oz.toString() ||
-            shown == UnitDropdownItem.flOz.toString()
-        ? shown
-        : null;
-  }
+  String? _shownEditUnit(BulkAddRow row, bool imperial) =>
+      shownEditUnit(row, imperial);
 
   /// The amber of a card that needs a look: the tertiary colour, which is
   /// the app's warning hue.
