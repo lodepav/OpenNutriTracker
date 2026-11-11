@@ -2,6 +2,19 @@
 
 Written by fork/tools/release_notes.dart at each release (D16).
 
+## 0.11.0 · 2026-11-11
+
+Based on OpenNutriTracker 2.7.0.
+
+### New
+
+- a photo's amounts sized the way you usually correct each food, a cooking fat question, note chips, and an amount question in the model's words
+- table fixes, 26 dishes, European pieces, and a photo's review gets a Size, one amount question and your earlier amounts
+
+### Fixes and changes
+
+- the cooking fat question skips foods that hold their fat and still asks for those fried without it, and the amount question keeps numbers in a food's name
+
 ## 0.10.1 · 2026-11-10
 
 Based on OpenNutriTracker 2.7.0.
