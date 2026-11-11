@@ -5,6 +5,9 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:opennutritracker/features/add_meal/data/openai_meal_items_api.dart';
 import 'package:opennutritracker/features/add_meal/domain/meal_items_api.dart';
+// [fork] S216 items-tool-wording
+import 'package:opennutritracker/fork/bulk/weighed_plate.dart';
+// [/fork]
 
 /// What the client sent, so a rule about the request can actually fail.
 class _Captured {
@@ -127,7 +130,9 @@ void main() {
 
       final tool = (s.sent.body['tools'] as List).single as Map;
       expect(tool['name'], mealItemsToolName);
-      expect(tool['parameters'], mealItemsToolSchema);
+      // [fork] S216 items-tool-wording: the fork's field descriptions (D51)
+      expect(tool['parameters'], forkItemsToolSchema);
+      // [/fork]
       expect(
         tool.containsKey('function'),
         isFalse,

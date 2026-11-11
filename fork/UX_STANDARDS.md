@@ -87,4 +87,4 @@ Sources, checked 2026-10-24:
 - **medium**: a task is slower or confusing for most users, or an A rule fails off the main path.
 - **low**: polish: wording, alignment, consistency that does not cost the user anything real.
 
-Upstream screens are in scope: a finding there is fixed at a seam (see `SEAMS.md`) or deferred to upstream after phase 4.
+Upstream screens are in scope: a finding there is fixed at a seam (see `SEAMS.md`) or deferred to upstream: an upstream PR, with the user's go-ahead.

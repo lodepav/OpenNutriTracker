@@ -10,6 +10,9 @@ import 'package:opennutritracker/features/add_meal/data/meal_items_api_factory.d
 import 'package:opennutritracker/features/add_meal/data/openai_compatible_meal_items_api.dart';
 import 'package:opennutritracker/features/add_meal/data/openai_meal_items_api.dart';
 import 'package:opennutritracker/features/add_meal/domain/meal_items_api.dart';
+// [fork] S216 items-tool-wording
+import 'package:opennutritracker/fork/bulk/weighed_plate.dart';
+// [/fork]
 
 /// Records where a request actually went. Everything else in this suite
 /// checks a shape; this checks a destination.
@@ -537,7 +540,9 @@ void main() {
       const AiSelection(provider: AiProvider.openrouter, apiKey: 'sk-or'),
     );
 
-    final expected = jsonDecode(jsonEncode(mealItemsToolSchema));
+    // [fork] S216 items-tool-wording: the fork's field descriptions (D51)
+    final expected = jsonDecode(jsonEncode(forkItemsToolSchema));
+    // [/fork]
     expect(
       ((anthropic.body!['tools'] as List).single as Map)['input_schema'],
       expected,

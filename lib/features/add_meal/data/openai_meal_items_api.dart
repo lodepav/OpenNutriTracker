@@ -71,8 +71,10 @@ class OpenAiMealItemsApi implements MealItemsApi {
           // that shape here is rejected.
           'type': 'function',
           'name': mealItemsToolName,
-          'description': mealItemsToolDescription,
-          // [fork] S208 photo-estimate-no-note: a plate read asks for grams (D42)
+          // [fork] S208 photo-estimate-no-note, S216 items-tool-wording: a
+          // plate read asks for grams (D42); every field says what each fork
+          // prompt asks for (D51)
+          'description': itemsToolDescription,
           'parameters': plateItemsSchemaFor(system),
           // [/fork]
           // **Explicit, and the whole reason this line exists.** Omitting
