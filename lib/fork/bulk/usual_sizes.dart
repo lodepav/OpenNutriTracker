@@ -1,7 +1,6 @@
 // How this user usually corrects a photo's amounts, learnt from the photo
-// meals they logged (D46): a whole-meal size they keep choosing, and foods
-// they keep setting smaller or larger than the photo shows. Pure code; the
-// memory it reads stays on the device.
+// meals they logged (D46): foods they keep logging smaller or larger than
+// the photo shows. Pure code; the memory it reads stays on the device.
 import 'dart:collection';
 import 'dart:math' as math;
 
@@ -10,9 +9,6 @@ import 'package:opennutritracker/features/add_meal/presentation/bloc/bulk_add_bl
 import 'package:opennutritracker/fork/bulk/meal_scale.dart';
 import 'package:opennutritracker/fork/bulk/note_weights.dart';
 import 'package:opennutritracker/fork/bulk/photo_meal_memory.dart';
-
-/// How many recent records the whole-meal size is learnt from.
-const usualMealRecords = 8;
 
 /// How many recent records holding a food its own size is learnt from.
 const usualFoodRecords = 5;
@@ -29,20 +25,20 @@ const _off = 0.1;
 const _least = 0.5;
 const _most = 2.0;
 
-/// The sizes learnt: [meal] for the whole plate (1 when none), and one per
-/// food key, only those that act.
+/// The sizes learnt, one per food key, only those that act. No whole-meal
+/// size: one learnt from three meals shrank every later meal whatever the
+/// dish, where the read was as often short as over.
 class UsualSizes {
-  final double meal;
   final Map<String, double> foods;
 
-  const UsualSizes({this.meal = 1, this.foods = const {}});
+  const UsualSizes({this.foods = const {}});
 
   static const none = UsualSizes();
 
-  bool get isEmpty => meal == 1 && foods.isEmpty;
+  bool get isEmpty => foods.isEmpty;
 
-  /// The factor a food of [key] takes: the meal's times its own.
-  double factorFor(String key) => meal * (foods[key] ?? 1);
+  /// The factor a food of [key] takes; 1 for a food with none.
+  double factorFor(String key) => foods[key] ?? 1;
 }
 
 /// -1, 0 or 1: whether [value] is 10% or more under 1, within it, or over.
@@ -74,46 +70,21 @@ List<PhotoMealRecord> _newestFirst(Iterable<PhotoMealRecord> records) =>
       return byDay != 0 ? byDay : b.loggedAt.compareTo(a.loggedAt);
     });
 
-/// The usual sizes [records] show at [now]. Records kept before sizes were
-/// (no size, no photo amounts) are left out.
+/// The usual sizes [records] show at [now]. A record's `size` is not read:
+/// a Size chosen on meals holding a food is evidence about that food, and
+/// counts in its logged amount. Records kept before photo amounts were
+/// give no food a size.
 UsualSizes usualSizesOf(
   Iterable<PhotoMealRecord> records, {
   required DateTime now,
-}) {
-  final recent = _newestFirst(
-    records.where(
-      (record) =>
-          !record.expiredAt(now) && record.size != null && record.size! > 0,
-    ),
-  );
-  return UsualSizes(meal: _usualMeal(recent), foods: _usualFoods(recent));
-}
+}) => UsualSizes(
+  foods: _usualFoods(
+    _newestFirst(records.where((record) => !record.expiredAt(now))),
+  ),
+);
 
-/// The whole-meal size: at least 3 of the last 8 sizes off one way, and
-/// twice as many as off the other.
-double _usualMeal(List<PhotoMealRecord> recent) {
-  final sizes = [
-    for (final record in recent.take(usualMealRecords)) record.size!,
-  ];
-  var up = 0, down = 0;
-  for (final size in sizes) {
-    switch (_direction(size)) {
-      case 1:
-        up++;
-      case -1:
-        down++;
-    }
-  }
-  final most = math.max(up, down);
-  final other = math.min(up, down);
-  if (most < usualMinimum || most < 2 * other) return 1;
-  return _learnt(sizes) ?? 1;
-}
-
-/// Each food's own size, apart from the meal's: what was logged against
-/// the photo's amount, divided by the meal's size then, so a Size chosen
-/// every time is not taken for each food's. At least 3 of its last 5 off
-/// one way and none the other.
+/// Each food's size: what was logged against the photo's amount, at least
+/// 3 of its last 5 off one way and none the other.
 Map<String, double> _usualFoods(List<PhotoMealRecord> recent) {
   final residuals = <String, List<double>>{};
   for (final record in recent) {
@@ -128,7 +99,7 @@ Map<String, double> _usualFoods(List<PhotoMealRecord> recent) {
     for (final MapEntry(:key, value: shown) in photo.entries) {
       final list = residuals[key] ??= [];
       if (list.length >= usualFoodRecords) continue;
-      list.add(logged[key]! / shown / record.size!);
+      list.add(logged[key]! / shown);
     }
   }
   final foods = <String, double>{};
@@ -150,7 +121,7 @@ Map<String, double> _usualFoods(List<PhotoMealRecord> recent) {
 }
 
 /// The usual amount text of each of [rows] [sizes] change, by resolved
-/// item: its amount times the meal's and its food's size, rounded as the
+/// item: its amount times its food's size, rounded as the
 /// Size rounds. Only rows [canTake] allows (the screen: the Size may change
 /// it and the user has not set it), never on a weighed plate's read, and
 /// none whose amount would not change.

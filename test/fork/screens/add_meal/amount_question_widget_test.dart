@@ -302,13 +302,13 @@ void main() {
 
   tearDown(() async => _getIt.reset());
 
-  testWidgets('asked on the row with the most energy only, the estimate '
-      'chosen', (tester) async {
+  testWidgets('asked on the row with the most energy only, in the model\'s '
+      'name for the food, the estimate chosen', (tester) async {
     await _open(tester);
     await _readPhoto(tester);
     expect(_question(1), findsOneWidget);
     expect(_question(0), findsNothing);
-    expect(find.text('How much chicken breast was it?'), findsOneWidget);
+    expect(find.text('How much chicken was it?'), findsOneWidget);
     expect(_labels(tester, 1), ['50 g', '75 g', '100 g', '150 g']);
     expect(_selected(tester, 1), 2);
   });
@@ -334,7 +334,7 @@ void main() {
     expect(_row(1).amountEditedByUser, isTrue);
     expect(_selected(tester, 1), 3);
     expect(find.text(DishStrings.amountAnswered), findsOneWidget);
-    expect(find.text('How much chicken breast was it?'), findsNothing);
+    expect(find.text('How much chicken was it?'), findsNothing);
     expect(
       tester.takeAnnouncements().map((a) => a.message),
       contains('150 grams. Meal now 460 kcal'),
@@ -352,18 +352,38 @@ void main() {
     semantics.dispose();
   });
 
-  testWidgets('the chosen chip confirms the amount unchanged, and pins it', (
+  testWidgets('the chosen chip confirms the amount unchanged and does not '
+      'pin it: a size still scales it, and the chips follow it', (
     tester,
   ) async {
+    final semantics = tester.ensureSemantics();
     await _open(tester);
     await _readPhoto(tester);
     await _tap(tester, _choice(1, 2));
     expect(_row(1).amountText, '100');
+    expect(_row(1).amountEditedByUser, isFalse);
     expect(find.text(DishStrings.amountAnswered), findsOneWidget);
+    expect(
+      tester.takeAnnouncements().map((a) => a.message),
+      contains('100 grams. Meal now 360 kcal'),
+    );
     await _tap(tester, _size(1.4));
     expect(_row(0).amountText, '224');
-    expect(_row(1).amountText, '100');
+    expect(_row(1).amountText, '140');
+    expect(find.byKey(const ValueKey('bulk-add-set-by-you-1')), findsNothing);
+    // closed, and true to the row: the amount it shows is the one chosen
+    expect(find.text(DishStrings.amountAnswered), findsOneWidget);
+    expect(_labels(tester, 1), ['70 g', '110 g', '140 g', '210 g']);
+    expect(_selected(tester, 1), 2);
+
+    // another amount after it pins as any answer that changes it
+    await _tap(tester, _choice(1, 0));
+    expect(_row(1).amountText, '70');
+    await _tap(tester, _size(0.6));
+    expect(_row(0).amountText, '96');
+    expect(_row(1).amountText, '70');
     expect(find.byKey(const ValueKey('bulk-add-set-by-you-1')), findsOneWidget);
+    semantics.dispose();
   });
 
   testWidgets('with a size chosen first the chips are built around the '
@@ -391,8 +411,8 @@ void main() {
     expect(_selected(tester, 1), 1);
   });
 
-  testWidgets('confirming the chosen chip at ×0.6 pins the row at the '
-      'amount shown, its unit unchanged', (tester) async {
+  testWidgets('confirming the chosen chip at ×0.6 keeps the amount shown '
+      'and its unit, and the row the Size\'s', (tester) async {
     await _open(tester);
     await _readPhoto(tester);
     await _tap(tester, _size(0.6));
@@ -403,8 +423,8 @@ void main() {
     expect(find.text(DishStrings.amountAnswered), findsOneWidget);
     await _tap(tester, _size(1.4));
     expect(_row(0).amountText, '224');
-    expect(_row(1).amountText, '60');
-    expect(find.byKey(const ValueKey('bulk-add-set-by-you-1')), findsOneWidget);
+    expect(_row(1).amountText, '140');
+    expect(find.byKey(const ValueKey('bulk-add-set-by-you-1')), findsNothing);
   });
 
   testWidgets('counts around the count a size left', (tester) async {
@@ -469,8 +489,8 @@ void main() {
   });
 
   testWidgets('on a row in grams of a counted food, the chosen count '
-      'confirms the grams unchanged and pins the row; another count sets '
-      'slices', (tester) async {
+      'confirms the grams unchanged and leaves the row the Size\'s; another '
+      'count sets slices', (tester) async {
     await _open(tester);
     await _readPhoto(tester, const [
       ParsedMealItem(query: 'salad', quantity: 100, unit: 'g'),
@@ -487,8 +507,11 @@ void main() {
     expect(find.text(DishStrings.amountAnswered), findsOneWidget);
     await _tap(tester, _size(0.6));
     expect(_row(0).amountText, '60');
+    expect(_row(1).amountText, '42');
+    expect(find.byKey(const ValueKey('bulk-add-set-by-you-1')), findsNothing);
+    await _tap(tester, _size(1.0));
     expect(_row(1).amountText, '70');
-    expect(find.byKey(const ValueKey('bulk-add-set-by-you-1')), findsOneWidget);
+    expect(_selected(tester, 1), 1);
 
     await _tap(tester, _choice(1, 2));
     expect(_row(1).amountText, '3');
@@ -525,9 +548,7 @@ void main() {
       tester.getSemantics(_choice(1, 2)),
       isSemantics(label: '100 grams', hasSelectedState: true, isSelected: true),
     );
-    final question = tester.getRect(
-      find.text('How much chicken breast was it?'),
-    );
+    final question = tester.getRect(find.text('How much chicken was it?'));
     expect(
       question.bottom,
       lessThanOrEqualTo(tester.getRect(_choice(1, 0)).top),

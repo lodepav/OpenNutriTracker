@@ -174,16 +174,6 @@ extension _BulkAddRow on _BulkAddScreenState {
                 onChosen: (choice) => _answerAmount(index, choice),
               ),
             ),
-          // an amount far from the food's usual serving (D47)
-          if (_usualServingOn(state, row) case final serving? when !faded)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(52, 0, 12, 6),
-              child: UsualServingView(
-                serving: serving,
-                index: index,
-                onTake: () => _takeUsualServing(index, serving),
-              ),
-            ),
           if (row.skipped || error != null || actions.isNotEmpty)
             Padding(
               padding: const EdgeInsets.fromLTRB(52, 0, 12, 4),

@@ -1,5 +1,5 @@
 // The review screen driven with a photo's read, for the widget tests of
-// D47-D49; as amount_question_widget_test.dart drives it.
+// D48 and D49; as amount_question_widget_test.dart drives it.
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';

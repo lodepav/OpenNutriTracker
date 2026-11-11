@@ -70,7 +70,9 @@ abstract final class DishStrings {
   /// [day] is "today", "yesterday" or a date, which takes "on".
   static String historyLike(String slot, String day, {bool date = true}) =>
       'Like your $slot ${date ? 'on ' : ''}$day';
-  static String historyAmounts(String energy) => 'Your amounts then: $energy';
+  // the meal as the tap would leave it, not the earlier meal's energy
+  static String historyAmounts(String energy) =>
+      'This meal with your amounts: $energy';
   static const historyUse = 'Use your amounts';
   static String historyUsing(String day) => 'Using your amounts from $day';
   static const historyUndo = 'Undo';
@@ -85,32 +87,23 @@ abstract final class DishStrings {
         : rounded.toString();
   }
 
-  static const _wholeMeal = 'whole meal';
   static String usualSized(
     List<({String name, double factor})> foods, {
-    double meal = 1,
     int more = 0,
   }) =>
-      'Sized the way you usually correct: ${[for (final food in foods) '${food.name} ×${_factor(food.factor)}', if (more > 0) 'and $more more', if (meal != 1) '$_wholeMeal ×${_factor(meal)}'].join(' · ')}';
+      'Sized the way you usually correct: ${[for (final food in foods) '${food.name} ×${_factor(food.factor)}', if (more > 0) 'and $more more'].join(' · ')}';
   static String usualSizedSpoken(
     List<({String name, double factor})> foods, {
-    double meal = 1,
     int more = 0,
   }) =>
-      'Sized the way you usually correct: ${[for (final food in foods) '${food.name} ${_factor(food.factor)} times', if (more > 0) 'and $more more', if (meal != 1) '$_wholeMeal ${_factor(meal)} times'].join(', ')}';
+      'Sized the way you usually correct: ${[for (final food in foods) '${food.name} ${_factor(food.factor)} times', if (more > 0) 'and $more more'].join(', ')}';
   static const usePhotoAmounts = "Use the photo's amounts";
   static const usingPhotoAmounts = "Using the photo's amounts";
   static const useUsualSizes = 'Use your usual sizes';
 
   /// The Size's hint while the usual sizes are in force: the sizes change
-  /// those, and a size chosen over a whole-meal usual size says what it
-  /// comes to against the photo.
+  /// those.
   static const sizesChangeUsual = 'Sizes change your usual amounts';
-  static String sizeOverUsual(double size, double meal) =>
-      '×${_factor(size)} of your usual · ×${_factor(size * meal)} of the photo';
-  static String sizeOverUsualSpoken(double size, double meal) =>
-      '${_factor(size)} times your usual, '
-      "${_factor(size * meal)} times the photo's amounts";
 
   // the one amount a photo's review asks about, on its row
   static String amountQuestion(String food) => 'How much $food was it?';
@@ -118,13 +111,12 @@ abstract final class DishStrings {
   static String amountSaid(String amount, String energy) =>
       '$amount. ${mealNow(energy)}';
 
-  // an amount far from the food's usual serving (D47)
-  static String usualServing(String amount) => 'Usual serving is about $amount';
-  static String useUsualServing(String amount) => 'Use $amount';
-
   // the fat a meal was cooked or dressed with (D48)
   static const cookedWithFat = 'Cooked with oil or butter?';
   static const dressedWithFat = 'Any dressing or oil?';
+  // a little fat on the read already, under 10 g
+  static const moreCookedFat = 'Any more oil or butter?';
+  static const moreDressing = 'Any more dressing or oil?';
   static const fatNone = 'None';
   static const fatLittle = 'A little (5 g)';
   static const fatSome = 'Some (10 g)';

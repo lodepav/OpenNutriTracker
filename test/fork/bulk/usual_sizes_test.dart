@@ -99,57 +99,30 @@ BulkAddRow _row(String name, String amount, {bool pieces = false}) {
 }
 
 void main() {
-  group('the whole meal', () {
-    test('nothing with 2 sizes off, a size with 3', () {
-      expect(_usual(_sized([0.8, 0.8])).meal, 1);
-      expect(_usual(_sized([0.8, 0.8, 1])).meal, 1);
-      expect(_usual(_sized([0.8, 0.8, 0.6])).meal, 0.8);
+  group('no whole-meal size', () {
+    test('a Size chosen every time on one food\'s meals is that food\'s', () {
+      // logged at ×0.8 of the photo's rice each time
+      final usual = _usual(_sized([0.8, 0.8, 0.8, 0.8]));
+      expect(usual.foods, {'rice': 0.8});
+      expect(usual.factorFor('chicken'), 1);
     });
 
-    test('the median of every size considered, sizes at 1 included', () {
-      expect(_usual(_sized([0.6, 0.6, 0.8, 1, 1])).meal, 0.8);
-      // the median within 10% of 1 is no size
-      expect(_usual(_sized([0.8, 0.8, 0.8, 1, 1, 1, 1])).meal, 1);
-    });
-
-    test('one way at least twice as often as the other', () {
-      expect(_usual(_sized([0.8, 0.8, 0.8, 1.2])).meal, 0.8);
-      expect(_usual(_sized([0.8, 0.8, 0.8, 1.2, 1.2])).meal, 1);
-      expect(_usual(_sized([0.6, 0.6, 0.6, 0.6, 1.2, 1.2])).meal, 0.6);
-    });
-
-    test('under 10% off is no correction', () {
-      expect(_usual(_sized([0.95, 0.95, 0.95, 0.95])).meal, 1);
-      expect(_usual(_sized([0.9, 0.9, 0.9])).meal, 0.9);
-    });
-
-    test('only the most recent 8 sizes', () {
-      // 3 larger sizes before the last 8 would have held it back
-      expect(
-        _usual(_sized([0.6, 0.6, 0.6, 0.6, 0.6, 1, 1, 1, 1.4, 1.4, 1.4])).meal,
-        0.6,
-      );
-      // 4 smaller, 2 of them out of reach
-      expect(_usual(_sized([1, 1, 1, 1, 1, 1, 0.6, 0.6, 0.6, 0.6])).meal, 1);
-    });
-
-    test('held to 0.5-2', () {
-      expect(_usual(_sized([0.3, 0.3, 0.3])).meal, 0.5);
-      expect(_usual(_sized([3, 3, 3])).meal, 2);
-    });
-
-    test('records kept before sizes were are left out', () {
-      expect(_usual(_sized([null, null, 0.8, 0.8])).meal, 1);
-      expect(_usual(_sized([0.8, null, 0.8, null, 0.8])).meal, 0.8);
+    test('the size kept with a record is not read', () {
+      // logged as the photo showed it, whatever the size says
+      final records = [
+        for (var i = 1; i <= 4; i++)
+          _record(i, size: 0.6, foods: {'rice': (150, 150)}),
+      ];
+      expect(_usual(records).isEmpty, isTrue);
     });
 
     test('records past the days kept are left out', () {
       final records = [
-        _record(1, size: 0.8),
-        _record(2, size: 0.8),
-        _record(photoMealMemoryDays + 5, size: 0.8),
+        _record(1, foods: {'rice': (70, 100)}),
+        _record(2, foods: {'rice': (70, 100)}),
+        _record(photoMealMemoryDays + 5, foods: {'rice': (70, 100)}),
       ];
-      expect(_usual(records).meal, 1);
+      expect(_usual(records).foods, isEmpty);
     });
   });
 
@@ -176,7 +149,7 @@ void main() {
       expect(_usual(_rice([250, 250, 250])).foods, {'rice': 2});
     });
 
-    test('a Size chosen every time is the meal\'s, not each food\'s', () {
+    test('a Size chosen every time counts for each food in those meals', () {
       final records = [
         for (var i = 1; i <= 4; i++)
           _record(
@@ -185,12 +158,10 @@ void main() {
             foods: {'rice': (120, 150), 'chicken': (80, 100)},
           ),
       ];
-      final usual = _usual(records);
-      expect(usual.meal, 0.8);
-      expect(usual.foods, isEmpty);
+      expect(_usual(records).foods, {'rice': 0.8, 'chicken': 0.8});
     });
 
-    test('its own correction apart from the Size chosen', () {
+    test('each food at its logged amount over the photo\'s', () {
       // at ×0.8 every time, and the rice set to half the photo's
       final records = [
         for (var i = 1; i <= 3; i++)
@@ -201,15 +172,12 @@ void main() {
           ),
       ];
       final usual = _usual(records);
-      expect(usual.meal, 0.8);
-      expect(usual.foods['rice'], closeTo(0.625, 1e-9));
-      expect(usual.foods, isNot(contains('chicken')));
-      expect(usual.factorFor('rice'), closeTo(0.5, 1e-9));
+      expect(usual.factorFor('rice'), 0.5);
       expect(usual.factorFor('chicken'), 0.8);
     });
 
-    test('a food added by hand, or in a record kept before, is not learnt '
-        'from', () {
+    test('a food added by hand, or in a record kept before photo amounts, '
+        'is not learnt from; one with no size is', () {
       expect(
         _usual([
           for (var i = 1; i <= 3; i++) _record(i, foods: {'rice': (100, null)}),
@@ -219,9 +187,9 @@ void main() {
       expect(
         _usual([
           for (var i = 1; i <= 3; i++)
-            _record(i, size: null, foods: {'rice': (100, 150)}),
+            _record(i, size: null, foods: {'rice': (75, 150)}),
         ]).foods,
-        isEmpty,
+        {'rice': 0.5},
       );
     });
 
@@ -258,17 +226,17 @@ void main() {
   });
 
   group('the usual amounts', () {
-    const sizes = UsualSizes(meal: 0.8, foods: {'rice': 0.7});
+    const sizes = UsualSizes(foods: {'rice': 0.7, 'egg': 0.8});
 
-    test('each row at its food\'s and the meal\'s size, rounded as the Size '
-        'rounds', () {
+    test('each row at its food\'s size, rounded as the Size rounds; a food '
+        'with none left', () {
       final rows = [
         _row('rice', '150'),
         _row('chicken', '100'),
         _row('egg', '3', pieces: true),
       ];
       final amounts = usualAmounts(rows, sizes, canTake: (_) => true);
-      expect(amounts.values, ['84', '80', '2.5']);
+      expect(amounts.values, ['105', '2.5']);
       expect(identical(amounts.keys.first, rows.first.resolved), isTrue);
     });
 
@@ -318,11 +286,10 @@ void main() {
     expect(
       DishStrings.usualSized(
         foods.take(shown).toList(),
-        meal: 0.8,
         more: foods.length - shown,
       ),
       'Sized the way you usually correct: rice ×0.7 · bread ×0.75 · '
-      'chicken ×1.25 · and 1 more · whole meal ×0.8',
+      'chicken ×1.25 · and 1 more',
     );
     expect(
       DishStrings.usualSized([foods.last]),

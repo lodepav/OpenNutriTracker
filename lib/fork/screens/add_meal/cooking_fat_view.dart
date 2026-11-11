@@ -42,9 +42,12 @@ class CookingFatView extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            ask == CookingFatAsk.cooked
-                ? DishStrings.cookedWithFat
-                : DishStrings.dressedWithFat,
+            switch (ask) {
+              CookingFatAsk.cooked => DishStrings.cookedWithFat,
+              CookingFatAsk.salad => DishStrings.dressedWithFat,
+              CookingFatAsk.cookedMore => DishStrings.moreCookedFat,
+              CookingFatAsk.saladMore => DishStrings.moreDressing,
+            },
             style: theme.textTheme.bodyMedium?.copyWith(
               color: paletteOf(context).textStrong,
               fontWeight: FontWeight.w600,

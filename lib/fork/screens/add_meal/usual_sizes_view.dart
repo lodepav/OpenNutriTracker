@@ -7,10 +7,8 @@ import 'package:opennutritracker/fork/dish/dish_strings.dart';
 /// how much, and one tap back to the photo's own amounts; once there, one
 /// tap returns to the usual sizes.
 class UsualSizesView extends StatelessWidget {
-  /// The foods sized on their own, in the order shown, and the whole
-  /// meal's size (1 when none).
+  /// The foods sized, in the order shown.
   final List<({String name, double factor})> foods;
-  final double meal;
 
   /// Whether the usual sizes are in force, not the photo's amounts.
   final bool inForce;
@@ -20,7 +18,6 @@ class UsualSizesView extends StatelessWidget {
   const UsualSizesView({
     super.key,
     required this.foods,
-    required this.meal,
     required this.inForce,
     required this.onUsePhoto,
     required this.onUseUsual,
@@ -36,10 +33,10 @@ class UsualSizesView extends StatelessWidget {
     final shown = foods.take(shownFoods).toList();
     final more = foods.length - shown.length;
     final text = inForce
-        ? DishStrings.usualSized(shown, meal: meal, more: more)
+        ? DishStrings.usualSized(shown, more: more)
         : DishStrings.usingPhotoAmounts;
     final spoken = inForce
-        ? DishStrings.usualSizedSpoken(shown, meal: meal, more: more)
+        ? DishStrings.usualSizedSpoken(shown, more: more)
         : text;
     final button = inForce
         ? (

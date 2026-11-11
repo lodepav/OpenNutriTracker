@@ -7,7 +7,8 @@ import 'package:opennutritracker/fork/dish/dish_strings.dart';
 /// The question on a photo's row, under its amount: one line, then the
 /// chips that answer it with one tap. Once answered the line thanks the
 /// user and the chips stay, so a mis-tap takes one more tap to correct.
-/// Until then the chips are built around the amount [row] shows.
+/// Until answered with another amount the chips are built around the
+/// amount [row] shows, that one chosen.
 class AmountQuestionView extends StatelessWidget {
   final AmountQuestion question;
 
@@ -30,7 +31,7 @@ class AmountQuestionView extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final palette = paletteOf(context);
-    final answered = question.answered != null;
+    final answered = question.isAnswered;
     final choices = question.choicesFor(row);
     final selected = question.selectedIn(choices);
     return Semantics(

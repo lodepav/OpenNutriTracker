@@ -43,7 +43,7 @@ deferred finding again without new evidence. Newest last.
 | 2026-11-11 | 1 | I1 | improvement | H1 | Photo review | Show "Meal now … kcal" on screen as well as speaking it | defer | Matters at 200%, with U3 |
 | 2026-11-11 | 1 | I2 | improvement | H6 | Earlier amounts offer | Name the foods the offer changes | defer | Revisit with use |
 | 2026-11-11 | 2 | - | - | - | Photo review | No findings; U1, U4 and L1 fixed on screen | - | Open: TalkBack focus after Undo, unseen in a UI dump |
-| 2026-11-11 | 1 | U1 | medium | H1 | Photo review additions: Size | A chip's ×0.8 on top of the usual ×0.8 was unseen | accept | Fixed: the hint says sizes change the usual amounts, and "×0.8 of your usual · ×0.64 of the photo" |
+| 2026-11-11 | 1 | U1 | medium | H1 | Photo review additions: Size | A chip's ×0.8 on top of the usual ×0.8 was unseen | accept | Fixed: the hint says sizes change the usual amounts; the whole-meal usual size it also stated was dropped later the same day (D46) |
 | 2026-11-11 | 1 | U2 | medium | - | Photo review additions: fat question | The question keyed on the matched name: "without dressing" read as a fat, a fried table food asked again | accept | Fixed: the cooked word comes from the model's row on a plain table food; a fat named as absent is none (D48) |
 | 2026-11-11 | 1 | L1 | low | - | Photo review additions: note chips | Opposite chips could stand together | accept | Fixed: Small/Large plate and Restaurant/Home-cooked take each other's words out |
 | 2026-11-11 | 1 | L2 | low | - | Photo review additions: fat question | Answering for butter adds sunflower oil | reject | The row is ordinary and can be changed; oil is the commoner case |

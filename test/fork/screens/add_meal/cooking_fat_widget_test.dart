@@ -81,6 +81,33 @@ void main() {
     expect(_question, findsNothing);
   });
 
+  testWidgets('a little oil on the read asks for more, and a chip adds its '
+      'own row beside the model\'s', (tester) async {
+    await openReview(tester);
+    await readReviewPhoto(tester, const [
+      ParsedMealItem(query: 'salad', quantity: 150, unit: 'g'),
+      ParsedMealItem(query: 'olive oil', quantity: 8, unit: 'g'),
+    ]);
+    expect(find.text(DishStrings.moreDressing), findsOneWidget);
+    expect(find.text(DishStrings.dressedWithFat), findsNothing);
+
+    await tapAndSettle(tester, _chip(0));
+    expect(reviewRows().length, 3);
+    expect(reviewRow(1).amountText, '8');
+    expect(reviewRow(2).meal!.name, 'Sunflower oil');
+    expect(reviewRow(2).amountText, '5');
+  });
+
+  testWidgets('a fried food with a little butter asks for more oil or '
+      'butter', (tester) async {
+    await openReview(tester);
+    await readReviewPhoto(tester, const [
+      _egg,
+      ParsedMealItem(query: 'butter', quantity: 5, unit: 'g'),
+    ]);
+    expect(find.text(DishStrings.moreCookedFat), findsOneWidget);
+  });
+
   testWidgets('a chip adds one row of the table\'s oil; another changes that '
       'row; None takes it off and ends the question', (tester) async {
     await openReview(tester);

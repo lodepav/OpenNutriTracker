@@ -31,20 +31,28 @@ MealEntity _food(String name) => MealEntity(
 
 /// A row the model called [query], matched to [matched] (or to a plain
 /// table food).
-BulkAddRow _row(String query, {String? matched, bool skipped = false}) =>
-    BulkAddRow(
-      resolved: ResolvedMealItem(
-        parsed: ParsedMealItem(query: query, quantity: 100, unit: 'g'),
-        candidates: [_food(matched ?? 'Plain food')],
-        selectedIndex: 0,
-        confidence: 1,
-      ),
-      selectedIndex: 0,
-      amountText: '100',
+BulkAddRow _row(
+  String query, {
+  String? matched,
+  bool skipped = false,
+  String grams = '100',
+}) => BulkAddRow(
+  resolved: ResolvedMealItem(
+    parsed: ParsedMealItem(
+      query: query,
+      quantity: double.tryParse(grams),
       unit: 'g',
-      skipped: skipped,
-      fromPhoto: true,
-    );
+    ),
+    candidates: [_food(matched ?? 'Plain food')],
+    selectedIndex: 0,
+    confidence: 1,
+  ),
+  selectedIndex: 0,
+  amountText: grams,
+  unit: 'g',
+  skipped: skipped,
+  fromPhoto: true,
+);
 
 CookingFatAsk? _ask(List<String> queries, {String? note}) =>
     cookingFatAskFor([for (final q in queries) _row(q)], note: note);
@@ -115,6 +123,22 @@ void main() {
         _row('green salad', matched: 'Salad, green, without dressing'),
       ];
       expect(cookingFatAskFor(rows), CookingFatAsk.salad);
+    });
+
+    test('for more when the fat rows come to under 10 g', () {
+      expect(
+        cookingFatAskFor([_row('green salad'), _row('olive oil', grams: '8')]),
+        CookingFatAsk.saladMore,
+      );
+      expect(
+        cookingFatAskFor([
+          _row('egg, fried'),
+          _row('butter', grams: '5'),
+          _row('olive oil', grams: '4'),
+          _row('butter', grams: '20', skipped: true),
+        ]),
+        CookingFatAsk.cookedMore,
+      );
     });
 
     test('from the dish a food belongs to', () {
@@ -224,6 +248,29 @@ void main() {
       expect(
         cookingFatAskFor([_row('egg, fried'), _row('butter', skipped: true)]),
         CookingFatAsk.cooked,
+      );
+    });
+
+    test('with 10 g of fat rows or more together, or a fat row with no '
+        'weight', () {
+      expect(
+        cookingFatAskFor([
+          _row('green salad'),
+          _row('mayonnaise', grams: '25'),
+        ]),
+        isNull,
+      );
+      expect(
+        cookingFatAskFor([
+          _row('egg, fried'),
+          _row('olive oil', grams: '5'),
+          _row('butter', grams: '5'),
+        ]),
+        isNull,
+      );
+      expect(
+        cookingFatAskFor([_row('egg, fried'), _row('butter', grams: 'some')]),
+        isNull,
       );
     });
 

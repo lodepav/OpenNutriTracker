@@ -79,16 +79,13 @@ import 'package:opennutritracker/fork/screens/add_meal/history_offer_view.dart';
 // the photo's amounts sized the way the user usually corrects them (D46)
 import 'package:opennutritracker/fork/bulk/usual_sizes.dart';
 import 'package:opennutritracker/fork/screens/add_meal/usual_sizes_view.dart';
-// an unusual amount, the fat a meal was cooked in, and the note's chips
-// (D47-D49)
+// the fat a meal was cooked in, and the note's chips (D48, D49)
 import 'package:opennutritracker/fork/bulk/cooking_fat.dart';
 import 'package:opennutritracker/fork/bulk/put_row.dart';
-import 'package:opennutritracker/fork/bulk/usual_serving.dart';
 import 'package:opennutritracker/fork/dish/break_down_dish_usecase.dart'
     show preferTableRow;
 import 'package:opennutritracker/fork/screens/add_meal/cooking_fat_view.dart';
 import 'package:opennutritracker/fork/screens/add_meal/note_chips_view.dart';
-import 'package:opennutritracker/fork/screens/add_meal/usual_serving_view.dart';
 
 part 'bulk_add_body.dart';
 part 'bulk_add_row.dart';
@@ -211,7 +208,7 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
   final _photoRows = LinkedHashMap<ResolvedMealItem, _PhotoRow>.identity();
 
   /// The usual sizes applied to this read, the rows they changed, and the
-  /// foods and whole-meal size the line names; null when none were.
+  /// foods the line names; null when none were.
   UsualSizes? _usual;
   final _usualRows = Set<ResolvedMealItem>.identity();
   List<({String name, double factor})> _usualFoods = const [];
@@ -763,11 +760,12 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
     return photo.base;
   }
 
-  /// The whole-meal size at Log against the photo's amounts; none when no
-  /// row of the read could be sized.
+  /// The Size chosen at Log, against the amounts in force (the photo's or
+  /// the usual ones); none when no row of the read could be sized. Kept,
+  /// not learnt from: each food's logged amount already holds it.
   double? _loggedSize() {
     if (!_photoRows.values.any((row) => row.sizable)) return null;
-    return _mealScale.factor * (_usualInForce ? _usual!.meal : 1);
+    return _mealScale.factor;
   }
 
   /// Notes each new row's amount, and whether a row the user set has moved
@@ -816,17 +814,15 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
   }
 
   /// [rows] as "Use your amounts" would leave them: the earlier meal's
-  /// amounts on the rows that would take them, the photo's on the other
-  /// rows the Size changes, and the amounts the user set kept.
+  /// amounts on the rows that would take them, the other rows the Size
+  /// changes at their bases (the usual sizes' while in force, else the
+  /// photo's), and the amounts the user set kept.
   List<BulkAddRow> _withHistory(List<BulkAddRow> rows) {
     final match = _history;
     if (match == null) return rows;
     final amounts = _mealScale.rebaseTargets(
       rows,
-      _historyTaken(
-        rows,
-        photoMealAmounts(rows, match.record, canTake: _mealScale.canScale),
-      ),
+      photoMealAmounts(rows, match.record, canTake: _mealScale.canScale),
     );
     return [
       for (final row in rows)
@@ -839,7 +835,8 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
 
   /// "Use your amounts": each shared row the Size may change takes the
   /// earlier meal's amount as its new base, unpinned, at "As shown", and
-  /// the other rows it may change go back to the photo's amounts; the
+  /// the other rows it may change go back to their bases: a usual size in
+  /// force is the user's too, so it stays, else the photo's amount. The
   /// question on a shared row goes, and the meal's energy is said.
   void _useHistory() {
     final state = _bloc.state;
@@ -852,10 +849,7 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
     );
     if (taken.isEmpty) return;
     final before = _mealScale.snapshot();
-    final amounts = _mealScale.rebase(
-      state.rows,
-      _historyTaken(state.rows, taken),
-    );
+    final amounts = _mealScale.rebase(state.rows, taken);
     setState(() {
       _historyUndo = before;
       if (_amountQuestion case final question?
@@ -866,29 +860,6 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
       }
     });
     _sendScaled(state.rows, amounts);
-  }
-
-  /// [taken] and, while the usual sizes are in force, the photo's amount
-  /// for each other row they sized: the earlier amounts are the user's own,
-  /// and every other food goes back to the photo's, as without them.
-  Map<ResolvedMealItem, String> _historyTaken(
-    List<BulkAddRow> rows,
-    Map<ResolvedMealItem, String> taken,
-  ) {
-    if (!_usualInForce) return taken;
-    final all = LinkedHashMap<ResolvedMealItem, String>.identity()
-      ..addAll(taken);
-    for (final row in rows) {
-      if (all.containsKey(row.resolved) ||
-          !_usualRows.contains(row.resolved) ||
-          !_mealScale.canScale(row)) {
-        continue;
-      }
-      if (_photoRows[row.resolved]?.text case final text?) {
-        all[row.resolved] = text;
-      }
-    }
-    return all;
   }
 
   /// Undo: the photo's bases and the size before, back.
@@ -985,9 +956,12 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
     }
   }
 
-  /// Chip [choice] of the question on row [index] tapped: the row takes its
-  /// amount as a typed one, in the unit it is shown in, and the meal's Size
-  /// leaves it.
+  /// Chip [choice] of the question on row [index] tapped. The amount the
+  /// row shows is confirmed as it is: not pinned, so the Size keeps scaling
+  /// it, and not "Set by you"; a pinned confirmed row took the Size's step
+  /// off the meal's biggest food. Another amount is taken as a typed one,
+  /// in the unit it is shown in, and the Size leaves it. Either way the
+  /// amount and the meal's energy are said.
   void _answerAmount(int index, int choice) {
     final state = _bloc.state;
     final question = _amountQuestion;
@@ -998,6 +972,11 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
     final row = state.rows[index];
     final chip = question.answer(row, choice);
     if (chip == null) return;
+    if (chip.unit == row.effectiveUnit && chip.text == row.amountText) {
+      setState(() {});
+      _amountSaid = (amount: chip.spoken, rows: state.rows);
+      return;
+    }
     _setRowTo(state, index, chip);
   }
 
@@ -1026,26 +1005,6 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
         ..add(ChangeRowUnitEvent(index, chip.unit))
         ..add(ChangeRowAmountEvent(index, chip.text));
     }
-  }
-
-  /// The usual serving offered on row [row] of a photo's review (D47): not
-  /// once the user set it, nor on the row the amount question is on.
-  AmountChoice? _usualServingOn(BulkAddLoadedState state, BulkAddRow row) {
-    if (state.source != BulkAddReadSource.photo) return null;
-    if (_mealScale.isPinned(row)) return null;
-    if (_amountQuestion?.isFor(row) ?? false) return null;
-    return usualServingFor(
-      row,
-      note: _photoNote,
-      imperial: state.usesImperialUnits,
-    );
-  }
-
-  /// The usual serving taken on row [index], as an amount the user set.
-  void _takeUsualServing(int index, AmountChoice serving) {
-    final state = _bloc.state;
-    if (state is! BulkAddLoadedState || index >= state.rows.length) return;
-    _setRowTo(state, index, serving);
   }
 
   /// The fat question for a photo's rows as they first arrive (D48).

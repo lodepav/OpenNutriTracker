@@ -2,6 +2,7 @@
 // review (D48): a photo cannot show the oil in a pan or on leaves, and a
 // tablespoon of it is 120 kcal the read leaves out.
 import 'package:opennutritracker/features/add_meal/presentation/bloc/bulk_add_bloc.dart';
+import 'package:opennutritracker/features/meal_detail/util/meal_quantity_converter.dart';
 import 'package:opennutritracker/fork/bulk/note_weights.dart';
 import 'package:opennutritracker/fork/dish/dish_breakdown_rows.dart';
 
@@ -13,7 +14,19 @@ enum CookingFatAsk {
 
   /// "Any dressing or oil?": a salad, nothing cooked in fat.
   salad,
+
+  /// "Any more oil or butter?": cooked in fat, with a little fat on the
+  /// read already ([cookingFatEnough]).
+  cookedMore,
+
+  /// "Any more dressing or oil?": a salad with a little fat on it.
+  saladMore,
 }
+
+/// At this many grams of fat rows on the read, together, the fat is taken
+/// as counted and nothing is asked; under it, the model's few grams are
+/// more often a dab than the meal's fat.
+const cookingFatEnough = 10.0;
 
 /// The chips' grams after None: a little, some, a lot.
 const cookingFatGrams = [5.0, 10.0, 20.0];
@@ -111,16 +124,27 @@ bool _saidCooked(BulkAddRow row) => _cooked.hasMatch(
   _plain('${row.resolved.parsed.query} · ${row.dishIngredient?.dish ?? ''}'),
 );
 
+/// [row]'s grams or millilitres; null when it has none to say.
+double? _grams(BulkAddRow row) {
+  final meal = row.meal;
+  final amount = double.tryParse(row.amountText.trim().replaceAll(',', '.'));
+  if (meal == null || amount == null) return null;
+  return convertQuantityToBaseUnit(amount, row.effectiveUnit, meal);
+}
+
 /// The question for a photo's [rows] as they first arrive, [note] being
 /// what the photo was sent with: [CookingFatAsk.cooked] when the model or
 /// the user says a food was fried, roasted, sautéed or stir-fried and the
 /// food matched is a plain one ("fried potatoes" as "Potato, boiled"),
-/// else [CookingFatAsk.salad] for a salad; null when the read already holds
-/// a fat, oil, butter, dressing, mayonnaise or fatty sauce, or when the note
-/// states weights (a weighed plate lists its fat, D24). A row matched to a
-/// table food that holds its fat ("Potatoes, home fries", "fat added")
-/// asks nothing and is no fat beside the others. Rows left out count for
-/// neither.
+/// else [CookingFatAsk.salad] for a salad. A fat, oil, butter, dressing,
+/// mayonnaise or fatty sauce on the read makes it "Any more …?"
+/// ([CookingFatAsk.cookedMore], [CookingFatAsk.saladMore]) while those rows
+/// come to under [cookingFatEnough] together, and asks nothing at it or
+/// over it, or with one whose amount cannot be weighed. Null too when the
+/// note states weights (a weighed plate lists its fat, D24). A row matched
+/// to a table food that holds its fat ("Potatoes, home fries", "fat
+/// added") asks nothing and is no fat beside the others. Rows left out
+/// count for neither.
 CookingFatAsk? cookingFatAskFor(List<BulkAddRow> rows, {String? note}) {
   if (noteWeights(note) != null) return null;
   final kept = [
@@ -129,14 +153,23 @@ CookingFatAsk? cookingFatAskFor(List<BulkAddRow> rows, {String? note}) {
   ];
   if (kept.isEmpty) return null;
   final own = [for (final row in kept) _tableHoldsFat(row)];
+  var fat = 0.0;
+  var anyFat = false;
   for (final (i, row) in kept.indexed) {
-    if (!own[i] && _fat.hasMatch(_words(row))) return null;
+    if (own[i] || !_fat.hasMatch(_words(row))) continue;
+    final grams = _grams(row);
+    if (grams == null) return null;
+    anyFat = true;
+    fat += grams;
   }
+  if (fat >= cookingFatEnough) return null;
   for (final (i, row) in kept.indexed) {
-    if (!own[i] && _saidCooked(row)) return CookingFatAsk.cooked;
+    if (!own[i] && _saidCooked(row)) {
+      return anyFat ? CookingFatAsk.cookedMore : CookingFatAsk.cooked;
+    }
   }
   if (kept.any((row) => _salad.hasMatch(_words(row)))) {
-    return CookingFatAsk.salad;
+    return anyFat ? CookingFatAsk.saladMore : CookingFatAsk.salad;
   }
   return null;
 }

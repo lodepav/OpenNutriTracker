@@ -79,9 +79,9 @@ class PhotoMealRecord {
   /// Whether the user changed any amount on that review.
   final bool corrected;
 
-  /// The whole-meal size in force at Log against the photo's amounts: the
-  /// Size chosen, times the usual whole-meal size when that was in force
-  /// (D46). Null when no amount could be sized, and in older records.
+  /// The Size chosen at Log, against the amounts then in force (the
+  /// photo's, or the usual sizes', D46). Kept for later use; not learnt
+  /// from. Null when no amount could be sized, and in older records.
   final double? size;
 
   const PhotoMealRecord({

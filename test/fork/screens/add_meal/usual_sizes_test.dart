@@ -225,10 +225,11 @@ PhotoMealRecord _dinner() {
   );
 }
 
-/// A dinner logged [daysAgo] days ago at [size] against the photo, the
-/// rice at [rice] times the rest: the photo's 150 g rice and 100 g
-/// chicken. Not corrected, so never offered as earlier amounts.
-PhotoMealRecord _sized(int daysAgo, {double size = 0.8, double rice = 0.7}) {
+/// A dinner logged [daysAgo] days ago, the photo's 150 g rice at ×0.7, its
+/// 100 g chicken at ×0.8 and its 80 g salad at ×0.75, at a Size of [size]
+/// (kept, not learnt from). Not corrected, so never offered as earlier
+/// amounts.
+PhotoMealRecord _sized(int daysAgo, {double size = 0.8}) {
   final day = DateTime(_today.year, _today.month, _today.day - daysAgo);
   PhotoMealFood food(String name, double grams, double photo) => PhotoMealFood(
     key: name,
@@ -242,8 +243,9 @@ PhotoMealRecord _sized(int daysAgo, {double size = 0.8, double rice = 0.7}) {
     loggedAt: day.add(const Duration(hours: 19)),
     slot: 'dinner',
     foods: [
-      food('rice', 150 * size * rice, 150),
-      food('chicken', 100 * size, 100),
+      food('rice', 105, 150),
+      food('chicken', 80, 100),
+      food('salad', 60, 80),
     ],
     kcal: 0,
     corrected: false,
@@ -310,7 +312,9 @@ final _line = find.byKey(const ValueKey('bulk-add-usual-sizes'));
 final _usePhoto = find.byKey(const ValueKey('bulk-add-usual-photo'));
 final _useUsual = find.byKey(const ValueKey('bulk-add-usual-return'));
 
-const _said = 'Sized the way you usually correct: rice ×0.7 · whole meal ×0.8';
+const _said =
+    'Sized the way you usually correct: rice ×0.7 · chicken ×0.8 · '
+    'salad ×0.75';
 
 String _chipText(WidgetTester tester, double factor) =>
     (tester.widget<ChoiceChip>(_chip(factor)).label as Text).data!;
@@ -350,15 +354,16 @@ void main() {
     await _open(tester);
     await _readPhoto(tester);
 
-    // rice 150 × 0.8 × 0.7, chicken 100 × 0.8, salad 80 × 0.8
-    expect(_amounts(), ['84', '80', '64']);
+    // each food at its own: rice 150 × 0.7, chicken 100 × 0.8, salad 80 ×
+    // 0.75
+    expect(_amounts(), ['105', '80', '60']);
     final rows = (_bloc.state as BulkAddLoadedState).rows;
     expect(rows.any((row) => row.amountEditedByUser), isFalse);
     expect(find.text(_said), findsOneWidget);
     expect(
       find.bySemanticsLabel(
         'Sized the way you usually correct: rice 0.7 times, '
-        'whole meal 0.8 times',
+        'chicken 0.8 times, salad 0.75 times',
       ),
       findsOneWidget,
     );
@@ -392,16 +397,13 @@ void main() {
     await _open(tester);
     await _readPhoto(tester);
     await _tap(tester, _chip(1.2));
-    expect(_amounts(), ['101', '96', '77']);
+    expect(_amounts(), ['126', '96', '72']);
     await _tap(tester, _chip(1.0));
-    expect(_amounts(), ['84', '80', '64']);
+    expect(_amounts(), ['105', '80', '60']);
   });
 
   testWidgets('the Size\'s hint says the sizes change the usual amounts, '
-      'and a size over the usual whole-meal size what it comes to', (
-    tester,
-  ) async {
-    final semantics = tester.ensureSemantics();
+      'at any size', (tester) async {
     _keepSized(3);
     await _open(tester);
     await _readPhoto(tester);
@@ -409,21 +411,11 @@ void main() {
     expect(tester.widget<Text>(hint).data, DishStrings.sizesChangeUsual);
 
     await _tap(tester, _chip(0.8));
-    expect(
-      tester.widget<Text>(hint).data,
-      '×0.8 of your usual · ×0.64 of the photo',
-    );
-    expect(
-      tester.getSemantics(hint),
-      isSemantics(
-        label: "0.8 times your usual, 0.64 times the photo's amounts",
-      ),
-    );
+    expect(tester.widget<Text>(hint).data, DishStrings.sizesChangeUsual);
 
     // the photo's amounts used: the hint as without usual sizes
     await _tap(tester, _usePhoto);
     expect(tester.widget<Text>(hint).data, DishStrings.sizeScalesUnset);
-    semantics.dispose();
   });
 
   testWidgets('"Use the photo\'s amounts" puts them back, said, and the '
@@ -450,7 +442,7 @@ void main() {
     expect(_amounts(), ['120', '80', '64']);
 
     await _tap(tester, _useUsual);
-    expect(_amounts(), ['101', '96', '77']);
+    expect(_amounts(), ['126', '96', '72']);
     expect(tester.widget<ChoiceChip>(_chip(1.2)).selected, isTrue);
     expect(find.text(_said), findsOneWidget);
     expect(_chipText(tester, 1.0), DishStrings.yourUsual);
@@ -468,7 +460,7 @@ void main() {
     await _tap(tester, _usePhoto);
     expect(_amounts(), ['150', set, '80']);
     await _tap(tester, _useUsual);
-    expect(_amounts(), ['84', set, '64']);
+    expect(_amounts(), ['105', set, '60']);
   });
 
   testWidgets('a row the user set before the memory was read is left alone', (
@@ -484,8 +476,12 @@ void main() {
 
     gate.complete();
     await tester.pumpAndSettle();
-    expect(_amounts(), ['84', set, '64']);
-    expect(find.text(_said), findsOneWidget);
+    expect(_amounts(), ['105', set, '60']);
+    // the row set is not named: it was not sized
+    expect(
+      find.text('Sized the way you usually correct: rice ×0.7 · salad ×0.75'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('the amount question asks around the usual amount', (
@@ -501,30 +497,30 @@ void main() {
         description: 'the chosen answer',
       ),
     );
-    expect(((tester.widget<ChoiceChip>(chosen)).label as Text).data, '84 g');
+    expect(((tester.widget<ChoiceChip>(chosen)).label as Text).data, '105 g');
   });
 
   testWidgets('the earlier amounts taken over the usual sizes: the line '
-      'goes, the other foods go back to the photo\'s, and Undo brings the '
-      'usual sizes back', (tester) async {
+      'goes, a food they do not cover keeps its usual amount, and Undo '
+      'brings the usual sizes back', (tester) async {
     _memory.kept.add(_dinner());
     _keepSized(3);
     await _open(tester);
     await _readPhoto(tester);
-    expect(_amounts(), ['84', '80', '64']);
+    expect(_amounts(), ['105', '80', '60']);
     expect(_line, findsOneWidget);
-    // rice 300 and chicken 200 then, the salad at the photo's 80
-    expect(find.text('Your amounts then: 580 kcal'), findsOneWidget);
+    // rice 300 and chicken 200 then, the salad at its usual 60
+    expect(find.text('This meal with your amounts: 560 kcal'), findsOneWidget);
 
     await _tap(tester, _use);
-    expect(_amounts(), ['300', '200', '80']);
+    expect(_amounts(), ['300', '200', '60']);
     expect(_line, findsNothing);
     expect(_chipText(tester, 1.0), DishStrings.yourAmounts);
     await _tap(tester, _chip(0.8));
-    expect(_amounts(), ['240', '160', '64']);
+    expect(_amounts(), ['240', '160', '48']);
 
     await _tap(tester, _undo);
-    expect(_amounts(), ['84', '80', '64']);
+    expect(_amounts(), ['105', '80', '60']);
     expect(find.text(_said), findsOneWidget);
     expect(_chipText(tester, 1.0), DishStrings.yourUsual);
   });
@@ -545,7 +541,7 @@ void main() {
       expect(record.foods.map((f) => f.amount), [150, 100, 80]);
     });
 
-    testWidgets('with the usual sizes: the whole meal\'s, not corrected', (
+    testWidgets('with the usual sizes: the Size chosen, not corrected', (
       tester,
     ) async {
       _keepSized(3);
@@ -553,13 +549,13 @@ void main() {
       await _readPhoto(tester);
       await _log(tester);
       final record = _memory.kept.last;
-      expect(record.size, closeTo(0.8, 1e-9));
+      expect(record.size, 1);
       expect(record.foods.map((f) => f.photoAmount), [150, 100, 80]);
-      expect(record.foods.map((f) => f.amount), [84, 80, 64]);
+      expect(record.foods.map((f) => f.amount), [105, 80, 60]);
       expect(record.corrected, isFalse);
     });
 
-    testWidgets('with the usual sizes and a Size: the two together', (
+    testWidgets('with the usual sizes and a Size: the Size alone', (
       tester,
     ) async {
       _keepSized(3);
@@ -567,7 +563,7 @@ void main() {
       await _readPhoto(tester);
       await _tap(tester, _chip(1.2));
       await _log(tester);
-      expect(_memory.kept.last.size, closeTo(0.96, 1e-9));
+      expect(_memory.kept.last.size, 1.2);
       expect(_memory.kept.last.corrected, isTrue);
     });
 

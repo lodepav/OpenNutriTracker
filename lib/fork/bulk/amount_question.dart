@@ -58,10 +58,14 @@ class AmountQuestion {
   /// Whether weights are offered in ounces where the Diary shows them so.
   final bool imperial;
 
-  /// The chips as they were when the user answered, and the one tapped;
-  /// null until they answer.
+  /// The chips as they were when the user answered with another amount,
+  /// and the one tapped; null until they do.
   List<AmountChoice>? _answeredChoices;
   int? _answered;
+
+  /// The amount shown confirmed: the row stays the Size's, so the chips
+  /// keep following it with the confirmed one chosen.
+  bool _confirmed = false;
 
   AmountQuestion({
     required this.item,
@@ -72,12 +76,16 @@ class AmountQuestion {
 
   bool isFor(BulkAddRow row) => identical(row.resolved, item);
 
-  /// The chip the user tapped; null until they answer.
+  /// Whether the user answered, with the amount shown or another.
+  bool get isAnswered => _confirmed || _answered != null;
+
+  /// The chip the user tapped for another amount; null until they do.
   int? get answered => _answered;
 
-  /// The chips on [row], its row as it is now: until answered, built
-  /// around the amount it shows (the photo's at the size chosen), so the
-  /// one chosen is that amount; once answered, the chips it was answered
+  /// The chips on [row], its row as it is now: until answered with another
+  /// amount, built around the amount it shows (the photo's at the size
+  /// chosen), so the one chosen is that amount, also after a confirmed one
+  /// was scaled; once answered with another, the chips it was answered
   /// with, so a mis-tap is corrected among the same.
   List<AmountChoice> choicesFor(BulkAddRow row) =>
       _answeredChoices ?? amountChoices(row, imperial: imperial) ?? const [];
@@ -87,14 +95,21 @@ class AmountQuestion {
   int selectedIn(List<AmountChoice> choices) =>
       _answered ?? choices.indexWhere((c) => c.estimate);
 
-  /// Chip [choice] on [row] tapped: the chips stay as they are now. The
-  /// chip, or null when there is no such chip.
+  /// Chip [choice] on [row] tapped. The amount shown, while the chips still
+  /// follow the row, confirms it and they go on following it; another
+  /// amount keeps the chips as they are now. The chip, or null when there
+  /// is no such chip.
   AmountChoice? answer(BulkAddRow row, int choice) {
     final choices = choicesFor(row);
     if (choice < 0 || choice >= choices.length) return null;
+    final chip = choices[choice];
+    if (_answeredChoices == null && chip.estimate) {
+      _confirmed = true;
+      return chip;
+    }
     _answeredChoices = choices;
     _answered = choice;
-    return choices[choice];
+    return chip;
   }
 
   /// Whether the question still stands among [rows]: its row is there with
@@ -132,7 +147,7 @@ AmountQuestion? amountQuestionFor(
   return AmountQuestion(
     item: best.resolved,
     selectedIndex: best.selectedIndex,
-    food: questionFood(best.meal?.name ?? best.resolved.parsed.query),
+    food: questionFoodOf(best.resolved.parsed.query, best.meal?.name),
     imperial: imperial,
   );
 }
@@ -151,6 +166,35 @@ String questionFood(String title) {
           ? word
           : word.toLowerCase(),
   ].join(' ');
+}
+
+/// An amount in the model's words: "150 g", "2x", "~1 cup of", "(about
+/// 200 g)", a count before the food.
+final _amountWords = RegExp(
+  r'\([^)]*\d[^)]*\)|'
+  r'(~\s*|\b(about|approx\.?|approximately|around)\s+)?'
+  r'\b\d+([.,]\d+)?(?![\d-])\s*(x\b|×|'
+  r'(g|grams?|kg|ml|l|oz|ounces?|lbs?|cups?|tbsps?|tablespoons?|tsps?|'
+  r'teaspoons?|pieces?|pcs|slices?|bowls?|plates?|portions?|servings?)\b'
+  r'(\s+of\b)?)?',
+  caseSensitive: false,
+);
+
+/// The food as the question names it: the model's own name for it,
+/// [query], without amount words and cut at its first comma ("How much
+/// orecchiette was it?", not the table's "pasta, dry, enriched"); the
+/// table's [tableName] when the model's says nothing.
+String questionFoodOf(String query, String? tableName) {
+  final words = query
+      .split(',')
+      .first
+      .replaceAll(_amountWords, ' ')
+      .replaceAll(RegExp(r'\s+'), ' ')
+      .trim();
+  if (RegExp(r'\p{L}', unicode: true).hasMatch(words)) {
+    return questionFood(words);
+  }
+  return questionFood(tableName ?? query);
 }
 
 /// The unit an imperial profile edits [row]'s weight in, the one its amount
@@ -345,24 +389,6 @@ String? _pieceWordOf(MealEntity meal, String unit) {
   if (meal.scalableServingQuantity == null) return null;
   return pieceWord(meal.servingSize ?? '');
 }
-
-/// A chip of [count] [word]s in [unit], read and said as the question's
-/// are; for the usual serving's offer (`usual_serving.dart`).
-AmountChoice countChoiceOf(double count, String word, String unit) =>
-    _countChoice(count, word, unit);
-
-/// A chip of [value] in the weight [unit], read and said as the
-/// question's are.
-AmountChoice weightChoiceOf(double value, String unit) =>
-    _weightChoice(value, unit);
-
-/// The word one of [unit] of [meal] is, when it counts a thing.
-String? pieceWordIn(MealEntity meal, String unit) => _pieceWordOf(meal, unit);
-
-/// Ounces or fluid ounces where the Diary shows [meal] in them and [unit]
-/// is not already that; null otherwise.
-String? imperialWeightOf(MealEntity meal, List<String> allowed, String unit) =>
-    _imperialWeight(meal, allowed, unit);
 
 /// The chips that answer the question on [row], at the amount it has now
 /// (the photo's at the size chosen): counts when it counts a thing, or when its weight is
