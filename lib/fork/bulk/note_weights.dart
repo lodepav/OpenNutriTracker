@@ -1,4 +1,5 @@
 import 'package:opennutritracker/features/add_meal/util/meal_text_parser.dart';
+import 'package:opennutritracker/fork/bulk/note_chips.dart';
 import 'package:opennutritracker/fork/bulk/note_counts.dart';
 
 /// A weight the user's note gives one food among others: "chicken 120g, rice",
@@ -54,7 +55,8 @@ const _separators = '-–—:=';
 /// states a count: those, and a note naming foods alone, are the photo
 /// read's, not this.
 NoteWeights? noteWeights(String? note) {
-  final text = note?.trim() ?? '';
+  // the note chips' words are no food (D49)
+  final text = withoutChipWords(note?.trim() ?? '');
   final amounts = _amount.allMatches(text).toList();
   if (amounts.isEmpty) return null;
   // "200g rice, 2 eggs": a count stays the photo read's to keep (S170)

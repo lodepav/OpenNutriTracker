@@ -24,6 +24,9 @@ import 'package:opennutritracker/fork/bulk/shown_unit.dart';
 // [fork] S212 meal-size: a photo's amounts scaled in one emit
 import 'package:opennutritracker/fork/bulk/scale_rows.dart';
 // [/fork]
+// [fork] S215 put-row: the cooking fat a photo's review adds and takes off
+import 'package:opennutritracker/fork/bulk/put_row.dart';
+// [/fork]
 // [fork] S98 default-amount: a sauce starts at a ladle, a drink at a glass,
 // a main dish at a plate
 import 'package:opennutritracker/fork/food/dish_serving.dart';
@@ -476,6 +479,12 @@ class BulkAddBloc extends Bloc<BulkAddEvent, BulkAddState> {
     on<ScaleRowsEvent>((event, emit) {
       final current = state;
       if (current is BulkAddLoadedState) emit(scaleRows(current, event));
+    });
+    // [/fork]
+    // [fork] S215 put-row: one row added, changed or taken off (D48)
+    on<PutRowEvent>((event, emit) {
+      final current = state;
+      if (current is BulkAddLoadedState) emit(putRow(current, event));
     });
     // [/fork]
   }

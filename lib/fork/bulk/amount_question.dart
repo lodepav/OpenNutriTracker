@@ -346,6 +346,24 @@ String? _pieceWordOf(MealEntity meal, String unit) {
   return pieceWord(meal.servingSize ?? '');
 }
 
+/// A chip of [count] [word]s in [unit], read and said as the question's
+/// are; for the usual serving's offer (`usual_serving.dart`).
+AmountChoice countChoiceOf(double count, String word, String unit) =>
+    _countChoice(count, word, unit);
+
+/// A chip of [value] in the weight [unit], read and said as the
+/// question's are.
+AmountChoice weightChoiceOf(double value, String unit) =>
+    _weightChoice(value, unit);
+
+/// The word one of [unit] of [meal] is, when it counts a thing.
+String? pieceWordIn(MealEntity meal, String unit) => _pieceWordOf(meal, unit);
+
+/// Ounces or fluid ounces where the Diary shows [meal] in them and [unit]
+/// is not already that; null otherwise.
+String? imperialWeightOf(MealEntity meal, List<String> allowed, String unit) =>
+    _imperialWeight(meal, allowed, unit);
+
 /// The chips that answer the question on [row], at the amount it has now
 /// (the photo's at the size chosen): counts when it counts a thing, or when its weight is
 /// within 15% of a whole or half piece; else weights at about ½, ¾, 1 and

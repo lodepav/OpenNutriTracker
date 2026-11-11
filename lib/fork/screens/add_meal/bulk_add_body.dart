@@ -278,6 +278,17 @@ extension _BulkAddBody on _BulkAddScreenState {
               const SizedBox(height: 10),
               _buildMealSize(context, state),
             ],
+            // the fat it was cooked or dressed with, once per read (D48)
+            if (state.source == BulkAddReadSource.photo &&
+                _fatAsk != null &&
+                !_fatClosed) ...[
+              const SizedBox(height: 10),
+              CookingFatView(
+                ask: _fatAsk!,
+                chosen: _fatChosen(state.rows),
+                onChosen: (choice) => unawaited(_chooseCookingFat(choice)),
+              ),
+            ],
             const SizedBox(height: 10),
             // its own node, so the day is read last, as it is shown
             Semantics(

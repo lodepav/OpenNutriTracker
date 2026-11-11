@@ -272,7 +272,7 @@ class MealScale {
   /// wrote take their base from the amount they were weighed for, the
   /// parent's amount at its size (`breakdownAmount` keeps it), so divided by
   /// that size, and are not pinned; under a parent the user set, they are
-  /// set too.
+  /// set too. A row pinned before it arrives stays pinned.
   Map<ResolvedMealItem, String> follow(List<BulkAddRow> rows) {
     if (!_started) {
       _started = true;
@@ -293,6 +293,8 @@ class MealScale {
     final parent = lost.length == 1 ? lost.single : null;
     for (final row in rows) {
       if (known.contains(row.resolved)) continue;
+      // pinned before it arrived: an amount the user stated (D48)
+      if (isPinned(row)) continue;
       if (parent != null && _pinned.contains(parent)) {
         pin(row);
         continue;

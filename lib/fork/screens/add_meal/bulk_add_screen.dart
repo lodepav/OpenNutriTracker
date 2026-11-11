@@ -79,6 +79,16 @@ import 'package:opennutritracker/fork/screens/add_meal/history_offer_view.dart';
 // the photo's amounts sized the way the user usually corrects them (D46)
 import 'package:opennutritracker/fork/bulk/usual_sizes.dart';
 import 'package:opennutritracker/fork/screens/add_meal/usual_sizes_view.dart';
+// an unusual amount, the fat a meal was cooked in, and the note's chips
+// (D47-D49)
+import 'package:opennutritracker/fork/bulk/cooking_fat.dart';
+import 'package:opennutritracker/fork/bulk/put_row.dart';
+import 'package:opennutritracker/fork/bulk/usual_serving.dart';
+import 'package:opennutritracker/fork/dish/break_down_dish_usecase.dart'
+    show preferTableRow;
+import 'package:opennutritracker/fork/screens/add_meal/cooking_fat_view.dart';
+import 'package:opennutritracker/fork/screens/add_meal/note_chips_view.dart';
+import 'package:opennutritracker/fork/screens/add_meal/usual_serving_view.dart';
 
 part 'bulk_add_body.dart';
 part 'bulk_add_row.dart';
@@ -124,6 +134,20 @@ Future<DayTotals> Function(DateTime day) forkDayTotals = loadDayTotals;
 
 /// The photo meal memory the review reads and Log writes; tests swap it.
 PhotoMealMemoryStore Function() forkPhotoMealMemory = PhotoMealMemoryStore.new;
+
+/// The food table's oil a cooking fat chip adds, at [grams] (D48); null
+/// when nothing matched. Tests swap it.
+Future<ResolvedMealItem?> Function(double grams) forkCookingFatFood =
+    _cookingFatFood;
+
+Future<ResolvedMealItem?> _cookingFatFood(double grams) async {
+  final found = await locator<ResolveParsedMealsUseCase>().resolve([
+    ParsedMealItem(query: cookingFatQuery, quantity: grams, unit: 'g'),
+  ], fromPhoto: true);
+  if (found.isEmpty || !found.first.isResolved) return null;
+  // the table's oil, not a bottle nobody named
+  return preferTableRow(found.first);
+}
 
 /// A row as the photo's read gave it: its food, unit, grams or millilitres
 /// and amount text, and whether a size could change it then.
@@ -205,6 +229,23 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
   /// the user has changed any amount from it (a row they set that moved).
   final _firstAmounts = LinkedHashMap<ResolvedMealItem, double?>.identity();
   bool _amountChanged = false;
+
+  /// The question about the fat the meal was cooked or dressed with,
+  /// decided once per read as its rows arrive; null when not asked.
+  CookingFatAsk? _fatAsk;
+  bool _fatAsked = false;
+
+  /// Answered None: the question goes.
+  bool _fatClosed = false;
+
+  /// The fat row a chip added, while it is on the review.
+  ResolvedMealItem? _fatItem;
+
+  /// The chip tapped while the table's oil is looked up.
+  int? _fatPending;
+
+  /// The note's field, focused by a chip that wants a number after it.
+  final _noteFocus = FocusNode();
 
   // titled like the buttons that open it while AI meal assistance is on
   final _aiAdd = aiAddEnabled();
@@ -577,10 +618,16 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
       _usualBases = null;
       _firstAmounts.clear();
       _amountChanged = false;
+      _fatAsk = null;
+      _fatAsked = false;
+      _fatClosed = false;
+      _fatItem = null;
+      _fatPending = null;
       return;
     }
     if (state.source != BulkAddReadSource.photo) return;
     _followAmountQuestion(state);
+    _askCookingFat(state);
     _askHistory(state);
     final amounts = _mealScale.follow(state.rows);
     _followAmountChanges(state.rows);
@@ -951,6 +998,14 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
     final row = state.rows[index];
     final chip = question.answer(row, choice);
     if (chip == null) return;
+    _setRowTo(state, index, chip);
+  }
+
+  /// Row [index] of [state] set to [chip] as the user's amount, in the unit
+  /// it is shown in: the meal's Size leaves it, and the amount and the
+  /// meal's energy are said.
+  void _setRowTo(BulkAddLoadedState state, int index, AmountChoice chip) {
+    final row = state.rows[index];
     _mealScale.pin(row);
     if (_quantityErrors.containsKey(index)) _clearQuantityError(index);
     setState(() {});
@@ -971,6 +1026,145 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
         ..add(ChangeRowUnitEvent(index, chip.unit))
         ..add(ChangeRowAmountEvent(index, chip.text));
     }
+  }
+
+  /// The usual serving offered on row [row] of a photo's review (D47): not
+  /// once the user set it, nor on the row the amount question is on.
+  AmountChoice? _usualServingOn(BulkAddLoadedState state, BulkAddRow row) {
+    if (state.source != BulkAddReadSource.photo) return null;
+    if (_mealScale.isPinned(row)) return null;
+    if (_amountQuestion?.isFor(row) ?? false) return null;
+    return usualServingFor(
+      row,
+      note: _photoNote,
+      imperial: state.usesImperialUnits,
+    );
+  }
+
+  /// The usual serving taken on row [index], as an amount the user set.
+  void _takeUsualServing(int index, AmountChoice serving) {
+    final state = _bloc.state;
+    if (state is! BulkAddLoadedState || index >= state.rows.length) return;
+    _setRowTo(state, index, serving);
+  }
+
+  /// The fat question for a photo's rows as they first arrive (D48).
+  void _askCookingFat(BulkAddLoadedState state) {
+    if (_fatAsked || state.rows.isEmpty) return;
+    _fatAsked = true;
+    if (state.modelFailure != null) return;
+    _fatAsk = cookingFatAskFor(state.rows, note: _photoNote);
+  }
+
+  /// The fat row the chips added, as it is on the review; null when none.
+  BulkAddRow? _fatRow(List<BulkAddRow> rows) {
+    final item = _fatItem;
+    if (item == null) return null;
+    for (final row in rows) {
+      if (identical(row.resolved, item)) return row;
+    }
+    return null;
+  }
+
+  /// The chip of the fat question that shows as chosen: the one at the
+  /// added row's amount, or the one tapped while its oil is looked up.
+  /// None while the row is in another unit than the chips' grams.
+  int? _fatChosen(List<BulkAddRow> rows) => switch (_fatRow(rows)) {
+    final row? when row.effectiveUnit == row.resolved.parsed.unit =>
+      cookingFatChipOf(row.amountText),
+    final _? => null,
+    null => _fatPending,
+  };
+
+  /// None (-1) takes the added row off and ends the question; an amount
+  /// adds the table's oil at it, pinned as the user's (the Size leaves
+  /// it), or sets the row it added before to it.
+  Future<void> _chooseCookingFat(int choice) async {
+    final state = _bloc.state;
+    if (state is! BulkAddLoadedState) return;
+    final current = _fatRow(state.rows);
+    if (choice < 0) {
+      setState(() {
+        _fatClosed = true;
+        _fatPending = null;
+      });
+      if (current != null) _bloc.add(PutRowEvent(current.resolved, null));
+      return;
+    }
+    final grams = cookingFatGrams[choice];
+    if (current != null) {
+      // the user's amount, not a correction of the photo's
+      _firstAmounts.remove(current.resolved);
+      _bloc.add(
+        PutRowEvent(
+          current.resolved,
+          // in the grams the row was added in, whatever unit it is in now
+          current.copyWith(
+            amountText: cookingFatText(grams),
+            unit: current.resolved.parsed.unit,
+          ),
+        ),
+      );
+      return;
+    }
+    final looking = _fatPending != null;
+    setState(() => _fatPending = choice);
+    if (looking) return;
+    final read = _readSerial;
+    ResolvedMealItem? found;
+    try {
+      found = await forkCookingFatFood(grams);
+    } catch (e, stackTrace) {
+      _log.warning('Looking up the cooking fat failed', e, stackTrace);
+    }
+    if (!mounted || read != _readSerial) return;
+    final pending = _fatPending;
+    setState(() => _fatPending = null);
+    if (pending == null || _fatClosed) return;
+    if (found == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text(DishStrings.fatNotFound)));
+      return;
+    }
+    final row = _cookingFatRow(found, cookingFatGrams[pending]);
+    _mealScale.pin(row);
+    setState(() => _fatItem = row.resolved);
+    _bloc.add(PutRowEvent(row.resolved, row));
+  }
+
+  /// An ordinary row of [found] at [grams], as the user's amount: in grams,
+  /// or grams-or-millilitres for a food that has no grams.
+  BulkAddRow _cookingFatRow(ResolvedMealItem found, double grams) {
+    final g = UnitDropdownItem.g.toString();
+    final probe = BulkAddRow(
+      resolved: found,
+      selectedIndex: found.selectedIndex,
+      amountText: '',
+      unit: g,
+    );
+    final unit = probe.allowedUnits.contains(g)
+        ? g
+        : UnitDropdownItem.gml.toString();
+    final item = ResolvedMealItem(
+      parsed: ParsedMealItem(
+        query: found.parsed.query,
+        quantity: grams,
+        unit: unit,
+      ),
+      candidates: found.candidates,
+      selectedIndex: found.selectedIndex,
+      // the user asked for it: no "uncertain" on it
+      confidence: 1,
+    );
+    return BulkAddRow(
+      resolved: item,
+      selectedIndex: item.selectedIndex,
+      amountText: cookingFatText(grams),
+      unit: unit,
+      amountEditedByUser: true,
+      fromPhoto: true,
+    );
   }
 
   /// "150 grams. Meal now 450 kcal" to a screen reader, after an answer.
@@ -1061,6 +1255,7 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
     _scaleFollow.cancel();
     _bloc.close();
     _textController.dispose();
+    _noteFocus.dispose();
     for (final controller in _amountControllers.values) {
       controller.dispose();
     }
@@ -1280,6 +1475,7 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
                 identifier: 'bulk-add-input',
                 child: TextField(
                   controller: _textController,
+                  focusNode: _noteFocus,
                   minLines: 2,
                   maxLines: 4,
                   textInputAction: TextInputAction.newline,
@@ -1307,6 +1503,11 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
                 ),
               ),
             ),
+            // words for the photo's note (D49)
+            if (staged != null && !busy) ...[
+              const SizedBox(height: 8),
+              NoteChipsView(controller: _textController, focus: _noteFocus),
+            ],
             const SizedBox(height: 12),
             // nothing to send on an empty box, or while a read runs
             ListenableBuilder(

@@ -107,4 +107,23 @@ abstract final class DishStrings {
   static const amountAnswered = 'Thanks. Tap another to change it.';
   static String amountSaid(String amount, String energy) =>
       '$amount. ${mealNow(energy)}';
+
+  // an amount far from the food's usual serving (D47)
+  static String usualServing(String amount) => 'Usual serving is about $amount';
+  static String useUsualServing(String amount) => 'Use $amount';
+
+  // the fat a meal was cooked or dressed with (D48)
+  static const cookedWithFat = 'Cooked with oil or butter?';
+  static const dressedWithFat = 'Any dressing or oil?';
+  static const fatNone = 'None';
+  static const fatLittle = 'A little (5 g)';
+  static const fatSome = 'Some (10 g)';
+  static const fatLot = 'A lot (20 g)';
+  static const fatLittleSpoken = 'A little, 5 grams';
+  static const fatSomeSpoken = 'Some, 10 grams';
+  static const fatLotSpoken = 'A lot, 20 grams';
+  static const fatNotFound = 'No oil found in the food table';
+
+  // words for a photo's note, one tap each (D49)
+  static const noteChipsLabel = 'Add to the note';
 }
