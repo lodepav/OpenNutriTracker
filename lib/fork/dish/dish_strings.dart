@@ -102,6 +102,16 @@ abstract final class DishStrings {
   static const usingPhotoAmounts = "Using the photo's amounts";
   static const useUsualSizes = 'Use your usual sizes';
 
+  /// The Size's hint while the usual sizes are in force: the sizes change
+  /// those, and a size chosen over a whole-meal usual size says what it
+  /// comes to against the photo.
+  static const sizesChangeUsual = 'Sizes change your usual amounts';
+  static String sizeOverUsual(double size, double meal) =>
+      '×${_factor(size)} of your usual · ×${_factor(size * meal)} of the photo';
+  static String sizeOverUsualSpoken(double size, double meal) =>
+      '${_factor(size)} times your usual, '
+      "${_factor(size * meal)} times the photo's amounts";
+
   // the one amount a photo's review asks about, on its row
   static String amountQuestion(String food) => 'How much $food was it?';
   static const amountAnswered = 'Thanks. Tap another to change it.';

@@ -64,32 +64,75 @@ final _fat = RegExp(
   unicode: true,
 );
 
-/// The words a row is known by: the model's own text, the food matched,
-/// and the dish it belongs to.
-String _words(BulkAddRow row) => [
-  row.resolved.parsed.query,
-  row.meal?.name ?? '',
-  row.dishIngredient?.dish ?? '',
-].join(' · ');
+/// A fat named only as absent: "without dressing", "no added fat", "fat
+/// not added", and German, Latvian, Polish and Russian "without …". The
+/// table's plain salad is "Salad, green, without dressing".
+final _noFat = RegExp(
+  r'\b(without|no|ohne|bez)\s+(added\s+)?[\p{L}-]+(\s+added)?|'
+  r'\bfat not added|без\s+\p{L}+',
+  caseSensitive: false,
+  unicode: true,
+);
 
-bool _isCooked(String words) =>
-    _cooked.hasMatch(words.replaceAll(_dryRoasted, ''));
+/// A table food whose numbers hold the fat it was cooked in: fried, fries,
+/// roasted, sautéed, stir-fried, or fat or oil added.
+final _holdsFat = RegExp(
+  r'\bfries\b|\b(fat added|with oil|in oil|with butter|in butter)\b',
+  caseSensitive: false,
+);
+
+String _plain(String words) =>
+    words.replaceAll(_noFat, ' ').replaceAll(_dryRoasted, ' ');
+
+/// Whether the food [row] matched holds its own fat: then the row neither
+/// asks (the fat is counted) nor is a fat of its own beside the others.
+bool _tableHoldsFat(BulkAddRow row) {
+  final name = _plain(row.meal?.name ?? '');
+  return _cooked.hasMatch(name) || _holdsFat.hasMatch(name);
+}
+
+/// The words a row is known by: the model's own text, the food matched,
+/// and the dish it belongs to; without a fat named as absent.
+String _words(BulkAddRow row) => _plain(
+  [
+    row.resolved.parsed.query,
+    row.meal?.name ?? '',
+    row.dishIngredient?.dish ?? '',
+  ].join(' · '),
+);
+
+/// Cooked in fat by the model's or the user's words, the dish's too.
+bool _saidCooked(BulkAddRow row) => _cooked.hasMatch(
+  _plain('${row.resolved.parsed.query} · ${row.dishIngredient?.dish ?? ''}'),
+);
 
 /// The question for a photo's [rows] as they first arrive, [note] being
-/// what the photo was sent with: [CookingFatAsk.cooked] when a food was
-/// fried, roasted, sautéed or stir-fried, else [CookingFatAsk.salad] for a
-/// salad; null when the read already holds a fat, oil, butter, dressing,
-/// mayonnaise or sauce, or when the note states weights (a weighed plate
-/// lists its fat, D24). Rows left out count for neither.
+/// what the photo was sent with: [CookingFatAsk.cooked] when the model or
+/// the user says a food was fried, roasted, sautéed or stir-fried and the
+/// food matched is a plain one ("fried potatoes" as "Potato, boiled"),
+/// else [CookingFatAsk.salad] for a salad; null when the read already holds
+/// a fat, oil, butter, dressing, mayonnaise or sauce, or when the note
+/// states weights (a weighed plate lists its fat, D24). A row matched to a
+/// table food that holds its fat ("Potatoes, home fries", "fat added")
+/// asks nothing and is no fat beside the others. Rows left out count for
+/// neither.
 CookingFatAsk? cookingFatAskFor(List<BulkAddRow> rows, {String? note}) {
   if (noteWeights(note) != null) return null;
-  final named = [
+  final kept = [
     for (final row in rows)
-      if (!row.skipped) _words(row),
+      if (!row.skipped) row,
   ];
-  if (named.isEmpty || named.any(_fat.hasMatch)) return null;
-  if (named.any(_isCooked)) return CookingFatAsk.cooked;
-  if (named.any(_salad.hasMatch)) return CookingFatAsk.salad;
+  if (kept.isEmpty) return null;
+  final own = [for (final row in kept) _tableHoldsFat(row)];
+  for (final (i, row) in kept.indexed) {
+    if (!own[i] && _fat.hasMatch(_words(row))) return null;
+  }
+  for (final (i, row) in kept.indexed) {
+    if (!own[i] && _saidCooked(row)) return CookingFatAsk.cooked;
+  }
+  if (kept.any((row) => _salad.hasMatch(_words(row)))) {
+    return CookingFatAsk.salad;
+  }
   return null;
 }
 

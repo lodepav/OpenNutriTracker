@@ -397,6 +397,35 @@ void main() {
     expect(_amounts(), ['84', '80', '64']);
   });
 
+  testWidgets('the Size\'s hint says the sizes change the usual amounts, '
+      'and a size over the usual whole-meal size what it comes to', (
+    tester,
+  ) async {
+    final semantics = tester.ensureSemantics();
+    _keepSized(3);
+    await _open(tester);
+    await _readPhoto(tester);
+    final hint = find.byKey(const ValueKey('bulk-add-meal-size-hint'));
+    expect(tester.widget<Text>(hint).data, DishStrings.sizesChangeUsual);
+
+    await _tap(tester, _chip(0.8));
+    expect(
+      tester.widget<Text>(hint).data,
+      '×0.8 of your usual · ×0.64 of the photo',
+    );
+    expect(
+      tester.getSemantics(hint),
+      isSemantics(
+        label: "0.8 times your usual, 0.64 times the photo's amounts",
+      ),
+    );
+
+    // the photo's amounts used: the hint as without usual sizes
+    await _tap(tester, _usePhoto);
+    expect(tester.widget<Text>(hint).data, DishStrings.sizeScalesUnset);
+    semantics.dispose();
+  });
+
   testWidgets('"Use the photo\'s amounts" puts them back, said, and the '
       'usual sizes can come back', (tester) async {
     final semantics = tester.ensureSemantics();

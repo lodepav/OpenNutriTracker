@@ -55,6 +55,17 @@ void main() {
     expect(tester.widget<FilterChip>(_chip(4)).selected, isFalse);
   });
 
+  testWidgets('a plate chip takes the other plate\'s words out', (
+    tester,
+  ) async {
+    await openWithStagedPhoto(tester);
+    await tapAndSettle(tester, _chip(4)); // Small plate
+    await tapAndSettle(tester, _chip(5)); // Large plate
+    expect(_note(tester), 'large plate');
+    expect(tester.widget<FilterChip>(_chip(4)).selected, isFalse);
+    expect(tester.widget<FilterChip>(_chip(5)).selected, isTrue);
+  });
+
   testWidgets('six chips, 48 dp each, on one line', (tester) async {
     await openWithStagedPhoto(tester);
     final tops = <double>{};

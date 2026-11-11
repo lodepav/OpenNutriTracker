@@ -392,7 +392,22 @@ extension _BulkAddBody on _BulkAddScreenState {
         Semantics(
           container: true,
           child: Text(
-            allSet ? DishStrings.sizeAllSet : DishStrings.sizeScalesUnset,
+            key: const ValueKey('bulk-add-meal-size-hint'),
+            allSet
+                ? DishStrings.sizeAllSet
+                : !usual
+                ? DishStrings.sizeScalesUnset
+                : _mealScale.factor != 1 && _usual!.meal != 1
+                // a size on top of the usual whole-meal size, said in full
+                ? DishStrings.sizeOverUsual(_mealScale.factor, _usual!.meal)
+                : DishStrings.sizesChangeUsual,
+            semanticsLabel:
+                !allSet && usual && _mealScale.factor != 1 && _usual!.meal != 1
+                ? DishStrings.sizeOverUsualSpoken(
+                    _mealScale.factor,
+                    _usual!.meal,
+                  )
+                : null,
             style: muted,
           ),
         ),

@@ -13,7 +13,16 @@ class NoteChip {
   /// the cursor goes after them and the keyboard opens.
   final bool asksMore;
 
-  const NoteChip(this.label, this.words, {this.asksMore = false});
+  /// The words of the chip this one says the opposite of: tapping either
+  /// takes the other's out.
+  final String? opposite;
+
+  const NoteChip(
+    this.label,
+    this.words, {
+    this.asksMore = false,
+    this.opposite,
+  });
 }
 
 /// The chips under a photo's note. "weighed:" and "counts:" lead to a
@@ -23,10 +32,10 @@ class NoteChip {
 const noteChips = [
   NoteChip('Weighed', 'weighed:', asksMore: true),
   NoteChip('Counts', 'counts:', asksMore: true),
-  NoteChip('Restaurant', 'restaurant portion'),
-  NoteChip('Home-cooked', 'home-cooked'),
-  NoteChip('Small plate', 'small plate'),
-  NoteChip('Large plate', 'large plate'),
+  NoteChip('Restaurant', 'restaurant portion', opposite: 'home-cooked'),
+  NoteChip('Home-cooked', 'home-cooked', opposite: 'restaurant portion'),
+  NoteChip('Small plate', 'small plate', opposite: 'large plate'),
+  NoteChip('Large plate', 'large plate', opposite: 'small plate'),
 ];
 
 const _separator = ', ';
@@ -55,8 +64,19 @@ bool _isWordChar(String c) =>
 /// [note] with [chip] tapped, and where the cursor goes: its words taken out
 /// with the separator before or after them when [note] holds them, else
 /// added at the end after ", " (a "weighed:" or "counts:" with a space for
-/// what comes next). The rest of the note is left as typed.
-({String text, int cursor}) toggleNoteChip(String note, NoteChip chip) {
+/// what comes next), its opposite's words taken out first. The rest of the
+/// note is left as typed.
+({String text, int cursor}) toggleNoteChip(String typed, NoteChip chip) {
+  final opposite = chip.opposite == null
+      ? null
+      : noteChips.firstWhere((other) => other.words == chip.opposite);
+  // a small plate is no large one
+  final note =
+      opposite != null &&
+          !noteHasChip(typed, chip) &&
+          noteHasChip(typed, opposite)
+      ? toggleNoteChip(typed, opposite).text
+      : typed;
   final at = _find(note, chip);
   if (at >= 0) {
     var start = at;

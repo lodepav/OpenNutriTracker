@@ -74,6 +74,30 @@ void main() {
         'small plates, small plate',
       );
     });
+
+    test('takes the opposite chip\'s words out', () {
+      expect(
+        toggleNoteChip('pelmeni, small plate', _chip('Large plate')).text,
+        'pelmeni, large plate',
+      );
+      expect(
+        toggleNoteChip('large plate, pelmeni', _chip('Small plate')).text,
+        'pelmeni, small plate',
+      );
+      expect(
+        toggleNoteChip('restaurant portion', _chip('Home-cooked')).text,
+        'home-cooked',
+      );
+      expect(
+        toggleNoteChip('Home-cooked, weighed: 300 g', _chip('Restaurant')).text,
+        'weighed: 300 g, restaurant portion',
+      );
+      // the plates leave the kitchen words alone
+      expect(
+        toggleNoteChip('home-cooked', _chip('Small plate')).text,
+        'home-cooked, small plate',
+      );
+    });
   });
 
   group('the app\'s rules read the chips\' words', () {

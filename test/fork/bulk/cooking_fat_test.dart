@@ -29,12 +29,13 @@ MealEntity _food(String name) => MealEntity(
   ),
 );
 
-/// A row the model called [query], matched to [matched] (or to itself).
+/// A row the model called [query], matched to [matched] (or to a plain
+/// table food).
 BulkAddRow _row(String query, {String? matched, bool skipped = false}) =>
     BulkAddRow(
       resolved: ResolvedMealItem(
         parsed: ParsedMealItem(query: query, quantity: 100, unit: 'g'),
-        candidates: [_food(matched ?? query)],
+        candidates: [_food(matched ?? 'Plain food')],
         selectedIndex: 0,
         confidence: 1,
       ),
@@ -93,9 +94,27 @@ void main() {
       expect(_ask(['egg, fried', 'salad']), CookingFatAsk.cooked);
     });
 
-    test('from the food matched when the model\'s words do not say', () {
-      final rows = [_row('potatoes', matched: 'Potatoes, roasted')];
+    test('for fried potatoes matched to a plain potato', () {
+      final rows = [_row('fried potatoes', matched: 'Potato, boiled')];
       expect(cookingFatAskFor(rows), CookingFatAsk.cooked);
+    });
+
+    test('for the table\'s green salad without dressing', () {
+      final rows = [
+        _row('green salad', matched: 'Salad, green, without dressing'),
+      ];
+      expect(cookingFatAskFor(rows), CookingFatAsk.salad);
+      expect(_ask(['salad, no dressing']), CookingFatAsk.salad);
+      expect(_ask(['Salat ohne Dressing']), CookingFatAsk.salad);
+      expect(_ask(['салат без масла']), CookingFatAsk.salad);
+    });
+
+    test('about the salad beside home fries', () {
+      final rows = [
+        _row('fried potatoes', matched: 'Potatoes, home fries'),
+        _row('green salad', matched: 'Salad, green, without dressing'),
+      ];
+      expect(cookingFatAskFor(rows), CookingFatAsk.salad);
     });
 
     test('from the dish a food belongs to', () {
@@ -141,6 +160,17 @@ void main() {
 
     test('when a row\'s table food says fat was added', () {
       expect(_ask(['Asian stir fry vegetables, cooked, fat added']), isNull);
+    });
+
+    test('when a fried food is matched to a table food that holds its fat', () {
+      final rows = [_row('fried potatoes', matched: 'Potatoes, home fries')];
+      expect(cookingFatAskFor(rows), isNull);
+      final roasted = [_row('potatoes', matched: 'Potatoes, roasted')];
+      expect(cookingFatAskFor(roasted), isNull);
+      final added = [
+        _row('chicken, fried', matched: 'Chicken breast, cooked, fat added'),
+      ];
+      expect(cookingFatAskFor(added), isNull);
     });
 
     test('french fries alone: the table\'s hold their frying fat', () {

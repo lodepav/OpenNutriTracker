@@ -28,7 +28,7 @@ void main() {
     reviewFoods
       ..clear()
       ..addAll({
-        'egg, fried': reviewFood('Egg, fried', kcal100: 200),
+        'egg, fried': reviewFood('Egg, whole', kcal100: 200),
         'rice': reviewFood('Rice'),
       });
     looked.clear();
