@@ -39,3 +39,28 @@ String? sliceAsPiece(String? portion, String query) =>
     _slice.hasMatch(portion ?? '') || _slice.hasMatch(query) ? 'piece' : null;
 
 final _slice = RegExp(r'\b(slices?|wedges?)\b', caseSensitive: false);
+
+/// Whether [token] and [term] only look like one word with an ending
+/// (S213): "piece" is not "pie" with one, and S202's "piece" for "1 slice
+/// of apple pie" matched the whole pie, 1,200 g.
+bool notOneWord(String token, String term) =>
+    _lookalikes.contains('$token/$term') ||
+    _lookalikes.contains('$term/$token');
+
+const _lookalikes = {'piece/pie', 'pieces/pie', 'pies/piece'};
+
+/// Whether a portion with English [label] is a measure of pieces that a
+/// text naming only a piece ([tokens]) must not match (S213): "1 cup,
+/// pieces" of bacon is a cup, and S202's "piece" for "1 slice of bacon"
+/// logged it, 80 g.
+bool measureOfPieces(String label, Set<String> tokens) =>
+    tokens.isNotEmpty &&
+    tokens.every(_pieceWord.hasMatch) &&
+    _measureWord.hasMatch(label);
+
+final _pieceWord = RegExp(r'^pieces?$');
+final _measureWord = RegExp(
+  r'\b(cups?|tbsps?|tablespoons?|tsps?|teaspoons?|oz|ounces?|lbs?|'
+  r'pounds?|g|grams?|ml)\b',
+  caseSensitive: false,
+);

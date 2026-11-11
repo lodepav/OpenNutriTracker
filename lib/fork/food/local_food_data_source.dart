@@ -733,10 +733,10 @@ const addedPieces = <String, (String, double)>{
   // Wiener Würstchen come in pairs of about 100 g.
   'Vienna sausage': ('1 sausage', 50),
   'Vegetarian Vienna sausages': ('1 sausage', 50),
-  // a cornflake cluster, about 20 to a 150 g bag
+  // a cornflake cluster, about 30 to a 150 g bag
   'Crispy praline, with milk chocolate, cornflakes and almond bits': (
     '1 piece',
-    7,
+    5,
   ),
   // a quarter of a 400 g Turkish loaf, or one Arabic flatbread
   'Wheat flatbread': ('1 piece', 100),
@@ -771,13 +771,379 @@ const addedPieces = <String, (String, double)>{
   'Bittersweet/semisweet chocolate, filled with marzipan': ('1 piece', 13),
   // a brine-cured olive with its stone
   'Olives blackened, in brine, drained': ('1 olive', 4),
+  // Counted BLS foods by group (S213), so a count is that many of them.
+  // Not the raw tomato, carrot, onion, chicken pieces, patties, duck and
+  // quail eggs, the fried eggs, the chicken thigh or the rye breads: with a
+  // piece each beat the row a name means, as "Rye bread" did above.
+  // A German or EU bakery roll (Brötchen) of 55-60 g, a toast slice of
+  // 25 g, a slice of a German loaf of about 45 g (1 cm of a 1 kg loaf), of
+  // a white loaf 30 g.
+  'Wheat roll': ('1 roll', 55),
+  'Wheat-rye roll (> 50 % and, < 90 % wheat)': ('1 roll', 55),
+  'Spelt roll': ('1 roll', 55),
+  'Wholemeal roll': ('1 roll', 60),
+  'Wholemeal wheat roll': ('1 roll', 60),
+  'Wholemeal rye roll': ('1 roll', 60),
+  'Wholemeal spelt roll': ('1 roll', 60),
+  'Oat roll': ('1 roll', 60),
+  'Rye roll': ('1 roll', 60),
+  'Rye roll, with oilseeds': ('1 roll', 60),
+  'Multigrain roll': ('1 roll', 60),
+  'Roll gluten-free': ('1 roll', 60),
+  'Wheat baguette roll': ('1 roll', 60),
+  'Milk roll (yeast dough)': ('1 roll', 45),
+  'Pretzel roll, with butter': ('1 roll', 80),
+  'Wheat toast/butter toast': ('1 slice', 25),
+  'Wheat toast/butter toast, toasted': ('1 slice', 22),
+  'Wholemeal wheat toast': ('1 slice', 28),
+  'Wholemeal wheat toast toasted': ('1 slice', 25),
+  'Mixed wheat toast': ('1 slice', 25),
+  'Mixed wheat toast toasted': ('1 slice', 22),
+  'Toast gluten-free': ('1 slice', 25),
+  'Toast gluten-free, toasted': ('1 slice', 22),
+  'Rye-wheat bread (> 50 % and, < 90 % rye)': ('1 slice', 45),
+  'Wheat-rye bread (> 50 % and, < 90 % wheat)': ('1 slice', 45),
+  'Multigrain bread': ('1 slice', 45),
+  'Oat bread': ('1 slice', 40),
+  'Protein bread': ('1 slice', 25),
+  'White bread/wheat bread': ('1 slice', 30),
+  'Rye crispbread': ('1 crispbread', 10),
+  'Crackers': ('1 cracker', 3),
+  // A Bavarian lye pretzel, as bakeries sell it, and a croissant of 60 g.
+  'Pretzel (visible salt removed)': ('1 pretzel', 85),
+  'Pretzel, salted': ('1 pretzel', 85),
+  'Danish pastry croissant': ('1 croissant', 60),
+  'Wholemeal Danish pastry croissant': ('1 croissant', 60),
+  'Danish pastry croissant, filled with nut nougat cream': ('1 croissant', 80),
+  // A medium (M) egg without its shell.
+  'Chicken egg, raw': ('1 egg', 55),
+  'Goose egg, raw': ('1 egg', 145),
+  'Quail egg, boiled': ('1 egg', 10),
+  'Turkey egg, raw': ('1 egg', 80),
+  'Turkey egg, boiled': ('1 egg', 80),
+  // Fast food as EU chains sell it: a cheeseburger of 115 g, a hamburger of
+  // 105 g, a double cheeseburger of 165 g, a hot dog in its bun of 120 g.
+  'Cheeseburger': ('1 cheeseburger', 115),
+  'Double cheeseburger': ('1 double cheeseburger', 165),
+  'Hamburger': ('1 hamburger', 105),
+  'Hot Dog': ('1 hot dog', 120),
+  'Doner kebab, flatbread filled with grilled poultry, salad and sauce': (
+    '1 doner',
+    400,
+  ),
+  'Club sandwich, with mozzarella, tomatoes and boiled ham': (
+    '1 sandwich',
+    200,
+  ),
+  'Toast Hawaii (pineapple, boiled ham, cheese) baked': ('1 toast', 110),
+  'Spring rolls filled, with vegetables and pork, deep-fried': (
+    '1 spring roll',
+    60,
+  ),
+  'Sushi, with salmon': ('1 piece', 30),
+  // A bread or potato dumpling (Knödel) of about 90 g.
+  'White bread dumplings': ('1 dumpling', 90),
+  'White bread dumplings, raw': ('1 dumpling', 90),
+  'White bread dumplings, dried, boiled': ('1 dumpling', 90),
+  'Potato dumplings (made, from half raw and half boiled potatoes)': (
+    '1 dumpling',
+    90,
+  ),
+  'Potato dumplings, from boiled potatoes': ('1 dumpling', 90),
+  'Thuringian dumplings (made, from raw and boiled potatoes)': (
+    '1 dumpling',
+    100,
+  ),
+  'Tyrolean bacon dumplings': ('1 dumpling', 90),
+  'Spinach dumplings': ('1 dumpling', 80),
+  '"Dampfnudeln" yeast dumplings, salted fried': ('1 dumpling', 110),
+  '"Rohrnudeln" sweet yeast dumplings, baked': ('1 dumpling', 90),
+  '"Buchteln", baked yeast buns': ('1 bun', 50),
+  '"Königsberger Klopse" meatballs': ('1 meatball', 60),
+  // A German pancake (Pfannkuchen) of about 60 g, thicker than a crêpe;
+  // small quark or buckwheat ones of 30-45 g; a potato pancake of 70 g.
+  'Pancakes unsweetened, with milk 3.5 % fat, fried': ('1 pancake', 60),
+  'Pancakes unsweetened, with milk 1.5 % fat, fried': ('1 pancake', 60),
+  'Pancakes unsweetened, with milk 1.5 % fat, fried without fat': (
+    '1 pancake',
+    60,
+  ),
+  'Pancakes unsweetened, with milk 3.5 % fat, fried in butter': (
+    '1 pancake',
+    60,
+  ),
+  'Wholemeal pancakes unsweetened, with milk 3.5 % fat, fried': (
+    '1 pancake',
+    60,
+  ),
+  'Pancakes made, from buckwheat flour, unsweetened, fried': ('1 pancake', 60),
+  'Pancakes, with milk 3.5 % fat and apple, fried': ('1 pancake', 80),
+  'Pancakes, with milk 3.5 % fat and blueberries, fried': ('1 pancake', 70),
+  'Pancakes, with milk 3.5 % fat, fried, filled with jam': ('1 pancake', 80),
+  'Pancakes, fried, filled with stewed mixed vegetables': ('1 pancake', 40),
+  'Small quark pancakes, fried': ('1 pancake', 45),
+  'Quark pancakes unsweetened, fried': ('1 pancake', 50),
+  'Small quark-yeast pancakes, fried': ('1 pancake', 40),
+  'Small buckwheat pancakes, fried': ('1 pancake', 30),
+  'Potato pancakes, fried': ('1 pancake', 70),
+  'Potato pancakes (with sour cream and semolina), fried': ('1 pancake', 70),
+  'Potato pancakes deep-frozen': ('1 pancake', 60),
+  'Potato pancakes deep-frozen, fried without fat (pan)': ('1 pancake', 60),
+  'Potato pancakes deep-frozen, baked': ('1 pancake', 55),
+  'Potato pancakes deep-frozen, deep-fried': ('1 pancake', 60),
+  // A slice of a German cake: 110 g of a fruit cake or pie, 70 g of a loaf
+  // cake (Rührkuchen), 130 g of strudel; a muffin of 85 g.
+  'Apple cake (quark oil dough)': ('1 slice', 110),
+  'Apple pie (cake batter)': ('1 slice', 110),
+  'Apple pie (sand cake batter)': ('1 slice', 110),
+  'Apple pie (shortcrust pastry)': ('1 slice', 110),
+  'Apple pie (yeast dough)': ('1 slice', 110),
+  'Apple strudel (puff pastry)': ('1 piece', 130),
+  'Apple strudel (shortcrust pastry)': ('1 piece', 130),
+  'Apple strudel (strudel dough)': ('1 piece', 130),
+  'Cherry strudel (puff pastry)': ('1 piece', 130),
+  'Cherry strudel (strudel dough)': ('1 piece', 130),
+  'Chocolate cake (cake batter)': ('1 slice', 70),
+  'Coconut cake (cake batter)': ('1 slice', 70),
+  'Lemon cake (cake batter)': ('1 slice', 70),
+  'Marble cake (cake batter)': ('1 slice', 70),
+  'Pound cake (cake batter)': ('1 slice', 70),
+  'Pumpkin cake (cake batter)': ('1 slice', 70),
+  'Thuringian poppy seed cake (yeast dough)': ('1 slice', 100),
+  'Sacher torte (cake batter)': ('1 slice', 90),
+  'Brownies': ('1 brownie', 50),
+  'Chocolate muffins (cake batter)': ('1 muffin', 85),
+  'Danish pastry, with pudding and fruit': ('1 pastry', 100),
+  'Danish pastry, with quark and fruit': ('1 pastry', 100),
+  '"Franzbrötchen" Danish pastry, filled with cinnamon-sugar': ('1 piece', 80),
+  '"Amerikaner" moist shortbread biscuit (cake batter), with sugar icing': (
+    '1 piece',
+    70,
+  ),
+  'Turnover (yeast dough) filled, with apples': ('1 turnover', 100),
+  'Doughnut (yeast dough), deep-fried': ('1 doughnut', 70),
+  'Gingerbread, with fruit filling and chocolate icing': ('1 piece', 25),
+  'Orange sponge biscuits': ('1 biscuit', 12),
+  // A boxed praline of 8-10 g (a truffle or coconut one 10 g), a boiled
+  // sweet of 5 g, a chocolate-coated ice cream bar of 75 g.
+  'Pralines': ('1 praline', 8),
+  'Truffle pralines': ('1 praline', 10),
+  'Truffle pralines (alcoholic)': ('1 praline', 10),
+  'Coconut praline, with cream-filling and blanched almond': ('1 praline', 10),
+  'Hard candy': ('1 piece', 5),
+  'Ice cream bar filled, with ice cream and caramel, covered with chocolate': (
+    '1 bar',
+    75,
+  ),
+  // Sausages as German butchers sell them: a bratwurst of 100-120 g, a
+  // Bockwurst of 90 g, a Weißwurst of 70 g, a Frankfurter of 50 g (a pair
+  // of 100 g), a Kabanos of 30 g; a slice of Leberkäse of 100 g.
+  'Rhenish bratwurst': ('1 sausage', 120),
+  'Rhenish bratwurst, fried without fat (pan)': ('1 sausage', 110),
+  'Curry-Bratwurst': ('1 sausage', 120),
+  'Curry-Bratwurst, grilled': ('1 sausage', 110),
+  'Poultry bratwurst': ('1 sausage', 100),
+  'Beef-Bratwurst': ('1 sausage', 100),
+  'Vegetarian bratwurst (made, from tofu and wheat protein)': ('1 sausage', 80),
+  'Bockwurst': ('1 sausage', 90),
+  'Bockwurst poached': ('1 sausage', 90),
+  'Poultry bockwurst, with pork': ('1 sausage', 90),
+  'Poultry bockwurst, with pork, poached': ('1 sausage', 90),
+  'Bavarian white sausage': ('1 sausage', 70),
+  'Knackwurst/Servela sausage, small': ('1 sausage', 100),
+  'Knacker sausage simple': ('1 sausage', 100),
+  'Regensburg sausage small': ('1 sausage', 75),
+  'Debrecziner sausage, raw, small, firm': ('1 sausage', 50),
+  'Landjäger sausage, raw, small, firm': ('1 sausage', 50),
+  'Kabanossi/Peperoni, sausage, raw, small, firm': ('1 sausage', 30),
+  'Frankfurt sausage small': ('1 sausage', 50),
+  'Frankfurt small sausage, canned': ('1 sausage', 50),
+  'Frankfurt beef sausage/red sausage': ('1 sausage', 100),
+  'Frankfurt beef sausage/red sausage, canned': ('1 sausage', 100),
+  'Poultry Vienna sausage': ('1 sausage', 50),
+  'Poultry Vienna sausage poached': ('1 sausage', 50),
+  'Vienna sausage, canned': ('1 sausage', 50),
+  'Cocktail sausage small, canned': ('1 sausage', 12),
+  'Soya bean small sausage': ('1 sausage', 50),
+  'Leberkaese sausage, fried': ('1 slice', 100),
+  'Leberkaese sausage, fried without fat (oven)': ('1 slice', 100),
+  'Fleischkaese sausage, fried without fat (pan)': ('1 slice', 100),
+  'Fleischkaese sausage, fried without fat (oven)': ('1 slice', 100),
+  'Pork salami': ('1 slice', 8),
+  // Cuts as EU butchers portion them: a steak of 180-200 g raw, 160 g
+  // cooked; a pork or veal chop of 150 g without the bone, a lamb chop of
+  // 80 g; a chicken breast of 130 g cooked; a drumstick as eaten, without
+  // the bone; a slice of a roast of 60 g.
+  'Beef steak (loin), raw': ('1 steak', 200),
+  'Beef steak (loin), marinated, raw': ('1 steak', 200),
+  'Beef tenderloin steak, raw': ('1 steak', 180),
+  'Beef steak (loin), fried without fat (pan)': ('1 steak', 160),
+  'Beef steak, fried (with fat and salt)': ('1 steak', 165),
+  'Beef rump steak, fried': ('1 steak', 160),
+  'Beef steak, grilled, with herb butter': ('1 steak', 170),
+  'Pork steak (loin), raw': ('1 steak', 160),
+  'Pork steak (neck), raw': ('1 steak', 160),
+  'Pork chop (loin), raw': ('1 chop', 150),
+  'Veal chop (loin), raw': ('1 chop', 150),
+  'Lamb chop (loin), raw': ('1 chop', 80),
+  'Chicken breast fillet, grilled': ('1 breast', 130),
+  'Chicken breast, without skin, grilled': ('1 breast', 130),
+  'Chicken drumstick, with skin, grilled': ('1 drumstick', 75),
+  'Chicken drumstick, with skin, marinated, grilled': ('1 drumstick', 75),
+  'Beef roast, with sauce': ('1 slice', 60),
+  'Beef roast, without sauce': ('1 slice', 60),
+  'Pork roast, without sauce': ('1 slice', 60),
+  // A fish fillet of 125 g, a salmon steak of 140 g fried, a fish finger of
+  // 28 g, a herring fillet of 50 g, a scallop of 15 g, a canned sprat of
+  // 7 g and a smoked one of 10 g.
+  'Fish fingers (with Alaska pollock), fried': ('1 fish finger', 28),
+  'Cod fillet, stewed (with fat and salt)': ('1 fillet', 125),
+  'Cod fillet breaded, fried': ('1 fillet', 130),
+  'Salmon steaks, fried': ('1 steak', 140),
+  'Mackerel, smoked': ('1 fillet', 125),
+  'Matjes herring mild, salted': ('1 fillet', 50),
+  'Herring, pickled, semi-preserved, drained': ('1 fillet', 50),
+  'Scallop, fried without fat (pan)': ('1 scallop', 15),
+  'Scallop, grilled': ('1 scallop', 15),
+  'Sprat, in oil, canned, drained': ('1 sprat', 7),
+  'Sprat, smoked': ('1 sprat', 10),
+  // Fruit as EU shops sell it (class I), the part eaten: an apple of 150 g,
+  // a banana of 120 g, a pear of 160 g, a peach of 140 g, a plum of 55 g,
+  // an orange of 150 g, a mandarin of 70 g, a kiwi of 75 g.
+  'Apple, raw': ('1 apple', 150),
+  'Banana, raw': ('1 banana', 120),
+  'Pear, raw': ('1 pear', 160),
+  'Peach, raw': ('1 peach', 140),
+  'Nectarine, raw': ('1 nectarine', 140),
+  'Plum, raw': ('1 plum', 55),
+  'Apricot, raw': ('1 apricot', 40),
+  'Apricot, dried': ('1 apricot', 8),
+  'Orange, raw': ('1 orange', 150),
+  'Mandarin, raw': ('1 mandarin', 70),
+  'Tangerine, raw': ('1 tangerine', 70),
+  'Clementine, raw': ('1 clementine', 60),
+  'Grapefruit, raw': ('1 grapefruit', 300),
+  'Kiwi fruit, raw': ('1 kiwi', 75),
+  'Avocado, raw': ('1 avocado', 140),
+  'Mango, raw': ('1 mango', 300),
+  'Fig, raw': ('1 fig', 50),
+  'Fig, dried': ('1 fig', 20),
+  'Lychee, raw': ('1 lychee', 10),
+  'Passion fruit, raw': ('1 passion fruit', 18),
+  'Persimmon, raw': ('1 persimmon', 180),
+  'Pomegranate, raw': ('1 pomegranate', 180),
+  'Pineapple, raw': ('1 slice', 56),
+  'Watermelon, raw': ('1 slice', 280),
+  'Strawberry, raw': ('1 strawberry', 15),
+  'Sweet cherry, raw': ('1 cherry', 8),
+  'Grape, raw': ('1 grape', 6),
+  // Vegetables eaten or cooked whole: a bell pepper of 160 g, a cucumber
+  // of 300 g, a radish of 8 g, a boiled potato of 80 g, a baked one of
+  // 200 g.
+  'Sweet pepper green, raw': ('1 pepper', 160),
+  'Sweet pepper red, raw': ('1 pepper', 160),
+  'Sweet pepper yellow, raw': ('1 pepper', 160),
+  'Cucumber, raw': ('1 cucumber', 300),
+  'Radish, raw': ('1 radish', 8),
+  'Spring onion, raw': ('1 spring onion', 15),
+  'Garlic, raw': ('1 clove', 4),
+  'Stalk celery, raw': ('1 stalk', 40),
+  'Potatoes, boiled with peel': ('1 potato', 80),
+  'Potatoes, boiled with salt': ('1 potato', 80),
+  'Jacket potatoes, baked': ('1 potato', 200),
+  // A bowl of the Latvian sweet bread soup (maizes zupa), as served.
+  'Bread soup (brown bread), with raisins, apple and sour cream': (
+    '1 bowl',
+    250,
+  ),
 };
 
 /// A serving that replaces the table's, so a count is of the thing a
 /// person counts: bacon's 16 g "serving" made a photo's 4 slices 64 g;
-/// a medium slice cooked is 8 g. Its other portions stay.
+/// a medium slice cooked is 8 g. Its other portions stay, but one of the
+/// same label gives way to it (S213).
 const servingOverrides = <String, (String, double)>{
   'Bacon, NS as to type of meat, cooked': ('1 slice', 8),
+  // European pieces where the table's US one is far off (S213): a naan of
+  // 90 g, not the 177 g 10" one; a fast-food cheeseburger of 115 g.
+  'Bread, naan': ('1 naan', 90),
+  'Cheeseburger, NFS': ('1 cheeseburger', 115),
+  // a thin crêpe of 22-24 cm
+  'Crepe, NFS': ('1 crepe, any size', 50),
+  'Crepe, plain': ('1 crepe, any size', 45),
+  // a boiled potato of 90 g, a baked one of 200 g, as EU shops grade them
+  'Potato, boiled, NFS': ('1 medium', 90),
+  'Potatoes, boiled, cooked without skin, flesh, without salt': (
+    '1 medium (2-1/4" to 3-1/4" dia.)',
+    90,
+  ),
+  'Potatoes, boiled, cooked without skin, flesh, with salt': (
+    '1 medium (2-1/4" to 2-1/4" dia.)',
+    90,
+  ),
+  'Potato, baked, NFS': ('1 medium', 200),
+  // a veal escalope of 125 g raw
+  'Veal, leg, top round, cap off, cutlet, boneless, cooked, grilled': (
+    '1 cutlet',
+    100,
+  ),
+  'Veal, leg, top round, cap off, cutlet, boneless, raw': ('1 cutlet', 125),
+  // a grilling sausage of 75 g, not a 35 g breakfast patty
+  'Sausage, NFS': ('1 sausage', 75),
+  'Pork sausage': ('1 sausage', 75),
+  'Beef sausage': ('1 sausage', 75),
+  // a plain bagel of 100 g
+  'Bagel': ('1 bagel', 100),
+  // a sandwich slice of ham of 25 g, of salami 10 g, of cheese 21 g
+  'Ham': ('1 regular/thin slice', 25),
+  'Salami, NFS': ('1 slice', 10),
+  'Cheese, NFS': ('1 slice', 21),
+  // one pot pie, not the 1,260 g family dish
+  'Pot pie, chicken': ('1 pie', 250),
+  // a Frankfurter of 50 g, sold in pairs
+  'Frankfurter, pork': ('1 link', 50),
+  // a potato pancake of 70 g, as for draniki or Reibekuchen
+  'Potato pancakes': ('1 pancake', 70),
+  // a strudel piece of 125 g, an eighth of a 1 kg strudel
+  'Strudel, apple': ('1 piece', 125),
+  // a boxed chocolate of 8 g, not a miniature bar
+  'Chocolate candy': ('1 piece', 8),
+  // a baklava piece of 35 g, a brioche bun of 50 g
+  'Baklava': ('1 piece', 35),
+  'Brioche': ('1 piece', 50),
+};
+
+/// Ladders whose middle piece is a US size, rescaled to a European one
+/// (S213), by name, label and the table's weight: a muffin of 85 g, a
+/// slice of cake of 110 g, a cookie of 18-22 g, a pancake of 33 g, a slice
+/// of pie of 115 g. A serving that was that piece moves with it.
+final pieceRescales = <(RegExp, Set<String>, double, double)>[
+  (RegExp(r'^Muffin'), {'1 medium'}, 130, 85),
+  (RegExp(r'^(Cake|Cheesecake)'), {'1 piece/slice, any size'}, 175, 110),
+  (RegExp(r'^(Cake|Cheesecake)'), {'1 piece/slice, any size'}, 200, 110),
+  (RegExp(r'^Cookie'), {'1 medium', '1 medium cookie'}, 30, 18),
+  (RegExp(r'^Cookie'), {'1 medium', '1 medium cookie'}, 42, 22),
+  (RegExp(r'^Pancakes'), {'1 medium pancake'}, 50, 33),
+  (RegExp(r'^Pie, '), {'1 regular slice'}, 150, 115),
+];
+
+/// The rescale of [name]'s [label] at [grams], or null.
+double? _rescaled(String? name, String label, double grams) {
+  if (name == null) return null;
+  for (final (pattern, labels, from, to) in pieceRescales) {
+    if (grams == from && labels.contains(label) && pattern.hasMatch(name)) {
+      return to;
+    }
+  }
+  return null;
+}
+
+/// A whole pie read as the middle of a pie's ladder, so "1 apple pie" was
+/// 1,200 g (S213). Named without the word, a count of pies is a slice of
+/// one, and "1 whole apple pie" still finds it.
+const _wholePieLabels = {
+  '1 regular pie (8-9" dia)': '1 whole (8-9" dia)',
+  '1 large pie (10" dia plus)': '1 whole, large (10" dia plus)',
 };
 
 /// [row] with its [servingOverrides] serving, or its [addedPieces] one
@@ -785,6 +1151,14 @@ const servingOverrides = <String, (String, double)>{
 Map<String, Object?> _withAddedPiece(Map<String, Object?> row) {
   if (servingOverrides[row['name']] case (final size, final grams)) {
     return {...row, 'serving_size': size, 'serving_gram_weight': grams};
+  }
+  if (row['serving_gram_weight'] case final num grams) {
+    final name = row['name'] as String?;
+    for (final (pattern, _, from, to) in pieceRescales) {
+      if (grams == from && name != null && pattern.hasMatch(name)) {
+        return {...row, 'serving_gram_weight': to};
+      }
+    }
   }
   final piece = addedPieces[row['name']];
   if (piece == null || row['serving_gram_weight'] != null) return row;
@@ -873,12 +1247,30 @@ class LocalFoodTable {
         int.parse(key as String): [
           for (final portion in value as List)
             MealPortionEntity(
-              label: portion[0] as String,
+              label:
+                  _wholePieLabels[portion[0] as String] ?? portion[0] as String,
               gramWeight: (portion[1] as num).toDouble(),
               localized: false,
             ),
         ],
     };
+    for (final food in foods) {
+      final list = portions[food.foodId];
+      if (list == null) continue;
+      for (var i = 0; i < list.length; i++) {
+        final to = _rescaled(food.name, list[i].label, list[i].gramWeight);
+        if (to == null) continue;
+        list[i] = MealPortionEntity(
+          label: list[i].label,
+          gramWeight: to,
+          localized: false,
+        );
+      }
+      // An override's own label gives way to it, which leads the list.
+      if (servingOverrides[food.name] case (final size, _)) {
+        list.removeWhere((p) => p.label.toLowerCase() == size.toLowerCase());
+      }
+    }
     for (final food in foods) {
       final (id, piece) = (food.foodId, addedPieces[food.name]);
       if (id == null || piece == null || portions.containsKey(id)) continue;
@@ -898,7 +1290,9 @@ class LocalFoodTable {
       if (list == null || size == null || grams == null || grams <= 0) {
         continue;
       }
-      if ((list.first.gramWeight - grams).abs() < 0.5) continue;
+      if (list.isNotEmpty && (list.first.gramWeight - grams).abs() < 0.5) {
+        continue;
+      }
       list.insert(
         0,
         MealPortionEntity(label: size, gramWeight: grams, localized: false),

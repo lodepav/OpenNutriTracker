@@ -27,6 +27,9 @@ import 'package:opennutritracker/features/add_meal/domain/entity/meal_portion_en
 // [fork] S197 unnamed-variety
 import 'package:opennutritracker/fork/food/unnamed_variety.dart';
 // [/fork]
+// [fork] S213 piece-count
+import 'package:opennutritracker/fork/food/portion_words.dart';
+// [/fork]
 
 /// A parenthetical: "1 cup (8 fl oz)".
 final _parenthetical = RegExp(r'\([^)]*\)');
@@ -61,6 +64,9 @@ Set<String> _termsOf(String label) =>
 /// True when [token] is [term], or either is the other with a short ending.
 bool _matches(String token, String term) {
   if (token == term) return true;
+  // [fork] S213 piece-count: "piece" is not "pie" with an ending
+  if (notOneWord(token, term)) return false;
+  // [/fork]
   if (token.startsWith(term) && token.length - term.length <= _maxInflection) {
     return true;
   }
@@ -124,6 +130,9 @@ int? _match(
     if (namesUnaskedKind(_englishLabelOf(portions[i]), tokens, _matches)) {
       continue;
     }
+    // [/fork]
+    // [fork] S213 piece-count: a piece alone is no cup of pieces
+    if (measureOfPieces(_englishLabelOf(portions[i]), tokens)) continue;
     // [/fork]
     var score = 0;
     for (final term in _termsOf(labelOf(portions[i]))) {

@@ -131,6 +131,40 @@ const _everyday = {
   // Latvian maizes zupa: rye bread soup with raisins and apple, served with
   // cream.
   'bread soup': 'Bread soup (brown bread), with raisins, apple and sour cream',
+  'maizes zupa': 'Bread soup (brown bread), with raisins, apple and sour cream',
+  'maizes zupa ar putukrējumu':
+      'Bread soup (brown bread), with raisins, apple and sour cream',
+  // a Latvian karbonāde is a breaded pork schnitzel
+  'karbonāde': 'Pork schnitzel breaded, fried',
+  'panēta karbonāde': 'Pork schnitzel breaded, fried',
+  'karbonade': 'Pork schnitzel breaded, fried',
+  // Baltic smoked sprats in oil, from the tin
+  'šprotes': 'Sprat, in oil, canned, drained',
+  'sprotes': 'Sprat, in oil, canned, drained',
+  'шпроты': 'Sprat, in oil, canned, drained',
+  'shproty': 'Sprat, in oil, canned, drained',
+  'sprats': 'Sprat, in oil, canned, drained',
+  'sprats in oil': 'Sprat, in oil, canned, drained',
+  'golubtsi': 'Stuffed cabbage rolls with beef and rice',
+  'kāpostu tīteņi': 'Stuffed cabbage rolls with beef and rice',
+  'голубцы': 'Stuffed cabbage rolls with beef and rice',
+  'cabbage rolls': 'Stuffed cabbage rolls with beef and rice',
+  'draniki': 'Potato pancake',
+  'kartupeļu pankūkas': 'Potato pancake',
+  'драники': 'Potato pancake',
+  // "pita" found pita chips, 3 g a chip
+  'pita': 'Bread, pita',
+  'pitas': 'Bread, pita',
+  // a Bavarian lye pretzel; "pretzel" found the 3 g snack
+  'pretzel': 'Pretzel, salted',
+  'pretzels': 'Pretzel, salted',
+  // "kiwi" found the stewed one, without a piece
+  'kiwi': 'Kiwi fruit, raw',
+  'kiwis': 'Kiwi fruit, raw',
+  'weisswurst': 'Bavarian white sausage',
+  'weißwurst': 'Bavarian white sausage',
+  'weisswürste': 'Bavarian white sausage',
+  'weißwürste': 'Bavarian white sausage',
   'butter, unsalted': _unsaltedButter,
   'unsalted butter': _unsaltedButter,
   'cola': _cola,
