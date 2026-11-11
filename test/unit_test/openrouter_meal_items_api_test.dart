@@ -10,6 +10,9 @@ import 'package:opennutritracker/features/add_meal/data/openai_compatible_meal_i
 import 'package:opennutritracker/features/add_meal/domain/meal_items_api.dart';
 import 'package:opennutritracker/features/add_meal/domain/meal_photo_interpreter.dart';
 import 'package:opennutritracker/features/add_meal/util/meal_text_parser.dart';
+// [fork] S216 items-tool-wording
+import 'package:opennutritracker/fork/bulk/weighed_plate.dart';
+// [/fork]
 
 /// Captures the outgoing request and replays a canned reply. Nothing in this
 /// file touches the network.
@@ -425,7 +428,9 @@ void main() {
       final tool = (client.sentBody!['tools'] as List).single as Map;
       expect(
         (tool['function'] as Map)['parameters'],
-        jsonDecode(jsonEncode(mealItemsToolSchema)),
+        // [fork] S216 items-tool-wording: the fork's field descriptions (D51)
+        jsonDecode(jsonEncode(forkItemsToolSchema)),
+        // [/fork]
       );
     });
 

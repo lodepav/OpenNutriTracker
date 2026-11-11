@@ -71,8 +71,10 @@ class AnthropicMealItemsApi implements MealItemsApi {
       'tools': [
         {
           'name': mealItemsToolName,
-          'description': mealItemsToolDescription,
-          // [fork] S208 photo-estimate-no-note: a plate read asks for grams (D42)
+          // [fork] S208 photo-estimate-no-note, S216 items-tool-wording: a
+          // plate read asks for grams (D42); every field says what each fork
+          // prompt asks for (D51)
+          'description': itemsToolDescription,
           'input_schema': plateItemsSchemaFor(system),
           // [/fork]
         },

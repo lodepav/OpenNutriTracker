@@ -64,10 +64,13 @@ Rules:
 
     return _api.requestItems(
       content: MealTextContent(trimmed),
-      system:
-          '${localeCode == null ? _systemPrompt : '$_systemPrompt\nThe user\'s app language is "$localeCode".'}'
-          // [fork] S204 typed-english-query
-          '\n$typedQueryLanguageRule',
+      // [fork] S204 typed-english-query: the fork's rule for "query" in
+      // place of upstream's
+      system: typedQueryPrompt(
+        localeCode == null
+            ? _systemPrompt
+            : '$_systemPrompt\nThe user\'s app language is "$localeCode".',
+      ),
       // [/fork]
     );
   }

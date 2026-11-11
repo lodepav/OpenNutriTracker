@@ -291,23 +291,68 @@ List<ParsedMealItem> _namedDish(List<ParsedMealItem> items) {
   ];
 }
 
+/// The tool's description as the fork sends it (D51). Upstream's, "Record
+/// the food items found.", fits neither the label read nor the body
+/// comparison, whose items are `key=value` values.
+const itemsToolDescription =
+    'Return what was read from the text or photo as a list of items: one '
+    'food per item with an optional amount, or a key=value the system '
+    'prompt asks for. Call it exactly once, with an empty list when nothing '
+    'applies. It never estimates nutrition.';
+
 /// The tool schema for a request with [system] as its prompt: a plate read
 /// (every prompt opening with [plateReadOpening]) asks for each food's
 /// grams, so its `quantity` and `unit` say so (D42); every other request
-/// keeps [mealItemsToolSchema] as it is. Only those two descriptions
-/// differ, so the plate schema carries no nutrition field either.
+/// takes [forkItemsToolSchema]. Only descriptions differ from
+/// [mealItemsToolSchema], so neither carries a nutrition field.
 Map<String, Object?> plateItemsSchemaFor(String system) =>
     system.startsWith(plateReadOpening)
     ? plateItemsToolSchema
-    : mealItemsToolSchema;
+    : forkItemsToolSchema;
 
-/// [mealItemsToolSchema] with `quantity` and `unit` described as the
+/// [mealItemsToolSchema] with its fields described so that each is true for
+/// every fork prompt (D51): upstream's were written for the typed prompt
+/// alone, and asked for the user's language where the fork's prompts ask
+/// for English, and for stated amounts where they ask for estimates.
+final Map<String, Object?> forkItemsToolSchema = _forkSchema();
+
+Map<String, dynamic> _copyWithDescriptions(
+  Map<String, Object?> from,
+  Map<String, String> descriptions,
+) {
+  final schema = jsonDecode(jsonEncode(from)) as Map<String, dynamic>;
+  final item = schema['properties']['items']['items'] as Map<String, dynamic>;
+  final properties = item['properties'] as Map<String, dynamic>;
+  for (final MapEntry(:key, :value) in descriptions.entries) {
+    (properties[key] as Map<String, dynamic>)['description'] = value;
+  }
+  return schema;
+}
+
+Map<String, Object?> _forkSchema() =>
+    _copyWithDescriptions(mealItemsToolSchema, {
+      'portion':
+          'One English word naming a portion or size (slice, piece, cup, '
+          'tablespoon, teaspoon, small, medium, large), as the system prompt '
+          'allows. Write abbreviations out. Never a weight, a count, or a '
+          'unit from the unit list.',
+      'query':
+          'The food\'s name with no amount in it, or the key=value the system '
+          'prompt asks for, written as the system prompt asks.',
+      'quantity':
+          'A number: the amount or count the system prompt asks for. Omit '
+          'when it asks for none.',
+      'unit':
+          'Only one of these, and only when the system prompt asks for a '
+          'unit. Never map a different unit onto one of them.',
+    });
+
+/// [forkItemsToolSchema] with `quantity` and `unit` described as the
 /// plate prompts ask for them.
 final Map<String, Object?> plateItemsToolSchema = _plateSchema();
 
 Map<String, Object?> _plateSchema() {
-  final schema =
-      jsonDecode(jsonEncode(mealItemsToolSchema)) as Map<String, dynamic>;
+  final schema = _copyWithDescriptions(forkItemsToolSchema, const {});
   final item = schema['properties']['items']['items'] as Map<String, dynamic>;
   final properties = item['properties'] as Map<String, dynamic>;
   properties['quantity'] = {

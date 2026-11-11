@@ -74,7 +74,7 @@ void main() {
         [_g('rice', 200)],
       ], note: '2 eggs');
       expect(api.systems.single, isNot(startsWith(plateReadOpening)));
-      expect(plateItemsSchemaFor(api.systems.single), mealItemsToolSchema);
+      expect(plateItemsSchemaFor(api.systems.single), forkItemsToolSchema);
       expect(result.items.single.quantity, isNull);
     });
 
@@ -237,7 +237,7 @@ void main() {
 
     test('a plate read differs only in quantity and unit', () {
       final plate = props(plateItemsToolSchema);
-      final meal = props(mealItemsToolSchema);
+      final meal = props(forkItemsToolSchema);
       expect(plate.keys, meal.keys);
       for (final key in meal.keys) {
         if (key == 'quantity' || key == 'unit') continue;
@@ -252,7 +252,57 @@ void main() {
       );
     });
 
+    test('the fork schema differs from upstream\'s only in wording (D51)', () {
+      String shape(Map<String, Object?> schema) => jsonEncode(
+        schema,
+      ).replaceAll(RegExp(r'"description":"(?:[^"\\]|\\.)*"'), '');
+      expect(shape(forkItemsToolSchema), shape(mealItemsToolSchema));
+      final fork = props(forkItemsToolSchema);
+      final upstream = props(mealItemsToolSchema);
+      for (final key in upstream.keys) {
+        expect(fork[key]['description'], isNot(upstream[key]['description']));
+      }
+    });
+
+    test('no field contradicts a fork prompt (D51)', () {
+      for (final schema in [forkItemsToolSchema, plateItemsToolSchema]) {
+        final text = jsonEncode(schema).toLowerCase();
+        for (final stale in [
+          "in the user's language",
+          'only if the user stated',
+        ]) {
+          expect(text, isNot(contains(stale)));
+        }
+        for (final banned in [
+          'kcal',
+          'calorie',
+          'energy',
+          'protein',
+          'carbohydrate',
+          'fat',
+          'sugar',
+          'fiber',
+          'nutriment',
+        ]) {
+          expect(text, isNot(contains(banned)), reason: banned);
+        }
+      }
+    });
+
     for (final client in _clients) {
+      test('${client.name} sends the fork tool description', () async {
+        final http = _CapturingClient(client.reply);
+        await client
+            .build(http)
+            .requestItems(
+              content: const MealTextContent('rice'),
+              system: 'You read a meal description',
+            );
+        final sent = jsonEncode(http.body);
+        expect(sent, contains(jsonEncode(itemsToolDescription)));
+        expect(sent, isNot(contains(mealItemsToolDescription)));
+      });
+
       test(
         '${client.name} sends the plate schema on a plate read only',
         () async {
@@ -260,7 +310,7 @@ void main() {
             (noNotePlatePrompt, plateItemsToolSchema),
             (estimatedPlatePrompt, plateItemsToolSchema),
             (weighedPlatePrompt, plateItemsToolSchema),
-            ('You read a meal description', mealItemsToolSchema),
+            ('You read a meal description', forkItemsToolSchema),
           ]) {
             final http = _CapturingClient(client.reply);
             await client
