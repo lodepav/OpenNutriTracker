@@ -28,6 +28,7 @@ const _right = {
   'stuffed cabbage rolls': 'Stuffed cabbage rolls with beef and rice',
   'cabbage rolls': 'Stuffed cabbage rolls with beef and rice',
   'buckwheat': 'Buckwheat, boiled',
+  'fried chicken fillet': 'Chicken breast fillet, fried',
   'margherita pizza': 'Pizza margherita (with tomato sauce, mozzarella)',
   'sauerkraut': 'Sauerkraut',
   'braised sauerkraut': 'Sauerkraut, drained, braised without fat',
@@ -106,7 +107,6 @@ const _right = {
 /// Names the table has no right row for, and what they log instead (D11 builds
 /// the table). A row added for one fails its test: move it to [_right].
 const _noRowYet = {
-  'fried chicken fillet': 'Chicken fillet sandwich, fried, on white bun',
   'pancakes with meat': 'Egg sandwich on griddle/pancake, with meat',
   'potato pie': 'Pie, sweet potato',
   'meat dumplings':

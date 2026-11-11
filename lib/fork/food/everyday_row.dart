@@ -13,7 +13,8 @@
 /// ("pork cutlet, breaded, fried" for "pork, cutlet, breaded, fried", a
 /// karbonāde that found minced pork patties), "boiled" for "cooked"
 /// ("spaghetti, boiled" found spaghetti squash, which holds both words), and
-/// the state before the food ("cooked spaghetti" for "spaghetti, cooked").
+/// the state before the food ("cooked spaghetti" for "spaghetti, cooked") or
+/// after it ("eggs, scrambled" for "scrambled eggs").
 String? everydayRowName(String query) {
   final key = query.trim().toLowerCase();
   final words = _words(key);
@@ -22,6 +23,13 @@ String? everydayRowName(String query) {
   if (_byWords[cooked] case final name?) return name;
   if (_stateFirst.firstMatch(cooked) case final m?) {
     if (_byWords['${m[2]} ${m[1]}'] case final name?) return name;
+  }
+  // and the state after the food, as a model names it: "eggs, scrambled"
+  // is scrambled eggs, which found the frozen mixture
+  for (final form in {words, cooked}) {
+    if (_stateLast.firstMatch(form) case final m?) {
+      if (_byWords['${m[2]} ${m[1]}'] case final name?) return name;
+    }
   }
   if (_plainMeat.firstMatch(key) case final m?) {
     // a chop the table has fried as such: "pork chop, pan-fried" is the
@@ -75,6 +83,11 @@ final _fried = RegExp(r'\bfried\b|saut[eé]ed');
 
 /// "cooked spaghetti": a state word, then the food.
 final _stateFirst = RegExp(r'^(cooked|fried|grilled|baked|roasted) (.+)$');
+
+/// "eggs scrambled": the food, then a state word.
+final _stateLast = RegExp(
+  r'^(.+) (cooked|boiled|fried|grilled|baked|roasted|scrambled)$',
+);
 
 /// Whether [name] is the row [query] means (see [everydayRowName]).
 bool isEverydayRow(String? name, String query) =>
@@ -392,6 +405,207 @@ const _everyday = {
   'salad, coleslaw': 'Coleslaw',
   'chicken apple sausage': _chickenSausage,
   'chicken and apple sausage': _chickenSausage,
+  // a deli roll of pressed breast, by the shorter name
+  'roasted chicken breast': _roastChickenBreast,
+  'roast chicken breast': _roastChickenBreast,
+  // Bread rolls by the kind of roll, which found rye bread on "bread" or a
+  // bread dumpling. No row names ciabatta: a hard white roll is the nearest.
+  'bread, multigrain roll': _multigrainRoll,
+  'multigrain roll': _multigrainRoll,
+  'multigrain bread roll': _multigrainRoll,
+  'bread roll with seeds': _multigrainRoll,
+  'seeded roll': _multigrainRoll,
+  'seeded bread roll': _multigrainRoll,
+  'bread roll, white': _whiteRoll,
+  'white bread roll': _whiteRoll,
+  'white roll': _whiteRoll,
+  'bread roll': _whiteRoll,
+  'ciabatta': _hardRoll,
+  'ciabatta roll': _hardRoll,
+  'ciabatta bread': _hardRoll,
+  // no pizza crust row; a flatbread pizza is a thin one
+  'flatbread pizza crust': _flatbread,
+  'pizza crust, flatbread': _flatbread,
+  // a moon cake, or a frozen turnover with egg and cheese
+  'meat pastry': _meatPastry,
+  'pastry filled with meat': _meatPastry,
+  'pastry filled with meat and tomato': _meatPastry,
+  'pastry filled with meat and vegetable': _meatPastry,
+  'pastry filled with meat and vegetables': _meatPastry,
+  'meat-filled pastry': _meatPastry,
+  'meat turnover': _meatPastry,
+  'meat turnovers': _meatPastry,
+  // a pizza with no cheese, the shortest name
+  'thin-crust pizza': _thinCrustPizza,
+  'thin crust pizza': _thinCrustPizza,
+  'pizza, thin crust': _thinCrustPizza,
+  'pizza, thin-crust': _thinCrustPizza,
+  'flatbread pizza': _thinCrustPizza,
+  // falafel in a flatbread
+  'falafel, fried': _falafel,
+  'falafel, deep-fried': _falafel,
+  'fried falafel': _falafel,
+  // a dry cervelat with lamb at 371 kcal per 100 g
+  'lamb sausage': _sausage,
+  'lamb sausages': _sausage,
+  'merguez': _sausage,
+  'merguez sausage': _sausage,
+  // liver spaetzle; the table's own spaetzle are raw dough
+  'spaetzle': _eggNoodles,
+  'spätzle': _eggNoodles,
+  'spaetzle, cooked': _eggNoodles,
+  // green tea, by "leaf" and "green"
+  'leafy greens, cooked': _cookedGreens,
+  'cooked leafy greens': _cookedGreens,
+  'greens, cooked': _cookedGreens,
+  'cooked greens': _cookedGreens,
+  // a berry bar
+  'mixed berries': _berries,
+  'mixed berries, fresh': _berries,
+  'fresh mixed berries': _berries,
+  'berries, mixed': _berries,
+  'mixed berries, frozen': 'Berries, frozen',
+  // pork shoulder, by "butt"
+  'butter, cooked': _butter,
+  'butter, melted': _butter,
+  'melted butter': _butter,
+  // a frozen sweet potato, the only row with every word
+  'potatoes, cooked, baked': _bakedPotato,
+  'potato, cooked, baked': _bakedPotato,
+  'baked potato': _bakedPotato,
+  'baked potatoes': _bakedPotato,
+  // raw cabbage; a lasagna al forno; red beans and rice
+  'cabbage, sauerkraut': 'Sauerkraut',
+  'pasta, lasagna sheets': _pasta,
+  'lasagna sheets': _pasta,
+  'lasagna noodles': _pasta,
+  'lasagna sheets, cooked': _pasta,
+  // no red rice cooked: brown rice is the nearest whole grain rice
+  'rice, red, cooked': _brownRice,
+  'red rice, cooked': _brownRice,
+  'red rice': _brownRice,
+  // a flourless one, by the shortest name
+  'chocolate cake': _chocolateCake,
+  'cake, chocolate': _chocolateCake,
+  // a salad in lemon marinade at 116 kcal per 100 g
+  'mixed salad': _salad,
+  'salad, mixed': _salad,
+  'green salad': _salad,
+  'side salad': _salad,
+  // the cooked groats row, named like the dry one: only a word for dry
+  // names the dry product
+  'buckwheat groats, dry': _dryBuckwheat,
+  'buckwheat groats, raw': _dryBuckwheat,
+  'buckwheat groats, uncooked': _dryBuckwheat,
+  'dry buckwheat groats': _dryBuckwheat,
+  'raw buckwheat groats': _dryBuckwheat,
+  // chocolate milk
+  'milk chocolate': _milkChocolate,
+  'chocolate, milk': _milkChocolate,
+  // a truffle pâté or torte
+  'truffle': _truffles,
+  'truffles': _truffles,
+  'chocolate truffle': _truffles,
+  'chocolate truffles': _truffles,
+  // nothing, or olives at half the energy: kalamata are brine-cured and
+  // denser than canned ripe olives
+  'kalamata olives': _brinedOlives,
+  'kalamata olive': _brinedOlives,
+  'olives, kalamata': _brinedOlives,
+  // a sweet pickle relish
+  'pickled red onion': _pickledOnion,
+  'pickled red onions': _pickledOnion,
+  'pickled onion': _pickledOnion,
+  'pickled onions': _pickledOnion,
+  'red onion, pickled': _pickledOnion,
+  'onions, pickled': _pickledOnion,
+  // sweet and sour pork, a sweet roll, or nothing
+  'sour sweets': _gummies,
+  'fruit jelly sweets': _gummies,
+  'jelly sweets': _gummies,
+  'gummy sweets': _gummies,
+  'gummies': _gummies,
+  'gummy bears': _gummies,
+  'gummy candy': _gummies,
+  'jelly candy': _gummies,
+  'jelly candies': _gummies,
+  'wine gums': _gummies,
+  'sour gummies': _gummies,
+  // a no-bake marshmallow cookie; fortune cookies, by the shortest name
+  'oat cookies': _oatmealCookie,
+  'oat cookie': _oatmealCookie,
+  'oatmeal cookies': _oatmealCookie,
+  'oatmeal cookie': _oatmealCookie,
+  'cookies': _cookie,
+  'cookie': _cookie,
+  // a sandwich spread
+  'chicken salad': _chickenGardenSalad,
+  // Canned sockeye, by "salmon": no row is glazed with teriyaki.
+  'teriyaki salmon': _cookedSalmon,
+  'salmon teriyaki': _cookedSalmon,
+  'salmon, teriyaki': _cookedSalmon,
+  // boiled potatoes, by "potato"
+  'potato wedges': _roastPotato,
+  'potato wedges, baked': _roastPotato,
+  'baked potato wedges': _roastPotato,
+  // a bratwurst with mustard, by the title
+  'rostbratwurst': 'Rostbratwurst sausage, grilled',
+  'rostbratwurst, grilled': 'Rostbratwurst sausage, grilled',
+  // a gyros burger, or nothing; no row adds the bacon
+  'bacon burger': _cheeseburger,
+  'bacon cheeseburger': _cheeseburger,
+  // The BLS singular rows have no portion, where the plural ones do.
+  'strawberry': _strawberries,
+  'strawberry, raw': _strawberries,
+  'fresh strawberry': _strawberries,
+  'blueberry': _blueberries,
+  'blueberry, raw': _blueberries,
+  'fresh blueberry': _blueberries,
+  'blackberry': _blackberries,
+  'blackberry, raw': _blackberries,
+  'fresh blackberry': _blackberries,
+  // nothing
+  'salty licorice': _licorice,
+  'salty liquorice': _licorice,
+  'salmiak': _licorice,
+  // nothing: Turkish delight is a starch jelly
+  'turkish delight': _starchJelly,
+  'lokum': _starchJelly,
+  // nothing: dried, not fried like banana chips
+  'dried banana': _driedBanana,
+  'dried banana flakes': _driedBanana,
+  'banana flakes': _driedBanana,
+  'dried banana slices': _driedBanana,
+  // the plain table row without a portion, at the same energy
+  'multigrain flakes': _multigrainFlakes,
+  'multigrain porridge flakes': _multigrainFlakes,
+  // canned foods, by "canne"
+  'cannele': _canele,
+  'cannelé': _canele,
+  'canele': _canele,
+  'canelé': _canele,
+  'caneles': _canele,
+  'canelés': _canele,
+  // a kebab wrap is the shawarma wrap; no row names the wrap otherwise
+  'chicken kebab wrap': _shawarmaWrap,
+  'kebab wrap': _shawarmaWrap,
+  'döner wrap': _shawarmaWrap,
+  'doner wrap': _shawarmaWrap,
+  'doner kebab wrap': _shawarmaWrap,
+  'kebab in lavash': _shawarmaWrap,
+  'chicken kebab in lavash': _shawarmaWrap,
+  // a marzipan cake or the raw paste
+  'marzipan in dark chocolate': _marzipanChocolate,
+  'chocolate marzipan': _marzipanChocolate,
+  'marzipan chocolate': _marzipanChocolate,
+  'chocolate-covered marzipan': _marzipanChocolate,
+  'chocolate covered marzipan': _marzipanChocolate,
+  'dark chocolate marzipan': _marzipanChocolate,
+  // Nothing: no row is the Thai sauce; the sweet and sour one is the
+  // nearest sugar-based dipping sauce.
+  'sweet chili sauce': _sweetSourSauce,
+  'sweet chilli sauce': _sweetSourSauce,
+  'sweet chili': _sweetSourSauce,
 };
 
 const _cheesePizza =
@@ -468,3 +682,55 @@ const _wheatBerries = 'Wheat whole grain, boiled';
 const _redPepper = 'Peppers, sweet, red, raw';
 const _pizzaSauce = 'Sauce, pizza, canned, ready-to-serve';
 const _chickenSausage = 'Turkey or chicken sausage';
+const _roastChickenBreast =
+    'Chicken breast, baked, broiled, or roasted, skin not eaten, from raw';
+const _multigrainRoll = 'Roll, multigrain';
+const _whiteRoll = 'Roll, white, soft';
+const _hardRoll = 'Roll, white, hard';
+const _meatPastry = 'Empanada, beef, with vegetables';
+const _thinCrustPizza =
+    'Pizza, cheese, from restaurant or fast food, thin crust';
+const _falafel = 'Falafel, home-prepared';
+const _sausage = 'Sausage, NFS';
+const _eggNoodles = 'Noodles, egg, enriched, cooked';
+const _cookedGreens = 'Greens, NS as to form, cooked';
+const _berries = 'Berries, NFS';
+const _butter = 'Butter, NFS';
+const _bakedPotato = 'Potato, baked, NFS';
+const _brownRice = 'Rice, brown, cooked, no added fat';
+const _chocolateCake =
+    'Cake or cupcake, chocolate with chocolate icing, bakery';
+const _salad =
+    'Salad, green, without dressing (garden salad, tossed salad, side salad)';
+const _dryBuckwheat = 'Buckwheat groats, roasted, dry';
+const _milkChocolate = 'Candies, milk chocolate';
+const _truffles = 'Candies, truffles, prepared-from-recipe';
+const _brinedOlives = 'Olives blackened, in brine, drained';
+const _pickledOnion = 'Silverskin onion, pickled, drained';
+const _gummies = 'Candy, gummy';
+const _oatmealCookie = 'Cookie, oatmeal';
+const _cookie = 'Cookie, NFS';
+const _chickenGardenSalad =
+    'Chicken or turkey garden salad, chicken and/or turkey, tomato and/or '
+    'carrots, other vegetables, no dressing';
+const _cookedSalmon = 'Fish, salmon, Atlantic, wild, cooked, dry heat';
+const _cheeseburger = 'Cheeseburger, NFS';
+const _strawberries = 'Strawberries, raw';
+const _blueberries = 'Blueberries, raw';
+const _blackberries = 'Blackberries, raw';
+const _licorice = 'Candy, licorice';
+const _starchJelly = 'Candies, gumdrops, starch jelly pieces';
+const _driedBanana = 'Banana, dried';
+const _sweetSourSauce = 'Sweet and sour sauce';
+const _multigrainFlakes =
+    'Multigrain flakes, porridge flakes, dry (multigrain porridge flakes, '
+    '4-grain flakes, four grain flakes, 5-grain flakes, five grain flakes, '
+    'mixed grain flakes, daudzgraudu pārslas)';
+const _canele =
+    'Canelé, French custard cake (canele, cannelé, cannele, canelé de '
+    'Bordeaux, caneles)';
+const _shawarmaWrap =
+    'Shawarma, chicken, wrap (chicken shawarma, chicken gyros, gyros, '
+    'shawarma wrap)';
+const _marzipanChocolate =
+    'Bittersweet/semisweet chocolate, filled with marzipan';

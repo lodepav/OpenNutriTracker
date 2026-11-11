@@ -128,6 +128,47 @@ class LocalFoodDataSource extends SpFoodDataSource {
         }
       }
       if (_coated.hasMatch(last)) break;
+      // A way of cooking the table has no row for is still cooked: "tomato,
+      // roasted" found raw tomatoes, where cooked ones are the nearest, and
+      // roasting is baking ("sweet potato, roasted" is a baked one, with its
+      // fat, not a boiled one). Only rows of the food itself (see [_ofFood]):
+      // "beetroot, roasted" is no cooked beetroot salad, "butter, sauteed"
+      // no braised pork butt; rows titled as the food come first, in either
+      // state, so "beets, roasted" is cooked beets before baked leaf beet.
+      final way = nameWords(last);
+      if (way.isNotEmpty && way.every(_heatedWays.contains)) {
+        final food = query.substring(0, cut);
+        // the table's cooked grains are boiled: "oat flakes, cooked" is
+        // "Oat flakes, boiled", where dropping the word found the dry flakes
+        final states = way.length == 1 && way.single == 'cooked'
+            ? const ['boiled']
+            : [if (way.contains('roasted')) 'baked', 'cooked'];
+        final of = {
+          for (final state in states)
+            state: [
+              for (final row in search('$food, $state'))
+                if (_ofFood(row, food)) row,
+            ],
+        };
+        var found = const <SpFoodDTO>[];
+        for (final titledOnly in [true, false]) {
+          for (final state in states) {
+            found = [
+              for (final row in of[state]!)
+                if (!titledOnly || _titled(row, food)) row,
+            ];
+            if (found.isNotEmpty) {
+              query = '$food, $state';
+              break;
+            }
+          }
+          if (found.isNotEmpty) break;
+        }
+        if (found.isNotEmpty) {
+          rows = found;
+          continue;
+        }
+      }
       query = query.substring(0, cut);
       rows = search(query);
     }
@@ -412,6 +453,27 @@ const _cookedWays = {
   'coated',
 };
 
+/// The [_cookedWays] that leave a food cooked through, as its cooked row
+/// has it. Not toasted or smoked, which a food may be and still be raw
+/// inside or cured, nor a coating.
+const _heatedWays = {
+  'cooked',
+  'fried',
+  'stir',
+  'pan',
+  'deep',
+  'baked',
+  'roasted',
+  'grilled',
+  'boiled',
+  'steamed',
+  'poached',
+  'sauteed',
+  'sautéed',
+  'braised',
+  'stewed',
+};
+
 /// The table's battered vegetables, fried: 239 kcal per 100 g, where its
 /// battered carrots, broccoli and cauliflower are 231-246.
 const _coatedVegetables = 'Vegetable tempura';
@@ -529,6 +591,54 @@ bool _namedFor(SpFoodDTO row, String food) {
   return true;
 }
 
+/// Whether [row]'s title, its name before the first comma, is [food]'s
+/// words, up to their endings: "Tomatoes, fresh, cooked" for "tomato".
+bool _titled(SpFoodDTO row, String food) {
+  final title = nameWords(deriveTitle(row.name ?? ''));
+  final words = nameWords(food);
+  if (title.length != words.length) return false;
+  for (var i = 0; i < words.length; i++) {
+    if (!wordsAgree(spelling(words[i]), spelling(title[i]))) return false;
+  }
+  return true;
+}
+
+/// Whether [row] is a row of [food] itself, not a dish holding it: no
+/// part of its name adds "with" something other than salt ("Sweet peppers,
+/// with minced meat filling"), and either its title is [food]'s words, its
+/// title is the family [food] names ("Squash, winter, acorn" for "acorn
+/// squash", "Summer squash, yellow" for "yellow squash"), or a part of its
+/// name is [food] ("Squash, summer, zucchini" for "zucchini").
+bool _ofFood(SpFoodDTO row, String food) {
+  final parts = (row.name ?? '').split(',').map((p) => p.trim()).toList();
+  for (final part in parts.skip(1)) {
+    final lower = part.toLowerCase();
+    if (lower.startsWith('with ') && !lower.startsWith('with salt')) {
+      return false;
+    }
+  }
+  final words = [for (final w in nameWords(food)) spelling(w)];
+  if (words.isEmpty) return false;
+  bool same(List<String> a) =>
+      a.length == words.length &&
+      [
+        for (var i = 0; i < a.length; i++) wordsAgree(words[i], a[i]),
+      ].every((ok) => ok);
+  final name = [for (final w in nameWords(row.name)) spelling(w)];
+  bool inName(String w) => name.any((n) => wordsAgree(w, n));
+  final title = [for (final w in nameWords(parts.first)) spelling(w)];
+  if (same(title)) return true;
+  if (title.isNotEmpty &&
+      words.every(inName) &&
+      (title.every((t) => words.any((w) => wordsAgree(w, t))) ||
+          wordsAgree(words.last, title.last))) {
+    return true;
+  }
+  return parts
+      .skip(1)
+      .any((part) => same([for (final w in nameWords(part)) spelling(w)]));
+}
+
 final _stateWords = RegExp(
   r'\b(raw|dry|dried|uncooked|cooked|boiled|steamed|stewed|fried|baked)\b',
   caseSensitive: false,
@@ -537,6 +647,17 @@ final _cookedWords = RegExp(
   r'\b(cooked|boiled|steamed)\b',
   caseSensitive: false,
 );
+
+/// A grain named as flakes, the product a person weighs out dry: "oat
+/// flakes" found "Oat flakes, boiled" at 66 kcal per 100 g, where the dry
+/// flakes are 348. A porridge or a cooking word names the cooked food
+/// ([_stateWords]). Groats are not: a plate's "buckwheat groats" is the
+/// cooked buckwheat, at its cooked weight. By the name's last word, through
+/// [spelling] ("auzu pārslas").
+bool _soldDry(String asked) {
+  final words = nameWords(asked);
+  return words.isNotEmpty && spelling(words.last) == 'flakes';
+}
 
 /// [rows] without the dry grains and pulses when [query] names the food
 /// with no state and the table also has it cooked. A plate holds the
@@ -549,13 +670,15 @@ final _cookedWords = RegExp(
 /// dense for fat. Only a cooked row named for the food itself counts
 /// ("Buckwheat, boiled"), not one that holds it ("Cereals, oats, ...
 /// cooked" left "oats" on a yogurt). A query that says "dry" or "raw"
-/// keeps every row, even once that qualifier was dropped ([asked]).
+/// keeps every row, even once that qualifier was dropped ([asked]). So does
+/// a name of flakes ([_soldDry]).
 List<SpFoodDTO> _servedNotDry(
   List<SpFoodDTO> rows,
   String query, {
   required String asked,
 }) {
   if (_stateWords.hasMatch(asked)) return rows;
+  if (_soldDry(asked)) return rows;
   final food = query.trim().toLowerCase();
   double? leanest;
   for (final row in rows) {
@@ -597,6 +720,57 @@ const addedPieces = <String, (String, double)>{
   'Small lamb meatballs, cooked': ('1 meatball', 12),
   'Small game meatballs': ('1 meatball', 12),
   'Small sausage meatballs': ('1 meatball', 12),
+  // Counted BLS foods, which the table weighs by 100 g only, so a count of
+  // 3 grilled sausages was 3 g. Typical German and EU weights, as eaten.
+  // Not "Rye bread", which with a slice beat "Bread, rye" on "rye bread",
+  // nor "Chicken breast, without skin, fried without fat (pan)", which beat
+  // the fried breast, with its fat, on "chicken breast, fried".
+  // A Thuringian-style Rostbratwurst is sold at 100-150 g raw.
+  'Rostbratwurst sausage': ('1 sausage', 100),
+  'Rostbratwurst sausage, grilled': ('1 sausage', 100),
+  'Rostbratwurst sausage, fried without fat (pan)': ('1 sausage', 100),
+  'Rostbratwurst sausage poached': ('1 sausage', 100),
+  // Wiener Würstchen come in pairs of about 100 g.
+  'Vienna sausage': ('1 sausage', 50),
+  'Vegetarian Vienna sausages': ('1 sausage', 50),
+  // a cornflake cluster, about 20 to a 150 g bag
+  'Crispy praline, with milk chocolate, cornflakes and almond bits': (
+    '1 piece',
+    7,
+  ),
+  // a quarter of a 400 g Turkish loaf, or one Arabic flatbread
+  'Wheat flatbread': ('1 piece', 100),
+  // a 25 cm wrap, as EU supermarkets sell them
+  'Wheat flour tortilla': ('1 tortilla', 60),
+  // a 250 g baguette is about 60 cm: a 3 cm slice
+  'Wheat baguette': ('1 slice', 12),
+  // a 120-150 g raw skewer, grilled
+  'Meat skewer (veal and pork), grilled': ('1 skewer', 100),
+  'Beef skewer, grilled': ('1 skewer', 100),
+  // a 125 g raw patty, cooked
+  'Beef patty, grilled': ('1 patty', 90),
+  'Beef patty, fried without fat (pan)': ('1 patty', 90),
+  // a schnitzel of about 125 g raw, with its crumbs after frying
+  'Pork schnitzel breaded, fried': ('1 schnitzel', 150),
+  'Pork schnitzel, fried': ('1 schnitzel', 110),
+  // a loin chop without the bone, crumbed
+  'Pork chop breaded, fried': ('1 chop', 150),
+  // a 170 g raw fillet, cooked
+  'Chicken breast fillet, fried without fat (pan)': ('1 breast', 130),
+  'Chicken breast fillet, fried': ('1 breast', 130),
+  // a 125 g raw portion, as packs of two sell it
+  'Salmon, grilled': ('1 fillet', 110),
+  // frozen croquettes, about 30 to a 750 g bag
+  'Potato croquettes': ('1 croquette', 25),
+  'Potato croquettes deep-frozen, baked': ('1 croquette', 25),
+  'Potato croquettes deep-frozen, deep-fried': ('1 croquette', 25),
+  'Muesli bar': ('1 bar', 25),
+  // a turkey breast steak of about 150 g raw, grilled
+  'Turkey breast, without skin, grilled': ('1 steak', 110),
+  // a chocolate-coated marzipan piece, as in a 100 g bar of eight
+  'Bittersweet/semisweet chocolate, filled with marzipan': ('1 piece', 13),
+  // a brine-cured olive with its stone
+  'Olives blackened, in brine, drained': ('1 olive', 4),
 };
 
 /// A serving that replaces the table's, so a count is of the thing a
