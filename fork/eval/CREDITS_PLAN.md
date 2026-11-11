@@ -647,6 +647,117 @@ piece of work (struck: fixed, with what fixed it; `wrong_rows_test.dart`):
 - ~~later rounds: "oil" → Oil, oat; "coleslaw salad" → Salad dressing,
   coleslaw~~ named: Vegetable oil, NFS; Coleslaw
 
+## Ideas not yet tried (2026-11-10)
+
+Every round so far asked the same photo a different way. A second Haiku
+pass cannot judge the plate's scale (its factor follows the needed one
+at 0.19-0.27), so most of these add information instead. In the order to
+try them:
+
+1. **One question after the read.** A "smaller / as shown / larger"
+   control scales the whole meal. One right scale per plate would cut the
+   median error from about 35% to about 18%. No model call; needs a
+   design for the review screen. Unlike round 6's sizes, the user picks.
+2. **Dimensions, not grams.** The model gives each food's share of the
+   plate and its height; code turns that into grams with a density
+   table. Measurable on the Nutrition5k sets.
+3. **A second photo from the side.** Height is what a photo from above
+   hides. Nutrition5k has side-angle frames, so it can be measured before
+   any app work.
+4. **The user's own corrections.** A corrected weight is kept and the
+   next read is told this user's usual amount of that food. The general
+   usual-amount prior was dropped; this one is personal. Needs weeks of
+   use to measure.
+5. **Ask about the least sure food.** The model marks one food and the
+   app asks about it ("how many skewers?").
+6. **The image itself.** A larger photo, or one crop per food for the
+   weighing. Resolution was never varied.
+7. **Weighed own meals.** About ten meals, each a photo and the grams of
+   every food, to settle whether reference photos help and to check any
+   of the above on real plates.
+
+Added later the same day. The first two come before everything above:
+they cost next to nothing and decide which of the rest are worth doing.
+
+8. **Does disagreement predict error?** Two reads of every plate already
+   exist. If the plates where they differ most are the most wrong, the
+   app can read twice and say "check the amounts" on those alone. An
+   analysis of old runs, no new calls.
+9. **The oracle scale test.** On the Nutrition5k sets the camera height
+   is known: tell the model the frame's true width in centimetres. If the
+   error does not drop, the model cannot use scale even when given it,
+   and ideas 3 and 12 and a known object in the frame are dead.
+10. **Household units, not grams.** The model answers in tablespoons,
+    cups, slices and palm-sized pieces; code converts. Aimed at small
+    portions (read at 2.3-3.5× their weight).
+11. **A shrink curve by read size, in code.** Small reads are about 2.5×
+    over, medium 1.4×, large about right, in every run. Calibration by
+    food class was dropped; by size was not tried. Risk: own meals are
+    already about right and would go under.
+12. **Real scale from the phone.** When the app takes the photo, the
+    camera's focus distance and focal length give the frame's width. Only
+    if idea 9 passes.
+13. **"Is this all yours?"** A read far above a usual meal asks how much
+    of it was eaten. Aimed at platters (the meat plate).
+14. **Another vendor's model as the weigher only** (Gemini is built for
+    spatial tasks). Needs a Google key or OpenRouter spend; wait for the
+    Sonnet chain result.
+
+### If none of them shows a gain
+
+- **The photo is a draft; correcting it is fast.** The foods are named
+  right, the amounts are not. The work moves to the review screen: the
+  whole-meal scale control (idea 1), quick per-food changes, "check this
+  one" hints. Depends on taps, not on an eval.
+- **The user's history instead of the photo.** The photo names the meal;
+  the amounts come from the last time it was logged and corrected. Only
+  a new meal needs an estimate.
+- **Unbiased rather than accurate.** A week's total matters more than one
+  meal. Own meals already log 90-97% of their reference; keep the total
+  near 100% and catch the outliers (platters). This is the yardstick for
+  the two above.
+- **A better model, when there is one.** The harness measures a new model
+  in an hour for a few cents. One clearly better could be offered as the
+  slower, dearer choice. Gemini first (said to be better at this, about
+  13 s and $0.006 a photo): five Haiku runs of every set for a firm
+  baseline and noise floor, then the same sets on gemini-3.8-flash.
+- **Check the premise first.** The large errors are on lab plates with
+  small portions; own meals are close. The ten weighed meals (idea 7)
+  show whether a real problem is left beyond platters.
+
+Preferred: the first two together.
+
+### Gemini against Haiku, the steps
+
+1. **A firm Haiku baseline.** Five runs of each scenario: both
+   Nutrition5k sets, the held-out calorie suite, the six own meals and
+   the meat plate with and without the note. From them a noise floor per
+   scenario and a spread per plate. About $0.25 on the Anthropic key;
+   after the Sonnet chain runs, which use the same checkout.
+2. **The same scenarios on gemini-3.8-flash**, the app preset's model,
+   through OpenRouter for now: three passes, about 180 photos a pass,
+   about $1.10 and 40 minutes a pass, about $3.30 of the $4.60 left.
+3. **Compare** per scenario against the step 1 floor: median off, meals
+   within 25%, total, the small/medium/large ratios, cost and time a
+   photo.
+   Done 2026-11-11 ($2.68 on OpenRouter). Median off, within 25%, total,
+   Haiku → Gemini: set 1 33% → 24%, 19 → 26 of 51, 122% → 90%; set 2
+   33% → 21%, 18 → 28 of 48, 127% → 94%; held-out 32% → 30%, 13 → 13 of
+   30, 113% → 107%; own meals 16% → 33% without a note and 14% → 30%
+   with one, totals 88% → 67% and 97% → 77%. Gemini reads every plate at
+   about 0.75 of Haiku's: Haiku × 0.69-0.79 matches it on the lab sets,
+   and the own meals go under. Small foods 1.5× (Haiku 2.5×), large 0.8×
+   (Haiku about right). 9-15 s and $0.006 a photo against 1.5-2 s and
+   $0.0004-0.0009. Not better where it counts; the weighed own meals
+   (idea 7) decide whether the own-meal references run low.
+4. **Later, with a Google AI Studio key in `.env`:** the app's Gemini
+   preset against Google itself, never yet checked live. On the free
+   tier Google may use the photos, own meals included.
+
+Dropped before trying: the user's plate and bowl sizes (no use away from
+home). Weak: a known object in the frame — the meat plate has a fork in
+it and is still read at 1.5-2× its reference.
+
 ## What the tests measure
 
 Each sends real photos or typed meals through the app's logging code,
