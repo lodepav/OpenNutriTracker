@@ -264,6 +264,10 @@ extension _BulkAddDish on _BulkAddScreenState {
         : typed;
     final amounts = scaledAmounts(state.rows, base, grams);
     if (amounts == null) return;
+    // a portion the user set: the meal's Size leaves the dish's foods
+    for (final index in dishMembers(state.rows, group)) {
+      _pinRow(index);
+    }
     for (final MapEntry(:key, :value) in amounts.entries) {
       if (_quantityErrors.containsKey(key)) _clearQuantityError(key);
       _bloc.add(ChangeRowAmountEvent(key, value));

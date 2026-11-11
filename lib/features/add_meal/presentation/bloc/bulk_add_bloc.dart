@@ -21,6 +21,9 @@ import 'package:opennutritracker/fork/dish/dish_breakdown_rows.dart';
 // [fork] S210 shown-unit: a row stepped in the unit it is shown in
 import 'package:opennutritracker/fork/bulk/shown_unit.dart';
 // [/fork]
+// [fork] S212 meal-size: a photo's amounts scaled in one emit
+import 'package:opennutritracker/fork/bulk/scale_rows.dart';
+// [/fork]
 // [fork] S98 default-amount: a sauce starts at a ladle, a drink at a glass,
 // a main dish at a plate
 import 'package:opennutritracker/fork/food/dish_serving.dart';
@@ -467,6 +470,12 @@ class BulkAddBloc extends Bloc<BulkAddEvent, BulkAddState> {
       if (current is BulkAddLoadedState) {
         emit(setRowInShownUnit(current, event));
       }
+    });
+    // [/fork]
+    // [fork] S212 meal-size: the meal's Size sets many amounts, left unedited
+    on<ScaleRowsEvent>((event, emit) {
+      final current = state;
+      if (current is BulkAddLoadedState) emit(scaleRows(current, event));
     });
     // [/fork]
   }

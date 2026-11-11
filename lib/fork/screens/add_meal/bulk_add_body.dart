@@ -259,26 +259,120 @@ extension _BulkAddBody on _BulkAddScreenState {
               ],
             ),
             MacrosLine(carbs: meal.carbs, fat: meal.fat, protein: meal.protein),
+            if (state.source == BulkAddReadSource.photo &&
+                _mealScale.offered(state.rows)) ...[
+              if (_historyShown(state.rows)) ...[
+                const SizedBox(height: 10),
+                _buildHistoryOffer(context, state),
+              ],
+              const SizedBox(height: 10),
+              _buildMealSize(context, state),
+            ],
             const SizedBox(height: 10),
-            Text(
-              DateUtils.isSameDay(_args.day, DateTime.now())
-                  ? 'Today with this meal'
-                  : 'That day with this meal',
-              style: muted,
-            ),
-            const SizedBox(height: 6),
-            TodayAfterAdding(
-              day: _args.day,
-              kcal: meal.kcal,
-              carbs: meal.carbs,
-              fat: meal.fat,
-              protein: meal.protein,
-              load: forkDayTotals,
-              framed: false,
+            // its own node, so the day is read last, as it is shown
+            Semantics(
+              container: true,
+              child: Column(
+                key: const ValueKey('bulk-add-day-totals'),
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    DateUtils.isSameDay(_args.day, DateTime.now())
+                        ? 'Today with this meal'
+                        : 'That day with this meal',
+                    style: muted,
+                  ),
+                  const SizedBox(height: 6),
+                  TodayAfterAdding(
+                    day: _args.day,
+                    kcal: meal.kcal,
+                    carbs: meal.carbs,
+                    fat: meal.fat,
+                    protein: meal.protein,
+                    load: forkDayTotals,
+                    framed: false,
+                  ),
+                ],
+              ),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  /// The amounts of a meal like this one that the user corrected before:
+  /// what the meal comes to with them, and one tap to use them.
+  Widget _buildHistoryOffer(BuildContext context, BulkAddLoadedState state) {
+    final record = _history!.record;
+    return HistoryOfferView(
+      day: record.day,
+      slot: record.slot,
+      energy: EnergyDisplay.formatSumWithUnit(
+        context,
+        loggedKcals(_withHistory(state.rows)),
+      ),
+      taken: _historyUndo != null,
+      onUse: _useHistory,
+      onUndo: _undoHistory,
+    );
+  }
+
+  /// The meal's Size on a photo's review: one tap scales every amount the
+  /// user has not set from the photo's, and "As shown" puts them back.
+  Widget _buildMealSize(BuildContext context, BulkAddLoadedState state) {
+    final theme = Theme.of(context);
+    final muted = theme.textTheme.bodySmall?.copyWith(
+      color: paletteOf(context).textMuted,
+    );
+    final allSet = _mealScale.allSet(state.rows);
+    // the user's earlier amounts in use: the sizes scale those
+    final own = _historyUndo != null;
+    _sayMealSize(context);
+    return Column(
+      key: const ValueKey('bulk-add-meal-size'),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // its own node: inside the card's, the whole card read as a heading
+        Semantics(
+          container: true,
+          header: true,
+          child: Text(DishStrings.mealSize, style: theme.textTheme.titleSmall),
+        ),
+        const SizedBox(height: 4),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            for (final factor in mealSizeFactors)
+              Semantics(
+                identifier: 'bulk-add-meal-size-$factor',
+                child: ChoiceChip(
+                  key: ValueKey('bulk-add-meal-size-$factor'),
+                  label: Text(
+                    DishStrings.sizeChip(factor, own: own),
+                    semanticsLabel: DishStrings.sizeChipSpoken(
+                      factor,
+                      own: own,
+                    ),
+                  ),
+                  materialTapTargetSize: MaterialTapTargetSize.padded,
+                  selected: _mealScale.factor == factor,
+                  onSelected: allSet ? null : (_) => _setMealSize(factor),
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        // its own node, so it is read after the chips, not with the card
+        Semantics(
+          container: true,
+          child: Text(
+            allSet ? DishStrings.sizeAllSet : DishStrings.sizeScalesUnset,
+            style: muted,
+          ),
+        ),
+      ],
     );
   }
 

@@ -12,10 +12,17 @@
 
     python3 -I fork/tools/build_food_db.py --add-dishes
 
-adds the dishes of fork/data/dishes.json that the built table lacks, worked
-out from its own rows, and drops the WRONG_ROWS it still has, without the
-source files; a full build gives them the same ids and, up to the table's
-rounding, the same nutrients.
+brings the built table's dishes in line with fork/data/dishes.json without
+the source files: it adds the dishes the table lacks and updates the ones it
+has (id, name, serving, nutrients), worked out from the table's own rows, and
+drops the WRONG_ROWS it still has; a full build gives them the same ids and,
+up to the table's rounding, the same nutrients.
+
+Each dish carries its id in dishes.json, the food_id diary entries and
+recents keep, so moving a dish in the list changes nothing. A new dish takes
+an id above every dish id the table has, so an id is never given to two
+dishes. Both modes refuse a table with a food_id or a (source, code) on two
+rows.
 
 Downloads (all free):
   USDA FoodData Central (public domain): https://fdc.nal.usda.gov/download-datasets
@@ -314,13 +321,42 @@ def fineli_foods(directory):
 
 # --- The fork's dishes ------------------------------------------------------
 
+def load_dishes(path):
+    """The dishes of [path], each with its own id at or above DISH_ID_BASE;
+    exits on a dish without one or an id or code two dishes share."""
+    with open(path, encoding='utf-8') as f:
+        dishes = json.load(f)['dishes']
+    for dish in dishes:
+        food_id = dish.get('id')
+        if not isinstance(food_id, int) or food_id < DISH_ID_BASE:
+            sys.exit(f'{dish.get("code")}: no id of {DISH_ID_BASE} or more')
+    for key in ('id', 'code'):
+        seen, twice = set(), set()
+        for dish in dishes:
+            (twice if dish[key] in seen else seen).add(dish[key])
+        if twice:
+            sys.exit(f'{path}: dishes with the same {key}: {sorted(twice)}')
+    return dishes
+
+
+def check_unique(foods):
+    """Exits when two rows of [foods] share a food_id or a (source, code):
+    the app keys portions and diary entries by the id, so a shared one
+    gives a row the other's serving."""
+    for what, key in (('food_id', lambda f: f[0]),
+                      ('(source, code)', lambda f: (f[1], f[2]))):
+        seen, twice = set(), set()
+        for food in foods:
+            (twice if key(food) in seen else seen).add(key(food))
+        if twice:
+            sys.exit(f'rows with the same {what}: {sorted(twice)[:20]}')
+
+
 def dish_foods(path, rows):
     """Each dish of [path] as a row: its ingredients' nutrients summed and
     put over the cooked weight. [rows] are the built rows by (source, name);
     a nutrient any ingredient lacks is unknown for the dish."""
-    with open(path, encoding='utf-8') as f:
-        dishes = json.load(f)['dishes']
-    for n, dish in enumerate(dishes):
+    for dish in load_dishes(path):
         nutrients = {}
         for column in NUTRIENTS:
             total = 0.0
@@ -335,14 +371,41 @@ def dish_foods(path, rows):
             nutrients[column] = (None if total is None
                                  else total * 100 / dish['yield_g'])
         serving = tuple(dish['serving'])
-        yield (DISH_ID_BASE + n, 'fork_dishes', dish['code'], dish['name'],
+        yield (dish['id'], 'fork_dishes', dish['code'], dish['name'],
                nutrients, [serving], serving)
 
 
 # --- Output ------------------------------------------------------------------
 
+def write_table(table, out):
+    """Writes [table] to [out] in one move, so a reader never meets half a
+    file."""
+    check_unique(table['foods'])
+    payload = json.dumps(table, ensure_ascii=False, separators=(',', ':'))
+    os.makedirs(os.path.dirname(out) or '.', exist_ok=True)
+    part = out + '.part'
+    with gzip.open(part, 'wt', encoding='utf-8', compresslevel=9) as f:
+        f.write(payload)
+    os.replace(part, out)
+
+
+def same_row(old, new):
+    """Whether two rows agree up to the table's rounding: a dish worked out
+    again from the table's rounded rows moves in its fourth digit."""
+    if old[:7] != new[:7]:
+        return False
+    for a, b in zip(old[7:], new[7:]):
+        if (a is None) != (b is None):
+            return False
+        if a is not None and abs(a - b) > max(abs(a), abs(b)) * 1e-3 + 1e-9:
+            return False
+    return True
+
+
 def add_dishes(dishes_path, out):
-    """Appends to the table at [out] the dishes it lacks, by code."""
+    """Brings the dishes of the table at [out] in line with [dishes_path],
+    by code: a dish the table has keeps its place and takes the file's id,
+    name, serving and nutrients; one it lacks is appended."""
     with gzip.open(out, 'rt', encoding='utf-8') as f:
         table = json.load(f)
     columns = table['columns']
@@ -357,31 +420,55 @@ def add_dishes(dishes_path, out):
         if food not in kept:
             table['portions'].pop(str(food[0]), None)
     table['foods'] = kept
-    have = {row[2] for row in table['foods'] if row[1] == 'fork_dishes'}
-    added = []
+
+    at = {food[2]: i for i, food in enumerate(kept) if food[1] == 'fork_dishes'}
+    highest = max((kept[i][0] for i in at.values()), default=DISH_ID_BASE - 1)
+    # A dish's portions are its serving alone; the old ids' go first, as a
+    # dish moved off an id leaves it to the dish that keeps it.
+    own = {code: table['portions'].pop(str(kept[i][0]), None)
+           for code, i in at.items()}
+    added, updated, listed = [], [], set()
     for food_id, src, code, name, nutrients, food_portions, serving in \
             dish_foods(dishes_path, rows):
-        if code in have:
-            continue
-        table['foods'].append([food_id, src, code, name, serving[0],
-                               serving[1], True]
-                              + [rounded(nutrients.get(c)) for c in NUTRIENTS])
+        listed.add(code)
+        row = [food_id, src, code, name, serving[0], serving[1], True] \
+            + [rounded(nutrients.get(c)) for c in NUTRIENTS]
+        if code in at:
+            old = kept[at[code]]
+            if not same_row(old, row):
+                if old[0] != food_id:
+                    updated.append(f'{code} (id {old[0]} -> {food_id})')
+                else:
+                    updated.append(code)
+                kept[at[code]] = row
+        else:
+            if food_id <= highest:
+                sys.exit(f'{code}: a new dish takes an id above {highest}, '
+                         f'the highest the table has, not {food_id}')
+            kept.append(row)
+            added.append(name)
         table['portions'][str(food_id)] = [list(p) for p in food_portions]
-        added.append(name)
-    if not added and not dropped:
-        print(f'no dishes to add -> {out} unchanged')
+    for code, i in at.items():
+        if code not in listed:
+            print(f'warning: {code} is in the table but not in {dishes_path}; '
+                  f'kept as it is', file=sys.stderr)
+            if own[code] is not None:
+                table['portions'][str(kept[i][0])] = own[code]
+    if not added and not updated and not dropped:
+        check_unique(kept)
+        print(f'no dishes to add or update -> {out} unchanged')
         return
-    payload = json.dumps(table, ensure_ascii=False, separators=(',', ':'))
-    with gzip.open(out, 'wt', encoding='utf-8', compresslevel=9) as f:
-        f.write(payload)
-    print(f'added {len(added)} dishes: {added}, dropped {dropped} -> {out}')
+    write_table(table, out)
+    print(f'added {len(added)} dishes: {added}; updated {len(updated)}: '
+          f'{updated}; dropped {dropped} -> {out}')
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('--add-dishes', action='store_true',
-                        help='add the dishes the built table lacks, from its rows')
+                        help='add and update the dishes of the built table, '
+                             'from its rows')
     parser.add_argument('--sr-legacy')
     parser.add_argument('--foundation')
     parser.add_argument('--survey')
@@ -427,11 +514,8 @@ def main():
             counts[src] = counts.get(src, 0) + 1
             by_name.setdefault((src, name), nutrients)
 
-    os.makedirs(os.path.dirname(args.out) or '.', exist_ok=True)
-    payload = json.dumps({'columns': COLUMNS, 'foods': foods, 'portions': portions},
-                         ensure_ascii=False, separators=(',', ':'))
-    with gzip.open(args.out, 'wt', encoding='utf-8', compresslevel=9) as f:
-        f.write(payload)
+    write_table({'columns': COLUMNS, 'foods': foods, 'portions': portions},
+                args.out)
     print(f'{len(foods)} foods ({counts}), {len(portions)} with portions, '
           f'{skipped} skipped without energy; {os.path.getsize(args.out)} bytes '
           f'-> {args.out}')

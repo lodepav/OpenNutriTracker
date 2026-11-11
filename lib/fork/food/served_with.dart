@@ -1,4 +1,5 @@
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dart';
+import 'package:opennutritracker/fork/food/everyday_row.dart';
 import 'package:opennutritracker/fork/food/local_food_data_source.dart';
 import 'package:opennutritracker/fork/food/portion_words.dart';
 import 'package:opennutritracker/fork/food/vegetables.dart';
@@ -105,13 +106,16 @@ bool holdsWord(String text, String word) =>
 /// "meat sauce" found "Meatballs, ..., with sauce", each matching every
 /// word the name has. Such a row is never the food asked for, so it is
 /// left out; with nothing left, the item is unresolved and a model's read
-/// breaks it down (D9) instead of logging the other food.
+/// breaks it down (D9) instead of logging the other food. The row the
+/// name means ([isEverydayRow]) always stays.
 List<MealEntity> withoutServedWith(List<MealEntity> ranked, String query) {
   final head = headNoun(query);
   if (head == null) return ranked;
   return [
     for (final meal in ranked)
-      if (!_onlyServedWith(meal.name ?? '', head)) meal,
+      if (!_onlyServedWith(meal.name ?? '', head) ||
+          isEverydayRow(meal.name, query))
+        meal,
   ];
 }
 
@@ -273,12 +277,16 @@ List<String> _sides(String query) {
 /// [query] names (S205): none of the words after its "with" are in them.
 /// "braised cabbage with sausage" logged M&S's "Braised Red Cabbage", 155
 /// kcal for a plate. With nothing left the dish is broken down (D9), into
-/// the cabbage and the sausage both.
+/// the cabbage and the sausage both. The row the name means
+/// ([isEverydayRow]) stays: "pastry filled with meat and tomato" is a beef
+/// empanada, whose name holds neither.
 List<MealEntity> withoutMissingSides(List<MealEntity> ranked, String query) {
   final sides = _sides(query);
   if (sides.isEmpty) return ranked;
   return [
     for (final meal in ranked)
-      if (sides.any((side) => holdsWord(meal.name ?? '', side))) meal,
+      if (sides.any((side) => holdsWord(meal.name ?? '', side)) ||
+          isEverydayRow(meal.name, query))
+        meal,
   ];
 }

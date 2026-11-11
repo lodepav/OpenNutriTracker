@@ -21,6 +21,9 @@ import 'package:opennutritracker/hive_registrar.g.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/fork/health/weight_import.dart';
 // [/fork]
+// [fork] S214 photo-memory: the photo meals a profile logged
+import 'package:opennutritracker/fork/bulk/photo_meal_memory_store.dart';
+// [/fork]
 
 /// Owns every Hive box the app uses.
 ///
@@ -96,6 +99,9 @@ class HiveDBProvider extends ChangeNotifier {
     // [fork] S16 adaptive-profiles: check-ins are per-profile data (D13)
     AdaptiveStore.boxName,
     WeightImport.boxName, // what Health Connect's weight import filed
+    // [/fork]
+    // [fork] S214 photo-memory: deleted with the profile
+    PhotoMealMemoryStore.boxName,
     // [/fork]
     favouriteMealBoxName,
   ];

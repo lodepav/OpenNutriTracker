@@ -1,7 +1,8 @@
 {
-  "_about": "Dishes the open tables lack, worked out from recipes over rows the table already has (fork/tools/build_food_db.py --dishes). Each ingredient is [source, exact row name, grams as weighed into the pot]; the row's nutrients per 100 g are their sum over yield_g, the dish's weight once cooked. A name carries its other spellings after a comma, in brackets, because the table search wants every word the person types (`solanka` is not `soļanka`).",
+  "_about": "Dishes the open tables lack, worked out from recipes over rows the table already has (fork/tools/build_food_db.py --dishes). Each dish has its own id, the food_id diary entries and recents keep: it never changes, and a new dish takes the next id above the highest any dish has had, appended at the end of the list. Each ingredient is [source, exact row name, grams as weighed into the pot]; the row's nutrients per 100 g are their sum over yield_g, the dish's weight once cooked. A name carries its other spellings after a comma, in brackets, because the table search wants every word the person types (`solanka` is not `soļanka`).",
   "dishes": [
     {
+      "id": 30000000,
       "code": "solyanka",
       "name": "Solyanka, meat soup (soljanka, solanka, soļanka, seļanka)",
       "basis": "Mixed-meat solyanka: https://en.wikipedia.org/wiki/Solyanka and common recipes (about 400 g of meats to 2 l): beef, smoked sausage, ham and frankfurters in a broth soured with pickles, tomato paste, olives and lemon.",
@@ -21,6 +22,7 @@
       ]
     },
     {
+      "id": 30000001,
       "code": "cepelinai",
       "name": "Cepelinai, potato dumplings with meat (cepelīni, zeppelins)",
       "basis": "One dumpling: https://en.wikipedia.org/wiki/Cepelinai, BBC Good Food Middle East (400 g potatoes and 250 g pork mince make 4) and LRT (15 to 20 g of meat a dumpling, grated raw and boiled potato bound with potato starch). Without the sour cream or bacon sauce served on it.",
@@ -34,6 +36,7 @@
       ]
     },
     {
+      "id": 30000002,
       "code": "salmon-soup",
       "name": "Salmon soup, creamy (lohikeitto, laša zupa, zivju zupa ar lasi)",
       "basis": "Finnish lohikeitto: https://en.wikipedia.org/wiki/Lohikeitto and common recipes: salmon, potatoes, carrot and leek in water with cream and butter.",
@@ -49,6 +52,7 @@
       ]
     },
     {
+      "id": 30000003,
       "code": "grey-peas",
       "name": "Grey peas with bacon, Latvian (pelēkie zirņi ar speķi)",
       "basis": "Boiled grey peas with fried bacon and onion, as common Latvian recipes make them. The table has no grey pea; dry split peas stand in, close in energy and protein.",
@@ -61,6 +65,7 @@
       ]
     },
     {
+      "id": 30000004,
       "code": "potato-balls",
       "name": "Potato balls, fried (kartupeļu bumbiņas, potato puffs)",
       "basis": "Mashed boiled potato bound with flour and egg, rolled in breadcrumbs and fried, as common recipes make them; oil is what the balls take up (about 8 %), and frying loses about a tenth of the weight.",
@@ -75,6 +80,7 @@
       ]
     },
     {
+      "id": 30000005,
       "code": "green-salad",
       "name": "Salad, green, without dressing (garden salad, tossed salad, side salad)",
       "basis": "A plain side salad as common recipes make it: leaf lettuce, tomato, cucumber and sweet pepper, undressed. The survey tables have salads named for what is in them (pea, crab, chicken) and dressings, but no plain one, so \"salad\" logged \"Salmon salad\".",
@@ -88,6 +94,7 @@
       ]
     },
     {
+      "id": 30000006,
       "code": "chicken-plov",
       "name": "Plov, chicken (chicken pilaf, pilau, palov)",
       "basis": "Central Asian plov as common recipes make it with chicken: rice cooked in the fat with chicken thigh, a lot of carrot, onion and garlic. Rice takes up about one and a half times its weight in water.",
@@ -103,6 +110,7 @@
       ]
     },
     {
+      "id": 30000007,
       "code": "khachapuri",
       "name": "Khachapuri, Adjarian, cheese bread with egg (adjaruli, hachapuri)",
       "basis": "One Adjarian khachapuri: https://en.wikipedia.org/wiki/Khachapuri and common recipes: a yeast dough boat filled with sulguni and imeruli cheese, an egg and butter. Mozzarella and feta stand in for the Georgian cheeses; the dough's water and a tenth lost in baking make up the weight.",
@@ -119,6 +127,7 @@
       ]
     },
     {
+      "id": 30000008,
       "code": "syrniki",
       "name": "Syrniki, fried quark pancakes (syrnyky, cottage cheese pancakes, biezpiena plācenīši)",
       "basis": "Quark bound with egg, flour and sugar, shaped and fried, as common recipes make them; oil is what they take up, and frying loses about a tenth of the weight.",
@@ -133,6 +142,7 @@
       ]
     },
     {
+      "id": 30000009,
       "code": "kharcho",
       "name": "Kharcho, beef and rice soup (harcho, kharcho soup)",
       "basis": "Georgian kharcho: https://en.wikipedia.org/wiki/Kharcho and common recipes: beef, rice, onion, tomato paste, walnuts and garlic in about 2 l of water, with coriander.",
@@ -150,6 +160,7 @@
       ]
     },
     {
+      "id": 30000010,
       "code": "beef-kofta",
       "name": "Kofta, beef, grilled (kofte, kefta, köfte, beef kofta kebab)",
       "basis": "Ground beef with onion, parsley and spices, shaped on skewers and grilled, as common recipes make it; grilling loses about a quarter of the weight.",
@@ -164,6 +175,7 @@
       ]
     },
     {
+      "id": 30000011,
       "code": "odzhakhuri",
       "name": "Odzhakhuri, pork with fried potatoes (ojakhuri, odjakhuri)",
       "basis": "Georgian ojakhuri: https://en.wikipedia.org/wiki/Ojakhuri and common recipes: pork and potatoes fried with onion and garlic, finished with coriander; frying loses about a quarter of the meat's and the potatoes' weight.",
@@ -179,6 +191,7 @@
       ]
     },
     {
+      "id": 30000012,
       "code": "chicken-poke-bowl",
       "name": "Poke bowl, chicken (chicken poke)",
       "basis": "A chicken poke bowl as the chains serve it: sushi rice with roast chicken, avocado, cucumber, edamame, carrot and red cabbage, with soy sauce. Cooked weights.",
@@ -196,6 +209,7 @@
       ]
     },
     {
+      "id": 30000013,
       "code": "beet-salad",
       "name": "Beet salad, grated, with garlic and mayonnaise (beetroot salad, grated beet salad, biešu salāti)",
       "basis": "Boiled beet, grated, with garlic and mayonnaise, as common Latvian and Russian recipes make it.",
@@ -208,6 +222,7 @@
       ]
     },
     {
+      "id": 30000014,
       "code": "chicken-schnitzel",
       "name": "Chicken schnitzel, breaded, fried (chicken escalope, breaded chicken breast)",
       "basis": "Flattened chicken breast in flour, egg and breadcrumbs, pan-fried, as common recipes make it; oil is what the crumb takes up, and frying loses about a fifth of the meat's weight.",
@@ -222,6 +237,7 @@
       ]
     },
     {
+      "id": 30000015,
       "code": "pork-chop-cheese",
       "name": "Pork chop with cheese, baked (karbonāde ar sieru, pork cutlet with melted cheese, pork with cheese and tomato)",
       "basis": "A Latvian canteen favourite: a pork loin chop baked under tomato, onion, mayonnaise and a cheese cap; cooking loses about a quarter of the meat's weight.",
@@ -237,6 +253,7 @@
       ]
     },
     {
+      "id": 30000016,
       "code": "chicken-teriyaki",
       "name": "Chicken teriyaki (teriyaki chicken)",
       "basis": "Chicken thigh pan-fried and glazed in teriyaki sauce with ginger and garlic, as common recipes make it; without the rice.",
@@ -252,6 +269,7 @@
       ]
     },
     {
+      "id": 30000017,
       "code": "chicken-shawarma",
       "name": "Shawarma, chicken, wrap (chicken shawarma, chicken gyros, gyros, shawarma wrap)",
       "basis": "One wrap as the kebab shops make it: grilled chicken thigh in flatbread with cabbage, tomato, cucumber and a garlic sauce of mayonnaise and yogurt.",
@@ -269,6 +287,7 @@
       ]
     },
     {
+      "id": 30000018,
       "code": "pork-shashlik",
       "name": "Shashlik, pork (šašliks, pork kebab, pork skewers)",
       "basis": "Pork shoulder marinated with onion and vinegar and grilled on skewers, as common Latvian and Russian recipes make it; grilling loses about a quarter of the meat's weight, and half the onion is eaten.",
@@ -282,6 +301,7 @@
       ]
     },
     {
+      "id": 30000019,
       "code": "butter-chicken",
       "name": "Butter chicken (murgh makhani, chicken makhani, chicken tikka masala)",
       "basis": "Chicken thigh marinated in yogurt, simmered in tomato with butter, cream, onion, garlic, ginger and spices, as common recipes make it; without the rice. Tikka masala is close enough to answer to it.",
@@ -301,6 +321,7 @@
       ]
     },
     {
+      "id": 30000020,
       "code": "thai-green-curry",
       "name": "Thai green curry, chicken (gaeng keow wan, green curry, thai curry)",
       "basis": "Chicken in coconut milk with eggplant, bamboo shoots and basil, seasoned with fish sauce and sugar, as common recipes make it; fresh chili, garlic and ginger stand in for the paste. Without the rice.",
@@ -321,6 +342,7 @@
       ]
     },
     {
+      "id": 30000021,
       "code": "liver-patties",
       "name": "Liver patties, beef (aknu pankūkas, liver pancakes, liver fritters)",
       "basis": "Minced beef liver with onion, egg and flour, fried by the spoonful, as common Latvian and Russian recipes make them; frying loses about a sixth of the weight.",
@@ -335,6 +357,7 @@
       ]
     },
     {
+      "id": 30000022,
       "code": "kimchi-pancake",
       "name": "Kimchi pancake (kimchijeon, kimchi jeon)",
       "basis": "Chopped kimchi in a flour and egg batter with scallions, pan-fried, as common recipes make it; the batter's water makes up the weight, less a tenth in frying.",
@@ -349,6 +372,7 @@
       ]
     },
     {
+      "id": 30000023,
       "code": "fish-cutlets",
       "name": "Fish cutlets, fried (zivju kotletes, fish patties, fish cakes)",
       "basis": "Minced white fish with onion, egg and breadcrumbs, fried, as common Latvian and Russian recipes make them; frying loses about a sixth of the weight.",
@@ -363,6 +387,7 @@
       ]
     },
     {
+      "id": 30000047,
       "code": "chicken-cutlets",
       "name": "Chicken cutlets, fried (cāļa kotletes, minced chicken patties, chicken kotlety)",
       "basis": "Minced chicken with onion, egg and milk-soaked white bread, rolled in breadcrumbs and fried, as common Latvian and Russian recipes make them; frying loses about a sixth of the weight. LIDO sells two in a 180 g pack.",
@@ -379,6 +404,7 @@
       ]
     },
     {
+      "id": 30000048,
       "code": "pork-cutlets",
       "name": "Pork cutlets, fried (cūkgaļas kotletes, minced pork patties, pork kotlety, meat patties)",
       "basis": "Minced pork with onion, egg and milk-soaked white bread, rolled in breadcrumbs and fried, as common Latvian and Russian recipes make them; frying loses about a sixth of the weight. LIDO sells two in a 180 g pack.",
@@ -395,6 +421,7 @@
       ]
     },
     {
+      "id": 30000049,
       "code": "chlodnik",
       "name": "Chłodnik, cold beet soup with kefir (chlodnik, cold beetroot soup, chilled borscht, cold borscht, aukstā zupa, šaltibarščiai, holodnik)",
       "basis": "Cold beet soup as Polish, Lithuanian and Latvian kitchens make it: boiled beets, cucumber, radish, dill and green onion in buttermilk or kefir, served with a boiled egg (log the egg as its own row).",
@@ -410,6 +437,7 @@
       ]
     },
     {
+      "id": 30000024,
       "code": "caesar-wrap",
       "name": "Caesar wrap, chicken (chicken caesar wrap)",
       "basis": "One wrap: a flour tortilla with roast chicken, romaine, parmesan and caesar dressing, as the cafés make it.",
@@ -424,6 +452,7 @@
       ]
     },
     {
+      "id": 30000025,
       "code": "rassolnik",
       "name": "Rassolnik, pickle soup with barley (rasolnik, rasoļņiks)",
       "basis": "Russian rassolnik: https://en.wikipedia.org/wiki/Rassolnik and common recipes: beef broth with pearl barley, pickled cucumbers, potato, carrot and onion, about 1.8 l of water.",
@@ -440,6 +469,7 @@
       ]
     },
     {
+      "id": 30000026,
       "code": "olivier-salad",
       "name": "Olivier salad (Russian salad, salat olivye, rasols)",
       "basis": "Olivier salad: https://en.wikipedia.org/wiki/Olivier_salad and common recipes: boiled potato, carrot and egg with pickles, peas, boiled sausage and onion in mayonnaise. Latvian rasols is the same salad.",
@@ -457,6 +487,7 @@
       ]
     },
     {
+      "id": 30000027,
       "code": "japchae",
       "name": "Japchae, glass noodles with beef and vegetables (chapchae)",
       "basis": "Korean japchae: https://en.wikipedia.org/wiki/Japchae and common recipes: sweet potato glass noodles (mung bean ones stand in) with beef, spinach, carrot, onion and mushrooms in soy sauce, sesame oil and sugar; the noodles take up twice their weight in water.",
@@ -476,6 +507,7 @@
       ]
     },
     {
+      "id": 30000028,
       "code": "chicken-saganaki",
       "name": "Chicken saganaki, with tomato and feta",
       "basis": "Chicken breast baked in tomato with onion, garlic and olive oil under feta, as Greek recipes make it; the sauce reduces by about a quarter.",
@@ -491,6 +523,7 @@
       ]
     },
     {
+      "id": 30000029,
       "code": "okroshka",
       "name": "Okroshka, cold kefir soup (okroška)",
       "basis": "Okroshka: https://en.wikipedia.org/wiki/Okroshka made with kefir, as common recipes make it: boiled potato and egg, cucumber, radish, boiled sausage, dill and scallions, with sour cream.",
@@ -509,6 +542,7 @@
       ]
     },
     {
+      "id": 30000030,
       "code": "lamb-biryani",
       "name": "Biryani, lamb (lamb biryani)",
       "basis": "Lamb marinated in yogurt and spices, layered with basmati rice and fried onion, as common recipes make it; rice takes up twice its weight in water.",
@@ -527,6 +561,7 @@
       ]
     },
     {
+      "id": 30000031,
       "code": "honey-cake",
       "name": "Honey cake, layered (medovik, medus kūka)",
       "basis": "Medovik: https://en.wikipedia.org/wiki/Medovik and common recipes: thin honey sponge layers with a sour cream and sugar filling; baking loses about a tenth of the dough.",
@@ -543,6 +578,7 @@
       ]
     },
     {
+      "id": 30000032,
       "code": "pork-bulgogi",
       "name": "Bulgogi, pork, spicy (jeyuk bokkeum, dwaeji bulgogi, pork bulgogi)",
       "basis": "Korean spicy pork: pork shoulder stir-fried with onion in a chili, soy, sugar, garlic and sesame sauce, as common recipes make it; sriracha stands in for gochujang. Without the rice.",
@@ -561,6 +597,7 @@
       ]
     },
     {
+      "id": 30000033,
       "code": "korean-fried-chicken",
       "name": "Korean fried chicken, glazed wings (yangnyeom chicken)",
       "basis": "Chicken wings in cornstarch, double-fried and glazed in a sweet chili sauce of ketchup, sriracha (for gochujang), sugar, soy sauce, honey and garlic, as common recipes make them; oil is what they take up.",
@@ -579,6 +616,7 @@
       ]
     },
     {
+      "id": 30000034,
       "code": "chili-con-carne",
       "name": "Chili con carne, homemade (chilli con carne)",
       "basis": "Ground beef with kidney beans, tomatoes, onion and sweet pepper, spiced with chili, as common recipes make it; simmering reduces it by about a tenth. Without the rice.",
@@ -596,6 +634,7 @@
       ]
     },
     {
+      "id": 30000035,
       "code": "beef-lasagna",
       "name": "Lasagna, beef, homemade (lasagne, lasagna bolognese, beef lasagna, meat lasagna)",
       "basis": "Lasagne alla bolognese as common home recipes make it: dry sheets layered with a beef, tomato, onion and carrot ragù and a béchamel of butter, flour and milk, under mozzarella and parmesan; the sheets take up the sauce's liquid, and simmering and baking lose about a seventh of the weight.",
@@ -617,6 +656,7 @@
       ]
     },
     {
+      "id": 30000036,
       "code": "kvass",
       "name": "Kvass, bread drink (kvas, kwas chlebowy, gira, kvasas)",
       "basis": "Kvass is a fermented rye bread drink the tables lack; its labels give about 27-40 kcal per 100 ml, nearly all of it sugar, with a trace of protein. Worked out as the closest table row, an alcohol-free malt drink, thinned to 70%: 30 kcal and 7 g carbohydrate per 100 ml. A drink is never broken into ingredients (D25): its sugar is fermented and its water would go missing.",
@@ -626,12 +666,38 @@
         ["bls", "Malt drink, alcohol-free", 70]
       ]
     },
-    {"code": "borscht-beef", "name": "Borscht, with beef (boršs, borščs, borsch, borshch, borscht soup)", "basis": "Beef borscht as Latvian, Ukrainian and Armenian kitchens make it, with common recipes' 500 g of beef to 3 l of water: beets, cabbage, potato, carrot and onion, softened in oil, with tomato paste. The table's own \"Soup, borscht\" is a meatless broth at 20 kcal per 100 g.", "yield_g": 3000, "serving": ["1 bowl", 350], "ingredients": [["fdc_sr_legacy", "Beef, chuck for stew, separable lean and fat, all grades, raw", 500], ["fdc_sr_legacy", "Beets, raw", 400], ["fdc_sr_legacy", "Cabbage, raw", 400], ["fdc_sr_legacy", "Potatoes, flesh and skin, raw", 400], ["fdc_sr_legacy", "Carrots, raw", 150], ["fdc_sr_legacy", "Onions, raw", 150], ["fdc_sr_legacy", "Oil, sunflower, linoleic (less than 60%)", 40], ["fdc_sr_legacy", "Tomato products, canned, paste, without salt added (Includes foods for USDA's Food Distribution Program)", 50]]},
-    {"code": "chicken-shashlik", "name": "Shashlik, chicken (vistas šašliks, chicken kebab, chicken skewers)", "basis": "Skinless chicken thigh marinated with onion and oil and grilled on skewers, as common Latvian, Russian and Armenian recipes make it; grilling loses about a quarter of the meat's weight, and half the onion is eaten.", "yield_g": 850, "serving": ["1 skewer", 200], "ingredients": [["fdc_sr_legacy", "Chicken, broilers or fryers, dark meat, thigh, meat only, raw", 1000], ["fdc_sr_legacy", "Onions, raw", 100], ["fdc_sr_legacy", "Oil, sunflower, linoleic (less than 60%)", 20]]},
-    {"code": "lula-kebab", "name": "Lula kebab, beef (ļuļa-kebabs, lyulya kebab, lula, beef lula kebab)", "basis": "Ground beef with onion, shaped on skewers and grilled, as Armenian and Caucasian kitchens make it; grilling loses about a quarter of the weight. One portion is two skewers.", "yield_g": 470, "serving": ["1 portion", 220], "ingredients": [["fdc_sr_legacy", "Beef, ground, 80% lean meat / 20% fat, raw", 500], ["fdc_sr_legacy", "Onions, raw", 100]]},
-    {"code": "chicken_rice_soup", "name": "Chicken and rice soup, homemade (chicken rice soup, chicken soup with rice, vistas zupa ar rīsiem, kurinyi sup s risom)", "basis": "Home chicken and rice soup, common recipes: chicken thighs, rice, carrot, onion and celery in about 2 l of water, with dill.", "yield_g": 2400, "serving": ["1 bowl", 350], "ingredients": [["fdc_sr_legacy", "Chicken, broilers or fryers, thigh, meat and skin, raw", 500], ["fdc_sr_legacy", "Rice, white, long-grain, regular, raw, enriched", 120], ["fdc_sr_legacy", "Carrots, raw", 150], ["fdc_sr_legacy", "Onions, raw", 120], ["fdc_sr_legacy", "Celery, raw", 80], ["fdc_sr_legacy", "Oil, sunflower, linoleic (less than 60%)", 10], ["fdc_sr_legacy", "Dill weed, fresh", 5]]},
-    {"code": "makarony_po_flotski", "name": "Macaroni with minced meat, navy-style (makarony po-flotski, makaroni po flotski, pasta with minced meat, macaroni with ground beef, makaroni ar maltu gaļu)", "basis": "Russian makarony po-flotski: https://en.wikipedia.org/wiki/Navy-style_macaroni and common recipes: 300 g of dry macaroni boiled, tossed with 400 g of minced beef fried with onion.", "yield_g": 1150, "serving": ["1 plate", 300], "ingredients": [["fdc_sr_legacy", "Pasta, dry, enriched", 300], ["fdc_sr_legacy", "Beef, ground, 80% lean meat / 20% fat, raw", 400], ["fdc_sr_legacy", "Onions, raw", 150], ["fdc_sr_legacy", "Oil, sunflower, linoleic (less than 60%)", 20], ["fdc_sr_legacy", "Butter, salted", 10]]},
-    {"code": "millet_pumpkin_porridge", "name": "Millet porridge with pumpkin (pumpkin millet porridge, pshennaya kasha s tykvoy, prosa putra ar ķirbi)", "basis": "Russian millet porridge with pumpkin, common recipes: 200 g of millet and 400 g of pumpkin cooked in milk and water, with butter and sugar.", "yield_g": 1300, "serving": ["1 bowl", 300], "ingredients": [["fdc_sr_legacy", "Millet, raw", 200], ["fdc_sr_legacy", "Pumpkin, raw", 400], ["fdc_sr_legacy", "Milk, whole, 3.25% milkfat, with added vitamin D", 600], ["fdc_sr_legacy", "Butter, salted", 30], ["fdc_sr_legacy", "Sugars, granulated", 30]]},
-    {"code": "braised_cabbage_meat", "name": "Braised cabbage with meat (stewed cabbage with meat, tushenaya kapusta, sautēti kāposti ar gaļu, braised cabbage with sausage, braised cabbage with pork, braised cabbage with beef)", "basis": "Braised white cabbage with meat, common Russian and Latvian recipes: 1 kg of cabbage stewed with minced pork, smoked sausage, onion, carrot and tomato paste.", "yield_g": 1300, "serving": ["1 plate", 300], "ingredients": [["fdc_sr_legacy", "Cabbage, raw", 1000], ["fdc_sr_legacy", "Pork, fresh, ground, raw", 300], ["fdc_sr_legacy", "Sausage, smoked link sausage, pork and beef", 150], ["fdc_sr_legacy", "Onions, raw", 150], ["fdc_sr_legacy", "Carrots, raw", 150], ["bls", "Tomato paste", 50], ["fdc_sr_legacy", "Oil, sunflower, linoleic (less than 60%)", 30], ["fdc_sr_legacy", "Sugars, granulated", 10]]}
+    {"id": 30000037, "code": "borscht-beef", "name": "Borscht, with beef (boršs, borščs, borsch, borshch, borscht soup)", "basis": "Beef borscht as Latvian, Ukrainian and Armenian kitchens make it, with common recipes' 500 g of beef to 3 l of water: beets, cabbage, potato, carrot and onion, softened in oil, with tomato paste. The table's own \"Soup, borscht\" is a meatless broth at 20 kcal per 100 g.", "yield_g": 3000, "serving": ["1 bowl", 350], "ingredients": [["fdc_sr_legacy", "Beef, chuck for stew, separable lean and fat, all grades, raw", 500], ["fdc_sr_legacy", "Beets, raw", 400], ["fdc_sr_legacy", "Cabbage, raw", 400], ["fdc_sr_legacy", "Potatoes, flesh and skin, raw", 400], ["fdc_sr_legacy", "Carrots, raw", 150], ["fdc_sr_legacy", "Onions, raw", 150], ["fdc_sr_legacy", "Oil, sunflower, linoleic (less than 60%)", 40], ["fdc_sr_legacy", "Tomato products, canned, paste, without salt added (Includes foods for USDA's Food Distribution Program)", 50]]},
+    {"id": 30000038, "code": "chicken-shashlik", "name": "Shashlik, chicken (vistas šašliks, chicken kebab, chicken skewers)", "basis": "Skinless chicken thigh marinated with onion and oil and grilled on skewers, as common Latvian, Russian and Armenian recipes make it; grilling loses about a quarter of the meat's weight, and half the onion is eaten.", "yield_g": 850, "serving": ["1 skewer", 200], "ingredients": [["fdc_sr_legacy", "Chicken, broilers or fryers, dark meat, thigh, meat only, raw", 1000], ["fdc_sr_legacy", "Onions, raw", 100], ["fdc_sr_legacy", "Oil, sunflower, linoleic (less than 60%)", 20]]},
+    {"id": 30000039, "code": "lula-kebab", "name": "Lula kebab, beef (ļuļa-kebabs, lyulya kebab, lula, beef lula kebab)", "basis": "Ground beef with onion, shaped on skewers and grilled, as Armenian and Caucasian kitchens make it; grilling loses about a quarter of the weight. One portion is two skewers.", "yield_g": 470, "serving": ["1 portion", 220], "ingredients": [["fdc_sr_legacy", "Beef, ground, 80% lean meat / 20% fat, raw", 500], ["fdc_sr_legacy", "Onions, raw", 100]]},
+    {"id": 30000043, "code": "chicken_rice_soup", "name": "Chicken and rice soup, homemade (chicken rice soup, chicken soup with rice, vistas zupa ar rīsiem, kurinyi sup s risom)", "basis": "Home chicken and rice soup, common recipes: chicken thighs, rice, carrot, onion and celery in about 2 l of water, with dill.", "yield_g": 2400, "serving": ["1 bowl", 350], "ingredients": [["fdc_sr_legacy", "Chicken, broilers or fryers, thigh, meat and skin, raw", 500], ["fdc_sr_legacy", "Rice, white, long-grain, regular, raw, enriched", 120], ["fdc_sr_legacy", "Carrots, raw", 150], ["fdc_sr_legacy", "Onions, raw", 120], ["fdc_sr_legacy", "Celery, raw", 80], ["fdc_sr_legacy", "Oil, sunflower, linoleic (less than 60%)", 10], ["fdc_sr_legacy", "Dill weed, fresh", 5]]},
+    {"id": 30000044, "code": "makarony_po_flotski", "name": "Macaroni with minced meat, navy-style (makarony po-flotski, makaroni po flotski, pasta with minced meat, macaroni with ground beef, makaroni ar maltu gaļu)", "basis": "Russian makarony po-flotski: https://en.wikipedia.org/wiki/Navy-style_macaroni and common recipes: 300 g of dry macaroni boiled, tossed with 400 g of minced beef fried with onion.", "yield_g": 1150, "serving": ["1 plate", 300], "ingredients": [["fdc_sr_legacy", "Pasta, dry, enriched", 300], ["fdc_sr_legacy", "Beef, ground, 80% lean meat / 20% fat, raw", 400], ["fdc_sr_legacy", "Onions, raw", 150], ["fdc_sr_legacy", "Oil, sunflower, linoleic (less than 60%)", 20], ["fdc_sr_legacy", "Butter, salted", 10]]},
+    {"id": 30000045, "code": "millet_pumpkin_porridge", "name": "Millet porridge with pumpkin (pumpkin millet porridge, pshennaya kasha s tykvoy, prosa putra ar ķirbi)", "basis": "Russian millet porridge with pumpkin, common recipes: 200 g of millet and 400 g of pumpkin cooked in milk and water, with butter and sugar.", "yield_g": 1300, "serving": ["1 bowl", 300], "ingredients": [["fdc_sr_legacy", "Millet, raw", 200], ["fdc_sr_legacy", "Pumpkin, raw", 400], ["fdc_sr_legacy", "Milk, whole, 3.25% milkfat, with added vitamin D", 600], ["fdc_sr_legacy", "Butter, salted", 30], ["fdc_sr_legacy", "Sugars, granulated", 30]]},
+    {"id": 30000046, "code": "braised_cabbage_meat", "name": "Braised cabbage with meat (stewed cabbage with meat, tushenaya kapusta, sautēti kāposti ar gaļu, braised cabbage with sausage, braised cabbage with pork, braised cabbage with beef)", "basis": "Braised white cabbage with meat, common Russian and Latvian recipes: 1 kg of cabbage stewed with minced pork, smoked sausage, onion, carrot and tomato paste.", "yield_g": 1300, "serving": ["1 plate", 300], "ingredients": [["fdc_sr_legacy", "Cabbage, raw", 1000], ["fdc_sr_legacy", "Pork, fresh, ground, raw", 300], ["fdc_sr_legacy", "Sausage, smoked link sausage, pork and beef", 150], ["fdc_sr_legacy", "Onions, raw", 150], ["fdc_sr_legacy", "Carrots, raw", 150], ["bls", "Tomato paste", 50], ["fdc_sr_legacy", "Oil, sunflower, linoleic (less than 60%)", 30], ["fdc_sr_legacy", "Sugars, granulated", 10]]},
+    {"id": 30000050, "code": "multigrain-flakes", "name": "Multigrain flakes, porridge flakes, dry (multigrain porridge flakes, 4-grain flakes, four grain flakes, 5-grain flakes, five grain flakes, mixed grain flakes, daudzgraudu pārslas)", "basis": "Equal parts oat, rye, barley and wheat flakes, as the four-grain porridge flakes Baltic and German shops sell; their labels give about 330-360 kcal per 100 g dry. Five-grain mixes add spelt or millet flakes, close in energy. Dry; a portion is the 50 g a bowl of porridge takes.", "yield_g": 100, "serving": ["1 portion", 50], "ingredients": [["bls", "Oat flakes", 25], ["bls", "Rye flakes", 25], ["bls", "Barley flakes", 25], ["bls", "Wheat flakes", 25]]},
+    {"id": 30000051, "code": "glazed-curd-snack", "name": "Glazed curd snack, chocolate-coated (biezpiena sieriņš, glazēts sieriņš, glazed curd bar, curd snack, curd bar, sirok, syrok, сырок, glazed quark bar)", "basis": "The Latvian and Russian glazed curd snack (biezpiena sieriņš, сырок) as the dairies make it: quark sweetened and enriched with butter, in a chocolate glaze of about a quarter of the bar; a bar weighs 40-45 g. Their labels give about 380-410 kcal per 100 g, with about 25 g of fat and 30 g of sugars.", "yield_g": 100, "serving": ["1 bar", 40], "ingredients": [["bls", "Quark 50 % fat, in dry matter", 45], ["fdc_sr_legacy", "Butter, salted", 15], ["fdc_sr_legacy", "Sugars, granulated", 13], ["bls", "Bittersweet/semisweet chocolate", 27]]},
+    {"id": 30000052, "code": "beef-ragu", "name": "Beef ragu, in tomato sauce (tomato beef ragu, beef ragù, ragu di manzo, slow-cooked beef ragu, shredded beef ragu)", "basis": "Beef chuck braised for hours in tomatoes over onion, carrot and celery softened in olive oil, then shredded, as common Italian-style recipes make it (about 800 g of beef to 800 g of tomatoes); braising takes about a third off the meat's and the sauce's weight. Recipe sites give about 120-160 kcal per 100 g. Without the pasta. The table's \"Bolognese sauce, with beef mince\" is the minced sauce.", "yield_g": 1300, "serving": ["1 plate", 250], "ingredients": [["fdc_sr_legacy", "Beef, chuck for stew, separable lean and fat, all grades, raw", 800], ["fdc_sr_legacy", "Tomatoes, red, ripe, canned, packed in tomato juice", 800], ["fdc_sr_legacy", "Onions, raw", 150], ["fdc_sr_legacy", "Carrots, raw", 100], ["fdc_sr_legacy", "Celery, raw", 80], ["fdc_sr_legacy", "Oil, olive, salad or cooking", 30], ["bls", "Tomato paste", 30], ["fdc_sr_legacy", "Garlic, raw", 10]]},
+    {"id": 30000053, "code": "chicken-liver-cream", "name": "Chicken liver in cream sauce (chicken livers in cream, creamy chicken livers, vistas aknas krējumā, vistas aknas mērcē, kurinaya pechen v slivkakh)", "basis": "Chicken livers fried with onion in butter and oil, then simmered in cream thickened with a little flour, as common Russian and Latvian recipes make them (500 g of liver to 150-200 ml of 20 % cream); cooking loses about a quarter of the liver's weight and the sauce reduces. Recipe sites give about 150-190 kcal per 100 g. Without a side.", "yield_g": 650, "serving": ["1 plate", 200], "ingredients": [["fdc_sr_legacy", "Chicken, liver, all classes, raw", 500], ["fdc_sr_legacy", "Onions, raw", 150], ["fdc_sr_legacy", "Cream, fluid, light (coffee cream or table cream)", 150], ["fdc_sr_legacy", "Butter, salted", 15], ["fdc_sr_legacy", "Oil, sunflower, linoleic (less than 60%)", 10], ["fdc_sr_legacy", "Wheat flour, white, all-purpose, enriched, unbleached", 10]]},
+    {"id": 30000054, "code": "chicken-kebab-plate", "name": "Chicken kebab plate, with fries, salad and garlic sauce (chicken doner plate, döner kebab plate, kebab teller, döner teller, kebabs šķīvī)", "basis": "A kebab shop's chicken döner plate as served in Latvia and Germany: grilled chicken thigh meat (200 g raw, a quarter lost on the spit), 150 g of fries, cabbage, tomato, cucumber and onion, and a garlic sauce of mayonnaise and yogurt; shops' nutrition pages give about 850-1000 kcal a plate. With fries; a plate with rice has about 200 kcal less.", "yield_g": 480, "serving": ["1 plate", 480], "ingredients": [["fdc_sr_legacy", "Chicken, broilers or fryers, dark meat, thigh, meat only, raw", 200], ["fdc_survey", "Potato, french fries, restaurant", 150], ["fdc_sr_legacy", "Cabbage, raw", 40], ["fdc_sr_legacy", "Tomatoes, red, ripe, raw, year round average", 40], ["fdc_sr_legacy", "Cucumber, with peel, raw", 30], ["fdc_sr_legacy", "Onions, raw", 20], ["fdc_sr_legacy", "Salad dressing, mayonnaise, regular", 25], ["fdc_sr_legacy", "Yogurt, plain, whole milk", 20], ["fdc_sr_legacy", "Garlic, raw", 3], ["fdc_sr_legacy", "Oil, sunflower, linoleic (less than 60%)", 5]]},
+    {"id": 30000055, "code": "flapjack", "name": "Flapjack, oat bar (flapjacks, oat flapjack, oaty bar, golden syrup oat bar)", "basis": "A British flapjack as common recipes make it (BBC Good Food: 250 g of oats, 125 g of butter, 125 g of light brown sugar and golden syrup, baked in a 20 cm tin and cut into 9); cane syrup stands in for golden syrup, and baking loses about a twentieth of the weight. Shop flapjacks label about 430-480 kcal per 100 g.", "yield_g": 545, "serving": ["1 piece", 60], "ingredients": [["bls", "Oat flakes", 250], ["fdc_sr_legacy", "Butter, salted", 125], ["fdc_sr_legacy", "Sugars, brown", 125], ["fdc_sr_legacy", "Syrup, Cane", 75]]},
+    {"id": 30000056, "code": "canele", "name": "Canelé, French custard cake (canele, cannelé, cannele, canelé de Bordeaux, caneles)", "basis": "Canelé de Bordeaux: https://en.wikipedia.org/wiki/Canel%C3%A9 and common recipes: 500 ml of milk, 250 g of sugar, 125 g of flour, 50 g of butter, 2 eggs and 2 yolks, with vanilla and rum, which add little once baked; an hour's baking loses about a fifth of the batter's weight, and the batter makes about 14 of 60 g. Pastry sites give about 150-180 kcal a canelé.", "yield_g": 830, "serving": ["1 canelé", 60], "ingredients": [["fdc_sr_legacy", "Milk, whole, 3.25% milkfat, with added vitamin D", 500], ["fdc_sr_legacy", "Sugars, granulated", 250], ["fdc_sr_legacy", "Wheat flour, white, all-purpose, enriched, unbleached", 125], ["fdc_sr_legacy", "Butter, salted", 50], ["fdc_sr_legacy", "Egg, whole, raw, fresh", 100], ["fdc_sr_legacy", "Egg, yolk, raw, fresh", 40]]},
+    {"id": 30000057, "code": "pelmeni", "name": "Pelmeni, meat dumplings, boiled (pelmeņi, pelmenu, pelmeny, пельмени, Russian dumplings, Siberian dumplings, meat dumplings)", "basis": "Russian pelmeni as common recipes make them (eda.ru, Latvian and Russian cookbooks): a dough of 300 g of flour, an egg and about 130 ml of water around 500 g of half-pork, half-beef mince with onion; boiling adds about a twentieth to the weight. Shop pelmeni label about 230-280 kcal per 100 g frozen, recipe sites about 190-250 boiled. Without sour cream or butter; a plate is about 20 pelmeni.", "yield_g": 1180, "serving": ["1 plate", 250], "ingredients": [["fdc_sr_legacy", "Wheat flour, white, all-purpose, enriched, unbleached", 300], ["fdc_sr_legacy", "Egg, whole, raw, fresh", 50], ["fdc_sr_legacy", "Pork, fresh, ground, raw", 250], ["fdc_sr_legacy", "Beef, ground, 80% lean meat / 20% fat, raw", 250], ["fdc_sr_legacy", "Onions, raw", 100]]},
+    {"id": 30000058, "code": "vareniki-curd", "name": "Vareniki with sweet quark, boiled (varenyky, vareņiki ar biezpienu, vareniki ar biezpienu, vareniki s tvorogom, вареники с творогом, curd dumplings, cottage cheese dumplings)", "basis": "Ukrainian vareniki with curd as common recipes make them: a dough of 300 g of flour, an egg and about 120 ml of water around 500 g of quark bound with an egg and 50 g of sugar; boiling adds a little to the weight. Recipe sites and shop labels give about 160-230 kcal per 100 g. Without sour cream or butter; a plate is about 10 vareniki.", "yield_g": 1100, "serving": ["1 plate", 250], "ingredients": [["fdc_sr_legacy", "Wheat flour, white, all-purpose, enriched, unbleached", 300], ["fdc_sr_legacy", "Egg, whole, raw, fresh", 100], ["bls", "Quark 20 % fat, in dry matter", 500], ["fdc_sr_legacy", "Sugars, granulated", 50]]},
+    {"id": 30000059, "code": "chebureki", "name": "Chebureki, fried meat turnovers (cheburek, čebureki, čebureks, chiburekki, чебуреки, чебурек, fried meat pastry)", "basis": "Crimean Tatar and Russian chebureki as common recipes make them: a thin dough of 400 g of flour, water and a little oil folded over 500 g of pork and beef mince with 200 g of onion and some water, fried in deep oil, which they take up at about a tenth of their weight, while frying loses the filling's water. Recipe sites and shop labels give about 260-330 kcal per 100 g; a cheburek weighs 120-150 g.", "yield_g": 1300, "serving": ["1 cheburek", 130], "ingredients": [["fdc_sr_legacy", "Wheat flour, white, all-purpose, enriched, unbleached", 400], ["fdc_sr_legacy", "Oil, sunflower, linoleic (less than 60%)", 130], ["fdc_sr_legacy", "Pork, fresh, ground, raw", 250], ["fdc_sr_legacy", "Beef, ground, 80% lean meat / 20% fat, raw", 250], ["fdc_sr_legacy", "Onions, raw", 200]]},
+    {"id": 30000060, "code": "bacon-buns", "name": "Bacon buns, Latvian (pīrāgi, pirāgi, piragi, speķa pīrāgi, speka piragi, speķa pīrādziņi, pīrādziņi, piradzini, pīrādziņš, bacon pies, pirozhki with bacon)", "basis": "Latvian speķa pīrāgi as common recipes make them: a buttery yeast dough of 500 g of flour, 250 ml of milk, 100 g of butter, an egg and a little sugar, filled with 350 g of diced smoked bacon and an onion and brushed with egg; baking loses about an eighth of the weight as the bacon renders, and the dough makes about 30. Latvian bakeries' labels give about 300-370 kcal per 100 g. The table's \"Wheat roll, with bacon\" is a bread roll at under 3 g of fat.", "yield_g": 1260, "serving": ["1 bun", 40], "ingredients": [["fdc_sr_legacy", "Wheat flour, white, all-purpose, enriched, unbleached", 500], ["fdc_sr_legacy", "Milk, whole, 3.25% milkfat, with added vitamin D", 250], ["fdc_sr_legacy", "Butter, salted", 100], ["fdc_sr_legacy", "Egg, whole, raw, fresh", 75], ["fdc_sr_legacy", "Sugars, granulated", 30], ["fdc_sr_legacy", "Leavening agents, yeast, baker's, compressed", 25], ["fdc_sr_legacy", "Pork, cured, bacon, unprepared", 350], ["fdc_sr_legacy", "Onions, raw", 100]]},
+    {"id": 30000061, "code": "sorrel-soup", "name": "Sorrel soup, with egg (skābeņu zupa, skabenu zupa, shchavel soup, shchavelevy sup, щавелевый суп, green borscht, green shchi)", "basis": "Latvian and Russian sorrel soup as common recipes make it: a pork broth (300 g of shoulder to about 2 l of water) with potatoes, carrot, onion softened in oil and 300 g of sorrel, with three hard-boiled eggs; simmering loses about a seventh of the water. Recipe sites give about 40-70 kcal per 100 g. Without the sour cream served on it.", "yield_g": 2900, "serving": ["1 bowl", 350], "ingredients": [["fdc_sr_legacy", "Pork, fresh, shoulder, whole, separable lean and fat, raw", 300], ["fdc_sr_legacy", "Potatoes, flesh and skin, raw", 400], ["bls", "Sorrel, raw", 300], ["fdc_sr_legacy", "Carrots, raw", 100], ["fdc_sr_legacy", "Onions, raw", 100], ["fdc_sr_legacy", "Oil, sunflower, linoleic (less than 60%)", 20], ["fdc_sr_legacy", "Egg, whole, cooked, hard-boiled", 150]]},
+    {"id": 30000062, "code": "buckwheat-mushrooms", "name": "Buckwheat with mushrooms and onion (grechka s gribami, гречка с грибами, griķi ar sēnēm, griki ar senem, buckwheat kasha with mushrooms, buckwheat with fried mushrooms)", "basis": "Buckwheat groats boiled (300 g dry take up about twice their weight of water) and mixed with 400 g of mushrooms and an onion fried in oil and butter, which lose about two fifths of their weight, as common Russian and Latvian recipes make it. Recipe sites give about 100-150 kcal per 100 g.", "yield_g": 1300, "serving": ["1 plate", 250], "ingredients": [["fdc_sr_legacy", "Buckwheat groats, roasted, dry", 300], ["fdc_sr_legacy", "Mushrooms, white, raw", 400], ["fdc_sr_legacy", "Onions, raw", 150], ["fdc_sr_legacy", "Oil, sunflower, linoleic (less than 60%)", 40], ["fdc_sr_legacy", "Butter, salted", 20]]},
+    {"id": 30000063, "code": "smoked-chicken-leg", "name": "Smoked chicken leg, hot-smoked (kūpināts vistas stilbs, kūpināta vistas kāja, kupinata vista, kūpināts vistas šķiņķis, kopchenaya kuritsa, копчёная курица, smoked chicken, smoked chicken quarter)", "basis": "A hot-smoked chicken leg quarter as Latvian and Russian shops sell it, meat and skin without the bone: smoking dries it beyond roasting, about an eighth more of the weight, so this is the roasted leg less that water. Shop labels give about 180-240 kcal per 100 g. A leg quarter of about 300 g gives about 200 g without the bone.", "yield_g": 100, "serving": ["1 leg", 200], "ingredients": [["fdc_sr_legacy", "Chicken, broilers or fryers, leg, meat and skin, cooked, roasted", 115]]},
+    {"id": 30000064, "code": "herring-fur-coat", "name": "Herring under a fur coat, layered beet salad (siļķe kažokā, silke kazoka, siļķe kažociņā, shuba, seledka pod shuboy, селёдка под шубой, dressed herring)", "basis": "Shuba: https://en.wikipedia.org/wiki/Dressed_herring and common recipes: 300 g of salted herring fillet and onion under layers of 400 g of boiled potato, 250 g of carrot, 400 g of beet and three hard-boiled eggs, each spread with mayonnaise (250 g in all); nothing is lost once the vegetables are boiled. Recipe sites give about 150-210 kcal per 100 g. The table's \"Matjes herring salad, with beetrot, apple, potatoes and mayonnaise\" is a lighter German salad at 126.", "yield_g": 1830, "serving": ["1 portion", 150], "ingredients": [["bls", "Herring, salted", 300], ["fdc_sr_legacy", "Potatoes, boiled, cooked without skin, flesh, without salt", 400], ["fdc_sr_legacy", "Carrots, cooked, boiled, drained, without salt", 250], ["fdc_sr_legacy", "Beets, cooked, boiled, drained", 400], ["fdc_sr_legacy", "Egg, whole, cooked, hard-boiled", 150], ["fdc_sr_legacy", "Onions, raw", 80], ["fdc_sr_legacy", "Salad dressing, mayonnaise, regular", 250]]},
+    {"id": 30000065, "code": "rye-bread-dessert", "name": "Rye bread dessert, layered, with whipped cream and jam (rupjmaizes kārtojums, rupjmaizes kartojums, rupjmaizes deserts, rye bread trifle, Latvian rye bread pudding)", "basis": "Latvian rupjmaizes kārtojums as common recipes make it: 300 g of dark rye bread dried and grated with sugar and cinnamon (drying loses about a third of the bread's weight), layered with 300 ml of whipped cream sweetened with sugar and 250 g of cranberry or lingonberry jam; generic jam stands in for those. Recipe sites give about 270-350 kcal per 100 g. A portion is a glass of about 150 g.", "yield_g": 850, "serving": ["1 glass", 150], "ingredients": [["bls", "Rye bread", 300], ["fdc_sr_legacy", "Sugars, granulated", 100], ["fdc_sr_legacy", "Cream, fluid, heavy whipping", 300], ["fdc_sr_legacy", "Jams and preserves", 250], ["fdc_sr_legacy", "Spices, cinnamon, ground", 3]]},
+    {"id": 30000066, "code": "debesmanna", "name": "Debesmanna, whipped cranberry semolina mousse (debess manna, debesmana, manna from heaven, cranberry mousse, cranberry semolina pudding, mannaya kasha s klyukvoy)", "basis": "Latvian debesmanna as common recipes make it: 300 g of cranberries cooked in about 1 l of water with 150 g of sugar, thickened with 150 g of semolina and whipped pale once cool; whipping adds air, not weight, and cooking loses a little water. Recipe sites give about 80-120 kcal per 100 g. Without the cold milk served with it.", "yield_g": 1450, "serving": ["1 bowl", 200], "ingredients": [["fdc_sr_legacy", "Cranberries, raw", 300], ["fdc_sr_legacy", "Sugars, granulated", 150], ["fdc_sr_legacy", "Semolina, enriched", 150]]},
+    {"id": 30000067, "code": "cardamom-bun", "name": "Cardamom bun (kardemummabulle, kardemummabullar, kardamona maizīte, kardamona maizite, kardamona bulciņa, cardamom roll, cardamom knot)", "basis": "A Swedish cardamom bun as common recipes make it: a yeast dough of 500 g of flour, 250 ml of milk, 100 g of butter, an egg and sugar spiced with cardamom, filled with a further 100 g of butter, sugar and cardamom and knotted; baking loses about a tenth of the weight, and the dough makes about 16 of 70 g. Swedish bakery labels give about 340-410 kcal per 100 g.", "yield_g": 1100, "serving": ["1 bun", 70], "ingredients": [["fdc_sr_legacy", "Wheat flour, white, all-purpose, enriched, unbleached", 500], ["fdc_sr_legacy", "Milk, whole, 3.25% milkfat, with added vitamin D", 250], ["fdc_sr_legacy", "Butter, salted", 200], ["fdc_sr_legacy", "Sugars, granulated", 180], ["fdc_sr_legacy", "Egg, whole, raw, fresh", 50], ["fdc_sr_legacy", "Leavening agents, yeast, baker's, compressed", 25], ["fdc_sr_legacy", "Spices, cardamom", 13]]},
+    {"id": 30000068, "code": "napoleon-cake", "name": "Napoleon cake, mille-feuille with custard (napoleona kūka, napoleona kuka, napoleon torte, napoleonka, наполеон, mille feuille, millefeuille, custard slice)", "basis": "The Russian and Baltic napoleon cake as common recipes make it: 800 g of butter puff pastry baked in thin layers (baking loses about a sixth) and a custard of 1 l of milk, 250 g of sugar, three eggs and 60 g of flour, with 200 g of butter beaten in; the custard loses about a tenth as it cooks. Recipe sites give about 300-380 kcal per 100 g. A slice weighs about 120 g.", "yield_g": 2180, "serving": ["1 slice", 120], "ingredients": [["bls", "Puff pastry (with butter), raw", 800], ["fdc_sr_legacy", "Milk, whole, 3.25% milkfat, with added vitamin D", 1000], ["fdc_sr_legacy", "Sugars, granulated", 250], ["fdc_sr_legacy", "Egg, whole, raw, fresh", 150], ["fdc_sr_legacy", "Wheat flour, white, all-purpose, enriched, unbleached", 60], ["fdc_sr_legacy", "Butter, salted", 200]]},
+    {"id": 30000069, "code": "curd-cake", "name": "Curd cake, Baltic quark sheet cake (biezpienmaize, biezpiena plātsmaize, biezpiena platsmaize, biezpiena kūka, biezpiena kuka, quark cake, quark sheet cake, tvorozhny pirog, творожный пирог)", "basis": "Latvian biezpiena plātsmaize as common recipes make it: a yeast dough of 400 g of flour, 200 ml of milk, butter, sugar and an egg under a topping of 800 g of quark beaten with sugar, three eggs and 200 g of sour cream; baking loses about an eighth of the weight. Latvian bakeries' labels and recipe sites give about 240-310 kcal per 100 g. A piece cut from the sheet weighs about 100 g.", "yield_g": 1870, "serving": ["1 piece", 100], "ingredients": [["fdc_sr_legacy", "Wheat flour, white, all-purpose, enriched, unbleached", 400], ["fdc_sr_legacy", "Milk, whole, 3.25% milkfat, with added vitamin D", 200], ["fdc_sr_legacy", "Butter, salted", 110], ["fdc_sr_legacy", "Sugars, granulated", 210], ["fdc_sr_legacy", "Egg, whole, raw, fresh", 200], ["fdc_sr_legacy", "Leavening agents, yeast, baker's, compressed", 20], ["bls", "Quark 40 % fat, in dry matter", 800], ["bls", "Sour cream, min. 20 % fat", 200]]},
+    {"id": 30000070, "code": "dill-sauce", "name": "Dill sauce, cream-based (diļļu mērce, dillu merce, dilles mērce, dillsås, dill cream sauce, ukropny sous, укропный соус)", "basis": "A warm dill sauce for fish and potatoes as common Latvian and Swedish recipes make it: a roux of 30 g of butter and 30 g of flour, 250 ml of broth and 200 ml of 20 % cream, with plenty of chopped dill; simmering loses about a tenth. Recipe sites and ready-made sauces give about 120-190 kcal per 100 g. A portion is about 60 g.", "yield_g": 480, "serving": ["1 portion", 60], "ingredients": [["fdc_sr_legacy", "Butter, salted", 30], ["fdc_sr_legacy", "Wheat flour, white, all-purpose, enriched, unbleached", 30], ["fdc_sr_legacy", "Soup, chicken broth, ready-to-serve", 250], ["fdc_sr_legacy", "Cream, fluid, light (coffee cream or table cream)", 200], ["fdc_sr_legacy", "Dill weed, fresh", 20]]},
+    {"id": 30000071, "code": "garlic-sour-cream-sauce", "name": "Garlic sauce, sour cream (ķiploku mērce, kiploku merce, krējuma ķiploku mērce, krejuma kiploku merce, sour cream garlic sauce, chesnochny sous, чесночный соус)", "basis": "The Latvian sour-cream garlic sauce as common recipes and shops make it: 200 g of 20 % sour cream with 50 g of mayonnaise, crushed garlic and dill, uncooked. Recipe sites and shop labels give about 230-330 kcal per 100 g. The table's \"Garlic sauce\" is an oil-based toum at 683. A portion is about 30 g.", "yield_g": 270, "serving": ["1 portion", 30], "ingredients": [["bls", "Sour cream, min. 20 % fat", 200], ["fdc_sr_legacy", "Salad dressing, mayonnaise, regular", 50], ["fdc_sr_legacy", "Garlic, raw", 15], ["fdc_sr_legacy", "Dill weed, fresh", 5]]},
+    {"id": 30000072, "code": "sklandrausis", "name": "Sklandrausis, Latvian rye tart with potato and carrot (sklandrauši, sklandrausi, sklandu rausis, rye carrot tart, carrot pie)", "basis": "Latvian sklandrausis as common recipes make it: a rye dough of 250 g of flour, butter and water pressed into small open tarts, filled with mashed potato and a sweet carrot layer of 400 g each, with sugar, sour cream, butter and an egg; baking loses about an eighth of the weight, and it makes about 14 of 90 g. Recipe sites and bakery labels give about 180-260 kcal per 100 g.", "yield_g": 1270, "serving": ["1 sklandrausis", 90], "ingredients": [["fdc_sr_legacy", "Rye flour, medium", 250], ["fdc_sr_legacy", "Butter, salted", 100], ["fdc_sr_legacy", "Potatoes, boiled, cooked without skin, flesh, without salt", 400], ["fdc_sr_legacy", "Carrots, cooked, boiled, drained, without salt", 400], ["fdc_sr_legacy", "Sugars, granulated", 60], ["bls", "Sour cream, min. 20 % fat", 100], ["fdc_sr_legacy", "Egg, whole, raw, fresh", 50]]},
+    {"id": 30000073, "code": "smoked-cod", "name": "Smoked cod, hot-smoked (kūpināta menca, kupinata menca, kūpināta mencas fileja, kopchenaya treska, копчёная треска, smoked cod fillet)", "basis": "Hot-smoked cod fillet as Baltic smokehouses sell it: cod that loses about a fifth of its weight in the smoke, so this is the raw fish less that water. Shop labels give about 90-120 kcal per 100 g. A portion is a piece of about 150 g.", "yield_g": 100, "serving": ["1 portion", 150], "ingredients": [["bls", "Cod, raw", 125]]},
+    {"id": 30000074, "code": "meatball-soup", "name": "Meatball soup (frikadeļu zupa, frikadelu zupa, sup s frikadelkami, суп с фрикадельками, frikadelki soup, meatball and potato soup)", "basis": "Latvian and Russian meatball soup as common recipes make it: small meatballs of 300 g of pork mince with an egg and onion, simmered with potatoes, carrot and onion in about 2 l of water and finished with dill; simmering loses about a twelfth of the pot. Recipe sites give about 35-65 kcal per 100 g.", "yield_g": 2800, "serving": ["1 bowl", 350], "ingredients": [["fdc_sr_legacy", "Pork, fresh, ground, raw", 300], ["fdc_sr_legacy", "Egg, whole, raw, fresh", 25], ["fdc_sr_legacy", "Onions, raw", 110], ["fdc_sr_legacy", "Potatoes, flesh and skin, raw", 500], ["fdc_sr_legacy", "Carrots, raw", 100], ["fdc_sr_legacy", "Dill weed, fresh", 10]]},
+    {"id": 30000075, "code": "sauerkraut-soup", "name": "Sauerkraut soup with pork, shchi (skābu kāpostu zupa, skabu kapostu zupa, kāpostu zupa, kislye shchi, shchi, schi, щи, sour cabbage soup)", "basis": "Russian and Latvian sauerkraut soup as common recipes make it: a pork broth (400 g of shoulder to about 2 l of water) with 500 g of sauerkraut, potatoes, carrot and onion softened in oil, and tomato paste; simmering loses about an eighth of the pot. Recipe sites give about 40-70 kcal per 100 g. Without the sour cream served on it. The table's \"Sauerkraut soup, with sweet pepper and potatoes\" is a meatless one.", "yield_g": 3000, "serving": ["1 bowl", 350], "ingredients": [["fdc_sr_legacy", "Pork, fresh, shoulder, whole, separable lean and fat, raw", 400], ["fdc_sr_legacy", "Sauerkraut, canned, solids and liquids", 500], ["fdc_sr_legacy", "Potatoes, flesh and skin, raw", 300], ["fdc_sr_legacy", "Carrots, raw", 100], ["fdc_sr_legacy", "Onions, raw", 100], ["fdc_sr_legacy", "Oil, sunflower, linoleic (less than 60%)", 20], ["fdc_sr_legacy", "Tomato products, canned, paste, without salt added (Includes foods for USDA's Food Distribution Program)", 30]]}
   ]
 }

@@ -75,6 +75,17 @@ extension _BulkAddRow on _BulkAddScreenState {
                   ),
                 ),
               ?note,
+              // an amount the meal's Size leaves, while a size is chosen
+              if (_mealScale.factor != 1 &&
+                  _mealScale.isPinned(row) &&
+                  _mealScale.isEligible(row))
+                Text(
+                  DishStrings.setByYou,
+                  key: ValueKey('bulk-add-set-by-you-$index'),
+                  style: textTheme.bodySmall?.copyWith(
+                    color: palette.textMuted,
+                  ),
+                ),
               if (macros != null) ...[
                 const SizedBox(height: 2),
                 MacrosLine(
@@ -148,6 +159,23 @@ extension _BulkAddRow on _BulkAddScreenState {
             Padding(
               padding: const EdgeInsets.fromLTRB(52, 0, 12, 6),
               child: _buildAmountRow(context, state, index, row),
+            ),
+          // the one amount a photo's review asks about
+          if (_amountQuestion case final question?
+              when !faded && question.isFor(row))
+            Padding(
+              padding: const EdgeInsets.fromLTRB(52, 0, 12, 6),
+              child: Builder(
+                builder: (context) {
+                  _sayAmountAnswer(context);
+                  return AmountQuestionView(
+                    question: question,
+                    row: row,
+                    index: index,
+                    onChosen: (choice) => _answerAmount(index, choice),
+                  );
+                },
+              ),
             ),
           if (row.skipped || error != null || actions.isNotEmpty)
             Padding(
@@ -253,20 +281,8 @@ extension _BulkAddRow on _BulkAddScreenState {
   /// The unit an imperial profile edits [row]'s weight in, the one its
   /// amount is shown in ("oz" for grams); null when the row is shown in
   /// its own unit. What the user types or steps is in the unit shown.
-  String? _shownEditUnit(BulkAddRow row, bool imperial) {
-    final meal = row.meal;
-    if (!imperial || meal == null || !isWeightUnit(row.effectiveUnit)) {
-      return null;
-    }
-    final shown = diaryUnit(meal, true).unit;
-    if (shown == row.effectiveUnit || !row.allowedUnits.contains(shown)) {
-      return null;
-    }
-    return shown == UnitDropdownItem.oz.toString() ||
-            shown == UnitDropdownItem.flOz.toString()
-        ? shown
-        : null;
-  }
+  String? _shownEditUnit(BulkAddRow row, bool imperial) =>
+      shownEditUnit(row, imperial);
 
   /// The amber of a card that needs a look: the tertiary colour, which is
   /// the app's warning hue.
@@ -418,6 +434,7 @@ extension _BulkAddRow on _BulkAddScreenState {
         steppedAmount(from, amountStep(unit, from), up: up),
       );
       if (_quantityErrors.containsKey(index)) _clearQuantityError(index);
+      _pinRow(index);
       _bloc.add(
         shown == null
             ? ChangeRowAmountEvent(index, next)
@@ -520,6 +537,7 @@ extension _BulkAddRow on _BulkAddScreenState {
         amount = amountInUnit(text, unit, to, meal) ?? text;
       }
       if (_quantityErrors.containsKey(index)) _clearQuantityError(index);
+      _pinRow(index);
       // typed in the unit shown, which the user did not choose: the row
       // asks to check its amount still, as it would in metric units
       if (!unitChosen &&

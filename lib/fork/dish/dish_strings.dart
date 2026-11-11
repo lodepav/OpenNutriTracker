@@ -30,4 +30,37 @@ abstract final class DishStrings {
   static const linkHasNoRecipe =
       'That page has no recipe data. Paste its ingredient lines instead.';
   static const linkFailed = 'The page could not be loaded.';
+
+  // the meal's Size on a photo's review
+  static const mealSize = 'Size';
+  static const asShown = 'As shown';
+  static const yourAmounts = 'Your amounts';
+
+  /// [own] while the user's earlier amounts are used: the sizes scale those.
+  static String sizeChip(double factor, {bool own = false}) =>
+      factor == 1 ? (own ? yourAmounts : asShown) : '×$factor';
+  static String sizeChipSpoken(double factor, {bool own = false}) => factor == 1
+      ? sizeChip(factor, own: own)
+      : "$factor times ${own ? 'your' : "the photo's"} amounts";
+  static const sizeScalesUnset = "Scales the amounts you haven't set";
+  static const sizeAllSet = 'Every amount is set by you';
+  static const setByYou = 'Set by you';
+  static String mealNow(String energy) => 'Meal now $energy';
+
+  // a photo's meal like one the user corrected before
+  /// [day] is "today", "yesterday" or a date, which takes "on".
+  static String historyLike(String slot, String day, {bool date = true}) =>
+      'Like your $slot ${date ? 'on ' : ''}$day';
+  static String historyAmounts(String energy) => 'Your amounts then: $energy';
+  static const historyUse = 'Use your amounts';
+  static String historyUsing(String day) => 'Using your amounts from $day';
+  static const historyUndo = 'Undo';
+  static const today = 'today';
+  static const yesterday = 'yesterday';
+
+  // the one amount a photo's review asks about, on its row
+  static String amountQuestion(String food) => 'How much $food was it?';
+  static const amountAnswered = 'Thanks. Tap another to change it.';
+  static String amountSaid(String amount, String energy) =>
+      '$amount. ${mealNow(energy)}';
 }
