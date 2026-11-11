@@ -575,11 +575,25 @@ void main() {
       ParsedMealItem(query: 'bread', quantity: 2),
     ]);
     expect(tester.takeException(), isNull);
-    await tester.scrollUntilVisible(
-      _question(1),
-      200,
-      scrollable: find.byType(Scrollable).last,
+    // Stepped by hand until the question's last chip is in view. With the
+    // review's whole window (D50) the card is taller than it, and both a
+    // drag and ensureVisible overshot to an estimated end the list then
+    // shrank from, leaving the rows out of the build.
+    final listFinder = find.bySemanticsIdentifier('bulk-add-row-list');
+    final list = tester.state<ScrollableState>(
+      find.descendant(of: listFinder, matching: find.byType(Scrollable)).first,
     );
+    bool inView() =>
+        _choice(1, 3).evaluate().isNotEmpty &&
+        tester.getRect(_choice(1, 3)).bottom <=
+            tester.getRect(listFinder).bottom;
+    for (var i = 0; i < 50 && !inView(); i++) {
+      final position = list.position;
+      position.jumpTo(
+        (position.pixels + 100).clamp(0, position.maxScrollExtent),
+      );
+      await tester.pump();
+    }
     await tester.pumpAndSettle();
     final tops = <double>{};
     final rects = <Rect>[];

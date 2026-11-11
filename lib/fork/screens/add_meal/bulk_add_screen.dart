@@ -244,6 +244,15 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
   /// The note's field, focused by a chip that wants a number after it.
   final _noteFocus = FocusNode();
 
+  /// A photo's foods on show: the review takes the screen and the entry
+  /// block above it goes, as the user asked; another food is logged through
+  /// Add again (D50). Not with no foods, where the photo and its note wait
+  /// by the box to be sent again.
+  bool _entryHidden(BulkAddState state) =>
+      state is BulkAddLoadedState &&
+      state.source == BulkAddReadSource.photo &&
+      state.rows.isNotEmpty;
+
   // titled like the buttons that open it while AI meal assistance is on
   final _aiAdd = aiAddEnabled();
   // the page the text was read from, if any
@@ -1276,12 +1285,14 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
                 // at large text scales would take multi-line entry away from
                 // exactly the users who need the biggest text, on a screen
                 // that exists for typing several items at once.
-                _buildInput(
-                  context,
-                  state,
-                  maxFieldHeight: constraints.maxHeight * 0.3,
-                ),
-                const Divider(height: 1),
+                if (!_entryHidden(state)) ...[
+                  _buildInput(
+                    context,
+                    state,
+                    maxFieldHeight: constraints.maxHeight * 0.3,
+                  ),
+                  const Divider(height: 1),
+                ],
                 Expanded(child: _buildBody(context, state)),
               ],
             ),
