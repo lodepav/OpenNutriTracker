@@ -148,7 +148,14 @@ void main() {
         'vinaigrette',
         'ranch dressing',
         'mayonnaise',
-        'tomato sauce',
+        'hollandaise',
+        'sauce béarnaise',
+        'fettuccine alfredo',
+        'pesto',
+        'tartar sauce',
+        'Sauce, cheese',
+        'garlic sauce',
+        'butter sauce',
         'Sonnenblumenöl',
         'saulespuķu eļļa',
         'сливочное масло',
@@ -156,6 +163,10 @@ void main() {
         expect(_ask(['egg, fried', fat]), isNull, reason: fat);
         expect(_ask(['salad', fat]), isNull, reason: fat);
       }
+    });
+
+    test('fried fish with tartar sauce', () {
+      expect(_ask(['fish, fried', 'tartar sauce']), isNull);
     });
 
     test('when a row\'s table food says fat was added', () {
@@ -182,6 +193,20 @@ void main() {
       expect(_ask(['rice, white, cooked', 'chicken breast, grilled']), isNull);
       expect(_ask(['soup, lentil']), isNull);
       expect(_ask(['almonds, dry roasted']), isNull);
+    });
+
+    test('a sauce or gravy by itself is no fat', () {
+      expect(
+        _ask(['eggs, fried', 'baked beans in tomato sauce']),
+        CookingFatAsk.cooked,
+      );
+      final rows = [
+        _row('chicken with gravy'),
+        _row('roasted potatoes', matched: 'Potato, baked'),
+      ];
+      expect(cookingFatAskFor(rows), CookingFatAsk.cooked);
+      expect(_ask(['жареная картошка', 'томатный соус']), CookingFatAsk.cooked);
+      expect(_ask(['pork, fried', 'Soße']), CookingFatAsk.cooked);
     });
 
     test('a nut butter, buttermilk or olives are no fat', () {

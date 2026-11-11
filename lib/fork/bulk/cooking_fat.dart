@@ -48,18 +48,23 @@ final _salad = RegExp(
   unicode: true,
 );
 
-/// Fat already on the plate: oil, butter, a dressing, mayonnaise or a
-/// sauce, or a row the table says has fat added. Not a nut butter, nor
-/// butternut, buttermilk or butter beans.
+/// Fat already on the plate: oil, butter, a dressing, mayonnaise, a sauce
+/// made of fat (hollandaise, pesto, a cream, cheese or garlic sauce), or a
+/// row the table says has fat added. Not a sauce or gravy by itself: a
+/// tomato sauce or a gravy holds little and leaves the pan's oil unsaid.
+/// Not a nut butter, nor butternut, buttermilk or butter beans.
 final _fat = RegExp(
   r'\b(oils?|ghee|lard|margarine|dressings?|vinaigrette|mayonnaise|mayo|'
-  r'aioli|sauces?|gravy|fat added|with fat|cooking fat|sos)\b|'
+  r'aioli|fat added|with fat|cooking fat|hollandaise|b[eé]arnaise|alfredo|'
+  r'pesto)\b|'
+  r'\b(tartare?|cream|creamy|cheese|garlic)\s+sauces?\b|'
+  r'\bsauces?,\s*(tartare?|cream|cheese|garlic)\b|'
   r'(?<!peanut |nut |almond |apple |cocoa |shea )butter'
   r'(?!nut|milk|scotch|cup|head| beans?| lettuce)|'
   // de (compounds end in it: "Sonnenblumenöl"), pl, lv, lt, ru; not
   // маслины, olives
-  r'öl\b|soße|\bolej|\bmasł|majonēz|majonez|eļļ|\bsviest|mērc|\baliej|'
-  r'\bpadaž|масл(о|а|е|ом)(?![а-яё])|майонез|соус|заправк',
+  r'öl\b|\bolej|\bmasł|majonēz|majonez|eļļ|\bsviest|\baliej|'
+  r'масл(о|а|е|ом)(?![а-яё])|майонез|заправк',
   caseSensitive: false,
   unicode: true,
 );
@@ -111,7 +116,7 @@ bool _saidCooked(BulkAddRow row) => _cooked.hasMatch(
 /// the user says a food was fried, roasted, sautéed or stir-fried and the
 /// food matched is a plain one ("fried potatoes" as "Potato, boiled"),
 /// else [CookingFatAsk.salad] for a salad; null when the read already holds
-/// a fat, oil, butter, dressing, mayonnaise or sauce, or when the note
+/// a fat, oil, butter, dressing, mayonnaise or fatty sauce, or when the note
 /// states weights (a weighed plate lists its fat, D24). A row matched to a
 /// table food that holds its fat ("Potatoes, home fries", "fat added")
 /// asks nothing and is no fat beside the others. Rows left out count for
