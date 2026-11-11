@@ -525,6 +525,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     final tops = <double>{};
+    final rects = <Rect>[];
     for (var i = 0; i < 4; i++) {
       final label = find.descendant(
         of: _choice(1, i),
@@ -538,8 +539,15 @@ void main() {
       expect(chip.height, greaterThanOrEqualTo(48));
       expect(chip.right, lessThanOrEqualTo(360));
       tops.add(chip.top);
+      rects.add(chip);
     }
     expect(tops.length, greaterThan(1), reason: 'the chips took more lines');
+    // 8 dp between the rows, as between the Size's: no two targets touch
+    final first = rects.where((r) => r.top == tops.first);
+    final next = rects.firstWhere((r) => r.top > tops.first);
+    for (final above in first) {
+      expect(next.top - above.bottom, greaterThanOrEqualTo(8));
+    }
     expect(
       tester
           .renderObject<RenderParagraph>(find.text('How much bread was it?'))

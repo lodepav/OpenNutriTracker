@@ -45,6 +45,7 @@ class AmountQuestionView extends StatelessWidget {
           ),
           Wrap(
             spacing: 8,
+            runSpacing: 8,
             children: [
               for (final (i, choice) in question.choices.indexed)
                 Semantics(

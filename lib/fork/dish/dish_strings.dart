@@ -34,9 +34,14 @@ abstract final class DishStrings {
   // the meal's Size on a photo's review
   static const mealSize = 'Size';
   static const asShown = 'As shown';
-  static String sizeChip(double factor) => factor == 1 ? asShown : '×$factor';
-  static String sizeChipSpoken(double factor) =>
-      factor == 1 ? asShown : "$factor times the photo's amounts";
+  static const yourAmounts = 'Your amounts';
+
+  /// [own] while the user's earlier amounts are used: the sizes scale those.
+  static String sizeChip(double factor, {bool own = false}) =>
+      factor == 1 ? (own ? yourAmounts : asShown) : '×$factor';
+  static String sizeChipSpoken(double factor, {bool own = false}) => factor == 1
+      ? sizeChip(factor, own: own)
+      : "$factor times ${own ? 'your' : "the photo's"} amounts";
   static const sizeScalesUnset = "Scales the amounts you haven't set";
   static const sizeAllSet = 'Every amount is set by you';
   static const setByYou = 'Set by you';

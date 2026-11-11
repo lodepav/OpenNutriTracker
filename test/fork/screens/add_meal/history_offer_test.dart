@@ -414,6 +414,87 @@ void main() {
     semantics.dispose();
   });
 
+  testWidgets('while your amounts are used the sizes say they scale those; '
+      'Undo puts the photo\'s words back', (tester) async {
+    final semantics = tester.ensureSemantics();
+    _memory.kept.add(_dinner());
+    await _open(tester);
+    await _readPhoto(tester);
+
+    void expectChips({required String one, required String whose}) {
+      expect(
+        find.descendant(of: _chip(1.0), matching: find.text(one)),
+        findsOneWidget,
+      );
+      expect(tester.getSemantics(_chip(1.0)), isSemantics(label: one));
+      expect(
+        find.descendant(of: _chip(0.8), matching: find.text('×0.8')),
+        findsOneWidget,
+      );
+      expect(
+        tester.getSemantics(_chip(0.8)),
+        isSemantics(label: '0.8 times $whose amounts'),
+      );
+    }
+
+    expectChips(one: 'As shown', whose: "the photo's");
+    await _tap(tester, _use);
+    expectChips(one: 'Your amounts', whose: 'your');
+    await _tap(tester, _chip(0.8));
+    expectChips(one: 'Your amounts', whose: 'your');
+    await _tap(tester, _undo);
+    expectChips(one: 'As shown', whose: "the photo's");
+    semantics.dispose();
+  });
+
+  testWidgets('the meal card is read in the order it is shown: the offer, '
+      'the Size and its chips, the hint, then the day', (tester) async {
+    final semantics = tester.ensureSemantics();
+    _memory.kept.add(_dinner());
+    await _open(tester);
+    await _readPhoto(tester);
+
+    final card = tester.getSemantics(
+      find.byKey(const ValueKey('bulk-add-meal-summary')),
+    );
+    final spoken = <String>[];
+    final headers = <String>[];
+    void visit(SemanticsNode node) {
+      final data = node.getSemanticsData();
+      if (data.label.isNotEmpty) spoken.add(data.label);
+      if (data.flagsCollection.isHeader) headers.add(data.label);
+      for (final child in node.debugListChildrenInOrder(
+        DebugSemanticsDumpOrder.traversalOrder,
+      )) {
+        visit(child);
+      }
+    }
+
+    visit(card);
+    int at(String text) {
+      final found = [
+        for (final (i, label) in spoken.indexed)
+          if (label.contains(text)) i,
+      ];
+      expect(found, hasLength(1), reason: '"$text" read once: $spoken');
+      return found.single;
+    }
+
+    final order = [
+      at('This meal'),
+      at('Like your dinner'),
+      at(DishStrings.historyUse),
+      at(DishStrings.mealSize),
+      at("0.6 times the photo's amounts"),
+      at("1.4 times the photo's amounts"),
+      at(DishStrings.sizeScalesUnset),
+      at('Today with this meal'),
+    ];
+    expect(order, [...order]..sort(), reason: '$spoken');
+    expect(headers, [DishStrings.mealSize]);
+    semantics.dispose();
+  });
+
   testWidgets('Undo puts back the photo\'s amounts and the size before', (
     tester,
   ) async {

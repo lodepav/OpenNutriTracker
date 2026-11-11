@@ -269,21 +269,31 @@ extension _BulkAddBody on _BulkAddScreenState {
               _buildMealSize(context, state),
             ],
             const SizedBox(height: 10),
-            Text(
-              DateUtils.isSameDay(_args.day, DateTime.now())
-                  ? 'Today with this meal'
-                  : 'That day with this meal',
-              style: muted,
-            ),
-            const SizedBox(height: 6),
-            TodayAfterAdding(
-              day: _args.day,
-              kcal: meal.kcal,
-              carbs: meal.carbs,
-              fat: meal.fat,
-              protein: meal.protein,
-              load: forkDayTotals,
-              framed: false,
+            // its own node, so the day is read last, as it is shown
+            Semantics(
+              container: true,
+              child: Column(
+                key: const ValueKey('bulk-add-day-totals'),
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    DateUtils.isSameDay(_args.day, DateTime.now())
+                        ? 'Today with this meal'
+                        : 'That day with this meal',
+                    style: muted,
+                  ),
+                  const SizedBox(height: 6),
+                  TodayAfterAdding(
+                    day: _args.day,
+                    kcal: meal.kcal,
+                    carbs: meal.carbs,
+                    fat: meal.fat,
+                    protein: meal.protein,
+                    load: forkDayTotals,
+                    framed: false,
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -316,6 +326,8 @@ extension _BulkAddBody on _BulkAddScreenState {
       color: paletteOf(context).textMuted,
     );
     final allSet = _mealScale.allSet(state.rows);
+    // the user's earlier amounts in use: the sizes scale those
+    final own = _historyUndo != null;
     _sayMealSize(context);
     return Column(
       key: const ValueKey('bulk-add-meal-size'),
@@ -338,8 +350,11 @@ extension _BulkAddBody on _BulkAddScreenState {
                 child: ChoiceChip(
                   key: ValueKey('bulk-add-meal-size-$factor'),
                   label: Text(
-                    DishStrings.sizeChip(factor),
-                    semanticsLabel: DishStrings.sizeChipSpoken(factor),
+                    DishStrings.sizeChip(factor, own: own),
+                    semanticsLabel: DishStrings.sizeChipSpoken(
+                      factor,
+                      own: own,
+                    ),
                   ),
                   materialTapTargetSize: MaterialTapTargetSize.padded,
                   selected: _mealScale.factor == factor,
@@ -349,9 +364,13 @@ extension _BulkAddBody on _BulkAddScreenState {
           ],
         ),
         const SizedBox(height: 4),
-        Text(
-          allSet ? DishStrings.sizeAllSet : DishStrings.sizeScalesUnset,
-          style: muted,
+        // its own node, so it is read after the chips, not with the card
+        Semantics(
+          container: true,
+          child: Text(
+            allSet ? DishStrings.sizeAllSet : DishStrings.sizeScalesUnset,
+            style: muted,
+          ),
         ),
       ],
     );
