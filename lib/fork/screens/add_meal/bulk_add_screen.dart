@@ -46,6 +46,8 @@ import 'package:opennutritracker/fork/dish/dish_group.dart';
 import 'package:opennutritracker/fork/dish/dish_recipe.dart';
 import 'package:opennutritracker/fork/dish/dish_strings.dart';
 import 'package:opennutritracker/fork/bulk/discard_guard.dart';
+import 'package:opennutritracker/fork/bulk/meal_scale.dart';
+import 'package:opennutritracker/fork/bulk/scale_rows.dart';
 import 'package:opennutritracker/fork/bulk/review_totals.dart';
 import 'package:opennutritracker/fork/bulk/review_units.dart';
 import 'package:opennutritracker/fork/bulk/shown_unit.dart';
@@ -126,6 +128,13 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
   late final StreamSubscription<BulkAddState> _stagedRead = _bloc.stream.listen(
     _onStagedReadState,
   );
+
+  /// The meal's Size on a photo's review: taken anew with each read.
+  var _mealScale = MealScale();
+  late final StreamSubscription<BulkAddState> _scaleFollow;
+
+  /// The rows a size just set, for the card to say the meal's energy at.
+  List<BulkAddRow>? _mealSizeSaid;
 
   // titled like the buttons that open it while AI meal assistance is on
   final _aiAdd = aiAddEnabled();
@@ -472,6 +481,67 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    _scaleFollow = _bloc.stream.listen(_onScaleState);
+  }
+
+  /// A read starting takes a new scale; a photo's rows arriving are its
+  /// base, and every later state is followed: what the user changed is
+  /// pinned, and rows a breakdown wrote or a put-back food take the size.
+  void _onScaleState(BulkAddState state) {
+    if (state is! BulkAddLoadedState) {
+      _mealScale = MealScale(note: _photoNote);
+      return;
+    }
+    if (state.source != BulkAddReadSource.photo) return;
+    final amounts = _mealScale.follow(state.rows);
+    if (amounts.isNotEmpty) _bloc.add(ScaleRowsEvent(amounts));
+    if (mounted) setState(() {});
+  }
+
+  /// Every amount the user has not set at [factor] times the photo's, and
+  /// the meal's new energy said to a screen reader.
+  void _setMealSize(double factor) {
+    final state = _bloc.state;
+    if (state is! BulkAddLoadedState) return;
+    setState(() => _mealScale.factor = factor);
+    final amounts = _mealScale.retarget(state.rows);
+    if (amounts.isNotEmpty) _bloc.add(ScaleRowsEvent(amounts));
+    // said once the card is built: the energy is formatted per profile
+    _mealSizeSaid = [
+      for (final row in state.rows)
+        switch (amounts[row.resolved]) {
+          final text? => row.copyWith(amountText: text),
+          null => row,
+        },
+    ];
+  }
+
+  /// "Meal now 150 kcal" to a screen reader, after a size was chosen.
+  void _sayMealSize(BuildContext context) {
+    final rows = _mealSizeSaid;
+    if (rows == null) return;
+    _mealSizeSaid = null;
+    final message = DishStrings.mealNow(
+      EnergyDisplay.formatSumWithUnit(context, loggedKcals(rows)),
+    );
+    final view = View.of(context);
+    final direction = Directionality.of(context);
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => SemanticsService.sendAnnouncement(view, message, direction),
+    );
+  }
+
+  /// The user set row [index]'s amount: the meal's Size leaves it.
+  void _pinRow(int index) {
+    final state = _bloc.state;
+    if (state is BulkAddLoadedState && index < state.rows.length) {
+      _mealScale.pin(state.rows[index]);
+    }
+  }
+
+  @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     _args =
@@ -540,6 +610,7 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
     // before the bloc it listens to
     _dishBreakdown.dispose();
     _stagedRead.cancel();
+    _scaleFollow.cancel();
     _bloc.close();
     _textController.dispose();
     for (final controller in _amountControllers.values) {

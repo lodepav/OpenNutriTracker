@@ -259,6 +259,11 @@ extension _BulkAddBody on _BulkAddScreenState {
               ],
             ),
             MacrosLine(carbs: meal.carbs, fat: meal.fat, protein: meal.protein),
+            if (state.source == BulkAddReadSource.photo &&
+                _mealScale.offered(state.rows)) ...[
+              const SizedBox(height: 10),
+              _buildMealSize(context, state),
+            ],
             const SizedBox(height: 10),
             Text(
               DateUtils.isSameDay(_args.day, DateTime.now())
@@ -279,6 +284,55 @@ extension _BulkAddBody on _BulkAddScreenState {
           ],
         ),
       ),
+    );
+  }
+
+  /// The meal's Size on a photo's review: one tap scales every amount the
+  /// user has not set from the photo's, and "As shown" puts them back.
+  Widget _buildMealSize(BuildContext context, BulkAddLoadedState state) {
+    final theme = Theme.of(context);
+    final muted = theme.textTheme.bodySmall?.copyWith(
+      color: paletteOf(context).textMuted,
+    );
+    final allSet = _mealScale.allSet(state.rows);
+    _sayMealSize(context);
+    return Column(
+      key: const ValueKey('bulk-add-meal-size'),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // its own node: inside the card's, the whole card read as a heading
+        Semantics(
+          container: true,
+          header: true,
+          child: Text(DishStrings.mealSize, style: theme.textTheme.titleSmall),
+        ),
+        const SizedBox(height: 4),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            for (final factor in mealSizeFactors)
+              Semantics(
+                identifier: 'bulk-add-meal-size-$factor',
+                child: ChoiceChip(
+                  key: ValueKey('bulk-add-meal-size-$factor'),
+                  label: Text(
+                    DishStrings.sizeChip(factor),
+                    semanticsLabel: DishStrings.sizeChipSpoken(factor),
+                  ),
+                  materialTapTargetSize: MaterialTapTargetSize.padded,
+                  selected: _mealScale.factor == factor,
+                  onSelected: allSet ? null : (_) => _setMealSize(factor),
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        Text(
+          allSet ? DishStrings.sizeAllSet : DishStrings.sizeScalesUnset,
+          style: muted,
+        ),
+      ],
     );
   }
 

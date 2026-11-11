@@ -30,4 +30,15 @@ abstract final class DishStrings {
   static const linkHasNoRecipe =
       'That page has no recipe data. Paste its ingredient lines instead.';
   static const linkFailed = 'The page could not be loaded.';
+
+  // the meal's Size on a photo's review
+  static const mealSize = 'Size';
+  static const asShown = 'As shown';
+  static String sizeChip(double factor) => factor == 1 ? asShown : '×$factor';
+  static String sizeChipSpoken(double factor) =>
+      factor == 1 ? asShown : "$factor times the photo's amounts";
+  static const sizeScalesUnset = "Scales the amounts you haven't set";
+  static const sizeAllSet = 'Every amount is set by you';
+  static const setByYou = 'Set by you';
+  static String mealNow(String energy) => 'Meal now $energy';
 }
