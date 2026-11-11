@@ -24,6 +24,7 @@ import 'package:opennutritracker/fork/dish/starter_recipes.dart';
 import 'package:opennutritracker/fork/display/display_prefs.dart';
 import 'package:opennutritracker/fork/food/food_table_licenses.dart';
 import 'package:opennutritracker/fork/food/local_food_data_source.dart';
+import 'package:opennutritracker/fork/food/moved_dish_ids.dart';
 import 'package:opennutritracker/fork/health/body_fat_import.dart';
 import 'package:opennutritracker/fork/health/nutrition_export.dart';
 import 'package:opennutritracker/fork/health/weight_import.dart';
@@ -97,6 +98,7 @@ Future<HiveStorageIntegrityException?> forkStartup() async {
     await OffKinds.start(); // S117
     await AutoBackup.start();
     await StorageRescue().finishPending(); // S112
+    await MovedDishIds.start(); // dishes moved to their own ids, once
     await WeightImport.start(refreshAfterWeightImport);
     BodyFatImport.start();
     NutritionExport.start();
