@@ -207,20 +207,20 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
   /// amounts can come back and be kept with the meal on Log.
   final _photoRows = LinkedHashMap<ResolvedMealItem, _PhotoRow>.identity();
 
-  /// The usual sizes applied to this read, the rows they changed, and the
-  /// foods the line names; null when none were.
-  UsualSizes? _usual;
+  /// The rows the usual sizes changed on this read, and the foods the line
+  /// names.
   final _usualRows = Set<ResolvedMealItem>.identity();
   List<({String name, double factor})> _usualFoods = const [];
 
   /// The bases before the usual sizes, which "Use the photo's amounts"
-  /// puts back; and, while the photo's amounts are used, the usual ones.
+  /// puts back, null when none were applied; and, while the photo's
+  /// amounts are used, the usual ones.
   MealScaleSnapshot? _photoBases;
   MealScaleSnapshot? _usualBases;
 
   /// Whether the usual sizes are what the rows' bases are now.
   bool get _usualInForce =>
-      _usual != null && _usualBases == null && _historyUndo == null;
+      _photoBases != null && _usualBases == null && _historyUndo == null;
 
   /// Each row's grams or millilitres when it first appeared, and whether
   /// the user has changed any amount from it (a row they set that moved).
@@ -608,7 +608,6 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
       _historyUndo = null;
       _arrivalDish = null;
       _photoRows.clear();
-      _usual = null;
       _usualRows.clear();
       _usualFoods = const [];
       _photoBases = null;
@@ -701,7 +700,6 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
     final before = _mealScale.snapshot();
     final scaled = _mealScale.rebase(state.rows, amounts);
     setState(() {
-      _usual = usual;
       _usualRows
         ..clear()
         ..addAll(amounts.keys);
@@ -716,7 +714,7 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
   /// Whether the usual sizes' line is shown: some row they sized is still
   /// one the Size changes, and no earlier amounts are used.
   bool _usualShown(List<BulkAddRow> rows) =>
-      _usual != null &&
+      _photoBases != null &&
       _historyUndo == null &&
       rows.any(
         (row) => _usualRows.contains(row.resolved) && _mealScale.canScale(row),
@@ -758,14 +756,6 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
       return null;
     }
     return photo.base;
-  }
-
-  /// The Size chosen at Log, against the amounts in force (the photo's or
-  /// the usual ones); none when no row of the read could be sized. Kept,
-  /// not learnt from: each food's logged amount already holds it.
-  double? _loggedSize() {
-    if (!_photoRows.values.any((row) => row.sizable)) return null;
-    return _mealScale.factor;
   }
 
   /// Notes each new row's amount, and whether a row the user set has moved
@@ -2022,7 +2012,6 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
             dish: _arrivalDish,
             corrected: _photoCorrected(state.rows),
             photoAmountOf: _photoAmountOf,
-            size: _loggedSize(),
           )
         : null;
 

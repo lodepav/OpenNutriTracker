@@ -79,11 +79,6 @@ class PhotoMealRecord {
   /// Whether the user changed any amount on that review.
   final bool corrected;
 
-  /// The Size chosen at Log, against the amounts then in force (the
-  /// photo's, or the usual sizes', D46). Kept for later use; not learnt
-  /// from. Null when no amount could be sized, and in older records.
-  final double? size;
-
   const PhotoMealRecord({
     required this.day,
     required this.loggedAt,
@@ -92,7 +87,6 @@ class PhotoMealRecord {
     required this.foods,
     required this.kcal,
     required this.corrected,
-    this.size,
   });
 
   Map<String, Object> toJson() => {
@@ -103,7 +97,6 @@ class PhotoMealRecord {
     'foods': [for (final food in foods) food.toJson()],
     'kcal': kcal,
     'corrected': corrected,
-    'size': ?size,
   };
 
   static PhotoMealRecord fromJson(Map<dynamic, dynamic> json) =>
@@ -118,7 +111,6 @@ class PhotoMealRecord {
         ],
         kcal: (json['kcal'] as num).toDouble(),
         corrected: json['corrected'] as bool,
-        size: (json['size'] as num?)?.toDouble(),
       );
 
   /// Whether [now] is past the days it is kept.
@@ -178,8 +170,8 @@ double? baseAmountOf(BulkAddRow row) {
 }
 
 /// The record of [rows] logged: each food that will be logged, at its
-/// amount, with the photo's own amount [photoAmountOf] gives it, and the
-/// meal's [size]. Null when none will be.
+/// amount, with the photo's own amount [photoAmountOf] gives it. Null when
+/// none will be.
 PhotoMealRecord? photoMealRecordOf(
   List<BulkAddRow> rows, {
   required DateTime day,
@@ -188,7 +180,6 @@ PhotoMealRecord? photoMealRecordOf(
   String? dish,
   required bool corrected,
   double? Function(BulkAddRow row)? photoAmountOf,
-  double? size,
 }) {
   final foods = <PhotoMealFood>[
     for (final row in rows)
@@ -211,7 +202,6 @@ PhotoMealRecord? photoMealRecordOf(
     foods: foods,
     kcal: foods.fold(0.0, (sum, food) => sum + food.kcal),
     corrected: corrected,
-    size: size,
   );
 }
 
