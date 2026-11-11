@@ -703,6 +703,64 @@ they cost next to nothing and decide which of the rest are worth doing.
     spatial tasks). Needs a Google key or OpenRouter spend; wait for the
     Sonnet chain result.
 
+Results, 2026-11-11 (round 10, $0.97):
+
+- **Idea 8, no.** Two reads' difference says nothing about which plates
+  are wrong: Spearman about 0 on both sets, and flagging the most
+  different 20-30% catches no more bad plates than chance. Haiku makes
+  the same mistake each time: a plate's signed error ranks the same from
+  run to run (0.85-0.90).
+- **Idea 9, no.** Told the frame's true size (37 × 28 cm, checked on the
+  plates), nothing changed. Told a frame 1.5× too large, totals moved
+  +1-4%; 0.5×, -5%; using it would have moved them about 2×. Sonnet the
+  same (+4%). The models do not measure against a stated size.
+- So ideas 12 and a known object in the frame are dead, and idea 3 very
+  likely is. The error is not one of scale: it is the step from what is
+  seen to grams, worst for small portions. Ideas 2, 10 and 11 go after
+  that step and are next.
+- Nutrition5k photos are 640 × 480, the app sends up to 1440 wide: idea
+  6 can only be measured on own photos.
+
+Results, 2026-11-11 (round 11, $0.26):
+
+- **Idea 11, no.** The 2.5× belongs to a food's weighed size, not its
+  read size: reads of 0-15 g are 0.78× their weight, so a curve on read
+  grams becomes a flat ×0.8 above 25 g. Own meals 88% → 70%, 97% → 78%.
+  The extra kcal on the lab plates is small portions of starch and
+  vegetables; oil is under-read (0.6-0.76×), not over.
+- **Idea 10, no.** Household measures with grams in code: 61% median
+  off, 186% total ("6 small pieces" of pepperoni became 360 g, a cup is
+  read generously). Naming the measure before the grams: no different.
+- **Idea 2, no.** Plate share and height, a piece's own weight for what
+  is counted: small/medium/large 1.6 / 1.0 / 0.95 (baseline 2.55 / 1.40
+  / 0.95), the first change to shrink small foods and leave large ones.
+  But plates scatter more (median off 36% and 34%, totals 113% and
+  117%), and the own meals with a note fall 97% → 82%.
+
+Results, 2026-11-11 (round 12, $0.43), measured before any design:
+
+- **Idea 1, build it.** Five levels, ×0.6 / 0.8 / 1 / 1.2 / 1.4, start
+  on 1. A user right 70% of the time (a neighbouring level otherwise):
+  lab sets 33% → 10% median off, meat plate 160% → 108%, own meals
+  unchanged. Lab plates want smaller, own meals the same or larger, so
+  the steps are even both ways. Whether a user can tell ±20% by eye is
+  not measured.
+- **Idea 13, a rule if at all.** No kcal threshold tells the meat plate
+  from an own breakfast, and the model never says a photo is shared (0
+  of 10). Three or more meat or fish foods of 30 g and 1,000 kcal fires
+  on 19 of 20 meat-plate reads, 4 of 60 own-meal reads, none of the lab
+  plates; one platter stands behind it.
+- **Idea 5, not the model's mark.** The food it marks is the most wrong
+  one 44-51% of the time; the food with the most kcal is 62-69%. A
+  per-food mark also moved the reads up. Asking about the food with the
+  most kcal needs no model change.
+- **Idea 6, keep the size.** The app sends 1365 × 1024. Smaller reads
+  10-20 points less food on own meals; larger reads the meat plate
+  higher (172-218%) at 1.6-1.8× the tokens.
+
+Every idea that an eval can measure is now tried. What is left is below, and ideas 1, 4, 5 and 13, which are app
+features, and idea 7.
+
 ### If none of them shows a gain
 
 - **The photo is a draft; correcting it is fast.** The foods are named
