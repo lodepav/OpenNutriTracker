@@ -150,6 +150,19 @@ void main() {
       expect(questionFoodOf('7-Up', null), '7-Up');
     });
 
+    test('a number that belongs to the name stays', () {
+      expect(questionFoodOf('2% milk', null), '2% milk');
+      expect(questionFoodOf('0% Greek yogurt', null), '0% greek yogurt');
+      expect(questionFoodOf('70% dark chocolate', null), '70% dark chocolate');
+      expect(questionFoodOf('7 Up', null), '7 up');
+      expect(questionFoodOf('250 ml 2% milk', null), '2% milk');
+    });
+
+    test('the table\'s name when what is left starts with no letter or '
+        'digit', () {
+      expect(questionFoodOf('% milk', 'Milk, 2%'), 'milk, 2%');
+    });
+
     test('the table\'s name when the model\'s says nothing', () {
       expect(questionFoodOf('', 'Rice, white'), 'rice, white');
       expect(questionFoodOf('150 g', 'Rice, white'), 'rice, white');
@@ -367,7 +380,6 @@ void main() {
       expect(chip.text, '60');
       expect(chip.unit, 'g');
       expect(question.isAnswered, isTrue);
-      expect(question.answered, isNull);
 
       now = sized(scale, now, 1.4);
       expect(now[0].amountText, '140');
@@ -382,7 +394,6 @@ void main() {
       final scale = MealScale()..follow(rows);
       var now = sized(scale, rows, 0.6);
       expect(question.answer(now[0], 1)!.text, '45');
-      expect(question.answered, 1);
       expect(question.isAnswered, isTrue);
       now = [now[0].copyWith(amountText: '45')];
 

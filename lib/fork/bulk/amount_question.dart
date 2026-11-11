@@ -79,9 +79,6 @@ class AmountQuestion {
   /// Whether the user answered, with the amount shown or another.
   bool get isAnswered => _confirmed || _answered != null;
 
-  /// The chip the user tapped for another amount; null until they do.
-  int? get answered => _answered;
-
   /// The chips on [row], its row as it is now: until answered with another
   /// amount, built around the amount it shows (the photo's at the size
   /// chosen), so the one chosen is that amount, also after a confirmed one
@@ -169,29 +166,40 @@ String questionFood(String title) {
 }
 
 /// An amount in the model's words: "150 g", "2x", "~1 cup of", "(about
-/// 200 g)", a count before the food.
+/// 200 g)". A number with no unit or "x" after it stays: "2% milk", "7 Up".
 final _amountWords = RegExp(
   r'\([^)]*\d[^)]*\)|'
   r'(~\s*|\b(about|approx\.?|approximately|around)\s+)?'
-  r'\b\d+([.,]\d+)?(?![\d-])\s*(x\b|×|'
+  r'\b\d+([.,]\d+)?(?![\d%-])\s*(x\b|×|'
   r'(g|grams?|kg|ml|l|oz|ounces?|lbs?|cups?|tbsps?|tablespoons?|tsps?|'
   r'teaspoons?|pieces?|pcs|slices?|bowls?|plates?|portions?|servings?)\b'
-  r'(\s+of\b)?)?',
+  r'(\s+of\b)?)',
   caseSensitive: false,
+);
+
+/// A count leading the food, before a word in lower case: "2 eggs"; not
+/// a name such as "7 Up".
+final _leadingCount = RegExp(
+  r'^\s*(~\s*|(about|approx\.?|approximately|around)\s+)?'
+  r'\d+([.,]\d+)?\s+(?=\p{Ll})',
+  unicode: true,
 );
 
 /// The food as the question names it: the model's own name for it,
 /// [query], without amount words and cut at its first comma ("How much
 /// orecchiette was it?", not the table's "pasta, dry, enriched"); the
-/// table's [tableName] when the model's says nothing.
+/// table's [tableName] when what is left of the model's has no letter or
+/// starts with neither a letter nor a digit.
 String questionFoodOf(String query, String? tableName) {
   final words = query
       .split(',')
       .first
       .replaceAll(_amountWords, ' ')
+      .replaceFirst(_leadingCount, '')
       .replaceAll(RegExp(r'\s+'), ' ')
       .trim();
-  if (RegExp(r'\p{L}', unicode: true).hasMatch(words)) {
+  if (RegExp(r'^[\p{L}\p{N}]', unicode: true).hasMatch(words) &&
+      RegExp(r'\p{L}', unicode: true).hasMatch(words)) {
     return questionFood(words);
   }
   return questionFood(tableName ?? query);

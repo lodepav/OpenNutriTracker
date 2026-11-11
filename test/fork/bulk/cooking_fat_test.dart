@@ -93,13 +93,35 @@ void main() {
 
     test('a salad with nothing to dress it asks about dressing', () {
       expect(_ask(['salad, mixed greens', 'bread']), CookingFatAsk.salad);
-      expect(_ask(['coleslaw']), CookingFatAsk.salad);
       expect(_ask(['salāti']), CookingFatAsk.salad);
-      expect(_ask(['салат оливье']), CookingFatAsk.salad);
+      expect(_ask(['green salad']), CookingFatAsk.salad);
+      expect(_ask(['side salad']), CookingFatAsk.salad);
     });
 
     test('a fried food beside a salad asks about cooking', () {
       expect(_ask(['egg, fried', 'salad']), CookingFatAsk.cooked);
+    });
+
+    test('for a fried food the table weighs fried without fat', () {
+      final rows = [
+        _row('fried aubergine', matched: 'Aubergine, fried without fat (pan)'),
+      ];
+      expect(cookingFatAskFor(rows), CookingFatAsk.cooked);
+      for (final table in [
+        'Bakłażan smażony bez tłuszczu',
+        'Aubergine, gebraten ohne Fettzugabe',
+      ]) {
+        expect(
+          cookingFatAskFor([_row('fried aubergine', matched: table)]),
+          CookingFatAsk.cooked,
+          reason: table,
+        );
+      }
+      // "no salt" is no word on the fat
+      final fries = [
+        _row('fried potatoes', matched: 'Potatoes, home fries, no salt'),
+      ];
+      expect(cookingFatAskFor(fries), isNull);
     });
 
     test('for fried potatoes matched to a plain potato', () {
@@ -193,7 +215,7 @@ void main() {
       expect(_ask(['fish, fried', 'tartar sauce']), isNull);
     });
 
-    test('when a row\'s table food says fat was added', () {
+    test('when the model\'s words say fat was added', () {
       expect(_ask(['Asian stir fry vegetables, cooked, fat added']), isNull);
     });
 
@@ -272,6 +294,69 @@ void main() {
         cookingFatAskFor([_row('egg, fried'), _row('butter', grams: 'some')]),
         isNull,
       );
+    });
+
+    test('for a salad dressed by definition', () {
+      for (final salad in [
+        'coleslaw',
+        'potato salad',
+        'pasta salad',
+        'egg salad',
+        'Caesar salad',
+        'Russian salad',
+        'салат оливье',
+        'Kartoffelsalat',
+        'sałatka jarzynowa',
+      ]) {
+        expect(_ask([salad]), isNull, reason: salad);
+      }
+      // greens with grilled chicken or tuna are still dressed at the table
+      expect(_ask(['grilled chicken salad']), CookingFatAsk.salad);
+      expect(_ask(['tuna salad']), CookingFatAsk.salad);
+      // and it is no fat beside a plain salad
+      expect(_ask(['coleslaw', 'green salad']), CookingFatAsk.salad);
+    });
+
+    test('schnitzel, bacon and coleslaw', () {
+      final rows = [
+        _row('pork schnitzel, fried', matched: 'Pork schnitzel, breaded'),
+        _row('bacon, fried', matched: 'Bacon, pan-fried'),
+        _row('coleslaw', matched: 'Coleslaw'),
+      ];
+      expect(cookingFatAskFor(rows), isNull);
+    });
+
+    test('eggs, hash browns and a little butter', () {
+      final rows = [
+        _row('eggs', matched: 'Egg, whole, cooked'),
+        _row(
+          'fried hash browns',
+          matched: 'Potatoes, hash brown, home-prepared',
+        ),
+        _row('butter', grams: '5'),
+      ];
+      expect(cookingFatAskFor(rows), isNull);
+    });
+
+    test('for the foods fried by definition', () {
+      for (final food in [
+        'Potato rösti',
+        'Corn fritters',
+        'Shrimp tempura',
+        'Chicken nuggets',
+        'Croquettes, potato',
+        'Doughnut, glazed',
+        'Potato crisps',
+        'Kartupeļu čipsi',
+        'Картофельные чипсы',
+        'Kartoffelpuffer',
+      ]) {
+        expect(
+          cookingFatAskFor([_row('fried $food', matched: food)]),
+          isNull,
+          reason: food,
+        );
+      }
     });
 
     test('for no rows', () {

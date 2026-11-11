@@ -11,11 +11,10 @@ import 'package:opennutritracker/fork/screens/add_meal/usual_sizes_view.dart';
 
 final _now = DateTime(2026, 11, 11, 19);
 
-/// A record [daysAgo] days before [_now], at [size], of [foods]: name to
-/// (logged, photo) grams; a null photo amount is a food added by hand.
+/// A record [daysAgo] days before [_now] of [foods]: name to (logged,
+/// photo) grams; a null photo amount is a food added by hand.
 PhotoMealRecord _record(
   int daysAgo, {
-  double? size = 1,
   Map<String, (double, double?)> foods = const {'rice': (150, 150)},
 }) {
   final day = DateTime(_now.year, _now.month, _now.day - daysAgo);
@@ -35,14 +34,13 @@ PhotoMealRecord _record(
     ],
     kcal: 0,
     corrected: false,
-    size: size,
   );
 }
 
-/// Records at [sizes], newest first, rice as the photo showed it.
-List<PhotoMealRecord> _sized(List<double?> sizes) => [
+/// Records with the photo's rice logged at [sizes] of it, newest first.
+List<PhotoMealRecord> _sized(List<double> sizes) => [
   for (final (i, size) in sizes.indexed)
-    _record(i + 1, size: size, foods: {'rice': (150 * (size ?? 1), 150)}),
+    _record(i + 1, foods: {'rice': (150 * size, 150)}),
 ];
 
 /// Records with rice logged at [grams] against the photo's 100 g, newest
@@ -107,15 +105,6 @@ void main() {
       expect(usual.factorFor('chicken'), 1);
     });
 
-    test('the size kept with a record is not read', () {
-      // logged as the photo showed it, whatever the size says
-      final records = [
-        for (var i = 1; i <= 4; i++)
-          _record(i, size: 0.6, foods: {'rice': (150, 150)}),
-      ];
-      expect(_usual(records).isEmpty, isTrue);
-    });
-
     test('records past the days kept are left out', () {
       final records = [
         _record(1, foods: {'rice': (70, 100)}),
@@ -152,11 +141,7 @@ void main() {
     test('a Size chosen every time counts for each food in those meals', () {
       final records = [
         for (var i = 1; i <= 4; i++)
-          _record(
-            i,
-            size: 0.8,
-            foods: {'rice': (120, 150), 'chicken': (80, 100)},
-          ),
+          _record(i, foods: {'rice': (120, 150), 'chicken': (80, 100)}),
       ];
       expect(_usual(records).foods, {'rice': 0.8, 'chicken': 0.8});
     });
@@ -165,11 +150,7 @@ void main() {
       // at ×0.8 every time, and the rice set to half the photo's
       final records = [
         for (var i = 1; i <= 3; i++)
-          _record(
-            i,
-            size: 0.8,
-            foods: {'rice': (75, 150), 'chicken': (80, 100)},
-          ),
+          _record(i, foods: {'rice': (75, 150), 'chicken': (80, 100)}),
       ];
       final usual = _usual(records);
       expect(usual.factorFor('rice'), 0.5);
@@ -177,19 +158,12 @@ void main() {
     });
 
     test('a food added by hand, or in a record kept before photo amounts, '
-        'is not learnt from; one with no size is', () {
+        'is not learnt from', () {
       expect(
         _usual([
           for (var i = 1; i <= 3; i++) _record(i, foods: {'rice': (100, null)}),
         ]).foods,
         isEmpty,
-      );
-      expect(
-        _usual([
-          for (var i = 1; i <= 3; i++)
-            _record(i, size: null, foods: {'rice': (75, 150)}),
-        ]).foods,
-        {'rice': 0.5},
       );
     });
 
@@ -218,7 +192,6 @@ void main() {
             ],
             kcal: 150,
             corrected: true,
-            size: 1,
           ),
       ];
       expect(_usual(records).foods, {'rice': 0.75});

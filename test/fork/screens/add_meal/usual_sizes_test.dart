@@ -226,10 +226,9 @@ PhotoMealRecord _dinner() {
 }
 
 /// A dinner logged [daysAgo] days ago, the photo's 150 g rice at ×0.7, its
-/// 100 g chicken at ×0.8 and its 80 g salad at ×0.75, at a Size of [size]
-/// (kept, not learnt from). Not corrected, so never offered as earlier
-/// amounts.
-PhotoMealRecord _sized(int daysAgo, {double size = 0.8}) {
+/// 100 g chicken at ×0.8 and its 80 g salad at ×0.75. Not corrected, so
+/// never offered as earlier amounts.
+PhotoMealRecord _sized(int daysAgo) {
   final day = DateTime(_today.year, _today.month, _today.day - daysAgo);
   PhotoMealFood food(String name, double grams, double photo) => PhotoMealFood(
     key: name,
@@ -249,7 +248,6 @@ PhotoMealRecord _sized(int daysAgo, {double size = 0.8}) {
     ],
     kcal: 0,
     corrected: false,
-    size: size,
   );
 }
 
@@ -525,58 +523,48 @@ void main() {
     expect(_chipText(tester, 1.0), DishStrings.yourUsual);
   });
 
-  group('Log keeps the photo\'s amounts and the size', () {
+  group('Log keeps the photo\'s amounts', () {
     // as in history_offer_test: the meal's group box never opens here
     setUp(() {
       Hive.init(Directory.systemTemp.createTempSync('usual_sizes').path);
     });
 
-    testWidgets('as the photo showed it: the size 1', (tester) async {
+    testWidgets('as the photo showed it', (tester) async {
       await _open(tester);
       await _readPhoto(tester);
       await _log(tester);
       final record = _memory.kept.single;
-      expect(record.size, 1);
       expect(record.foods.map((f) => f.photoAmount), [150, 100, 80]);
       expect(record.foods.map((f) => f.amount), [150, 100, 80]);
     });
 
-    testWidgets('with the usual sizes: the Size chosen, not corrected', (
-      tester,
-    ) async {
+    testWidgets('with the usual sizes: not corrected', (tester) async {
       _keepSized(3);
       await _open(tester);
       await _readPhoto(tester);
       await _log(tester);
       final record = _memory.kept.last;
-      expect(record.size, 1);
       expect(record.foods.map((f) => f.photoAmount), [150, 100, 80]);
       expect(record.foods.map((f) => f.amount), [105, 80, 60]);
       expect(record.corrected, isFalse);
     });
 
-    testWidgets('with the usual sizes and a Size: the Size alone', (
-      tester,
-    ) async {
+    testWidgets('with the usual sizes and a Size: corrected', (tester) async {
       _keepSized(3);
       await _open(tester);
       await _readPhoto(tester);
       await _tap(tester, _chip(1.2));
       await _log(tester);
-      expect(_memory.kept.last.size, 1.2);
       expect(_memory.kept.last.corrected, isTrue);
     });
 
-    testWidgets('with the photo\'s amounts used: the Size alone', (
-      tester,
-    ) async {
+    testWidgets('with the photo\'s amounts used and a Size', (tester) async {
       _keepSized(3);
       await _open(tester);
       await _readPhoto(tester);
       await _tap(tester, _usePhoto);
       await _tap(tester, _chip(0.6));
       await _log(tester);
-      expect(_memory.kept.last.size, closeTo(0.6, 1e-9));
       expect(_memory.kept.last.foods.map((f) => f.amount), [90, 60, 48]);
     });
 

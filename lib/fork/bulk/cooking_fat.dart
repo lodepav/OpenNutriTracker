@@ -93,10 +93,40 @@ final _noFat = RegExp(
 );
 
 /// A table food whose numbers hold the fat it was cooked in: fried, fries,
-/// roasted, sautéed, stir-fried, or fat or oil added.
+/// roasted, sautéed, stir-fried, or fat or oil added; and the foods fried
+/// by definition: hash browns, rösti, fritters, tempura, nuggets,
+/// schnitzel, croquettes, doughnuts, crisps and chips.
 final _holdsFat = RegExp(
-  r'\bfries\b|\b(fat added|with oil|in oil|with butter|in butter)\b',
+  r'\bfries\b|\b(fat added|with oil|in oil|with butter|in butter)\b|'
+  r'\b(hash ?browns?|r[öo]e?sti|fritters?|tempura|nuggets?|schnitzels?|'
+  r'croquettes?|doughnuts?|donuts?|crisps|chips)\b|'
+  // de, pl, lv, ru; \b sees only ASCII letters, so none before "č"
+  r'\b(pommes|kroketten|kartoffelpuffer|frytki|chipsy|pączk)|'
+  r'čipsi|чипсы|драник|пончик',
   caseSensitive: false,
+  unicode: true,
+);
+
+/// A salad dressed by definition, its fat in its numbers: coleslaw, a
+/// potato, pasta or egg salad bound with mayonnaise, Caesar, Olivier. Not a
+/// chicken or tuna salad: greens with grilled chicken are read so.
+final _dressedSalad = RegExp(
+  r'\b(cole)?slaw\b|\b(potato|pasta|macaroni|egg|caesar|'
+  r'russian)\s+salads?\b|\bsalads?,\s*(potato|pasta|macaroni|egg|'
+  r'caesar)\b|\bolivier|'
+  // de, pl, lv, lt, ru
+  r'\b(kartoffel|nudel|eier|kraut)salat|\bsałatka '
+  r'(ziemniaczana|jarzynowa)|\bkartupeļu salāt|\bbulvių salot|'
+  r'оливье|картофельн\p{L}* салат|салат из картофел',
+  caseSensitive: false,
+  unicode: true,
+);
+
+/// A fat named absent: "without fat", "no added oil"; not "no salt".
+final _absentFat = RegExp(
+  r'\b(fat|oils?|butter|dressing)\b|\b(ohne fett|bez tauk|bez tłuszcz)|жир|масл',
+  caseSensitive: false,
+  unicode: true,
 );
 
 String _plain(String words) =>
@@ -105,9 +135,18 @@ String _plain(String words) =>
 /// Whether the food [row] matched holds its own fat: then the row neither
 /// asks (the fat is counted) nor is a fat of its own beside the others.
 bool _tableHoldsFat(BulkAddRow row) {
-  final name = _plain(row.meal?.name ?? '');
+  final raw = row.meal?.name ?? '';
+  // "Aubergine, fried without fat (pan)": fried, its fat not counted
+  if (_noFat.allMatches(raw).any((m) => _absentFat.hasMatch(m[0]!))) {
+    return false;
+  }
+  final name = _plain(raw);
   return _cooked.hasMatch(name) || _holdsFat.hasMatch(name);
 }
+
+/// A salad dressed by definition, by the model's words or the table's:
+/// it asks nothing about dressing and is no fat beside the others.
+bool _dressed(BulkAddRow row) => _dressedSalad.hasMatch(_words(row));
 
 /// The words a row is known by: the model's own text, the food matched,
 /// and the dish it belongs to; without a fat named as absent.
@@ -152,7 +191,7 @@ CookingFatAsk? cookingFatAskFor(List<BulkAddRow> rows, {String? note}) {
       if (!row.skipped) row,
   ];
   if (kept.isEmpty) return null;
-  final own = [for (final row in kept) _tableHoldsFat(row)];
+  final own = [for (final row in kept) _tableHoldsFat(row) || _dressed(row)];
   var fat = 0.0;
   var anyFat = false;
   for (final (i, row) in kept.indexed) {
@@ -168,7 +207,7 @@ CookingFatAsk? cookingFatAskFor(List<BulkAddRow> rows, {String? note}) {
       return anyFat ? CookingFatAsk.cookedMore : CookingFatAsk.cooked;
     }
   }
-  if (kept.any((row) => _salad.hasMatch(_words(row)))) {
+  if (kept.any((row) => !_dressed(row) && _salad.hasMatch(_words(row)))) {
     return anyFat ? CookingFatAsk.saladMore : CookingFatAsk.salad;
   }
   return null;
