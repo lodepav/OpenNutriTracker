@@ -2,6 +2,14 @@
 
 Written by fork/tools/release_notes.dart at each release (D16).
 
+## 0.13.0 · 2026-11-11
+
+Based on OpenNutriTracker 2.7.0.
+
+### New
+
+- the model is told each thing once, in the tool's field texts and the typed prompt
+
 ## 0.12.0 · 2026-11-11
 
 Based on OpenNutriTracker 2.7.0.
