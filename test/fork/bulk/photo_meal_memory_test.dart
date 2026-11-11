@@ -328,6 +328,25 @@ void main() {
       expect(amounts.length, 2);
     });
 
+    test('a quarter piece then comes back as a quarter', () {
+      final bread = _food(
+        'bread',
+        portions: const [
+          MealPortionEntity(label: '1 slice', gramWeight: 30, localized: true),
+        ],
+      );
+      final rows = [
+        _row('bread', 30, food: bread, unit: portionUnit(0), amount: '1'),
+        _row('rice', 150),
+      ];
+      final amounts = photoMealAmounts(
+        rows,
+        _record({'bread': 7.5, 'rice': 200}),
+        canTake: (_) => true,
+      );
+      expect(amounts[rows[0].resolved], '0.25');
+    });
+
     test('two rows of one food share it as they shared the photo\'s', () {
       final rows = [_row('rice', 100), _row('rice', 300)];
       final amounts = photoMealAmounts(

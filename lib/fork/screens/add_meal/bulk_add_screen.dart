@@ -1720,12 +1720,12 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
         }
         intakeIds.add(intake.id);
       }
-      // a group in the profile its entries are in
       // kept beside the meal, not before it: neither waits on the other,
       // and a store that fails or never opens leaves the meal logged
       if (!dropped && memory != null) {
         unawaited(rememberPhotoMeal(memory, forkPhotoMealMemory()));
       }
+      // a group in the profile its entries are in
       if (!dropped) await recordMealGroup(intakeIds, photo: _forkMealPhoto);
     } catch (e, stackTrace) {
       _log.severe('Bulk intake write failed', e, stackTrace);

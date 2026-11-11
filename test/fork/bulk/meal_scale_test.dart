@@ -103,12 +103,24 @@ void main() {
       expect(scaledAmountText(8, 'fl.oz', 0.6), '4.8');
     });
 
-    test('a count to the nearest half, never below one half', () {
+    test('a count to the nearest half', () {
       expect(scaledAmountText(1, 'serving', 0.6), '0.5');
       expect(scaledAmountText(1, 'serving', 0.8), '1');
       expect(scaledAmountText(1, 'serving#2', 1.4), '1.5');
       expect(scaledAmountText(3, 'serving', 0.8), '2.5');
-      expect(scaledAmountText(0.5, 'serving', 0.6), '0.5');
+    });
+
+    test('below one half to the nearest quarter, never 0, and never '
+        'against the size', () {
+      // a smaller size never makes it more, a larger never less
+      for (final factor in [0.6, 0.8, 1.0, 1.2, 1.4]) {
+        expect(scaledAmountText(0.25, 'serving', factor), '0.25');
+      }
+      expect(scaledAmountText(0.5, 'serving', 0.6), '0.25');
+      expect(scaledAmountText(0.5, 'serving', 0.8), '0.5');
+      expect(scaledAmountText(0.3, 'serving', 1), '0.25');
+      expect(scaledAmountText(0.3, 'serving', 0.6), '0.25');
+      expect(scaledAmountText(0.3, 'serving', 1.4), '0.5');
     });
 
     test('a pinch stays a pinch', () {

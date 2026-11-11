@@ -96,9 +96,11 @@ bool _sameWord(String a, String b) =>
 /// Whatever the serving is (S213): a "1 serving" of 100 g made 2 pancakes
 /// 200 g beside the row's own pancakes, and a steak's "1 serving" stood for
 /// a steak only by chance. Before S213 only a serving that weighs food out
-/// ("1 cup, chopped", "3 oz") gave way to a piece; a slice, a piece or a
-/// sized one still gives way only to such a serving, so "3 bread" beside
-/// an unnamed serving keeps it rather than three slices.
+/// ("1 cup, chopped", "3 oz") gave way to a piece. A medium or regular one
+/// is taken whatever the serving is ("3 bacon" is three medium slices), and
+/// so is a whole one with no size; a slice, a piece or another sized one
+/// still gives way only to such a serving, so "3 bread" beside an unnamed
+/// serving keeps it rather than three slices.
 int? pieceForCount(MealEntity meal, String query) {
   final serving = meal.servingSize;
   // A serving that weighs food out, or none: the only kind a slice or a

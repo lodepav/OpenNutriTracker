@@ -12,16 +12,24 @@ import 'package:opennutritracker/fork/bulk/note_weights.dart';
 const mealSizeFactors = [0.6, 0.8, 1.0, 1.2, 1.4];
 
 /// [base] in [unit] times [factor], as the amount field holds it: whole
-/// grams and millilitres, ounces to a tenth, a count to the nearest half
-/// and never below a half; a pinch stays a pinch, since a 0 would refuse the
-/// whole batch.
+/// grams and millilitres, ounces to a tenth, a count to the nearest half,
+/// or below a half to the nearest quarter and never 0; a pinch stays a
+/// pinch, since a 0 would refuse the whole batch. The rounding never moves
+/// against the size: under ×1 the result is never above [base], over ×1
+/// never below it (but for a pinch's 0.01), and at ×1 [base] comes back as
+/// it was, up to that rounding.
 String scaledAmountText(double base, String unit, double factor) {
   final amount = base * factor;
   var rounded = isPortionUnit(unit)
-      ? math.max(0.5, (amount * 2).roundToDouble() / 2)
+      ? amount >= 0.5
+            ? (amount * 2).roundToDouble() / 2
+            : math.max(0.25, (amount * 4).roundToDouble() / 4)
       : unit == 'oz' || unit == 'fl.oz'
       ? (amount * 10).roundToDouble() / 10
       : amount.roundToDouble();
+  if (factor < 1 && rounded > base) rounded = base;
+  if (factor > 1 && rounded < base) rounded = base;
+  // the one exception: a pinch never reads 0
   if (rounded <= 0 && amount > 0) {
     rounded = double.parse(amount.toStringAsFixed(2));
     if (rounded <= 0) rounded = 0.01;

@@ -71,8 +71,6 @@ class PhotoMealMemoryStore {
     }
     if (old.isNotEmpty) await box.deleteAll(old);
   }
-
-  Future<void> clear() async => (await _open())?.clear();
 }
 
 /// Keeps [record] in [store]. The meal is already logged by then, so a
