@@ -210,6 +210,15 @@ Future<void> _register({bool photos = false}) async {
     ..registerSingleton<BulkAddBloc>(reviewBloc);
 }
 
+/// A new bloc for the screen's next visit, as the app's factory gives one;
+/// the screen closes its bloc as it leaves.
+void renewReviewBloc() {
+  reviewBloc = BulkAddBloc(_Resolver(), _TextReader(), reviewReader);
+  _getIt
+    ..unregister<BulkAddBloc>()
+    ..registerSingleton<BulkAddBloc>(reviewBloc);
+}
+
 /// Hive for the photo sheet's keep-photos flag, and today's totals; call
 /// from `main`.
 void setUpReviewHarness(String name) {

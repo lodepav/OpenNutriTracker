@@ -360,20 +360,21 @@ void main() {
   testWidgets('nothing offered from a meal not corrected, nor on typed text', (
     tester,
   ) async {
-    _memory.kept.add(_dinner(corrected: false));
+    // typed text first: a photo's review has no box to type in (D50)
+    _memory.kept.add(_dinner());
     await _open(tester);
-    await _readPhoto(tester);
-    expect(find.text(DishStrings.mealSize), findsOneWidget);
-    expect(_use, findsNothing);
-
-    _memory.kept
-      ..clear()
-      ..add(_dinner());
     await tester.enterText(find.byType(TextField).first, 'rice and chicken');
     await tester.pump();
     await tester.tap(find.widgetWithIcon(FilledButton, Icons.search));
     await tester.pumpAndSettle();
     expect(_amount('150 g'), findsOneWidget);
+    expect(_use, findsNothing);
+
+    _memory.kept
+      ..clear()
+      ..add(_dinner(corrected: false));
+    await _readPhoto(tester);
+    expect(find.text(DishStrings.mealSize), findsOneWidget);
     expect(_use, findsNothing);
   });
 
