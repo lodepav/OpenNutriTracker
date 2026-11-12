@@ -37,6 +37,16 @@ Details live in the seam rows ([SEAMS.md](SEAMS.md), `Sxx`) and decisions (`Dxx`
 | Copy a meal into another meal of the same day (#842, from S177) | #1614, open |
 | Custom meals and recipes found by their words in any order (S5) | #1615, open |
 | Read a nutrition label into a custom food; add an unknown barcode from its label (S29, S36) | #1616, open |
+| A typed weight under the ruler in the weigh-in and target-weight dialogs (S111) | #1643, open |
+| Delete in the Edit item dialog; OK refuses 0 (S83, S168) | #1644, open |
+| No photo for the four demo foods whose photo was another food (S82) | #1645, open |
+| Trends' windows end on the Diary's logical today (S190) | #1646, open |
+| A unit picked while the amount is blank is kept (S192) | #1647, open |
+| Chart touches labelled, charts fitted to the period, dots up to a month (S96, S97, S161, S166) | #1648, open |
+| A food that cannot be logged says what it needs per 100 g, energy in the user's unit (S94) | #1649, open |
+| Key field names that wrap, a spoken Go to today, three lists clear of the navigation bar (S211, S92, S143) | #1650, open |
+| The added-food snackbar names the meal (S110) | #1651, open |
+| A recipe's serving reads as one serving and its weight (S91) | #1652, open |
 
 ## Targets and coaching (MacroFactor's)
 
@@ -85,8 +95,8 @@ Details live in the seam rows ([SEAMS.md](SEAMS.md), `Sxx`) and decisions (`Dxx`
 | Remembered amounts: a food opens at the amount last logged (S45) | Candidate | |
 | Amount picker: units as chips, the food's portions with their weights, − and +, the user's own named portion (D33, S195) | Candidate | A large UI change to upstream's meal detail. |
 | A unit change converts the amount (180 g → 1 serving, S164) | Sent (#1603) | A bug fix. |
-| A food that cannot be logged says what it lacks (S94) | Candidate | |
-| A recipe's serving reads as one serving and its weight (S91) | Candidate | |
+| A food that cannot be logged says what it lacks (S94) | Sent (#1649) | Upstream already listed the missing values (#1474); the PR words the first line and names energy in the user's unit. |
+| A recipe's serving reads as one serving and its weight (S91) | Sent (#1652) | |
 | Contribute a custom food to Open Food Facts (S33) | Candidate | Ported from another fork (theoleuthardt `personal`). |
 | Search opens with the keyboard up (S163) | Candidate | |
 | Search rows as short as the Diary's; Open Food Facts products as an emoji, not a photo (S116, S117) | Fork only | Part of the redesign. |
@@ -103,7 +113,7 @@ Details live in the seam rows ([SEAMS.md](SEAMS.md), `Sxx`) and decisions (`Dxx`
 | Swipe the Diary a day back or forward, past today (S176) | Candidate | |
 | Undo after deleting a food (S52) | Candidate | |
 | Show water and Show fasting switches (S144) | Candidate | Next to upstream's Show activity tracking. |
-| The added-food snackbar names the meal (S110) | Candidate | |
+| The added-food snackbar names the meal (S110) | Sent (#1651) | |
 | The food page's Add says when the write failed (S189) | Sent (#1608) | A bug fix. |
 | Editing a food whose serving the simple form cannot hold opens the advanced form (S188) | Sent (#1607) | A bug fix. |
 | Number fields take digits and one separator only (S141) | Sent (#1604) | A bug fix: "120-" saved an empty value. |
@@ -159,12 +169,12 @@ Details live in the seam rows ([SEAMS.md](SEAMS.md), `Sxx`) and decisions (`Dxx`
 
 | Feature | Mark | Why / notes |
 |---|---|---|
-| Chart touches name each number with its unit and day; an empty range says so (S96, S97) | Candidate | |
-| Charts fit the period shown; dots up to a month (S161, S166) | Candidate | |
-| Trends' windows end on the Diary's logical today (S190) | Candidate | A bug fix past midnight. |
+| Chart touches name each number with its unit and day; an empty range says so (S96, S97) | Sent (#1648) | Upstream's lines and 7-day average stay; the fork's trend line and legend are not in it. |
+| Charts fit the period shown; dots up to a month (S161, S166) | Sent (#1648) | |
+| Trends' windows end on the Diary's logical today (S190) | Sent (#1646) | A bug fix past midnight. The water average over the days logged is not in it. |
 | Daily averages over the days logged, rounded not cut (S87, S114, now in S120) | Sent (#1610) | Bug fixes to upstream's Daily average card. |
-| Screen-reader labels and large-text fixes beyond what 2.7.0 took (S81, S83, S92, S111) | Candidate | Partly upstream via #1494; the typed weigh-in field (S111) and the rest are next. |
-| Lists clear of a 3-button navigation bar (S143) | Candidate | Partly upstream via #1493. |
+| Screen-reader labels and large-text fixes beyond what 2.7.0 took (S81, S83, S92, S111, S211) | Sent (part) | Partly upstream via #1494. Sent: the typed weigh-in field (#1643), the edit dialog's Delete (#1644), key field names and Go to today (#1650). The rest of S81 and S83 is not sent. |
+| Lists clear of a 3-button navigation bar (S143) | Sent (#1650) | Partly upstream via #1493. |
 
 ## Release checks
 
