@@ -271,7 +271,14 @@ class _ScannerScreenState extends State<ScannerScreen>
             ),
           ),
           Padding(
-            padding: const EdgeInsets.all(Dimens.spacing16),
+            // [fork] S217 scanner-nav-bar: edge to edge, the button clears the navigation bar
+            padding: EdgeInsets.fromLTRB(
+              Dimens.spacing16,
+              Dimens.spacing16,
+              Dimens.spacing16,
+              Dimens.spacing16 + MediaQuery.paddingOf(context).bottom,
+            ),
+            // [/fork]
             child: Semantics(
               identifier: 'scanner-manual-entry-open',
               child: OutlinedButton.icon(
