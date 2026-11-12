@@ -47,6 +47,7 @@ Details live in the seam rows ([SEAMS.md](SEAMS.md), `Sxx`) and decisions (`Dxx`
 | Key field names that wrap, a spoken Go to today, three lists clear of the navigation bar (S211, S92, S143) | #1650, open |
 | The added-food snackbar names the meal (S110) | #1651, open |
 | A recipe's serving reads as one serving and its weight (S91) | #1652, open |
+| The scanner's manual-entry button clear of the navigation bar (S217) | #1653, open |
 
 ## Targets and coaching (MacroFactor's)
 
