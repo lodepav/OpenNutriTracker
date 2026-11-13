@@ -24,7 +24,7 @@ Sources, checked 2026-10-24:
 | A6 | At 200% font scale nothing that matters is cut off or overlaps: text wraps rather than ellipsizes, and the screen still scrolls to everything (WCAG 1.4.4, 1.4.10). | `adb shell settings put system font_scale 2.0`, then back to `1.0`. |
 | A7 | Section titles and group names are headings, so TalkBack can jump between them (WCAG 1.3.1). | The UI dump does not show headings: read the widget's code for `Semantics(header: true)`. |
 | A8 | Anything done by dragging or a long press also has a plain tap path (WCAG 2.5.7). | Look for the same action in a menu or button. |
-| A9 | Content is not hidden behind sticky bars, the bottom navigation or the FAB when it has focus or is the last item (WCAG 2.4.11). | Scroll to the end of each list; the last row must be fully tappable. |
+| A9 | Content is not hidden behind sticky bars, the bottom navigation, the FAB or the system navigation bar when it has focus or is the last item (WCAG 2.4.11). | Scroll to the end of each list, and open every screen with a fixed bottom control with the 3-button bar on (`adb shell cmd overlay enable-exclusive --category com.android.internal.systemui.navbar.threebutton`, and `…navbar.gestural` the same way to go back); the last row and the control must be fully tappable. |
 | A10 | Both light and dark themes work, with the contrast of A2 (Android Theme_Support). | `adb shell cmd uimode night yes`, then `no`. |
 
 ## P. Android platform
