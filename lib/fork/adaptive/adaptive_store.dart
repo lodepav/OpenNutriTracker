@@ -499,8 +499,8 @@ class AdaptiveStore {
 
   /// What else of this box a backup carries, as stored: step counts and
   /// their switch and goal, where the goal began and whether its phase was
-  /// applied (else a restore redates the one and reapplies the other), and
-  /// how the app shows and arranges things.
+  /// applied (else a restore redates the one and reapplies the other), the
+  /// reminders' times, and how the app shows and arranges things.
   static const keptKeys = [
     ..._dayMaps,
     'goalStart',
@@ -517,6 +517,8 @@ class AdaptiveStore {
     'homeSections',
     'trendsLayout',
     'trendsTiles',
+    'weighInReminder',
+    'checkInReminder',
   ];
 
   /// By day or workout: what this box already read stays, as the newer.
