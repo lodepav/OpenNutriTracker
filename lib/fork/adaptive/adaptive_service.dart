@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:logging/logging.dart';
 import 'package:opennutritracker/core/utils/calc/calendar_day_calc.dart';
+import 'package:opennutritracker/core/data/repository/user_activity_repository.dart';
 import 'package:opennutritracker/core/domain/entity/config_entity.dart';
 import 'package:opennutritracker/core/domain/entity/calories_profile_entity.dart';
 import 'package:opennutritracker/core/domain/entity/user_entity.dart';
@@ -540,16 +541,48 @@ Future<double> _todayActivity(DateTime day) async {
   }
 }
 
+/// The energy burned on [day] less on logical today, as upstream's formula
+/// reads it from [activities] (the active profile's by default) by
+/// [config]'s day start; 0 when either cannot be read, so the goal stays
+/// today's rather than half moved.
+Future<double> _burnedMoved(
+  DateTime day,
+  Future<ConfigEntity> Function()? config,
+  UserActivityRepository? activities,
+) async {
+  try {
+    final read = await (config ?? locator<GetConfigUsecase>().getConfig)();
+    final offset = read.dayStartOffsetTotalMinutes;
+    final repository = activities ?? locator<UserActivityRepository>();
+    Future<double> burnedOn(DateTime label) async =>
+        (await repository.getAllUserActivityByDate(
+          label,
+          dayStartOffsetHours: read.dayStartOffsetHours,
+          dayStartOffsetMinutes: read.dayStartOffsetMinutes,
+        )).fold<double>(0, (sum, a) => sum + a.burnedKcal);
+    return await burnedOn(DayBoundaryCalc.dayLabelOf(day, offset)) -
+        await burnedOn(DayBoundaryCalc.currentLogicalDayMinutes(offset));
+  } catch (e) {
+    _log.warning('Activities unreadable, none moved in the goal: $e');
+    return 0;
+  }
+}
+
 /// Seams S63–S67 and S69: [goal], which carries logical today's weekday
 /// shift and, in the daily activity mode, today's activity, moved to [day]'s,
-/// for a row made for another day (a copy, a past day's log). [store] and
-/// [config] are another profile's (S69), whose goal holds no activity; its
-/// settings, unreadable, leave [goal] as it is.
+/// for a row made for another day (a copy, a past day's log). Under the
+/// formula it also carries today's logged activities, unless
+/// [holdsTodayActivities] is false (an activity's row, credited after);
+/// those move to [day]'s too. [store], [config] and [activities] are another
+/// profile's (S69), whose goal holds no daily-mode activity; its settings,
+/// unreadable, leave [goal] as it is.
 Future<double> forkGoalOnDay(
   double goal,
   DateTime day, {
   AdaptiveStore? store,
   Future<ConfigEntity> Function()? config,
+  bool holdsTodayActivities = true,
+  UserActivityRepository? activities,
 }) async {
   final AdaptiveSettings settings;
   try {
@@ -568,7 +601,13 @@ Future<double> forkGoalOnDay(
       settings.adaptiveTarget &&
       !settings.fixedTarget &&
       settings.activityMode == ActivityMode.daily;
-  if (!daily && offsets.every((o) => o == 0)) return goal;
+  // The day does not change whether the target is the formula.
+  final moved =
+      holdsTodayActivities &&
+          (await forkKcalGoal(DateTime.now(), store)).target == null
+      ? await _burnedMoved(day, config, activities)
+      : 0.0;
+  if (!daily && offsets.every((o) => o == 0)) return goal + moved;
   final read = await (config ?? locator<GetConfigUsecase>().getConfig)();
   final offset = read.dayStartOffsetTotalMinutes;
   final today = DayBoundaryCalc.currentLogicalDayMinutes(offset);
@@ -580,7 +619,8 @@ Future<double> forkGoalOnDay(
   return goal -
       offsets[today.weekday - 1] +
       offsets[label.weekday - 1] +
-      activity;
+      activity +
+      moved;
 }
 
 /// Seam S62: whether [day]'s goal leaves logged activities out (a fixed

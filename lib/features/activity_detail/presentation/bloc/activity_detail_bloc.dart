@@ -148,6 +148,7 @@ class ActivityDetailBloc
       final totalKcalGoal = await forkGoalOnDay(
         await _getKcalGoalUsecase.getKcalGoal(totalKcalActivitiesParam: 0),
         day,
+        holdsTodayActivities: false,
       ); // Exclude persisted activities
       // [/fork]
       final totalCarbsGoal = await _getMacroGoalUsecase.getCarbsGoal(

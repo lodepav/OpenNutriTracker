@@ -207,6 +207,9 @@ void main() {
             (goal('activityDaily')['weekdayShift'] as num) +
             openWeekdayOffsets[DateTime.wednesday - 1],
       );
+      // On the formula too, today's workout stays on today.
+      final formula = snap['goals']['formula'] as Map;
+      expect(formula[row], goal('formula', 'd-3')['kcal']);
     });
 
     test('the break hold is present after a break', () {

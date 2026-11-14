@@ -19,12 +19,14 @@ import 'package:opennutritracker/core/domain/entity/user_gender_entity.dart';
 import 'package:opennutritracker/core/domain/entity/user_pal_entity.dart';
 import 'package:opennutritracker/core/domain/entity/user_weight_goal_entity.dart';
 import 'package:opennutritracker/core/domain/usecase/add_tracked_day_usecase.dart';
+import 'package:opennutritracker/core/domain/usecase/add_user_activity_usercase.dart';
 import 'package:opennutritracker/core/domain/usecase/get_config_usecase.dart';
 import 'package:opennutritracker/core/domain/usecase/get_kcal_goal_usecase.dart';
 import 'package:opennutritracker/core/domain/usecase/get_macro_goal_usecase.dart';
 import 'package:opennutritracker/core/domain/usecase/get_tracked_day_usecase.dart';
 import 'package:opennutritracker/core/domain/usecase/get_user_usecase.dart';
 import 'package:opennutritracker/core/domain/usecase/get_weight_log_usecase.dart';
+import 'package:opennutritracker/core/domain/usecase/log_user_activity_usecase.dart';
 import 'package:opennutritracker/core/utils/calc/day_boundary_calc.dart';
 import 'package:opennutritracker/core/utils/hive_db_provider.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
@@ -132,6 +134,83 @@ class _Rows extends Fake implements TrackedDayRepository {
     double? fatGoal,
     double? proteinGoal,
   }) async => moves.add('-macros');
+}
+
+/// Activities held in memory, each filed under its logical day.
+class _DayActivities extends Fake implements UserActivityRepository {
+  final all = <UserActivityEntity>[];
+
+  _DayActivities(Map<DateTime, double> kcalAt) {
+    for (final MapEntry(key: at, value: kcal) in kcalAt.entries) {
+      all.add(_workout(at, kcal));
+    }
+  }
+
+  @override
+  Future<void> addUserActivity(UserActivityEntity activityEntity) async =>
+      all.add(activityEntity);
+
+  @override
+  Future<List<UserActivityEntity>> getAllUserActivityByDate(
+    DateTime dateTime, {
+    int dayStartOffsetHours = 0,
+    int dayStartOffsetMinutes = 0,
+  }) async => [
+    for (final a in all)
+      if (DateUtils.isSameDay(
+        a.date.subtract(
+          Duration(hours: dayStartOffsetHours, minutes: dayStartOffsetMinutes),
+        ),
+        dateTime,
+      ))
+        a,
+  ];
+
+  @override
+  Future<List<UserActivityDBO>> getAllUserActivityDBO() async => [
+    for (final a in all) UserActivityDBO.fromUserActivityEntity(a),
+  ];
+}
+
+UserActivityEntity _workout(DateTime at, double kcal) => UserActivityEntity(
+  'w-$at-$kcal',
+  30,
+  kcal,
+  at,
+  PhysicalActivityEntity.custom,
+);
+
+/// One day's row: its calorie goal once made.
+class _Row extends Fake implements TrackedDayRepository {
+  double? goal;
+
+  @override
+  Future<bool> hasTrackedDay(DateTime day) async => goal != null;
+
+  @override
+  Future<bool> addNewTrackedDayIfAbsent(
+    DateTime day,
+    double totalKcalGoal,
+    double totalCarbsGoal,
+    double totalFatGoal,
+    double totalProteinGoal,
+  ) async {
+    if (goal != null) return false;
+    goal = totalKcalGoal;
+    return true;
+  }
+
+  @override
+  Future<void> increaseDayCalorieGoal(DateTime day, double amount) async =>
+      goal = goal! + amount;
+
+  @override
+  Future<void> increaseDayMacroGoal(
+    DateTime day, {
+    double? carbGoal,
+    double? fatGoal,
+    double? proteinGoal,
+  }) async {}
 }
 
 void main() {
@@ -400,6 +479,166 @@ void main() {
       },
     );
 
+    group('under the formula, a row made for another day', () {
+      final thursday = DateTime(2026, 10, 22);
+      final friday = DateTime(2026, 10, 23);
+      late _DayActivities activities;
+
+      /// [day]'s own goal, as upstream computes it on that day.
+      Future<double> ownGoal(DateTime day, [int dayStartHours = 0]) async {
+        final clock = DayBoundaryCalc.clock;
+        DayBoundaryCalc.clock = () => day.add(const Duration(hours: 12));
+        try {
+          return await GetKcalGoalUsecase(
+            _Users(),
+            _Config(dayStartHours: dayStartHours),
+            activities,
+          ).getKcalGoal();
+        } finally {
+          DayBoundaryCalc.clock = clock;
+        }
+      }
+
+      Future<double> todaysGoal([int dayStartHours = 0]) => GetKcalGoalUsecase(
+        _Users(),
+        _Config(dayStartHours: dayStartHours),
+        activities,
+      ).getKcalGoal();
+
+      void register(Map<DateTime, double> kcalAt, [int dayStartHours = 0]) {
+        activities = _DayActivities(kcalAt);
+        locator.registerSingleton<UserActivityRepository>(activities);
+        locator.registerSingleton<GetConfigUsecase>(
+          GetConfigUsecase(_Config(dayStartHours: dayStartHours)),
+        );
+        addTearDown(locator.reset);
+      }
+
+      setUp(() => DayBoundaryCalc.clock = () => DateTime(2026, 10, 23, 12));
+
+      test(
+        'leaves today\'s activity on today, with no weekday shift',
+        () async {
+          register({DateTime(2026, 10, 23, 8): 1250});
+          final today = await todaysGoal();
+          expect(
+            await forkGoalOnDay(today, thursday),
+            closeTo(await ownGoal(thursday), 1e-6),
+          );
+          expect(
+            await forkGoalOnDay(today, thursday),
+            closeTo(today - 1250, 1e-6),
+          );
+          // Today's own row keeps today's goal.
+          expect(await forkGoalOnDay(today, friday), today);
+        },
+      );
+
+      test('carries the day\'s own activity, with its weekday shift', () async {
+        register({DateTime(2026, 10, 22, 8): 300});
+        AdaptiveStore.settings.value = const AdaptiveSettings(
+          weekdayOffsets: _weekendUp,
+        );
+        // Friday writing Saturday's row: Saturday has its own 200.
+        activities.all.add(_workout(DateTime(2026, 10, 24, 9), 200));
+        expect(
+          await forkGoalOnDay(await todaysGoal(), _saturday),
+          closeTo(await ownGoal(_saturday), 1e-6),
+        );
+        expect(
+          await forkGoalOnDay(await todaysGoal(), thursday),
+          closeTo(await ownGoal(thursday), 1e-6),
+        );
+      });
+
+      test('reads activities by the logical day', () async {
+        // 01:30 on Saturday is still Friday, and so is the 01:00 workout.
+        register({
+          DateTime(2026, 10, 23, 8): 100,
+          DateTime(2026, 10, 24, 1): 50,
+          DateTime(2026, 10, 22, 8): 300,
+        }, 4);
+        DayBoundaryCalc.clock = () => DateTime(2026, 10, 24, 1, 30);
+        final today = await todaysGoal(4);
+        expect(
+          await forkGoalOnDay(today, thursday),
+          closeTo(today - 150 + 300, 1e-6),
+        );
+      });
+
+      test('a goal said to hold no activity is left alone', () async {
+        register({DateTime(2026, 10, 23, 8): 1250});
+        expect(
+          await forkGoalOnDay(2000, thursday, holdsTodayActivities: false),
+          2000,
+        );
+      });
+
+      test('a fixed target is left alone', () async {
+        register({
+          DateTime(2026, 10, 23, 8): 1250,
+          DateTime(2026, 10, 22, 8): 300,
+        });
+        AdaptiveStore.settings.value = const AdaptiveSettings(
+          fixedTarget: true,
+          fixedKcal: 1800,
+        );
+        expect(await forkGoalOnDay(1800, thursday), 1800);
+      });
+
+      for (final (name, todayKcal) in [
+        ('with an activity today', 400.0),
+        ('with none today', 0.0),
+      ]) {
+        test('an activity logged into a past day with no row counts once, '
+            '$name', () async {
+          register({if (todayKcal > 0) DateTime(2026, 10, 23, 8): todayKcal});
+          final row = _Row();
+          final kcalGoal = GetKcalGoalUsecase(_Users(), _Config(), activities);
+          await LogUserActivityUsecase(
+            AddUserActivityUsecase(activities),
+            AddTrackedDayUsecase(row),
+            kcalGoal,
+            GetMacroGoalUsecase(_Config()),
+          ).logActivity(
+            _workout(DateTime(2026, 10, 22, 8), 300),
+            day: thursday,
+          );
+          // Thursday's own goal holds its 300 once.
+          expect(row.goal, closeTo(await ownGoal(thursday), 1e-6));
+          expect(
+            row.goal,
+            closeTo(
+              await kcalGoal.getKcalGoal(totalKcalActivitiesParam: 300),
+              1e-6,
+            ),
+          );
+        });
+      }
+
+      test('in another profile, takes that profile\'s activities', () async {
+        register({});
+        final other = AdaptiveStore.otherProfile(
+          () => Hive.openBox<dynamic>('other'),
+        );
+        await other.save(const AdaptiveSettings());
+        final theirs = _DayActivities({DateTime(2026, 10, 23, 8): 500});
+        Future<double> onThursday(double goal) => forkGoalOnDay(
+          goal,
+          thursday,
+          store: other,
+          config: () => _Config().getConfig(),
+          activities: theirs,
+        );
+        expect(await onThursday(2500), 2000);
+        // Under its fixed target, nothing moves.
+        await other.save(
+          const AdaptiveSettings(fixedTarget: true, fixedKcal: 1800),
+        );
+        expect(await onThursday(1800), 1800);
+      });
+    });
+
     group('in the daily activity mode', () {
       const daily = AdaptiveSettings(
         adaptiveTarget: true,
@@ -477,6 +716,23 @@ void main() {
           ),
           2100,
         );
+      });
+
+      test('an accepted target moves no logged activity', () async {
+        await checkedIn();
+        locator.unregister<UserActivityRepository>();
+        locator.registerSingleton<UserActivityRepository>(
+          _DayActivities({
+            DateTime(2026, 10, 22, 8): 300,
+            DateTime(2026, 10, 23, 8): 100,
+          }),
+        );
+        AdaptiveStore.settings.value = daily;
+        expect(await forkGoalOnDay(2100, thursday), 2300);
+        AdaptiveStore.settings.value = daily.copyWith(
+          activityMode: ActivityMode.weekly,
+        );
+        expect(await forkGoalOnDay(2000, thursday), 2000);
       });
 
       test('nor before the first check-in, under the formula', () async {
