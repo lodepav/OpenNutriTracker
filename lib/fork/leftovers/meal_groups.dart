@@ -55,6 +55,19 @@ class MealGroupStore {
     final json = (await _box()).get(intakeId);
     return json == null ? null : MealGroup.fromJson(json);
   }
+
+  /// Every member's group, by intake id, for the backup.
+  Future<Map<String, MealGroup>> all() async => {
+    for (final MapEntry(:key, :value) in (await _box()).toMap().entries)
+      '$key': MealGroup.fromJson(value),
+  };
+
+  /// Writes [groups] from a backup over the ones with the same intake ids.
+  Future<void> merge(Map<String, MealGroup> groups) async =>
+      (await _box()).putAll({
+        for (final MapEntry(:key, :value) in groups.entries)
+          key: value.toJson(),
+      });
 }
 
 /// Seam S8: records one bulk-add save's entries as a meal, keeping the

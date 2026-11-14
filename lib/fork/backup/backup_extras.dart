@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:archive/archive.dart';
+import 'package:logging/logging.dart';
 import 'package:opennutritracker/core/data/data_source/config_data_source.dart';
 import 'package:opennutritracker/core/data/data_source/custom_meal_data_source.dart';
 import 'package:opennutritracker/core/data/data_source/user_data_source.dart';
@@ -19,15 +21,20 @@ import 'package:opennutritracker/features/settings/domain/export_import_failure.
 import 'package:opennutritracker/fork/amounts/own_portions.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/fork/body/measurement_store.dart';
+import 'package:opennutritracker/fork/leftovers/meal_groups.dart';
+import 'package:opennutritracker/fork/leftovers/meal_photo_cache.dart';
 import 'package:opennutritracker/fork/phases/phases.dart';
 import 'package:opennutritracker/fork/photos/photo_store.dart';
 import 'package:opennutritracker/fork/plan/plan_store.dart';
 import 'package:opennutritracker/fork/backup/profiles_backup.dart';
+import 'package:opennutritracker/fork/reminders/reminders.dart';
 
 /// What the JSON backup leaves out and the fork adds (phase 2, seam S21):
 /// the water log, fasting sessions, saved custom meals, the adaptive
 /// target's settings, check-ins and diet phases, the meal plan, body measurements,
-/// progress photos, the profile, the app settings, and every other profile ([ProfilesBackup]).
+/// progress photos, the reminders' times, which entries were logged as one
+/// meal, the switch that keeps meal photos (not the photos), the profile,
+/// the app settings, and every other profile ([ProfilesBackup]).
 ///
 /// Ported from theoleuthardt's `PersonalBackupExtras` (GPL-3.0, their #93,
 /// #94, #95, #97). Every file is optional on restore, so upstream's zips and
@@ -44,6 +51,11 @@ class BackupExtras {
   static const ownPortionsFileName = 'fork_own_portions.json';
   static const profileFileName = 'user_profile.json';
   static const appSettingsFileName = 'app_settings.json';
+  static const mealGroupsFileName = 'fork_meal_groups.json';
+  static const flagsFileName = 'fork_flags.json';
+  static const keepMealPhotosKey = 'keepMealPhotos';
+
+  static final _log = Logger('BackupExtras');
 
   /// The `ConfigDBO` keys `app_settings.json` carries: the device-wide
   /// preferences. Left out on purpose: the legal and consent flags (a restore
@@ -84,6 +96,12 @@ class BackupExtras {
   final PhotoStore Function() _photos;
   final PhaseStore Function() _phases;
   final OwnPortions Function() _ownPortions;
+  final MealGroupStore Function() _mealGroups;
+  final MealPhotoCache Function() _mealPhotos;
+
+  /// Run when a restore wrote a reminder's time: a time alone schedules
+  /// nothing.
+  final Future<void> Function() _replanReminders;
 
   /// Null leaves the profile, and the app settings, out of the backup.
   final UserDataSource? _user;
@@ -102,6 +120,9 @@ class BackupExtras {
     PhotoStore Function()? photos,
     PhaseStore Function()? phases,
     OwnPortions Function()? ownPortions,
+    MealGroupStore Function()? mealGroups,
+    MealPhotoCache Function()? mealPhotos,
+    Future<void> Function()? replanReminders,
     UserDataSource? user,
     ConfigDataSource? config,
     ProfilesBackup? profiles,
@@ -111,6 +132,9 @@ class BackupExtras {
        _photos = photos ?? PhotoStore.new,
        _phases = phases ?? PhaseStore.new,
        _ownPortions = ownPortions ?? OwnPortions.new,
+       _mealGroups = mealGroups ?? MealGroupStore.new,
+       _mealPhotos = mealPhotos ?? MealPhotoCache.new,
+       _replanReminders = replanReminders ?? (() => Reminders().replan()),
        _user = user,
        _config = config,
        _profiles = profiles;
@@ -150,6 +174,14 @@ class BackupExtras {
       for (final m in await _measurements().all()) m.toJson(),
     ]);
     _addJson(archive, ownPortionsFileName, await _ownPortions().all());
+    // Without the photo's path: the photo stays on this phone.
+    _addJson(archive, mealGroupsFileName, {
+      for (final MapEntry(:key, :value) in (await _mealGroups().all()).entries)
+        key: MealGroup(value.intakeIds, value.loggedAt).toJson(),
+    });
+    _addJson(archive, flagsFileName, {
+      keepMealPhotosKey: await _mealPhotos().enabled,
+    });
     final photos = _photos();
     final photoIndex = await photos.all();
     _addJson(archive, photosFileName, [for (final p in photoIndex) p.toJson()]);
@@ -227,7 +259,7 @@ class BackupExtras {
               ? null
               : [for (final p in upcoming) PhasePlan.fromJson(p as Map)],
           // Absent in a backup from before it carried them.
-          kept: map[keptKey] as Map<String, dynamic>?,
+          kept: _checkReminders(map[keptKey] as Map<String, dynamic>?),
         );
       });
 
@@ -302,6 +334,30 @@ class BackupExtras {
       ConfigDBO.fromJson({...ConfigDBO.empty().toJson(), ...picked});
       return picked;
     });
+    final mealGroups = _decodeOrSkip(archive, mealGroupsFileName, (json) {
+      final groups = <String, MealGroup>{};
+      for (final MapEntry(:key, :value) in (json as Map).entries) {
+        try {
+          final group = MealGroup.fromJson(value as Map);
+          final ids = [for (final id in group.intakeIds) id];
+          if (ids.length < 2 || !ids.contains(key)) {
+            throw FormatException('Not a meal of $key', value);
+          }
+          // Its photo, if it had one, is not in the backup.
+          groups[key as String] = MealGroup(ids, group.loggedAt);
+        } catch (error) {
+          _log.warning('Skipped a meal group in $mealGroupsFileName', error);
+        }
+      }
+      return groups;
+    });
+    final keepMealPhotos = _decodeOrSkip(archive, flagsFileName, (json) {
+      final value = (json as Map)[keepMealPhotosKey];
+      if (value != null && value is! bool) {
+        throw FormatException('$keepMealPhotosKey is not true or false', value);
+      }
+      return value as bool?;
+    });
     final otherProfiles = _profiles?.prepareRestore(archive);
 
     return () async {
@@ -325,6 +381,10 @@ class BackupExtras {
       // After the plan: saving one clears the phase already applied.
       if (adaptive?.kept case final kept?) {
         await _adaptive().restoreKept(kept);
+        // Not awaited: it reads the diary, and the import holds its lock.
+        if (kept.keys.any(_reminderKeys.contains)) {
+          unawaited(_replanReminders());
+        }
       }
       if (plans != null) await _plans().merge(plans);
       if (measurements != null) {
@@ -332,6 +392,11 @@ class BackupExtras {
       }
       if (photos != null) await _photos().merge(photos.index, photos.images);
       if (ownPortions != null) await _ownPortions().merge(ownPortions);
+      // Merged, as the import upserts the entries they name.
+      if (mealGroups != null) await _mealGroups().merge(mealGroups);
+      if (keepMealPhotos != null) {
+        await _mealPhotos().setEnabled(keepMealPhotos);
+      }
       if (profile != null) await _user?.saveUserData(profile);
       if ((_config, settings) case (final config?, final settings?)) {
         final current = (await config.getConfig()).toJson();
@@ -372,6 +437,28 @@ class BackupExtras {
     );
   }
 
+  static final _reminderKeys = {for (final k in ReminderKind.values) k.key};
+
+  /// [kept] without a reminder that is not a time of day, which is skipped
+  /// with a warning: the reminders' tile and schedule read it as one.
+  static Map<String, dynamic>? _checkReminders(Map<String, dynamic>? kept) {
+    if (kept == null) return null;
+    final checked = <String, dynamic>{};
+    for (final MapEntry(:key, :value) in kept.entries) {
+      if (!_reminderKeys.contains(key)) {
+        checked[key] = value;
+      } else if (value case {
+        'hour': final int hour,
+        'minute': final int minute,
+      } when hour >= 0 && hour < 24 && minute >= 0 && minute < 60) {
+        checked[key] = {'hour': hour, 'minute': minute};
+      } else {
+        _log.warning('Skipped $key in $adaptiveFileName: not a time of day');
+      }
+    }
+    return checked;
+  }
+
   static void _addJson(Archive archive, String name, Object json) {
     final bytes = utf8.encode(jsonEncode(json));
     archive.addFile(ArchiveFile(name, bytes.length, bytes));
@@ -398,5 +485,20 @@ class BackupExtras {
         ),
       ),
     );
+  }
+
+  /// [_decode] for a file older backups lack and older builds ignore: a
+  /// malformed one is skipped with a warning, the rest restores.
+  static T? _decodeOrSkip<T>(
+    Archive archive,
+    String name,
+    T Function(Object? json) parse,
+  ) {
+    try {
+      return _decode(archive, name, parse);
+    } on ExportImportFailure catch (error) {
+      _log.warning('Skipped $name', error);
+      return null;
+    }
   }
 }

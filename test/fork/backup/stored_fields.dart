@@ -54,7 +54,10 @@ const storedFields = <String, Map<String, StoredField>>{
     'goalsUpcoming': backedUp,
     'milestoneStep': backedUp,
     'phaseApplied': backedUp,
-    'phaseGoalNotice': StoredField.notBackedUp('not decided (2026-11-14)'),
+    'phaseGoalNotice': StoredField.notBackedUp(
+      "the owner's choice (2026-11-14): Home's note that a phase moved the "
+      'goal; lost, the note is not shown again (phases.dart)',
+    ),
     'plannedFoods': backedUp,
     'measurements': backedUp,
     'progressPhotos': backedUp,
@@ -78,20 +81,44 @@ const storedFields = <String, Map<String, StoredField>>{
     'trendsTiles': backedUp,
     'goalStart': backedUp,
     'goalStartNoTarget': backedUp,
-    'weighInReminder': StoredField.notBackedUp('not decided (2026-11-14)'),
-    'checkInReminder': StoredField.notBackedUp('not decided (2026-11-14)'),
-    'sidePart': StoredField.notBackedUp('not decided (2026-11-14)'),
-    'strengthAnswered': StoredField.notBackedUp('not decided (2026-11-14)'),
-    'bodyFatImport': StoredField.notBackedUp('not decided (2026-11-14)'),
-    'nutritionExport': StoredField.notBackedUp('not decided (2026-11-14)'),
+    'weighInReminder': backedUp,
+    'checkInReminder': backedUp,
+    'sidePart': StoredField.notBackedUp(
+      "the owner's choice (2026-11-14): which pair of sides the tile "
+      'compares; lost, it shows arms until picked again (side_compare.dart)',
+    ),
+    'strengthAnswered': StoredField.notBackedUp(
+      "the owner's choice (2026-11-14): the strength suggestion last applied "
+      'or put off; lost, Home may offer it again (strength_card.dart)',
+    ),
+    'bodyFatImport': StoredField.notBackedUp(
+      "the owner's choice (2026-11-14): per-device import state; lost, the "
+      'import is off until turned on, and then reads the last 30 days again '
+      '(body_fat_import.dart)',
+    ),
+    'nutritionExport': StoredField.notBackedUp(
+      "the owner's choice (2026-11-14): per-device export state; lost, the "
+      'export is off until turned on, and then writes the last 14 days again '
+      '(nutrition_export.dart)',
+    ),
     'movedDishIds': StoredField.notBackedUp(
       "per device: this profile's dish ids moved here (moved_dish_ids.dart)",
     ),
   },
   WeightImport.boxName: {
-    'enabled': StoredField.notBackedUp('not decided (2026-11-14)'),
-    'lastImportAt': StoredField.notBackedUp('not decided (2026-11-14)'),
-    'filed': StoredField.notBackedUp('not decided (2026-11-14)'),
+    'enabled': StoredField.notBackedUp(
+      "the owner's choice (2026-11-14): the weight import's switch, per "
+      'device with its permission; lost, it is off until turned on again',
+    ),
+    'lastImportAt': StoredField.notBackedUp(
+      "the owner's choice (2026-11-14): per-device import state; lost, the "
+      'next import reads the last 30 days again (weight_import.dart)',
+    ),
+    'filed': StoredField.notBackedUp(
+      "the owner's choice (2026-11-14): what the import filed per day; "
+      'lost, the rows in the log count as typed and are kept, and a day '
+      'deleted since can be filled again',
+    ),
   },
   // For every profile.
   forkFlagsBox: {
@@ -101,10 +128,7 @@ const storedFields = <String, Map<String, StoredField>>{
     'movedDishIds': StoredField.notBackedUp(
       "per install: the search cache's dish ids moved (moved_dish_ids.dart)",
     ),
-    'keepMealPhotos': StoredField.notBackedUp(
-      'per device: the meal photos it governs never leave the phone '
-      '(meal_photo_cache.dart)',
-    ),
+    'keepMealPhotos': backedUp,
   },
   AutoBackup.boxName: {
     'folderUri': StoredField.notBackedUp('per device: the backup folder'),
@@ -139,5 +163,6 @@ const storedBoxes = <String, StoredField>{
   OffKinds.boxName: StoredField.notBackedUp(
     'learnt again from the next search or scan (off_kinds.dart)',
   ),
-  MealGroupStore.boxName: StoredField.notBackedUp('not decided (2026-11-14)'),
+  // Without the photo paths: the photos stay on the phone they were taken on.
+  MealGroupStore.boxName: backedUp,
 };

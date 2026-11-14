@@ -22,6 +22,8 @@ import 'package:opennutritracker/features/settings/domain/export_import_failure.
 import 'package:opennutritracker/fork/amounts/own_portions.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/fork/body/measurement_store.dart';
+import 'package:opennutritracker/fork/leftovers/meal_groups.dart';
+import 'package:opennutritracker/fork/leftovers/meal_photo_cache.dart';
 import 'package:opennutritracker/fork/phases/phases.dart';
 import 'package:opennutritracker/fork/photos/photo_store.dart';
 import 'package:opennutritracker/fork/plan/plan_store.dart';
@@ -58,6 +60,9 @@ void main() {
     PhotoStore photos,
     PhaseStore phases,
     OwnPortions ownPortions,
+    MealGroupStore mealGroups,
+    MealPhotoCache mealPhotos,
+    List<Object> replans,
     _User user,
     _Config config,
   })
@@ -72,6 +77,12 @@ void main() {
     );
     final phases = PhaseStore(() => Hive.openBox<dynamic>(name));
     final ownPortions = OwnPortions(() => Hive.openBox<dynamic>(name));
+    final mealGroups = MealGroupStore(() => Hive.openBox<Map>('groups$name'));
+    final mealPhotos = MealPhotoCache(
+      dir: () async => Directory('${dir.path}/meal$name'),
+      flags: () => Hive.openBox<bool>('flags$name'),
+    );
+    final replans = <Object>[];
     final water = _Water();
     final fasting = _Fasting();
     final meals = _Meals();
@@ -88,6 +99,9 @@ void main() {
         photos: () => photos,
         phases: () => phases,
         ownPortions: () => ownPortions,
+        mealGroups: () => mealGroups,
+        mealPhotos: () => mealPhotos,
+        replanReminders: () async => replans.add(true),
         user: user,
         config: config,
       ),
@@ -100,9 +114,26 @@ void main() {
       photos: photos,
       phases: phases,
       ownPortions: ownPortions,
+      mealGroups: mealGroups,
+      mealPhotos: mealPhotos,
+      replans: replans,
       user: user,
       config: config,
     );
+  }
+
+  /// [archive] with [files] in place of, or beside, its own; null drops one.
+  Archive edited(Archive archive, Map<String, String?> files) {
+    final edited = Archive();
+    for (final file in archive.files) {
+      if (files.containsKey(file.name)) continue;
+      edited.addFile(ArchiveFile.bytes(file.name, file.content as List<int>));
+    }
+    for (final MapEntry(:key, :value) in files.entries) {
+      if (value == null) continue;
+      edited.addFile(ArchiveFile.bytes(key, utf8.encode(value)));
+    }
+    return edited;
   }
 
   final checkIn = CheckInRecord(
@@ -408,6 +439,129 @@ void main() {
         throwsA(isA<ExportImportFailure>()),
         reason: json,
       );
+    }
+  });
+
+  test('the reminders, the meal groups and the keep-photos switch travel; '
+      "a meal's photo does not, and the reminders are planned", () async {
+    final from = device();
+    final box = await Hive.openBox<dynamic>('adaptive${boxes - 1}');
+    await box.putAll({
+      'weighInReminder': {'hour': 7, 'minute': 30},
+      'checkInReminder': {'hour': 9, 'minute': 0},
+    });
+    final loggedAt = DateTime(2026, 11, 1, 13);
+    await from.mealGroups.record(['i1', 'i2'], loggedAt, '/phone/1.webp');
+    await from.mealPhotos.setEnabled(false);
+    final archive = Archive();
+    await from.extras.addTo(archive);
+    expect(
+      utf8.decode(
+        archive.findFile(BackupExtras.mealGroupsFileName)!.content as List<int>,
+      ),
+      isNot(contains('photoPath')),
+    );
+
+    final to = device();
+    final target = await Hive.openBox<dynamic>('adaptive${boxes - 1}');
+    // Another profile's meal stays.
+    await to.mealGroups.record(['o1', 'o2'], loggedAt);
+    await to.extras.prepareRestore(archive)();
+
+    expect(target.get('weighInReminder'), {'hour': 7, 'minute': 30});
+    expect(target.get('checkInReminder'), {'hour': 9, 'minute': 0});
+    expect(to.replans, hasLength(1));
+    for (final id in ['i1', 'i2']) {
+      final group = (await to.mealGroups.groupOf(id))!;
+      expect(group.intakeIds, ['i1', 'i2']);
+      expect(group.loggedAt, loggedAt);
+      expect(group.photoPath, isNull);
+    }
+    expect((await to.mealGroups.groupOf('o1'))?.intakeIds, ['o1', 'o2']);
+    expect(await to.mealPhotos.enabled, isFalse);
+  });
+
+  test('a backup from before them leaves the reminders, the meal groups and '
+      'the keep-photos switch as they are', () async {
+    final archive = edited(
+      await () async {
+        final archive = Archive();
+        await device().extras.addTo(archive);
+        return archive;
+      }(),
+      {BackupExtras.mealGroupsFileName: null, BackupExtras.flagsFileName: null},
+    );
+
+    final to = device();
+    final target = await Hive.openBox<dynamic>('adaptive${boxes - 1}');
+    await target.put('weighInReminder', {'hour': 6, 'minute': 0});
+    await to.mealGroups.record(['o1', 'o2'], DateTime(2026, 11, 1));
+    await to.mealPhotos.setEnabled(false);
+    await to.extras.prepareRestore(archive)();
+
+    expect(target.get('weighInReminder'), {'hour': 6, 'minute': 0});
+    expect(to.replans, isEmpty);
+    expect((await to.mealGroups.all()).keys, ['o1', 'o2']);
+    expect(await to.mealPhotos.enabled, isFalse);
+  });
+
+  test('a malformed reminder, meal group or switch is skipped and the rest '
+      'restores', () async {
+    final from = device();
+    final box = await Hive.openBox<dynamic>('adaptive${boxes - 1}');
+    await box.putAll({
+      'weighInReminder': {'hour': 7, 'minute': 30},
+      'checkInReminder': {'hour': 25, 'minute': 0},
+      'stepsOn': true,
+    });
+    final good = {
+      'intakeIds': ['i1', 'i2'],
+      'loggedAt': '2026-11-01T13:00:00.000',
+    };
+    final source = Archive();
+    await from.extras.addTo(source);
+
+    for (final (groups, flags) in [
+      (
+        jsonEncode({
+          'i1': good,
+          'i2': good,
+          'x': {'intakeIds': 'x', 'loggedAt': '2026-11-01'},
+          'y': {
+            'intakeIds': ['y', 'y2'],
+            'loggedAt': 'never',
+          },
+          'z': good,
+          'w': [1, 2],
+          'v': {
+            'intakeIds': ['v', 3],
+            'loggedAt': '2026-11-01',
+          },
+        }),
+        '{"keepMealPhotos": "no"}',
+      ),
+      ('{', '[true]'),
+      ('[1]', '1e400'),
+    ]) {
+      final archive = edited(source, {
+        BackupExtras.mealGroupsFileName: groups,
+        BackupExtras.flagsFileName: flags,
+      });
+      final to = device();
+      final target = await Hive.openBox<dynamic>('adaptive${boxes - 1}');
+      await target.put('checkInReminder', {'hour': 8, 'minute': 0});
+      await to.mealPhotos.setEnabled(false);
+      await to.extras.prepareRestore(archive)();
+
+      expect(target.get('weighInReminder'), {'hour': 7, 'minute': 30});
+      expect(target.get('checkInReminder'), {'hour': 8, 'minute': 0});
+      expect(target.get('stepsOn'), isTrue);
+      expect(
+        (await to.mealGroups.all()).keys,
+        groups.startsWith('{"') ? ['i1', 'i2'] : isEmpty,
+        reason: groups,
+      );
+      expect(await to.mealPhotos.enabled, isFalse, reason: flags);
     }
   });
 

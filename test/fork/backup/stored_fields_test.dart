@@ -20,6 +20,7 @@ import 'package:opennutritracker/fork/bulk/photo_meal_memory_store.dart';
 import 'package:opennutritracker/fork/health/steps.dart';
 import 'package:opennutritracker/fork/health/weight_import.dart';
 import 'package:opennutritracker/fork/leftovers/meal_groups.dart';
+import 'package:opennutritracker/fork/leftovers/meal_photo_cache.dart';
 import 'package:opennutritracker/fork/off/off_kinds.dart';
 import 'package:opennutritracker/fork/phases/phases.dart';
 import 'package:opennutritracker/fork/photos/photo_store.dart';
@@ -79,12 +80,34 @@ class _NoWater extends Fake implements WaterIntakeRepository {
   Future<void> addAllEntries(List<WaterIntakeDBO> entries) async {}
 }
 
-Future<Box<dynamic>> _open(String name) => Hive.isBoxOpen(name)
-    ? Future.value(Hive.box<dynamic>(name))
-    : Hive.openBox<dynamic>(name);
+Future<Box<E>> _openAs<E>(String name) async =>
+    Hive.isBoxOpen(name) ? Hive.box<E>(name) : await Hive.openBox<E>(name);
+
+/// In the type the app opens it in: Hive refuses a box open as another.
+Future<Box<dynamic>> _open(String name) => switch (name) {
+  forkFlagsBox => _openAs<bool>(name),
+  MealGroupStore.boxName => _openAs<Map>(name),
+  _ => _openAs<dynamic>(name),
+};
+
+/// What a backed-up box holds after a restore: a meal group's photo path
+/// is dropped, since the photo stays on the phone it was taken on.
+Map<dynamic, Object?> _restored(String name, Map<dynamic, Object?> before) =>
+    name != MealGroupStore.boxName
+    ? before
+    : {
+        for (final MapEntry(:key, :value) in before.entries)
+          key: {...value! as Map}..remove('photoPath'),
+      };
+
+/// Keys whose default is not null, false or empty.
+const _ownDefaults = {'keepMealPhotos': true};
 
 /// Null, false, empty, or [AdaptiveSettings]' own default.
 bool _isDefault(String key, Object? value) {
+  if (_ownDefaults.containsKey(key)) {
+    return value == null || value == _ownDefaults[key];
+  }
   final defaults = const AdaptiveSettings().toJson();
   if (defaults.containsKey(key)) return equals(defaults[key]).matches(value, {});
   return switch (value) {
@@ -156,7 +179,7 @@ void main() {
         '2026-11-01': {'kg': 84.0},
       },
     });
-    await (await _open(forkFlagsBox)).putAll({
+    await (await _open(forkFlagsBox)).putAll(<String, bool>{
       'starterRecipesSeeded': true,
       'movedDishIds': true,
       'keepMealPhotos': false,
@@ -173,10 +196,14 @@ void main() {
     await (await _open(UpdateNotice.boxName)).put(UpdateNotice.seenKey, '1.2.3');
     await (await _open(PhotoMealMemoryStore.boxName)).put('1', '{}');
     await (await _open(OffKinds.boxName)).put('4001234567890', '🥛');
-    await (await _open(MealGroupStore.boxName)).put('i1', {
+    final group = {
       'intakeIds': ['i1', 'i2'],
       'loggedAt': f.at(0, 13).toIso8601String(),
-    });
+      'photoPath': '${dir.path}/fork_meal_photos/1.webp',
+    };
+    await (await _open(
+      MealGroupStore.boxName,
+    )).putAll(<String, Map>{'i1': group, 'i2': group});
     return f;
   }
 
@@ -297,6 +324,10 @@ void main() {
       f.customMeals,
       photos: () =>
           PhotoStore(null, () async => Directory('${dir.path}/photos')),
+      mealPhotos: () => MealPhotoCache(
+        dir: () async => Directory('${dir.path}/fork_meal_photos'),
+      ),
+      replanReminders: () async {},
       user: UserDataSource(f.db),
       config: f.configSource,
     );
@@ -326,7 +357,9 @@ void main() {
       final after = (await _open(name)).toMap();
       if (!field.isBackedUp) {
         if (after.isNotEmpty) leaked.add(name);
-      } else if (!equals(wholeBefore[name]).matches(after, {})) {
+      } else if (!equals(
+        _restored(name, wholeBefore[name]!),
+      ).matches(after, {})) {
         lost.add(name);
       }
     }
