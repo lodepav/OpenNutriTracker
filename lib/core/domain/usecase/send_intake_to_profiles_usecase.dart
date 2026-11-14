@@ -145,6 +145,7 @@ class SendIntakeToProfilesUsecase {
             day,
             store: AdaptiveStore.forProfile(_hiveDBProvider, suffix),
             config: configRepository.getConfig,
+            activities: UserActivityRepository(UserActivityDataSource(scoped)),
           ),
           // [/fork]
         );

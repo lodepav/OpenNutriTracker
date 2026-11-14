@@ -55,6 +55,7 @@ class LogUserActivityUsecase {
       final kcalGoal = await forkGoalOnDay(
         await _getKcalGoalUsecase.getKcalGoal(totalKcalActivitiesParam: 0),
         day,
+        holdsTodayActivities: false,
       );
       // [/fork]
       await _addTrackedDayUsecase.addNewTrackedDayIfAbsent(
