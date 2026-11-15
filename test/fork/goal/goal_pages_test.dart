@@ -96,6 +96,28 @@ class _Settings extends Fake implements AdaptiveStore {
       AdaptiveStore.settings.value = value;
 }
 
+Finder _changeOf(String part) => find.descendant(
+  of: find.byWidgetPredicate(
+    (w) =>
+        w is Semantics && w.properties.identifier == 'goal-plan-change-$part',
+  ),
+  matching: find.text('Change'),
+);
+
+/// Opens [part] of the plan from its Change row.
+Future<void> _change(WidgetTester tester, String part) async {
+  await tester.scrollUntilVisible(
+    _changeOf(part),
+    100,
+    scrollable: find.byType(Scrollable).first,
+  );
+  // Clear of the bottom bar.
+  await tester.ensureVisible(_changeOf(part));
+  await tester.pumpAndSettle();
+  await tester.tap(_changeOf(part));
+  await tester.pumpAndSettle();
+}
+
 void main() {
   testWidgets('the plan: a grid, this week, its phases, the one now', (
     tester,
@@ -812,11 +834,13 @@ void main() {
       ),
     );
     expect(find.textContaining('A bulk needs a target above'), findsOneWidget);
+    // Opened on its goal, from the plan: Done is off as Next was.
+    expect(find.text('Your plan › Goal'), findsOneWidget);
     expect(
       tester
           .widget<FilledButton>(
             find.ancestor(
-              of: find.text('Next'),
+              of: find.text('Done'),
               matching: find.byType(FilledButton),
             ),
           )
@@ -1006,14 +1030,16 @@ void main() {
         onStart: (_) async => true,
       ),
     );
+    await _change(tester, 'goal');
     await tester.scrollUntilVisible(
       find.textContaining('The weeks so far stay'),
       100,
       scrollable: find.byType(Scrollable).first,
     );
     expect(find.textContaining('Today,'), findsNothing);
-    await tester.tap(find.text('Next'));
+    await tester.tap(find.text('Done'));
     await tester.pumpAndSettle();
+    await _change(tester, 'pace');
     // Seven weeks begun, then from 84 kg at 0.5 a week: 8 more, from
     // the start kept.
     await tester.scrollUntilVisible(
@@ -1023,6 +1049,180 @@ void main() {
     );
     expect(find.textContaining('Oct 5'), findsOneWidget);
     expect(find.textContaining('Jan 17, 2027'), findsWidgets);
+  });
+
+  group('a goal edited opens on its plan', () {
+    final running = _cut(breaks: false);
+    final today = DateTime(2026, 11, 18);
+    GoalPlannerScreen editing({Future<bool> Function(PhasePlan)? onStart}) =>
+        GoalPlannerScreen(
+          setup: PlannerSetup(
+            nowKg: 84,
+            unit: BodyWeightUnit.kg,
+            expenditureKcal: 2600,
+            bodyFatPercent: 22,
+            running: running,
+          ),
+          draft: GoalDraft.of(running, 84).copyWith(startKg: 84),
+          editing: running,
+          today: today,
+          onStart: onStart ?? (_) async => true,
+        );
+
+    testWidgets('a Change row for each part; Pace changed there comes back '
+        'and saves in one tap', (tester) async {
+      final saved = <PhasePlan>[];
+      await _pump(
+        tester,
+        editing(
+          onStart: (plan) async {
+            saved.add(plan);
+            return true;
+          },
+        ),
+      );
+      // No steps came before it: no count and no dots.
+      expect(find.text('Your plan'), findsOneWidget);
+      expect(find.textContaining('Step '), findsNothing);
+      expect(tester.widget<AppBar>(find.byType(AppBar)).bottom, isNull);
+      expect(find.text('Back'), findsNothing);
+      for (final part in ['goal', 'pace', 'burn', 'target', 'macros']) {
+        expect(_changeOf(part), findsOneWidget, reason: part);
+      }
+      expect(
+        find.descendant(
+          of: find.ancestor(
+            of: _changeOf('pace'),
+            matching: find.byType(ListTile),
+          ),
+          matching: find.text('0.5 kg a week'),
+        ),
+        findsOneWidget,
+      );
+      await _change(tester, 'pace');
+      expect(find.text('Your plan › Pace'), findsOneWidget);
+      await tester.tap(find.textContaining('Fast ·'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Done'));
+      await tester.pumpAndSettle();
+      expect(find.text('Your plan'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.ancestor(
+            of: _changeOf('pace'),
+            matching: find.byType(ListTile),
+          ),
+          matching: find.text('0.75 kg a week'),
+        ),
+        findsOneWidget,
+      );
+      await tester.tap(find.text('Save plan'));
+      await tester.pumpAndSettle();
+      expect(saved, hasLength(1));
+      expect(saved.single.phases.last.kgPerWeek, -0.75);
+    });
+
+    testWidgets('system Back in a detour returns to the plan; on the plan it '
+        'asks to leave', (tester) async {
+      await _pump(tester, editing());
+      await _change(tester, 'target');
+      expect(find.text('Your plan › Calorie target'), findsOneWidget);
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(find.text('Your plan'), findsOneWidget);
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(find.text('Leave without saving?'), findsOneWidget);
+    });
+
+    testWidgets('a goal changed there to one it cannot plan blocks Done, and '
+        'Save after Back', (tester) async {
+      await _pump(tester, editing());
+      await _change(tester, 'goal');
+      // A bulk to 80 kg from 84.
+      await tester.tap(find.text('Gain'));
+      await tester.pumpAndSettle();
+      FilledButton main() =>
+          tester.widget<FilledButton>(find.byType(FilledButton));
+      expect(main().onPressed, isNull);
+      await tester.tap(find.text('Back'));
+      await tester.pumpAndSettle();
+      expect(find.text('Change the target weight to save.'), findsOneWidget);
+      expect(main().onPressed, isNull);
+    });
+
+    testWidgets('at 200% text on a 360 dp phone: nothing cut, the targets and '
+        'contrast', (tester) async {
+      await pumpOnPhone(
+        tester,
+        ChangeNotifierProvider(
+          create: (_) => EnergyUnitProvider(usesKilojoules: false),
+          child: editing(),
+        ),
+      );
+      tester.view.physicalSize = const Size(360 * 2.625, 7020);
+      await tester.pumpAndSettle();
+      expect(find.text('Your plan'), findsOneWidget);
+      expect(cutText(tester), isEmpty);
+      await expectAccessible(tester);
+    });
+  });
+
+  testWidgets('a new goal still walks the steps from the first', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      GoalPlannerScreen(
+        setup: PlannerSetup(
+          nowKg: 84,
+          unit: BodyWeightUnit.kg,
+          expenditureKcal: 2600,
+          bodyFatPercent: 22,
+          running: _cut(breaks: false),
+        ),
+        draft: GoalDraft.fresh(84, _start, targetKg: 80),
+        onStart: (_) async => true,
+      ),
+    );
+    expect(find.text('Step 1 of 6 · Goal'), findsOneWidget);
+    expect(tester.widget<AppBar>(find.byType(AppBar)).bottom, isNotNull);
+    expect(_changeOf('goal'), findsNothing);
+  });
+
+  testWidgets('an upcoming goal edited opens on its plan', (tester) async {
+    final cut = _cut(breaks: false);
+    final hold = GoalDraft(
+      kind: PhaseKind.maintain,
+      startKg: 80,
+      start: cut.end,
+      maintainWeeks: 4,
+    ).toPlan();
+    await _pump(
+      tester,
+      GoalPlannerScreen(
+        setup: PlannerSetup(
+          nowKg: 85,
+          unit: BodyWeightUnit.kg,
+          expenditureKcal: 2870,
+          bodyFatPercent: 22,
+          running: cut,
+          upcoming: [hold],
+        ),
+        draft: GoalDraft.of(hold, 80),
+        queuedAt: 0,
+        onStart: (_) async => true,
+        onQueue: (_, _) async => true,
+        today: DateTime(2026, 10, 29),
+      ),
+    );
+    expect(find.text('Your plan'), findsOneWidget);
+    expect(find.text('Save goal'), findsOneWidget);
+    await _change(tester, 'pace');
+    expect(find.text('Your plan › Length'), findsOneWidget);
+    await tester.tap(find.text('Done'));
+    await tester.pumpAndSettle();
+    expect(find.text('Your plan'), findsOneWidget);
   });
 
   testWidgets(

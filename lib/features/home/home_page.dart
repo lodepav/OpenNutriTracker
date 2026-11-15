@@ -534,11 +534,13 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     final mealGroup = await mealGroupEntriesOf(intakeEntity);
     if (!context.mounted) return;
     // [/fork]
+    final unit = ValueNotifier(intakeEntity.unit); // [fork] S220
     final changeIntakeAmount = await showDialog<double>(
       context: context,
       builder: (context) => EditDialog(
         intakeEntity: intakeEntity,
         usesImperialUnits: usesImperialUnits,
+        unit: unit, // [fork] S220
         wholeMeal: mealGroup != null, // [fork] S10
       ),
     );
@@ -574,6 +576,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     if (changeIntakeAmount != null) {
       await _homeBloc.updateIntakeItem(intakeEntity.id, {
         'amount': changeIntakeAmount,
+        'unit': unit.value, // [fork] S220
       });
       _homeBloc.add(const LoadItemsEvent());
       if (context.mounted) {

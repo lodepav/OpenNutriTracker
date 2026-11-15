@@ -101,7 +101,7 @@ class AmountPicker extends StatelessWidget {
             Expanded(
               child: Semantics(
                 identifier: 'amount-field',
-                child: TextField(
+                child: TextFormField(
                   key: const ValueKey('amount-field'),
                   enabled: enabled,
                   controller: controller,
@@ -161,19 +161,23 @@ class AmountPicker extends StatelessWidget {
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Semantics(
-                    identifier: 'amount-unit-$i',
-                    child: GestureDetector(
-                      onLongPress: option.own && onRemovePortion != null
-                          ? () => _remove(context, option)
-                          : null,
-                      child: ChoiceChip(
-                        key: ValueKey('amount-unit-${option.unit}'),
-                        label: Text(_chipLabel(context, option)),
-                        selected: option.unit == unit,
-                        onSelected: enabled
-                            ? (_) => _choose(option.unit)
+                  // Wraps its label where a row is narrower than it: the
+                  // Edit item dialog at 200% text.
+                  Flexible(
+                    child: Semantics(
+                      identifier: 'amount-unit-$i',
+                      child: GestureDetector(
+                        onLongPress: option.own && onRemovePortion != null
+                            ? () => _remove(context, option)
                             : null,
+                        child: ChoiceChip(
+                          key: ValueKey('amount-unit-${option.unit}'),
+                          label: Text(_chipLabel(context, option)),
+                          selected: option.unit == unit,
+                          onSelected: enabled
+                              ? (_) => _choose(option.unit)
+                              : null,
+                        ),
                       ),
                     ),
                   ),
@@ -306,32 +310,8 @@ class AmountPicker extends StatelessWidget {
     if (index >= 0) onSet(controller.text, portionUnit(index));
   }
 
-  /// "slice", "g", "fl oz": the unit as one word.
-  String _unitWord(BuildContext context, AmountUnitOption option) {
-    final s = S.of(context);
-    if (option.isPortion) {
-      if (option.own) return option.portionLabel!;
-      return householdPortionLabel(
-            option.portionLabel,
-            languageCode: Localizations.localeOf(context).languageCode,
-            textIsLocalized: _localized(option),
-          ) ??
-          s.servingLabel;
-    }
-    return switch (UnitDropdownItem.g.fromString(storedUnit(option.unit))) {
-      UnitDropdownItem.g || UnitDropdownItem.gml => s.gramUnit,
-      UnitDropdownItem.ml => s.milliliterUnit,
-      UnitDropdownItem.oz => s.ozUnit,
-      UnitDropdownItem.flOz => s.flOzUnit,
-      UnitDropdownItem.serving => s.servingLabel,
-    };
-  }
-
-  bool _localized(AmountUnitOption option) {
-    if (meal.portions.isEmpty) return meal.servingSizeIsLocalized;
-    final index = effectivePortionIndex(option.unit);
-    return index < meal.portions.length && meal.portions[index].localized;
-  }
+  String _unitWord(BuildContext context, AmountUnitOption option) =>
+      amountUnitWord(context, meal, option);
 
   /// "slice · 32 g", or the weight unit's word.
   String _chipLabel(BuildContext context, AmountUnitOption option) {
@@ -372,6 +352,37 @@ class AmountPicker extends StatelessWidget {
     return '${amountText(quantity)} × ${_unitWord(context, selected)} = '
         '${_weight(context, grams)}$energy';
   }
+}
+
+/// "slice", "g", "fl oz": [option] of [meal] as one word.
+String amountUnitWord(
+  BuildContext context,
+  MealEntity meal,
+  AmountUnitOption option,
+) {
+  final s = S.of(context);
+  if (option.isPortion) {
+    if (option.own) return option.portionLabel!;
+    return householdPortionLabel(
+          option.portionLabel,
+          languageCode: Localizations.localeOf(context).languageCode,
+          textIsLocalized: _localized(meal, option),
+        ) ??
+        s.servingLabel;
+  }
+  return switch (UnitDropdownItem.g.fromString(storedUnit(option.unit))) {
+    UnitDropdownItem.g || UnitDropdownItem.gml => s.gramUnit,
+    UnitDropdownItem.ml => s.milliliterUnit,
+    UnitDropdownItem.oz => s.ozUnit,
+    UnitDropdownItem.flOz => s.flOzUnit,
+    UnitDropdownItem.serving => s.servingLabel,
+  };
+}
+
+bool _localized(MealEntity meal, AmountUnitOption option) {
+  if (meal.portions.isEmpty) return meal.servingSizeIsLocalized;
+  final index = effectivePortionIndex(option.unit);
+  return index < meal.portions.length && meal.portions[index].localized;
 }
 
 /// Names a portion of the food and its weight; prefilled with the amount

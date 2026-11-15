@@ -394,12 +394,14 @@ class _DiaryPageState extends State<DiaryPage> with WidgetsBindingObserver {
     if (!context.mounted) return;
     // [/fork]
     final meal = ValueNotifier(intakeEntity.type); // [fork] S177
+    final unit = ValueNotifier(intakeEntity.unit); // [fork] S220
     final changeIntakeAmount = await showDialog<double>(
       context: context,
       builder: (context) => EditDialog(
         intakeEntity: intakeEntity,
         usesImperialUnits: usesImperialUnits,
         meal: meal, // [fork] S177
+        unit: unit, // [fork] S220
         wholeMeal: mealGroup != null, // [fork] S9
       ),
     );
@@ -444,13 +446,16 @@ class _DiaryPageState extends State<DiaryPage> with WidgetsBindingObserver {
         mounted) {
       // This page's context: a reload under the dialog takes the row's.
       await moveToMeal(this.context, intakeEntity, day, meal.value);
-      if (changeIntakeAmount == intakeEntity.amount) return;
+      if (changeIntakeAmount == intakeEntity.amount &&
+          unit.value == intakeEntity.unit) { // [fork] S220
+        return;
+      }
     }
     // [/fork]
     if (changeIntakeAmount != null) {
       await _calendarDayBloc.updateIntakeItem(
         intakeEntity.id,
-        {'amount': changeIntakeAmount},
+        {'amount': changeIntakeAmount, 'unit': unit.value}, // [fork] S220
         day,
       );
       _diaryBloc.add(const LoadDiaryYearEvent());

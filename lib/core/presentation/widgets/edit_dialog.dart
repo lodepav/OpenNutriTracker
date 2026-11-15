@@ -8,6 +8,12 @@ import 'package:opennutritracker/fork/units/energy_text.dart'; // [fork] S142
 import 'package:opennutritracker/core/domain/entity/intake_type_entity.dart';
 import 'package:opennutritracker/fork/widget/meal_picker_chip.dart';
 // [/fork]
+// [fork] S220 edit-in-unit
+import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dart';
+import 'package:opennutritracker/fork/amounts/amount_picker.dart';
+import 'package:opennutritracker/fork/amounts/edit_amount.dart';
+import 'package:opennutritracker/fork/amounts/own_portions.dart';
+// [/fork]
 import 'package:opennutritracker/generated/l10n.dart';
 
 class EditDialog extends StatefulWidget {
@@ -27,12 +33,17 @@ class EditDialog extends StatefulWidget {
   // the caller; null where it cannot be changed
   final ValueNotifier<IntakeTypeEntity>? meal;
   // [/fork]
+  // [fork] S220 edit-in-unit: the unit the amount is in, changed here and
+  // stored on OK by the caller; null keeps the plain field in grams
+  final ValueNotifier<String>? unit;
+  // [/fork]
 
   const EditDialog({
     super.key,
     required this.intakeEntity,
     required this.usesImperialUnits,
     this.meal, // [fork] S177
+    this.unit, // [fork] S220
     this.wholeMeal = false, // [fork] S83
   });
 
@@ -49,7 +60,7 @@ class _EditDialogState extends State<EditDialog> {
 
   /// The amount as logged, in the units shown, which what is left over is
   /// taken from.
-  late final double _loggedAmount;
+  late double _loggedAmount; // [fork] S220
 
   // [fork] S83 select-on-focus: tapping into a field selects what it holds,
   // so typing replaces the amount rather than adding to it
@@ -86,6 +97,49 @@ class _EditDialogState extends State<EditDialog> {
       usesKj(context, listen: false) ? UnitCalc.kcalToKj(kcal) : kcal;
   // [/fork]
 
+  // [fork] S220 edit-in-unit: the amount in the food page's picker, opened
+  // in the unit the entry was logged in, with the user's own portions
+  MealEntity? _forkMeal;
+  late EditAmount _forkOpened;
+
+  Future<void> _forkLoad() async {
+    final base = widget.intakeEntity.meal;
+    final meal = withOwnPortions(base, await OwnPortions.current.of(base));
+    if (!mounted) return;
+    final opened = editOpening(
+      widget.intakeEntity,
+      meal,
+      imperial: widget.usesImperialUnits,
+    );
+    setState(() {
+      _forkMeal = meal;
+      _forkOpened = opened;
+      _loggedAmount = opened.quantity;
+      widget.unit!.value = opened.unit;
+      amountEditingController.text = _amountText(opened.quantity);
+    });
+  }
+
+  /// A new unit counts what was logged in it, and a leftover typed in the
+  /// old one is cleared rather than read in the new.
+  void _forkSet(String text, String to) {
+    final unit = widget.unit!;
+    setState(() {
+      if (to != unit.value) {
+        _loggedAmount = quantityInUnit(
+          _loggedAmount,
+          unit.value,
+          to,
+          _forkMeal!,
+        );
+        leftoverEditingController.clear();
+      }
+      unit.value = to;
+      amountEditingController.text = text;
+    });
+  }
+  // [/fork]
+
   @override
   void initState() {
     super.initState();
@@ -102,6 +156,7 @@ class _EditDialogState extends State<EditDialog> {
     amountEditingController = TextEditingController(
       text: _amountText(initialAmount), // [fork] S83
     );
+    if (widget.unit != null && _kcalPerUnit == null) _forkLoad(); // [fork] S220
   }
 
   @override
@@ -161,6 +216,22 @@ class _EditDialogState extends State<EditDialog> {
             const SizedBox(height: 16),
           ],
           // [/fork]
+          // [fork] S220 edit-in-unit: nothing in its place for the moment
+          // the own portions load, so no number shows in the wrong unit
+          if (widget.unit != null && _kcalPerUnit == null)
+            if (_forkMeal case final meal?)
+              AmountPicker(
+                meal: meal,
+                unit: widget.unit!.value,
+                controller: amountEditingController,
+                focusNode: _amountFocus,
+                imperial: widget.usesImperialUnits,
+                onSet: _forkSet,
+              )
+            else
+              const SizedBox(height: 48)
+          else
+          // [/fork]
           TextFormField(
             controller: amountEditingController,
             focusNode: _amountFocus, // [fork] S83
@@ -189,7 +260,7 @@ class _EditDialogState extends State<EditDialog> {
               // wraps rather than being cut (A6)
               helperText:
                   "What you didn't eat; the ${_kcalPerUnit != null ? 'energy' : 'quantity'} above goes down by it",
-              helperMaxLines: 3,
+              helperMaxLines: 5, // [fork] S220: 4 lines at 200%, 360 dp
               suffixText: _shownUnit,
               // [/fork]
             ),
@@ -250,6 +321,21 @@ class _EditDialogState extends State<EditDialog> {
                   amountEditingController.text.replaceAll(',', '.'),
                 );
                 if (newAmount == null || newAmount <= 0) return; // [fork] S83
+                // [fork] S220 edit-in-unit: grams for the amount in the unit
+                // chosen, which the caller reads from the notifier
+                if (_forkMeal case final meal?) {
+                  Navigator.of(context).pop(
+                    editStoredAmount(
+                      newAmount,
+                      widget.unit!.value,
+                      meal,
+                      widget.intakeEntity,
+                      _forkOpened,
+                    ),
+                  );
+                  return;
+                }
+                // [/fork]
                 Navigator.of(context).pop(
                   switch (_kcalPerUnit) {
                     // [fork] S142
@@ -297,6 +383,15 @@ class _EditDialogState extends State<EditDialog> {
   // upstream's "gml" rather than the code word
   String get _shownUnit => _kcalPerUnit != null
       ? (usesKj(context) ? 'kJ' : 'kcal')
+      // [fork] S220 edit-in-unit: the leftover in the picker's unit
+      : _forkMeal != null
+      ? editUnitWord(
+          context,
+          _forkMeal!,
+          widget.unit!.value,
+          imperial: widget.usesImperialUnits,
+        )
+      // [/fork]
       : _convertUnit(widget.intakeEntity.meal.mealUnit ?? '');
   // [/fork]
 
