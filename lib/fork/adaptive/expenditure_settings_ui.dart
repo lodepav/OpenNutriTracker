@@ -11,6 +11,7 @@ import 'package:opennutritracker/fork/adaptive/activity.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_ui.dart';
+import 'package:opennutritracker/fork/adaptive/auto_check_in.dart';
 import 'package:opennutritracker/fork/adaptive/check_in_history.dart';
 import 'package:opennutritracker/fork/adaptive/choice.dart';
 import 'package:opennutritracker/fork/adaptive/expenditure.dart';
@@ -721,6 +722,21 @@ class _OpenCheckInTileState extends State<_OpenCheckInTile> {
   Future<bool> _readDue() => Future(
     () => (widget.service ?? AdaptiveService.fromLocator()).checkInDue(),
   ).catchError((Object _) => false);
+
+  @override
+  void initState() {
+    super.initState();
+    // An automatic accept on resume ends "Due now" while this is open.
+    AutoCheckIn.accepted.addListener(_reread);
+  }
+
+  @override
+  void dispose() {
+    AutoCheckIn.accepted.removeListener(_reread);
+    super.dispose();
+  }
+
+  void _reread() => setState(() => _due = _readDue());
 
   @override
   void didUpdateWidget(_OpenCheckInTile oldWidget) {
