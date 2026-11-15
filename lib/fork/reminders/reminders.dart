@@ -194,6 +194,9 @@ class Reminders {
   final Future<DateTime?> Function() _checkInDueDay;
   final Future<String?> Function() _checkInResult;
   final DateTime Function() _clock;
+  final Future<bool> Function() _allowed;
+  final Future<bool> Function() _dailyOn;
+  final Future<void> Function() _openSettings;
 
   Reminders({
     ReminderScheduler scheduler = const LocalNotificationScheduler(),
@@ -202,12 +205,41 @@ class Reminders {
     Future<DateTime?> Function()? checkInDueDay,
     Future<String?> Function()? checkInResult,
     DateTime Function()? clock,
+    Future<bool> Function()? notificationsAllowed,
+    Future<bool> Function()? dailyReminderOn,
+    Future<void> Function()? openNotificationSettings,
   }) : _scheduler = scheduler,
        _box = box ?? AdaptiveStore.openActiveBox,
        _weighed = weighed ?? _weighedInLog,
        _checkInDueDay = checkInDueDay ?? _dueFromStore,
        _checkInResult = checkInResult ?? _resultFromStore,
-       _clock = clock ?? DateTime.now;
+       _clock = clock ?? DateTime.now,
+       _allowed = notificationsAllowed ?? _allowedInOs,
+       _dailyOn = dailyReminderOn ?? _dailyFromConfig,
+       _openSettings = openNotificationSettings ?? _openOsSettings;
+
+  static Future<bool> _allowedInOs() async {
+    final plugin = FlutterLocalNotificationsPlugin();
+    final android = plugin
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >();
+    if (android != null) return await android.areNotificationsEnabled() ?? true;
+    final ios = plugin
+        .resolvePlatformSpecificImplementation<
+          IOSFlutterLocalNotificationsPlugin
+        >();
+    if (ios != null) return (await ios.checkPermissions())?.isEnabled ?? true;
+    return true;
+  }
+
+  /// Upstream's daily reminder.
+  static Future<bool> _dailyFromConfig() async =>
+      (await locator<GetConfigUsecase>().getConfig()).notificationsEnabled;
+
+  static Future<void> _openOsSettings() async {
+    await FlutterLocalNotificationsPlugin().openAppNotificationSettings();
+  }
 
   static Future<bool> _weighedInLog(DateTime day) async =>
       await locator<WeightLogRepository>().getEntry(day) != null;
@@ -251,6 +283,38 @@ class Reminders {
     changes.value++;
     await replan();
     return true;
+  }
+
+  /// A reminder is on (these or upstream's daily one) while the OS won't
+  /// show notifications; false when that can't be read.
+  Future<bool> silent() async {
+    try {
+      final on =
+          await timeOf(ReminderKind.weighIn) != null ||
+          await timeOf(ReminderKind.checkIn) != null ||
+          await _dailyOn();
+      return on && !await _allowed();
+    } catch (error, stack) {
+      _log.warning('Could not read whether reminders can show', error, stack);
+      return false;
+    }
+  }
+
+  /// Asks for the notification permission, and plans the reminders once
+  /// granted.
+  Future<bool> allow() async {
+    if (!await _scheduler.requestPermission()) return false;
+    await replan();
+    return true;
+  }
+
+  /// The app's notification settings: once refused, Android may no longer
+  /// show the permission dialog.
+  Future<void> openNotificationSettings() => _openSettings();
+
+  /// After a restore: when its reminders would stay silent, asks once.
+  Future<void> askIfSilent() async {
+    if (await silent()) await allow();
   }
 
   /// Schedules what [planReminders] gives and cancels the rest; failures

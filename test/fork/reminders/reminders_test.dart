@@ -11,9 +11,13 @@ class _Scheduler implements ReminderScheduler {
   final scheduled = <ReminderKind, PlannedReminder>{};
   final bodies = <ReminderKind, String?>{};
   var granted = true;
+  var asked = 0;
 
   @override
-  Future<bool> requestPermission() async => granted;
+  Future<bool> requestPermission() async {
+    asked++;
+    return granted;
+  }
 
   @override
   Future<void> schedule(PlannedReminder reminder, {String? body}) async {
@@ -261,6 +265,75 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Weigh-in 7:30 AM'), findsOneWidget);
     });
+
+    const silentLine =
+        'Notifications are off for OpenBite, so reminders stay silent.';
+
+    Future<void> openSheet(WidgetTester tester, Reminders r) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(body: RemindersTile(reminders: r)),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('reminders-tile')));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('a reminder on without notifications says so; Allow asks, '
+        'and once granted the line goes', (tester) async {
+      final scheduler = _Scheduler();
+      final r = _MemoryReminders(scheduler, {
+        ReminderKind.weighIn: _morning,
+      }, allowed: () async => scheduler.asked > 0 && scheduler.granted);
+      await openSheet(tester, r);
+      expect(find.text(silentLine), findsOneWidget);
+
+      await tester.tap(find.byKey(const ValueKey('reminders-allow')));
+      await tester.pumpAndSettle();
+      expect(scheduler.asked, 1);
+      expect(find.text(silentLine), findsNothing);
+    });
+
+    testWidgets('once refused, Allow opens the system settings', (
+      tester,
+    ) async {
+      final scheduler = _Scheduler()..granted = false;
+      var opened = 0;
+      final r = _MemoryReminders(
+        scheduler,
+        {ReminderKind.checkIn: _nine},
+        allowed: () async => false,
+        openSettings: () async => opened++,
+      );
+      await openSheet(tester, r);
+      await tester.tap(find.byKey(const ValueKey('reminders-allow')));
+      await tester.pumpAndSettle();
+      expect((scheduler.asked, opened), (1, 0));
+      await tester.tap(find.byKey(const ValueKey('reminders-allow')));
+      await tester.pumpAndSettle();
+      expect((scheduler.asked, opened), (1, 1));
+      expect(find.text(silentLine), findsOneWidget);
+    });
+
+    testWidgets('no line with notifications allowed, or nothing on', (
+      tester,
+    ) async {
+      await openSheet(
+        tester,
+        _MemoryReminders(_Scheduler(), {ReminderKind.weighIn: _morning}),
+      );
+      expect(find.text(silentLine), findsNothing);
+      await tester.tap(find.text('Close'));
+      await tester.pumpAndSettle();
+
+      await openSheet(
+        tester,
+        _MemoryReminders(_Scheduler(), {}, allowed: () async => false),
+      );
+      expect(find.text(silentLine), findsNothing);
+      expect(find.byKey(const ValueKey('reminders-allow')), findsNothing);
+    });
   });
 }
 
@@ -268,8 +341,20 @@ void main() {
 class _MemoryReminders extends Reminders {
   final Map<ReminderKind, ReminderTime?> times;
 
-  _MemoryReminders(_Scheduler scheduler, this.times)
-    : super(scheduler: scheduler);
+  _MemoryReminders(
+    _Scheduler scheduler,
+    this.times, {
+    Future<bool> Function()? allowed,
+    Future<void> Function()? openSettings,
+  }) : super(
+         scheduler: scheduler,
+         notificationsAllowed: allowed ?? () async => true,
+         dailyReminderOn: () async => false,
+         openNotificationSettings: openSettings ?? () async {},
+         weighed: (_) async => false,
+         checkInDueDay: () async => null,
+         checkInResult: () async => null,
+       );
 
   @override
   Future<ReminderTime?> timeOf(ReminderKind kind) async => times[kind];

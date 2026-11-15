@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
 import 'package:opennutritracker/fork/backup/auto_backup.dart';
 import 'package:opennutritracker/fork/display/settings_tile.dart';
 
@@ -25,12 +26,34 @@ String _when(DateTime at) => DateFormat.yMMMd().add_jm().format(at);
 
 String _summary(AutoBackupState state) {
   if (!state.isOn) return 'Off';
-  final error = state.lastErrorAt;
+  if (state.failed) return 'Last backup failed';
   final success = state.lastSuccessAt;
-  if (error != null && (success == null || error.isAfter(success))) {
-    return 'Last backup failed';
-  }
   return success == null ? 'On' : 'Last backup ${_when(success)}';
+}
+
+/// The backup's state on Settings' Data row.
+String backupLine(AutoBackupState state) {
+  if (!state.isOn) return 'Backup off';
+  if (state.failed) return 'Last backup failed';
+  final success = state.lastSuccessAt;
+  return success == null ? 'Backup on' : 'Backed up ${_when(success)}';
+}
+
+enum BackupNotice { none, failed, offAfterRestore }
+
+/// What Home says about the backup: a failure until dismissed, then
+/// nothing until a newer one; after a restore left it off, that, until
+/// dismissed or a folder is chosen.
+BackupNotice backupNotice(AutoBackupState state) {
+  final dismissed = state.dismissedErrorAt;
+  if (state.failed &&
+      (dismissed == null || state.lastErrorAt!.isAfter(dismissed))) {
+    return BackupNotice.failed;
+  }
+  if (state.restoredWhileOff && !state.isOn) {
+    return BackupNotice.offAfterRestore;
+  }
+  return BackupNotice.none;
 }
 
 String _errorText(String? code) => switch (code) {
@@ -78,9 +101,6 @@ class _AutoBackupScreenState extends State<AutoBackupScreen> {
         valueListenable: AutoBackup.state,
         builder: (context, state, _) {
           final error = state.lastErrorAt;
-          final success = state.lastSuccessAt;
-          final failed =
-              error != null && (success == null || error.isAfter(success));
           return ListView(
             padding: EdgeInsets.fromLTRB(
               16,
@@ -119,11 +139,11 @@ class _AutoBackupScreenState extends State<AutoBackupScreen> {
                 title: Text(state.folderName ?? 'No folder chosen'),
                 subtitle: Text(_summary(state)),
               ),
-              if (failed)
+              if (state.failed)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 8),
                   child: Text(
-                    '${_errorText(state.lastError)} (${_when(error)})',
+                    '${_errorText(state.lastError)} (${_when(error!)})',
                     style: textTheme.bodyMedium?.copyWith(
                       color: Theme.of(context).colorScheme.error,
                     ),
@@ -166,4 +186,67 @@ class _AutoBackupScreenState extends State<AutoBackupScreen> {
       ),
     );
   }
+}
+
+/// Seam S219: Home's notice of a failed backup, or of a restore that left
+/// the backup off on this phone ([backupNotice]).
+class BackupNoticeCard extends StatelessWidget {
+  final AutoBackup? backup;
+
+  const BackupNoticeCard({super.key, this.backup});
+
+  @override
+  Widget build(BuildContext context) => ValueListenableBuilder(
+    valueListenable: AutoBackup.state,
+    builder: (context, state, _) {
+      final backup = this.backup ?? AutoBackup.instance;
+      final (title, body, dismiss) = switch (backupNotice(state)) {
+        BackupNotice.none => (null, null, null),
+        BackupNotice.failed => (
+          'The last backup failed',
+          _errorText(state.lastError),
+          backup.dismissFailure,
+        ),
+        BackupNotice.offAfterRestore => (
+          'Automatic backup is off on this phone',
+          "A restore doesn't bring the backup folder. Choose one to keep "
+              'backing up.',
+          backup.dismissRestoreNotice,
+        ),
+      };
+      if (title == null) return const SizedBox.shrink();
+      final text = Theme.of(context).textTheme;
+      return Padding(
+        // Home's sections bring their own margins; the card has none.
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+        child: AppCard(
+          padding: const EdgeInsets.fromLTRB(16, 12, 4, 12),
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (_) => AutoBackupScreen(backup: this.backup),
+            ),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, style: text.titleMedium),
+                    Text(body!),
+                  ],
+                ),
+              ),
+              IconButton(
+                tooltip: 'Dismiss',
+                icon: const Icon(Icons.close),
+                onPressed: dismiss,
+              ),
+            ],
+          ),
+        ),
+      );
+    },
+  );
 }

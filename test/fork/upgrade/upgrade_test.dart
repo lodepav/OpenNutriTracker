@@ -350,6 +350,8 @@ final _fieldReaders = <String, Map<String, Future<Object?> Function()>>{
     'lastSuccessAt': () async => AutoBackup.state.value.lastSuccessAt,
     'lastErrorAt': () async => AutoBackup.state.value.lastErrorAt,
     'lastError': () async => AutoBackup.state.value.lastError,
+    'dismissedErrorAt': () async => AutoBackup.state.value.dismissedErrorAt,
+    'restoredWhileOff': () async => AutoBackup.state.value.restoredWhileOff,
     'setAsideOn': () => _stored(AutoBackup.boxName, AutoBackup.setAsideOnKey),
   },
   UpdateNotice.boxName: {

@@ -152,6 +152,12 @@ const storedFields = <String, Map<String, StoredField>>{
     'restorePending': StoredField.notBackedUp(
       'per device: a recovery restore still to run (storage_rescue.dart)',
     ),
+    'dismissedErrorAt': StoredField.notBackedUp(
+      'per device: the backup failure whose Home notice was dismissed',
+    ),
+    'restoredWhileOff': StoredField.notBackedUp(
+      'per device: a restore left the backup off, for the Home notice',
+    ),
   },
   UpdateNotice.boxName: {
     'seen': StoredField.notBackedUp('per device: the update last offered'),

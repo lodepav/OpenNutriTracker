@@ -59,6 +59,9 @@ List<SettingsEntry> matchingSettings(
 /// The sections, each with what is set in it now.
 class SettingsIndex extends StatelessWidget {
   final Map<SettingsSection, String> summaries;
+
+  /// Sections whose summary reports a failure, drawn in the error colour.
+  final Set<SettingsSection> failing;
   final ValueChanged<SettingsSection> onOpen;
 
   /// Under the cards: the app's version banner.
@@ -67,6 +70,7 @@ class SettingsIndex extends StatelessWidget {
   const SettingsIndex({
     super.key,
     required this.summaries,
+    this.failing = const {},
     required this.onOpen,
     this.footer,
   });
@@ -83,6 +87,7 @@ class SettingsIndex extends StatelessWidget {
             _SectionRow(
               section: s,
               summary: summaries[s],
+              failing: failing.contains(s),
               onTap: () => onOpen(s),
             ),
           ],
@@ -112,11 +117,13 @@ class SettingsIndex extends StatelessWidget {
 class _SectionRow extends StatelessWidget {
   final SettingsSection section;
   final String? summary;
+  final bool failing;
   final VoidCallback onTap;
 
   const _SectionRow({
     required this.section,
     required this.summary,
+    required this.failing,
     required this.onTap,
   });
 
@@ -167,7 +174,9 @@ class _SectionRow extends StatelessWidget {
                           Text(
                             summary,
                             style: text.bodySmall?.copyWith(
-                              color: palette.textMuted,
+                              color: failing
+                                  ? Theme.of(context).colorScheme.error
+                                  : palette.textMuted,
                             ),
                           ),
                       ],

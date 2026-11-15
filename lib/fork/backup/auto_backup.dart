@@ -22,15 +22,31 @@ class AutoBackupState {
   final DateTime? lastErrorAt;
   final String? lastError;
 
+  /// The failure whose notice on Home was dismissed.
+  final DateTime? dismissedErrorAt;
+
+  /// A restore finished while the backup was off, and Home's notice of it
+  /// was not dismissed.
+  final bool restoredWhileOff;
+
   const AutoBackupState({
     this.folderUri,
     this.folderName,
     this.lastSuccessAt,
     this.lastErrorAt,
     this.lastError,
+    this.dismissedErrorAt,
+    this.restoredWhileOff = false,
   });
 
   bool get isOn => folderUri != null;
+
+  /// The last attempt failed.
+  bool get failed {
+    final error = lastErrorAt;
+    final success = lastSuccessAt;
+    return error != null && (success == null || error.isAfter(success));
+  }
 }
 
 /// Writes upstream's JSON backup zip, with the fork's files (S21), into a
@@ -138,6 +154,8 @@ class AutoBackup {
       lastSuccessAt: box.get('lastSuccessAt') as DateTime?,
       lastErrorAt: box.get('lastErrorAt') as DateTime?,
       lastError: box.get('lastError') as String?,
+      dismissedErrorAt: box.get('dismissedErrorAt') as DateTime?,
+      restoredWhileOff: box.get('restoredWhileOff') == true,
     );
   }
 
@@ -156,9 +174,25 @@ class AutoBackup {
     return true;
   }
 
+  // Clearing drops the dismissal with the failure it hid, so no old
+  // failure can show again.
   Future<void> turnOff() async {
     await (await _box()).clear();
     await load();
+  }
+
+  /// Home's failure notice: shown again only for a newer failure.
+  Future<void> dismissFailure() =>
+      _put({'dismissedErrorAt': state.value.lastErrorAt});
+
+  /// Home's notice that a restore left the backup off.
+  Future<void> dismissRestoreNotice() => _put({'restoredWhileOff': null});
+
+  /// After a restore: the folder is not in a backup, so on a new phone the
+  /// backup is off until one is chosen, which Home then says.
+  Future<void> markRestoredWhileOff() async {
+    if ((await _box()).get('folderUri') != null) return;
+    await _put({'restoredWhileOff': true});
   }
 
   Future<bool> runIfDue() async {

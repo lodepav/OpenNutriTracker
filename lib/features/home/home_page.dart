@@ -48,6 +48,9 @@ import 'package:opennutritracker/fork/adaptive/adaptive_ui.dart';
 // [fork] S193 phase-goal-notice
 import 'package:opennutritracker/fork/phases/phase_goal_notice.dart';
 // [/fork]
+// [fork] S219 backup-notice
+import 'package:opennutritracker/fork/backup/auto_backup_ui.dart';
+// [/fork]
 // [fork] S43 meal-plan
 import 'package:opennutritracker/fork/plan/plan_ui.dart';
 // [/fork]
@@ -208,6 +211,10 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         // not shown today is null
         HomeSectionsList(
           sections: {
+            // [fork] S219 backup-notice: first, and not in the editor, so
+            // Arrange Home can neither move nor hide it
+            'backupNotice': const BackupNoticeCard(),
+            // [/fork]
             'dashboard': Padding(
               // S119: the chips are tiles under the card now.
               padding: const EdgeInsets.only(top: Dimens.spacing8),
