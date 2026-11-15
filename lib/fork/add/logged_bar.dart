@@ -5,6 +5,11 @@ import 'package:opennutritracker/fork/basket/basket_ui.dart'
     show refreshAfterLogging;
 import 'package:opennutritracker/fork/copy/copy_entries.dart';
 
+/// Whether the food page asks before adding a food already in that meal
+/// that day (upstream #212). The fork doesn't: the bar's Undo takes a
+/// double add back.
+const asksBeforeAddingAgain = false;
+
 /// Takes back what a log wrote, in the profile it began in. Tests swap it.
 Future<bool> Function(Placed placed, {required ProfileStamp startedOn})
 undoLogged = (placed, {required startedOn}) =>
