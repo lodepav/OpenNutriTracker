@@ -38,6 +38,9 @@ if [[ -z "${CI:-}" && "$(git config core.hooksPath)" != fork/hooks ]]; then
   echo "verify: warning: the hooks are off in this clone; run fork/tools/install-hooks.sh" >&2
 fi
 
+# A push the Fork checks workflow didn't follow or didn't pass; never fails the check.
+[[ -n "${CI:-}" ]] || python3 -B fork/tools/actions_status.py || true
+
 if already_checked; then
   echo "verify: passed at $(git rev-parse --short "$(cat "$STAMP")"), and only docs or fixtures changed since"
   exit 0
@@ -53,6 +56,7 @@ if git grep -nE '^(<{7}|>{7})( |$)' -- '*.md'; then
 fi
 python3 fork/tools/seam_check.py
 python3 -B test/fork/tools/upstream_status_test.py
+python3 -B test/fork/tools/actions_status_test.py
 fork/tools/sibling_check.sh
 diff <(fork/tools/decision-index.sh) fork/DECISIONS-INDEX.md || {
   echo "verify: run fork/tools/decision-index.sh > fork/DECISIONS-INDEX.md" >&2
