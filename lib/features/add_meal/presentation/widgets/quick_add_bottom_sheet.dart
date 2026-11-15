@@ -24,6 +24,7 @@ import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
 // [/fork]
 // [fork] S133 quick-add
 import 'package:opennutritracker/core/styles/dimens.dart';
+import 'package:opennutritracker/fork/add/logged_bar.dart' show showLoggedBar;
 import 'package:opennutritracker/fork/add/quick_add.dart';
 import 'package:opennutritracker/fork/copy/copy_ui.dart' show mealLabel;
 import 'package:opennutritracker/fork/units/energy_text.dart';
@@ -169,6 +170,7 @@ class _QuickAddBottomSheetState extends State<QuickAddBottomSheet> {
         ? S.of(context).quickAddDefaultName
         : typedTitle;
     // [/fork]
+    var forkStored = false; // [fork] S133: what the bar says if a later step throws
 
     try {
       final intake = _buildIntake(
@@ -195,12 +197,19 @@ class _QuickAddBottomSheetState extends State<QuickAddBottomSheet> {
       }
       // The entry and its row together, so no reconciliation counts the
       // entry before the row has it (#1317).
+      // [fork] S133 quick-add: Undo takes it back only in this profile
+      final stamp = ProfileStamp.now();
+      // [/fork]
       final saved = await withTrackedDayLockOnProfile(() async {
         await locator<AddIntakeUsecase>().addIntake(intake);
+        forkStored = true; // [fork] S133
         await _updateTrackedDay(intake);
         return true;
       });
       if (saved != true) {
+        // [fork] S133 quick-add: a profile switch dropped it
+        if (mounted) quickAddNotAdded(context, failed: false);
+        // [/fork]
         if (mounted) setState(() => _saving = false);
         return;
       }
@@ -222,7 +231,13 @@ class _QuickAddBottomSheetState extends State<QuickAddBottomSheet> {
       if (widget.onAdded case final onAdded?) {
         Navigator.of(context).pop();
         onAdded();
-        scaffoldMessenger.showSnackBar(SnackBar(content: Text(addedMessage)));
+        showLoggedBar(
+          scaffoldMessenger,
+          addedMessage,
+          day: widget.day,
+          written: [intake],
+          stamp: stamp,
+        );
         return;
       }
       // [/fork]
@@ -230,15 +245,20 @@ class _QuickAddBottomSheetState extends State<QuickAddBottomSheet> {
         NavigationOptions.mainRoute,
         (route) => false,
       );
-      scaffoldMessenger.showSnackBar(
-        SnackBar(
-          content: Text(addedMessage),
-        ),
+      // [fork] S133 quick-add: with Undo, as the food page's Add has
+      showLoggedBar(
+        scaffoldMessenger,
+        addedMessage,
+        day: widget.day,
+        written: [intake],
+        stamp: stamp,
       );
+      // [/fork]
     } catch (e, st) {
       _log.severe('Quick Add save failed', e, st);
       Sentry.captureException(e, stackTrace: st);
       if (!mounted) return;
+      quickAddNotAdded(context, failed: true, stored: forkStored); // [fork] S133
       setState(() => _saving = false);
     }
   }

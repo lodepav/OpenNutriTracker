@@ -39,6 +39,7 @@ import 'package:opennutritracker/fork/copy/copy_ui.dart' show mealLabel;
 // [fork] S189 add-says-failure
 import 'package:logging/logging.dart';
 import 'package:opennutritracker/fork/add/logged_bar.dart';
+import 'package:opennutritracker/core/utils/tracked_day_lock.dart';
 // [/fork]
 // [fork] S125 food-page
 import 'package:opennutritracker/fork/widget/meal_picker_chip.dart';
@@ -588,7 +589,11 @@ class _MealDetailBottomSheetState extends State<MealDetailBottomSheet> {
     }
 
     // Check for duplicate additions (#212)
-    final isDuplicate = await _checkForDuplicate(context);
+    // [fork] S189 add-says-failure: no "add it again?", the bar after adding
+    // has Undo
+    final isDuplicate =
+        asksBeforeAddingAgain && await _checkForDuplicate(context);
+    // [/fork]
     if (!context.mounted) return;
     if (isDuplicate) {
       final shouldAdd = await _showDuplicateDialog(context);
@@ -646,6 +651,7 @@ class _MealDetailBottomSheetState extends State<MealDetailBottomSheet> {
     // [fork] S189 add-says-failure: a failed or dropped write says so and
     // stays on the page, not "Added"
     final messenger = ScaffoldMessenger.of(context);
+    final stamp = ProfileStamp.now();
     final IntakeEntity? written;
     try {
       written = await widget.mealDetailBloc.addIntake(
@@ -676,19 +682,17 @@ class _MealDetailBottomSheetState extends State<MealDetailBottomSheet> {
 
     if (!context.mounted) return;
     // Show snackbar and return to dashboard
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(
-      SnackBar(
-        content: Text(
-          // [fork] S110 meal-named: which meal it went to, which a large
-          // font can squeeze off the add screen's title
-          S.of(context).quickAddAddedSnack(
-            mealLabel(context, _type),
-          ),
-        ),
-      ),
+    // [fork] S189 add-says-failure: with Undo, as the one-tap plus has
+    showLoggedBar(
+      messenger,
+      // [fork] S110 meal-named: which meal it went to, which a large font
+      // can squeeze off the add screen's title
+      S.of(context).quickAddAddedSnack(mealLabel(context, _type)),
+      day: widget.day,
+      written: [written],
+      stamp: stamp,
     );
+    // [/fork]
     Navigator.of(
       context,
     ).popUntil(namedRouteOrFirst(NavigationOptions.mainRoute));

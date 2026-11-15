@@ -9,7 +9,9 @@ import 'package:opennutritracker/features/add_meal/presentation/widgets/quick_ad
 import 'package:opennutritracker/features/diary/presentation/bloc/calendar_day_bloc.dart';
 import 'package:opennutritracker/features/diary/presentation/bloc/diary_bloc.dart';
 import 'package:opennutritracker/features/home/presentation/bloc/home_bloc.dart';
+import 'package:opennutritracker/fork/add/logged_bar.dart';
 import 'package:opennutritracker/fork/add/quick_add.dart';
+import 'package:opennutritracker/fork/copy/copy_entries.dart' show Placed;
 import 'package:opennutritracker/generated/l10n.dart';
 
 /// Keeps the entry; the tracked day after it fails, which the sheet logs
@@ -19,6 +21,11 @@ class _FakeAdd extends Fake implements AddIntakeUsecase {
 
   @override
   Future<void> addIntake(IntakeEntity intake) async => added = intake;
+}
+
+class _ThrowingAdd extends Fake implements AddIntakeUsecase {
+  @override
+  Future<void> addIntake(IntakeEntity intake) => throw StateError('disk');
 }
 
 class _FakeTracked extends Fake implements AddTrackedDayUsecase {}
@@ -53,6 +60,28 @@ Widget _app() => MaterialApp(
     body: QuickAddBottomSheet(
       intakeType: IntakeTypeEntity.dinner,
       day: DateTime(2026, 10, 26),
+    ),
+  ),
+);
+
+/// The sheet as a review screen opens it: only the sheet closes on Add.
+Widget _inSheet() => MaterialApp(
+  localizationsDelegates: const [S.delegate],
+  supportedLocales: S.supportedLocales,
+  home: Scaffold(
+    body: Builder(
+      builder: (context) => TextButton(
+        onPressed: () => showModalBottomSheet<void>(
+          context: context,
+          isScrollControlled: true,
+          builder: (_) => QuickAddBottomSheet(
+            intakeType: IntakeTypeEntity.dinner,
+            day: DateTime(2026, 10, 26),
+            onAdded: () {},
+          ),
+        ),
+        child: const Text('open'),
+      ),
     ),
   ),
 );
@@ -120,6 +149,81 @@ void main() {
     expect(find.byType(QuickAddBottomSheet), findsNothing);
     expect(find.text('review'), findsOneWidget);
   });
+
+  testWidgets('the bar after adding has Undo, which takes the entry back', (
+    tester,
+  ) async {
+    final add = _FakeAdd();
+    GetIt.I
+      ..registerSingleton<AddIntakeUsecase>(add)
+      ..registerSingleton<AddTrackedDayUsecase>(_SavedTracked())
+      ..registerSingleton<HomeBloc>(_Home())
+      ..registerSingleton<DiaryBloc>(_Diary())
+      ..registerSingleton<CalendarDayBloc>(_Calendar());
+    addTearDown(GetIt.I.reset);
+    final undo = undoLogged;
+    final undone = <Placed>[];
+    undoLogged = (placed, {required startedOn}) async {
+      undone.add(placed);
+      return true;
+    };
+    addTearDown(() => undoLogged = undo);
+
+    await tester.pumpWidget(_inSheet());
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+    await tester.enterText(_field('quick-add-energy'), '450');
+    await tester.pump();
+    await tester.tap(_submit());
+    await tester.pumpAndSettle();
+
+    expect(find.text('Added to Dinner'), findsOneWidget);
+    await tester.tap(find.text('Undo'));
+    await tester.pumpAndSettle();
+    expect(undone.single.day, DateTime(2026, 10, 26));
+    expect(undone.single.written, [add.added]);
+  });
+
+  testWidgets('a failed write closes the sheet and says Not added', (
+    tester,
+  ) async {
+    GetIt.I
+      ..registerSingleton<AddIntakeUsecase>(_ThrowingAdd())
+      ..registerSingleton<AddTrackedDayUsecase>(_FakeTracked());
+    addTearDown(GetIt.I.reset);
+
+    await tester.pumpWidget(_inSheet());
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+    await tester.enterText(_field('quick-add-energy'), '450');
+    await tester.pump();
+    await tester.tap(_submit());
+    await tester.pumpAndSettle();
+
+    expect(find.byType(QuickAddBottomSheet), findsNothing);
+    expect(find.text("Not added: it couldn't be saved."), findsOneWidget);
+  });
+
+  testWidgets(
+    'an entry stored before a later step fails is not called Not added',
+    (tester) async {
+      GetIt.I
+        ..registerSingleton<AddIntakeUsecase>(_FakeAdd())
+        ..registerSingleton<AddTrackedDayUsecase>(_FakeTracked());
+      addTearDown(GetIt.I.reset);
+
+      await tester.pumpWidget(_inSheet());
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+      await tester.enterText(_field('quick-add-energy'), '450');
+      await tester.pump();
+      await tester.tap(_submit());
+      await tester.pumpAndSettle();
+
+      expect(find.byType(QuickAddBottomSheet), findsNothing);
+      expect(find.text(quickAddStoredButFailed), findsOneWidget);
+    },
+  );
 
   testWidgets('macros alone add up the energy on Add and in the field', (
     tester,

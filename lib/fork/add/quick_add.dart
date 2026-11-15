@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/core/utils/custom_text_input_formatter.dart';
+import 'package:opennutritracker/fork/add/logged_bar.dart';
+import 'package:opennutritracker/fork/basket/basket_ui.dart'
+    show refreshAfterLogging;
 import 'package:opennutritracker/fork/display/display_prefs.dart';
 import 'package:opennutritracker/fork/units/energy_text.dart';
 
@@ -22,6 +25,28 @@ double? quickAddKcal({
   final sum = 4.0 * (carbs ?? 0) + 9 * (fat ?? 0) + 4 * (protein ?? 0);
   return sum > 0 ? sum : null;
 }
+
+/// Says the entry was not added: the write [failed], or a profile switch
+/// dropped it. A sheet closes first, as a bar under it would be hidden.
+/// [stored]: the entry went in before a later step failed, so saying "not
+/// added" would have it added twice.
+void quickAddNotAdded(
+  BuildContext context, {
+  required bool failed,
+  bool stored = false,
+}) {
+  final messenger = ScaffoldMessenger.of(context);
+  final route = ModalRoute.of(context);
+  if (route is PopupRoute && route.isCurrent) Navigator.of(context).pop();
+  if (!stored) return showNotAdded(messenger, failed: failed);
+  refreshAfterLogging();
+  messenger
+    ..removeCurrentSnackBar()
+    ..showSnackBar(const SnackBar(content: Text(quickAddStoredButFailed)));
+}
+
+const quickAddStoredButFailed =
+    "Added, but the day's totals couldn't be updated.";
 
 /// The energy field: a big centred number with its unit, hinting at what
 /// the macros add up to while it is empty.

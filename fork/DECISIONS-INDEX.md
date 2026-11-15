@@ -18,6 +18,7 @@ there before changing anything a line touches. After adding or rewording a decis
 - **D53** Log with AI: the meal is a chip, Log can be undone, the photo notice shows once per destination
 - **D54** Editing an entry: a tap selects the amount, and a meal's entry opens the dialog at once
 - **D55** The meal is a chip wherever a food is added, and the centre + says which day it adds to
+- **D56** Undo after every add, and no "add it again?"
 - **D11** Generic foods come from open tables bundled into the app as an offline asset. No API key and no backend.
 - **D12** Dishes come from recipes, and the AI writes the recipe.
 - **D14** Leftovers are subtracted from the logged meal, manually or by AI.
