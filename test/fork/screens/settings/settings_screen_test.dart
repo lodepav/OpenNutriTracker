@@ -1,5 +1,8 @@
+import 'dart:io';
+import 'dart:typed_data';
 import 'dart:async';
 
+import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -491,6 +494,14 @@ void main() {
       'model set up', (tester) async {
     await locator.reset();
     _register(storage: _OpenRouterStorage());
+    // the row reads the keep-photos flag: opened here, in memory, since a
+    // first open never finishes in a widget test's fake time
+    await tester.runAsync(() async {
+      Hive.init((await Directory.systemTemp.createTemp('settings')).path);
+      final flags = await Hive.openBox<bool>('fork_flags', bytes: Uint8List(0));
+      await flags.put('keepMealPhotos', false);
+    });
+    addTearDown(() => tester.runAsync(Hive.close));
     tester.view.physicalSize = const Size(1080, 2400);
     tester.view.devicePixelRatio = 2.625;
     addTearDown(tester.view.reset);
