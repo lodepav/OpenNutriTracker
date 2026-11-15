@@ -6,27 +6,19 @@ import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:opennutritracker/core/data/data_source/user_data_source.dart';
 import 'package:opennutritracker/core/data/dbo/water_intake_dbo.dart';
 import 'package:opennutritracker/core/data/repository/water_intake_repository.dart';
-import 'package:opennutritracker/core/domain/entity/intake_type_entity.dart';
 import 'package:opennutritracker/core/utils/hive_db_provider.dart';
 import 'package:opennutritracker/features/fasting/data/data_source/fasting_data_source.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
-import 'package:opennutritracker/fork/adaptive/expenditure.dart';
-import 'package:opennutritracker/fork/adaptive/macro_program.dart';
-import 'package:opennutritracker/fork/backup/auto_backup.dart';
 import 'package:opennutritracker/fork/backup/backup_extras.dart';
 import 'package:opennutritracker/fork/backup/profile_wipe.dart';
-import 'package:opennutritracker/fork/backup/storage_rescue.dart';
-import 'package:opennutritracker/fork/bulk/photo_meal_memory_store.dart';
 import 'package:opennutritracker/fork/health/steps.dart';
-import 'package:opennutritracker/fork/health/weight_import.dart';
 import 'package:opennutritracker/fork/leftovers/meal_groups.dart';
 import 'package:opennutritracker/fork/leftovers/meal_photo_cache.dart';
-import 'package:opennutritracker/fork/off/off_kinds.dart';
 import 'package:opennutritracker/fork/phases/phases.dart';
 import 'package:opennutritracker/fork/photos/photo_store.dart';
 import 'package:opennutritracker/fork/plan/plan_store.dart';
-import 'package:opennutritracker/fork/update/update_notice.dart';
 
+import '../helpers/fork_state.dart';
 import '../open/open_fixture.dart';
 import 'stored_fields.dart';
 
@@ -50,27 +42,6 @@ const _upstreamBoxes = {
   HiveDBProvider.appConfigBoxName,
 };
 
-/// Every field away from its default, so a restore that drops one shows.
-const _settings = AdaptiveSettings(
-  smoothedTrend: true,
-  adaptiveTarget: true,
-  cycleWindow: true,
-  fixedTarget: true,
-  fixedKcal: 2300,
-  fixedMacros: FixedMacros(proteinG: 150, carbsG: 250, fatG: 70),
-  weekdayOffsets: openWeekdayOffsets,
-  macroProgram: MacroProgram(proteinGPerKg: 2.2),
-  responsiveness: Responsiveness.responsive,
-  activityMode: ActivityMode.daily,
-  countSteps: false,
-  countWorkouts: false,
-  workoutSharePct: 80,
-  checkInWeekday: 3,
-  maxCheckInChangeKcal: 300,
-  autoAcceptCheckIn: true,
-  flatEnergy: true,
-);
-
 /// The water log is upstream's and not in the fixture's provider.
 class _NoWater extends Fake implements WaterIntakeRepository {
   @override
@@ -79,16 +50,6 @@ class _NoWater extends Fake implements WaterIntakeRepository {
   @override
   Future<void> addAllEntries(List<WaterIntakeDBO> entries) async {}
 }
-
-Future<Box<E>> _openAs<E>(String name) async =>
-    Hive.isBoxOpen(name) ? Hive.box<E>(name) : await Hive.openBox<E>(name);
-
-/// In the type the app opens it in: Hive refuses a box open as another.
-Future<Box<dynamic>> _open(String name) => switch (name) {
-  forkFlagsBox => _openAs<bool>(name),
-  MealGroupStore.boxName => _openAs<Map>(name),
-  _ => _openAs<dynamic>(name),
-};
 
 /// What a backed-up box holds after a restore: a meal group's photo path
 /// is dropped, since the photo stays on the phone it was taken on.
@@ -121,89 +82,14 @@ void main() {
   late Directory dir;
   OpenFixture? fixture;
 
-  /// The open fixture, then every listed key it leaves empty.
+  /// The open fixture, then every listed key away from its default.
   Future<OpenFixture> fill() async {
     final f = fixture = await fillOpenFixture(dir, openToday());
-    final adaptive = await AdaptiveStore.openActiveBox();
-    await AdaptiveStore().save(_settings);
-    await PhaseStore().saveMilestoneStep(2);
-    await PhaseStore().markApplied('cut-1');
-    await PhaseStore().saveGoalNotice((
-      title: 'Diet break',
-      fromKcal: 2100,
-      toKcal: 2500,
-    ));
-    await PlanStore().add(
-      [(meal: f.chicken, unit: 'g', amountText: '150', kcal: 180)],
-      IntakeTypeEntity.dinner,
-      f.day(2),
+    await fillForkState(
+      today: f.today,
+      meal: f.chicken,
+      photos: Directory('${dir.path}/photos'),
     );
-    await PhotoStore(
-      null,
-      () async => Directory('${dir.path}/photos'),
-    ).add(f.day(-3), [1, 2, 3]);
-    await adaptive.putAll({
-      'steps': {f.day(-1).toIso8601String().substring(0, 10): 9000},
-      'workoutSteps': {
-        'open-workout-2': {'steps': 500, 'final': true},
-      },
-      'stepsOn': true,
-      'stepGoal': 9000,
-      'homeTiles': {
-        'order': ['water', 'fasting'],
-        'hidden': ['steps'],
-      },
-      'homeSections': {
-        'order': ['plan', 'ring'],
-        'hidden': <String>[],
-      },
-      'trendsLayout': {
-        'order': ['weight', 'expenditure'],
-        'hidden': ['photos'],
-      },
-      'trendsTiles': {
-        'order': ['steps'],
-        'hidden': ['kcal'],
-      },
-      'goalStartNoTarget': true,
-      'sidePart': 'waist',
-      'strengthAnswered': '{"key":"protein","at":"2026-11-01T09:00:00.000"}',
-      'bodyFatImport': {'enabled': true, 'filed': <String, Object>{}},
-      'nutritionExport': {'enabled': true, 'written': <String, Object>{}},
-      'movedDishIds': true,
-    });
-    await (await _open(WeightImport.boxName)).putAll({
-      'enabled': true,
-      'lastImportAt': f.at(0, 7),
-      'filed': {
-        '2026-11-01': {'kg': 84.0},
-      },
-    });
-    await (await _open(forkFlagsBox)).putAll(<String, bool>{
-      'starterRecipesSeeded': true,
-      'movedDishIds': true,
-      'keepMealPhotos': false,
-    });
-    await (await _open(AutoBackup.boxName)).putAll({
-      'folderUri': 'content://folder',
-      'folderName': 'Backups',
-      'lastSuccessAt': f.at(0, 6),
-      'lastErrorAt': f.at(-1, 6),
-      'lastError': 'io',
-      AutoBackup.setAsideOnKey: f.at(-2, 6),
-      StorageRescue.pendingKey: true,
-    });
-    await (await _open(UpdateNotice.boxName)).put(UpdateNotice.seenKey, '1.2.3');
-    await (await _open(PhotoMealMemoryStore.boxName)).put('1', '{}');
-    await (await _open(OffKinds.boxName)).put('4001234567890', '🥛');
-    final group = {
-      'intakeIds': ['i1', 'i2'],
-      'loggedAt': f.at(0, 13).toIso8601String(),
-      'photoPath': '${dir.path}/fork_meal_photos/1.webp',
-    };
-    await (await _open(
-      MealGroupStore.boxName,
-    )).putAll(<String, Map>{'i1': group, 'i2': group});
     return f;
   }
 
@@ -251,7 +137,7 @@ void main() {
       }
     }
     for (final MapEntry(key: name, value: fields) in storedFields.entries) {
-      for (final key in (await _open(name)).keys) {
+      for (final key in (await openForkBox(name)).keys) {
         if (!fields.containsKey(key)) problems.add('$name holds "$key"');
       }
     }
@@ -300,11 +186,11 @@ void main() {
     final f = await fill();
     final before = <String, Map<dynamic, Object?>>{
       for (final name in storedFields.keys)
-        name: Map.of((await _open(name)).toMap()),
+        name: Map.of((await openForkBox(name)).toMap()),
     };
     final wholeBefore = {
       for (final name in storedBoxes.keys)
-        name: Map.of((await _open(name)).toMap()),
+        name: Map.of((await openForkBox(name)).toMap()),
     };
     final unset = [
       for (final MapEntry(key: name, value: fields) in storedFields.entries)
@@ -334,7 +220,7 @@ void main() {
     final archive = Archive();
     await extras.addTo(archive);
     for (final name in [...storedFields.keys, ...storedBoxes.keys]) {
-      await (await _open(name)).clear();
+      await (await openForkBox(name)).clear();
     }
     await extras.prepareTargetRestore(archive)();
     await extras.prepareRestore(archive)();
@@ -342,7 +228,7 @@ void main() {
     final lost = <String>[];
     final leaked = <String>[];
     for (final MapEntry(key: name, value: fields) in storedFields.entries) {
-      final box = await _open(name);
+      final box = await openForkBox(name);
       for (final MapEntry(key: key, value: field) in fields.entries) {
         if (field.isBackedUp) {
           if (!equals(before[name]![key]).matches(box.get(key), {})) {
@@ -354,7 +240,7 @@ void main() {
       }
     }
     for (final MapEntry(key: name, value: field) in storedBoxes.entries) {
-      final after = (await _open(name)).toMap();
+      final after = (await openForkBox(name)).toMap();
       if (!field.isBackedUp) {
         if (after.isNotEmpty) leaked.add(name);
       } else if (!equals(

@@ -29,7 +29,11 @@ if [[ -n "$COMMIT" ]]; then
 fi
 
 mkdir -p "$TMP/data" "$(dirname "$OUT")"
-(cd "$SRC" && FIXTURE_DIR="$TMP/data" flutter test test/fork/upgrade/write_fixture.dart --reporter=compact >"$TMP/log" 2>&1) || {
+# A release that has write_fork_state.dart adds the fork's own state with it; it is never copied.
+(cd "$SRC" && FIXTURE_DIR="$TMP/data" flutter test test/fork/upgrade/write_fixture.dart --reporter=compact >"$TMP/log" 2>&1 &&
+  if [[ -f test/fork/upgrade/write_fork_state.dart ]]; then
+    FIXTURE_DIR="$TMP/data" flutter test test/fork/upgrade/write_fork_state.dart --reporter=compact >>"$TMP/log" 2>&1
+  fi) || {
   tail -25 "$TMP/log" >&2
   echo "upgrade_fixture: $VER failed" >&2
   exit 1
