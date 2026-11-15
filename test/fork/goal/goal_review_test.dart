@@ -85,6 +85,21 @@ Future<void> _next(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
+/// Opens [part] of a goal edited from its plan's Change row.
+Future<void> _change(WidgetTester tester, String part) async {
+  await tester.tap(
+    find.descendant(
+      of: find.byWidgetPredicate(
+        (w) =>
+            w is Semantics &&
+            w.properties.identifier == 'goal-plan-change-$part',
+      ),
+      matching: find.text('Change'),
+    ),
+  );
+  await tester.pumpAndSettle();
+}
+
 Finder _start(String id) => find.byWidgetPredicate(
   (w) => w is Semantics && w.properties.identifier == 'goal-start-$id',
 );
@@ -149,6 +164,7 @@ void main() {
           onStart: (_) async => true,
         ),
       );
+      await _change(tester, 'goal');
       expect(_start('kept'), findsOneWidget);
     });
   });
@@ -214,15 +230,15 @@ void main() {
           },
         ),
       );
-      await _next(tester);
+      await _change(tester, 'pace');
       // Two and four weeks: three kept, then one, so the last day is Nov 1.
       expect(find.textContaining(RegExp(r'Until Nov 1\b')), findsNWidgets(2));
       // Eight weeks, unchanged.
       expect(find.textContaining('Until Nov 29'), findsOneWidget);
-      for (var i = 0; i < 4; i++) {
-        await _next(tester);
-      }
-      expect(find.text('Maintain for 8 weeks'), findsOneWidget);
+      await tester.tap(find.text('Done'));
+      await tester.pumpAndSettle();
+      // The plan's title, and its Goal row.
+      expect(find.text('Maintain for 8 weeks'), findsNWidgets(2));
       await tester.tap(find.text('Save plan'));
       await tester.pumpAndSettle();
       expect(saved, same(hold));
@@ -288,6 +304,7 @@ void main() {
         },
       ),
     );
+    await _change(tester, 'goal');
     await tester.tap(find.text('Maintain'));
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(
@@ -298,12 +315,13 @@ void main() {
     expect(_start('today'), findsNothing);
     expect(_start('monday'), findsNothing);
     expect(_start('kept'), findsNothing);
-    await _next(tester);
+    await tester.tap(find.text('Done'));
+    await tester.pumpAndSettle();
+    await _change(tester, 'pace');
     // The length's dates run from today too.
     expect(find.textContaining(RegExp(r'Until Dec 1\b')), findsOneWidget);
-    for (var i = 0; i < 4; i++) {
-      await _next(tester);
-    }
+    await tester.tap(find.text('Done'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Save plan'));
     await tester.pumpAndSettle();
     expect(saved!.start, today);

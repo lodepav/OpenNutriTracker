@@ -298,9 +298,14 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
   PhasePlan _goalBefore(int place) =>
       place == 0 ? _setup.running! : _setup.upcoming[place - 1];
 
-  /// A step opened from Carried over or the plan in a queued goal: shown
-  /// as a detour, so Done and Back return to where it was opened.
+  /// A step opened from Carried over or the plan in a queued goal, or from
+  /// the plan of a goal edited: shown as a detour, so Done and Back return
+  /// to where it was opened.
   _Step? _detour;
+
+  /// A goal that exists already, running or upcoming: it opens on its plan,
+  /// each part changed from there.
+  bool get _editingGoal => widget.editing != null || widget.queuedAt != null;
 
   List<_Step> get _steps {
     final place = _place;
@@ -327,10 +332,11 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
       ? 'Length'
       : step.label;
 
-  /// Shows [step]: in the steps, or as a detour from a queued goal's.
+  /// Shows [step]: in the steps, or as a detour from a queued goal's or a
+  /// goal edited.
   void _goTo(_Step step) => setState(() {
     final i = _steps.indexOf(step);
-    if (i < 0) {
+    if (i < 0 || _editingGoal) {
       _detour = step;
     } else {
       _step = i;
@@ -363,6 +369,11 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
     super.initState();
     final place = _place;
     if (place != null && widget.queuedAt == null) _moveTo(place);
+    if (_editingGoal) {
+      _step = _steps.length - 1;
+      // A goal that cannot be planned as it is says why at once.
+      if (_draft.problem != null) _detour = _Step.goal;
+    }
   }
 
   /// The goal edited, once begun: its start stays.
@@ -540,12 +551,18 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
       _draft.targetKg == null
           ? 'Set the target weight to go on.'
           : 'Change the target weight to go on.',
+    // Back from the goal in a detour leaves the plan with the problem.
+    _Step.plan when _draft.problem != null =>
+      _draft.targetKg == null
+          ? 'Set the target weight to save.'
+          : 'Change the target weight to save.',
     _ => null,
   };
 
   bool get _canGoOn => switch (_at) {
     _Step.goal => _draft.problem == null,
     _Step.macros => _macrosValid,
+    _Step.plan => _draft.problem == null,
     _ => true,
   };
 
@@ -560,7 +577,7 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
         if (didPop) return;
         if (_detour != null) {
           setState(() => _detour = null);
-        } else if (_step > 0) {
+        } else if (_step > 0 && !_editingGoal) {
           setState(() => _step--);
         } else {
           _leave();
@@ -585,32 +602,35 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
                 ? 'Edit plan'
                 : 'Plan your goal',
           ),
-          bottom: PreferredSize(
-            preferredSize: const Size.fromHeight(12),
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-              child: ExcludeSemantics(
-                child: Row(
-                  children: [
-                    for (var i = 0; i < steps.length; i++) ...[
-                      if (i > 0) const SizedBox(width: 4),
-                      Expanded(
-                        child: Container(
-                          height: 4,
-                          decoration: BoxDecoration(
-                            color: i <= _step
-                                ? theme.colorScheme.primary
-                                : theme.colorScheme.outlineVariant,
-                            borderRadius: BorderRadius.circular(2),
-                          ),
-                        ),
+          // A goal edited opens on its plan: no steps came before it.
+          bottom: _editingGoal
+              ? null
+              : PreferredSize(
+                  preferredSize: const Size.fromHeight(12),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                    child: ExcludeSemantics(
+                      child: Row(
+                        children: [
+                          for (var i = 0; i < steps.length; i++) ...[
+                            if (i > 0) const SizedBox(width: 4),
+                            Expanded(
+                              child: Container(
+                                height: 4,
+                                decoration: BoxDecoration(
+                                  color: i <= _step
+                                      ? theme.colorScheme.primary
+                                      : theme.colorScheme.outlineVariant,
+                                  borderRadius: BorderRadius.circular(2),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
-                    ],
-                  ],
+                    ),
+                  ),
                 ),
-              ),
-            ),
-          ),
         ),
         // The mode toggled on the target step changes its figures.
         body: ValueListenableBuilder(
@@ -622,7 +642,7 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
                 child: Text(
-                  'Step ${_step + 1} of ${steps.length} · '
+                  '${_editingGoal ? '' : 'Step ${_step + 1} of ${steps.length} · '}'
                   '${_label(steps[_step])}'
                   '${_detour == null ? '' : ' › ${_label(_detour!)}'}',
                   style: theme.textTheme.labelMedium?.copyWith(
@@ -649,7 +669,7 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
               theme,
               Row(
                 children: [
-                  if (_step > 0 || _detour != null) ...[
+                  if ((_step > 0 && !_editingGoal) || _detour != null) ...[
                     Semantics(
                       identifier: 'goal-planner-back',
                       child: OutlinedButton(
@@ -1578,6 +1598,23 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
       _Panel(
         padding: const EdgeInsets.symmetric(vertical: 4),
         children: [
+          if (_editingGoal) ...[
+            _ChangeRow(
+              identifier: 'goal-plan-change-goal',
+              title: _Step.goal.label,
+              subtitle: title,
+              onChange: () => _goTo(_Step.goal),
+            ),
+            _ChangeRow(
+              identifier: 'goal-plan-change-pace',
+              title: _label(_Step.pace),
+              subtitle: plan.kind == PhaseKind.maintain
+                  ? _weeks(weeks)
+                  : '${_rate(_draft.paceKg)}'
+                        '${plan.kind == PhaseKind.cut && _draft.breaks ? ' · with diet breaks' : ''}',
+              onChange: () => _goTo(_Step.pace),
+            ),
+          ],
           _ChangeRow(
             identifier: 'goal-plan-change-burn',
             title: 'Expenditure',

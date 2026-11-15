@@ -24,6 +24,8 @@ there before changing anything a line touches. After adding or rewording a decis
 - **D59** The backup's state shows without digging, and restored reminders ask to be heard
 - **D60** Six small eases
 - **D61** Five stats from data already stored
+- **D62** The Edit item dialog takes its amount with the food page's picker
+- **D63** A goal that exists is edited from its plan
 - **D11** Generic foods come from open tables bundled into the app as an offline asset. No API key and no backend.
 - **D12** Dishes come from recipes, and the AI writes the recipe.
 - **D14** Leftovers are subtracted from the logged meal, manually or by AI.

@@ -2243,7 +2243,7 @@ void main() {
       // the sheet opens in ounces, and the number typed is ounces
       await tester.tap(find.byKey(const ValueKey('bulk-add-unit-1')));
       await tester.pumpAndSettle();
-      final field = tester.widget<TextField>(
+      final field = tester.widget<TextFormField>(
         find.byKey(const ValueKey('amount-field')),
       );
       expect(field.controller!.text, '5.3');

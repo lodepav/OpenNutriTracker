@@ -94,6 +94,7 @@ class IntakeDataSource {
     }
     for (final copy in copies) {
       copy.value.amount = fields['amount'] ?? copy.value.amount;
+      copy.value.unit = fields['unit'] ?? copy.value.unit; // [fork] S220
     }
     await _intakeBox.putAll({for (final copy in copies) copy.key: copy.value});
     return _intakeBox.get(copies.first.key);
