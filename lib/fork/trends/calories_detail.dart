@@ -97,7 +97,7 @@ class CaloriesDetailPage extends StatelessWidget {
                         context,
                         'Weekdays and weekends, last ${days(dates.length)}',
                       ),
-                      WeekendCard(split: split),
+                      WeekendCard(split: split, rangeDays: dates.length),
                     ],
                   );
                 },
@@ -331,6 +331,9 @@ class DaysWentCard extends StatelessWidget {
     int logged,
     DayValue? highest,
     DayValue? lowest,
+    double? overBy,
+    double? underBy,
+    double? topThreeShare,
   })
   outcomes;
 
@@ -370,6 +373,21 @@ class DaysWentCard extends StatelessWidget {
           ),
           TrendRow(label: 'Under', value: days(o.under)),
           TrendRow(label: 'Over', value: days(o.over)),
+          if (o.overBy case final v?)
+            TrendRow(
+              label: 'Over by, on average',
+              value: valueText(context, v),
+            ),
+          if (o.underBy case final v?)
+            TrendRow(
+              label: 'Under by, on average',
+              value: valueText(context, v),
+            ),
+          if (o.topThreeShare case final s?)
+            TrendRow(
+              label: 'Top 3 days\' share of the excess',
+              value: '${(s * 100).round()}%',
+            ),
           if (o.highest case final d?)
             TrendRow(label: 'Highest', value: day(d)),
           if (o.lowest case final d?) TrendRow(label: 'Lowest', value: day(d)),
@@ -380,7 +398,7 @@ class DaysWentCard extends StatelessWidget {
 }
 
 /// The mean energy by weekday over the last three months, whatever the
-/// range, the weekday that stands out marked.
+/// range, the weekday furthest from its own goal marked.
 class WeekdayCard extends StatefulWidget {
   /// The clock; the app's when null.
   final DateTime Function()? now;
@@ -490,11 +508,11 @@ class _WeekdayCardState extends State<WeekdayCard> {
                 const SizedBox(height: Dimens.spacing8),
                 Text(
                   standout == null
-                      ? 'No weekday runs far from your average.'
+                      ? 'No weekday runs far from its goal.'
                       : '${name(standout.weekday, intl.DateFormat.EEEE(locale))}s '
                             'run ${energyText(context, standout.off.abs())} '
                             '${standout.off > 0 ? 'over' : 'under'} '
-                            'your average.',
+                            'their goal.',
                   style: text.bodySmall?.copyWith(color: palette.textMuted),
                 ),
               ],
@@ -511,7 +529,11 @@ class _WeekdayCardState extends State<WeekdayCard> {
 class WeekendCard extends StatelessWidget {
   final ({WeekPart weekdays, WeekPart weekend}) split;
 
-  const WeekendCard({super.key, required this.split});
+  /// The range's days: under four weeks, what the weekend gives back is
+  /// one or two weekends' noise, so it is not said.
+  final int rangeDays;
+
+  const WeekendCard({super.key, required this.split, required this.rangeDays});
 
   @override
   Widget build(BuildContext context) {
@@ -522,6 +544,7 @@ class WeekendCard extends StatelessWidget {
     String balance(double? b) =>
         b == null ? '–' : energyText(context, b, signed: true);
     final off = weekend.kcal - weekdays.kcal;
+    final giveBack = rangeDays >= 28 ? weekendGiveBack(split) : null;
     final rows = [
       (
         'Energy',
@@ -587,6 +610,14 @@ class WeekendCard extends StatelessWidget {
                       '${off > 0 ? 'over' : 'under'} weekdays.',
             style: text.bodySmall?.copyWith(color: muted),
           ),
+          if (giveBack != null)
+            Text(
+              giveBack > 1
+                  ? 'Weekends give back more than the weekdays\' deficit.'
+                  : 'Weekends give back about ${(giveBack * 100).round()}% '
+                        'of the weekdays\' deficit.',
+              style: text.bodySmall?.copyWith(color: muted),
+            ),
         ],
       ),
     );

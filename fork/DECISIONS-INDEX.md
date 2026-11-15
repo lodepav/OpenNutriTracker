@@ -23,6 +23,7 @@ there before changing anything a line touches. After adding or rewording a decis
 - **D58** Automatic check-ins don't need Home's card, and the check-in can be opened from settings
 - **D59** The backup's state shows without digging, and restored reminders ask to be heard
 - **D60** Six small eases
+- **D61** Five stats from data already stored
 - **D11** Generic foods come from open tables bundled into the app as an offline asset. No API key and no backend.
 - **D12** Dishes come from recipes, and the AI writes the recipe.
 - **D14** Leftovers are subtracted from the logged meal, manually or by AI.

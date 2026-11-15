@@ -199,6 +199,44 @@ void main() {
       expect(o.logged, 0);
       expect(o.highest, isNull);
     });
+
+    test('how far the over and under days ran, and the top three', () {
+      final o = dayOutcomes([
+        _tracked(-1, kcal: 3000),
+        _tracked(-2, kcal: 2600),
+        _tracked(-3, kcal: 2400),
+        _tracked(-4, kcal: 2300),
+        // On target: neither over nor under.
+        _tracked(-5, kcal: 2100),
+        _tracked(-6, kcal: 1500),
+        _tracked(-7, kcal: 1700),
+      ], windowDates(_today, 14));
+      expect((o.over, o.under, o.onTarget), (4, 2, 1));
+      expect(o.overBy, (1000 + 600 + 400 + 300) / 4);
+      expect(o.underBy, (500 + 300) / 2);
+      expect(o.topThreeShare, closeTo(2000 / 2300, 1e-9));
+    });
+
+    test('no over days: no size of them, no top three', () {
+      final o = dayOutcomes([
+        _tracked(-1, kcal: 1500),
+        _tracked(-2, kcal: 2000),
+      ], windowDates(_today, 7));
+      expect(o.overBy, isNull);
+      expect(o.topThreeShare, isNull);
+      expect(o.underBy, 500);
+    });
+
+    test('three over days or fewer: the top three are all of it', () {
+      final o = dayOutcomes([
+        _tracked(-1, kcal: 3000),
+        _tracked(-2, kcal: 2500),
+        _tracked(-3, kcal: 2400),
+      ], windowDates(_today, 7));
+      expect(o.over, 3);
+      expect(o.topThreeShare, isNull);
+      expect(o.underBy, isNull);
+    });
   });
 
   group('weekdays', () {
@@ -212,16 +250,47 @@ void main() {
       final means = weekdayMeans(days)!;
       expect(means.byWeekday[DateTime.monday], 2000);
       expect(means.byWeekday[DateTime.saturday], 2700);
-      expect(means.mean, 2100);
+      expect(means.goalByWeekday[DateTime.saturday], 2000);
       final standout = standoutWeekday(means)!;
       expect(standout.weekday, DateTime.saturday);
-      expect(standout.off, 600);
+      expect(standout.off, 700);
+    });
+
+    test('a planned high day eaten to its goal does not stand out', () {
+      // Saturdays shifted up 600 and eaten to it; Mondays 200 under.
+      final days = [
+        for (var w = 0; w < 4; w++)
+          for (var i = 0; i < 7; i++)
+            _tracked(
+              -w * 7 - i,
+              kcal: i == 2 ? 2600 : (i == 0 ? 1800 : 2000),
+              goal: i == 2 ? 2600 : 2000,
+            ),
+      ];
+      final standout = standoutWeekday(weekdayMeans(days)!)!;
+      expect(standout.weekday, DateTime.monday);
+      expect(standout.off, -200);
+    });
+
+    test('days without a goal are left out of it; no goal, no standout', () {
+      final means = weekdayMeans([
+        // Mondays: one at a 2000 goal, one with none.
+        _tracked(0, kcal: 2500),
+        _tracked(-7, kcal: 2500, goal: 0),
+        // A Sunday far over, with no goal at all.
+        _tracked(-1, kcal: 4000, goal: 0),
+      ])!;
+      expect(means.goalByWeekday[DateTime.monday], 2000);
+      expect(means.goalByWeekday.containsKey(DateTime.sunday), isFalse);
+      final standout = standoutWeekday(means)!;
+      expect(standout.weekday, DateTime.monday);
+      expect(standout.off, 500);
     });
 
     test('none stands out under the threshold', () {
       final means = weekdayMeans([
         _tracked(0, kcal: 2000),
-        _tracked(-1, kcal: 2100),
+        _tracked(-1, kcal: 2140),
       ])!;
       expect(standoutWeekday(means), isNull);
       expect(weekdayMeans(const []), isNull);
@@ -336,6 +405,34 @@ void main() {
 
     test('none without a logged day in each part', () {
       expect(weekendSplit([_tracked(0)], week), isNull);
+    });
+  });
+
+  group('weekendGiveBack', () {
+    WeekPart part(double? balance) => (
+      days: 1,
+      kcal: 2000,
+      carbs: null,
+      fat: null,
+      protein: null,
+      balance: balance,
+    );
+    double? share(double? weekdays, double? weekend) =>
+        weekendGiveBack((weekdays: part(weekdays), weekend: part(weekend)));
+
+    test('the weekend surplus over the weekdays\' deficit', () {
+      // 5 × 500 = 2500 under; 2 × 500 = 1000 back.
+      expect(share(-500, 500), 0.4);
+      expect(share(-200, 800), closeTo(1.6, 1e-9));
+    });
+
+    test('nothing to give back without a deficit and a surplus', () {
+      expect(share(null, 500), isNull);
+      expect(share(-500, null), isNull);
+      expect(share(0, 500), isNull);
+      expect(share(200, 500), isNull);
+      expect(share(-500, 0), isNull);
+      expect(share(-500, -100), isNull);
     });
   });
 

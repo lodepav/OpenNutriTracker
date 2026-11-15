@@ -3,18 +3,23 @@ import 'dart:math' as math;
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:opennutritracker/core/domain/entity/body_weight_unit_entity.dart';
 import 'package:opennutritracker/core/domain/entity/user_gender_entity.dart';
+import 'package:opennutritracker/core/domain/entity/weight_log_entity.dart';
 import 'package:opennutritracker/core/domain/usecase/get_user_usecase.dart';
+import 'package:opennutritracker/core/domain/usecase/get_weight_log_usecase.dart';
 import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/core/utils/calc/calendar_day_calc.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
+import 'package:opennutritracker/fork/adaptive/trend_points.dart';
 import 'package:opennutritracker/fork/body/measurement_store.dart';
 import 'package:opennutritracker/fork/body/side_compare.dart' show SideUnits;
 import 'package:opennutritracker/fork/report/chart_touch.dart';
 import 'package:opennutritracker/fork/trends/detail_widgets.dart';
 import 'package:opennutritracker/fork/trends/trends_widgets.dart';
+import 'package:opennutritracker/fork/units/weight_text.dart';
 
 /// What the ratios are taken against: the profile's height, and its
 /// gender for the waist-to-hip cut-off.
@@ -62,6 +67,34 @@ List<WaistPoint> waistPoints(List<Measurement> all, double heightCm) {
   ];
 }
 
+/// The change in waist from the first to the last of [inRange]'s
+/// measurements, beside the change in trend weight between the same days,
+/// each read from [trendByDay] on that day or the nearest before it within
+/// a week. Null under two measurements or without such a trend day.
+({DateTime from, DateTime to, double waistCm, double trendKg})?
+waistAgainstWeight(List<WaistPoint> inRange, Map<DateTime, double> trendByDay) {
+  if (inRange.length < 2) return null;
+  final first = inRange.first, last = inRange.last;
+  // Two on one day span no time to compare across.
+  if (!last.date.isAfter(first.date)) return null;
+  double? trendOn(DateTime day) {
+    for (var back = 0; back <= 7; back++) {
+      final kg = trendByDay[DateTime(day.year, day.month, day.day - back)];
+      if (kg != null) return kg;
+    }
+    return null;
+  }
+
+  final start = trendOn(first.date), end = trendOn(last.date);
+  if (start == null || end == null) return null;
+  return (
+    from: first.date,
+    to: last.date,
+    waistCm: last.waistCm - first.waistCm,
+    trendKg: end - start,
+  );
+}
+
 /// NICE's bands for adults (2022): under 0.5 no increased health risk,
 /// to 0.6 increased, beyond it high.
 String waistBand(double ratio) => ratio < 0.5
@@ -106,15 +139,22 @@ class WaistRatioPage extends StatefulWidget {
   final Future<List<Measurement>> Function() load;
   final Future<BodyFrame?> Function()? frame;
 
+  /// The weigh-ins the trend weight is read from.
+  final Future<List<WeightLogEntity>> Function() weights;
+
   const WaistRatioPage({
     super.key,
     required this.imperial,
     required this.rangeDays,
     this.load = _all,
     this.frame,
+    this.weights = _weighIns,
   });
 
   static Future<List<Measurement>> _all() async => MeasurementStore().all();
+
+  static Future<List<WeightLogEntity>> _weighIns() =>
+      locator<GetWeightLogUsecase>().getAllEntries();
 
   @override
   State<WaistRatioPage> createState() => _WaistRatioPageState();
@@ -123,9 +163,11 @@ class WaistRatioPage extends StatefulWidget {
 class _WaistRatioPageState extends State<WaistRatioPage> {
   late var _data = _read();
 
-  Future<(List<Measurement>, BodyFrame?)> _read() => (
+  Future<(List<Measurement>, BodyFrame?, List<WeightLogEntity>)> _read() => (
     widget.load().catchError((Object _) => <Measurement>[]),
     (widget.frame ?? loadBodyFrame)(),
+    // No locator in widget tests that don't pass weigh-ins.
+    Future(widget.weights).catchError((Object _) => <WeightLogEntity>[]),
   ).wait;
 
   void _reload() => setState(() {
@@ -154,12 +196,17 @@ class _WaistRatioPageState extends State<WaistRatioPage> {
         if (data == null) {
           return const Center(child: CircularProgressIndicator());
         }
-        return _body(context, data.$1, data.$2);
+        return _body(context, data.$1, data.$2, data.$3);
       },
     ),
   );
 
-  Widget _body(BuildContext context, List<Measurement> all, BodyFrame? frame) {
+  Widget _body(
+    BuildContext context,
+    List<Measurement> all,
+    BodyFrame? frame,
+    List<WeightLogEntity> weighIns,
+  ) {
     final units = SideUnits(widget.imperial);
     final points = waistPoints(all, frame?.heightCm ?? 0);
     final now = DateTime.now();
@@ -173,6 +220,10 @@ class _WaistRatioPageState extends State<WaistRatioPage> {
     final charted = inRange.isEmpty ? points : inRange;
     final last = points.lastOrNull;
     final cutOff = frame == null ? null : hipCutOff(frame.gender);
+    final against = waistAgainstWeight(inRange, {
+      for (final p in trendPoints(weighIns, until: now))
+        DateTime(p.date.year, p.date.month, p.date.day): p.weightKg,
+    });
     final hipNote = cutOff == null
         ? 'WHO: over 0.90 for men, 0.85 for women'
         : 'WHO: over ${cutOff.toStringAsFixed(2)} raises the risk';
@@ -222,6 +273,18 @@ class _WaistRatioPageState extends State<WaistRatioPage> {
           ),
           if (last.hipRatio != null)
             Text(hipNote, style: Theme.of(context).textTheme.bodySmall),
+          if (against != null) ...[
+            const SizedBox(height: Dimens.spacing8),
+            Text(
+              'Waist ${against.waistCm > 0 ? '+' : ''}'
+              '${units.shown(against.waistCm).toStringAsFixed(1)} '
+              '${units.unit} · trend weight '
+              '${weightChangeText(against.trendKg, widget.imperial ? BodyWeightUnit.lb : BodyWeightUnit.kg)}, '
+              '${DateFormat.MMMd().format(against.from)} to '
+              '${DateFormat.MMMd().format(against.to)}',
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+          ],
         ],
         const SizedBox(height: Dimens.spacing16),
         _RatioChart(
