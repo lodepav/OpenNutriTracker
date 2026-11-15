@@ -242,6 +242,8 @@ Future<void> fillForkState({
     'lastSuccessAt': at(0, 6),
     'lastErrorAt': at(-1, 6),
     'lastError': 'io',
+    'dismissedErrorAt': at(-1, 6),
+    'restoredWhileOff': true,
     AutoBackup.setAsideOnKey: at(-2, 6),
     StorageRescue.pendingKey: true,
   });

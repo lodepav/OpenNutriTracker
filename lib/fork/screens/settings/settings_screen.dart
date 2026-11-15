@@ -64,6 +64,7 @@ import 'package:opennutritracker/fork/goal/planner_screen.dart';
 import 'package:opennutritracker/fork/phases/phases.dart';
 import 'package:opennutritracker/fork/reminders/reminders_ui.dart';
 // The automatic backup's settings (phase 2)
+import 'package:opennutritracker/fork/backup/auto_backup.dart';
 import 'package:opennutritracker/fork/backup/auto_backup_ui.dart';
 import 'package:opennutritracker/fork/history/history_import.dart';
 import 'package:opennutritracker/fork/export/csv_export.dart';
@@ -256,10 +257,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
           final palette = paletteOf(context);
           // The sections, each a page
           if (!widget.embedded && widget.section == null) {
-            return SettingsIndex(
-              summaries: _forkSummaries(context, state),
-              onOpen: _forkOpen,
-              footer: AppBannerVersion(versionNumber: state.versionNumber),
+            // The Data row says how the backup is doing, live.
+            return ValueListenableBuilder(
+              valueListenable: AutoBackup.state,
+              builder: (context, _, _) => SettingsIndex(
+                summaries: _forkSummaries(context, state),
+                failing: {
+                  if (AutoBackup.state.value.failed) SettingsSection.data,
+                },
+                onOpen: _forkOpen,
+                footer: AppBannerVersion(versionNumber: state.versionNumber),
+              ),
             );
           }
           // Built once, then wrapped in one of two shapes — because the
@@ -377,7 +385,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
             )
           : 'Daily reminder off · weigh-in and check-in',
       SettingsSection.food: 'Food sources, Open Food Facts, AI assist',
-      SettingsSection.data: 'Backup, $healthPlatformName, import, export',
+      SettingsSection.data:
+          '${backupLine(AutoBackup.state.value)} · $healthPlatformName, '
+          'import, export',
       SettingsSection.appearance: 'Theme, colour, language, what screens show',
       SettingsSection.about:
           'OpenBite ${state.versionNumber} · privacy · sources',

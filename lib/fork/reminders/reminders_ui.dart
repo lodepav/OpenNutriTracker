@@ -93,11 +93,25 @@ class _RemindersDialogState extends State<_RemindersDialog> {
 
   final _times = <ReminderKind, ReminderTime?>{};
   var _loaded = false;
+  var _silent = false;
+
+  /// Allow was refused once here; the next tap opens the system settings.
+  var _refused = false;
+
+  // Back from the system settings, the permission may have changed.
+  late final AppLifecycleListener _lifecycle;
 
   @override
   void initState() {
     super.initState();
+    _lifecycle = AppLifecycleListener(onResume: _checkSilent);
     _load();
+  }
+
+  @override
+  void dispose() {
+    _lifecycle.dispose();
+    super.dispose();
   }
 
   Future<void> _load() async {
@@ -108,7 +122,22 @@ class _RemindersDialogState extends State<_RemindersDialog> {
         _times[kind] = null;
       }
     }
+    _silent = await widget.reminders.silent();
     if (mounted) setState(() => _loaded = true);
+  }
+
+  Future<void> _checkSilent() async {
+    final silent = await widget.reminders.silent();
+    if (mounted) setState(() => _silent = silent);
+  }
+
+  Future<void> _allow() async {
+    if (_refused) {
+      await widget.reminders.openNotificationSettings();
+      return;
+    }
+    _refused = !await widget.reminders.allow();
+    await _checkSilent();
   }
 
   Future<void> _set(ReminderKind kind, ReminderTime? time) async {
@@ -123,6 +152,7 @@ class _RemindersDialogState extends State<_RemindersDialog> {
       return;
     }
     setState(() => _times[kind] = time);
+    await _checkSilent();
   }
 
   Future<void> _pickTime(ReminderKind kind, ReminderTime current) async {
@@ -171,6 +201,28 @@ class _RemindersDialogState extends State<_RemindersDialog> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
+                if (_silent)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'Notifications are off for OpenBite, so '
+                            'reminders stay silent.',
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.error,
+                            ),
+                          ),
+                        ),
+                        TextButton(
+                          key: const ValueKey('reminders-allow'),
+                          onPressed: _allow,
+                          child: const Text('Allow'),
+                        ),
+                      ],
+                    ),
+                  ),
                 _row(
                   ReminderKind.weighIn,
                   'Weigh-in',

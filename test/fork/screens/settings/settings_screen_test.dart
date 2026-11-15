@@ -22,6 +22,7 @@ import 'package:opennutritracker/features/profile/presentation/bloc/profile_bloc
 import 'package:opennutritracker/features/settings/presentation/bloc/settings_bloc.dart';
 import 'package:opennutritracker/features/settings/presentation/widgets/ai_assist_dialog.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
+import 'package:opennutritracker/fork/backup/auto_backup.dart';
 import 'package:opennutritracker/fork/screens/settings/settings_screen.dart';
 import 'package:opennutritracker/features/trends/presentation/bloc/trends_bloc.dart';
 import 'package:opennutritracker/generated/l10n.dart';
@@ -261,6 +262,28 @@ void main() {
         isNot(isA<NeverScrollableScrollPhysics>()),
       );
     });
+  });
+
+  testWidgets('the Data row starts with the backup state, live', (
+    tester,
+  ) async {
+    addTearDown(() => AutoBackup.state.value = const AutoBackupState());
+    await tester.pumpWidget(_app());
+    await tester.pumpAndSettle();
+    expect(
+      find.text('Backup off · Health Connect, import, export'),
+      findsOneWidget,
+    );
+
+    AutoBackup.state.value = AutoBackupState(
+      folderUri: 'content://f',
+      lastErrorAt: DateTime(2026, 11, 12),
+    );
+    await tester.pump();
+    expect(
+      find.text('Last backup failed · Health Connect, import, export'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('the AI row is nowhere near the top of a plain Settings', (

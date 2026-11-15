@@ -11,7 +11,7 @@ import 'package:opennutritracker/features/settings/presentation/bloc/settings_bl
 import 'package:opennutritracker/features/settings/presentation/widgets/export_import_error_text.dart';
 import 'package:opennutritracker/features/trends/presentation/bloc/trends_bloc.dart';
 // [fork] S38 restore-settings-live: import
-import 'package:opennutritracker/fork/backup/apply_restored_settings.dart';
+import 'package:opennutritracker/fork/backup/after_restore.dart';
 // [/fork]
 import 'package:opennutritracker/generated/l10n.dart';
 
@@ -192,7 +192,7 @@ class _ExportImportDialogState extends State<ExportImportDialog> {
       trendsBloc.add(LoadTrendsEvent(rangeDays: trendsState.rangeDays));
     }
     // [fork] S38 restore-settings-live: theme, units and language now
-    applyRestoredSettings(context);
+    afterRestore(context);
     // [/fork]
   }
 }

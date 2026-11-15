@@ -40,6 +40,10 @@ import 'package:opennutritracker/fork/reminders/reminders.dart';
 /// #94, #95, #97). Every file is optional on restore, so upstream's zips and
 /// older ones still import.
 class BackupExtras {
+  /// A restore wrote the fork's files; `afterRestore` takes it, since
+  /// Settings' dialog also refreshes after an export.
+  static var restored = false;
+
   static const waterFileName = 'water_intake.json';
   static const fastingFileName = 'fasting_sessions.json';
   static const customMealsFileName = 'custom_meals.json';
@@ -403,6 +407,7 @@ class BackupExtras {
         await config.addConfig(ConfigDBO.fromJson({...current, ...settings}));
       }
       await otherProfiles?.call();
+      restored = true;
     };
   }
 
