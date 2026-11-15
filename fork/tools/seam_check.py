@@ -5,7 +5,7 @@
 
   - a seam id on two rows, which merge=union lets through when two branches take the
     same next number: renumber the later one, in its row and its markers;
-  - a [fork] S<n> marker with no row, or a row no marker or path backs;
+  - a [fork] S<n> marker with no row;
   - an upstream file the fork changed that neither has a marker nor is named on a row.
     Formatting-only churn counts: restore the file to upstream's.
 """

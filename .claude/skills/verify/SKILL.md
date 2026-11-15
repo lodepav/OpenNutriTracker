@@ -19,7 +19,7 @@ flutter test -j 1 <the test files of what changed>
 ## Before a merge
 
 ```bash
-fork/tools/verify.sh    # about 2.5 min: Bash timeout 400000
+fork/tools/verify.sh    # about 2.5 min: Bash timeout 500000
 ```
 
 No conflict marker, `fork/tools/seam_check.py`, analyze, and the whole suite bundled (`fork/tools/test-fast.sh`). A red upstream test means the fork changed behaviour it shouldn't have: fix the fork, never the test (fork/README.md, rule 4).
@@ -30,7 +30,7 @@ A clean pass is remembered by commit: merge, then push, and the hook doesn't run
 
 `fork/hooks/`, on once a clone by `fork/tools/install-hooks.sh`:
 
-- **pre-push**: a push to `fork/main` runs `verify.sh` on the working tree, so it needs that commit checked out and a clean tree. Give the push a Bash timeout of 400000 unless verify just passed. A push after a docs-only commit doesn't run it again.
+- **pre-push**: a push to `fork/main` runs `verify.sh` on the working tree, so it needs that commit checked out and a clean tree. Give the push a Bash timeout of 500000 unless verify just passed. A push after a docs-only commit doesn't run it again.
 - **commit-msg**: a merge into `fork/main` needs the subject `Merge fork/<branch>: what it does`, which is what the release notes read.
 
 `--no-verify` skips them. Use it only when the user says so.

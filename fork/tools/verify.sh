@@ -6,26 +6,31 @@
 #   fork/tools/verify.sh --strict   # a process a file, as upstream's CI: for a release
 #
 # A pass on a clean tree is remembered by commit, so pushing what was just checked
-# doesn't check it again, nor does a later commit that only touches docs or fork/VERSION.
+# doesn't check it again, nor does a later commit that only touches docs, fork/VERSION or adds an
+# upgrade fixture (a release commit: release-apk.sh runs upgrade_test.dart on it first).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 export PATH="$HOME/flutter/bin:$PATH"
 cd "$ROOT"
+# An exported key would run test/fork/eval/ here, billed: evals run only when started on purpose.
+unset "${!FORK_EVAL_@}"
 STAMP="$(git rev-parse --path-format=absolute --git-common-dir)/fork-verified"
 strict=
 [[ "${1:-}" == --strict ]] && strict=1
 
 clean() { [[ -z "$(git status --porcelain)" ]]; }
 
-# Whether only docs changed since the last pass (never true for --strict).
+# Whether only docs, fork/VERSION or new upgrade fixtures changed since the last pass (never true
+# for --strict).
 already_checked() {
   [[ -z "$strict" ]] && clean && [[ -f "$STAMP" ]] || return 1
   local last
   last="$(cat "$STAMP")"
   git merge-base --is-ancestor "$last" HEAD 2>/dev/null || return 1
   # No grep -q here: exiting early kills git, which pipefail reads as no match.
-  [[ -z "$(git diff --name-only "$last" HEAD | grep -vE '\.md$|^fork/VERSION$')" ]]
+  [[ -z "$(git diff --name-only "$last" HEAD | grep -vE '\.md$|^fork/VERSION$|^test/fork/upgrade/fixtures/[^/]+\.tar\.gz$')" ]] &&
+    [[ -z "$(git diff --name-only --diff-filter=a "$last" HEAD -- test/fork/upgrade/fixtures)" ]]
 }
 
 # git doesn't carry core.hooksPath over a clone: without it nothing guards fork/main.
@@ -34,7 +39,7 @@ if [[ -z "${CI:-}" && "$(git config core.hooksPath)" != fork/hooks ]]; then
 fi
 
 if already_checked; then
-  echo "verify: passed at $(git rev-parse --short "$(cat "$STAMP")"), and only docs changed since"
+  echo "verify: passed at $(git rev-parse --short "$(cat "$STAMP")"), and only docs or fixtures changed since"
   exit 0
 fi
 
@@ -48,8 +53,18 @@ if git grep -nE '^(<{7}|>{7})( |$)' -- '*.md'; then
 fi
 python3 fork/tools/seam_check.py
 fork/tools/sibling_check.sh
+diff <(fork/tools/decision-index.sh) fork/DECISIONS-INDEX.md || {
+  echo "verify: run fork/tools/decision-index.sh > fork/DECISIONS-INDEX.md" >&2
+  exit 1
+}
 flutter analyze lib test
 if [[ -n "$strict" ]]; then
+  # Only tracked files are compared: env.g.dart is ignored, and is rewritten from .env.
+  dart run build_runner build --delete-conflicting-outputs
+  git diff --exit-code --stat -- '*.g.dart' || {
+    echo "verify: committed *.g.dart files are stale: run dart run build_runner build --delete-conflicting-outputs and commit them" >&2
+    exit 1
+  }
   flutter gen-l10n
   fork/tools/heavy.sh flutter test
 else

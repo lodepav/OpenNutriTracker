@@ -33,8 +33,9 @@ Everything that belongs only to the fork lives in this `fork/` folder or in `lib
    ported by hand at each release merge: `fork/tools/upstream-copies.sh <tag>` lists them.
 3. **Logic is tested.** Anything that computes a number the user acts on (expenditure, targets,
    trend weight) is a pure Dart function in `lib/fork/` with a unit test in `test/fork/`.
-4. **Upstream's checks stay green, unmodified.** `just ci` (format, l10n, analyze, test) passes
-   on the fork trunk. A red upstream test means the fork changed behaviour it shouldn't have:
+4. **Upstream's checks stay green, unmodified.** Upstream's tests and analyze pass on the fork
+   trunk, checked by `fork/tools/verify.sh` (below). Nothing runs `just ci`: its format step
+   fails on the fork. A red upstream test means the fork changed behaviour it shouldn't have:
    fix the fork, never the test. Where a seam changes behaviour on purpose, the upstream test
    is skipped between markers and the fork's version lives in `test/fork/`; fork tests never
    go into upstream test files (`test/fork/cases/` mirrors upstream's paths for the ones
@@ -48,3 +49,13 @@ Everything that belongs only to the fork lives in this `fork/` folder or in `lib
    That workflow also runs the release gate's Trivy scan, so a known vulnerability shows up with
    the next push. Dependabot would read upstream's `main`, not the fork's lockfiles.
 5. **Merge upstream, never rebase.** `fork/main` merges each upstream release tag (D6); `develop` mirrors `upstream/develop` for upstream PRs.
+
+## A bad release
+
+Version codes only rise, so a phone cannot go back to an older release. To stop the damage,
+mark the last good release as latest:
+`gh release edit openbite-v<good> --latest -R lodepav/OpenNutriTracker`. The app's updater (`lib/fork/update/updater.dart`) reads only the
+release GitHub marks latest (`/releases/latest`) and offers it when its version is higher than
+the installed one, so phones still on an older version stop being offered the bad one. Phones
+that already have it keep it. Then release a fix: it gets a higher version, and the updater
+offers it to everyone.
