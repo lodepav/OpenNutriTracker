@@ -217,8 +217,10 @@ class BackupNoticeCard extends StatelessWidget {
       if (title == null) return const SizedBox.shrink();
       final text = Theme.of(context).textTheme;
       return Padding(
-        padding: const EdgeInsets.only(top: 8),
+        // Home's sections bring their own margins; the card has none.
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
         child: AppCard(
+          padding: const EdgeInsets.fromLTRB(16, 12, 4, 12),
           onTap: () => Navigator.of(context).push(
             MaterialPageRoute<void>(
               builder: (_) => AutoBackupScreen(backup: this.backup),
