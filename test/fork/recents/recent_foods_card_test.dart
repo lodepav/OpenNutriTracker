@@ -11,6 +11,7 @@ import 'package:opennutritracker/fork/recents/recent_foods_card.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 
 import '../../fixture/meal_entity_fixtures.dart';
+import '../../helpers/ux_checks.dart';
 
 class _Config extends Fake implements GetConfigUsecase {
   @override
@@ -30,6 +31,8 @@ final _food = IntakeEntity(
   meal: MealEntityFixtures.mealOne,
   dateTime: DateTime(2026, 10, 25, 8),
 );
+
+final _chip = find.byKey(const ValueKey('home-recent-meal'));
 
 void main() {
   setUp(() => GetIt.instance.registerSingleton<GetConfigUsecase>(_Config()));
@@ -80,7 +83,11 @@ void main() {
     final logged = await pump(tester, [_food]);
     await tester.tap(find.text('Recent foods'));
     await tester.pumpAndSettle();
-    expect(find.textContaining('log it to Lunch'), findsOneWidget);
+    expect(find.text('Tap a food to log it to'), findsOneWidget);
+    expect(
+      find.descendant(of: _chip, matching: find.text('Lunch')),
+      findsOneWidget,
+    );
     expect(find.textContaining('150 g'), findsOneWidget);
 
     await tester.tap(find.byKey(const ValueKey('home-recent-0')));
@@ -195,5 +202,89 @@ void main() {
     await tester.tap(find.text('Recent foods'));
     await tester.pumpAndSettle();
     expect(find.text('Foods you log will show here.'), findsOneWidget);
+  });
+
+  group('the meal a tap logs to', () {
+    const lunch = IntakeTypeEntity.lunch;
+    const dinner = IntakeTypeEntity.dinner;
+
+    test('the time\'s meal, or the one picked over it while it lasts', () {
+      expect(recentFoodsMeal(lunch, null), lunch);
+      expect(recentFoodsMeal(lunch, (meal: dinner, over: lunch)), dinner);
+      // the time's meal moved on since the pick
+      expect(
+        recentFoodsMeal(IntakeTypeEntity.snack, (meal: dinner, over: lunch)),
+        IntakeTypeEntity.snack,
+      );
+    });
+
+    testWidgets('a pick on the chip is where a tap logs, after a reload too', (
+      tester,
+    ) async {
+      final logged = <IntakeTypeEntity>[];
+      final shown = ValueNotifier(true);
+      addTearDown(shown.dispose);
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: const [S.delegate],
+          supportedLocales: S.supportedLocales,
+          home: Scaffold(
+            body: ValueListenableBuilder(
+              valueListenable: shown,
+              builder: (_, isShown, _) => !isShown
+                  ? const SizedBox.shrink()
+                  : RecentFoodsCard(
+                      load: () async =>
+                          (meal: lunch, foods: [_food], imperial: false),
+                      log: (_, _, meal) async => logged.add(meal),
+                    ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('Recent foods'));
+      await tester.pumpAndSettle();
+      await tester.tap(_chip);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Dinner').last);
+      await tester.pumpAndSettle();
+      expect(
+        find.descendant(of: _chip, matching: find.text('Dinner')),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.byKey(const ValueKey('home-recent-0')));
+      await tester.pumpAndSettle();
+      // Home reloads after a log
+      shown.value = false;
+      await tester.pumpAndSettle();
+      shown.value = true;
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('home-recent-0')));
+      await tester.pumpAndSettle();
+      expect(logged, [dinner, dinner]);
+    });
+
+    testWidgets('the line and its chip fit at 2x on a 360 dp phone', (
+      tester,
+    ) async {
+      await pumpOnPhone(
+        tester,
+        RecentFoodsCard(
+          load: () async => (meal: lunch, foods: [_food], imperial: false),
+          log: (_, _, _) async {},
+        ),
+      );
+      tester.view
+        ..physicalSize = const Size(360 * 3, 800 * 3)
+        ..devicePixelRatio = 3;
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Recent foods'));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(tester.getSize(_chip).height, greaterThanOrEqualTo(48));
+      expect(cutText(tester), isEmpty);
+    });
   });
 }

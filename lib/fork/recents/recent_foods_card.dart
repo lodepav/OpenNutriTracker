@@ -10,6 +10,7 @@ import 'package:opennutritracker/fork/copy/copy_ui.dart';
 import 'package:opennutritracker/fork/recents/recents_by_meal.dart';
 import 'package:opennutritracker/fork/units/amount_text.dart';
 import 'package:opennutritracker/fork/units/energy_text.dart';
+import 'package:opennutritracker/fork/widget/meal_picker_chip.dart';
 
 /// How many foods the list holds; the rest are a search away.
 const recentFoodsShown = 10;
@@ -51,8 +52,16 @@ Future<void> _log(
   verb: 'Logged',
 );
 
+/// The meal a tap logs to: [chosen], the one picked on the list's chip, while
+/// the time's meal is still the [suggested] it was picked over; else that.
+IntakeTypeEntity recentFoodsMeal(
+  IntakeTypeEntity suggested,
+  ({IntakeTypeEntity meal, IntakeTypeEntity over})? chosen,
+) => chosen != null && chosen.over == suggested ? chosen.meal : suggested;
+
 /// Seam S162: Home's recent foods, collapsed until opened. A tap logs a food
-/// at its last amount into the time's meal, which the list names. The foods
+/// at its last amount into the time's meal, which the list names on a chip
+/// that picks another ([recentFoodsMeal]). The foods
 /// are read on each opening. It stays open when Home reloads after a log (the
 /// storage key), so a second food takes one more tap.
 class RecentFoodsCard extends StatelessWidget {
@@ -94,6 +103,21 @@ class _RecentFoodsListState extends State<_RecentFoodsList> {
   late final _recent = widget.load();
   bool _busy = false;
 
+  // in the route's storage, as the tile's open state, so a pick outlives the
+  // reload of Home after a log
+  static const _chosenId = 'home-recent-foods-meal';
+
+  ({IntakeTypeEntity meal, IntakeTypeEntity over})? get _chosen =>
+      PageStorage.maybeOf(context)?.readState(context, identifier: _chosenId)
+          as ({IntakeTypeEntity meal, IntakeTypeEntity over})?;
+
+  void _choose(IntakeTypeEntity meal, IntakeTypeEntity suggested) => setState(
+    () => PageStorage.maybeOf(context)?.writeState(context, (
+      meal: meal,
+      over: suggested,
+    ), identifier: _chosenId),
+  );
+
   Future<void> _logFood(IntakeEntity food, IntakeTypeEntity meal) async {
     setState(() => _busy = true);
     try {
@@ -115,15 +139,29 @@ class _RecentFoodsListState extends State<_RecentFoodsList> {
       if (recent.foods.isEmpty) {
         return const ListTile(title: Text('Foods you log will show here.'));
       }
-      final mealName = mealLabel(context, recent.meal);
+      final meal = recentFoodsMeal(recent.meal, _chosen);
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
-            child: Text(
-              'Tap a food to log it to $mealName',
-              style: Theme.of(context).textTheme.bodySmall,
+            child: Wrap(
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 8,
+              children: [
+                Text(
+                  'Tap a food to log it to',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                DefaultTextStyle.merge(
+                  style: Theme.of(context).textTheme.labelLarge,
+                  child: MealPickerChip(
+                    key: const ValueKey('home-recent-meal'),
+                    type: meal,
+                    onChanged: (type) => _choose(type, recent.meal),
+                  ),
+                ),
+              ],
             ),
           ),
           for (final (i, food) in recent.foods.indexed)
@@ -139,7 +177,7 @@ class _RecentFoodsListState extends State<_RecentFoodsList> {
                           '${energyText(context, food.totalKcal)}',
               ),
               trailing: const Icon(Icons.add_rounded),
-              onTap: () => _logFood(food, recent.meal),
+              onTap: () => _logFood(food, meal),
             ),
         ],
       );

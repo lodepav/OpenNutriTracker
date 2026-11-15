@@ -28,6 +28,7 @@ import 'package:opennutritracker/fork/screens/diary/day_info_widget.dart';
 // import 'package:opennutritracker/features/meal_detail/presentation/bloc/meal_detail_bloc.dart';
 // [/fork]
 import 'package:opennutritracker/generated/l10n.dart';
+import 'package:opennutritracker/fork/add/add_sheet.dart' show diaryPickedDay; // [fork] S131
 // [fork] S9 meal-groups: leftovers of a whole meal (D14)
 import 'package:opennutritracker/fork/leftovers/group_leftovers.dart';
 // [/fork]
@@ -103,6 +104,7 @@ class _DiaryPageState extends State<DiaryPage> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
+    diaryPickedDay = _pickedDate; // [fork] S131: the + sheet names today
     return BlocConsumer<DiaryBloc, DiaryState>(
       bloc: _diaryBloc,
       listener: (context, state) {

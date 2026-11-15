@@ -20,11 +20,13 @@ import 'package:opennutritracker/features/add_meal/presentation/bloc/favourite_t
 import 'package:opennutritracker/features/add_meal/presentation/bloc/food_bloc.dart';
 import 'package:opennutritracker/features/add_meal/presentation/bloc/products_bloc.dart';
 import 'package:opennutritracker/features/add_meal/presentation/bloc/recent_meal_bloc.dart';
+import 'package:opennutritracker/fork/add/one_tap_log.dart';
 import 'package:opennutritracker/fork/basket/basket.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 
 import '../../../helpers/fake_favourites.dart';
 import '../../../helpers/test_l10n.dart';
+import '../../../helpers/ux_checks.dart' show cutText, pumpOnPhone;
 
 /// Counts reads of recent history: each one copies and sorts the whole
 /// intake box, so typing must not trigger one per keystroke (#1334 review).
@@ -406,6 +408,91 @@ void main() {
       await tester.pumpWidget(_app());
       await tester.pumpAndSettle();
       expect(_withIdentifier('add-meal-quick-add'), findsOneWidget);
+    });
+  });
+
+  group('the meal chip', () {
+    tearDown(() async => getIt.reset());
+
+    final chip = find.byKey(const ValueKey('add-meal-meal'));
+
+    testWidgets('names the meal opened for; a pick there is where adds go', (
+      tester,
+    ) async {
+      final logged = <IntakeTypeEntity>[];
+      logFromRow =
+          (
+            context, {
+            required meal,
+            required type,
+            required day,
+            required imperial,
+            last,
+          }) async => logged.add(type);
+      addTearDown(() => logFromRow = defaultLogFromRow);
+      await _register([_intake('Apple')]);
+      await tester.pumpWidget(_app());
+      await tester.pumpAndSettle();
+      expect(
+        find.descendant(of: chip, matching: find.text('Lunch')),
+        findsOneWidget,
+      );
+
+      await tester.tap(chip);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Dinner').last);
+      await tester.pumpAndSettle();
+      expect(
+        find.descendant(of: chip, matching: find.text('Dinner')),
+        findsOneWidget,
+      );
+
+      await tester.tap(
+        find.descendant(
+          of: _withIdentifier('meal-item-add').first,
+          matching: find.byType(IconButton),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(logged, [IntakeTypeEntity.dinner]);
+    });
+
+    testWidgets('not while planning, which stays on its meal', (tester) async {
+      addTearDown(() => FoodBasket.instance.planning = null);
+      FoodBasket.instance.planning = PlanMode.once;
+      await _register(const []);
+      await tester.pumpWidget(_app());
+      await tester.pumpAndSettle();
+      expect(chip, findsNothing);
+    });
+
+    testWidgets('the app bar fits at 2x on a 360 dp phone', (tester) async {
+      await _register([_intake('Apple')]);
+      await pumpOnPhone(
+        tester,
+        Navigator(
+          onGenerateRoute: (settings) => MaterialPageRoute<void>(
+            settings: RouteSettings(
+              arguments: AddMealScreenArguments(
+                AddMealType.breakfastType,
+                DateTime(2026, 10, 1),
+              ),
+            ),
+            builder: (_) => const AddMealScreen(),
+          ),
+        ),
+      );
+      tester.view
+        ..physicalSize = const Size(360 * 3, 800 * 3)
+        ..devicePixelRatio = 3;
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(tester.getSize(chip).height, greaterThanOrEqualTo(48));
+      expect(
+        cutText(tester).where((t) => t == 'Add food' || t == 'Breakfast'),
+        isEmpty,
+      );
     });
   });
 }
