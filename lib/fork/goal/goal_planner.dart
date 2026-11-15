@@ -1,4 +1,5 @@
 import 'package:opennutritracker/core/utils/calc/calendar_day_calc.dart';
+import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/fork/phases/phases.dart';
 
 /// The goal planner's paces, kg a week: gentle, steady and fast.
@@ -23,6 +24,22 @@ const longestPhaseWeeks = 52;
 /// of cutting.
 const breakEveryWeeks = 6;
 const breakWeeks = 2;
+
+/// The kcal a day a pace of [kgPerWeek] is worth at [kcalPerKg]: negative
+/// to lose, as the pace is.
+double paceKcalPerDay(double kgPerWeek, double kcalPerKg) =>
+    kgPerWeek * kcalPerKg / 7;
+
+/// The grams [split]'s shares of [kcal] come to: 4 kcal a gram of protein
+/// and carbs, 9 of fat.
+FixedMacros splitGrams(
+  double kcal,
+  ({double carbs, double fat, double protein}) split,
+) => FixedMacros(
+  proteinG: kcal * split.protein / 4,
+  carbsG: kcal * split.carbs / 4,
+  fatG: kcal * split.fat / 9,
+);
 
 DateTime _date(DateTime t) => DateTime(t.year, t.month, t.day);
 

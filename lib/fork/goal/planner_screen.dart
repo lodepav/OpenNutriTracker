@@ -446,7 +446,8 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
         : AdaptiveSettings.commonKcalPerKg;
   }
 
-  double _kcalAt(double kgPerWeek) => _baseKcal + kgPerWeek * _kcalPerKg / 7;
+  double _kcalAt(double kgPerWeek) =>
+      _baseKcal + paceKcalPerDay(kgPerWeek, _kcalPerKg);
 
   /// The grams at the main phase's target: by weight with a program,
   /// else the macro split's shares.
@@ -458,11 +459,7 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
         // the phase's pace: fat moves with it (D34)
         goalKcal: kcal - _baseKcal,
       ) ??
-      FixedMacros(
-        proteinG: kcal * _setup.split.protein / 4,
-        carbsG: kcal * _setup.split.carbs / 4,
-        fatG: kcal * _setup.split.fat / 9,
-      );
+      splitGrams(kcal, _setup.split);
 
   static String _gramsText(FixedMacros g) => inMacroOrder(
     protein: 'Protein ${g.proteinG.round()} g',
@@ -998,7 +995,7 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
   List<Widget> _customPaceRows(BuildContext context, bool cut) {
     final range = cut ? cutCustomPaceKg : bulkCustomPaceKg;
     final pace = _draft.paceKg.clamp(range.min, range.max);
-    final kcal = pace * _kcalPerKg / 7;
+    final kcal = paceKcalPerDay(pace, _kcalPerKg);
     final percent = pace / _draft.startKg * 100;
     final end = _planOf(_draft.copyWith(paceKg: pace)).end;
     final theme = Theme.of(context);
@@ -1215,7 +1212,7 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
         Builder(
           builder: (context) {
             final at = _planOf(_draft.copyWith(paceKg: pace));
-            final kcal = (pace * _kcalPerKg / 7).round();
+            final kcal = paceKcalPerDay(pace, _kcalPerKg).round();
             return _OptionCard(
               identifier: 'goal-pace-$i',
               selected: !_customPace && _draft.paceKg == pace,
@@ -1322,7 +1319,7 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
 
   List<Widget> _targetStep(BuildContext context) {
     final pace = _draft.signedPace;
-    final shift = (pace * _kcalPerKg / 7).round();
+    final shift = paceKcalPerDay(pace, _kcalPerKg).round();
     final breaks = _planOf(_draft).phases.length > 1;
     final settings = AdaptiveStore.settings.value;
     final base = energyText(context, _baseKcal);
