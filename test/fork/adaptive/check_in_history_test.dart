@@ -75,6 +75,16 @@ void main() {
       expect(parts.fold(0.0, (a, p) => a + p.kcal), 350);
     });
 
+    test('the rounding of an accepted target is not an edit', () {
+      final before = _full(5, base: 2600, proposed: 2100.4, set: 2100);
+      final now = _full(12, base: 2500, proposed: 1999.5, set: 2000);
+      final parts = {
+        for (final p in checkInChangeParts(before, now)!) p.label: p.kcal,
+      };
+      expect(parts['You edited it'], 0);
+      expect(parts.values.fold(0.0, (a, b) => a + b), -100);
+    });
+
     test('an older record has no split', () {
       final full = _full(12, base: 2550, proposed: 2050, set: 2050);
       expect(checkInChangeParts(_record(5, 2600, 2100, 2100), full), isNull);
@@ -136,7 +146,10 @@ void main() {
     expect(find.text('You edited it'), findsNothing);
     expect(find.text('In all'), findsOneWidget);
     expect(find.text('Pace went from -0.5 to -0.25 kg a week.'), findsOne);
-    expect(find.text("The target's basis changed."), findsOne);
+    expect(
+      find.text('How activity or a kg is counted changed in Settings.'),
+      findsOne,
+    );
     expect(find.textContaining('Target weight'), findsNothing);
   });
 

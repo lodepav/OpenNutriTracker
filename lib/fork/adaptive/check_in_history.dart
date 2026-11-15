@@ -23,9 +23,13 @@ List<({String label, double kcal})>? checkInChangeParts(
   final total = now.acceptedKcal - before.acceptedKcal;
   final estimate = now.baseKcal - before.baseKcal;
   final activity = now.activityKcal - before.activityKcal;
-  final edited =
-      (now.acceptedKcal - now.proposedKcal) -
-      (before.acceptedKcal - before.proposedKcal);
+  // Under 1 kcal is the accepted target's rounding, not an edit.
+  double edit(CheckInRecord r) {
+    final by = r.acceptedKcal - r.proposedKcal;
+    return by.abs() >= 1 ? by : 0;
+  }
+
+  final edited = edit(now) - edit(before);
   return [
     (label: 'Your estimate moved', kcal: estimate),
     (label: 'Counted activity', kcal: activity),
@@ -178,7 +182,8 @@ Future<void> _showParts(
           ? 'Target weight went from ${weightText(from, unit)} to '
                 '${weightText(to, unit)}.'
           : 'The target weight changed.',
-    if (before.basis != now.basis) "The target's basis changed.",
+    if (before.basis != now.basis)
+      'How activity or a kg is counted changed in Settings.',
   ];
   await showModalBottomSheet<void>(
     context: context,
