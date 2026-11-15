@@ -324,6 +324,17 @@ class _EditDialogState extends State<EditDialog> {
                 // [fork] S220 edit-in-unit: grams for the amount in the unit
                 // chosen, which the caller reads from the notifier
                 if (_forkMeal case final meal?) {
+                  // nothing changed: the unit stays as it was logged, also
+                  // one that opened as its weight
+                  if (editUnchanged(
+                    newAmount,
+                    widget.unit!.value,
+                    _forkOpened,
+                  )) {
+                    widget.unit!.value = widget.intakeEntity.unit;
+                    Navigator.of(context).pop(widget.intakeEntity.amount);
+                    return;
+                  }
                   Navigator.of(context).pop(
                     editStoredAmount(
                       newAmount,

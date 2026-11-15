@@ -1,9 +1,11 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:opennutritracker/core/data/dbo/intake_dbo.dart';
 import 'package:opennutritracker/core/domain/entity/intake_entity.dart';
 import 'package:opennutritracker/core/domain/entity/intake_type_entity.dart';
 import 'package:opennutritracker/core/utils/calc/unit_calc.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dart';
 import 'package:opennutritracker/fork/amounts/edit_amount.dart';
+import 'package:opennutritracker/fork/amounts/own_portions.dart';
 
 import 'amount_test_foods.dart';
 
@@ -19,6 +21,59 @@ IntakeEntity _logged(String unit, double amount, [MealEntity? meal]) =>
 
 void main() {
   group('editOpening', () {
+    // A stored entry's food comes back without its database portions.
+    group('as stored', () {
+      IntakeEntity stored(String unit, double amount, MealEntity meal) =>
+          IntakeEntity.fromIntakeDBO(
+            IntakeDBO.fromIntakeEntity(_logged(unit, amount, meal)),
+          );
+
+      test('a database portion the stored food cannot name opens as grams', () {
+        final rolls = stored('serving#1', 120, bread());
+        expect(rolls.meal.portions, isEmpty);
+        expect(editOpening(rolls, rolls.meal, imperial: false), (
+          unit: 'g',
+          quantity: 120,
+        ));
+      });
+
+      test('a serving of a food with no serving figure opens as grams', () {
+        final entry = stored('serving', 70, rye(serving: null));
+        expect(entry.meal.scalableServingQuantity, isNull);
+        expect(editOpening(entry, entry.meal, imperial: false), (
+          unit: 'g',
+          quantity: 70,
+        ));
+      });
+
+      test('an index that lands on another portion opens as grams', () {
+        final rolls = stored('serving#1', 120, bread());
+        final meal = withOwnPortions(rolls.meal, const [
+          OwnPortionEntity(label: 'bowl', gramWeight: 250),
+        ]);
+        expect(editOpening(rolls, meal, imperial: false), (
+          unit: 'g',
+          quantity: 120,
+        ));
+      });
+
+      test('the one serving and an own portion open as their count', () {
+        final slices = stored('serving', 64, bread());
+        expect(editOpening(slices, slices.meal, imperial: false), (
+          unit: 'serving',
+          quantity: 2,
+        ));
+        final meal = withOwnPortions(slices.meal, const [
+          OwnPortionEntity(label: 'bowl', gramWeight: 250),
+        ]);
+        final bowls = stored('serving#1', 375, bread());
+        expect(editOpening(bowls, meal, imperial: false), (
+          unit: 'serving#1',
+          quantity: 1.5,
+        ));
+      });
+    });
+
     test('a portion opens as its count, not the grams', () {
       final open = editOpening(
         _logged('serving#1', 120),
@@ -30,13 +85,24 @@ void main() {
     });
 
     test('a bare serving is the first portion', () {
-      final open = editOpening(
-        _logged('serving', 70),
-        bread(),
-        imperial: false,
-      );
-      expect(open.unit, 'serving');
-      expect(open.quantity, closeTo(2.1875, 1e-9));
+      expect(editOpening(_logged('serving', 64), bread(), imperial: false), (
+        unit: 'serving',
+        quantity: 2,
+      ));
+    });
+
+    test('grams that are no whole or half portions open as grams', () {
+      expect(editOpening(_logged('serving', 70), bread(), imperial: false), (
+        unit: 'g',
+        quantity: 70,
+      ));
+    });
+
+    test('less than half a portion opens as grams, not as 0 of it', () {
+      expect(editOpening(_logged('serving', 0.1), bread(), imperial: false), (
+        unit: 'g',
+        quantity: 0.1,
+      ));
     });
 
     test('grams and ounces open as logged', () {
@@ -91,21 +157,18 @@ void main() {
       );
     });
 
-    test('a portion count left as it opened keeps the logged grams', () {
-      final intake = _logged('serving', 70);
-      final opened = editOpening(intake, bread(), imperial: false);
-      // shown as 2.19, which would store 70.08
-      expect(editStoredAmount(2.19, 'serving', bread(), intake, opened), 70);
+    test('an amount left as it opened keeps the logged grams', () {
+      final intake = _logged('oz', 64.3);
+      final opened = editOpening(intake, bread(), imperial: true);
+      // shown as 2.27, which would store 64.35
+      expect(editStoredAmount(2.27, 'oz', bread(), intake, opened), 64.3);
     });
 
     test('a changed count or unit stores its grams', () {
-      final intake = _logged('serving', 70);
+      final intake = _logged('serving', 64);
       final opened = editOpening(intake, bread(), imperial: false);
       expect(editStoredAmount(3, 'serving', bread(), intake, opened), 96);
-      expect(
-        editStoredAmount(2.19, 'serving#1', bread(), intake, opened),
-        closeTo(131.4, 1e-9),
-      );
+      expect(editStoredAmount(2, 'serving#1', bread(), intake, opened), 120);
     });
 
     test('a leftover in a portion takes its share of the portion', () {
