@@ -16,7 +16,7 @@ import 'package:opennutritracker/fork/layout/home_layout.dart';
 import 'package:opennutritracker/fork/layout/layout_store.dart';
 import 'package:opennutritracker/features/home/presentation/widgets/log_water_dialog.dart';
 import 'package:opennutritracker/features/home/presentation/widgets/quick_weight_widget.dart';
-import 'package:opennutritracker/features/trends/presentation/trends_page.dart'
+import 'package:opennutritracker/fork/screens/trends/trends_page.dart'
     show openTrendFromHome;
 import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
 import 'package:opennutritracker/fork/adaptive/trend_points.dart';

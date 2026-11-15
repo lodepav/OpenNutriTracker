@@ -119,12 +119,8 @@ void main() {
     position.jumpTo(position.maxScrollExtent);
     await tester.pumpAndSettle();
 
-    // [fork] S121: the Settings row, which opens its screen, is the last
-    // thing in the list.
-    final lastRow = tester.getRect(
-      find.bySemanticsIdentifier('profile-settings'),
-    );
-    // [/fork]
+    // Collapsed, the Settings row is the last thing in the list.
+    final lastRow = tester.getRect(find.byType(ExpansionTile));
     final fab = tester.getRect(find.byType(FloatingActionButton));
 
     expect(

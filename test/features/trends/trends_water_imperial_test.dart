@@ -117,10 +117,7 @@ void main() {
       chart.data.extraLinesData.horizontalLines.single.y,
       closeTo(UnitCalc.mlToFlOz(_goalMl.toDouble()), 0.001),
     );
-    // [fork] S120 trends-tiles: the card is the Water tile's page; its case is
-    // in test/fork/trends/trends_water_imperial_test.dart
-  }, skip: true /* the card is the Water tile's page (S120) */);
-  // [/fork]
+  });
 
   testWidgets('metric: header, points and goal line stay in ml', (
     tester,
@@ -131,8 +128,5 @@ void main() {
 
     final chart = _waterChart(tester, _todayMl.toDouble());
     expect(chart.data.extraLinesData.horizontalLines.single.y, _goalMl);
-    // [fork] S120 trends-tiles: the card is the Water tile's page; its case is
-    // in test/fork/trends/trends_water_imperial_test.dart
-  }, skip: true /* the card is the Water tile's page (S120) */);
-  // [/fork]
+  });
 }
