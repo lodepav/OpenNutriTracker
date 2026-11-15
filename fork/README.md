@@ -17,6 +17,8 @@ Everything that belongs only to the fork lives in this `fork/` folder or in `lib
 | [FEATURES.md](FEATURES.md) | The fork's features, each marked fork only, an upstream candidate, or already sent upstream. |
 | [SEAMS.md](SEAMS.md) | Every place the fork edits an upstream file. Keep it current: it is what makes conflicts predictable. |
 | [tools/emulator.sh](tools/emulator.sh) | Builds the debug APK, boots the Android 16 emulator, installs and launches it. Drive the app with upstream's `tools/adb/adb-driver.sh`. |
+| [tools/upstream-coming.sh](tools/upstream-coming.sh) | What upstream has coming before merge day: a dry merge of `upstream/develop` (or a ref) into `fork/main`, the seam files it changed and the copies to port. A hint: develop is not the release. Prints only. |
+| [tools/upstream_status.py](tools/upstream_status.py) | The state of the fork's upstream PRs, whether a merged one is in develop and the newest release, and what is ready to drop. Prints only. Test: `python3 test/fork/tools/upstream_status_test.py`. |
 
 ## The rules
 
