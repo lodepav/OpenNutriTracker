@@ -21,6 +21,7 @@ import 'package:opennutritracker/core/domain/usecase/get_weight_log_usecase.dart
 import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_ui.dart';
+import 'package:opennutritracker/fork/adaptive/auto_check_in.dart';
 import 'package:opennutritracker/fork/adaptive/check_in.dart';
 import 'package:opennutritracker/fork/adaptive/expenditure.dart';
 import 'package:opennutritracker/fork/adaptive/goal_plan.dart';
@@ -818,7 +819,7 @@ void main() {
     expect(find.textContaining(' kJ'), findsWidgets);
     expect(find.textContaining('kcal'), findsNothing);
     await tester.scrollUntilVisible(
-      find.text('Accept'),
+      find.byKey(const ValueKey('check-in-target')),
       200,
       scrollable: find.byType(Scrollable).last,
     );
@@ -1160,6 +1161,73 @@ void main() {
     });
   });
 
+  testWidgets('with auto-accept on, the card says so; Dismiss clears it', (
+    tester,
+  ) async {
+    AdaptiveStore.settings.value = const AdaptiveSettings(
+      adaptiveTarget: true,
+      autoAcceptCheckIn: true,
+    );
+    addTearDown(() => AutoCheckIn.accepted.value = null);
+    final memory = _MemoryStore();
+    var refreshed = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: AdaptiveCheckInCard(
+            service: AdaptiveService(
+              _User(),
+              _Weights(),
+              _TrackedDays(),
+              memory,
+              () => _today.add(const Duration(hours: 9)),
+            ),
+            onAccepted: () => refreshed++,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(memory.records, hasLength(1));
+    expect(refreshed, 1);
+    expect(find.text('Your first target is set'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Dismiss'));
+    await tester.pumpAndSettle();
+    expect(AutoCheckIn.accepted.value, isNull);
+    expect(find.text('Your first target is set'), findsNothing);
+  });
+
+  testWidgets('Accept and Keep are on screen of a small phone, unscrolled', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(360, 640);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final service = AdaptiveService(
+      _User(),
+      _Weights(),
+      _TrackedDays(),
+      _MemoryStore(),
+      () => _today.add(const Duration(hours: 9)),
+    );
+    await service.accept(await service.checkIn(), 2100);
+    await tester.pumpWidget(MaterialApp(home: CheckInScreen(service: service)));
+    await tester.pumpAndSettle();
+
+    final accept = find.byKey(const ValueKey('check-in-accept'));
+    final keep = find.byKey(const ValueKey('check-in-keep'));
+    expect(accept.hitTestable(), findsOneWidget);
+    expect(keep.hitTestable(), findsOneWidget);
+    expect(tester.getTopLeft(accept).dy, lessThan(tester.getTopLeft(keep).dy));
+
+    // Above the keyboard while the target field has it.
+    tester.view.viewInsets = const FakeViewPadding(bottom: 300);
+    await tester.pumpAndSettle();
+    expect(tester.getBottomLeft(keep).dy, lessThanOrEqualTo(640 - 300));
+    expect(keep.hitTestable(), findsOneWidget);
+  });
+
   testWidgets('Keep current target records the check-in at it', (tester) async {
     final memory = _MemoryStore();
     final service = AdaptiveService(
@@ -1420,7 +1488,6 @@ class _MemoryStore extends AdaptiveStore {
     records[records.length - 1] = record;
   }
 }
-
 
 class _UnreadableActivity extends Fake implements ActivityCounter {
   @override
