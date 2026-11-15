@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:opennutritracker/core/data/dbo/intake_dbo.dart';
 import 'package:opennutritracker/core/domain/entity/intake_entity.dart';
 import 'package:opennutritracker/core/domain/entity/intake_type_entity.dart';
 import 'package:opennutritracker/core/presentation/widgets/edit_dialog.dart';
@@ -98,6 +99,23 @@ Future<void> _ok(WidgetTester tester) async {
 }
 
 void main() {
+  testWidgets('a stored entry in a database portion opens in grams, and OK '
+      'with nothing changed keeps its unit', (tester) async {
+    // as storage returns it: the food without its database portions
+    final stored = IntakeEntity.fromIntakeDBO(
+      IntakeDBO.fromIntakeEntity(_logged('serving#1', 120)),
+    );
+    final unit = ValueNotifier(stored.unit);
+    final result = await _open(tester, stored, unit);
+
+    expect(_text(tester, _amount), '120');
+    expect(unit.value, 'g');
+
+    await _ok(tester);
+    expect(await result, 120);
+    expect(unit.value, 'serving#1');
+  });
+
   testWidgets('an entry logged in a portion opens in that portion', (
     tester,
   ) async {

@@ -11,29 +11,43 @@ import 'package:opennutritracker/fork/amounts/amount_units.dart';
 typedef EditAmount = ({String unit, double quantity});
 
 /// Where the Edit item dialog opens for [intake]: in the unit it was logged
-/// in, the stored grams counted in it ("2 slice", not "64 g"). A portion no
-/// longer on [meal] (the food with the user's own portions) opens as the
+/// in, the stored grams counted in it ("2 slice", not "64 g"). A stored
+/// food keeps its serving but not its database portions, and the unit is
+/// only a place in the list the food's page showed, so a portion opens as
+/// its count only when [meal] (the food with the user's own portions) has
+/// one there and the grams are whole or half ones of it; else as the
 /// weight, the picker's weight chip.
 EditAmount editOpening(
   IntakeEntity intake,
   MealEntity meal, {
   required bool imperial,
 }) {
-  var unit = intake.unit;
-  var perOne = convertQuantityToBaseUnit(1, unit, meal);
-  final gone =
-      isPortionUnit(unit) &&
-      meal.portions.isNotEmpty &&
-      effectivePortionIndex(unit) >= meal.portions.length;
-  if (gone || perOne <= 0) {
-    unit = amountUnitOptions(
-      meal,
-      selected: '',
-      imperial: imperial,
-    ).firstWhere((o) => !o.isPortion).unit;
-    perOne = convertQuantityToBaseUnit(1, unit, meal);
+  final unit = intake.unit;
+  if (!isPortionUnit(unit)) {
+    return (
+      unit: unit,
+      quantity: intake.amount / convertQuantityToBaseUnit(1, unit, meal),
+    );
   }
-  return (unit: unit, quantity: intake.amount / perOne);
+  final index = effectivePortionIndex(unit);
+  final double? perOne = meal.portions.isNotEmpty
+      ? (index < meal.portions.length ? meal.portions[index].gramWeight : null)
+      : (index == 0 ? meal.scalableServingQuantity : null);
+  if (perOne != null && perOne > 0) {
+    final halves = intake.amount / perOne * 2;
+    if (halves.round() >= 1 && (halves - halves.round()).abs() < 0.02) {
+      return (unit: unit, quantity: intake.amount / perOne);
+    }
+  }
+  final weight = amountUnitOptions(
+    meal,
+    selected: '',
+    imperial: imperial,
+  ).firstWhere((o) => !o.isPortion).unit;
+  return (
+    unit: weight,
+    quantity: intake.amount / convertQuantityToBaseUnit(1, weight, meal),
+  );
 }
 
 /// [quantity] in [from] as the same weight in [to]: what a leftover is taken
@@ -50,9 +64,14 @@ double quantityInUnit(
   return convertQuantityToBaseUnit(quantity, from, meal) / perOne;
 }
 
+/// Whether [quantity] in [unit] is the amount as it [opened]: OK then
+/// stores the entry's amount and unit as they were logged.
+bool editUnchanged(double quantity, String unit, EditAmount opened) =>
+    unit == opened.unit && amountText(quantity) == amountText(opened.quantity);
+
 /// What OK stores for [quantity] in [unit]: grams or millilitres, as the
-/// food's page logs them. A portion count left as it [opened] keeps the
-/// logged [intake]'s amount, so a count rounded to show it moves nothing.
+/// food's page logs them. An amount left as it [opened] keeps the logged
+/// [intake]'s, so a number rounded to show it moves nothing.
 double editStoredAmount(
   double quantity,
   String unit,
@@ -60,9 +79,7 @@ double editStoredAmount(
   IntakeEntity intake,
   EditAmount opened,
 ) {
-  if (unit == opened.unit &&
-      isPortionUnit(unit) &&
-      amountText(quantity) == amountText(opened.quantity)) {
+  if (editUnchanged(quantity, unit, opened)) {
     return intake.amount;
   }
   return convertQuantityToBaseUnit(quantity, unit, meal);
