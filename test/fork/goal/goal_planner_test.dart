@@ -252,7 +252,8 @@ void main() {
           (PhaseKind.cut, 9),
           (PhaseKind.maintain, breakWeeks),
           (PhaseKind.cut, 1),
-          (PhaseKind.cut, 7),
+          // from the 79.42 kg due on Monday, not Wednesday's 79.6: 6, not 7
+          (PhaseKind.cut, 6),
         ],
       );
       expect(edited.phases.last.kgPerWeek, -0.25);
@@ -260,6 +261,23 @@ void main() {
       expect(edited.start, _start);
       expect(edited.startKg, 86.4);
       expect(edited.extensions, 1);
+    });
+
+    test('begun and saved unchanged, the plan stays as it is', () {
+      final plan = _cut().toPlan();
+      // on its first day, and ten days in at the weight planned for then
+      for (final (today, nowKg) in [
+        (_start, 86.4),
+        (_start.add(const Duration(days: 10)), 86.4 - 0.5 * 10 / 7),
+      ]) {
+        final edited = editedPlan(
+          plan,
+          GoalDraft.of(plan, nowKg).copyWith(startKg: nowKg),
+          today: today,
+          nowKg: nowKg,
+        );
+        expect(edited.end, plan.end);
+      }
     });
 
     test('not begun, the draft plans it, extensions kept', () {
