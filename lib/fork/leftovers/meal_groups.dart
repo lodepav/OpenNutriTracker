@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:logging/logging.dart';
 import 'package:opennutritracker/features/add_meal/domain/meal_photo_interpreter.dart';
@@ -54,6 +56,18 @@ class MealGroupStore {
   Future<MealGroup?> groupOf(String intakeId) async {
     final json = (await _box()).get(intakeId);
     return json == null ? null : MealGroup.fromJson(json);
+  }
+
+  /// Deletes the group of [intakeIds], an Undo of the save that recorded
+  /// it, and the photo it kept.
+  Future<void> forget(List<String> intakeIds) async {
+    if (intakeIds.isEmpty) return;
+    final box = await _box();
+    final photoPath = (await groupOf(intakeIds.first))?.photoPath;
+    await box.deleteAll(intakeIds);
+    if (photoPath == null) return;
+    final photo = File(photoPath);
+    if (await photo.exists()) await photo.delete();
   }
 
   /// Every member's group, by intake id, for the backup.

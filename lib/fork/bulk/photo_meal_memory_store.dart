@@ -57,6 +57,13 @@ class PhotoMealMemoryStore {
     await prune(box, now ?? DateTime.now());
   }
 
+  /// Deletes the record logged at [loggedAt], an Undo of its Log.
+  Future<void> remove(DateTime loggedAt) async {
+    final box = await _open();
+    if (box == null) return;
+    await box.delete(loggedAt.microsecondsSinceEpoch.toString());
+  }
+
   /// Deletes the records past the days kept at [now], and any that does
   /// not read.
   static Future<void> prune(Box<dynamic> box, DateTime now) async {

@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:opennutritracker/fork/leftovers/meal_groups.dart';
@@ -46,6 +45,12 @@ import 'package:opennutritracker/features/meal_detail/util/meal_quantity_convert
 import 'package:opennutritracker/features/settings/settings_screen.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 
+import 'package:flutter/services.dart';
+import 'package:opennutritracker/fork/add/logged_bar.dart';
+import 'package:opennutritracker/fork/bulk/photo_disclosure.dart';
+import 'package:opennutritracker/fork/copy/copy_entries.dart';
+import 'package:opennutritracker/fork/leftovers/meal_photo_cache.dart';
+
 import '../../../helpers/test_l10n.dart';
 
 /// One recorded `addIntake` call: what the screen actually asked to be
@@ -56,8 +61,9 @@ class _Write {
   final String unit;
   final String amount;
   final String? mealName;
+  final IntakeTypeEntity? type;
 
-  const _Write(this.unit, this.amount, this.mealName);
+  const _Write(this.unit, this.amount, this.mealName, [this.type]);
 
   @override
   String toString() => '$mealName $amount $unit';
@@ -90,7 +96,7 @@ class _FakeMealDetailBloc extends Fake implements MealDetailBloc {
     if (failOnSecondWrite && writes.length == 1) {
       throw StateError('write failed');
     }
-    writes.add(_Write(unit, amountText, meal.name));
+    writes.add(_Write(unit, amountText, meal.name, intakeTypeEntity));
     if (dropSecondWrite && writes.length == 2) return null;
     return IntakeEntity(
       id: 'intake-${writes.length}',
@@ -642,6 +648,7 @@ void main() {
     // In memory: a write to a file never finishes in fake time either.
     Hive.init((await Directory.systemTemp.createTemp('bulk_add')).path);
     await Hive.openBox<Map>(MealGroupStore.boxName, bytes: Uint8List(0));
+    await Hive.openBox<dynamic>('photo_disclosure_seen', bytes: Uint8List(0));
     final flags = await Hive.openBox<bool>('fork_flags', bytes: Uint8List(0));
     await flags.put('keepMealPhotos', false);
   });
@@ -1486,6 +1493,128 @@ void main() {
       find.textContaining(l10nEn.bulkAddPhotoDisclosureCommon),
       findsOneWidget,
     );
+  });
+
+  testWidgets('the photo sheet shows once per destination, and again when '
+      'it changes', (tester) async {
+    await _register(const {});
+    getIt
+      ..unregister<AiCredentialStorage>()
+      ..registerLazySingleton<AiCredentialStorage>(
+        () => AiCredentialStorage(
+          _MapStorage({
+            'AiApiKeyTag.openrouter': 'sk-or-test',
+            'AiAssistEnabledTag': 'true',
+            'AiProviderTag': 'openrouter',
+          }),
+        ),
+      );
+    final seenBox = Hive.box<dynamic>('photo_disclosure_seen');
+    final before = forkPhotoDisclosureSeen;
+    forkPhotoDisclosureSeen = () => PhotoDisclosureSeen(() async => seenBox);
+    final flags = Hive.box<bool>('fork_flags');
+    addTearDown(() async {
+      forkPhotoDisclosureSeen = before;
+      await seenBox.clear();
+      await flags.put('keepMealPhotos', false);
+    });
+    // a picker the user cancels, counted
+    var picks = 0;
+    const picker = MethodChannel('plugins.flutter.io/image_picker');
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(picker, (
+      _,
+    ) async {
+      picks++;
+      return null;
+    });
+    addTearDown(
+      () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        picker,
+        null,
+      ),
+    );
+
+    await tester.pumpWidget(_app());
+    await tester.pumpAndSettle();
+    tester.state<NavigatorState>(find.byType(Navigator)).pushNamed('/bulk');
+    await tester.pumpAndSettle();
+    final camera = find.byIcon(Icons.photo_camera_rounded).first;
+    final sheet = find.bySemanticsIdentifier('bulk-add-photo-camera');
+
+    // the first time, the disclosure before the camera
+    await tester.tap(camera);
+    await tester.pumpAndSettle();
+    expect(
+      find.textContaining(l10nEn.bulkAddPhotoDisclosureCommon),
+      findsOneWidget,
+    );
+    expect(picks, 0);
+    await tester.tap(sheet);
+    await tester.pumpAndSettle();
+    expect(picks, 1);
+
+    // read once: the camera opens directly
+    await tester.tap(camera);
+    await tester.pumpAndSettle();
+    expect(sheet, findsNothing);
+    expect(picks, 2);
+
+    // photos kept now: a new disclosure, shown again
+    await flags.put('keepMealPhotos', true);
+    await tester.tap(camera);
+    await tester.pumpAndSettle();
+    expect(find.textContaining(keptPhotoDisclosure), findsOneWidget);
+    expect(picks, 2);
+  });
+
+  testWidgets('the meal chip sends Log to the meal chosen, and the bar after '
+      'Log takes it back', (tester) async {
+    await _register({
+      'toast': [_meal('Toast')],
+      'eggs': [_meal('Egg', servingQuantity: 50)],
+    });
+    await tester.pumpWidget(_app());
+    await _parse(tester, '100g toast, 2 eggs');
+    final chip = find.byKey(const ValueKey('bulk-add-meal'));
+    expect(
+      find.descendant(of: chip, matching: find.text(l10nEn.breakfastLabel)),
+      findsOneWidget,
+    );
+    expect(tester.getSize(chip).height, greaterThanOrEqualTo(48));
+
+    await tester.tap(chip);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(l10nEn.dinnerLabel).last);
+    await tester.pumpAndSettle();
+    expect(
+      find.descendant(of: chip, matching: find.text(l10nEn.dinnerLabel)),
+      findsOneWidget,
+    );
+
+    await tester.tap(_submitButton());
+    await tester.pumpAndSettle();
+    expect(_mealDetailBloc.writes.map((w) => w.type), [
+      IntakeTypeEntity.dinner,
+      IntakeTypeEntity.dinner,
+    ]);
+    expect(find.text('Added to ${l10nEn.dinnerLabel}'), findsOneWidget);
+    expect((await MealGroupStore().groupOf('intake-1'))?.intakeIds, [
+      'intake-1',
+      'intake-2',
+    ]);
+
+    Placed? undone;
+    final before = undoLogged;
+    undoLogged = (placed, {required startedOn}) async {
+      undone = placed;
+      return true;
+    };
+    addTearDown(() => undoLogged = before);
+    await tester.tap(find.text('Undo'));
+    await tester.pumpAndSettle();
+    expect(undone!.day, DateTime(2026, 8, 10));
+    expect(undone!.written.map((i) => i.id), ['intake-1', 'intake-2']);
+    expect(await MealGroupStore().groupOf('intake-1'), isNull);
   });
 
   testWidgets('a shared photo waits by the buttons until send, its note '
@@ -2468,6 +2597,8 @@ void main() {
 
     // a food left out leaves the meal
     await _leaveOut(tester, 1);
+    // back up to the card, which the swipe's scroll can take off screen
+    await tester.scrollUntilVisible(kcal, -150, scrollable: _rowList());
     expect(tester.widget<Text>(kcal).data, '100 kcal');
   });
 

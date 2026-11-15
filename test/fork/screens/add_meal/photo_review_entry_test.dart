@@ -93,6 +93,10 @@ class _Memory implements PhotoMealMemoryStore {
   @override
   Future<void> add(PhotoMealRecord record, {DateTime? now}) async =>
       kept.add(record);
+
+  @override
+  Future<void> remove(DateTime loggedAt) async =>
+      kept.removeWhere((r) => r.loggedAt == loggedAt);
 }
 
 /// The screen opened again, as from the add sheet.

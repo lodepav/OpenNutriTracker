@@ -19,6 +19,7 @@ import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/fork/amounts/own_portions.dart';
 import 'package:opennutritracker/fork/backup/auto_backup.dart';
+import 'package:opennutritracker/fork/bulk/photo_disclosure.dart';
 import 'package:opennutritracker/fork/body/measurement_store.dart';
 import 'package:opennutritracker/fork/display/display_prefs.dart';
 import 'package:opennutritracker/fork/food/moved_dish_ids.dart';
@@ -330,6 +331,8 @@ final _fieldReaders = <String, Map<String, Future<Object?> Function()>>{
     'nutritionExport': () => _stored(AdaptiveStore.boxName, 'nutritionExport'),
     'movedDishIds': () =>
         _stored(AdaptiveStore.boxName, MovedDishIds.profileFlag),
+    'photoDisclosureSeen': () =>
+        _stored(AdaptiveStore.boxName, PhotoDisclosureSeen.key),
   },
   WeightImport.boxName: {
     'enabled': () => _weightImport.isOn(),
