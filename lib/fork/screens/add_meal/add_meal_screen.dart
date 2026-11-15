@@ -1,6 +1,7 @@
 // Fork-owned copy of lib/features/add_meal/presentation/add_meal_screen.dart (D23); upstream's later changes to it
 // are ported by hand: fork/tools/upstream-copies.sh.
 import 'package:flutter/material.dart';
+import 'package:opennutritracker/core/domain/entity/intake_type_entity.dart';
 import 'package:opennutritracker/core/presentation/widgets/empty_hint.dart';
 import 'package:opennutritracker/core/presentation/widgets/error_dialog.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
@@ -39,6 +40,7 @@ import 'package:opennutritracker/fork/screens/add_meal/result_sections.dart';
 import 'package:opennutritracker/fork/bulk/ai_add.dart';
 import 'package:opennutritracker/fork/suggest/fits_left.dart';
 import 'package:opennutritracker/fork/recents/search_sections.dart';
+import 'package:opennutritracker/fork/widget/meal_picker_chip.dart';
 
 class AddMealScreen extends StatefulWidget {
   const AddMealScreen({super.key});
@@ -50,7 +52,10 @@ class AddMealScreen extends StatefulWidget {
 class _AddMealScreenState extends State<AddMealScreen> {
   final ValueNotifier<String> _searchStringListener = ValueNotifier('');
 
-  late AddMealType _mealType;
+  late AddMealType _openedFor;
+  // the app bar's chip; everything added here goes to it
+  AddMealType? _chosenMeal;
+  AddMealType get _mealType => _chosenMeal ?? _openedFor;
   late DateTime _day;
 
   late ProductsBloc _productsBloc;
@@ -90,11 +95,18 @@ class _AddMealScreenState extends State<AddMealScreen> {
   void didChangeDependencies() {
     final args =
         ModalRoute.of(context)?.settings.arguments as AddMealScreenArguments;
-    _mealType = args.mealType;
+    _openedFor = args.mealType;
     _day = args.day;
     // the recents put this meal's usual foods first
     _recentMealBloc.forkMeal = _mealType.getIntakeType();
     super.didChangeDependencies();
+  }
+
+  void _onMealChanged(IntakeTypeEntity type) {
+    setState(() => _chosenMeal = AddMealExtension.fromIntakeTypeEntity(type));
+    _recentMealBloc
+      ..forkMeal = type
+      ..add(LoadRecentMealEvent(searchString: _searchStringListener.value));
   }
 
   @override
@@ -163,11 +175,36 @@ class _AddMealScreenState extends State<AddMealScreen> {
       // While planning (the meal plan's search) nothing here may log.
       floatingActionButton: _planning ? null : _aiAddFab(),
       appBar: AppBar(
+        // the meal is the chip under it, so the title does not repeat it
         title: Text(
           _planning
               ? 'Planning ${_mealType.getTypeName(context).toLowerCase()}'
-              : _mealType.getTypeName(context),
+              : 'Add food',
         ),
+        // A plan's search stays on the meal it plans.
+        bottom: _planning
+            ? null
+            : PreferredSize(
+                preferredSize: const Size.fromHeight(56),
+                child: Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  child: Padding(
+                    padding: const EdgeInsetsDirectional.only(
+                      start: 16,
+                      bottom: 8,
+                    ),
+                    // the chip's size as on the food page, not the title's
+                    child: DefaultTextStyle.merge(
+                      style: Theme.of(context).textTheme.labelLarge,
+                      child: MealPickerChip(
+                        key: const ValueKey('add-meal-meal'),
+                        type: _mealType.getIntakeType(),
+                        onChanged: _onMealChanged,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
         actions: [
           if (!_planning)
             Semantics(

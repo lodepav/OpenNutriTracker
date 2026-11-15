@@ -237,6 +237,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
       builder: (BuildContext context) {
         return AddSheet(
           // [fork] S131
+          diaryDay: _selectedPageIndex == 1 ? diaryPickedDay : null, // [fork] S131
           day: DateTime.now(),
           showActivityTracking: config.showActivityTracking,
           usesImperialUnits: config.usesImperialFoodUnits,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:opennutritracker/core/domain/entity/intake_entity.dart';
 import 'package:opennutritracker/core/domain/entity/intake_type_entity.dart';
 import 'package:opennutritracker/core/domain/entity/user_activity_entity.dart';
@@ -21,6 +22,21 @@ import 'package:opennutritracker/fork/recents/recents_by_meal.dart'
     show recentKey;
 import 'package:opennutritracker/generated/l10n.dart';
 
+/// The line under the + sheet's title when the sheet adds to [today] while
+/// the Diary shows [diaryDay], another day; null when the Diary is not shown
+/// or is on today, or the sheet was opened for a day of its own.
+/// The day the Diary shows when it is not today, written by the Diary as it
+/// builds (S131); the centre + reads it while the Diary is the open tab.
+DateTime? diaryPickedDay;
+
+String? addsToTodayLine({
+  required DateTime? diaryDay,
+  required DateTime today,
+  String? locale,
+}) => diaryDay == null || DateUtils.isSameDay(diaryDay, today)
+    ? null
+    : 'Adds to today, ${DateFormat.MMMMEEEEd(locale).format(today)}';
+
 /// Seam S131: the + sheet after the canvas's "Add sheet · A". Search
 /// first, the meal it goes to as chips (the time's meal picked), the
 /// foods logged lately with that meal, "Log with AI" while AI meal
@@ -33,12 +49,17 @@ class AddSheet extends StatefulWidget {
   /// The meal picked when the sheet opens; the time's meal when null.
   final IntakeTypeEntity? suggestedType;
 
+  /// The day the Diary shows, when the centre + opened the sheet over it:
+  /// [addsToTodayLine] then says the sheet still adds to [day], today.
+  final DateTime? diaryDay;
+
   const AddSheet({
     super.key,
     required this.day,
     this.showActivityTracking = true,
     this.usesImperialUnits = false,
     this.suggestedType,
+    this.diaryDay,
   });
 
   @override
@@ -121,6 +142,11 @@ class _AddSheetState extends State<AddSheet> {
     final s = S.of(context);
     final theme = Theme.of(context);
     final palette = paletteOf(context);
+    final daySaid = addsToTodayLine(
+      diaryDay: widget.diaryDay,
+      today: widget.day,
+      locale: Localizations.localeOf(context).toLanguageTag(),
+    );
     return SafeArea(
       child: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(
@@ -142,6 +168,14 @@ class _AddSheetState extends State<AddSheet> {
                 ),
               ),
             ),
+            if (daySaid != null)
+              Text(
+                daySaid,
+                key: const ValueKey('add-item-day'),
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: palette.textMuted,
+                ),
+              ),
             const SizedBox(height: Dimens.spacing12),
             Semantics(
               identifier: 'add-item-search',

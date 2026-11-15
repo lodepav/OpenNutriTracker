@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get_it/get_it.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:opennutritracker/core/domain/entity/intake_entity.dart';
 import 'package:opennutritracker/core/domain/entity/intake_type_entity.dart';
 import 'package:opennutritracker/core/domain/usecase/get_intake_usecase.dart';
@@ -353,5 +354,49 @@ void main() {
     expect(args.day, DateTime(2026, 1, 1));
     expect(args.usesImperialUnits, isTrue);
     await getIt.reset();
+  });
+
+  group('the day it adds to, opened from the centre +', () {
+    final today = DateTime(2026, 11, 15, 9, 30);
+    setUpAll(initializeDateFormatting);
+
+    test('nothing said while the Diary is on today, or is not shown', () {
+      expect(
+        addsToTodayLine(diaryDay: DateTime(2026, 11, 15), today: today),
+        isNull,
+      );
+      expect(addsToTodayLine(diaryDay: null, today: today), isNull);
+    });
+
+    test('the Diary on another day: the line names today', () {
+      expect(
+        addsToTodayLine(
+          diaryDay: DateTime(2026, 11, 12),
+          today: today,
+          locale: 'en',
+        ),
+        'Adds to today, Sunday, November 15',
+      );
+    });
+
+    testWidgets('the sheet shows the line under its title', (tester) async {
+      await tester.pumpWidget(
+        _wrapWithMaterial(
+          AddSheet(day: today, diaryDay: DateTime(2026, 11, 12)),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Adds to today, Sunday, November 15'), findsOneWidget);
+    });
+
+    testWidgets('a sheet opened for a day of its own says nothing', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _wrapWithMaterial(AddSheet(day: DateTime(2026, 11, 12))),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('add-item-day')), findsNothing);
+    });
   });
 }
