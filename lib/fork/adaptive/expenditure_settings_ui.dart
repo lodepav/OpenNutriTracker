@@ -736,7 +736,10 @@ class _OpenCheckInTileState extends State<_OpenCheckInTile> {
     super.dispose();
   }
 
-  void _reread() => setState(() => _due = _readDue());
+  // A block: setState refuses a callback that returns a Future.
+  void _reread() => setState(() {
+    _due = _readDue();
+  });
 
   @override
   void didUpdateWidget(_OpenCheckInTile oldWidget) {
@@ -769,7 +772,7 @@ class _OpenCheckInTileState extends State<_OpenCheckInTile> {
       );
       if (accepted != true) return;
       await refreshGoals();
-      if (mounted) setState(() => _due = _readDue());
+      if (mounted) _reread();
     },
   );
 }
