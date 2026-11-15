@@ -12,6 +12,7 @@ import 'package:opennutritracker/features/settings/settings_screen.dart'
 export 'package:opennutritracker/features/settings/settings_screen.dart'
     show SettingsScreenArguments;
 import 'package:flutter/material.dart';
+import 'package:opennutritracker/fork/bulk/photo_disclosure.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart' show DateFormat;
 import 'package:opennutritracker/core/domain/entity/app_theme_entity.dart';
@@ -420,6 +421,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       e('Weigh-in and check-in reminders', reminders),
       e('Search sources', food, 'food databases'),
       e(s.settingsAiAssistLabel, food),
+      e('What happens to a meal photo', food, 'privacy camera'),
       e('Open Food Facts account', food),
       e(healthPlatformName, data, 'sync workouts weight steps'),
       e('Import history', data),

@@ -130,6 +130,10 @@ class _Memory implements PhotoMealMemoryStore {
   @override
   Future<void> add(PhotoMealRecord record, {DateTime? now}) async =>
       kept.add(record);
+
+  @override
+  Future<void> remove(DateTime loggedAt) async =>
+      kept.removeWhere((r) => r.loggedAt == loggedAt);
 }
 
 class _MealDetailBloc extends Fake implements MealDetailBloc {

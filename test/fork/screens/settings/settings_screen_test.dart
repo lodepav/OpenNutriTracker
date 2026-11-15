@@ -1,5 +1,8 @@
+import 'dart:io';
+import 'dart:typed_data';
 import 'dart:async';
 
+import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -7,6 +10,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:get_it/get_it.dart';
 import 'package:opennutritracker/core/domain/entity/app_theme_entity.dart';
 import 'package:opennutritracker/core/utils/ai_credential_storage.dart';
+import 'package:opennutritracker/core/utils/ai_model_catalogue.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/core/utils/navigation_options.dart';
 import 'package:opennutritracker/features/add_meal/domain/usecase/probe_ai_endpoint_usecase.dart';
@@ -119,6 +123,27 @@ class _HiddenStorage extends _EmptyStorage {
     AppleOptions? mOptions,
     WindowsOptions? wOptions,
   }) async => key == 'AiAssistHiddenTag' ? 'true' : null;
+}
+
+/// A photo model set up: OpenRouter with a key, agreed to.
+class _OpenRouterStorage extends _EmptyStorage {
+  static const _values = {
+    'AiTermsAcceptedTag': 'true',
+    'AiApiKeyTag.openrouter': 'sk-or-test',
+    'AiAssistEnabledTag': 'true',
+    'AiProviderTag': 'openrouter',
+  };
+
+  @override
+  Future<String?> read({
+    required String key,
+    AppleOptions? iOptions,
+    AndroidOptions? aOptions,
+    LinuxOptions? lOptions,
+    WebOptions? webOptions,
+    AppleOptions? mOptions,
+    WindowsOptions? wOptions,
+  }) async => _values[key];
 }
 
 /// The runner is real; only the thing that would talk to a server is not.
@@ -465,6 +490,44 @@ void main() {
     expect(diaryBloc.added, contains(isA<LoadDiaryYearEvent>()));
   });
 
+  testWidgets('the photo row says what happens to a meal photo, for the '
+      'model set up', (tester) async {
+    await locator.reset();
+    _register(storage: _OpenRouterStorage());
+    // the row reads the keep-photos flag: opened here, in memory, since a
+    // first open never finishes in a widget test's fake time
+    await tester.runAsync(() async {
+      Hive.init((await Directory.systemTemp.createTemp('settings')).path);
+      final flags = await Hive.openBox<bool>('fork_flags', bytes: Uint8List(0));
+      await flags.put('keepMealPhotos', false);
+    });
+    addTearDown(() => tester.runAsync(Hive.close));
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 2.625;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(_app(section: SettingsSection.food));
+    await tester.pumpAndSettle();
+    final row = find.bySemanticsIdentifier('settings-ai-photo-disclosure');
+    await tester.ensureVisible(row);
+    await tester.pumpAndSettle();
+    await tester.tap(row);
+    await tester.pumpAndSettle();
+
+    final vendor = AiModelCatalogue.defaultFor(AiProvider.openrouter)!.servedBy;
+    expect(
+      find.textContaining(l10nEn.bulkAddPhotoDisclosureOpenRouter(vendor)),
+      findsOneWidget,
+    );
+    expect(
+      find.textContaining(l10nEn.bulkAddPhotoDisclosureCommon),
+      findsOneWidget,
+    );
+    await tester.tap(find.text('OK'));
+    await tester.pumpAndSettle();
+    expect(find.byType(AlertDialog), findsNothing);
+  });
+
   testWidgets('with the AI features hidden, Food has no AI row (#1518)', (
     tester,
   ) async {
@@ -477,6 +540,10 @@ void main() {
     await tester.pumpWidget(_app(section: SettingsSection.food));
     await tester.pumpAndSettle();
     expect(find.bySemanticsIdentifier('settings-ai-assist'), findsNothing);
+    expect(
+      find.bySemanticsIdentifier('settings-ai-photo-disclosure'),
+      findsNothing,
+    );
   });
 
   testWidgets('with the AI features hidden, their switch shows off (#1518)', (

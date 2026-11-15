@@ -10,14 +10,28 @@ Future<bool> Function(Placed placed, {required ProfileStamp startedOn})
 undoLogged = (placed, {required startedOn}) =>
     CopyEntries.fromLocator().undoPlace(placed, startedOn: startedOn);
 
+/// Takes [placed] back and then, once the entries are gone, what
+/// [alsoUndo] takes back. Null when the profile changed and nothing was
+/// undone; otherwise whether [alsoUndo] finished.
+Future<bool?> takeBackLogged(
+  Placed placed, {
+  required ProfileStamp startedOn,
+  Future<bool> Function()? alsoUndo,
+}) async {
+  if (!await undoLogged(placed, startedOn: startedOn)) return null;
+  return alsoUndo == null ? true : await alsoUndo();
+}
+
 /// Says [text] with an Undo that takes [written] back off [day], as the
-/// one-tap plus, a recipe's plus and the basket's "Log all" do.
+/// one-tap plus, a recipe's plus and the basket's "Log all" do; and then
+/// [alsoUndo]'s part, false when it could not finish.
 void showLoggedBar(
   ScaffoldMessengerState messenger,
   String text, {
   required DateTime day,
   required List<IntakeEntity> written,
   required ProfileStamp stamp,
+  Future<bool> Function()? alsoUndo,
 }) {
   messenger.removeCurrentSnackBar();
   messenger.showSnackBar(
@@ -28,14 +42,24 @@ void showLoggedBar(
       action: SnackBarAction(
         label: 'Undo',
         onPressed: () async {
-          final undone = await undoLogged((
-            day: DateUtils.dateOnly(day),
-            written: written,
-          ), startedOn: stamp);
+          final undone = await takeBackLogged(
+            (day: DateUtils.dateOnly(day), written: written),
+            startedOn: stamp,
+            alsoUndo: alsoUndo,
+          );
           refreshAfterLogging();
-          if (!undone) {
+          if (undone == null) {
             messenger.showSnackBar(
               const SnackBar(content: Text('Not undone: the profile changed.')),
+            );
+          } else if (!undone) {
+            messenger.showSnackBar(
+              const SnackBar(
+                content: Text(
+                  "Undone, but the meal's grouping or photo record "
+                  "couldn't be removed.",
+                ),
+              ),
             );
           }
         },

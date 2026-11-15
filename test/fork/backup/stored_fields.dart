@@ -104,6 +104,10 @@ const storedFields = <String, Map<String, StoredField>>{
     'movedDishIds': StoredField.notBackedUp(
       "per device: this profile's dish ids moved here (moved_dish_ids.dart)",
     ),
+    'photoDisclosureSeen': StoredField.notBackedUp(
+      'per device: the photo disclosure last read; lost, it shows again '
+      '(photo_disclosure.dart)',
+    ),
   },
   WeightImport.boxName: {
     'enabled': StoredField.notBackedUp(

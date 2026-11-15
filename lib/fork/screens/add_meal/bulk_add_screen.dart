@@ -83,6 +83,13 @@ import 'package:opennutritracker/fork/dish/break_down_dish_usecase.dart'
 import 'package:opennutritracker/fork/screens/add_meal/cooking_fat_view.dart';
 import 'package:opennutritracker/fork/screens/add_meal/note_chips_view.dart';
 import 'package:opennutritracker/fork/screens/add_meal/photo_review_controller.dart';
+// the meal chosen here, Undo after Log, the photo sheet once per destination
+import 'package:opennutritracker/core/utils/tracked_day_lock.dart';
+import 'package:opennutritracker/core/domain/entity/intake_entity.dart';
+import 'package:opennutritracker/fork/add/logged_bar.dart';
+import 'package:opennutritracker/fork/bulk/bulk_log_undo.dart';
+import 'package:opennutritracker/fork/bulk/photo_disclosure.dart';
+import 'package:opennutritracker/fork/widget/meal_picker_chip.dart';
 
 part 'bulk_add_body.dart';
 part 'bulk_add_row.dart';
@@ -128,6 +135,10 @@ Future<DayTotals> Function(DateTime day) forkDayTotals = loadDayTotals;
 
 /// The photo meal memory the review reads and Log writes; tests swap it.
 PhotoMealMemoryStore Function() forkPhotoMealMemory = PhotoMealMemoryStore.new;
+
+/// Which photo disclosure the profile last continued from; tests swap it.
+PhotoDisclosureSeen Function() forkPhotoDisclosureSeen =
+    PhotoDisclosureSeen.new;
 
 /// The food table's oil a cooking fat chip adds, at [grams] (D48); null
 /// when nothing matched. Tests swap it.
@@ -385,53 +396,10 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
   /// Null when the stored provider is a name this build does not know. The
   /// sheet cannot name a destination it cannot identify, so it does not open
   /// — the same outcome as a provider with no key, and the point of #753.
-  late Future<({AiProvider provider, String name})?> _photoDestination =
-      _resolvePhotoDestination();
+  late Future<PhotoDestination?> _photoDestination = _resolvePhotoDestination();
 
-  Future<({AiProvider provider, String name})?>
-  _resolvePhotoDestination() async {
-    final storage = locator<AiCredentialStorage>();
-    final provider = await storage.activeProvider();
-    if (provider == null) return null;
-    if (provider == AiProvider.ownServer) {
-      return await _ownServerDestination(storage);
-    }
-    final model = AiModelCatalogue.resolve(
-      provider,
-      await storage.readModel(provider: provider),
-    );
-    if (model == null) return null;
-    return (provider: provider, name: model.servedBy);
-  }
-
-  /// A server the user runs, **only once a photo probe has passed against the
-  /// pair currently configured** — and null otherwise.
-  ///
-  /// The stored pass is the whole gate (#735). There is no curated list here
-  /// and no behavioural screen the project can run against a machine it has
-  /// never seen, so the app's own setup-time test is what stands in for one;
-  /// and unlike the text path there is nothing underneath a photo to fall
-  /// back to, so offering the camera to a model that cannot see is offering a
-  /// dead end. [AiCredentialStorage.writeEndpoint] and
-  /// [AiCredentialStorage.writeModel] each discard the record when their
-  /// value changes, so a pass read here can only describe the address and
-  /// model in use right now.
-  ///
-  /// A missing host is a second, independent null: the sheet's whole job for
-  /// this provider is to say the address out loud, and it cannot do that from
-  /// text that is not one.
-  Future<({AiProvider provider, String name})?> _ownServerDestination(
-    AiCredentialStorage storage,
-  ) async {
-    const provider = AiProvider.ownServer;
-    final probe = await storage.readProbe(provider: provider);
-    if (probe.photo != AiCapability.passed) return null;
-    final endpoint = await storage.readEndpoint(provider: provider);
-    if (endpoint == null) return null;
-    final host = AiCredentialStorage.displayHost(endpoint);
-    if (host == null) return null;
-    return (provider: provider, name: host);
-  }
+  Future<PhotoDestination?> _resolvePhotoDestination() =>
+      photoDestinationOf(locator<AiCredentialStorage>());
 
   /// Whether a read from this screen waits on a server the user runs.
   ///
@@ -457,6 +425,10 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
 
   late BulkAddScreenArguments _args;
   bool _submitting = false;
+
+  /// The meal the rows go to: the add sheet's, until the chip changes it.
+  IntakeTypeEntity? _chosenMeal;
+  IntakeTypeEntity get _meal => _chosenMeal ?? _args.intakeTypeEntity;
 
   /// Opens settings, and re-reads the three answers above once it pops.
   ///
@@ -668,21 +640,30 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        // which meal the items go to, as the add sheet named it
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            FutureBuilder<bool>(
-              future: _aiAdd,
-              builder: (context, ai) => Text(
-                ai.data == true ? aiAddLabel : S.of(context).bulkAddTitle,
+        title: FutureBuilder<bool>(
+          future: _aiAdd,
+          builder: (context, ai) =>
+              Text(ai.data == true ? aiAddLabel : S.of(context).bulkAddTitle),
+        ),
+        // which meal the items go to, changeable before Log; under the
+        // title, where a large font cannot squeeze it
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(56),
+          child: Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: Padding(
+              padding: const EdgeInsetsDirectional.only(start: 16, bottom: 8),
+              // the chip's size as on the food page, not the bar's title size
+              child: DefaultTextStyle.merge(
+                style: Theme.of(context).textTheme.labelLarge,
+                child: MealPickerChip(
+                  key: const ValueKey('bulk-add-meal'),
+                  type: _meal,
+                  onChanged: (type) => setState(() => _chosenMeal = type),
+                ),
               ),
             ),
-            Text(
-              _mealName(context),
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-          ],
+          ),
         ),
         actions: [
           // every ready row as one recipe
@@ -1091,75 +1072,81 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
   }) async {
     FocusScope.of(context).unfocus();
     final destination = await _photoDestination;
+    // say so when the photo is kept for leftovers
+    final keepsPhoto = await MealPhotoCache().keepsPhotos;
+    final seenStore = forkPhotoDisclosureSeen();
+    final seen = await seenStore.read();
     if (!mounted) return;
+    final sheet = photoSheetFor(
+      destination,
+      keepsPhoto: keepsPhoto,
+      seen: seen,
+      shared: sharedPath != null,
+    );
     // Refusing rather than guessing: with no identifiable destination there
     // is no honest sentence to put in the sheet, and the sheet is the last
     // moment the user can decline.
-    if (destination == null) {
+    if (sheet == PhotoSheet.refuse || destination == null) {
       if (sharedPath != null) _discardShared(sharedPath);
       return;
     }
-    // say so when the photo is kept for leftovers
-    final keepsPhoto = await MealPhotoCache().keepsPhotos;
-    if (!mounted) return;
-    final disclosure = switch (destination.provider) {
-      AiProvider.anthropic => S.of(context).bulkAddPhotoDisclosureAnthropic,
-      AiProvider.openrouter =>
-        S.of(context).bulkAddPhotoDisclosureOpenRouter(destination.name),
-      // No placeholder: a direct path has no serving vendor to name, so this
-      // string is flat where OpenRouter's is parameterised.
-      AiProvider.openai => S.of(context).bulkAddPhotoDisclosureOpenAI,
-      // The address, and nothing beyond it. Not "no third party receives it",
-      // however tempting: the app cannot tell a local runtime from a
-      // self-hosted proxy forwarding to OpenAI, and #732 ruled those out of
-      // scope by making no claim about them rather than by detecting them.
-      // The no-copy sentence below is about this app and still holds.
-      AiProvider.ownServer =>
-        S.of(context).bulkAddPhotoDisclosureOwnServer(destination.name),
-    };
-    final shouldOpenCamera = await showModalBottomSheet<bool>(
-      context: context,
-      builder: (sheetContext) => SafeArea(
-        child: Wrap(
-          children: [
-            // The disclosure sits here rather than in a dialog the user has
-            // to dismiss: this is the moment a photograph would leave the
-            // device, and it is the last moment they can decline.
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-              child: Text(
-                '$disclosure '
-                '${keepsPhoto ? keptPhotoDisclosure : S.of(sheetContext).bulkAddPhotoDisclosureCommon}\n\n'
-                // The photo path has no deterministic fallback, so this is
-                // the only surface besides Settings where a user opts into a
-                // model. The stability note belongs on both.
-                '${S.of(sheetContext).aiAssistExperimentalNote}',
-                style: Theme.of(sheetContext).textTheme.bodySmall,
-              ),
-            ),
-            Semantics(
-              identifier: 'bulk-add-photo-camera',
-              child: ListTile(
-                leading: Icon(switch ((sharedPath, from)) {
-                  (null, ImageSource.camera) => Icons.photo_camera_rounded,
-                  (null, ImageSource.gallery) => Icons.photo_library_rounded,
-                  _ => Icons.photo_rounded,
-                }),
-                title: Text(switch ((sharedPath, from)) {
-                  (null, ImageSource.camera) =>
-                    S.of(sheetContext).mealImageTakePhoto,
-                  (null, ImageSource.gallery) =>
-                    S.of(sheetContext).mealImagePickFromGallery,
-                  _ => 'Use the shared photo',
-                }),
-                onTap: () => Navigator.of(sheetContext).pop(true),
-              ),
-            ),
-          ],
-        ),
-      ),
+    final disclosure = photoDisclosureText(
+      S.of(context),
+      destination,
+      keepsPhoto: keepsPhoto,
     );
-    if (shouldOpenCamera != true || !mounted) {
+    var shouldOpenCamera = sheet == PhotoSheet.skip;
+    if (!shouldOpenCamera) {
+      shouldOpenCamera =
+          await showModalBottomSheet<bool>(
+            context: context,
+            builder: (sheetContext) => SafeArea(
+              child: Wrap(
+                children: [
+                  // The disclosure sits here rather than in a dialog the user
+                  // has to dismiss: this is the moment a photograph would
+                  // leave the device, and it is the last moment they can
+                  // decline.
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                    child: Text(
+                      disclosure,
+                      style: Theme.of(sheetContext).textTheme.bodySmall,
+                    ),
+                  ),
+                  Semantics(
+                    identifier: 'bulk-add-photo-camera',
+                    child: ListTile(
+                      leading: Icon(switch ((sharedPath, from)) {
+                        (null, ImageSource.camera) =>
+                          Icons.photo_camera_rounded,
+                        (null, ImageSource.gallery) =>
+                          Icons.photo_library_rounded,
+                        _ => Icons.photo_rounded,
+                      }),
+                      title: Text(switch ((sharedPath, from)) {
+                        (null, ImageSource.camera) =>
+                          S.of(sheetContext).mealImageTakePhoto,
+                        (null, ImageSource.gallery) =>
+                          S.of(sheetContext).mealImagePickFromGallery,
+                        _ => 'Use the shared photo',
+                      }),
+                      onTap: () => Navigator.of(sheetContext).pop(true),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ) ==
+          true;
+      // read once, and the camera opens directly next time
+      if (shouldOpenCamera) {
+        await seenStore.write(
+          photoDisclosureKey(destination, keepsPhoto: keepsPhoto),
+        );
+      }
+    }
+    if (!shouldOpenCamera || !mounted) {
       if (sharedPath != null) _discardShared(sharedPath);
       return;
     }
@@ -1335,7 +1322,7 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
       isScrollControlled: true,
       showDragHandle: true,
       builder: (_) => QuickAddBottomSheet(
-        intakeType: _args.intakeTypeEntity,
+        intakeType: _meal,
         day: _args.day,
         onAdded: () {
           if (_bloc.state case BulkAddLoadedState(:final rows)) {
@@ -1453,6 +1440,9 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
       _quantityErrors.clear();
       _submitting = true;
     });
+    final meal = _meal;
+    // the profile Undo takes the meal back from
+    final stamp = ProfileStamp.now();
 
     // the photo's meal as logged, for a read like it later
     final memory = state.source == BulkAddReadSource.photo
@@ -1460,7 +1450,7 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
             state.rows,
             day: _args.day,
             loggedAt: DateTime.now(),
-            slot: _args.intakeTypeEntity.name,
+            slot: meal.name,
             dish: _review.arrivalDish,
             corrected: _review.photoCorrected(state.rows),
             photoAmountOf: _review.photoAmountOf,
@@ -1470,11 +1460,12 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
     final mealDetailBloc = locator<MealDetailBloc>();
     // set when a profile switch dropped a write
     var dropped = false;
+    final written = <IntakeEntity>[];
+    Future<void>? remembering;
     try {
       // Sequential, not concurrent. The tracked-day totals are accumulated
       // with a read-modify-write, so overlapping writes lose updates and
       // the day silently under-counts.
-      final intakeIds = <String>[];
       for (final write in writes) {
         final intake = await mealDetailBloc.addIntake(
           context,
@@ -1483,7 +1474,7 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
           // against. #864 decision 3.
           storedUnit(write.unit),
           write.amount.toString(),
-          _args.intakeTypeEntity,
+          meal,
           write.meal,
           _args.day,
         );
@@ -1493,15 +1484,20 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
           dropped = true;
           break;
         }
-        intakeIds.add(intake.id);
+        written.add(intake);
       }
       // kept beside the meal, not before it: neither waits on the other,
       // and a store that fails or never opens leaves the meal logged
       if (!dropped && memory != null) {
-        unawaited(rememberPhotoMeal(memory, forkPhotoMealMemory()));
+        remembering = rememberPhotoMeal(memory, forkPhotoMealMemory());
+        unawaited(remembering);
       }
       // a group in the profile its entries are in
-      if (!dropped) await recordMealGroup(intakeIds, photo: _forkMealPhoto);
+      if (!dropped) {
+        await recordMealGroup([
+          for (final intake in written) intake.id,
+        ], photo: _forkMealPhoto);
+      }
     } catch (e, stackTrace) {
       _log.severe('Bulk intake write failed', e, stackTrace);
       if (!mounted) return;
@@ -1518,22 +1514,32 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
     locator<DiaryBloc>().add(const LoadDiaryYearEvent());
     locator<CalendarDayBloc>().add(const RefreshCalendarDayEvent());
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          dropped
-              ? 'Not all added: the profile changed.'
-              : 'Added to ${_mealName(context)}',
+    final messenger = ScaffoldMessenger.of(context);
+    if (dropped) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Not all added: the profile changed.')),
+      );
+    } else {
+      // Undo takes back the group and the memory record with the entries
+      showLoggedBar(
+        messenger,
+        'Added to ${_mealName(context)}',
+        day: _args.day,
+        written: written,
+        stamp: stamp,
+        alsoUndo: () => forgetBulkLog(
+          intakeIds: [for (final intake in written) intake.id],
+          memory: memory,
+          remembering: remembering,
+          memoryStore: forkPhotoMealMemory(),
         ),
-      ),
-    );
+      );
+    }
     Navigator.of(
       context,
     ).popUntil(ModalRoute.withName(NavigationOptions.mainRoute));
   }
 
   String _mealName(BuildContext context) =>
-      AddMealExtension.fromIntakeTypeEntity(
-        _args.intakeTypeEntity,
-      ).getTypeName(context);
+      AddMealExtension.fromIntakeTypeEntity(_meal).getTypeName(context);
 }

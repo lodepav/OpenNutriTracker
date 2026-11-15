@@ -127,6 +127,10 @@ class _Memory implements PhotoMealMemoryStore {
   @override
   Future<void> add(PhotoMealRecord record, {DateTime? now}) async =>
       kept.add(record);
+
+  @override
+  Future<void> remove(DateTime loggedAt) async =>
+      kept.removeWhere((r) => r.loggedAt == loggedAt);
 }
 
 /// A memory whose box cannot be opened.
@@ -138,6 +142,8 @@ class _BrokenMemory implements PhotoMealMemoryStore {
   @override
   Future<void> add(PhotoMealRecord record, {DateTime? now}) =>
       Future.error(StateError('no box'));
+  @override
+  Future<void> remove(DateTime loggedAt) => Future.error(StateError('no box'));
 }
 
 class _MealDetailBloc extends Fake implements MealDetailBloc {

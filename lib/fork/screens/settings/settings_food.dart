@@ -33,6 +33,15 @@ extension _FoodSettings on _SettingsScreenState {
               badge: S.of(context).aiAssistExperimentalLabel,
               onTap: () => _openAiAssistDialog(context),
             ),
+          // the photo sheet's text, readable after it stopped showing
+          if (!_aiHidden)
+            _SettingsTile(
+              identifier: 'settings-ai-photo-disclosure',
+              palette: palette,
+              icon: Icons.photo_camera_outlined,
+              title: 'What happens to a meal photo',
+              onTap: () => showPhotoDisclosure(context, _aiCredentials),
+            ),
           const OffAccountTile(),
         ],
       ),

@@ -222,6 +222,7 @@ Future<void> fillForkState({
     'bodyFatImport': {'enabled': true, 'filed': <String, Object>{}},
     'nutritionExport': {'enabled': true, 'written': <String, Object>{}},
     'movedDishIds': true,
+    'photoDisclosureSeen': 'openrouter|Google|false',
   });
   await (await openForkBox(WeightImport.boxName)).putAll({
     'enabled': true,
