@@ -13,7 +13,8 @@ The fork's five rules, in full in [fork/README.md](../fork/README.md#the-rules):
 4. Upstream's checks stay green, unmodified.
 5. Merge upstream, never rebase.
 
-Decisions are numbered in [fork/DECISIONS.md](../fork/DECISIONS.md), seams in
+Decisions are numbered in [fork/DECISIONS.md](../fork/DECISIONS.md), one line each in
+[fork/DECISIONS-INDEX.md](../fork/DECISIONS-INDEX.md), seams in
 [fork/SEAMS.md](../fork/SEAMS.md). Before a merge, run the `seam-check` and `verify` skills.
 
 Strings in fork code are hard-coded English: no l10n keys.
