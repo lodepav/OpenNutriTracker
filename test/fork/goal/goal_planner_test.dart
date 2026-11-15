@@ -451,4 +451,22 @@ void main() {
       expect(on(queue[1].end), PhaseKind.maintain);
     });
   });
+
+  group('pace and split maths', () {
+    test('a cut pace is a deficit, a bulk pace a surplus', () {
+      expect(paceKcalPerDay(-0.5, 7700), closeTo(-550, 1e-9));
+      expect(paceKcalPerDay(0.25, 7700), closeTo(275, 1e-9));
+      expect(paceKcalPerDay(0, 7700), 0);
+      expect(paceKcalPerDay(-0.7, 6000), -paceKcalPerDay(0.7, 6000));
+    });
+
+    test('a split gives 4 kcal a gram of protein and carbs, 9 of fat', () {
+      const split = (carbs: 0.45, fat: 0.3, protein: 0.25);
+      final g = splitGrams(1800, split);
+      expect(g.proteinG, closeTo(112.5, 1e-9));
+      expect(g.carbsG, closeTo(202.5, 1e-9));
+      expect(g.fatG, closeTo(60, 1e-9));
+      expect(4 * g.proteinG + 4 * g.carbsG + 9 * g.fatG, closeTo(1800, 1e-9));
+    });
+  });
 }

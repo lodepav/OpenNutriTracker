@@ -4,6 +4,7 @@ import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/fork/adaptive/expenditure.dart';
 import 'package:opennutritracker/fork/adaptive/goal_plan.dart';
 import 'package:opennutritracker/fork/adaptive/trend.dart';
+import 'package:opennutritracker/fork/goal/goal_planner.dart';
 
 /// What a check-in needs, gathered by `AdaptiveService` from upstream's
 /// weight log, tracked days and profile.
@@ -226,7 +227,7 @@ CheckIn computeCheckIn(CheckInInputs inputs) {
 
   final weight = now ?? inputs.fallbackWeightKg;
   final kcalPerKg = inputs.settings.kcalPerKgAt(weight, inputs.bodyFatPercent);
-  final goalKcal = inputs.goalRateKgPerWeek * kcalPerKg / 7;
+  final goalKcal = paceKcalPerDay(inputs.goalRateKgPerWeek, kcalPerKg);
   final goalEnergy = inputs.taper(goalKcal, weight);
   final previous = inputs.previousBaseKcal;
   final cap = inputs.maxChangeKcal;
