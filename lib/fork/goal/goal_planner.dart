@@ -400,8 +400,27 @@ PhasePlan editedPlan(
     if (weeksAhead == _weeksOf(plan.phases)) return plan;
     weeksAhead = (weeksAhead - _weeksOf(kept)).clamp(1, weeksAhead);
   }
+  // What follows starts at this week's end, so from the weight due by then:
+  // from today's, a goal on plan would come out a week longer.
+  final index = plan.indexOn(day);
+  final losing =
+      index < plan.phases.length &&
+      plan.phases[index].kind != PhaseKind.maintain;
+  final rate = !losing
+      ? 0.0
+      : switch (draft.kind) {
+          PhaseKind.cut => -draft.paceKg,
+          PhaseKind.bulk => draft.paceKg,
+          PhaseKind.maintain => 0.0,
+        };
+  final daysLeft = CalendarDayCalc.daysBetween(day, from).clamp(0, 7);
+  var fromKg = nowKg + rate * daysLeft / 7;
+  final target = draft.targetKg;
+  if (target != null && (fromKg - target) * (nowKg - target) <= 0) {
+    fromKg = nowKg;
+  }
   final ahead = draft
-      .copyWith(start: from, startKg: nowKg, maintainWeeks: weeksAhead)
+      .copyWith(start: from, startKg: fromKg, maintainWeeks: weeksAhead)
       .toPlan();
   return PhasePlan(
     start: plan.start,
