@@ -26,6 +26,8 @@ No conflict marker, `fork/tools/seam_check.py`, analyze, and the whole suite bun
 
 A clean pass is remembered by commit: merge, then push, and the hook doesn't run it again.
 
+A `verify: warning:` line that names GitHub's Fork checks (from `fork/tools/actions_status.py`, printed by every `verify.sh` run) is about what was already pushed, not about this tree: the line says whether the run for `origin/fork/main` is missing or ended red. It doesn't fail the pass or block the merge. Go on, and tell the user the line in your reply.
+
 ## What enforces it
 
 `fork/hooks/`, on once a clone by `fork/tools/install-hooks.sh`:
