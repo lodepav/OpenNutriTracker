@@ -144,7 +144,7 @@ Future<void> offerUpdate(
 }
 
 /// Downloads and installs [info], with the download's progress in a dialog
-/// that cannot be dismissed; a failure is a snackbar.
+/// that only its Cancel dismisses; a failure is a snackbar, a cancel is not.
 Future<void> installUpdate(
   BuildContext context,
   UpdateInfo info,
@@ -152,6 +152,7 @@ Future<void> installUpdate(
 ) async {
   final progress = ValueNotifier<String>('Starting download…');
   final fraction = ValueNotifier<double?>(null);
+  final cancel = Completer<void>();
   final messenger = ScaffoldMessenger.of(context);
   final navigator = Navigator.of(context);
   unawaited(
@@ -176,6 +177,15 @@ Future<void> installUpdate(
               ),
             ],
           ),
+          actions: [
+            TextButton(
+              // The dialog closes when the download has stopped.
+              onPressed: () {
+                if (!cancel.isCompleted) cancel.complete();
+              },
+              child: const Text('Cancel'),
+            ),
+          ],
         ),
       ),
     ),
@@ -183,6 +193,7 @@ Future<void> installUpdate(
   try {
     await updater.install(
       info,
+      cancel: cancel.future,
       onProgress: (received, total) {
         if (total != null && total > 0) {
           final value = (received / total).clamp(0.0, 1.0);
@@ -193,6 +204,8 @@ Future<void> installUpdate(
         }
       },
     );
+    navigator.pop();
+  } on UpdateCancelled {
     navigator.pop();
   } catch (e) {
     navigator.pop();

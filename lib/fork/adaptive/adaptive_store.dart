@@ -517,6 +517,7 @@ class AdaptiveStore {
     'homeSections',
     'trendsLayout',
     'trendsTiles',
+    'trendsRange',
     'weighInReminder',
     'checkInReminder',
   ];

@@ -1,4 +1,5 @@
 // The in-app updater (D16): which release it offers, and how it installs it.
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -33,6 +34,31 @@ Map<String, Object?> _release(String tag) => {
     {'name': 'openbite-0.2.0.apk', 'browser_download_url': 'a', 'url': 'aApi'},
   ],
 };
+
+/// Serves the checksum, then an APK whose bytes come when the test adds
+/// them, and drops it when its request is aborted, as IOClient does.
+class _SlowClient extends http.BaseClient {
+  final apk = StreamController<List<int>>();
+  var aborted = false;
+
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) async {
+    if (request.url.path == '/h') {
+      return http.StreamedResponse(Stream.value(utf8.encode(_hash)), 200);
+    }
+    if (request case http.Abortable(:final abortTrigger?)) {
+      unawaited(
+        abortTrigger.whenComplete(() {
+          aborted = true;
+          apk
+            ..addError(http.RequestAbortedException(request.url))
+            ..close();
+        }),
+      );
+    }
+    return http.StreamedResponse(apk.stream, 200, contentLength: 100);
+  }
+}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -335,6 +361,73 @@ void main() {
       );
       expect(call, isNull);
     });
+
+    test('Cancel drops the request and the part downloaded', () async {
+      final client = _SlowClient();
+      final cancel = Completer<void>();
+      final started = Completer<void>();
+      final done = Updater(cacheDir: () async => cache, client: client).install(
+        info,
+        cancel: cancel.future,
+        onProgress: (_, _) {
+          if (!started.isCompleted) started.complete();
+        },
+      );
+      client.apk.add([1, 2, 3]);
+      await started.future;
+      final apk = File('${cache.path}/openbite-update/openbite.apk');
+      expect(apk.existsSync(), isTrue);
+      cancel.complete();
+      await expectLater(done, throwsA(isA<UpdateCancelled>()));
+      expect(client.aborted, isTrue);
+      expect(apk.existsSync(), isFalse);
+      expect(call, isNull);
+    });
+
+    test(
+      'a download with no byte for the limit stops, a slow one does not',
+      () async {
+        Updater slow(_SlowClient client) => Updater(
+          cacheDir: () async => cache,
+          client: client,
+          // Wide of the 100 ms steps: the whole suite can pause a test for
+          // hundreds of milliseconds.
+          stallLimit: const Duration(seconds: 3),
+        );
+        // Bytes 100 ms apart for longer than the limit in all: never stalled.
+        final steady = _SlowClient();
+        final finished = slow(steady).install(info);
+        for (var i = 0; i < 35; i++) {
+          await Future<void>.delayed(const Duration(milliseconds: 100));
+          steady.apk.add([i]);
+        }
+        await steady.apk.close();
+        await finished;
+        expect(steady.aborted, isFalse);
+        expect(call?.method, 'install');
+
+        call = null;
+        final stalled = _SlowClient();
+        final done = slow(stalled).install(info);
+        stalled.apk.add([1]);
+        await expectLater(
+          done,
+          throwsA(
+            isA<UpdateException>().having(
+              (e) => e.message,
+              'message',
+              contains('the download stopped'),
+            ),
+          ),
+        );
+        expect(stalled.aborted, isTrue);
+        expect(
+          File('${cache.path}/openbite-update/openbite.apk').existsSync(),
+          isFalse,
+        );
+        expect(call, isNull);
+      },
+    );
 
     test("names the Android side's mismatch", () async {
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger

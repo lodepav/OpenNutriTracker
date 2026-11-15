@@ -144,6 +144,19 @@ Future<IntakeTypeEntity?> pickMeal(BuildContext context) =>
       ),
     );
 
+/// What the row's + does: "Log 1 serving of Chili to Lunch", or with no
+/// [meal] given, that it asks for one.
+String logServingTooltip(
+  BuildContext context,
+  RecipeEntity recipe,
+  IntakeTypeEntity? meal,
+) {
+  final what = '${RecipePortion(recipe, 1).label} of ${recipe.name}';
+  return meal == null
+      ? 'Log $what to a meal you pick'
+      : 'Log $what to ${mealLabel(context, meal)}';
+}
+
 var _loggingServing = false;
 
 /// Logs one serving of [recipe] today to [meal], or to the meal the user

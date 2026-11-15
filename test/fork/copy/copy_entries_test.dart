@@ -346,10 +346,29 @@ void main() {
     await tester.tap(find.text('open'));
     await tester.pumpAndSettle();
     final done = find.byKey(const Key('fork-where-done'));
-    expect(tester.widget<FilledButton>(done).onPressed, isNull);
-    await tester.tap(find.byKey(const Key('fork-where-day1')));
-    await tester.pumpAndSettle();
+    // It starts on tomorrow.
+    expect(
+      tester
+          .widget<ChoiceChip>(find.byKey(const Key('fork-where-day1')))
+          .selected,
+      isTrue,
+    );
     expect(tester.widget<FilledButton>(done).onPressed, isNotNull);
+    await tester.tap(find.byKey(const Key('fork-where-day0')));
+    await tester.pumpAndSettle();
+    expect(tester.widget<FilledButton>(done).onPressed, isNull);
+  });
+
+  test('Copy day starts on tomorrow, or the day after when that is copied', () {
+    final oct24 = DateTime(2026, 10, 24);
+    expect(copyDayStart(_oct23, _oct23), oct24);
+    expect(copyDayStart(_oct23, DateTime(2026, 10, 20)), oct24);
+    expect(
+      copyDayStart(_oct23, DateTime(2026, 10, 24, 9)),
+      DateTime(2026, 10, 25),
+    );
+    // Across a month's end.
+    expect(copyDayStart(DateTime(2026, 10, 31), null), DateTime(2026, 11, 1));
   });
 
   testWidgets('the sheet picks move, tomorrow and lunch with chips', (

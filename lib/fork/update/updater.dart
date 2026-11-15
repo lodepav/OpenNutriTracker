@@ -113,11 +113,15 @@ class Updater {
   final bool _release;
   Future<UpdateInfo>? _cached;
 
+  /// How long [install] waits for the next byte before it gives up.
+  final Duration stallLimit;
+
   Updater({
     http.Client? client,
     Future<PackageInfo> Function()? package,
     Future<Directory> Function()? cacheDir,
     bool release = kReleaseMode,
+    this.stallLimit = const Duration(seconds: 30),
   }) : _client = client ?? http.Client(),
        _package = package ?? PackageInfo.fromPlatform,
        _cacheDir = cacheDir ?? getTemporaryDirectory,
@@ -171,17 +175,27 @@ class Updater {
   /// A GET of the asset's github.com link, then of its API link. On
   /// 2026-11-09 the github.com link answered 504 every time while the API's
   /// served the same file, so each download falls back to it once.
-  List<http.Request> _requests(String? url, String? apiUrl) => [
-    if (url != null) http.Request('GET', Uri.parse(url)),
+  /// Each is dropped when [abort] completes.
+  List<http.Request> _requests(
+    String? url,
+    String? apiUrl, [
+    Future<void>? abort,
+  ]) => [
+    if (url != null)
+      http.AbortableRequest('GET', Uri.parse(url), abortTrigger: abort),
     if (apiUrl != null)
-      http.Request('GET', Uri.parse(apiUrl))
+      http.AbortableRequest('GET', Uri.parse(apiUrl), abortTrigger: abort)
         ..headers['Accept'] = 'application/octet-stream',
   ];
 
   /// The release's published SHA-256 of its APK, or null when neither link
   /// gives one.
-  Future<String?> checksum(String? hashUrl, [String? hashApiUrl]) async {
-    for (final req in _requests(hashUrl, hashApiUrl)) {
+  Future<String?> checksum(
+    String? hashUrl, [
+    String? hashApiUrl,
+    Future<void>? abort,
+  ]) async {
+    for (final req in _requests(hashUrl, hashApiUrl, abort)) {
       try {
         final res = await http.Response.fromStream(await _client.send(req));
         final hex = res.statusCode == 200 ? parseChecksum(res.body) : null;
@@ -197,44 +211,86 @@ class Updater {
   /// github.com's fails), with [onProgress] (received
   /// bytes, and the total or null), and opens the installer. Refuses a
   /// release without a checksum; the Android side refuses a mismatch.
+  /// [cancel] completing stops the download with [UpdateCancelled]; no
+  /// byte for [stallLimit] stops it with an [UpdateException]. Either
+  /// drops the request and the part downloaded.
   Future<void> install(
     UpdateInfo info, {
     void Function(int received, int? total)? onProgress,
+    Future<void>? cancel,
   }) async {
-    final hash = await checksum(info.hashUrl, info.hashApiUrl);
-    if (info.apkUrl == null || hash == null) {
-      throw const UpdateException('Checksum not available, so not installing');
+    final abort = Completer<void>();
+    var stalled = false;
+    Timer? stall;
+    void heard() {
+      stall?.cancel();
+      stall = Timer(stallLimit, () {
+        stalled = true;
+        if (!abort.isCompleted) abort.complete();
+      });
     }
+
+    unawaited(
+      cancel?.whenComplete(() {
+        if (!abort.isCompleted) abort.complete();
+      }),
+    );
     // The provider shares only this folder of the cache (fork_update_paths).
     const name = 'openbite-update/openbite.apk';
-    final file = File('${(await _cacheDir()).path}/$name');
-    await file.parent.create(recursive: true);
-    http.StreamedResponse? res;
-    Object? failure;
-    for (final req in _requests(info.apkUrl, info.apkApiUrl)) {
-      try {
-        final r = await _client.send(req);
-        if (r.statusCode == 200) {
-          res = r;
-          break;
-        }
-        failure = r.statusCode;
-        await r.stream.drain<void>();
-      } on Exception catch (e) {
-        failure = e;
-      }
-    }
-    if (res == null) throw UpdateException('Download failed ($failure)');
-    final sink = file.openWrite();
-    var received = 0;
+    File? file;
+    final String? hash;
     try {
-      await for (final chunk in res.stream) {
-        sink.add(chunk);
-        received += chunk.length;
-        onProgress?.call(received, res.contentLength);
+      heard();
+      hash = await checksum(info.hashUrl, info.hashApiUrl, abort.future);
+      if (abort.isCompleted) throw const UpdateCancelled();
+      if (info.apkUrl == null || hash == null) {
+        throw const UpdateException(
+          'Checksum not available, so not installing',
+        );
       }
+      file = File('${(await _cacheDir()).path}/$name');
+      await file.parent.create(recursive: true);
+      http.StreamedResponse? res;
+      Object? failure;
+      for (final req in _requests(info.apkUrl, info.apkApiUrl, abort.future)) {
+        try {
+          final r = await _client.send(req);
+          heard();
+          if (r.statusCode == 200) {
+            res = r;
+            break;
+          }
+          failure = r.statusCode;
+          await r.stream.drain<void>();
+        } on Exception catch (e) {
+          failure = e;
+        }
+      }
+      if (abort.isCompleted) throw const UpdateCancelled();
+      if (res == null) throw UpdateException('Download failed ($failure)');
+      final sink = file.openWrite();
+      var received = 0;
+      try {
+        await for (final chunk in res.stream) {
+          heard();
+          sink.add(chunk);
+          received += chunk.length;
+          onProgress?.call(received, res.contentLength);
+        }
+      } finally {
+        await sink.close();
+      }
+    } catch (_) {
+      if (!abort.isCompleted) rethrow;
+      if (file != null && await file.exists()) await file.delete();
+      if (stalled) {
+        throw UpdateException(
+          'No data for ${stallLimit.inSeconds} seconds, so the download stopped',
+        );
+      }
+      throw const UpdateCancelled();
     } finally {
-      await sink.close();
+      stall?.cancel();
     }
     try {
       await _channel.invokeMethod<void>('install', {
@@ -249,6 +305,11 @@ class Updater {
       });
     }
   }
+}
+
+/// The user stopped the download; nothing to report.
+class UpdateCancelled implements Exception {
+  const UpdateCancelled();
 }
 
 class UpdateException implements Exception {

@@ -158,19 +158,36 @@ class AmountPicker extends StatelessWidget {
           runSpacing: Dimens.spacing4,
           children: [
             for (final (i, option) in options.indexed)
-              Semantics(
-                identifier: 'amount-unit-$i',
-                child: GestureDetector(
-                  onLongPress: option.own && onRemovePortion != null
-                      ? () => _remove(context, option)
-                      : null,
-                  child: ChoiceChip(
-                    key: ValueKey('amount-unit-${option.unit}'),
-                    label: Text(_chipLabel(context, option)),
-                    selected: option.unit == unit,
-                    onSelected: enabled ? (_) => _choose(option.unit) : null,
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Semantics(
+                    identifier: 'amount-unit-$i',
+                    child: GestureDetector(
+                      onLongPress: option.own && onRemovePortion != null
+                          ? () => _remove(context, option)
+                          : null,
+                      child: ChoiceChip(
+                        key: ValueKey('amount-unit-${option.unit}'),
+                        label: Text(_chipLabel(context, option)),
+                        selected: option.unit == unit,
+                        onSelected: enabled
+                            ? (_) => _choose(option.unit)
+                            : null,
+                      ),
+                    ),
                   ),
-                ),
+                  // Seen, where the long-press is not.
+                  if (option.own && onRemovePortion != null)
+                    IconButton(
+                      key: ValueKey('amount-remove-${option.unit}'),
+                      tooltip: 'Remove ${option.portionLabel}',
+                      icon: const Icon(Icons.close_rounded, size: 18),
+                      onPressed: enabled
+                          ? () => _remove(context, option)
+                          : null,
+                    ),
+                ],
               ),
             if (fits != null)
               Semantics(

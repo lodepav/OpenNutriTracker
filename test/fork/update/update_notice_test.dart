@@ -1,4 +1,6 @@
 // A new OpenBite offers itself once per version (D16).
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:opennutritracker/fork/update/update_notice.dart';
@@ -160,4 +162,70 @@ void main() {
       );
     });
   });
+
+  group('the download', () {
+    Future<void> start(WidgetTester tester, Updater updater) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => TextButton(
+                onPressed: () => installUpdate(context, _newer, updater),
+                child: const Text('install'),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('install'));
+      await tester.pump();
+      expect(find.text('Downloading update…'), findsOneWidget);
+    }
+
+    testWidgets('Cancel stops it and closes the dialog, saying nothing', (
+      tester,
+    ) async {
+      final updater = _Downloading();
+      await start(tester, updater);
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+      expect(updater.cancelled, isTrue);
+      expect(find.text('Downloading update…'), findsNothing);
+      expect(find.byType(SnackBar), findsNothing);
+    });
+
+    testWidgets('a stalled one closes the dialog and says why', (tester) async {
+      final updater = _Downloading();
+      await start(tester, updater);
+      updater.stall();
+      await tester.pumpAndSettle();
+      expect(find.text('Downloading update…'), findsNothing);
+      expect(
+        find.text('Update failed: No data for 30 seconds'),
+        findsOneWidget,
+      );
+    });
+  });
+}
+
+/// A download that ends only when it is cancelled or [stall] is called.
+class _Downloading extends Updater {
+  final _stalled = Completer<void>();
+  var cancelled = false;
+
+  void stall() => _stalled.complete();
+
+  @override
+  Future<void> install(
+    UpdateInfo info, {
+    void Function(int received, int? total)? onProgress,
+    Future<void>? cancel,
+  }) async {
+    await Future.any([?cancel, _stalled.future]);
+    if (_stalled.isCompleted) {
+      throw const UpdateException('No data for 30 seconds');
+    }
+    cancelled = true;
+    throw const UpdateCancelled();
+  }
 }

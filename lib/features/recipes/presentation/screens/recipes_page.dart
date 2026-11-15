@@ -449,6 +449,7 @@ class _RecipesPageState extends State<RecipesPage>
                                       : () =>
                                           logRecipeServing(context, recipe,
                                               meal: _meal(context)),
+                                  logMeal: _meal(context),
                                   // [/fork]
                                 );
                               },

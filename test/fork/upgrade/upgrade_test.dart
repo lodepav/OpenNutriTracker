@@ -35,6 +35,7 @@ import 'package:opennutritracker/fork/photos/photo_store.dart';
 import 'package:opennutritracker/fork/plan/plan_store.dart';
 import 'package:opennutritracker/fork/reminders/reminders.dart';
 import 'package:opennutritracker/fork/report/trends_layout.dart';
+import 'package:opennutritracker/fork/trends/trends_range.dart';
 import 'package:opennutritracker/fork/update/update_notice.dart';
 import 'package:opennutritracker/fork/health/weight_import.dart';
 import 'package:opennutritracker/fork/startup.dart';
@@ -319,6 +320,7 @@ final _fieldReaders = <String, Map<String, Future<Object?> Function()>>{
     'homeSections': () => _layout(homeSectionsKey),
     'trendsLayout': () => _layout(TrendsLayoutStore.storeKey),
     'trendsTiles': () => _layout(TrendsTilesStore.storeKey),
+    'trendsRange': TrendsRange.read,
     'goalStart': () async => (await GoalStartStore().read())?.toJson(),
     'goalStartNoTarget': () =>
         _stored(AdaptiveStore.boxName, GoalStartStore.noTargetKey),

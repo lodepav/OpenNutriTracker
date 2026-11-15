@@ -8,6 +8,7 @@ import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/fork/trends/trend_stats.dart';
+import 'package:opennutritracker/fork/trends/trends_range.dart';
 
 /// Water's colour on Trends, a blue the palette lacks.
 Color waterColor(BuildContext context) =>
@@ -23,7 +24,8 @@ String signedText(double v, [int digits = 0]) {
   return v > 0 ? '+$text' : text;
 }
 
-/// MacroFactor's 1W–All pills; picking one reloads Trends at that range.
+/// MacroFactor's 1W–All pills; picking one reloads Trends at that range,
+/// and Trends opens at it next time ([TrendsRange]).
 class RangePills extends StatelessWidget {
   final int rangeDays;
   final ValueChanged<int> onChanged;
@@ -65,7 +67,10 @@ class RangePills extends StatelessWidget {
                       borderRadius: BorderRadius.circular(9),
                       onTap: r.days == rangeDays
                           ? null
-                          : () => onChanged(r.days),
+                          : () {
+                              TrendsRange.save(r.days);
+                              onChanged(r.days);
+                            },
                       child: ConstrainedBox(
                         constraints: const BoxConstraints(minHeight: 48),
                         child: Center(
