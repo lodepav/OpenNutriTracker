@@ -220,13 +220,17 @@ class _EditDialogState extends State<EditDialog> {
           // the own portions load, so no number shows in the wrong unit
           if (widget.unit != null && _kcalPerUnit == null)
             if (_forkMeal case final meal?)
-              AmountPicker(
-                meal: meal,
-                unit: widget.unit!.value,
-                controller: amountEditingController,
-                focusNode: _amountFocus,
-                imperial: widget.usesImperialUnits,
-                onSet: _forkSet,
+              // full width, or the dialog's follows each unit's chips
+              SizedBox(
+                width: double.maxFinite,
+                child: AmountPicker(
+                  meal: meal,
+                  unit: widget.unit!.value,
+                  controller: amountEditingController,
+                  focusNode: _amountFocus,
+                  imperial: widget.usesImperialUnits,
+                  onSet: _forkSet,
+                ),
               )
             else
               const SizedBox(height: 48)

@@ -170,8 +170,10 @@ class GoalDraft {
   }
 
   /// The plan the draft makes: a cut or bulk until the target (a cut cut
-  /// into stretches by diet breaks), or maintenance for its weeks.
-  PhasePlan toPlan() {
+  /// into stretches by diet breaks), or maintenance for its weeks. A plan
+  /// that follows [cutWeeksRun] weeks of cutting since the last break
+  /// takes its first break that much sooner.
+  PhasePlan toPlan({int cutWeeksRun = 0}) {
     final target = targetKg;
     if (kind == PhaseKind.maintain || target == null) {
       return PhasePlan(
@@ -189,23 +191,26 @@ class GoalDraft {
     var left = DietPhase.weeksTo(startKg, target, signedPace);
     final phases = <DietPhase>[];
     if (kind == PhaseKind.cut && breaks) {
-      while (left > breakEveryWeeks) {
-        phases
-          ..add(
+      var stretch = (breakEveryWeeks - cutWeeksRun).clamp(0, breakEveryWeeks);
+      while (left > stretch) {
+        if (stretch > 0) {
+          phases.add(
             DietPhase(
               kind: PhaseKind.cut,
               kgPerWeek: signedPace,
-              weeks: breakEveryWeeks,
-            ),
-          )
-          ..add(
-            const DietPhase(
-              kind: PhaseKind.maintain,
-              kgPerWeek: 0,
-              weeks: breakWeeks,
+              weeks: stretch,
             ),
           );
-        left -= breakEveryWeeks;
+        }
+        phases.add(
+          const DietPhase(
+            kind: PhaseKind.maintain,
+            kgPerWeek: 0,
+            weeks: breakWeeks,
+          ),
+        );
+        left -= stretch;
+        stretch = breakEveryWeeks;
       }
     }
     phases.add(
@@ -288,6 +293,32 @@ List<DietPhase> _ranUntil(PhasePlan plan, DateTime day) {
     }
   }
   return kept;
+}
+
+/// [plan] for showing: neighbouring phases of one kind and pace as one, so
+/// an edited goal's week begun and the weeks after it read as one cut.
+PhasePlan joinedForShow(PhasePlan plan) {
+  final joined = <DietPhase>[];
+  for (final p in plan.phases) {
+    final last = joined.lastOrNull;
+    if (last != null && last.kind == p.kind && last.kgPerWeek == p.kgPerWeek) {
+      joined.last = DietPhase(
+        kind: p.kind,
+        kgPerWeek: p.kgPerWeek,
+        weeks: last.weeks + p.weeks,
+        untilKg: p.untilKg,
+      );
+    } else {
+      joined.add(p);
+    }
+  }
+  return PhasePlan(
+    start: plan.start,
+    startKg: plan.startKg,
+    targetKg: plan.targetKg,
+    extensions: plan.extensions,
+    phases: joined,
+  );
 }
 
 /// The days of a [PhasePlan], for showing.
@@ -394,6 +425,18 @@ PhasePlan editedPlan(
     );
   }
   final kept = _ranUntil(plan, day);
+  final index = plan.indexOn(day);
+  final regularBreaks = draft.kind == PhaseKind.cut && draft.breaks;
+  // A diet break begun runs its length, and the cutting since the last one
+  // counts towards the next: the breaks stay where they were.
+  if (regularBreaks &&
+      index < plan.phases.length &&
+      plan.phases[index].kind == PhaseKind.maintain) {
+    kept.last = plan.phases[index];
+  }
+  final cutWeeksRun = !regularBreaks
+      ? 0
+      : _weeksOf(kept.reversed.takeWhile((p) => p.kind == PhaseKind.cut));
   final from = PhasePlan(start: plan.start, phases: kept).end;
   var weeksAhead = draft.maintainWeeks;
   if (draft.kind == PhaseKind.maintain && plan.kind == PhaseKind.maintain) {
@@ -402,7 +445,6 @@ PhasePlan editedPlan(
   }
   // What follows starts at this week's end, so from the weight due by then:
   // from today's, a goal on plan would come out a week longer.
-  final index = plan.indexOn(day);
   final losing =
       index < plan.phases.length &&
       plan.phases[index].kind != PhaseKind.maintain;
@@ -413,7 +455,10 @@ PhasePlan editedPlan(
           PhaseKind.bulk => draft.paceKg,
           PhaseKind.maintain => 0.0,
         };
-  final daysLeft = CalendarDayCalc.daysBetween(day, from).clamp(0, 7);
+  final daysLeft = CalendarDayCalc.daysBetween(
+    day,
+    from,
+  ).clamp(0, 7 * breakWeeks);
   var fromKg = nowKg + rate * daysLeft / 7;
   final target = draft.targetKg;
   if (target != null && (fromKg - target) * (nowKg - target) <= 0) {
@@ -421,7 +466,7 @@ PhasePlan editedPlan(
   }
   final ahead = draft
       .copyWith(start: from, startKg: fromKg, maintainWeeks: weeksAhead)
-      .toPlan();
+      .toPlan(cutWeeksRun: cutWeeksRun);
   return PhasePlan(
     start: plan.start,
     startKg: plan.startKg,

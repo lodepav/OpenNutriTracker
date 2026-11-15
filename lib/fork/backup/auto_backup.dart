@@ -181,7 +181,8 @@ class AutoBackup {
     await load();
   }
 
-  /// Home's failure notice: shown again only for a newer failure.
+  /// Home's failure notice: shown again for another failure, or the same
+  /// one after a backup that worked.
   Future<void> dismissFailure() =>
       _put({'dismissedErrorAt': state.value.lastErrorAt});
 
@@ -241,9 +242,18 @@ class AutoBackup {
       return true;
     } catch (error, stackTrace) {
       _log.warning('Automatic backup failed', error, stackTrace);
+      final at = _clock();
+      final code = error is BackupFolderException ? error.code : 'io';
+      final before = state.value;
       await _put({
-        'lastErrorAt': _clock(),
-        'lastError': error is BackupFolderException ? error.code : 'io',
+        'lastErrorAt': at,
+        'lastError': code,
+        // The same failure again, already dismissed: a retry on each pause
+        // would bring the notice back every time.
+        if (before.lastError == code &&
+            before.lastErrorAt != null &&
+            before.dismissedErrorAt == before.lastErrorAt)
+          'dismissedErrorAt': at,
       });
       return false;
     }

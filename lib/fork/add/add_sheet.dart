@@ -22,13 +22,13 @@ import 'package:opennutritracker/fork/recents/recents_by_meal.dart'
     show recentKey;
 import 'package:opennutritracker/generated/l10n.dart';
 
-/// The line under the + sheet's title when the sheet adds to [today] while
-/// the Diary shows [diaryDay], another day; null when the Diary is not shown
-/// or is on today, or the sheet was opened for a day of its own.
 /// The day the Diary shows when it is not today, written by the Diary as it
 /// builds (S131); the centre + reads it while the Diary is the open tab.
 DateTime? diaryPickedDay;
 
+/// The line under the + sheet's title when the sheet adds to [today] while
+/// the Diary shows [diaryDay], another day; null when the Diary is not shown
+/// or is on today, or the sheet was opened for a day of its own.
 String? addsToTodayLine({
   required DateTime? diaryDay,
   required DateTime today,

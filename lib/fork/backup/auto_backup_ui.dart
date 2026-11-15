@@ -42,7 +42,7 @@ String backupLine(AutoBackupState state) {
 enum BackupNotice { none, failed, offAfterRestore }
 
 /// What Home says about the backup: a failure until dismissed, then
-/// nothing until a newer one; after a restore left it off, that, until
+/// nothing while the same one repeats; after a restore left it off, that, until
 /// dismissed or a folder is chosen.
 BackupNotice backupNotice(AutoBackupState state) {
   final dismissed = state.dismissedErrorAt;

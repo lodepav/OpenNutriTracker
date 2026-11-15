@@ -268,6 +268,9 @@ class Updater {
       }
       if (abort.isCompleted) throw const UpdateCancelled();
       if (res == null) throw UpdateException('Download failed ($failure)');
+      // openWrite makes the file only once it gets to it: the part is on
+      // disk from the first progress on, for Cancel to remove.
+      await file.create();
       final sink = file.openWrite();
       var received = 0;
       try {

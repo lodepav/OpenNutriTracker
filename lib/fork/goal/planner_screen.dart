@@ -1556,6 +1556,7 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
     final theme = Theme.of(context);
     final settings = AdaptiveStore.settings.value;
     final inCut = plan.kind == PhaseKind.cut;
+    final shown = joinedForShow(plan);
     final program = _setup.onboarding
         ? OnboardingMacros.pending.value
         : settings.macroProgram;
@@ -1577,12 +1578,12 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
       ..._capWarning(context),
       _Panel(
         children: [
-          PhaseBar(plan),
+          PhaseBar(shown),
           const SizedBox(height: 6),
-          for (final (i, p) in plan.phases.indexed)
+          for (final (i, p) in shown.phases.indexed)
             _Row(
               label:
-                  '${_date(plan.startOf(i))} – ${_date(_dayBefore(plan.startOf(i + 1)))}',
+                  '${_date(shown.startOf(i))} – ${_date(_dayBefore(shown.startOf(i + 1)))}',
               value:
                   '${phaseName(p.kind, inCut: inCut)}'
                   '${settings.fixedTarget ? '' : ' · about ${energyText(context, _kcalAt(p.kgPerWeek))}'}',
