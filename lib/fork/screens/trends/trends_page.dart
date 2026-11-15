@@ -1,0 +1,448 @@
+// Fork-owned copy of lib/features/trends/presentation/trends_page.dart (D23); upstream's later changes to it
+// are ported by hand: fork/tools/upstream-copies.sh.
+import 'package:auto_size_text/auto_size_text.dart';
+import 'package:fl_chart/fl_chart.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:opennutritracker/core/domain/entity/body_weight_unit_entity.dart';
+import 'package:opennutritracker/core/domain/entity/weight_log_entity.dart';
+import 'package:opennutritracker/core/domain/usecase/get_user_usecase.dart';
+import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
+import 'package:opennutritracker/core/styles/app_palette.dart';
+import 'package:opennutritracker/core/styles/dimens.dart';
+import 'package:opennutritracker/core/utils/calc/unit_calc.dart';
+import 'package:opennutritracker/core/utils/locator.dart';
+import 'package:opennutritracker/features/profile/presentation/bloc/profile_bloc.dart';
+import 'package:opennutritracker/features/profile/presentation/widgets/set_weight_dialog.dart';
+import 'package:opennutritracker/features/profile/presentation/widgets/weight_trend_chart.dart';
+import 'package:opennutritracker/features/trends/presentation/bloc/trends_bloc.dart';
+import 'package:opennutritracker/features/trends/presentation/trends_calc.dart';
+import 'package:opennutritracker/generated/l10n.dart';
+import 'package:opennutritracker/fork/report/chart_touch.dart';
+import 'package:opennutritracker/fork/adaptive/trend_points.dart';
+import 'package:opennutritracker/fork/report/rate_text.dart';
+import 'package:opennutritracker/fork/body/body_card.dart';
+import 'package:opennutritracker/fork/health/steps_card.dart';
+import 'package:opennutritracker/fork/goal/goal_card.dart';
+import 'package:opennutritracker/fork/photos/photo_card.dart';
+import 'package:opennutritracker/fork/report/weekly_report.dart';
+import 'package:opennutritracker/fork/trends/trends_overview.dart';
+import 'package:opennutritracker/fork/weight/weigh_in_log.dart';
+import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
+import 'package:opennutritracker/fork/trends/trend_detail.dart';
+import 'package:opennutritracker/fork/trends/trend_stats.dart';
+import 'package:opennutritracker/fork/trends/trends_widgets.dart'
+    show dayLabels, fittedRange, noData;
+
+class TrendsPage extends StatefulWidget {
+  const TrendsPage({super.key});
+
+  @override
+  State<TrendsPage> createState() => _TrendsPageState();
+}
+
+class _TrendsPageState extends State<TrendsPage> {
+  // The bloc is a GetIt singleton, so provide it by value rather than letting
+  // BlocProvider close it on dispose. Settings holds the same instance and
+  // pokes it with LoadTrendsEvent when the body-weight unit changes.
+  final TrendsBloc _trendsBloc = locator<TrendsBloc>();
+
+  @override
+  void initState() {
+    super.initState();
+    _trendsBloc.add(const LoadTrendsEvent());
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocProvider<TrendsBloc>.value(
+      value: _trendsBloc,
+      child: const _TrendsView(),
+    );
+  }
+}
+
+class _TrendsView extends StatelessWidget {
+  const _TrendsView();
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final palette = isDark ? AppPalette.dark : AppPalette.light;
+    return BlocBuilder<TrendsBloc, TrendsState>(
+      builder: (context, state) {
+        if (state is! TrendsLoaded) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        // MacroFactor's tile grid in place of
+        // upstream's streak card, range picker and cards; the weight and
+        // water cards open from their tiles, the calorie and macro cards
+        // gave way to the Calories page (S40's cards follow the grid).
+        return TrendsOverview(
+          state: state,
+          weightCard: (state) => _WeightCard(
+            entries: state.weight,
+            bodyWeightUnit: state.bodyWeightUnit,
+            targetWeightKg: state.targetWeightKg,
+            rangeDays: state.windowDays,
+            palette: palette,
+          ),
+          waterCard: (state) => _WaterTrendCard(
+            waterByDay: state.waterByDay,
+            goalMl: state.waterGoalMl,
+            rangeDays: state.windowDays,
+            palette: palette,
+            today: state.logicalToday, // S190
+            usesImperialUnits: state.usesImperialFoodUnits,
+          ),
+          cards: {
+            'weekly': WeeklyReportCard(
+              days: state.days,
+              rangeDays: state.windowDays,
+              palette: palette,
+              dayStartMinutes: state.dayStartMinutes, // S190
+            ),
+            'goalPlan': GoalCard(unit: state.bodyWeightUnit),
+            'body': BodyMeasurementsCard(
+              rangeDays: state.windowDays,
+              palette: palette,
+              imperial: state.bodyWeightUnit != BodyWeightUnit.kg,
+            ),
+            'steps': StepsCard(rangeDays: state.windowDays, palette: palette),
+            'photos': const ProgressPhotosCard(),
+          },
+        );
+      },
+    );
+  }
+}
+
+class _WaterTrendCard extends StatelessWidget {
+  final Map<DateTime, int> waterByDay;
+  final int goalMl;
+  final int rangeDays;
+  final AppPalette palette;
+  // the window ends where the page's header does
+  final DateTime today;
+  final bool usesImperialUnits;
+  const _WaterTrendCard({
+    required this.waterByDay,
+    required this.goalMl,
+    required this.rangeDays,
+    required this.palette,
+    required this.today,
+    this.usesImperialUnits = false,
+  });
+
+  // #1306: plot, label and tooltip in fl oz with imperial food units, the way
+  // the calorie card follows the energy unit (#1362).
+  double _toUnit(num ml) =>
+      usesImperialUnits ? UnitCalc.mlToFlOz(ml.toDouble()) : ml.toDouble();
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    final color = palette.proteinColor;
+    // today is the field, not the wall clock's
+    final spots = <FlSpot>[];
+    var sum = 0;
+    var loggedDays = 0;
+    for (int i = 0; i < rangeDays; i++) {
+      // calendar days, as the labels count them
+      final day = DateTime(today.year, today.month, today.day - (rangeDays - 1 - i));
+      final ml = waterByDay[DateTime(day.year, day.month, day.day)] ?? 0;
+      spots.add(FlSpot(i.toDouble(), _toUnit(ml)));
+      if (ml > 0) {
+        sum += ml;
+        loggedDays++;
+      }
+    }
+    // over the logged days, as the page's header
+    final avgMl = loggedDays == 0 ? 0 : (sum / loggedDays).round();
+    final goal = _toUnit(goalMl);
+    final dayLabel = dayLabels(context, windowDates(today, rangeDays));
+    // the period's own lowest to highest
+    final range = fittedRange([
+      for (final s in spots) s.y,
+      if (goalMl > 0) goal,
+    ], minSpan: _toUnit(100));
+    final maxY = range.max;
+
+    return AppCard(
+      padding: const EdgeInsets.all(Dimens.spacing20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: AutoSizeText(S.of(context).trendsWaterLabel,
+                    style: text.titleMedium,
+                    maxLines: 1,
+                    minFontSize: 12,
+                    overflow: TextOverflow.ellipsis),
+              ),
+              Text(
+                usesImperialUnits
+                    ? S.of(context).waterChipLabelFlOz(
+                        _toUnit(avgMl).round(), goal.round())
+                    : S.of(context).waterChipLabel(avgMl, goalMl),
+                style: text.bodySmall?.copyWith(
+                    color: palette.textMuted, fontWeight: FontWeight.w700),
+              ),
+            ],
+          ),
+          const SizedBox(height: Dimens.spacing20),
+          if (loggedDays == 0)
+            noData(context, 'No water logged in this range.')
+          else
+          Semantics(
+            label: S.of(context).trendsWaterLabel,
+            child: SizedBox(
+              height: 140,
+              child: LineChart(
+                LineChartData(
+                  minX: 0,
+                  maxX: (rangeDays - 1).toDouble(),
+                  minY: range.min,
+                  maxY: maxY,
+                  gridData: const FlGridData(show: false),
+                  borderData: FlBorderData(show: false),
+                  titlesData: const FlTitlesData(show: false),
+                  lineTouchData: labelledTouch(
+                    context,
+                    (s) => '${s.y.round()}',
+                    after: (s) =>
+                        ' ${usesImperialUnits ? S.of(context).flOzUnit : 'ml'}'
+                        '\n${dayLabel(s.x.round())}',
+                  ),
+                  extraLinesData: goalMl <= 0
+                      ? const ExtraLinesData()
+                      : ExtraLinesData(horizontalLines: [
+                          HorizontalLine(
+                            y: goal,
+                            color: palette.textMuted,
+                            strokeWidth: 1.2,
+                            dashArray: const [6, 4],
+                          ),
+                        ]),
+                  lineBarsData: [
+                    LineChartBarData(
+                      spots: spots,
+                      isCurved: true,
+                      preventCurveOverShooting: true,
+                      color: color,
+                      barWidth: 3,
+                      // a dot a day up to a month
+                      dotData: FlDotData(show: rangeDays <= 31),
+                      belowBarData: BarAreaData(
+                          show: true, color: color.withValues(alpha: 0.12)),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _WeightCard extends StatelessWidget {
+  final List<WeightLogEntity> entries;
+  final BodyWeightUnit bodyWeightUnit;
+  final double? targetWeightKg;
+  final int rangeDays;
+  final AppPalette palette;
+  const _WeightCard({
+    required this.entries,
+    required this.bodyWeightUnit,
+    required this.targetWeightKg,
+    required this.rangeDays,
+    required this.palette,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    // the weigh-ins the chart draws, so the
+    // outlook shows only when the chart has a trend, and from the same
+    // points; all of them read a rate under "Log at least two days".
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final start = DateTime(today.year, today.month, today.day - (rangeDays - 1));
+    bool inRange(DateTime d) => !d.isBefore(start) && !d.isAfter(today);
+    final readings = [
+      for (final e in [...entries]..sort((a, b) => a.date.compareTo(b.date)))
+        if (inRange(e.date)) (date: e.date, kg: e.weightKg),
+    ];
+    // The rate from the smoothed trend, as the Goal planner's "Last 7
+    // days" is: carried on to today, over the range's days back from it;
+    // a fit of the raw readings read -0.0 where the planner said -0.18.
+    final from = DateTime(today.year, today.month, today.day - rangeDays);
+    final trend = trendPoints(entries, until: today)
+        .where((p) => !p.date.isBefore(from) && !p.date.isAfter(today))
+        .toList();
+    final projection = readings.length < 2
+        ? null
+        : weightProjection(
+            trend.length < 2
+                ? readings
+                : [
+                    for (final p in [trend.first, trend.last])
+                      (date: p.date, kg: p.weightKg),
+                  ],
+            targetWeightKg,
+          );
+    return AppCard(
+      padding: const EdgeInsets.all(Dimens.spacing20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: AutoSizeText(S.of(context).weightHistoryWeightLabel,
+                    style: text.titleMedium,
+                    maxLines: 1,
+                    minFontSize: 12,
+                    overflow: TextOverflow.ellipsis),
+              ),
+              Semantics(
+                identifier: 'trends-log-weight',
+                // Tight bounds: without this the node inherits the whole
+                // card's box (the container gotcha) and coordinate taps miss.
+                container: true,
+                child: IconButton(
+                  tooltip: S.of(context).weightHistoryAddEntry,
+                  icon: const Icon(Icons.add_rounded),
+                  onPressed: () => _logWeight(context),
+                ),
+              ),
+            ],
+          ),
+          if (projection != null)
+            Text(
+              _projectionLabel(context, projection),
+              style: text.bodySmall?.copyWith(color: palette.textMuted),
+            ),
+          const SizedBox(height: Dimens.spacing12),
+          WeightTrendChart(
+            entries: entries,
+            bodyWeightUnit: bodyWeightUnit,
+            targetWeightKg: targetWeightKg,
+            windowDays: rangeDays,
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// One-line weight outlook: the weekly rate of change (in the user's unit),
+  /// plus a rough number of weeks to the target when one is set and the trend
+  /// is heading toward it.
+  String _projectionLabel(
+    BuildContext context,
+    ({double ratePerWeek, int? weeksToTarget}) projection,
+  ) {
+    // measured, not the plan's pace, at two
+    // decimals as the Trend weight card's, and never "-0.00"
+    final (rate, unit) = switch (bodyWeightUnit) {
+      BodyWeightUnit.kg => (projection.ratePerWeek, S.of(context).kgLabel),
+      BodyWeightUnit.lb => (
+        projection.ratePerWeek * 2.20462,
+        S.of(context).lbsLabel,
+      ),
+      // Decimal stones for rate display.
+      BodyWeightUnit.st => (
+        projection.ratePerWeek * 2.20462 / 14,
+        S.of(context).stLabel,
+      ),
+    };
+    var label = 'Trend: ${signedRate(rate)} $unit a week';
+    if (projection.weeksToTarget != null) {
+      label += ' · ~${projection.weeksToTarget} '
+          '${S.of(context).trendsWeeksToGoalLabel}';
+    }
+    return label;
+  }
+
+  /// Logs a weight entry from the trends view, reusing the same dialog and
+  /// persistence path as the home weight chip, then reloads the trend so the
+  /// chart reflects the new point. Keeping weight editable here means it no
+  /// longer lives only behind the home widget.
+  Future<void> _logWeight(BuildContext context) async {
+    final trendsBloc = context.read<TrendsBloc>();
+    final rangeDays = trendsBloc.state is TrendsLoaded
+        ? (trendsBloc.state as TrendsLoaded).rangeDays
+        : 7;
+    final user = await locator<GetUserUsecase>().getUserData();
+    final logged = await weighInsByDay();
+    if (!context.mounted) return;
+    final entered = await showDialog<({double weight, DateTime date})>(
+      context: context,
+      builder: (_) => SetWeightDialog(
+        initialKg: user.weightKG,
+        unit: bodyWeightUnit,
+        allowDateSelection: true,
+        logged: logged,
+      ),
+    );
+    if (entered == null || !context.mounted) return;
+    // The dialog now always returns kg in the weight slot.
+    final kg = entered.weight;
+    final d = entered.date;
+    // says what it filed, with an Undo that
+    // brings back the weigh-in it replaced
+    final day = DateTime(d.year, d.month, d.day);
+    await logWeighIn(
+      context,
+      kg: kg,
+      day: day,
+      unit: bodyWeightUnit,
+      replaced: logged[day],
+      refresh: () async {
+        final updated = await locator<GetUserUsecase>().getUserData();
+        await locator<ProfileBloc>().updateUser(updated);
+        if (context.mounted) {
+          trendsBloc.add(LoadTrendsEvent(rangeDays: rangeDays));
+        }
+      },
+    );
+  }
+}
+
+// a Home tile opens the page its Trends tile
+// opens, on the Trends bloc (loaded here when Trends was not opened yet)
+void openTrendFromHome(BuildContext context, TrendMetric metric) {
+  final bloc = locator<TrendsBloc>();
+  if (bloc.state is! TrendsLoaded) bloc.add(const LoadTrendsEvent());
+  final palette = paletteOf(context);
+  openTrendDetail(
+    context,
+    metric,
+    TrendsDeps(
+      expenditure: ValueNotifier(
+        AdaptiveService.fromLocator().expenditureHistory().catchError(
+          (Object _) => <ExpenditureDay>[],
+        ),
+      ),
+      weightCard: (state) => _WeightCard(
+        entries: state.weight,
+        bodyWeightUnit: state.bodyWeightUnit,
+        targetWeightKg: state.targetWeightKg,
+        rangeDays: state.windowDays,
+        palette: palette,
+      ),
+      waterCard: (state) => _WaterTrendCard(
+        waterByDay: state.waterByDay,
+        goalMl: state.waterGoalMl,
+        rangeDays: state.windowDays,
+        palette: palette,
+        today: state.logicalToday, // S190
+      ),
+    ),
+    bloc: bloc,
+  );
+}

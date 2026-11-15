@@ -5,7 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/features/home/presentation/bloc/home_bloc.dart';
 import 'package:opennutritracker/features/trends/presentation/bloc/trends_bloc.dart';
-import 'package:opennutritracker/features/trends/presentation/trends_page.dart'
+import 'package:opennutritracker/fork/screens/trends/trends_page.dart'
     show openTrendFromHome;
 import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
 import 'package:opennutritracker/fork/adaptive/goal_saving.dart'

@@ -16,8 +16,8 @@ import 'package:opennutritracker/features/diary/presentation/widgets/daily_nutri
 import 'package:opennutritracker/features/diary/presentation/widgets/diary_table_calendar.dart';
 import 'package:opennutritracker/features/home/home_page.dart';
 import 'package:opennutritracker/fork/screens/home/intake_vertical_list.dart'; // [fork] S156
-import 'package:opennutritracker/features/profile/profile_page.dart';
-import 'package:opennutritracker/features/trends/presentation/trends_page.dart';
+import 'package:opennutritracker/fork/screens/profile/profile_page.dart'; // [fork] S156
+import 'package:opennutritracker/fork/screens/trends/trends_page.dart'; // [fork] S156
 import 'package:opennutritracker/main.dart' as app;
 import 'package:path_provider/path_provider.dart';
 

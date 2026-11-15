@@ -13,8 +13,12 @@ import 'package:opennutritracker/features/diary/diary_page.dart';
 import 'package:opennutritracker/core/presentation/widgets/home_appbar.dart';
 import 'package:opennutritracker/features/home/home_page.dart';
 import 'package:opennutritracker/core/presentation/widgets/main_appbar.dart';
-import 'package:opennutritracker/features/profile/profile_page.dart';
-import 'package:opennutritracker/features/trends/presentation/trends_page.dart';
+// [fork] S218 own-trends-you: the fork's Trends and You tabs (D23)
+// import 'package:opennutritracker/features/profile/profile_page.dart';
+// import 'package:opennutritracker/features/trends/presentation/trends_page.dart';
+import 'package:opennutritracker/fork/screens/profile/profile_page.dart';
+import 'package:opennutritracker/fork/screens/trends/trends_page.dart';
+// [/fork]
 import 'package:opennutritracker/generated/l10n.dart';
 // [fork] S76 releases: a new OpenBite offers itself (D16)
 import 'package:opennutritracker/fork/update/update_notice.dart';

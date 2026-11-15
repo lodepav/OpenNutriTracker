@@ -12,7 +12,7 @@ import 'package:opennutritracker/core/domain/usecase/get_weight_log_usecase.dart
 import 'package:opennutritracker/core/utils/energy_unit_provider.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/features/trends/presentation/bloc/trends_bloc.dart';
-import 'package:opennutritracker/features/trends/presentation/trends_page.dart';
+import 'package:opennutritracker/fork/screens/trends/trends_page.dart';
 import 'package:opennutritracker/fork/report/trends_layout.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 import 'package:provider/provider.dart';
