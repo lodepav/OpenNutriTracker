@@ -387,29 +387,8 @@ class _DiaryPageState extends State<DiaryPage> with WidgetsBindingObserver {
     // The day the entry is listed under now: "today" can move on while
     // the dialog is open (#1360), and the row to adjust is this one.
     final day = _selectedDate;
-    // [fork] S9 meal-groups
-    var mealEdited = false;
-    final handled = await editMealGroupLeftovers(
-      context,
-      intakeEntity,
-      update: (id, amount) {
-        mealEdited = true;
-        return _calendarDayBloc.updateIntakeItem(id, {'amount': amount}, day);
-      },
-      usesImperialUnits: usesImperialUnits, // [fork] S90
-    );
-    if (handled) {
-      if (!mealEdited) return;
-      _diaryBloc.add(const LoadDiaryYearEvent());
-      _calendarDayBloc.add(LoadCalendarDayEvent(_selectedDate));
-      _diaryBloc.updateHomePage();
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(S.of(context).itemUpdatedSnackbar)),
-        );
-      }
-      return;
-    }
+    // [fork] S9 meal-groups: an entry of a meal offers its leftovers
+    final mealGroup = await mealGroupEntriesOf(intakeEntity);
     if (!context.mounted) return;
     // [/fork]
     final meal = ValueNotifier(intakeEntity.type); // [fork] S177
@@ -419,6 +398,7 @@ class _DiaryPageState extends State<DiaryPage> with WidgetsBindingObserver {
         intakeEntity: intakeEntity,
         usesImperialUnits: usesImperialUnits,
         meal: meal, // [fork] S177
+        wholeMeal: mealGroup != null, // [fork] S9
       ),
     );
     // [fork] S83 tap-delete
@@ -426,6 +406,31 @@ class _DiaryPageState extends State<DiaryPage> with WidgetsBindingObserver {
       // Even when the list moved on to a new day while the dialog was open
       // (#1360): the row's context is gone, this page's is not.
       _onDeleteIntakeItem(intakeEntity, day);
+      return;
+    }
+    // [/fork]
+    // [fork] S9 meal-groups
+    if (changeIntakeAmount == EditDialog.wholeMealResult && mealGroup != null) {
+      if (!context.mounted) return;
+      var mealEdited = false;
+      await editWholeMealLeftovers(
+        context,
+        mealGroup,
+        update: (id, amount) {
+          mealEdited = true;
+          return _calendarDayBloc.updateIntakeItem(id, {'amount': amount}, day);
+        },
+        usesImperialUnits: usesImperialUnits, // [fork] S90
+      );
+      if (!mealEdited) return;
+      _diaryBloc.add(const LoadDiaryYearEvent());
+      _calendarDayBloc.add(LoadCalendarDayEvent(_selectedDate));
+      _diaryBloc.updateHomePage();
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(S.of(context).itemUpdatedSnackbar)),
+        );
+      }
       return;
     }
     // [/fork]

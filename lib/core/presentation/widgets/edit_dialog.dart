@@ -15,6 +15,12 @@ class EditDialog extends StatefulWidget {
   // path beside the long-press drag (WCAG 2.5.7)
   static const deleteResult = -1.0;
   // [/fork]
+  // [fork] S83 whole-meal: what the dialog returns for the leftovers of
+  // the whole meal the entry was logged in (S9, S10)
+  static const wholeMealResult = -2.0;
+  static const wholeMealLabel = 'Leftovers of the whole meal';
+  final bool wholeMeal;
+  // [/fork]
   final IntakeEntity intakeEntity;
   final bool usesImperialUnits;
   // [fork] S177 copy-move: the meal, changed here and applied on OK by
@@ -27,6 +33,7 @@ class EditDialog extends StatefulWidget {
     required this.intakeEntity,
     required this.usesImperialUnits,
     this.meal, // [fork] S177
+    this.wholeMeal = false, // [fork] S83
   });
 
   @override
@@ -43,6 +50,24 @@ class _EditDialogState extends State<EditDialog> {
   /// The amount as logged, in the units shown, which what is left over is
   /// taken from.
   late final double _loggedAmount;
+
+  // [fork] S83 select-on-focus: tapping into a field selects what it holds,
+  // so typing replaces the amount rather than adding to it
+  late final _amountFocus = _selectAllOnFocus(amountEditingController);
+  late final _leftoverFocus = _selectAllOnFocus(leftoverEditingController);
+
+  static FocusNode _selectAllOnFocus(TextEditingController controller) {
+    final node = FocusNode();
+    node.addListener(() {
+      if (!node.hasFocus) return;
+      controller.selection = TextSelection(
+        baseOffset: 0,
+        extentOffset: controller.text.length,
+      );
+    });
+    return node;
+  }
+  // [/fork]
 
   // [fork] S142 energy-only: a Quick add with only its energy (100 "gml"
   // of a made-up food) is edited as its energy, not a quantity (H2)
@@ -83,6 +108,8 @@ class _EditDialogState extends State<EditDialog> {
   void dispose() {
     amountEditingController.dispose();
     leftoverEditingController.dispose();
+    _amountFocus.dispose(); // [fork] S83
+    _leftoverFocus.dispose(); // [fork] S83
     super.dispose();
   }
 
@@ -112,6 +139,8 @@ class _EditDialogState extends State<EditDialog> {
     return AlertDialog(
       // [fork] S83: the dialog names the food it edits
       title: Text(widget.intakeEntity.meal.name ?? S.of(context).editItemDialogTitle),
+      // at 200% font on a small screen the fields are taller than it (A6)
+      scrollable: true,
       // [/fork]
       content: Column(
         mainAxisSize: MainAxisSize.min,
@@ -134,6 +163,7 @@ class _EditDialogState extends State<EditDialog> {
           // [/fork]
           TextFormField(
             controller: amountEditingController,
+            focusNode: _amountFocus, // [fork] S83
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             inputFormatters: CustomTextInputFormatter.doubleOnly(),
             decoration: InputDecoration(
@@ -148,6 +178,7 @@ class _EditDialogState extends State<EditDialog> {
           const SizedBox(height: 16),
           TextFormField(
             controller: leftoverEditingController,
+            focusNode: _leftoverFocus, // [fork] S83
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             inputFormatters: CustomTextInputFormatter.doubleOnly(),
             onChanged: _onLeftoverChanged,
@@ -175,6 +206,21 @@ class _EditDialogState extends State<EditDialog> {
                 ),
             ],
           ),
+          // [fork] S83 whole-meal: 48 dp tall (A1), and its label wraps (A6)
+          if (widget.wholeMeal) ...[
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
+                onPressed: () =>
+                    Navigator.of(context).pop(EditDialog.wholeMealResult),
+                icon: const Icon(Icons.restaurant_rounded),
+                label: const Text(EditDialog.wholeMealLabel),
+              ),
+            ),
+          ],
+          // [/fork]
         ],
       ),
       // [fork] S83 tap-delete; Material order: Delete on its own on the
@@ -189,8 +235,9 @@ class _EditDialogState extends State<EditDialog> {
           onPressed: () => Navigator.of(context).pop(EditDialog.deleteResult),
           child: Text(S.of(context).dialogDeleteLabel),
         ),
-        Row(
-          mainAxisSize: MainAxisSize.min,
+        // a Wrap: at 200% font Cancel and OK are wider than a 360 dp screen
+        Wrap(
+          alignment: WrapAlignment.end,
           children: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
