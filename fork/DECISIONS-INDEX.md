@@ -15,6 +15,7 @@ there before changing anything a line touches. After adding or rewording a decis
 - **D9** Break a dish down before estimating.
 - **D10** Google Drive backup through a sync app; the app only writes backup files
 - **D52** What a backup carries is a list, and a new stored key must be on it
+- **D53** Log with AI: the meal is a chip, Log can be undone, the photo notice shows once per destination
 - **D11** Generic foods come from open tables bundled into the app as an offline asset. No API key and no backend.
 - **D12** Dishes come from recipes, and the AI writes the recipe.
 - **D14** Leftovers are subtracted from the logged meal, manually or by AI.
