@@ -260,6 +260,15 @@ class CopyDayButton extends StatelessWidget {
 
 enum _When { same, now, picked }
 
+/// Where Copy day starts: tomorrow, as a day is mostly copied forward;
+/// the day after when [from], the day copied, is tomorrow itself.
+DateTime copyDayStart(DateTime today, DateTime? from) {
+  final tomorrow = DateUtils.addDaysToDate(today, 1);
+  return from != null && DateUtils.isSameDay(from, tomorrow)
+      ? DateUtils.addDaysToDate(tomorrow, 1)
+      : tomorrow;
+}
+
 /// Where a copy or a move goes, picked with chips: the day (yesterday,
 /// today, tomorrow or any), for foods the time (the same, now, or one
 /// picked) and the meal, and for a whole day whether activities go too.
@@ -295,7 +304,9 @@ class WhereToSheet extends StatefulWidget {
 
 class _WhereToSheetState extends State<WhereToSheet> {
   late bool _move = widget.move;
-  late DateTime _day = widget.today;
+  late DateTime _day = widget.wholeDay
+      ? copyDayStart(widget.today, widget.from)
+      : widget.today;
   var _when = _When.same;
   TimeOfDay? _time;
   late IntakeTypeEntity? _meal = widget.meals?.length == 1

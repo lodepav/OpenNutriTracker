@@ -6,6 +6,7 @@ import 'package:auto_size_text/auto_size_text.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
+import 'package:opennutritracker/core/domain/entity/intake_type_entity.dart';
 import 'package:opennutritracker/core/domain/entity/recipe_entity.dart';
 import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
@@ -26,6 +27,9 @@ class RecipeListItem extends StatelessWidget {
   // logs one serving; a chevron without it
   final VoidCallback? onLog;
 
+  /// The meal [onLog] logs to; null when it asks.
+  final IntakeTypeEntity? logMeal;
+
   static const double _thumbSize = 52;
 
   const RecipeListItem({
@@ -35,6 +39,7 @@ class RecipeListItem extends StatelessWidget {
     this.onLongPress,
     this.isSelected = false,
     this.onLog,
+    this.logMeal,
   });
 
   @override
@@ -154,7 +159,7 @@ class RecipeListItem extends StatelessWidget {
                 else if (onLog != null)
                   IconButton(
                     key: ValueKey('recipe-log-${recipe.id}'),
-                    tooltip: 'Log one serving of ${recipe.name}',
+                    tooltip: logServingTooltip(context, recipe, logMeal),
                     icon: Icon(Icons.add_circle_outline_rounded, color: accent),
                     onPressed: onLog,
                   )

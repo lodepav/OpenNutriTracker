@@ -31,6 +31,7 @@ import 'package:opennutritracker/fork/weight/weigh_in_log.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
 import 'package:opennutritracker/fork/trends/trend_detail.dart';
 import 'package:opennutritracker/fork/trends/trend_stats.dart';
+import 'package:opennutritracker/fork/trends/trends_range.dart';
 import 'package:opennutritracker/fork/trends/trends_widgets.dart'
     show dayLabels, fittedRange, noData;
 
@@ -50,7 +51,9 @@ class _TrendsPageState extends State<TrendsPage> {
   @override
   void initState() {
     super.initState();
-    _trendsBloc.add(const LoadTrendsEvent());
+    TrendsRange.read().then(
+      (days) => _trendsBloc.add(LoadTrendsEvent(rangeDays: days)),
+    );
   }
 
   @override
@@ -417,7 +420,11 @@ class _WeightCard extends StatelessWidget {
 // opens, on the Trends bloc (loaded here when Trends was not opened yet)
 void openTrendFromHome(BuildContext context, TrendMetric metric) {
   final bloc = locator<TrendsBloc>();
-  if (bloc.state is! TrendsLoaded) bloc.add(const LoadTrendsEvent());
+  if (bloc.state is! TrendsLoaded) {
+    TrendsRange.read().then(
+      (days) => bloc.add(LoadTrendsEvent(rangeDays: days)),
+    );
+  }
   final palette = paletteOf(context);
   openTrendDetail(
     context,

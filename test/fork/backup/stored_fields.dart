@@ -79,6 +79,7 @@ const storedFields = <String, Map<String, StoredField>>{
     'homeSections': backedUp,
     'trendsLayout': backedUp,
     'trendsTiles': backedUp,
+    'trendsRange': backedUp,
     'goalStart': backedUp,
     'goalStartNoTarget': backedUp,
     'weighInReminder': backedUp,

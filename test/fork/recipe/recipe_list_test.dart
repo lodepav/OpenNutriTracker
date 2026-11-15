@@ -190,6 +190,34 @@ void main() {
       expect(logs, 1);
     });
 
+    testWidgets('the + says what it logs, and where', (tester) async {
+      await tester.pumpWidget(
+        _app(
+          RecipeListItem(
+            recipe: _bowl(),
+            onTap: () {},
+            onLog: () {},
+            logMeal: IntakeTypeEntity.lunch,
+          ),
+        ),
+      );
+      final name = _bowl().name;
+      expect(find.byTooltip('Log 1 serving of $name to Lunch'), findsOneWidget);
+      await tester.pumpWidget(
+        _app(
+          RecipeListItem(
+            recipe: _bowl(servings: null),
+            onTap: () {},
+            onLog: () {},
+          ),
+        ),
+      );
+      expect(
+        find.byTooltip('Log 1 recipe of $name to a meal you pick'),
+        findsOneWidget,
+      );
+    });
+
     testWidgets('a recipe without servings shows all of it', (tester) async {
       await tester.pumpWidget(
         _app(RecipeListItem(recipe: _bowl(servings: null), onTap: () {})),

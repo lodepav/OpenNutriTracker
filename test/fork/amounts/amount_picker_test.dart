@@ -55,6 +55,15 @@ class _HostState extends State<_Host> {
       );
       return meal;
     },
+    onRemovePortion: (label) async {
+      setState(
+        () => meal = withOwnPortions(meal, [
+          for (final p in meal.portions)
+            if (p is OwnPortionEntity && p.label != label) p,
+        ]),
+      );
+      return meal;
+    },
   );
 }
 
@@ -167,6 +176,35 @@ void main() {
     expect(find.text('slice · 35 g'), findsOneWidget);
     expect(sets.last, ('2', 'serving'));
     expect(_summary(tester), startsWith('2 × slice = 70 g'));
+  });
+
+  testWidgets('an own portion has a remove button, and the long-press stays', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      withOwnPortions(rye(serving: null), [
+        const OwnPortionEntity(label: 'slice', gramWeight: 35),
+        const OwnPortionEntity(label: 'heel', gramWeight: 20),
+      ]),
+    );
+    final remove = find.byTooltip('Remove slice');
+    expect(remove, findsOneWidget);
+    final button = find.ancestor(of: remove, matching: find.byType(IconButton));
+    expect(tester.getSize(button), const Size(48, 48));
+    // Only the user's own portions have one.
+    expect(find.byIcon(Icons.close_rounded), findsNWidgets(2));
+
+    await tester.tap(remove);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Remove'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('slice'), findsNothing);
+    expect(find.byTooltip('Remove heel'), findsOneWidget);
+
+    await tester.longPress(find.textContaining('heel'));
+    await tester.pumpAndSettle();
+    expect(find.text('Remove "heel"?'), findsOneWidget);
   });
 
   testWidgets('on Log with AI a count stays when the portion changes, and '

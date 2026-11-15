@@ -216,6 +216,7 @@ Future<void> fillForkState({
       'order': ['steps'],
       'hidden': ['kcal'],
     },
+    'trendsRange': 90,
     'goalStartNoTarget': true,
     'sidePart': 'waist',
     'strengthAnswered': '{"key":"protein","at":"2026-11-01T09:00:00.000"}',

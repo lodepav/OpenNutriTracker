@@ -367,6 +367,24 @@ void main() {
     expect(find.bySemanticsIdentifier('settings-show-water'), findsOne);
   });
 
+  testWidgets('the search finds the AI key and model, and the photo rows', (
+    tester,
+  ) async {
+    await tester.pumpWidget(_app());
+    await tester.pumpAndSettle();
+    await tester.tap(find.bySemanticsIdentifier('settings-search'));
+    await tester.pumpAndSettle();
+    for (final word in ['key', 'model']) {
+      await tester.enterText(find.byType(TextField), word);
+      await tester.pumpAndSettle();
+      expect(find.text(l10nEn.settingsAiAssistLabel), findsOneWidget);
+    }
+    await tester.enterText(find.byType(TextField), 'photo');
+    await tester.pumpAndSettle();
+    expect(find.text('What happens to a meal photo'), findsOneWidget);
+    expect(find.text(l10nEn.settingsPrivacySettings), findsOneWidget);
+  });
+
   testWidgets('what people come to change is in the first card', (
     tester,
   ) async {
