@@ -53,8 +53,9 @@ applies to the fork's copy, then set the row's "Upstream at copy" to the release
 ## Carried upstream changes
 
 Upstream-bound work (rule 1) is built on a branch off `develop`, cherry-picked (`-x`) into a
-`fork/<topic>` branch, and carried without markers until upstream merges it; then the release
-merge brings it in and its row goes.
+`fork/<topic>` branch, and carried without markers until upstream merges it. When the PR lands on `develop` the fork takes
+upstream's commit (the `upstream-merge` skill, "When one of the fork's PRs lands on develop") and
+the row says so; the release merge then finds the files equal and the row goes.
 
 | Branch | What it changes | Upstream |
 |---|---|---|
