@@ -14,6 +14,7 @@ import 'package:opennutritracker/core/utils/notification_service.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/fork/adaptive/check_in.dart';
+import 'package:opennutritracker/fork/reminders/reminder_taps.dart';
 import 'package:timezone/timezone.dart' as tz;
 
 /// A time of day a reminder goes off.
@@ -150,6 +151,8 @@ class LocalNotificationScheduler implements ReminderScheduler {
       id: reminder.kind.id,
       title: reminder.kind.title,
       body: body ?? reminder.kind.body,
+      // What a tap opens (reminderTapAction).
+      payload: reminder.kind.key,
       scheduledDate: tz.TZDateTime.from(reminder.at, tz.local),
       notificationDetails: const NotificationDetails(
         android: AndroidNotificationDetails(
@@ -291,6 +294,7 @@ class Reminders {
 
   /// Run at start-up (seam S6).
   static Future<void> start() async {
+    unawaited(openLaunchingTap());
     final reminders = Reminders();
     void replan() => unawaited(reminders.replan());
     replan();

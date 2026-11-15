@@ -8,7 +8,8 @@ import 'package:opennutritracker/generated/l10n.dart';
 
 /// Home's way straight to the frequent actions (seam S162): search, then the
 /// launcher shortcuts by the same names, each for today and the time's meal,
-/// and the meal plan.
+/// and the meal plan. Weigh in opens the dialog over Home, where the
+/// shortcut opens the weight history.
 /// Photo log shows while AI meal assistance is on, as on the + sheet. Home
 /// stays alive under other tabs and screens, so the setting is read again
 /// each time Home shows: Settings may have changed it meanwhile.
@@ -89,7 +90,7 @@ class _QuickActionsState extends State<QuickActions> {
         'weigh-in',
         Icons.monitor_weight_outlined,
         'Weigh in',
-        const WeighInAction(),
+        const WeighInDialogAction(),
       ),
       _tile(
         'meal-plan',

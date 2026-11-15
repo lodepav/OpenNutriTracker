@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:logging/logging.dart';
 import 'package:opennutritracker/core/domain/usecase/get_config_usecase.dart';
+import 'package:opennutritracker/core/domain/usecase/get_user_usecase.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/core/utils/meal_type_suggester.dart';
 import 'package:opennutritracker/core/utils/navigation_options.dart';
 import 'package:opennutritracker/features/add_meal/presentation/add_meal_screen.dart';
 import 'package:opennutritracker/features/add_meal/presentation/add_meal_type.dart';
 import 'package:opennutritracker/features/add_meal/presentation/widgets/quick_add_bottom_sheet.dart';
+import 'package:opennutritracker/features/home/presentation/widgets/quick_weight_widget.dart';
 import 'package:opennutritracker/features/scanner/scanner_screen.dart';
 import 'package:opennutritracker/fork/plan/plan_screen.dart';
 import 'package:opennutritracker/fork/screens/add_meal/bulk_add_screen.dart';
@@ -60,6 +62,12 @@ class WeighInAction extends LaunchAction {
   const WeighInAction();
 }
 
+/// The weigh-in dialog over the screen showing, as the weight tile's +
+/// opens it: Home's Weigh in tile and the weigh-in reminder's tap.
+class WeighInDialogAction extends LaunchAction {
+  const WeighInDialogAction();
+}
+
 /// An image shared from another app, copied into the cache.
 class SharedPhotoAction extends LaunchAction {
   final String path;
@@ -77,11 +85,19 @@ class SharedTextAction extends LaunchAction {
 /// Seam S167: around the main screen, opens what a shortcut or a share
 /// asked for, once on mounting (a cold start) and whenever Android says
 /// another arrived. Below the main screen, so only an onboarded profile
-/// gets one.
+/// gets one. Taps from inside the app's own Dart (a notification's) come
+/// through [deliver].
 class LaunchActionHost extends StatefulWidget {
   final Widget child;
 
   const LaunchActionHost({super.key, required this.child});
+
+  /// Kept until a host is up, so a tap that started the app waits for the
+  /// main screen.
+  static final _pending = ValueNotifier<LaunchAction?>(null);
+
+  /// Opens [action] once the main screen is up, or now when it is.
+  static void deliver(LaunchAction action) => _pending.value = action;
 
   @override
   State<LaunchActionHost> createState() => _LaunchActionHostState();
@@ -98,12 +114,22 @@ class _LaunchActionHostState extends State<LaunchActionHost> {
       if (call.method == 'launch') await _consume();
     });
     _consume();
+    LaunchActionHost._pending.addListener(_openPending);
+    _openPending();
   }
 
   @override
   void dispose() {
     _channel.setMethodCallHandler(null);
+    LaunchActionHost._pending.removeListener(_openPending);
     super.dispose();
+  }
+
+  void _openPending() {
+    final action = LaunchActionHost._pending.value;
+    if (action == null) return;
+    LaunchActionHost._pending.value = null;
+    openLaunchAction(context, action);
   }
 
   Future<void> _consume() async {
@@ -183,6 +209,15 @@ Future<void> openLaunchAction(BuildContext context, LaunchAction action) async {
       navigator.pushNamed(
         NavigationOptions.weightHistoryRoute,
         arguments: const WeighInOnOpen(),
+      );
+    case WeighInDialogAction():
+      // Home's weight, as HomeBloc reads it.
+      final user = await locator<GetUserUsecase>().getUserData();
+      if (!context.mounted) return;
+      await QuickWeightWidget.showWeightDialog(
+        context,
+        weightKg: user.weightKG,
+        bodyWeightUnit: config.bodyWeightUnit,
       );
     case SharedPhotoAction(:final path):
       navigator.pushNamed(

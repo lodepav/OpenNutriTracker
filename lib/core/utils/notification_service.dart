@@ -1,6 +1,9 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:logging/logging.dart';
+// [fork] S46 reminders: a tap on the weigh-in reminder opens the weigh-in
+import 'package:opennutritracker/fork/reminders/reminder_taps.dart';
+// [/fork]
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 
@@ -42,7 +45,10 @@ class NotificationService {
       iOS: iosSettings,
     );
 
-    await _plugin.initialize(settings: initSettings);
+    await _plugin.initialize(
+      settings: initSettings,
+      onDidReceiveNotificationResponse: onNotificationTap, // [fork] S46
+    );
     _initialized = true;
     _log.fine('NotificationService initialized');
   }
