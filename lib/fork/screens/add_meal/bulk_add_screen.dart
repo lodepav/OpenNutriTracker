@@ -1,7 +1,6 @@
 // Fork-owned copy of lib/features/add_meal/presentation/screens/bulk_add_screen.dart (D23); upstream's later changes to it
 // are ported by hand: fork/tools/upstream-copies.sh.
 import 'dart:async';
-import 'dart:collection';
 import 'dart:io';
 
 import 'package:auto_size_text/auto_size_text.dart';
@@ -49,7 +48,6 @@ import 'package:opennutritracker/fork/dish/dish_strings.dart';
 import 'package:opennutritracker/fork/bulk/discard_guard.dart';
 import 'package:opennutritracker/fork/bulk/amount_question.dart';
 import 'package:opennutritracker/fork/bulk/meal_scale.dart';
-import 'package:opennutritracker/fork/bulk/scale_rows.dart';
 import 'package:opennutritracker/fork/bulk/review_totals.dart';
 import 'package:opennutritracker/fork/bulk/review_units.dart';
 import 'package:opennutritracker/fork/bulk/shown_unit.dart';
@@ -77,15 +75,14 @@ import 'package:opennutritracker/fork/bulk/photo_meal_memory.dart';
 import 'package:opennutritracker/fork/bulk/photo_meal_memory_store.dart';
 import 'package:opennutritracker/fork/screens/add_meal/history_offer_view.dart';
 // the photo's amounts sized the way the user usually corrects them (D46)
-import 'package:opennutritracker/fork/bulk/usual_sizes.dart';
 import 'package:opennutritracker/fork/screens/add_meal/usual_sizes_view.dart';
 // the fat a meal was cooked in, and the note's chips (D48, D49)
 import 'package:opennutritracker/fork/bulk/cooking_fat.dart';
-import 'package:opennutritracker/fork/bulk/put_row.dart';
 import 'package:opennutritracker/fork/dish/break_down_dish_usecase.dart'
     show preferTableRow;
 import 'package:opennutritracker/fork/screens/add_meal/cooking_fat_view.dart';
 import 'package:opennutritracker/fork/screens/add_meal/note_chips_view.dart';
+import 'package:opennutritracker/fork/screens/add_meal/photo_review_controller.dart';
 
 part 'bulk_add_body.dart';
 part 'bulk_add_row.dart';
@@ -146,16 +143,6 @@ Future<ResolvedMealItem?> _cookingFatFood(double grams) async {
   return preferTableRow(found.first);
 }
 
-/// A row as the photo's read gave it: its food, unit, grams or millilitres
-/// and amount text, and whether a size could change it then.
-typedef _PhotoRow = ({
-  String key,
-  String unit,
-  double? base,
-  String text,
-  bool sizable,
-});
-
 class _BulkAddScreenState extends State<BulkAddScreen> {
   final _log = Logger('BulkAddScreen');
   final _bloc = locator<BulkAddBloc>();
@@ -174,72 +161,9 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
     _onStagedReadState,
   );
 
-  /// The meal's Size on a photo's review: taken anew with each read.
-  var _mealScale = MealScale();
-  late final StreamSubscription<BulkAddState> _scaleFollow;
-
-  /// The rows a size just set, for the card to say the meal's energy at.
-  List<BulkAddRow>? _mealSizeSaid;
-
-  /// The one amount a photo's review asks about, chosen once per read;
-  /// null when none was, or once it ended.
-  AmountQuestion? _amountQuestion;
-  bool _amountAsked = false;
-
-  /// An answer to say once built: the amount, and the rows it set.
-  ({String amount, List<BulkAddRow> rows})? _amountSaid;
-
-  /// A meal like this photo's that the user corrected before, found once
-  /// per read as its rows arrive; null when none was.
-  PhotoMealMatch? _history;
-  bool _historyAsked = false;
-
-  /// While its amounts are used: the bases and size they replaced.
-  MealScaleSnapshot? _historyUndo;
-
-  /// Counts reads, so a memory found for one is not offered on the next.
-  var _readSerial = 0;
-
-  /// The dish the photo's read arrived as, kept with the meal on Log.
-  String? _arrivalDish;
-
-  /// The rows of a photo's read as they arrived, kept so the photo's own
-  /// amounts can come back and be kept with the meal on Log.
-  final _photoRows = LinkedHashMap<ResolvedMealItem, _PhotoRow>.identity();
-
-  /// The rows the usual sizes changed on this read, and the foods the line
-  /// names.
-  final _usualRows = Set<ResolvedMealItem>.identity();
-  List<({String name, double factor})> _usualFoods = const [];
-
-  /// The bases before the usual sizes, which "Use the photo's amounts"
-  /// puts back, null when none were applied; and, while the photo's
-  /// amounts are used, the usual ones.
-  MealScaleSnapshot? _photoBases;
-  MealScaleSnapshot? _usualBases;
-
-  /// Whether the usual sizes are what the rows' bases are now.
-  bool get _usualInForce =>
-      _photoBases != null && _usualBases == null && _historyUndo == null;
-
-  /// Each row's grams or millilitres when it first appeared, and whether
-  /// the user has changed any amount from it (a row they set that moved).
-  final _firstAmounts = LinkedHashMap<ResolvedMealItem, double?>.identity();
-  bool _amountChanged = false;
-
-  /// The question about the fat the meal was cooked or dressed with,
-  /// decided once per read as its rows arrive; null when not asked.
-  CookingFatAsk? _fatAsk;
-  bool _fatAsked = false;
-
-  /// Answered None: the question goes.
-  bool _fatClosed = false;
-
-  /// The fat row a chip added, while it is on the review.
-  ResolvedMealItem? _fatItem;
-
-  /// The chip tapped while the table's oil is looked up.
-  int? _fatPending;
+  /// The photo's review: its Size, question, remembered meal, usual sizes
+  /// and cooking fat, which decide the amount each row carries.
+  late final PhotoReviewController _review;
 
   /// The note's field, focused by a chip that wants a number after it.
   final _noteFocus = FocusNode();
@@ -600,316 +524,22 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
   @override
   void initState() {
     super.initState();
-    _scaleFollow = _bloc.stream.listen(_onScaleState);
-  }
-
-  /// A read starting takes a new scale; a photo's rows arriving are its
-  /// base, and every later state is followed: what the user changed is
-  /// pinned, and rows a breakdown wrote or a put-back food take the size.
-  void _onScaleState(BulkAddState state) {
-    if (state is! BulkAddLoadedState) {
-      _mealScale = MealScale(note: _photoNote);
-      _amountQuestion = null;
-      _amountAsked = false;
-      _readSerial++;
-      _history = null;
-      _historyAsked = false;
-      _historyUndo = null;
-      _arrivalDish = null;
-      _photoRows.clear();
-      _usualRows.clear();
-      _usualFoods = const [];
-      _photoBases = null;
-      _usualBases = null;
-      _firstAmounts.clear();
-      _amountChanged = false;
-      _fatAsk = null;
-      _fatAsked = false;
-      _fatClosed = false;
-      _fatItem = null;
-      _fatPending = null;
-      return;
-    }
-    if (state.source != BulkAddReadSource.photo) return;
-    _followAmountQuestion(state);
-    _askCookingFat(state);
-    _askHistory(state);
-    final amounts = _mealScale.follow(state.rows);
-    _followAmountChanges(state.rows);
-    if (amounts.isNotEmpty) _bloc.add(ScaleRowsEvent(amounts));
-    if (mounted) setState(() {});
-  }
-
-  /// A photo's rows as they first arrive are matched against the meals the
-  /// user corrected before; the match is offered once it is found.
-  void _askHistory(BulkAddLoadedState state) {
-    if (_historyAsked || state.rows.isEmpty) return;
-    _historyAsked = true;
-    _arrivalDish = readDishName(state.rows);
-    if (state.modelFailure != null) return;
-    for (final row in state.rows) {
-      final meal = row.meal;
-      if (meal == null) continue;
-      _photoRows[row.resolved] = (
-        key: foodKeyOf(meal),
-        unit: row.effectiveUnit,
-        base: baseAmountOf(row),
-        text: row.amountText,
-        sizable: isScalableRow(row, note: _photoNote),
-      );
-    }
-    unawaited(_findHistory(_readSerial, state.rows, _photoNote));
-  }
-
-  Future<void> _findHistory(
-    int read,
-    List<BulkAddRow> rows,
-    String? note,
-  ) async {
-    final List<PhotoMealRecord> records;
-    try {
-      records = await forkPhotoMealMemory().records();
-    } catch (e, stackTrace) {
-      _log.warning('Reading the photo meal memory failed', e, stackTrace);
-      return;
-    }
-    if (!mounted || read != _readSerial) return;
-    final now = DateTime.now();
-    final match = photoMealMatchFor(rows, records, note: note, now: now);
-    if (match != null) setState(() => _history = match);
-    _applyUsual(usualSizesOf(records, now: now));
-  }
-
-  /// The photo's amounts sized the way the user usually corrects them: each
-  /// row the Size may change, still at the photo's amount, takes its usual
-  /// amount as its base, at 1×, which reads "Your usual". Not once a size
-  /// was chosen or earlier amounts used: the user has sized this meal.
-  void _applyUsual(UsualSizes usual) {
-    final state = _bloc.state;
-    if (usual.isEmpty || state is! BulkAddLoadedState) return;
-    if (state.source != BulkAddReadSource.photo) return;
-    if (_mealScale.factor != 1 || _historyUndo != null) return;
-    final amounts = usualAmounts(
-      state.rows,
-      usual,
-      note: _photoNote,
-      canTake: (row) =>
-          _mealScale.canScale(row) &&
-          _photoRows[row.resolved]?.text == row.amountText,
-    );
-    if (amounts.isEmpty) return;
-    final foods = <String, ({String name, double factor})>{};
-    for (final row in state.rows) {
-      if (!amounts.containsKey(row.resolved)) continue;
-      final key = foodKeyOf(row.meal!);
-      if (usual.foods[key] case final factor?) {
-        foods.putIfAbsent(key, () => (name: _rowTitle(row), factor: factor));
-      }
-    }
-    final before = _mealScale.snapshot();
-    final scaled = _mealScale.rebase(state.rows, amounts);
-    setState(() {
-      _usualRows
-        ..clear()
-        ..addAll(amounts.keys);
-      _usualFoods = [...foods.values];
-      _photoBases = before;
-      _usualBases = null;
-    });
-    // not said: nothing was tapped, and the line is read with the card
-    if (scaled.isNotEmpty) _bloc.add(ScaleRowsEvent(scaled));
-  }
-
-  /// Whether the usual sizes' line is shown: some row they sized is still
-  /// one the Size changes, and no earlier amounts are used.
-  bool _usualShown(List<BulkAddRow> rows) =>
-      _photoBases != null &&
-      _historyUndo == null &&
-      rows.any(
-        (row) => _usualRows.contains(row.resolved) && _mealScale.canScale(row),
-      );
-
-  /// "Use the photo's amounts": the bases before the usual sizes back, the
-  /// rows the user set left as set.
-  void _usePhotoAmounts() {
-    final state = _bloc.state;
-    final photo = _photoBases;
-    if (state is! BulkAddLoadedState || photo == null || !_usualInForce) {
-      return;
-    }
-    final usual = _mealScale.snapshot();
-    final amounts = _mealScale.restore(state.rows, photo);
-    setState(() => _usualBases = usual);
-    _sendScaled(state.rows, amounts);
-  }
-
-  /// Back to the usual sizes, and the size chosen with them.
-  void _useUsualSizes() {
-    final state = _bloc.state;
-    final usual = _usualBases;
-    if (state is! BulkAddLoadedState || usual == null) return;
-    final amounts = _mealScale.restore(state.rows, usual);
-    setState(() => _usualBases = null);
-    _sendScaled(state.rows, amounts);
-  }
-
-  /// The photo's own grams or millilitres for [row], kept with the meal on
-  /// Log: none for a row the read did not give, nor one whose match or
-  /// unit changed, nor one no size could change (its amount was not the
-  /// photo's estimate).
-  double? _photoAmountOf(BulkAddRow row) {
-    final photo = _photoRows[row.resolved];
-    final meal = row.meal;
-    if (photo == null || !photo.sizable || meal == null) return null;
-    if (foodKeyOf(meal) != photo.key || row.effectiveUnit != photo.unit) {
-      return null;
-    }
-    return photo.base;
-  }
-
-  /// Notes each new row's amount, and whether a row the user set has moved
-  /// from it: what makes a logged meal "corrected".
-  void _followAmountChanges(List<BulkAddRow> rows) {
-    for (final row in rows) {
-      final first = _firstAmounts.putIfAbsent(
-        row.resolved,
-        () => baseAmountOf(row),
-      );
-      if (_amountChanged || !_mealScale.isPinned(row)) continue;
-      if (_moved(first, baseAmountOf(row))) _amountChanged = true;
-    }
-  }
-
-  static bool _moved(double? first, double? now) {
-    if (first == null || now == null) return false;
-    return (now - first).abs() > 0.02 * (now > first ? now : first);
-  }
-
-  /// Whether the user changed the photo's amounts: a size other than "As
-  /// shown", an amount they set that differs, or their earlier amounts used.
-  bool _photoCorrected(List<BulkAddRow> rows) =>
-      _historyUndo != null ||
-      _amountChanged ||
-      (_mealScale.factor != 1 && rows.any(_mealScale.canScale)) ||
-      rows.any(
-        (row) =>
-            _mealScale.isPinned(row) &&
-            _moved(_firstAmounts[row.resolved], baseAmountOf(row)),
-      );
-
-  /// Whether the earlier meal is offered on [rows]: while its amounts are
-  /// used, or while enough of its foods are there and one of them is a row
-  /// the Size may change.
-  bool _historyShown(List<BulkAddRow> rows) {
-    final match = _history;
-    if (match == null) return false;
-    if (_historyUndo != null) return true;
-    return photoMealMatchStands(rows, match) &&
-        photoMealAmounts(
-          rows,
-          match.record,
-          canTake: _mealScale.canScale,
-        ).isNotEmpty;
-  }
-
-  /// [rows] as "Use your amounts" would leave them: the earlier meal's
-  /// amounts on the rows that would take them, the other rows the Size
-  /// changes at their bases (the usual sizes' while in force, else the
-  /// photo's), and the amounts the user set kept.
-  List<BulkAddRow> _withHistory(List<BulkAddRow> rows) {
-    final match = _history;
-    if (match == null) return rows;
-    final amounts = _mealScale.rebaseTargets(
-      rows,
-      photoMealAmounts(rows, match.record, canTake: _mealScale.canScale),
-    );
-    return [
-      for (final row in rows)
-        switch (amounts[row.resolved]) {
-          final text? => row.copyWith(amountText: text),
-          null => row,
-        },
-    ];
-  }
-
-  /// "Use your amounts": each shared row the Size may change takes the
-  /// earlier meal's amount as its new base, unpinned, at "As shown", and
-  /// the other rows it may change go back to their bases: a usual size in
-  /// force is the user's too, so it stays, else the photo's amount. The
-  /// question on a shared row goes, and the meal's energy is said.
-  void _useHistory() {
-    final state = _bloc.state;
-    final match = _history;
-    if (state is! BulkAddLoadedState || match == null) return;
-    final taken = photoMealAmounts(
-      state.rows,
-      match.record,
-      canTake: _mealScale.canScale,
-    );
-    if (taken.isEmpty) return;
-    final before = _mealScale.snapshot();
-    final amounts = _mealScale.rebase(state.rows, taken);
-    setState(() {
-      _historyUndo = before;
-      if (_amountQuestion case final question?
-          when state.rows.any(
-            (row) => question.isFor(row) && taken.containsKey(row.resolved),
-          )) {
-        _amountQuestion = null;
-      }
-    });
-    _sendScaled(state.rows, amounts);
-  }
-
-  /// Undo: the photo's bases and the size before, back.
-  void _undoHistory() {
-    final state = _bloc.state;
-    final before = _historyUndo;
-    if (state is! BulkAddLoadedState || before == null) return;
-    final amounts = _mealScale.restore(state.rows, before);
-    setState(() => _historyUndo = null);
-    _sendScaled(state.rows, amounts);
-  }
-
-  /// Sets [amounts] on [rows] in one go, and says the meal's energy once
-  /// the card is built.
-  void _sendScaled(
-    List<BulkAddRow> rows,
-    Map<ResolvedMealItem, String> amounts,
-  ) {
-    if (amounts.isNotEmpty) _bloc.add(ScaleRowsEvent(amounts));
-    _mealSizeSaid = [
-      for (final row in rows)
-        switch (amounts[row.resolved]) {
-          final text? => row.copyWith(amountText: text),
-          null => row,
-        },
-    ];
-  }
-
-  /// Every amount the user has not set at [factor] times the photo's, and
-  /// the meal's new energy said to a screen reader.
-  void _setMealSize(double factor) {
-    final state = _bloc.state;
-    if (state is! BulkAddLoadedState) return;
-    setState(() => _mealScale.factor = factor);
-    final amounts = _mealScale.retarget(state.rows);
-    if (amounts.isNotEmpty) _bloc.add(ScaleRowsEvent(amounts));
-    // said once the card is built: the energy is formatted per profile
-    _mealSizeSaid = [
-      for (final row in state.rows)
-        switch (amounts[row.resolved]) {
-          final text? => row.copyWith(amountText: text),
-          null => row,
-        },
-    ];
+    _review =
+        PhotoReviewController(
+          _bloc,
+          note: () => _photoNote,
+          // read when used, so a test can swap them
+          records: () => forkPhotoMealMemory().records(),
+          cookingFatFood: (grams) => forkCookingFatFood(grams),
+        )..addListener(() {
+          if (mounted) setState(() {});
+        });
   }
 
   /// "Meal now 150 kcal" to a screen reader, after a size was chosen.
   void _sayMealSize(BuildContext context) {
-    final rows = _mealSizeSaid;
+    final rows = _review.takeMealSizeSaid();
     if (rows == null) return;
-    _mealSizeSaid = null;
     final message = DishStrings.mealNow(
       EnergyDisplay.formatSumWithUnit(context, loggedKcals(rows)),
     );
@@ -920,216 +550,27 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
     );
   }
 
-  /// The user set row [index]'s amount: the meal's Size leaves it, and a
-  /// question on it is answered another way, so it goes for good.
-  void _pinRow(int index) {
-    final state = _bloc.state;
-    if (state is BulkAddLoadedState && index < state.rows.length) {
-      final row = state.rows[index];
-      _mealScale.pin(row);
-      if (_amountQuestion?.isFor(row) ?? false) {
-        setState(() => _amountQuestion = null);
-      }
-    }
-  }
-
-  /// The question asked of a photo's rows as they first arrive (before
-  /// any size), and ended once its row is broken down or matched anew.
-  void _followAmountQuestion(BulkAddLoadedState state) {
-    if (!_amountAsked) {
-      if (state.rows.isEmpty) return;
-      _amountAsked = true;
-      _amountQuestion = state.modelFailure != null
-          ? null
-          : amountQuestionFor(
-              state.rows,
-              note: _photoNote,
-              imperial: state.usesImperialUnits,
-              pinned: _mealScale.isPinned,
-            );
-      return;
-    }
-    if (_amountQuestion case final question?
-        when !question.standsIn(state.rows)) {
-      _amountQuestion = null;
-    }
-  }
-
-  /// Chip [choice] of the question on row [index] tapped. The amount the
-  /// row shows is confirmed as it is: not pinned, so the Size keeps scaling
-  /// it, and not "Set by you"; a pinned confirmed row took the Size's step
-  /// off the meal's biggest food. Another amount is taken as a typed one,
-  /// in the unit it is shown in, and the Size leaves it. Either way the
-  /// amount and the meal's energy are said.
+  /// A chip of the amount question: a row set to another amount loses its
+  /// refusal mark.
   void _answerAmount(int index, int choice) {
-    final state = _bloc.state;
-    final question = _amountQuestion;
-    if (state is! BulkAddLoadedState || question == null) return;
-    if (index >= state.rows.length || !question.isFor(state.rows[index])) {
-      return;
-    }
-    final row = state.rows[index];
-    final chip = question.answer(row, choice);
-    if (chip == null) return;
-    if (chip.unit == row.effectiveUnit && chip.text == row.amountText) {
-      setState(() {});
-      _amountSaid = (amount: chip.spoken, rows: state.rows);
-      return;
-    }
-    _setRowTo(state, index, chip);
-  }
-
-  /// Row [index] of [state] set to [chip] as the user's amount, in the unit
-  /// it is shown in: the meal's Size leaves it, and the amount and the
-  /// meal's energy are said.
-  void _setRowTo(BulkAddLoadedState state, int index, AmountChoice chip) {
-    final row = state.rows[index];
-    _mealScale.pin(row);
-    if (_quantityErrors.containsKey(index)) _clearQuantityError(index);
-    setState(() {});
-    // said once the row is built: the energy is formatted per profile
-    _amountSaid = (
-      amount: chip.spoken,
-      rows: [
-        for (final (i, r) in state.rows.indexed)
-          i == index ? r.copyWith(unit: chip.unit, amountText: chip.text) : r,
-      ],
-    );
-    if (chip.unit == row.effectiveUnit) {
-      _bloc.add(ChangeRowAmountEvent(index, chip.text));
-    } else if (chip.unit == shownEditUnit(row, state.usesImperialUnits)) {
-      _bloc.add(SetRowInShownUnitEvent(index, chip.unit, chip.text));
-    } else {
-      _bloc
-        ..add(ChangeRowUnitEvent(index, chip.unit))
-        ..add(ChangeRowAmountEvent(index, chip.text));
+    if (_review.answerAmount(index, choice) &&
+        _quantityErrors.containsKey(index)) {
+      _clearQuantityError(index);
     }
   }
 
-  /// The fat question for a photo's rows as they first arrive (D48).
-  void _askCookingFat(BulkAddLoadedState state) {
-    if (_fatAsked || state.rows.isEmpty) return;
-    _fatAsked = true;
-    if (state.modelFailure != null) return;
-    _fatAsk = cookingFatAskFor(state.rows, note: _photoNote);
-  }
-
-  /// The fat row the chips added, as it is on the review; null when none.
-  BulkAddRow? _fatRow(List<BulkAddRow> rows) {
-    final item = _fatItem;
-    if (item == null) return null;
-    for (final row in rows) {
-      if (identical(row.resolved, item)) return row;
-    }
-    return null;
-  }
-
-  /// The chip of the fat question that shows as chosen: the one at the
-  /// added row's amount, or the one tapped while its oil is looked up.
-  /// None while the row is in another unit than the chips' grams.
-  int? _fatChosen(List<BulkAddRow> rows) => switch (_fatRow(rows)) {
-    final row? when row.effectiveUnit == row.resolved.parsed.unit =>
-      cookingFatChipOf(row.amountText),
-    final _? => null,
-    null => _fatPending,
-  };
-
-  /// None (-1) takes the added row off and ends the question; an amount
-  /// adds the table's oil at it, pinned as the user's (the Size leaves
-  /// it), or sets the row it added before to it.
   Future<void> _chooseCookingFat(int choice) async {
-    final state = _bloc.state;
-    if (state is! BulkAddLoadedState) return;
-    final current = _fatRow(state.rows);
-    if (choice < 0) {
-      setState(() {
-        _fatClosed = true;
-        _fatPending = null;
-      });
-      if (current != null) _bloc.add(PutRowEvent(current.resolved, null));
-      return;
-    }
-    final grams = cookingFatGrams[choice];
-    if (current != null) {
-      // the user's amount, not a correction of the photo's
-      _firstAmounts.remove(current.resolved);
-      _bloc.add(
-        PutRowEvent(
-          current.resolved,
-          // in the grams the row was added in, whatever unit it is in now
-          current.copyWith(
-            amountText: cookingFatText(grams),
-            unit: current.resolved.parsed.unit,
-          ),
-        ),
-      );
-      return;
-    }
-    final looking = _fatPending != null;
-    setState(() => _fatPending = choice);
-    if (looking) return;
-    final read = _readSerial;
-    ResolvedMealItem? found;
-    try {
-      found = await forkCookingFatFood(grams);
-    } catch (e, stackTrace) {
-      _log.warning('Looking up the cooking fat failed', e, stackTrace);
-    }
-    if (!mounted || read != _readSerial) return;
-    final pending = _fatPending;
-    setState(() => _fatPending = null);
-    if (pending == null || _fatClosed) return;
-    if (found == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text(DishStrings.fatNotFound)));
-      return;
-    }
-    final row = _cookingFatRow(found, cookingFatGrams[pending]);
-    _mealScale.pin(row);
-    setState(() => _fatItem = row.resolved);
-    _bloc.add(PutRowEvent(row.resolved, row));
-  }
-
-  /// An ordinary row of [found] at [grams], as the user's amount: in grams,
-  /// or grams-or-millilitres for a food that has no grams.
-  BulkAddRow _cookingFatRow(ResolvedMealItem found, double grams) {
-    final g = UnitDropdownItem.g.toString();
-    final probe = BulkAddRow(
-      resolved: found,
-      selectedIndex: found.selectedIndex,
-      amountText: '',
-      unit: g,
-    );
-    final unit = probe.allowedUnits.contains(g)
-        ? g
-        : UnitDropdownItem.gml.toString();
-    final item = ResolvedMealItem(
-      parsed: ParsedMealItem(
-        query: found.parsed.query,
-        quantity: grams,
-        unit: unit,
-      ),
-      candidates: found.candidates,
-      selectedIndex: found.selectedIndex,
-      // the user asked for it: no "uncertain" on it
-      confidence: 1,
-    );
-    return BulkAddRow(
-      resolved: item,
-      selectedIndex: item.selectedIndex,
-      amountText: cookingFatText(grams),
-      unit: unit,
-      amountEditedByUser: true,
-      fromPhoto: true,
-    );
+    final notFound = await _review.chooseCookingFat(choice);
+    if (!notFound || !mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text(DishStrings.fatNotFound)));
   }
 
   /// "150 grams. Meal now 450 kcal" to a screen reader, after an answer.
   void _sayAmountAnswer(BuildContext context) {
-    final said = _amountSaid;
+    final said = _review.takeAmountSaid();
     if (said == null) return;
-    _amountSaid = null;
     final message = DishStrings.amountSaid(
       said.amount,
       EnergyDisplay.formatSumWithUnit(context, loggedKcals(said.rows)),
@@ -1209,8 +650,8 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
     // screen owns it and has to close it.
     // before the bloc it listens to
     _dishBreakdown.dispose();
+    _review.dispose();
     _stagedRead.cancel();
-    _scaleFollow.cancel();
     _bloc.close();
     _textController.dispose();
     _noteFocus.dispose();
@@ -2020,9 +1461,9 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
             day: _args.day,
             loggedAt: DateTime.now(),
             slot: _args.intakeTypeEntity.name,
-            dish: _arrivalDish,
-            corrected: _photoCorrected(state.rows),
-            photoAmountOf: _photoAmountOf,
+            dish: _review.arrivalDish,
+            corrected: _review.photoCorrected(state.rows),
+            photoAmountOf: _review.photoAmountOf,
           )
         : null;
 

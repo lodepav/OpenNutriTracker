@@ -266,7 +266,7 @@ extension _BulkAddDish on _BulkAddScreenState {
     if (amounts == null) return;
     // a portion the user set: the meal's Size leaves the dish's foods
     for (final index in dishMembers(state.rows, group)) {
-      _pinRow(index);
+      _review.pinRow(index);
     }
     for (final MapEntry(:key, :value) in amounts.entries) {
       if (_quantityErrors.containsKey(key)) _clearQuantityError(key);

@@ -260,18 +260,18 @@ extension _BulkAddBody on _BulkAddScreenState {
             ),
             MacrosLine(carbs: meal.carbs, fat: meal.fat, protein: meal.protein),
             if (state.source == BulkAddReadSource.photo &&
-                _mealScale.offered(state.rows)) ...[
-              if (_historyShown(state.rows)) ...[
+                _review.mealScale.offered(state.rows)) ...[
+              if (_review.historyShown(state.rows)) ...[
                 const SizedBox(height: 10),
                 _buildHistoryOffer(context, state),
               ],
-              if (_usualShown(state.rows)) ...[
+              if (_review.usualShown(state.rows)) ...[
                 const SizedBox(height: 10),
                 UsualSizesView(
-                  foods: _usualFoods,
-                  inForce: _usualInForce,
-                  onUsePhoto: _usePhotoAmounts,
-                  onUseUsual: _useUsualSizes,
+                  foods: _review.usualFoods,
+                  inForce: _review.usualInForce,
+                  onUsePhoto: _review.usePhotoAmounts,
+                  onUseUsual: _review.useUsualSizes,
                 ),
               ],
               const SizedBox(height: 10),
@@ -279,12 +279,12 @@ extension _BulkAddBody on _BulkAddScreenState {
             ],
             // the fat it was cooked or dressed with, once per read (D48)
             if (state.source == BulkAddReadSource.photo &&
-                _fatAsk != null &&
-                !_fatClosed) ...[
+                _review.fatAsk != null &&
+                !_review.fatClosed) ...[
               const SizedBox(height: 10),
               CookingFatView(
-                ask: _fatAsk!,
-                chosen: _fatChosen(state.rows),
+                ask: _review.fatAsk!,
+                chosen: _review.fatChosen(state.rows),
                 onChosen: (choice) => unawaited(_chooseCookingFat(choice)),
               ),
             ],
@@ -324,17 +324,17 @@ extension _BulkAddBody on _BulkAddScreenState {
   /// The amounts of a meal like this one that the user corrected before:
   /// what the meal comes to with them, and one tap to use them.
   Widget _buildHistoryOffer(BuildContext context, BulkAddLoadedState state) {
-    final record = _history!.record;
+    final record = _review.history!.record;
     return HistoryOfferView(
       day: record.day,
       slot: record.slot,
       energy: EnergyDisplay.formatSumWithUnit(
         context,
-        loggedKcals(_withHistory(state.rows)),
+        loggedKcals(_review.withHistory(state.rows)),
       ),
-      taken: _historyUndo != null,
-      onUse: _useHistory,
-      onUndo: _undoHistory,
+      taken: _review.historyTaken,
+      onUse: _review.useHistory,
+      onUndo: _review.undoHistory,
     );
   }
 
@@ -345,11 +345,11 @@ extension _BulkAddBody on _BulkAddScreenState {
     final muted = theme.textTheme.bodySmall?.copyWith(
       color: paletteOf(context).textMuted,
     );
-    final allSet = _mealScale.allSet(state.rows);
+    final allSet = _review.mealScale.allSet(state.rows);
     // the user's earlier amounts in use: the sizes scale those
-    final own = _historyUndo != null;
+    final own = _review.historyTaken;
     // the usual sizes in force: the sizes scale those
-    final usual = _usualInForce;
+    final usual = _review.usualInForce;
     _sayMealSize(context);
     return Column(
       key: const ValueKey('bulk-add-meal-size'),
@@ -380,8 +380,10 @@ extension _BulkAddBody on _BulkAddScreenState {
                     ),
                   ),
                   materialTapTargetSize: MaterialTapTargetSize.padded,
-                  selected: _mealScale.factor == factor,
-                  onSelected: allSet ? null : (_) => _setMealSize(factor),
+                  selected: _review.mealScale.factor == factor,
+                  onSelected: allSet
+                      ? null
+                      : (_) => _review.setMealSize(factor),
                 ),
               ),
           ],

@@ -78,9 +78,9 @@ extension _BulkAddRow on _BulkAddScreenState {
                 ),
               ?note,
               // an amount the meal's Size leaves, while a size is chosen
-              if (_mealScale.factor != 1 &&
-                  _mealScale.isPinned(row) &&
-                  _mealScale.isEligible(row))
+              if (_review.mealScale.factor != 1 &&
+                  _review.mealScale.isPinned(row) &&
+                  _review.mealScale.isEligible(row))
                 Text(
                   DishStrings.setByYou,
                   key: ValueKey('bulk-add-set-by-you-$index'),
@@ -163,7 +163,7 @@ extension _BulkAddRow on _BulkAddScreenState {
               child: _buildAmountRow(context, state, index, row),
             ),
           // the one amount a photo's review asks about
-          if (_amountQuestion case final question?
+          if (_review.amountQuestion case final question?
               when !faded && question.isFor(row))
             Padding(
               padding: const EdgeInsets.fromLTRB(52, 0, 12, 6),
@@ -431,7 +431,7 @@ extension _BulkAddRow on _BulkAddScreenState {
         steppedAmount(from, amountStep(unit, from), up: up),
       );
       if (_quantityErrors.containsKey(index)) _clearQuantityError(index);
-      _pinRow(index);
+      _review.pinRow(index);
       _bloc.add(
         shown == null
             ? ChangeRowAmountEvent(index, next)
@@ -534,7 +534,7 @@ extension _BulkAddRow on _BulkAddScreenState {
         amount = amountInUnit(text, unit, to, meal) ?? text;
       }
       if (_quantityErrors.containsKey(index)) _clearQuantityError(index);
-      _pinRow(index);
+      _review.pinRow(index);
       // typed in the unit shown, which the user did not choose: the row
       // asks to check its amount still, as it would in metric units
       if (!unitChosen &&
