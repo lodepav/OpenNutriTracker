@@ -27,8 +27,131 @@ CheckInRecord _record(int day, double spent, double proposed, double set) =>
       acceptedKcal: set,
     );
 
+CheckInRecord _full(
+  int day, {
+  required double base,
+  double activity = 0,
+  required double proposed,
+  required double set,
+  double rate = -0.5,
+  double? targetKg = 75,
+  String basis = 'expenditure',
+}) => CheckInRecord(
+  date: DateTime(2026, 10, day),
+  expenditureKcal: base + activity,
+  proposedKcal: proposed,
+  acceptedKcal: set,
+  activityKcal: activity,
+  baseKcal: base,
+  goalRateKgPerWeek: rate,
+  targetWeightKg: targetKg,
+  basis: basis,
+);
+
 void main() {
   tearDown(() => AdaptiveStore.settings.value = const AdaptiveSettings());
+
+  group('checkInChangeParts', () {
+    test('the parts add up to the change', () {
+      final before = _full(5, base: 2600, proposed: 2100, set: 2050);
+      final now = _full(
+        12,
+        base: 2550,
+        activity: 120,
+        proposed: 2345,
+        set: 2400,
+        rate: -0.25,
+      );
+      final parts = checkInChangeParts(before, now)!;
+      expect(
+        {for (final p in parts) p.label: p.kcal},
+        {
+          'Your estimate moved': -50,
+          'Counted activity': 120,
+          'You edited it': 105,
+          "Goal's pace or the plan": 175,
+        },
+      );
+      expect(parts.fold(0.0, (a, p) => a + p.kcal), 350);
+    });
+
+    test('the rounding of an accepted target is not an edit', () {
+      final before = _full(5, base: 2600, proposed: 2100.4, set: 2100);
+      final now = _full(12, base: 2500, proposed: 1999.5, set: 2000);
+      final parts = {
+        for (final p in checkInChangeParts(before, now)!) p.label: p.kcal,
+      };
+      expect(parts['You edited it'], 0);
+      expect(parts.values.fold(0.0, (a, b) => a + b), -100);
+    });
+
+    test('an older record has no split', () {
+      final full = _full(12, base: 2550, proposed: 2050, set: 2050);
+      expect(checkInChangeParts(_record(5, 2600, 2100, 2100), full), isNull);
+      expect(checkInChangeParts(full, _record(19, 2600, 2100, 2100)), isNull);
+      final noBasis = CheckInRecord(
+        date: DateTime(2026, 10, 5),
+        expenditureKcal: 2600,
+        proposedKcal: 2100,
+        acceptedKcal: 2100,
+        goalRateKgPerWeek: -0.5,
+      );
+      expect(checkInChangeParts(noBasis, full), isNull);
+    });
+  });
+
+  testWidgets('a tap shows why the target moved', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: CheckInHistoryScreen(
+          store: _Store([
+            _record(1, 2600, 2100, 2100),
+            _full(5, base: 2600, proposed: 2100, set: 2100),
+            _full(
+              12,
+              base: 2550,
+              proposed: 2300,
+              set: 2300,
+              rate: -0.25,
+              basis: 'profile',
+            ),
+          ]),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final tappable = find.byKey(const ValueKey('check-in-2026-10-12'));
+    expect(
+      tester.getSemantics(tappable),
+      isSemantics(hint: 'Shows why it moved', hasTapAction: true),
+    );
+    // The first full record follows an older one: no split.
+    expect(
+      tester
+          .widget<ListTile>(find.byKey(const ValueKey('check-in-2026-10-05')))
+          .onTap,
+      isNull,
+    );
+
+    await tester.tap(tappable);
+    await tester.pumpAndSettle();
+    expect(find.text('Why it moved from 5 Oct'), findsOneWidget);
+    expect(find.text('Your estimate moved'), findsOneWidget);
+    expect(find.text('-50 kcal'), findsOneWidget);
+    expect(find.text("Goal's pace or the plan"), findsOneWidget);
+    expect(find.text('+250 kcal'), findsOneWidget);
+    // Parts that round to nothing are left out.
+    expect(find.text('Counted activity'), findsNothing);
+    expect(find.text('You edited it'), findsNothing);
+    expect(find.text('In all'), findsOneWidget);
+    expect(find.text('Pace went from -0.5 to -0.25 kg a week.'), findsOne);
+    expect(
+      find.text('How activity or a kg is counted changed in Settings.'),
+      findsOne,
+    );
+    expect(find.textContaining('Target weight'), findsNothing);
+  });
 
   Future<void> open(WidgetTester tester, _Store store) async {
     AdaptiveStore.settings.value = const AdaptiveSettings(adaptiveTarget: true);
@@ -108,6 +231,21 @@ void main() {
           store: _Store([
             _record(20, 2500, 2100, 2000),
             _record(13, 2480, 2050, 2050),
+          ]),
+        ),
+      );
+    },
+  );
+
+  testWidgets(
+    'tappable rows at 200% text: nothing cut, the targets and contrast',
+    (tester) async {
+      await checkScreen(
+        tester,
+        CheckInHistoryScreen(
+          store: _Store([
+            _full(13, base: 2480, proposed: 2050, set: 2050),
+            _full(20, base: 2500, proposed: 2100, set: 2000),
           ]),
         ),
       );

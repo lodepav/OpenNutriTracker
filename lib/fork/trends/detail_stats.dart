@@ -70,7 +70,10 @@ typedef DayValue = ({double value, DateTime date});
 /// How the logged days of the window went against their goals, and the
 /// highest and lowest of them: the energy's, or [eaten] and [goal]'s, a
 /// macro's grams. [today], still being eaten, is left out: its breakfast is
-/// neither under the goal nor the lowest day.
+/// neither under the goal nor the lowest day. [overBy] and [underBy] are the
+/// mean amount past and short of the goal on the over and under days, null
+/// with none; [topThreeShare] the share of all the excess the three most
+/// over days gave, null with three over days or fewer.
 ({
   int onTarget,
   int under,
@@ -78,6 +81,9 @@ typedef DayValue = ({double value, DateTime date});
   int logged,
   DayValue? highest,
   DayValue? lowest,
+  double? overBy,
+  double? underBy,
+  double? topThreeShare,
 })
 dayOutcomes(
   List<TrackedDayEntity> days,
@@ -91,7 +97,8 @@ dayOutcomes(
     for (final d in days)
       if (isLogged(d) && window.contains(_date(d.day)) && eaten(d) != null) d,
   ];
-  var onTarget = 0, under = 0, over = 0;
+  var onTarget = 0;
+  final overs = <double>[], unders = <double>[];
   for (final d in logged) {
     final target = goal(d) ?? 0;
     if (target <= 0) continue;
@@ -99,11 +106,13 @@ dayOutcomes(
     if (off.abs() <= target * onTargetShare) {
       onTarget++;
     } else if (off < 0) {
-      under++;
+      unders.add(-off);
     } else {
-      over++;
+      overs.add(off);
     }
   }
+  overs.sort((a, b) => b.compareTo(a));
+  final excess = overs.fold(0.0, (a, b) => a + b);
   DayValue? pick(bool Function(double, double) better) {
     if (logged.isEmpty) return null;
     final d = logged.reduce((a, b) => better(eaten(b)!, eaten(a)!) ? b : a);
@@ -112,11 +121,16 @@ dayOutcomes(
 
   return (
     onTarget: onTarget,
-    under: under,
-    over: over,
+    under: unders.length,
+    over: overs.length,
     logged: logged.length,
     highest: pick((a, b) => a > b),
     lowest: pick((a, b) => a < b),
+    overBy: meanOf(overs),
+    underBy: meanOf(unders),
+    topThreeShare: overs.length <= 3
+        ? null
+        : overs.take(3).fold(0.0, (a, b) => a + b) / excess,
   );
 }
 
@@ -202,41 +216,56 @@ typedef WeekPart = ({
   );
 }
 
-/// The mean energy of the logged [days] by weekday (1 for Monday), and
-/// over them all; null without a logged day.
-({Map<int, double> byWeekday, double mean})? weekdayMeans(
+/// The mean energy of the logged [days] by weekday (1 for Monday), and the
+/// mean goal by weekday over those of its days that have one (a weekday
+/// shift is stored in each day's goal); null without a logged day.
+({Map<int, double> byWeekday, Map<int, double> goalByWeekday})? weekdayMeans(
   List<TrackedDayEntity> days,
 ) {
   final logged = days.where(isLogged).toList();
   if (logged.isEmpty) return null;
   final sums = <int, (double, int)>{};
+  final goals = <int, (double, int)>{};
   for (final d in logged) {
     final (sum, n) = sums[d.day.weekday] ?? (0.0, 0);
     sums[d.day.weekday] = (sum + d.caloriesTracked, n + 1);
+    if (d.calorieGoal <= 0) continue;
+    final (goal, g) = goals[d.day.weekday] ?? (0.0, 0);
+    goals[d.day.weekday] = (goal + d.calorieGoal, g + 1);
   }
-  return (
-    byWeekday: {
-      for (final MapEntry(:key, :value) in sums.entries)
-        key: value.$1 / value.$2,
-    },
-    mean: meanOf([for (final d in logged) d.caloriesTracked])!,
-  );
+  Map<int, double> means(Map<int, (double, int)> of) => {
+    for (final MapEntry(:key, :value) in of.entries) key: value.$1 / value.$2,
+  };
+  return (byWeekday: means(sums), goalByWeekday: means(goals));
 }
 
-/// The weekday furthest from [means]' overall mean, and by how much, once
-/// it is at least [atLeast] kcal off; null when none is.
+/// The weekday whose mean eaten is furthest from its own mean goal, and by
+/// how much (over when positive), once at least [atLeast] kcal off; null
+/// when none is. A weekday without a goal cannot stand out.
 ({int weekday, double off})? standoutWeekday(
-  ({Map<int, double> byWeekday, double mean}) means, {
+  ({Map<int, double> byWeekday, Map<int, double> goalByWeekday}) means, {
   double atLeast = 150,
 }) {
   ({int weekday, double off})? best;
   for (final MapEntry(:key, :value) in means.byWeekday.entries) {
-    final off = value - means.mean;
+    final goal = means.goalByWeekday[key];
+    if (goal == null) continue;
+    final off = value - goal;
     if (off.abs() >= atLeast && (best == null || off.abs() > best.off.abs())) {
       best = (weekday: key, off: off);
     }
   }
   return best;
+}
+
+/// The share of the weekdays' weekly deficit the weekend eats back: its two
+/// days' surplus over the five days' deficit. Null unless the weekdays run
+/// a deficit and the weekend a surplus.
+double? weekendGiveBack(({WeekPart weekdays, WeekPart weekend}) split) {
+  final weekdays = split.weekdays.balance, weekend = split.weekend.balance;
+  if (weekdays == null || weekend == null) return null;
+  if (weekdays >= 0 || weekend <= 0) return null;
+  return weekend * 2 / (-weekdays * 5);
 }
 
 /// The share of the window's energy each macro gave, by 4, 9 and 4 kcal a

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:intl/intl.dart';
+import 'package:opennutritracker/core/domain/entity/weight_log_entity.dart';
 import 'package:opennutritracker/core/domain/entity/user_gender_entity.dart';
 import 'package:opennutritracker/fork/body/measurement_store.dart';
 import 'package:opennutritracker/fork/body/waist_ratio.dart';
@@ -82,6 +84,98 @@ void main() {
     await tester.tap(find.text('What is waist to height?'));
     await tester.pumpAndSettle();
     expect(find.byType(AlertDialog), findsOne);
+  });
+
+  group('waistAgainstWeight', () {
+    WaistPoint point(int day, double cm) =>
+        (date: _day(day), waistCm: cm, ratio: cm / 180, hipRatio: null);
+
+    test('first to last measurement, the trend those days', () {
+      final w = waistAgainstWeight(
+        [point(-30, 92), point(-20, 91), point(-2, 90)],
+        {
+          _day(-40): 85,
+          // The nearest trend day at or before the first measurement.
+          _day(-33): 82.4,
+          _day(-2): 81,
+          _day(0): 80,
+        },
+      )!;
+      expect(w.from, _day(-30));
+      expect(w.to, _day(-2));
+      expect(w.waistCm, -2);
+      expect(w.trendKg, closeTo(-1.4, 1e-9));
+    });
+
+    test('one measurement, or no trend near either end: nothing', () {
+      final trend = {for (var d = -40; d <= 0; d++) _day(d): 80.0};
+      expect(waistAgainstWeight([point(-2, 90)], trend), isNull);
+      expect(waistAgainstWeight([point(-30, 92), point(-2, 90)], {}), isNull);
+      // The trend starts after the first measurement.
+      expect(
+        waistAgainstWeight(
+          [point(-30, 92), point(-2, 90)],
+          {_day(-29): 80, _day(-2): 79},
+        ),
+        isNull,
+      );
+      // Over a week before the last one is too far.
+      expect(
+        waistAgainstWeight(
+          [point(-30, 92), point(-2, 90)],
+          {_day(-30): 80, _day(-10): 79},
+        ),
+        isNull,
+      );
+    });
+  });
+
+  testWidgets('the waist against the trend weight over the range', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: WaistRatioPage(
+          imperial: false,
+          rangeDays: 30,
+          frame: () async => (heightCm: 180.0, gender: UserGenderEntity.male),
+          load: () async => [
+            _m(-20, BodyMetric.waist, 92),
+            _m(-1, BodyMetric.waist, 90),
+          ],
+          weights: () async => [
+            WeightLogEntity(date: _day(-25), weightKg: 82),
+            WeightLogEntity(date: _day(-1), weightKg: 82),
+          ],
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    // A steady weight: its trend has not moved.
+    expect(
+      find.text(
+        'Waist -2.0 cm · trend weight 0.0 kg, '
+        '${DateFormat.MMMd().format(_day(-20))} to '
+        '${DateFormat.MMMd().format(_day(-1))}',
+      ),
+      findsOne,
+    );
+  });
+
+  testWidgets('one waist measurement: no change shown', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: WaistRatioPage(
+          imperial: false,
+          rangeDays: 30,
+          frame: () async => (heightCm: 180.0, gender: UserGenderEntity.male),
+          load: () async => [_m(-1, BodyMetric.waist, 90)],
+          weights: () async => [WeightLogEntity(date: _day(-25), weightKg: 82)],
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.textContaining('trend weight'), findsNothing);
   });
 
   testWidgets('no height: it asks for one', (tester) async {

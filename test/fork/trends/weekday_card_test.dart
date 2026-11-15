@@ -25,11 +25,12 @@ class _TrackedDays extends Fake implements GetTrackedDayUsecase {
   }
 }
 
-TrackedDayEntity _tracked(int offset, double kcal) => TrackedDayEntity(
-  day: DateTime(_today.year, _today.month, _today.day + offset, 9),
-  calorieGoal: 2000,
-  caloriesTracked: kcal,
-);
+TrackedDayEntity _tracked(int offset, double kcal, {double goal = 2000}) =>
+    TrackedDayEntity(
+      day: DateTime(_today.year, _today.month, _today.day + offset, 9),
+      calorieGoal: goal,
+      caloriesTracked: kcal,
+    );
 
 Future<void> _pump(WidgetTester tester, {double scale = 1}) async {
   await tester.pumpWidget(
@@ -64,9 +65,30 @@ void main() {
     expect(usecase.start, DateTime(2026, 7, 29));
     expect(find.text('By weekday, last 3 months'), findsOneWidget);
     expect(
-      find.text('Saturdays run 600 kcal over your average.'),
+      find.text('Saturdays run 700 kcal over their goal.'),
       findsOneWidget,
     );
+    expect(find.bySemanticsLabel('Saturday, 2700 kcal'), findsOneWidget);
+  });
+
+  testWidgets('a planned high day eaten to its goal is not named', (
+    tester,
+  ) async {
+    // Saturdays' goal shifted up 700 and eaten to it.
+    getIt.registerSingleton<GetTrackedDayUsecase>(
+      _TrackedDays([
+        for (var w = 0; w < 4; w++)
+          for (var i = 0; i < 7; i++)
+            _tracked(
+              -w * 7 - i,
+              i == 2 ? 2700 : 2000,
+              goal: i == 2 ? 2700 : 2000,
+            ),
+      ]),
+    );
+    await _pump(tester);
+    expect(find.text('No weekday runs far from its goal.'), findsOneWidget);
+    // The bar still shows what was eaten.
     expect(find.bySemanticsLabel('Saturday, 2700 kcal'), findsOneWidget);
   });
 
@@ -75,7 +97,7 @@ void main() {
       _TrackedDays([_tracked(0, 2000), _tracked(-1, 2050)]),
     );
     await _pump(tester);
-    expect(find.text('No weekday runs far from your average.'), findsOneWidget);
+    expect(find.text('No weekday runs far from its goal.'), findsOneWidget);
     expect(find.bySemanticsLabel('Sunday, 2050 kcal'), findsOneWidget);
     expect(find.bySemanticsLabel('Friday, nothing logged'), findsOneWidget);
   });
