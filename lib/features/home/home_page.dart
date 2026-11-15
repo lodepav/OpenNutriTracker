@@ -523,27 +523,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     IntakeEntity intakeEntity,
     bool usesImperialUnits,
   ) async {
-    // [fork] S10 meal-groups
-    var mealEdited = false;
-    final handled = await editMealGroupLeftovers(
-      context,
-      intakeEntity,
-      update: (id, amount) {
-        mealEdited = true;
-        return _homeBloc.updateIntakeItem(id, {'amount': amount});
-      },
-      usesImperialUnits: usesImperialUnits, // [fork] S90
-    );
-    if (handled) {
-      if (!mealEdited) return;
-      _homeBloc.add(const LoadItemsEvent());
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(S.of(context).itemUpdatedSnackbar)),
-        );
-      }
-      return;
-    }
+    // [fork] S10 meal-groups: an entry of a meal offers its leftovers
+    final mealGroup = await mealGroupEntriesOf(intakeEntity);
     if (!context.mounted) return;
     // [/fork]
     final changeIntakeAmount = await showDialog<double>(
@@ -551,11 +532,35 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       builder: (context) => EditDialog(
         intakeEntity: intakeEntity,
         usesImperialUnits: usesImperialUnits,
+        wholeMeal: mealGroup != null, // [fork] S10
       ),
     );
     // [fork] S83 tap-delete
     if (changeIntakeAmount == EditDialog.deleteResult) {
       await onDeleteIntake(intakeEntity, null);
+      return;
+    }
+    // [/fork]
+    // [fork] S10 meal-groups
+    if (changeIntakeAmount == EditDialog.wholeMealResult && mealGroup != null) {
+      if (!context.mounted) return;
+      var mealEdited = false;
+      await editWholeMealLeftovers(
+        context,
+        mealGroup,
+        update: (id, amount) {
+          mealEdited = true;
+          return _homeBloc.updateIntakeItem(id, {'amount': amount});
+        },
+        usesImperialUnits: usesImperialUnits, // [fork] S90
+      );
+      if (!mealEdited) return;
+      _homeBloc.add(const LoadItemsEvent());
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(S.of(context).itemUpdatedSnackbar)),
+        );
+      }
       return;
     }
     // [/fork]

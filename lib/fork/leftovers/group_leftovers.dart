@@ -20,11 +20,6 @@ abstract final class LeftoverStrings {
       "AI estimate: $count ${count == 1 ? 'item' : 'items'} didn't match a "
       'food. Check each amount.';
 
-  static const chooseTitle = 'Edit';
-  static const justThis = 'Just this item';
-  static const justThisHint = 'Its amount and details';
-  static String wholeMeal(int count) => 'Whole meal ($count items)';
-  static const wholeMealHint = "What's left over of each item";
   static const title = 'Left over from the meal';
   static const hint = 'Pick what share is left, then adjust any item.';
   static const left = 'Left';
@@ -55,63 +50,48 @@ Map<String, double> amountsAfterLeftovers(
     },
 };
 
-/// Seams S9 (diary) and S10 (home): on an entry logged as part of a meal,
-/// asks whether the edit is for it alone or for the whole meal's leftovers.
-/// Returns true when it handled the edit (saved or cancelled), false to let
-/// upstream's single-entry dialog run.
-Future<bool> editMealGroupLeftovers(
-  BuildContext context,
+/// A meal group and those of its entries that still exist.
+typedef MealGroupEntries = ({MealGroup group, List<IntakeEntity> members});
+
+/// Seams S9 (diary) and S10 (home): the meal [intake] was logged as part
+/// of, with its entries that still exist, or null when there is no meal of
+/// two or more. The edit dialog offers the whole meal's leftovers on it.
+Future<MealGroupEntries?> mealGroupEntriesOf(
   IntakeEntity intake, {
-  required Future<void> Function(String intakeId, double amount) update,
   MealGroupStore? store,
   Future<IntakeEntity?> Function(String id)? intakeById,
+}) async {
+  try {
+    final group = await (store ?? MealGroupStore()).groupOf(intake.id);
+    if (group == null) return null;
+    final byId = intakeById ?? locator<GetIntakeUsecase>().getIntakeById;
+    final members = [for (final id in group.intakeIds) ?await byId(id)];
+    // Entries deleted since leave a group of one, which is just this entry.
+    return members.length < 2 ? null : (group: group, members: members);
+  } catch (e, stackTrace) {
+    // Like S8: a failed lookup only loses the grouping, and the entry is
+    // still edited on its own.
+    Logger('MealGroups').warning('Reading a meal group failed', e, stackTrace);
+    return null;
+  }
+}
+
+/// Seams S9 (diary) and S10 (home): the leftovers of the whole [meal],
+/// saved through [update] for each entry whose amount changed.
+Future<void> editWholeMealLeftovers(
+  BuildContext context,
+  MealGroupEntries meal, {
+  required Future<void> Function(String intakeId, double amount) update,
   ReadLeftoversUseCase? leftovers,
   MealPhotoCache? photoCache,
   bool usesImperialUnits = false,
   Future<MealPhoto?> Function(AiSelection selection)? takePhoto,
 }) async {
-  final group = await (store ?? MealGroupStore()).groupOf(intake.id).catchError(
-    (Object e, StackTrace stackTrace) {
-      // Like S8: a failed lookup only loses the grouping, and the entry is
-      // still edited on its own.
-      Logger(
-        'MealGroups',
-      ).warning('Reading a meal group failed', e, stackTrace);
-      return null;
-    },
-  );
-  if (group == null || !context.mounted) return false;
-  final byId = intakeById ?? locator<GetIntakeUsecase>().getIntakeById;
-  final members = [for (final id in group.intakeIds) ?await byId(id)];
-  // Entries deleted since leave a group of one, which is just this entry.
-  if (members.length < 2 || !context.mounted) return false;
-
-  final wholeMeal = await showDialog<bool>(
-    context: context,
-    builder: (context) => SimpleDialog(
-      title: const Text(LeftoverStrings.chooseTitle),
-      children: [
-        // two-line tiles: 48 dp and over, and each says where it leads
-        ListTile(
-          title: const Text(LeftoverStrings.justThis),
-          subtitle: const Text(LeftoverStrings.justThisHint),
-          onTap: () => Navigator.pop(context, false),
-        ),
-        ListTile(
-          title: Text(LeftoverStrings.wholeMeal(members.length)),
-          subtitle: const Text(LeftoverStrings.wholeMealHint),
-          onTap: () => Navigator.pop(context, true),
-        ),
-      ],
-    ),
-  );
-  if (wholeMeal == null) return true;
-  if (!wholeMeal || !context.mounted) return false;
-
+  final (:group, :members) = meal;
   final reader =
       leftovers ?? ReadLeftoversUseCase(locator(), locator<http.Client>());
   final selection = await reader.selection;
-  if (!context.mounted) return true;
+  if (!context.mounted) return;
   final amounts = await showDialog<Map<String, double>>(
     context: context,
     builder: (_) => GroupLeftoversDialog(
@@ -132,13 +112,12 @@ Future<bool> editMealGroupLeftovers(
             },
     ),
   );
-  if (amounts == null) return true;
+  if (amounts == null) return;
   for (final member in members) {
     final amount = amounts[member.id]!;
     // Sequential: the day totals are a read-modify-write.
     if (amount != member.amount) await update(member.id, amount);
   }
-  return true;
 }
 
 /// The camera, encoded as a meal photo is for the same destination; null

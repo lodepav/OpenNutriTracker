@@ -3,10 +3,12 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:opennutritracker/core/domain/entity/intake_entity.dart';
 import 'package:opennutritracker/core/domain/entity/intake_type_entity.dart';
+import 'package:opennutritracker/core/presentation/widgets/edit_dialog.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_nutriments_entity.dart';
 import 'package:opennutritracker/core/utils/ai_credential_storage.dart';
@@ -17,6 +19,7 @@ import 'package:opennutritracker/fork/leftovers/group_leftovers.dart';
 import 'package:opennutritracker/fork/units/amount_text.dart';
 import 'package:opennutritracker/fork/leftovers/meal_groups.dart';
 import 'package:opennutritracker/fork/leftovers/meal_photo_cache.dart';
+import 'package:opennutritracker/generated/l10n.dart';
 
 IntakeEntity _intake(String id, String name, double amount) => IntakeEntity(
   id: id,
@@ -133,56 +136,179 @@ void main() {
     });
   });
 
-  group('editMealGroupLeftovers', () {
+  group('mealGroupEntriesOf', () {
     final entries = {
       for (final i in [_rice, _curry, _naan]) i.id: i,
     };
 
-    /// Taps an entry and returns whether the fork handled the edit, plus
-    /// the updates it made.
-    Future<(Future<bool>, Map<String, double>)> tap(
+    test('finds every entry of the meal that still exists', () async {
+      await store.record(['rice', 'curry', 'naan'], DateTime(2026, 10, 22));
+
+      final meal = await mealGroupEntriesOf(
+        _curry,
+        store: store,
+        intakeById: (id) async => id == 'naan' ? null : entries[id],
+      );
+      expect(meal!.members.map((i) => i.id), ['rice', 'curry']);
+    });
+
+    test('a meal of one remaining entry is none', () async {
+      await store.record(['rice', 'curry'], DateTime(2026, 10, 22));
+
+      final meal = await mealGroupEntriesOf(
+        _curry,
+        store: store,
+        intakeById: (id) async => id == 'rice' ? null : entries[id],
+      );
+      expect(meal, isNull);
+    });
+
+    test('a failed lookup is no meal, not an error', () async {
+      final broken = MealGroupStore(() async => throw StateError('box'));
+
+      expect(await mealGroupEntriesOf(_curry, store: broken), isNull);
+      await store.record(['rice', 'curry'], DateTime(2026, 10, 22));
+      expect(
+        await mealGroupEntriesOf(
+          _curry,
+          store: store,
+          intakeById: (_) async => throw StateError('intakes'),
+        ),
+        isNull,
+      );
+    });
+  });
+
+  group('the edit dialog of a meal entry', () {
+    final entries = {
+      for (final i in [_rice, _curry, _naan]) i.id: i,
+    };
+
+    /// Taps an entry as Home and the Diary do: the meal is looked up, the
+    /// edit dialog opens, and its whole-meal button opens the leftovers.
+    /// Returns the updates the leftovers made.
+    Future<Map<String, double>> tap(
       WidgetTester tester,
       IntakeEntity intake, {
       _Reader? reader,
       bool imperial = false,
+      List<String> meal = const ['rice', 'curry', 'naan'],
+      MealGroupStore? lookup,
     }) async {
       final updates = <String, double>{};
-      late Future<bool> handled;
       await tester.pumpWidget(
         MaterialApp(
+          localizationsDelegates: const [
+            S.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: S.supportedLocales,
           home: Builder(
             builder: (context) => TextButton(
-              onPressed: () => handled = editMealGroupLeftovers(
-                context,
-                intake,
-                store: store,
-                intakeById: (id) async => entries[id],
-                update: (id, amount) async => updates[id] = amount,
-                leftovers: reader ?? _Reader(),
-                photoCache: MealPhotoCache(dir: () async => dir),
-                takePhoto: (_) async => _photo,
-                usesImperialUnits: imperial,
-              ),
+              onPressed: () async {
+                final group = await mealGroupEntriesOf(
+                  intake,
+                  store: lookup ?? store,
+                  intakeById: (id) async => entries[id],
+                );
+                if (!context.mounted) return;
+                final result = await showDialog<double>(
+                  context: context,
+                  builder: (_) => EditDialog(
+                    intakeEntity: intake,
+                    usesImperialUnits: imperial,
+                    wholeMeal: group != null,
+                  ),
+                );
+                if (result != EditDialog.wholeMealResult || group == null) {
+                  return;
+                }
+                if (!context.mounted) return;
+                await editWholeMealLeftovers(
+                  context,
+                  group,
+                  update: (id, amount) async => updates[id] = amount,
+                  leftovers: reader ?? _Reader(),
+                  photoCache: MealPhotoCache(dir: () async => dir),
+                  takePhoto: (_) async => _photo,
+                  usesImperialUnits: imperial,
+                );
+              },
               child: const Text('tap'),
             ),
           ),
         ),
       );
-      await tester.runAsync(
-        () => store.record(['rice', 'curry', 'naan'], DateTime(2026, 10, 22)),
-      );
+      await tester.runAsync(() => store.record(meal, DateTime(2026, 10, 22)));
       await tester.tap(find.text('tap'));
       // The store reads Hive's file, which fake time does not advance.
       await tester.runAsync(() => Future.delayed(Duration(milliseconds: 50)));
       await tester.pumpAndSettle();
-      return (handled, updates);
+      return updates;
     }
 
-    testWidgets('half of the meal left, none of the naan', (tester) async {
-      final (handled, updates) = await tap(tester, _curry);
-
-      await tester.tap(find.text(LeftoverStrings.wholeMeal(3)));
+    Future<void> openWholeMeal(WidgetTester tester) async {
+      await tester.tap(find.text(EditDialog.wholeMealLabel));
       await tester.pumpAndSettle();
+    }
+
+    testWidgets('an entry of a meal opens its edit dialog with the button', (
+      tester,
+    ) async {
+      await tap(tester, _curry, meal: ['rice', 'curry']);
+
+      expect(find.byType(EditDialog), findsOneWidget);
+      expect(find.text(EditDialog.wholeMealLabel), findsOneWidget);
+      expect(
+        tester
+            .getSize(
+              find.ancestor(
+                of: find.text(EditDialog.wholeMealLabel),
+                matching: find.byWidgetPredicate((w) => w is TextButton),
+              ),
+            )
+            .height,
+        greaterThanOrEqualTo(48),
+      );
+    });
+
+    testWidgets('an entry of no meal has no whole-meal button', (tester) async {
+      await tap(tester, _intake('soup', 'Soup', 250));
+
+      expect(find.byType(EditDialog), findsOneWidget);
+      expect(find.text(EditDialog.wholeMealLabel), findsNothing);
+    });
+
+    testWidgets('a meal with one entry left has no whole-meal button', (
+      tester,
+    ) async {
+      // "gone" was deleted since the meal was logged.
+      await tap(tester, _curry, meal: ['gone', 'curry']);
+
+      expect(find.byType(EditDialog), findsOneWidget);
+      expect(find.text(EditDialog.wholeMealLabel), findsNothing);
+    });
+
+    testWidgets('a failed lookup still opens the entry on its own', (
+      tester,
+    ) async {
+      await tap(
+        tester,
+        _curry,
+        lookup: MealGroupStore(() async => throw StateError('box')),
+      );
+
+      expect(find.byType(EditDialog), findsOneWidget);
+      expect(find.text(EditDialog.wholeMealLabel), findsNothing);
+    });
+
+    testWidgets('half of the meal left, none of the naan', (tester) async {
+      final updates = await tap(tester, _curry);
+
+      await openWholeMeal(tester);
+      expect(find.byType(EditDialog), findsNothing);
       await tester.tap(find.text('½'));
       await tester.pump();
       await tester.enterText(find.byKey(const ValueKey('left-naan')), '0');
@@ -190,7 +316,6 @@ void main() {
       await tester.tap(find.text(LeftoverStrings.save));
       await tester.pumpAndSettle();
 
-      expect(await handled, isTrue);
       // The naan was all eaten, so it is left as logged.
       expect(updates, {'rice': 100, 'curry': 150});
     });
@@ -198,10 +323,9 @@ void main() {
     testWidgets('in imperial units the amounts are ounces, typed and shown', (
       tester,
     ) async {
-      final (handled, updates) = await tap(tester, _curry, imperial: true);
+      final updates = await tap(tester, _curry, imperial: true);
 
-      await tester.tap(find.text(LeftoverStrings.wholeMeal(3)));
-      await tester.pumpAndSettle();
+      await openWholeMeal(tester);
       // 200 g of rice, shown as what it is in ounces, not "200 oz".
       expect(find.text('7.1 → 7.1 oz'), findsOneWidget);
       await tester.enterText(find.byKey(const ValueKey('left-rice')), '3.5');
@@ -210,7 +334,6 @@ void main() {
       await tester.tap(find.text(LeftoverStrings.save));
       await tester.pumpAndSettle();
 
-      expect(await handled, isTrue);
       expect(updates['rice'], closeTo(200 - 3.5 * 28.3495, 0.01));
       expect(updates.keys, ['rice']);
     });
@@ -240,28 +363,14 @@ void main() {
       expect(shownUnit(entry, false), (unit: 'g', factor: 1.0));
     });
 
-    testWidgets('just this item leaves the edit to the usual dialog', (
-      tester,
-    ) async {
-      final (handled, updates) = await tap(tester, _curry);
-
-      await tester.tap(find.text(LeftoverStrings.justThis));
-      await tester.pumpAndSettle();
-
-      expect(await handled, isFalse);
-      expect(updates, isEmpty);
-    });
-
     testWidgets('cancelling changes nothing', (tester) async {
-      final (handled, updates) = await tap(tester, _rice);
+      final updates = await tap(tester, _rice);
 
-      await tester.tap(find.text(LeftoverStrings.wholeMeal(3)));
-      await tester.pumpAndSettle();
+      await openWholeMeal(tester);
       await tester.tap(find.text('¼'));
       await tester.tap(find.text(LeftoverStrings.cancel));
       await tester.pumpAndSettle();
 
-      expect(await handled, isTrue);
       expect(updates, isEmpty);
     });
 
@@ -275,8 +384,7 @@ void main() {
         gate: gate,
       );
       await tap(tester, _rice, reader: reader);
-      await tester.tap(find.text(LeftoverStrings.wholeMeal(3)));
-      await tester.pumpAndSettle();
+      await openWholeMeal(tester);
       await tester.tap(find.text(LeftoverStrings.readPhoto));
       await tester.runAsync(() => Future.delayed(Duration(milliseconds: 50)));
       await tester.pump();
@@ -301,8 +409,7 @@ void main() {
         unplaced: 2,
       );
       await tap(tester, _rice, reader: reader);
-      await tester.tap(find.text(LeftoverStrings.wholeMeal(3)));
-      await tester.pumpAndSettle();
+      await openWholeMeal(tester);
       await tester.tap(find.text(LeftoverStrings.readPhoto));
       await tester.runAsync(() => Future.delayed(Duration(milliseconds: 50)));
       await tester.pumpAndSettle();
@@ -318,10 +425,9 @@ void main() {
         // The model left the naan out: all of it was eaten.
         answer: {'rice': 50, 'curry': 100},
       );
-      final (handled, updates) = await tap(tester, _rice, reader: reader);
+      final updates = await tap(tester, _rice, reader: reader);
 
-      await tester.tap(find.text(LeftoverStrings.wholeMeal(3)));
-      await tester.pumpAndSettle();
+      await openWholeMeal(tester);
       await tester.tap(find.text(LeftoverStrings.readPhoto));
       await tester.runAsync(() => Future.delayed(Duration(milliseconds: 50)));
       await tester.pumpAndSettle();
@@ -329,7 +435,6 @@ void main() {
       expect(find.text(LeftoverStrings.aiEstimate), findsOneWidget);
       await tester.tap(find.text(LeftoverStrings.save));
       await tester.pumpAndSettle();
-      expect(await handled, isTrue);
       expect(updates, {'rice': 150, 'curry': 200});
       // No photo was kept for this meal.
       expect(reader.sawMeal, isNull);
@@ -338,8 +443,7 @@ void main() {
     testWidgets('without a model there is no photo button', (tester) async {
       await tap(tester, _rice);
 
-      await tester.tap(find.text(LeftoverStrings.wholeMeal(3)));
-      await tester.pumpAndSettle();
+      await openWholeMeal(tester);
 
       expect(find.text(LeftoverStrings.readPhoto), findsNothing);
     });
