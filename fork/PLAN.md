@@ -1,4 +1,4 @@
-# Plan — MacroFactor features on OpenNutriTracker
+# Plan: MacroFactor features on OpenNutriTracker
 
 Started 2026-10-17. Decisions in [DECISIONS.md](DECISIONS.md) win over this file.
 
@@ -6,7 +6,7 @@ Sections 0 to 4b, the finished phases, are in [archive/PLAN-phases.md](archive/P
 
 ## 5. Backlog (after phases 1–3)
 
-Not built anywhere yet:
+Not built anywhere else when listed; all done since:
 
 - *Done 2026-10-24 (D19):* "Count every kg as 7,700 kcal" in Expenditure and check-ins, off
   by default. Off, a kg follows body composition (Forbes via Hall, about 6,200 kcal at a typical
@@ -33,7 +33,7 @@ Not built anywhere yet:
   - Seen: ML Kit's barcode scanner brings in Google's datatransport, which sends usage
     metrics to Google. That's upstream's to decide.
 
-Lower: already built elsewhere (§0b), port or wait:
+Lower: already built elsewhere (§0b), ported after a review, not waited for (D15):
 
 - AI nutrition-label scan: done (2026-10-23, `lib/fork/label/`, S29). Ported cattosmile's label-reading
   rules only; its OFF/web research and estimate merge were left out, so only printed values fill the form.

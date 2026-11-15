@@ -1,6 +1,7 @@
 # OpenBite's own features
 
-What the fork adds to OpenNutriTracker, as of OpenBite 0.9.1 (based on ONT 2.7.0), 2026-11-09.
+What the fork adds to OpenNutriTracker, as of OpenBite 0.13.0 and the merges after it (based on ONT
+2.7.0), 2026-11-15.
 Each feature is marked:
 
 - **Fork only**: stays in the fork, for the reason given: it goes against an upstream rule, is
@@ -62,6 +63,7 @@ Details live in the seam rows ([SEAMS.md](SEAMS.md), `Sxx`) and decisions (`Dxx`
 | Activities leave a fixed or adaptive target alone (S62, S68) | Candidate (fixed part) | For upstream's fixed target (#671) a logged activity still moves the goal; the adaptive part is the fork's. |
 | "Allow for a monthly cycle" on a woman's profile only (S146) | Fork only | A setting of the adaptive estimate. |
 | Weigh-in and check-in reminders (S46) | Candidate (weigh-in) | The weigh-in reminder fits upstream's reminders; the check-in one is the fork's. |
+| A past day's goal leaves out today's burned calories when a meal, quick add, copy or import writes its row (S65, S66, S69) | Fork only | A fix to the fork's per-day goals. |
 | Strength from Go Hevier suggests a calorie change; OpenBite shares its phase with Go Hevier (D28, D29, S182, S183) | Fork only | Depends on the user's own gym app and signing key. |
 
 ## Logging with AI
@@ -70,6 +72,18 @@ Details live in the seam rows ([SEAMS.md](SEAMS.md), `Sxx`) and decisions (`Dxx`
 |---|---|---|
 | A dish the database lacks is broken into ingredients with grams; only an unmatched ingredient gets the model's estimate (D9, D12, S3) | Fork only | Upstream forbids model-supplied numbers (#250). |
 | A photo note's weight sizes the plate; a named meal without a weight gets estimated grams (D24, D25, S175) | Fork only | Visual portion estimates, which #250 rules out. |
+| A photo with no note gets estimated grams too, which the review asks the user to check (D42, S208) | Fork only | Model-supplied amounts, which #250 rules out. |
+| Google Gemini as a choice in AI settings: a Google AI Studio key, with Google's address and model filled in (D43, S209) | Fork only | Upstream leaves Google out on purpose: Google's terms bar under-18s, and its free tier may use what is sent. |
+| A reply cut off at the model's output limit is retried, not read as a model that cannot call the tool (S209) | Candidate | Any provider can cut a reply off; it failed the setup check for good (#782). |
+| A Size on a photo's meal card scales every amount the user has not set, ×0.6 to ×1.4 (D44, S212) | Fork only | Scales the model's estimated grams (D42). |
+| One amount question on a photo's biggest food; a meal like one corrected before offers the user's earlier amounts, from a photo meal memory kept on the device for 120 days (D45, S214) | Fork only | Built on the estimated grams; the memory is a fork box. |
+| A photo's amounts sized the way the user usually corrects each food (D46) | Fork only | Learnt from the photo meal memory. |
+| "Cooked with oil or butter?" on a photo's meal card when a fried or roasted food has under 10 g of fat beside it; "Any dressing or oil?" for a salad (D48, S215) | Fork only | Adds a row of the bundled table's oil, on the fork's photo review. |
+| Chips that write a photo's note: Weighed, Counts, Restaurant, Home-cooked, Small plate, Large plate (D49) | Fork only | Weighed and Counts feed D24's weighed plate and S170's note counts; upstream has no photo note. |
+| A photo's review takes the whole screen; another food is logged through Add again (D50) | Fork only | Part of the fork's review (D35–D38). |
+| On an imperial profile Log with AI's review shows and edits a row held in grams in ounces, as the Diary does (S210) | Candidate | Any imperial user would want it; the screen part is the fork's review, so upstream's screen needs its own change. |
+| A broken-down dish keeps its portion, and an unmatched food inside a dish can be broken down too (D12) | Fork only | Part of the breakdown. |
+| The model is told each rule once: the tool's field texts defer to the fork's prompts (D51, S216) | Fork only | The fork's own prompts. |
 | Leftovers: subtract what was left from an entry or a meal (D14, S9, S10) | Candidate (manual) | D14: the manual amount or fraction goes upstream; the AI photo of the leftovers is fork only (#250). |
 | Read a nutrition label into a custom food (S29), and "Add it from its label" when a barcode is not found (S36) | Sent (#1616) | Reads printed numbers; it does not estimate them. |
 | Photo prompt: counts of halves and pieces, counts the note states (S60, S170) | Candidate | The first part went upstream as #1496. The note counts need the photo note upstream first (`feat/photo-note`, not opened). |
@@ -90,6 +104,9 @@ Details live in the seam rows ([SEAMS.md](SEAMS.md), `Sxx`) and decisions (`Dxx`
 |---|---|---|
 | Offline generic foods: USDA FoodData Central and BLS 4.0 bundled (D11, S1, S2) | Fork only | Replaces upstream's food backend and adds a large asset; a change of upstream's architecture, not a feature PR. |
 | The fork's dishes worked out from recipes (solyanka, cepelinai, kvass…) (S72) | Fork only | Rows of the fork's own table. |
+| 26 more dishes, pieces at European sizes, a piece for counted German rows, a slice of pie not a whole pie (S213) | Fork only | Rows and portions of the fork's own tables. |
+| Photo foods on the right rows: no side dish, other meat, dry mix or 0 kcal product for the food named, no branded snack for a vegetable, chicken shashlik as skinless thigh | Fork only | Tuned on the bundled tables. |
+| Letters with marks found by plain ones ("sasliks" finds "šašliks") | Fork only | Search of the bundled tables. |
 | Four Latvian starter recipes (D12, S6) | Fork only | Local to the user. |
 | Saved meals and recipes found by their words in any order (S5) | Sent (#1615) | Flagged in SEAMS.md as an upstream PR candidate. |
 | Recents put the foods usually logged in this meal first (S19) | Candidate | |
@@ -129,6 +146,7 @@ Details live in the seam rows ([SEAMS.md](SEAMS.md), `Sxx`) and decisions (`Dxx`
 | Trends: tiles over 1W to All, with a page each (S120) | Fork only | |
 | You tab, the foods behind a macro, the recipe page, accent colour, Health Connect page (S121, S124, S126, S136, S138) | Fork only | |
 | Muted macro colours on every macro line (D38) | Fork only | |
+| Home's Photo log follows the Show AI features switch without a restart | Fork only | A fix to the fork's Home. |
 
 ## Health and body
 
@@ -149,6 +167,7 @@ Details live in the seam rows ([SEAMS.md](SEAMS.md), `Sxx`) and decisions (`Dxx`
 |---|---|---|
 | Automatic backup into a folder a sync app mirrors (D10, S22) | Sent | Issue #1356. |
 | The fork's own data in the backup: water, fasting, check-ins, phases, settings (S21) | Fork only | The fork's boxes. |
+| The backup also carries both reminders' times, which entries were logged as one meal and the meal-photo switch; a test lists every stored key as backed up or not (D52) | Fork only | The fork's settings and boxes. |
 | Restore a backup from onboarding (S37); restored settings apply without a restart (S38) | Candidate | |
 | Data that will not open: restore the newest backup or start again, files set aside, never deleted (S112) | Candidate | |
 | Import another app's history, e.g. MacroFactor's export (`lib/fork/history/`) | Candidate | The user's own export never goes in the repo. |

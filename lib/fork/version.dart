@@ -3,6 +3,6 @@
 /// fork/VERSION. A test keeps the two in step at each upstream merge.
 const upstreamVersion = '2.7.0';
 
-/// About's version line: "0.1.0 · based on OpenNutriTracker 2.6.0".
+/// About's version line: "0.13.0 · based on OpenNutriTracker 2.7.0".
 String aboutVersion(String version) =>
     '$version · based on OpenNutriTracker $upstreamVersion';
