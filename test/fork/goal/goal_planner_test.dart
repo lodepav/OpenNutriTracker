@@ -280,6 +280,45 @@ void main() {
       }
     });
 
+    test('for showing, the week begun and the weeks after are one cut', () {
+      final plan = _cut().toPlan();
+      final edited = editedPlan(
+        plan,
+        GoalDraft.of(plan, 86.4).copyWith(startKg: 86.4),
+        today: _start,
+        nowKg: 86.4,
+      );
+      expect(edited.phases.length, 2);
+      final shown = joinedForShow(edited);
+      expect(shown.phases.single.weeks, plan.phases.single.weeks);
+      expect(shown.end, edited.end);
+
+      // a break stays between its cuts
+      final withBreaks = _cut(breaks: true).toPlan();
+      expect(joinedForShow(withBreaks).phases.length, withBreaks.phases.length);
+    });
+
+    test('begun with diet breaks and saved unchanged, the breaks stay where '
+        'they were', () {
+      final plan = _cut(breaks: true).toPlan();
+      List<(PhaseKind, int)> shape(PhasePlan p) => [
+        for (final phase in joinedForShow(p).phases) (phase.kind, phase.weeks),
+      ];
+      // on its first day, and in the first break's first week, on plan
+      for (final (today, nowKg) in [
+        (_start, 86.4),
+        (_start.add(const Duration(days: 45)), 86.4 - 0.5 * 6),
+      ]) {
+        final edited = editedPlan(
+          plan,
+          GoalDraft.of(plan, nowKg).copyWith(startKg: nowKg),
+          today: today,
+          nowKg: nowKg,
+        );
+        expect(shape(edited), shape(plan));
+      }
+    });
+
     test('not begun, the draft plans it, extensions kept', () {
       final later = PhasePlan.fromJson({
         ...extended.toJson(),

@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:opennutritracker/core/utils/hive_db_provider.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
+import 'package:opennutritracker/fork/adaptive/auto_check_in.dart';
 import 'package:opennutritracker/fork/adaptive/expenditure.dart';
 import 'package:opennutritracker/fork/display/display_prefs.dart';
 import 'package:opennutritracker/fork/health/steps.dart';
@@ -395,7 +396,10 @@ class AdaptiveStore {
     await AdaptiveStore().load();
     locator<HiveDBProvider>().addListener(() async {
       final previous = HiveDBProvider.boxNameFor(boxName, suffix);
+      final before = suffix;
       suffix = _activeSuffix();
+      // the profile left accepted it, not this one
+      if (suffix != before) AutoCheckIn.accepted.value = null;
       if (Hive.isBoxOpen(previous)) await Hive.box<dynamic>(previous).close();
       await AdaptiveStore().load();
     });

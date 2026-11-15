@@ -5,6 +5,7 @@ import 'package:archive/archive.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:opennutritracker/fork/backup/auto_backup.dart';
+import 'package:opennutritracker/fork/backup/auto_backup_ui.dart';
 import 'package:opennutritracker/fork/backup/backup_folder.dart';
 
 void main() {
@@ -114,6 +115,34 @@ void main() {
     now = now.add(const Duration(minutes: 1));
     expect(await b.runIfDue(), isTrue);
     expect(AutoBackup.state.value.lastError, isNull);
+  });
+
+  test('a failure dismissed stays quiet while the same one repeats', () async {
+    final b = backup();
+    await b.chooseFolder();
+    folder.fail = const BackupFolderException('access_denied');
+    now = now.add(const Duration(hours: 2));
+    await b.runIfDue();
+    expect(backupNotice(AutoBackup.state.value), BackupNotice.failed);
+    await b.dismissFailure();
+
+    now = now.add(const Duration(hours: 2));
+    await b.runIfDue();
+    expect(backupNotice(AutoBackup.state.value), BackupNotice.none);
+
+    // another failure, or the same after a backup that worked, shows again
+    folder.fail = const BackupFolderException('io');
+    now = now.add(const Duration(hours: 2));
+    await b.runIfDue();
+    expect(backupNotice(AutoBackup.state.value), BackupNotice.failed);
+    await b.dismissFailure();
+    folder.fail = null;
+    now = now.add(const Duration(hours: 2));
+    await b.runIfDue();
+    folder.fail = const BackupFolderException('io');
+    now = now.add(const Duration(hours: 2));
+    await b.runIfDue();
+    expect(backupNotice(AutoBackup.state.value), BackupNotice.failed);
   });
 
   test('no automatic backup without a profile, as after "Start again": '
