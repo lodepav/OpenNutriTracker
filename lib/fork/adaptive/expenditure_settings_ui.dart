@@ -8,6 +8,7 @@ import 'package:opennutritracker/core/utils/calc/workout_compensation_calc.dart'
 import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/fork/adaptive/activity.dart';
+import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_ui.dart';
 import 'package:opennutritracker/fork/adaptive/check_in_history.dart';
@@ -42,11 +43,16 @@ class ExpenditureSettingsScreen extends StatelessWidget {
   /// pass their own.
   final Future<bool> Function() isFemale;
 
+  /// The check-in Open check-in opens; the locator's when null (tests pass
+  /// one).
+  final AdaptiveService? service;
+
   const ExpenditureSettingsScreen({
     super.key,
     required this.store,
     this.steps,
     this.isFemale = _readFemale,
+    this.service,
   });
 
   /// A profile that cannot be read (tests) is not one.
@@ -70,7 +76,7 @@ class ExpenditureSettingsScreen extends StatelessWidget {
         children: [
           _Card(_EstimateSection(settings, store, isFemale)),
           _Card(_ActivitySection(settings, store, steps ?? StepCounts())),
-          _Card(_CheckInSection(settings, store)),
+          _Card(_CheckInSection(settings, store, service)),
         ],
       ),
     ),
@@ -97,7 +103,7 @@ class ExpenditureGroups extends StatelessWidget {
     builder: (context, settings, _) => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: checkIn
-          ? [_Card(_CheckInSection(settings, store))]
+          ? [_Card(_CheckInSection(settings, store, null, false))]
           : [
               _Card(
                 _EstimateSection(
@@ -547,8 +553,18 @@ class _WorkoutShare extends StatelessWidget {
 class _CheckInSection extends StatelessWidget {
   final AdaptiveSettings settings;
   final AdaptiveStore store;
+  final AdaptiveService? service;
 
-  const _CheckInSection(this.settings, this.store);
+  /// False in the goal planner: a check-in there would be for the goal
+  /// being replaced.
+  final bool canOpen;
+
+  const _CheckInSection(
+    this.settings,
+    this.store, [
+    this.service,
+    this.canOpen = true,
+  ]);
 
   static String _weekday(int weekday) =>
       // 2024-01-01 was a Monday.
@@ -669,6 +685,7 @@ class _CheckInSection extends StatelessWidget {
             onChanged: (v) =>
                 _save(store, settings.copyWith(autoAcceptCheckIn: v)),
           ),
+          if (canOpen) _OpenCheckInTile(service),
         ],
         ListTile(
           key: const ValueKey('check-in-history'),
@@ -685,4 +702,58 @@ class _CheckInSection extends StatelessWidget {
       ],
     );
   }
+}
+
+/// The check-in Home's card opens, at any time, and whether it is due.
+class _OpenCheckInTile extends StatefulWidget {
+  final AdaptiveService? service;
+
+  const _OpenCheckInTile(this.service);
+
+  @override
+  State<_OpenCheckInTile> createState() => _OpenCheckInTileState();
+}
+
+class _OpenCheckInTileState extends State<_OpenCheckInTile> {
+  late Future<bool> _due = _readDue();
+
+  /// A service the locator can't build (tests) says not due.
+  Future<bool> _readDue() => Future(
+    () => (widget.service ?? AdaptiveService.fromLocator()).checkInDue(),
+  ).catchError((Object _) => false);
+
+  @override
+  void didUpdateWidget(_OpenCheckInTile oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // The section rebuilds on a settings change, which can make one due.
+    _due = _readDue();
+  }
+
+  @override
+  Widget build(BuildContext context) => ListTile(
+    key: const ValueKey('open-check-in'),
+    title: const Text('Open check-in'),
+    subtitle: FutureBuilder<bool>(
+      future: _due,
+      builder: (context, due) => Text(
+        due.data == true
+            ? 'Due now'
+            : 'The past week and the target it proposes',
+      ),
+    ),
+    trailing: const Icon(Icons.chevron_right_rounded),
+    onTap: () async {
+      final accepted = await Navigator.push<bool>(
+        context,
+        MaterialPageRoute(
+          builder: (_) => CheckInScreen(
+            service: widget.service ?? AdaptiveService.fromLocator(),
+          ),
+        ),
+      );
+      if (accepted != true) return;
+      await refreshGoals();
+      if (mounted) setState(() => _due = _readDue());
+    },
+  );
 }

@@ -20,6 +20,7 @@ import 'package:opennutritracker/fork/adaptive/activity.dart';
 import 'package:opennutritracker/fork/adaptive/choice.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
+import 'package:opennutritracker/fork/adaptive/adaptive_ui.dart';
 import 'package:opennutritracker/fork/adaptive/check_in.dart';
 import 'package:opennutritracker/fork/adaptive/expenditure.dart';
 import 'package:opennutritracker/fork/adaptive/expenditure_settings_ui.dart';
@@ -892,6 +893,35 @@ void main() {
       expect(find.textContaining('Health Connect permission'), findsOneWidget);
     });
 
+    testWidgets('Open check-in says when one is due, and opens it', (
+      tester,
+    ) async {
+      AdaptiveStore.settings.value = const AdaptiveSettings(
+        adaptiveTarget: true,
+      );
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ExpenditureSettingsScreen(
+            store: _MemoryStore(),
+            steps: _SwitchSteps(),
+            service: _DueService(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final open = find.byKey(const ValueKey('open-check-in'));
+      await tester.scrollUntilVisible(open, 200);
+      await tester.pumpAndSettle();
+      expect(
+        find.descendant(of: open, matching: find.text('Due now')),
+        findsOneWidget,
+      );
+
+      await tester.tap(open);
+      await tester.pumpAndSettle();
+      expect(find.byType(CheckInScreen), findsOneWidget);
+    });
+
     testWidgets('choices stack as rows at large text', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
@@ -940,6 +970,18 @@ class _SwitchSteps extends Fake implements StepCounts {
 
   @override
   Future<bool> turnOn() async => on = grants;
+}
+
+/// A check-in that is due; the screen it opens finds nothing to read.
+class _DueService extends Fake implements AdaptiveService {
+  @override
+  Future<bool> checkInDue() async => true;
+
+  @override
+  Future<CheckIn> checkIn() async => throw StateError('nothing to read');
+
+  @override
+  Future<CheckInRecord?> lastCheckIn() async => null;
 }
 
 /// Hive's file I/O does not finish in a widget test's fake time.

@@ -11,6 +11,7 @@ import 'package:opennutritracker/features/add_meal/presentation/add_meal_type.da
 import 'package:opennutritracker/features/add_meal/presentation/widgets/quick_add_bottom_sheet.dart';
 import 'package:opennutritracker/features/home/presentation/widgets/quick_weight_widget.dart';
 import 'package:opennutritracker/features/scanner/scanner_screen.dart';
+import 'package:opennutritracker/fork/adaptive/auto_check_in.dart';
 import 'package:opennutritracker/fork/plan/plan_screen.dart';
 import 'package:opennutritracker/fork/screens/add_meal/bulk_add_screen.dart';
 import 'package:opennutritracker/fork/screens/profile/weight_history_screen.dart';
@@ -86,7 +87,8 @@ class SharedTextAction extends LaunchAction {
 /// asked for, once on mounting (a cold start) and whenever Android says
 /// another arrived. Below the main screen, so only an onboarded profile
 /// gets one. Taps from inside the app's own Dart (a notification's) come
-/// through [deliver].
+/// through [deliver]. It also runs automatic check-ins on mounting and on
+/// each resume, Home's card being hideable.
 class LaunchActionHost extends StatefulWidget {
   final Widget child;
 
@@ -106,10 +108,13 @@ class LaunchActionHost extends StatefulWidget {
 class _LaunchActionHostState extends State<LaunchActionHost> {
   static const _channel = MethodChannel('openbite/launch');
   static final _log = Logger('LaunchActions');
+  late final AppLifecycleListener _lifecycle;
 
   @override
   void initState() {
     super.initState();
+    AutoCheckIn.run();
+    _lifecycle = AppLifecycleListener(onResume: AutoCheckIn.run);
     _channel.setMethodCallHandler((call) async {
       if (call.method == 'launch') await _consume();
     });
@@ -121,6 +126,7 @@ class _LaunchActionHostState extends State<LaunchActionHost> {
   @override
   void dispose() {
     _channel.setMethodCallHandler(null);
+    _lifecycle.dispose();
     LaunchActionHost._pending.removeListener(_openPending);
     super.dispose();
   }

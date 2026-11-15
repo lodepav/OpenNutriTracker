@@ -15,6 +15,7 @@ import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
 import 'package:opennutritracker/fork/adaptive/macro_program.dart';
 import 'package:opennutritracker/fork/adaptive/macro_program_ui.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
+import 'package:opennutritracker/fork/adaptive/auto_check_in.dart';
 import 'package:opennutritracker/fork/copy/copy_ui.dart';
 import 'package:opennutritracker/fork/adaptive/check_in_history.dart';
 import 'package:opennutritracker/fork/adaptive/check_in.dart';
@@ -48,9 +49,7 @@ class AdaptiveCheckInCard extends StatefulWidget {
   State<AdaptiveCheckInCard> createState() => _AdaptiveCheckInCardState();
 }
 
-/// Why a check-in is due: the first, the week is up, or the goal (D18)
-/// or the target's settings (D20) changed.
-enum _Due { first, weekly, goal, settings }
+typedef _Due = CheckInReason;
 
 /// The settings that differ between two [AdaptiveSettings.targetBasis]
 /// strings, named as Expenditure settings names them.
@@ -107,38 +106,26 @@ class _AdaptiveCheckInCardState extends State<AdaptiveCheckInCard> {
   late final _service = widget.service ?? AdaptiveService.fromLocator();
   late Future<_Due?> _due = _readDue();
 
-  /// A check-in accepted on its own, and why, shown until dismissed.
-  CheckIn? _autoAccepted;
-  _Due _autoAcceptedFor = _Due.weekly;
-
   /// What changed, for [_Due.settings]; empty when it can't be told.
   List<String> _changed = const [];
 
   Future<_Due?> _readDue() async {
     if (!await _service.checkInDue()) return null;
-    return _reason();
-  }
-
-  Future<_Due> _reason() async => await _service.firstCheckIn()
-      ? _Due.first
-      : await _service.goalChanged()
-      ? _Due.goal
-      : await _service.basisChanged()
-      ? await _settingsChanged()
-      : _Due.weekly;
-
-  Future<_Due> _settingsChanged() async {
-    _changed = changedTargetSettings(
-      (await _service.lastCheckIn())?.basis,
-      AdaptiveStore.settings.value.targetBasis,
-    );
-    return _Due.settings;
+    final reason = await checkInReason(_service);
+    if (reason == _Due.settings) {
+      _changed = changedTargetSettings(
+        (await _service.lastCheckIn())?.basis,
+        AdaptiveStore.settings.value.targetBasis,
+      );
+    }
+    return reason;
   }
 
   @override
   void initState() {
     super.initState();
     AdaptiveStore.settings.addListener(_recheck);
+    AutoCheckIn.accepted.addListener(_onAutoAccepted);
     _autoAccept();
     _syncDailyGoal();
   }
@@ -149,7 +136,7 @@ class _AdaptiveCheckInCardState extends State<AdaptiveCheckInCard> {
     // Home rebuilds after an activity is logged, the app resumes or the
     // profile (its goal) changes.
     _syncDailyGoal();
-    if (_autoAccepted == null) {
+    if (AutoCheckIn.accepted.value == null) {
       _due = _readDue();
       _autoAccept();
     }
@@ -158,6 +145,7 @@ class _AdaptiveCheckInCardState extends State<AdaptiveCheckInCard> {
   @override
   void dispose() {
     AdaptiveStore.settings.removeListener(_recheck);
+    AutoCheckIn.accepted.removeListener(_onAutoAccepted);
     super.dispose();
   }
 
@@ -169,38 +157,16 @@ class _AdaptiveCheckInCardState extends State<AdaptiveCheckInCard> {
     _autoAccept();
   }
 
-  /// True while [_autoAccept] runs: Home rebuilding meanwhile must not
-  /// accept the same check-in twice.
-  bool _accepting = false;
+  void _autoAccept() => AutoCheckIn.run(_service);
 
-  Future<void> _autoAccept() async {
-    if (_accepting) return;
-    _accepting = true;
-    try {
-      await _autoAcceptOnce();
-    } finally {
-      _accepting = false;
-    }
-  }
-
-  Future<void> _autoAcceptOnce() async {
-    if (!AdaptiveStore.settings.value.autoAcceptCheckIn) return;
-    final CheckIn? accepted;
-    final _Due reason;
-    try {
-      reason = await _reason();
-      accepted = await _service.autoAcceptIfDue();
-    } catch (_) {
-      return; // The card stays, to be done by hand.
-    }
-    if (accepted == null || !mounted) return;
+  /// An accept from any caller, or a dismissal; [AutoCheckIn] has
+  /// refreshed the goals by then.
+  void _onAutoAccepted() {
+    final accepted = AutoCheckIn.accepted.value;
     setState(() {
-      _autoAccepted = accepted;
-      _autoAcceptedFor = reason;
-      _due = Future.value(null);
+      if (accepted != null) _due = Future.value(null);
     });
-    await _refreshGoals();
-    widget.onAccepted();
+    if (accepted != null) widget.onAccepted();
   }
 
   /// Today's counted activity when the goal was last written, and when.
@@ -234,13 +200,13 @@ class _AdaptiveCheckInCardState extends State<AdaptiveCheckInCard> {
 
   @override
   Widget build(BuildContext context) {
-    final accepted = _autoAccepted;
+    final accepted = AutoCheckIn.accepted.value?.checkIn;
     if (accepted != null) {
       return Card(
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         child: ListTile(
           leading: const Icon(Icons.insights_rounded),
-          title: Text(switch (_autoAcceptedFor) {
+          title: Text(switch (AutoCheckIn.accepted.value!.reason) {
             _Due.first => 'Your first target is set',
             _Due.goal => 'Target set for your new goal',
             _Due.settings => 'Target set for your new settings',
@@ -253,7 +219,7 @@ class _AdaptiveCheckInCardState extends State<AdaptiveCheckInCard> {
           trailing: IconButton(
             tooltip: 'Dismiss',
             icon: const Icon(Icons.close_rounded),
-            onPressed: () => setState(() => _autoAccepted = null),
+            onPressed: () => AutoCheckIn.accepted.value = null,
           ),
           onTap: () => Navigator.of(context).push(
             MaterialPageRoute<void>(
@@ -341,6 +307,7 @@ class _CheckInScreenState extends State<CheckInScreen> {
     if (!locator.isRegistered<GetConfigUsecase>()) return BodyWeightUnit.kg;
     return (await locator<GetConfigUsecase>().getConfig()).bodyWeightUnit;
   }();
+  late final _data = (_checkIn, _last, _goalNow, _weightUnit).wait;
   final _target = TextEditingController();
 
   @override
@@ -445,15 +412,25 @@ class _CheckInScreenState extends State<CheckInScreen> {
         ),
       ),
     ),
+    // Pinned under the list, which would leave them below the fold.
+    bottomNavigationBar:
+        FutureBuilder<(CheckIn, CheckInRecord?, double?, BodyWeightUnit)>(
+          future: _data,
+          builder: (context, snapshot) {
+            final data = snapshot.data;
+            if (snapshot.hasError || data == null) {
+              return const SizedBox.shrink();
+            }
+            return _actions(context, data.$1, data.$2?.acceptedKcal ?? data.$3);
+          },
+        ),
     body: FutureBuilder<(CheckIn, CheckInRecord?, double?, BodyWeightUnit)>(
-      future: (_checkIn, _last, _goalNow, _weightUnit).wait,
+      future: _data,
       builder: (context, snapshot) {
         final checkIn = snapshot.data?.$1;
         final last = snapshot.data?.$2;
         final current = last?.acceptedKcal ?? snapshot.data?.$3;
         final weightUnit = snapshot.data?.$4 ?? BodyWeightUnit.kg;
-        // read here, not in a button's handler
-        final unit = energyUnit(context);
         if (snapshot.hasError) {
           return const Center(child: Text("Couldn't read your data."));
         }
@@ -671,8 +648,32 @@ class _CheckInScreenState extends State<CheckInScreen> {
                 suffixText: energyUnit(context),
               ),
             ),
-            const SizedBox(height: 16),
+          ],
+        );
+      },
+    ),
+  );
+
+  /// Accept, and Keep below it while there is a target in use; above the
+  /// keyboard while the target field has it.
+  Widget _actions(BuildContext context, CheckIn checkIn, double? current) {
+    // read here, not in a button's handler
+    final unit = energyUnit(context);
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(
+          16,
+          8,
+          16,
+          8 + MediaQuery.viewInsetsOf(context).bottom,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
             FilledButton(
+              key: const ValueKey('check-in-accept'),
               onPressed: () async {
                 final typed = double.tryParse(_target.text.trim());
                 if (typed == null || !typed.isFinite || typed <= 0) {
@@ -712,10 +713,10 @@ class _CheckInScreenState extends State<CheckInScreen> {
                 ),
               ),
           ],
-        );
-      },
-    ),
-  );
+        ),
+      ),
+    );
+  }
 
   String _breakHoldText(BreakHold hold) {
     final left = hold.resumesIn;
