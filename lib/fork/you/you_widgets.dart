@@ -10,21 +10,19 @@ import 'package:opennutritracker/features/profile/presentation/utils/profile_dis
 import 'package:opennutritracker/features/profile/presentation/widgets/profile_avatar.dart';
 import 'package:opennutritracker/fork/display/display_prefs.dart';
 import 'package:opennutritracker/fork/display/home_tiles.dart';
+import 'package:opennutritracker/fork/trends/trends_widgets.dart'
+    show keepUnits;
 import 'package:opennutritracker/fork/units/energy_text.dart';
 
 /// Seam S121: the You tab as MacroFactor's (YouA). Who is active, with a
 /// Switch button for the profile sheet.
 class YouProfileRow extends StatelessWidget {
   final ProfileEntity? profile;
-
-  /// "29 · 178 cm · Male".
-  final String details;
   final VoidCallback onSwitch;
 
   const YouProfileRow({
     super.key,
     required this.profile,
-    required this.details,
     required this.onSwitch,
   });
 
@@ -45,27 +43,16 @@ class YouProfileRow extends StatelessWidget {
             ProfileAvatar(profile: profile, radius: 24),
             const SizedBox(width: Dimens.spacing12),
           ],
+          // The body facts are the Body rows' (age, height, sex).
           Expanded(
-            child: MergeSemantics(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (profile != null)
-                    Text(
-                      profileDisplayName(context, profile),
-                      style: text.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  Text(
-                    details,
-                    style: text.bodySmall?.copyWith(
-                      color: paletteOf(context).textMuted,
+            child: profile == null
+                ? const SizedBox.shrink()
+                : Text(
+                    profileDisplayName(context, profile),
+                    style: text.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
-                ],
-              ),
-            ),
           ),
           if (profile != null)
             Semantics(
@@ -85,35 +72,48 @@ class YouProfileRow extends StatelessWidget {
   }
 }
 
-/// Four tiles, two to a row, each row as tall as its taller tile.
+/// Four tiles, two to a row, each row as tall as its taller tile; one to a
+/// row past 1.5x text, as Home's and Trends'.
 class YouTiles extends StatelessWidget {
   final List<Widget> tiles;
 
   const YouTiles({super.key, required this.tiles});
 
   @override
-  Widget build(BuildContext context) => Column(
-    children: [
-      for (var i = 0; i < tiles.length; i += 2)
-        Padding(
-          padding: const EdgeInsets.only(bottom: Dimens.spacing8),
-          child: IntrinsicHeight(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Expanded(child: tiles[i]),
-                const SizedBox(width: Dimens.spacing8),
-                Expanded(
-                  child: i + 1 < tiles.length
-                      ? tiles[i + 1]
-                      : const SizedBox.shrink(),
+  Widget build(BuildContext context) {
+    // As Home's: past 1.5x text two to a row break words and split units.
+    final oneColumn = MediaQuery.textScalerOf(context).scale(10) > 15;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (oneColumn)
+          for (final tile in tiles)
+            Padding(
+              padding: const EdgeInsets.only(bottom: Dimens.spacing8),
+              child: tile,
+            )
+        else
+          for (var i = 0; i < tiles.length; i += 2)
+            Padding(
+              padding: const EdgeInsets.only(bottom: Dimens.spacing8),
+              child: IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Expanded(child: tiles[i]),
+                    const SizedBox(width: Dimens.spacing8),
+                    Expanded(
+                      child: i + 1 < tiles.length
+                          ? tiles[i + 1]
+                          : const SizedBox.shrink(),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
-          ),
-        ),
-    ],
-  );
+      ],
+    );
+  }
 }
 
 /// Today's energy goal and macro goals, as Home has them; a dash before
@@ -148,18 +148,20 @@ class BudgetTile extends StatelessWidget {
           ? '—'
           : '${energyValue(context, state.totalKcalDaily)}',
       note: energyUnit(context),
+      spokenLabel: [
+        'Daily budget',
+        if (state != null)
+          '${energyValue(context, state.totalKcalDaily)} ${energyUnit(context)}',
+        if (state != null)
+          ...inMacroOrder(
+            carbs: '${state.totalCarbsGoal.round()} grams carbs',
+            fat: '${state.totalFatsGoal.round()} grams fat',
+            protein: '${state.totalProteinsGoal.round()} grams protein',
+          ),
+      ].join(', '),
       hint: 'How it is worked out',
       onTap: onTap,
-      below: macros == null
-          ? null
-          : _Below(
-              '$macros g',
-              semanticsLabel: inMacroOrder(
-                carbs: '${state!.totalCarbsGoal.round()} grams carbs',
-                fat: '${state.totalFatsGoal.round()} grams fat',
-                protein: '${state.totalProteinsGoal.round()} grams protein',
-              ).join(', '),
-            ),
+      below: macros == null ? null : _Below('$macros g'),
     );
   }
 }
@@ -167,14 +169,12 @@ class BudgetTile extends StatelessWidget {
 /// A tile's line under its value.
 class _Below extends StatelessWidget {
   final String text;
-  final String? semanticsLabel;
 
-  const _Below(this.text, {this.semanticsLabel});
+  const _Below(this.text);
 
   @override
   Widget build(BuildContext context) => Text(
-    text,
-    semanticsLabel: semanticsLabel,
+    keepUnits(text),
     style: Theme.of(
       context,
     ).textTheme.bodySmall?.copyWith(color: paletteOf(context).textMuted),
@@ -189,6 +189,9 @@ class YouTile extends StatelessWidget {
   final String? note;
   final String? below;
   final String? hint;
+
+  /// What a screen reader says for the tile, in words; [hint] its action.
+  final String? spokenLabel;
   final VoidCallback onTap;
 
   const YouTile({
@@ -199,6 +202,7 @@ class YouTile extends StatelessWidget {
     this.note,
     this.below,
     this.hint,
+    this.spokenLabel,
     required this.onTap,
   });
 
@@ -206,9 +210,11 @@ class YouTile extends StatelessWidget {
   Widget build(BuildContext context) => HomeTile(
     identifier: identifier,
     title: title,
-    value: value,
+    // The Goal tile's "Losing 0.4 kg a week" wraps in a half-width tile.
+    value: keepUnits(value),
     note: note,
     hint: hint,
+    spokenLabel: spokenLabel,
     onTap: onTap,
     below: below == null ? null : _Below(below!),
   );
@@ -234,10 +240,12 @@ class YouSection extends StatelessWidget {
             Dimens.spacing4,
             Dimens.spacing8,
           ),
+          // A node of its own: without it the title names the card's node.
           child: Semantics(
+            container: true,
             header: true,
             child: Text(
-              title.toUpperCase(),
+              title,
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
                 color: palette.textMuted,
                 fontWeight: FontWeight.w600,
@@ -268,6 +276,9 @@ class YouRow extends StatelessWidget {
   final String label;
   final String? value;
 
+  /// [value] as spoken, where its text would read badly ("−0.4").
+  final String? spokenValue;
+
   /// Under the value, smaller (the distance to the target weight).
   final String? detail;
   final VoidCallback onTap;
@@ -277,6 +288,7 @@ class YouRow extends StatelessWidget {
     required this.identifier,
     required this.label,
     this.value,
+    this.spokenValue,
     this.detail,
     required this.onTap,
   });
@@ -317,6 +329,7 @@ class YouRow extends StatelessWidget {
                             if (value != null)
                               Text(
                                 value!,
+                                semanticsLabel: spokenValue,
                                 textAlign: TextAlign.end,
                                 style: text.bodyMedium?.copyWith(color: muted),
                               ),

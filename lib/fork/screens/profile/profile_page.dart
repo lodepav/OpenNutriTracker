@@ -30,10 +30,13 @@ import 'package:opennutritracker/features/profile/presentation/widgets/set_weigh
 import 'package:opennutritracker/features/home/presentation/bloc/home_bloc.dart';
 import 'package:opennutritracker/features/settings/presentation/bloc/settings_bloc.dart';
 import 'package:opennutritracker/features/settings/presentation/widgets/water_goal_dialog.dart';
-import 'package:opennutritracker/fork/units/weight_text.dart' show bodyWeightText;
+import 'package:opennutritracker/fork/trends/trends_widgets.dart';
+import 'package:opennutritracker/fork/units/weight_text.dart'
+    show bodyWeightText;
 import 'package:opennutritracker/fork/display/display_prefs.dart';
 import 'package:opennutritracker/fork/goal/goal_progress_page.dart';
 import 'package:opennutritracker/fork/goal/goal_you_tile.dart';
+import 'package:opennutritracker/fork/report/rate_text.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 import 'package:opennutritracker/core/domain/usecase/get_profiles_usecase.dart';
 import 'package:opennutritracker/core/domain/usecase/get_weight_log_usecase.dart';
@@ -122,17 +125,6 @@ class _ProfilePageState extends State<ProfilePage> {
       children: [
         YouProfileRow(
           profile: locator<GetProfilesUsecase>().getActiveProfile(),
-          details: [
-            '${user.age}',
-            formatHeight(
-              user.heightCM,
-              usesImperialHeightUnits,
-              cmLabel: S.of(context).cmLabel,
-              ftLabel: S.of(context).ftLabel,
-              inLabel: S.of(context).inLabel,
-            ),
-            user.gender.getName(context),
-          ].join(' · '),
           onSwitch: () => showProfileSwitcherSheet(context),
         ),
         YouTiles(
@@ -152,16 +144,28 @@ class _ProfilePageState extends State<ProfilePage> {
               title: S.of(context).goalLabel,
               // A weekly rate alone is no goal, as Goal progress counts.
               profileGoal: user.targetWeightKg != null,
-              value: switch (user.goal) {
-                UserWeightGoalEntity.loseWeight => 'Lose',
-                UserWeightGoalEntity.maintainWeight => 'Keep',
-                UserWeightGoalEntity.gainWeight => 'Gain',
-              },
-              note: _forkRate(context, user, bodyWeightUnit),
+              // Without a target, the plan the budget follows (the rate).
+              value: user.targetWeightKg == null
+                  ? plannedRateText(
+                      user.goal,
+                      user.weeklyWeightGoalKg,
+                      bodyWeightUnit,
+                    )
+                  : switch (user.goal) {
+                      UserWeightGoalEntity.loseWeight => 'Lose',
+                      UserWeightGoalEntity.maintainWeight => 'Keep',
+                      UserWeightGoalEntity.gainWeight => 'Gain',
+                    },
+              note: user.targetWeightKg == null
+                  ? null
+                  : _forkRate(user, bodyWeightUnit),
               below: user.targetWeightKg == null
-                  ? S.of(context).profileTargetWeightNotSetLabel
+                  ? 'Set a target weight'
                   : 'Target ${bodyWeightText(context, user.targetWeightKg!, bodyWeightUnit)}',
               onTap: () => openGoalProgress(context, bodyWeightUnit),
+              // As the Target weight row: the tile says "Set a target weight".
+              onSetTarget: () =>
+                  _showSetTargetWeightDialog(context, user, bodyWeightUnit),
             ),
             BudgetTile(
               onTap: () => Navigator.of(context).push(
@@ -176,7 +180,11 @@ class _ProfilePageState extends State<ProfilePage> {
               value: '${userBMIEntity.bmiValue.roundToPrecision(1)}',
               note: userBMIEntity.nutritionalStatus.getName(context),
               below: 'How it is worked out',
-              hint: 'How the BMI is worked out',
+              spokenLabel:
+                  '${S.of(context).bmiLabel}, '
+                  '${userBMIEntity.bmiValue.roundToPrecision(1)}, '
+                  '${userBMIEntity.nutritionalStatus.getName(context)}',
+              hint: 'How it is worked out',
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(builder: (_) => const BmiInfoScreen()),
               ),
@@ -203,18 +211,23 @@ class _ProfilePageState extends State<ProfilePage> {
               identifier: 'profile-weekly-goal',
               label: S.of(context).weeklyWeightGoalLabel,
               value: _weeklyGoalSubtitle(context, user, bodyWeightUnit),
-              onTap: () => _showSetWeeklyWeightGoalDialog(
-                context,
-                user,
-                bodyWeightUnit,
-              ),
+              spokenValue: switch (user.weeklyWeightGoalKg) {
+                null || 0.0 => null,
+                final kg => weeklyRateSpoken(kg, bodyWeightUnit),
+              },
+              onTap: () =>
+                  _showSetWeeklyWeightGoalDialog(context, user, bodyWeightUnit),
             ),
             YouRow(
               identifier: 'profile-target-weight',
               label: S.of(context).profileTargetWeightLabel,
               value: user.targetWeightKg == null
                   ? S.of(context).profileTargetWeightNotSetLabel
-                  : bodyWeightText(context, user.targetWeightKg!, bodyWeightUnit),
+                  : bodyWeightText(
+                      context,
+                      user.targetWeightKg!,
+                      bodyWeightUnit,
+                    ),
               onTap: () =>
                   _showSetTargetWeightDialog(context, user, bodyWeightUnit),
             ),
@@ -234,7 +247,8 @@ class _ProfilePageState extends State<ProfilePage> {
           rows: [
             YouRow(
               identifier: 'profile-weight',
-              label: S.of(context).weightLabel,
+              // The trend tile shows another weight: this is the profile's.
+              label: 'Profile weight',
               value: bodyWeightText(context, user.weightKG, bodyWeightUnit),
               detail: user.targetWeightKg == null
                   ? null
@@ -270,9 +284,8 @@ class _ProfilePageState extends State<ProfilePage> {
               YouRow(
                 identifier: 'profile-calories-profile',
                 label: S.of(context).caloriesProfileInfoTitle,
-                value:
-                    (user.caloriesProfile ?? CaloriesProfileEntity.averaged)
-                        .getName(context),
+                value: (user.caloriesProfile ?? CaloriesProfileEntity.averaged)
+                    .getName(context),
                 onTap: () => _showCaloriesProfileDialog(context, user),
               ),
           ],
@@ -320,7 +333,7 @@ class _ProfilePageState extends State<ProfilePage> {
               ),
               YouRow(
                 identifier: 'profile-sources',
-                label: S.of(context).sourcesIconTooltip,
+                label: 'Data sources',
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute<void>(
                     builder: (_) => const SourcesScreen(),
@@ -337,8 +350,9 @@ class _ProfilePageState extends State<ProfilePage> {
             YouRow(
               identifier: 'profile-settings',
               label: S.of(context).settingsLabel,
-              onTap: () =>
-                  Navigator.of(context).pushNamed(NavigationOptions.settingsRoute),
+              onTap: () => Navigator.of(
+                context,
+              ).pushNamed(NavigationOptions.settingsRoute),
             ),
           ],
         ),
@@ -347,13 +361,10 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   /// The goal tile's weekly rate, unsigned: the goal says which way.
-  String? _forkRate(BuildContext context, UserEntity user, BodyWeightUnit unit) {
+  String? _forkRate(UserEntity user, BodyWeightUnit unit) {
     final kg = user.weeklyWeightGoalKg;
     if (kg == null || kg == 0) return null;
-    return switch (unit) {
-      BodyWeightUnit.kg => '${kg.abs().toStringAsFixed(2)} ${S.of(context).kgLabel}/wk',
-      _ => '${UnitCalc.kgToLbs(kg.abs()).toStringAsFixed(2)} ${S.of(context).lbsLabel}/wk',
-    };
+    return unsignedRateText(kg, unit);
   }
 
   Future<void> _showSetPALCategoryDialog(
@@ -378,20 +389,11 @@ class _ProfilePageState extends State<ProfilePage> {
     final goal = user.weeklyWeightGoalKg;
     if (goal == null) return S.of(context).weeklyWeightGoalNoneLabel;
     if (goal == 0.0) return S.of(context).goalMaintainWeight;
-    switch (bodyWeightUnit) {
-      case BodyWeightUnit.kg:
-        final sign = goal > 0 ? '+' : '';
-        return S.of(context).weeklyWeightGoalKgPerWeek('$sign${goal.toStringAsFixed(2)}');
-      case BodyWeightUnit.lb:
-        final displayLb = goal * 2.20462;
-        final sign = displayLb > 0 ? '+' : '';
-        return S.of(context).weeklyWeightGoalLbsPerWeek('$sign${displayLb.toStringAsFixed(2)}');
-      case BodyWeightUnit.st:
-        final displaySt = goal * 2.20462 / 14;
-        final sign = displaySt > 0 ? '+' : '';
-        return '$sign${displaySt.toStringAsFixed(2)} ${S.of(context).stLabel}'
-            '${S.of(context).trendsPerWeekSuffix}';
-    }
+    // The form the weight trend tile uses (stones in pounds); at large text
+    // it wraps as "−0.4 kg / a week", not "−0.4 kg a / week".
+    return keepUnits(
+      weeklyRateText(goal, bodyWeightUnit),
+    ).replaceFirst(' a week', ' a\u00A0week');
   }
 
   Future<void> _showSetWeeklyWeightGoalDialog(
@@ -459,10 +461,8 @@ class _ProfilePageState extends State<ProfilePage> {
   ) async {
     final newKg = await showDialog<double>(
       context: context,
-      builder: (context) => SetWeightDialog(
-        initialKg: userEntity.weightKG,
-        unit: bodyWeightUnit,
-      ),
+      builder: (context) =>
+          SetWeightDialog(initialKg: userEntity.weightKG, unit: bodyWeightUnit),
     );
     if (newKg != null) {
       final now = DateTime.now();

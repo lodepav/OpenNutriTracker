@@ -286,26 +286,26 @@ void main() {
     expect(saved.last, (_cut.paceOn(today), 80.0));
   });
 
-  testWidgets('no goal: "No goal", or maintaining since the last one', (
-    tester,
-  ) async {
+  testWidgets('no goal: the profile\'s plan, or maintaining since the last '
+      'one', (tester) async {
     Widget tile(List<GoalRecord> history, {bool profileGoal = false}) =>
         Scaffold(
           body: GoalYouTile(
             key: UniqueKey(),
             title: 'Goal',
-            value: 'Keep',
+            value: profileGoal ? 'Keep' : 'Keeping your weight',
             note: null,
-            below: 'Not set',
+            below: profileGoal ? 'Not set' : 'Set a target weight',
             profileGoal: profileGoal,
             onTap: () {},
             load: () async => (plan: null, history: history),
           ),
         );
+    // With no target the page passes the plan's rate and an offer of one.
     await _pump(tester, tile(const []));
-    expect(find.text(noGoalText), findsOneWidget);
-    expect(find.text('Plan a goal'), findsOneWidget);
-    expect(find.text('Keep'), findsNothing);
+    expect(find.text('Keeping your weight', findRichText: true), findsOne);
+    expect(find.text('Set a target weight'), findsOneWidget);
+    expect(find.text(noGoalText), findsNothing);
 
     await _pump(tester, tile([_done]));
     expect(
