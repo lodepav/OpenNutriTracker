@@ -890,7 +890,13 @@ in the note 25/33, 17%, 113%.
 - **WebP: no difference.** Nine passes each: within 25% 75/99 (WebP)
   against 80/99 (JPEG), median 16% against 18%, same tokens. One photo's
   borsch was never read as WebP and always as JPEG; one photo, not shown
-  in general.
+  in general. Rechecked the same day with the app's own encoder: the
+  photos encoded on the emulator by `MealPhotoEncoder` (Android's WebP,
+  0.7-2.3 of 255 from Pillow's per pixel, same size and orientation),
+  nine passes on the merged code: 75/99 within 25%, median 16%, total
+  96%, and the soup read in 9 of 9, as with JPEG (Pillow's WebP, same
+  code: 68/99, 17%, 92%, the soup in 0 of 9). What the app sends reads as
+  JPEG does; the eval's own WebP is not a stand-in for it.
 - **Row audit: merged as correctness.** 4,192 food names from every run
   so far: 173 now find their everyday row (S75), covering 3,533 past
   reads, e.g. battered fish, hash browns, farro, vinaigrette, cooked
