@@ -28,6 +28,11 @@ import 'logged_kcal.dart';
 final _env = Platform.environment;
 final _set = _env['FORK_EVAL_PHOTOS'];
 final _withNote = _env['FORK_EVAL_WITH_NOTE'] == '1';
+// FORK_EVAL_WEBP=1: <id>.webp sent as image/webp, as the app sends Anthropic,
+// OpenRouter and OpenAI (MealPhotoFormat.webp, q80). The set is pre-converted
+// on the host, where flutter_image_compress has no implementation.
+final _webp = _env['FORK_EVAL_WEBP'] == '1';
+final _mediaType = _webp ? 'image/webp' : 'image/jpeg';
 final _repeat = int.tryParse(_env['FORK_EVAL_REPEAT'] ?? '') ?? 1;
 final _ids = (_env['FORK_EVAL_IDS'] ?? '')
     .split(',')
@@ -70,9 +75,10 @@ void main() {
   tearDownAll(() {
     if (out.isEmpty) return;
     runDir.createSync(recursive: true);
-    File(
-      '${runDir.path}/report.md',
-    ).writeAsStringSync('# Fresh set, ${DateTime.now()}\n\n$summary$out');
+    File('${runDir.path}/report.md').writeAsStringSync(
+      '# Fresh set, ${DateTime.now()}\n\nPhotos sent as $_mediaType.\n\n'
+      '$summary$out',
+    );
     reads.write(runDir);
     models.addUsage(runDir);
     // ignore: avoid_print
@@ -93,14 +99,16 @@ void main() {
         final score = KcalScore();
         for (var pass = 0; pass < _repeat; pass++) {
           for (final photo in photos) {
-            final file = File('$photoDir/${photo['id']}.jpg');
+            final file = File(
+              '$photoDir/${photo['id']}.${_webp ? 'webp' : 'jpg'}',
+            );
             if (!file.existsSync()) continue;
             final label = ((photo['per_serving'] as Map)['kcal'] as num)
                 .toDouble();
             final note = _withNote ? photo['typed'] as String? : null;
             final mealPhoto = MealPhoto(
               bytes: file.readAsBytesSync(),
-              mediaType: 'image/jpeg',
+              mediaType: _mediaType,
             );
             final bloc = evalBulkAddBloc(api, resolver);
             bloc.add(
