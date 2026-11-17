@@ -127,6 +127,11 @@ void main() {
     'cold beet soup with kefir',
     'cold beet soup (chilled borscht with kefir or yogurt)',
     'chłodnik',
+    'cold borscht',
+    'chilled borscht',
+    'cold beet soup',
+    'cold beet borscht',
+    'chilled beet borscht',
   ]) {
     test('$query resolves to the fork\'s chłodnik', () async {
       final item = await resolve(query);
@@ -238,11 +243,62 @@ void main() {
     ('stuffed bell pepper', 'Stuffed pepper, with rice and meat'),
     ('mashed potatoes with butter', 'Potatoes, mashed, home-prepared'),
     ('toasted baguette', 'Bread, French or Vienna, toasted'),
+    ('borsch, beet soup', 'Borscht, with beef'),
+    ('borscht, beet soup', 'Borscht, with beef'),
+    ('beet soup', 'Borscht, with beef'),
+    ('beet borscht', 'Borscht, with beef'),
+    ('wheat flour noodles, dry, egg-free, cooked', 'Noodles, cooked'),
+    ('broccoli sprouts, raw', 'Radish seeds, sprouted, raw'),
+    ('elk, steak, cooked, grilled', _elkSteak),
+    ('elk, cooked, steak', _elkSteak),
+    ('elk, cooked', _elkSteak),
+    ('elk steak', _elkSteak),
+    ('elk steak, grilled', _elkSteak),
+    ('elk, raw', 'Game meat, elk, raw'),
+    ('elk, steak, raw', 'Game meat, elk, raw'),
+    ('elk, cooked, roasted', 'Game meat, elk, cooked, roasted'),
+    ('burger', 'Hamburger, NFS'),
+    ('beef burger', 'Hamburger, NFS'),
+    ('veggie burger', 'Veggie burger'),
+    ('hamburger bun, white', 'Roll, white, hamburger bun'),
+    ('breaded chicken', 'Chicken fillet, breaded'),
+    ('breaded chicken pieces', 'Chicken fillet, breaded'),
+    ('cod, battered or breaded, fried', 'Cod fillet, in frying batter'),
+    ('seaweed salad', 'Seaweed salad, wakame'),
+    ('wakame salad', 'Seaweed salad, wakame'),
+    ('seaweed salad, wakame', 'Seaweed salad, wakame'),
   ]) {
     test('bare "$query" resolves to "$expected..."', () async {
       final item = await resolve(query);
       expect(item.candidates[item.selectedIndex].name, startsWith(expected));
       expect(item.confidence, greaterThanOrEqualTo(kResolutionConfidenceFloor));
+    });
+  }
+
+  // A dressed carrot salad, not the one with apples, which holds the words.
+  for (final query in [
+    'carrot salad with mayonnaise',
+    'carrot salad with mayo',
+    'carrot salad, with mayonnaise',
+  ]) {
+    test('$query resolves to "Carrots, raw, salad"', () async {
+      final item = await resolve(query);
+      expect(item.candidates[item.selectedIndex].name, 'Carrots, raw, salad');
+    });
+  }
+
+  // Elk named as ground keeps the ground rows; a steak or a plain cooked
+  // elk is the lean loin.
+  for (final query in [
+    'elk, ground, cooked',
+    'ground elk',
+    'elk, ground, raw',
+  ]) {
+    test('$query stays a ground elk row', () async {
+      final item = await resolve(query);
+      final name = item.candidates[item.selectedIndex].name;
+      expect(name, contains('lk'));
+      expect(name, contains('ground'));
     });
   }
 
@@ -335,3 +391,5 @@ void main() {
     });
   }
 }
+
+const _elkSteak = 'Game meat, elk, loin, separable lean only, cooked, broiled';
