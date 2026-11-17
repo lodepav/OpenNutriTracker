@@ -16,6 +16,8 @@ import 'package:opennutritracker/core/utils/navigation_options.dart';
 import 'package:opennutritracker/features/profile/presentation/bloc/profile_bloc.dart';
 import 'package:opennutritracker/fork/screens/profile/profile_page.dart';
 import 'package:opennutritracker/fork/display/display_prefs.dart';
+import 'package:opennutritracker/fork/trends/trends_widgets.dart'
+    show keepUnits;
 import 'package:opennutritracker/generated/l10n.dart';
 
 // Seam S121: the You tab as MacroFactor's; every setting it had stays.
@@ -191,7 +193,7 @@ void main() {
 
   testWidgets('the goal and BMI tiles', (tester) async {
     await _pump(tester, _user(targetKg: 80));
-    expect(find.text('Lose 0.40 kg/wk'), findsOneWidget);
+    expect(find.text(keepUnits('Lose 0.40 kg/wk')), findsOneWidget);
     expect(find.text('Target 80 kg'), findsOneWidget);
     expect(find.textContaining('27.5'), findsOneWidget);
     // Before Home has loaded the budget is a dash.

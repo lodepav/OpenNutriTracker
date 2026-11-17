@@ -208,6 +208,10 @@ Future<void> fillForkState({
       'order': ['plan', 'ring'],
       'hidden': <String>[],
     },
+    'homeQuickActions': {
+      'order': ['search', 'scan'],
+      'hidden': ['meal-plan'],
+    },
     'trendsLayout': {
       'order': ['weight', 'expenditure'],
       'hidden': ['photos'],

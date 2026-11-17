@@ -318,6 +318,7 @@ final _fieldReaders = <String, Map<String, Future<Object?> Function()>>{
     'showFasting': () async => DisplayPrefs.showFasting.value,
     'homeTiles': () => _layout(homeTilesKey),
     'homeSections': () => _layout(homeSectionsKey),
+    'homeQuickActions': () => _layout(homeQuickActionsKey),
     'trendsLayout': () => _layout(TrendsLayoutStore.storeKey),
     'trendsTiles': () => _layout(TrendsTilesStore.storeKey),
     'trendsRange': TrendsRange.read,
