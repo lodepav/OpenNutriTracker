@@ -2590,7 +2590,7 @@ void main() {
     // the screen's day is not today
     expect(find.text('That day with this meal'), findsOneWidget);
     expect(
-      find.text('700 / 2200', findRichText: true),
+      find.text('700 / 2200\u00a0kcal', findRichText: true),
       findsOneWidget,
       reason: '400 eaten + 300',
     );

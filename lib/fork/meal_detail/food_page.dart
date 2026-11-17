@@ -11,17 +11,31 @@ import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dart';
 import 'package:opennutritracker/features/meal_detail/presentation/widgets/meal_detail_nutriments_table.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
+import 'package:opennutritracker/fork/display/day_totals_card.dart'
+    show dayTotalLabel;
 import 'package:opennutritracker/fork/display/display_prefs.dart';
 import 'package:opennutritracker/fork/off/off_kinds.dart';
+import 'package:opennutritracker/fork/trends/trends_widgets.dart'
+    show keepUnits;
 import 'package:opennutritracker/fork/units/energy_text.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 
 /// Seam S125: the food's page after the canvas's "Food page · A + B". A
 /// header with the food's photo or kind, a ring of where the amount's
 /// energy comes from, and the day's energy and macros after adding it,
-/// the added part lighter and the figure red once over. The amount and
-/// Add stay in upstream's bottom sheet, which gains the meal beside Add,
-/// the amount on Add and the basket as an icon.
+/// the added part lighter. The amount and Add stay in upstream's bottom
+/// sheet, which gains the meal beside Add, the amount on Add and the
+/// basket as an icon; above 1.5x text the amount and the meal move onto
+/// the page and only Add and the basket stay pinned ([FoodSheetPart]).
+
+/// Which part of upstream's bottom sheet an instance shows: the whole of
+/// it, the amount and meal on the page, or the pinned bar with Add.
+enum FoodSheetPart { all, amount, addBar }
+
+/// Whether the food page puts the amount on the page and pins only Add:
+/// above 1.5x text, as Home, Trends and the Diary change their layouts.
+bool foodPageInline(BuildContext context) =>
+    MediaQuery.textScalerOf(context).scale(10) > 15;
 
 /// Energy per gram of each macro, for the ring's shares.
 const _kcalPerG = (carbs: 4.0, fat: 9.0, protein: 4.0);
@@ -75,36 +89,36 @@ class FoodPageHeader extends StatelessWidget {
       thumb = _kind(context, palette);
     }
     final per100 = meal.nutriments.energyKcal100;
+    final energy = per100 == null
+        ? null
+        : '${energyText(context, per100)} per 100 ${meal.isLiquid ? 'ml' : 'g'}';
     return Row(
       children: [
         thumb,
         const SizedBox(width: Dimens.spacing12),
         Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Semantics(
-                header: true,
-                child: Text(
+          // One heading read as sentences, not the lines run together (A5).
+          child: Semantics(
+            header: true,
+            label: [meal.name ?? '', _source(), ?energy].join('. '),
+            excludeSemantics: true,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
                   meal.name ?? '',
-                  maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
                   style: theme.textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.w700,
                   ),
                 ),
-              ),
-              Text(
-                [
-                  _source(),
-                  if (per100 != null)
-                    '${energyText(context, per100)} per 100 ${meal.isLiquid ? 'ml' : 'g'}',
-                ].join(' · '),
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: palette.textMuted,
+                Text(
+                  [_source(), ?energy].join(' · '),
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: palette.textMuted,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ],
@@ -329,16 +343,23 @@ Future<DayTotals> loadDayTotals(DateTime day) async {
   );
 }
 
-/// The four columns in one row, or two rows of two at large text, where a
-/// quarter of the width breaks "protein" (A6).
-List<List<Widget>> _afterAddingRows(BuildContext context, List<Widget> cells) =>
-    MediaQuery.textScalerOf(context).scale(10) > 13
-    ? [cells.sublist(0, 2), cells.sublist(2)]
-    : [cells];
+/// The four columns in one row, two rows of two at large text, where a
+/// quarter of the width breaks "Protein", and one a line above 1.5x, as the
+/// Diary's totals (A6).
+List<List<Widget>> _afterAddingRows(BuildContext context, List<Widget> cells) {
+  final scale = MediaQuery.textScalerOf(context).scale(10);
+  if (scale > 15) {
+    return [
+      for (final cell in cells) [cell],
+    ];
+  }
+  return scale > 13 ? [cells.sublist(0, 2), cells.sublist(2)] : [cells];
+}
 
 /// The day's energy and macros once the amount is added: each a figure
 /// over its goal and a bar of what was eaten, the amount lighter after
-/// it; red once over. Nothing until the day is read, or when it can't be.
+/// it. Goals are targets, so passing one is not coloured, as in the Diary.
+/// Nothing until the day is read, or when it can't be.
 class TodayAfterAdding extends StatefulWidget {
   final DateTime day;
   final double kcal;
@@ -377,7 +398,6 @@ class _TodayAfterAddingState extends State<TodayAfterAdding> {
 
   @override
   Widget build(BuildContext context) {
-    final s = S.of(context);
     final theme = Theme.of(context);
     final palette = paletteOf(context);
     return FutureBuilder<DayTotals>(
@@ -386,45 +406,60 @@ class _TodayAfterAddingState extends State<TodayAfterAdding> {
         final totals = snapshot.data;
         if (totals == null) return const SizedBox.shrink();
         Widget column({
-          required String label,
-          required String figure,
-          required String goal,
+          required String name,
+          required String unit,
+          required int value,
+          required int goal,
+          required double barGoal,
           required double eaten,
           required double added,
-          required double target,
           required Color color,
-          required String spoken,
+          int flex = 4,
         }) {
-          final over = target > 0 && eaten + added > target;
-          final shown = over ? palette.fat : color;
-          final scale = math.max(target, eaten + added);
+          // in [eaten]'s unit: [goal] is shown in the profile's (kJ or kcal)
+          final scale = math.max(barGoal, eaten + added);
           double part(double v) => scale > 0 ? (v / scale).clamp(0, 1) : 0;
           return Expanded(
-            // Words, not "428 / 465 carbs g" (A5).
+            flex: flex,
+            // Words, "Fat 96 of 86 g, 10 g over" (A5).
             child: Semantics(
-              label: '$figure of $goal $spoken${over ? ', over' : ''}',
+              // its own node, not merged into the page around it
+              container: true,
+              label: dayTotalLabel(
+                name: name,
+                value: value,
+                goal: goal,
+                unit: unit,
+              ),
               excludeSemantics: true,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text.rich(
-                    TextSpan(
-                      children: [
-                        TextSpan(
-                          text: figure,
-                          style: TextStyle(
-                            fontWeight: FontWeight.w700,
-                            color: over
-                                ? palette.fat
-                                : theme.colorScheme.onSurface,
+                  // One line, smaller if it must, as the Diary's totals.
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: AlignmentDirectional.centerStart,
+                    child: Text.rich(
+                      maxLines: 1,
+                      TextSpan(
+                        children: [
+                          TextSpan(
+                            text: '$value',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              color: palette.textStrong,
+                            ),
                           ),
-                        ),
-                        TextSpan(text: ' / $goal'),
-                      ],
-                    ),
-                    // Wraps at large text rather than cut the goal (A6).
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: palette.textMuted,
+                          TextSpan(
+                            text: keepUnits(
+                              goal > 0 ? ' / $goal $unit' : ' $unit',
+                            ),
+                          ),
+                        ],
+                      ),
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: palette.textMuted,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -440,8 +475,8 @@ class _TodayAfterAddingState extends State<TodayAfterAdding> {
                               // A part that rounds to nothing is left out:
                               // a zero flex would lay out unbounded.
                               for (final (flex, fill) in [
-                                (part(eaten), shown),
-                                (part(added), shown.withValues(alpha: 0.45)),
+                                (part(eaten), color),
+                                (part(added), color.withValues(alpha: 0.45)),
                                 (
                                   (1 - part(eaten) - part(added)).clamp(0, 1),
                                   null,
@@ -463,8 +498,8 @@ class _TodayAfterAddingState extends State<TodayAfterAdding> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    label,
-                    style: theme.textTheme.bodySmall?.copyWith(
+                    name,
+                    style: theme.textTheme.labelSmall?.copyWith(
                       color: palette.textMuted,
                     ),
                   ),
@@ -475,20 +510,20 @@ class _TodayAfterAddingState extends State<TodayAfterAdding> {
         }
 
         Widget macro(
-          String label,
+          String name,
           double eaten,
           double added,
           double goal,
           Color color,
         ) => column(
-          label: '$label g',
-          figure: '${(eaten + added).round()}',
-          goal: '${goal.round()}',
+          name: name,
+          unit: 'g',
+          value: (eaten + added).round(),
+          goal: goal.round(),
+          barGoal: goal,
           eaten: eaten,
           added: added,
-          target: goal,
           color: color,
-          spoken: 'grams ${label.toLowerCase()}',
         );
 
         final e = totals.eaten, g = totals.goal;
@@ -496,38 +531,45 @@ class _TodayAfterAddingState extends State<TodayAfterAdding> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (widget.framed) ...[
-              Text(
-                DateUtils.isSameDay(widget.day, DateTime.now())
-                    ? 'Today after adding'
-                    : 'That day after adding',
-                style: theme.textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w700,
+              // its own heading, read before the totals it heads
+              Semantics(
+                container: true,
+                header: true,
+                child: Text(
+                  DateUtils.isSameDay(widget.day, DateTime.now())
+                      ? 'Today after adding'
+                      : 'That day after adding',
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
               const SizedBox(height: Dimens.spacing8),
             ],
             for (final row in _afterAddingRows(context, [
               column(
-                label: energyUnit(context),
-                figure: '${energyValue(context, e.kcal + widget.kcal)}',
-                goal: '${energyValue(context, g.kcal)}',
+                name: 'Energy',
+                unit: energyUnit(context),
+                value: energyValue(context, e.kcal + widget.kcal),
+                goal: energyValue(context, g.kcal),
+                barGoal: g.kcal,
                 eaten: e.kcal,
                 added: widget.kcal,
-                target: g.kcal,
                 color: theme.colorScheme.primary,
-                spoken: energyUnit(context),
+                // the longest figure, kept at the macros' size (as the Diary)
+                flex: 5,
               ),
               ...inMacroOrder(
                 carbs: macro(
-                  s.carbsLabel,
+                  'Carbs',
                   e.carbs,
                   widget.carbs,
                   g.carbs,
                   palette.carbs,
                 ),
-                fat: macro(s.fatLabel, e.fat, widget.fat, g.fat, palette.fat),
+                fat: macro('Fat', e.fat, widget.fat, g.fat, palette.fat),
                 protein: macro(
-                  s.proteinLabel,
+                  'Protein',
                   e.protein,
                   widget.protein,
                   g.protein,

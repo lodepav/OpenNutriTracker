@@ -95,13 +95,13 @@ String _summary(WidgetTester tester) =>
     tester.widget<Text>(find.byKey(const ValueKey('amount-summary'))).data!;
 
 void main() {
-  testWidgets("the food's portions are chips with their weights, then g", (
+  testWidgets("the food's portions are chips with their weights, then Grams", (
     tester,
   ) async {
     await _pump(tester, bread());
     expect(find.text('slice · 32 g'), findsOneWidget);
     expect(find.text('roll · 60 g'), findsOneWidget);
-    expect(find.widgetWithText(ChoiceChip, 'g'), findsOneWidget);
+    expect(find.widgetWithText(ChoiceChip, 'Grams'), findsOneWidget);
     expect(find.text('oz'), findsNothing);
     expect(find.text('ml'), findsNothing);
     expect(_summary(tester), '158 kcal');
@@ -137,7 +137,7 @@ void main() {
     await tester.pump();
     expect(sets.last, ('1', 'serving'));
 
-    await tester.tap(find.widgetWithText(ChoiceChip, 'g'));
+    await tester.tap(find.widgetWithText(ChoiceChip, 'Grams'));
     await tester.pump();
     expect(sets.last, ('32', 'g'));
     await tester.tap(find.byIcon(Icons.add));
@@ -223,7 +223,7 @@ void main() {
     await tester.pump();
     expect(sets.length, 2);
     // To grams it still converts.
-    await tester.tap(find.widgetWithText(ChoiceChip, 'g'));
+    await tester.tap(find.widgetWithText(ChoiceChip, 'Grams'));
     await tester.pump();
     expect(sets.last, ('96', 'g'));
   });

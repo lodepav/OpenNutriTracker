@@ -46,6 +46,7 @@ import 'package:opennutritracker/fork/widget/meal_picker_chip.dart';
 import 'package:opennutritracker/fork/units/amount_text.dart' show servingTextAgrees; // [fork] S142
 import 'package:opennutritracker/core/utils/extensions.dart'; // [fork] S142
 import 'package:opennutritracker/fork/meal_detail/unit_change.dart'; // [fork] S164
+import 'package:opennutritracker/fork/meal_detail/food_page.dart';
 // [/fork]
 
 class MealDetailBottomSheet extends StatefulWidget {
@@ -77,6 +78,12 @@ class MealDetailBottomSheet extends StatefulWidget {
   final Future<MealEntity?> Function(String label)? forkOnRemovePortion;
   // [/fork]
 
+  // [fork] S125 food-page: the part this sheet shows, and the meal picked
+  // when the page shares it between two parts
+  final FoodSheetPart forkPart;
+  final ValueNotifier<IntakeTypeEntity>? forkType;
+  // [/fork]
+
   const MealDetailBottomSheet({
     super.key,
     required this.product,
@@ -91,6 +98,10 @@ class MealDetailBottomSheet extends StatefulWidget {
     // [fork] S195 amount-picker
     this.forkOnAddPortion,
     this.forkOnRemovePortion,
+    // [/fork]
+    // [fork] S125 food-page
+    this.forkPart = FoodSheetPart.all,
+    this.forkType,
     // [/fork]
   });
 
@@ -107,14 +118,22 @@ class _MealDetailBottomSheetState extends State<MealDetailBottomSheet> {
   /// twice.
   bool _submitting = false;
 
-  // [fork] S125 food-page: the meal it goes to, picked beside Add
-  late IntakeTypeEntity _type = widget.intakeTypeEntity;
+  // [fork] S125 food-page: the meal it goes to, picked beside Add, or
+  // on the page above 1.5x text while Add is pinned (forkType)
+  late final ValueNotifier<IntakeTypeEntity> _forkType =
+      widget.forkType ?? ValueNotifier(widget.intakeTypeEntity);
+  IntakeTypeEntity get _type => _forkType.value;
+  set _type(IntakeTypeEntity type) => _forkType.value = type;
   // [/fork]
 
   @override
   void initState() {
     super.initState();
-    widget.quantityTextController.addListener(_onQuantityChanged);
+    // [fork] S125 food-page: the pinned Add leaves the amount to the page
+    if (widget.forkPart != FoodSheetPart.addBar) {
+      widget.quantityTextController.addListener(_onQuantityChanged);
+    }
+    // [/fork]
     _quantityFocusNode.addListener(_onQuantityFocusChanged);
     // "Add" or "Add to list" follows the list, which a food arriving from
     // a + on the add-food screen changes while this sheet is open.
@@ -217,7 +236,15 @@ class _MealDetailBottomSheetState extends State<MealDetailBottomSheet> {
                 S.of(context).gramUnit,
               );
         return Container(
-          decoration: BoxDecoration(
+          // [fork] S125 food-page: on the page, a card of its own
+          decoration: widget.forkPart == FoodSheetPart.amount
+              ? BoxDecoration(
+                  color: palette.surface,
+                  borderRadius: Dimens.borderRadiusL,
+                )
+              :
+          // [/fork]
+          BoxDecoration(
             border: Border(
               top: BorderSide(color: palette.border, width: Dimens.hairline),
             ),
@@ -232,9 +259,22 @@ class _MealDetailBottomSheetState extends State<MealDetailBottomSheet> {
             child: Wrap(
               children: [
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(16.0, 32.0, 16.0, 8.0),
+                  // [fork] S125 food-page: the parts' own room
+                  padding: switch (widget.forkPart) {
+                    FoodSheetPart.amount => const EdgeInsets.all(16.0),
+                    FoodSheetPart.addBar =>
+                      const EdgeInsets.fromLTRB(16.0, 0, 16.0, 8.0),
+                    FoodSheetPart.all =>
+                      const EdgeInsets.fromLTRB(16.0, 32.0, 16.0, 8.0),
+                  },
+                  // [/fork]
                   child: Column(
                     children: [
+                      // [fork] S125 food-page: the pinned Add holds no amount
+                      if (widget.forkPart == FoodSheetPart.addBar)
+                        const SizedBox.shrink()
+                      else
+                      // [/fork]
                       // [fork] S195 amount-picker: chips and − + in place
                       // of the Quantity field and the Unit menu
                       if (forkAmountPicker)
@@ -371,7 +411,16 @@ class _MealDetailBottomSheetState extends State<MealDetailBottomSheet> {
                         ),
                       const SizedBox(height: Dimens.spacing16),
                       // [fork] S125 food-page: the meal, Add with the
-                      // amount, and the basket on one line
+                      // amount, and the basket on one line; on the page
+                      // the meal alone, the pinned bar without it
+                      if (widget.forkPart == FoodSheetPart.amount) ...[
+                        if (FoodBasket.instance.planning == null ||
+                            productMissingRequiredInfo)
+                          Align(
+                            alignment: AlignmentDirectional.centerStart,
+                            child: _mealChip(),
+                          ),
+                      ] else
                       Row(
                         children: [
                           // The meal plan's search only fills the basket: no
@@ -380,12 +429,10 @@ class _MealDetailBottomSheetState extends State<MealDetailBottomSheet> {
                               !productMissingRequiredInfo)
                             Expanded(child: _basketButton(compact: false))
                           else ...[
-                            MealPickerChip(
-                              key: const ValueKey('meal-detail-meal'),
-                              type: _type,
-                              onChanged: (type) => setState(() => _type = type),
-                            ),
-                            const SizedBox(width: Dimens.spacing8),
+                            if (widget.forkPart == FoodSheetPart.all) ...[
+                              _mealChip(),
+                              const SizedBox(width: Dimens.spacing8),
+                            ],
                             Expanded(
                               child: Semantics(
                                 identifier: 'meal-detail-add',
@@ -406,9 +453,10 @@ class _MealDetailBottomSheetState extends State<MealDetailBottomSheet> {
                                   label: ValueListenableBuilder(
                                     valueListenable:
                                         widget.quantityTextController,
+                                    // wraps rather than cut "Add 1 serving"
                                     builder: (context, value, _) => Text(
                                       _addLabel(context, value.text),
-                                      overflow: TextOverflow.ellipsis,
+                                      textAlign: TextAlign.center,
                                     ),
                                   ),
                                 ),
@@ -421,7 +469,11 @@ class _MealDetailBottomSheetState extends State<MealDetailBottomSheet> {
                           ],
                         ],
                       ),
-                      if (logTray != null && !addsToList)
+                      // [/fork]
+                      // [fork] S125 food-page: Add to list goes with Add
+                      if (logTray != null && !addsToList &&
+                          widget.forkPart != FoodSheetPart.amount)
+                      // [/fork]
                         Padding(
                           padding: const EdgeInsets.only(top: Dimens.spacing8),
                           child: Semantics(
@@ -449,7 +501,10 @@ class _MealDetailBottomSheetState extends State<MealDetailBottomSheet> {
                             ),
                           ),
                         ),
-                      productMissingRequiredInfo
+                      // [fork] S125 food-page: what is missing, by the amount
+                      productMissingRequiredInfo &&
+                              widget.forkPart != FoodSheetPart.addBar
+                      // [/fork]
                           ? Text(
                               // [fork] S94 missing-info: names what is
                               // missing, energy in the user's unit
@@ -478,11 +533,29 @@ class _MealDetailBottomSheetState extends State<MealDetailBottomSheet> {
   }
 
   // [fork] S125 food-page
-  Widget _basketButton({required bool compact}) => AddToBasketButton(
+  // A node of its own: unbounded, the page's text merged into its button.
+  Widget _mealChip() => Semantics(
+    container: true,
+    child: MealPickerChip(
+      key: const ValueKey('meal-detail-meal'),
+      type: _type,
+      onChanged: (type) => setState(() => _type = type),
+    ),
+  );
+
+  // The pinned bar's basket follows a meal picked on the page (S125).
+  Widget _basketButton({required bool compact}) =>
+      ValueListenableBuilder<IntakeTypeEntity>(
+        valueListenable: _forkType,
+        builder: (context, type, _) => _basketButtonFor(type, compact),
+      );
+
+  Widget _basketButtonFor(IntakeTypeEntity type, bool compact) =>
+      AddToBasketButton(
     compact: compact,
     planning: !compact,
     meal: widget.product,
-    type: _type,
+    type: type,
     day: widget.day,
     current: () {
       final quantity = double.tryParse(

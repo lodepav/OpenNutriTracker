@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show RenderParagraph;
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get_it/get_it.dart';
@@ -9,9 +10,11 @@ import 'package:opennutritracker/core/domain/entity/intake_type_entity.dart';
 import 'package:opennutritracker/core/domain/usecase/get_config_usecase.dart';
 import 'package:opennutritracker/core/domain/usecase/get_intake_usecase.dart';
 import 'package:opennutritracker/core/utils/ai_credential_storage.dart';
+import 'package:opennutritracker/core/utils/navigation_options.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_nutriments_entity.dart';
 import 'package:opennutritracker/features/add_meal/domain/usecase/search_products_usecase.dart';
+import 'package:opennutritracker/features/add_meal/presentation/widgets/meal_search_bar.dart';
 import 'package:opennutritracker/fork/screens/add_meal/add_meal_screen.dart';
 import 'package:opennutritracker/features/add_meal/presentation/add_meal_type.dart';
 import 'package:opennutritracker/features/add_meal/presentation/bloc/add_meal_bloc.dart';
@@ -164,7 +167,8 @@ Future<void> _register(List<IntakeEntity> recent) async {
   );
 }
 
-Widget _app() => MaterialApp(
+Widget _app({List<NavigatorObserver> observers = const []}) => MaterialApp(
+  navigatorObservers: observers,
   localizationsDelegates: const [
     S.delegate,
     GlobalMaterialLocalizations.delegate,
@@ -185,6 +189,12 @@ Widget _app() => MaterialApp(
 );
 
 Finder _searchAll() => find.text(l10nEn.noResultsSearchAll);
+
+/// Opens the app bar's one menu, where Quick add and the others are.
+Future<void> _openMenu(WidgetTester tester) async {
+  await tester.tap(find.byKey(const ValueKey('add-meal-menu')));
+  await tester.pumpAndSettle();
+}
 
 void main() {
   group('RecentMealBloc search-as-you-type', () {
@@ -333,6 +343,7 @@ void main() {
       getIt.registerSingleton<AiCredentialStorage>(_AiCredentials(false));
       await tester.pumpWidget(_app());
       await tester.pumpAndSettle();
+      await _openMenu(tester);
 
       expect(_withIdentifier('add-meal-bulk-add'), findsOneWidget);
       expect(find.text('Log with AI'), findsNothing);
@@ -343,9 +354,10 @@ void main() {
       getIt.registerSingleton<AiCredentialStorage>(_AiCredentials(true));
       await tester.pumpWidget(_app());
       await tester.pumpAndSettle();
+      expect(_withIdentifier('add-meal-ai-add'), findsOneWidget);
+      await _openMenu(tester);
 
       expect(_withIdentifier('add-meal-bulk-add'), findsNothing);
-      expect(_withIdentifier('add-meal-ai-add'), findsOneWidget);
       expect(find.text('Log with AI'), findsOneWidget);
     });
   });
@@ -360,10 +372,14 @@ void main() {
         getIt.registerSingleton<AiCredentialStorage>(_AiCredentials(ai));
         await tester.pumpWidget(_app());
         await tester.pumpAndSettle();
+        expect(_withIdentifier('add-meal-ai-add'), findsNothing);
+        await _openMenu(tester);
 
         expect(_withIdentifier('add-meal-quick-add'), findsNothing);
         expect(_withIdentifier('add-meal-bulk-add'), findsNothing);
-        expect(_withIdentifier('add-meal-ai-add'), findsNothing);
+        expect(_withIdentifier('add-meal-custom-add'), findsOneWidget);
+        await tester.tapAt(Offset.zero);
+        await tester.pumpAndSettle();
         expect(find.textContaining('Planning '), findsOneWidget);
         expect(find.byKey(const ValueKey('add-meal-fits-left')), findsNothing);
       });
@@ -407,7 +423,195 @@ void main() {
       getIt.registerSingleton<AiCredentialStorage>(_AiCredentials(false));
       await tester.pumpWidget(_app());
       await tester.pumpAndSettle();
+      await _openMenu(tester);
       expect(_withIdentifier('add-meal-quick-add'), findsOneWidget);
+    });
+  });
+
+  group('the app bar', () {
+    tearDown(() async => getIt.reset());
+
+    // Critique P2: three bare icons became one named menu.
+    testWidgets('one named menu holds the other ways to add', (tester) async {
+      final semantics = tester.ensureSemantics();
+      await _register(const []);
+      getIt.registerSingleton<AiCredentialStorage>(_AiCredentials(false));
+      final pushed = _Pushed();
+      await tester.pumpWidget(_app(observers: [pushed]));
+      await tester.pumpAndSettle();
+      expect(find.byIcon(Icons.bolt_rounded), findsNothing);
+      expect(find.byIcon(Icons.add_circle_outline), findsNothing);
+      expect(
+        tester.getSemantics(find.bySemanticsIdentifier('add-meal-menu')),
+        isSemantics(tooltip: 'More ways to add', isButton: true),
+      );
+
+      await _openMenu(tester);
+      for (final (id, label) in [
+        ('add-meal-quick-add', l10nEn.quickAddCardLabel),
+        ('add-meal-bulk-add', l10nEn.bulkAddTitle),
+        ('add-meal-custom-add', l10nEn.newCustomMealLabel),
+      ]) {
+        expect(_withIdentifier(id), findsOneWidget, reason: id);
+        expect(find.text(label), findsOneWidget, reason: label);
+      }
+      await tester.tap(find.text(l10nEn.quickAddCardLabel));
+      await tester.pumpAndSettle();
+      expect(find.bySemanticsIdentifier('quick-add-energy'), findsOneWidget);
+      await tester.tapAt(const Offset(10, 10));
+      await tester.pumpAndSettle();
+      expect(find.bySemanticsIdentifier('quick-add-energy'), findsNothing);
+
+      // each item opens its own way
+      await _openMenu(tester);
+      await tester.tap(find.text(l10nEn.bulkAddTitle));
+      await tester.pumpAndSettle();
+      expect(pushed.names.last, NavigationOptions.bulkAddRoute);
+      tester.state<NavigatorState>(find.byType(Navigator)).pop();
+      await tester.pumpAndSettle();
+
+      await _openMenu(tester);
+      await tester.tap(find.text(l10nEn.newCustomMealLabel));
+      await tester.pumpAndSettle();
+      expect(find.text(l10nEn.createCustomDialogTitle), findsOneWidget);
+      semantics.dispose();
+    });
+
+    // Critique P3: the + sheet's Search is a button into this field.
+    testWidgets('the search field opens with the keyboard up', (tester) async {
+      await _register(const []);
+      await tester.pumpWidget(_app());
+      await tester.pumpAndSettle();
+      final field = tester.widget<EditableText>(
+        find.descendant(
+          of: find.byType(MealSearchBar),
+          matching: find.byType(EditableText),
+        ),
+      );
+      expect(field.focusNode.hasFocus, isTrue);
+    });
+  });
+
+  group('at 2x text with results', () {
+    tearDown(() async => getIt.reset());
+
+    MealEntity food(
+      String name,
+      String backend, {
+      MealSourceEntity source = MealSourceEntity.fdc,
+      String? brands,
+      String? code,
+      String? serving,
+    }) => MealEntity(
+      code: code ?? name,
+      name: name,
+      brands: brands,
+      url: null,
+      mealQuantity: null,
+      mealUnit: 'g',
+      servingQuantity: serving == null ? null : 15,
+      servingUnit: 'g',
+      servingSize: serving,
+      nutriments: const MealNutrimentsEntity(
+        energyKcal100: 165,
+        carbohydrates100: 0,
+        fat100: 3.6,
+        proteins100: 31,
+        sugars100: 0,
+        saturatedFat100: 1,
+        fiber100: 0,
+      ),
+      source: source,
+      backendSource: backend,
+    );
+
+    testWidgets('nothing is cut, and each add button names its food', (
+      tester,
+    ) async {
+      final semantics = tester.ensureSemantics();
+      await _register([_intake('Apple')]);
+      // the settings the add buttons read their amount from
+      getIt.registerSingleton<GetConfigUsecase>(_FakeGetConfigUsecase());
+      _search.food = [
+        food('Chicken breast, roasted', 'fdc_survey'),
+        food('Chicken, back, meat only', 'fdc_sr_legacy'),
+        // the longest serving word the add button names, "1 tablespoon"
+        food('Chicken fat', 'fdc_sr_legacy', serving: '1 tablespoon (15 g)'),
+      ];
+      // one row for three products of a name, with long brands
+      _search.products = [
+        for (final (i, brand) in [
+          'Kirkland Signature Organic',
+          'Trader Joe\'s Fully Cooked',
+          'Tyson Foods Incorporated',
+        ].indexed)
+          food(
+            'Chicken breast strips',
+            'off',
+            source: MealSourceEntity.off,
+            brands: brand,
+            code: 'strips-$i',
+          ),
+      ];
+      await pumpOnPhone(
+        tester,
+        Navigator(
+          onGenerateRoute: (settings) => MaterialPageRoute<void>(
+            settings: RouteSettings(
+              arguments: AddMealScreenArguments(
+                AddMealType.breakfastType,
+                DateTime(2026, 10, 1),
+              ),
+            ),
+            builder: (_) => const AddMealScreen(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField).first, 'chicken');
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(
+        find.textContaining('Chicken breast, roasted', findRichText: true),
+        findsOneWidget,
+      );
+      expect(cutText(tester), isEmpty);
+      // read with a verb and the food, not "100 g" alone
+      final add = tester.getSemantics(
+        find.byTooltip('Add Chicken breast, roasted, 100 g'),
+      );
+      expect(add.label, isEmpty);
+      expect(add, isSemantics(isButton: true));
+      // the source after the macros, no stray comma before it
+      expect(
+        find.bySemanticsLabel(RegExp(r'grams protein, FDC')),
+        findsWidgets,
+      );
+      expect(find.bySemanticsLabel(RegExp(r', ·')), findsNothing);
+      await tester.scrollUntilVisible(
+        find.textContaining('Kirkland Signature'),
+        300,
+        scrollable: find.byType(Scrollable).last,
+      );
+      await tester.pumpAndSettle();
+      expect(cutText(tester), isEmpty);
+      // a word on the add button is never broken across lines
+      final tablespoon = find.text('tablespoon');
+      await tester.ensureVisible(tablespoon);
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .renderObject<RenderParagraph>(tablespoon)
+            .getBoxesForSelection(
+              const TextSelection(baseOffset: 0, extentOffset: 10),
+            )
+            .map((b) => b.top)
+            .toSet(),
+        hasLength(1),
+      );
+      expect(find.byTooltip('Add Chicken fat, 1 tablespoon'), findsOneWidget);
+      semantics.dispose();
     });
   });
 
@@ -495,4 +699,12 @@ void main() {
       );
     });
   });
+}
+
+class _Pushed extends NavigatorObserver {
+  final names = <String?>[];
+
+  @override
+  void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) =>
+      names.add(route.settings.name);
 }

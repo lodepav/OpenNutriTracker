@@ -22,6 +22,7 @@ import 'package:opennutritracker/features/add_meal/presentation/add_meal_type.da
 import 'package:opennutritracker/fork/screens/add_meal/meal_item_card.dart';
 import '../../helpers/fake_favourites.dart';
 import '../../helpers/test_l10n.dart';
+import '../../helpers/ux_checks.dart' show cutText, pumpOnPhone;
 
 // #277: the Show Activity Tracking toggle in Settings has been wired to
 // hide every activity-related surface in the app. AddItemBottomSheet is
@@ -136,6 +137,25 @@ void main() {
     expect(_withIdentifier('add-item-recent-favourite-1'), findsOneWidget);
     expect(_withIdentifier('add-item-recent-favourite-2'), findsOneWidget);
     handle.dispose();
+    await getIt.reset();
+    await favourites.dispose();
+  });
+
+  testWidgets('at 2x with recents nothing is cut or overflows', (tester) async {
+    final getIt = GetIt.instance;
+    await getIt.reset();
+    final favourites = FakeFavourites();
+    getIt.registerSingleton<GetIntakeUsecase>(_FakeGetIntakeUsecase());
+    getIt.registerFactory<FavouriteToggleBloc>(
+      () => FavouriteToggleBloc(favourites.get, favourites.toggle),
+    );
+
+    await pumpOnPhone(tester, AddSheet(day: DateTime(2026, 1, 1)));
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('Search foods'), findsOneWidget);
+    expect(cutText(tester), isEmpty);
     await getIt.reset();
     await favourites.dispose();
   });
@@ -266,7 +286,16 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text(l10nEn.dinnerLabel));
     await tester.pump();
-    await tester.tap(find.text(l10nEn.searchLabel));
+    // A button named for what it opens, read with the meal it adds to.
+    expect(
+      tester.getSemantics(find.bySemanticsIdentifier('add-item-search')),
+      isSemantics(
+        label: 'Search foods for Dinner',
+        isButton: true,
+        hasTapAction: true,
+      ),
+    );
+    await tester.tap(find.text('Search foods'));
     await tester.pumpAndSettle();
 
     expect(pushed.single.name, NavigationOptions.addMealRoute);

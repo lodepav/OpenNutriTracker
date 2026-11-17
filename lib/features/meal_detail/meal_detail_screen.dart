@@ -16,7 +16,8 @@ import 'package:opennutritracker/features/add_meal/presentation/widgets/favourit
 import 'package:opennutritracker/features/edit_meal/presentation/edit_meal_screen.dart';
 import 'package:opennutritracker/features/meal_detail/presentation/bloc/meal_detail_bloc.dart';
 import 'package:opennutritracker/features/meal_detail/presentation/widgets/meal_detail_bottom_sheet.dart';
-import 'package:opennutritracker/features/meal_detail/presentation/widgets/meal_detail_nutriments_table.dart';
+// [fork] S221 food-nutrients-table: upstream's table import went with its table
+// [/fork]
 import 'package:opennutritracker/features/meal_detail/presentation/widgets/meal_info_button.dart';
 import 'package:opennutritracker/features/meal_detail/presentation/widgets/off_disclaimer.dart';
 import 'package:opennutritracker/generated/l10n.dart';
@@ -28,6 +29,9 @@ import 'package:opennutritracker/fork/amounts/own_portions.dart';
 // [/fork]
 // [fork] S125 food-page
 import 'package:opennutritracker/fork/meal_detail/food_page.dart';
+// [/fork]
+// [fork] S221 food-nutrients-table
+import 'package:opennutritracker/fork/meal_detail/nutrients_table.dart';
 // [/fork]
 
 class MealDetailScreen extends StatefulWidget {
@@ -158,8 +162,16 @@ class _MealDetailScreenState extends State<MealDetailScreen> {
     super.initState();
   }
 
+  // [fork] S125 food-page: the meal picked, shared by the amount on the
+  // page and the pinned Add above 1.5x text
+  late final ValueNotifier<IntakeTypeEntity> _forkType = ValueNotifier(
+    intakeTypeEntity,
+  );
+  // [/fork]
+
   @override
   void dispose() {
+    _forkType.dispose(); // [fork] S125 food-page
     _scrollController.removeListener(_handleScroll);
     _scrollController.dispose();
     quantityTextController.dispose();
@@ -397,6 +409,12 @@ class _MealDetailScreenState extends State<MealDetailScreen> {
               forkOnAddPortion: _forkAddPortion,
               forkOnRemovePortion: _forkRemovePortion,
               // [/fork]
+              // [fork] S125 food-page: only Add pinned above 1.5x text; a
+              // new part is a new sheet, so one listener holds the amount
+              key: ValueKey(_forkPinnedPart(context)),
+              forkPart: _forkPinnedPart(context),
+              forkType: _forkType,
+              // [/fork]
             );
           },
           ),
@@ -405,6 +423,30 @@ class _MealDetailScreenState extends State<MealDetailScreen> {
       ), // [fork] S168
     );
   }
+
+  // [fork] S125 food-page
+  FoodSheetPart _forkPinnedPart(BuildContext context) =>
+      foodPageInline(context) ? FoodSheetPart.addBar : FoodSheetPart.all;
+
+  /// Above 1.5x text the amount and the meal, on the page after the food's
+  /// summary and above its nutrition table.
+  Widget _forkAmountOnPage(String selectedUnit) => MealDetailBottomSheet(
+    key: const ValueKey(FoodSheetPart.amount),
+    product: meal,
+    day: _day,
+    intakeTypeEntity: intakeTypeEntity,
+    selectedUnit: selectedUnit,
+    usesImperialUnits: _usesImperialUnits,
+    mealDetailBloc: _mealDetailBloc,
+    quantityTextController: quantityTextController,
+    onQuantityOrUnitChanged: onQuantityOrUnitChanged,
+    logTray: _logTray,
+    forkOnAddPortion: _forkAddPortion,
+    forkOnRemovePortion: _forkRemovePortion,
+    forkPart: FoodSheetPart.amount,
+    forkType: _forkType,
+  );
+  // [/fork]
 
   Widget _getLoadedContent(
     BuildContext context,
@@ -432,14 +474,28 @@ class _MealDetailScreenState extends State<MealDetailScreen> {
           title: AnimatedOpacity(
             opacity: _showAppBarTitle ? 1.0 : 0.0,
             duration: const Duration(milliseconds: 200),
-            child: Text(
-              meal.name ?? '',
-              style: Theme.of(context)
-                  .textTheme
-                  .titleLarge
-                  ?.copyWith(fontWeight: FontWeight.w800),
-              overflow: TextOverflow.ellipsis,
-            ),
+            // smaller rather than cut above 1.5x text (A6)
+            child: foodPageInline(context)
+                ? FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: AlignmentDirectional.centerStart,
+                    child: Text(
+                      meal.name ?? '',
+                      maxLines: 1,
+                      style: Theme.of(context)
+                          .textTheme
+                          .titleLarge
+                          ?.copyWith(fontWeight: FontWeight.w800),
+                    ),
+                  )
+                : Text(
+                    meal.name ?? '',
+                    style: Theme.of(context)
+                        .textTheme
+                        .titleLarge
+                        ?.copyWith(fontWeight: FontWeight.w800),
+                    overflow: TextOverflow.ellipsis,
+                  ),
           ),
           actions: [
             FavouriteToggleButton(
@@ -525,19 +581,26 @@ class _MealDetailScreenState extends State<MealDetailScreen> {
                     protein: totalProtein,
                   ),
                   const SizedBox(height: Dimens.spacing16),
+                  if (foodPageInline(context)) ...[
+                    _forkAmountOnPage(selectedUnit),
+                    const SizedBox(height: Dimens.spacing16),
+                  ],
         // [/fork]
                   if (isHydrating)
                     const Padding(
                       padding: EdgeInsets.only(bottom: 16.0),
                       child: LinearProgressIndicator(minHeight: 2),
                     ),
-                  MealDetailNutrimentsTable(
+                  // [fork] S221 food-nutrients-table: the fork's table,
+                  // its heading in its card
+                  FoodNutrientsTable(
                     product: meal,
                     usesImperialUnits: _usesImperialUnits,
                     servingQuantity: meal.servingQuantity,
                     servingUnit: meal.servingUnit,
                     showMicronutrients: _showMicronutrients,
                   ),
+                  // [/fork]
                   const SizedBox(height: 32.0),
                   MealInfoButton(
                     url: meal.url,
@@ -582,6 +645,10 @@ class _MealDetailScreenState extends State<MealDetailScreen> {
   }
 
   void _scrollToCalorieText() {
+    // [fork] S125 food-page: the amount is on the page above 1.5x text, and
+    // scrolling would take it away under the finger
+    if (foodPageInline(context)) return;
+    // [/fork]
     if (_scrollController.hasClients) {
       _scrollController.animateTo(
         // [fork] S125 food-page: back to the top, where the ring and the
