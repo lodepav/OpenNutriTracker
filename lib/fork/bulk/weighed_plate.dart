@@ -161,6 +161,10 @@ $rules "query" its name, with your
 const _dishKey = 'dish=';
 const _bones = 'bones';
 
+/// The most pieces a count on a plate can be, as `portionThatFits` takes
+/// it (`lib/fork/amounts/amount_units.dart`).
+const _mostPieces = 20;
+
 /// Reads [photo] as a weighed plate; [weights] is what [note] states.
 Future<MealTextParseResult> readWeighedPlate(
   MealItemsApi api,
@@ -384,12 +388,20 @@ List<ParsedMealItem> weighedPlateItems(
       dish ??= query.substring(_dishKey.length).trim();
       continue;
     }
-    final grams = item.unit == 'g' || item.unit == 'ml' ? item.quantity : null;
+    // A bare number above any count of things is the grams these prompts
+    // ask for, its unit left out or spelt outside the enum: a live Haiku
+    // read logged 150 g of chicken as 150 servings (113,597 kcal).
+    // shortcut: a bare 14 (a tablespoon of oil) still reads as a count;
+    // upgrade if reads show small foods without a unit.
+    final bareGrams = item.unit == null && (item.quantity ?? 0) > _mostPieces;
+    final grams = item.unit == 'g' || item.unit == 'ml' || bareGrams
+        ? item.quantity
+        : null;
     foods.add((
       query: query,
       grams: grams != null && grams > 0 ? grams : null,
       // a count is the model's to give (S170), a weight is not
-      count: item.unit == null ? item.quantity : null,
+      count: item.unit == null && !bareGrams ? item.quantity : null,
     ));
   }
 

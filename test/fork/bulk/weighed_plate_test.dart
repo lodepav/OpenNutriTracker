@@ -379,4 +379,61 @@ void main() {
       },
     );
   });
+
+  // A live Haiku read of a plate with no note, 2026-11-17: 113,597 kcal,
+  // three foods logged as 150, 150 and 90 servings.
+  group('a plate food with a bare number', () {
+    final photo = MealPhoto(bytes: Uint8List(1), mediaType: 'image/jpeg');
+
+    test('the unit goes missing before the plate rules see it, two ways', () {
+      // left out, or spelt outside the enum: both arrive as a bare number
+      final raw = [
+        {'query': 'chicken breast, grilled', 'quantity': 150},
+        {'query': 'french fries, fast food', 'quantity': 150, 'unit': 'grams'},
+        {'query': 'tomato soup', 'quantity': 250, 'unit': 'g'},
+      ];
+      final items = validateParsedMealItems(mealItemsFromJson(raw)).items;
+      expect(items.map((i) => (i.quantity, i.unit)), [
+        (150, null),
+        (150, null),
+        (250, 'g'),
+      ]);
+    });
+
+    test('above a count is grams, on a plate with no note', () async {
+      final api = _Api([
+        const ParsedMealItem(
+          query:
+              'dish=Grilled chicken with fries, carrot salad and tomato soup',
+        ),
+        _g('tomato soup', 250),
+        const ParsedMealItem(query: 'chicken breast, grilled', quantity: 150),
+        const ParsedMealItem(query: 'french fries, fast food', quantity: 150),
+        const ParsedMealItem(
+          query: 'carrot salad, with mayonnaise-based dressing',
+          quantity: 90,
+        ),
+      ]);
+      final result = await readEstimatedPlate(api, photo, note: null);
+      expect(result.items.map((i) => (i.quantity, i.unit)), [
+        (250, 'g'),
+        (150, 'g'),
+        (150, 'g'),
+        (90, 'g'),
+      ]);
+    });
+
+    test('a count stays a count', () {
+      final items = weighedPlateItems([
+        _g('rice, white, cooked', 180),
+        const ParsedMealItem(query: 'egg, fried', quantity: 2),
+        const ParsedMealItem(query: 'bread, white', quantity: 3),
+      ], const NoteWeights());
+      expect(items.map((i) => (i.quantity, i.unit)), [
+        (180, 'g'),
+        (2, null),
+        (3, null),
+      ]);
+    });
+  });
 }
