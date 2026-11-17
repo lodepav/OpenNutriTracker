@@ -405,6 +405,7 @@ List<ParsedMealItem> weighedPlateItems(
   // with best ("carrot" with "carrots, raw"), else is added as the note
   // names it.
   final stated = <int, double>{};
+  final unmatched = <FoodWeight>[];
   for (final weight in wholeDish ? const <FoodWeight>[] : weights.foods) {
     final words = tokenize(weight.name);
     int? match;
@@ -416,9 +417,19 @@ List<ParsedMealItem> weighedPlateItems(
     if (match != null) {
       stated[match] = weight.grams;
     } else {
-      foods.add((query: weight.name, grams: null, count: null));
-      stated[foods.length - 1] = weight.grams;
+      unmatched.add(weight);
     }
+  }
+  _claimSplitFood(
+    foods,
+    stated,
+    unmatched,
+    dish,
+    withTotal: weights.totalGrams != null,
+  );
+  for (final weight in unmatched) {
+    foods.add((query: weight.name, grams: null, count: null));
+    stated[foods.length - 1] = weight.grams;
   }
 
   final total =
@@ -456,6 +467,63 @@ List<ParsedMealItem> weighedPlateItems(
         group: group,
       ),
   ];
+}
+
+/// A weighed food no food's name agrees with, that the meal's [dish] name
+/// does name, is one the model split into parts ("burger 250g" as a bun, a
+/// patty and the salad in it), not one it missed: added as the note names
+/// it, it was counted twice. A food the note does not weigh at exactly its
+/// grams is that food ("salad 163g" as "coleslaw" 163 g); else, with one such
+/// weight and no total, the foods the note does not weigh are its parts,
+/// sized to it when they come to half to twice it. Each weight placed so is
+/// taken out of [unmatched]; the rest are added as before.
+/// shortcut: a food the note leaves unweighed beside a split one counts as
+/// one of its parts, and two split foods, or one beside a total, are added
+/// as before; upgrade when the model marks which food each part is of (a
+/// prompt change, live runs).
+void _claimSplitFood(
+  List<({String query, double? grams, double? count})> foods,
+  Map<int, double> stated,
+  List<FoodWeight> unmatched,
+  String? dish, {
+  required bool withTotal,
+}) {
+  if (dish == null || dish.isEmpty) return;
+  bool free(int i) =>
+      !stated.containsKey(i) &&
+      foods[i].grams != null &&
+      foods[i].query.toLowerCase() != _bones;
+  final named = [
+    for (final weight in unmatched)
+      if (scoreText(dish, tokenize(weight.name)) > 0) weight,
+  ];
+  for (final weight in named) {
+    final exact = foods.indexed
+        .where((e) => free(e.$1) && e.$2.grams == weight.grams)
+        .map((e) => e.$1)
+        .firstOrNull;
+    if (exact == null) continue;
+    stated[exact] = weight.grams;
+    unmatched.remove(weight);
+  }
+  // the parts would take the total's other foods with them
+  if (withTotal) return;
+  if (unmatched.length != 1 || !named.contains(unmatched.single)) return;
+  final weight = unmatched.single;
+  final parts = [
+    for (var i = 0; i < foods.length; i++)
+      if (free(i)) i,
+  ];
+  final sum = parts.fold<double>(0, (s, i) => s + foods[i].grams!);
+  if (parts.isEmpty || sum < weight.grams / 2 || sum > weight.grams * 2) {
+    return;
+  }
+  final grams = <double?>[for (final i in parts) foods[i].grams];
+  _sizeToTotal(grams, const {}, weight.grams);
+  for (final (k, i) in parts.indexed) {
+    stated[i] = grams[k]!;
+  }
+  unmatched.clear();
 }
 
 /// Sizes the foods not in [fixed] so that all of [grams] add up to [total],

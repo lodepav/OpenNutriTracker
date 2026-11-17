@@ -78,7 +78,7 @@ Future<Logged?> loggedKcal(
       broken = await breakDown(
         dish.query,
         amount: amount,
-        photo: row.fromPhoto ? photo : null,
+        photo: breakdownPhoto(row, photo),
       );
     } on MealInterpreterException {
       return null;
