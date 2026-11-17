@@ -37,6 +37,11 @@ String? everydayRowName(String query) {
     if (m[1] == 'pork chop' && _fried.hasMatch(key)) return null;
     return _meats[m[1]! + (m[2] == null ? '' : ' ground')];
   }
+  if (_elk.firstMatch(key) case final m?) {
+    if (m[0]!.contains('raw')) return 'Game meat, elk, raw';
+    if (m[0]!.contains('roast')) return 'Game meat, elk, cooked, roasted';
+    return 'Game meat, elk, loin, separable lean only, cooked, broiled';
+  }
   return null;
 }
 
@@ -77,6 +82,15 @@ const _meats = {
   'beef ground': 'Beef, ground, unspecified fat content, cooked',
   'pork ground': 'Pork, fresh, ground, cooked',
 };
+
+/// Elk named as a steak or with only how it was cooked: "elk steak",
+/// "elk, cooked, steak", "elk, raw". Ground elk patties, at a ground cut's
+/// fat, were the shortest rows; ground elk keeps them.
+final _elk = RegExp(
+  r'^(?:(?:cooked|grilled|broiled|roasted|pan[- ]fried|fried|seared)[ ,]+)*'
+  r'elk(?:(?:,\s*| )(?:steaks?|loin|cooked|grilled|broiled|roasted|'
+  r'pan[- ]fried|fried|seared|raw))+$',
+);
 
 final _boiled = RegExp(r'\bboiled\b');
 final _fried = RegExp(r'\bfried\b|saut[eé]ed');
@@ -640,6 +654,35 @@ const _everyday = {
   'sweet chili sauce': _sweetSourSauce,
   'sweet chilli sauce': _sweetSourSauce,
   'sweet chili': _sweetSourSauce,
+  // the one with apples, which holds the words; mayonnaise is this one's
+  // dressing
+  'carrot salad with mayonnaise': 'Carrots, raw, salad',
+  'carrot salad with mayo': 'Carrots, raw, salad',
+  // the fork's chłodnik, a cold beet soup; a hot one is borscht
+  'beet soup': _borscht,
+  'beetroot soup': _borscht,
+  'borsch, beet soup': _borscht,
+  'borscht, beet soup': _borscht,
+  'beet borscht': _borscht,
+  // a veggie burger, or nothing
+  'burger': _hamburger,
+  'beef burger': _hamburger,
+  // a whole hamburger
+  'hamburger bun, white': _burgerBun,
+  // frozen breaded thighs, reheated, at 334 kcal per 100 g
+  'breaded chicken': _breadedChicken,
+  'breaded chicken pieces': _breadedChicken,
+  // nothing
+  'cod, battered or breaded, fried': _batteredCod,
+  'cod, battered, fried': _batteredCod,
+  // nothing: "dry" is the bought product, "cooked" what is on the plate
+  'wheat flour noodles, dry, egg-free, cooked': _cookedNoodles,
+  'wheat flour noodles, cooked': _cookedNoodles,
+  'wheat noodles, cooked': _cookedNoodles,
+  // Nothing: no row is broccoli sprouts. Radish sprouts are the nearest raw
+  // sprouts, of the same cabbage family, at a like energy.
+  'broccoli sprouts': _radishSprouts,
+  'broccoli sprouts, raw': _radishSprouts,
 };
 
 const _cheesePizza =
@@ -768,3 +811,9 @@ const _shawarmaWrap =
     'shawarma wrap)';
 const _marzipanChocolate =
     'Bittersweet/semisweet chocolate, filled with marzipan';
+const _borscht =
+    'Borscht, with beef (boršs, borščs, borsch, borshch, borscht soup)';
+const _hamburger = 'Hamburger, NFS';
+const _breadedChicken = 'Chicken fillet, breaded';
+const _batteredCod = 'Cod fillet, in frying batter (with beer) deep-fried';
+const _radishSprouts = 'Radish seeds, sprouted, raw';
