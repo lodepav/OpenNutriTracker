@@ -816,6 +816,62 @@ Dropped before trying: the user's plate and bowl sizes (no use away from
 home). Weak: a known object in the frame — the meat plate has a fork in
 it and is still read at 1.5-2× its reference.
 
+## Idea 7: weighed own meals (2026-11-17, about $0.15)
+
+Eleven of the user's meals, every food weighed on a kitchen scale, as
+served (`FORK_EVAL_PHOTOS`, kept under `build/`, never committed). The
+manifest lists each food's grams and the words of a read row that count
+toward it; `fork/tools/weighed_grams.py` scores a run's `kcal.json`
+against them. The kcal references are the true grams times Claude's
+estimated energy per 100 g, so only the grams are exact. Haiku 5.5, three
+passes per scenario, 13 runs in all.
+
+- **Wrong rows first.** Carrot salad with mayonnaise found no row (0 kcal
+  in every read), borsch the cold kefir soup, elk steak the ground elk
+  patties, "burger" a veggie burger, "breaded chicken" frozen thighs at
+  334 kcal per 100 g. Fixed (S75), seaweed salad added as a dish. Over
+  the three scenarios the median miss went from 17-19% to 15-16%.
+- **Grams.** Real plates are read at 0.90 of their weight: foods over
+  150 g at 0.83 (n=303), 35-150 g at 1.01 (126), under 35 g at 2.00 (9,
+  all the pesto). The lab plates' pattern holds for small foods, but here
+  the large ones are under, not about right. 12 of 450 foods were not
+  read at all (the borsch beside a plate and the pesto, no note).
+- **Error split.** Without weights, a plate's miss is a median 17% of the
+  reference from portions and 13% from the rows and their energy. With
+  the weights in the note the portion part is 0 and the miss stays at
+  16-19%: once grams are right, the rows decide.
+- **The review's tools reach these plates.** 16 of 198 reads need a
+  scale outside the Size's ×0.6-×1.4, so a wider step is not supported.
+  The nearest Size takes the median miss from 15% to 11%; the amount
+  question after it adds nothing on the median. The true amount is inside
+  the question's chips in 192 of 198 reads. The question's food (most
+  kcal) is the one with the largest kcal error in 80 of 144 reads (56%,
+  round 12 found 62-69%, its measure unknown) and the one with the
+  largest gram ratio in 33 (23%).
+- **Idea 6, resolution: no effect shown.** The app sends 1365 × 1024
+  (`MealPhotoEncoder`, short edge 1024, quality 80, WebP to the three
+  hosted providers). That size against the original 4000 × 3000: with the
+  dish name, 92% and 89% of the reference on the nine resized photos;
+  without a note 90% and 84%, but two photos sent at the same pixels in
+  both runs moved 14 points too, so three passes cannot tell it from
+  noise. The API scales a 12 MP photo down to about 3.8 MP; it costs
+  about 2.7× the input tokens. Keep the size. The eval sends JPEG, not
+  the app's WebP.
+- **The first set was sent turned.** Its photos were resized without
+  their EXIF orientation, so 9 of 11 reached the model sideways or upside
+  down; the app sends them upright. The row-fix comparison is unaffected
+  (both sides turned); every run after it is upright.
+- **Double counts seen, left as they are.** A weighed plate's note
+  ("burger 250 g") keeps the burger and adds its bun, patty and lettuce:
+  1,690 kcal against 1,135. Kept: the user does not always weigh the
+  salad, so foods beyond the note can be real. Two reads also listed the
+  pork and potatoes again, raw, at 300 g each.
+
+What is left is the rows and the user's own repeats: about 30 weighed
+plates, some meals repeated and photographed in the app, would show
+whether D46's per-food sizes learn anything (11 plates repeat too few
+foods by name).
+
 ## What the tests measure
 
 Each sends real photos or typed meals through the app's logging code,
