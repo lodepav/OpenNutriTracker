@@ -86,7 +86,7 @@ void main() {
     await pump([_day(10, 17, 1800), _day(10, 19, 1900), _day(10, 22, 2300)]);
     expect(find.byKey(const ValueKey('week-2026-10-19')), findsOneWidget);
     expect(find.text('Oct 19 – Oct 25'), findsOneWidget);
-    expect(find.text('This week'), findsOneWidget);
+    expect(find.text('This week so far'), findsOneWidget);
     expect(find.text('2 of 5 days logged'), findsOneWidget);
     expect(find.text('2100 / 2000 kcal'), findsOneWidget);
     expect(find.text('+100 kcal · On target'), findsOneWidget);
@@ -101,7 +101,7 @@ void main() {
     // One card read aloud per week.
     expect(
       tester.getSemantics(find.byKey(const ValueKey('week-2026-10-19'))).label,
-      startsWith('Oct 19 – Oct 25, this week, 2 of 5 days logged, '),
+      startsWith('Oct 19 – Oct 25, this week so far, 2 of 5 days logged, '),
     );
   });
 

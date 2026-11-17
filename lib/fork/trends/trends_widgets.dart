@@ -16,6 +16,24 @@ Color waterColor(BuildContext context) =>
     ? const Color(0xFF7DB8E8)
     : const Color(0xFF2F7DBF);
 
+/// A tile's short warning line: a muted amber at 4.5:1 or more on the
+/// tile, 5.53:1 on light's white and carbs' amber 8.55:1 on dark's
+/// surface; the palette's light amber (3.79:1) is too pale for text.
+Color noteColor(BuildContext context) =>
+    Theme.of(context).brightness == Brightness.dark
+    ? AppPalette.dark.carbs
+    : const Color(0xFF945C0B);
+
+/// [text] with its units whole: no line break inside "-0.16/wk",
+/// "kcal/day", "2925 kcal" or "fl oz"; " / " and " · " still break.
+String keepUnits(String text) => text
+    .replaceAll('fl oz', 'fl\u00A0oz')
+    .replaceAllMapped(
+      RegExp(r'(?<=\d) (?=\p{L})', unicode: true),
+      (_) => '\u00A0',
+    )
+    .replaceAllMapped(RegExp(r'(?<=\S)/(?=\S)'), (_) => '/\u2060');
+
 /// [v] at [digits] decimals with its sign, "+12" or "-12"; one that rounds
 /// to nothing is unsigned, never "-0".
 String signedText(double v, [int digits = 0]) {
@@ -55,6 +73,14 @@ class RangePills extends StatelessWidget {
               Expanded(
                 child: Semantics(
                   identifier: 'trends-range-${r.label.toLowerCase()}',
+                  label: switch (r.days) {
+                    7 => '1 week',
+                    30 => '1 month',
+                    365 => '1 year',
+                    0 => 'All',
+                    _ => '${r.days ~/ 30} months',
+                  },
+                  button: true,
                   selected: r.days == rangeDays,
                   inMutuallyExclusiveGroup: true,
                   child: Material(
@@ -74,15 +100,17 @@ class RangePills extends StatelessWidget {
                       child: ConstrainedBox(
                         constraints: const BoxConstraints(minHeight: 48),
                         child: Center(
-                          child: Text(
-                            r.label,
-                            style: text.labelLarge?.copyWith(
-                              color: r.days == rangeDays
-                                  ? palette.textStrong
-                                  : palette.textMuted,
-                              fontWeight: r.days == rangeDays
-                                  ? FontWeight.w700
-                                  : FontWeight.w500,
+                          child: ExcludeSemantics(
+                            child: Text(
+                              r.label,
+                              style: text.labelLarge?.copyWith(
+                                color: r.days == rangeDays
+                                    ? palette.textStrong
+                                    : palette.textMuted,
+                                fontWeight: r.days == rangeDays
+                                    ? FontWeight.w700
+                                    : FontWeight.w500,
+                              ),
                             ),
                           ),
                         ),
@@ -224,6 +252,15 @@ class TrendTile extends StatelessWidget {
   final Widget chart;
   final VoidCallback onTap;
 
+  /// What a screen reader says for the whole tile, in words
+  /// ("Calories, daily average 2573 of 2925 kcal"), as is: it includes
+  /// the [note] if that should be heard. The label, value and note when
+  /// null.
+  final String? spokenLabel;
+
+  /// A short line under the value, e.g. "over limit" for a passed limit.
+  final String? note;
+
   const TrendTile({
     super.key,
     required this.id,
@@ -233,6 +270,8 @@ class TrendTile extends StatelessWidget {
     this.valueColor,
     required this.chart,
     required this.onTap,
+    this.spokenLabel,
+    this.note,
   });
 
   @override
@@ -243,6 +282,13 @@ class TrendTile extends StatelessWidget {
     final lines = MediaQuery.textScalerOf(context).scale(10) > 13 ? 2 : 1;
     return Semantics(
       identifier: id,
+      container: true,
+      button: true,
+      label:
+          spokenLabel ??
+          [label, suffix == null ? value : '$value $suffix', ?note].join(', '),
+      onTap: onTap,
+      excludeSemantics: true,
       child: AppCard(
         key: ValueKey(id),
         borderRadius: Dimens.radiusS,
@@ -279,7 +325,7 @@ class TrendTile extends StatelessWidget {
                 children: [
                   if (suffix != null)
                     TextSpan(
-                      text: ' $suffix',
+                      text: ' ${keepUnits(suffix!)}',
                       style: text.labelMedium?.copyWith(
                         color: palette.textMuted,
                         fontWeight: FontWeight.w500,
@@ -291,6 +337,14 @@ class TrendTile extends StatelessWidget {
               minFontSize: 11,
               overflow: TextOverflow.ellipsis,
             ),
+            if (note != null)
+              Text(
+                note!,
+                style: text.labelMedium?.copyWith(
+                  color: noteColor(context),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             const SizedBox(height: 6),
             chart,
           ],

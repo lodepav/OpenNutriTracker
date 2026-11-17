@@ -20,6 +20,18 @@ import 'package:opennutritracker/fork/trends/nutrient_trends.dart';
 import 'package:opennutritracker/fork/trends/trend_stats.dart';
 import 'package:opennutritracker/fork/trends/trends_overview.dart';
 
+/// Trends' tiles whose number is a daily average, by id.
+const _averaged = {
+  'trends-tile-calories',
+  'trends-tile-carbs',
+  'trends-tile-fat',
+  'trends-tile-protein',
+  'trends-tile-fibre',
+  'trends-tile-sugars',
+  'trends-tile-sodium',
+  'trends-tile-water',
+};
+
 /// What the Trends tiles on Home read besides Trends' state.
 typedef _Extras = ({
   List<ExpenditureDay> history,
@@ -162,16 +174,31 @@ class _HomeTrendTilesState extends State<HomeTrendTiles> {
                   if (widget.ids.contains(
                     t.id.substring('trends-tile-'.length),
                   ))
-                    t.id.substring('trends-tile-'.length): HomeTile(
+                    t.id.substring('trends-tile-'.length): Semantics(
+                      container: true,
                       identifier: 'home-${t.id}',
-                      title: t.label,
-                      value: t.value,
-                      valueColor: t.valueColor,
-                      note: t.suffix,
-                      // No room kept for a tile with no chart.
-                      below: t.chart is SizedBox ? null : t.chart,
+                      button: true,
+                      label: t.spokenLabel,
+                      hint: 'Open ${t.label}',
                       onTap: t.onTap,
-                      hint: 'Open ${t.label.replaceAll(' · avg', '')}',
+                      // Read as on Trends, in words, not the tile's text.
+                      excludeSemantics: true,
+                      child: HomeTile(
+                        identifier: 'home-${t.id}',
+                        // Home has no line saying these are averages.
+                        title: _averaged.contains(t.id)
+                            ? '${t.label} · avg'
+                            : t.label,
+                        value: t.value,
+                        valueColor: t.valueColor,
+                        note: t.note == null
+                            ? t.suffix
+                            : '${t.suffix} · ${t.note}',
+                        // No room kept for a tile with no chart.
+                        below: t.chart is SizedBox ? null : t.chart,
+                        onTap: t.onTap,
+                        hint: 'Open ${t.label}',
+                      ),
                     ),
               },
             );

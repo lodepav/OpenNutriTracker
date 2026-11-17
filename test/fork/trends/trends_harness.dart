@@ -78,12 +78,41 @@ TrendsLoaded loaded({
   usesImperialFoodUnits: imperial,
 );
 
-/// Trends on [state], the bloc in the locator as the page reads it.
+/// Every tile, in their first order with the upstream macro order.
+const allTrendTiles = [
+  'calories',
+  'weight',
+  'expenditure',
+  'balance',
+  'carbs',
+  'fat',
+  'protein',
+  'fibre',
+  'sugars',
+  'sodium',
+  'water',
+  'goal',
+  'sides',
+  'waist',
+];
+
+/// A saved tile layout with every tile on, [order] first.
+void showAllTiles({List<String> order = allTrendTiles}) {
+  TrendsTilesStore.current.value = (order: order, hidden: const {});
+  addTearDown(
+    () => TrendsTilesStore.current.value = (order: const [], hidden: const {}),
+  );
+}
+
+/// Trends on [state], the bloc in the locator as the page reads it; every
+/// tile on unless [allTiles] is false.
 Future<SeededTrendsBloc> pumpTrends(
   WidgetTester tester,
   TrendsLoaded state, {
   bool kj = false,
+  bool allTiles = true,
 }) async {
+  if (allTiles) showAllTiles();
   final bloc = SeededTrendsBloc(state);
   locator.registerSingleton<TrendsBloc>(bloc);
   // The cards below the grid read the locator; the grid is the test's.
@@ -142,5 +171,13 @@ String tileText(WidgetTester tester, String metric) {
       matching: find.byType(RichText),
     ),
   );
-  return texts.map((t) => t.text.toPlainText()).join(' | ');
+  // a tile's units are glued with a no-break space and a word joiner
+  return texts
+      .map(
+        (t) => t.text
+            .toPlainText()
+            .replaceAll('\u00A0', ' ')
+            .replaceAll('\u2060', ''),
+      )
+      .join(' | ');
 }

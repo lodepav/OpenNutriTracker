@@ -22,6 +22,17 @@ class TrendsLayoutStore extends LayoutStore {
   static ValueNotifier<Layout> get current => LayoutStore.current(storeKey);
 }
 
+/// The tiles on for a profile that has not arranged them; the others wait
+/// in Arrange Trends.
+const defaultTrendTiles = {
+  'calories',
+  'weight',
+  'expenditure',
+  'balance',
+  'protein',
+  'fibre',
+};
+
 /// Trends' tiles, by their metric's name.
 class TrendsTilesStore extends LayoutStore {
   static const storeKey = 'trendsTiles';

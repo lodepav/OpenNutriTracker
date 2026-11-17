@@ -21,7 +21,7 @@ import 'package:opennutritracker/fork/screens/trends/trends_page.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 import 'package:provider/provider.dart';
 
-import 'trends_harness.dart' show openTile;
+import 'trends_harness.dart' show openTile, showAllTiles;
 
 // Seam S93: the weight outlook reads the weigh-ins the chart draws, and is
 // labelled as the measured trend.
@@ -188,6 +188,8 @@ void main() {
   // and its fill along the bottom under the goal; S120 has the water card
   // on its tile's page (the calorie page is test/fork/trends').
   testWidgets('nothing logged: the water card says so', (tester) async {
+    // Water is off by default; a saved layout has it on.
+    showAllTiles();
     await _pump(tester, const []);
     await tester.pageBack();
     await tester.pumpAndSettle();
