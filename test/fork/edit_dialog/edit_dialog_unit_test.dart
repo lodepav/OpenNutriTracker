@@ -139,7 +139,7 @@ void main() {
     final unit = ValueNotifier('serving#1');
     final result = await _open(tester, _logged('serving#1', 120), unit);
 
-    await tester.tap(find.widgetWithText(ChoiceChip, 'g'));
+    await tester.tap(find.widgetWithText(ChoiceChip, 'Grams'));
     await tester.pump();
     expect(_text(tester, _amount), '120');
 
@@ -185,7 +185,7 @@ void main() {
     await tester.enterText(_leftover, '0.5');
     await tester.pump();
 
-    await tester.tap(find.widgetWithText(ChoiceChip, 'g'));
+    await tester.tap(find.widgetWithText(ChoiceChip, 'Grams'));
     await tester.pump();
     expect(_text(tester, _amount), '90');
     expect(_text(tester, _leftover), '');

@@ -162,7 +162,9 @@ void main() {
     // [fork] S125: the ring in place of the macro summary
     expect(inRing(find.text('0 g fat · 0%')), findsOneWidget);
     // [/fork]
-    expect(inTable(find.text('0.0g')), findsOneWidget);
+    // [fork] S221 food-nutrients-table: "0 g", a space before the unit
+    expect(inTable(find.text('0 g')), findsOneWidget);
+    // [/fork]
     expect(find.text(missingNutrientPlaceholder), findsNothing);
 
     expect(

@@ -283,8 +283,9 @@ class _GroupRow extends StatelessWidget {
                       const SizedBox(height: 2),
                       Text(
                         whose,
-                        maxLines: large ? 2 : 1,
-                        overflow: TextOverflow.ellipsis,
+                        // whole at large text, as the name (A6)
+                        maxLines: large ? null : 1,
+                        overflow: large ? null : TextOverflow.ellipsis,
                         style: muted,
                       ),
                       if (large && rangeText != null) ...[

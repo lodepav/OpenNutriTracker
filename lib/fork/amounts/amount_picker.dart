@@ -313,10 +313,19 @@ class AmountPicker extends StatelessWidget {
   String _unitWord(BuildContext context, AmountUnitOption option) =>
       amountUnitWord(context, meal, option);
 
-  /// "slice · 32 g", or the weight unit's word.
+  /// "slice · 32 g", or the weight unit named in full, "Grams": a lone
+  /// "g" chip read as nothing (H2).
   String _chipLabel(BuildContext context, AmountUnitOption option) {
     final word = _unitWord(context, option);
-    if (!option.isPortion) return word;
+    if (!option.isPortion) {
+      return switch (UnitDropdownItem.g.fromString(storedUnit(option.unit))) {
+        UnitDropdownItem.g || UnitDropdownItem.gml => 'Grams',
+        UnitDropdownItem.ml => 'Millilitres',
+        UnitDropdownItem.oz => 'Ounces',
+        UnitDropdownItem.flOz => 'Fluid ounces',
+        UnitDropdownItem.serving => word,
+      };
+    }
     return '$word · ${_weight(context, option.grams!)}';
   }
 

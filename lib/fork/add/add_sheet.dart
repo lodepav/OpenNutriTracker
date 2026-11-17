@@ -177,33 +177,50 @@ class _AddSheetState extends State<AddSheet> {
                 ),
               ),
             const SizedBox(height: Dimens.spacing12),
+            // A button into Add food, whose field opens with the keyboard
+            // up (S163): not a second field to type in (critique P3).
             Semantics(
               identifier: 'add-item-search',
               button: true,
-              label: '${s.searchLabel}, ${mealLabel(context, _type)}',
+              label: 'Search foods for ${mealLabel(context, _type)}',
               excludeSemantics: true,
+              // the InkWell's tap is excluded with its text
+              onTap: _openSearch,
               child: Material(
                 color: palette.surfaceMuted,
                 borderRadius: Dimens.borderRadiusM,
                 child: InkWell(
                   borderRadius: Dimens.borderRadiusM,
                   onTap: _openSearch,
-                  child: SizedBox(
-                    height: 52,
-                    child: Row(
-                      children: [
-                        const SizedBox(width: Dimens.spacing12),
-                        Icon(Icons.search_rounded, color: palette.textMuted),
-                        const SizedBox(width: Dimens.spacing8),
-                        Expanded(
-                          child: Text(
-                            s.searchLabel,
-                            style: theme.textTheme.bodyLarge?.copyWith(
-                              color: palette.textMuted,
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(minHeight: 52),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: Dimens.spacing12,
+                        vertical: Dimens.spacing8,
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.search_rounded,
+                            color: theme.colorScheme.primary,
+                          ),
+                          const SizedBox(width: Dimens.spacing8),
+                          Expanded(
+                            child: Text(
+                              'Search foods',
+                              style: theme.textTheme.titleSmall?.copyWith(
+                                fontWeight: FontWeight.w600,
+                                color: palette.textStrong,
+                              ),
                             ),
                           ),
-                        ),
-                      ],
+                          Icon(
+                            Icons.chevron_right_rounded,
+                            color: palette.textMuted,
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),

@@ -133,7 +133,8 @@ class MealItemCard extends StatelessWidget {
                       fat: last?.totalFatsGram ?? n.fat100,
                       protein: last?.totalProteinsGram ?? n.proteins100,
                       tail: source == null ? null : '· $source',
-                      maxLines: large ? 3 : 1,
+                      // the whole source at large text, "FDC Survey" (A6)
+                      maxLines: large ? null : 1,
                     ),
                     if (large && kcal != null)
                       Text(
@@ -206,25 +207,55 @@ class MealItemCard extends StatelessWidget {
                                 )
                               : label == null
                               ? const Icon(Icons.add_rounded, size: 20)
-                              : ConstrainedBox(
-                                  constraints: const BoxConstraints(
-                                    maxWidth: 112,
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      const Icon(Icons.add_rounded, size: 18),
-                                      const SizedBox(width: 2),
-                                      Flexible(
-                                        child: Text(
-                                          label,
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: textTheme.labelMedium
-                                              ?.copyWith(color: accent),
+                              // The tooltip names it, "Add Apple, 60 g", not
+                              // the amount alone (A3).
+                              : ExcludeSemantics(
+                                  child: ConstrainedBox(
+                                    constraints: const BoxConstraints(
+                                      maxWidth: 112,
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        const Icon(Icons.add_rounded, size: 18),
+                                        const SizedBox(width: 2),
+                                        Flexible(
+                                          // at large text wraps between
+                                          // words, "1 / tablespoon", and a
+                                          // word too long shrinks rather
+                                          // than breaks (A6)
+                                          child: large
+                                              ? Wrap(
+                                                  alignment:
+                                                      WrapAlignment.center,
+                                                  spacing: 4,
+                                                  children: [
+                                                    for (final word
+                                                        in label.split(' '))
+                                                      FittedBox(
+                                                        fit: BoxFit.scaleDown,
+                                                        child: Text(
+                                                          word,
+                                                          style: textTheme
+                                                              .labelMedium
+                                                              ?.copyWith(
+                                                                color: accent,
+                                                              ),
+                                                        ),
+                                                      ),
+                                                  ],
+                                                )
+                                              : Text(
+                                                  label,
+                                                  maxLines: 1,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                  style: textTheme.labelMedium
+                                                      ?.copyWith(color: accent),
+                                                ),
                                         ),
-                                      ),
-                                    ],
+                                      ],
+                                    ),
                                   ),
                                 ),
                           //; S142: the brand tells like-named foods apart (A4)
@@ -236,7 +267,8 @@ class MealItemCard extends StatelessWidget {
                                   if (mealEntity.brands case final b?
                                       when b.trim().isNotEmpty)
                                     b.trim(),
-                                  ?label,
+                                  // a recent's amount is on its row
+                                  ?(label ?? (last == null ? null : per)),
                                 ].join(', '),
                               ),
                           // S179: logs at once; the row opens the page

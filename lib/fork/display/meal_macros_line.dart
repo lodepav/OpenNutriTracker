@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dart';
 import 'package:opennutritracker/fork/display/display_prefs.dart';
+import 'package:opennutritracker/fork/trends/trends_widgets.dart';
 import 'package:opennutritracker/fork/units/energy_text.dart';
 
 /// A food's energy and macros per 100 g (or ml) on one line under its name
@@ -84,13 +85,11 @@ class MacrosLine extends StatelessWidget {
                   ],
                 ),
               ],
-              // Shown with no-break spaces, so "per 100 g" never splits;
-              // on one line, cut where it must.
+              // A unit stays with its number ("per 100 g"), words wrap
+              // between them; on one line, cut where it must.
               if (tail != null)
                 TextSpan(
-                  text: maxLines == 1
-                      ? ' $tail'
-                      : ' ${tail!.replaceAll(' ', '\u00a0')}',
+                  text: maxLines == 1 ? ' $tail' : ' ${keepUnits(tail!)}',
                 ),
             ],
           ),
@@ -101,7 +100,8 @@ class MacrosLine extends StatelessWidget {
             ?lead,
             for (final (_, name, value, _) in macros)
               '${grams(value)} ${grams(value) == '1' ? 'gram' : 'grams'} $name',
-            ?tail,
+            // the dot is for the eye: "26 grams protein, FDC Survey"
+            ?tail?.replaceFirst(RegExp(r'^·\s*'), ''),
           ].join(', '),
         );
       },

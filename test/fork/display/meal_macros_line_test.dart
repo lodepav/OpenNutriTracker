@@ -43,7 +43,7 @@ void main() {
 
     expect(
       find.text(
-        '120 kcal · P\u00a0– · F\u00a03 · C\u00a020 per\u00a0100\u00a0g',
+        '120 kcal · P\u00a0– · F\u00a03 · C\u00a020 per 100\u00a0g',
       ),
       findsOneWidget,
     );
@@ -58,12 +58,30 @@ void main() {
   testWidgets('a drink is per 100 ml', (tester) async {
     await _pump(tester, _meal(unit: 'ml'));
 
-    expect(find.textContaining('per\u00a0100\u00a0ml'), findsOneWidget);
+    expect(find.textContaining('per 100\u00a0ml'), findsOneWidget);
   });
 
   testWidgets('nothing without energy', (tester) async {
     await _pump(tester, _meal(kcal: null));
 
     expect(find.byType(Text), findsNothing);
+  });
+
+  testWidgets('a source wraps between its words at a large font', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: MacrosLine(
+            carbs: 0,
+            fat: 21,
+            protein: 26,
+            tail: '· FDC Survey',
+          ),
+        ),
+      ),
+    );
+    expect(find.textContaining(' · FDC Survey'), findsOneWidget);
   });
 }

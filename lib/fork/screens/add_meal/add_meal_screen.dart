@@ -205,53 +205,19 @@ class _AddMealScreenState extends State<AddMealScreen> {
                   ),
                 ),
               ),
+        // One named menu, not three bare icons (H6, as the Diary's Day menu).
         actions: [
-          if (!_planning)
-            Semantics(
-              identifier: 'add-meal-quick-add',
-              // an icon, as the actions beside it, so the meal
-              // in the title has room (A6); Quick add is a tile on the + sheet
-              child: IconButton(
-                onPressed: _onQuickAddPressed,
-                icon: const Icon(Icons.bolt_rounded),
-                tooltip: S.of(context).quickAddCardLabel,
-              ),
-            ),
           BlocBuilder<AddMealBloc, AddMealState>(
             bloc: _addMealBloc,
-            builder: (BuildContext context, AddMealState state) {
-              if (state is AddMealLoadedState) {
-                return Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    FutureBuilder<bool>(
-                      future: _aiAdd,
-                      builder: (context, ai) => ai.data == false && !_planning
-                          ? Semantics(
-                              identifier: 'add-meal-bulk-add',
-                              child: IconButton(
-                                onPressed: () =>
-                                    _onBulkAddPressed(state.usesImperialUnits),
-                                icon: const Icon(Icons.playlist_add),
-                                tooltip: S.of(context).bulkAddTitle,
-                              ),
-                            )
-                          : const SizedBox.shrink(),
-                    ),
-                    Semantics(
-                      identifier: 'add-meal-custom-add',
-                      child: IconButton(
-                        onPressed: () =>
-                            _onCustomAddButtonPressed(state.usesImperialUnits),
-                        icon: const Icon(Icons.add_circle_outline),
-                        tooltip: S.of(context).newCustomMealLabel,
-                      ),
-                    ),
-                  ],
-                );
-              }
-              return const SizedBox();
-            },
+            builder: (context, state) => FutureBuilder<bool>(
+              future: _aiAdd,
+              builder: (context, ai) => _addMenu(
+                context,
+                state is AddMealLoadedState ? state.usesImperialUnits : null,
+                // Log with AI takes its place while AI meal assistance is on
+                bulk: ai.data == false,
+              ),
+            ),
           ),
         ],
       ),
@@ -302,6 +268,70 @@ class _AddMealScreenState extends State<AddMealScreen> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  /// Quick add, Add several items and New custom food, in one menu;
+  /// nothing that logs while planning, nothing that needs the units until
+  /// they are read.
+  Widget _addMenu(BuildContext context, bool? imperial, {required bool bulk}) {
+    final s = S.of(context);
+    final items = [
+      if (!_planning)
+        (
+          _AddAction.quick,
+          'add-meal-quick-add',
+          Icons.bolt_rounded,
+          s.quickAddCardLabel,
+        ),
+      if (bulk && !_planning && imperial != null)
+        (
+          _AddAction.bulk,
+          'add-meal-bulk-add',
+          Icons.playlist_add,
+          s.bulkAddTitle,
+        ),
+      if (imperial != null)
+        (
+          _AddAction.custom,
+          'add-meal-custom-add',
+          Icons.add_circle_outline,
+          s.newCustomMealLabel,
+        ),
+    ];
+    if (items.isEmpty) return const SizedBox.shrink();
+    // One node: the identifier with the button and its name.
+    return MergeSemantics(
+      child: Semantics(
+        identifier: 'add-meal-menu',
+        child: PopupMenuButton<_AddAction>(
+          key: const ValueKey('add-meal-menu'),
+          tooltip: 'More ways to add',
+          icon: const Icon(Icons.more_vert_rounded),
+          shape: Dimens.shapeM,
+          onSelected: (action) => switch (action) {
+            _AddAction.quick => _onQuickAddPressed(),
+            _AddAction.bulk => _onBulkAddPressed(imperial ?? false),
+            _AddAction.custom => _onCustomAddButtonPressed(imperial ?? false),
+          },
+          itemBuilder: (context) => [
+            for (final (action, id, icon, label) in items)
+              PopupMenuItem(
+                value: action,
+                child: Semantics(
+                  identifier: id,
+                  child: Row(
+                    children: [
+                      Icon(icon),
+                      const SizedBox(width: Dimens.spacing12),
+                      Flexible(child: Text(label)),
+                    ],
+                  ),
+                ),
+              ),
+          ],
         ),
       ),
     );
@@ -1003,3 +1033,5 @@ class _AddMealScreenState extends State<AddMealScreen> {
 }
 
 enum _SearchSource { recent, favourites, all, products, food }
+
+enum _AddAction { quick, bulk, custom }

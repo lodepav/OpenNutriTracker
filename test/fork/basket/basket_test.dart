@@ -270,7 +270,7 @@ void main() {
       expect(find.text('Today with this meal'), findsOneWidget);
       expect(asked, [today]);
       // fat goes over: 70 + 8 of 75
-      expect(find.text('78 / 75'), findsOneWidget);
+      expect(find.text('78 / 75\u00a0g'), findsOneWidget);
     });
 
     testWidgets('a meal repeated on set days shows no one day', (tester) async {
