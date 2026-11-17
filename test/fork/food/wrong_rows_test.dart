@@ -214,7 +214,7 @@ void main() {
     'gravy, brown, from meat drippings': anyOf(isNull, isNot(contains('dry'))),
     'pork chop, pan-fried': allOf(contains('chop'), contains('pan-fried')),
     'bread, whole grain with seeds, roll': allOf(
-      startsWith('Bread'),
+      anyOf(startsWith('Bread'), startsWith('Roll')),
       isNot(contains('gluten')),
     ),
     'herbs, fresh, garnish': 'Parsley, raw',
