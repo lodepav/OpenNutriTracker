@@ -10,6 +10,7 @@ import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/core/utils/navigation_options.dart';
 import 'package:opennutritracker/fork/screens/activity/add_activity_screen.dart';
 import 'package:opennutritracker/features/home/domain/entity/shared_activity_payload.dart';
+import 'package:opennutritracker/fork/units/energy_text.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 
 enum _ActivityPopupMenuSelection { onCopy, onShare, onImport }
@@ -143,12 +144,32 @@ class _ActivityVerticalListState extends State<ActivityVerticalList> {
         Column(
           children: [
             for (final userActivity in widget.userActivityList)
-              ActivityCard(
-                activityEntity: userActivity,
-                onItemLongPressed: widget.onItemLongPressedCallback,
-                onItemTapped: widget.onItemTappedCallback,
-                onItemDragCallback: widget.onItemDragCallback,
-                firstListElement: false,
+              // Upstream's card reads "🔥249 kcal"; spoken in words here,
+              // its tap and long-press given back to the one node.
+              Semantics(
+                container: true,
+                label: activityLabel(
+                  name: userActivity.physicalActivityEntity.getName(context),
+                  minutes: userActivity.duration.toInt(),
+                  energy: energyText(context, userActivity.burnedKcal),
+                ),
+                onTap: widget.onItemTappedCallback == null
+                    ? null
+                    : () => widget.onItemTappedCallback!(context, userActivity),
+                onLongPress: widget.onItemDragCallback == null
+                    ? () => widget.onItemLongPressedCallback(
+                        context,
+                        userActivity,
+                      )
+                    : null,
+                excludeSemantics: true,
+                child: ActivityCard(
+                  activityEntity: userActivity,
+                  onItemLongPressed: widget.onItemLongPressedCallback,
+                  onItemTapped: widget.onItemTappedCallback,
+                  onItemDragCallback: widget.onItemDragCallback,
+                  firstListElement: false,
+                ),
               ),
             if (!widget.compact)
               PlaceholderCard(
@@ -171,3 +192,10 @@ class _ActivityVerticalListState extends State<ActivityVerticalList> {
     );
   }
 }
+
+/// An activity in words: "aerobic, 43 minutes, 249 kcal burned".
+String activityLabel({
+  required String name,
+  required int minutes,
+  required String energy,
+}) => '$name, $minutes ${minutes == 1 ? 'minute' : 'minutes'}, $energy burned';

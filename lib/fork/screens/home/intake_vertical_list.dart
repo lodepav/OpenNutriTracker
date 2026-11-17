@@ -60,14 +60,14 @@ class IntakeVerticalList extends StatefulWidget {
   final double? mealKcalTarget;
 
   /// Current sort applied to [intakeList]. When non-null (and
-  /// [onSortTypeChanged] is also provided), a small sort menu is rendered in
-  /// the section header. Callers are responsible for sorting [intakeList]
+  /// [onSortTypeChanged] is also provided), the section's ⋮ menu lists the
+  /// sort options. Callers are responsible for sorting [intakeList]
   /// before it reaches the widget — this field only drives the menu's
   /// highlighted selection.
   final DiarySortType? sortType;
 
-  /// Called when the user picks a new sort option from the section header.
-  /// When null, the sort menu is hidden.
+  /// Called when the user picks a new sort option from the section's menu.
+  /// When null, the menu has no sort options.
   final ValueChanged<DiarySortType>? onSortTypeChanged;
 
   // an hour's section has no add row of its own,
@@ -212,8 +212,39 @@ class _IntakeVerticalListState extends State<IntakeVerticalList> {
 
   // the summary on a line of its own under
   // the header's row, lined up with the title
-  Widget _forkTimelineHeader(BuildContext context, Widget row) =>
-      _selectableHeader(context, _timelineHeaderBody(context, row));
+  Widget _forkTimelineHeader(BuildContext context, Widget row) {
+    final header = _selectableHeader(
+      context,
+      _timelineHeaderBody(context, row),
+    );
+    if (widget.forkTime == null) return header;
+    // Read as one heading, in words and in the order a listener wants it;
+    // its buttons stay nodes of their own.
+    return Semantics(
+      container: true,
+      header: true,
+      label: _timelineLabel(context),
+      child: header,
+    );
+  }
+
+  /// "Breakfast, 8:41 AM, 1166 kcal, carbs 216 g, fat 15 g, protein 40 g":
+  /// what the header shows, so not the meal's target.
+  String _timelineLabel(BuildContext context) {
+    final s = S.of(context);
+    final timeShown = widget.selection?.active != true || _timeAbove(context);
+    return [
+      widget.title,
+      if (timeShown) clockText(context, widget.forkTime!),
+      if (totalKcal > 0) EnergyDisplay.formatWithUnit(context, totalKcal),
+      if (widget.showMealMacros && totalKcal > 0)
+        ...inMacroOrder(
+          carbs: '${s.carbsLabel} ${totalCarbsGram.round()} g',
+          fat: '${s.fatLabel} ${totalFatsGram.round()} g',
+          protein: '${s.proteinLabel} ${totalProteinsGram.round()} g',
+        ),
+    ].join(', ');
+  }
 
   Widget _timelineHeaderBody(BuildContext context, Widget row) {
     final time = widget.forkTime;
@@ -221,10 +252,12 @@ class _IntakeVerticalListState extends State<IntakeVerticalList> {
     if (time == null || (totalKcal <= 0 && !above)) return row;
     final palette = paletteOf(context);
     final textTheme = Theme.of(context).textTheme;
-    final summary = Text.rich(
-      _timelineSummary(context),
-      semanticsLabel: _headerSummaryLabel(context),
-      style: textTheme.labelMedium?.copyWith(color: palette.textMuted),
+    // spoken in the header's label
+    final summary = ExcludeSemantics(
+      child: Text.rich(
+        _timelineSummary(context),
+        style: textTheme.labelMedium?.copyWith(color: palette.textMuted),
+      ),
     );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -248,13 +281,15 @@ class _IntakeVerticalListState extends State<IntakeVerticalList> {
     );
   }
 
-  Widget _timeText(BuildContext context, DateTime time) => Text(
-    clockText(context, time),
-    maxLines: 1,
-    softWrap: false,
-    style: Theme.of(context).textTheme.labelMedium?.copyWith(
-      color: paletteOf(context).textMuted,
-      fontWeight: FontWeight.w700,
+  Widget _timeText(BuildContext context, DateTime time) => ExcludeSemantics(
+    child: Text(
+      clockText(context, time),
+      maxLines: 1,
+      softWrap: false,
+      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+        color: paletteOf(context).textMuted,
+        fontWeight: FontWeight.w700,
+      ),
     ),
   );
 
@@ -367,8 +402,7 @@ class _IntakeVerticalListState extends State<IntakeVerticalList> {
                   // a heading TalkBack can jump between
                   // a smaller title
                   child: widget.forkTime != null
-                      ? Semantics(
-                          header: true,
+                      ? ExcludeSemantics(
                           child: Text(
                             widget.title,
                             style: textTheme.titleMedium?.copyWith(
@@ -416,8 +450,6 @@ class _IntakeVerticalListState extends State<IntakeVerticalList> {
                       textAlign: TextAlign.end,
                     ),
                   ),
-                if (widget.onSortTypeChanged != null && totalKcal > 0)
-                  _buildSortMenu(context),
                 // the add row's button
                 if (widget.forkTime != null)
                   IconButton(
@@ -546,6 +578,10 @@ class _IntakeVerticalListState extends State<IntakeVerticalList> {
                               child: Text(S.of(context).pasteCodeLabel),
                             ),
                           ),
+                          // Sort, rarely changed, in the menu rather than
+                          // a button on every meal
+                          if (widget.onSortTypeChanged != null && totalKcal > 0)
+                            ..._sortItems(context),
                         ],
                   ),
                 ),
@@ -656,48 +692,38 @@ class _IntakeVerticalListState extends State<IntakeVerticalList> {
     );
   }
 
-  Widget _buildSortMenu(BuildContext context) {
+  List<PopupMenuEntry<VerticalListPopupMenuSelections>> _sortItems(
+    BuildContext context,
+  ) {
     final current = widget.sortType ?? DiarySortType.timeAdded;
-    final palette = paletteOf(context);
-    return Semantics(
-      identifier: 'diary-section-sort-menu',
-      child: PopupMenuButton<DiarySortType>(
-        tooltip: S.of(context).diarySortByLabel,
-        icon: Icon(Icons.sort_rounded, color: palette.textMuted),
-        shape: Dimens.shapeM,
-        initialValue: current,
-        onSelected: (sort) => widget.onSortTypeChanged?.call(sort),
-        itemBuilder: (context) => <PopupMenuEntry<DiarySortType>>[
-          CheckedPopupMenuItem<DiarySortType>(
-            value: DiarySortType.timeAdded,
-            checked: current == DiarySortType.timeAdded,
-            child: Text(S.of(context).diarySortByTime),
-          ),
-          CheckedPopupMenuItem<DiarySortType>(
-            value: DiarySortType.kcal,
-            checked: current == DiarySortType.kcal,
-            child: Text(S.of(context).diarySortByKcal),
-          ),
-          ...inMacroOrder<PopupMenuEntry<DiarySortType>>(
-            carbs: CheckedPopupMenuItem<DiarySortType>(
-              value: DiarySortType.carbs,
-              checked: current == DiarySortType.carbs,
-              child: Text(S.of(context).diarySortByCarbs),
-            ),
-            fat: CheckedPopupMenuItem<DiarySortType>(
-              value: DiarySortType.fat,
-              checked: current == DiarySortType.fat,
-              child: Text(S.of(context).diarySortByFat),
-            ),
-            protein: CheckedPopupMenuItem<DiarySortType>(
-              value: DiarySortType.protein,
-              checked: current == DiarySortType.protein,
-              child: Text(S.of(context).diarySortByProtein),
-            ),
-          ),
-        ],
-      ),
+    final s = S.of(context);
+    PopupMenuEntry<VerticalListPopupMenuSelections> item(
+      DiarySortType sort,
+      String label,
+    ) => CheckedPopupMenuItem<VerticalListPopupMenuSelections>(
+      key: ValueKey('diary-sort-${sort.name}'),
+      checked: current == sort,
+      onTap: () => widget.onSortTypeChanged?.call(sort),
+      child: Text(label),
     );
+    return [
+      const PopupMenuDivider(),
+      PopupMenuItem<VerticalListPopupMenuSelections>(
+        enabled: false,
+        child: Semantics(
+          identifier: 'diary-section-sort-menu',
+          header: true,
+          child: Text(s.diarySortByLabel),
+        ),
+      ),
+      item(DiarySortType.timeAdded, s.diarySortByTime),
+      item(DiarySortType.kcal, s.diarySortByKcal),
+      ...inMacroOrder(
+        carbs: item(DiarySortType.carbs, s.diarySortByCarbs),
+        fat: item(DiarySortType.fat, s.diarySortByFat),
+        protein: item(DiarySortType.protein, s.diarySortByProtein),
+      ),
+    ];
   }
 
   void _onPlaceholderCardTapped(BuildContext context) {

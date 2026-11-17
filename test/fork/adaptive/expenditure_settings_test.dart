@@ -690,22 +690,41 @@ void main() {
       handle.dispose();
     });
 
-    testWidgets('the Diary switch leaves the day out', (tester) async {
+    testWidgets('a day left out says so, and a tap counts it again', (
+      tester,
+    ) async {
       final store = _MemoryStore();
+      final day = DateTime(2026, 10, 20, 12);
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: SkipDayTile(day: DateTime(2026, 10, 20, 12), store: store),
+            body: SkipDayNote(day: day, store: store),
           ),
         ),
       );
-      await tester.tap(find.byType(Switch));
+      expect(find.textContaining('Left out'), findsNothing);
+
+      await store.setSkipped(DateTime(2026, 10, 20), true);
       await tester.pump();
-      expect(AdaptiveStore.skipped.value, {DateTime(2026, 10, 20)});
       expect(
-        find.textContaining('Not used in the expenditure'),
+        find.text('Left out of expenditure · Undo', findRichText: true),
         findsOneWidget,
       );
+      await tester.tap(find.byType(SkipDayNote));
+      await tester.pump();
+      expect(AdaptiveStore.skipped.value, isEmpty);
+      expect(find.textContaining('Left out'), findsNothing);
+
+      // TalkBack's double-tap counts it again too.
+      final handle = tester.ensureSemantics();
+      await store.setSkipped(DateTime(2026, 10, 20), true);
+      await tester.pump();
+      tester.semantics.tap(
+        find.semantics.byLabel('Left out of expenditure. Undo'),
+      );
+      await tester.pump();
+      expect(AdaptiveStore.skipped.value, isEmpty);
+      handle.dispose();
     });
 
     testWidgets('three groups; activity rows only while it counts', (

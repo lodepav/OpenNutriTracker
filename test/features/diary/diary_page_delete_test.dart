@@ -431,6 +431,8 @@ void main() {
     await setUpDiary(yesterdayHasRow: true, entriesToday: true);
     await pumpDiary(tester);
 
+    await tester.tap(find.byTooltip('Day options'));
+    await settle(tester);
     await tester.tap(find.byKey(const Key('fork-select-entries')));
     await settle(tester);
     expect(find.text('Tap foods'), findsOneWidget);
@@ -608,6 +610,8 @@ void main() {
     ) async {
       await openToday(tester);
 
+      await tester.tap(find.byTooltip('Day options'));
+      await settle(tester);
       await tester.tap(find.byKey(const Key('fork-select-entries')));
       await settle(tester);
       await tester.tap(find.text('Toast'));

@@ -10,7 +10,10 @@ void main() {
       'amount under the energy', (tester) async {
     await tester.pumpWidget(card.wrap(null));
 
-    expect(find.text('C 30 · F 15 · P 8', findRichText: true), findsOneWidget);
+    expect(
+      find.text('C\u00a030 · F\u00a015 · P\u00a08', findRichText: true),
+      findsOneWidget,
+    );
     expect(find.text('150 g'), findsOneWidget);
     expect(
       tester.getTopLeft(find.text('150 g')).dy,
@@ -22,7 +25,10 @@ void main() {
     DisplayPrefs.macroOrder.value = [Macro.protein, Macro.fat, Macro.carbs];
     await tester.pumpWidget(card.wrap(null));
 
-    expect(find.text('P 8 · F 15 · C 30', findRichText: true), findsOneWidget);
+    expect(
+      find.text('P\u00a08 · F\u00a015 · C\u00a030', findRichText: true),
+      findsOneWidget,
+    );
   });
 
   testWidgets('fits at a large text size', (tester) async {

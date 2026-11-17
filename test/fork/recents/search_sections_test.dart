@@ -121,7 +121,10 @@ void main() {
     expect(find.text('From your history'), findsOneWidget);
     expect(find.text('640 g'), findsOneWidget);
     expect(find.text('787 kcal'), findsOneWidget);
-    expect(find.text('C 166 · F 6 · P 19', findRichText: true), findsOneWidget);
+    expect(
+      find.text('C\u00a0166 · F\u00a06 · P\u00a019', findRichText: true),
+      findsOneWidget,
+    );
   });
 
   testWidgets('the favourites follow the history, which shows ten until '
@@ -182,7 +185,7 @@ void main() {
     await tester.pumpAndSettle();
 
     final macros = find.textContaining(
-      'C 166 · F 6 · P 19 · Open Food Facts',
+      'C\u00a0166 · F\u00a06 · P\u00a019 · Open Food Facts',
       findRichText: true,
     );
     expect(macros, findsOneWidget);

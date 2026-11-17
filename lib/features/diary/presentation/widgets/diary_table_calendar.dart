@@ -204,13 +204,19 @@ class _DiaryTableCalendarState extends State<DiaryTableCalendar> {
                 child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text(
-                    DateFormat.yMMMM(
-                      Localizations.localeOf(context).toLanguageTag(),
-                    ).format(day),
-                    style: textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: palette.textStrong,
+                  // shrinks at large text rather than overflow the chevrons
+                  Flexible(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        DateFormat.yMMMM(
+                          Localizations.localeOf(context).toLanguageTag(),
+                        ).format(day),
+                        style: textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: palette.textStrong,
+                        ),
+                      ),
                     ),
                   ),
                   Icon(

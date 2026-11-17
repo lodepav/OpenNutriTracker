@@ -144,6 +144,19 @@ void main() {
       ]);
     });
 
+    test('a day with nothing logged has no empty hours', () {
+      expect(
+        _shown(
+          diaryTimeline(_day, [
+            _meal(IntakeTypeEntity.breakfast, const []),
+            _meal(IntakeTypeEntity.lunch, const []),
+            _meal(IntakeTypeEntity.dinner, const []),
+          ]),
+        ),
+        ['section breakfast', 'section lunch', 'section dinner'],
+      );
+    });
+
     test('meals at the same time keep the usual order', () {
       final at = DateTime(2026, 10, 25, 12);
       expect(
@@ -186,7 +199,10 @@ void main() {
       // The phone's clock: 12 hours in the test's en-US
       expect(find.text('1:00 PM'), findsOneWidget);
       // The summary on one line under the title.
-      expect(find.text('100 kcal · C 20 · F 10 · P 5'), findsOneWidget);
+      expect(
+        find.text('100 kcal · C\u00a020 · F\u00a010 · P\u00a05'),
+        findsOneWidget,
+      );
       expect(find.byIcon(Icons.lunch_dining_outlined), findsNothing);
       expect(find.byKey(const ValueKey('timeline-add')), findsOneWidget);
       expect(find.bySemanticsIdentifier('add-meal-placeholder'), findsNothing);
@@ -194,7 +210,7 @@ void main() {
   });
 
   testWidgets('the day card: the counts, and each total against its goal, '
-      'past it in red', (tester) async {
+      'a passed target not in red', (tester) async {
     await tester.pumpWidget(
       _app(
         DayTotalsCard(
@@ -222,9 +238,12 @@ void main() {
     );
     expect(find.text('2 meals · 3 foods'), findsOneWidget);
     // 900 g at 100 kcal, 20 g carbs and 10 g fat per 100 g.
-    expect(find.bySemanticsLabel('900 of 2000 kcal'), findsOneWidget);
-    expect(find.bySemanticsLabel('180 of 250 carbs g'), findsOneWidget);
-    expect(find.bySemanticsLabel('90 of 70 fat g, over'), findsOneWidget);
+    expect(find.bySemanticsLabel('Energy 900 of 2000 kcal'), findsOneWidget);
+    expect(find.bySemanticsLabel('Carbs 180 of 250 g'), findsOneWidget);
+    expect(find.bySemanticsLabel('Fat 90 of 70 g, 20 g over'), findsOneWidget);
+    // The unit stays with its number.
+    expect(find.text('90 / 70\u00a0g', findRichText: true), findsOneWidget);
+    expect(find.text('Fat'), findsOneWidget);
 
     final error = Theme.of(
       tester.element(find.byType(DayTotalsCard)),
@@ -234,10 +253,46 @@ void main() {
           find.byType(LinearProgressIndicator),
         )
         .toList();
-    expect(
-      [for (final b in bars) b.color == error],
-      [false, false, true, false],
+    expect([for (final b in bars) b.color == error], everyElement(isFalse));
+    final fat = tester.widget<RichText>(
+      find.text('90 / 70\u00a0g', findRichText: true),
     );
+    final spans = <TextStyle?>[];
+    fat.text.visitChildren((span) {
+      spans.add(span.style);
+      return true;
+    });
+    expect(spans.map((s) => s?.color), isNot(contains(error)));
+  });
+
+  test('a day total in words', () {
+    expect(
+      dayTotalLabel(name: 'Fat', value: 96, goal: 86, unit: 'g'),
+      'Fat 96 of 86 g, 10 g over',
+    );
+    expect(
+      dayTotalLabel(name: 'Carbs', value: 413, goal: 465, unit: 'g'),
+      'Carbs 413 of 465 g',
+    );
+    expect(
+      dayTotalLabel(name: 'Energy', value: 900, goal: 0, unit: 'kcal'),
+      'Energy 900 kcal',
+    );
+  });
+
+  testWidgets('at 2x text the day card is one figure a line', (tester) async {
+    tester.view.physicalSize = const Size(412, 915);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    tester.platformDispatcher.textScaleFactorTestValue = 2;
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+    await tester.pumpWidget(
+      _app(DayTotalsCard(trackedDay: _tracked(), intakes: const [])),
+    );
+    double y(String label) => tester.getTopLeft(find.text(label)).dy;
+    expect(y('Energy'), lessThan(y('Carbs')));
+    expect(y('Carbs'), lessThan(y('Fat')));
+    expect(y('Fat'), lessThan(y('Protein')));
   });
 
   testWidgets('the day totals list the macros in the picked order', (
@@ -255,8 +310,8 @@ void main() {
       _app(DayTotalsCard(trackedDay: _tracked(), intakes: const [])),
     );
     double x(String label) => tester.getTopLeft(find.text(label)).dx;
-    expect(x('protein g'), lessThan(x('carbs g')));
-    expect(x('carbs g'), lessThan(x('fat g')));
+    expect(x('Protein'), lessThan(x('Carbs')));
+    expect(x('Carbs'), lessThan(x('Fat')));
   });
 
   test('a ring fills with the energy eaten against the goal', () {
@@ -287,5 +342,30 @@ void main() {
     await tester.tap(find.text('October 2026'));
     await tester.pumpAndSettle();
     expect(find.byType(DayRing).evaluate().length, greaterThanOrEqualTo(28));
+  });
+
+  testWidgets('the month title fits the calendar at twice the text size', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(412, 900);
+    tester.view.devicePixelRatio = 1;
+    tester.platformDispatcher.textScaleFactorTestValue = 2;
+    addTearDown(tester.view.reset);
+    addTearDown(tester.platformDispatcher.clearAllTestValues);
+    await tester.pumpWidget(
+      _app(
+        DiaryTableCalendar(
+          onDateSelected: (_, _) {},
+          calendarDurationDays: const Duration(days: 365),
+          focusedDate: _day,
+          currentDate: _day,
+          selectedDate: _day,
+          trackedDaysMap: const {},
+          daysWithEntries: const {},
+        ),
+      ),
+    );
+    expect(tester.takeException(), isNull);
+    expect(find.text('October 2026'), findsOneWidget);
   });
 }
