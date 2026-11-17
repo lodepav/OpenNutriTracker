@@ -603,9 +603,14 @@ void main() {
       group: plate,
     );
 
+    // what each breakdown was sent beside the amount
+    final photos = <MealPhoto?>[];
+    final platePhoto = MealPhoto(bytes: Uint8List(1), mediaType: 'image/webp');
+
     Future<(BulkAddBloc, List<(String, String?)>)> read(
       List<ParsedMealItem> ingredients,
     ) async {
+      photos.clear();
       final plateBloc = BulkAddBloc(
         _Resolver(),
         _ModelReader(),
@@ -620,16 +625,15 @@ void main() {
         plateBloc,
         breakDown: (dish, {amount, photo}) async {
           asked.add((dish, amount));
+          photos.add(photo);
           return DishBreakdown(dish, await _Resolver().resolve(ingredients));
         },
         modelConfigured: () async => true,
+        photo: () => platePhoto,
       );
       addTearDown(controller.dispose);
       plateBloc.add(
-        ReadMealPhotoEvent(
-          photo: MealPhoto(bytes: Uint8List(1), mediaType: 'image/webp'),
-          usesImperialUnits: false,
-        ),
+        ReadMealPhotoEvent(photo: platePhoto, usesImperialUnits: false),
       );
       await pumpEventQueue();
       await pumpEventQueue();
@@ -642,6 +646,10 @@ void main() {
         ParsedMealItem(query: 'cheese, sulguni', quantity: 55, unit: 'g'),
       ]);
       expect(asked, [('bell pepper, battered, fried', '80 g')]);
+      // The plate's photo shows its other foods too, and the reply listed
+      // them all as raw ingredients beside their cooked rows; the grams are
+      // stated, so the photo is not needed to size it.
+      expect(photos, [isNull]);
       final rows = (plateBloc.state as BulkAddLoadedState).rows;
       expect(
         [for (final r in rows) r.meal?.name],

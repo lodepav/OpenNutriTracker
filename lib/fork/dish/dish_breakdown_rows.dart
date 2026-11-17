@@ -1,3 +1,4 @@
+import 'package:opennutritracker/features/add_meal/domain/meal_photo_interpreter.dart';
 import 'package:opennutritracker/features/add_meal/domain/usecase/resolve_parsed_meals_usecase.dart';
 import 'package:opennutritracker/features/add_meal/presentation/bloc/bulk_add_bloc.dart';
 import 'package:opennutritracker/features/add_meal/util/portion_unit.dart';
@@ -81,6 +82,19 @@ double? shownGrams(BulkAddRow row) {
 String? breakdownAmount(BulkAddRow row) {
   final grams = shownGrams(row);
   return grams == null ? statedAmount(row) : '${_amountText(grams)} g';
+}
+
+/// The photo a breakdown of [row] is sent: [photo], the one the row was
+/// read off, to size a dish to the plate shown. None for a plate's food
+/// with a weight: its grams are known, and with the whole plate in view the
+/// model listed every food on it as raw ingredients beside their cooked
+/// rows (pork loin, raw, 300 g beside the grilled pork).
+MealPhoto? breakdownPhoto(BulkAddRow row, MealPhoto? photo) {
+  if (!row.fromPhoto) return null;
+  final amount = breakdownAmount(row);
+  final weighed =
+      amount != null && (amount.endsWith(' g') || amount.endsWith(' ml'));
+  return row.dishIngredient != null && weighed ? null : photo;
 }
 
 /// The whole count [statedAmount] states, a bare count or "N servings",

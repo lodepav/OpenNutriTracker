@@ -99,7 +99,7 @@ class DishBreakdownController extends ChangeNotifier {
         // the weight the row shows, so the portion stays what it was
         amount: breakdownAmount(row),
         // The photo a row was read off, so the grams fit the plate shown.
-        photo: row.fromPhoto ? _photo() : null,
+        photo: breakdownPhoto(row, _photo()),
       );
       if (breakdown == null) return DishBreakdownOutcome.noModel;
       if (breakdown.ingredients.isEmpty) return DishBreakdownOutcome.empty;
