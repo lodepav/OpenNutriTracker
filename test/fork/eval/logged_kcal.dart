@@ -89,6 +89,11 @@ Future<Logged?> loggedKcal(
     );
     if (identical(next, state)) continue;
     state = next;
+    // A food of a weighed plate (D24) breaks down inside the plate's group.
+    if (row.dishIngredient case final parent?) {
+      dishes.putIfAbsent(parent.group, () => parent.dish);
+      continue;
+    }
     final group = state.rows
         .map((r) => r.dishIngredient?.group)
         .firstWhere((g) => g != null && !dishes.containsKey(g));
