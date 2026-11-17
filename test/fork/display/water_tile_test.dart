@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:opennutritracker/fork/display/home_tiles.dart';
+import 'package:opennutritracker/fork/trends/trends_widgets.dart'
+    show keepUnits;
 import 'package:opennutritracker/generated/l10n.dart';
 
 // #1306: Home's water tile follows the food units, ml or fl oz.
@@ -26,13 +28,17 @@ void main() {
     // 500 ml = 16.9 fl oz, 2000 ml = 67.6 fl oz.
     final shown = await _shown(tester, imperial: true);
     expect(shown, contains('17'));
-    expect(shown, contains('/ 68 fl oz'));
+    expect(shown, contains(keepUnits('/ 68 fl oz')));
+    expect(
+      find.bySemanticsLabel('Water, 17 of 68 fluid ounces'),
+      findsOneWidget,
+    );
     expect(shown, isNot(contains('500')));
   });
 
   testWidgets('metric: in ml', (tester) async {
     final shown = await _shown(tester, imperial: false);
     expect(shown, contains('500'));
-    expect(shown, contains('/ 2000 ml'));
+    expect(shown, contains(keepUnits('/ 2000 ml')));
   });
 }

@@ -3,6 +3,7 @@
 // fork/tools/upstream-copies.sh.
 import 'package:animated_flip_counter/animated_flip_counter.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart' show toBeginningOfSentenceCase;
 import 'package:opennutritracker/core/domain/entity/intake_entity.dart';
 import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
@@ -45,6 +46,9 @@ class DashboardWidget extends StatefulWidget {
   // end on
   final DateTime? forkDay;
 
+  /// Whether activity raises the goal; the settings' own read but in tests.
+  final Future<ActivityCredit> Function() loadCredit;
+
   const DashboardWidget({
     super.key,
     required this.totalKcalSupplied,
@@ -60,6 +64,7 @@ class DashboardWidget extends StatefulWidget {
     this.intakes = const [],
     this.usesImperialUnits = false,
     this.forkDay,
+    this.loadCredit = activityCredit,
   });
 
   @override
@@ -69,12 +74,12 @@ class DashboardWidget extends StatefulWidget {
 class _DashboardWidgetState extends State<DashboardWidget> {
   // whether Burned raises the goal; a fixed or
   // adaptive target leaves it out (read again as Home reloads)
-  late Future<ActivityCredit> _forkCredit = activityCredit();
+  late Future<ActivityCredit> _forkCredit = widget.loadCredit();
 
   @override
   void didUpdateWidget(DashboardWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
-    _forkCredit = activityCredit();
+    _forkCredit = widget.loadCredit();
   }
 
   void _openKcalGoalInfoScreen() {
@@ -268,36 +273,72 @@ class _DashboardWidgetState extends State<DashboardWidget> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          _StatLine(
-                            label: 'Eaten',
-                            value: '${displaySupplied.round()}',
-                          ),
-                          // "+" only where it is added
                           FutureBuilder<ActivityCredit>(
                             future: _forkCredit,
-                            builder: (context, credit) =>
-                                credit.data == ActivityCredit.dailyCapped &&
-                                    widget.totalKcalBurned >
-                                        maxDailyActivityKcal
-                                // The goal counts the burn up to its cap
-                                ? _StatLine(
-                                    label: 'Burned, up to',
-                                    value:
-                                        '+${(usesKilojoules ? UnitCalc.kcalToKj(maxDailyActivityKcal) : maxDailyActivityKcal).round()}',
-                                  )
-                                : credit.data?.raisesGoal ?? true
-                                ? _StatLine(
-                                    label: 'Burned',
-                                    value: '+${displayBurned.round()}',
-                                  )
-                                : _StatLine(
-                                    label: 'Burned, not added',
-                                    value: '${displayBurned.round()}',
-                                  ),
-                          ),
-                          _StatLine(
-                            label: 'Goal',
-                            value: '${displayGoal.round()}',
+                            builder: (context, credit) {
+                              final unit = usesKilojoules
+                                  ? S.of(context).kjLabel
+                                  : S.of(context).kcalLabel;
+                              final cap =
+                                  (usesKilojoules
+                                          ? UnitCalc.kcalToKj(
+                                              maxDailyActivityKcal,
+                                            )
+                                          : maxDailyActivityKcal)
+                                      .round();
+                              final burned = displayBurned.round();
+                              // "Activity", not "Burned": the Expenditure
+                              // tile is the day's whole burn; "+" only where
+                              // it is added.
+                              final activity =
+                                  credit.data == ActivityCredit.dailyCapped &&
+                                      widget.totalKcalBurned >
+                                          maxDailyActivityKcal
+                                  // The goal counts the burn up to its cap
+                                  ? (
+                                      label: 'Activity, up to',
+                                      value: '+$cap',
+                                      spoken: 'activity adds up to $cap $unit',
+                                    )
+                                  : credit.data?.raisesGoal ?? true
+                                  ? (
+                                      label: 'Activity',
+                                      value: '+$burned',
+                                      spoken: 'activity adds $burned $unit',
+                                    )
+                                  : (
+                                      label: 'Activity, not added',
+                                      value: '$burned',
+                                      spoken:
+                                          'activity $burned $unit, not added',
+                                    );
+                              return Semantics(
+                                container: true,
+                                label:
+                                    'Eaten ${displaySupplied.round()} $unit, '
+                                    '${activity.spoken}, '
+                                    'goal ${displayGoal.round()} $unit',
+                                excludeSemantics: true,
+                                child: Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.stretch,
+                                  children: [
+                                    _StatLine(
+                                      label: 'Eaten',
+                                      value: '${displaySupplied.round()}',
+                                    ),
+                                    _StatLine(
+                                      label: activity.label,
+                                      value: activity.value,
+                                    ),
+                                    _StatLine(
+                                      label: 'Goal',
+                                      value: '${displayGoal.round()}',
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
                           ),
                           const SizedBox(height: Dimens.spacing8),
                           SegmentedButton<bool>(
@@ -335,7 +376,9 @@ class _DashboardWidgetState extends State<DashboardWidget> {
                     children: [
                       for (final (i, column) in inMacroOrder(
                         carbs: _MacroLeft(
-                          label: S.of(context).carbsLabel,
+                          label: toBeginningOfSentenceCase(
+                            S.of(context).carbsLabel,
+                          ),
                           intake: widget.totalCarbsIntake,
                           goal: widget.totalCarbsGoal,
                           color: palette.carbs,
@@ -347,7 +390,9 @@ class _DashboardWidgetState extends State<DashboardWidget> {
                           ),
                         ),
                         fat: _MacroLeft(
-                          label: S.of(context).fatLabel,
+                          label: toBeginningOfSentenceCase(
+                            S.of(context).fatLabel,
+                          ),
                           intake: widget.totalFatsIntake,
                           goal: widget.totalFatsGoal,
                           color: palette.fat,
@@ -359,7 +404,9 @@ class _DashboardWidgetState extends State<DashboardWidget> {
                           ),
                         ),
                         protein: _MacroLeft(
-                          label: S.of(context).proteinLabel,
+                          label: toBeginningOfSentenceCase(
+                            S.of(context).proteinLabel,
+                          ),
                           intake: widget.totalProteinsIntake,
                           goal: widget.totalProteinsGoal,
                           color: palette.protein,
@@ -440,8 +487,8 @@ class _StatLine extends StatelessWidget {
   }
 }
 
-/// A macro's column: "51 g left" (or "9 g over", in red), a bar and its
-/// name; tapping it lists the foods behind it (#1266).
+/// A macro's column: its name, "51 g left" (or "9 g over") and a bar;
+/// tapping it lists the foods behind it (#1266).
 class _MacroLeft extends StatelessWidget {
   final String label;
   final double intake;
@@ -463,7 +510,6 @@ class _MacroLeft extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = paletteOf(context);
     final textTheme = Theme.of(context).textTheme;
-    final error = Theme.of(context).colorScheme.error;
     final pct = goal <= 0 ? 0.0 : (intake / goal).clamp(0.0, 1.0);
     final over = goal > 0 && intake.round() > goal.round();
     final grams = (goal - intake).abs().round();
@@ -483,14 +529,22 @@ class _MacroLeft extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              Text(
+                label,
+                style: textTheme.labelMedium?.copyWith(
+                  color: palette.textMuted,
+                ),
+              ),
               Text.rich(
                 TextSpan(
                   children: [
                     TextSpan(
                       text: '$grams g',
+                      // A target, not a limit: "over" says it, uncoloured,
+                      // as Trends leaves a passed target.
                       style: TextStyle(
                         fontWeight: FontWeight.w700,
-                        color: over ? error : palette.textStrong,
+                        color: palette.textStrong,
                       ),
                     ),
                     TextSpan(text: over ? ' over' : ' left'),
@@ -505,13 +559,8 @@ class _MacroLeft extends StatelessWidget {
                   value: pct,
                   minHeight: 5,
                   backgroundColor: palette.surfaceMuted,
-                  valueColor: AlwaysStoppedAnimation(over ? error : color),
+                  valueColor: AlwaysStoppedAnimation(color),
                 ),
-              ),
-              const SizedBox(height: Dimens.spacing4),
-              Text(
-                label,
-                style: textTheme.labelSmall?.copyWith(color: palette.textMuted),
               ),
             ],
           ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:opennutritracker/core/domain/entity/body_weight_unit_entity.dart';
@@ -8,6 +9,7 @@ import 'package:opennutritracker/core/utils/energy_unit_provider.dart';
 import 'package:opennutritracker/features/fasting/domain/entity/fasting_session_entity.dart';
 import 'package:opennutritracker/features/fasting/presentation/bloc/fasting_bloc.dart';
 import 'package:opennutritracker/fork/screens/home/dashboard_widget.dart';
+import 'package:opennutritracker/fork/adaptive/activity_credit.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
 import 'package:opennutritracker/fork/display/display_prefs.dart';
 import 'package:opennutritracker/fork/display/home_tiles.dart';
@@ -15,10 +17,12 @@ import 'package:opennutritracker/fork/layout/home_layout.dart';
 import 'package:opennutritracker/fork/layout/layout_store.dart';
 import 'package:opennutritracker/fork/trends/trend_stats.dart' show TrendMetric;
 import 'package:opennutritracker/fork/trends/trends_widgets.dart'
-    show Sparkline;
+    show Sparkline, keepUnits;
 import 'package:opennutritracker/fork/display/week_bars.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 import 'package:provider/provider.dart';
+
+import '../../helpers/ux_checks.dart' show pumpOnPhone;
 
 final _today = DateTime(2026, 10, 25);
 
@@ -53,9 +57,12 @@ Widget _tiles({
   openTrend: openTrend ?? (_, _) {},
 );
 
-DashboardWidget _dashboard() => DashboardWidget(
+DashboardWidget _dashboard({
+  double burned = 300,
+  ActivityCredit credit = ActivityCredit.added,
+}) => DashboardWidget(
   totalKcalSupplied: 1800,
-  totalKcalBurned: 300,
+  totalKcalBurned: burned,
   totalKcalDaily: 2500,
   totalKcalLeft: 1000,
   totalCarbsIntake: 200,
@@ -65,6 +72,7 @@ DashboardWidget _dashboard() => DashboardWidget(
   totalFatsGoal: 70,
   totalProteinsGoal: 120,
   forkDay: _today,
+  loadCredit: () async => credit,
 );
 
 void main() {
@@ -109,10 +117,15 @@ void main() {
     );
     await tester.pump();
     expect(from, DateTime(2026, 10, 19));
-    expect(find.bySemanticsLabel(RegExp(r'^\w+day: ')), findsNWidgets(7));
-    expect(find.bySemanticsLabel('Tuesday: 2100 of 2400 kcal'), findsOne);
-    expect(find.bySemanticsLabel('Monday: 0 of 0 kcal'), findsOne);
-    expect(find.bySemanticsLabel('Sunday: 1800 of 2500 kcal'), findsOne);
+    // One node for the week; a day with no goal says no "of 0".
+    expect(
+      find.bySemanticsLabel(
+        'Last 7 days: Monday 0 kcal, Tuesday 2100 of 2400 kcal, '
+        'Wednesday 0 kcal, Thursday 0 kcal, Friday 0 kcal, Saturday 0 kcal, '
+        'Sunday 1800 of 2500 kcal',
+      ),
+      findsOne,
+    );
   });
 
   group('the tiles', () {
@@ -124,7 +137,7 @@ void main() {
       expect(find.textContaining('81.0 kg'), findsOne);
       expect(find.textContaining('/wk'), findsNothing);
       expect(find.textContaining('after a weigh-in'), findsOne);
-      expect(find.textContaining('750 / 2000 ml'), findsOne);
+      expect(find.textContaining('750 ${keepUnits('/ 2000 ml')}'), findsOne);
       expect(find.textContaining('Not fasting'), findsOne);
     });
 
@@ -162,8 +175,8 @@ void main() {
       await tester.pump();
       expect(find.textContaining('79.5'), findsOne);
       expect(find.textContaining('81 kg'), findsNothing);
-      expect(find.textContaining('· 0.00 kg/wk'), findsOne);
-      expect(find.textContaining('2712 kcal/day'), findsOne);
+      expect(find.textContaining(keepUnits('· 0.00 kg/wk')), findsOne);
+      expect(find.textContaining('2712 ${keepUnits('kcal/day')}'), findsOne);
       expect(find.byType(Sparkline), findsNWidgets(2));
     });
   });
@@ -271,6 +284,152 @@ void main() {
     );
   });
 
+  group('spoken in words', () {
+    test('the weight trend: down, up, steady, or no week yet', () {
+      expect(
+        weightSpoken('87.1 kg', '-0.16', 'kg'),
+        'Weight trend, 87.1 kg, down 0.16 kg a week',
+      );
+      expect(
+        weightSpoken('192.0 lbs', '+0.35', 'lbs'),
+        'Weight trend, 192.0 lbs, up 0.35 lbs a week',
+      );
+      expect(
+        weightSpoken('87.1 kg', '0.00', 'kg'),
+        'Weight trend, 87.1 kg, steady',
+      );
+      expect(weightSpoken('81.0 kg', null, 'kg'), 'Weight trend, 81.0 kg');
+    });
+
+    test('expenditure, and fasting in hours and minutes', () {
+      expect(expenditureSpoken(3045, 'kcal'), 'Expenditure, 3045 kcal a day');
+      expect(expenditureSpoken(null, 'kcal'), 'Expenditure, after a weigh-in');
+      expect(
+        fastingSpoken(const Duration(hours: 11, minutes: 30)),
+        'Fasting, 11 hours 30 minutes left',
+      );
+      expect(
+        fastingSpoken(const Duration(hours: 1, minutes: 1)),
+        'Fasting, 1 hour 1 minute left',
+      );
+      expect(
+        fastingSpoken(const Duration(minutes: 5)),
+        'Fasting, 5 minutes left',
+      );
+      expect(fastingSpoken(null), 'Fasting, no fast under way');
+    });
+
+    testWidgets('each tile is one node: its words, its hint, its tap', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      final opened = <TrendMetric>[];
+      await tester.pumpWidget(
+        _app(_tiles(openTrend: (_, metric) => opened.add(metric))),
+      );
+      await tester.pumpAndSettle();
+      SemanticsNode node(String id) =>
+          tester.getSemantics(find.bySemanticsIdentifier(id));
+      expect(node('home-weight-chip').label, 'Weight trend, 81.0 kg');
+      expect(node('home-weight-chip').hint, 'Open the weight trend');
+      expect(
+        node('home-expenditure-tile').label,
+        'Expenditure, after a weigh-in',
+      );
+      expect(node('home-water-chip').label, 'Water, 750 of 2000 milliliters');
+      expect(node('home-fasting-chip').label, 'Fasting, no fast under way');
+      for (final id in ['home-weight-chip', 'home-water-chip']) {
+        expect(node(id).label, isNot(matches(RegExp('[·/]'))));
+      }
+      final water = node('home-water-chip');
+      expect(water, isSemantics(isButton: true, hasTapAction: true));
+      water.owner!.performAction(water.id, SemanticsAction.tap);
+      expect(opened, [TrendMetric.water]);
+      // The + stays a button of its own.
+      expect(find.byTooltip('Log water'), findsOne);
+      handle.dispose();
+    });
+  });
+
+  testWidgets('two tiles to a row, one past 1.5x text', (tester) async {
+    tester.view.physicalSize = const Size(1080, 6000);
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(_app(_tiles()));
+    await tester.pumpAndSettle();
+    Offset at(Type tile) => tester.getTopLeft(find.byType(tile));
+    expect(at(ExpenditureTile).dy, at(WeightTile).dy);
+
+    tester.platformDispatcher.textScaleFactorTestValue = 1.6;
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+    await tester.pumpAndSettle();
+    expect(at(ExpenditureTile).dx, at(WeightTile).dx);
+    expect(at(ExpenditureTile).dy, greaterThan(at(WeightTile).dy));
+  });
+
+  testWidgets('at 2x in the app\'s font a 180-wide tile keeps its units '
+      'whole', (tester) async {
+    await pumpOnPhone(
+      tester,
+      Align(
+        alignment: Alignment.topLeft,
+        child: SizedBox(
+          width: 180,
+          child: Column(
+            children: [
+              HomeTile(
+                identifier: 'w',
+                title: 'Weight trend',
+                value: '87.1 kg',
+                note: '· -0.16 kg/wk',
+                onTap: () {},
+                onAction: () {},
+              ),
+              HomeTile(
+                identifier: 'e',
+                title: 'Expenditure',
+                value: '3045',
+                note: 'kcal/day',
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    // Every box of the unit's text on one line.
+    void whole(String unit) {
+      for (final paragraph in tester.renderObjectList<RenderParagraph>(
+        find.byType(RichText),
+      )) {
+        final text = paragraph.text.toPlainText();
+        // The text as read, each character's offset in the text as laid out.
+        final offsets = [
+          for (final (i, c) in text.split('').indexed)
+            if (c != '⁠') i,
+        ];
+        final read = [
+          for (final i in offsets) text[i] == ' ' ? ' ' : text[i],
+        ].join();
+        final start = read.indexOf(unit);
+        if (start < 0) continue;
+        final tops = {
+          for (final box in paragraph.getBoxesForSelection(
+            TextSelection(
+              baseOffset: offsets[start],
+              extentOffset: offsets[start + unit.length - 1] + 1,
+            ),
+          ))
+            box.top,
+        };
+        expect(tops, hasLength(1), reason: '"$unit" split in "$text"');
+        return;
+      }
+      fail('"$unit" not shown');
+    }
+
+    whole('-0.16 kg/wk');
+    whole('kcal/day');
+  });
+
   group('the card', () {
     setUp(() => DisplayPrefs.homeShowsEaten.value = false);
     tearDown(() => DisplayPrefs.homeShowsEaten.value = false);
@@ -281,6 +440,8 @@ void main() {
       await tester.pumpWidget(_app(_dashboard()));
       await tester.pumpAndSettle();
       expect(find.bySemanticsLabel(RegExp(r'^1000 ')), findsOne);
+      expect(find.text('Activity'), findsOne);
+      expect(find.text('Burned'), findsNothing);
       expect(find.text('+300'), findsOne);
       expect(find.text('2500'), findsOne);
 
@@ -289,33 +450,169 @@ void main() {
       expect(find.bySemanticsLabel('1800 kcal eaten'), findsOne);
     });
 
-    testWidgets('each macro left of its goal, or over it in red', (
+    testWidgets('today\'s totals and the week are two nodes, in words', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      await tester.pumpWidget(_app(_dashboard()));
+      await tester.pumpAndSettle();
+      expect(
+        find.bySemanticsLabel(
+          'Eaten 1800 kcal, activity adds 300 kcal, goal 2500 kcal',
+        ),
+        findsOne,
+      );
+      expect(find.bySemanticsLabel(RegExp(r'\+')), findsNothing);
+      expect(find.bySemanticsLabel(RegExp(r'^Last 7 days: ')), findsOne);
+      expect(
+        find.bySemanticsLabel(RegExp(r'Eaten.*Last 7 days')),
+        findsNothing,
+      );
+      handle.dispose();
+    });
+
+    testWidgets('in kilojoules, the totals are spoken in kJ', (tester) async {
+      final handle = tester.ensureSemantics();
+      await tester.pumpWidget(
+        ChangeNotifierProvider<EnergyUnitProvider>(
+          create: (_) => EnergyUnitProvider(usesKilojoules: true),
+          child: MaterialApp(
+            localizationsDelegates: const [
+              S.delegate,
+              ...GlobalMaterialLocalizations.delegates,
+            ],
+            supportedLocales: S.supportedLocales,
+            home: Scaffold(body: SingleChildScrollView(child: _dashboard())),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        find.bySemanticsLabel(
+          'Eaten 7531 kJ, activity adds 1255 kJ, goal 10460 kJ',
+        ),
+        findsOne,
+      );
+      handle.dispose();
+    });
+
+    group('activity', () {
+      Future<void> pumpKj(WidgetTester tester, Widget child) =>
+          tester.pumpWidget(
+            ChangeNotifierProvider<EnergyUnitProvider>(
+              // A new provider, not the kcal one pumped before.
+              key: UniqueKey(),
+              create: (_) => EnergyUnitProvider(usesKilojoules: true),
+              child: MaterialApp(
+                localizationsDelegates: const [
+                  S.delegate,
+                  ...GlobalMaterialLocalizations.delegates,
+                ],
+                supportedLocales: S.supportedLocales,
+                home: Scaffold(body: SingleChildScrollView(child: child)),
+              ),
+            ),
+          );
+
+      testWidgets('past the daily cap: added up to it', (tester) async {
+        final handle = tester.ensureSemantics();
+        final capped = _dashboard(
+          burned: 1000,
+          credit: ActivityCredit.dailyCapped,
+        );
+        await tester.pumpWidget(_app(capped));
+        await tester.pumpAndSettle();
+        expect(find.text('Activity, up to'), findsOne);
+        expect(find.text('+800'), findsOne);
+        expect(
+          find.bySemanticsLabel(
+            'Eaten 1800 kcal, activity adds up to 800 kcal, goal 2500 kcal',
+          ),
+          findsOne,
+        );
+
+        await pumpKj(tester, capped);
+        await tester.pumpAndSettle();
+        expect(find.text('+3347'), findsOne);
+        expect(
+          find.bySemanticsLabel(RegExp('activity adds up to 3347 kJ,')),
+          findsOne,
+        );
+        handle.dispose();
+      });
+
+      testWidgets('under the cap, the burn is added in full', (tester) async {
+        await tester.pumpWidget(
+          _app(_dashboard(credit: ActivityCredit.dailyCapped)),
+        );
+        await tester.pumpAndSettle();
+        expect(find.text('Activity'), findsOne);
+        expect(find.text('+300'), findsOne);
+      });
+
+      testWidgets('a target that leaves it out: not added, no "+"', (
+        tester,
+      ) async {
+        final handle = tester.ensureSemantics();
+        await tester.pumpWidget(
+          _app(_dashboard(credit: ActivityCredit.notCounted)),
+        );
+        await tester.pumpAndSettle();
+        expect(find.text('Activity, not added'), findsOne);
+        expect(find.text('300'), findsOne);
+        expect(find.text('+300'), findsNothing);
+        expect(
+          find.bySemanticsLabel(
+            'Eaten 1800 kcal, activity 300 kcal, not added, goal 2500 kcal',
+          ),
+          findsOne,
+        );
+        handle.dispose();
+      });
+    });
+
+    testWidgets('each macro left of its target, or over it, uncoloured', (
       tester,
     ) async {
       await tester.pumpWidget(_app(_dashboard()));
       await tester.pumpAndSettle();
       expect(
-        find.bySemanticsLabel(RegExp(r': 200 of 251 g, 51 g left$')),
+        find.bySemanticsLabel(RegExp(r'^Carbs: 200 of 251 g, 51 g left$')),
         findsOne,
       );
       expect(
-        find.bySemanticsLabel(RegExp(r': 79 of 70 g, 9 g over$')),
+        find.bySemanticsLabel(RegExp(r'^Fat: 79 of 70 g, 9 g over$')),
         findsOne,
       );
       expect(
-        find.bySemanticsLabel(RegExp(r': 42 of 120 g, 78 g left$')),
+        find.bySemanticsLabel(RegExp(r'^Protein: 42 of 120 g, 78 g left$')),
         findsOne,
       );
 
-      final error = Theme.of(
-        tester.element(find.byType(DashboardWidget)),
-      ).colorScheme.error;
-      final bars = tester
-          .widgetList<LinearProgressIndicator>(
-            find.byType(LinearProgressIndicator),
-          )
+      // Each name in Title Case, above its figure and bar.
+      final bars = find.byType(LinearProgressIndicator);
+      for (final (i, name) in ['Carbs', 'Fat', 'Protein'].indexed) {
+        expect(
+          tester.getBottomLeft(find.text(name)).dy,
+          lessThanOrEqualTo(tester.getTopLeft(bars.at(i)).dy),
+        );
+      }
+
+      final theme = Theme.of(tester.element(find.byType(DashboardWidget)));
+      final colours = tester
+          .widgetList<LinearProgressIndicator>(bars)
           .map((b) => (b.valueColor as AlwaysStoppedAnimation<Color?>).value);
-      expect([for (final c in bars) c == error], [false, true, false]);
+      expect(colours, isNot(contains(theme.colorScheme.error)));
+      Color? figure(String text) =>
+          (tester.widget<RichText>(find.text(text, findRichText: true)).text
+                  as TextSpan)
+              .children!
+              .whereType<TextSpan>()
+              .first
+              .style
+              ?.color;
+      expect(figure('9 g over'), figure('51 g left'));
+      expect(figure('9 g over'), isNot(theme.colorScheme.error));
     });
   });
 }

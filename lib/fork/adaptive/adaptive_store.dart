@@ -519,6 +519,7 @@ class AdaptiveStore {
     'showFasting',
     'homeTiles',
     'homeSections',
+    'homeQuickActions',
     'trendsLayout',
     'trendsTiles',
     'trendsRange',

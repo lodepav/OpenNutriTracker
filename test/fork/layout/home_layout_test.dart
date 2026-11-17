@@ -22,6 +22,7 @@ void main() {
           body: HomeSectionsList(
             sections: {
               'dashboard': const Text('summary'),
+              'recentFoods': const Text('recent'),
               'tiles': const Text('tiles'),
               'plan': const Text('plan'),
               'notices': const Text('notices'),
@@ -104,6 +105,18 @@ void main() {
     expect(find.text('lunch'), findsNothing);
   });
 
+  testWidgets('Recent foods is off, but under a saved order that lists it', (
+    tester,
+  ) async {
+    await pump(tester);
+    expect(find.text('summary'), findsOneWidget);
+    expect(find.text('recent'), findsNothing);
+
+    layout.value = (order: ['dashboard', 'recentFoods'], hidden: const {});
+    await tester.pumpAndSettle();
+    expect(find.text('recent'), findsOneWidget);
+  });
+
   testWidgets('a meal switched on in Arrange Home shows', (tester) async {
     layout.value = (order: ['dashboard', 'diaryLunch'], hidden: const {});
     await pump(tester);
@@ -114,6 +127,9 @@ void main() {
   testWidgets('Arrange Home: sections and tiles; a hidden one added back', (
     tester,
   ) async {
+    // Tall enough to build every list.
+    tester.view.physicalSize = const Size(800, 6000);
+    addTearDown(tester.view.reset);
     layout.value = (order: const [], hidden: {'tiles'});
     await pump(tester);
     await tester.tap(find.byKey(const ValueKey('home-arrange')));
@@ -136,5 +152,24 @@ void main() {
           .value,
       isTrue,
     );
+    expect(
+      tester
+          .widget<SwitchListTile>(
+            find.byKey(const ValueKey('arrange-recentFoods')),
+          )
+          .value,
+      isFalse,
+    );
+    // The quick actions, a list of their own: search off, the rest on.
+    expect(find.text('Quick actions'), findsNWidgets(2));
+    bool on(String id) => tester
+        .widget<SwitchListTile>(find.byKey(ValueKey('arrange-$id')))
+        .value;
+    expect(on('search'), isFalse);
+    for (final id in ['scan', 'quick-add', 'weigh-in', 'meal-plan']) {
+      expect(on(id), isTrue, reason: id);
+    }
+    // AI meal assistance is off here.
+    expect(find.byKey(const ValueKey('arrange-photo')), findsNothing);
   });
 }

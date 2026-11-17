@@ -23,7 +23,7 @@ import 'package:opennutritracker/fork/adaptive/trend_points.dart';
 import 'package:opennutritracker/fork/report/rate_text.dart';
 import 'package:opennutritracker/fork/trends/trend_stats.dart' show TrendMetric;
 import 'package:opennutritracker/fork/trends/trends_widgets.dart'
-    show Sparkline;
+    show Sparkline, keepUnits;
 import 'package:opennutritracker/fork/units/energy_text.dart';
 import 'package:opennutritracker/fork/units/weight_text.dart' show weightText;
 import 'package:opennutritracker/generated/l10n.dart';
@@ -88,6 +88,8 @@ class HomeTiles extends StatelessWidget {
       // rest go two to a row as arranged (S162), one alone spanning it,
       // with Trends' tiles switched on there.
       final layout = LayoutStore.current(homeTilesKey).value;
+      // As Trends': past 1.5x text two tiles to a row split their units.
+      final perRow = MediaQuery.textScalerOf(context).scale(10) > 15 ? 1 : 2;
       final own = {
         'weight': WeightTile(
           // Reloaded once a weigh-in changes today's weight.
@@ -115,17 +117,18 @@ class HomeTiles extends StatelessWidget {
         for (final id in homeTrendTileNames.keys)
           if (!addable([id], layout).contains(id)) id,
       };
-      if (added.isEmpty) return _grid(arranged(own, layout));
+      if (added.isEmpty) return _grid(arranged(own, layout), perRow);
       return HomeTrendTiles(
         ids: added,
         loadExpenditure: loadExpenditure,
         homeLoads: homeLoads,
-        builder: (trends) => _grid(arranged({...own, ...trends}, layout)),
+        builder: (trends) =>
+            _grid(arranged({...own, ...trends}, layout), perRow),
       );
     },
   );
 
-  Widget _grid(List<Widget> tiles) {
+  Widget _grid(List<Widget> tiles, int perRow) {
     if (tiles.isEmpty) return const SizedBox.shrink();
     return Padding(
       padding: const EdgeInsets.fromLTRB(
@@ -135,22 +138,25 @@ class HomeTiles extends StatelessWidget {
         0,
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          for (var i = 0; i < tiles.length; i += 2)
+          for (var i = 0; i < tiles.length; i += perRow)
             Padding(
               padding: const EdgeInsets.only(top: Dimens.spacing8),
-              child: IntrinsicHeight(
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Expanded(child: tiles[i]),
-                    if (i + 1 < tiles.length) ...[
-                      const SizedBox(width: Dimens.spacing8),
-                      Expanded(child: tiles[i + 1]),
-                    ],
-                  ],
-                ),
-              ),
+              child: perRow == 1
+                  ? tiles[i]
+                  : IntrinsicHeight(
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Expanded(child: tiles[i]),
+                          if (i + 1 < tiles.length) ...[
+                            const SizedBox(width: Dimens.spacing8),
+                            Expanded(child: tiles[i + 1]),
+                          ],
+                        ],
+                      ),
+                    ),
             ),
         ],
       ),
@@ -170,6 +176,10 @@ class HomeTile extends StatelessWidget {
   final VoidCallback? onTap;
   final String? hint;
 
+  /// What a screen reader says for the card, in words ("Expenditure,
+  /// 3045 kcal a day"); its text as shown when null.
+  final String? spokenLabel;
+
   /// A + in the corner that logs (a weigh-in, water), [actionTooltip] its
   /// name; beside the card rather than in it, a button in a button being
   /// one target to a screen reader.
@@ -186,6 +196,7 @@ class HomeTile extends StatelessWidget {
     this.below,
     this.onTap,
     this.hint,
+    this.spokenLabel,
     this.onAction,
     this.actionTooltip,
   });
@@ -196,8 +207,13 @@ class HomeTile extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
     final card = Semantics(
       identifier: identifier,
+      container: spokenLabel != null,
       button: onTap != null,
+      label: spokenLabel,
       hint: hint,
+      // Excluding the text drops the card's tap too, so the node has its own.
+      onTap: spokenLabel == null ? null : onTap,
+      excludeSemantics: spokenLabel != null,
       child: AppCard(
         onTap: onTap,
         padding: const EdgeInsets.all(Dimens.spacing12),
@@ -229,7 +245,7 @@ class HomeTile extends StatelessWidget {
                   ),
                   if (note != null)
                     TextSpan(
-                      text: ' $note',
+                      text: ' ${keepUnits(note!)}',
                       style: textTheme.labelSmall?.copyWith(
                         color: palette.textMuted,
                       ),
@@ -307,14 +323,19 @@ class _WeightTileState extends State<WeightTile> {
       final kg = trend.isEmpty ? widget.weightKg : trend.last.weightKg;
       final s = S.of(context);
       final value = weightText(kg, widget.unit);
-      String? note;
+      // Stones are too coarse for a week's change: pounds.
+      final rateUnit = widget.unit == BodyWeightUnit.kg
+          ? s.kgLabel
+          : s.lbsLabel;
+      String? rate;
       if (trend.length > 7) {
         final kgPerWeek =
             trend.last.weightKg - trend[trend.length - 8].weightKg;
-        // Stones are too coarse for a week's change: pounds.
-        note = widget.unit == BodyWeightUnit.kg
-            ? '· ${signedRate(kgPerWeek)} ${s.kgLabel}/wk'
-            : '· ${signedRate(UnitCalc.kgToLbs(kgPerWeek))} ${s.lbsLabel}/wk';
+        rate = signedRate(
+          widget.unit == BodyWeightUnit.kg
+              ? kgPerWeek
+              : UnitCalc.kgToLbs(kgPerWeek),
+        );
       }
       final month = trend.length > 30
           ? trend.sublist(trend.length - 30)
@@ -328,7 +349,8 @@ class _WeightTileState extends State<WeightTile> {
         identifier: widget.identifier,
         title: 'Weight trend',
         value: value,
-        note: note,
+        note: rate == null ? null : '· $rate $rateUnit/wk',
+        spokenLabel: weightSpoken(value, rate, rateUnit),
         hint: widget.hint,
         onTap: widget.onTap ?? weighIn,
         onAction: weighIn,
@@ -375,6 +397,10 @@ class _ExpenditureTileState extends State<ExpenditureTile> {
             ? '—'
             : '${energyValue(context, days.last.expenditureKcal)}',
         note: days.isEmpty ? 'after a weigh-in' : '${energyUnit(context)}/day',
+        spokenLabel: expenditureSpoken(
+          days.isEmpty ? null : energyValue(context, days.last.expenditureKcal),
+          energyUnit(context),
+        ),
         below: month.length < 2
             ? null
             : Sparkline(
@@ -421,6 +447,9 @@ class WaterTile extends StatelessWidget {
       title: 'Water',
       value: shown(ml),
       note: '/ ${shown(goalMl)} ${usesImperialUnits ? 'fl oz' : 'ml'}',
+      spokenLabel:
+          'Water, ${shown(ml)} of ${shown(goalMl)} '
+          '${usesImperialUnits ? 'fluid ounces' : 'milliliters'}',
       hint: onTap == null ? 'Log water' : 'Open the water trend',
       onTap: onTap ?? logWater,
       onAction: logWater,
@@ -467,6 +496,7 @@ class FastingTileView extends StatelessWidget {
       title: 'Fasting',
       value: active == null ? 'Not fasting' : _hoursMinutes(active.remaining),
       note: active == null ? null : 'left',
+      spokenLabel: fastingSpoken(active?.remaining),
       hint: 'Open fasting',
       onTap: () =>
           Navigator.of(context).pushNamed(NavigationOptions.fastingRoute),
@@ -480,6 +510,30 @@ class FastingTileView extends StatelessWidget {
             ),
     );
   }
+}
+
+/// "Weight trend, 87.1 kg, down 0.16 kg a week": [rate] the week's change
+/// as shown ("-0.16", "0.00"), null before a week of trend.
+String weightSpoken(String weight, String? rate, String unit) =>
+    'Weight trend, $weight${switch (rate) {
+      null => '',
+      '0.00' => ', steady',
+      _ => ', ${rate.startsWith('-') ? 'down' : 'up'} '
+          '${rate.replaceFirst(RegExp('^[+-]'), '')} $unit a week',
+    }}';
+
+/// "Expenditure, 3045 kcal a day", or that it waits for a weigh-in.
+String expenditureSpoken(int? value, String unit) => value == null
+    ? 'Expenditure, after a weigh-in'
+    : 'Expenditure, $value $unit a day';
+
+/// "Fasting, 11 hours 30 minutes left", or that no fast is under way.
+String fastingSpoken(Duration? remaining) {
+  if (remaining == null) return 'Fasting, no fast under way';
+  String count(int n, String unit) => '$n $unit${n == 1 ? '' : 's'}';
+  final h = remaining.inHours;
+  final m = count(remaining.inMinutes.remainder(60), 'minute');
+  return 'Fasting, ${h == 0 ? m : '${count(h, 'hour')} $m'} left';
 }
 
 /// A tile's thin progress bar.

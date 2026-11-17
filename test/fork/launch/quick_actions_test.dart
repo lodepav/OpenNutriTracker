@@ -6,6 +6,9 @@ import 'package:opennutritracker/core/domain/usecase/get_config_usecase.dart';
 import 'package:opennutritracker/core/utils/ai_credential_storage.dart';
 import 'package:opennutritracker/core/utils/navigation_options.dart';
 import 'package:opennutritracker/fork/launch/quick_actions.dart';
+import 'package:opennutritracker/fork/layout/arrange_screen.dart';
+import 'package:opennutritracker/fork/layout/home_layout.dart';
+import 'package:opennutritracker/fork/layout/layout_store.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 
 class _Config extends Fake implements GetConfigUsecase {
@@ -28,8 +31,19 @@ class _Ai extends Fake implements AiCredentialStorage {
   Future<bool> isEnabled() async => on;
 }
 
+/// In memory, as real Hive hangs under `testWidgets`.
+class _Memory extends LayoutStore {
+  _Memory(super.key);
+
+  @override
+  Future<void> save(Layout layout) async =>
+      LayoutStore.current(key).value = layout;
+}
+
 void main() {
+  final layout = LayoutStore.current(homeQuickActionsKey);
   tearDown(GetIt.instance.reset);
+  tearDown(() => layout.value = (order: const [], hidden: const {}));
 
   Future<List<String>> pump(WidgetTester tester, {bool ai = false}) async {
     final opened = <String>[];
@@ -115,11 +129,62 @@ void main() {
   });
 
   testWidgets('search opens the food search', (tester) async {
+    layout.value = (order: ['search'], hidden: const {});
     final opened = await pump(tester);
     await tester.tap(find.bySemanticsIdentifier('home-quick-search'));
     await tester.pump();
     await tester.pump();
     expect(opened, [NavigationOptions.addMealRoute]);
+  });
+
+  testWidgets('a fresh profile has no Search: the + sheet opens on it', (
+    tester,
+  ) async {
+    await pump(tester);
+    expect(find.bySemanticsIdentifier('home-quick-search'), findsNothing);
+    expect(find.bySemanticsIdentifier('home-quick-scan'), findsOneWidget);
+  });
+
+  testWidgets('switched on in Arrange Home, Search shows; the rest as '
+      'arranged', (tester) async {
+    GetIt.instance
+      ..registerSingleton<GetConfigUsecase>(_Config())
+      ..registerSingleton<AiCredentialStorage>(_Ai(false));
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: const [S.delegate],
+        supportedLocales: S.supportedLocales,
+        home: Builder(
+          builder: (context) => ArrangeScreen(
+            title: 'Arrange Home',
+            lists: [
+              ArrangeList(
+                title: 'Quick actions',
+                store: _Memory(homeQuickActionsKey),
+                names: homeQuickActionNames(context, ai: false),
+                optional: optionalQuickActions,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('arrange-search')));
+    await tester.tap(find.byKey(const ValueKey('arrange-scan')));
+    await tester.pumpAndSettle();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: const [S.delegate],
+        supportedLocales: S.supportedLocales,
+        home: const Scaffold(body: QuickActions()),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.bySemanticsIdentifier('home-quick-search'), findsOneWidget);
+    expect(find.bySemanticsIdentifier('home-quick-scan'), findsNothing);
+    expect(find.bySemanticsIdentifier('home-quick-weigh-in'), findsOneWidget);
   });
 
   testWidgets('the meal plan is a tile away', (tester) async {

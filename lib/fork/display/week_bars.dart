@@ -107,17 +107,19 @@ class _Bars extends StatelessWidget {
         .expand((d) => [d.kcal, d.goal])
         .fold(1.0, (a, b) => b > a ? b : a);
     final unit = energyUnit(context);
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        for (final (i, d) in week.indexed)
-          Expanded(
-            child: Semantics(
-              label:
-                  '${DateFormat.EEEE().format(d.day)}: '
-                  '${energyValue(context, d.kcal)} of '
-                  '${energyValue(context, d.goal)} $unit',
-              excludeSemantics: true,
+    String spoken(_Day d) =>
+        '${DateFormat.EEEE().format(d.day)} ${energyValue(context, d.kcal)}'
+        '${d.goal > 0 ? ' of ${energyValue(context, d.goal)}' : ''} $unit';
+    // One node for the week, apart from the day's totals above it.
+    return Semantics(
+      container: true,
+      label: 'Last 7 days: ${week.map(spoken).join(', ')}',
+      excludeSemantics: true,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          for (final (i, d) in week.indexed)
+            Expanded(
               child: Column(
                 children: [
                   SizedBox(
@@ -163,8 +165,8 @@ class _Bars extends StatelessWidget {
                 ],
               ),
             ),
-          ),
-      ],
+        ],
+      ),
     );
   }
 }

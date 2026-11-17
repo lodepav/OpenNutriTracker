@@ -4,11 +4,13 @@ import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/fork/add/add_sheet.dart';
 import 'package:opennutritracker/fork/bulk/ai_add.dart';
 import 'package:opennutritracker/fork/launch/launch_actions.dart';
-import 'package:opennutritracker/generated/l10n.dart';
+import 'package:opennutritracker/fork/layout/home_layout.dart';
+import 'package:opennutritracker/fork/layout/layout_store.dart';
 
 /// Home's way straight to the frequent actions (seam S162): search, then the
 /// launcher shortcuts by the same names, each for today and the time's meal,
-/// and the meal plan. Weigh in opens the dialog over Home, where the
+/// and the meal plan, as arranged in Arrange Home; search is off until
+/// switched on there. Weigh in opens the dialog over Home, where the
 /// shortcut opens the weight history.
 /// Photo log shows while AI meal assistance is on, as on the + sheet. Home
 /// stays alive under other tabs and screens, so the setting is read again
@@ -50,54 +52,46 @@ class _QuickActionsState extends State<QuickActions> {
     if (mounted && ai != _ai) setState(() => _ai = ai);
   }
 
-  Widget _tile(String id, IconData icon, String label, LaunchAction action) =>
-      actionTile(
-        context,
-        id: 'home-quick-$id',
-        icon: icon,
-        label: label,
-        onTap: () => openLaunchAction(context, action),
-      );
+  static const Map<String, (IconData, LaunchAction)> _actions = {
+    'search': (Icons.search_rounded, SearchAction()),
+    'scan': (Icons.qr_code_scanner_rounded, ScanAction()),
+    'photo': (Icons.photo_camera_outlined, PhotoAction()),
+    'quick-add': (Icons.bolt_rounded, QuickAddAction()),
+    'weigh-in': (Icons.monitor_weight_outlined, WeighInDialogAction()),
+    'meal-plan': (Icons.event_note_rounded, PlanAction()),
+  };
 
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.symmetric(
-      horizontal: Dimens.spacing16,
-      vertical: Dimens.spacing8,
-    ),
-    child: actionTiles(context, [
-      _tile(
-        'search',
-        Icons.search_rounded,
-        S.of(context).searchLabel,
-        const SearchAction(),
-      ),
-      _tile('scan', Icons.qr_code_scanner_rounded, 'Scan', const ScanAction()),
-      if (_ai)
-        _tile(
-          'photo',
-          Icons.photo_camera_outlined,
-          'Photo log',
-          const PhotoAction(),
+  Widget build(BuildContext context) => ValueListenableBuilder(
+    valueListenable: LayoutStore.current(homeQuickActionsKey),
+    builder: (context, layout, _) {
+      final tiles = arranged(
+        {
+          for (final MapEntry(key: id, value: label) in homeQuickActionNames(
+            context,
+            ai: _ai,
+          ).entries)
+            id: actionTile(
+              context,
+              id: 'home-quick-$id',
+              icon: _actions[id]!.$1,
+              label: label,
+              onTap: () => openLaunchAction(context, _actions[id]!.$2),
+            ),
+        },
+        (
+          order: layout.order,
+          hidden: {...layout.hidden, ...addable(optionalQuickActions, layout)},
         ),
-      _tile(
-        'quick-add',
-        Icons.bolt_rounded,
-        S.of(context).quickAddCardLabel,
-        const QuickAddAction(),
-      ),
-      _tile(
-        'weigh-in',
-        Icons.monitor_weight_outlined,
-        'Weigh in',
-        const WeighInDialogAction(),
-      ),
-      _tile(
-        'meal-plan',
-        Icons.event_note_rounded,
-        'Meal plan',
-        const PlanAction(),
-      ),
-    ], perRow: 3),
+      );
+      if (tiles.isEmpty) return const SizedBox.shrink();
+      return Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: Dimens.spacing16,
+          vertical: Dimens.spacing8,
+        ),
+        child: actionTiles(context, tiles, perRow: 3),
+      );
+    },
   );
 }

@@ -77,6 +77,7 @@ const storedFields = <String, Map<String, StoredField>>{
     'showFasting': backedUp,
     'homeTiles': backedUp,
     'homeSections': backedUp,
+    'homeQuickActions': backedUp,
     'trendsLayout': backedUp,
     'trendsTiles': backedUp,
     'trendsRange': backedUp,
