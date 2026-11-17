@@ -108,6 +108,11 @@ void main() {
     expect(tester.widget<HomeTile>(sides).title, 'Arms · left vs right');
     expect(tester.widget<HomeTile>(sides).value, '1.2');
     expect(tester.widget<HomeTile>(sides).note, 'cm · right bigger');
+    // Spoken as on Trends.
+    expect(
+      find.bySemanticsLabel('Arms left versus right, 1.2 cm, right bigger'),
+      findsOne,
+    );
     // First, beside the weight.
     expect(
       tester.getTopLeft(sides).dx,
@@ -118,6 +123,29 @@ void main() {
     await tester.tap(sides);
     await tester.pumpAndSettle();
     expect(find.byType(SideComparePage), findsOne);
+  });
+
+  testWidgets('an average says so in its title, Home having no span line', (
+    tester,
+  ) async {
+    layout.value = (
+      order: [
+        'calories',
+        'weight',
+        'expenditure',
+        'water',
+        'fasting',
+        ...homeTrendTileNames.keys.where((id) => id != 'calories'),
+      ],
+      hidden: {...homeTrendTileNames.keys.where((id) => id != 'calories')},
+    );
+    await pump(tester);
+    final calories = find.byWidgetPredicate(
+      (w) => w is HomeTile && w.identifier == 'home-trends-tile-calories',
+    );
+    expect(tester.widget<HomeTile>(calories).title, 'Calories · avg');
+    expect(tester.widget<HomeTile>(calories).hint, 'Open Calories');
+    expect(find.bySemanticsLabel('Calories, nothing logged'), findsOne);
   });
 
   testWidgets('waist to height reads the height it is taken against', (

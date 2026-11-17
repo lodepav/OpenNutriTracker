@@ -187,7 +187,7 @@ void main() {
     await showTile(tester, 'water');
     expect(tileText(tester, 'water'), contains('1000 / 1900 ml'));
     expect(
-      find.textContaining('Last 7 days, 1 logged', skipOffstage: false),
+      find.text('Daily averages · Last 7 days · 1\u00A0logged'),
       findsOneWidget,
     );
   });
@@ -206,7 +206,7 @@ void main() {
     // Tall enough for every tile to be built.
     tester.view.physicalSize = const Size(2400, 6000);
     addTearDown(tester.view.reset);
-    await pumpTrends(tester, loaded(days: [_logged(0)]));
+    await pumpTrends(tester, loaded(days: [_logged(0)]), allTiles: false);
     double y(String m) =>
         tester.getTopLeft(find.byKey(ValueKey('trends-tile-$m'))).dy;
     double x(String m) =>
@@ -246,16 +246,15 @@ void main() {
 
   testWidgets('the macro tiles follow the macro order', (tester) async {
     DisplayPrefs.macroOrder.value = [Macro.protein, Macro.carbs, Macro.fat];
-    await pumpTrends(tester, loaded(days: [_logged(0)]));
+    // Never arranged: the editor lists them in the macro order.
+    await pumpTrends(tester, loaded(days: [_logged(0)]), allTiles: false);
+    await tester.tap(find.byKey(const ValueKey('trends-arrange')));
+    await tester.pumpAndSettle();
     double y(String m) =>
-        tester.getTopLeft(find.byKey(ValueKey('trends-tile-$m'))).dy;
-    double x(String m) =>
-        tester.getTopLeft(find.byKey(ValueKey('trends-tile-$m'))).dx;
-    // Row three is protein, carbs; row four fat, fibre.
-    expect(y('protein'), y('carbs'));
-    expect(x('protein'), lessThan(x('carbs')));
-    expect(y('fat'), greaterThan(y('protein')));
-    expect(y('fat'), y('fibre'));
+        tester.getTopLeft(find.byKey(ValueKey('arrange-$m'))).dy;
+    expect(y('protein'), lessThan(y('carbs')));
+    expect(y('carbs'), lessThan(y('fat')));
+    expect(y('fat'), lessThan(y('fibre')));
   });
 
   testWidgets('a pill reloads Trends at its range', (tester) async {
@@ -374,7 +373,7 @@ void main() {
       loaded(days: [_logged(0, kcal: 1039, goal: 2000)]),
       kj: true,
     );
-    expect(tileText(tester, 'calories'), contains('Energy · avg'));
+    expect(tileText(tester, 'calories'), startsWith('Energy | '));
     expect(tileText(tester, 'calories'), contains('4347 / 8368 kJ'));
 
     await openTile(tester, 'calories');
@@ -1054,14 +1053,18 @@ void main() {
     loadBodyFrame = () async =>
         (heightCm: 180.0, gender: UserGenderEntity.male);
     await pumpTrends(tester, loaded());
-    await showTile(tester, 'waist');
-    expect(tileText(tester, 'waist'), contains('measure your waist'));
+    // Not measured: the Body measurements card asks, the tile waits.
+    expect(
+      find.byKey(const ValueKey('trends-tile-waist'), skipOffstage: false),
+      findsNothing,
+    );
 
     TrendsOverview.loadMeasurements = () async => [
       Measurement(id: 'w', date: day(-3), metric: BodyMetric.waist, value: 95),
     ];
     MeasurementStore.changes.value++;
     await tester.pumpAndSettle();
+    await showTile(tester, 'waist');
     expect(tileText(tester, 'waist'), contains('0.53'));
     expect(tileText(tester, 'waist'), contains('increased risk'));
 

@@ -299,7 +299,7 @@ class _Week extends StatelessWidget {
 
     final spoken = [
       dates,
-      if (current) 'this week',
+      if (current) 'this week so far',
       days,
       '${energyText(context, kcal.eaten)} a day of '
           '${energyText(context, kcal.goal)}, $offText, '
@@ -328,7 +328,7 @@ class _Week extends StatelessWidget {
               ),
               if (current) ...[
                 _Badge(
-                  label: 'This week',
+                  label: 'This week so far',
                   color: palette.accent,
                   palette: palette,
                 ),

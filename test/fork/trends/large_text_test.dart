@@ -1,5 +1,8 @@
+import 'dart:math' as math;
+
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:opennutritracker/core/domain/entity/body_weight_unit_entity.dart';
@@ -7,6 +10,8 @@ import 'package:opennutritracker/core/domain/entity/weight_log_entity.dart';
 import 'package:opennutritracker/features/profile/presentation/widgets/weight_trend_chart.dart';
 import 'package:opennutritracker/fork/trends/trends_widgets.dart';
 import 'package:opennutritracker/generated/l10n.dart';
+
+import '../../helpers/ux_checks.dart';
 
 Widget _app(Widget child) => MaterialApp(
   localizationsDelegates: const [
@@ -75,6 +80,58 @@ void main() {
     await tester.pumpAndSettle();
     expect(tester.widget<Text>(find.text('Weight trend')).maxLines, 2);
   });
+
+  for (final (value, suffix, units) in [
+    ('3045', 'kcal/day', ['kcal/day']),
+    ('87.1', 'kg · -0.16/wk', ['-0.16/wk']),
+    ('2573', '/ 2925 kcal', ['2925 kcal']),
+  ]) {
+    // 200 to 250 split each unit before this, in the app's font
+    for (final width in [180.0, 200.0, 220.0, 250.0]) {
+      testWidgets('at 200% a $width wide tile keeps ${units.join()} whole', (
+        tester,
+      ) async {
+        await pumpOnPhone(
+          tester,
+          Align(
+            alignment: Alignment.topLeft,
+            child: SizedBox(
+              width: width,
+              child: TrendTile(
+                id: 'tile',
+                label: 'Energy',
+                value: value,
+                suffix: suffix,
+                chart: const SizedBox(height: 20),
+                onTap: () {},
+              ),
+            ),
+          ),
+        );
+        expect(tester.takeException(), isNull);
+        expect(cutText(tester), isEmpty);
+        final paragraph = tester
+            .renderObjectList<RenderParagraph>(find.byType(RichText))
+            .firstWhere((p) => p.text.toPlainText().contains(value));
+        final plain = paragraph.text.toPlainText();
+        for (final unit in units) {
+          // the unit whatever joiners sit in it
+          final match = RegExp(
+            RegExp.escape(
+              unit,
+            ).replaceAll(' ', '[ \u00A0]').replaceAll('/', '/\u2060?'),
+          ).firstMatch(plain)!;
+          final boxes = paragraph.getBoxesForSelection(
+            TextSelection(baseOffset: match.start, extentOffset: match.end),
+          );
+          // on one line every box shares a band, whatever its font size
+          final top = boxes.map((b) => b.top).reduce(math.max);
+          final bottom = boxes.map((b) => b.bottom).reduce(math.min);
+          expect(top, lessThan(bottom), reason: '"$unit" split in "$plain"');
+        }
+      });
+    }
+  }
 
   testWidgets('at 200% the weight chart axes make room for their labels', (
     tester,

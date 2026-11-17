@@ -252,11 +252,32 @@ class _TrendsOverviewState extends State<TrendsOverview> {
                         ))
                           t.id.substring('trends-tile-'.length): t,
                       };
-                      final tiles = arranged(
-                        all,
-                        TrendsTilesStore.current.value,
-                      );
+                      final layout = TrendsTilesStore.current.value;
+                      // Only a profile that never arranged its tiles gets
+                      // the default six; a saved order shows tiles it does
+                      // not know, as before.
+                      final optional = layout.order.isEmpty
+                          ? all.keys.toSet().difference(defaultTrendTiles)
+                          : const <String>{};
+                      // Kept while loading, so the grid does not jump.
+                      final settled = [
+                        measured,
+                        goal,
+                        frame,
+                      ].every((s) => s.connectionState == ConnectionState.done);
+                      final tiles = arranged(all, (
+                        order: layout.order,
+                        hidden: {...layout.hidden, ...optional},
+                      )).where((t) => !settled || !_noData(t)).toList();
+                      final perRow =
+                          MediaQuery.textScalerOf(context).scale(10) > 15
+                          ? 1
+                          : 2;
                       final logged = state.days.where(isLogged).length;
+                      final range = rangeText(
+                        state.rangeDays,
+                        state.windowDays,
+                      );
                       // One column, built once: a lazy list dropped the
                       // cards scrolled past, and rebuilt they load from
                       // nothing to their height above the screen, which
@@ -283,39 +304,49 @@ class _TrendsOverviewState extends State<TrendsOverview> {
                                 LoadTrendsEvent(rangeDays: d),
                               ),
                             ),
-                            const SizedBox(height: Dimens.spacing12),
-                            for (var i = 0; i < tiles.length; i += 2)
+                            const SizedBox(height: Dimens.spacing8),
+                            Semantics(
+                              label:
+                                  'Daily averages, ${range.toLowerCase()}'
+                                  '${logged == 0 ? '' : ', $logged ${logged == 1 ? 'day' : 'days'} logged'}',
+                              excludeSemantics: true,
+                              child: Text(
+                                'Daily averages · $range'
+                                '${logged == 0 ? '' : ' · $logged\u00A0logged'}',
+                                key: const ValueKey('trends-span'),
+                                textAlign: TextAlign.center,
+                                style: Theme.of(context).textTheme.bodySmall
+                                    ?.copyWith(
+                                      color: paletteOf(context).textMuted,
+                                    ),
+                              ),
+                            ),
+                            const SizedBox(height: Dimens.spacing8),
+                            for (var i = 0; i < tiles.length; i += perRow)
                               Padding(
                                 padding: const EdgeInsets.only(
                                   bottom: Dimens.spacing8,
                                 ),
                                 // The tiles are alike, so a row's two are one height;
                                 // AutoSizeText measures, so no IntrinsicHeight here.
-                                child: Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Expanded(child: tiles[i]),
-                                    const SizedBox(width: Dimens.spacing8),
-                                    Expanded(
-                                      child: i + 1 < tiles.length
-                                          ? tiles[i + 1]
-                                          : const SizedBox.shrink(),
-                                    ),
-                                  ],
-                                ),
+                                child: perRow == 1
+                                    ? tiles[i]
+                                    : Row(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Expanded(child: tiles[i]),
+                                          const SizedBox(
+                                            width: Dimens.spacing8,
+                                          ),
+                                          Expanded(
+                                            child: i + 1 < tiles.length
+                                                ? tiles[i + 1]
+                                                : const SizedBox.shrink(),
+                                          ),
+                                        ],
+                                      ),
                               ),
-                            Text(
-                              'Tap a card for its chart · '
-                              '${rangeText(state.rangeDays, state.windowDays)}, '
-                              '$logged logged',
-                              textAlign: TextAlign.center,
-                              style: Theme.of(context).textTheme.bodySmall
-                                  ?.copyWith(
-                                    color: paletteOf(context).textMuted,
-                                  ),
-                            ),
-                            ...arrangeTrendCards(widget.cards),
-                            const SizedBox(height: Dimens.spacing16),
                             Center(
                               child: TextButton.icon(
                                 key: const ValueKey('trends-arrange'),
@@ -333,11 +364,9 @@ class _TrendsOverviewState extends State<TrendsOverview> {
                                           names: {
                                             for (final MapEntry(:key, :value)
                                                 in all.entries)
-                                              key: value.label.replaceAll(
-                                                ' · avg',
-                                                '',
-                                              ),
+                                              key: value.label,
                                           },
+                                          optional: optional,
                                         ),
                                         ArrangeList(
                                           title: 'Cards',
@@ -350,6 +379,7 @@ class _TrendsOverviewState extends State<TrendsOverview> {
                                 ),
                               ),
                             ),
+                            ...arrangeTrendCards(widget.cards),
                           ],
                         ),
                       );
@@ -389,16 +419,26 @@ List<TrendTile> trendTiles(
     required DaySeries spark,
     required Color sparkColor,
     bool bars = true,
-    String? label,
+    required String spoken,
+    String? note,
   }) => TrendTile(
     id: 'trends-tile-${m.name}',
-    label: label ?? metricTitle(context, m),
+    label: metricTitle(context, m),
     value: value,
     suffix: suffix,
     valueColor: valueColor,
     chart: Sparkline(values: spark, color: sparkColor, bars: bars),
     onTap: () => open(m),
+    spokenLabel: spoken,
+    note: note,
   );
+
+  /// "Protein, daily average 93 of 110 g", or that none was logged.
+  String averageSpoken(TrendMetric m, String? mean, String? goal, String u) =>
+      mean == null
+      ? '${metricTitle(context, m)}, nothing logged'
+      : '${metricTitle(context, m)}, daily average $mean'
+            '${goal == null ? '' : ' of $goal'} $u';
 
   final energy = nutritionSeries(state.days, dates, (d) => d.caloriesTracked);
   final energyMean = meanOf(energy);
@@ -420,13 +460,18 @@ List<TrendTile> trendTiles(
     final goal = goalOf(state.days, dates, macro.goal);
     return tile(
       m,
-      label: '${metricTitle(context, m)} · avg',
       value: mean == null ? '–' : '${mean.round()}',
       // S114: grams rounded, as the weekly report's are.
       suffix: goal == null ? 'g' : '/ ${goal.round()} g',
       valueColor: color,
       spark: series,
       sparkColor: color,
+      spoken: averageSpoken(
+        m,
+        mean == null ? null : '${mean.round()}',
+        goal == null ? null : '${goal.round()}',
+        'g',
+      ),
     );
   }
 
@@ -436,15 +481,28 @@ List<TrendTile> trendTiles(
     final mean = micro == null ? null : microMean(micro);
     final goal = micro?.summary.goal;
     final color = Theme.of(context).colorScheme.primary;
+    // As shown: "2300 / 2300 mg" is not over.
+    final over =
+        nutrient.isLimit &&
+        mean != null &&
+        goal != null &&
+        double.parse(nutrient.text(mean)) > double.parse(nutrient.text(goal));
+    final spoken = averageSpoken(
+      m,
+      mean == null ? null : nutrient.text(mean),
+      goal == null ? null : nutrient.text(goal),
+      nutrient.unit,
+    );
     return tile(
       m,
-      label: '${metricTitle(context, m)} · avg',
       value: mean == null ? '–' : nutrient.text(mean),
       suffix: goal == null
           ? nutrient.unit
           : '/ ${nutrient.text(goal)} ${nutrient.unit}',
       spark: micro?.series ?? [for (final _ in dates) null],
       sparkColor: color,
+      note: over ? 'over limit' : null,
+      spoken: over ? '$spoken, over limit' : spoken,
     );
   }
 
@@ -455,11 +513,16 @@ List<TrendTile> trendTiles(
       ? UnitCalc.mlToFlOz(state.waterGoalMl.toDouble()).round()
       : state.waterGoalMl;
   final waterMean = meanOf(water);
+  final rate = weight.perWeekKg == null
+      ? null
+      : weightIn(wu, weight.perWeekKg!).abs().toStringAsFixed(2);
+  final balanceShown = balanceMean == null
+      ? null
+      : energyValue(context, balanceMean);
 
   return [
     tile(
       TrendMetric.calories,
-      label: '${energyTitle(context)} · avg',
       // Rounded, as energyValue is everywhere (S114).
       value: energyMean == null ? '–' : '${energyValue(context, energyMean)}',
       suffix: energyGoal == null
@@ -467,6 +530,12 @@ List<TrendTile> trendTiles(
           : '/ ${energyValue(context, energyGoal)} $unit',
       spark: energy,
       sparkColor: palette.accent,
+      spoken: averageSpoken(
+        TrendMetric.calories,
+        energyMean == null ? null : '${energyValue(context, energyMean)}',
+        energyGoal == null ? null : '${energyValue(context, energyGoal)}',
+        unit,
+      ),
     ),
     tile(
       TrendMetric.weight,
@@ -479,6 +548,15 @@ List<TrendTile> trendTiles(
       spark: weight.trend,
       sparkColor: Theme.of(context).colorScheme.primary,
       bars: false,
+      spoken: weight.nowKg == null
+          ? 'Weight trend, no weigh-ins'
+          : 'Weight trend, '
+                '${weightIn(wu, weight.nowKg!).toStringAsFixed(1)} $wLabel'
+                '${switch (rate) {
+                  null => '',
+                  '0.00' => ', steady',
+                  _ => ', ${weight.perWeekKg! < 0 ? 'down' : 'up'} $rate $wLabel a week',
+                }}',
     ),
     tile(
       TrendMetric.expenditure,
@@ -487,6 +565,9 @@ List<TrendTile> trendTiles(
       spark: spent,
       sparkColor: palette.accent,
       bars: false,
+      spoken: spentNow == null
+          ? 'Expenditure, after a weigh-in'
+          : 'Expenditure, ${energyValue(context, spentNow)} $unit a day',
     ),
     tile(
       TrendMetric.balance,
@@ -496,6 +577,13 @@ List<TrendTile> trendTiles(
       suffix: '$unit/day',
       spark: balance,
       sparkColor: palette.fat,
+      spoken: switch (balanceShown) {
+        null => 'Energy balance, no estimate yet',
+        0 => 'Energy balance, even',
+        final b =>
+          'Energy balance, ${b.abs()} $unit a day '
+              '${b < 0 ? 'under' : 'over'}',
+      },
     ),
     ...inMacroOrder(
       carbs: macroTile(TrendMetric.carbs, palette.carbs),
@@ -506,17 +594,30 @@ List<TrendTile> trendTiles(
     if (DisplayPrefs.showWater.value)
       tile(
         TrendMetric.water,
-        label: '${metricTitle(context, TrendMetric.water)} · avg',
         value: waterMean == null ? '–' : '${waterMean.round()}',
         suffix: state.waterGoalMl > 0 ? '/ $waterGoal $waterUnit' : waterUnit,
         spark: water,
         sparkColor: waterColor(context),
+        spoken: averageSpoken(
+          TrendMetric.water,
+          waterMean == null ? null : '${waterMean.round()}',
+          state.waterGoalMl > 0 ? '$waterGoal' : null,
+          flOz ? 'fluid ounces' : 'ml',
+        ),
       ),
     _goalTile(context, state, weight, goal),
     _sidesTile(context, state, measurements),
     _waistTile(context, state, measurements, frame),
   ];
 }
+
+/// Goal, left vs right and waist to height with nothing to show yet: the
+/// cards below invite the first entry, so Trends leaves them out.
+bool _noData(TrendTile t) => switch (t.id) {
+  'trends-tile-goal' => t.value == noGoalText,
+  'trends-tile-sides' || 'trends-tile-waist' => t.value == '–',
+  _ => false,
+};
 
 /// Waist to height: the latest ratio and its band; it opens its page.
 TrendTile _waistTile(
@@ -534,6 +635,9 @@ TrendTile _waistTile(
     label: 'Waist to height',
     value: text?.value ?? '–',
     suffix: text?.suffix ?? 'measure your waist',
+    spokenLabel: text == null
+        ? 'Waist to height, not measured'
+        : 'Waist to height, ${text.value}, ${text.suffix}',
     chart: const SizedBox(),
     onTap: () => openWaistRatio(
       context,
@@ -571,6 +675,13 @@ TrendTile _goalTile(
         : left < 0.1
         ? null
         : '${weightUnitLabel(context, wu)} to go',
+    spokenLabel: left == null
+        ? 'Goal, ${untargeted.value}'
+              '${untargeted.note == null ? '' : ' ${untargeted.note}'}'
+        : left < 0.1
+        ? 'Goal, target reached'
+        : 'Goal, ${weightIn(wu, left).toStringAsFixed(1)} '
+              '${weightUnitLabel(context, wu)} to go',
     chart: target == null || now == null
         ? const SizedBox()
         : _GoalBar(progress: goal?.progress),
@@ -595,6 +706,13 @@ TrendTile _sidesTile(
     label: '${part.label} · left vs right',
     value: text?.value ?? '–',
     suffix: text == null ? 'measure both sides' : text.suffix,
+    spokenLabel:
+        '${part.label} left versus right, '
+        '${switch (text) {
+          null => 'not measured',
+          (value: final v, suffix: null) => v.toLowerCase(),
+          (value: final v, suffix: final s?) => '$v ${s.replaceAll(' · ', ', ')}',
+        }}',
     chart: const SizedBox(),
     onTap: () => openSideCompare(
       context,
