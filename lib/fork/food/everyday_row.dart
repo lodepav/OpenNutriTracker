@@ -42,6 +42,11 @@ String? everydayRowName(String query) {
     if (m[0]!.contains('roast')) return 'Game meat, elk, cooked, roasted';
     return 'Game meat, elk, loin, separable lean only, cooked, broiled';
   }
+  if (words.contains('batter') &&
+      words.contains('fried') &&
+      _batteredVegetables.hasMatch(words)) {
+    return 'Vegetable tempura';
+  }
   return null;
 }
 
@@ -683,7 +688,237 @@ const _everyday = {
   // sprouts, of the same cabbage family, at a like energy.
   'broccoli sprouts': _radishSprouts,
   'broccoli sprouts, raw': _radishSprouts,
+  // An audit of the rows 4,192 photo reads land on (2026-11-17) found the
+  // rest below.
+  // Dry farro at 344 kcal per 100 g. No row is cooked farro; spelt is the
+  // nearest hulled wheat.
+  'farro, cooked': _cookedSpelt,
+  'cooked farro': _cookedSpelt,
+  // the frozen bag, unprepared, at a third of the energy
+  'potatoes, hash browns, frozen, cooked':
+      'Potatoes, hash brown, frozen, plain, prepared, pan fried in canola oil',
+  'hash browns, shredded potato, pan-fried': _hashBrown,
+  'hash browns, shredded': _hashBrown,
+  'hash brown, shredded': _hashBrown,
+  'shredded potato, fried': _hashBrown,
+  'potatoes, shredded, cooked, pan-fried': _hashBrown,
+  'potatoes, fried, shredded': _hashBrown,
+  // the dry mix, at seven times the energy; nothing for the rest
+  'gravy, brown, prepared from mix': _gravy,
+  'gravy, brown, prepared': _gravy,
+  'gravy, brown, from meat drippings': _gravy,
+  'gravy, brown, meat-based': _gravy,
+  'pork gravy': _gravy,
+  // Chinese broccoli
+  'broccoli, cooked': 'Broccoli, NS as to form, cooked',
+  'broccoli, boiled': _boiledBroccoli,
+  'broccoli, steamed': _boiledBroccoli,
+  'steamed broccoli': _boiledBroccoli,
+  // a turkey stuffing with oysters, by "dressing"
+  'vinaigrette dressing': _vinaigrette,
+  'olive oil vinaigrette dressing': _vinaigrette,
+  'creamy herb dressing': _ranch,
+  'mayonnaise-based dressing': _ranch,
+  'mayonnaise-style dressing': _ranch,
+  'mayonnaise-based creamy herb dressing': _ranch,
+  // a peanut butter cookie, or a pork butt
+  'butter, for cooking': _butter,
+  'butter, for cooking eggs': _butter,
+  'butter, for cooking vegetables': _butter,
+  'butter, cooked, fried': _butter,
+  // a reduced-fat mayonnaise, or a margarine spread
+  'fat, olive oil': 'Olive oil',
+  'fat, oil, olive': 'Olive oil',
+  'oil, vegetable, salad or cooking': _vegetableOil,
+  // a poached bread dumpling, or rye bread
+  'bread, white, roll': _whiteRoll,
+  'bread, white roll': _whiteRoll,
+  'bread, white, bread roll': _whiteRoll,
+  'bread roll, white, wheat': _whiteRoll,
+  'bread, roll, white, commercially prepared': _whiteRoll,
+  'bread roll, white, crusty': _hardRoll,
+  'bread, white roll, ciabatta': _hardRoll,
+  'bread, ciabatta roll': _hardRoll,
+  'bread, multigrain with seeds, roll': _multigrainRoll,
+  'bread, multigrain roll with seeds': _multigrainRoll,
+  'bread, multigrain roll with pumpkin seeds': _multigrainRoll,
+  'bread, whole grain roll': _multigrainRoll,
+  'bread, whole grain with seeds, roll': _multigrainRoll,
+  'bread, seeded roll, pumpkin seed': _multigrainRoll,
+  'bread, flatbread, pizza crust': _flatbread,
+  'bread, flatbread, pizza-style crust': _flatbread,
+  'bread, flatbread or pizza crust': _flatbread,
+  'bread, flatbread or pizza crust, baked': _flatbread,
+  'bread, flatbread or focaccia': _flatbread,
+  // bread dumplings, by "white" and "breaded", and shark
+  'fish, white, breaded, cooked': _batteredFish,
+  'fish, white, breaded, fried': _batteredFish,
+  'fish, white, fried in batter': _batteredFish,
+  'fish, white, battered, fried': _batteredFish,
+  'fish, white, battered and fried': _batteredFish,
+  'fish, white, fried, battered': _batteredFish,
+  'fish, fried, battered': _batteredFish,
+  'fish, battered and fried': _batteredFish,
+  'fish, fried, batter-coated': _batteredFish,
+  'fish, white, breaded, baked':
+      'Fish, white, mixed species, baked or broiled, coated',
+  'white fish fillet, baked': 'Fish, white, mixed species, baked or broiled',
+  'fish, cod, battered and fried': _batteredCod,
+  'fish, cod, battered, fried': _batteredCod,
+  'fish, cod, cooked, battered and fried': _batteredCod,
+  // nothing; the table's fried squid is the nearest
+  'squid, battered, fried': _friedSquid,
+  'squid, battered and fried': _friedSquid,
+  'squid, fried, battered': _friedSquid,
+  'squid, fried in batter': _friedSquid,
+  'fried squid, battered': _friedSquid,
+  // capon giblets, a chicken back at 298 kcal per 100 g, a game hen, liver
+  'chicken, cooked': _chicken,
+  'chicken meat, cooked': _chicken,
+  'chicken, shredded, cooked': _chicken,
+  'chicken, cooked, shredded': _chicken,
+  'shredded chicken': _chicken,
+  'chicken, roasted, meat only': _roastChickenMeat,
+  'chicken, meat only, cooked, roasted': _roastChickenMeat,
+  'chicken, meat only, roasted': _roastChickenMeat,
+  'chicken, roasted, skin removed': _roastChickenMeat,
+  'chicken meat, roasted': _roastChickenMeat,
+  'chicken meat, cooked, roasted': _roastChickenMeat,
+  'chicken pieces, stir-fried':
+      'Chicken, NS as to part, sauteed, skin not eaten',
+  // a breast with its skin, from pre-cooked
+  'chicken breast, cooked': _roastChickenBreast,
+  'chicken breast, baked': _roastChickenBreast,
+  'chicken breast, stir-fried': 'Chicken breast, sauteed, skin not eaten',
+  'chicken breast, baked, breaded': _breadedChicken,
+  'chicken cutlet, breaded, fried':
+      'Chicken schnitzel, breaded, fried (chicken escalope, breaded chicken '
+      'breast)',
+  'pork cutlet, breaded, pan-fried': _schnitzel,
+  // a lamb's brain, a poultry kebab, or nothing
+  'lamb kebab': _lambKebab,
+  'lamb kebab, grilled': _lambKebab,
+  'kebab, lamb, grilled': _lambKebab,
+  'lamb, grilled, kebab': _lambKebab,
+  'meat, lamb, grilled kebab': _lambKebab,
+  'lamb kofta': _lambKofta,
+  'lamb kofta, grilled': _lambKofta,
+  'lamb kofta kebab, grilled': _lambKofta,
+  'lamb, grilled, kofta': _lambKofta,
+  'lamb, kofta or minced meat kebab, grilled': _lambKofta,
+  'lamb, cooked, meat only': 'Lamb, NS as to cut',
+  // a fast-food salad with bacon
+  'bacon, grilled': _bacon,
+  'grilled bacon': _bacon,
+  // a fat-free one at 109 kcal per 100 g
+  'frankfurter, pork and beef': _frankfurter,
+  'frankfurter, pork and beef, cooked': _frankfurter,
+  'frankfurter, pork and beef, grilled': _frankfurter,
+  'frankfurter, pork and beef, raw': _frankfurter,
+  // a falafel at 514 kcal per 100 g, beside the home-prepared 333
+  'falafel': _falafel,
+  // small lamb meatballs at 121 kcal per 100 g
+  'meatballs, grilled': _meatballs,
+  'grilled meatballs': _meatballs,
+  'meatballs, pan-fried': _meatballs,
+  'meatballs, grilled, minced meat': _meatballs,
+  // No row names these; the table's own words for them found nothing.
+  'corn on the cob': _cornOnTheCob,
+  'corn on the cob, cooked': _cornOnTheCob,
+  'corn on the cob, cooked, boiled': _cornOnTheCob,
+  'corn on the cob, boiled, sliced': _cornOnTheCob,
+  'corn on the cob, yellow, cooked': _cornOnTheCob,
+  'corn on the cob, yellow, cooked, boiled': _cornOnTheCob,
+  'corn on the cob, yellow, boiled': _cornOnTheCob,
+  'cherry tomatoes, raw': 'Tomatoes, raw',
+  'cherry tomato, raw': 'Tomatoes, raw',
+  'blood pudding': _bloodSausage,
+  'blood pudding, fried': _bloodSausage,
+  'blood pudding, cooked': _bloodSausage,
+  'blood pudding, pan-fried': _bloodSausage,
+  'black pudding': _bloodSausage,
+  'black pudding, fried': _bloodSausage,
+  'black pudding, cooked': _bloodSausage,
+  'baked beans in tomato sauce': 'Beans, baked, canned, plain or vegetarian',
+  'pastina, cooked': _pasta,
+  'orzo, cooked': _pasta,
+  'orzo pasta, cooked': _pasta,
+  'orecchiette pasta, cooked': _pasta,
+  'celery root, cooked': 'Celeriac, cooked, boiled, drained, without salt',
+  // sandwich steaks, raw, at 309 kcal per 100 g
+  'beef, steak, sliced, grilled': _steak,
+  'beef steak, sliced, grilled': _steak,
+  'beef, steak, sliced, cooked': _steak,
+  // an imported raw one
+  'beef, roasted, sirloin steak':
+      'Beef, loin, top sirloin cap steak, boneless, separable lean and fat, '
+      'trimmed to 1/8" fat, choice, cooked, grilled',
+  // raw turkey links, or nothing
+  'breakfast sausage, link, cooked': _porkSausage,
+  'pork breakfast sausage, cooked': _porkSausage,
+  // the frozen mixture
+  'eggs, scrambled, with milk': _scrambledEgg,
+  'eggs, scrambled, with milk and butter': _scrambledEgg,
+  'eggs, scrambled, prepared with milk': _scrambledEgg,
+  'eggs, scrambled, prepared with milk and butter': _scrambledEgg,
+  // chamomile tea, by "herb"
+  'herbs, fresh, mixed garnish': _parsley,
+  'herbs, mixed, fresh': _parsley,
+  'herbs, mixed, chopped': _parsley,
+  'herbs, fresh, parsley': _parsley,
+  'herbs, parsley, fresh': _parsley,
+  // a stuffing made from a dry mix
+  'bread, cornbread': 'Cornbread, made from home recipe',
+  // a steak sauce
+  'tomato sauce, arrabbiata': _tomatoSauce,
+  'tomato sauce, arrabbiata, cooked': _tomatoSauce,
+  'tomato sauce, spicy': _tomatoSauce,
+  'tomato sauce, ready-to-serve': _tomatoSauce,
+  'sauce, tomato-based, ready-to-serve': _tomatoSauce,
+  'sauce, tomato, pizza': _pizzaSauce,
+  // a rice and vermicelli mix made with margarine
+  'rice vermicelli': _cookedRiceNoodles,
+  'rice vermicelli, cooked': _cookedRiceNoodles,
+  'rice vermicelli noodles': _cookedRiceNoodles,
+  // a beef lasagna
+  'lasagna, meat-free, baked': 'Lasagna, Vegetable, frozen, baked',
+  // a ham terrine with alcohol
+  'bologna sausage': 'Bologna',
+  // a stewed cauliflower with breadcrumbs
+  'breadcrumbs': 'Bread, crumbs, dry, grated, plain',
+  // granola bars
+  'granola with nuts': 'Cereal, granola',
+  'granola, honey-almond': 'Cereal, granola',
+  'granola, nut-based': 'Cereal, granola',
+  // a jam sweetened with fruit juice
+  'fruit jam': 'Jam',
+  'jam, fruit': 'Jam',
+  'fruit preserves': 'Jam',
+  // frozen fries, par-fried, unprepared
+  'potatoes, fried, french fried': _fries,
+  'potatoes, fried, home fries': _homeFries,
+  'fried potatoes, sliced': _homeFries,
+  // canned peas, by "baby" and "green"
+  'baby greens, raw': 'Mixed salad greens, raw',
+  // chum salmon, by the shortest name
+  'salmon, cooked': _cookedSalmon,
+  'salmon, cooked, dry heat': _cookedSalmon,
+  'fish, salmon, cooked': _cookedSalmon,
+  // honey roasted
+  'walnuts': 'Nuts, walnuts, english',
 };
+
+/// Vegetables named battered and fried: "zucchini, battered and fried",
+/// "bell pepper, fried in batter", "vegetables, mixed, battered, fried".
+/// The tempura row scored nothing on these words, so a photo's fried
+/// peppers were broken down and logged raw, at a ninth of the energy.
+final _batteredVegetables = RegExp(
+  r'^(?:(?:fried|battered|and|mixed) )*'
+  r'(?:vegetables?|veggies|bell peppers?|sweet peppers?|peppers?|zucchini|'
+  r'squash|carrot sticks|cabbage)'
+  r'(?: (?:mixed|sweet|red|green|yellow|battered|and|fried|deep-fried|in|'
+  r'batter|tempura))*$',
+);
 
 const _cheesePizza =
     'Pizza, cheese, from restaurant or fast food, NS as to type of crust';
@@ -817,3 +1052,23 @@ const _hamburger = 'Hamburger, NFS';
 const _breadedChicken = 'Chicken fillet, breaded';
 const _batteredCod = 'Cod fillet, in frying batter (with beer) deep-fried';
 const _radishSprouts = 'Radish seeds, sprouted, raw';
+const _cookedSpelt = 'Spelt, cooked';
+const _hashBrown = 'Potato, hash brown, from fresh';
+const _boiledBroccoli = 'Broccoli, cooked, boiled, drained, without salt';
+const _ranch = 'Ranch dressing';
+const _chicken =
+    'Chicken, NS as to part and cooking method, NS as to skin eaten';
+const _roastChickenMeat =
+    'Chicken, broilers or fryers, meat only, cooked, roasted';
+const _lambKebab =
+    'Lamb, cubed for stew or kabob (leg and shoulder), separable lean only, '
+    'trimmed to 1/4" fat, cooked, broiled';
+const _lambKofta = 'Lamb, ground, cooked, broiled';
+const _frankfurter = 'Frankfurter, meat';
+const _cornOnTheCob =
+    'Corn, sweet, yellow, cooked, boiled, drained, without salt';
+const _bloodSausage = 'Blood sausage';
+const _steak = 'Steak, NS as to type of meat, NS as to fat eaten';
+const _porkSausage = 'Pork sausage, link/patty, cooked, pan-fried';
+const _tomatoSauce = 'Tomato products, canned, sauce';
+const _friedSquid = 'Mollusks, squid, mixed species, cooked, fried';
