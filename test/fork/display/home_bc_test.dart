@@ -135,10 +135,57 @@ void main() {
       await tester.pumpWidget(_app(_tiles()));
       await tester.pump();
       expect(find.textContaining('81.0 kg'), findsOne);
-      expect(find.textContaining('/wk'), findsNothing);
+      expect(find.textContaining('a week'), findsNothing);
       expect(find.textContaining('after a weigh-in'), findsOne);
       expect(find.textContaining('750 ${keepUnits('/ 2000 ml')}'), findsOne);
       expect(find.textContaining('Not fasting'), findsOne);
+    });
+
+    testWidgets('at 1x on a 360 dp phone the weekly change leaves no word '
+        'alone on a line', (tester) async {
+      final now = DateTime.now();
+      await pumpOnPhone(
+        tester,
+        ChangeNotifierProvider<EnergyUnitProvider>(
+          create: (_) => EnergyUnitProvider(usesKilojoules: false),
+          child: _tiles(
+            loadWeights: () async => [
+              for (var i = 7; i >= 0; i--)
+                WeightLogEntity(
+                  date: DateTime(now.year, now.month, now.day - i),
+                  weightKg: 87.1 + i * 0.03,
+                ),
+            ],
+          ),
+        ),
+        textScale: 1,
+      );
+      tester.view.physicalSize = const Size(360 * 2.625, 2340);
+      await tester.pumpAndSettle();
+      final paragraph = tester
+          .renderObjectList<RenderParagraph>(find.byType(RichText))
+          .firstWhere((p) => p.text.toPlainText().contains('week'));
+      final text = paragraph.text.toPlainText();
+      expect(text, contains('\u2212'));
+      // The paragraph's text laid out at its width, for its lines.
+      final lines = TextPainter(
+        text: paragraph.text,
+        textDirection: TextDirection.ltr,
+        textScaler: paragraph.textScaler,
+      )..layout(maxWidth: paragraph.size.width);
+      addTearDown(lines.dispose);
+      var start = 0;
+      while (start < text.length) {
+        final line = lines.getLineBoundary(TextPosition(offset: start));
+        final words = text
+            .substring(line.start, line.end)
+            .replaceAll('\u00A0', ' ')
+            .trim()
+            .split(RegExp(r'\s+'));
+        expect(words.length, greaterThan(1), reason: 'a lone word in "$text"');
+        if (line.end <= start) break;
+        start = line.end;
+      }
     });
 
     testWidgets('the trend, its weekly change, and the expenditure', (
@@ -175,7 +222,7 @@ void main() {
       await tester.pump();
       expect(find.textContaining('79.5'), findsOne);
       expect(find.textContaining('81 kg'), findsNothing);
-      expect(find.textContaining(keepUnits('· 0.00 kg/wk')), findsOne);
+      expect(find.textContaining('· 0\u00A0kg\u00A0a\u00A0week'), findsOne);
       expect(find.textContaining('2712 ${keepUnits('kcal/day')}'), findsOne);
       expect(find.byType(Sparkline), findsNWidgets(2));
     });
@@ -287,18 +334,21 @@ void main() {
   group('spoken in words', () {
     test('the weight trend: down, up, steady, or no week yet', () {
       expect(
-        weightSpoken('87.1 kg', '-0.16', 'kg'),
+        weightSpoken('87.1 kg', -0.16, BodyWeightUnit.kg),
         'Weight trend, 87.1 kg, down 0.16 kg a week',
       );
       expect(
-        weightSpoken('192.0 lbs', '+0.35', 'lbs'),
-        'Weight trend, 192.0 lbs, up 0.35 lbs a week',
+        weightSpoken('192.0 lb', 0.16, BodyWeightUnit.lb),
+        'Weight trend, 192.0 lb, up 0.35 lb a week',
       );
       expect(
-        weightSpoken('87.1 kg', '0.00', 'kg'),
+        weightSpoken('87.1 kg', 0.001, BodyWeightUnit.kg),
         'Weight trend, 87.1 kg, steady',
       );
-      expect(weightSpoken('81.0 kg', null, 'kg'), 'Weight trend, 81.0 kg');
+      expect(
+        weightSpoken('81.0 kg', null, BodyWeightUnit.kg),
+        'Weight trend, 81.0 kg',
+      );
     });
 
     test('expenditure, and fasting in hours and minutes', () {

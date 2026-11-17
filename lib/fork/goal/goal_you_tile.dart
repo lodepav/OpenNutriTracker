@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart' as intl;
+import 'package:opennutritracker/core/domain/entity/body_weight_unit_entity.dart';
+import 'package:opennutritracker/core/domain/entity/user_weight_goal_entity.dart';
 import 'package:opennutritracker/fork/goal/goal_planner.dart';
 import 'package:opennutritracker/fork/phases/phases.dart';
+import 'package:opennutritracker/fork/report/rate_text.dart';
 import 'package:opennutritracker/fork/you/you_widgets.dart';
 
 /// What the app calls having no goal, on the You tile, Goal progress and
@@ -54,12 +57,33 @@ String _sinceText(BuildContext context, DateTime since) =>
 String maintainingSinceText(BuildContext context, DateTime since) =>
     'Maintaining ${_sinceText(context, since)}';
 
+/// The profile's plan with no target weight: "Losing 0.4 kg a week" at its
+/// weekly rate, which the budget follows over the direction; the direction
+/// alone without one.
+String plannedRateText(
+  UserWeightGoalEntity goal,
+  double? kgPerWeek,
+  BodyWeightUnit unit,
+) {
+  if (kgPerWeek == null) {
+    return switch (goal) {
+      UserWeightGoalEntity.loseWeight => 'Losing weight',
+      UserWeightGoalEntity.maintainWeight => 'Keeping your weight',
+      UserWeightGoalEntity.gainWeight => 'Gaining weight',
+    };
+  }
+  if (weeklyRateShown(kgPerWeek, unit) == 0) return 'Keeping your weight';
+  return '${kgPerWeek < 0 ? 'Losing' : 'Gaining'} '
+      '${unsignedRateText(kgPerWeek, unit)}';
+}
+
 typedef GoalTileLoad =
     Future<({PhasePlan? plan, List<GoalRecord> history})> Function();
 
 /// The You tab's goal tile: [value], [note] and [below] while a goal
-/// runs or one is set in the profile; with none, "No goal", or
-/// "Maintaining since …" after a completed one, and "Plan a goal".
+/// runs or one is set in the profile, or the profile's plan with an offer
+/// to set a target; "Maintain since …" after a completed one, and "Plan a
+/// goal".
 class GoalYouTile extends StatefulWidget {
   final String value;
   final String? note;
@@ -70,6 +94,10 @@ class GoalYouTile extends StatefulWidget {
   final bool profileGoal;
   final String title;
   final VoidCallback onTap;
+
+  /// The tap while the tile offers to set a target ("Set a target weight");
+  /// [onTap] without one.
+  final VoidCallback? onSetTarget;
   final GoalTileLoad? load;
 
   const GoalYouTile({
@@ -80,6 +108,7 @@ class GoalYouTile extends StatefulWidget {
     required this.below,
     required this.profileGoal,
     required this.onTap,
+    this.onSetTarget,
     this.load,
   });
 
@@ -123,25 +152,39 @@ class _GoalYouTileState extends State<GoalYouTile> {
   @override
   Widget build(BuildContext context) {
     final goals = _goals;
-    final none = goals != null && goals.plan == null && !widget.profileGoal;
     final plan = goals?.plan;
-    final untargeted = none
-        ? untargetedGoal(context, null, maintainingSince(null, goals.history))
+    // No target and no goal running: [below] offers one, as the tap does.
+    final offer = !widget.profileGoal && plan == null;
+    final since = offer && goals != null
+        ? maintainingSince(null, goals.history)
+        : null;
+    final untargeted = since != null
+        ? untargetedGoal(context, null, since)
         : plan != null && plan.targetKg == null
         ? untargetedGoal(context, plan, null)
         : null;
+    final value = untargeted?.value ?? widget.value;
+    final note = untargeted != null ? untargeted.note : widget.note;
+    final below = since != null
+        ? 'Plan a goal'
+        : untargeted != null
+        ? null
+        : widget.below;
     return YouTile(
       identifier: 'profile-goal-tile',
       title: widget.title,
-      value: untargeted?.value ?? widget.value,
-      note: untargeted != null ? untargeted.note : widget.note,
-      below: none
-          ? 'Plan a goal'
-          : untargeted != null
-          ? null
-          : widget.below,
-      hint: 'Open the goal and its plan',
-      onTap: widget.onTap,
+      value: value,
+      note: note,
+      below: below,
+      spokenLabel: [
+        widget.title,
+        note == null ? value : '$value $note',
+        if (!offer && below != null) below,
+      ].join(', '),
+      hint: offer && below != null ? below : 'Open the goal',
+      onTap: offer && since == null
+          ? widget.onSetTarget ?? widget.onTap
+          : widget.onTap,
     );
   }
 }

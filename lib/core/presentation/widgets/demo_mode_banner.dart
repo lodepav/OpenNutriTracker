@@ -53,6 +53,9 @@ class DemoModeBanner extends StatelessWidget {
                 ),
               ),
               child: Row(
+                // [fork] S222 banner-eye: wrapped at large text, the eye stays by the first line
+                crossAxisAlignment: CrossAxisAlignment.start,
+                // [/fork]
                 children: [
                   Icon(Icons.visibility_outlined, size: 18, color: accent),
                   const SizedBox(width: Dimens.spacing8),

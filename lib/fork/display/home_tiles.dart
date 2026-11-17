@@ -26,7 +26,6 @@ import 'package:opennutritracker/fork/trends/trends_widgets.dart'
     show Sparkline, keepUnits;
 import 'package:opennutritracker/fork/units/energy_text.dart';
 import 'package:opennutritracker/fork/units/weight_text.dart' show weightText;
-import 'package:opennutritracker/generated/l10n.dart';
 
 /// Home's 2×2 tiles (seam S119, MacroFactor's dashboard), in place of the
 /// weight, water and fasting chips: the weight trend and its weekly rate,
@@ -321,22 +320,10 @@ class _WeightTileState extends State<WeightTile> {
         until: DateTime(now.year, now.month, now.day),
       );
       final kg = trend.isEmpty ? widget.weightKg : trend.last.weightKg;
-      final s = S.of(context);
       final value = weightText(kg, widget.unit);
-      // Stones are too coarse for a week's change: pounds.
-      final rateUnit = widget.unit == BodyWeightUnit.kg
-          ? s.kgLabel
-          : s.lbsLabel;
-      String? rate;
-      if (trend.length > 7) {
-        final kgPerWeek =
-            trend.last.weightKg - trend[trend.length - 8].weightKg;
-        rate = signedRate(
-          widget.unit == BodyWeightUnit.kg
-              ? kgPerWeek
-              : UnitCalc.kgToLbs(kgPerWeek),
-        );
-      }
+      final kgPerWeek = trend.length > 7
+          ? trend.last.weightKg - trend[trend.length - 8].weightKg
+          : null;
       final month = trend.length > 30
           ? trend.sublist(trend.length - 30)
           : trend;
@@ -349,8 +336,11 @@ class _WeightTileState extends State<WeightTile> {
         identifier: widget.identifier,
         title: 'Weight trend',
         value: value,
-        note: rate == null ? null : '· $rate $rateUnit/wk',
-        spokenLabel: weightSpoken(value, rate, rateUnit),
+        // "a week" held to its unit: wrapped, it left "week" on a line alone.
+        note: kgPerWeek == null
+            ? null
+            : '· ${weeklyRateText(kgPerWeek, widget.unit).replaceAll(' ', '\u00A0')}',
+        spokenLabel: weightSpoken(value, kgPerWeek, widget.unit),
         hint: widget.hint,
         onTap: widget.onTap ?? weighIn,
         onAction: weighIn,
@@ -512,15 +502,11 @@ class FastingTileView extends StatelessWidget {
   }
 }
 
-/// "Weight trend, 87.1 kg, down 0.16 kg a week": [rate] the week's change
-/// as shown ("-0.16", "0.00"), null before a week of trend.
-String weightSpoken(String weight, String? rate, String unit) =>
-    'Weight trend, $weight${switch (rate) {
-      null => '',
-      '0.00' => ', steady',
-      _ => ', ${rate.startsWith('-') ? 'down' : 'up'} '
-          '${rate.replaceFirst(RegExp('^[+-]'), '')} $unit a week',
-    }}';
+/// "Weight trend, 87.1 kg, down 0.16 kg a week": [kgPerWeek] the week's
+/// change, null before a week of trend.
+String weightSpoken(String weight, double? kgPerWeek, BodyWeightUnit unit) =>
+    'Weight trend, $weight'
+    '${kgPerWeek == null ? '' : ', ${weeklyRateSpoken(kgPerWeek, unit)}'}';
 
 /// "Expenditure, 3045 kcal a day", or that it waits for a weigh-in.
 String expenditureSpoken(int? value, String unit) => value == null
