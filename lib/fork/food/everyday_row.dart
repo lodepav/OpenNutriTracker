@@ -688,8 +688,8 @@ const _everyday = {
   // sprouts, of the same cabbage family, at a like energy.
   'broccoli sprouts': _radishSprouts,
   'broccoli sprouts, raw': _radishSprouts,
-  // An audit of the rows 4,192 photo reads land on (2026-11-17) found the
-  // rest below.
+  // An audit of the rows that 4,192 distinct photo-read names land on
+  // (2026-11-17) found the rest below.
   // Dry farro at 344 kcal per 100 g. No row is cooked farro; spelt is the
   // nearest hulled wheat.
   'farro, cooked': _cookedSpelt,
@@ -712,6 +712,7 @@ const _everyday = {
   // Chinese broccoli
   'broccoli, cooked': 'Broccoli, NS as to form, cooked',
   'broccoli, boiled': _boiledBroccoli,
+  'boiled broccoli': _boiledBroccoli,
   'broccoli, steamed': _boiledBroccoli,
   'steamed broccoli': _boiledBroccoli,
   // a turkey stuffing with oysters, by "dressing"
@@ -832,13 +833,6 @@ const _everyday = {
   'corn on the cob, yellow, boiled': _cornOnTheCob,
   'cherry tomatoes, raw': 'Tomatoes, raw',
   'cherry tomato, raw': 'Tomatoes, raw',
-  'blood pudding': _bloodSausage,
-  'blood pudding, fried': _bloodSausage,
-  'blood pudding, cooked': _bloodSausage,
-  'blood pudding, pan-fried': _bloodSausage,
-  'black pudding': _bloodSausage,
-  'black pudding, fried': _bloodSausage,
-  'black pudding, cooked': _bloodSausage,
   'baked beans in tomato sauce': 'Beans, baked, canned, plain or vegetarian',
   'pastina, cooked': _pasta,
   'orzo, cooked': _pasta,
@@ -1067,7 +1061,6 @@ const _lambKofta = 'Lamb, ground, cooked, broiled';
 const _frankfurter = 'Frankfurter, meat';
 const _cornOnTheCob =
     'Corn, sweet, yellow, cooked, boiled, drained, without salt';
-const _bloodSausage = 'Blood sausage';
 const _steak = 'Steak, NS as to type of meat, NS as to fat eaten';
 const _porkSausage = 'Pork sausage, link/patty, cooked, pan-fried';
 const _tomatoSauce = 'Tomato products, canned, sauce';

@@ -305,7 +305,6 @@ void main() {
     ('corn on the cob, boiled', 'Corn, sweet, yellow, cooked, boiled'),
     ('corn on the cob', 'Corn, sweet, yellow, cooked, boiled'),
     ('cherry tomatoes, raw', 'Tomatoes, raw'),
-    ('blood pudding, fried', 'Blood sausage'),
     ('baked beans in tomato sauce', 'Beans, baked, canned, plain'),
     ('orzo, cooked', 'Pasta, cooked'),
     ('celery root, cooked', 'Celeriac, cooked'),
