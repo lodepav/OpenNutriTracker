@@ -11,7 +11,7 @@
 # chosen locale and the service locator, which tests leave behind: left, they
 # break later files. The check
 # before a merge; plain `flutter test`, a file a process, stays the strict
-# one, which fork/tools/verify.sh --strict runs before a release, and for when
+# one, which fork/tools/verify.sh --strict runs on GitHub for each push, and for when
 # a bundled run fails and you want to know whether a file's own tests do. The bundles (test/_bundle_*.dart) are
 # deleted at the end and ignored by git.
 set -euo pipefail

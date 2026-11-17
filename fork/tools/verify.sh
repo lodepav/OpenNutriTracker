@@ -3,7 +3,7 @@
 # whole test suite. The pre-push hook and the release run this; see the verify skill.
 #
 #   fork/tools/verify.sh            # bundled suite, about 2.5 minutes
-#   fork/tools/verify.sh --strict   # a process a file, as upstream's CI: for a release
+#   fork/tools/verify.sh --strict   # a process a file, as upstream's CI: the Fork checks workflow
 #
 # A pass on a clean tree is remembered by commit, so pushing what was just checked
 # doesn't check it again, nor does a later commit that only touches docs, fork/VERSION or adds an

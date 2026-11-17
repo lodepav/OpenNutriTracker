@@ -44,10 +44,11 @@ Everything that belongs only to the fork lives in this `fork/` folder or in `lib
    that share an upstream file's harness).
    Before a merge, `fork/tools/verify.sh` runs the seams, analyze and the whole suite bundled,
    in about 2.5 minutes; a push to `fork/main` runs it too (`fork/hooks/`, turned on once a
-   clone with `fork/tools/install-hooks.sh`). A release runs `verify.sh --strict`: plain
-   `flutter test`, a file a process. So does `.github/workflows/fork-checks.yml`, on every push
-   to `fork/main`. `fork/tools/release-apk.sh` is local on purpose (`.git/info/exclude`), so it
-   exists only on the release machine, with a copy in `~/.local/share/openbite/`.
+   clone with `fork/tools/install-hooks.sh`). `verify.sh --strict` (plain
+   `flutter test`, a file a process) runs in `.github/workflows/fork-checks.yml` on every push
+   to `fork/main`; a release needs that run green for its commit. `fork/tools/release-apk.sh`
+   is local on purpose (`.git/info/exclude`), so it exists only on the release machine, with a
+   copy in `~/.local/share/openbite/`.
    That workflow also runs the release gate's Trivy scan, so a known vulnerability shows up with
    the next push. Dependabot would read upstream's `main`, not the fork's lockfiles.
 5. **Merge upstream, never rebase.** `fork/main` merges each upstream release tag (D6); `develop` mirrors `upstream/develop` for upstream PRs.

@@ -39,6 +39,6 @@ A `verify: warning:` line that names GitHub's Fork checks (from `fork/tools/acti
 
 ## Before a release
 
-`fork/tools/release-apk.sh` runs `verify.sh --strict` itself (plain `flutter test`, a process a file, about 8.5 min), then builds and runs `fork/tools/release-check.sh` on the APK. Its gates block.
+`fork/tools/release-apk.sh` runs the bundled `verify.sh` (usually passed on its stamp at the push), with `fork/tools/release-check.sh`'s source gates and the release manifest's permissions and exported components beside it, then builds and runs `release-check.sh` on the APK. Its gates block. The strict level is the Fork checks run on GitHub: the release stops if it failed for the commit, or is missing because the commit isn't pushed yet (push `fork/main` first), and waits for one still running before it tags.
 
 `.github/workflows/fork-checks.yml` runs the strict level on every push to `fork/main`. `fork/tools/release-apk.sh` is local only, not in git.
