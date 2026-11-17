@@ -266,7 +266,7 @@ void main() {
         '292 kcal',
       );
       // 30 + 0 g carbs, 3 + 5 g fat, 6 + 10 g protein
-      expect(find.text('C 30 · F 8 · P 16'), findsOneWidget);
+      expect(find.text('C\u00a030 · F\u00a08 · P\u00a016'), findsOneWidget);
       expect(find.text('Today with this meal'), findsOneWidget);
       expect(asked, [today]);
       // fat goes over: 70 + 8 of 75

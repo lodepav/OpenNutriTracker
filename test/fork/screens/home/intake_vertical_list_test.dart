@@ -171,7 +171,7 @@ void main() {
 
   String headerWithMacros() =>
       '200 ${l10nEn.kcalLabel}\n'
-      'C 20 · F 10 · P 5';
+      'C\u00a020 · F\u00a010 · P\u00a05';
 
   String headerKcalOnly() => '200 ${l10nEn.kcalLabel}';
 
@@ -238,9 +238,9 @@ void main() {
       return true;
     });
     final palette = paletteOf(tester.element(find.text(headerWithMacros())));
-    expect(colours['C 20'], mutedMacroColor(palette.carbsColor, palette));
-    expect(colours['F 10'], mutedMacroColor(palette.fatColor, palette));
-    expect(colours['P 5'], mutedMacroColor(palette.proteinColor, palette));
+    expect(colours['C\u00a020'], mutedMacroColor(palette.carbsColor, palette));
+    expect(colours['F\u00a010'], mutedMacroColor(palette.fatColor, palette));
+    expect(colours['P\u00a05'], mutedMacroColor(palette.proteinColor, palette));
   });
 
   testWidgets('shows only kcal when showMealMacros is false', (
@@ -624,7 +624,7 @@ void main() {
       expect(tester.takeException(), isNull);
       final macros = tester.renderObject<RenderParagraph>(
         find.descendant(
-          of: find.textContaining('kcal · C 20'),
+          of: find.textContaining('kcal · C\u00a020'),
           matching: find.byType(RichText),
         ),
       );

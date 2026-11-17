@@ -42,7 +42,9 @@ void main() {
     await _pump(tester, _meal());
 
     expect(
-      find.text('120 kcal · P – · F 3 · C 20 per\u00a0100\u00a0g'),
+      find.text(
+        '120 kcal · P\u00a0– · F\u00a03 · C\u00a020 per\u00a0100\u00a0g',
+      ),
       findsOneWidget,
     );
     expect(

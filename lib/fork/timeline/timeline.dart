@@ -97,27 +97,15 @@ class TimelineEntries {
   }
 }
 
-/// The diary's "Timeline" (seam S26): MacroFactor's day by the clock. The
-/// day's foods by the hour they were eaten, each with its energy and the
-/// running total; tapping one moves it to another time of the same day,
-/// and "Add food at a time" logs a food at the time picked, into the meal that
-/// time suggests.
-class TimelineButton extends StatelessWidget {
-  final DateTime day;
-
-  const TimelineButton({super.key, required this.day});
-
-  @override
-  Widget build(BuildContext context) => IconButton(
-    key: const ValueKey('timeline'),
-    tooltip: 'Timeline',
-    icon: const Icon(Icons.schedule_rounded),
-    onPressed: () => Navigator.push(
-      context,
-      MaterialPageRoute<void>(builder: (_) => TimelineScreen(day: day)),
-    ),
-  );
-}
+/// The Diary's "Timeline" in its Day menu (seam S26): MacroFactor's day by
+/// the clock. The day's foods by the hour they were eaten, each with its
+/// energy and the running total; tapping one moves it to another time of
+/// the same day, and "Add food at a time" logs a food at the time picked,
+/// into the meal that time suggests.
+void openTimeline(BuildContext context, DateTime day) => Navigator.push(
+  context,
+  MaterialPageRoute<void>(builder: (_) => TimelineScreen(day: day)),
+);
 
 class TimelineScreen extends StatefulWidget {
   final DateTime day;

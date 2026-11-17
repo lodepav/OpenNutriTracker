@@ -79,7 +79,8 @@ class MacrosLine extends StatelessWidget {
                       text: letter,
                       style: const TextStyle(fontWeight: FontWeight.w700),
                     ),
-                    TextSpan(text: ' ${grams(value)}'),
+                    // A no-break space: "P 40" never splits at a large font.
+                    TextSpan(text: '\u00a0${grams(value)}'),
                   ],
                 ),
               ],
@@ -126,7 +127,7 @@ List<InlineSpan> macroSpans(
     for (final (i, (letter, value, color)) in macros.indexed) ...[
       if (i > 0) const TextSpan(text: ' · '),
       TextSpan(
-        text: '$letter ${value.round()}',
+        text: '$letter\u00a0${value.round()}',
         style: TextStyle(color: mutedMacroColor(color, palette)),
       ),
     ],

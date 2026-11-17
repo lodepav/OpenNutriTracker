@@ -216,45 +216,32 @@ void _copied(BuildContext context, DateTime? day) =>
       ),
     );
 
-/// "Copy day" beside the diary's date (seam S26): every entry of [day],
-/// each in its own meal, and its activities if wanted.
-class CopyDayButton extends StatelessWidget {
-  final DateTime day;
-
-  const CopyDayButton({super.key, required this.day});
-
-  Future<void> _copy(BuildContext context) async {
-    final today = await logicalToday();
-    if (!context.mounted) return;
-    final where = await showModalBottomSheet<WhereTo>(
-      context: context,
-      isScrollControlled: true,
-      showDragHandle: true,
-      builder: (_) => WhereToSheet(
-        today: today,
-        now: DateTime.now(),
-        count: 1,
-        wholeDay: true,
-        from: day,
-      ),
-    );
-    if (where == null || !context.mounted) return;
-    final moment = where.moment as CopySameTimes;
-    await placeWithUndo(
-      context,
-      const [],
-      moment,
-      place: (entries) =>
-          entries.copyDay(day, moment.day, activities: where.activities),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) => IconButton(
-    key: const Key('fork-copy-day'),
-    tooltip: 'Copy day',
-    icon: const Icon(Icons.copy_all_rounded),
-    onPressed: () => _copy(context),
+/// "Copy day" in the Diary's Day menu (seam S26): every entry of [day],
+/// each in its own meal, and its activities if wanted, to a day picked on
+/// the where-to sheet.
+Future<void> copyDay(BuildContext context, DateTime day) async {
+  final today = await logicalToday();
+  if (!context.mounted) return;
+  final where = await showModalBottomSheet<WhereTo>(
+    context: context,
+    isScrollControlled: true,
+    showDragHandle: true,
+    builder: (_) => WhereToSheet(
+      today: today,
+      now: DateTime.now(),
+      count: 1,
+      wholeDay: true,
+      from: day,
+    ),
+  );
+  if (where == null || !context.mounted) return;
+  final moment = where.moment as CopySameTimes;
+  await placeWithUndo(
+    context,
+    const [],
+    moment,
+    place: (entries) =>
+        entries.copyDay(day, moment.day, activities: where.activities),
   );
 }
 

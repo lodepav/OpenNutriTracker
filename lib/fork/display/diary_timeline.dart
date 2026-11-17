@@ -41,8 +41,9 @@ DateTime _mealEnd(DateTime day, TimelineMeal meal) {
 
 /// MacroFactor's day as a timeline: the [meals] in the order they were
 /// eaten, and between two meals more than an hour apart, the hours with
-/// nothing logged.
+/// nothing logged. A day with nothing logged has no such hours to point out.
 List<Widget> diaryTimeline(DateTime day, List<TimelineMeal> meals) {
+  final logged = meals.any((m) => m.intakes.isNotEmpty);
   final timed = [
     for (final (index, meal) in meals.indexed)
       (at: mealTime(day, meal.type, meal.intakes), index: index, meal: meal),
@@ -57,7 +58,7 @@ List<Widget> diaryTimeline(DateTime day, List<TimelineMeal> meals) {
   final widgets = <Widget>[];
   DateTime? previousEnd;
   for (final (:at, index: _, :meal) in timed) {
-    if (previousEnd != null) {
+    if (logged && previousEnd != null) {
       final from = DateTime(
         previousEnd.year,
         previousEnd.month,

@@ -14,6 +14,7 @@ import 'package:opennutritracker/core/presentation/widgets/copy_or_delete_dialog
 // core/presentation/widgets/app_card.dart, unused since the day card
 import 'package:opennutritracker/core/presentation/widgets/empty_hint.dart';
 import 'package:opennutritracker/core/presentation/widgets/delete_dialog.dart';
+import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
 // core/utils/calc/unit_calc.dart, unused since the day card
 import 'package:opennutritracker/core/utils/custom_icons.dart';
@@ -29,6 +30,7 @@ import 'package:opennutritracker/fork/copy/copy_ui.dart';
 import 'package:opennutritracker/fork/copy/diary_selection.dart';
 import 'package:opennutritracker/fork/timeline/timeline.dart';
 // leave a part-logged day out of expenditure (D17)
+import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/fork/adaptive/skip_day.dart';
 import 'package:opennutritracker/fork/display/diary_timeline.dart';
 import 'package:opennutritracker/fork/display/day_totals_card.dart';
@@ -211,8 +213,8 @@ class _DayInfoWidgetState extends State<DayInfoWidget> {
             Dimens.spacing20,
             Dimens.spacing4,
           ),
-          // "Timeline", "Select foods", "Copy day"
-          // by the date
+          // "Timeline", "Select foods", "Copy day" and "Leave out of
+          // expenditure" in one named menu by the date
           child: Row(
             children: [
               Expanded(
@@ -223,19 +225,12 @@ class _DayInfoWidgetState extends State<DayInfoWidget> {
                   ),
                 ),
               ),
-              TimelineButton(day: widget.selectedDay),
-              if (trackedDay != null) ...[
-                IconButton(
-                  key: const Key('fork-select-entries'),
-                  tooltip: 'Select foods',
-                  icon: const Icon(Icons.checklist_rounded),
-                  onPressed: () => DiarySelection.instance.start(),
-                ),
-                CopyDayButton(day: widget.selectedDay),
-              ],
+              DayMenu(day: widget.selectedDay, hasEntries: trackedDay != null),
             ],
           ),
         ),
+        // while the day is left out of the estimate
+        SkipDayNote(day: widget.selectedDay),
         const SizedBox(height: Dimens.spacing8),
         // the day's planned foods, to tick off
         PlannedFoodsCard(day: widget.selectedDay),
@@ -256,8 +251,6 @@ class _DayInfoWidgetState extends State<DayInfoWidget> {
             // and MacroNutrientsView)
             if (trackedDay != null)
               DayTotalsCard(intakes: _allIntakes, trackedDay: trackedDay),
-            // under the day's totals
-            if (trackedDay != null) SkipDayTile(day: widget.selectedDay),
             // #160 + #173 + #404: Daily micronutrient panel — aggregates
             // ten nutrients (fibre, sodium, saturated fat, sugar, calcium,
             // iron, potassium, vitamin D, vitamin B12, magnesium) across
@@ -499,5 +492,86 @@ class _DayInfoWidgetState extends State<DayInfoWidget> {
       }
       widget.onDeleteActivity(activityEntity, day);
     }
+  }
+}
+
+enum _DayAction { timeline, select, copy, skip }
+
+/// The day's actions in one menu by the date, each named (seams S26, S84):
+/// "Timeline" on every day; on a day with entries "Select foods", "Copy
+/// day" and "Leave out of expenditure", ticked while the day is left out.
+class DayMenu extends StatelessWidget {
+  final DateTime day;
+  final bool hasEntries;
+  final AdaptiveStore? store;
+
+  const DayMenu({
+    super.key,
+    required this.day,
+    required this.hasEntries,
+    this.store,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = paletteOf(context);
+    // The tooltip alone gives no button role or identifier.
+    return Semantics(
+      identifier: 'diary-day-menu',
+      button: true,
+      child: PopupMenuButton<_DayAction>(
+        key: const ValueKey('diary-day-menu'),
+        tooltip: 'Day options',
+        shape: Dimens.shapeM,
+        onSelected: (action) => switch (action) {
+          _DayAction.timeline => openTimeline(context, day),
+          _DayAction.select => DiarySelection.instance.start(),
+          _DayAction.copy => copyDay(context, day),
+          _DayAction.skip => toggleSkippedDay(day, store: store),
+        },
+        itemBuilder: (context) => [
+          const PopupMenuItem(
+            key: ValueKey('timeline'),
+            value: _DayAction.timeline,
+            child: Text('Timeline'),
+          ),
+          if (hasEntries) ...[
+            const PopupMenuItem(
+              key: Key('fork-select-entries'),
+              value: _DayAction.select,
+              child: Text('Select foods'),
+            ),
+            const PopupMenuItem(
+              key: Key('fork-copy-day'),
+              value: _DayAction.copy,
+              child: Text('Copy day'),
+            ),
+            skipDayItem(context, _DayAction.skip, day),
+          ],
+        ],
+        // The tooltip names it; the word on screen is part of that name.
+        child: ExcludeSemantics(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 48),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: Dimens.spacing8),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.more_horiz_rounded, color: palette.textMuted),
+                  const SizedBox(width: Dimens.spacing4),
+                  Text(
+                    'Day',
+                    style: Theme.of(
+                      context,
+                    ).textTheme.labelLarge?.copyWith(color: palette.textStrong),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
