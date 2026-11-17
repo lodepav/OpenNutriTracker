@@ -49,6 +49,8 @@ Details live in the seam rows ([SEAMS.md](SEAMS.md), `Sxx`) and decisions (`Dxx`
 | The added-food snackbar names the meal (S110) | #1651, open |
 | A recipe's serving reads as one serving and its weight (S91) | #1652, open |
 | The scanner's manual-entry button clear of the navigation bar (S217) | #1653, open |
+| Trends opens on range pills and a tile per metric, a page each (from S120) | #1669, open |
+| Headings, labelled menus and plus buttons, Home text that fits at large font sizes (from S92) | #1670, open |
 
 ## Targets and coaching (MacroFactor's)
 
@@ -96,6 +98,7 @@ Details live in the seam rows ([SEAMS.md](SEAMS.md), `Sxx`) and decisions (`Dxx`
 | Matching rules for what a model reads: variants trail, everyday rows, dish parts and sides left out, slices as pieces, brands named or not (S70, S73–S75, S178, S187, S196–S200, S202, S205, S206; D26, D40) | Fork only | Tuned on the fork's bundled tables and evals. A rule that also helps Open Food Facts results could be split out later. |
 | Log with AI's review list as Diary rows with the meal's macros, swipe to leave out (D35–D38) | Fork only | Part of the redesign. |
 | Back on "Add several items" asks before the foods found are lost (S90) | Candidate | |
+| "Save all as a recipe" from Add several items, and a recipe link read from its schema.org data (S30) | Candidate | Builds on upstream's recipe builder; the screen is the fork's copy (D23), so upstream needs its own entry point. |
 | A fake model and replayed answers for emulator runs (`FORK_FAKE_AI`) | Fork only | Development tooling. |
 
 ## Food data and search
@@ -143,7 +146,7 @@ Details live in the seam rows ([SEAMS.md](SEAMS.md), `Sxx`) and decisions (`Dxx`
 |---|---|---|
 | Home: one summary card, quick actions, recent foods, repeat a meal, sections arranged by the user (S119, S162, D30, D31) | Fork only | The fork's taste; whole screens copied under D23. |
 | Diary: a week calendar of rings filling with the day's energy, the day card (S118, S149) | Fork only | |
-| Trends: tiles over 1W to All, with a page each (S120) | Fork only | |
+| Trends: tiles over 1W to All, with a page each (S120) | Sent (#1669) | Upstream's version is four tiles over its own cards; the fork's tile set and arrangement stay fork only. |
 | You tab, the foods behind a macro, the recipe page, accent colour, Health Connect page (S121, S124, S126, S136, S138) | Fork only | |
 | Muted macro colours on every macro line (D38) | Fork only | |
 | Home's Photo log follows the Show AI features switch without a restart | Fork only | A fix to the fork's Home. |
