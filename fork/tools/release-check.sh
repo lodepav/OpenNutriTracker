@@ -5,6 +5,8 @@
 #
 #   fork/tools/release-check.sh                   # sources only
 #   fork/tools/release-check.sh --apk <file>      # also a signed release APK
+#   fork/tools/release-check.sh --manifest <file> # only the permissions and exported components,
+#                                                 # of an APK or Gradle's linked resources (.ap_)
 #   fork/tools/release-check.sh --accept-packages # after reviewing pubspec.lock's changes
 #
 # Every gate runs even when one fails; exit 1 if any failed. A finding is fixed, or accepted
@@ -20,7 +22,7 @@ CERT="${FORK_CERT:-$HOME/.config/hevier/apk-cert.txt}"
 # The fork's own id (D8, android/app/fork.gradle).
 APP_ID="${FORK_APP_ID:-io.github.lodepav.openbite}"
 export PATH="$HOME/.local/opt/gitleaks:$HOME/.local/opt/trivy:$PATH"
-APK=""
+APK="" MANIFEST=""
 cd "$ROOT"
 
 # pubspec.lock as "name version source sha256", one package a line.
@@ -38,6 +40,7 @@ PY
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --apk) APK="$(realpath "$2")"; shift ;;
+    --manifest) APK="$(realpath "$2")" MANIFEST=1; shift ;;
     --accept-packages)
       { echo "# pubspec.lock as reviewed: name version source sha256 (fork/tools/release-check.sh)."
         packages; } > "$SEC/packages.txt"
@@ -60,6 +63,10 @@ TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 NAMES=() PIDS=()
 gate() {   # name, command... : started in the background, its output kept for report
+  [[ -z "$MANIFEST" ]] || return 0
+  mgate "$@"
+}
+mgate() {   # the same, for a gate that reads only the manifest (--manifest runs these alone)
   local n=${#NAMES[@]}
   NAMES+=("$1"); shift
   "$@" > "$TMP/gate-$n.log" 2>&1 &
@@ -118,7 +125,7 @@ dart_packages() { packages | against "$SEC/packages.txt" "Dart packages"; }
 gate "supply chain: Dart packages" dart_packages
 
 if [[ -n "$APK" ]]; then
-  unzip -q "$APK" -d "$TMP/apk"
+  [[ -n "$MANIFEST" ]] || unzip -q "$APK" -d "$TMP/apk"
   # From inside it, so a finding's fingerprint has no temporary path.
   apk_secrets() { cd "$TMP/apk" && gitleaks dir . "${GL[@]}"; }
   gate "secrets: APK" apk_secrets
@@ -173,9 +180,9 @@ if [[ -n "$APK" ]]; then
   gate "APK: signing certificate" apk_signature
   gate "APK: signature scheme" apk_scheme
   gate "APK: release build" apk_release
-  gate "APK: permissions" apk_permissions
+  mgate "APK: permissions" apk_permissions
   gate "APK: native libraries" apk_native
-  gate "APK: exported components" apk_exported
+  mgate "APK: exported components" apk_exported
 fi
 
 FAILED=()
