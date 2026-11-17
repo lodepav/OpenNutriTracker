@@ -181,6 +181,70 @@ void main() {
       ]);
     });
 
+    test('a weighed food the model split into parts is its parts', () {
+      final items = weighedPlateItems([
+        const ParsedMealItem(query: 'dish=Burger with fries'),
+        _g('hamburger bun', 60),
+        _g('beef patty, grilled', 110),
+        _g('tomato, raw', 10),
+        _g('lettuce, raw', 5),
+        _g('french fries, fast food', 170),
+      ], noteWeights('burger 250g, fries 170g')!);
+      expect(items.map((i) => i.query), isNot(contains('burger')));
+      expect(items.map((i) => (i.query, i.quantity)), [
+        ('hamburger bun', 81),
+        ('beef patty, grilled', 148),
+        ('tomato, raw', 14),
+        ('lettuce, raw', 7),
+        ('french fries, fast food', 170),
+      ]);
+    });
+
+    test('a part at the weighed food\'s exact grams is that food', () {
+      final items = weighedPlateItems([
+        const ParsedMealItem(
+          query: 'dish=Grilled pork with potato wedges and salad',
+        ),
+        _g('pork fillet, grilled', 263),
+        _g('coleslaw', 163),
+        _g('potatoes, roasted', 318),
+        _g('cucumber, raw', 30),
+        _g('onions, pickled', 30),
+      ], noteWeights('pork fillet 263g, salad 163g, potatoes 318g')!);
+      expect(items.map((i) => (i.query, i.quantity)), [
+        ('pork fillet, grilled', 263),
+        ('coleslaw', 163),
+        ('potatoes, roasted', 318),
+        ('cucumber, raw', 30),
+        ('onions, pickled', 30),
+      ]);
+    });
+
+    test('with a total, a split food\'s parts still add up to the plate', () {
+      final items = weighedPlateItems([
+        const ParsedMealItem(query: 'dish=Burger with salad'),
+        _g('hamburger bun', 60),
+        _g('beef patty, grilled', 110),
+        _g('coleslaw', 150),
+      ], noteWeights('burger 250g, salad - 400g total')!);
+      expect(items.map((i) => i.quantity).reduce((a, b) => a! + b!), 400);
+    });
+
+    test('a weighed food the model missed leaves the other foods alone', () {
+      for (final dish in ['Chicken with rice and pesto', 'Chicken with rice']) {
+        final items = weighedPlateItems([
+          ParsedMealItem(query: 'dish=$dish'),
+          _g('chicken breast, grilled', 150),
+          _g('rice, white, cooked', 180),
+        ], noteWeights('chicken 150g, pesto 15g')!);
+        expect(items.map((i) => (i.query, i.quantity)), [
+          ('chicken breast, grilled', 150),
+          ('rice, white, cooked', 180),
+          ('pesto', 15),
+        ], reason: dish);
+      }
+    });
+
     test('without a total, an unweighed food keeps the model\'s grams', () {
       final items = weighedPlateItems([
         _g('chicken', 100),
@@ -378,5 +442,62 @@ void main() {
         expect(result.items.single.unit, 'g');
       },
     );
+  });
+
+  // A live Haiku read of a plate with no note, 2026-11-17: 113,597 kcal,
+  // three foods logged as 150, 150 and 90 servings.
+  group('a plate food with a bare number', () {
+    final photo = MealPhoto(bytes: Uint8List(1), mediaType: 'image/jpeg');
+
+    test('the unit goes missing before the plate rules see it, two ways', () {
+      // left out, or spelt outside the enum: both arrive as a bare number
+      final raw = [
+        {'query': 'chicken breast, grilled', 'quantity': 150},
+        {'query': 'french fries, fast food', 'quantity': 150, 'unit': 'grams'},
+        {'query': 'tomato soup', 'quantity': 250, 'unit': 'g'},
+      ];
+      final items = validateParsedMealItems(mealItemsFromJson(raw)).items;
+      expect(items.map((i) => (i.quantity, i.unit)), [
+        (150, null),
+        (150, null),
+        (250, 'g'),
+      ]);
+    });
+
+    test('above a count is grams, on a plate with no note', () async {
+      final api = _Api([
+        const ParsedMealItem(
+          query:
+              'dish=Grilled chicken with fries, carrot salad and tomato soup',
+        ),
+        _g('tomato soup', 250),
+        const ParsedMealItem(query: 'chicken breast, grilled', quantity: 150),
+        const ParsedMealItem(query: 'french fries, fast food', quantity: 150),
+        const ParsedMealItem(
+          query: 'carrot salad, with mayonnaise-based dressing',
+          quantity: 90,
+        ),
+      ]);
+      final result = await readEstimatedPlate(api, photo, note: null);
+      expect(result.items.map((i) => (i.quantity, i.unit)), [
+        (250, 'g'),
+        (150, 'g'),
+        (150, 'g'),
+        (90, 'g'),
+      ]);
+    });
+
+    test('a count stays a count', () {
+      final items = weighedPlateItems([
+        _g('rice, white, cooked', 180),
+        const ParsedMealItem(query: 'egg, fried', quantity: 2),
+        const ParsedMealItem(query: 'bread, white', quantity: 3),
+      ], const NoteWeights());
+      expect(items.map((i) => (i.quantity, i.unit)), [
+        (180, 'g'),
+        (2, null),
+        (3, null),
+      ]);
+    });
   });
 }

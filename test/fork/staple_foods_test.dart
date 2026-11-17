@@ -267,11 +267,93 @@ void main() {
     ('seaweed salad', 'Seaweed salad, wakame'),
     ('wakame salad', 'Seaweed salad, wakame'),
     ('seaweed salad, wakame', 'Seaweed salad, wakame'),
+    // the row audit of photo reads (2026-11-17)
+    ('farro, cooked', 'Spelt, cooked'),
+    ('potatoes, hash browns, frozen, cooked', 'Potatoes, hash brown, frozen'),
+    ('shredded potato, fried', 'Potato, hash brown, from fresh'),
+    ('gravy, brown, prepared from mix', 'Gravy, NFS'),
+    ('broccoli, cooked', 'Broccoli, NS as to form, cooked'),
+    ('broccoli, steamed', 'Broccoli, cooked, boiled'),
+    ('broccoli, boiled', 'Broccoli, cooked, boiled'),
+    ('vinaigrette dressing', 'Salad dressing, home recipe, vinegar'),
+    ('creamy herb dressing', 'Ranch dressing'),
+    ('butter, for cooking', 'Butter, NFS'),
+    ('fat, olive oil', 'Olive oil'),
+    ('oil, vegetable, salad or cooking', 'Vegetable oil, NFS'),
+    ('bread, white, roll', 'Roll, white, soft'),
+    ('bread, ciabatta roll', 'Roll, white, hard'),
+    ('bread, multigrain with seeds, roll', 'Roll, multigrain'),
+    ('bread, flatbread, pizza crust', 'Wheat flatbread'),
+    ('fish, white, breaded, cooked', 'Restaurant, family style, fish fillet'),
+    ('fish, white, battered, fried', 'Restaurant, family style, fish fillet'),
+    ('fish, cod, battered and fried', 'Cod fillet, in frying batter'),
+    ('squid, battered, fried', 'Mollusks, squid, mixed species, cooked, fried'),
+    ('chicken, cooked', 'Chicken, NS as to part and cooking method'),
+    ('chicken, shredded, cooked', 'Chicken, NS as to part and cooking method'),
+    ('chicken, roasted, meat only', 'Chicken, broilers or fryers, meat only'),
+    ('chicken pieces, stir-fried', 'Chicken, NS as to part, sauteed'),
+    ('chicken breast, cooked', 'Chicken breast, baked, broiled, or roasted'),
+    ('chicken breast, stir-fried', 'Chicken breast, sauteed, skin not eaten'),
+    ('chicken cutlet, breaded, fried', 'Chicken schnitzel, breaded, fried'),
+    ('lamb kebab, grilled', 'Lamb, cubed for stew or kabob'),
+    ('lamb kofta, grilled', 'Lamb, ground, cooked, broiled'),
+    ('lamb, cooked, meat only', 'Lamb, NS as to cut'),
+    ('bacon, grilled', 'Bacon, NS as to type of meat, cooked'),
+    ('frankfurter, pork and beef', 'Frankfurter, meat'),
+    ('falafel', 'Falafel, home-prepared'),
+    ('meatballs, grilled', 'Meatballs, fried'),
+    ('corn on the cob, boiled', 'Corn, sweet, yellow, cooked, boiled'),
+    ('corn on the cob', 'Corn, sweet, yellow, cooked, boiled'),
+    ('cherry tomatoes, raw', 'Tomatoes, raw'),
+    ('baked beans in tomato sauce', 'Beans, baked, canned, plain'),
+    ('orzo, cooked', 'Pasta, cooked'),
+    ('celery root, cooked', 'Celeriac, cooked'),
+    ('beef, steak, sliced, grilled', 'Steak, NS as to type of meat'),
+    ('beef, roasted, sirloin steak', 'Beef, loin, top sirloin cap steak'),
+    ('breakfast sausage, link, cooked', 'Pork sausage, link/patty, cooked'),
+    ('eggs, scrambled, with milk', 'Egg, whole, cooked, scrambled'),
+    ('herbs, mixed, fresh', 'Parsley, raw'),
+    ('bread, cornbread', 'Cornbread, made from home recipe'),
+    ('tomato sauce, spicy', 'Tomato products, canned, sauce'),
+    ('rice vermicelli', 'Rice noodles, cooked'),
+    ('lasagna, meat-free, baked', 'Lasagna, Vegetable'),
+    ('bologna sausage', 'Bologna'),
+    ('breadcrumbs', 'Bread, crumbs, dry, grated, plain'),
+    ('granola with nuts', 'Cereal, granola'),
+    ('fruit jam', 'Jam'),
+    ('potatoes, fried, home fries', 'Potato, home fries, from fresh'),
+    ('baby greens, raw', 'Mixed salad greens, raw'),
+    ('salmon, cooked', 'Fish, salmon, Atlantic, wild, cooked'),
+    ('walnuts', 'Nuts, walnuts, english'),
+    ('zucchini, battered and fried', 'Vegetable tempura'),
+    ('bell pepper, fried in batter', 'Vegetable tempura'),
+    ('vegetables, mixed, battered, fried', 'Vegetable tempura'),
   ]) {
     test('bare "$query" resolves to "$expected..."', () async {
       final item = await resolve(query);
       expect(item.candidates[item.selectedIndex].name, startsWith(expected));
       expect(item.confidence, greaterThanOrEqualTo(kResolutionConfidenceFloor));
+    });
+  }
+
+  // Names beside the audit's fixes keep their own rows: a battered
+  // vegetable the table has, a raw or bought food, a dish's other parts.
+  for (final (query, expected) in [
+    ('broccoli, battered and fried', 'Broccoli, in frying batter'),
+    ('carrots, battered, fried', 'Carrots, in frying batter'),
+    ('broccoli, raw', 'Broccoli, raw'),
+    ('bell pepper, red, raw', 'Peppers, bell, red, raw'),
+    ('farro', 'Farro, pearled, dry, raw'),
+    ('walnuts, raw', 'Nuts, walnuts, English, halves, raw'),
+    ('hash brown, fried', 'Potatoes, hash brown, refrigerated, prepared'),
+    ('chicken breast, grilled', 'Chicken breast, grilled without sauce'),
+    ('chicken breast, breaded, fried', 'Chicken schnitzel, breaded, fried'),
+    ('salmon, grilled', 'Salmon, grilled'),
+    ('beef kofta, grilled', 'Kofta, beef, grilled'),
+  ]) {
+    test('"$query" keeps "$expected..."', () async {
+      final item = await resolve(query);
+      expect(item.candidates[item.selectedIndex].name, startsWith(expected));
     });
   }
 

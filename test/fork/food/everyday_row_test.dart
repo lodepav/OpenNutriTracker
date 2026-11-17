@@ -54,4 +54,39 @@ void main() {
     );
     expect(everydayRowName('pork cutlet breaded fried'), isNotNull);
   });
+
+  // "boiled broccoli" went boiled → cooked → state first and found the
+  // "broccoli, cooked" row, which has fat added.
+  test('boiled broccoli is the boiled row in either order', () {
+    for (final query in ['boiled broccoli', 'broccoli, boiled']) {
+      expect(
+        everydayRowName(query),
+        'Broccoli, cooked, boiled, drained, without salt',
+        reason: query,
+      );
+    }
+    expect(everydayRowName('broccoli, cooked'), isNot(contains('boiled')));
+  });
+
+  // Battered vegetables the table has no row of are the tempura row; the
+  // ones it has (broccoli, carrots) and a plain fried vegetable keep theirs.
+  test('a battered vegetable without its own row is tempura', () {
+    for (final query in [
+      'zucchini, battered and fried',
+      'bell peppers, fried in batter',
+      'battered fried vegetables',
+      'vegetables, mixed, battered, fried',
+    ]) {
+      expect(everydayRowName(query), 'Vegetable tempura', reason: query);
+    }
+    for (final query in [
+      'broccoli, battered and fried',
+      'carrots, battered, fried',
+      'zucchini, fried',
+      'bell pepper, battered',
+      'chicken, fried, battered',
+    ]) {
+      expect(everydayRowName(query), isNull, reason: query);
+    }
+  });
 }

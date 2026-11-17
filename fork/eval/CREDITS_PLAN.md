@@ -872,6 +872,48 @@ plates, some meals repeated and photographed in the app, would show
 whether D46's per-food sizes learn anything (11 plates repeat too few
 foods by name).
 
+### Idea 7, six trials (2026-11-17, about $1.20 promo key and $0.18 OpenRouter)
+
+On the weighed set, now sent upright at the app's size. Haiku, no note,
+three passes: 29/33 within 25%, median 16%, total 99%; with the weights
+in the note 25/33, 17%, 113%.
+
+- **Sonnet 5.5: not worth it.** Portions closer (portion error 0.14
+  against 0.24 of the reference, foods over 150 g at 0.89 against 0.85),
+  the plate's miss barely (14% against 16%), it left out 9 of 75 foods
+  against 3, at 25× the cost ($0.42 a 33-read pass).
+- **Gemini 3.8 Flash, through OpenRouter: no verdict.** 18 of 33 reads
+  came back with nothing (12 of 51 on 2026-11-10), the multi-food plates
+  most; the 15 that did were 12/15 within 25%. The second pass was not
+  run. The app calls Google directly, not this route, and the harness
+  does not record why a read failed.
+- **WebP: no difference.** Nine passes each: within 25% 75/99 (WebP)
+  against 80/99 (JPEG), median 16% against 18%, same tokens. One photo's
+  borsch was never read as WebP and always as JPEG; one photo, not shown
+  in general.
+- **Row audit: merged as correctness.** 4,192 food names from every run
+  so far: 173 now find their everyday row (S75), covering 3,533 past
+  reads, e.g. battered fish, hash browns, farro, vinaigrette, cooked
+  chicken. On these plates only one row moved energy, so no gain shows
+  here.
+- **A weighed food split into parts: merged.** The note's "burger 250 g"
+  matched none of the model's bun, patty and lettuce and was added again
+  as a whole; now the parts are sized to it (D24). Burger plate 1,710 →
+  about 1,100 kcal (1,135); poke bowl 1,185 → 590 (706).
+- **Raw duplicates: merged, fixed at the cause.** A plate's food the
+  table lacked was broken down with the whole plate's photo, and the
+  breakdown listed the plate again raw (pork loin 300 g beside the grilled
+  pork). It is now sent without the photo (D42). A rule dropping raw rows
+  beside cooked ones was not built: under 1% of reads, with real garnishes
+  among them.
+- **Found on the way: a bare number read as servings.** A read with no
+  unit took "150" of chicken as 150 servings (113,597 kcal), twice in 15
+  runs. A bare number above 20 on a plate is now grams (D42).
+
+All merged, the same Haiku passes: weights in the note 29/33 within 25%,
+median 13%, total 102% (from 25/33, 17%, 113%); no note 27/33, 15%, 93%,
+within run-to-run noise of before.
+
 ## What the tests measure
 
 Each sends real photos or typed meals through the app's logging code,
