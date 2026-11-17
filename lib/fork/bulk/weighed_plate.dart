@@ -420,7 +420,13 @@ List<ParsedMealItem> weighedPlateItems(
       unmatched.add(weight);
     }
   }
-  _claimSplitFood(foods, stated, unmatched, dish);
+  _claimSplitFood(
+    foods,
+    stated,
+    unmatched,
+    dish,
+    withTotal: weights.totalGrams != null,
+  );
   for (final weight in unmatched) {
     foods.add((query: weight.name, grams: null, count: null));
     stated[foods.length - 1] = weight.grams;
@@ -468,18 +474,20 @@ List<ParsedMealItem> weighedPlateItems(
 /// patty and the salad in it), not one it missed: added as the note names
 /// it, it was counted twice. A food the note does not weigh at exactly its
 /// grams is that food ("salad 163g" as "coleslaw" 163 g); else, with one such
-/// weight, the foods the note does not weigh are its parts, sized to it when
-/// they come to half to twice it. Each weight placed so is taken out of
-/// [unmatched]; the rest are added as before.
+/// weight and no total, the foods the note does not weigh are its parts,
+/// sized to it when they come to half to twice it. Each weight placed so is
+/// taken out of [unmatched]; the rest are added as before.
 /// shortcut: a food the note leaves unweighed beside a split one counts as
-/// one of its parts, and two split foods are added as before; upgrade when
-/// the model marks each food's part of (live runs, prompt change).
+/// one of its parts, and two split foods, or one beside a total, are added
+/// as before; upgrade when the model marks which food each part is of (a
+/// prompt change, live runs).
 void _claimSplitFood(
   List<({String query, double? grams, double? count})> foods,
   Map<int, double> stated,
   List<FoodWeight> unmatched,
-  String? dish,
-) {
+  String? dish, {
+  required bool withTotal,
+}) {
   if (dish == null || dish.isEmpty) return;
   bool free(int i) =>
       !stated.containsKey(i) &&
@@ -498,6 +506,8 @@ void _claimSplitFood(
     stated[exact] = weight.grams;
     unmatched.remove(weight);
   }
+  // the parts would take the total's other foods with them
+  if (withTotal) return;
   if (unmatched.length != 1 || !named.contains(unmatched.single)) return;
   final weight = unmatched.single;
   final parts = [

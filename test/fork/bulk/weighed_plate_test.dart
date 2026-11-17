@@ -220,6 +220,16 @@ void main() {
       ]);
     });
 
+    test('with a total, a split food\'s parts still add up to the plate', () {
+      final items = weighedPlateItems([
+        const ParsedMealItem(query: 'dish=Burger with salad'),
+        _g('hamburger bun', 60),
+        _g('beef patty, grilled', 110),
+        _g('coleslaw', 150),
+      ], noteWeights('burger 250g, salad - 400g total')!);
+      expect(items.map((i) => i.quantity).reduce((a, b) => a! + b!), 400);
+    });
+
     test('a weighed food the model missed leaves the other foods alone', () {
       for (final dish in ['Chicken with rice and pesto', 'Chicken with rice']) {
         final items = weighedPlateItems([
