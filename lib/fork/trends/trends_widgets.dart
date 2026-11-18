@@ -280,15 +280,18 @@ class _SparkPainter extends CustomPainter {
       old.bars != bars;
 }
 
-/// One tile of the grid: what it is, its number, its small chart.
+/// One tile of a grid, on Home, Trends and You alike: what it is, its
+/// number, and a small chart or line under them.
 class TrendTile extends StatelessWidget {
   final String id;
   final String label;
   final String value;
   final String? suffix;
   final Color? valueColor;
-  final Widget chart;
-  final VoidCallback onTap;
+
+  /// Under the value: a chart, a bar or a line of text; none when null.
+  final Widget? chart;
+  final VoidCallback? onTap;
 
   /// What a screen reader says for the whole tile, in words
   /// ("Calories, daily average 2573 of 2925 kcal"), as is: it includes
@@ -296,11 +299,20 @@ class TrendTile extends StatelessWidget {
   /// null.
   final String? spokenLabel;
 
+  /// What the tap does, for a screen reader ("Open the weight trend").
+  final String? hint;
+
   /// A short line under the value, e.g. "over limit" for a passed limit.
   final String? note;
 
   /// [note] is a plain fact ("from Nov 9"), muted, not a warning in amber.
   final bool noteMuted;
+
+  /// A + in the corner that logs (a weigh-in, water), [actionTooltip] its
+  /// name; beside the card rather than in it, a button in a button being
+  /// one target to a screen reader.
+  final VoidCallback? onAction;
+  final String? actionTooltip;
 
   const TrendTile({
     super.key,
@@ -309,26 +321,28 @@ class TrendTile extends StatelessWidget {
     required this.value,
     this.suffix,
     this.valueColor,
-    required this.chart,
-    required this.onTap,
+    this.chart,
+    this.onTap,
     this.spokenLabel,
+    this.hint,
     this.note,
     this.noteMuted = false,
+    this.onAction,
+    this.actionTooltip,
   });
 
   @override
   Widget build(BuildContext context) {
     final palette = paletteOf(context);
     final text = Theme.of(context).textTheme;
-    // at large text a second line, not the rate or goal cut off (A6)
-    final lines = MediaQuery.textScalerOf(context).scale(10) > 13 ? 2 : 1;
-    return Semantics(
+    final card = Semantics(
       identifier: id,
       container: true,
-      button: true,
+      button: onTap != null,
       label:
           spokenLabel ??
           [label, suffix == null ? value : '$value $suffix', ?note].join(', '),
+      hint: hint,
       onTap: onTap,
       excludeSemantics: true,
       child: AppCard(
@@ -344,20 +358,26 @@ class TrendTile extends StatelessWidget {
                 Expanded(
                   child: Text(
                     label,
-                    maxLines: lines,
+                    // A second line, not "Shoulders · left vs right" cut (A6).
+                    maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: text.labelMedium?.copyWith(color: palette.textMuted),
                   ),
                 ),
-                Icon(
-                  Icons.chevron_right_rounded,
-                  size: 18,
-                  color: palette.textMuted,
-                ),
+                // The + takes the corner and says the tile acts.
+                if (onAction != null)
+                  const SizedBox(width: 32)
+                else if (onTap != null)
+                  Icon(
+                    Icons.chevron_right_rounded,
+                    size: 18,
+                    color: palette.textMuted,
+                  ),
               ],
             ),
             const SizedBox(height: 2),
-            AutoSizeText.rich(
+            // Wraps rather than shrinks: Home's rows size by IntrinsicHeight.
+            Text.rich(
               TextSpan(
                 text: value,
                 style: text.titleLarge?.copyWith(
@@ -375,9 +395,6 @@ class TrendTile extends StatelessWidget {
                     ),
                 ],
               ),
-              maxLines: lines,
-              minFontSize: 11,
-              overflow: TextOverflow.ellipsis,
             ),
             if (note != null)
               Text(
@@ -389,11 +406,27 @@ class TrendTile extends StatelessWidget {
                         fontWeight: FontWeight.w600,
                       ),
               ),
-            const SizedBox(height: 6),
-            chart,
+            if (chart != null) ...[const SizedBox(height: 6), chart!],
           ],
         ),
       ),
+    );
+    if (onAction == null) return card;
+    return Stack(
+      fit: StackFit.passthrough,
+      children: [
+        card,
+        PositionedDirectional(
+          top: 0,
+          end: 0,
+          child: IconButton(
+            key: Key('$id-add'),
+            tooltip: actionTooltip,
+            icon: const Icon(Icons.add_rounded),
+            onPressed: onAction,
+          ),
+        ),
+      ],
     );
   }
 }

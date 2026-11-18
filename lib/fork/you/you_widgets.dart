@@ -10,9 +10,8 @@ import 'package:opennutritracker/features/home/presentation/bloc/home_bloc.dart'
 import 'package:opennutritracker/features/profile/presentation/utils/profile_display_name.dart';
 import 'package:opennutritracker/features/profile/presentation/widgets/profile_avatar.dart';
 import 'package:opennutritracker/fork/display/display_prefs.dart';
-import 'package:opennutritracker/fork/display/home_tiles.dart';
 import 'package:opennutritracker/fork/trends/trends_widgets.dart'
-    show keepUnits;
+    show TrendTile, keepUnits;
 import 'package:opennutritracker/fork/units/energy_text.dart';
 
 /// Seam S121: the You tab as MacroFactor's (YouA). Who is active, with a
@@ -142,13 +141,13 @@ class BudgetTile extends StatelessWidget {
             fat: 'F ${state.totalFatsGoal.round()}',
             protein: 'P ${state.totalProteinsGoal.round()}',
           ).join(' · ');
-    return HomeTile(
-      identifier: 'profile-budget',
-      title: 'Calorie goal',
+    return TrendTile(
+      id: 'profile-budget',
+      label: 'Calorie goal',
       value: state == null
           ? '—'
           : '${energyValue(context, state.totalKcalDaily)}',
-      note: energyUnit(context),
+      suffix: energyUnit(context),
       spokenLabel: [
         'Calorie goal',
         if (state != null)
@@ -162,7 +161,7 @@ class BudgetTile extends StatelessWidget {
       ].join(', '),
       hint: 'How it is worked out',
       onTap: onTap,
-      below: macros == null ? null : _Below('$macros g'),
+      chart: macros == null ? null : _Below('$macros g'),
     );
   }
 }
@@ -208,16 +207,16 @@ class YouTile extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) => HomeTile(
-    identifier: identifier,
-    title: title,
+  Widget build(BuildContext context) => TrendTile(
+    id: identifier,
+    label: title,
     // The Goal tile's "Losing 0.4 kg a week" wraps in a half-width tile.
     value: keepUnits(value),
-    note: note,
+    suffix: note,
     hint: hint,
     spokenLabel: spokenLabel,
     onTap: onTap,
-    below: below == null ? null : _Below(below!),
+    chart: below == null ? null : _Below(below!),
   );
 }
 

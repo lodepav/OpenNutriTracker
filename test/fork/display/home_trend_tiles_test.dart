@@ -22,6 +22,8 @@ import 'package:opennutritracker/fork/layout/layout_store.dart';
 import 'package:opennutritracker/fork/report/nutrient_explorer.dart';
 import 'package:opennutritracker/fork/trends/nutrient_trends.dart';
 import 'package:opennutritracker/fork/trends/trends_overview.dart';
+import 'package:opennutritracker/fork/trends/trends_widgets.dart'
+    show TrendTile;
 import 'package:opennutritracker/generated/l10n.dart';
 import 'package:provider/provider.dart';
 
@@ -109,12 +111,12 @@ void main() {
         (goal: UserWeightGoalEntity.loseWeight, kgPerWeek: -0.4);
     layout.value = (order: ['goal'], hidden: const {});
     await pump(tester);
-    final goal = tester.widget<HomeTile>(
+    final goal = tester.widget<TrendTile>(
       find.byWidgetPredicate(
-        (w) => w is HomeTile && w.identifier == 'home-trends-tile-goal',
+        (w) => w is TrendTile && w.id == 'home-trends-tile-goal',
       ),
     );
-    expect((goal.value, goal.note), ('Losing', '0.4 kg a week'));
+    expect((goal.value, goal.suffix), ('Losing', '0.4 kg a week'));
   });
 
   testWidgets('none of them until added', (tester) async {
@@ -149,12 +151,12 @@ void main() {
     );
     await pump(tester);
     final sides = find.byWidgetPredicate(
-      (w) => w is HomeTile && w.identifier == 'home-trends-tile-sides',
+      (w) => w is TrendTile && w.id == 'home-trends-tile-sides',
     );
     expect(sides, findsOne);
-    expect(tester.widget<HomeTile>(sides).title, 'Arms · left vs right');
-    expect(tester.widget<HomeTile>(sides).value, '1.2');
-    expect(tester.widget<HomeTile>(sides).note, 'cm · right bigger');
+    expect(tester.widget<TrendTile>(sides).label, 'Arms · left vs right');
+    expect(tester.widget<TrendTile>(sides).value, '1.2');
+    expect(tester.widget<TrendTile>(sides).suffix, 'cm · right bigger');
     // Spoken as on Trends.
     expect(
       find.bySemanticsLabel('Arms left versus right, 1.2 cm, right bigger'),
@@ -188,10 +190,10 @@ void main() {
     );
     await pump(tester);
     final calories = find.byWidgetPredicate(
-      (w) => w is HomeTile && w.identifier == 'home-trends-tile-calories',
+      (w) => w is TrendTile && w.id == 'home-trends-tile-calories',
     );
-    expect(tester.widget<HomeTile>(calories).title, 'Calories · avg');
-    expect(tester.widget<HomeTile>(calories).hint, 'Open Calories');
+    expect(tester.widget<TrendTile>(calories).label, 'Calories · avg');
+    expect(tester.widget<TrendTile>(calories).hint, 'Open Calories');
     expect(find.bySemanticsLabel('Calories, nothing logged'), findsOne);
   });
 
@@ -208,13 +210,13 @@ void main() {
       hidden: const {},
     );
     await pump(tester);
-    final waist = tester.widget<HomeTile>(
+    final waist = tester.widget<TrendTile>(
       find.byWidgetPredicate(
-        (w) => w is HomeTile && w.identifier == 'home-trends-tile-waist',
+        (w) => w is TrendTile && w.id == 'home-trends-tile-waist',
       ),
     );
     expect(waist.value, '0.50');
-    expect(waist.note, 'increased risk');
+    expect(waist.suffix, 'increased risk');
   });
 
   testWidgets('read again after Home reloads, kept in place meanwhile', (
@@ -228,7 +230,7 @@ void main() {
     addTearDown(homeLoads.close);
     final bloc = await pump(tester, homeLoads: homeLoads.stream);
     final goal = find.byWidgetPredicate(
-      (w) => w is HomeTile && w.identifier == 'home-trends-tile-goal',
+      (w) => w is TrendTile && w.id == 'home-trends-tile-goal',
     );
     expect(goal, findsOne);
 
@@ -267,7 +269,7 @@ void main() {
     await pump(tester);
     expect(
       find.byWidgetPredicate(
-        (w) => w is HomeTile && w.identifier == 'home-trends-tile-fibre',
+        (w) => w is TrendTile && w.id == 'home-trends-tile-fibre',
       ),
       findsOne,
     );

@@ -367,24 +367,25 @@ class _TrendsOverviewState extends State<TrendsOverview> {
                                   padding: const EdgeInsets.only(
                                     bottom: Dimens.spacing8,
                                   ),
-                                  // The tiles are alike, so a row's two are one height;
-                                  // AutoSizeText measures, so no IntrinsicHeight here.
+                                  // A row's two one height, as on Home.
                                   child: perRow == 1
                                       ? tiles[i]
-                                      : Row(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Expanded(child: tiles[i]),
-                                            const SizedBox(
-                                              width: Dimens.spacing8,
-                                            ),
-                                            Expanded(
-                                              child: i + 1 < tiles.length
-                                                  ? tiles[i + 1]
-                                                  : const SizedBox.shrink(),
-                                            ),
-                                          ],
+                                      : IntrinsicHeight(
+                                          child: Row(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.stretch,
+                                            children: [
+                                              Expanded(child: tiles[i]),
+                                              const SizedBox(
+                                                width: Dimens.spacing8,
+                                              ),
+                                              Expanded(
+                                                child: i + 1 < tiles.length
+                                                    ? tiles[i + 1]
+                                                    : const SizedBox.shrink(),
+                                              ),
+                                            ],
+                                          ),
                                         ),
                                 ),
                               Center(
