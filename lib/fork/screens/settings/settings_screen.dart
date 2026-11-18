@@ -25,6 +25,7 @@ import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
 import 'package:opennutritracker/core/presentation/ai_assist_summary.dart';
 import 'package:opennutritracker/core/presentation/widgets/badged_title.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
+import 'package:opennutritracker/fork/display/contrast.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/core/presentation/widgets/disclaimer_dialog.dart';
 import 'package:opennutritracker/core/domain/usecase/delete_all_user_data_usecase.dart';

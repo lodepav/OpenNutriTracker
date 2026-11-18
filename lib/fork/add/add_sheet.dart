@@ -12,6 +12,7 @@ import 'package:opennutritracker/core/utils/navigation_options.dart';
 import 'package:opennutritracker/fork/screens/activity/add_activity_screen.dart';
 import 'package:opennutritracker/fork/add/chosen_chips.dart';
 import 'package:opennutritracker/fork/bulk/ai_add.dart';
+import 'package:opennutritracker/fork/display/contrast.dart';
 import 'package:opennutritracker/fork/screens/add_meal/bulk_add_screen.dart';
 import 'package:opennutritracker/features/add_meal/presentation/add_meal_screen.dart';
 import 'package:opennutritracker/features/add_meal/presentation/add_meal_type.dart';
@@ -211,7 +212,10 @@ class _AddSheetState extends State<AddSheet> {
                         children: [
                           Icon(
                             Icons.search_rounded,
-                            color: theme.colorScheme.primary,
+                            color: chartSafe(
+                              theme.colorScheme.primary,
+                              palette.surfaceMuted,
+                            ),
                           ),
                           const SizedBox(width: Dimens.spacing8),
                           Expanded(
@@ -402,7 +406,13 @@ Widget actionTile(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(icon, color: theme.colorScheme.primary),
+                  Icon(
+                    icon,
+                    color: chartSafe(
+                      theme.colorScheme.primary,
+                      palette.surfaceMuted,
+                    ),
+                  ),
                   const SizedBox(height: Dimens.spacing4),
                   Text(
                     label,

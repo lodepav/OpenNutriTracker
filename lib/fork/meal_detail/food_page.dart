@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:opennutritracker/fork/display/contrast.dart';
 import 'package:flutter/rendering.dart';
 import 'package:opennutritracker/core/domain/usecase/get_kcal_goal_usecase.dart';
 import 'package:opennutritracker/core/domain/usecase/get_macro_goal_usecase.dart';
@@ -192,7 +193,10 @@ class FoodPageHeader extends StatelessWidget {
       ),
       _ => Icon(
         Icons.restaurant_rounded,
-        color: Theme.of(context).colorScheme.primary,
+        color: chartSafe(
+          Theme.of(context).colorScheme.primary,
+          palette.surfaceMuted,
+        ),
       ),
     },
   );

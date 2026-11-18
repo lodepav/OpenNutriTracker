@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:opennutritracker/fork/display/contrast.dart';
 import 'package:opennutritracker/core/domain/entity/intake_type_entity.dart';
 import 'package:opennutritracker/core/domain/entity/recipe_entity.dart';
 import 'package:opennutritracker/core/domain/entity/recipe_ingredient_entity.dart';
@@ -241,7 +242,10 @@ class RecipeIngredientRow extends StatelessWidget {
               _ => Icon(
                 Icons.eco_rounded,
                 size: 20,
-                color: theme.colorScheme.primary,
+                color: chartSafe(
+                  theme.colorScheme.primary,
+                  palette.surfaceMuted,
+                ),
               ),
             },
           ),

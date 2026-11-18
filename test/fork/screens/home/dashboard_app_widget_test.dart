@@ -44,7 +44,7 @@ void main() {
 
     // Verify that the supplied and burned calorie values are displayed.
     expect(find.text('1500'), findsOneWidget);
-    expect(find.text('+500'), findsOneWidget); //: burned, signed
+    expect(find.text('500'), findsOneWidget); //: burned, in the goal
 
     // Verify that the kcal left label is displayed as AnimatedFlipCounter
     final kcalLeftFlipCounter = tester.firstWidget<AnimatedFlipCounter>(

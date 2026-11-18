@@ -237,7 +237,14 @@ class RecipeListItem extends StatelessWidget {
         color: accent.withValues(alpha: 0.14),
         borderRadius: Dimens.borderRadiusS,
       ),
-      child: Icon(Icons.menu_book_rounded, color: accent, size: 24),
+      child: Icon(
+        Icons.menu_book_rounded,
+        color: chartSafe(
+          accent,
+          Color.alphaBlend(accent.withValues(alpha: 0.14), palette.surface),
+        ),
+        size: 24,
+      ),
     );
   }
 }

@@ -125,6 +125,16 @@ void main() {
       expect(find.text('1.27'), findsOneWidget);
     });
 
+    testWidgets("under the formula, the burn step names Home's other one", (
+      tester,
+    ) async {
+      await _pump(tester, breakdown(), equations: false);
+      expect(
+        find.textContaining("Home's Expenditure is measured"),
+        findsOneWidget,
+      );
+    });
+
     testWidgets('The equations opens the page of every step', (tester) async {
       await _pump(tester, breakdown(), equations: false);
       expect(find.text(l10nEn.kcalGoalInfoIntro), findsNothing);

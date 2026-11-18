@@ -17,7 +17,7 @@ extension _GoalsSettings on _SettingsScreenState {
       if (widget.embedded)
         _categoryHeader(context, palette, S.of(context).settingsCategoryGoals),
       // What sets the target, then what splits it, then the day it counts
-      _categoryHeader(context, palette, 'Calorie Target'),
+      _categoryHeader(context, palette, 'Calorie target'),
       _SettingsGroup(
         palette: palette,
         tiles: [

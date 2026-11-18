@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:opennutritracker/fork/display/contrast.dart';
 import 'package:flutter/services.dart';
 import 'package:opennutritracker/core/domain/entity/recipe_ingredient_entity.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
@@ -95,7 +96,13 @@ class _BuilderIngredientRowState extends State<BuilderIngredientRow> {
                 ? ExcludeSemantics(
                     child: Text(emoji, style: const TextStyle(fontSize: 20)),
                   )
-                : Icon(Icons.eco_rounded, color: theme.colorScheme.primary),
+                : Icon(
+                    Icons.eco_rounded,
+                    color: chartSafe(
+                      theme.colorScheme.primary,
+                      palette.surfaceMuted,
+                    ),
+                  ),
           ),
           const SizedBox(width: Dimens.spacing12),
           Expanded(

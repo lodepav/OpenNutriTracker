@@ -150,7 +150,10 @@ class _SettingsTile extends StatelessWidget {
       trailing:
           trailing ??
           (showChevron
-              ? Icon(Icons.chevron_right_rounded, color: accent)
+              ? Icon(
+                  Icons.chevron_right_rounded,
+                  color: chartSafe(accent, palette.surface),
+                )
               : null),
       onTap: onTap,
     );
@@ -226,7 +229,14 @@ class _SettingsIconChip extends StatelessWidget {
         color: color.withValues(alpha: 0.12),
         borderRadius: Dimens.borderRadiusS,
       ),
-      child: Icon(icon, color: color, size: 22),
+      child: Icon(
+        icon,
+        color: chartSafe(
+          color,
+          Color.alphaBlend(color.withValues(alpha: 0.12), palette.surface),
+        ),
+        size: 22,
+      ),
     );
   }
 }

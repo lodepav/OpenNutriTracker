@@ -5,6 +5,7 @@ import 'package:opennutritracker/core/domain/entity/body_weight_unit_entity.dart
 import 'package:opennutritracker/core/domain/usecase/get_config_usecase.dart';
 import 'package:opennutritracker/core/domain/usecase/get_kcal_goal_usecase.dart';
 import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
+import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/core/utils/reload_diary_and_trends.dart';
 import 'package:opennutritracker/features/home/presentation/bloc/home_bloc.dart';
@@ -788,7 +789,17 @@ class _CheckInScreenState extends State<CheckInScreen> {
             CircleAvatar(
               radius: 16,
               backgroundColor: color.withValues(alpha: 0.18),
-              child: Icon(icon, size: 18, color: color),
+              child: Icon(
+                icon,
+                size: 18,
+                color: chartSafe(
+                  color,
+                  Color.alphaBlend(
+                    color.withValues(alpha: 0.18),
+                    paletteOf(context).surface,
+                  ),
+                ),
+              ),
             ),
             const SizedBox(width: 12),
             Flexible(

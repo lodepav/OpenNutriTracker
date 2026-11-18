@@ -6,7 +6,9 @@ import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/core/utils/hive_db_provider.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/fork/goal/goal_progress_page.dart';
-import 'package:opennutritracker/fork/goal/goal_you_tile.dart' show noGoalText;
+import 'package:opennutritracker/core/domain/usecase/get_user_usecase.dart';
+import 'package:opennutritracker/fork/goal/goal_you_tile.dart'
+    show noGoalText, plannedRateText;
 import 'package:opennutritracker/fork/goal/phase_colors.dart';
 import 'package:opennutritracker/fork/goal/goal_planner.dart';
 import 'package:opennutritracker/fork/goal/planner_screen.dart';
@@ -20,7 +22,11 @@ class GoalCard extends StatefulWidget {
   final BodyWeightUnit unit;
   final Future<PhasePlan?> Function()? load;
 
-  const GoalCard({super.key, required this.unit, this.load});
+  /// The profile's pace with no plan, as You says it ("Losing 0.4 kg a
+  /// week"); the profile's when null, none where it cannot be read.
+  final Future<String?> Function()? pace;
+
+  const GoalCard({super.key, required this.unit, this.load, this.pace});
 
   @override
   State<GoalCard> createState() => _GoalCardState();
@@ -38,8 +44,22 @@ class _GoalCardState extends State<GoalCard> {
     }
   }
 
+  late Future<String?> _pace = _readPace();
+
+  Future<String?> _readPace() async {
+    if (widget.pace != null) return widget.pace!();
+    if (!locator.isRegistered<GetUserUsecase>()) return null;
+    final user = await locator<GetUserUsecase>().getUserData();
+    return plannedRateText(user.goal, user.weeklyWeightGoalKg, widget.unit);
+  }
+
   void _reload() {
-    if (mounted) setState(() => _plan = _read());
+    if (mounted) {
+      setState(() {
+        _plan = _read();
+        _pace = _readPace();
+      });
+    }
   }
 
   @override
@@ -64,9 +84,10 @@ class _GoalCardState extends State<GoalCard> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return FutureBuilder(
-      future: _plan,
+      future: Future.wait([_plan, _pace]),
       builder: (context, snapshot) {
-        final plan = snapshot.data;
+        final plan = snapshot.data?[0] as PhasePlan?;
+        final pace = snapshot.data?[1] as String?;
         final target = plan?.targetKg;
         final today = DateTime.now();
         final index = plan?.indexOn(today);
@@ -90,9 +111,12 @@ class _GoalCardState extends State<GoalCard> {
               const SizedBox(height: 4),
               Text(
                 plan == null
-                    ? '$noGoalText. Plan a cut, maintenance or a bulk: '
-                          'its pace, what you burn, the calorie target and '
-                          'macros, step by step.'
+                    // The pace You shows is the goal the budget follows; the
+                    // planner adds dates and phases to it.
+                    ? '${pace == null ? noGoalText : '$pace, with no end date'}. '
+                          'Plan a cut, maintenance or a bulk: its pace, what '
+                          'you burn, the calorie target and macros, step by '
+                          'step.'
                     : '${plan.kind.label}'
                           '${target == null ? '' : ' to ${weightText(target, widget.unit)}'}'
                           ', until ${format.format(plan.lastDay)}'

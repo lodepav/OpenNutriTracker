@@ -305,7 +305,7 @@ class WeightTile extends StatefulWidget {
     required this.load,
     this.reload,
     this.identifier = 'home-weight-chip',
-    this.hint = 'Log a weigh-in',
+    this.hint = 'Weigh in',
     this.onTap,
   });
 
@@ -348,15 +348,20 @@ class _WeightTileState extends State<WeightTile> {
         identifier: widget.identifier,
         title: 'Weight trend',
         value: value,
-        // "a week" held to its unit: wrapped, it left "week" on a line alone.
+        // The last 7 days by name, as Weight history's "per week" is over
+        // its range; held to its unit, so a wrap leaves no word alone.
         note: kgPerWeek == null
             ? null
-            : '· ${weeklyRateText(kgPerWeek, widget.unit).replaceAll(' ', '\u00A0')}',
-        spokenLabel: weightSpoken(value, kgPerWeek, widget.unit),
+            : '· ${weeklyRateText(kgPerWeek, widget.unit).replaceFirst(' a week', ' in 7 days').replaceAll(' ', '\u00A0')}',
+        spokenLabel: weightSpoken(
+          value,
+          kgPerWeek,
+          widget.unit,
+        ).replaceFirst(' a week', ' in 7 days'),
         hint: widget.hint,
         onTap: widget.onTap ?? weighIn,
         onAction: weighIn,
-        actionTooltip: 'Log a weigh-in',
+        actionTooltip: 'Weigh in',
         below: month.length < 2
             ? null
             : Sparkline(

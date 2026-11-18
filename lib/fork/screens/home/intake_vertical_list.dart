@@ -398,7 +398,17 @@ class _IntakeVerticalListState extends State<IntakeVerticalList> {
                         color: accent.withValues(alpha: 0.12),
                         borderRadius: Dimens.borderRadiusS,
                       ),
-                      child: Icon(widget.listIcon, size: 20, color: accent),
+                      child: Icon(
+                        widget.listIcon,
+                        size: 20,
+                        color: chartSafe(
+                          accent,
+                          Color.alphaBlend(
+                            accent.withValues(alpha: 0.12),
+                            palette.canvas,
+                          ),
+                        ),
+                      ),
                     ),
                   if (selecting || !_timeAbove(context))
                     const SizedBox(width: Dimens.spacing12),

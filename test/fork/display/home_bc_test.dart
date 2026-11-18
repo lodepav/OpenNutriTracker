@@ -141,7 +141,7 @@ void main() {
       expect(find.textContaining('Not fasting'), findsOne);
     });
 
-    testWidgets('at 1x on a 360 dp phone the weekly change leaves no word '
+    testWidgets('at 1x on a 360 dp phone the 7 days\' change leaves no word '
         'alone on a line', (tester) async {
       final now = DateTime.now();
       await pumpOnPhone(
@@ -164,7 +164,7 @@ void main() {
       await tester.pumpAndSettle();
       final paragraph = tester
           .renderObjectList<RenderParagraph>(find.byType(RichText))
-          .firstWhere((p) => p.text.toPlainText().contains('week'));
+          .firstWhere((p) => p.text.toPlainText().contains('7\u00A0days'));
       final text = paragraph.text.toPlainText();
       expect(text, contains('\u2212'));
       // The paragraph's text laid out at its width, for its lines.
@@ -222,7 +222,10 @@ void main() {
       await tester.pump();
       expect(find.textContaining('79.5'), findsOne);
       expect(find.textContaining('81 kg'), findsNothing);
-      expect(find.textContaining('· 0\u00A0kg\u00A0a\u00A0week'), findsOne);
+      expect(
+        find.textContaining('· 0\u00A0kg\u00A0in\u00A07\u00A0days'),
+        findsOne,
+      );
       expect(find.textContaining('2712 ${keepUnits('kcal a day')}'), findsOne);
       expect(find.byType(Sparkline), findsNWidgets(2));
     });
@@ -249,7 +252,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(Dialog), findsOne);
     expect(opened, hasLength(3));
-    expect(find.byTooltip('Log a weigh-in'), findsOne);
+    expect(find.byTooltip('Weigh in'), findsOne);
   });
 
   testWidgets('a fast under way: the time left and how far along', (
@@ -490,9 +493,9 @@ void main() {
       await tester.pumpWidget(_app(_dashboard()));
       await tester.pumpAndSettle();
       expect(find.bySemanticsLabel(RegExp(r'^1000 ')), findsOne);
-      expect(find.text('Activity'), findsOne);
+      expect(find.text('Incl. activity'), findsOne);
       expect(find.text('Burned'), findsNothing);
-      expect(find.text('+300'), findsOne);
+      expect(find.text('300'), findsOne);
       expect(find.text('2500'), findsOne);
 
       DisplayPrefs.homeShowsEaten.value = true;
@@ -508,7 +511,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(
         find.bySemanticsLabel(
-          'Eaten 1800 kcal, activity adds 300 kcal, goal 2500 kcal',
+          'Eaten 1800 kcal, goal 2500 kcal including 300 kcal of activity',
         ),
         findsOne,
       );
@@ -539,7 +542,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(
         find.bySemanticsLabel(
-          'Eaten 7531 kJ, activity adds 1255 kJ, goal 10460 kJ',
+          'Eaten 7531 kJ, goal 10460 kJ including 1255 kJ of activity',
         ),
         findsOne,
       );
@@ -572,20 +575,20 @@ void main() {
         );
         await tester.pumpWidget(_app(capped));
         await tester.pumpAndSettle();
-        expect(find.text('Activity, up to'), findsOne);
-        expect(find.text('+800'), findsOne);
+        expect(find.text('Incl. activity, up to'), findsOne);
+        expect(find.text('800'), findsOne);
         expect(
           find.bySemanticsLabel(
-            'Eaten 1800 kcal, activity adds up to 800 kcal, goal 2500 kcal',
+            'Eaten 1800 kcal, goal 2500 kcal including up to 800 kcal of activity',
           ),
           findsOne,
         );
 
         await pumpKj(tester, capped);
         await tester.pumpAndSettle();
-        expect(find.text('+3347'), findsOne);
+        expect(find.text('3347'), findsOne);
         expect(
-          find.bySemanticsLabel(RegExp('activity adds up to 3347 kJ,')),
+          find.bySemanticsLabel(RegExp('including up to 3347 kJ of activity')),
           findsOne,
         );
         handle.dispose();
@@ -596,8 +599,8 @@ void main() {
           _app(_dashboard(credit: ActivityCredit.dailyCapped)),
         );
         await tester.pumpAndSettle();
-        expect(find.text('Activity'), findsOne);
-        expect(find.text('+300'), findsOne);
+        expect(find.text('Incl. activity'), findsOne);
+        expect(find.text('300'), findsOne);
       });
 
       testWidgets('a target that leaves it out: not added, no "+"', (
@@ -613,7 +616,7 @@ void main() {
         expect(find.text('+300'), findsNothing);
         expect(
           find.bySemanticsLabel(
-            'Eaten 1800 kcal, activity 300 kcal, not added, goal 2500 kcal',
+            'Eaten 1800 kcal, goal 2500 kcal, activity 300 kcal, not added',
           ),
           findsOne,
         );

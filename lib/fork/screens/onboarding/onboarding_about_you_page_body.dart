@@ -2,6 +2,7 @@
 // are ported by hand: fork/tools/upstream-copies.sh.
 import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/material.dart';
+import 'package:opennutritracker/fork/display/contrast.dart';
 import 'package:opennutritracker/core/domain/entity/calories_profile_entity.dart';
 import 'package:opennutritracker/core/domain/entity/user_gender_entity.dart';
 import 'package:opennutritracker/core/presentation/sources_screen.dart';
@@ -161,7 +162,10 @@ class _OnboardingAboutYouPageBodyState
                       Icon(
                         Icons.info_outline,
                         size: 18,
-                        color: Theme.of(context).colorScheme.primary,
+                        color: chartSafe(
+                          Theme.of(context).colorScheme.primary,
+                          Theme.of(context).colorScheme.surfaceContainerHighest,
+                        ),
                       ),
                       const SizedBox(width: 8),
                       Expanded(
@@ -248,7 +252,10 @@ class _OnboardingAboutYouPageBodyState
           Icon(
             Icons.info_outline,
             size: 18,
-            color: Theme.of(context).colorScheme.primary,
+            color: chartSafe(
+              Theme.of(context).colorScheme.primary,
+              Theme.of(context).colorScheme.surfaceContainerHighest,
+            ),
           ),
           const SizedBox(width: 8),
           Expanded(
