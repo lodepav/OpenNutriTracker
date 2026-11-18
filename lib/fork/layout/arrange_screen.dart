@@ -22,9 +22,9 @@ class ArrangeList {
   });
 }
 
-/// Drag to reorder, switch off to hide and on to add back; saved as it
-/// changes. Reset puts every list back in its first order, all shown but
-/// the optional items.
+/// Drag to reorder, or tap the handle for Move up and Move down; switch off
+/// to hide and on to add back; saved as it changes. Reset puts every list
+/// back in its first order, all shown but the optional items, with Undo.
 class ArrangeScreen extends StatefulWidget {
   final String title;
   final List<ArrangeList> lists;
@@ -55,6 +55,53 @@ class _ArrangeScreenState extends State<ArrangeScreen> {
     hidden: {..._layouts[i].hidden},
   ));
 
+  void _move(int i, int from, int to) {
+    final order = _layouts[i].order;
+    setState(() => order.insert(to, order.removeAt(from)));
+    _save(i);
+  }
+
+  /// Puts each list's [layouts] in place and saves them.
+  void _restore(List<Layout> layouts) {
+    void apply() {
+      for (final (i, l) in layouts.indexed) {
+        _layouts[i].order
+          ..clear()
+          ..addAll(l.order);
+        _layouts[i].hidden
+          ..clear()
+          ..addAll(l.hidden);
+      }
+    }
+
+    // Undo may come after the screen has closed: the stores save it then.
+    mounted ? setState(apply) : apply();
+    for (var i = 0; i < widget.lists.length; i++) {
+      _save(i);
+    }
+  }
+
+  void _reset() {
+    final before = [
+      for (final l in _layouts) (order: [...l.order], hidden: {...l.hidden}),
+    ];
+    _restore([
+      for (final l in widget.lists)
+        (order: l.names.keys.toList(), hidden: {...l.optional}),
+    ]);
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: const Text('Layout reset'),
+          action: SnackBarAction(
+            label: 'Undo',
+            onPressed: () => _restore(before),
+          ),
+        ),
+      );
+  }
+
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
@@ -64,21 +111,7 @@ class _ArrangeScreenState extends State<ArrangeScreen> {
         actions: [
           TextButton(
             key: const ValueKey('arrange-reset'),
-            onPressed: () {
-              setState(() {
-                for (final (i, l) in widget.lists.indexed) {
-                  _layouts[i].order
-                    ..clear()
-                    ..addAll(l.names.keys);
-                  _layouts[i].hidden
-                    ..clear()
-                    ..addAll(l.optional);
-                }
-              });
-              for (var i = 0; i < widget.lists.length; i++) {
-                _save(i);
-              }
-            },
+            onPressed: _reset,
             child: const Text('Reset'),
           ),
         ],
@@ -96,7 +129,8 @@ class _ArrangeScreenState extends State<ArrangeScreen> {
               0,
             ),
             child: Text(
-              'Drag to reorder. Switch one off to hide it, on to add it back.',
+              'Drag or tap the handle to move. Switch one off to hide it, on '
+              'to add it back.',
               style: text.bodySmall?.copyWith(
                 color: paletteOf(context).textMuted,
               ),
@@ -119,18 +153,44 @@ class _ArrangeScreenState extends State<ArrangeScreen> {
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               buildDefaultDragHandles: false,
-              onReorderItem: (from, to) {
-                final order = _layouts[i].order;
-                setState(() => order.insert(to, order.removeAt(from)));
-                _save(i);
-              },
+              onReorderItem: (from, to) => _move(i, from, to),
               children: [
                 for (final (j, id) in _layouts[i].order.indexed)
                   SwitchListTile(
                     key: ValueKey('arrange-$id'),
+                    // drag it, or tap it for a menu: a 48 dp target either
+                    // way, and a way to move with no drag (WCAG 2.5.7)
                     secondary: ReorderableDragStartListener(
                       index: j,
-                      child: const Icon(Icons.drag_handle_rounded),
+                      child: SizedBox.square(
+                        dimension: 48,
+                        // For touch: no tooltip, as its long-press would
+                        // take a press held before a drag. TalkBack has the
+                        // list's own Move actions on the row, which merges
+                        // what is in it.
+                        child: ExcludeSemantics(
+                          child: TooltipVisibility(
+                            visible: false,
+                            child: PopupMenuButton<int>(
+                              tooltip: 'Move ${list.names[id] ?? id}',
+                              icon: const Icon(Icons.drag_handle_rounded),
+                              onSelected: (to) => _move(i, j, to),
+                              itemBuilder: (_) => [
+                                PopupMenuItem(
+                                  value: j - 1,
+                                  enabled: j > 0,
+                                  child: const Text('Move up'),
+                                ),
+                                PopupMenuItem(
+                                  value: j + 1,
+                                  enabled: j < _layouts[i].order.length - 1,
+                                  child: const Text('Move down'),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
                     ),
                     title: Text(list.names[id] ?? id),
                     value: !_layouts[i].hidden.contains(id),

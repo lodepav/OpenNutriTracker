@@ -40,6 +40,9 @@ import 'package:opennutritracker/fork/undo/undo_delete.dart';
 import 'package:opennutritracker/fork/copy/copy_ui.dart' show moveToMeal;
 import 'package:opennutritracker/fork/copy/diary_selection.dart';
 // [/fork]
+// [fork] S230 diary-width
+import 'package:opennutritracker/fork/layout/width_cap.dart';
+// [/fork]
 
 class DiaryPage extends StatefulWidget {
   const DiaryPage({super.key});
@@ -151,12 +154,13 @@ class _DiaryPageState extends State<DiaryPage> with WidgetsBindingObserver {
     Set<String> daysWithEntries,
   ) {
     // [fork] S177 copy-move: the selection's bar under the day, and Back
-    // ends the selection
+    // ends the selection, while the Diary is the tab shown: the main
+    // screen's IndexedStack keeps it mounted under the other tabs
     final selection = DiarySelection.instance;
     return ListenableBuilder(
       listenable: selection,
       builder: (context, child) => PopScope(
-        canPop: !selection.active,
+        canPop: !selection.active || !Visibility.of(context),
         onPopInvokedWithResult: (didPop, _) {
           if (!didPop) selection.end();
         },
@@ -173,7 +177,9 @@ class _DiaryPageState extends State<DiaryPage> with WidgetsBindingObserver {
       child: ListView(
     // [/fork]
       padding: const EdgeInsets.only(bottom: Dimens.spacing16),
-      children: [
+      // [fork] S230 diary-width: each item capped, so the sides still scroll
+      children: [for (final item in <Widget>[
+      // [/fork]
         DiaryTableCalendar(
           trackedDaysMap: trackedDaysMap,
           daysWithEntries: daysWithEntries,
@@ -261,7 +267,9 @@ class _DiaryPageState extends State<DiaryPage> with WidgetsBindingObserver {
           ),
         ),
         // [/fork]
-      ],
+      // [fork] S230 diary-width
+      ]) WidthCap(child: item)],
+      // [/fork]
     ),
     ),
     // [fork] S177 copy-move

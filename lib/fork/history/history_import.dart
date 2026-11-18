@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'dart:io';
+import 'dart:isolate';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -686,6 +688,74 @@ class HistoryImportTile extends StatelessWidget {
     onTap: () => _run(context),
   );
 
+  /// The picked [files] as tables, and what they hold read in [unit];
+  /// null, once it has said so, when a file could not be read. Read off the
+  /// UI isolate, a year of exports at a time, with "Reading files…" shown
+  /// until [prepare] is done too.
+  static Future<({List<SheetTable> tables, HistoryFile first})?> readFiles(
+    BuildContext context,
+    List<({String name, String path})> files,
+    BodyWeightUnit unit, {
+    Future<void> Function(List<SheetTable> tables, HistoryFile first)? prepare,
+  }) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context, rootNavigator: true);
+    final progress = DialogRoute<void>(
+      context: context,
+      barrierDismissible: false,
+      // Back leaves it up: the read can't be cancelled, and would go on to
+      // show its dialog anyway
+      builder: (_) => const PopScope(
+        canPop: false,
+        child: AlertDialog(
+          content: Row(
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(width: 24),
+              Expanded(child: Text('Reading files…')),
+            ],
+          ),
+        ),
+      ),
+    );
+    unawaited(navigator.push(progress));
+    try {
+      // From a function of its own, so the closure carries only these two
+      final read = await _readOff(files, unit);
+      if (read.failed case final name?) {
+        messenger.showSnackBar(SnackBar(content: Text('Could not read $name')));
+        return null;
+      }
+      // still under "Reading files…": what is here and the first plan
+      await prepare?.call(read.tables, read.first!);
+      return (tables: read.tables, first: read.first!);
+    } finally {
+      if (progress.isActive) navigator.removeRoute(progress);
+    }
+  }
+
+  static Future<({List<SheetTable> tables, HistoryFile? first, String? failed})>
+  _readOff(List<({String name, String path})> files, BodyWeightUnit unit) =>
+      Isolate.run(() => _read(files, unit));
+
+  /// [readFiles]' work, on its own isolate: nothing here touches a plugin.
+  static Future<({List<SheetTable> tables, HistoryFile? first, String? failed})>
+  _read(List<({String name, String path})> files, BodyWeightUnit unit) async {
+    final tables = <SheetTable>[];
+    for (final f in files) {
+      try {
+        tables.addAll(readTables(f.name, await File(f.path).readAsBytes()));
+      } catch (_) {
+        return (tables: tables, first: null, failed: f.name);
+      }
+    }
+    return (
+      tables: tables,
+      first: readHistory(tables, unit: unit),
+      failed: null,
+    );
+  }
+
   static int _csvFirst(String name) =>
       name.toLowerCase().endsWith('.csv') ? 0 : 1;
 
@@ -733,32 +803,40 @@ class HistoryImportTile extends StatelessWidget {
     ]..sort((a, b) => _csvFirst(a.name).compareTo(_csvFirst(b.name)));
     if (picked.isEmpty) return;
     final names = picked.map((f) => f.name).join(', ');
-    final tables = <SheetTable>[];
-    for (final f in picked) {
-      try {
-        tables.addAll(readTables(f.name, await File(f.path!).readAsBytes()));
-      } catch (_) {
-        say('Could not read ${f.name}');
-        return;
-      }
-    }
     // What is already here is read from this profile: the plan is written
     // only into it.
     final startedOn = ProfileStamp.now();
     final config = await locator<GetConfigUsecase>().getConfig();
-    final existing = await _existing();
+    final unit = config.bodyWeightUnit == BodyWeightUnit.kg
+        ? BodyWeightUnit.kg
+        : BodyWeightUnit.lb;
+    if (!context.mounted) return;
     final now = DateTime.now();
     final source = picked.first.name.replaceFirst(RegExp(r'\.[^.]*$'), '');
-    HistoryPlan plan(HistoryFile file) => planImport(
+    late final HistoryExisting existing;
+    HistoryPlan planOf(HistoryFile file) => planImport(
       file,
       existing: existing,
       today: DateTime(now.year, now.month, now.day),
       source: source,
     );
-    final unit = config.bodyWeightUnit == BodyWeightUnit.kg
-        ? BodyWeightUnit.kg
-        : BodyWeightUnit.lb;
-    final first = readHistory(tables, unit: unit);
+    HistoryPlan? firstPlan;
+    final read = await readFiles(
+      context,
+      [for (final f in picked) (name: f.name, path: f.path!)],
+      unit,
+      // on the UI isolate (Hive), but before the dialog closes, so the
+      // screen never sits empty
+      prepare: (_, first) async {
+        existing = await _existing();
+        if (!first.isEmpty) firstPlan = planOf(first);
+      },
+    );
+    if (read == null) return;
+    final (:tables, :first) = read;
+    // the preview opens on the plan made under "Reading files…"
+    HistoryPlan plan(HistoryFile file) =>
+        identical(file, first) ? firstPlan! : planOf(file);
     if (first.isEmpty) {
       say('No days with calories or weight found in $names');
       return;
@@ -768,6 +846,8 @@ class HistoryImportTile extends StatelessWidget {
       context: context,
       builder: (_) => HistoryImportDialog(
         file: first,
+        // shortcut: a changed unit and the plan are read on the UI isolate,
+        // from tables already parsed; move them off if a toggle stalls.
         reread: (unit) => readHistory(tables, unit: unit),
         plan: plan,
       ),

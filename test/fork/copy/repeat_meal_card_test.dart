@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
 import 'package:get_it/get_it.dart';
 import 'package:opennutritracker/core/domain/entity/config_entity.dart';
 import 'package:opennutritracker/core/domain/entity/intake_entity.dart';
@@ -99,6 +102,8 @@ void main() {
     WidgetTester tester,
     _Copier copier, {
     List<IntakeEntity> today = const [],
+    DateTime? day,
+    Stream<Object?>? homeLoads,
   }) async {
     await tester.pumpWidget(
       MaterialApp(
@@ -106,9 +111,10 @@ void main() {
         supportedLocales: S.supportedLocales,
         home: Scaffold(
           body: RepeatMealCard(
-            day: DateTime(2026, 11, 1),
+            day: day ?? DateTime(2026, 11, 1),
             today: today,
             copier: copier,
+            homeLoads: homeLoads,
           ),
         ),
       ),
@@ -128,12 +134,39 @@ void main() {
     expect(copier.asked.first, DateTime(2026, 10, 31));
     expect(find.textContaining('as yesterday'), findsOneWidget);
     expect(find.textContaining('1 food'), findsOneWidget);
+    // Home's one card surface (AppCard), as its other sections
+    expect(find.byType(AppCard), findsOneWidget);
+    expect(find.byType(Card), findsNothing);
 
     await tester.tap(log);
     await tester.pumpAndSettle();
     expect(copier.placed.single.$1, [same]);
     expect(copier.placed.single.$2, meal);
     expect(find.text('Undo'), findsOneWidget);
+  });
+
+  testWidgets('a rebuild of Home reads yesterday once; a Home load or a new '
+      'day reads it again', (tester) async {
+    final copier = _Copier([_intake('a', meal)]);
+    final loads = StreamController<Object?>.broadcast();
+    addTearDown(loads.close);
+    await pump(tester, copier, homeLoads: loads.stream);
+    // the same figures, as a drag on Home rebuilds it
+    await pump(tester, copier, today: [], homeLoads: loads.stream);
+    expect(copier.asked, hasLength(1));
+
+    // Yesterday may have changed on the Diary.
+    loads.add(null);
+    await tester.pumpAndSettle();
+    expect(copier.asked, hasLength(2));
+
+    await pump(
+      tester,
+      copier,
+      day: DateTime(2026, 11, 2),
+      homeLoads: loads.stream,
+    );
+    expect(copier.asked.last, DateTime(2026, 11, 1));
   });
 
   testWidgets('not once something is logged to that meal today', (

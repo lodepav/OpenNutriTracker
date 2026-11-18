@@ -209,7 +209,10 @@ Future<void> openLaunchAction(BuildContext context, LaunchAction action) async {
         context: context,
         isScrollControlled: true,
         showDragHandle: true,
-        builder: (_) => QuickAddBottomSheet(intakeType: type, day: now),
+        // only the sheet closes, back on the screen it opened over, not a
+        // fresh Home
+        builder: (_) =>
+            QuickAddBottomSheet(intakeType: type, day: now, onAdded: () {}),
       );
     case WeighInAction():
       navigator.pushNamed(

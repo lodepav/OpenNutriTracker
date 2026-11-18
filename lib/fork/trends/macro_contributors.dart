@@ -63,6 +63,66 @@ class _MacroDaysAndFoodsState extends State<MacroDaysAndFoods> {
     }
   }
 
+  /// The hint under the chart, and a way in that needs no tap on a bar.
+  Widget _pickHint(BuildContext context) => LayoutBuilder(
+    builder: (context, box) => Row(
+      children: [
+        Expanded(
+          // The chart's own hint is the spoken one.
+          child: ExcludeSemantics(
+            child: Text(
+              narrowDaySlots(box.maxWidth, widget.dates.length)
+                  ? 'Pick a day for its foods.'
+                  : 'Tap a day for its foods.',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: paletteOf(context).textMuted,
+              ),
+            ),
+          ),
+        ),
+        if (widget.dates.isNotEmpty)
+          TextButton(
+            style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
+            onPressed: () =>
+                setState(() => _day = stepDay(null, -1, widget.dates.length)),
+            child: const Text('Pick a day'),
+          ),
+      ],
+    ),
+  );
+
+  /// The picked day with its figure, between steps to the days beside it.
+  Widget _stepper(BuildContext context) {
+    final count = widget.dates.length;
+    final previous = stepDay(_day, -1, count);
+    final next = stepDay(_day, 1, count);
+    final grams = widget.series[_day!];
+    return Row(
+      children: [
+        IconButton(
+          tooltip: 'Previous day',
+          icon: const Icon(Icons.chevron_left),
+          onPressed: previous == _day
+              ? null
+              : () => setState(() => _day = previous),
+        ),
+        Expanded(
+          child: Text(
+            '${intl.DateFormat.MMMEd().format(widget.dates[_day!])} · '
+            '${grams == null ? 'nothing logged' : '${grams.round()} g'}',
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+        ),
+        IconButton(
+          tooltip: 'Next day',
+          icon: const Icon(Icons.chevron_right),
+          onPressed: next == _day ? null : () => setState(() => _day = next),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final day = _day == null ? null : widget.dates[_day!];
@@ -85,12 +145,7 @@ class _MacroDaysAndFoodsState extends State<MacroDaysAndFoods> {
                 onTap: (i) => setState(() => _day = _day == i ? null : i),
               ),
               const SizedBox(height: Dimens.spacing8),
-              Text(
-                'Tap a day for its foods.',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: paletteOf(context).textMuted,
-                ),
-              ),
+              if (_day == null) _pickHint(context) else _stepper(context),
             ],
           ),
         ),

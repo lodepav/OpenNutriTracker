@@ -41,8 +41,9 @@ void showLoggedBar(
   messenger.removeCurrentSnackBar();
   messenger.showSnackBar(
     SnackBar(
-      // An action keeps a bar up until dismissed: this one goes.
-      persist: false,
+      // An action keeps a bar up until dismissed: this one goes, except
+      // under a screen reader, which needs the time to reach Undo (WCAG 2.2.1).
+      persist: MediaQuery.accessibleNavigationOf(messenger.context),
       content: Text(text),
       action: SnackBarAction(
         label: 'Undo',

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:opennutritracker/fork/display/contrast.dart';
 import 'package:opennutritracker/core/domain/entity/intake_entity.dart';
 import 'package:opennutritracker/core/domain/entity/tracked_day_entity.dart';
 import 'package:opennutritracker/core/domain/entity/user_entity.dart';
@@ -23,32 +24,57 @@ const microLabels = {
 ExplorerNutrient microNutrient(TrendMetric m) =>
     explorerNutrients.firstWhere((n) => n.label == microLabels[m]);
 
-/// The window's intakes, with what reads them as the Diary does.
+/// The window's intakes, with what reads them as the Diary does, and
+/// their summaries over the tracked days they were loaded for.
 typedef MicroData = ({
   List<IntakeEntity> intakes,
   int dayStartMinutes,
   UserEntity? user,
   List<TrackedDayEntity>? goalHistory,
+  List<NutrientSummary>? summaries,
 });
 
 /// [dates]' intakes through [load]; null without a database, in widget
-/// tests.
-Future<MicroData?> loadMicros(IntakeLoader load, List<DateTime> dates) async {
+/// tests. Given the tracked [days], their summaries are worked out here,
+/// once, rather than on each build.
+Future<MicroData?> loadMicros(
+  IntakeLoader load,
+  List<DateTime> dates, {
+  List<TrackedDayEntity>? days,
+}) async {
   if (dates.isEmpty) return null;
   try {
+    final intakes = await load(dates.first, dates.last);
+    final start = await dayStartMinutes();
+    final user = await loadUser();
+    final goalHistory = await allTrackedDays();
     return (
-      intakes: await load(dates.first, dates.last),
-      dayStartMinutes: await dayStartMinutes(),
-      user: await loadUser(),
-      goalHistory: await allTrackedDays(),
+      intakes: intakes,
+      dayStartMinutes: start,
+      user: user,
+      goalHistory: goalHistory,
+      summaries: days == null
+          ? null
+          : summarizeMicros(
+              intakes,
+              days,
+              user,
+              dayStartMinutes: start,
+              goalHistory: goalHistory,
+            ),
     );
   } catch (_) {
     return null;
   }
 }
 
+/// What works out the micro summaries; tests count its runs.
+@visibleForTesting
+var summarizeMicros = summarizeNutrients;
+
 /// [m] each day of [dates], and its summary over them: the goal or limit,
-/// and the foods it came from.
+/// and the foods it came from; [data]'s own summaries when it has them,
+/// which are over [days].
 ({DaySeries series, NutrientSummary summary}) microOf(
   MicroData data,
   List<TrackedDayEntity> days,
@@ -63,13 +89,16 @@ Future<MicroData?> loadMicros(IntakeLoader load, List<DateTime> dates) async {
       nutrient,
       dayStartMinutes: data.dayStartMinutes,
     ),
-    summary: summarizeNutrients(
-      data.intakes,
-      days,
-      data.user,
-      dayStartMinutes: data.dayStartMinutes,
-      goalHistory: data.goalHistory,
-    ).firstWhere((s) => s.nutrient == nutrient),
+    summary:
+        (data.summaries ??
+                summarizeMicros(
+                  data.intakes,
+                  days,
+                  data.user,
+                  dayStartMinutes: data.dayStartMinutes,
+                  goalHistory: data.goalHistory,
+                ))
+            .firstWhere((s) => s.nutrient == nutrient),
   );
 }
 
@@ -104,14 +133,17 @@ class MicroDetail extends StatefulWidget {
 }
 
 class _MicroDetailState extends State<MicroDetail> {
-  late Future<MicroData?> _data = loadMicros(widget.load, widget.dates);
+  late Future<MicroData?> _data = _load();
+
+  Future<MicroData?> _load() =>
+      loadMicros(widget.load, widget.dates, days: widget.state.days);
   var _allFoods = false;
 
   @override
   void didUpdateWidget(MicroDetail old) {
     super.didUpdateWidget(old);
     if (old.dates.first != widget.dates.first || old.state != widget.state) {
-      _data = loadMicros(widget.load, widget.dates);
+      _data = _load();
     }
   }
 
@@ -194,7 +226,7 @@ class _MicroDetailState extends State<MicroDetail> {
             child: DailyBarChart(
               values: series,
               dates: widget.dates,
-              color: Theme.of(context).colorScheme.primary,
+              color: chartAccent(context),
               goal: goal,
               unit: unit,
               format: nutrient.text,

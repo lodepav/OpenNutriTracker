@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'dart:math' as math;
 
-import 'dart:io';
+// [fork] S272 meal-photo-evict: no File left here
+// import 'dart:io';
+// [/fork]
 // [fork] S29 label-scan
 import 'dart:typed_data';
 // [/fork]
@@ -42,6 +44,9 @@ import 'package:opennutritracker/fork/off/off_contribution_ui.dart';
 // [/fork]
 // [fork] S132 custom-food
 import 'package:opennutritracker/fork/edit_meal/nutrition_facts.dart';
+// [/fork]
+// [fork] S272 meal-photo-evict
+import 'package:opennutritracker/fork/display/sized_file_image.dart';
 // [/fork]
 import 'package:opennutritracker/generated/l10n.dart';
 import 'package:provider/provider.dart';
@@ -1178,7 +1183,11 @@ class _EditMealScreenState extends State<EditMealScreen> {
       );
       // Bust the in-memory Image.file cache so the new picture shows up
       // immediately instead of redrawing previous bytes for this path.
-      FileImage(File(await UserImageStorage.absolutePath(relative))).evict();
+      // [fork] S272 meal-photo-evict: Home's and the Diary's thumbnails too,
+      // which are cached at their own size
+      // FileImage(File(await UserImageStorage.absolutePath(relative))).evict();
+      await evictPhoto(relative);
+      // [/fork]
       if (!mounted) return;
       setState(() {
         _localImagePath = relative;

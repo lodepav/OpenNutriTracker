@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
 import 'package:get_it/get_it.dart';
 import 'package:opennutritracker/core/domain/entity/config_entity.dart';
 import 'package:opennutritracker/core/domain/entity/intake_entity.dart';
@@ -75,6 +76,9 @@ void main() {
     expect(find.text('Recent foods'), findsOneWidget);
     expect(find.textContaining('150 g'), findsNothing);
     expect(loads, 0);
+    // Home's one card surface (AppCard), as its other sections
+    expect(find.byType(AppCard), findsOneWidget);
+    expect(find.byType(Card), findsNothing);
   });
 
   testWidgets('a tap logs the food at its amount, to the meal it names', (

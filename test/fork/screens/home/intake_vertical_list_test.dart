@@ -486,12 +486,111 @@ void main() {
       expect(selection.active, isFalse);
     });
 
+    testWidgets('TalkBack hears what a tap and a long-press on a row do, '
+        'and a tap on the header', (tester) async {
+      final semantics = tester.ensureSemantics();
+      SemanticsNode row() => tester.getSemantics(
+        find.descendant(
+          of: find.byType(IntakeCard),
+          matching: find.byType(InkWell),
+        ),
+      );
+      SemanticsNode header() => tester.getSemantics(
+        find.ancestor(
+          of: find.text('Breakfast'),
+          matching: find.byType(InkWell),
+        ),
+      );
+      await pump(tester, intakes);
+      expect(row(), isSemantics(onTapHint: 'Select', onLongPressHint: 'Edit'));
+      expect(header(), isSemantics(onTapHint: 'Select all'));
+
+      await tester.tap(find.text('Test Meal'));
+      await tester.pump();
+      expect(
+        row(),
+        isSemantics(onTapHint: 'Unselect', onLongPressHint: 'Unselect'),
+      );
+      expect(header(), isSemantics(onTapHint: 'Unselect all'));
+      semantics.dispose();
+    });
+
     testWidgets('the header of an empty section does nothing', (tester) async {
       await pump(tester, const []);
       await tester.tap(find.text('Breakfast'));
       await tester.pump();
       expect(selection.active, isFalse);
     });
+  });
+
+  testWidgets('on a wide window a dragged row is as wide as its section', (
+    tester,
+  ) async {
+    tester.view
+      ..devicePixelRatio = 1
+      ..physicalSize = const Size(1200, 800);
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      _wrapWithMaterial(
+        Center(
+          child: SizedBox(
+            width: 600,
+            child: IntakeVerticalList(
+              day: DateTime(2026, 1, 1),
+              title: 'Breakfast',
+              listIcon: Icons.bakery_dining_outlined,
+              addMealType: AddMealType.breakfastType,
+              intakeList: intakes,
+              usesImperialUnits: false,
+              onItemTappedCallback: (_, _, _) {},
+              onDeleteIntakeCallback: (_, _) {},
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    final gesture = await tester.startGesture(
+      tester.getCenter(find.text('Test Meal')),
+    );
+    await tester.pump(const Duration(seconds: 1));
+    await gesture.moveBy(const Offset(0, 20));
+    await tester.pump();
+    expect(
+      tester.getSize(find.byKey(const ValueKey('fb-test-intake'))).width,
+      600,
+    );
+    await gesture.up();
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('on Home TalkBack hears that a tap edits', (tester) async {
+    final semantics = tester.ensureSemantics();
+    await tester.pumpWidget(
+      _wrapWithMaterial(
+        IntakeVerticalList(
+          day: DateTime(2026, 1, 1),
+          title: 'Breakfast',
+          listIcon: Icons.bakery_dining_outlined,
+          addMealType: AddMealType.breakfastType,
+          intakeList: intakes,
+          usesImperialUnits: false,
+          onItemTappedCallback: (_, _, _) {},
+          onDeleteIntakeCallback: (_, _) {},
+        ),
+      ),
+    );
+    await tester.pump();
+    expect(
+      tester.getSemantics(
+        find.descendant(
+          of: find.byType(IntakeCard),
+          matching: find.byType(InkWell),
+        ),
+      ),
+      isSemantics(onTapHint: 'Edit'),
+    );
+    semantics.dispose();
   });
 
   testWidgets('without a selection, as on Home, a tap edits', (tester) async {

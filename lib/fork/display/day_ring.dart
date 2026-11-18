@@ -32,6 +32,16 @@ class DayRing extends StatelessWidget {
     );
   }
 
+  /// The ring's fill in words, for TalkBack: the share of the energy goal
+  /// eaten, past 100% when over, as the ring cannot show; none for a day
+  /// with nothing tracked.
+  static String? fillLabel(TrackedDayEntity? trackedDay) {
+    if (trackedDay == null || trackedDay.calorieGoal <= 0) return null;
+    final percent = (trackedDay.caloriesTracked / trackedDay.calorieGoal * 100)
+        .round();
+    return '$percent% of energy goal';
+  }
+
   @override
   Widget build(BuildContext context) {
     final palette = paletteOf(context);

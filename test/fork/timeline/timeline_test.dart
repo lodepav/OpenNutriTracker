@@ -8,6 +8,7 @@ import 'package:opennutritracker/core/utils/calc/day_boundary_calc.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_nutriments_entity.dart';
 import 'package:opennutritracker/fork/copy/copy_entries.dart';
+import 'package:opennutritracker/fork/layout/width_cap.dart';
 import 'package:opennutritracker/fork/timeline/timeline.dart';
 
 import '../../helpers/ux_checks.dart';
@@ -127,6 +128,61 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('timeline-add')));
     await tester.pumpAndSettle();
     expect(added, [(IntakeTypeEntity.dinner, DateTime(2026, 10, 23, 19, 30))]);
+  });
+
+  testWidgets('TalkBack hears what a tap on a row does', (tester) async {
+    final semantics = tester.ensureSemantics();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: TimelineScreen(
+          day: _day,
+          entries: TimelineEntries(
+            of: (_) async => [_eat('Toast', DateTime(2026, 10, 23, 7, 10))],
+            replace: (_) async {},
+            config: () async =>
+                const ConfigEntity(false, false, false, AppThemeEntity.system),
+          ),
+          pickTime: (_, _) async => null,
+          addAt: (_, _, _) async {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      tester.getSemantics(find.byKey(const ValueKey('timeline-Toast'))),
+      isSemantics(hasTapAction: true, onTapHint: 'Change time'),
+    );
+    semantics.dispose();
+  });
+
+  testWidgets('the rows keep the 600 dp column at 1280 dp', (tester) async {
+    tester.view.physicalSize = const Size(1280 * 2.625, 800 * 2.625);
+    tester.view.devicePixelRatio = 2.625;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: TimelineScreen(
+          day: _day,
+          entries: TimelineEntries(
+            of: (_) async => [_eat('Toast', DateTime(2026, 10, 23, 7, 10))],
+            replace: (_) async {},
+            config: () async =>
+                const ConfigEntity(false, false, false, AppThemeEntity.system),
+          ),
+          pickTime: (_, _) async => null,
+          addAt: (_, _, _) async {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final row = find.byKey(const ValueKey('timeline-Toast'));
+    expect(tester.getSize(row).width, lessThanOrEqualTo(WidthCap.maxWidth));
+    expect(tester.getCenter(row).dx, 640);
+    // the hour heading sits in the same column
+    expect(
+      tester.getTopLeft(find.text('7:00 AM')).dx,
+      tester.getTopLeft(row).dx + 16,
+    );
   });
 
   testWidgets('a row fits at 200% text', (tester) async {

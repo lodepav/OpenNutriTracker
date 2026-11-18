@@ -31,9 +31,10 @@ class _AccentTrailingSwatch extends StatelessWidget {
         ),
       );
     }
+    // With none picked, the theme's own accent: what the app shows
     final color = accentColor != null
         ? Color(accentColor!)
-        : const Color(0xFF43A047); // default green disc preview
+        : Theme.of(context).colorScheme.primary;
     return Container(
       width: 24,
       height: 24,
@@ -87,7 +88,7 @@ class _SettingsTile extends StatelessWidget {
   final Widget? trailing;
   final bool showChevron;
   final bool enabled;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   const _SettingsTile({
     required this.palette,
@@ -121,7 +122,7 @@ class _SettingsTile extends StatelessWidget {
     palette: palette,
     style: text.titleMedium?.copyWith(
       fontWeight: FontWeight.w700,
-      color: titleColor,
+      color: enabled ? titleColor : Theme.of(context).disabledColor,
     ),
   );
 
@@ -129,7 +130,9 @@ class _SettingsTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final accent = Theme.of(context).colorScheme.primary;
     final text = Theme.of(context).textTheme;
-    final tint = iconColor ?? accent;
+    // The explicit colours below would hide ListTile's own disabled look
+    final disabled = Theme.of(context).disabledColor;
+    final tint = enabled ? iconColor ?? accent : disabled;
     final tile = ListTile(
       enabled: enabled,
       leading: settingsRowsDropIcons(context)
@@ -139,7 +142,9 @@ class _SettingsTile extends StatelessWidget {
       subtitle: subtitle != null
           ? Text(
               subtitle!,
-              style: text.bodyMedium?.copyWith(color: palette.textMuted),
+              style: text.bodyMedium?.copyWith(
+                color: enabled ? palette.textMuted : disabled,
+              ),
             )
           : null,
       trailing:

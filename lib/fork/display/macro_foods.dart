@@ -191,7 +191,14 @@ class _MacroFoodsPageState extends State<MacroFoodsPage> {
                 ])
                   ButtonSegment(
                     value: m,
-                    label: Text(_capitalized(_label(context, m))),
+                    // shrunk to fit at large text, not broken inside the word
+                    label: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        _capitalized(_label(context, m)),
+                        maxLines: 1,
+                      ),
+                    ),
                   ),
               ],
               selected: {_metric},

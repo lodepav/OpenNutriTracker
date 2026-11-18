@@ -2,6 +2,9 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
+// [fork] S233 text-accent
+import 'package:opennutritracker/fork/display/contrast.dart';
+// [/fork]
 
 /// Friendly, highly readable type. Nunito carries everything — rounded enough to
 /// feel warm, calm enough to stay legible in dense lists. Heavy weights give the
@@ -90,7 +93,10 @@ ThemeData buildAppTheme(AppPalette p) {
     ),
     textButtonTheme: TextButtonThemeData(
       style: TextButton.styleFrom(
-        foregroundColor: p.accent,
+        // [fork] S233 text-accent: a pale picked accent darkened to 4.5:1 as text
+        // foregroundColor: p.accent,
+        foregroundColor: textAccentOf(p),
+        // [/fork]
         textStyle: text.labelLarge,
         shape: pill,
       ),

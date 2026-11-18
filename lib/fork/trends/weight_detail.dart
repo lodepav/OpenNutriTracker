@@ -410,33 +410,61 @@ List<Widget> weighInRows(
           final day = DateTime(e.date.year, e.date.month, e.date.day);
           final i = dates.indexOf(day);
           final trend = i < 0 ? null : stats.trend[i];
+          final date = day == today ? 'Today' : format.format(day);
+          final trendText = trend == null
+              ? null
+              : Text(
+                  'trend ${weightIn(wu, trend).toStringAsFixed(1)}',
+                  style: text.bodySmall?.copyWith(color: palette.textMuted),
+                );
+          final weight = Text(
+            '${weightIn(wu, e.weightKg).toStringAsFixed(1)} $label',
+            style: const TextStyle(fontWeight: FontWeight.w700),
+          );
           return MergeSemantics(
             child: Container(
               constraints: const BoxConstraints(minHeight: 48),
               decoration: BoxDecoration(
                 border: Border(bottom: BorderSide(color: palette.border)),
               ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      day == today ? 'Today' : format.format(day),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+              // At large text the date over its figures, as TrendRow
+              // stacks, so the date is not cut to "Mon…".
+              child: MediaQuery.textScalerOf(context).scale(10) > 15
+                  ? Padding(
+                      padding: const EdgeInsets.symmetric(
+                        vertical: Dimens.spacing8,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(date),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.baseline,
+                            textBaseline: TextBaseline.alphabetic,
+                            children: [
+                              ?trendText,
+                              if (trendText != null)
+                                const SizedBox(width: Dimens.spacing16),
+                              weight,
+                            ],
+                          ),
+                        ],
+                      ),
+                    )
+                  : Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            date,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        ?trendText,
+                        const SizedBox(width: Dimens.spacing16),
+                        weight,
+                      ],
                     ),
-                  ),
-                  if (trend != null)
-                    Text(
-                      'trend ${weightIn(wu, trend).toStringAsFixed(1)}',
-                      style: text.bodySmall?.copyWith(color: palette.textMuted),
-                    ),
-                  const SizedBox(width: Dimens.spacing16),
-                  Text(
-                    '${weightIn(wu, e.weightKg).toStringAsFixed(1)} $label',
-                    style: const TextStyle(fontWeight: FontWeight.w700),
-                  ),
-                ],
-              ),
             ),
           );
         },

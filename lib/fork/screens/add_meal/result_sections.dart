@@ -5,6 +5,7 @@ import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dart';
 import 'package:opennutritracker/features/add_meal/presentation/add_meal_type.dart';
 import 'package:opennutritracker/fork/food/result_groups.dart';
+import 'package:opennutritracker/fork/layout/width_cap.dart';
 import 'package:opennutritracker/fork/recents/search_sections.dart';
 import 'package:opennutritracker/fork/screens/add_meal/meal_item_card.dart';
 import 'package:opennutritracker/fork/units/energy_text.dart';
@@ -117,7 +118,7 @@ class _ResultSectionsState extends State<ResultSections> {
     ];
     return ListView.builder(
       itemCount: rows.length,
-      itemBuilder: (context, index) => rows[index],
+      itemBuilder: (context, index) => WidthCap(child: rows[index]),
     );
   }
 

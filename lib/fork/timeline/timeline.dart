@@ -13,6 +13,8 @@ import 'package:opennutritracker/core/utils/tracked_day_lock.dart';
 import 'package:opennutritracker/features/add_meal/presentation/add_meal_screen.dart';
 import 'package:opennutritracker/features/add_meal/presentation/add_meal_type.dart';
 import 'package:opennutritracker/fork/copy/copy_entries.dart';
+import 'package:opennutritracker/fork/display/contrast.dart';
+import 'package:opennutritracker/fork/layout/width_cap.dart';
 import 'package:opennutritracker/fork/basket/basket_ui.dart'
     show refreshAfterLogging;
 import 'package:opennutritracker/fork/units/amount_text.dart';
@@ -240,14 +242,16 @@ class _TimelineScreenState extends State<TimelineScreen> {
           padding: const EdgeInsets.only(bottom: 96),
           children: [
             for (final (hour, group) in hours) ...[
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
-                child: Semantics(
-                  header: true,
-                  child: Text(
-                    clockText(context, hour),
-                    style: theme.textTheme.titleSmall?.copyWith(
-                      color: theme.colorScheme.primary,
+              WidthCap(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+                  child: Semantics(
+                    header: true,
+                    child: Text(
+                      clockText(context, hour),
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        color: textAccent(context),
+                      ),
                     ),
                   ),
                 ),
@@ -255,66 +259,74 @@ class _TimelineScreenState extends State<TimelineScreen> {
               for (final (intake, total) in group)
                 // A row, not a ListTile: a tile caps its trailing column's
                 // height, and at 200% text the total overflowed it.
-                MergeSemantics(
-                  child: InkWell(
-                    key: ValueKey('timeline-${intake.id}'),
-                    onTap: () => _move(intake),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
-                      ),
-                      child: Row(
-                        children: [
-                          Text(
-                            hasNoTime(intake)
-                                ? '–'
-                                : clockText(context, intake.dateTime),
-                            style: theme.textTheme.labelLarge,
+                WidthCap(
+                  child: MergeSemantics(
+                    child: Semantics(
+                      onTapHint: 'Change time',
+                      child: InkWell(
+                        key: ValueKey('timeline-${intake.id}'),
+                        onTap: () => _move(intake),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
                           ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  intake.meal.name ?? '?',
-                                  style: theme.textTheme.bodyLarge,
+                          child: Row(
+                            children: [
+                              Text(
+                                hasNoTime(intake)
+                                    ? '–'
+                                    : clockText(context, intake.dateTime),
+                                style: theme.textTheme.labelLarge,
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      intake.meal.name ?? '?',
+                                      style: theme.textTheme.bodyLarge,
+                                    ),
+                                    Text(
+                                      '${amountText(intake, _imperial)} · '
+                                      '${energyText(context, intake.totalKcal)}',
+                                      style: theme.textTheme.bodyMedium
+                                          ?.copyWith(
+                                            color: theme
+                                                .colorScheme
+                                                .onSurfaceVariant,
+                                          ),
+                                    ),
+                                    if (large)
+                                      Text(
+                                        '${energyText(context, total)} so far',
+                                        style: theme.textTheme.bodySmall,
+                                      ),
+                                  ],
                                 ),
-                                Text(
-                                  '${amountText(intake, _imperial)} · '
-                                  '${energyText(context, intake.totalKcal)}',
-                                  style: theme.textTheme.bodyMedium?.copyWith(
-                                    color: theme.colorScheme.onSurfaceVariant,
-                                  ),
+                              ),
+                              if (!large) ...[
+                                const SizedBox(width: 16),
+                                // The day's total up to this entry, said so on
+                                // screen.
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    Text(
+                                      energyText(context, total),
+                                      style: theme.textTheme.bodySmall,
+                                    ),
+                                    Text(
+                                      'so far',
+                                      style: theme.textTheme.labelSmall,
+                                    ),
+                                  ],
                                 ),
-                                if (large)
-                                  Text(
-                                    '${energyText(context, total)} so far',
-                                    style: theme.textTheme.bodySmall,
-                                  ),
                               ],
-                            ),
+                            ],
                           ),
-                          if (!large) ...[
-                            const SizedBox(width: 16),
-                            // The day's total up to this entry, said so on
-                            // screen.
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: [
-                                Text(
-                                  energyText(context, total),
-                                  style: theme.textTheme.bodySmall,
-                                ),
-                                Text(
-                                  'so far',
-                                  style: theme.textTheme.labelSmall,
-                                ),
-                              ],
-                            ),
-                          ],
-                        ],
+                        ),
                       ),
                     ),
                   ),

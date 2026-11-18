@@ -29,12 +29,14 @@ extension _FoodSettings on _SettingsScreenState {
             palette: palette,
             icon: Icons.cached_rounded,
             title: S.of(context).clearOffCacheLabel,
-            subtitle: S
-                .of(context)
-                .clearOffCacheSubtitle(
-                  state.offCacheCount,
-                  _formatBytes(state.offCacheSizeBytes),
-                ),
+            subtitle: state.offCacheCount == 0
+                ? 'Nothing cached'
+                : S
+                      .of(context)
+                      .clearOffCacheSubtitle(
+                        state.offCacheCount,
+                        _formatBytes(state.offCacheSizeBytes),
+                      ),
             enabled: state.offCacheCount > 0,
             onTap: () => _confirmClearOffCache(context),
           ),

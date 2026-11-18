@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:opennutritracker/fork/layout/width_cap.dart';
 import 'package:opennutritracker/core/utils/calc/unit_calc.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -131,12 +132,19 @@ class TrendDetailPage extends StatelessWidget {
             future: future,
             builder: (context, snapshot) => ListView(
               padding: EdgeInsets.fromLTRB(
-                Dimens.spacing16,
+                Dimens.spacing16 + MediaQuery.paddingOf(context).left,
                 Dimens.spacing8,
-                Dimens.spacing16,
+                Dimens.spacing16 + MediaQuery.paddingOf(context).right,
                 Dimens.spacing32 + MediaQuery.paddingOf(context).bottom,
               ),
-              children: _body(context, state, snapshot.data ?? const []),
+              children: [
+                for (final child in _body(
+                  context,
+                  state,
+                  snapshot.data ?? const [],
+                ))
+                  WidthCap(child: child),
+              ],
             ),
           ),
         );

@@ -145,6 +145,8 @@ extension _AppearanceSettings on _SettingsScreenState {
       context: context,
       builder: (context) {
         return AlertDialog(
+          // three options at 2x text outgrow a landscape phone
+          scrollable: true,
           contentPadding: EdgeInsets.zero,
           title: Text(S.of(context).settingsThemeLabel),
           content: StatefulBuilder(

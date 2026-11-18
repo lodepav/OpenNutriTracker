@@ -2,6 +2,9 @@ import 'dart:math' as math;
 
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:opennutritracker/fork/layout/width_cap.dart';
+import 'package:opennutritracker/fork/display/contrast.dart';
+import 'package:opennutritracker/fork/display/motion.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:opennutritracker/core/domain/entity/tracked_day_entity.dart';
@@ -41,72 +44,77 @@ class CaloriesDetailPage extends StatelessWidget {
           return const Center(child: CircularProgressIndicator());
         }
         final dates = windowDates(state.logicalToday, state.windowDays);
+        final insets = MediaQuery.paddingOf(context);
         return ListView(
           padding: EdgeInsets.fromLTRB(
-            Dimens.spacing16,
+            Dimens.spacing16 + insets.left,
             Dimens.spacing8,
-            Dimens.spacing16,
-            Dimens.spacing32 + MediaQuery.paddingOf(context).bottom,
+            Dimens.spacing16 + insets.right,
+            Dimens.spacing32 + insets.bottom,
           ),
           children: [
-            ..._header(context, state, dates),
-            const SizedBox(height: Dimens.spacing16),
-            RangePills(
-              rangeDays: state.rangeDays,
-              onChanged: (d) =>
-                  context.read<TrendsBloc>().add(LoadTrendsEvent(rangeDays: d)),
-            ),
-            const SizedBox(height: Dimens.spacing16),
-            MacroEnergyChart(state: state, dates: dates),
-            const SizedBox(height: Dimens.spacing16),
-            PeriodTopFoods(
-              key: ValueKey((dates.firstOrNull, dates.length)),
-              metric: FoodsMetric.energy,
-              dates: dates,
-              color: Theme.of(context).colorScheme.primary,
-              load: deps.loadIntakes,
-            ),
-            if (dayOutcomes(state.days, dates, today: state.logicalToday)
-                case final o when o.logged > 0) ...[
-              trendSection(context, 'How the days went'),
-              DaysWentCard(outcomes: o, today: state.logicalToday),
-            ],
-            WeekdayCard(dayStartMinutes: state.dayStartMinutes),
-            ValueListenableBuilder(
-              valueListenable: deps.expenditure,
-              builder: (context, future, _) => FutureBuilder(
-                future: future,
-                builder: (context, snapshot) {
-                  final history = snapshot.data ?? const [];
-                  final split = weekendSplit(
-                    state.days,
-                    dates,
-                    balance: {
-                      for (final (i, b) in balanceSeries(
-                        history,
-                        dates,
-                      ).indexed)
-                        dates[i]: ?b,
-                    },
-                  );
-                  if (split == null) return const SizedBox.shrink();
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      trendSection(
-                        context,
-                        'Weekdays and weekends, last ${days(dates.length)}',
-                      ),
-                      WeekendCard(split: split, rangeDays: dates.length),
-                    ],
-                  );
-                },
+            for (final child in [
+              ..._header(context, state, dates),
+              const SizedBox(height: Dimens.spacing16),
+              RangePills(
+                rangeDays: state.rangeDays,
+                onChanged: (d) => context.read<TrendsBloc>().add(
+                  LoadTrendsEvent(rangeDays: d),
+                ),
               ),
-            ),
-            if (macroShares(state.days, dates) case final shares?) ...[
-              trendSection(context, 'Where the energy came from'),
-              _Shares(shares: shares),
-            ],
+              const SizedBox(height: Dimens.spacing16),
+              MacroEnergyChart(state: state, dates: dates),
+              const SizedBox(height: Dimens.spacing16),
+              PeriodTopFoods(
+                key: ValueKey((dates.firstOrNull, dates.length)),
+                metric: FoodsMetric.energy,
+                dates: dates,
+                color: chartAccent(context),
+                load: deps.loadIntakes,
+              ),
+              if (dayOutcomes(state.days, dates, today: state.logicalToday)
+                  case final o when o.logged > 0) ...[
+                trendSection(context, 'How the days went'),
+                DaysWentCard(outcomes: o, today: state.logicalToday),
+              ],
+              WeekdayCard(dayStartMinutes: state.dayStartMinutes),
+              ValueListenableBuilder(
+                valueListenable: deps.expenditure,
+                builder: (context, future, _) => FutureBuilder(
+                  future: future,
+                  builder: (context, snapshot) {
+                    final history = snapshot.data ?? const [];
+                    final split = weekendSplit(
+                      state.days,
+                      dates,
+                      balance: {
+                        for (final (i, b) in balanceSeries(
+                          history,
+                          dates,
+                        ).indexed)
+                          dates[i]: ?b,
+                      },
+                    );
+                    if (split == null) return const SizedBox.shrink();
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        trendSection(
+                          context,
+                          'Weekdays and weekends, last ${days(dates.length)}',
+                        ),
+                        WeekendCard(split: split, rangeDays: dates.length),
+                      ],
+                    );
+                  },
+                ),
+              ),
+              if (macroShares(state.days, dates) case final shares?) ...[
+                trendSection(context, 'Where the energy came from'),
+                _Shares(shares: shares),
+              ],
+            ])
+              WidthCap(child: child),
           ],
         );
       },
@@ -224,6 +232,10 @@ class MacroEnergyChart extends StatelessWidget {
                 height: 200,
                 child: LayoutBuilder(
                   builder: (context, box) => BarChart(
+                    duration: motionDuration(
+                      context,
+                      const Duration(milliseconds: 150),
+                    ),
                     BarChartData(
                       minY: 0,
                       maxY: top * 1.12,
@@ -480,7 +492,7 @@ class _WeekdayCardState extends State<WeekdayCard> {
                                     // Not the macro colours of the chart
                                     // above: the standout day in the accent.
                                     color: standout?.weekday == w
-                                        ? Theme.of(context).colorScheme.primary
+                                        ? chartAccent(context)
                                         : palette.textMuted,
                                     borderRadius: const BorderRadius.vertical(
                                       top: Radius.circular(5),

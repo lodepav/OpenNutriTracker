@@ -1,4 +1,6 @@
-import 'dart:io';
+// [fork] S273 recipe-photo-evict: no File left here
+// import 'dart:io';
+// [/fork]
 
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
@@ -24,6 +26,9 @@ import 'package:opennutritracker/generated/l10n.dart';
 // [fork] S127 recipe-builder
 import 'package:opennutritracker/fork/recipe/recipe_builder.dart';
 import 'package:opennutritracker/fork/widget/toolbar_height.dart';
+// [/fork]
+// [fork] S273 recipe-photo-evict
+import 'package:opennutritracker/fork/display/sized_file_image.dart';
 // [/fork]
 
 class RecipeBuilderArguments {
@@ -487,8 +492,12 @@ class _RecipeBuilderScreenState extends State<RecipeBuilderScreen> {
       );
       // Bust the in-memory Image.file cache so the new picture shows up
       // immediately instead of redrawing the previous bytes for this path.
-      FileImage(File(await UserImageStorage.absolutePath(relative)))
-          .evict();
+      // [fork] S273 recipe-photo-evict: Home's and the Diary's thumbnails
+      // too, which are cached at their own size
+      // FileImage(File(await UserImageStorage.absolutePath(relative)))
+      //     .evict();
+      await evictPhoto(relative);
+      // [/fork]
       _bloc.add(UpdateImagePathEvent(relative));
     } catch (_) {
       if (!context.mounted) return;

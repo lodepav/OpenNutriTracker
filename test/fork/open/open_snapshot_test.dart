@@ -107,7 +107,8 @@ void main() {
       await disposeOpenFixture(normal);
       await dir.delete(recursive: true);
     }
-  });
+    // Two fixtures: past 30 s on a loaded machine, and a timed-out body runs on into the next setUpAll.
+  }, timeout: const Timeout(Duration(minutes: 3)));
 
   group('open snapshot', () {
     late Directory dir;

@@ -253,7 +253,9 @@ class UpdateStatus extends StatefulWidget {
   /// The version running, as Settings already has it.
   final String version;
   final Updater? updater;
-  final Widget Function(String subtitle, VoidCallback onTap) builder;
+
+  /// [onTap] is null while the check runs: there is nothing to do yet.
+  final Widget Function(String subtitle, VoidCallback? onTap) builder;
 
   const UpdateStatus({
     super.key,
@@ -287,7 +289,7 @@ class _UpdateStatusState extends State<UpdateStatus> {
         );
       }
       if (info == null) {
-        return widget.builder('$running. Checking for updates…', () {});
+        return widget.builder('$running. Checking for updates…', null);
       }
       if (!info.checked) {
         return widget.builder(

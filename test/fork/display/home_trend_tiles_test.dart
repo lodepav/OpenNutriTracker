@@ -3,6 +3,8 @@ import 'package:opennutritracker/fork/body/waist_ratio.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:opennutritracker/core/data/data_source/intake_data_source.dart';
+import 'package:opennutritracker/core/data/dbo/intake_dbo.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:opennutritracker/core/domain/entity/body_weight_unit_entity.dart';
@@ -16,13 +18,24 @@ import 'package:opennutritracker/fork/body/side_compare.dart';
 import 'package:opennutritracker/fork/display/home_tiles.dart';
 import 'package:opennutritracker/fork/layout/home_layout.dart';
 import 'package:opennutritracker/fork/layout/layout_store.dart';
+import 'package:opennutritracker/fork/report/nutrient_explorer.dart';
+import 'package:opennutritracker/fork/trends/nutrient_trends.dart';
 import 'package:opennutritracker/fork/trends/trends_overview.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 import 'package:provider/provider.dart';
 
+import '../../fixture/intake_entity_fixtures.dart';
 import '../trends/trends_harness.dart';
 
 // Trends' tiles Home can add, off until switched on.
+
+/// Today's oats, as the database gives them.
+class _Intakes extends Fake implements IntakeDataSource {
+  @override
+  Future<List<IntakeDBO>> getAllIntakes() async => [
+    IntakeDBO.fromIntakeEntity(intakeOf('Oats', 100, carbs100: 60)),
+  ];
+}
 
 void main() {
   final layout = LayoutStore.current(homeTilesKey);
@@ -31,6 +44,7 @@ void main() {
     layout.value = (order: const [], hidden: const {});
     TrendsOverview.loadMeasurements = () async => const [];
     loadBodyFrame = () async => null;
+    summarizeMicros = summarizeNutrients;
     await locator.reset();
   });
 
@@ -69,6 +83,21 @@ void main() {
     await tester.pumpAndSettle();
     return bloc;
   }
+
+  testWidgets('a rebuild of Home asks Trends nothing; only a Home load does', (
+    tester,
+  ) async {
+    layout.value = (order: ['goal'], hidden: const {});
+    final homeLoads = StreamController<Object?>();
+    addTearDown(homeLoads.close);
+    final bloc = await pump(tester, homeLoads: homeLoads.stream);
+    tester.element(find.byType(HomeTiles)).markNeedsBuild();
+    await tester.pump();
+    expect(bloc.events, isNot(contains(isA<RefreshTrendsEvent>())));
+    homeLoads.add(null);
+    await tester.pump();
+    expect(bloc.events, contains(isA<RefreshTrendsEvent>()));
+  });
 
   testWidgets('none of them until added', (tester) async {
     final bloc = await pump(tester);
@@ -196,5 +225,38 @@ void main() {
     await tester.pump();
     await tester.pump();
     expect(goal, findsOne);
+  });
+
+  testWidgets('a micro tile\'s summary is worked out once a load, not each '
+      'build', (tester) async {
+    var summaries = 0;
+    summarizeMicros =
+        (intakes, days, user, {dayStartMinutes = 0, goalHistory}) {
+          summaries++;
+          return summarizeNutrients(
+            intakes,
+            days,
+            user,
+            dayStartMinutes: dayStartMinutes,
+            goalHistory: goalHistory,
+          );
+        };
+    locator.registerSingleton<IntakeDataSource>(_Intakes());
+    layout.value = (
+      order: ['weight', 'expenditure', 'water', 'fasting', 'fibre'],
+      hidden: const {},
+    );
+    await pump(tester);
+    expect(
+      find.byWidgetPredicate(
+        (w) => w is HomeTile && w.identifier == 'home-trends-tile-fibre',
+      ),
+      findsOne,
+    );
+    final first = summaries;
+    expect(first, greaterThan(0));
+    tester.element(find.byType(HomeTiles)).markNeedsBuild();
+    await tester.pumpAndSettle();
+    expect(summaries, first);
   });
 }

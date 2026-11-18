@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:opennutritracker/fork/layout/width_cap.dart';
+import 'package:opennutritracker/fork/display/contrast.dart';
 import 'package:intl/intl.dart' as intl;
 import 'package:opennutritracker/core/utils/calc/unit_calc.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
@@ -172,7 +174,7 @@ class _TrendsOverviewState extends State<TrendsOverview> {
     final key = (dates.first, widget.state);
     if (_microsFor != key) {
       _microsFor = key;
-      _micros = loadMicros(_deps.loadIntakes, dates);
+      _micros = loadMicros(_deps.loadIntakes, dates, days: widget.state.days);
     }
     return _micros!;
   }
@@ -294,111 +296,114 @@ class _TrendsOverviewState extends State<TrendsOverview> {
                       // cards scrolled past, and rebuilt they load from
                       // nothing to their height above the screen, which
                       // fought the scroll on the way back up.
+                      final insets = MediaQuery.paddingOf(context);
                       return SingleChildScrollView(
-                        padding: const EdgeInsets.fromLTRB(
-                          Dimens.spacing12,
+                        padding: EdgeInsets.fromLTRB(
+                          Dimens.spacing12 + insets.left,
                           Dimens.spacing8,
-                          Dimens.spacing12,
+                          Dimens.spacing12 + insets.right,
                           Dimens.spacing32,
                         ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            FutureBuilder(
-                              future: _allDays,
-                              builder: (context, all) =>
-                                  // Not the range's streak while loading.
-                                  !all.hasData &&
-                                      all.connectionState !=
-                                          ConnectionState.done
-                                  ? const SizedBox.shrink()
-                                  : _Streak(
-                                      days: all.data ?? state.days,
-                                      today: state.logicalToday,
-                                    ),
-                            ),
-                            const SizedBox(height: Dimens.spacing8),
-                            RangePills(
-                              rangeDays: state.rangeDays,
-                              onChanged: (d) => context.read<TrendsBloc>().add(
-                                LoadTrendsEvent(rangeDays: d),
+                        child: WidthCap(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              FutureBuilder(
+                                future: _allDays,
+                                builder: (context, all) =>
+                                    // Not the range's streak while loading.
+                                    !all.hasData &&
+                                        all.connectionState !=
+                                            ConnectionState.done
+                                    ? const SizedBox.shrink()
+                                    : _Streak(
+                                        days: all.data ?? state.days,
+                                        today: state.logicalToday,
+                                      ),
                               ),
-                            ),
-                            const SizedBox(height: Dimens.spacing8),
-                            Semantics(
-                              label:
-                                  '$range${logged == 0 ? '' : ', $logged ${logged == 1 ? 'day' : 'days'} logged'}',
-                              excludeSemantics: true,
-                              child: Text(
-                                '$range${logged == 0 ? '' : ' · $logged\u00A0logged'}',
-                                key: const ValueKey('trends-span'),
-                                textAlign: TextAlign.center,
-                                style: Theme.of(context).textTheme.bodySmall
-                                    ?.copyWith(
-                                      color: paletteOf(context).textMuted,
-                                    ),
+                              const SizedBox(height: Dimens.spacing8),
+                              RangePills(
+                                rangeDays: state.rangeDays,
+                                onChanged: (d) => context
+                                    .read<TrendsBloc>()
+                                    .add(LoadTrendsEvent(rangeDays: d)),
                               ),
-                            ),
-                            const SizedBox(height: Dimens.spacing8),
-                            for (var i = 0; i < tiles.length; i += perRow)
-                              Padding(
-                                padding: const EdgeInsets.only(
-                                  bottom: Dimens.spacing8,
+                              const SizedBox(height: Dimens.spacing8),
+                              Semantics(
+                                label:
+                                    '$range${logged == 0 ? '' : ', $logged ${logged == 1 ? 'day' : 'days'} logged'}',
+                                excludeSemantics: true,
+                                child: Text(
+                                  '$range${logged == 0 ? '' : ' · $logged\u00A0logged'}',
+                                  key: const ValueKey('trends-span'),
+                                  textAlign: TextAlign.center,
+                                  style: Theme.of(context).textTheme.bodySmall
+                                      ?.copyWith(
+                                        color: paletteOf(context).textMuted,
+                                      ),
                                 ),
-                                // The tiles are alike, so a row's two are one height;
-                                // AutoSizeText measures, so no IntrinsicHeight here.
-                                child: perRow == 1
-                                    ? tiles[i]
-                                    : Row(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Expanded(child: tiles[i]),
-                                          const SizedBox(
-                                            width: Dimens.spacing8,
+                              ),
+                              const SizedBox(height: Dimens.spacing8),
+                              for (var i = 0; i < tiles.length; i += perRow)
+                                Padding(
+                                  padding: const EdgeInsets.only(
+                                    bottom: Dimens.spacing8,
+                                  ),
+                                  // The tiles are alike, so a row's two are one height;
+                                  // AutoSizeText measures, so no IntrinsicHeight here.
+                                  child: perRow == 1
+                                      ? tiles[i]
+                                      : Row(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Expanded(child: tiles[i]),
+                                            const SizedBox(
+                                              width: Dimens.spacing8,
+                                            ),
+                                            Expanded(
+                                              child: i + 1 < tiles.length
+                                                  ? tiles[i + 1]
+                                                  : const SizedBox.shrink(),
+                                            ),
+                                          ],
+                                        ),
+                                ),
+                              Center(
+                                child: TextButton.icon(
+                                  key: const ValueKey('trends-arrange'),
+                                  icon: const Icon(Icons.tune_rounded),
+                                  label: const Text('Arrange Trends'),
+                                  onPressed: () => Navigator.push(
+                                    context,
+                                    MaterialPageRoute<void>(
+                                      builder: (_) => ArrangeScreen(
+                                        title: 'Arrange Trends',
+                                        lists: [
+                                          ArrangeList(
+                                            title: 'Tiles',
+                                            store: TrendsTilesStore(),
+                                            names: {
+                                              for (final MapEntry(:key, :value)
+                                                  in all.entries)
+                                                key: value.label,
+                                            },
+                                            optional: optional,
                                           ),
-                                          Expanded(
-                                            child: i + 1 < tiles.length
-                                                ? tiles[i + 1]
-                                                : const SizedBox.shrink(),
+                                          ArrangeList(
+                                            title: 'Cards',
+                                            store: TrendsLayoutStore(),
+                                            names: trendCards,
                                           ),
                                         ],
                                       ),
-                              ),
-                            Center(
-                              child: TextButton.icon(
-                                key: const ValueKey('trends-arrange'),
-                                icon: const Icon(Icons.tune_rounded),
-                                label: const Text('Arrange Trends'),
-                                onPressed: () => Navigator.push(
-                                  context,
-                                  MaterialPageRoute<void>(
-                                    builder: (_) => ArrangeScreen(
-                                      title: 'Arrange Trends',
-                                      lists: [
-                                        ArrangeList(
-                                          title: 'Tiles',
-                                          store: TrendsTilesStore(),
-                                          names: {
-                                            for (final MapEntry(:key, :value)
-                                                in all.entries)
-                                              key: value.label,
-                                          },
-                                          optional: optional,
-                                        ),
-                                        ArrangeList(
-                                          title: 'Cards',
-                                          store: TrendsLayoutStore(),
-                                          names: trendCards,
-                                        ),
-                                      ],
                                     ),
                                   ),
                                 ),
                               ),
-                            ),
-                            ...arrangeTrendCards(widget.cards),
-                          ],
+                              ...arrangeTrendCards(widget.cards),
+                            ],
+                          ),
                         ),
                       );
                     },
@@ -513,7 +518,7 @@ List<TrendTile> trendTiles(
     final micro = micros == null ? null : microOf(micros, state.days, dates, m);
     final mean = micro == null ? null : microMean(micro);
     final goal = micro?.summary.goal;
-    final color = Theme.of(context).colorScheme.primary;
+    final color = chartAccent(context);
     // As shown: "2300 / 2300 mg" is not over.
     final over =
         nutrient.isLimit &&
@@ -562,7 +567,7 @@ List<TrendTile> trendTiles(
           ? unit
           : '/ ${energyValue(context, energyGoal)} $unit',
       spark: energy,
-      sparkColor: palette.accent,
+      sparkColor: chartAccent(context),
       spoken: averageSpoken(
         TrendMetric.calories,
         energyMean == null ? null : '${energyValue(context, energyMean)}',
@@ -580,7 +585,7 @@ List<TrendTile> trendTiles(
           // "a week" held to its unit, as on Home.
           : '$wLabel · ${weeklyRateText(weight.perWeekKg!, wu).replaceAll(' ', '\u00A0')}',
       spark: weight.trend,
-      sparkColor: Theme.of(context).colorScheme.primary,
+      sparkColor: chartAccent(context),
       bars: false,
       spoken: weight.nowKg == null
           ? 'Weight trend, no weigh-ins'
@@ -597,7 +602,7 @@ List<TrendTile> trendTiles(
       value: spentNow == null ? '–' : '${energyValue(context, spentNow)}',
       suffix: spentNow == null ? 'after a weigh-in' : '$unit\u00A0a\u00A0day',
       spark: expenditureSeries(history, dates, settledOnly: true),
-      sparkColor: Theme.of(context).colorScheme.primary,
+      sparkColor: chartAccent(context),
       bars: false,
       spoken: spentNow == null
           ? 'Expenditure, after a weigh-in'
@@ -612,7 +617,7 @@ List<TrendTile> trendTiles(
       spark: balanceBars.values,
       // As the page: a surplus in fat's colour, a deficit in the accent.
       sparkColor: palette.fat,
-      sparkNegativeColor: palette.accent,
+      sparkNegativeColor: chartAccent(context),
       note: balanceFrom,
       noteMuted: true,
       spoken:
@@ -786,7 +791,7 @@ class _GoalBar extends StatelessWidget {
           child: LinearProgressIndicator(
             value: progress.fraction,
             minHeight: 8,
-            color: Theme.of(context).colorScheme.primary,
+            color: chartAccent(context),
             backgroundColor: palette.surfaceMuted,
           ),
         ),
@@ -822,7 +827,7 @@ class _Streak extends StatelessWidget {
           children: [
             Icon(
               Icons.local_fire_department_rounded,
-              color: scheme.primary,
+              color: textAccent(context),
               size: 20,
             ),
             const SizedBox(width: Dimens.spacing4),

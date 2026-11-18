@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:opennutritracker/core/domain/entity/intake_entity.dart';
@@ -284,6 +285,9 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Planned · 500 kcal'), findsOneWidget);
     expect(find.textContaining('Lunch · 150 g · 300 kcal'), findsOneWidget);
+    // Home's one card surface (AppCard), as its other sections
+    expect(find.byType(AppCard), findsOneWidget);
+    expect(find.byType(Card), findsNothing);
 
     await tester.tap(find.byKey(const ValueKey('plan-drop-b')));
     await tester.pumpAndSettle();

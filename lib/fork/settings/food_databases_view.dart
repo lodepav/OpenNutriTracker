@@ -4,6 +4,7 @@ import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/core/utils/off_const.dart';
 import 'package:opennutritracker/features/add_meal/data/dto/sp/sp_const.dart';
+import 'package:opennutritracker/fork/layout/width_cap.dart';
 
 /// A database as the list names it: a short tag, a name, what it holds.
 typedef FoodDatabase = ({String tag, String name, String holds});
@@ -130,7 +131,7 @@ class FoodDatabasesView extends StatelessWidget {
               TextButton(onPressed: () => onOpenSite(url), child: Text(name)),
           ],
         ),
-      ],
+      ].map<Widget>((c) => WidthCap(child: c)).toList(),
     );
   }
 }

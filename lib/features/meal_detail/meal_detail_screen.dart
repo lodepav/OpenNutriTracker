@@ -28,6 +28,8 @@ import 'package:opennutritracker/fork/amounts/remembered_amounts.dart';
 import 'package:opennutritracker/fork/amounts/own_portions.dart';
 // [/fork]
 // [fork] S125 food-page
+import 'package:opennutritracker/fork/display/motion.dart';
+import 'package:opennutritracker/fork/layout/width_cap.dart';
 import 'package:opennutritracker/fork/meal_detail/food_page.dart';
 // [/fork]
 // [fork] S221 food-nutrients-table
@@ -167,11 +169,14 @@ class _MealDetailScreenState extends State<MealDetailScreen> {
   late final ValueNotifier<IntakeTypeEntity> _forkType = ValueNotifier(
     intakeTypeEntity,
   );
+  // the pinned sheet's height, so the page's end scrolls clear of it
+  final _forkSheetHeight = ValueNotifier<double>(200);
   // [/fork]
 
   @override
   void dispose() {
     _forkType.dispose(); // [fork] S125 food-page
+    _forkSheetHeight.dispose(); // [fork] S125 food-page
     _scrollController.removeListener(_handleScroll);
     _scrollController.dispose();
     quantityTextController.dispose();
@@ -395,7 +400,9 @@ class _MealDetailScreenState extends State<MealDetailScreen> {
           bloc: _mealDetailBloc,
           selector: (state) => state.selectedUnit,
           builder: (context, selectedUnit) {
-            return MealDetailBottomSheet(
+            return ReportHeight( // [fork] S125 food-page
+              onHeight: (height) => _forkSheetHeight.value = height,
+              child: MealDetailBottomSheet( // [fork] S125
               product: meal,
               day: _day,
               intakeTypeEntity: intakeTypeEntity,
@@ -415,6 +422,7 @@ class _MealDetailScreenState extends State<MealDetailScreen> {
               forkPart: _forkPinnedPart(context),
               forkType: _forkType,
               // [/fork]
+            ), // [fork] S125
             );
           },
           ),
@@ -525,7 +533,8 @@ class _MealDetailScreenState extends State<MealDetailScreen> {
         ),
         SliverList(
           delegate: SliverChildListDelegate([
-            Padding(
+            // one phone column on a wide window
+            WidthCap(child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -612,10 +621,17 @@ class _MealDetailScreenState extends State<MealDetailScreen> {
                           children: [SizedBox(height: 32), OffDisclaimer()],
                         )
                       : const SizedBox(),
-                  const SizedBox(height: 200.0), // height added to scroll
+                  // [fork] S125 food-page: the pinned sheet's height, which
+                  // 200 fell short of
+                  ValueListenableBuilder<double>(
+                    valueListenable: _forkSheetHeight,
+                    builder: (context, height, _) =>
+                        SizedBox(height: height + Dimens.spacing16),
+                  ),
+                  // [/fork]
                 ],
               ),
-            ),
+            )), // [fork] S125 food-page
           ]),
         ),
       ],
@@ -648,17 +664,21 @@ class _MealDetailScreenState extends State<MealDetailScreen> {
     // [fork] S125 food-page: the amount is on the page above 1.5x text, and
     // scrolling would take it away under the finger
     if (foodPageInline(context)) return;
-    // [/fork]
-    if (_scrollController.hasClients) {
+    // back to the top, where the ring and the day after adding now are; at
+    // once while Remove animations is on
+    if (!_scrollController.hasClients || _scrollController.offset == 0) {
+      return;
+    }
+    if (animationsOff(context)) {
+      _scrollController.jumpTo(0);
+    } else {
       _scrollController.animateTo(
-        // [fork] S125 food-page: back to the top, where the ring and the
-        // day after adding now are
         0,
-        // [/fork]
         duration: const Duration(seconds: 1),
         curve: Curves.easeInOut,
       );
     }
+    // [/fork]
   }
 }
 

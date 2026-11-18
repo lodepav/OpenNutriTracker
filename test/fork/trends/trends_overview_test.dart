@@ -23,6 +23,7 @@ import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
 import 'package:opennutritracker/fork/body/measurement_store.dart';
 import 'package:opennutritracker/fork/body/side_compare.dart';
 import 'package:opennutritracker/fork/body/waist_ratio.dart';
+import 'package:opennutritracker/fork/display/contrast.dart';
 import 'package:opennutritracker/fork/display/display_prefs.dart';
 import 'package:opennutritracker/fork/goal/goal_progress.dart';
 import 'package:opennutritracker/fork/phases/phases.dart';
@@ -583,7 +584,7 @@ void main() {
 
     expect(find.text('Trend weight'), findsOneWidget);
     expect(find.textContaining('Trend: '), findsOneWidget);
-    expect(find.byTooltip('Add entry'), findsOneWidget);
+    expect(find.byTooltip('Add weigh-in'), findsOneWidget);
     await tester.scrollUntilVisible(
       find.text('79.4 kg'),
       200,
@@ -893,6 +894,10 @@ void main() {
   });
 
   testWidgets('expenditure and balance from the estimate', (tester) async {
+    // Tall enough for the breakdown and its link on one screen, now the
+    // page's column is capped at 600 dp wide (WidthCap).
+    tester.view.physicalSize = const Size(2400, 3600);
+    addTearDown(tester.view.reset);
     final history = [
       for (var i = -6; i <= 0; i++)
         ExpenditureDay(
@@ -941,7 +946,7 @@ void main() {
     final balanceSpark = spark('balance');
     final balancePage = tester.element(find.byType(TrendsOverview));
     expect(balanceSpark.color, paletteOf(balancePage).fat);
-    expect(balanceSpark.negativeColor, paletteOf(balancePage).accent);
+    expect(balanceSpark.negativeColor, chartAccent(balancePage));
     final spentColor = spark('expenditure').color;
 
     await openTile(tester, 'balance');

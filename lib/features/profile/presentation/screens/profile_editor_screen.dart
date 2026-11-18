@@ -99,7 +99,13 @@ class _ProfileEditorScreenState extends State<ProfileEditorScreen> {
   }
 
   Future<void> _onPickImage({required ImageSource source}) async {
-    final picked = await ImagePicker().pickImage(source: source);
+    // [fork] S251 avatar-pick: a camera photo is not taken in at full size
+    final picked = await ImagePicker().pickImage(
+      source: source,
+      maxWidth: 1440,
+      maxHeight: 1440,
+    );
+    // [/fork]
     if (picked == null) return;
     final relative = await UserImageStorage.importFrom(
       kind: UserImageKind.profile,
@@ -107,6 +113,15 @@ class _ProfileEditorScreenState extends State<ProfileEditorScreen> {
       sourcePath: picked.path,
     );
     FileImage(File(await UserImageStorage.absolutePath(relative))).evict();
+    // [fork] S251 avatar-pick: the avatars hold the photo at their own sizes
+    // (S250), which the line above leaves cached; the new photo at that path
+    // would not show.
+    // shortcut: drops every cached image, for a rare event; evict by size if
+    // this shows as reloads.
+    PaintingBinding.instance.imageCache
+      ..clear()
+      ..clearLiveImages();
+    // [/fork]
     setState(() {
       _imagePath = relative;
       // importFrom deletes any stale credit sidecar, so re-read once.

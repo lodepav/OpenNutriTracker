@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:opennutritracker/fork/display/contrast.dart';
 import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
@@ -64,7 +65,7 @@ List<Widget> balanceBody(
             values: [for (final v in series) v == null ? null : shown(v)],
             dates: dates,
             color: palette.fat,
-            negativeColor: palette.accent,
+            negativeColor: chartAccent(context),
             unit: unit,
             label: 'Energy balance chart',
           ),

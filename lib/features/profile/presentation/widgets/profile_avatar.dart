@@ -1,8 +1,13 @@
-import 'dart:io';
+// [fork] S250 avatar-decode: upstream's photo imports, unused since
+// import 'dart:io';
+// [/fork]
 
 import 'package:flutter/material.dart';
 import 'package:opennutritracker/core/domain/entity/profile_entity.dart';
-import 'package:opennutritracker/core/utils/user_image_storage.dart';
+// [fork] S250 avatar-decode
+// import 'package:opennutritracker/core/utils/user_image_storage.dart';
+import 'package:opennutritracker/fork/profile/avatar_photo.dart';
+// [/fork]
 
 /// Round avatar for a profile: shows the profile picture when one is set,
 /// otherwise the first letter of the name, falling back to a person icon
@@ -19,22 +24,10 @@ class ProfileAvatar extends StatelessWidget {
     final imagePath = profile.imagePath;
 
     if (imagePath != null) {
-      return FutureBuilder<String>(
-        future: UserImageStorage.absolutePath(imagePath),
-        builder: (context, snapshot) {
-          if (!snapshot.hasData) {
-            return CircleAvatar(
-              radius: radius,
-              backgroundColor: theme.colorScheme.primaryContainer,
-            );
-          }
-          return CircleAvatar(
-            radius: radius,
-            backgroundColor: theme.colorScheme.primaryContainer,
-            backgroundImage: FileImage(File(snapshot.data!)),
-          );
-        },
-      );
+      // [fork] S250 avatar-decode: decoded at the avatar's size, its path
+      // looked up once, not the full photo on every rebuild
+      return AvatarPhoto(relativePath: imagePath, radius: radius);
+      // [/fork]
     }
 
     return CircleAvatar(

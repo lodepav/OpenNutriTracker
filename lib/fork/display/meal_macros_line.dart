@@ -134,8 +134,12 @@ List<InlineSpan> macroSpans(
   ];
 }
 
-/// [macro] halfway to the muted text colour: quiet beside a food's name
-/// and still its own colour, readable as small text on the cards it sits
-/// on (4.6:1 or more on the light theme's surface, 6.5:1 on the dark).
+/// [macro] toned toward the text colour: quiet beside a food's name and
+/// still its own hue, readable as small text on the page, a card and a
+/// picked row. Light: 28% toward the strong text (4.5:1 or more; halfway to
+/// the muted text was 3.9:1 on a picked row). Dark: halfway to the muted
+/// text (5.6:1 or more).
 Color mutedMacroColor(Color macro, AppPalette palette) =>
-    Color.lerp(macro, palette.textMuted, 0.5)!;
+    palette.brightness == Brightness.light
+    ? Color.lerp(macro, palette.textStrong, 0.28)!
+    : Color.lerp(macro, palette.textMuted, 0.5)!;

@@ -3,6 +3,7 @@ import 'package:opennutritracker/fork/bulk/ai_add.dart';
 import 'package:opennutritracker/fork/display/display_prefs.dart';
 import 'package:opennutritracker/fork/layout/arrange_screen.dart';
 import 'package:opennutritracker/fork/layout/layout_store.dart';
+import 'package:opennutritracker/fork/layout/width_cap.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 
 /// Home's tiles (S119), by id in their first order.
@@ -147,10 +148,12 @@ class HomeSectionsList extends StatelessWidget {
     valueListenable: LayoutStore.current(homeSectionsKey),
     builder: (context, layout, _) => ListView(
       children: [
-        ...arranged(sections, (
+        // each capped, so the list's sides still scroll on a wide window
+        for (final section in arranged(sections, (
           order: layout.order,
           hidden: {...layout.hidden, ...addable(homeOptionalSections, layout)},
-        )).nonNulls,
+        )).nonNulls)
+          WidthCap(child: section),
         const SizedBox(height: 16),
         Center(
           child: TextButton.icon(

@@ -8,6 +8,7 @@ import 'package:opennutritracker/features/add_meal/util/portion_label.dart';
 import 'package:opennutritracker/features/add_meal/util/portion_unit.dart';
 import 'package:opennutritracker/features/meal_detail/presentation/bloc/meal_detail_bloc.dart';
 import 'package:opennutritracker/features/meal_detail/util/meal_quantity_converter.dart';
+import 'package:opennutritracker/fork/add/chosen_chips.dart';
 import 'package:opennutritracker/fork/amounts/amount_units.dart';
 import 'package:opennutritracker/fork/amounts/own_portions.dart';
 import 'package:opennutritracker/fork/meal_detail/unit_change.dart';
@@ -101,6 +102,10 @@ class AmountPicker extends StatelessWidget {
             Expanded(
               child: Semantics(
                 identifier: 'amount-field',
+                // its name, not "100, g" alone (A3)
+                label: selected == null
+                    ? 'Amount'
+                    : 'Amount in ${_unitWord(context, selected)}',
                 child: TextFormField(
                   key: const ValueKey('amount-field'),
                   enabled: enabled,
@@ -124,6 +129,12 @@ class AmountPicker extends StatelessWidget {
                     border: const OutlineInputBorder(
                       borderRadius: Dimens.borderRadiusM,
                     ),
+                    // an edge at 3:1 (WCAG 1.4.11), as Quick add's fields:
+                    // the theme's field is a fill alone, about 1.2:1
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: Dimens.borderRadiusM,
+                      borderSide: BorderSide(color: palette.textMuted),
+                    ),
                     suffixText: selected == null
                         ? null
                         : _unitWord(context, selected),
@@ -140,6 +151,8 @@ class AmountPicker extends StatelessWidget {
               child: IconButton.filledTonal(
                 tooltip: 'More',
                 onPressed: enabled ? () => _step(up: true) : null,
+                // not add_rounded: upstream's tests find the food page's
+                // Add by that icon
                 icon: const Icon(Icons.add),
               ),
             ),
@@ -153,72 +166,75 @@ class AmountPicker extends StatelessWidget {
           style: text.bodyMedium?.copyWith(color: palette.textMuted),
         ),
         const SizedBox(height: Dimens.spacing12),
-        Wrap(
-          spacing: Dimens.spacing8,
-          runSpacing: Dimens.spacing4,
-          children: [
-            for (final (i, option) in options.indexed)
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Wraps its label where a row is narrower than it: the
-                  // Edit item dialog at 200% text.
-                  Flexible(
-                    child: Semantics(
-                      identifier: 'amount-unit-$i',
-                      child: GestureDetector(
-                        onLongPress: option.own && onRemovePortion != null
-                            ? () => _remove(context, option)
-                            : null,
-                        child: ChoiceChip(
-                          key: ValueKey('amount-unit-${option.unit}'),
-                          label: Text(_chipLabel(context, option)),
-                          selected: option.unit == unit,
-                          onSelected: enabled
-                              ? (_) => _choose(option.unit)
+        chosenChips(
+          context,
+          child: Wrap(
+            spacing: Dimens.spacing8,
+            runSpacing: Dimens.spacing4,
+            children: [
+              for (final (i, option) in options.indexed)
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Wraps its label where a row is narrower than it: the
+                    // Edit item dialog at 200% text.
+                    Flexible(
+                      child: Semantics(
+                        identifier: 'amount-unit-$i',
+                        child: GestureDetector(
+                          onLongPress: option.own && onRemovePortion != null
+                              ? () => _remove(context, option)
                               : null,
+                          child: ChoiceChip(
+                            key: ValueKey('amount-unit-${option.unit}'),
+                            label: Text(_chipLabel(context, option)),
+                            selected: option.unit == unit,
+                            onSelected: enabled
+                                ? (_) => _choose(option.unit)
+                                : null,
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                  // Seen, where the long-press is not.
-                  if (option.own && onRemovePortion != null)
-                    IconButton(
-                      key: ValueKey('amount-remove-${option.unit}'),
-                      tooltip: 'Remove ${option.portionLabel}',
-                      icon: const Icon(Icons.close_rounded, size: 18),
-                      onPressed: enabled
-                          ? () => _remove(context, option)
-                          : null,
+                    // Seen, where the long-press is not.
+                    if (option.own && onRemovePortion != null)
+                      IconButton(
+                        key: ValueKey('amount-remove-${option.unit}'),
+                        tooltip: 'Remove ${option.portionLabel}',
+                        icon: const Icon(Icons.close_rounded, size: 18),
+                        onPressed: enabled
+                            ? () => _remove(context, option)
+                            : null,
+                      ),
+                  ],
+                ),
+              if (fits != null)
+                Semantics(
+                  identifier: 'amount-fits-portion',
+                  child: ActionChip(
+                    key: const ValueKey('amount-fits'),
+                    avatar: const Icon(Icons.swap_horiz_rounded, size: 18),
+                    label: Text(
+                      '= ${amountText(fits.count)} × '
+                      '${_unitWord(context, fits.option)}',
                     ),
-                ],
-              ),
-            if (fits != null)
-              Semantics(
-                identifier: 'amount-fits-portion',
-                child: ActionChip(
-                  key: const ValueKey('amount-fits'),
-                  avatar: const Icon(Icons.swap_horiz_rounded, size: 18),
-                  label: Text(
-                    '= ${amountText(fits.count)} × '
-                    '${_unitWord(context, fits.option)}',
+                    onPressed: enabled
+                        ? () => onSet(amountText(fits.count), fits.option.unit)
+                        : null,
                   ),
-                  onPressed: enabled
-                      ? () => onSet(amountText(fits.count), fits.option.unit)
-                      : null,
                 ),
-              ),
-            if (onAddPortion != null)
-              Semantics(
-                identifier: 'amount-add-portion',
-                child: ActionChip(
-                  key: const ValueKey('amount-add-portion'),
-                  avatar: const Icon(Icons.bookmark_add_outlined, size: 18),
-                  label: const Text('Portion'),
-                  onPressed: enabled ? () => _addPortion(context) : null,
+              if (onAddPortion != null)
+                Semantics(
+                  identifier: 'amount-add-portion',
+                  child: ActionChip(
+                    key: const ValueKey('amount-add-portion'),
+                    avatar: const Icon(Icons.bookmark_add_outlined, size: 18),
+                    label: const Text('Portion'),
+                    onPressed: enabled ? () => _addPortion(context) : null,
+                  ),
                 ),
-              ),
-          ],
+            ],
+          ),
         ),
       ],
     );

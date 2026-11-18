@@ -53,6 +53,8 @@ Future<void> copyOrMoveIntakes(
   final where = await showModalBottomSheet<WhereTo>(
     context: context,
     isScrollControlled: true,
+    // a tall sheet (large text) stops below the status bar
+    useSafeArea: true,
     showDragHandle: true,
     builder: (_) => WhereToSheet(
       today: today,
@@ -187,6 +189,7 @@ Future<void> copyActivitiesWithDialog(
   final where = await showModalBottomSheet<WhereTo>(
     context: context,
     isScrollControlled: true,
+    useSafeArea: true,
     showDragHandle: true,
     builder: (_) => WhereToSheet(
       today: today,
@@ -225,6 +228,8 @@ Future<void> copyDay(BuildContext context, DateTime day) async {
   final where = await showModalBottomSheet<WhereTo>(
     context: context,
     isScrollControlled: true,
+    // a tall sheet (large text) stops below the status bar
+    useSafeArea: true,
     showDragHandle: true,
     builder: (_) => WhereToSheet(
       today: today,

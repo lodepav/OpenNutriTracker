@@ -5,6 +5,7 @@ import 'package:opennutritracker/core/domain/usecase/get_tracked_day_usecase.dar
 import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
+import 'package:opennutritracker/fork/display/contrast.dart';
 import 'package:opennutritracker/fork/units/energy_text.dart';
 
 /// The tracked days from one day to another, both included.
@@ -89,6 +90,22 @@ class _WeekBarsState extends State<WeekBars> {
   );
 }
 
+/// Today's bar and the past days' in [accent] on [surface]: past days a
+/// paler tint, today further from the card, both at 3:1 on it (WCAG 1.4.11)
+/// and 1.5:1 apart, so a pale accent pinned at the floor still tells them
+/// apart by more than hue.
+({Color today, Color past}) weekBarColors(Color accent, Color surface) {
+  final mark = chartSafe(accent, surface);
+  final past = chartSafe(
+    Color.alphaBlend(mark.withValues(alpha: 0.45), surface),
+    surface,
+  );
+  final today = contrastRatio(mark, past) >= 1.5
+      ? mark
+      : shiftUntil(mark, past, 1.5, darken: surface.computeLuminance() > 0.18);
+  return (today: today, past: past);
+}
+
 class _Bars extends StatelessWidget {
   final List<_Day> week;
 
@@ -99,7 +116,10 @@ class _Bars extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = paletteOf(context);
-    final scheme = Theme.of(context).colorScheme;
+    final (:today, :past) = weekBarColors(
+      Theme.of(context).colorScheme.primary,
+      palette.surface,
+    );
     final label = Theme.of(
       context,
     ).textTheme.labelSmall?.copyWith(color: palette.textMuted);
@@ -131,9 +151,7 @@ class _Bars extends StatelessWidget {
                         Container(
                           height: _height * (d.kcal / top).clamp(0.0, 1.0),
                           decoration: BoxDecoration(
-                            color: i == week.length - 1
-                                ? scheme.primary
-                                : scheme.primary.withValues(alpha: 0.45),
+                            color: i == week.length - 1 ? today : past,
                             borderRadius: const BorderRadius.vertical(
                               top: Radius.circular(3),
                             ),

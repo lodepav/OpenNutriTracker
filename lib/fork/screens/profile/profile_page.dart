@@ -46,6 +46,7 @@ import 'package:opennutritracker/features/profile/presentation/widgets/bmi_info_
 import 'package:opennutritracker/features/profile/presentation/widgets/profile_switcher_sheet.dart';
 import 'package:opennutritracker/features/settings/presentation/widgets/kcal_goal_info_screen.dart';
 import 'package:opennutritracker/fork/display/home_tiles.dart';
+import 'package:opennutritracker/fork/layout/width_cap.dart';
 import 'package:opennutritracker/fork/you/you_widgets.dart';
 
 class ProfilePage extends StatefulWidget {
@@ -68,17 +69,22 @@ class _ProfilePageState extends State<ProfilePage> {
   void initState() {
     _profileBloc = locator<ProfileBloc>();
     super.initState();
+    if (_profileBloc.state is ProfileInitial) {
+      _profileBloc.add(LoadProfileEvent());
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<ProfileBloc, ProfileState>(
       bloc: _profileBloc,
+      // An edit reloads the profile: the list stays up meanwhile, so the
+      // scroll and TalkBack's focus stay where they were. The first load
+      // still shows the spinner.
+      buildWhen: (previous, current) =>
+          !(previous is ProfileLoadedState && current is ProfileLoadingState),
       builder: (context, state) {
-        if (state is ProfileInitial) {
-          _profileBloc.add(LoadProfileEvent());
-          return _getLoadingContent();
-        } else if (state is ProfileLoadingState) {
+        if (state is ProfileInitial || state is ProfileLoadingState) {
           return _getLoadingContent();
         } else if (state is ProfileLoadedState) {
           return _getLoadedContent(
@@ -89,6 +95,7 @@ class _ProfilePageState extends State<ProfilePage> {
             state.usesImperialHeightUnits,
             state.effectiveWaterGoalMl,
             state.usesImperialFoodUnits,
+            state,
           );
         } else {
           return _getLoadingContent();
@@ -109,6 +116,7 @@ class _ProfilePageState extends State<ProfilePage> {
     bool usesImperialHeightUnits,
     int effectiveWaterGoalMl,
     bool usesImperialFoodUnits,
+    ProfileLoadedState loaded,
   ) {
     return ListView(
       padding: const EdgeInsets.fromLTRB(
@@ -122,7 +130,8 @@ class _ProfilePageState extends State<ProfilePage> {
       // budget, the BMI), then short lists: Plan, Body and Tools. Every
       // row of upstream's is still here; Settings opens its screen
       // (upstream: a large BMI ring, five icon groups and Settings inline)
-      children: [
+      // a phone column on a tablet or in landscape
+      children: <Widget>[
         YouProfileRow(
           profile: locator<GetProfilesUsecase>().getActiveProfile(),
           onSwitch: () => showProfileSwitcherSheet(context),
@@ -130,7 +139,9 @@ class _ProfilePageState extends State<ProfilePage> {
         YouTiles(
           tiles: [
             WeightTile(
-              key: ValueKey(user.weightKG),
+              // Each reload's state is a new one, so a weigh-in on a past day
+              // shows too; kept mounted, the old trend stays up meanwhile.
+              reload: loaded,
               weightKg: user.weightKG,
               unit: bodyWeightUnit,
               load: () async => locator<GetWeightLogUsecase>().getAllEntries(),
@@ -356,7 +367,7 @@ class _ProfilePageState extends State<ProfilePage> {
             ),
           ],
         ),
-      ],
+      ].map((child) => WidthCap(child: child)).toList(),
     );
   }
 

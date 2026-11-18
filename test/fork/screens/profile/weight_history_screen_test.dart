@@ -800,4 +800,42 @@ void main() {
       expect(find.text('Undo'), findsNothing);
     });
   });
+
+  testWidgets('an invalid weight says so, and OK waits for a valid one', (
+    tester,
+  ) async {
+    ReloadRecorder()
+      ..register()
+      ..registerProfile();
+    addTearDown(locator.reset);
+    final addUsecase = _FakeAddWeightLogUsecase();
+    await tester.pumpWidget(
+      _wrap(_buildScreen(const [], addUsecase: addUsecase)),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.bySemanticsIdentifier('weight-history-add'));
+    await tester.pumpAndSettle();
+    final field = find.descendant(
+      of: find.bySemanticsIdentifier('weight-history-weight-input'),
+      matching: find.byType(TextField),
+    );
+    final ok = find.widgetWithText(TextButton, l10nEn.dialogOKLabel);
+
+    await tester.enterText(field, '');
+    await tester.pump();
+    expect(find.text(l10nEn.onboardingWrongWeightLabel), findsOneWidget);
+    expect(tester.widget<TextButton>(ok).onPressed, isNull);
+    await tester.tap(ok);
+    await tester.pumpAndSettle();
+    // Still open, nothing dropped.
+    expect(ok, findsOneWidget);
+    expect(addUsecase.added, isEmpty);
+
+    await tester.enterText(field, '75');
+    await tester.pump();
+    expect(find.text(l10nEn.onboardingWrongWeightLabel), findsNothing);
+    await tester.tap(ok);
+    await tester.pumpAndSettle();
+    expect(addUsecase.added.single.weightKg, 75);
+  });
 }

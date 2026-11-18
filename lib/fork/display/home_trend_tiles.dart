@@ -86,12 +86,12 @@ class _HomeTrendTilesState extends State<HomeTrendTiles> {
   Future<_Extras> _extrasOf(TrendsLoaded state, List<DateTime> dates) {
     if (_extrasFor != state || _extras == null) {
       _extrasFor = state;
-      _extras = _load(dates);
+      _extras = _load(state, dates);
     }
     return _extras!;
   }
 
-  Future<_Extras> _load(List<DateTime> dates) async {
+  Future<_Extras> _load(TrendsLoaded state, List<DateTime> dates) async {
     final needMicros = widget.ids.any(
       (id) => microLabels.keys.any((m) => m.name == id),
     );
@@ -99,7 +99,9 @@ class _HomeTrendTilesState extends State<HomeTrendTiles> {
       history: await widget.loadExpenditure().catchError(
         (Object _) => <ExpenditureDay>[],
       ),
-      micros: needMicros ? await loadMicros(intakesBetween, dates) : null,
+      micros: needMicros
+          ? await loadMicros(intakesBetween, dates, days: state.days)
+          : null,
       measurements: widget.ids.contains('sides') || widget.ids.contains('waist')
           ? await TrendsOverview.loadMeasurements().catchError(
               (Object _) => <Measurement>[],

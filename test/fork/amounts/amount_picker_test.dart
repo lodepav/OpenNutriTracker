@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:opennutritracker/core/styles/app_palette.dart';
+import 'package:opennutritracker/core/styles/app_theme.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dart';
 import 'package:opennutritracker/fork/amounts/amount_picker.dart';
 import 'package:opennutritracker/fork/amounts/own_portions.dart';
+import 'package:opennutritracker/fork/display/contrast.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 
 import 'amount_test_foods.dart';
@@ -227,4 +230,42 @@ void main() {
     await tester.pump();
     expect(sets.last, ('96', 'g'));
   });
+
+  for (final palette in [AppPalette.light, AppPalette.dark]) {
+    testWidgets('the unfocused field has a 3:1 edge '
+        '(${palette == AppPalette.dark ? 'dark' : 'light'})', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: buildAppTheme(palette),
+          localizationsDelegates: const [
+            S.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          home: Scaffold(body: _Host(bread(), 'g', '64', [])),
+        ),
+      );
+      final decoration = tester
+          .widget<TextField>(
+            find.descendant(
+              of: find.byKey(const ValueKey('amount-field')),
+              matching: find.byType(TextField),
+            ),
+          )
+          .decoration!;
+      final side = decoration.enabledBorder?.borderSide;
+      expect(side, isNotNull);
+      expect(side!.style, BorderStyle.solid);
+      // on the sheet and on the field's own fill
+      expect(
+        contrastRatio(side.color, palette.surface),
+        greaterThanOrEqualTo(3),
+      );
+      expect(
+        contrastRatio(side.color, palette.surfaceMuted),
+        greaterThanOrEqualTo(3),
+      );
+    });
+  }
 }

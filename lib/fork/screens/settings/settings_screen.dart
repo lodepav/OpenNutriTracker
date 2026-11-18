@@ -12,6 +12,7 @@ import 'package:opennutritracker/features/settings/settings_screen.dart'
 export 'package:opennutritracker/features/settings/settings_screen.dart'
     show SettingsScreenArguments;
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'package:opennutritracker/fork/bulk/photo_disclosure.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart' show DateFormat;
@@ -78,6 +79,7 @@ import 'package:opennutritracker/core/domain/entity/config_entity.dart';
 import 'package:opennutritracker/core/domain/usecase/get_config_usecase.dart';
 import 'package:opennutritracker/fork/brand/openbite_logo.dart';
 import 'package:opennutritracker/fork/settings/settings_index.dart';
+import 'package:opennutritracker/fork/layout/width_cap.dart';
 // OpenBite's version, and its update
 import 'package:opennutritracker/fork/update/update_notice.dart';
 import 'package:opennutritracker/fork/version.dart';
@@ -124,7 +126,15 @@ class SettingsScreen extends StatefulWidget {
   // route lists the sections
   final SettingsSection? section;
 
-  const SettingsScreen({super.key, this.embedded = false, this.section});
+  /// The row a search result named, by its label: the page opens on it.
+  final String? focus;
+
+  const SettingsScreen({
+    super.key,
+    this.embedded = false,
+    this.section,
+    this.focus,
+  });
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
@@ -164,6 +174,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   /// route going up — so an unguarded read reopens a dialog that is already
   /// open, and closing it leaves a second behind.
   bool _routeRequestHandled = false;
+
+  /// Whether the page has been scrolled to [SettingsScreen.focus].
+  bool _focusShown = false;
 
   @override
   void initState() {
@@ -314,6 +327,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
           if (widget.embedded) {
             return Column(mainAxisSize: MainAxisSize.min, children: children);
           }
+          if (widget.focus != null && !_focusShown) {
+            _focusShown = true;
+            WidgetsBinding.instance.addPostFrameCallback((_) => _showFocus());
+          }
           return ListView(
             padding: EdgeInsets.fromLTRB(
               Dimens.spacing16,
@@ -321,7 +338,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
               Dimens.spacing16,
               Dimens.spacing32 + MediaQuery.paddingOf(context).bottom,
             ),
-            children: children,
+            // shortcut: a page opened on a row builds all of its few cards, so
+            // the row is there to scroll to; use keyed rows if a page grows long.
+            scrollCacheExtent: widget.focus == null
+                ? null
+                : const ScrollCacheExtent.pixels(100000),
+            children: [for (final c in children) WidthCap(child: c)],
           );
         }
         return const SizedBox();
@@ -344,7 +366,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   MaterialPageRoute<void>(
                     builder: (_) => SettingsSearchPage(
                       entries: _forkEntries(context),
-                      onOpen: (section) => _forkOpen(section, replace: true),
+                      onOpen: (entry) => _forkOpen(
+                        entry.section,
+                        replace: true,
+                        focus: entry.label,
+                      ),
                     ),
                   ),
                 ),
@@ -360,12 +386,39 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _forkShows(SettingsSection section) =>
       widget.embedded || widget.section == section;
 
-  void _forkOpen(SettingsSection section, {bool replace = false}) {
+  void _forkOpen(
+    SettingsSection section, {
+    bool replace = false,
+    String? focus,
+  }) {
     final route = MaterialPageRoute<void>(
-      builder: (_) => SettingsScreen(section: section),
+      builder: (_) => SettingsScreen(section: section, focus: focus),
     );
     final navigator = Navigator.of(context);
     replace ? navigator.pushReplacement(route) : navigator.push(route);
+  }
+
+  /// Scrolls the page to the row whose text is [SettingsScreen.focus]; a
+  /// label no row shows leaves the page at its top.
+  void _showFocus() {
+    if (!mounted) return;
+    final label = widget.focus;
+    Element? row;
+    void visit(Element e) {
+      if (row != null) return;
+      final w = e.widget;
+      if ((w is Text && w.data == label) ||
+          (w is RichText && w.text.toPlainText() == label)) {
+        row = e;
+        return;
+      }
+      e.visitChildren(visit);
+    }
+
+    context.visitChildElements(visit);
+    if (row case final row?) {
+      Scrollable.ensureVisible(row, alignment: 0.3);
+    }
   }
 
   /// What is set in each section now, under its name.
@@ -384,6 +437,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       SettingsSection.reminders: state.notificationsEnabled
           ? s.settingsNotificationsTimeLabel(
               _formatNotificationTime(
+                context,
                 state.notificationHour,
                 state.notificationMinute,
               ),
