@@ -129,6 +129,31 @@ void main() {
     expect(added, [(IntakeTypeEntity.dinner, DateTime(2026, 10, 23, 19, 30))]);
   });
 
+  testWidgets('TalkBack hears what a tap on a row does', (tester) async {
+    final semantics = tester.ensureSemantics();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: TimelineScreen(
+          day: _day,
+          entries: TimelineEntries(
+            of: (_) async => [_eat('Toast', DateTime(2026, 10, 23, 7, 10))],
+            replace: (_) async {},
+            config: () async =>
+                const ConfigEntity(false, false, false, AppThemeEntity.system),
+          ),
+          pickTime: (_, _) async => null,
+          addAt: (_, _, _) async {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      tester.getSemantics(find.byKey(const ValueKey('timeline-Toast'))),
+      isSemantics(hasTapAction: true, onTapHint: 'Change time'),
+    );
+    semantics.dispose();
+  });
+
   testWidgets('a row fits at 200% text', (tester) async {
     tester.view.physicalSize = const Size(1080, 2340);
     tester.view.devicePixelRatio = 2.625;

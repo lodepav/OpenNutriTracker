@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:opennutritracker/core/domain/usecase/get_kcal_goal_usecase.dart';
 import 'package:opennutritracker/core/domain/usecase/get_macro_goal_usecase.dart';
 import 'package:opennutritracker/core/domain/usecase/get_tracked_day_usecase.dart';
@@ -32,9 +33,45 @@ import 'package:opennutritracker/fork/units/energy_text.dart';
 enum FoodSheetPart { all, amount, addBar }
 
 /// Whether the food page puts the amount on the page and pins only Add:
-/// above 1.5x text, as Home, Trends and the Diary change their layouts.
+/// above 1.5x text, as Home, Trends and the Diary change their layouts, and
+/// on a short window (a phone in landscape), where the whole sheet would
+/// leave the page a strip.
 bool foodPageInline(BuildContext context) =>
-    MediaQuery.textScalerOf(context).scale(10) > 15;
+    MediaQuery.textScalerOf(context).scale(10) > 15 ||
+    MediaQuery.sizeOf(context).height < 500;
+
+/// [child], telling [onHeight] its height whenever a layout changes it: the
+/// pinned sheet's, so the page's end scrolls clear of it.
+class ReportHeight extends SingleChildRenderObjectWidget {
+  final ValueChanged<double> onHeight;
+
+  const ReportHeight({super.key, required this.onHeight, super.child});
+
+  @override
+  RenderObject createRenderObject(BuildContext context) =>
+      _RenderReportHeight(onHeight);
+
+  @override
+  void updateRenderObject(BuildContext context, RenderObject renderObject) =>
+      (renderObject as _RenderReportHeight).onHeight = onHeight;
+}
+
+class _RenderReportHeight extends RenderProxyBox {
+  ValueChanged<double> onHeight;
+  double? _reported;
+
+  _RenderReportHeight(this.onHeight);
+
+  @override
+  void performLayout() {
+    super.performLayout();
+    final height = size.height;
+    if (height == _reported) return;
+    _reported = height;
+    // after the frame: a rebuild can't be asked for during layout
+    WidgetsBinding.instance.addPostFrameCallback((_) => onHeight(height));
+  }
+}
 
 /// Energy per gram of each macro, for the ring's shares.
 const _kcalPerG = (carbs: 4.0, fat: 9.0, protein: 4.0);
@@ -89,6 +126,11 @@ class FoodPageHeader extends StatelessWidget {
               photo,
               width: 56,
               height: 56,
+              // decoded at the size shown, not the photo's own
+              // shortcut: decoded 56 dp wide, so a landscape photo's short
+              // side is a little under the square; decode by the short
+              // side if it looks soft.
+              cacheWidth: (56 * MediaQuery.devicePixelRatioOf(context)).round(),
               fit: BoxFit.cover,
               errorBuilder: (_, _, _) => _kind(context, palette),
             ),

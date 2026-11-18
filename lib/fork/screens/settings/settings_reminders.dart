@@ -23,6 +23,7 @@ extension _RemindersSettings on _SettingsScreenState {
                       .of(context)
                       .settingsNotificationsTimeLabel(
                         _formatNotificationTime(
+                          context,
                           state.notificationHour,
                           state.notificationMinute,
                         ),
@@ -40,6 +41,7 @@ extension _RemindersSettings on _SettingsScreenState {
                   .of(context)
                   .settingsNotificationsTimeLabel(
                     _formatNotificationTime(
+                      context,
                       state.notificationHour,
                       state.notificationMinute,
                     ),
@@ -66,11 +68,9 @@ extension _RemindersSettings on _SettingsScreenState {
     ];
   }
 
-  String _formatNotificationTime(int hour, int minute) {
-    final h = hour.toString().padLeft(2, '0');
-    final m = minute.toString().padLeft(2, '0');
-    return '$h:$m';
-  }
+  // As the weigh-in row beside it: 12 or 24 hours, as the phone is set
+  String _formatNotificationTime(BuildContext context, int hour, int minute) =>
+      TimeOfDay(hour: hour, minute: minute).format(context);
 
   Future<void> _onNotificationToggled(
     BuildContext context,

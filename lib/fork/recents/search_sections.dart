@@ -5,6 +5,7 @@ import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dart';
 import 'package:opennutritracker/features/add_meal/presentation/add_meal_type.dart';
 import 'package:opennutritracker/features/add_meal/presentation/bloc/favourite_meal_bloc.dart';
+import 'package:opennutritracker/fork/layout/width_cap.dart';
 import 'package:opennutritracker/fork/screens/add_meal/meal_item_card.dart';
 
 /// The add-meal screen before anything is typed (seam S116, MacroFactor's
@@ -52,14 +53,15 @@ class _SearchSectionsState extends State<SearchSections> {
     final shown = _all
         ? entries.length
         : entries.length.clamp(0, SearchSections.historyShown);
-    MealItemCard row(MealEntity meal, IntakeEntity? entry, bool imperial) =>
-        MealItemCard(
-          day: widget.day,
-          mealEntity: meal,
-          addMealType: widget.addMealType,
-          usesImperialUnits: imperial,
-          forkLastLogged: entry,
-        );
+    Widget row(MealEntity meal, IntakeEntity? entry, bool imperial) => WidthCap(
+      child: MealItemCard(
+        day: widget.day,
+        mealEntity: meal,
+        addMealType: widget.addMealType,
+        usesImperialUnits: imperial,
+        forkLastLogged: entry,
+      ),
+    );
     return Semantics(
       identifier: 'add-meal-recent-list',
       container: true,
@@ -67,9 +69,11 @@ class _SearchSectionsState extends State<SearchSections> {
         slivers: [
           if (entries.isNotEmpty)
             const SliverToBoxAdapter(
-              child: SearchSectionHeader(
-                title: 'From your history',
-                note: 'last amount',
+              child: WidthCap(
+                child: SearchSectionHeader(
+                  title: 'From your history',
+                  note: 'last amount',
+                ),
               ),
             ),
           SliverList.builder(
@@ -82,12 +86,14 @@ class _SearchSectionsState extends State<SearchSections> {
           ),
           if (shown < entries.length)
             SliverToBoxAdapter(
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: TextButton(
-                  key: const ValueKey('search-history-all'),
-                  onPressed: () => setState(() => _all = true),
-                  child: Text('Show all ${entries.length}'),
+              child: WidthCap(
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton(
+                    key: const ValueKey('search-history-all'),
+                    onPressed: () => setState(() => _all = true),
+                    child: Text('Show all ${entries.length}'),
+                  ),
                 ),
               ),
             ),
@@ -101,7 +107,9 @@ class _SearchSectionsState extends State<SearchSections> {
               return SliverMainAxisGroup(
                 slivers: [
                   const SliverToBoxAdapter(
-                    child: SearchSectionHeader(title: 'Favourites'),
+                    child: WidthCap(
+                      child: SearchSectionHeader(title: 'Favourites'),
+                    ),
                   ),
                   SliverList.builder(
                     itemCount: state.favourites.length,

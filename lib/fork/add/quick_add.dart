@@ -176,8 +176,14 @@ class QuickAddMacroFields extends StatelessWidget {
                       decimal: true,
                     ),
                     inputFormatters: CustomTextInputFormatter.doubleOnly(),
-                    decoration: const InputDecoration(
-                      border: OutlineInputBorder(),
+                    // An edge at 3:1 (WCAG 1.4.11): the theme's field is a
+                    // fill alone, about 1.2:1 on the sheet.
+                    decoration: InputDecoration(
+                      border: const OutlineInputBorder(),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: Dimens.borderRadiusM,
+                        borderSide: BorderSide(color: palette.textMuted),
+                      ),
                     ),
                   ),
                 ),

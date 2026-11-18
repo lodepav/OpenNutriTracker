@@ -4,6 +4,9 @@ import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/core/utils/demo/demo_seeder.dart';
 import 'package:opennutritracker/core/utils/navigation_options.dart';
 import 'package:opennutritracker/generated/l10n.dart';
+// [fork] S232 banner-cap
+import 'package:opennutritracker/fork/layout/width_cap.dart';
+// [/fork]
 
 /// Persistent banner shown above every tab of `MainScreen` while the
 /// active profile holds seeded sample data (see
@@ -20,6 +23,12 @@ class DemoModeBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // [fork] S232 banner-cap: as wide as the tabs' content on a wide window
+    return WidthCap(child: _banner(context));
+  }
+
+  Widget _banner(BuildContext context) {
+    // [/fork]
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final palette = isDark ? AppPalette.dark : AppPalette.light;
     final accent = Theme.of(context).colorScheme.primary;

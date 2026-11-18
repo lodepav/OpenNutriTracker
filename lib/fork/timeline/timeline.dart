@@ -256,65 +256,68 @@ class _TimelineScreenState extends State<TimelineScreen> {
                 // A row, not a ListTile: a tile caps its trailing column's
                 // height, and at 200% text the total overflowed it.
                 MergeSemantics(
-                  child: InkWell(
-                    key: ValueKey('timeline-${intake.id}'),
-                    onTap: () => _move(intake),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
-                      ),
-                      child: Row(
-                        children: [
-                          Text(
-                            hasNoTime(intake)
-                                ? '–'
-                                : clockText(context, intake.dateTime),
-                            style: theme.textTheme.labelLarge,
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  intake.meal.name ?? '?',
-                                  style: theme.textTheme.bodyLarge,
-                                ),
-                                Text(
-                                  '${amountText(intake, _imperial)} · '
-                                  '${energyText(context, intake.totalKcal)}',
-                                  style: theme.textTheme.bodyMedium?.copyWith(
-                                    color: theme.colorScheme.onSurfaceVariant,
-                                  ),
-                                ),
-                                if (large)
+                  child: Semantics(
+                    onTapHint: 'Change time',
+                    child: InkWell(
+                      key: ValueKey('timeline-${intake.id}'),
+                      onTap: () => _move(intake),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
+                        child: Row(
+                          children: [
+                            Text(
+                              hasNoTime(intake)
+                                  ? '–'
+                                  : clockText(context, intake.dateTime),
+                              style: theme.textTheme.labelLarge,
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
                                   Text(
-                                    '${energyText(context, total)} so far',
+                                    intake.meal.name ?? '?',
+                                    style: theme.textTheme.bodyLarge,
+                                  ),
+                                  Text(
+                                    '${amountText(intake, _imperial)} · '
+                                    '${energyText(context, intake.totalKcal)}',
+                                    style: theme.textTheme.bodyMedium?.copyWith(
+                                      color: theme.colorScheme.onSurfaceVariant,
+                                    ),
+                                  ),
+                                  if (large)
+                                    Text(
+                                      '${energyText(context, total)} so far',
+                                      style: theme.textTheme.bodySmall,
+                                    ),
+                                ],
+                              ),
+                            ),
+                            if (!large) ...[
+                              const SizedBox(width: 16),
+                              // The day's total up to this entry, said so on
+                              // screen.
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Text(
+                                    energyText(context, total),
                                     style: theme.textTheme.bodySmall,
                                   ),
-                              ],
-                            ),
-                          ),
-                          if (!large) ...[
-                            const SizedBox(width: 16),
-                            // The day's total up to this entry, said so on
-                            // screen.
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: [
-                                Text(
-                                  energyText(context, total),
-                                  style: theme.textTheme.bodySmall,
-                                ),
-                                Text(
-                                  'so far',
-                                  style: theme.textTheme.labelSmall,
-                                ),
-                              ],
-                            ),
+                                  Text(
+                                    'so far',
+                                    style: theme.textTheme.labelSmall,
+                                  ),
+                                ],
+                              ),
+                            ],
                           ],
-                        ],
+                        ),
                       ),
                     ),
                   ),

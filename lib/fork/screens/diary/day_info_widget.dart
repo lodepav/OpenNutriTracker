@@ -157,6 +157,14 @@ class _DayInfoWidgetState extends State<DayInfoWidget> {
     if (oldWidget.diarySortPreferences != widget.diarySortPreferences) {
       _sortByMeal = _seedFromPreferences(widget.diarySortPreferences);
     }
+    // a new list from the bloc is new data; the same lists keep the
+    // nutrient panel from re-reading the week on every rebuild
+    if (oldWidget.breakfastIntake != widget.breakfastIntake ||
+        oldWidget.lunchIntake != widget.lunchIntake ||
+        oldWidget.dinnerIntake != widget.dinnerIntake ||
+        oldWidget.snackIntake != widget.snackIntake) {
+      _allIntakes = _combined();
+    }
   }
 
   Map<IntakeTypeEntity, DiarySortType> _seedFromPreferences(
@@ -218,11 +226,15 @@ class _DayInfoWidgetState extends State<DayInfoWidget> {
           child: Row(
             children: [
               Expanded(
-                child: Text(
-                  // the week strip above shows the year
-                  DateFormat.MMMMEEEEd().format(widget.selectedDay),
-                  style: textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w800,
+                // the day's heading, above its meals' headings
+                child: Semantics(
+                  header: true,
+                  child: Text(
+                    // the week strip above shows the year
+                    DateFormat.MMMMEEEEd().format(widget.selectedDay),
+                    style: textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
                 ),
               ),
@@ -450,7 +462,9 @@ class _DayInfoWidgetState extends State<DayInfoWidget> {
   }
 
   // #182: Compute from actual intakes instead of stale cached values
-  List<IntakeEntity> get _allIntakes => [
+  late var _allIntakes = _combined();
+
+  List<IntakeEntity> _combined() => [
     ...widget.breakfastIntake,
     ...widget.lunchIntake,
     ...widget.dinnerIntake,

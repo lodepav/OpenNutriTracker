@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
 import 'package:opennutritracker/fork/backup/auto_backup.dart';
 import 'package:opennutritracker/fork/display/settings_tile.dart';
+import 'package:opennutritracker/fork/layout/width_cap.dart';
 
 /// Settings → "Automatic backup" (seam S23), beside upstream's export.
 class AutoBackupTile extends StatelessWidget {
@@ -180,7 +181,7 @@ class _AutoBackupScreenState extends State<AutoBackupScreen> {
                   child: const Text('Turn off'),
                 ),
               ],
-            ],
+            ].map<Widget>((c) => WidthCap(child: c)).toList(),
           );
         },
       ),

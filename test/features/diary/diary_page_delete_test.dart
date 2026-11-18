@@ -386,6 +386,9 @@ void main() {
     await settle(tester);
     expect(find.text('1 selected'), findsOneWidget);
     expect(find.byType(EditDialog), findsNothing);
+    // Edit is under More
+    await tester.tap(find.byKey(const Key('fork-selection-more')));
+    await settle(tester);
     await tester.tap(find.byKey(const Key('fork-selection-edit')));
     await settle(tester);
     expect(find.byType(EditDialog), findsOneWidget);
@@ -493,6 +496,86 @@ void main() {
     expect(toastMeal(), IntakeTypeDBO.breakfast);
     expect(intakeBox.values.single.amount, 100);
     expect(rowOf(today)!.caloriesTracked, 500, reason: 'was left at 700');
+  });
+
+  testWidgets('Back on another tab leaves while a Diary selection is open, '
+      'and the picks stay', (tester) async {
+    await setUpDiary(yesterdayHasRow: false, entriesToday: true);
+    tester.view.physicalSize = const Size(1080, 4000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final tab = ValueNotifier(0);
+    await tester.pumpWidget(
+      ChangeNotifierProvider<EnergyUnitProvider>(
+        create: (_) => EnergyUnitProvider(),
+        child: MaterialApp(
+          localizationsDelegates: const [
+            S.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: S.supportedLocales,
+          home: Builder(
+            builder: (context) => TextButton(
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  // the main screen's tabs, kept mounted
+                  builder: (_) => Scaffold(
+                    body: ValueListenableBuilder(
+                      valueListenable: tab,
+                      builder: (_, index, _) => IndexedStack(
+                        index: index,
+                        children: const [DiaryPage(), Text('Home tab')],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              child: const Text('open'),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('open'));
+    await settle(tester);
+    await tester.tap(find.text('Toast'));
+    await settle(tester);
+    expect(DiarySelection.instance.count, 1);
+
+    tab.value = 1;
+    await settle(tester);
+    await tester.binding.handlePopRoute();
+    await settle(tester);
+    expect(find.text('open'), findsOneWidget, reason: 'Back left the screen');
+    expect(DiarySelection.instance.count, 1, reason: 'the picks are kept');
+    DiarySelection.instance.end();
+  });
+
+  testWidgets('Back on the Diary ends its selection first', (tester) async {
+    await setUpDiary(yesterdayHasRow: false, entriesToday: true);
+    await pumpDiary(tester);
+    await tester.tap(find.text('Toast'));
+    await settle(tester);
+    expect(find.text('1 selected'), findsOneWidget);
+    await tester.binding.handlePopRoute();
+    await settle(tester);
+    expect(find.text('1 selected'), findsNothing);
+  });
+  // [/fork]
+
+  // [fork] S230 diary-width
+  testWidgets('on a wide window the day is one centred column', (
+    tester,
+  ) async {
+    await setUpDiary(yesterdayHasRow: false, entriesToday: true);
+    await pumpDiary(tester);
+    for (final part in [DiaryTableCalendar, DayInfoWidget]) {
+      final box = tester.getRect(find.byType(part));
+      expect(box.width, lessThanOrEqualTo(600), reason: '$part');
+      expect(box.center.dx, 540, reason: '$part');
+    }
   });
   // [/fork]
 

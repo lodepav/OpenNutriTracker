@@ -1,8 +1,6 @@
 // Fork-owned copy of lib/core/presentation/widgets/intake_card.dart
 // (D23); upstream's later changes to it are ported by hand:
 // fork/tools/upstream-copies.sh.
-import 'dart:io';
-
 import 'package:auto_size_text/auto_size_text.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
@@ -14,7 +12,6 @@ import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/core/utils/energy_display.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
-import 'package:opennutritracker/core/utils/user_image_storage.dart';
 import 'package:opennutritracker/features/diary/presentation/widgets/diary_sort_type.dart';
 import 'package:opennutritracker/fork/units/amount_text.dart';
 import 'package:opennutritracker/generated/l10n.dart';
@@ -22,6 +19,7 @@ import 'package:opennutritracker/features/add_meal/util/food_emoji_resolver.dart
 import 'package:opennutritracker/fork/timeline/timeline.dart';
 import 'package:opennutritracker/fork/history/food_icon.dart';
 import 'package:opennutritracker/fork/display/meal_macros_line.dart';
+import 'package:opennutritracker/fork/display/sized_file_image.dart';
 import 'package:opennutritracker/fork/off/off_kinds.dart';
 
 /// A logged intake, rendered as a full-width row: a rounded thumbnail, the meal
@@ -46,6 +44,11 @@ class IntakeCard extends StatelessWidget {
   /// when not selecting.
   final bool? selected;
 
+  /// What a tap and a long-press do, for TalkBack ("Select", "Edit"); the
+  /// caller knows, as it gives the callbacks.
+  final String? tapHint;
+  final String? longPressHint;
+
   const IntakeCard({
     required super.key,
     required this.intake,
@@ -56,11 +59,20 @@ class IntakeCard extends StatelessWidget {
     this.sortType,
     this.showTime = false,
     this.selected,
+    this.tapHint,
+    this.longPressHint,
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, constraints) => _row(context, constraints.maxWidth),
+  );
+
+  Widget _row(BuildContext context, double width) {
     final palette = paletteOf(context);
+    // Above 1.5x text the energy and amount go under the name, which then
+    // wraps as far as it needs (as on the Timeline)
+    final stacked = MediaQuery.textScalerOf(context).scale(10) > 15;
     final textTheme = Theme.of(context).textTheme;
     final radius = BorderRadius.circular(Dimens.radiusM);
     final s = S.of(context);
@@ -96,6 +108,33 @@ class IntakeCard extends StatelessWidget {
           ),
       ],
     );
+    // one line each on the trailing edge; under the name they wrap
+    final lines = stacked ? null : 1;
+    final overflow = stacked ? null : TextOverflow.ellipsis;
+    final figures = [
+      if (macro != null)
+        Text(
+          '$macroValue ${s.gramUnit} ${macro.$2}',
+          maxLines: lines,
+          overflow: overflow,
+          style: textTheme.labelMedium?.copyWith(
+            color: palette.textStrong,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      Text(
+        EnergyDisplay.formatWithUnit(context, intake.totalKcal),
+        maxLines: lines,
+        overflow: overflow,
+        style: macro == null
+            ? textTheme.labelMedium?.copyWith(
+                color: palette.textStrong,
+                fontWeight: FontWeight.w700,
+              )
+            : textTheme.bodySmall?.copyWith(color: palette.textMuted),
+      ),
+      amount,
+    ];
     return Padding(
       padding: const EdgeInsets.symmetric(
         horizontal: Dimens.spacing16,
@@ -103,6 +142,8 @@ class IntakeCard extends StatelessWidget {
       ),
       child: Semantics(
         selected: selected,
+        onTapHint: onItemTapped == null ? null : tapHint,
+        onLongPressHint: onItemLongPressed == null ? null : longPressHint,
         child: Material(
           color: Colors.transparent,
           child: InkWell(
@@ -148,16 +189,24 @@ class IntakeCard extends StatelessWidget {
                         mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          AutoSizeText(
-                            intake.meal.name ?? "?",
-                            style: textTheme.titleSmall?.copyWith(
-                              color: palette.textStrong,
+                          if (stacked)
+                            Text(
+                              intake.meal.name ?? "?",
+                              style: textTheme.titleSmall?.copyWith(
+                                color: palette.textStrong,
+                              ),
+                            )
+                          else
+                            AutoSizeText(
+                              intake.meal.name ?? "?",
+                              style: textTheme.titleSmall?.copyWith(
+                                color: palette.textStrong,
+                              ),
+                              maxLines:
+                                  2, // large-text: a long name wraps once before it is cut
+                              minFontSize: 11,
+                              overflow: TextOverflow.ellipsis,
                             ),
-                            maxLines:
-                                2, // large-text: a long name wraps once before it is cut
-                            minFontSize: 11,
-                            overflow: TextOverflow.ellipsis,
-                          ),
                           // was the amount, and
                           // the time in an hour's section (S80)
                           const SizedBox(height: 2),
@@ -166,48 +215,21 @@ class IntakeCard extends StatelessWidget {
                             fat: intake.totalFatsGram,
                             protein: intake.totalProteinsGram,
                           ),
+                          if (stacked) ...figures,
                         ],
                       ),
                     ),
-                    const SizedBox(width: Dimens.spacing8),
-                    ConstrainedBox(
-                      constraints: BoxConstraints(
-                        maxWidth: MediaQuery.sizeOf(context).width * 0.4,
+                    if (!stacked) ...[
+                      const SizedBox(width: Dimens.spacing8),
+                      ConstrainedBox(
+                        constraints: BoxConstraints(maxWidth: width * 0.4),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: figures,
+                        ),
                       ),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          if (macro != null)
-                            Text(
-                              '$macroValue ${s.gramUnit} ${macro.$2}',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: textTheme.labelMedium?.copyWith(
-                                color: palette.textStrong,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          Text(
-                            EnergyDisplay.formatWithUnit(
-                              context,
-                              intake.totalKcal,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: macro == null
-                                ? textTheme.labelMedium?.copyWith(
-                                    color: palette.textStrong,
-                                    fontWeight: FontWeight.w700,
-                                  )
-                                : textTheme.bodySmall?.copyWith(
-                                    color: palette.textMuted,
-                                  ),
-                          ),
-                          amount,
-                        ],
-                      ),
-                    ),
+                    ],
                   ],
                 ),
               ),
@@ -239,13 +261,21 @@ class _Thumbnail extends StatelessWidget {
   Widget build(BuildContext context) {
     Widget content;
     if (intake.meal.localImagePath != null) {
-      content = _LocalMealImage(relativePath: intake.meal.localImagePath!);
+      content = SizedFileImage(
+        relativePath: intake.meal.localImagePath!,
+        size: IntakeCard.thumbSize,
+        fallback: (_) => _fallback(),
+      );
     } else if (intake.meal.mainImageUrl != null &&
         OffKinds.showsPhoto(intake.meal)) {
       content = CachedNetworkImage(
         cacheManager: locator<CacheManager>(),
         imageUrl: intake.meal.mainImageUrl ?? "",
         fit: BoxFit.cover,
+        // decoded at the thumbnail's size, not the photo's
+        memCacheWidth:
+            (IntakeCard.thumbSize * MediaQuery.devicePixelRatioOf(context))
+                .round(),
         errorWidget: (context, url, error) => _fallback(),
         placeholder: (context, url) => _fallback(),
       );
@@ -282,23 +312,4 @@ class _Thumbnail extends StatelessWidget {
       ),
     },
   );
-}
-
-class _LocalMealImage extends StatelessWidget {
-  final String relativePath;
-
-  const _LocalMealImage({required this.relativePath});
-
-  @override
-  Widget build(BuildContext context) {
-    return FutureBuilder<String>(
-      future: UserImageStorage.absolutePath(relativePath),
-      builder: (context, snapshot) {
-        if (!snapshot.hasData) return const SizedBox.shrink();
-        final file = File(snapshot.data!);
-        if (!file.existsSync()) return const SizedBox.shrink();
-        return Image.file(file, fit: BoxFit.cover);
-      },
-    );
-  }
 }

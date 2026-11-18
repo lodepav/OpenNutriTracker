@@ -162,4 +162,18 @@ AppPalette paletteOf(BuildContext context) =>
     Theme.of(context).brightness == Brightness.dark
     ? AppPalette.dark
     : AppPalette.light;
+
+/// The fork's colours the upstream palette lacks.
+extension ForkPalette on AppPalette {
+  /// Water's blue, as a chart mark: 4.37:1 on light's card, 7.38:1 on dark's.
+  Color get water => brightness == Brightness.dark
+      ? const Color(0xFF7DB8E8)
+      : const Color(0xFF2F7DBF);
+
+  /// A short warning line: a muted amber at 5.53:1 on light's white and
+  /// carbs' amber at 8.55:1 on dark's surface; light's carbs (3.79:1) is
+  /// too pale for text.
+  Color get warningText =>
+      brightness == Brightness.dark ? carbsColor : const Color(0xFF945C0B);
+}
 // [/fork]

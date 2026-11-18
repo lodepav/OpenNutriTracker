@@ -10,6 +10,7 @@ import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/core/utils/meal_type_suggester.dart';
 import 'package:opennutritracker/core/utils/navigation_options.dart';
 import 'package:opennutritracker/fork/screens/activity/add_activity_screen.dart';
+import 'package:opennutritracker/fork/add/chosen_chips.dart';
 import 'package:opennutritracker/fork/bulk/ai_add.dart';
 import 'package:opennutritracker/fork/screens/add_meal/bulk_add_screen.dart';
 import 'package:opennutritracker/features/add_meal/presentation/add_meal_screen.dart';
@@ -117,7 +118,13 @@ class _AddSheetState extends State<AddSheet> {
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
-      builder: (_) => QuickAddBottomSheet(intakeType: _type, day: widget.day),
+      builder: (_) => QuickAddBottomSheet(
+        intakeType: _type,
+        day: widget.day,
+        // the + sheet closes too, back where it was opened, not to a
+        // fresh Home
+        onAdded: () => Navigator.of(context).pop(),
+      ),
     );
   }
 
@@ -227,20 +234,23 @@ class _AddSheetState extends State<AddSheet> {
               ),
             ),
             const SizedBox(height: Dimens.spacing12),
-            Wrap(
-              spacing: Dimens.spacing8,
-              runSpacing: Dimens.spacing4,
-              children: [
-                for (final type in IntakeTypeEntity.values)
-                  Semantics(
-                    identifier: 'add-item-${type.name}',
-                    child: ChoiceChip(
-                      label: Text(mealLabel(context, type)),
-                      selected: _type == type,
-                      onSelected: (_) => setState(() => _type = type),
+            chosenChips(
+              context,
+              child: Wrap(
+                spacing: Dimens.spacing8,
+                runSpacing: Dimens.spacing4,
+                children: [
+                  for (final type in IntakeTypeEntity.values)
+                    Semantics(
+                      identifier: 'add-item-${type.name}',
+                      child: ChoiceChip(
+                        label: Text(mealLabel(context, type)),
+                        selected: _type == type,
+                        onSelected: (_) => setState(() => _type = type),
+                      ),
                     ),
-                  ),
-              ],
+                ],
+              ),
             ),
             _recentFoods(context),
             const SizedBox(height: Dimens.spacing16),
@@ -271,7 +281,7 @@ class _AddSheetState extends State<AddSheet> {
               actionTile(
                 context,
                 id: 'add-item-recipes',
-                icon: Icons.menu_book_outlined,
+                icon: Icons.menu_book_rounded,
                 label: s.recipesLabel,
                 onTap: _openRecipes,
               ),
@@ -310,12 +320,15 @@ class _AddSheetState extends State<AddSheet> {
                 top: Dimens.spacing16,
                 bottom: Dimens.spacing4,
               ),
-              child: Text(
-                forMeal.isEmpty
-                    ? S.of(context).recentlyAddedLabel
-                    : 'Recent for ${mealLabel(context, _type)}',
-                style: theme.textTheme.titleSmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
+              child: Semantics(
+                header: true,
+                child: Text(
+                  forMeal.isEmpty
+                      ? S.of(context).recentlyAddedLabel
+                      : 'Recent for ${mealLabel(context, _type)}',
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
                 ),
               ),
             ),

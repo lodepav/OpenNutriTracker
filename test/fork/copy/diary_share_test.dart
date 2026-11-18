@@ -97,6 +97,9 @@ void main() {
     tester,
   ) async {
     final selection = await _pump(tester, [_intake('Rice')]);
+    // Share is under More
+    await tester.tap(find.byKey(const Key('fork-selection-more')));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('fork-selection-share')));
     await tester.pumpAndSettle();
 
@@ -112,6 +115,9 @@ void main() {
     tester,
   ) async {
     await _pump(tester, [_intake('Rice'), _intake('Beans')], profiles: 2);
+    // Share is under More
+    await tester.tap(find.byKey(const Key('fork-selection-more')));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('fork-selection-share')));
     await tester.pumpAndSettle();
 

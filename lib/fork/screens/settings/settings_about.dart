@@ -54,12 +54,13 @@ extension _AboutSettings on _SettingsScreenState {
               icon: Icons.system_update_rounded,
               title: 'Updates',
               subtitle: subtitle,
+              enabled: onTap != null,
               onTap: onTap,
             ),
           ),
           _SettingsTile(
             palette: palette,
-            icon: Icons.error_outline_rounded,
+            icon: Icons.info_outline_rounded,
             title: 'About OpenBite',
             onTap: () => _showAboutDialog(context),
           ),
@@ -133,6 +134,8 @@ extension _AboutSettings on _SettingsScreenState {
       context: context,
       builder: (context) {
         return AlertDialog(
+          // At 2x text on a small phone the rows outgrow the screen
+          scrollable: true,
           title: Text(S.of(context).settingsPrivacySettings),
           content: StatefulBuilder(
             builder:

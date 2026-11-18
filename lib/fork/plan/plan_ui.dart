@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:logging/logging.dart';
 import 'package:opennutritracker/core/domain/entity/intake_entity.dart';
+import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
 import 'package:opennutritracker/core/domain/entity/intake_type_entity.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/core/utils/meal_type_suggester.dart';
@@ -301,9 +302,9 @@ class _PlannedFoodsCardState extends State<PlannedFoodsCard> {
       if (foods.isEmpty) return const SizedBox.shrink();
       final total = foods.fold<double>(0, (sum, f) => sum + f.kcal);
       final macros = plannedMacros(foods);
-      return Card(
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        child: Padding(
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: AppCard(
           padding: const EdgeInsets.fromLTRB(16, 12, 8, 8),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,

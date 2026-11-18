@@ -2,6 +2,8 @@ import 'dart:math' as math;
 
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:opennutritracker/fork/display/contrast.dart';
+import 'package:opennutritracker/fork/display/motion.dart';
 import 'package:intl/intl.dart' as intl;
 import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
@@ -138,7 +140,7 @@ class ExpenditureChart extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = paletteOf(context);
     final theme = Theme.of(context);
-    final accent = theme.colorScheme.primary;
+    final accent = chartAccent(context);
     final kj = usesKj(context);
     double shown(double kcal) => kj ? UnitCalc.kcalToKj(kcal) : kcal;
     final unit = energyUnit(context);
@@ -187,6 +189,10 @@ class ExpenditureChart extends StatelessWidget {
             child: SizedBox(
               height: 180,
               child: LineChart(
+                duration: motionDuration(
+                  context,
+                  const Duration(milliseconds: 150),
+                ),
                 LineChartData(
                   minX: 0,
                   maxX: math.max(dates.length - 1, 1).toDouble(),

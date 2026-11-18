@@ -5,6 +5,7 @@ import 'package:opennutritracker/core/domain/usecase/get_tracked_day_usecase.dar
 import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
+import 'package:opennutritracker/fork/display/contrast.dart';
 import 'package:opennutritracker/fork/units/energy_text.dart';
 
 /// The tracked days from one day to another, both included.
@@ -99,7 +100,12 @@ class _Bars extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = paletteOf(context);
-    final scheme = Theme.of(context).colorScheme;
+    // Past days lighter than today, both at 3:1 on the card (WCAG 1.4.11).
+    final today = chartAccent(context);
+    final past = chartSafe(
+      Color.alphaBlend(today.withValues(alpha: 0.45), palette.surface),
+      palette.surface,
+    );
     final label = Theme.of(
       context,
     ).textTheme.labelSmall?.copyWith(color: palette.textMuted);
@@ -131,9 +137,7 @@ class _Bars extends StatelessWidget {
                         Container(
                           height: _height * (d.kcal / top).clamp(0.0, 1.0),
                           decoration: BoxDecoration(
-                            color: i == week.length - 1
-                                ? scheme.primary
-                                : scheme.primary.withValues(alpha: 0.45),
+                            color: i == week.length - 1 ? today : past,
                             borderRadius: const BorderRadius.vertical(
                               top: Radius.circular(3),
                             ),

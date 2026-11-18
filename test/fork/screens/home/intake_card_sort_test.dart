@@ -62,14 +62,18 @@ Widget wrap(
           size: const Size(320, 640),
           textScaler: TextScaler.linear(scale),
         ),
-        child: SizedBox(
-          width: 320,
-          child: IntakeCard(
-            key: const ValueKey('card'),
-            intake: intake(missingMacros: missing),
-            firstListElement: false,
-            usesImperialUnits: false,
-            sortType: sort,
+        // in a list, as on the Diary: at large text a name wraps as far as
+        // it needs
+        child: SingleChildScrollView(
+          child: SizedBox(
+            width: 320,
+            child: IntakeCard(
+              key: const ValueKey('card'),
+              intake: intake(missingMacros: missing),
+              firstListElement: false,
+              usesImperialUnits: false,
+              sortType: sort,
+            ),
           ),
         ),
       ),

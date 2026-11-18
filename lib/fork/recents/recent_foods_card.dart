@@ -3,6 +3,7 @@ import 'package:opennutritracker/core/domain/entity/intake_entity.dart';
 import 'package:opennutritracker/core/domain/entity/intake_type_entity.dart';
 import 'package:opennutritracker/core/domain/usecase/get_config_usecase.dart';
 import 'package:opennutritracker/core/domain/usecase/get_intake_usecase.dart';
+import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/core/utils/meal_type_suggester.dart';
 import 'package:opennutritracker/fork/copy/copy_entries.dart';
@@ -71,19 +72,20 @@ class RecentFoodsCard extends StatelessWidget {
   const RecentFoodsCard({super.key, this.load = _load, this.log = _log});
 
   @override
-  Widget build(BuildContext context) => Card(
+  Widget build(BuildContext context) => Padding(
     key: const PageStorageKey('home-recent-foods-card'),
-    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-    clipBehavior: Clip.antiAlias,
-    child: Semantics(
-      identifier: 'home-recent-foods',
-      child: ExpansionTile(
-        key: const ValueKey('home-recent-foods'),
-        leading: const Icon(Icons.history_rounded),
-        title: const Text('Recent foods'),
-        shape: const Border(),
-        // A closed tile drops its children, so each opening reads anew.
-        children: [_RecentFoodsList(load: load, log: log)],
+    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+    child: AppCard(
+      child: Semantics(
+        identifier: 'home-recent-foods',
+        child: ExpansionTile(
+          key: const ValueKey('home-recent-foods'),
+          leading: const Icon(Icons.history_rounded),
+          title: const Text('Recent foods'),
+          shape: const Border(),
+          // A closed tile drops its children, so each opening reads anew.
+          children: [_RecentFoodsList(load: load, log: log)],
+        ),
       ),
     ),
   );

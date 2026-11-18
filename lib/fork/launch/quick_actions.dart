@@ -55,9 +55,9 @@ class _QuickActionsState extends State<QuickActions> {
   static const Map<String, (IconData, LaunchAction)> _actions = {
     'search': (Icons.search_rounded, SearchAction()),
     'scan': (Icons.qr_code_scanner_rounded, ScanAction()),
-    'photo': (Icons.photo_camera_outlined, PhotoAction()),
+    'photo': (Icons.photo_camera_rounded, PhotoAction()),
     'quick-add': (Icons.bolt_rounded, QuickAddAction()),
-    'weigh-in': (Icons.monitor_weight_outlined, WeighInDialogAction()),
+    'weigh-in': (Icons.monitor_weight_rounded, WeighInDialogAction()),
     'meal-plan': (Icons.event_note_rounded, PlanAction()),
   };
 

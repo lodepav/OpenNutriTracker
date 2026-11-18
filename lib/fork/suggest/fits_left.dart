@@ -11,7 +11,9 @@ import 'package:opennutritracker/fork/screens/add_meal/meal_item_card.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
 import 'package:opennutritracker/fork/basket/basket_ui.dart'
     show entriesChanged;
+import 'package:opennutritracker/fork/add/chosen_chips.dart';
 import 'package:opennutritracker/fork/display/display_prefs.dart';
+import 'package:opennutritracker/fork/layout/width_cap.dart';
 import 'package:opennutritracker/fork/units/amount_text.dart';
 import 'package:opennutritracker/fork/units/energy_text.dart';
 
@@ -150,13 +152,16 @@ class _FitsLeftSwitchState extends State<FitsLeftSwitch> {
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      Semantics(
-        identifier: 'add-meal-fits-left',
-        child: FilterChip(
-          key: const ValueKey('add-meal-fits-left'),
-          label: const Text("Fits what's left"),
-          selected: _on,
-          onSelected: (on) => setState(() => _on = on),
+      chosenChips(
+        context,
+        child: Semantics(
+          identifier: 'add-meal-fits-left',
+          child: FilterChip(
+            key: const ValueKey('add-meal-fits-left'),
+            label: const Text("Fits what's left"),
+            selected: _on,
+            onSelected: (on) => setState(() => _on = on),
+          ),
         ),
       ),
       Expanded(child: _on ? _fits(context) : widget.recents),
@@ -172,7 +177,9 @@ class _FitsLeftSwitchState extends State<FitsLeftSwitch> {
       }
       final data = snapshot.data;
       if (data == null) {
-        return const Center(child: CircularProgressIndicator());
+        return const Center(
+          child: CircularProgressIndicator(semanticsLabel: 'Loading'),
+        );
       }
       final left = data.left;
       final foods = fitsLeft(data.recents, left);
@@ -186,36 +193,39 @@ class _FitsLeftSwitchState extends State<FitsLeftSwitch> {
       ).join(', ');
       return ListView(
         children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Text(
-              left.kcal <= 0
-                  ? 'Nothing is left of the day\'s energy. Turn off '
-                        '"Fits what\'s left" for all your recent foods.'
-                  : '${energyText(context, left.kcal)} left: '
-                        '$macros. '
-                        'Best fit first, at the amount you logged last.',
-              style: theme.textTheme.bodySmall,
+          for (final row in <Widget>[
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Text(
+                left.kcal <= 0
+                    ? 'Nothing is left of the day\'s energy. Turn off '
+                          '"Fits what\'s left" for all your recent foods.'
+                    : '${energyText(context, left.kcal)} left: '
+                          '$macros. '
+                          'Best fit first, at the amount you logged last.',
+                style: theme.textTheme.bodySmall,
+              ),
             ),
-          ),
-          if (left.kcal > 0 && foods.isEmpty)
-            const Text('Nothing you logged before fits in that.'),
-          for (final food in foods) ...[
-            MealItemCard(
-              day: widget.day,
-              mealEntity: food.meal,
-              addMealType: widget.addMealType,
-              usesImperialUnits: data.imperial,
-              forkLastLogged: food,
-            ),
-            Text(
-              '${isEnergyOnly(food.meal) ? '' : '${amountText(food, data.imperial)}: '}'
-              '${energyText(context, food.totalKcal)}, '
-              '${food.totalProteinsGram.round()} g protein',
-              key: ValueKey('fits-${food.id}'),
-              style: theme.textTheme.bodySmall,
-            ),
-          ],
+            if (left.kcal > 0 && foods.isEmpty)
+              const Text('Nothing you logged before fits in that.'),
+            for (final food in foods) ...[
+              MealItemCard(
+                day: widget.day,
+                mealEntity: food.meal,
+                addMealType: widget.addMealType,
+                usesImperialUnits: data.imperial,
+                forkLastLogged: food,
+              ),
+              Text(
+                '${isEnergyOnly(food.meal) ? '' : '${amountText(food, data.imperial)}: '}'
+                '${energyText(context, food.totalKcal)}, '
+                '${food.totalProteinsGram.round()} g protein',
+                key: ValueKey('fits-${food.id}'),
+                style: theme.textTheme.bodySmall,
+              ),
+            ],
+          ])
+            WidthCap(child: row),
         ],
       );
     },

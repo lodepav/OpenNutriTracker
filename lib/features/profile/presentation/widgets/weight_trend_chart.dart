@@ -13,8 +13,15 @@ import 'package:opennutritracker/generated/l10n.dart';
 import 'package:opennutritracker/fork/adaptive/trend_points.dart';
 // [/fork]
 // [fork] S96 chart-touch
+import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/fork/report/chart_touch.dart';
 import 'package:opennutritracker/fork/report/weight_chart_label.dart';
+// [/fork]
+// [fork] S270 weight-chart-accent
+import 'package:opennutritracker/fork/display/contrast.dart';
+// [/fork]
+// [fork] S271 weight-chart-motion
+import 'package:opennutritracker/fork/display/motion.dart';
 // [/fork]
 
 /// Smoothed weight trend line shared by the weight-history screen and the
@@ -77,7 +84,11 @@ class WeightTrendChart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final lineColor = theme.colorScheme.primary;
+    // [fork] S270 weight-chart-accent: the accent as every Trends chart draws
+    // it, at 3:1 on the card; a yellow accent was too pale
+    // final lineColor = theme.colorScheme.primary;
+    final lineColor = chartAccent(context);
+    // [/fork]
 
     final now = clock();
     final today = DateTime(now.year, now.month, now.day);
@@ -246,6 +257,10 @@ class WeightTrendChart extends StatelessWidget {
       SizedBox(
         height: chartHeight,
         child: LineChart(
+          // [fork] S271 weight-chart-motion: no movement while animations
+          // are off
+          duration: motionDuration(context, const Duration(milliseconds: 150)),
+          // [/fork]
           LineChartData(
             minX: 0,
             maxX: (windowDays - 1).toDouble(),
@@ -309,7 +324,10 @@ class WeightTrendChart extends StatelessWidget {
                 if (showTargetLine)
                   HorizontalLine(
                     y: targetY,
-                    color: theme.colorScheme.outline,
+                    // [fork] S96 chart-touch: the palette's muted text, as
+                    // Weight history's; the border colour was 1.3:1
+                    color: paletteOf(context).textMuted,
+                    // [/fork]
                     strokeWidth: 1.2,
                     dashArray: const [6, 4],
                   ),

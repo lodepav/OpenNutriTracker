@@ -305,11 +305,9 @@ class _AddWeightEntryDialogState extends State<_AddWeightEntryDialog> {
   }
 
   void _submit() {
+    // OK is off while the weight is invalid, so an entry is never dropped
     final kg = _weightKg;
-    if (kg == null || kg <= 0) {
-      Navigator.of(context).pop();
-      return;
-    }
+    if (kg == null || kg <= 0) return;
     final note = _noteController.text.trim();
     Navigator.of(context).pop(
       _NewWeightEntry(
@@ -325,6 +323,8 @@ class _AddWeightEntryDialogState extends State<_AddWeightEntryDialog> {
     final dateLabel = DateFormat.yMMMd(
       Localizations.localeOf(context).toLanguageTag(),
     ).format(_date);
+    // as SetWeightDialog: an invalid weight says so, and OK waits for it
+    final invalid = _weightKg == null || _weightKg! <= 0;
 
     return AlertDialog(
       title: Text(S.of(context).weightHistoryAddEntry),
@@ -345,6 +345,9 @@ class _AddWeightEntryDialogState extends State<_AddWeightEntryDialog> {
               unit: widget.bodyWeightUnit,
               identifierPrefix: 'weight-history',
               autofocus: true,
+              errorText: invalid
+                  ? S.of(context).onboardingWrongWeightLabel
+                  : null,
               onChangedKg: (kg) => setState(() => _weightKg = kg),
             ),
             const SizedBox(height: 8),
@@ -363,7 +366,7 @@ class _AddWeightEntryDialogState extends State<_AddWeightEntryDialog> {
           child: Text(S.of(context).dialogCancelLabel),
         ),
         TextButton(
-          onPressed: _submit,
+          onPressed: invalid ? null : _submit,
           child: Text(S.of(context).dialogOKLabel),
         ),
       ],

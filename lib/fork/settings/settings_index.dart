@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
+import 'package:opennutritracker/fork/layout/width_cap.dart';
 
 /// Seam S129: Settings as MacroFactor's (SettingsB), a page for each of
 /// these, in this order.
@@ -102,7 +103,7 @@ class SettingsIndex extends StatelessWidget {
         card(SettingsSection.values.where((s) => s.isFirstCard)),
         const SizedBox(height: Dimens.spacing12),
         card(SettingsSection.values.where((s) => !s.isFirstCard)),
-      ],
+      ].map<Widget>((c) => WidthCap(child: c)).toList(),
     );
   }
 }
@@ -151,10 +152,11 @@ class _SectionRow extends StatelessWidget {
                       ),
                       child: Icon(
                         section.icon,
-                        // A dynamic primary can be pale, as in dark themes
+                        // A dynamic primary can be pale, as in dark themes;
+                        // so is the muted fill in the dark theme
                         color: section.isFirstCard
                             ? Theme.of(context).colorScheme.onPrimary
-                            : Colors.white,
+                            : AppPalette.readableOn(section.colorIn(context)),
                         size: 22,
                       ),
                     ),
@@ -198,10 +200,10 @@ class _SectionRow extends StatelessWidget {
   }
 }
 
-/// Every row by name; a result opens its section.
+/// Every row by name; a result opens its section at the row.
 class SettingsSearchPage extends StatefulWidget {
   final List<SettingsEntry> entries;
-  final ValueChanged<SettingsSection> onOpen;
+  final ValueChanged<SettingsEntry> onOpen;
 
   const SettingsSearchPage({
     super.key,
@@ -255,7 +257,7 @@ class _SettingsSearchPageState extends State<SettingsSearchPage> {
                     title: Text(e.label),
                     subtitle: Text(e.section.title),
                     trailing: const Icon(Icons.chevron_right_rounded),
-                    onTap: () => widget.onOpen(e.section),
+                    onTap: () => widget.onOpen(e),
                   ),
               ],
             ),

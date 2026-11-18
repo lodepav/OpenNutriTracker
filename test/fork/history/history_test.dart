@@ -1068,4 +1068,43 @@ void main() {
     );
     expect(plan.misread, isEmpty);
   });
+
+  testWidgets('Back leaves "Reading files…" up, as the read goes on', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Builder(
+            builder: (context) => TextButton(
+              onPressed: () => HistoryImportTile.readFiles(context, [
+                (name: 'none.csv', path: '/nonexistent/none.csv'),
+              ], BodyWeightUnit.kg),
+              child: const Text('read'),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('read'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.text('Reading files…'), findsOneWidget);
+
+    await tester.binding.handlePopRoute();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    final shownAfterBack = find.text('Reading files…').evaluate().isNotEmpty;
+    // the read, on its own isolate, done before any expect: up to 10 s
+    for (var i = 0; i < 100; i++) {
+      if (find.text('Reading files…').evaluate().isEmpty) break;
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 100)),
+      );
+      await tester.pump();
+    }
+    await tester.pumpAndSettle();
+    expect(shownAfterBack, isTrue);
+    expect(find.text('Reading files…'), findsNothing);
+  });
 }

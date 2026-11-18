@@ -293,11 +293,16 @@ class WeightTile extends StatefulWidget {
   final String hint;
   final VoidCallback? onTap;
 
+  /// A new value loads the weigh-ins again, the old trend shown meanwhile;
+  /// a new key instead would flash [weightKg] and replace TalkBack's node.
+  final Object? reload;
+
   const WeightTile({
     super.key,
     required this.weightKg,
     required this.unit,
     required this.load,
+    this.reload,
     this.identifier = 'home-weight-chip',
     this.hint = 'Log a weigh-in',
     this.onTap,
@@ -308,7 +313,13 @@ class WeightTile extends StatefulWidget {
 }
 
 class _WeightTileState extends State<WeightTile> {
-  late final _entries = widget.load();
+  late var _entries = widget.load();
+
+  @override
+  void didUpdateWidget(WeightTile oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!identical(widget.reload, oldWidget.reload)) _entries = widget.load();
+  }
 
   @override
   Widget build(BuildContext context) => FutureBuilder<List<WeightLogEntity>>(
@@ -386,7 +397,9 @@ class _ExpenditureTileState extends State<ExpenditureTile> {
         value: days.isEmpty
             ? '—'
             : '${energyValue(context, days.last.expenditureKcal)}',
-        note: days.isEmpty ? 'after a weigh-in' : '${energyUnit(context)} a day',
+        note: days.isEmpty
+            ? 'after a weigh-in'
+            : '${energyUnit(context)} a day',
         spokenLabel: expenditureSpoken(
           days.isEmpty ? null : energyValue(context, days.last.expenditureKcal),
           energyUnit(context),

@@ -22,6 +22,7 @@ import 'package:opennutritracker/fork/report/chart_touch.dart';
 import 'package:opennutritracker/fork/adaptive/trend_points.dart';
 import 'package:opennutritracker/fork/report/rate_text.dart';
 import 'package:opennutritracker/fork/body/body_card.dart';
+import 'package:opennutritracker/fork/display/motion.dart';
 import 'package:opennutritracker/fork/health/steps_card.dart';
 import 'package:opennutritracker/fork/goal/goal_card.dart';
 import 'package:opennutritracker/fork/photos/photo_card.dart';
@@ -83,21 +84,8 @@ class _TrendsView extends StatelessWidget {
         // gave way to the Calories page (S40's cards follow the grid).
         return TrendsOverview(
           state: state,
-          weightCard: (state) => _WeightCard(
-            entries: state.weight,
-            bodyWeightUnit: state.bodyWeightUnit,
-            targetWeightKg: state.targetWeightKg,
-            rangeDays: state.windowDays,
-            palette: palette,
-          ),
-          waterCard: (state) => _WaterTrendCard(
-            waterByDay: state.waterByDay,
-            goalMl: state.waterGoalMl,
-            rangeDays: state.windowDays,
-            palette: palette,
-            today: state.logicalToday, // S190
-            usesImperialUnits: state.usesImperialFoodUnits,
-          ),
+          weightCard: (state) => _weightCard(state, palette),
+          waterCard: (state) => _waterCard(state, palette),
           cards: {
             'weekly': WeeklyReportCard(
               days: state.days,
@@ -120,6 +108,24 @@ class _TrendsView extends StatelessWidget {
   }
 }
 
+// One builder for the Trends tab and a Home tile, so the two cannot drift.
+Widget _weightCard(TrendsLoaded state, AppPalette palette) => _WeightCard(
+  entries: state.weight,
+  bodyWeightUnit: state.bodyWeightUnit,
+  targetWeightKg: state.targetWeightKg,
+  rangeDays: state.windowDays,
+  palette: palette,
+);
+
+Widget _waterCard(TrendsLoaded state, AppPalette palette) => _WaterTrendCard(
+  waterByDay: state.waterByDay,
+  goalMl: state.waterGoalMl,
+  rangeDays: state.windowDays,
+  palette: palette,
+  today: state.logicalToday, // S190
+  usesImperialUnits: state.usesImperialFoodUnits,
+);
+
 class _WaterTrendCard extends StatelessWidget {
   final Map<DateTime, int> waterByDay;
   final int goalMl;
@@ -134,7 +140,7 @@ class _WaterTrendCard extends StatelessWidget {
     required this.rangeDays,
     required this.palette,
     required this.today,
-    this.usesImperialUnits = false,
+    required this.usesImperialUnits,
   });
 
   // #1306: plot, label and tooltip in fl oz with imperial food units, the way
@@ -204,6 +210,10 @@ class _WaterTrendCard extends StatelessWidget {
             child: SizedBox(
               height: 140,
               child: LineChart(
+                duration: motionDuration(
+                  context,
+                  const Duration(milliseconds: 150),
+                ),
                 LineChartData(
                   minX: 0,
                   maxX: (rangeDays - 1).toDouble(),
@@ -318,7 +328,7 @@ class _WeightCard extends StatelessWidget {
                 // card's box (the container gotcha) and coordinate taps miss.
                 container: true,
                 child: IconButton(
-                  tooltip: S.of(context).weightHistoryAddEntry,
+                  tooltip: 'Add weigh-in',
                   icon: const Icon(Icons.add_rounded),
                   onPressed: () => _logWeight(context),
                 ),
@@ -435,20 +445,8 @@ void openTrendFromHome(BuildContext context, TrendMetric metric) {
           (Object _) => <ExpenditureDay>[],
         ),
       ),
-      weightCard: (state) => _WeightCard(
-        entries: state.weight,
-        bodyWeightUnit: state.bodyWeightUnit,
-        targetWeightKg: state.targetWeightKg,
-        rangeDays: state.windowDays,
-        palette: palette,
-      ),
-      waterCard: (state) => _WaterTrendCard(
-        waterByDay: state.waterByDay,
-        goalMl: state.waterGoalMl,
-        rangeDays: state.windowDays,
-        palette: palette,
-        today: state.logicalToday, // S190
-      ),
+      weightCard: (state) => _weightCard(state, palette),
+      waterCard: (state) => _waterCard(state, palette),
     ),
     bloc: bloc,
   );

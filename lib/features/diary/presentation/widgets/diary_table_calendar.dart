@@ -7,6 +7,8 @@ import 'package:opennutritracker/core/utils/extensions.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 import 'package:table_calendar/table_calendar.dart';
 // [fork] S118 diary-header
+import 'dart:math' as math;
+
 import 'package:intl/intl.dart';
 import 'package:opennutritracker/fork/display/day_ring.dart';
 // [/fork]
@@ -85,20 +87,28 @@ class _DiaryTableCalendarState extends State<DiaryTableCalendar> {
         textTheme.labelSmall?.copyWith(color: palette.textMuted) ??
             const TextStyle();
 
+    // [fork] S118 diary-header: a day 48 dp wide on a 360 dp phone too, the
+    // card's inner sides giving way first, then its margins (the card's
+    // border takes a hairline each side)
+    return LayoutBuilder(builder: (context, constraints) {
+    final side = ((constraints.maxWidth - 7 * 48) / 2 - Dimens.hairline)
+        .clamp(0.0, Dimens.spacing16 + Dimens.spacing8);
+    final outer = math.min(Dimens.spacing16, side);
     return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        Dimens.spacing16,
+      padding: EdgeInsets.fromLTRB(
+        outer,
         Dimens.spacing8,
-        Dimens.spacing16,
+        outer,
         Dimens.spacing4,
       ),
       child: AppCard(
-        padding: const EdgeInsets.fromLTRB(
-          Dimens.spacing8,
+        padding: EdgeInsets.fromLTRB(
+          side - outer,
           Dimens.spacing12,
-          Dimens.spacing8,
+          side - outer,
           Dimens.spacing12,
         ),
+    // [/fork]
         child: TableCalendar(
           // [fork] S118 diary-header
           calendarFormat: _format,
@@ -201,6 +211,9 @@ class _DiaryTableCalendarState extends State<DiaryTableCalendar> {
                       ? CalendarFormat.month
                       : CalendarFormat.week,
                 ),
+                // a 48 dp target, as tall as the arrows beside it
+                child: ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 48),
                 child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -226,6 +239,7 @@ class _DiaryTableCalendarState extends State<DiaryTableCalendar> {
                     color: palette.textMuted,
                   ),
                 ],
+              ),
               ),
               ),
             ),
@@ -261,11 +275,16 @@ class _DiaryTableCalendarState extends State<DiaryTableCalendar> {
             markerBuilder: (context, day, _) {
               final selected = isSameDay(day, widget.selectedDate);
               final today = isSameDay(day, widget.currentDate);
-              if (!selected && !today) return null;
+              // the ring's fill, spoken
+              final fill = widget.daysWithEntries.contains(day.toParsedDay())
+                  ? DayRing.fillLabel(widget.trackedDaysMap[day.toParsedDay()])
+                  : null;
+              if (!selected && !today && fill == null) return null;
+              final label = [if (today) 'today', ?fill].join(', ');
               return Positioned.fill(
                 child: Semantics(
                   selected: selected ? true : null,
-                  label: today ? 'today' : null,
+                  label: label.isEmpty ? null : label,
                 ),
               );
             },
@@ -274,5 +293,8 @@ class _DiaryTableCalendarState extends State<DiaryTableCalendar> {
         ),
       ),
     );
+    // [fork] S118 diary-header
+    });
+    // [/fork]
   }
 }

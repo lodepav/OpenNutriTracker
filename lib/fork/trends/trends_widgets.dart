@@ -7,22 +7,15 @@ import 'package:intl/intl.dart' as intl;
 import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
+import 'package:opennutritracker/fork/display/motion.dart';
 import 'package:opennutritracker/fork/trends/trend_stats.dart';
 import 'package:opennutritracker/fork/trends/trends_range.dart';
 
-/// Water's colour on Trends, a blue the palette lacks.
-Color waterColor(BuildContext context) =>
-    Theme.of(context).brightness == Brightness.dark
-    ? const Color(0xFF7DB8E8)
-    : const Color(0xFF2F7DBF);
+/// Water's colour on Trends.
+Color waterColor(BuildContext context) => paletteOf(context).water;
 
-/// A tile's short warning line: a muted amber at 4.5:1 or more on the
-/// tile, 5.53:1 on light's white and carbs' amber 8.55:1 on dark's
-/// surface; the palette's light amber (3.79:1) is too pale for text.
-Color noteColor(BuildContext context) =>
-    Theme.of(context).brightness == Brightness.dark
-    ? AppPalette.dark.carbs
-    : const Color(0xFF945C0B);
+/// A tile's short warning line, at 4.5:1 or more on the tile.
+Color noteColor(BuildContext context) => paletteOf(context).warningText;
 
 /// [text] with its units whole: no line break inside "-0.16/wk",
 /// "kcal/day", "2925 kcal" or "fl oz"; " / " and " · " still break.
@@ -577,12 +570,40 @@ class DailyBarChart extends StatelessWidget {
     final base = range.min > 0 ? range.min : 0.0;
     final dayLabel = dayLabels(context, dates);
     final scheme = Theme.of(context).colorScheme;
+    String spoken(int i) => switch (values[i]) {
+      null => '${dayLabel(i)}, nothing logged',
+      final v => '${dayLabel(i)}, ${format?.call(v) ?? v.round()} $unit',
+    };
+    // A day picked without touch: up from none is the first, down the
+    // last; at either end the day stays.
+    int target(int step) =>
+        ((selected ?? (step > 0 ? -1 : values.length)) + step).clamp(
+          0,
+          values.length - 1,
+        );
+    void move(int step) {
+      if (target(step) != selected) onTap!(target(step));
+    }
+
+    final picked = selected == null ? null : spoken(selected!);
     return Semantics(
+      container: true,
       label: label,
+      value: picked,
+      increasedValue: picked == null ? null : spoken(target(1)),
+      decreasedValue: picked == null ? null : spoken(target(-1)),
+      onIncrease: onTap == null ? null : () => move(1),
+      onDecrease: onTap == null ? null : () => move(-1),
+      // One node: the axis' weekdays are not read after its name.
+      excludeSemantics: true,
       child: SizedBox(
         height: 200,
         child: LayoutBuilder(
           builder: (context, box) => BarChart(
+            duration: motionDuration(
+              context,
+              const Duration(milliseconds: 150),
+            ),
             BarChartData(
               minY: range.min,
               maxY: range.max,

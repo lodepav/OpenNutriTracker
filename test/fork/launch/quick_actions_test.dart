@@ -75,6 +75,16 @@ void main() {
     expect(find.text('Photo log'), findsNothing);
   });
 
+  testWidgets('the tiles\' icons are one family, the rounded set', (
+    tester,
+  ) async {
+    await pump(tester, ai: true);
+    expect(find.byIcon(Icons.photo_camera_rounded), findsOneWidget);
+    expect(find.byIcon(Icons.monitor_weight_rounded), findsOneWidget);
+    expect(find.byIcon(Icons.photo_camera_outlined), findsNothing);
+    expect(find.byIcon(Icons.monitor_weight_outlined), findsNothing);
+  });
+
   testWidgets('Photo log while AI meal assistance is on', (tester) async {
     await pump(tester, ai: true);
     expect(find.text('Photo log'), findsOneWidget);

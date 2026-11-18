@@ -1,6 +1,8 @@
 // Fork-owned copy of lib/features/home/presentation/widgets/dashboard_widget.dart
 // (D23); upstream's later changes to it are ported by hand:
 // fork/tools/upstream-copies.sh.
+import 'dart:async';
+
 import 'package:animated_flip_counter/animated_flip_counter.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart' show toBeginningOfSentenceCase;
@@ -16,9 +18,12 @@ import 'package:opennutritracker/features/settings/presentation/widgets/kcal_goa
 import 'package:percent_indicator/circular_percent_indicator.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 import 'package:opennutritracker/fork/display/display_prefs.dart';
+import 'package:opennutritracker/fork/display/motion.dart';
+import 'package:opennutritracker/fork/screens/home/home_loads.dart';
 import 'package:opennutritracker/fork/display/week_bars.dart';
 import 'package:opennutritracker/fork/display/macro_foods.dart';
 import 'package:opennutritracker/fork/adaptive/activity_credit.dart';
+import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/fork/adaptive/activity.dart'
     show maxDailyActivityKcal;
 import 'package:provider/provider.dart';
@@ -49,6 +54,10 @@ class DashboardWidget extends StatefulWidget {
   /// Whether activity raises the goal; the settings' own read but in tests.
   final Future<ActivityCredit> Function() loadCredit;
 
+  /// Home's loads, on which the credit is read again; for tests, the app's
+  /// from the HomeBloc.
+  final Stream<Object?>? homeLoads;
+
   const DashboardWidget({
     super.key,
     required this.totalKcalSupplied,
@@ -65,6 +74,7 @@ class DashboardWidget extends StatefulWidget {
     this.usesImperialUnits = false,
     this.forkDay,
     this.loadCredit = activityCredit,
+    this.homeLoads,
   });
 
   @override
@@ -73,13 +83,28 @@ class DashboardWidget extends StatefulWidget {
 
 class _DashboardWidgetState extends State<DashboardWidget> {
   // whether Burned raises the goal; a fixed or
-  // adaptive target leaves it out (read again as Home reloads)
+  // adaptive target leaves it out (read again as Home reloads, not on
+  // every rebuild)
   late Future<ActivityCredit> _forkCredit = widget.loadCredit();
+  late final StreamSubscription<Object?> _homeLoads;
+
+  void _readCredit() => setState(() {
+    _forkCredit = widget.loadCredit();
+  });
 
   @override
-  void didUpdateWidget(DashboardWidget oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    _forkCredit = widget.loadCredit();
+  void initState() {
+    super.initState();
+    _homeLoads = (widget.homeLoads ?? homeLoads()).listen((_) => _readCredit());
+    // the target's settings, which may change with no Home load
+    AdaptiveStore.settings.addListener(_readCredit);
+  }
+
+  @override
+  void dispose() {
+    _homeLoads.cancel();
+    AdaptiveStore.settings.removeListener(_readCredit);
+    super.dispose();
   }
 
   void _openKcalGoalInfoScreen() {
@@ -221,10 +246,13 @@ class _DashboardWidgetState extends State<DashboardWidget> {
                           behavior: HitTestBehavior.opaque,
                           onTap: _openKcalGoalInfoScreen,
                           child: CircularPercentIndicator(
+                            // made anew when Remove animations changes: the
+                            // indicator reads it only as it starts
+                            key: ValueKey(animationsOff(context)),
                             radius: 58,
                             lineWidth: 10,
                             percent: gaugeValue.clamp(0.0, 1.0),
-                            animation: true,
+                            animation: !animationsOff(context),
                             // The first build shows the real value at once;
                             // a later change (a meal logged) animates.
                             animateToInitialPercent: false,
@@ -243,8 +271,9 @@ class _DashboardWidgetState extends State<DashboardWidget> {
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     AnimatedFlipCounter(
-                                      duration: const Duration(
-                                        milliseconds: 800,
+                                      duration: motionDuration(
+                                        context,
+                                        const Duration(milliseconds: 800),
                                       ),
                                       curve: AppMotion.emphasized,
                                       value: ringValue.round(),
@@ -351,14 +380,22 @@ class _DashboardWidgetState extends State<DashboardWidget> {
                                 visualDensity: VisualDensity.compact,
                                 tapTargetSize: MaterialTapTargetSize.padded,
                               ),
+                              // shrunk to fit at large text, not broken
+                              // inside the word
                               segments: const [
                                 ButtonSegment(
                                   value: false,
-                                  label: Text('Left'),
+                                  label: FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    child: Text('Left', maxLines: 1),
+                                  ),
                                 ),
                                 ButtonSegment(
                                   value: true,
-                                  label: Text('Eaten'),
+                                  label: FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    child: Text('Eaten', maxLines: 1),
+                                  ),
                                 ),
                               ],
                               selected: {showsEaten},

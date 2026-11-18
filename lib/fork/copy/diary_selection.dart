@@ -68,9 +68,9 @@ class DiarySelection extends ChangeNotifier {
   }
 }
 
-/// The bar under the Diary while selecting: how many, Copy, Move, Share and
-/// Delete for them all, and Edit for one, the tap path beside a food's
-/// long-press.
+/// The bar under the Diary while selecting: how many, Copy, Move and Delete
+/// for them all, and under More, Share, and Edit for one, the tap path
+/// beside a food's long-press.
 class DiarySelectionBar extends StatelessWidget {
   final DiarySelection selection;
 
@@ -99,73 +99,120 @@ class DiarySelectionBar extends StatelessWidget {
         action(picked);
       }
 
+      Widget button(
+        String key,
+        String label,
+        IconData icon,
+        void Function(List<IntakeEntity>) action,
+      ) => IconButton(
+        key: Key('fork-selection-$key'),
+        tooltip: label,
+        icon: Icon(icon),
+        onPressed: count == 0 ? null : () => act(action),
+      );
+
+      final actions = [
+        button(
+          'copy',
+          'Copy',
+          Icons.copy_rounded,
+          (picked) => copyOrMoveIntakes(context, picked, from: day),
+        ),
+        button(
+          'move',
+          'Move',
+          Icons.drive_file_move_outline,
+          (picked) => copyOrMoveIntakes(context, picked, from: day, move: true),
+        ),
+        button(
+          'delete',
+          S.of(context).dialogDeleteLabel,
+          Icons.delete_outline_rounded,
+          (picked) {
+            for (final intake in picked) {
+              onDelete(intake, day);
+            }
+          },
+        ),
+        // the less used ones, so the count keeps its room
+        PopupMenuButton<void Function(List<IntakeEntity>)>(
+          key: const Key('fork-selection-more'),
+          tooltip: 'More',
+          enabled: count != 0,
+          onSelected: act,
+          itemBuilder: (_) => [
+            if (count == 1)
+              PopupMenuItem(
+                key: const Key('fork-selection-edit'),
+                value: (picked) => onEdit(context, picked.single),
+                child: const ListTile(
+                  leading: Icon(Icons.edit_outlined),
+                  title: Text('Edit'),
+                ),
+              ),
+            PopupMenuItem(
+              key: const Key('fork-selection-share'),
+              value: (picked) => shareIntakes(context, picked),
+              child: const ListTile(
+                leading: Icon(Icons.share_outlined),
+                title: Text('Share'),
+              ),
+            ),
+          ],
+        ),
+      ];
+      final close = IconButton(
+        key: const Key('fork-selection-end'),
+        tooltip: 'Stop selecting',
+        icon: const Icon(Icons.close_rounded),
+        onPressed: selection.end,
+      );
+      final label = count == 0 ? 'Tap foods' : '$count selected';
+      final style = Theme.of(context).textTheme.titleMedium;
+
       return Material(
         color: Theme.of(context).colorScheme.surfaceContainerHigh,
         child: Padding(
           // clear of the add button that sits over the navigation bar
           padding: const EdgeInsets.fromLTRB(4, 4, 8, 32),
-          child: Row(
-            children: [
-              IconButton(
-                key: const Key('fork-selection-end'),
-                tooltip: 'Stop selecting',
-                icon: const Icon(Icons.close_rounded),
-                onPressed: selection.end,
-              ),
-              Expanded(
-                child: Text(
-                  count == 0 ? 'Tap foods' : '$count selected',
-                  style: Theme.of(context).textTheme.titleMedium,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              for (final (key, label, icon, action) in [
-                if (count == 1)
-                  (
-                    'edit',
-                    'Edit',
-                    Icons.edit_outlined,
-                    (List<IntakeEntity> picked) =>
-                        onEdit(context, picked.single),
-                  ),
-                (
-                  'copy',
-                  'Copy',
-                  Icons.copy_rounded,
-                  (List<IntakeEntity> picked) =>
-                      copyOrMoveIntakes(context, picked, from: day),
-                ),
-                (
-                  'move',
-                  'Move',
-                  Icons.drive_file_move_outline,
-                  (List<IntakeEntity> picked) =>
-                      copyOrMoveIntakes(context, picked, from: day, move: true),
-                ),
-                (
-                  'share',
-                  'Share',
-                  Icons.share_outlined,
-                  (List<IntakeEntity> picked) => shareIntakes(context, picked),
-                ),
-                (
-                  'delete',
-                  S.of(context).dialogDeleteLabel,
-                  Icons.delete_outline_rounded,
-                  (List<IntakeEntity> picked) {
-                    for (final intake in picked) {
-                      onDelete(intake, day);
-                    }
-                  },
-                ),
-              ])
-                IconButton(
-                  key: Key('fork-selection-$key'),
-                  tooltip: label,
-                  icon: Icon(icon),
-                  onPressed: count == 0 ? null : () => act(action),
-                ),
-            ],
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final painter = TextPainter(
+                text: TextSpan(text: label, style: style),
+                textDirection: Directionality.of(context),
+                textScaler: MediaQuery.textScalerOf(context),
+                maxLines: 1,
+              )..layout();
+              final width = painter.width;
+              painter.dispose();
+              // the close button and the actions are 48 dp each
+              final room = constraints.maxWidth - 48.0 * (1 + actions.length);
+              // the count whole: beside the actions, or on its own line
+              // above them at large text
+              return width <= room
+                  ? Row(
+                      children: [
+                        close,
+                        Expanded(child: Text(label, style: style)),
+                        ...actions,
+                      ],
+                    )
+                  : Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Row(
+                          children: [
+                            close,
+                            Expanded(child: Text(label, style: style)),
+                          ],
+                        ),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: actions,
+                        ),
+                      ],
+                    );
+            },
           ),
         ),
       );

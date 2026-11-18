@@ -41,6 +41,8 @@ import 'package:opennutritracker/fork/bulk/ai_add.dart';
 import 'package:opennutritracker/fork/suggest/fits_left.dart';
 import 'package:opennutritracker/fork/recents/search_sections.dart';
 import 'package:opennutritracker/fork/widget/meal_picker_chip.dart';
+import 'package:opennutritracker/fork/add/chosen_chips.dart';
+import 'package:opennutritracker/fork/layout/width_cap.dart';
 
 class AddMealScreen extends StatefulWidget {
   const AddMealScreen({super.key});
@@ -82,6 +84,9 @@ class _AddMealScreenState extends State<AddMealScreen> {
 
   bool get _planning => FoodBasket.instance.planning != null;
 
+  // the recents are asked for once, not from a builder on each rebuild
+  bool _loadsStarted = false;
+
   @override
   void initState() {
     _productsBloc = locator<ProductsBloc>();
@@ -99,6 +104,10 @@ class _AddMealScreenState extends State<AddMealScreen> {
     _day = args.day;
     // the recents put this meal's usual foods first
     _recentMealBloc.forkMeal = _mealType.getIntakeType();
+    if (!_loadsStarted && _recentMealBloc.state is RecentMealInitial) {
+      _recentMealBloc.add(const LoadRecentMealEvent(searchString: ""));
+    }
+    _loadsStarted = true;
     super.didChangeDependencies();
   }
 
@@ -251,19 +260,30 @@ class _AddMealScreenState extends State<AddMealScreen> {
                   builder: (context, ai) => MediaQuery(
                     data: MediaQuery.of(context).copyWith(
                       padding: MediaQuery.paddingOf(context).copyWith(
-                        // the button, its margin, the inset under it, a gap
-                        bottom: ai.data == true
-                            ? 56 +
-                                  kFloatingActionButtonMargin +
-                                  MediaQuery.viewPaddingOf(context).bottom +
-                                  Dimens.spacing16
-                            : 0,
+                        // and clear of the keyboard, which the body is not
+                        // resized for
+                        bottom:
+                            MediaQuery.viewInsetsOf(context).bottom +
+                            // the button, its margin, the inset under it, a gap
+                            (ai.data == true
+                                ? 56 +
+                                      kFloatingActionButtonMargin +
+                                      MediaQuery.viewPaddingOf(context).bottom +
+                                      Dimens.spacing16
+                                : 0),
                       ),
                     ),
-                    child: ValueListenableBuilder<String>(
-                      valueListenable: _searchStringListener,
-                      builder: (context, query, _) =>
-                          _buildResults(context, palette, query),
+                    // a drag through the results puts the keyboard away
+                    child: ScrollConfiguration(
+                      behavior: ScrollConfiguration.of(context).copyWith(
+                        keyboardDismissBehavior:
+                            ScrollViewKeyboardDismissBehavior.onDrag,
+                      ),
+                      child: ValueListenableBuilder<String>(
+                        valueListenable: _searchStringListener,
+                        builder: (context, query, _) =>
+                            _buildResults(context, palette, query),
+                      ),
                     ),
                   ),
                 ),
@@ -292,14 +312,14 @@ class _AddMealScreenState extends State<AddMealScreen> {
         (
           _AddAction.bulk,
           'add-meal-bulk-add',
-          Icons.playlist_add,
+          Icons.playlist_add_rounded,
           s.bulkAddTitle,
         ),
       if (imperial != null)
         (
           _AddAction.custom,
           'add-meal-custom-add',
-          Icons.add_circle_outline,
+          Icons.add_circle_outline_rounded,
           s.newCustomMealLabel,
         ),
     ];
@@ -486,16 +506,22 @@ class _AddMealScreenState extends State<AddMealScreen> {
     ];
     // Above 1.5x a scrolling row hides chips past the edge with no cue.
     if (MediaQuery.textScalerOf(context).scale(10) > 15) {
-      return Align(
-        alignment: Alignment.centerLeft,
-        child: Wrap(runSpacing: Dimens.spacing8, children: chips),
+      return chosenChips(
+        context,
+        child: Align(
+          alignment: Alignment.centerLeft,
+          child: Wrap(runSpacing: Dimens.spacing8, children: chips),
+        ),
       );
     }
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(children: chips),
+    return chosenChips(
+      context,
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(children: chips),
+        ),
       ),
     );
   }
@@ -503,11 +529,14 @@ class _AddMealScreenState extends State<AddMealScreen> {
   Widget _resultsHeader(BuildContext context, AppPalette palette) => Container(
     padding: const EdgeInsets.symmetric(vertical: Dimens.spacing4),
     alignment: Alignment.centerLeft,
-    child: Text(
-      S.of(context).searchResultsLabel,
-      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-        fontWeight: FontWeight.w700,
-        color: palette.textMuted,
+    child: Semantics(
+      header: true,
+      child: Text(
+        S.of(context).searchResultsLabel,
+        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+          fontWeight: FontWeight.w700,
+          color: palette.textMuted,
+        ),
       ),
     ),
   );
@@ -543,7 +572,7 @@ class _AddMealScreenState extends State<AddMealScreen> {
       child: SizedBox(
         width: 36,
         height: 36,
-        child: CircularProgressIndicator(),
+        child: CircularProgressIndicator(semanticsLabel: 'Loading'),
       ),
     ),
   );
@@ -802,11 +831,13 @@ class _AddMealScreenState extends State<AddMealScreen> {
                           if (index == state.food.length) {
                             return const NoResultsWidget();
                           }
-                          return MealItemCard(
-                            day: _day,
-                            mealEntity: state.food[index],
-                            addMealType: _mealType,
-                            usesImperialUnits: state.usesImperialUnits,
+                          return WidthCap(
+                            child: MealItemCard(
+                              day: _day,
+                              mealEntity: state.food[index],
+                              addMealType: _mealType,
+                              usesImperialUnits: state.usesImperialUnits,
+                            ),
                           );
                         },
                       ),
@@ -830,13 +861,13 @@ class _AddMealScreenState extends State<AddMealScreen> {
         final recents = BlocBuilder<RecentMealBloc, RecentMealState>(
           bloc: _recentMealBloc,
           builder: (context, state) {
+            // loaded from didChangeDependencies
             if (state is RecentMealInitial) {
-              _recentMealBloc.add(const LoadRecentMealEvent(searchString: ""));
               return const SizedBox();
             } else if (state is RecentMealLoadingState) {
               return const Padding(
                 padding: EdgeInsets.only(top: 32),
-                child: CircularProgressIndicator(),
+                child: CircularProgressIndicator(semanticsLabel: 'Loading'),
               );
             } else if (state is RecentMealLoadedState) {
               // before anything is typed, the
@@ -857,12 +888,14 @@ class _AddMealScreenState extends State<AddMealScreen> {
                   child: ListView.builder(
                     itemCount: state.recentMeals.length,
                     itemBuilder: (context, index) {
-                      return MealItemCard(
-                        day: _day,
-                        mealEntity: state.recentMeals[index],
-                        addMealType: _mealType,
-                        usesImperialUnits: state.usesImperialUnits,
-                        forkLastLogged: state.forkIntakes[index],
+                      return WidthCap(
+                        child: MealItemCard(
+                          day: _day,
+                          mealEntity: state.recentMeals[index],
+                          addMealType: _mealType,
+                          usesImperialUnits: state.usesImperialUnits,
+                          forkLastLogged: state.forkIntakes[index],
+                        ),
                       );
                     },
                   ),
@@ -909,13 +942,13 @@ class _AddMealScreenState extends State<AddMealScreen> {
     return BlocBuilder<FavouriteMealBloc, FavouriteMealState>(
       bloc: _favouriteMealBloc,
       builder: (context, state) {
+        // the Favourites chip asks for them (_selectSource), the one way here
         if (state is FavouriteMealInitial) {
-          _favouriteMealBloc.add(LoadFavouriteMealEvent(searchString: query));
           return const SizedBox();
         } else if (state is FavouriteMealLoadingState) {
           return const Padding(
             padding: EdgeInsets.only(top: 32),
-            child: CircularProgressIndicator(),
+            child: CircularProgressIndicator(semanticsLabel: 'Loading'),
           );
         } else if (state is FavouriteMealLoadedState) {
           if (state.favourites.isNotEmpty) {
@@ -924,11 +957,13 @@ class _AddMealScreenState extends State<AddMealScreen> {
               container: true,
               child: ListView.builder(
                 itemCount: state.favourites.length,
-                itemBuilder: (context, index) => MealItemCard(
-                  day: _day,
-                  mealEntity: state.favourites[index],
-                  addMealType: _mealType,
-                  usesImperialUnits: state.usesImperialUnits,
+                itemBuilder: (context, index) => WidthCap(
+                  child: MealItemCard(
+                    day: _day,
+                    mealEntity: state.favourites[index],
+                    addMealType: _mealType,
+                    usesImperialUnits: state.usesImperialUnits,
+                  ),
                 ),
               ),
             );
@@ -994,8 +1029,12 @@ class _AddMealScreenState extends State<AddMealScreen> {
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
-      builder: (sheetContext) =>
-          QuickAddBottomSheet(intakeType: _mealType.getIntakeType(), day: _day),
+      builder: (sheetContext) => QuickAddBottomSheet(
+        intakeType: _mealType.getIntakeType(),
+        day: _day,
+        // only the sheet closes: search stays, with its query and the bar
+        onAdded: () {},
+      ),
     );
   }
 

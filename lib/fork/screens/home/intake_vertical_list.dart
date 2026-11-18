@@ -348,331 +348,358 @@ class _IntakeVerticalListState extends State<IntakeVerticalList> {
     final palette = paletteOf(context);
     final accent = Theme.of(context).colorScheme.primary;
     final textTheme = Theme.of(context).textTheme;
-    return Column(
-      children: [
-        Container(
-          // closer together on the timeline
-          padding: EdgeInsets.fromLTRB(
-            Dimens.spacing16,
-            widget.forkTime == null ? Dimens.spacing20 : Dimens.spacing8,
-            Dimens.spacing12,
-            widget.forkTime == null ? Dimens.spacing8 : 0,
-          ),
-          alignment: Alignment.centerLeft,
-          child: _forkTimelineHeader(
-            context,
-            Row(
-              children: [
-                if (selecting)
-                  SizedBox(
-                    width: widget.forkTime == null || _timeAbove(context)
-                        ? null
-                        : _timeColumn(context),
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      child: Checkbox(
-                        key: ValueKey('fork-select-section-${widget.title}'),
-                        tristate: true,
-                        semanticLabel: 'Select all of ${widget.title}',
-                        value: selection!.stateOf(widget.intakeList),
-                        onChanged: widget.intakeList.isEmpty
-                            ? null
-                            : (_) => selection.toggleAll(widget.intakeList),
-                      ),
-                    ),
-                  )
-                else if (widget.forkTime case final time?
-                    when !_timeAbove(context))
-                  SizedBox(
-                    width: _timeColumn(context),
-                    child: _timeText(context, time),
-                  )
-                else if (widget.forkTime == null)
-                  Container(
-                    padding: const EdgeInsets.all(Dimens.spacing8),
-                    decoration: BoxDecoration(
-                      color: accent.withValues(alpha: 0.12),
-                      borderRadius: Dimens.borderRadiusS,
-                    ),
-                    child: Icon(widget.listIcon, size: 20, color: accent),
-                  ),
-                if (selecting || !_timeAbove(context))
-                  const SizedBox(width: Dimens.spacing12),
-                Expanded(
-                  // a heading TalkBack can jump between
-                  // a smaller title
-                  child: widget.forkTime != null
-                      ? ExcludeSemantics(
-                          child: Text(
-                            widget.title,
-                            style: textTheme.titleMedium?.copyWith(
-                              color: palette.textStrong,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        )
-                      : // [/fork]
-                        Semantics(
-                          header: true,
-                          child: AutoSizeText(
-                            widget.title,
-                            maxLines: 1,
-                            minFontSize: 14,
-                            overflow: TextOverflow.ellipsis,
-                            style: textTheme.titleLarge?.copyWith(
-                              color: palette.textStrong,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
+    // the section's own width, not the screen's: Home caps it on a wide
+    // window (WidthCap)
+    return LayoutBuilder(
+      builder: (context, constraints) => Column(
+        children: [
+          Container(
+            // closer together on the timeline
+            padding: EdgeInsets.fromLTRB(
+              Dimens.spacing16,
+              widget.forkTime == null ? Dimens.spacing20 : Dimens.spacing8,
+              Dimens.spacing12,
+              widget.forkTime == null ? Dimens.spacing8 : 0,
+            ),
+            alignment: Alignment.centerLeft,
+            child: _forkTimelineHeader(
+              context,
+              Row(
+                children: [
+                  if (selecting)
+                    SizedBox(
+                      width: widget.forkTime == null || _timeAbove(context)
+                          ? null
+                          : _timeColumn(context),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Checkbox(
+                          key: ValueKey('fork-select-section-${widget.title}'),
+                          tristate: true,
+                          semanticLabel: 'Select all of ${widget.title}',
+                          value: selection!.stateOf(widget.intakeList),
+                          onChanged: widget.intakeList.isEmpty
+                              ? null
+                              : (_) => selection.toggleAll(widget.intakeList),
                         ),
-                ),
-                const SizedBox(width: Dimens.spacing8),
-                if (_shouldShowHeaderSummary &&
-                    widget.forkTime == null) //: under the title
-                  // At most half the row, not half of it always, so the ⋮
-                  // sits at the edge on every meal (H4)
-                  ConstrainedBox(
-                    constraints: BoxConstraints(
-                      maxWidth: MediaQuery.sizeOf(context).width / 2,
-                    ),
-                    child: Text.rich(
-                      _buildHeaderSummary(context),
-                      // read as words; at a large font
-                      // the macros wrap as far as they need rather than cut off
-                      semanticsLabel: _headerSummaryLabel(context),
-                      // (no ellipsis: with no line limit it cuts to one line)
-                      maxLines: null,
-                      style: textTheme.labelMedium?.copyWith(
-                        color: palette.textMuted,
-                        fontWeight: FontWeight.w700,
-                        height: 1.3,
                       ),
-                      textAlign: TextAlign.end,
+                    )
+                  else if (widget.forkTime case final time?
+                      when !_timeAbove(context))
+                    SizedBox(
+                      width: _timeColumn(context),
+                      child: _timeText(context, time),
+                    )
+                  else if (widget.forkTime == null)
+                    Container(
+                      padding: const EdgeInsets.all(Dimens.spacing8),
+                      decoration: BoxDecoration(
+                        color: accent.withValues(alpha: 0.12),
+                        borderRadius: Dimens.borderRadiusS,
+                      ),
+                      child: Icon(widget.listIcon, size: 20, color: accent),
                     ),
+                  if (selecting || !_timeAbove(context))
+                    const SizedBox(width: Dimens.spacing12),
+                  Expanded(
+                    // a heading TalkBack can jump between
+                    // a smaller title
+                    child: widget.forkTime != null
+                        ? ExcludeSemantics(
+                            child: Text(
+                              widget.title,
+                              style: textTheme.titleMedium?.copyWith(
+                                color: palette.textStrong,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          )
+                        : // [/fork]
+                          Semantics(
+                            header: true,
+                            child: AutoSizeText(
+                              widget.title,
+                              maxLines: 1,
+                              minFontSize: 14,
+                              overflow: TextOverflow.ellipsis,
+                              style: textTheme.titleLarge?.copyWith(
+                                color: palette.textStrong,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
                   ),
-                // the add row's button
-                if (widget.forkTime != null)
-                  IconButton(
-                    key: const ValueKey('timeline-add'),
-                    tooltip: S.of(context).addToSectionLabel(widget.title),
-                    icon: Icon(Icons.add_rounded, color: accent),
-                    onPressed: () => _onPlaceholderCardTapped(context),
-                  ),
-                Semantics(
-                  identifier: 'intake-section-menu',
-                  // Tight bounds: without this the node inherits the flex
-                  // Row's full-width box and coordinate taps miss the button.
-                  container: true,
-                  child: PopupMenuButton<VerticalListPopupMenuSelections>(
-                    tooltip: S.of(context).sectionOptionsLabel(widget.title),
-                    icon: Icon(
-                      Icons.more_vert_rounded,
-                      color: palette.textMuted,
+                  const SizedBox(width: Dimens.spacing8),
+                  if (_shouldShowHeaderSummary &&
+                      widget.forkTime == null) //: under the title
+                    // At most half the row, not half of it always, so the ⋮
+                    // sits at the edge on every meal (H4)
+                    ConstrainedBox(
+                      constraints: BoxConstraints(
+                        maxWidth: constraints.maxWidth / 2,
+                      ),
+                      child: Text.rich(
+                        _buildHeaderSummary(context),
+                        // read as words; at a large font
+                        // the macros wrap as far as they need rather than cut off
+                        semanticsLabel: _headerSummaryLabel(context),
+                        // (no ellipsis: with no line limit it cuts to one line)
+                        maxLines: null,
+                        style: textTheme.labelMedium?.copyWith(
+                          color: palette.textMuted,
+                          fontWeight: FontWeight.w700,
+                          height: 1.3,
+                        ),
+                        textAlign: TextAlign.end,
+                      ),
                     ),
-                    shape: Dimens.shapeM,
-                    onSelected:
-                        (VerticalListPopupMenuSelections selection) async {
-                          // The section as it was when the menu was used: the
-                          // Diary can move on to another day while a dialog is
-                          // open (#1360), rebuilding this list for that day.
-                          final intakes = widget.intakeList;
-                          final onDeleteIntake = widget.onDeleteIntakeCallback;
-                          final trackedDay = widget.trackedDayEntity;
-                          switch (selection) {
-                            // Not offered: the selection's bar copies and
-                            // moves. The value is upstream's.
-                            case VerticalListPopupMenuSelections.onCopy:
-                              break;
-                            case VerticalListPopupMenuSelections.onDelete:
-                              // deleted at once, in
-                              // place of upstream's DeleteAllDialog; each
-                              // delete's Undo bar gathers the meal into one
-                              for (IntakeEntity intake in intakes) {
-                                onDeleteIntake(intake, trackedDay);
-                              }
-                              // What is gone can't stay picked.
-                              widget.selection?.end();
-                            case VerticalListPopupMenuSelections.onShare:
-                              if (context.mounted) {
-                                final code = SharedMealPayload.fromIntakeList(
-                                  widget.intakeList,
-                                  recipeRepository: locator<RecipeRepository>(),
-                                ).toJsonString();
-                                final hasOtherProfiles =
-                                    locator<GetProfilesUsecase>()
-                                        .getProfiles()
-                                        .length >
-                                    1;
-                                await showDialog(
-                                  context: context,
-                                  builder: (_) => ShareQrDialog(
-                                    title: S.of(context).shareMealLabel,
-                                    code: code,
-                                    fileBaseName: 'meal_qr',
-                                    onCopyToProfile: hasOtherProfiles
-                                        ? () => showCopyToProfileSheet(
-                                            context,
-                                            widget.intakeList,
-                                          )
-                                        : null,
-                                  ),
-                                );
-                              }
-                            case VerticalListPopupMenuSelections.onImport:
-                              if (context.mounted) {
-                                Navigator.of(context).pushNamed(
-                                  NavigationOptions.importMealScannerRoute,
-                                  arguments: ImportMealScannerArguments(
-                                    widget.addMealType.getIntakeType(),
-                                    widget.addMealType,
-                                    widget.day,
-                                  ),
-                                );
-                              }
-                            case VerticalListPopupMenuSelections.onImportCode:
-                              final payload =
-                                  await showDialog<SharedMealPayload>(
+                  // the add row's button
+                  if (widget.forkTime != null)
+                    IconButton(
+                      key: const ValueKey('timeline-add'),
+                      tooltip: S.of(context).addToSectionLabel(widget.title),
+                      icon: Icon(Icons.add_rounded, color: accent),
+                      onPressed: () => _onPlaceholderCardTapped(context),
+                    ),
+                  Semantics(
+                    identifier: 'intake-section-menu',
+                    // Tight bounds: without this the node inherits the flex
+                    // Row's full-width box and coordinate taps miss the button.
+                    container: true,
+                    child: PopupMenuButton<VerticalListPopupMenuSelections>(
+                      tooltip: S.of(context).sectionOptionsLabel(widget.title),
+                      icon: Icon(
+                        Icons.more_vert_rounded,
+                        color: palette.textMuted,
+                      ),
+                      shape: Dimens.shapeM,
+                      onSelected:
+                          (VerticalListPopupMenuSelections selection) async {
+                            // The section as it was when the menu was used: the
+                            // Diary can move on to another day while a dialog is
+                            // open (#1360), rebuilding this list for that day.
+                            final intakes = widget.intakeList;
+                            final onDeleteIntake =
+                                widget.onDeleteIntakeCallback;
+                            final trackedDay = widget.trackedDayEntity;
+                            switch (selection) {
+                              // Not offered: the selection's bar copies and
+                              // moves. The value is upstream's.
+                              case VerticalListPopupMenuSelections.onCopy:
+                                break;
+                              case VerticalListPopupMenuSelections.onDelete:
+                                // deleted at once, in
+                                // place of upstream's DeleteAllDialog; each
+                                // delete's Undo bar gathers the meal into one
+                                for (IntakeEntity intake in intakes) {
+                                  onDeleteIntake(intake, trackedDay);
+                                }
+                                // What is gone can't stay picked.
+                                widget.selection?.end();
+                              case VerticalListPopupMenuSelections.onShare:
+                                if (context.mounted) {
+                                  final code = SharedMealPayload.fromIntakeList(
+                                    widget.intakeList,
+                                    recipeRepository:
+                                        locator<RecipeRepository>(),
+                                  ).toJsonString();
+                                  final hasOtherProfiles =
+                                      locator<GetProfilesUsecase>()
+                                          .getProfiles()
+                                          .length >
+                                      1;
+                                  await showDialog(
                                     context: context,
-                                    builder: (_) =>
-                                        const SharedMealCodeDialog(),
-                                  );
-                              if (payload != null && context.mounted) {
-                                final imported = await SharedMealImporter(
-                                  context,
-                                  widget.addMealType.getIntakeType(),
-                                  widget.addMealType,
-                                  widget.day,
-                                ).importPayload(payload);
-                                if (imported && context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                        S.of(context).importMealSuccessLabel,
-                                      ),
+                                    builder: (_) => ShareQrDialog(
+                                      title: S.of(context).shareMealLabel,
+                                      code: code,
+                                      fileBaseName: 'meal_qr',
+                                      onCopyToProfile: hasOtherProfiles
+                                          ? () => showCopyToProfileSheet(
+                                              context,
+                                              widget.intakeList,
+                                            )
+                                          : null,
                                     ),
                                   );
                                 }
-                              }
-                          }
-                        },
-                    itemBuilder: (BuildContext context) =>
-                        <PopupMenuEntry<VerticalListPopupMenuSelections>>[
-                          if (totalKcal > 0)
+                              case VerticalListPopupMenuSelections.onImport:
+                                if (context.mounted) {
+                                  Navigator.of(context).pushNamed(
+                                    NavigationOptions.importMealScannerRoute,
+                                    arguments: ImportMealScannerArguments(
+                                      widget.addMealType.getIntakeType(),
+                                      widget.addMealType,
+                                      widget.day,
+                                    ),
+                                  );
+                                }
+                              case VerticalListPopupMenuSelections.onImportCode:
+                                final payload =
+                                    await showDialog<SharedMealPayload>(
+                                      context: context,
+                                      builder: (_) =>
+                                          const SharedMealCodeDialog(),
+                                    );
+                                if (payload != null && context.mounted) {
+                                  final imported = await SharedMealImporter(
+                                    context,
+                                    widget.addMealType.getIntakeType(),
+                                    widget.addMealType,
+                                    widget.day,
+                                  ).importPayload(payload);
+                                  if (imported && context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          S.of(context).importMealSuccessLabel,
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                }
+                            }
+                          },
+                      itemBuilder: (BuildContext context) =>
+                          <PopupMenuEntry<VerticalListPopupMenuSelections>>[
+                            if (totalKcal > 0)
+                              PopupMenuItem<VerticalListPopupMenuSelections>(
+                                value: VerticalListPopupMenuSelections.onDelete,
+                                child: Text(S.of(context).deleteAllLabel),
+                              ),
+                            if (totalKcal > 0)
+                              PopupMenuItem<VerticalListPopupMenuSelections>(
+                                value: VerticalListPopupMenuSelections.onShare,
+                                child: Text(S.of(context).shareMealLabel),
+                              ),
                             PopupMenuItem<VerticalListPopupMenuSelections>(
-                              value: VerticalListPopupMenuSelections.onDelete,
-                              child: Text(S.of(context).deleteAllLabel),
+                              value: VerticalListPopupMenuSelections.onImport,
+                              child: Text(S.of(context).importMealLabel),
                             ),
-                          if (totalKcal > 0)
                             PopupMenuItem<VerticalListPopupMenuSelections>(
-                              value: VerticalListPopupMenuSelections.onShare,
-                              child: Text(S.of(context).shareMealLabel),
+                              value:
+                                  VerticalListPopupMenuSelections.onImportCode,
+                              child: Semantics(
+                                identifier: 'intake-import-meal-code',
+                                child: Text(S.of(context).pasteCodeLabel),
+                              ),
                             ),
-                          PopupMenuItem<VerticalListPopupMenuSelections>(
-                            value: VerticalListPopupMenuSelections.onImport,
-                            child: Text(S.of(context).importMealLabel),
-                          ),
-                          PopupMenuItem<VerticalListPopupMenuSelections>(
-                            value: VerticalListPopupMenuSelections.onImportCode,
-                            child: Semantics(
-                              identifier: 'intake-import-meal-code',
-                              child: Text(S.of(context).pasteCodeLabel),
-                            ),
-                          ),
-                          // Sort, rarely changed, in the menu rather than
-                          // a button on every meal
-                          if (widget.onSortTypeChanged != null && totalKcal > 0)
-                            ..._sortItems(context),
-                        ],
+                            // Sort, rarely changed, in the menu rather than
+                            // a button on every meal
+                            if (widget.onSortTypeChanged != null &&
+                                totalKcal > 0)
+                              ..._sortItems(context),
+                          ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
-        ),
-        DragTarget<IntakeEntity>(
-          onAcceptWithDetails: (intake) {
-            _onItemDropped(intake.data);
-          },
-          builder: (context, candidateData, rejectedData) {
-            return Column(
-              children: [
-                for (final intakeEntity in widget.intakeList)
-                  LongPressDraggable<IntakeEntity>(
-                    key: ValueKey(intakeEntity.id),
-                    data: intakeEntity,
-                    // a long-press picks it while selecting
-                    maxSimultaneousDrags: selecting ? 0 : null,
-                    onDragStarted: () => widget.onItemDragCallback?.call(true),
-                    onDragEnd: (_) => widget.onItemDragCallback?.call(false),
-                    feedback: Material(
-                      color: Colors.transparent,
-                      child: SizedBox(
-                        width: MediaQuery.of(context).size.width,
-                        child: Opacity(
-                          opacity: 0.85,
-                          child: IntakeCard(
-                            key: ValueKey('fb-${intakeEntity.id}'),
-                            intake: intakeEntity,
-                            firstListElement: false,
-                            usesImperialUnits: widget.usesImperialUnits,
-                            sortType: widget.sortType,
-                          ),
-                        ),
-                      ),
-                    ),
-                    childWhenDragging: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: Dimens.spacing16,
-                        vertical: Dimens.spacing4,
-                      ),
-                      child: Container(
-                        height: 76,
-                        decoration: BoxDecoration(
-                          color: palette.surfaceMuted,
-                          borderRadius: Dimens.borderRadiusM,
-                          border: Border.all(
-                            color: palette.border,
-                            width: Dimens.hairline,
-                          ),
-                        ),
-                      ),
-                    ),
-                    child: IntakeCard(
+          DragTarget<IntakeEntity>(
+            onAcceptWithDetails: (intake) {
+              _onItemDropped(intake.data);
+            },
+            builder: (context, candidateData, rejectedData) {
+              return Column(
+                children: [
+                  for (final intakeEntity in widget.intakeList)
+                    LongPressDraggable<IntakeEntity>(
                       key: ValueKey(intakeEntity.id),
-                      intake: intakeEntity,
-                      selected: selecting
-                          ? selection!.isPicked(intakeEntity)
-                          : null,
-                      onItemLongPressed: switch (selection) {
-                        null => null,
-                        final selection when selecting =>
-                          (_, intake) => selection.toggleAll([intake]),
-                        _ =>
-                          (context, intake) => widget.onItemTappedCallback
-                              ?.call(context, intake, widget.usesImperialUnits),
-                      },
-                      onItemTapped: selection == null
-                          ? widget.onItemTappedCallback
-                          : (_, intake, _) => selection.toggleAll([intake]),
-                      firstListElement: false,
-                      usesImperialUnits: widget.usesImperialUnits,
-                      sortType: widget.sortType,
-                      showTime: widget.hourSection,
+                      data: intakeEntity,
+                      // a long-press picks it while selecting
+                      maxSimultaneousDrags: selecting ? 0 : null,
+                      onDragStarted: () =>
+                          widget.onItemDragCallback?.call(true),
+                      onDragEnd: (_) => widget.onItemDragCallback?.call(false),
+                      feedback: Material(
+                        color: Colors.transparent,
+                        child: SizedBox(
+                          width: constraints.maxWidth,
+                          child: Opacity(
+                            opacity: 0.85,
+                            child: IntakeCard(
+                              key: ValueKey('fb-${intakeEntity.id}'),
+                              intake: intakeEntity,
+                              firstListElement: false,
+                              usesImperialUnits: widget.usesImperialUnits,
+                              sortType: widget.sortType,
+                            ),
+                          ),
+                        ),
+                      ),
+                      childWhenDragging: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: Dimens.spacing16,
+                          vertical: Dimens.spacing4,
+                        ),
+                        child: Container(
+                          height: 76,
+                          decoration: BoxDecoration(
+                            color: palette.surfaceMuted,
+                            borderRadius: Dimens.borderRadiusM,
+                            border: Border.all(
+                              color: palette.border,
+                              width: Dimens.hairline,
+                            ),
+                          ),
+                        ),
+                      ),
+                      child: IntakeCard(
+                        key: ValueKey(intakeEntity.id),
+                        intake: intakeEntity,
+                        selected: selecting
+                            ? selection!.isPicked(intakeEntity)
+                            : null,
+                        onItemLongPressed: switch (selection) {
+                          null => null,
+                          final selection when selecting =>
+                            (_, intake) => selection.toggleAll([intake]),
+                          _ =>
+                            (context, intake) =>
+                                widget.onItemTappedCallback?.call(
+                                  context,
+                                  intake,
+                                  widget.usesImperialUnits,
+                                ),
+                        },
+                        onItemTapped: selection == null
+                            ? widget.onItemTappedCallback
+                            : (_, intake, _) => selection.toggleAll([intake]),
+                        // spoken by TalkBack, as the callbacks above do
+                        tapHint: selection == null
+                            ? 'Edit'
+                            : selection.isPicked(intakeEntity)
+                            ? 'Unselect'
+                            : 'Select',
+                        longPressHint: switch (selection) {
+                          null => null,
+                          final selection when selecting =>
+                            selection.isPicked(intakeEntity)
+                                ? 'Unselect'
+                                : 'Select',
+                          _ => 'Edit',
+                        },
+                        firstListElement: false,
+                        usesImperialUnits: widget.usesImperialUnits,
+                        sortType: widget.sortType,
+                        showTime: widget.hourSection,
+                      ),
                     ),
-                  ),
-                if (!widget.hourSection && widget.forkTime == null) // S118
-                  PlaceholderCard(
-                    day: widget.day,
-                    onTap: () => _onPlaceholderCardTapped(context),
-                    firstListElement: true,
-                    semanticIdentifier: 'add-meal-placeholder',
-                    label: S.of(context).addToSectionLabel(widget.title),
-                  ),
-              ],
-            );
-          },
-        ),
-      ],
+                  if (!widget.hourSection && widget.forkTime == null) // S118
+                    PlaceholderCard(
+                      day: widget.day,
+                      onTap: () => _onPlaceholderCardTapped(context),
+                      firstListElement: true,
+                      semanticIdentifier: 'add-meal-placeholder',
+                      label: S.of(context).addToSectionLabel(widget.title),
+                    ),
+                ],
+              );
+            },
+          ),
+        ],
+      ),
     );
   }
 
@@ -683,6 +710,11 @@ class _IntakeVerticalListState extends State<IntakeVerticalList> {
     if (selection == null) return header;
     return Semantics(
       identifier: 'diary-section-select',
+      onTapHint: widget.intakeList.isEmpty
+          ? null
+          : selection.stateOf(widget.intakeList) == true
+          ? 'Unselect all'
+          : 'Select all',
       child: InkWell(
         onTap: widget.intakeList.isEmpty
             ? null

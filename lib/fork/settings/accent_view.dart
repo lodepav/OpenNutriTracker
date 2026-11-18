@@ -3,6 +3,7 @@ import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
 import 'package:opennutritracker/core/styles/accent_colors.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
+import 'package:opennutritracker/fork/layout/width_cap.dart';
 
 /// What a screen reader calls each of [accentPresetColors], in its order.
 const accentPresetNames = [
@@ -143,8 +144,11 @@ class AccentColourView extends StatelessWidget {
             children: [
               LayoutBuilder(
                 builder: (context, constraints) {
-                  const perRow = 6;
                   const gap = Dimens.spacing8;
+                  // As many as fit at 48 dp each, the touch target's floor
+                  final perRow = ((constraints.maxWidth + gap) / (48 + gap))
+                      .floor()
+                      .clamp(1, accentPresetColors.length);
                   final size =
                       (constraints.maxWidth - gap * (perRow - 1)) / perRow;
                   return Wrap(
@@ -181,7 +185,7 @@ class AccentColourView extends StatelessWidget {
             ],
           ),
         ),
-      ],
+      ].map<Widget>((c) => WidthCap(child: c)).toList(),
     );
   }
 }
@@ -233,7 +237,10 @@ class _Swatch extends StatelessWidget {
                     : null,
               ),
               child: selected
-                  ? Icon(Icons.check_rounded, color: AppPalette.readableOn(color))
+                  ? Icon(
+                      Icons.check_rounded,
+                      color: AppPalette.readableOn(color),
+                    )
                   : null,
             ),
           ),
