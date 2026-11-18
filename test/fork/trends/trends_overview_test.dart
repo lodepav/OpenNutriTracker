@@ -588,7 +588,7 @@ void main() {
       of: find.byType(ChangeChips),
       matching: find.text(text),
     );
-    expect(chip('\u22120.4'), findsOneWidget);
+    expect(chip('\u22120.4 kg'), findsOneWidget);
     expect(chip('–'), findsNWidgets(3));
     expect(find.text('Highest trend'), findsOneWidget);
     expect(find.text('Lowest trend'), findsOneWidget);

@@ -123,7 +123,9 @@ List<Widget> weightDetailBody(
         for (final d in weightChangeSpans)
           (
             span: '$d d',
-            value: w(changes[d], signed: true) ?? '–',
+            value: changes[d] == null
+                ? '–'
+                : '${w(changes[d], signed: true)} $label',
             spoken: changes[d] == null
                 ? 'Over $d days: not enough weigh-ins'
                 : 'Over $d days: ${w(changes[d], signed: true)} $label',

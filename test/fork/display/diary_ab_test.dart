@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get_it/get_it.dart';
@@ -392,6 +393,34 @@ void main() {
     );
     expect(find.text('Mon'), findsOneWidget);
     expect(find.bySemanticsLabel('Mon'), findsNothing);
+    semantics.dispose();
+  });
+
+  testWidgets('the week strip says which day is shown, and which is today', (
+    tester,
+  ) async {
+    final semantics = tester.ensureSemantics();
+    await tester.pumpWidget(
+      _app(
+        DiaryTableCalendar(
+          onDateSelected: (_, _) {},
+          calendarDurationDays: const Duration(days: 365),
+          focusedDate: _day,
+          currentDate: _day,
+          selectedDate: DateTime(2026, 10, 23),
+          trackedDaysMap: const {},
+          daysWithEntries: const {},
+        ),
+      ),
+    );
+    // The flag sits on the node that reads the date, not on one of its own.
+    SemanticsNode cell(String date) =>
+        tester.getSemantics(find.bySemanticsLabel(RegExp(date)));
+    expect(cell('October 23, 2026'), isSemantics(isSelected: true));
+    expect(cell('October 24, 2026'), isNot(isSemantics(isSelected: true)));
+    expect(cell('October 25, 2026'), isNot(isSemantics(isSelected: true)));
+    expect(cell('October 25, 2026').label, contains('today'));
+    expect(cell('October 24, 2026').label, isNot(contains('today')));
     semantics.dispose();
   });
 }

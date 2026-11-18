@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -23,6 +24,7 @@ import 'package:opennutritracker/generated/l10n.dart';
 import 'package:opennutritracker/fork/settings/settings_index.dart';
 
 import '../../helpers/test_l10n.dart';
+import '../../helpers/ux_checks.dart';
 import '../a11y/nested_buttons.dart';
 
 // Seam S129: Settings as MacroFactor's, a page for each section, and every
@@ -486,8 +488,81 @@ void main() {
   test('a list of shares puts the unit on each number', () {
     expect(
       percentsLine([('Breakfast', 30), ('Dinner', 20), ('Snack', 10)]),
-      'Breakfast 30% · Dinner 20% · Snack 10%',
+      'Breakfast\u00a030%\u00a0· Dinner\u00a020%\u00a0· Snack\u00a010%',
     );
+    // A dot never starts a line: no plain space before one.
+    expect(
+      percentsLine([('Carbs', 60), ('Fat', 25), ('Protein', 15)]),
+      isNot(contains(' ·')),
+    );
+  });
+
+  testWidgets('at 2x on a 360 dp phone no line of the shares starts with a '
+      'dot', (tester) async {
+    final line = percentsLine([
+      ('Breakfast', 30),
+      ('Lunch', 40),
+      ('Dinner', 20),
+      ('Snack', 10),
+    ]);
+    // The subtitle's width depends on the row around it: every width a
+    // settings row's subtitle can take on this phone. The row held
+    // "Breakfast 30% · Lunch 40%" on the emulator, so it is past 220; below
+    // about 204 even "Breakfast 30% ·" can't fit a line.
+    final widths = [for (var w = 220.0; w <= 328; w += 4) w];
+    await pumpOnPhone(
+      tester,
+      Builder(
+        builder: (context) => ListView(
+          children: [
+            for (final w in widths)
+              Align(
+                alignment: Alignment.centerLeft,
+                child: SizedBox(
+                  width: w,
+                  child: Text(
+                    line,
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+    tester.view
+      ..physicalSize = const Size(360, 20000)
+      ..devicePixelRatio = 1;
+    await tester.pump();
+    final paragraphs = tester.renderObjectList<RenderParagraph>(
+      find.text(line),
+    );
+    expect(paragraphs, hasLength(widths.length));
+    var wrapped = 0;
+    for (final p in paragraphs) {
+      final lines = <String>[];
+      double? top;
+      for (var i = 0; i < line.length; i++) {
+        final boxes = p.getBoxesForSelection(
+          TextSelection(baseOffset: i, extentOffset: i + 1),
+        );
+        final at = boxes.isEmpty ? top : boxes.first.top.roundToDouble();
+        if (lines.isEmpty || at != top) {
+          lines.add('');
+          top = at;
+        }
+        lines[lines.length - 1] += line[i];
+      }
+      if (lines.length > 1) wrapped++;
+      for (final (i, l) in lines.indexed) {
+        expect(l.trimLeft().startsWith('·'), isFalse, reason: '$lines');
+        // Each "Name N%" stays whole: a line breaks only after a dot.
+        if (i < lines.length - 1) {
+          expect(l.trimRight().endsWith('·'), isTrue, reason: '$lines');
+        }
+      }
+    }
+    expect(wrapped, greaterThan(0));
   });
 
   testWidgets('the search finds Show AI features, by ai or assistant', (

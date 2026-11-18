@@ -261,9 +261,16 @@ class ChangeChips extends StatelessWidget {
               c.span,
               style: text.labelSmall?.copyWith(color: palette.textMuted),
             ),
-            Text(
-              c.value,
-              style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+            // "−17.3 kg" shrinks to its chip at 1x rather than wrap the unit.
+            // shortcut: lbs shrink a little at 1x on a 360 dp phone (to
+            // about 0.94), and a two-digit change more (about 0.81); a chip
+            // row that scrolls or wraps would keep them full size
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                c.value,
+                style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+              ),
             ),
           ],
         ),
@@ -274,7 +281,12 @@ class ChangeChips extends StatelessWidget {
         spacing: Dimens.spacing8,
         runSpacing: Dimens.spacing8,
         children: [
-          for (final c in changes) SizedBox(width: 96, child: chip(c)),
+          // grows past 96 for "−0.6 kg" at 2x, rather than shrink it
+          for (final c in changes)
+            ConstrainedBox(
+              constraints: const BoxConstraints(minWidth: 96),
+              child: chip(c),
+            ),
         ],
       );
     }

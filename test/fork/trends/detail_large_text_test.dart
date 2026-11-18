@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:opennutritracker/core/domain/entity/body_weight_unit_entity.dart';
+import 'package:opennutritracker/core/domain/entity/weight_log_entity.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
 import 'package:opennutritracker/fork/trends/calories_detail.dart';
 import 'package:opennutritracker/fork/trends/detail_widgets.dart';
 import 'package:opennutritracker/fork/trends/expenditure_detail.dart';
+import 'package:opennutritracker/fork/trends/trend_detail.dart';
 import 'package:opennutritracker/fork/trends/trend_stats.dart';
+import 'package:opennutritracker/fork/trends/weight_detail.dart';
 import 'package:opennutritracker/fork/trends/trends_widgets.dart';
 
 import '../../helpers/ux_checks.dart';
@@ -327,4 +331,76 @@ void main() {
       greaterThan(tester.getTopLeft(find.text('Days logged')).dx),
     );
   });
+
+  /// The Weight page's body over 100 days losing 0.2 kg a day, so the
+  /// 90-day chip holds a wide figure, "−18.0 kg".
+  Widget weightPage(BodyWeightUnit unit) => Builder(
+    builder: (context) => ListView(
+      padding: const EdgeInsets.all(16),
+      children: weightDetailBody(
+        context,
+        loaded(
+          unit: unit,
+          weight: [
+            for (var i = -99; i <= 0; i++)
+              WeightLogEntity(date: day(i), weightKg: 80 - i * 0.2),
+          ],
+        ),
+        windowDates(day(0), 7),
+        TrendsDeps(
+          expenditure: ValueNotifier(Future.value(const <ExpenditureDay>[])),
+          weightCard: (_) => const SizedBox(),
+          waterCard: (_) => const SizedBox(),
+          loadIntakes: (_, _) async => const [],
+        ),
+        const SizedBox(),
+      ),
+    ),
+  );
+
+  for (final (unit, label) in [
+    (BodyWeightUnit.kg, 'kg'),
+    (BodyWeightUnit.lb, 'lbs'),
+    (BodyWeightUnit.st, 'st'),
+  ]) {
+    for (final scale in [1.0, 1.5, 2.0]) {
+      testWidgets('at ${scale}x the ${unit.name} change chips say $label, '
+          'each on one line', (tester) async {
+        final semantics = tester.ensureSemantics();
+        await _pumpAt360(tester, weightPage(unit), textScale: scale);
+        await tester.pumpAndSettle();
+        final values = find.descendant(
+          of: find.byType(ChangeChips),
+          matching: find.textContaining(' $label'),
+        );
+        await tester.scrollUntilVisible(values.last, 100);
+        expect(values, findsNWidgets(weightChangeSpans.length));
+        for (final (i, f)
+            in values.evaluate().map((e) => find.byWidget(e.widget)).indexed) {
+          final text = tester.widget<Text>(f).data!;
+          expect(text, matches(RegExp('^[−+]?\\d+\\.\\d $label\$')));
+          expect(_lines(tester, f), hasLength(1), reason: text);
+          // How far the chip shrinks it: a one-line text can still be
+          // squeezed. At large text the chips grow instead; at 1x a kg or
+          // st change of a few tenths shows full size.
+          final shrink = tester.getRect(f).width / tester.getSize(f).width;
+          if (scale > 1 || (i == 0 && unit != BodyWeightUnit.lb)) {
+            expect(shrink, closeTo(1, 0.001), reason: text);
+          } else {
+            expect(shrink, greaterThan(0.8), reason: text);
+          }
+        }
+        // The unit is spoken once. The chips read as one node here, a line
+        // each.
+        expect(
+          find.bySemanticsLabel(
+            RegExp('^Over 90 days: −\\d+\\.\\d $label\$', multiLine: true),
+          ),
+          findsOneWidget,
+        );
+        expect(cutText(tester), isEmpty);
+        semantics.dispose();
+      });
+    }
+  }
 }

@@ -1,9 +1,10 @@
 part of 'settings_screen.dart';
 
 /// "Carbs 60% · Fat 25%": a unit on each number, so a lone "%" never wraps
-/// onto a line of its own at large text.
+/// onto a line of its own at large text, and no-break spaces inside each
+/// "Carbs 60%" and before each dot, so a line breaks only after a dot.
 String percentsLine(List<(String, int)> parts) =>
-    [for (final (label, n) in parts) '$label $n%'].join(' · ');
+    [for (final (label, n) in parts) '$label\u00a0$n%'].join('\u00a0· ');
 
 /// The Goals section: its rows and the dialogs they open.
 extension _GoalsSettings on _SettingsScreenState {

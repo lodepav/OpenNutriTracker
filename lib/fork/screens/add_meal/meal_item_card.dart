@@ -185,12 +185,28 @@ class MealItemCard extends StatelessWidget {
                             foregroundColor: accent,
                             side: BorderSide(color: accent, width: 1.5),
                             // D39: names what it adds, "+ 1 roll"
+                            // a label wrapped at large text, "1 / serving",
+                            // ran into a stadium's ends: a rounded rectangle
+                            // with room above and below keeps it inside
                             shape: label == null
                                 ? const CircleBorder()
+                                : large
+                                ? const RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.all(
+                                      Radius.circular(16),
+                                    ),
+                                  )
                                 : const StadiumBorder(),
                             minimumSize: const Size(32, 32),
                             padding: label == null
                                 ? EdgeInsets.zero
+                                : large
+                                ? const EdgeInsetsDirectional.fromSTEB(
+                                    8,
+                                    6,
+                                    12,
+                                    6,
+                                  )
                                 : const EdgeInsetsDirectional.fromSTEB(
                                     6,
                                     0,
