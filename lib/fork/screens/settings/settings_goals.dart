@@ -16,10 +16,25 @@ extension _GoalsSettings on _SettingsScreenState {
     return [
       if (widget.embedded)
         _categoryHeader(context, palette, S.of(context).settingsCategoryGoals),
+      // What sets the target, then what splits it, then the day it counts
+      _categoryHeader(context, palette, 'Calorie Target'),
       _SettingsGroup(
         palette: palette,
         tiles: [
           _GoalPlannerTile(palette: palette, unit: state.bodyWeightUnit),
+          const AdaptiveSettingsTile(),
+          // The weigh-in and
+          // check-in reminders are under Reminders
+          _SettingsTile(
+            identifier: 'settings-kcal-adjustment',
+            palette: palette,
+            icon: Icons.calculate_rounded,
+            title: state.usesKilojoules
+                ? S.of(context).settingsKjAdjustmentLabel
+                : S.of(context).settingsKcalAdjustmentLabel,
+            subtitle: _kcalAdjustmentText(context),
+            onTap: () => _showKcalAdjustmentDialog(context),
+          ),
           // The old Calculations dialog had grown into a wall of
           // sliders covering daily kcal, macros, per-meal split,
           // ten nutrient goals, and the diary day boundary. Each
@@ -37,19 +52,13 @@ extension _GoalsSettings on _SettingsScreenState {
               ),
             ),
           ),
-          _SettingsTile(
-            identifier: 'settings-kcal-adjustment',
-            palette: palette,
-            icon: Icons.calculate_rounded,
-            title: state.usesKilojoules
-                ? S.of(context).settingsKjAdjustmentLabel
-                : S.of(context).settingsKcalAdjustmentLabel,
-            subtitle: _kcalAdjustmentText(context),
-            onTap: () => _showKcalAdjustmentDialog(context),
-          ),
-          const AdaptiveSettingsTile(),
-          // The weigh-in and
-          // check-in reminders are under Reminders
+        ],
+      ),
+      const SizedBox(height: Dimens.spacing20),
+      _categoryHeader(context, palette, 'Nutrition'),
+      _SettingsGroup(
+        palette: palette,
+        tiles: [
           _SettingsTile(
             identifier: 'settings-macro-split',
             palette: palette,
@@ -74,6 +83,14 @@ extension _GoalsSettings on _SettingsScreenState {
             showChevron: true,
             onTap: () => _openNutrientGoalsScreen(context),
           ),
+        ],
+      ),
+      const SizedBox(height: Dimens.spacing20),
+      // Not "Day Start", which the row under it already says
+      _categoryHeader(context, palette, 'Diary'),
+      _SettingsGroup(
+        palette: palette,
+        tiles: [
           _SettingsTile(
             identifier: 'settings-day-boundary',
             palette: palette,

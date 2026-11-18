@@ -176,7 +176,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('a long source is cut, the macros stay on one line', (
+  testWidgets('the short source and the macros stay on one line', (
     tester,
   ) async {
     await tester.pumpWidget(
@@ -185,7 +185,7 @@ void main() {
     await tester.pumpAndSettle();
 
     final macros = find.textContaining(
-      'C\u00a0166 · F\u00a06 · P\u00a019 · Open Food Facts',
+      'C\u00a0166 · F\u00a06 · P\u00a019 · OFF',
       findRichText: true,
     );
     expect(macros, findsOneWidget);

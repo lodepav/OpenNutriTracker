@@ -574,7 +574,7 @@ void main() {
   ) async {
     await GetIt.instance.reset();
     _register(storage: _HiddenStorage());
-    await tester.pumpWidget(_app(section: SettingsSection.appearance));
+    await tester.pumpWidget(_app(section: SettingsSection.food));
     await tester.pumpAndSettle();
     final toggle = find.bySemanticsIdentifier('settings-show-ai');
     await tester.scrollUntilVisible(

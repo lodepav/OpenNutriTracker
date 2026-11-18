@@ -90,25 +90,26 @@ class _FakeSearch implements SearchProductsUseCase {
       throw UnimplementedError('Unexpected call: ${invocation.memberName}');
 }
 
-IntakeEntity _intake(String name) => IntakeEntity(
-  id: name,
-  unit: 'g',
-  amount: 100,
-  type: IntakeTypeEntity.lunch,
-  meal: MealEntity(
-    code: name,
-    name: name,
-    url: null,
-    mealQuantity: null,
-    mealUnit: 'g',
-    servingQuantity: null,
-    servingUnit: 'g',
-    servingSize: null,
-    nutriments: MealNutrimentsEntity.empty(),
-    source: MealSourceEntity.custom,
-  ),
-  dateTime: DateTime(2026, 10, 1),
-);
+IntakeEntity _intake(String name, {MealNutrimentsEntity? nutriments}) =>
+    IntakeEntity(
+      id: name,
+      unit: 'g',
+      amount: 100,
+      type: IntakeTypeEntity.lunch,
+      meal: MealEntity(
+        code: name,
+        name: name,
+        url: null,
+        mealQuantity: null,
+        mealUnit: 'g',
+        servingQuantity: null,
+        servingUnit: 'g',
+        servingSize: null,
+        nutriments: nutriments ?? MealNutrimentsEntity.empty(),
+        source: MealSourceEntity.custom,
+      ),
+      dateTime: DateTime(2026, 10, 1),
+    );
 
 MealEntity _meal(String name, MealSourceEntity source) => MealEntity(
   code: name,
@@ -535,8 +536,12 @@ void main() {
       _search.food = [
         food('Chicken breast, roasted', 'fdc_survey'),
         food('Chicken, back, meat only', 'fdc_sr_legacy'),
-        // the longest serving word the add button names, "1 tablespoon"
-        food('Chicken fat', 'fdc_sr_legacy', serving: '1 tablespoon (15 g)'),
+        // a long serving word the add button names, "1 drumstick"
+        food(
+          'Chicken drumstick',
+          'fdc_sr_legacy',
+          serving: '1 drumstick (15 g)',
+        ),
       ];
       // one row for three products of a name, with long brands
       _search.products = [
@@ -583,10 +588,10 @@ void main() {
       );
       expect(add.label, isEmpty);
       expect(add, isSemantics(isButton: true));
-      // the source after the macros, no stray comma before it
+      // the section's header names the source, so its rows do not
       expect(
-        find.bySemanticsLabel(RegExp(r'grams protein, FDC')),
-        findsWidgets,
+        find.bySemanticsLabel(RegExp(r'grams protein, (FDC|USDA)')),
+        findsNothing,
       );
       expect(find.bySemanticsLabel(RegExp(r', ·')), findsNothing);
       await tester.scrollUntilVisible(
@@ -597,20 +602,23 @@ void main() {
       await tester.pumpAndSettle();
       expect(cutText(tester), isEmpty);
       // a word on the add button is never broken across lines
-      final tablespoon = find.text('tablespoon');
-      await tester.ensureVisible(tablespoon);
+      final drumstick = find.text('drumstick');
+      await tester.ensureVisible(drumstick);
       await tester.pumpAndSettle();
       expect(
         tester
-            .renderObject<RenderParagraph>(tablespoon)
+            .renderObject<RenderParagraph>(drumstick)
             .getBoxesForSelection(
-              const TextSelection(baseOffset: 0, extentOffset: 10),
+              const TextSelection(baseOffset: 0, extentOffset: 9),
             )
             .map((b) => b.top)
             .toSet(),
         hasLength(1),
       );
-      expect(find.byTooltip('Add Chicken fat, 1 tablespoon'), findsOneWidget);
+      expect(
+        find.byTooltip('Add Chicken drumstick, 1 drumstick'),
+        findsOneWidget,
+      );
       semantics.dispose();
     });
   });
@@ -634,7 +642,21 @@ void main() {
             last,
           }) async => logged.add(type);
       addTearDown(() => logFromRow = defaultLogFromRow);
-      await _register([_intake('Apple')]);
+      // a food with what logging needs: one without opens its page instead
+      await _register([
+        _intake(
+          'Apple',
+          nutriments: MealNutrimentsEntity(
+            energyKcal100: 52,
+            carbohydrates100: 14,
+            fat100: 0.2,
+            proteins100: 0.3,
+            sugars100: null,
+            saturatedFat100: null,
+            fiber100: null,
+          ),
+        ),
+      ]);
       await tester.pumpWidget(_app());
       await tester.pumpAndSettle();
       expect(

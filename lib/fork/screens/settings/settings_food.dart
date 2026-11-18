@@ -1,6 +1,7 @@
 part of 'settings_screen.dart';
 
-/// The Food section: search sources, Open Food Facts and AI assist.
+/// The Food section: search sources, their cache, Open Food Facts and AI
+/// assist.
 extension _FoodSettings on _SettingsScreenState {
   List<Widget> _foodRows(
     BuildContext context,
@@ -22,6 +23,38 @@ extension _FoodSettings on _SettingsScreenState {
             subtitle: S.of(context).settingsFoodSourcesSubtitle,
             showChevron: true,
             onTap: () => _openFoodSourcesScreen(context),
+          ),
+          // The search's cached results
+          _SettingsTile(
+            palette: palette,
+            icon: Icons.cached_rounded,
+            title: S.of(context).clearOffCacheLabel,
+            subtitle: S
+                .of(context)
+                .clearOffCacheSubtitle(
+                  state.offCacheCount,
+                  _formatBytes(state.offCacheSizeBytes),
+                ),
+            enabled: state.offCacheCount > 0,
+            onTap: () => _confirmClearOffCache(context),
+          ),
+          // #1518: one switch for every AI surface — the AI add, Photo
+          // log, the AI badges, the set-up offer and the AI meal
+          // assistance row — and, while off, nothing is sent to a model.
+          // Device-wide, like the keys it sits beside. Shown while off,
+          // so it can be turned back on.
+          _SettingsSwitchTile(
+            identifier: 'settings-show-ai',
+            palette: palette,
+            icon: Icons.auto_awesome_rounded,
+            title: S.of(context).settingsShowAiFeaturesLabel,
+            subtitle: S.of(context).settingsShowAiFeaturesSubtitle,
+            value: !_aiHidden,
+            onChanged: (bool value) async {
+              _update(() => _aiHidden = !value);
+              await _aiCredentials.setHidden(!value);
+              await _refreshAiAssistState();
+            },
           ),
           if (!_aiHidden)
             _SettingsTile(
@@ -79,5 +112,36 @@ extension _FoodSettings on _SettingsScreenState {
     Navigator.of(
       context,
     ).push(MaterialPageRoute<void>(builder: (_) => const FoodSourcesScreen()));
+  }
+
+  Future<void> _confirmClearOffCache(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(S.of(context).clearOffCacheConfirmTitle),
+        content: Text(S.of(context).clearOffCacheConfirmContent),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(S.of(context).dialogCancelLabel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(S.of(context).dialogOKLabel),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      await _settingsBloc.clearOffCache();
+    }
+  }
+
+  /// Format a byte count for display in the cache-clear tile subtitle.
+  /// Uses KB up to 1 MB, then MB with one decimal place above that.
+  String _formatBytes(int bytes) {
+    if (bytes < 1024) return '$bytes B';
+    if (bytes < 1024 * 1024) return '${(bytes / 1024).round()} KB';
+    return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
   }
 }

@@ -167,6 +167,9 @@ Widget _app({SettingsSection? section, double textScale = 1}) => MaterialApp(
 /// What each page must hold, by the row's text.
 Map<SettingsSection, List<String>> _rows() => {
   SettingsSection.goals: [
+    'Calorie Target',
+    'Nutrition',
+    'Diary',
     l10nEn.settingsKcalGoalInfoLabel,
     l10nEn.settingsKcalAdjustmentLabel,
     'Trend and calorie target',
@@ -188,6 +191,8 @@ Map<SettingsSection, List<String>> _rows() => {
   ],
   SettingsSection.food: [
     'Search sources',
+    l10nEn.clearOffCacheLabel,
+    l10nEn.settingsShowAiFeaturesLabel,
     l10nEn.settingsAiAssistLabel,
     'Open Food Facts account',
   ],
@@ -201,7 +206,6 @@ Map<SettingsSection, List<String>> _rows() => {
     'Export diary as CSV',
     'Profiles',
     l10nEn.manageProfilesLabel,
-    l10nEn.clearOffCacheLabel,
     l10nEn.settingsDeleteAllDataLabel,
   ],
   SettingsSection.appearance: [
@@ -305,7 +309,9 @@ void main() {
       );
     }
     expect(find.text('kg · kcal · metric'), findsOneWidget);
-    expect(find.textContaining('OpenBite 1.0.0'), findsOneWidget);
+    // The version is on the About page, not the list of sections.
+    expect(find.textContaining('1.0.0'), findsNothing);
+    expect(find.text('Privacy, sources, updates'), findsOneWidget);
     // No row of a section is on the list itself.
     expect(find.text(l10nEn.settingsEnergyUnitLabel), findsNothing);
   });
@@ -347,7 +353,6 @@ void main() {
       'Take Data Out',
       'Export diary as CSV',
       'Start Over',
-      l10nEn.clearOffCacheLabel,
       l10nEn.settingsDeleteAllDataLabel,
     ];
     for (var i = 1; i < order.length; i++) {
@@ -585,6 +590,88 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text(l10nEn.settingsNotificationsLabel), findsNothing);
     expect(find.text(l10nEn.settingsDisclaimerLabel), findsNothing);
+    // It opens Food databases, where the switch is
+    await tester.tap(find.text(l10nEn.settingsShowAiFeaturesLabel));
+    await tester.pumpAndSettle();
+    expect(find.text(SettingsSection.food.title), findsWidgets);
+    expect(find.bySemanticsIdentifier('settings-show-ai'), findsOneWidget);
+  });
+
+  testWidgets('the search finds Clear cached items on Food databases', (
+    tester,
+  ) async {
+    await tester.pumpWidget(_app());
+    await tester.pumpAndSettle();
+    await tester.tap(find.bySemanticsIdentifier('settings-search'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'cached');
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(l10nEn.clearOffCacheLabel));
+    await tester.pumpAndSettle();
+    expect(find.text(SettingsSection.food.title), findsWidgets);
+    expect(find.bySemanticsIdentifier('settings-food-sources'), findsOneWidget);
+  });
+
+  testWidgets('food: the cache by the search sources, the AI switch over '
+      'the AI row', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(400, 3000));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(_app(section: SettingsSection.food));
+    await tester.pumpAndSettle();
+    double top(String text) => tester.getTopLeft(find.text(text).first).dy;
+    final order = [
+      'Search sources',
+      l10nEn.clearOffCacheLabel,
+      l10nEn.settingsShowAiFeaturesLabel,
+      l10nEn.settingsAiAssistLabel,
+    ];
+    for (var i = 1; i < order.length; i++) {
+      expect(top(order[i - 1]) < top(order[i]), isTrue, reason: order[i]);
+    }
+  });
+
+  testWidgets('goals: the calorie target, then nutrition, then the day', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(400, 3000));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(_app(section: SettingsSection.goals));
+    await tester.pumpAndSettle();
+    double top(String text) => tester.getTopLeft(find.text(text).first).dy;
+    final order = [
+      'Calorie Target',
+      'Goal planner',
+      'Trend and calorie target',
+      l10nEn.settingsKcalAdjustmentLabel,
+      l10nEn.settingsKcalGoalInfoLabel,
+      'Nutrition',
+      l10nEn.settingsMacroSplitLabel,
+      l10nEn.settingsPerMealKcalShareLabel,
+      l10nEn.settingsNutrientGoalsLabel,
+      'Diary',
+      l10nEn.settingsDayStartLabel,
+    ];
+    for (var i = 1; i < order.length; i++) {
+      expect(top(order[i - 1]) < top(order[i]), isTrue, reason: order[i]);
+    }
+  });
+
+  testWidgets('the version shows twice on About: Updates and the footer', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(400, 3000));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(_app(section: SettingsSection.about));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('1.0.0'), findsNWidgets(2));
+    expect(
+      find.descendant(
+        of: find.bySemanticsIdentifier('settings-updates'),
+        matching: find.textContaining('1.0.0'),
+      ),
+      findsOneWidget,
+    );
+    expect(find.text(l10nEn.appVersionName('1.0.0')), findsWidgets);
   });
 
   testWidgets('the Food summary names its rows, and no AI once it is hidden', (
@@ -598,7 +685,7 @@ void main() {
       find.text('Search sources, Open Food Facts account, AI meal assistance'),
       findsOneWidget,
     );
-    await tester.tap(find.bySemanticsIdentifier('settings-section-appearance'));
+    await tester.tap(find.bySemanticsIdentifier('settings-section-food'));
     await tester.pumpAndSettle();
     await tester.tap(
       find.descendant(
@@ -614,7 +701,7 @@ void main() {
       findsOneWidget,
     );
     // and back when shown again
-    await tester.tap(find.bySemanticsIdentifier('settings-section-appearance'));
+    await tester.tap(find.bySemanticsIdentifier('settings-section-food'));
     await tester.pumpAndSettle();
     await tester.tap(
       find.descendant(

@@ -280,6 +280,27 @@ void main() {
       );
     });
 
+    test('an unnamed serving of a known weight in grams', () {
+      expect(
+        oneTapLabel(roll(size: '1 serving (85 g)'), (
+          unit: 'serving',
+          amount: 60,
+        )),
+        '60 g',
+      );
+      expect(
+        oneTapLabel(roll(size: '1 cup (60 g)'), (unit: 'serving', amount: 60)),
+        '60 g',
+      );
+      expect(
+        oneTapLabel(roll(size: '1 slice, thin (60 g)'), (
+          unit: 'serving',
+          amount: 60,
+        )),
+        '1 slice',
+      );
+    });
+
     test('nothing for a search hit whose serving is not fetched yet', () {
       expect(oneTapLabel(roll(thin: true), (unit: 'g', amount: 100)), isNull);
     });
@@ -655,15 +676,15 @@ void main() {
         () async => [],
       );
       addTearDown(() => RememberedAmounts.current = kept);
-      final bar = MealEntity(
-        code: 'bar',
-        name: 'Protein bar',
+      final egg = MealEntity(
+        code: 'egg',
+        name: 'Egg',
         url: null,
         mealQuantity: null,
         mealUnit: 'g',
         servingQuantity: 30,
         servingUnit: 'g',
-        servingSize: '1 serving (30 g)',
+        servingSize: '1 large egg (30 g)',
         nutriments: _food().nutriments,
         source: MealSourceEntity.custom,
       );
@@ -671,28 +692,28 @@ void main() {
         tester,
         MealItemCard(
           day: DateTime(2026, 10, 30),
-          mealEntity: bar,
+          mealEntity: egg,
           addMealType: AddMealType.lunchType,
           usesImperialUnits: false,
         ),
       );
       await tester.pumpAndSettle();
-      expect(find.byTooltip('Add Protein bar, 1 serving'), findsOneWidget);
+      expect(find.byTooltip('Add Egg, 1 large egg'), findsOneWidget);
       final button = find.ancestor(
-        of: find.text('serving'),
+        of: find.text('egg'),
         matching: find.byType(IconButton),
       );
       // The nearest Material draws the outline.
       final outline = find
-          .ancestor(of: find.text('serving'), matching: find.byType(Material))
+          .ancestor(of: find.text('egg'), matching: find.byType(Material))
           .first;
       final rect = tester.getRect(outline);
       final shape = tester.widget<Material>(outline).shape!;
       final inside = shape.getInnerPath(rect);
-      // It wraps at this size, "1 / serving", the case that ran into the
+      // It wraps at this size, "1 large / egg", the case that ran into the
       // outline.
       final one = tester.getRect(find.text('1'));
-      final word = tester.getRect(find.text('serving'));
+      final word = tester.getRect(find.text('egg'));
       expect(word.top, greaterThan(one.top));
       for (final r in [one, word]) {
         expect(r.left - rect.left, greaterThanOrEqualTo(6), reason: '$r');
@@ -707,6 +728,156 @@ void main() {
         ]) {
           expect(inside.contains(corner), isTrue, reason: '$corner in $rect');
         }
+      }
+      final target = tester.getSize(button);
+      expect(target.width, greaterThanOrEqualTo(48));
+      expect(target.height, greaterThanOrEqualTo(48));
+    });
+
+    Future<void> pumpRow(
+      WidgetTester tester,
+      MealEntity meal, {
+      double scale = 1,
+    }) async {
+      GetIt.instance.registerSingleton<GetConfigUsecase>(_Config());
+      final kept = RememberedAmounts.current;
+      RememberedAmounts.current = RememberedAmounts(
+        () async => throw StateError('no box'),
+        () async => [],
+      );
+      addTearDown(() => RememberedAmounts.current = kept);
+      final card = MealItemCard(
+        day: DateTime(2026, 10, 30),
+        mealEntity: meal,
+        addMealType: AddMealType.lunchType,
+        usesImperialUnits: false,
+      );
+      if (scale == 1) {
+        await tester.pumpWidget(
+          MaterialApp(
+            localizationsDelegates: const [S.delegate],
+            onGenerateRoute: (settings) {
+              calls.add('open ${settings.name}');
+              return MaterialPageRoute(builder: (_) => const Scaffold());
+            },
+            home: Scaffold(body: card),
+          ),
+        );
+      } else {
+        await pumpOnPhone(tester, card);
+      }
+      await tester.pumpAndSettle();
+    }
+
+    MealEntity chickenBack() => MealEntity(
+      code: 'back',
+      name: 'Chicken, back',
+      url: null,
+      mealQuantity: null,
+      mealUnit: 'g',
+      servingQuantity: 85,
+      servingUnit: 'g',
+      servingSize: '1 serving (85 g)',
+      nutriments: _food().nutriments,
+      source: MealSourceEntity.fdc,
+      backendSource: 'fdc_survey',
+      detailed: true,
+    );
+
+    // a product with no carbs: the plus would open its page
+    MealEntity stock() => MealEntity(
+      code: '9300633',
+      name: 'Chicken Stock',
+      brands: 'Woolworths',
+      url: null,
+      mealQuantity: null,
+      mealUnit: 'g',
+      servingQuantity: null,
+      servingUnit: 'g',
+      servingSize: null,
+      nutriments: _food(carbs: null).nutriments,
+      source: MealSourceEntity.off,
+      detailed: true,
+    );
+
+    testWidgets('a search hit keeps the plus, which fetches and logs', (
+      tester,
+    ) async {
+      await pumpRow(tester, _thin());
+      expect(find.byIcon(Icons.add_rounded), findsOneWidget);
+      expect(find.text('Choose'), findsNothing);
+    });
+
+    testWidgets('a one-tap serving says its grams', (tester) async {
+      await pumpRow(tester, chickenBack());
+      expect(find.text('85 g'), findsOneWidget);
+      expect(find.text('1 serving'), findsNothing);
+      expect(find.byTooltip('Add Chicken, back, 85 g'), findsOneWidget);
+      // a list of several sources names its own, short
+      expect(find.textContaining('· USDA', findRichText: true), findsOneWidget);
+      expect(find.byIcon(Icons.add_rounded), findsOneWidget);
+    });
+
+    testWidgets('a food the page must complete offers Choose, which opens it', (
+      tester,
+    ) async {
+      await pumpRow(tester, stock());
+      expect(find.byIcon(Icons.add_rounded), findsNothing);
+      expect(find.text('Choose'), findsOneWidget);
+      expect(
+        find.byTooltip('Choose an amount of Chicken Stock, Woolworths'),
+        findsOneWidget,
+      );
+      expect(find.bySemanticsIdentifier('meal-item-choose'), findsOneWidget);
+      expect(find.bySemanticsIdentifier('meal-item-add'), findsNothing);
+      await tester.tap(find.text('Choose'));
+      await tester.pumpAndSettle();
+      expect(calls, ['open ${NavigationOptions.mealDetailRoute}']);
+    });
+
+    testWidgets('a recent the page must complete offers Choose too', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: const [S.delegate],
+          home: Scaffold(
+            body: MealItemCard(
+              day: DateTime(2026, 10, 30),
+              mealEntity: _food(carbs: null),
+              addMealType: AddMealType.lunchType,
+              usesImperialUnits: false,
+              forkLastLogged: intakeOf('oats', 45),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Choose'), findsOneWidget);
+      expect(find.byIcon(Icons.add_rounded), findsNothing);
+    });
+
+    testWidgets('at 2x Choose sits inside its outline, 48 dp or more', (
+      tester,
+    ) async {
+      await pumpRow(tester, stock(), scale: 2);
+      final button = find.ancestor(
+        of: find.text('Choose'),
+        matching: find.byType(IconButton),
+      );
+      final outline = find
+          .ancestor(of: find.text('Choose'), matching: find.byType(Material))
+          .first;
+      final rect = tester.getRect(outline);
+      final inside = tester.widget<Material>(outline).shape!.getInnerPath(rect);
+      final word = tester.getRect(find.text('Choose'));
+      for (final corner in [
+        word.topLeft,
+        word.topRight,
+        word.bottomLeft,
+        word.bottomRight,
+      ]) {
+        expect(inside.contains(corner), isTrue, reason: '$corner in $rect');
       }
       final target = tester.getSize(button);
       expect(target.width, greaterThanOrEqualTo(48));

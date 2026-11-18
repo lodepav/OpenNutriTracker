@@ -90,19 +90,6 @@ extension _DataSettings on _SettingsScreenState {
         palette: palette,
         tiles: [
           _SettingsTile(
-            palette: palette,
-            icon: Icons.cached_rounded,
-            title: S.of(context).clearOffCacheLabel,
-            subtitle: S
-                .of(context)
-                .clearOffCacheSubtitle(
-                  state.offCacheCount,
-                  _formatBytes(state.offCacheSizeBytes),
-                ),
-            enabled: state.offCacheCount > 0,
-            onTap: () => _confirmClearOffCache(context),
-          ),
-          _SettingsTile(
             identifier: 'settings-delete-all-data',
             palette: palette,
             icon: Icons.delete_forever_rounded,
@@ -136,29 +123,6 @@ extension _DataSettings on _SettingsScreenState {
     );
   }
 
-  Future<void> _confirmClearOffCache(BuildContext context) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(S.of(context).clearOffCacheConfirmTitle),
-        content: Text(S.of(context).clearOffCacheConfirmContent),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text(S.of(context).dialogCancelLabel),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: Text(S.of(context).dialogOKLabel),
-          ),
-        ],
-      ),
-    );
-    if (confirmed == true) {
-      await _settingsBloc.clearOffCache();
-    }
-  }
-
   Future<void> _confirmDeleteAllData(BuildContext context) async {
     final l10n = S.of(context);
     final navigator = Navigator.of(context);
@@ -189,13 +153,5 @@ extension _DataSettings on _SettingsScreenState {
       NavigationOptions.onboardingRoute,
       (_) => false,
     );
-  }
-
-  /// Format a byte count for display in the cache-clear tile subtitle.
-  /// Uses KB up to 1 MB, then MB with one decimal place above that.
-  String _formatBytes(int bytes) {
-    if (bytes < 1024) return '$bytes B';
-    if (bytes < 1024 * 1024) return '${(bytes / 1024).round()} KB';
-    return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
   }
 }

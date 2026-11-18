@@ -65,15 +65,11 @@ class SettingsIndex extends StatelessWidget {
   final Set<SettingsSection> failing;
   final ValueChanged<SettingsSection> onOpen;
 
-  /// Under the cards: the app's version banner.
-  final Widget? footer;
-
   const SettingsIndex({
     super.key,
     required this.summaries,
     this.failing = const {},
     required this.onOpen,
-    this.footer,
   });
 
   @override
@@ -106,10 +102,6 @@ class SettingsIndex extends StatelessWidget {
         card(SettingsSection.values.where((s) => s.isFirstCard)),
         const SizedBox(height: Dimens.spacing12),
         card(SettingsSection.values.where((s) => !s.isFirstCard)),
-        if (footer != null) ...[
-          const SizedBox(height: Dimens.spacing24),
-          footer!,
-        ],
       ],
     );
   }
