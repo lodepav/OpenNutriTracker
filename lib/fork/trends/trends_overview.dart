@@ -5,7 +5,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:opennutritracker/core/domain/entity/tracked_day_entity.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/features/trends/presentation/bloc/trends_bloc.dart';
-import 'package:opennutritracker/features/trends/presentation/trends_calc.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/core/domain/entity/body_weight_unit_entity.dart';
@@ -24,7 +23,7 @@ import 'package:opennutritracker/fork/goal/goal_progress_page.dart';
 import 'package:opennutritracker/fork/goal/goal_you_tile.dart';
 import 'package:opennutritracker/fork/phases/phases.dart';
 import 'package:opennutritracker/fork/report/nutrient_explorer.dart'
-    show IntakeLoader, intakesBetween;
+    show IntakeLoader, allTrackedDays, intakesBetween;
 import 'package:opennutritracker/fork/trends/nutrient_trends.dart';
 import 'package:opennutritracker/fork/trends/trend_detail.dart';
 import 'package:opennutritracker/fork/trends/trend_stats.dart';
@@ -95,6 +94,12 @@ class TrendsOverview extends StatefulWidget {
     );
   }
 
+  /// Where the streak reads every tracked day, past the range; null
+  /// without a database, and the range's days are counted. Tests swap it.
+  @visibleForTesting
+  static Future<List<TrackedDayEntity>?> Function() loadAllDays =
+      allTrackedDays;
+
   /// Where the left and right tile reads the measurements, here and on
   /// Home; tests swap it.
   static Future<List<Measurement>> Function() loadMeasurements = () async =>
@@ -129,6 +134,9 @@ class _TrendsOverviewState extends State<TrendsOverview> {
 
   /// The profile's height and gender, for the waist tile.
   late Future<BodyFrame?> _frame = loadBodyFrame();
+
+  /// Every tracked day, for the streak.
+  late Future<List<TrackedDayEntity>?> _allDays = TrendsOverview.loadAllDays();
 
   /// The goal, for the Goal tile; read again for a new pace or target.
   late Future<TrendsGoal> _goal = TrendsOverview.goal();
@@ -197,7 +205,10 @@ class _TrendsOverviewState extends State<TrendsOverview> {
       _goal = TrendsOverview.goal();
     }
     // A height changed in the profile reloads Trends.
-    if (old.state != widget.state) _frame = loadBodyFrame();
+    if (old.state != widget.state) {
+      _frame = loadBodyFrame();
+      _allDays = TrendsOverview.loadAllDays();
+    }
     // After the frame: an open detail page listens too, and is not
     // under this one to be rebuilt with it.
     if (old.state != widget.state) {
@@ -292,10 +303,18 @@ class _TrendsOverviewState extends State<TrendsOverview> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            _Streak(
-                              days: state.days,
-                              windowDays: state.windowDays,
-                              today: state.logicalToday,
+                            FutureBuilder(
+                              future: _allDays,
+                              builder: (context, all) =>
+                                  // Not the range's streak while loading.
+                                  !all.hasData &&
+                                      all.connectionState !=
+                                          ConnectionState.done
+                                  ? const SizedBox.shrink()
+                                  : _Streak(
+                                      days: all.data ?? state.days,
+                                      today: state.logicalToday,
+                                    ),
                             ),
                             const SizedBox(height: Dimens.spacing8),
                             RangePills(
@@ -762,37 +781,24 @@ class _GoalBar extends StatelessWidget {
   }
 }
 
-/// The on-track streak over the range, as upstream's card counted it.
+/// The on-track streak over all of [days], whatever the range: upstream's
+/// card counted it within the range, so 1W capped it at 7.
 class _Streak extends StatelessWidget {
   final List<TrackedDayEntity> days;
-  final int windowDays;
   final DateTime today;
 
-  const _Streak({
-    required this.days,
-    required this.windowDays,
-    required this.today,
-  });
+  const _Streak({required this.days, required this.today});
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final text = Theme.of(context).textTheme;
     final palette = paletteOf(context);
-    final start = DateTime(
-      today.year,
-      today.month,
-      today.day - (windowDays - 1),
-    );
-    final stats = streakStats(
-      {
-        for (final d in days)
-          if (d.getCalendarDayRatingColor(context) != scheme.error)
-            DateTime(d.day.year, d.day.month, d.day.day),
-      },
-      start,
-      today,
-    );
+    final stats = historyStreak({
+      for (final d in days)
+        if (d.getCalendarDayRatingColor(context) != scheme.error)
+          DateTime(d.day.year, d.day.month, d.day.day),
+    }, today);
     // No "0 day streak" to someone who has not had one yet (C3)
     if (stats.longest == 0) return const SizedBox.shrink();
     return MergeSemantics(

@@ -27,4 +27,24 @@ void main() {
     expect(misread, isEmpty);
     expect(zero, 0);
   });
+
+  testWidgets('a signed energy has a true minus; unsigned keeps its hyphen', (
+    tester,
+  ) async {
+    late List<String> shown;
+    await tester.pumpWidget(
+      Builder(
+        builder: (context) {
+          shown = [
+            energyText(context, -377, signed: true),
+            energyText(context, 120, signed: true),
+            energyText(context, 0, signed: true),
+            energyText(context, -377),
+          ];
+          return const SizedBox();
+        },
+      ),
+    );
+    expect(shown, ['\u2212377 kcal', '+120 kcal', '0 kcal', '-377 kcal']);
+  });
 }

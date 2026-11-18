@@ -73,6 +73,17 @@ double? fittedChange(DaySeries series) {
 /// it.
 bool isLogged(TrackedDayEntity d) => d.caloriesTracked > 0;
 
+/// The current and best on-track streak over all of [onTrackDays] (dates
+/// only) to [today]: a fact about the history, whatever the range shown.
+({int current, int longest}) historyStreak(
+  Set<DateTime> onTrackDays,
+  DateTime today,
+) {
+  if (onTrackDays.isEmpty) return (current: 0, longest: 0);
+  final first = onTrackDays.reduce((a, b) => a.isBefore(b) ? a : b);
+  return streakStats(onTrackDays, first, today);
+}
+
 /// The tracked days over the window by date.
 Map<DateTime, TrackedDayEntity> _byDate(List<TrackedDayEntity> days) => {
   for (final d in days) _date(d.day): d,

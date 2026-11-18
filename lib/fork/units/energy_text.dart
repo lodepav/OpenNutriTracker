@@ -18,9 +18,17 @@ String energyUnit(BuildContext context) => usesKj(context) ? 'kJ' : 'kcal';
 int energyValue(BuildContext context, double kcal) =>
     (usesKj(context) ? UnitCalc.kcalToKj(kcal) : kcal).round();
 
+/// [signed] puts '+' before a gain and a true minus (U+2212) before a loss.
 String energyText(BuildContext context, double kcal, {bool signed = false}) {
   final value = energyValue(context, kcal);
-  return '${signed && value > 0 ? '+' : ''}$value ${energyUnit(context)}';
+  final text = !signed
+      ? '$value'
+      : value > 0
+      ? '+$value'
+      : value < 0
+      ? '\u2212${-value}'
+      : '$value';
+  return '$text ${energyUnit(context)}';
 }
 
 /// A typed value in the display unit, back to kcal.

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
+import 'package:opennutritracker/fork/trends/calories_detail.dart';
 import 'package:opennutritracker/fork/trends/detail_widgets.dart';
 import 'package:opennutritracker/fork/trends/expenditure_detail.dart';
 import 'package:opennutritracker/fork/trends/trend_stats.dart';
@@ -83,8 +84,8 @@ Finder _inTable(String text) => find.descendant(
 
 void main() {
   test('a count of finished days says so', () {
-    expect(finishedDays(1), '1 finished day');
-    expect(finishedDays(6), '6 finished days');
+    expect(finishedDays(1), '1 finished\u00A0day');
+    expect(finishedDays(6), '6 finished\u00A0days');
   });
 
   for (final scale in [1.0, 2.0]) {
@@ -111,6 +112,136 @@ void main() {
       expect(cutText(tester), isEmpty);
     });
   }
+
+  // 1.5 is the largest scale whose rows stay side by side.
+  for (final (width, scale) in [(360.0, 2.0), (411.0, 2.0), (360.0, 1.5)]) {
+    testWidgets('at ${scale}x on a ${width.round()} dp phone no row value '
+        'leaves a word alone on a line or breaks one', (tester) async {
+      await pumpOnPhone(
+        tester,
+        textScale: scale,
+        SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              // The Calories page's, and Protein's in grams.
+              for (final unit in ['kcal', 'g'])
+                DaysWentCard(
+                  outcomes: (
+                    onTarget: 6,
+                    under: 0,
+                    over: 0,
+                    logged: 6,
+                    // A Wednesday and a Tuesday.
+                    highest: (value: 2898, date: DateTime(2026, 11, 18)),
+                    lowest: (value: 2292, date: DateTime(2026, 11, 17)),
+                    overBy: null,
+                    underBy: null,
+                    topThreeShare: null,
+                  ),
+                  week: true,
+                  valueText: (_, v) => '${v.round()} $unit',
+                ),
+              // The Energy balance page's.
+              TrendRows(
+                rows: [(label: 'In deficit', value: '6 of ${finishedDays(6)}')],
+              ),
+            ],
+          ),
+        ),
+      );
+      tester.view
+        ..physicalSize = Size(width, 1600)
+        ..devicePixelRatio = 1;
+      await tester.pumpAndSettle();
+      final texts = find.descendant(
+        of: find.byType(TrendRow),
+        matching: find.byType(RichText),
+      );
+      var checked = 0;
+      final lone = <List<String>>[], broken = <List<String>>[];
+      for (var i = 0; i < texts.evaluate().length; i++) {
+        final lines = _lines(tester, texts.at(i));
+        if (!RegExp(r'finished|·').hasMatch(lines.join())) continue;
+        checked++;
+        for (final (j, line) in lines.indexed) {
+          final words = line
+              .replaceAll('\u00A0', ' ')
+              .trim()
+              .split(RegExp(r'\s+'));
+          if (words.length < 2) lone.add(lines);
+          if (j < lines.length - 1 && !line.endsWith(' ')) broken.add(lines);
+        }
+      }
+      // On target, Highest and Lowest twice, and In deficit.
+      expect(checked, 7);
+      expect(broken, isEmpty, reason: 'a word broken across lines');
+      // Side by side at 1.5x a lone word was there before the joins.
+      if (scale == 2) expect(lone, isEmpty, reason: 'a lone word on a line');
+      expect(cutText(tester), isEmpty);
+    });
+  }
+
+  testWidgets('at 200% stacked rows fill the card, labels on one edge', (
+    tester,
+  ) async {
+    await _pumpAt360(
+      tester,
+      SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            DaysWentCard(
+              outcomes: (
+                onTarget: 6,
+                under: 0,
+                over: 0,
+                logged: 6,
+                highest: (value: 2898, date: DateTime(2026, 11, 18)),
+                lowest: (value: 2292, date: DateTime(2026, 11, 17)),
+                overBy: null,
+                underBy: null,
+                topThreeShare: null,
+              ),
+              week: true,
+            ),
+            TrendRows(
+              rows: [
+                (label: 'In deficit', value: '6 of ${finishedDays(6)}'),
+                (label: 'In surplus', value: '0 days'),
+                (label: 'Eaten a day', value: '2500 kcal'),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+    for (final card in [find.byType(DaysWentCard), find.byType(TrendRows)]) {
+      final rows = find.descendant(of: card, matching: find.byType(TrendRow));
+      expect(rows, findsAtLeastNWidgets(3));
+      final widths = {
+        for (final r in rows.evaluate())
+          tester.getSize(find.byWidget(r.widget)).width,
+      };
+      final lefts = {
+        for (final r in rows.evaluate())
+          tester
+              .getTopLeft(
+                find.descendant(
+                  of: find.byWidget(r.widget),
+                  matching: find.text((r.widget as TrendRow).label),
+                ),
+              )
+              .dx,
+      };
+      // As wide as the card's content, the column the rows are in.
+      final column = find
+          .ancestor(of: rows.first, matching: find.byType(Column))
+          .first;
+      expect(widths, {tester.getSize(column).width}, reason: '$card');
+      expect(lefts, hasLength(1), reason: '$card');
+    }
+  });
 
   testWidgets('the header\'s change at 1W is the table\'s 7 days', (
     tester,

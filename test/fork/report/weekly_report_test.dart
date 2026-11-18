@@ -97,7 +97,7 @@ void main() {
     expect(find.text('150 / 140 g'), findsNWidgets(2));
     // The range starts on Saturday the 17th.
     expect(find.text('1 of 2 days logged'), findsOneWidget);
-    expect(find.text('-200 kcal · On target'), findsOneWidget);
+    expect(find.text('\u2212200 kcal · On target'), findsOneWidget);
     // One card read aloud per week.
     expect(
       tester.getSemantics(find.byKey(const ValueKey('week-2026-10-19'))).label,
