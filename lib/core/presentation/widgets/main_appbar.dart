@@ -9,7 +9,10 @@ class MainAppbar extends StatelessWidget implements PreferredSizeWidget {
   @override
   Widget build(BuildContext context) {
     return AppBar(
-      leading: Icon(iconData),
+      // [fork] S279 tab-appbar: no decorative icon in Back's slot; the
+      // title starts at the keyline as on pushed pages
+      // leading: Icon(iconData),
+      // [/fork]
       title: Text(title),
     );
   }

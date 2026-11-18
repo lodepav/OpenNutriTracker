@@ -48,6 +48,9 @@ import 'package:opennutritracker/core/utils/extensions.dart'; // [fork] S142
 import 'package:opennutritracker/fork/meal_detail/unit_change.dart'; // [fork] S164
 import 'package:opennutritracker/fork/meal_detail/food_page.dart';
 // [/fork]
+// [fork] S282 food-page-words
+import 'package:opennutritracker/fork/amounts/edit_amount.dart';
+// [/fork]
 
 class MealDetailBottomSheet extends StatefulWidget {
   final MealEntity product;
@@ -596,6 +599,20 @@ class _MealDetailBottomSheetState extends State<MealDetailBottomSheet> {
     if (_addsToList) return S.of(context).addToListLabel;
     final quantity = double.tryParse(text.trim().replaceAll(',', '.'));
     if (quantity == null || quantity <= 0) return S.of(context).addLabel;
+    // S282: the unit as the picker names it, "1 large" or "100 g" (not
+    // "1 serving" or "100 gml"); a portion with no name keeps "servings"
+    final unit = widget.selectedUnit;
+    if (unit.isNotEmpty) {
+      final word = editUnitWord(
+        context,
+        widget.product,
+        unit,
+        imperial: widget.usesImperialUnits,
+      );
+      if (word != S.of(context).servingLabel) {
+        return '${S.of(context).addLabel} ${amountLabel(text.trim())} $word';
+      }
+    }
     return '${S.of(context).addLabel} '
         '${pickedLabel(text.trim(), widget.selectedUnit)}';
   }

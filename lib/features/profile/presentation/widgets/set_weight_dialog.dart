@@ -138,7 +138,10 @@ class _SetWeightDialogState extends State<SetWeightDialog> {
     // [/fork]
 
     return AlertDialog(
-      title: Text(S.of(context).selectWeightDialogLabel),
+      // [fork] S281 weigh-in-title: the glossary's word
+      // title: Text(S.of(context).selectWeightDialogLabel),
+      title: const Text('Log a weigh-in'),
+      // [/fork]
       content: Wrap(
         children: [
           Column(

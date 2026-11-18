@@ -20,7 +20,9 @@ import 'package:opennutritracker/features/meal_detail/presentation/widgets/meal_
 // [/fork]
 import 'package:opennutritracker/features/meal_detail/presentation/widgets/meal_info_button.dart';
 import 'package:opennutritracker/features/meal_detail/presentation/widgets/off_disclaimer.dart';
-import 'package:opennutritracker/generated/l10n.dart';
+// [fork] S282 food-page-words: the tooltip was its last use
+// import 'package:opennutritracker/generated/l10n.dart';
+// [/fork]
 // [fork] S45 remembered-amounts
 import 'package:opennutritracker/fork/amounts/remembered_amounts.dart';
 // [/fork]
@@ -526,7 +528,10 @@ class _MealDetailScreenState extends State<MealDetailScreen> {
                   );
                 },
                 icon: const Icon(Icons.edit_rounded),
-                tooltip: S.of(context).editMealLabel,
+                // [fork] S282 food-page-words: it edits a food
+                // tooltip: S.of(context).editMealLabel,
+                tooltip: 'Edit food',
+                // [/fork]
               ),
             ),
           ],
