@@ -2,17 +2,32 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:opennutritracker/core/domain/entity/body_weight_unit_entity.dart';
+import 'package:opennutritracker/core/domain/entity/tracked_day_entity.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/fork/body/body_card.dart';
 import 'package:opennutritracker/fork/body/measurement_store.dart';
+import 'package:opennutritracker/fork/goal/goal_card.dart';
+import 'package:opennutritracker/fork/health/steps.dart';
+import 'package:opennutritracker/fork/health/steps_card.dart';
 import 'package:opennutritracker/fork/photos/photo_card.dart';
 import 'package:opennutritracker/fork/photos/photo_store.dart';
+import 'package:opennutritracker/fork/report/trends_layout.dart';
+import 'package:opennutritracker/fork/report/weekly_report.dart';
 
 class _Measurements extends Fake implements MeasurementStore {
   final entries = <Measurement>[];
 
   @override
   Future<List<Measurement>> all() async => [...entries];
+}
+
+class _Steps extends Fake implements StepCounts {
+  @override
+  Future<bool> isOn() async => false;
+
+  @override
+  Future<int> goal() async => 10000;
 }
 
 class _Photos extends PhotoStore {
@@ -44,10 +59,38 @@ void main() {
     tester,
   ) async {
     final semantics = tester.ensureSemantics();
-    for (final (title, card) in [
-      ('Body measurements', _body(_Measurements())),
-      ('Progress photos', ProgressPhotosCard(store: _Photos())),
-    ]) {
+    final today = DateTime(2026, 11, 18, 12);
+    // by the ids of the page's cards, so a new card fails here until added
+    final cards = <String, Widget>{
+      'weekly': WeeklyReportCard(
+        days: [
+          TrackedDayEntity(
+            day: DateTime(2026, 11, 17),
+            calorieGoal: 2000,
+            caloriesTracked: 1800,
+          ),
+        ],
+        rangeDays: 7,
+        palette: AppPalette.light,
+        clock: () => today,
+      ),
+      'goalPlan': GoalCard(
+        unit: BodyWeightUnit.kg,
+        load: () async => null,
+        pace: () async => null,
+      ),
+      'body': _body(_Measurements()),
+      'steps': StepsCard(
+        rangeDays: 7,
+        palette: AppPalette.light,
+        steps: _Steps(),
+        clock: () => today,
+      ),
+      'photos': ProgressPhotosCard(store: _Photos()),
+    };
+    expect(cards.keys.toSet(), trendCards.keys.toSet());
+    for (final MapEntry(key: id, value: card) in cards.entries) {
+      final title = trendCards[id]!;
       await _pump(tester, card);
       final data = tester.getSemantics(find.text(title)).getSemanticsData();
       expect(data.label, title);

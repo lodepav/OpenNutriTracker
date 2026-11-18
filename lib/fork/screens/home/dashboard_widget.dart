@@ -384,8 +384,8 @@ class _DashboardWidgetState extends State<DashboardWidget> {
                             child: SegmentedButton<bool>(
                               key: const ValueKey('home-ring-mode'),
                               showSelectedIcon: false,
+                              // not compact: that takes the target to 40 dp
                               style: const ButtonStyle(
-                                visualDensity: VisualDensity.compact,
                                 tapTargetSize: MaterialTapTargetSize.padded,
                               ),
                               // shrunk to fit at large text, not broken

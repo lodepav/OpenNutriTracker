@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:opennutritracker/fork/display/chart_semantics.dart';
 import 'package:opennutritracker/fork/display/contrast.dart';
 import 'package:opennutritracker/fork/display/motion.dart';
 import 'package:intl/intl.dart' as intl;
@@ -184,8 +185,10 @@ class ExpenditureChart extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Semantics(
-            label: 'Expenditure chart',
+          ChartSemantics(
+            label:
+                'Expenditure over ${dates.length} days, '
+                '${spokenFromTo('${values.first.round()}', '${values.last.round()}', unit)}',
             child: SizedBox(
               height: 180,
               child: LineChart(

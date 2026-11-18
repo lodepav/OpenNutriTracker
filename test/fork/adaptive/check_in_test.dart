@@ -3,6 +3,9 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
+import 'package:opennutritracker/core/styles/app_palette.dart';
+import 'package:opennutritracker/core/styles/app_theme.dart';
+import 'package:opennutritracker/fork/display/contrast.dart';
 import 'package:opennutritracker/fork/adaptive/activity.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:opennutritracker/core/domain/entity/tracked_day_entity.dart';
@@ -144,6 +147,35 @@ Future<void> _pumpLarge(WidgetTester tester, AdaptiveService service) async {
     ),
   );
   await tester.pumpAndSettle();
+}
+
+/// The check-in's "Trend change" colour in [p], for a goal of [rate] kg a
+/// week against [_Weights]' loss of 0.5.
+Future<Color?> _trendChangeColor(
+  WidgetTester tester,
+  AppPalette p,
+  double rate,
+) async {
+  tester.view.physicalSize = const Size(1000, 4000);
+  tester.view.devicePixelRatio = 1;
+  addTearDown(tester.view.reset);
+  final service = AdaptiveService(
+    _User(rate: rate),
+    _Weights(),
+    _TrackedDays(),
+    _MemoryStore(),
+    () => _today.add(const Duration(hours: 9)),
+  );
+  final checkIn = await tester.runAsync(service.checkIn);
+  await tester.pumpWidget(
+    MaterialApp(
+      theme: buildAppTheme(p),
+      home: CheckInScreen(service: service),
+    ),
+  );
+  await tester.pumpAndSettle();
+  final text = weightChangeText(checkIn!.weekChangeKg!, BodyWeightUnit.kg);
+  return tester.widget<Text>(find.text(text)).style?.color;
 }
 
 void main() {
@@ -1176,6 +1208,26 @@ void main() {
       expect(find.textContaining(RegExp(r'\bkg\b')), findsNothing);
     });
   });
+
+  for (final base in [AppPalette.light, AppPalette.dark]) {
+    // a picked accent that is not green
+    final p = base.withAccent(const Color(0xFF1E88E5));
+    final name = base.brightness.name;
+
+    testWidgets('$name: a trend change toward the goal is in the accent '
+        'picked, at 4.5:1', (tester) async {
+      final color = await _trendChangeColor(tester, p, -0.5);
+      expect(contrastRatio(color!, p.surface), greaterThanOrEqualTo(4.5));
+      expect(color, textAccentOf(p));
+    });
+
+    testWidgets('$name: a trend change away from the goal is in the warning '
+        'colour, at 4.5:1', (tester) async {
+      final color = await _trendChangeColor(tester, p, 0.5);
+      expect(contrastRatio(color!, p.surface), greaterThanOrEqualTo(4.5));
+      expect(color, p.warningText);
+    });
+  }
 
   testWidgets('with auto-accept on, the card says so; Dismiss clears it', (
     tester,

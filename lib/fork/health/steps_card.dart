@@ -9,6 +9,7 @@ import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/fork/display/contrast.dart';
 import 'package:opennutritracker/fork/health/steps.dart';
 import 'package:opennutritracker/fork/trends/card_title.dart';
+import 'package:opennutritracker/fork/display/chart_semantics.dart';
 
 typedef _Read = ({bool on, int goal, Map<DateTime, int>? days, bool failed});
 
@@ -240,8 +241,12 @@ class _StepsCardState extends State<StepsCard> {
       today.day - widget.rangeDays + 1,
     );
     final most = [goal, ...days.values].reduce((a, b) => a > b ? a : b);
-    return Semantics(
-      label: 'Daily steps',
+    return ChartSemantics(
+      label: days.isEmpty
+          ? 'Daily steps'
+          : 'Daily steps, between '
+                '${_count(days.values.reduce((a, b) => a < b ? a : b))} and '
+                '${_count(days.values.reduce((a, b) => a > b ? a : b))} a day',
       child: SizedBox(
         height: 120,
         child: BarChart(

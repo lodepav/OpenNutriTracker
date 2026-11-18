@@ -24,6 +24,7 @@ import 'package:opennutritracker/fork/trends/trend_detail.dart';
 import 'package:opennutritracker/fork/trends/trend_stats.dart';
 import 'package:opennutritracker/fork/trends/trends_widgets.dart';
 import 'package:opennutritracker/fork/units/energy_text.dart';
+import 'package:opennutritracker/fork/display/chart_semantics.dart';
 
 /// Opens Goal progress.
 void openGoalProgress(BuildContext context, BodyWeightUnit unit) =>
@@ -674,7 +675,7 @@ class _GoalChart extends StatelessWidget {
       children: [
         SizedBox(
           height: 200,
-          child: Semantics(
+          child: ChartSemantics(
             label:
                 'Trend weight since ${format.format(p.start.date)}, the plan '
                 'and the projection to the target of '

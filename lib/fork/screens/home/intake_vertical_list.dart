@@ -214,18 +214,24 @@ class _IntakeVerticalListState extends State<IntakeVerticalList> {
   // the summary on a line of its own under
   // the header's row, lined up with the title
   Widget _forkTimelineHeader(BuildContext context, Widget row) {
-    final header = _selectableHeader(
-      context,
-      _timelineHeaderBody(context, row),
-    );
-    if (widget.forkTime == null) return header;
-    // Read as one heading, in words and in the order a listener wants it;
-    // its buttons stay nodes of their own.
+    final body = _timelineHeaderBody(context, row);
+    if (widget.forkTime == null) return _selectableHeader(context, body);
+    final selection = widget.selection;
+    final toggle = selection == null || widget.intakeList.isEmpty
+        ? null
+        : () => selection.toggleAll(widget.intakeList);
+    // Read as one heading, in words and in the order a listener wants it,
+    // that picks the section itself; its buttons stay nodes of their own.
     return Semantics(
       container: true,
       header: true,
+      identifier: selection == null ? null : 'diary-section-select',
       label: _timelineLabel(context),
-      child: header,
+      onTap: toggle,
+      onTapHint: toggle == null ? null : _selectHint(selection!),
+      child: selection == null
+          ? body
+          : InkWell(onTap: toggle, excludeFromSemantics: true, child: body),
     );
   }
 
@@ -725,11 +731,7 @@ class _IntakeVerticalListState extends State<IntakeVerticalList> {
     if (selection == null) return header;
     return Semantics(
       identifier: 'diary-section-select',
-      onTapHint: widget.intakeList.isEmpty
-          ? null
-          : selection.stateOf(widget.intakeList) == true
-          ? 'Unselect all'
-          : 'Select all',
+      onTapHint: widget.intakeList.isEmpty ? null : _selectHint(selection),
       child: InkWell(
         onTap: widget.intakeList.isEmpty
             ? null
@@ -738,6 +740,11 @@ class _IntakeVerticalListState extends State<IntakeVerticalList> {
       ),
     );
   }
+
+  String _selectHint(DiarySelection selection) =>
+      selection.stateOf(widget.intakeList) == true
+      ? 'Unselect all'
+      : 'Select all';
 
   List<PopupMenuEntry<VerticalListPopupMenuSelections>> _sortItems(
     BuildContext context,

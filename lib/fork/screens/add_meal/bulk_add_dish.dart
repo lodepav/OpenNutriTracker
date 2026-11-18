@@ -102,9 +102,10 @@ extension _BulkAddDish on _BulkAddScreenState {
         children: [
           IconButton.filledTonal(
             key: const ValueKey('bulk-add-dish-less'),
-            style: IconButton.styleFrom(backgroundColor: scheme.surface),
+            style: _stepperStyle.merge(
+              IconButton.styleFrom(backgroundColor: scheme.surface),
+            ),
             tooltip: 'Less',
-            visualDensity: VisualDensity.compact,
             onPressed: grams > 0
                 ? () => _stepDish(group, grams, up: false)
                 : null,
@@ -147,9 +148,10 @@ extension _BulkAddDish on _BulkAddScreenState {
           const SizedBox(width: 4),
           IconButton.filledTonal(
             key: const ValueKey('bulk-add-dish-more'),
-            style: IconButton.styleFrom(backgroundColor: scheme.surface),
+            style: _stepperStyle.merge(
+              IconButton.styleFrom(backgroundColor: scheme.surface),
+            ),
             tooltip: 'More',
-            visualDensity: VisualDensity.compact,
             onPressed: grams > 0
                 ? () => _stepDish(group, grams, up: true)
                 : null,

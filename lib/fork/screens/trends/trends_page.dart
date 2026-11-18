@@ -36,6 +36,7 @@ import 'package:opennutritracker/fork/trends/trends_range.dart';
 import 'package:opennutritracker/fork/trends/card_title.dart';
 import 'package:opennutritracker/fork/trends/trends_widgets.dart'
     show dayLabels, fittedRange, noData;
+import 'package:opennutritracker/fork/display/chart_semantics.dart';
 
 class TrendsPage extends StatefulWidget {
   const TrendsPage({super.key});
@@ -183,6 +184,7 @@ class _WaterTrendCard extends StatelessWidget {
       if (goalMl > 0) goal,
     ], minSpan: _toUnit(100));
     final maxY = range.max;
+    final ys = spots.map((s) => s.y);
 
     return AppCard(
       padding: const EdgeInsets.all(Dimens.spacing20),
@@ -222,8 +224,12 @@ class _WaterTrendCard extends StatelessWidget {
           if (loggedDays == 0)
             noData(context, 'No water logged in this range.')
           else
-            Semantics(
-              label: S.of(context).trendsWaterLabel,
+            ChartSemantics(
+              label:
+                  '${S.of(context).trendsWaterLabel}, between '
+                  '${ys.reduce((a, b) => a < b ? a : b).round()} and '
+                  '${ys.reduce((a, b) => a > b ? a : b).round()} '
+                  '${usesImperialUnits ? S.of(context).flOzUnit : 'ml'} a day',
               child: SizedBox(
                 height: 140,
                 child: LineChart(

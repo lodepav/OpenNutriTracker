@@ -386,11 +386,16 @@ void main() {
       addTearDown(selection.dispose);
     });
 
-    Future<void> pump(WidgetTester tester, List<IntakeEntity> list) async {
+    Future<void> pump(
+      WidgetTester tester,
+      List<IntakeEntity> list, {
+      DateTime? forkTime,
+    }) async {
       await tester.pumpWidget(
         _wrapWithMaterial(
           IntakeVerticalList(
             day: DateTime(2026, 1, 1),
+            forkTime: forkTime,
             title: 'Breakfast',
             listIcon: Icons.bakery_dining_outlined,
             addMealType: AddMealType.breakfastType,
@@ -512,6 +517,78 @@ void main() {
         isSemantics(onTapHint: 'Unselect', onLongPressHint: 'Unselect'),
       );
       expect(header(), isSemantics(onTapHint: 'Unselect all'));
+      semantics.dispose();
+    });
+
+    testWidgets('on the timeline the heading itself picks the section, and '
+        'no tappable node is left unnamed', (tester) async {
+      final semantics = tester.ensureSemantics();
+      await pump(tester, intakes, forkTime: DateTime(2026, 1, 1, 8, 41));
+      final heading = tester.getSemantics(
+        find.bySemanticsIdentifier('diary-section-select'),
+      );
+      expect(heading.label, startsWith('Breakfast, '));
+      expect(
+        heading,
+        isSemantics(
+          isHeader: true,
+          hasTapAction: true,
+          onTapHint: 'Select all',
+        ),
+      );
+
+      final unnamed = <SemanticsNode>[];
+      final tappable = <String>[];
+      void visit(SemanticsNode node) {
+        final data = node.getSemanticsData();
+        if (data.hasAction(SemanticsAction.tap)) {
+          final name = data.label.isNotEmpty ? data.label : data.tooltip;
+          if (name.isEmpty) unnamed.add(node);
+          tappable.add(name);
+        }
+        node.visitChildren((child) {
+          visit(child);
+          return true;
+        });
+      }
+
+      visit(
+        tester
+            .binding
+            .renderViews
+            .first
+            .owner!
+            .semanticsOwner!
+            .rootSemanticsNode!,
+      );
+      expect(unnamed, isEmpty);
+      // + and the menu stay stops of their own
+      expect(
+        tappable,
+        containsAll([
+          l10nEn.addToSectionLabel('Breakfast'),
+          l10nEn.sectionOptionsLabel('Breakfast'),
+        ]),
+      );
+
+      await tester.tap(find.bySemanticsIdentifier('diary-section-select'));
+      await tester.pump();
+      expect(selection.isPicked(intakes.single), isTrue);
+
+      // an hour section's header is named by its title
+      selection.end();
+      await pump(tester, intakes);
+      unnamed.clear();
+      visit(
+        tester
+            .binding
+            .renderViews
+            .first
+            .owner!
+            .semanticsOwner!
+            .rootSemanticsNode!,
+      );
+      expect(unnamed, isEmpty);
       semantics.dispose();
     });
 

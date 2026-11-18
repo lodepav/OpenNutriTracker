@@ -15,6 +15,7 @@ import 'package:opennutritracker/fork/display/contrast.dart';
 import 'package:opennutritracker/fork/report/chart_touch.dart';
 import 'package:opennutritracker/fork/trends/detail_widgets.dart';
 import 'package:opennutritracker/fork/trends/trends_widgets.dart';
+import 'package:opennutritracker/fork/display/chart_semantics.dart';
 
 const _cmPerInch = 2.54;
 
@@ -338,13 +339,22 @@ class _SidesChart extends StatelessWidget {
       ),
     );
     final lastX = x(measurements.last.date);
+    String fromTo(List<FlSpot> s) => spokenFromTo(
+      s.first.y.toStringAsFixed(1),
+      s.last.y.toStringAsFixed(1),
+      units.unit,
+    );
     return AppCard(
       padding: const EdgeInsets.all(Dimens.spacing16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Semantics(
-            label: '${part.label} chart, left and right',
+          ChartSemantics(
+            label: [
+              '${part.label} chart',
+              if (left.isNotEmpty) 'left ${fromTo(left)}',
+              if (right.isNotEmpty) 'right ${fromTo(right)}',
+            ].join(', '),
             child: SizedBox(
               height: 180,
               child: LineChart(
