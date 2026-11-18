@@ -21,6 +21,7 @@ import 'package:opennutritracker/fork/report/chart_touch.dart';
 import 'package:opennutritracker/fork/trends/detail_widgets.dart';
 import 'package:opennutritracker/fork/trends/trends_widgets.dart';
 import 'package:opennutritracker/fork/units/weight_text.dart';
+import 'package:opennutritracker/fork/display/chart_semantics.dart';
 
 /// What the ratios are taken against: the profile's height, and its
 /// gender for the waist-to-hip cut-off.
@@ -350,8 +351,10 @@ class _RatioChart extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Semantics(
-            label: 'Waist to height chart, with the 0.5 line',
+          ChartSemantics(
+            label:
+                'Waist to height chart, with the 0.5 line, '
+                '${spokenFromTo(spots.first.y.toStringAsFixed(2), spots.last.y.toStringAsFixed(2), '').trimRight()}',
             child: SizedBox(
               height: 180,
               child: LineChart(

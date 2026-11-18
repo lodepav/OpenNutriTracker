@@ -11,6 +11,7 @@ import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/core/utils/calc/calendar_day_calc.dart';
 import 'package:opennutritracker/fork/adaptive/trend_points.dart';
+import 'package:opennutritracker/fork/display/chart_semantics.dart';
 import 'package:opennutritracker/fork/display/contrast.dart';
 import 'package:opennutritracker/fork/display/motion.dart';
 import 'package:opennutritracker/fork/layout/width_cap.dart';
@@ -495,16 +496,18 @@ class WeightHistoryChart extends StatelessWidget {
       Localizations.localeOf(context).toLanguageTag(),
     );
     final n = dates.length;
+    final spoken = trend.isEmpty ? scale : trend;
+    String digits(double y) => y.toStringAsFixed(1);
     // Large text needs room for "87.5" and a date under the plot.
     final textScale = MediaQuery.textScalerOf(context).scale(1);
 
     return SizedBox(
       key: const Key('weightHistoryChart'),
       height: 176,
-      child: Semantics(
+      child: ChartSemantics(
         label:
             'Weight over ${n == 1 ? 'a day' : '$n days'}, '
-            'trend and weigh-ins',
+            '${spokenFromTo(digits(spoken.first.y), digits(spoken.last.y), label)}',
         child: LineChart(
           // fl_chart's own 150 ms tween, none with Remove animations on
           duration: motionDuration(context, const Duration(milliseconds: 150)),

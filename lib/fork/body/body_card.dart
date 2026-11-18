@@ -9,6 +9,7 @@ import 'package:opennutritracker/fork/display/contrast.dart';
 import 'package:opennutritracker/fork/report/chart_touch.dart';
 import 'package:opennutritracker/fork/undo/undo_delete.dart';
 import 'package:opennutritracker/fork/trends/card_title.dart';
+import 'package:opennutritracker/fork/display/chart_semantics.dart';
 
 const _cmPerInch = 2.54;
 
@@ -270,8 +271,11 @@ class _BodyMeasurementsCardState extends State<BodyMeasurementsCard> {
     final low = ys.reduce((a, b) => a < b ? a : b);
     final high = ys.reduce((a, b) => a > b ? a : b);
     final pad = ((high - low) * 0.2).clamp(0.5, double.infinity);
-    return Semantics(
-      label: metric.label,
+    String digits(double y) => y.toStringAsFixed(1);
+    return ChartSemantics(
+      label:
+          '${metric.label}, '
+          '${spokenFromTo(digits(ys.first), digits(ys.last), _unit(metric))}',
       child: SizedBox(
         height: 120,
         child: LineChart(

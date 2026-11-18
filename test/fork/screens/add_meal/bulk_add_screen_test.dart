@@ -880,6 +880,21 @@ void main() {
     );
   });
 
+  testWidgets('a row\'s Less and More are 48 dp tap targets', (tester) async {
+    await _register({
+      'toast': [_meal('Toast', servingQuantity: 30)],
+    });
+    await tester.pumpWidget(_app());
+    await tester.pumpAndSettle();
+    await _parse(tester, '100g toast');
+
+    for (final key in ['bulk-add-less-0', 'bulk-add-more-0']) {
+      final size = tester.getSize(find.byKey(ValueKey(key)));
+      expect(size.width, greaterThanOrEqualTo(48), reason: key);
+      expect(size.height, greaterThanOrEqualTo(48), reason: key);
+    }
+  });
+
   testWidgets('the button adds up the rows; a count says the grams it is', (
     tester,
   ) async {
@@ -2109,6 +2124,15 @@ void main() {
       await tester.tap(find.byKey(const ValueKey('bulk-add-dish-more')));
       await tester.pumpAndSettle();
       expectPortion('375');
+    });
+
+    testWidgets('its Less and More are 48 dp tap targets', (tester) async {
+      await readDish(tester);
+      for (final key in ['bulk-add-dish-less', 'bulk-add-dish-more']) {
+        final size = tester.getSize(find.byKey(ValueKey(key)));
+        expect(size.width, greaterThanOrEqualTo(48), reason: key);
+        expect(size.height, greaterThanOrEqualTo(48), reason: key);
+      }
     });
 
     testWidgets('a breakdown\'s portion is in grams as eaten', (tester) async {

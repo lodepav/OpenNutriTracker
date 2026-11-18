@@ -821,14 +821,14 @@ class _CheckInScreenState extends State<CheckInScreen> {
     ),
   );
 
-  /// The week's trend change toward the goal's direction in green, away
-  /// from it in orange; at maintenance, uncoloured.
+  /// The week's trend change toward the goal's direction in the accent,
+  /// away from it in the warning colour, both as text; at maintenance,
+  /// uncoloured.
   Color? _towardGoalColor(BuildContext context, double change, double goal) {
     if (goal == 0 || change.abs() < 0.05) return null;
-    final dark = Theme.of(context).brightness == Brightness.dark;
     return change.sign == goal.sign
-        ? (dark ? const Color(0xFF81C784) : const Color(0xFF2E7D32))
-        : phaseColor(context, PhaseKind.cut);
+        ? textAccent(context)
+        : paletteOf(context).warningText;
   }
 }
 

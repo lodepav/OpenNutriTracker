@@ -13,6 +13,7 @@ import 'package:opennutritracker/fork/goal/phase_colors.dart';
 import 'package:opennutritracker/fork/goal/goal_planner.dart';
 import 'package:opennutritracker/fork/goal/planner_screen.dart';
 import 'package:opennutritracker/fork/phases/phases.dart';
+import 'package:opennutritracker/fork/trends/card_title.dart';
 import 'package:opennutritracker/fork/units/weight_text.dart';
 
 /// Trends' goal card: the goal planned and its phases, Goal progress, and
@@ -103,11 +104,13 @@ class _GoalCardState extends State<GoalCard> {
           Localizations.localeOf(context).toLanguageTag(),
         );
         return AppCard(
-          padding: const EdgeInsets.all(Dimens.spacing16),
+          padding: const EdgeInsets.all(Dimens.spacing20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Goal', style: theme.textTheme.titleMedium),
+              CardTitle(
+                child: Text('Goal', style: theme.textTheme.titleMedium),
+              ),
               const SizedBox(height: 4),
               Text(
                 plan == null

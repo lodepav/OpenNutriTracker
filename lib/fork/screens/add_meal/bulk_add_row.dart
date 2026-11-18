@@ -1,5 +1,12 @@
 part of 'bulk_add_screen.dart';
 
+/// Compact's 40 x 32 look on a 48 dp target: compact itself takes the
+/// target to 40 dp.
+final _stepperStyle = IconButton.styleFrom(
+  minimumSize: const Size(40, 32),
+  padding: const EdgeInsets.symmetric(horizontal: 8),
+);
+
 /// One parsed row of the bulk-add list: its match, amount, unit, energy
 /// and macros.
 extension _BulkAddRow on _BulkAddScreenState {
@@ -445,7 +452,7 @@ extension _BulkAddRow on _BulkAddScreenState {
         IconButton.filledTonal(
           key: ValueKey('bulk-add-less-$index'),
           tooltip: 'Less',
-          visualDensity: VisualDensity.compact,
+          style: _stepperStyle,
           onPressed: quantity == null ? null : () => step(up: false),
           icon: const Icon(Icons.remove),
         ),
@@ -477,7 +484,7 @@ extension _BulkAddRow on _BulkAddScreenState {
         IconButton.filledTonal(
           key: ValueKey('bulk-add-more-$index'),
           tooltip: 'More',
-          visualDensity: VisualDensity.compact,
+          style: _stepperStyle,
           onPressed: () => step(up: true),
           icon: const Icon(Icons.add),
         ),

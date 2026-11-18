@@ -26,6 +26,7 @@ import 'package:opennutritracker/fork/trends/trend_detail.dart';
 import 'package:opennutritracker/fork/trends/trend_stats.dart';
 import 'package:opennutritracker/fork/trends/trends_widgets.dart';
 import 'package:opennutritracker/fork/units/energy_text.dart';
+import 'package:opennutritracker/fork/display/chart_semantics.dart';
 
 /// The Calories page, after the canvas's TdNutrA: the average and the
 /// goal, each day stacked by macro, how the days went, the weekdays over
@@ -195,6 +196,7 @@ class MacroEnergyChart extends StatelessWidget {
     };
     final energy = nutritionSeries(state.days, dates, (d) => d.caloriesTracked);
     final mean = meanOf(energy);
+    final logged = energy.nonNulls.toList();
     final goal = goalOf(state.days, dates, (d) => d.calorieGoal);
     final macros = inMacroOrder<_Macro>(
       carbs: (
@@ -228,8 +230,11 @@ class MacroEnergyChart extends StatelessWidget {
           if (mean == null)
             noData(context, 'Nothing logged in this range.')
           else
-            Semantics(
-              label: '${energyTitle(context)} by macro chart',
+            ChartSemantics(
+              label:
+                  '${energyTitle(context)} by macro chart, between '
+                  '${shown(logged.reduce(math.min)).round()} and '
+                  '${shown(logged.reduce(math.max)).round()} $unit a day',
               child: SizedBox(
                 height: 200,
                 child: LayoutBuilder(
