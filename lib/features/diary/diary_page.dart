@@ -8,6 +8,9 @@ import 'package:opennutritracker/core/domain/entity/intake_entity.dart';
 import 'package:opennutritracker/core/domain/entity/tracked_day_entity.dart';
 import 'package:opennutritracker/core/domain/entity/user_activity_entity.dart';
 import 'package:opennutritracker/core/presentation/widgets/edit_activity_dialog.dart';
+// [fork] S278 activity-dialog-delete
+import 'package:opennutritracker/core/presentation/widgets/delete_dialog.dart';
+// [/fork]
 import 'package:opennutritracker/core/presentation/widgets/edit_dialog.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/core/utils/calc/met_calc.dart';
@@ -488,6 +491,18 @@ class _DiaryPageState extends State<DiaryPage> with WidgetsBindingObserver {
       builder: (context) =>
           EditActivityDialog(activityEntity: activityEntity),
     );
+    // [fork] S278 activity-dialog-delete: asks first, as a long press on
+    // today's does; a deleted activity has no Undo
+    if (newDuration == EditActivityDialog.deleteResult) {
+      if (!context.mounted) return;
+      final delete = await showDialog<bool>(
+        context: context,
+        builder: (context) => const DeleteDialog(),
+      );
+      if (delete == true) _onDeleteActivityItem(activityEntity, day);
+      return;
+    }
+    // [/fork]
     if (newDuration != null) {
       await _calendarDayBloc.updateUserActivityItem(
         activityEntity,

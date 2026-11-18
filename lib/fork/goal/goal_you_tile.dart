@@ -24,7 +24,8 @@ String _sinceText(BuildContext context, DateTime since) =>
 
 /// The goal with no target weight: a goal running, a maintenance one,
 /// until it ends; maintenance since the last goal completed, or since a
-/// goal ended that is not yet marked; or the profile's [pace]
+/// goal ended that is not yet marked, unless [pace] loses or gains; or the
+/// profile's [pace]
 /// ([plannedRateText]) in the You tile's words, its verb the value; or none.
 ({String value, String? note}) untargetedGoal(
   BuildContext context,
@@ -49,7 +50,8 @@ String _sinceText(BuildContext context, DateTime since) =>
       note: 'until $until',
     );
   }
-  if (since != null) {
+  // A rate set on You after the goal ended is what the budget follows.
+  if (since != null && (pace == null || pace == _keeping)) {
     return (value: 'Maintain', note: _sinceText(context, since));
   }
   if (pace == null) return (value: noGoalText, note: null);
@@ -168,7 +170,8 @@ class _GoalYouTileState extends State<GoalYouTile> {
         ? maintainingSince(null, goals.history)
         : null;
     final untargeted = since != null
-        ? untargetedGoal(context, null, since)
+        // [value] is the profile's rate here: with no target it is the pace.
+        ? untargetedGoal(context, null, since, pace: widget.value)
         : plan != null && plan.targetKg == null
         ? untargetedGoal(context, plan, null)
         : null;

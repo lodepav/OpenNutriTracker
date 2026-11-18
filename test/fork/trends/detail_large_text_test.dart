@@ -358,6 +358,26 @@ void main() {
     ),
   );
 
+  // The header's change reads as the weekly rate: two decimals, pounds for
+  // stones.
+  for (final (unit, label) in [
+    (BodyWeightUnit.kg, 'kg'),
+    (BodyWeightUnit.lb, 'lbs'),
+    (BodyWeightUnit.st, 'lbs'),
+  ]) {
+    testWidgets('the ${unit.name} header change is in $label at two '
+        'decimals', (tester) async {
+      await _pumpAt360(tester, weightPage(unit), textScale: 1);
+      await tester.pumpAndSettle();
+      final change = tester
+          .widget<StatHeader>(find.byType(StatHeader))
+          .stats
+          .firstWhere((s) => s.label == 'Change');
+      expect(change.value, matches(RegExp(r'^−\d+\.\d\d$')));
+      expect(change.unit, label);
+    });
+  }
+
   for (final (unit, label) in [
     (BodyWeightUnit.kg, 'kg'),
     (BodyWeightUnit.lb, 'lbs'),

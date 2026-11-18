@@ -514,6 +514,13 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       context: context,
       builder: (context) => EditActivityDialog(activityEntity: activityEntity),
     );
+    // [fork] S278 activity-dialog-delete: asks first, as a long press does;
+    // a deleted activity has no Undo
+    if (newDuration == EditActivityDialog.deleteResult) {
+      if (context.mounted) onActivityItemLongPressed(context, activityEntity);
+      return;
+    }
+    // [/fork]
     if (newDuration != null) {
       await _homeBloc.updateUserActivityItem(activityEntity, newDuration);
       _homeBloc.add(const LoadItemsEvent());

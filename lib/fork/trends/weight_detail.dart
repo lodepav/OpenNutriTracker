@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart' as intl;
+import 'package:opennutritracker/core/domain/entity/body_weight_unit_entity.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/features/trends/presentation/bloc/trends_bloc.dart';
@@ -62,6 +63,13 @@ List<Widget> weightDetailBody(
       : signed
       ? signedText(weightIn(wu, kg), 1)
       : weightIn(wu, kg).toStringAsFixed(1);
+  // A change reads as the weekly rate does: two decimals, pounds for stones.
+  String? change(double? kg) =>
+      kg == null ? null : signedRate(weeklyRateShown(kg, wu));
+  final changeLabel = weightUnitLabel(
+    context,
+    wu == BodyWeightUnit.kg ? wu : BodyWeightUnit.lb,
+  );
   final today = dates.isEmpty ? null : dates.last;
   final dayFormat = intl.DateFormat.MMMd(
     Localizations.localeOf(context).toLanguageTag(),
@@ -101,8 +109,8 @@ List<Widget> weightDetailBody(
         (label: 'Trend weight', value: w(stats.nowKg) ?? '–', unit: label),
         (
           label: 'Change',
-          value: w(stats.changeKg, signed: true) ?? '–',
-          unit: label,
+          value: change(stats.changeKg) ?? '–',
+          unit: changeLabel,
         ),
         (
           label: 'Per week',

@@ -7,6 +7,10 @@ import 'package:provider/provider.dart';
 
 class EditActivityDialog extends StatefulWidget {
   final UserActivityEntity activityEntity;
+  // [fork] S278 activity-dialog-delete: what the dialog returns for Delete,
+  // below any minutes or kcal it returns
+  static const deleteResult = -1.0;
+  // [/fork]
 
   const EditActivityDialog({super.key, required this.activityEntity});
 
@@ -56,7 +60,11 @@ class _EditActivityDialogState extends State<EditActivityDialog> {
         : S.of(context).minuteShortLabel;
 
     return AlertDialog(
-      title: Text(S.of(context).editItemDialogTitle),
+      // [fork] S278 activity-dialog-name: named for the activity, as the
+      // food dialog is for the food (S83)
+      title: Text(widget.activityEntity.physicalActivityEntity.getName(context)),
+      // title: Text(S.of(context).editItemDialogTitle),
+      // [/fork]
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -77,7 +85,23 @@ class _EditActivityDialogState extends State<EditActivityDialog> {
           ),
         ],
       ),
+      // [fork] S278 activity-dialog-delete: Material order, as in the food
+      // dialog (S83): Delete on its own on the left in the error colour
+      actionsAlignment: MainAxisAlignment.spaceBetween,
       actions: [
+        TextButton(
+          style: TextButton.styleFrom(
+            foregroundColor: Theme.of(context).colorScheme.error,
+          ),
+          onPressed: () =>
+              Navigator.of(context).pop(EditActivityDialog.deleteResult),
+          child: Text(S.of(context).dialogDeleteLabel),
+        ),
+        // a Wrap: at 200% font Cancel and OK are wider than a 360 dp screen
+        Wrap(
+          alignment: WrapAlignment.end,
+          children: [
+      // [/fork]
         // [fork] S277 activity-dialog-cancel-first: Cancel before OK, as
         // every other dialog has them; the upstream order moved below
         TextButton(
@@ -102,6 +126,10 @@ class _EditActivityDialogState extends State<EditActivityDialog> {
         //   onPressed: () => Navigator.of(context).pop(),
         //   child: Text(S.of(context).dialogCancelLabel),
         // ),
+        // [/fork]
+        // [fork] S278 activity-dialog-delete
+          ],
+        ),
         // [/fork]
       ],
     );
