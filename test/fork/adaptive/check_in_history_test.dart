@@ -138,7 +138,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Why it moved from 5 Oct'), findsOneWidget);
     expect(find.text('Your estimate moved'), findsOneWidget);
-    expect(find.text('-50 kcal'), findsOneWidget);
+    expect(find.text('\u221250 kcal'), findsOneWidget);
     expect(find.text("Goal's pace or the plan"), findsOneWidget);
     expect(find.text('+250 kcal'), findsOneWidget);
     // Parts that round to nothing are left out.

@@ -183,4 +183,22 @@ void main() {
     expect(rangeText(7, 7), 'Last 7 days');
     expect(rangeText(0, 412), 'All time');
   });
+
+  group('historyStreak', () {
+    final today = DateTime(2026, 11, 18);
+    DateTime back(int n) => DateTime(today.year, today.month, today.day - n);
+
+    test('counts a run past any range', () {
+      // 15 days to today, after a 20-day run months ago.
+      final s = historyStreak({
+        for (var i = 0; i < 15; i++) back(i),
+        for (var i = 100; i < 120; i++) back(i),
+      }, today);
+      expect(s, (current: 15, longest: 20));
+    });
+
+    test('none yet: nothing', () {
+      expect(historyStreak({}, today), (current: 0, longest: 0));
+    });
+  });
 }

@@ -143,6 +143,7 @@ void main() {
       history: await PhaseStore().history(),
     );
     TrendsOverview.loadMeasurements = () async => const [];
+    TrendsOverview.loadAllDays = allTrackedDays;
     loadBodyFrame = () async => null;
     SidePartPref.current.value = SidePart.arms;
     await locator.reset();
@@ -165,6 +166,28 @@ void main() {
     await openTile(tester, 'calories');
     expect(find.textContaining('Water'), findsNothing);
   });
+
+  for (final range in [7, 90]) {
+    testWidgets('the streak at $range days counts every logged day', (
+      tester,
+    ) async {
+      // 15 days in a row; the range's state holds only its own.
+      final run = [for (var i = -14; i <= 0; i++) _logged(i)];
+      TrendsOverview.loadAllDays = () async => run;
+      await pumpTrends(
+        tester,
+        loaded(
+          rangeDays: range,
+          days: [
+            for (final d in run)
+              if (!d.day.isBefore(day(-(range - 1)))) d,
+          ],
+        ),
+      );
+      expect(find.text('15 day streak'), findsOneWidget);
+      expect(find.text('best 15'), findsOneWidget);
+    });
+  }
 
   testWidgets('the tiles: averages of the logged days against the goals', (
     tester,
@@ -290,10 +313,10 @@ void main() {
       200,
       scrollable: find.byType(Scrollable).last,
     );
-    expect(row('On target (within 10%)'), '0 of 1 finished day');
+    expect(row('On target (within 10%)'), '0 of 1 finished\u00A0day');
     expect(row('Under'), '1 day');
     expect(row('Over'), '0 days');
-    expect(row('Highest'), startsWith('1560 kcal · '));
+    expect(row('Highest'), startsWith('1560 kcal\u00A0·\u00A0'));
   });
 
   testWidgets('Calories: the days stacked by macro and the macro shares', (
@@ -445,7 +468,7 @@ void main() {
     );
     await openTile(tester, 'protein');
     // 110 g a day: 80 under, 160 over.
-    await tester.scrollUntilVisible(find.text('0 of 1 finished day'), 200);
+    await tester.scrollUntilVisible(find.text('0 of 1 finished\u00A0day'), 200);
     await tester.scrollUntilVisible(find.text('1.4 g/kg'), 200);
     expect(find.text('1.5 g/kg'), findsOneWidget);
     expect(find.text('1.4 g/kg'), findsOneWidget);
@@ -632,7 +655,7 @@ void main() {
       contains('of 1 day'),
     );
     expect(
-      find.text('Counted over 1 finished day; today is not over yet.'),
+      find.text('Counted over 1 finished\u00A0day; today is not over yet.'),
       findsOneWidget,
     );
     await tester.scrollUntilVisible(
@@ -915,7 +938,7 @@ void main() {
     String row(String label) =>
         tester.widget<TrendRow>(find.widgetWithText(TrendRow, label)).value;
     // Day 0 is today, not over yet.
-    expect(row('In deficit'), '3 of 3 finished days');
+    expect(row('In deficit'), '3 of 3 finished\u00A0days');
     expect(row('In surplus'), '0 days');
     expect(row('Eaten a day'), '2500 kcal');
     expect(row('Burnt a day'), '2970 kcal');

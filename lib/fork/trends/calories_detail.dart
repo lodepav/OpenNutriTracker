@@ -358,7 +358,7 @@ class DaysWentCard extends StatelessWidget {
         ? intl.DateFormat.E(locale)
         : intl.DateFormat.MMMd(locale);
     String day(DayValue d) =>
-        '${valueText(context, d.value)} · ${format.format(d.date)}';
+        '${valueText(context, d.value)}\u00A0·\u00A0${format.format(d.date)}';
     return AppCard(
       padding: const EdgeInsets.symmetric(
         horizontal: Dimens.spacing16,

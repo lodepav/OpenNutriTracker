@@ -27,7 +27,7 @@ import 'package:opennutritracker/fork/units/weight_text.dart';
 import 'package:opennutritracker/fork/goal/phase_colors.dart';
 import 'package:opennutritracker/fork/phases/phases.dart';
 import 'package:opennutritracker/fork/trends/trends_widgets.dart'
-    show waterColor;
+    show signedText, waterColor;
 import 'package:opennutritracker/fork/display/display_prefs.dart';
 import 'package:opennutritracker/fork/display/settings_tile.dart';
 
@@ -323,7 +323,8 @@ class _CheckInScreenState extends State<CheckInScreen> {
   String _shownDiff(double a, double b, {bool signed = false}) {
     final diff = energyValue(context, a) - energyValue(context, b);
     if (!signed) return '${diff.abs()} ${energyUnit(context)}';
-    return '${diff > 0 ? '+' : ''}$diff ${energyUnit(context)}';
+    // Not energyText: the difference of the two as shown, already rounded.
+    return '${signedText(diff.toDouble())} ${energyUnit(context)}';
   }
 
   /// [kcalPerKg] a kg, or a pound where weight changes are shown in pounds.

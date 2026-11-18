@@ -122,8 +122,8 @@ String _day(BuildContext context, DateTime date) => intl.DateFormat.MMMd(
 ).format(date);
 
 /// The estimate a day over the window as a line, fitted to its own
-/// values, the energy on the right and three dates under it; a touched day
-/// names its logged intake too.
+/// values but at least 200 kcal tall, the energy on the right and three
+/// dates under it; a touched day names its logged intake too.
 class ExpenditureChart extends StatelessWidget {
   final List<ExpenditureDay> history;
   final List<DateTime> dates;
@@ -160,11 +160,10 @@ class ExpenditureChart extends StatelessWidget {
     if (values.isEmpty) {
       return noData(context, 'No estimate in this range.');
     }
-    final step = _niceStep(
-      (values.reduce(math.max) - values.reduce(math.min)) / 3,
+    final (min: minY, max: maxY, :step) = expenditureAxis(
+      values,
+      minSpan: shown(200),
     );
-    final minY = (values.reduce(math.min) / step).floor() * step;
-    final maxY = (values.reduce(math.max) / step).ceil() * step;
     final muted = palette.textMuted;
     final small = theme.textTheme.labelSmall?.copyWith(color: muted);
     // The axis as wide as its widest number at the user's font, so the
@@ -275,14 +274,36 @@ class ExpenditureChart extends StatelessWidget {
   }
 
   /// A round step near [raw]: 1, 2 or 5 times a power of ten.
-  static double _niceStep(double raw) {
-    if (raw <= 0) return 100;
-    final p = math.pow(10, (math.log(raw) / math.ln10).floor()).toDouble();
-    for (final m in [1, 2, 5, 10]) {
-      if (m * p >= raw) return m * p;
-    }
-    return 10 * p;
+}
+
+/// The Expenditure chart's y axis for [values] (not empty): at least
+/// [minSpan] wide, centred on them, so a drift of a few kcal is not drawn
+/// as a climb, then out to whole steps of about a third of it.
+({double min, double max, double step}) expenditureAxis(
+  List<double> values, {
+  required double minSpan,
+}) {
+  var lo = values.reduce(math.min), hi = values.reduce(math.max);
+  if (hi - lo < minSpan) {
+    final mid = (lo + hi) / 2;
+    lo = mid - minSpan / 2;
+    hi = mid + minSpan / 2;
   }
+  final step = _niceStep((hi - lo) / 3);
+  return (
+    min: (lo / step).floor() * step,
+    max: (hi / step).ceil() * step,
+    step: step,
+  );
+}
+
+double _niceStep(double raw) {
+  if (raw <= 0) return 100;
+  final p = math.pow(10, (math.log(raw) / math.ln10).floor()).toDouble();
+  for (final m in [1, 2, 5, 10]) {
+    if (m * p >= raw) return m * p;
+  }
+  return 10 * p;
 }
 
 /// The estimate now against 3, 7, 14, 30 and 90 days before: the change,

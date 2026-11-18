@@ -20,7 +20,8 @@ Widget trendSection(BuildContext context, String label) => Padding(
   ),
 );
 
-/// A label and its value on one line, as a row of a detail card.
+/// A label and its value on one line, as a row of a detail card; at large
+/// text the value under its label, as half a row splits its words.
 class TrendRow extends StatelessWidget {
   final String label;
   final String value;
@@ -36,8 +37,12 @@ class TrendRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = paletteOf(context);
+    final labelText = Text(label, style: TextStyle(color: palette.textMuted));
+    const bold = TextStyle(fontWeight: FontWeight.w600);
     return MergeSemantics(
       child: Container(
+        // The card's width stacked too, its text at the card's edge.
+        width: double.infinity,
         constraints: const BoxConstraints(minHeight: 40),
         padding: const EdgeInsets.symmetric(vertical: Dimens.spacing8),
         decoration: first
@@ -45,26 +50,28 @@ class TrendRow extends StatelessWidget {
             : BoxDecoration(
                 border: Border(top: BorderSide(color: palette.border)),
               ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: Text(label, style: TextStyle(color: palette.textMuted)),
-            ),
-            const SizedBox(width: Dimens.spacing8),
-            Flexible(
-              // Against the card's right edge, not the half's start.
-              child: Align(
-                alignment: AlignmentDirectional.topEnd,
-                child: Text(
-                  value,
-                  textAlign: TextAlign.end,
-                  style: const TextStyle(fontWeight: FontWeight.w600),
-                ),
+        child: MediaQuery.textScalerOf(context).scale(10) > 15
+            ? Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  labelText,
+                  Text(value, style: bold),
+                ],
+              )
+            : Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(child: labelText),
+                  const SizedBox(width: Dimens.spacing8),
+                  Flexible(
+                    // Against the card's right edge, not the half's start.
+                    child: Align(
+                      alignment: AlignmentDirectional.topEnd,
+                      child: Text(value, textAlign: TextAlign.end, style: bold),
+                    ),
+                  ),
+                ],
               ),
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -311,4 +318,5 @@ class ExplainerLink extends StatelessWidget {
 String days(int n) => n == 1 ? '1 day' : '$n days';
 
 /// [n] finished days, in words: today, not over yet, is not one of them.
-String finishedDays(int n) => n == 1 ? '1 finished day' : '$n finished days';
+String finishedDays(int n) =>
+    n == 1 ? '1 finished\u00A0day' : '$n finished\u00A0days';

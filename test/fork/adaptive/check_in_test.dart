@@ -855,7 +855,9 @@ void main() {
     expect(find.text('Change'), findsOneWidget);
     // The rows add up as shown.
     final proposed = checkIn!.proposedTargetKcal.round();
-    expect(find.text('${proposed - 2847} kcal'), findsOneWidget);
+    // A cut: the change down, with a true minus.
+    expect(proposed, lessThan(2847));
+    expect(find.text('\u2212${2847 - proposed} kcal'), findsOneWidget);
     expect(
       find.textContaining(
         'That is the expenditure less '
@@ -958,7 +960,17 @@ void main() {
     await tester.scrollUntilVisible(current, 200);
     expect(find.text('2000 kcal'), findsOneWidget);
     await tester.scrollUntilVisible(find.text('Change'), 200);
-    expect(find.text('${change > 0 ? '+' : ''}$change kcal'), findsOneWidget);
+    // A true minus for a change down.
+    expect(
+      find.text(
+        '${change > 0
+            ? '+$change'
+            : change < 0
+            ? '\u2212${-change}'
+            : '0'} kcal',
+      ),
+      findsOneWidget,
+    );
     // The cap is explained whether or not it held the change back.
     final cap = find.textContaining(RegExp('check-in limit|A check-in moves'));
     await tester.scrollUntilVisible(cap, 200);

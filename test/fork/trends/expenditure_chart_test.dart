@@ -99,4 +99,48 @@ void main() {
       '',
     );
   });
+
+  test('a small spread gets an axis of at least the minimum span', () {
+    final axis = expenditureAxis([3035, 3042, 3050], minSpan: 200);
+    expect(axis.max - axis.min, greaterThanOrEqualTo(200));
+    expect(axis.min, lessThanOrEqualTo(3035));
+    expect(axis.max, greaterThanOrEqualTo(3050));
+    // Centred on the data, at the nice step.
+    expect(axis, (min: 2900.0, max: 3200.0, step: 100.0));
+  });
+
+  test('a spread over the minimum keeps its own axis', () {
+    expect(expenditureAxis([3000, 3300, 3600], minSpan: 200), (
+      min: 3000.0,
+      max: 3600.0,
+      step: 200.0,
+    ));
+  });
+
+  testWidgets('a 15 kcal week does not fill the chart', (tester) async {
+    final dates = [for (var i = 0; i < 7; i++) DateTime(2026, 10, 20 + i)];
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: ExpenditureChart(
+              history: [
+                for (final (i, d) in dates.indexed)
+                  ExpenditureDay(
+                    date: d,
+                    expenditureKcal: 3035 + i * 2.5,
+                    intakeKcal: 2500,
+                    settled: true,
+                  ),
+              ],
+              dates: dates,
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final data = tester.widget<LineChart>(find.byType(LineChart)).data;
+    expect(data.maxY - data.minY, greaterThanOrEqualTo(200));
+  });
 }
