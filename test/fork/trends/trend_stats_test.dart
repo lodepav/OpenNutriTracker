@@ -124,7 +124,7 @@ void main() {
     expect(signedText(-0.2), '0');
     expect(signedText(-0.04, 1), '0.0');
     expect(signedText(12.4), '+12');
-    expect(signedText(-1.25, 1), '-1.3');
+    expect(signedText(-1.25, 1), '\u22121.3');
   });
 
   // As S93's outlook: the smoothed trend carried to today, its change

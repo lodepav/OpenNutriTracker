@@ -7,6 +7,8 @@ import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/core/utils/calc/day_boundary_calc.dart';
 import 'package:opennutritracker/fork/report/nutrient_explorer.dart';
 import 'package:opennutritracker/fork/trends/detail_stats.dart';
+import 'package:opennutritracker/fork/trends/trends_widgets.dart'
+    show keepUnits;
 import 'package:opennutritracker/fork/units/energy_text.dart';
 import 'package:opennutritracker/fork/display/display_prefs.dart';
 
@@ -201,8 +203,6 @@ class WeeklyReportCard extends StatelessWidget {
                   child: Text(
                     'Weekly report',
                     style: theme.textTheme.titleMedium,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
                 Semantics(
@@ -308,6 +308,44 @@ class _Week extends StatelessWidget {
         '$name ${v!.eaten.round()} of ${v.goal.round()} g',
     ].join(', ');
 
+    // Above 1.5x the badges go under what they sat beside, the figures
+    // wrap rather than shrink, and the macros stack.
+    final large = MediaQuery.textScalerOf(context).scale(10) > 15;
+    final thisWeek = _Badge(
+      label: 'This week so far',
+      color: palette.accent,
+      palette: palette,
+    );
+    final figure = Text.rich(
+      maxLines: large ? null : 1,
+      TextSpan(
+        children: [
+          TextSpan(
+            text: '${energyValue(context, kcal.eaten)}',
+            style: text.headlineSmall?.copyWith(
+              fontWeight: FontWeight.w700,
+              color: palette.textStrong,
+            ),
+          ),
+          TextSpan(
+            text: large
+                ? keepUnits(' / ${energyValue(context, kcal.goal)} $unit')
+                : ' / ${energyValue(context, kcal.goal)} $unit',
+            style: text.bodyMedium?.copyWith(color: palette.textMuted),
+          ),
+        ],
+      ),
+    );
+    final standingBadge = _Badge(
+      label: '$offText · $standingWord',
+      color: standingColor,
+      palette: palette,
+    );
+    final macroViews = [
+      for (final (name, v, color) in macros)
+        _Macro(name: name, versus: v!, color: color, palette: palette),
+    ];
+
     return Semantics(
       key: ValueKey('week-${DateFormat('yyyy-MM-dd').format(week.monday)}'),
       container: true,
@@ -322,59 +360,41 @@ class _Week extends StatelessWidget {
                 child: Text(
                   dates,
                   style: text.titleSmall,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                  maxLines: large ? null : 1,
+                  overflow: large ? null : TextOverflow.ellipsis,
                 ),
               ),
-              if (current) ...[
-                _Badge(
-                  label: 'This week so far',
-                  color: palette.accent,
-                  palette: palette,
-                ),
+              if (current && !large) ...[
+                thisWeek,
                 const SizedBox(width: Dimens.spacing8),
               ],
               _DayDots(marks: week.marks, palette: palette),
             ],
           ),
+          if (current && large) ...[
+            const SizedBox(height: Dimens.spacing4),
+            thisWeek,
+          ],
           const SizedBox(height: Dimens.spacing8),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Expanded(
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: AlignmentDirectional.centerStart,
-                  child: Text.rich(
-                    maxLines: 1,
-                    TextSpan(
-                      children: [
-                        TextSpan(
-                          text: '${energyValue(context, kcal.eaten)}',
-                          style: text.headlineSmall?.copyWith(
-                            fontWeight: FontWeight.w700,
-                            color: palette.textStrong,
-                          ),
-                        ),
-                        TextSpan(
-                          text: ' / ${energyValue(context, kcal.goal)} $unit',
-                          style: text.bodyMedium?.copyWith(
-                            color: palette.textMuted,
-                          ),
-                        ),
-                      ],
-                    ),
+          if (large) ...[
+            figure,
+            const SizedBox(height: Dimens.spacing4),
+            standingBadge,
+          ] else
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Expanded(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: AlignmentDirectional.centerStart,
+                    child: figure,
                   ),
                 ),
-              ),
-              const SizedBox(width: Dimens.spacing8),
-              _Badge(
-                label: '$offText · $standingWord',
-                color: standingColor,
-                palette: palette,
-              ),
-            ],
-          ),
+                const SizedBox(width: Dimens.spacing8),
+                standingBadge,
+              ],
+            ),
           const SizedBox(height: Dimens.spacing8),
           _Bar(
             share: kcal.goal <= 0 ? 0 : kcal.eaten / kcal.goal,
@@ -386,22 +406,18 @@ class _Week extends StatelessWidget {
           Text(days, style: text.bodySmall?.copyWith(color: palette.textMuted)),
           if (macros.isNotEmpty) ...[
             const SizedBox(height: Dimens.spacing12),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                for (final (i, (name, v, color)) in macros.indexed) ...[
-                  if (i > 0) const SizedBox(width: Dimens.spacing12),
-                  Expanded(
-                    child: _Macro(
-                      name: name,
-                      versus: v!,
-                      color: color,
-                      palette: palette,
-                    ),
-                  ),
-                ],
-              ],
-            ),
+            if (large)
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                spacing: Dimens.spacing8,
+                children: macroViews,
+              )
+            else
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                spacing: Dimens.spacing12,
+                children: [for (final m in macroViews) Expanded(child: m)],
+              ),
           ],
         ],
       ),

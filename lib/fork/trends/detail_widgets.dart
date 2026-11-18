@@ -175,7 +175,8 @@ class FigureTile extends StatelessWidget {
   }
 }
 
-/// [tiles] two to a row, each row as tall as its taller tile.
+/// [tiles] two to a row, each row as tall as its taller tile; one to a row
+/// above 1.5x text.
 class FigureGrid extends StatelessWidget {
   final List<Widget> tiles;
 
@@ -184,20 +185,24 @@ class FigureGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Column(
     spacing: Dimens.spacing8,
+    crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
-      for (var i = 0; i < tiles.length; i += 2)
-        IntrinsicHeight(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            spacing: Dimens.spacing8,
-            children: [
-              Expanded(child: tiles[i]),
-              Expanded(
-                child: i + 1 < tiles.length ? tiles[i + 1] : const SizedBox(),
-              ),
-            ],
+      if (MediaQuery.textScalerOf(context).scale(10) > 15)
+        ...tiles
+      else
+        for (var i = 0; i < tiles.length; i += 2)
+          IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              spacing: Dimens.spacing8,
+              children: [
+                Expanded(child: tiles[i]),
+                Expanded(
+                  child: i + 1 < tiles.length ? tiles[i + 1] : const SizedBox(),
+                ),
+              ],
+            ),
           ),
-        ),
     ],
   );
 }
@@ -304,3 +309,6 @@ class ExplainerLink extends StatelessWidget {
 
 /// [n] days, in words: "1 day", "3 days".
 String days(int n) => n == 1 ? '1 day' : '$n days';
+
+/// [n] finished days, in words: today, not over yet, is not one of them.
+String finishedDays(int n) => n == 1 ? '1 finished day' : '$n finished days';

@@ -137,9 +137,9 @@ void main() {
       _app(const FoodMacroRing(kcal: 200, carbs: 25, fat: 0, protein: 25)),
     );
     expect(find.text('200'), findsOneWidget);
-    expect(find.text('25 g Carbs · 50%'), findsOneWidget);
-    expect(find.text('0 g Fat · 0%'), findsOneWidget);
-    expect(find.text('25 g Protein · 50%'), findsOneWidget);
+    expect(find.text('25 g Carbs\u00A0·\u00A050%'), findsOneWidget);
+    expect(find.text('0 g Fat\u00A0·\u00A00%'), findsOneWidget);
+    expect(find.text('25 g Protein\u00A0·\u00A050%'), findsOneWidget);
   });
 
   test(
@@ -184,8 +184,8 @@ void main() {
     );
     expect(find.text('—'), findsOneWidget);
     expect(find.text('— Fat'), findsOneWidget);
-    expect(find.text('25 g Carbs · 50%'), findsOneWidget);
-    expect(find.text('25 g Protein · 50%'), findsOneWidget);
+    expect(find.text('25 g Carbs\u00A0·\u00A050%'), findsOneWidget);
+    expect(find.text('25 g Protein\u00A0·\u00A050%'), findsOneWidget);
   });
 
   testWidgets('the header names where the food comes from and its energy', (

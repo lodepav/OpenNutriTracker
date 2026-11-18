@@ -82,8 +82,12 @@ void main() {
   });
 
   for (final (value, suffix, units) in [
-    ('3045', 'kcal/day', ['kcal/day']),
-    ('87.1', 'kg · -0.16/wk', ['-0.16/wk']),
+    ('3045', 'kcal\u00A0a\u00A0day', ['kcal a day']),
+    (
+      '87.1',
+      'kg · \u22120.16\u00A0kg\u00A0a\u00A0week',
+      ['\u22120.16 kg a week'],
+    ),
     ('2573', '/ 2925 kcal', ['2925 kcal']),
   ]) {
     // 200 to 250 split each unit before this, in the app's font

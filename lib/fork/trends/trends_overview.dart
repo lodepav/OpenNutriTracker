@@ -307,12 +307,10 @@ class _TrendsOverviewState extends State<TrendsOverview> {
                             const SizedBox(height: Dimens.spacing8),
                             Semantics(
                               label:
-                                  'Daily averages, ${range.toLowerCase()}'
-                                  '${logged == 0 ? '' : ', $logged ${logged == 1 ? 'day' : 'days'} logged'}',
+                                  '$range${logged == 0 ? '' : ', $logged ${logged == 1 ? 'day' : 'days'} logged'}',
                               excludeSemantics: true,
                               child: Text(
-                                'Daily averages · $range'
-                                '${logged == 0 ? '' : ' · $logged\u00A0logged'}',
+                                '$range${logged == 0 ? '' : ' · $logged\u00A0logged'}',
                                 key: const ValueKey('trends-span'),
                                 textAlign: TextAlign.center,
                                 style: Theme.of(context).textTheme.bodySmall
@@ -418,6 +416,7 @@ List<TrendTile> trendTiles(
     Color? valueColor,
     required DaySeries spark,
     required Color sparkColor,
+    Color? sparkNegativeColor,
     bool bars = true,
     required String spoken,
     String? note,
@@ -427,7 +426,12 @@ List<TrendTile> trendTiles(
     value: value,
     suffix: suffix,
     valueColor: valueColor,
-    chart: Sparkline(values: spark, color: sparkColor, bars: bars),
+    chart: Sparkline(
+      values: spark,
+      color: sparkColor,
+      negativeColor: sparkNegativeColor,
+      bars: bars,
+    ),
     onTap: () => open(m),
     spokenLabel: spoken,
     note: note,
@@ -544,7 +548,8 @@ List<TrendTile> trendTiles(
           : weightIn(wu, weight.nowKg!).toStringAsFixed(1),
       suffix: weight.perWeekKg == null
           ? wLabel
-          : '$wLabel · ${signedRate(weightIn(wu, weight.perWeekKg!))}/wk',
+          // "a week" held to its unit, as on Home.
+          : '$wLabel · ${weeklyRateText(weight.perWeekKg!, wu).replaceAll(' ', '\u00A0')}',
       spark: weight.trend,
       sparkColor: Theme.of(context).colorScheme.primary,
       bars: false,
@@ -561,9 +566,9 @@ List<TrendTile> trendTiles(
     tile(
       TrendMetric.expenditure,
       value: spentNow == null ? '–' : '${energyValue(context, spentNow)}',
-      suffix: spentNow == null ? 'after a weigh-in' : '$unit/day',
+      suffix: spentNow == null ? 'after a weigh-in' : '$unit\u00A0a\u00A0day',
       spark: spent,
-      sparkColor: palette.accent,
+      sparkColor: Theme.of(context).colorScheme.primary,
       bars: false,
       spoken: spentNow == null
           ? 'Expenditure, after a weigh-in'
@@ -574,9 +579,11 @@ List<TrendTile> trendTiles(
       value: balanceMean == null
           ? '–'
           : signedText(energyValue(context, balanceMean).toDouble()),
-      suffix: '$unit/day',
+      suffix: '$unit\u00A0a\u00A0day',
       spark: balance,
+      // As the page: a surplus in fat's colour, a deficit in the accent.
       sparkColor: palette.fat,
+      sparkNegativeColor: palette.accent,
       spoken: switch (balanceShown) {
         null => 'Energy balance, no estimate yet',
         0 => 'Energy balance, even',

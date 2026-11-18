@@ -37,7 +37,11 @@ List<Widget> expenditureBody(
   final unit = energyUnit(context);
   final series = expenditureSeries(history, dates);
   final present = series.whereType<double>();
-  final change = present.length < 2 ? null : present.last - present.first;
+  // As the table reckons it, so 1W reads as its 7 days; a range older than
+  // the estimate changes from the range's first estimate.
+  final change =
+      expenditureChanges(history, spans: [dates.length]).single.change ??
+      (present.length < 2 ? null : present.last - present.first);
   final mean = meanOf(series);
   const gap = SizedBox(height: Dimens.spacing16);
   return [
@@ -327,6 +331,58 @@ class ExpenditureChanges extends StatelessWidget {
           'from $then';
     }
 
+    String changeText(double change) => keepUnits(
+      '${signedText(energyValue(context, change).toDouble())} $unit',
+    );
+    String thenText(double then) =>
+        keepUnits('${energyValue(context, then)} $unit');
+    final changes = expenditureChanges(history);
+    // Three columns of a third each split "3047 kcal": a row each instead.
+    if (MediaQuery.textScalerOf(context).scale(10) > 15) {
+      return AppCard(
+        key: const ValueKey('expenditure-changes'),
+        padding: const EdgeInsets.symmetric(
+          horizontal: Dimens.spacing16,
+          vertical: Dimens.spacing4,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            for (final (i, c) in changes.indexed)
+              Semantics(
+                label: said(c),
+                excludeSemantics: true,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  decoration: i == 0
+                      ? null
+                      : BoxDecoration(
+                          border: Border(
+                            top: BorderSide(color: palette.border),
+                          ),
+                        ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Over ${c.days} days', style: head),
+                      Text(
+                        c.change == null ? '–' : changeText(c.change!),
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      if (c.then != null)
+                        Text(
+                          'was ${thenText(c.then!)}',
+                          style: TextStyle(color: palette.textMuted),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+          ],
+        ),
+      );
+    }
+
     return AppCard(
       padding: const EdgeInsets.symmetric(
         horizontal: Dimens.spacing16,
@@ -342,7 +398,7 @@ class ExpenditureChanges extends StatelessWidget {
               cell('Was', style: head),
             ],
           ),
-          for (final c in expenditureChanges(history))
+          for (final c in changes)
             TableRow(
               decoration: BoxDecoration(
                 border: Border(top: BorderSide(color: palette.border)),
@@ -350,15 +406,11 @@ class ExpenditureChanges extends StatelessWidget {
               children: [
                 cell('${c.days} days', first: true, spoken: said(c)),
                 cell(
-                  c.change == null
-                      ? '–'
-                      : '${signedText(energyValue(context, c.change!).toDouble())} $unit',
+                  c.change == null ? '–' : changeText(c.change!),
                   style: const TextStyle(fontWeight: FontWeight.w600),
                 ),
                 cell(
-                  c.then == null
-                      ? '–'
-                      : '${energyValue(context, c.then!)} $unit',
+                  c.then == null ? '–' : thenText(c.then!),
                   style: TextStyle(color: palette.textMuted),
                 ),
               ],
@@ -390,8 +442,9 @@ class _Breakdown extends StatelessWidget {
     final accent = Theme.of(context).colorScheme.primary;
     final b = breakdown;
     final lost = b.fromWeight >= 0;
-    Widget figure(String value, String label, {Color? color}) => Expanded(
-      child: MergeSemantics(
+    final large = MediaQuery.textScalerOf(context).scale(10) > 15;
+    Widget figure(String value, String label, {Color? color}) {
+      final shown = MergeSemantics(
         child: Column(
           children: [
             Text(
@@ -408,8 +461,10 @@ class _Breakdown extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
+      );
+      return large ? shown : Expanded(child: shown);
+    }
+
     Widget sign(String s) => ExcludeSemantics(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: Dimens.spacing4),
@@ -418,8 +473,13 @@ class _Breakdown extends StatelessWidget {
     );
     return AppCard(
       padding: const EdgeInsets.all(Dimens.spacing16),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      // Three figures across break "expenditure" at large text: one under
+      // another instead.
+      child: Flex(
+        direction: large ? Axis.vertical : Axis.horizontal,
+        crossAxisAlignment: large
+            ? CrossAxisAlignment.center
+            : CrossAxisAlignment.start,
         children: [
           figure('${energyValue(context, b.eaten)}', 'eaten a day'),
           sign(lost ? '+' : '−'),

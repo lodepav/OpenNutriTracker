@@ -110,7 +110,7 @@ void main() {
     );
     await tester.scrollUntilVisible(find.text('Since the start'), 200);
     expect(find.text('Last 30 days'), findsOneWidget);
-    expect(find.text('-0.20 kg a week'), findsNWidgets(2));
+    expect(find.text('−0.20 kg a week'), findsNWidgets(2));
     await tester.scrollUntilVisible(find.text('Calorie goal now'), 200);
     expect(find.text('Since the start'), findsWidgets);
     expect(find.text('in 10 weeks'), findsOneWidget);

@@ -70,7 +70,8 @@ typedef DayValue = ({double value, DateTime date});
 /// How the logged days of the window went against their goals, and the
 /// highest and lowest of them: the energy's, or [eaten] and [goal]'s, a
 /// macro's grams. [today], still being eaten, is left out: its breakfast is
-/// neither under the goal nor the lowest day. [overBy] and [underBy] are the
+/// neither under the goal nor the lowest day; it can be the highest, as the
+/// chart draws it. [overBy] and [underBy] are the
 /// mean amount past and short of the goal on the over and under days, null
 /// with none; [topThreeShare] the share of all the excess the three most
 /// over days gave, null with three over days or fewer.
@@ -92,10 +93,14 @@ dayOutcomes(
   double? Function(TrackedDayEntity) goal = _calorieGoal,
   DateTime? today,
 }) {
-  final window = dates.toSet()..remove(today);
-  final logged = [
+  final window = dates.toSet();
+  final shown = [
     for (final d in days)
       if (isLogged(d) && window.contains(_date(d.day)) && eaten(d) != null) d,
+  ];
+  final logged = [
+    for (final d in shown)
+      if (_date(d.day) != today) d,
   ];
   var onTarget = 0;
   final overs = <double>[], unders = <double>[];
@@ -113,9 +118,12 @@ dayOutcomes(
   }
   overs.sort((a, b) => b.compareTo(a));
   final excess = overs.fold(0.0, (a, b) => a + b);
-  DayValue? pick(bool Function(double, double) better) {
-    if (logged.isEmpty) return null;
-    final d = logged.reduce((a, b) => better(eaten(b)!, eaten(a)!) ? b : a);
+  DayValue? pick(
+    List<TrackedDayEntity> of,
+    bool Function(double, double) better,
+  ) {
+    if (of.isEmpty) return null;
+    final d = of.reduce((a, b) => better(eaten(b)!, eaten(a)!) ? b : a);
     return (value: eaten(d)!, date: _date(d.day));
   }
 
@@ -124,8 +132,8 @@ dayOutcomes(
     under: unders.length,
     over: overs.length,
     logged: logged.length,
-    highest: pick((a, b) => a > b),
-    lowest: pick((a, b) => a < b),
+    highest: pick(shown, (a, b) => a > b),
+    lowest: pick(logged, (a, b) => a < b),
     overBy: meanOf(overs),
     underBy: meanOf(unders),
     topThreeShare: overs.length <= 3

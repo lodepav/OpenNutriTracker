@@ -184,6 +184,21 @@ void main() {
       expect(o.highest, (value: 2000.0, date: _d(-1)));
     });
 
+    test('today already past every other day is the highest, as charted', () {
+      final o = dayOutcomes(
+        [
+          _tracked(-1, kcal: 2000),
+          _tracked(-2, kcal: 1500),
+          _tracked(0, kcal: 2700),
+        ],
+        windowDates(_today, 7),
+        today: _today,
+      );
+      expect((o.logged, o.onTarget, o.under, o.over), (2, 1, 1, 0));
+      expect(o.highest, (value: 2700.0, date: _today));
+      expect(o.lowest, (value: 1500.0, date: _d(-2)));
+    });
+
     test('only today logged: nothing to report yet', () {
       final o = dayOutcomes(
         [_tracked(0, kcal: 300)],

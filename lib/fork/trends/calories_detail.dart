@@ -369,7 +369,7 @@ class DaysWentCard extends StatelessWidget {
           TrendRow(
             first: true,
             label: 'On target (within ${(onTargetShare * 100).round()}%)',
-            value: '${o.onTarget} of ${days(o.logged)}',
+            value: '${o.onTarget} of ${finishedDays(o.logged)}',
           ),
           TrendRow(label: 'Under', value: days(o.under)),
           TrendRow(label: 'Over', value: days(o.over)),

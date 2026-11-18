@@ -180,6 +180,15 @@ class _MicroDetailState extends State<MicroDetail> {
               ),
             ],
           ),
+          // The header's third has no room for "finished": said under it.
+          if (good != null && counted.length < known.length) ...[
+            const SizedBox(height: Dimens.spacing4),
+            Text(
+              'Counted over ${finishedDays(counted.length)}; today is not '
+              'over yet.',
+              style: muted,
+            ),
+          ],
           gap,
           widget.pills,
           gap,
