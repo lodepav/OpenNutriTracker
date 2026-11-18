@@ -78,6 +78,13 @@ class _EditActivityDialogState extends State<EditActivityDialog> {
         ],
       ),
       actions: [
+        // [fork] S277 activity-dialog-cancel-first: Cancel before OK, as
+        // every other dialog has them; the upstream order moved below
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(S.of(context).dialogCancelLabel),
+        ),
+        // [/fork]
         TextButton(
           onPressed: () {
             final parsed = double.tryParse(_quantityController.text);
@@ -90,10 +97,12 @@ class _EditActivityDialogState extends State<EditActivityDialog> {
           },
           child: Text(S.of(context).dialogOKLabel),
         ),
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: Text(S.of(context).dialogCancelLabel),
-        ),
+        // [fork] S277 activity-dialog-cancel-first
+        // TextButton(
+        //   onPressed: () => Navigator.of(context).pop(),
+        //   child: Text(S.of(context).dialogCancelLabel),
+        // ),
+        // [/fork]
       ],
     );
   }

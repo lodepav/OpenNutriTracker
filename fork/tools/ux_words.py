@@ -14,12 +14,14 @@ WORDS = {
     r"weight entr(y|ies)": "weigh-in",
     r"entr(y|ies)": "food",
     r"sections?": "meal",
+    r"budget": "goal",
 }
 
 # Where the word is right, and why.
 ALLOWED = {
     "lib/fork/body/body_card.dart": "a body metric's values, not foods",
     "lib/fork/history/history_import.dart": "a day's totals, not foods",
+    "lib/fork/history/history_file.dart": "column names another app's export uses",
     "lib/fork/leftovers/ai_leftovers.dart": "a prompt for the model",
     "lib/fork/label/label_scan.dart": "a prompt for the model",
     "lib/fork/photos/body_compare.dart": "a prompt for the model",

@@ -352,7 +352,7 @@ class _WeightTileState extends State<WeightTile> {
         // its range; held to its unit, so a wrap leaves no word alone.
         note: kgPerWeek == null
             ? null
-            : '· ${weeklyRateText(kgPerWeek, widget.unit).replaceFirst(' a week', ' in 7 days').replaceAll(' ', '\u00A0')}',
+            : '·\u00A0${weeklyRateText(kgPerWeek, widget.unit).replaceFirst(' a week', ' in 7 days').replaceAll(' ', '\u00A0')}',
         spokenLabel: weightSpoken(
           value,
           kgPerWeek,

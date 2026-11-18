@@ -144,13 +144,13 @@ class BudgetTile extends StatelessWidget {
           ).join(' · ');
     return HomeTile(
       identifier: 'profile-budget',
-      title: 'Daily budget',
+      title: 'Calorie goal',
       value: state == null
           ? '—'
           : '${energyValue(context, state.totalKcalDaily)}',
       note: energyUnit(context),
       spokenLabel: [
-        'Daily budget',
+        'Calorie goal',
         if (state != null)
           '${energyValue(context, state.totalKcalDaily)} ${energyUnit(context)}',
         if (state != null)

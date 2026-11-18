@@ -30,7 +30,8 @@ import 'package:opennutritracker/fork/units/energy_text.dart';
 String expenditureSummary(AdaptiveSettings s) => [
   s.responsiveness.label,
   s.activityMode == ActivityMode.off
-      ? 'activity off'
+      // the setting is the check-ins', not the formula target's
+      ? 'activity left out of check-ins'
       : 'activity ${s.activityMode.label.toLowerCase()}',
   s.autoAcceptCheckIn ? 'automatic check-ins' : 'check-ins by hand',
 ].join(' · ');

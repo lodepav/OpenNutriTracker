@@ -24,12 +24,14 @@ String _sinceText(BuildContext context, DateTime since) =>
 
 /// The goal with no target weight: a goal running, a maintenance one,
 /// until it ends; maintenance since the last goal completed, or since a
-/// goal ended that is not yet marked; or none.
+/// goal ended that is not yet marked; or the profile's [pace]
+/// ([plannedRateText]) in the You tile's words, its verb the value; or none.
 ({String value, String? note}) untargetedGoal(
   BuildContext context,
   PhasePlan? plan,
   DateTime? since, {
   DateTime? today,
+  String? pace,
 }) {
   if (plan != null && !(today ?? DateTime.now()).isBefore(plan.end)) {
     return (value: 'Maintain', note: _sinceText(context, plan.end));
@@ -50,7 +52,10 @@ String _sinceText(BuildContext context, DateTime since) =>
   if (since != null) {
     return (value: 'Maintain', note: _sinceText(context, since));
   }
-  return (value: noGoalText, note: null);
+  if (pace == null) return (value: noGoalText, note: null);
+  // Whole, "Losing 0.4 kg a week" is cut off in a 360 dp Trends tile.
+  final verb = pace.indexOf(' ');
+  return (value: pace.substring(0, verb), note: pace.substring(verb + 1));
 }
 
 /// "Maintaining since Oct 29".

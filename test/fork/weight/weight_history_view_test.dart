@@ -516,4 +516,15 @@ void main() {
       expect(dates[i].left, greaterThanOrEqualTo(dates[i - 1].right));
     }
   });
+
+  testWidgets('the chosen range shows a check, not a text colour alone', (
+    tester,
+  ) async {
+    await _pump(tester, [
+      WeightLogEntity(date: DateTime(2026, 1, 1), weightKg: 80),
+    ]);
+    final chips = tester.widgetList<ChoiceChip>(find.byType(ChoiceChip));
+    expect(chips.where((c) => c.selected), hasLength(1));
+    expect(chips.every((c) => c.showCheckmark != false), isTrue);
+  });
 }
