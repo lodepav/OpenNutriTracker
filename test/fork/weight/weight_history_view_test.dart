@@ -93,7 +93,7 @@ void main() {
     expect(find.text('Oct 21 · after a run'), findsOneWidget);
     await tester.scrollUntilVisible(find.text('Aug 26, 2026'), 200);
     // The oldest has nothing before it.
-    expect(_changes(tester), ['-0.2', '0.0', '-0.8', '-1.0']);
+    expect(_changes(tester), ['\u22120.2', '0.0', '\u22120.8', '\u22121.0']);
     expect(find.textContaining('+'), findsNothing);
   });
 
@@ -102,8 +102,14 @@ void main() {
   ) async {
     await _pump(tester, entries);
     expect(_tile(tester, 'Trend'), matches(RegExp(r'^Trend 8\d\.\d kg$')));
-    expect(_tile(tester, '30 days'), matches(RegExp(r'^30 days -\d\.\d$')));
-    expect(_tile(tester, 'Per week'), matches(RegExp(r'^Per week -\d\.\d\d$')));
+    expect(
+      _tile(tester, '30 days'),
+      matches(RegExp('^30 days \u2212\\d\\.\\d\$')),
+    );
+    expect(
+      _tile(tester, 'Per week'),
+      matches(RegExp('^Per week \u2212\\d\\.\\d\\d\$')),
+    );
 
     await tester.tap(find.text('90 d'));
     await tester.pumpAndSettle();
@@ -131,7 +137,7 @@ void main() {
 
   testWidgets('in lb, the rows and the change are in lb', (tester) async {
     await _pump(tester, entries.take(2).toList(), unit: BodyWeightUnit.lb);
-    expect(_changes(tester), ['-0.4']);
+    expect(_changes(tester), ['\u22120.4']);
     expect(_tile(tester, 'Trend'), endsWith('lbs'));
   });
 

@@ -183,51 +183,57 @@ class FoodMacroRing extends StatelessWidget {
     );
     final sum = energy.carbs + energy.fat + energy.protein;
     int share(double part) => macroEnergyShare(part, sum);
-    Widget line(
-      String name,
-      double? grams,
-      double part,
-      Color color,
-    ) => Semantics(
-      container: true,
-      label: macroSpokenLabel(name, grams, share(part)),
-      excludeSemantics: true,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 3),
-        child: Row(
-          children: [
-            Container(
-              width: 10,
-              height: 10,
-              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-            ),
-            const SizedBox(width: Dimens.spacing8),
-            Expanded(
-              child: Text.rich(
-                TextSpan(
-                  children: [
-                    TextSpan(
-                      text: grams == null
-                          ? '$missingNutrientPlaceholder '
-                          : '${grams.round()} g ',
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    TextSpan(
-                      text: grams == null ? name : '$name · ${share(part)}%',
-                    ),
-                  ],
+    final large = MediaQuery.textScalerOf(context).scale(10) > 15;
+    Widget line(String name, double? grams, double part, Color color) =>
+        Semantics(
+          container: true,
+          label: macroSpokenLabel(name, grams, share(part)),
+          excludeSemantics: true,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 3),
+            child: Row(
+              children: [
+                Container(
+                  width: 10,
+                  height: 10,
+                  decoration: BoxDecoration(
+                    color: color,
+                    shape: BoxShape.circle,
+                  ),
                 ),
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: palette.textMuted,
+                const SizedBox(width: Dimens.spacing8),
+                Expanded(
+                  child: Text.rich(
+                    TextSpan(
+                      children: [
+                        TextSpan(
+                          text: grams == null
+                              ? '$missingNutrientPlaceholder '
+                              : '${grams.round()} g ',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        TextSpan(
+                          // No-break spaces keep "· 74%" with its macro; above
+                          // 1.5x that run is too wide, so the share has a line.
+                          text: grams == null
+                              ? name
+                              : large
+                              ? '$name\n${share(part)}%'
+                              : '$name\u00A0·\u00A0${share(part)}%',
+                        ),
+                      ],
+                    ),
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: palette.textMuted,
+                    ),
+                  ),
                 ),
-              ),
+              ],
             ),
-          ],
-        ),
-      ),
-    );
+          ),
+        );
     return AppCard(
       padding: const EdgeInsets.all(Dimens.spacing16),
       child: Row(
@@ -244,27 +250,33 @@ class FoodMacroRing extends StatelessWidget {
                 ),
                 track: palette.surfaceMuted,
               ),
-              child: Center(
-                child: MergeSemantics(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        switch (kcal) {
-                          final kcal? => '${energyValue(context, kcal)}',
-                          null => missingNutrientPlaceholder,
-                        },
-                        style: theme.textTheme.headlineSmall?.copyWith(
-                          fontWeight: FontWeight.w800,
+              // A square inside the stroke, so a large font shrinks the
+              // figure rather than touching the ring.
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: MergeSemantics(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          switch (kcal) {
+                            final kcal? => '${energyValue(context, kcal)}',
+                            null => missingNutrientPlaceholder,
+                          },
+                          style: theme.textTheme.headlineSmall?.copyWith(
+                            fontWeight: FontWeight.w800,
+                          ),
                         ),
-                      ),
-                      Text(
-                        energyUnit(context),
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: palette.textMuted,
+                        Text(
+                          energyUnit(context),
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: palette.textMuted,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),

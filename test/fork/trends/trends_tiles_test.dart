@@ -233,10 +233,7 @@ void main() {
     expect(_tile(tester, 'calories').label, 'Calories');
     expect(_tile(tester, 'protein').label, 'Protein');
     final span = find.byKey(const ValueKey('trends-span'));
-    expect(
-      tester.widget<Text>(span).data,
-      'Daily averages · Last 7 days · 1\u00A0logged',
-    );
+    expect(tester.widget<Text>(span).data, 'Last 7 days · 1\u00A0logged');
     expect(
       tester.getTopLeft(span).dy,
       greaterThan(tester.getBottomLeft(find.text('1W')).dy),
@@ -245,10 +242,7 @@ void main() {
       tester.getBottomLeft(span).dy,
       lessThan(tester.getTopLeft(find.byType(TrendTile).first).dy),
     );
-    expect(
-      find.bySemanticsLabel('Daily averages, last 7 days, 1 day logged'),
-      findsOneWidget,
-    );
+    expect(find.bySemanticsLabel('Last 7 days, 1 day logged'), findsOneWidget);
     expect(find.textContaining('Tap a card'), findsNothing);
   });
 
@@ -256,7 +250,7 @@ void main() {
     await pumpTrends(tester, loaded());
     expect(
       tester.widget<Text>(find.byKey(const ValueKey('trends-span'))).data,
-      'Daily averages · Last 7 days',
+      'Last 7 days',
     );
   });
 

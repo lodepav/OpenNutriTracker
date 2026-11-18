@@ -14,6 +14,7 @@ import 'package:opennutritracker/core/domain/entity/tracked_day_entity.dart';
 import 'package:opennutritracker/core/domain/entity/weight_log_entity.dart';
 import 'package:opennutritracker/core/utils/calc/unit_calc.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
+import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/features/trends/presentation/bloc/trends_bloc.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_nutriments_entity.dart';
@@ -27,6 +28,7 @@ import 'package:opennutritracker/fork/phases/phases.dart';
 import 'package:opennutritracker/fork/report/nutrient_explorer.dart';
 import 'package:opennutritracker/fork/trends/detail_widgets.dart';
 import 'package:opennutritracker/fork/trends/trends_overview.dart';
+import 'package:opennutritracker/fork/trends/trends_widgets.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 
 import 'trends_harness.dart';
@@ -186,10 +188,7 @@ void main() {
     expect(find.textContaining('day streak'), findsOneWidget);
     await showTile(tester, 'water');
     expect(tileText(tester, 'water'), contains('1000 / 1900 ml'));
-    expect(
-      find.text('Daily averages · Last 7 days · 1\u00A0logged'),
-      findsOneWidget,
-    );
+    expect(find.text('Last 7 days · 1\u00A0logged'), findsOneWidget);
   });
 
   testWidgets('the tiles as arranged: moved, hidden, and in the editor', (
@@ -291,7 +290,7 @@ void main() {
       200,
       scrollable: find.byType(Scrollable).last,
     );
-    expect(row('On target (within 10%)'), '0 of 1 day');
+    expect(row('On target (within 10%)'), '0 of 1 finished day');
     expect(row('Under'), '1 day');
     expect(row('Over'), '0 days');
     expect(row('Highest'), startsWith('1560 kcal · '));
@@ -446,7 +445,7 @@ void main() {
     );
     await openTile(tester, 'protein');
     // 110 g a day: 80 under, 160 over.
-    await tester.scrollUntilVisible(find.text('0 of 1 day'), 200);
+    await tester.scrollUntilVisible(find.text('0 of 1 finished day'), 200);
     await tester.scrollUntilVisible(find.text('1.4 g/kg'), 200);
     expect(find.text('1.5 g/kg'), findsOneWidget);
     expect(find.text('1.4 g/kg'), findsOneWidget);
@@ -518,7 +517,7 @@ void main() {
     );
     expect(
       tileText(tester, 'weight'),
-      matches(RegExp(r'\d\d\.\d kg · -0\.\d\d/wk')),
+      matches(RegExp(r'\d\d\.\d kg · \u2212\d\.\d+ kg a week')),
     );
     await openTile(tester, 'weight');
 
@@ -566,7 +565,7 @@ void main() {
       of: find.byType(ChangeChips),
       matching: find.text(text),
     );
-    expect(chip('-0.4'), findsOneWidget);
+    expect(chip('\u22120.4'), findsOneWidget);
     expect(chip('–'), findsNWidgets(3));
     expect(find.text('Highest trend'), findsOneWidget);
     expect(find.text('Lowest trend'), findsOneWidget);
@@ -631,6 +630,10 @@ void main() {
     expect(
       tester.getSemantics(find.text('Under it')).label,
       contains('of 1 day'),
+    );
+    expect(
+      find.text('Counted over 1 finished day; today is not over yet.'),
+      findsOneWidget,
     );
     await tester.scrollUntilVisible(
       find.text('Where it came from'),
@@ -865,18 +868,44 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(tileText(tester, 'expenditure'), contains('3000 kcal/day'));
+    expect(tileText(tester, 'expenditure'), contains('3000 kcal a day'));
     // Logged on days -6, -4, -2 and 0: 2500 less 2940, 2960, 2980, 3000.
-    expect(tileText(tester, 'balance'), contains('-470 kcal/day'));
+    expect(tileText(tester, 'balance'), contains('\u2212470 kcal a day'));
+    Sparkline spark(String metric) => tester.widget<Sparkline>(
+      find.descendant(
+        of: find.byKey(ValueKey('trends-tile-$metric')),
+        matching: find.byType(Sparkline),
+      ),
+    );
+    // The tile's surplus and deficit in the page's two colours.
+    final balanceSpark = spark('balance');
+    final balancePage = tester.element(find.byType(TrendsOverview));
+    expect(balanceSpark.color, paletteOf(balancePage).fat);
+    expect(balanceSpark.negativeColor, paletteOf(balancePage).accent);
+    final spentColor = spark('expenditure').color;
 
     await openTile(tester, 'balance');
-    expect(tester.getSemantics(find.text('Average')).label, contains('-470'));
+    expect(
+      tester.getSemantics(find.text('Average')).label,
+      contains('\u2212470'),
+    );
     expect(tester.getSemantics(find.text('Logged')).label, contains('4'));
     final bars = tester.widget<BarChart>(find.byType(BarChart)).data.barGroups;
     expect(bars.last.barRods.single.toY, -500);
     expect(bars[1].barRods.single.toY, 0);
+    expect(
+      tester.getSemantics(find.text('Average')).label,
+      contains('kcal a day'),
+    );
+    final chart = tester.widget<BarChart>(find.byType(BarChart)).data;
+    // The line "below the line is a deficit" points at.
+    expect(chart.extraLinesData.horizontalLines.map((l) => l.y), contains(0));
+    expect(chart.minY, lessThan(0));
     // 10000 eaten less 11880 burnt over the four logged days.
-    expect(tester.getSemantics(find.text('Total')).label, contains('-1880'));
+    expect(
+      tester.getSemantics(find.text('Total')).label,
+      contains('\u22121880'),
+    );
     final scroll = find.byType(Scrollable).last;
     await tester.scrollUntilVisible(
       find.text('From the balance'),
@@ -886,16 +915,26 @@ void main() {
     String row(String label) =>
         tester.widget<TrendRow>(find.widgetWithText(TrendRow, label)).value;
     // Day 0 is today, not over yet.
-    expect(row('In deficit'), '3 of 3 days');
+    expect(row('In deficit'), '3 of 3 finished days');
     expect(row('In surplus'), '0 days');
     expect(row('Eaten a day'), '2500 kcal');
     expect(row('Burnt a day'), '2970 kcal');
     // -470 a day for the week, at 7700 kcal a kg.
-    expect(find.text('-0.4 kg', findRichText: true), findsOneWidget);
+    expect(find.text('\u22120.4 kg', findRichText: true), findsOneWidget);
 
     await tester.pageBack();
     await tester.pumpAndSettle();
     await openTile(tester, 'expenditure');
+    // The tile's line in the page's colour.
+    expect(
+      tester
+          .widget<LineChart>(find.byType(LineChart))
+          .data
+          .lineBarsData
+          .first
+          .color,
+      spentColor,
+    );
     final table = find.byKey(const ValueKey('expenditure-changes'));
     String cellOf(String over, int column) {
       final cells = [
@@ -907,8 +946,8 @@ void main() {
       return cells[cells.indexOf(over) + column];
     }
 
-    expect(cellOf('3 days', 1), '+30 kcal');
-    expect(cellOf('3 days', 2), '2970 kcal');
+    expect(cellOf('3 days', 1), '+30\u00A0kcal');
+    expect(cellOf('3 days', 2), '2970\u00A0kcal');
     // TalkBack reads each row as one sentence.
     expect(
       find.bySemanticsLabel('Over 3 days: up 30 kcal, from 2970 kcal'),

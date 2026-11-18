@@ -38,7 +38,7 @@ List<Widget> balanceBody(
         (
           label: 'Average',
           value: mean == null ? '–' : signed(mean),
-          unit: '$unit/day',
+          unit: '$unit a day',
         ),
         (
           label: 'Total',
@@ -86,7 +86,7 @@ List<Widget> balanceBody(
           if (sum.finished > 0) ...[
             (
               label: 'In deficit',
-              value: '${sum.deficit} of ${days(sum.finished)}',
+              value: '${sum.deficit} of ${finishedDays(sum.finished)}',
             ),
             (label: 'In surplus', value: days(sum.surplus)),
           ],

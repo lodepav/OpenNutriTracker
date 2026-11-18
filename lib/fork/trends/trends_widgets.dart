@@ -34,12 +34,12 @@ String keepUnits(String text) => text
     )
     .replaceAllMapped(RegExp(r'(?<=\S)/(?=\S)'), (_) => '/\u2060');
 
-/// [v] at [digits] decimals with its sign, "+12" or "-12"; one that rounds
-/// to nothing is unsigned, never "-0".
+/// [v] at [digits] decimals with its sign, "+12" or "−12" (a true minus);
+/// one that rounds to nothing is unsigned, never "−0".
 String signedText(double v, [int digits = 0]) {
-  final text = v.toStringAsFixed(digits);
+  final text = v.abs().toStringAsFixed(digits);
   if (double.parse(text) == 0) return 0.toStringAsFixed(digits);
-  return v > 0 ? '+$text' : text;
+  return v > 0 ? '+$text' : '\u2212$text';
 }
 
 /// MacroFactor's 1W–All pills; picking one reloads Trends at that range,
@@ -126,18 +126,22 @@ class RangePills extends StatelessWidget {
   }
 }
 
-/// A tile's small chart: bars a day, or a line through the days present.
-/// More days than fit are averaged into at most [maxBars] bars.
+/// A tile's small chart: bars a day from zero, or a line through the days
+/// present. More days than fit are averaged into at most [maxBars] bars.
 class Sparkline extends StatelessWidget {
   final DaySeries values;
   final bool bars;
   final Color color;
+
+  /// A bar below zero's colour, [color] when null.
+  final Color? negativeColor;
   final int maxBars;
 
   const Sparkline({
     super.key,
     required this.values,
     required this.color,
+    this.negativeColor,
     this.bars = true,
     this.maxBars = 14,
   });
@@ -152,6 +156,7 @@ class Sparkline extends StatelessWidget {
           bars ? bucketed(values, maxBars) : values,
           bars,
           color,
+          negativeColor ?? color,
           paletteOf(context).surfaceMuted,
         ),
       ),
@@ -178,31 +183,48 @@ class _SparkPainter extends CustomPainter {
   final DaySeries values;
   final bool bars;
   final Color color;
+  final Color negativeColor;
   final Color track;
 
-  _SparkPainter(this.values, this.bars, this.color, this.track);
+  _SparkPainter(
+    this.values,
+    this.bars,
+    this.color,
+    this.negativeColor,
+    this.track,
+  );
 
   @override
   void paint(Canvas canvas, Size size) {
-    final present = values.whereType<double>().map((v) => v.abs()).toList();
+    final present = values.whereType<double>().toList();
     if (values.isEmpty || present.isEmpty) return;
     if (bars) {
-      // From the period's lowest to its highest, as the pages' charts.
-      final range = fittedRange(present);
-      final span = range.max - range.min;
+      // From zero, so a low day is not drawn as the stub of an empty one.
+      final hi = math.max(0.0, present.reduce(math.max));
+      final lo = math.min(0.0, present.reduce(math.min));
+      final span = hi - lo;
+      final zero = span == 0 ? size.height : hi / span * size.height;
       final slot = size.width / values.length;
       final w = math.min(slot * 0.72, 16.0);
       for (final (i, v) in values.indexed) {
         final x = i * slot + (slot - w) / 2;
         final h = v == null || span == 0
             ? 2.0
-            : math.max(2.0, (v.abs() - range.min) / span * size.height);
+            : math.max(2.0, v.abs() / span * size.height);
+        final top = v != null && v < 0
+            ? math.min(zero, size.height - h)
+            : (zero - h).clamp(0.0, size.height - h);
         canvas.drawRRect(
           RRect.fromRectAndRadius(
-            Rect.fromLTWH(x, size.height - h, w, h),
+            Rect.fromLTWH(x, top, w, h),
             const Radius.circular(2),
           ),
-          Paint()..color = v == null ? track : color,
+          Paint()
+            ..color = v == null
+                ? track
+                : v < 0
+                ? negativeColor
+                : color,
         );
       }
       return;
@@ -239,7 +261,10 @@ class _SparkPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_SparkPainter old) =>
-      old.values != values || old.color != color || old.bars != bars;
+      old.values != values ||
+      old.color != color ||
+      old.negativeColor != negativeColor ||
+      old.bars != bars;
 }
 
 /// One tile of the grid: what it is, its number, its small chart.
@@ -497,7 +522,8 @@ ExtraLinesData goalLine(BuildContext context, double? goal) =>
       );
 
 /// Bars a day of [values] (already in the unit shown), with the [goal]
-/// dashed across; negative bars hang below zero.
+/// dashed across; given a [negativeColor], bars stand on a zero line and
+/// negative ones hang below it.
 class DailyBarChart extends StatelessWidget {
   final DaySeries values;
   final List<DateTime> dates;
@@ -539,8 +565,9 @@ class DailyBarChart extends StatelessWidget {
     final range = fittedRange([
       ...present,
       if (goal != null && goal! > 0) goal!,
-      if (present.any((v) => v < 0)) 0,
+      if (negativeColor != null || present.any((v) => v < 0)) 0,
     ]);
+    final goals = goalLine(context, goal).horizontalLines;
     final base = range.min > 0 ? range.min : 0.0;
     final dayLabel = dayLabels(context, dates);
     final scheme = Theme.of(context).colorScheme;
@@ -557,7 +584,17 @@ class DailyBarChart extends StatelessWidget {
               gridData: const FlGridData(show: false),
               borderData: FlBorderData(show: false),
               titlesData: weekdayTitles(context, dates),
-              extraLinesData: goalLine(context, goal),
+              extraLinesData: ExtraLinesData(
+                horizontalLines: [
+                  if (negativeColor != null)
+                    HorizontalLine(
+                      y: 0,
+                      color: paletteOf(context).textMuted,
+                      strokeWidth: 1,
+                    ),
+                  ...goals,
+                ],
+              ),
               barTouchData: BarTouchData(
                 touchCallback: onTap == null
                     ? null

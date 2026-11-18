@@ -5,7 +5,8 @@ import 'package:opennutritracker/core/domain/entity/body_weight_unit_entity.dart
 String signedRate(double rate) {
   final text = rate.toStringAsFixed(2);
   if (double.parse(text) == 0) return '0.00';
-  return rate > 0 ? '+$text' : text;
+  // a true minus, as signedText draws it
+  return rate > 0 ? '+$text' : text.replaceFirst('-', '\u2212');
 }
 
 /// A week's change in kg as shown: in kg, or in pounds for lb and st

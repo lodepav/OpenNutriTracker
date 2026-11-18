@@ -129,7 +129,7 @@ void main() {
     // The smoothed trend's loss, short of the readings' 0.70 kg a week.
     expect(
       tester.widget<Text>(outlook).data,
-      matches(RegExp(r'^Trend: -0\.[0-6]\d kg a week')),
+      matches(RegExp(r'^Trend: −0\.[0-6]\d kg a week')),
     );
   });
 
@@ -153,7 +153,7 @@ void main() {
     // A fit of the readings in the range says +1.03 kg a week.
     expect(
       tester.widget<Text>(outlook).data,
-      matches(RegExp(r'^Trend: [+-]0\.\d\d kg a week')),
+      matches(RegExp(r'^Trend: [+−]0\.\d\d kg a week')),
     );
     expect(find.text('Dots: weigh-ins. Bold line: trend.'), findsOneWidget);
   });

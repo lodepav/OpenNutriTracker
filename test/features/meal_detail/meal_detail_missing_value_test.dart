@@ -160,7 +160,7 @@ void main() {
     await pumpMealDetail(tester, _driedApple(fat100: 0));
 
     // [fork] S125: the ring in place of the macro summary
-    expect(inRing(find.text('0 g Fat · 0%')), findsOneWidget);
+    expect(inRing(find.text('0 g Fat\u00A0·\u00A00%')), findsOneWidget);
     // [/fork]
     // [fork] S221 food-nutrients-table: "0 g", a space before the unit
     expect(inTable(find.text('0 g')), findsOneWidget);
