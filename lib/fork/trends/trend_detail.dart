@@ -211,7 +211,7 @@ class TrendDetailPage extends StatelessWidget {
             trendSection(context, 'How the days went'),
             DaysWentCard(
               outcomes: o,
-              week: dates.length <= 7,
+              today: state.logicalToday,
               valueText: (_, g) => '${g.round()} g',
             ),
           ],

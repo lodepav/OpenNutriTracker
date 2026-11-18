@@ -24,6 +24,8 @@ void main() {
   });
 
   tearDown(() async {
+    // The state is static: left, it outlives this file in a bundled run.
+    AutoBackup.state.value = const AutoBackupState();
     await Hive.close();
     await dir.delete(recursive: true);
   });

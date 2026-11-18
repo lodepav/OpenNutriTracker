@@ -69,7 +69,7 @@ class CaloriesDetailPage extends StatelessWidget {
             if (dayOutcomes(state.days, dates, today: state.logicalToday)
                 case final o when o.logged > 0) ...[
               trendSection(context, 'How the days went'),
-              DaysWentCard(outcomes: o, week: dates.length <= 7),
+              DaysWentCard(outcomes: o, today: state.logicalToday),
             ],
             WeekdayCard(dayStartMinutes: state.dayStartMinutes),
             ValueListenableBuilder(
@@ -337,8 +337,8 @@ class DaysWentCard extends StatelessWidget {
   })
   outcomes;
 
-  /// A week names a day by its weekday, a longer range by its date.
-  final bool week;
+  /// The day the Highest and Lowest rows call "today".
+  final DateTime today;
 
   /// A day's value as shown: its energy, or grams.
   final String Function(BuildContext, double) valueText;
@@ -346,7 +346,7 @@ class DaysWentCard extends StatelessWidget {
   const DaysWentCard({
     super.key,
     required this.outcomes,
-    required this.week,
+    required this.today,
     this.valueText = energyText,
   });
 
@@ -354,11 +354,12 @@ class DaysWentCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final o = outcomes;
     final locale = Localizations.localeOf(context).toLanguageTag();
-    final format = week
-        ? intl.DateFormat.E(locale)
-        : intl.DateFormat.MMMd(locale);
-    String day(DayValue d) =>
-        '${valueText(context, d.value)}\u00A0·\u00A0${format.format(d.date)}';
+    String day(DayValue d) => dayValueText(
+      valueText(context, d.value),
+      d.date,
+      today: today,
+      locale: locale,
+    );
     return AppCard(
       padding: const EdgeInsets.symmetric(
         horizontal: Dimens.spacing16,

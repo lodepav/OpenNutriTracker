@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:opennutritracker/core/domain/entity/intake_entity.dart';
 import 'package:opennutritracker/core/domain/entity/intake_type_entity.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dart';
@@ -130,6 +131,18 @@ void main() {
     test('null with no day logged', () {
       expect(expenditureBreakdown([_spent(0, 3000)]), isNull);
     });
+  });
+
+  test('a highest or lowest day: its value, then its date or today', () async {
+    await initializeDateFormatting('en');
+    expect(
+      dayValueText('2898 kcal', _d(-5), today: _today, locale: 'en'),
+      '2898 kcal · Oct 21',
+    );
+    expect(
+      dayValueText('64 g', _today, today: _today, locale: 'en'),
+      '64 g · today',
+    );
   });
 
   group('dayOutcomes', () {

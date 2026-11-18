@@ -286,6 +286,9 @@ class TrendTile extends StatelessWidget {
   /// A short line under the value, e.g. "over limit" for a passed limit.
   final String? note;
 
+  /// [note] is a plain fact ("from Nov 9"), muted, not a warning in amber.
+  final bool noteMuted;
+
   const TrendTile({
     super.key,
     required this.id,
@@ -297,6 +300,7 @@ class TrendTile extends StatelessWidget {
     required this.onTap,
     this.spokenLabel,
     this.note,
+    this.noteMuted = false,
   });
 
   @override
@@ -365,10 +369,12 @@ class TrendTile extends StatelessWidget {
             if (note != null)
               Text(
                 note!,
-                style: text.labelMedium?.copyWith(
-                  color: noteColor(context),
-                  fontWeight: FontWeight.w600,
-                ),
+                style: noteMuted
+                    ? text.bodySmall?.copyWith(color: palette.textMuted)
+                    : text.labelMedium?.copyWith(
+                        color: noteColor(context),
+                        fontWeight: FontWeight.w600,
+                      ),
               ),
             const SizedBox(height: 6),
             chart,

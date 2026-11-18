@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart' as intl;
 import 'package:opennutritracker/core/utils/calc/unit_calc.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -439,6 +440,7 @@ List<TrendTile> trendTiles(
     bool bars = true,
     required String spoken,
     String? note,
+    bool noteMuted = false,
   }) => TrendTile(
     id: 'trends-tile-${m.name}',
     label: metricTitle(context, m),
@@ -454,6 +456,7 @@ List<TrendTile> trendTiles(
     onTap: () => open(m),
     spokenLabel: spoken,
     note: note,
+    noteMuted: noteMuted,
   );
 
   /// "Protein, daily average 93 of 110 g", or that none was logged.
@@ -475,6 +478,13 @@ List<TrendTile> trendTiles(
   final spentNow = spent.whereType<double>().lastOrNull;
   final balance = balanceSeries(history, dates);
   final balanceMean = meanOf(balance);
+  // The days before the estimate began are no grey stubs beside "logged".
+  final balanceBars = fromDay(balance, dates, history.firstOrNull?.date);
+  final balanceFrom = switch (balanceBars.from) {
+    null => null,
+    final d =>
+      'from ${intl.DateFormat.MMMd(Localizations.localeOf(context).toLanguageTag()).format(d)}',
+  };
 
   TrendTile macroTile(TrendMetric m, Color color) {
     final macro = macroOf(m);
@@ -586,7 +596,7 @@ List<TrendTile> trendTiles(
       TrendMetric.expenditure,
       value: spentNow == null ? '–' : '${energyValue(context, spentNow)}',
       suffix: spentNow == null ? 'after a weigh-in' : '$unit\u00A0a\u00A0day',
-      spark: spent,
+      spark: expenditureSeries(history, dates, settledOnly: true),
       sparkColor: Theme.of(context).colorScheme.primary,
       bars: false,
       spoken: spentNow == null
@@ -599,17 +609,21 @@ List<TrendTile> trendTiles(
           ? '–'
           : signedText(energyValue(context, balanceMean).toDouble()),
       suffix: '$unit\u00A0a\u00A0day',
-      spark: balance,
+      spark: balanceBars.values,
       // As the page: a surplus in fat's colour, a deficit in the accent.
       sparkColor: palette.fat,
       sparkNegativeColor: palette.accent,
-      spoken: switch (balanceShown) {
-        null => 'Energy balance, no estimate yet',
-        0 => 'Energy balance, even',
-        final b =>
-          'Energy balance, ${b.abs()} $unit a day '
-              '${b < 0 ? 'under' : 'over'}',
-      },
+      note: balanceFrom,
+      noteMuted: true,
+      spoken:
+          switch (balanceShown) {
+            null => 'Energy balance, no estimate yet',
+            0 => 'Energy balance, even',
+            final b =>
+              'Energy balance, ${b.abs()} $unit a day '
+                  '${b < 0 ? 'under' : 'over'}',
+          } +
+          (balanceFrom == null ? '' : ', $balanceFrom'),
     ),
     ...inMacroOrder(
       carbs: macroTile(TrendMetric.carbs, palette.carbs),
