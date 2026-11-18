@@ -15,7 +15,7 @@ import 'package:opennutritracker/fork/trends/detail_widgets.dart';
 import 'package:opennutritracker/fork/trends/trend_detail.dart';
 import 'package:opennutritracker/fork/trends/trend_stats.dart';
 import 'package:opennutritracker/fork/trends/trends_overview.dart'
-    show TrendsGoal, TrendsOverview;
+    show TrendsGoal, TrendsOverview, goalPaceText;
 import 'package:opennutritracker/fork/trends/trends_widgets.dart';
 
 /// The spans the weight page's change chips compare, in days, as
@@ -346,7 +346,12 @@ Widget _goalTile(
   void open() => openGoalProgress(context, wu);
   final target = state.targetWeightKg;
   if (target == null || now == null) {
-    final untargeted = untargetedGoal(context, goal?.plan, goal?.since);
+    final untargeted = untargetedGoal(
+      context,
+      goal?.plan,
+      goal?.since,
+      pace: goalPaceText(goal, wu),
+    );
     return FigureTile(
       label: 'To your goal',
       value: untargeted.value,

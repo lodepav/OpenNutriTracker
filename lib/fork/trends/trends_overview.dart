@@ -11,6 +11,9 @@ import 'package:opennutritracker/features/trends/presentation/bloc/trends_bloc.d
 import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/core/domain/entity/body_weight_unit_entity.dart';
+import 'package:opennutritracker/core/domain/entity/user_weight_goal_entity.dart';
+import 'package:opennutritracker/core/domain/usecase/get_user_usecase.dart';
+import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/fork/body/measurement_store.dart';
 import 'package:opennutritracker/fork/body/side_compare.dart';
 import 'package:opennutritracker/fork/body/waist_ratio.dart';
@@ -78,22 +81,36 @@ class TrendsOverview extends StatefulWidget {
     return (plan: await store.plan(), history: await store.history());
   };
 
+  /// Where the Goal tile reads the profile's goal and weekly rate, as the
+  /// You tab shows them; tests swap it.
+  @visibleForTesting
+  static Future<ProfilePace> Function() loadPace = () async {
+    final user = await locator<GetUserUsecase>().getUserData();
+    return (goal: user.goal, kgPerWeek: user.weeklyWeightGoalKg);
+  };
+
   /// The goal as Goal progress loads it, keeping the start when none is
   /// kept yet, with the goal running and, after a completed one, when
-  /// maintenance began; nulls with none, or no store (widget tests).
+  /// maintenance began, and the profile's pace; nulls with none, or no
+  /// store (widget tests).
   static Future<TrendsGoal> goal() async {
     GoalProgress? progress;
     ({PhasePlan? plan, List<GoalRecord> history})? phases;
+    ProfilePace? pace;
     try {
       progress = (await loadGoal()).progress;
     } catch (_) {}
     try {
       phases = await loadPhases();
     } catch (_) {}
+    try {
+      pace = await loadPace();
+    } catch (_) {}
     return (
       progress: progress,
       plan: phases?.plan,
       since: maintainingSince(phases?.plan, phases?.history ?? const []),
+      pace: pace,
     );
   }
 
@@ -706,7 +723,12 @@ TrendTile _goalTile(
   final left = target == null || now == null
       ? null
       : goalLeftKg(target, now, goal?.progress);
-  final untargeted = untargetedGoal(context, goal?.plan, goal?.since);
+  final untargeted = untargetedGoal(
+    context,
+    goal?.plan,
+    goal?.since,
+    pace: goalPaceText(goal, wu),
+  );
   return TrendTile(
     id: 'trends-tile-goal',
     label: 'Goal',
@@ -850,10 +872,21 @@ class _Streak extends StatelessWidget {
   }
 }
 
+/// The profile's goal and weekly rate, kg a week, as the You tab reads them.
+typedef ProfilePace = ({UserWeightGoalEntity goal, double? kgPerWeek});
+
 /// The Goal tile's goal: its progress to the target, the goal running,
-/// and when maintenance began after a completed one.
+/// when maintenance began after a completed one, and the profile's pace.
 typedef TrendsGoal = ({
   GoalProgress? progress,
   PhasePlan? plan,
   DateTime? since,
+  ProfilePace? pace,
 });
+
+/// [goal]'s profile pace as You says it ("Losing 0.4 kg a week"); null
+/// when it could not be read.
+String? goalPaceText(TrendsGoal? goal, BodyWeightUnit unit) {
+  final pace = goal?.pace;
+  return pace == null ? null : plannedRateText(pace.goal, pace.kgPerWeek, unit);
+}

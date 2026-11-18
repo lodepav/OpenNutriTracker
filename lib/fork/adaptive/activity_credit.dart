@@ -17,7 +17,7 @@ enum ActivityCredit {
 
   /// Under the energy an activity burns.
   String note(BuildContext context) => switch (this) {
-    added => "burned, adds to the day's budget",
+    added => "burned, adds to the day's goal",
     dailyCapped =>
       "burned; today's goal counts activity, up to "
           '${energyText(context, maxDailyActivityKcal)}',

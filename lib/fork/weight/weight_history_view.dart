@@ -416,8 +416,9 @@ class _RangeChips extends StatelessWidget {
             child: ChoiceChip(
               key: ValueKey('weight-history-range-$days'),
               label: Text(label, semanticsLabel: weightRangeLabel(days)),
+              // the check marks the chosen range, as the search chips do;
+              // the fill alone is the unselected one's
               selected: days == rangeDays,
-              showCheckmark: false,
               materialTapTargetSize: MaterialTapTargetSize.padded,
               onSelected: (_) {
                 if (days != rangeDays) onChanged(days);

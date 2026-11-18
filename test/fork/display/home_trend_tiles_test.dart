@@ -8,6 +8,7 @@ import 'package:opennutritracker/core/data/dbo/intake_dbo.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:opennutritracker/core/domain/entity/body_weight_unit_entity.dart';
+import 'package:opennutritracker/core/domain/entity/user_weight_goal_entity.dart';
 import 'package:opennutritracker/core/utils/energy_unit_provider.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/features/fasting/presentation/bloc/fasting_bloc.dart';
@@ -39,9 +40,11 @@ class _Intakes extends Fake implements IntakeDataSource {
 
 void main() {
   final layout = LayoutStore.current(homeTilesKey);
+  final readPace = TrendsOverview.loadPace;
 
   tearDown(() async {
     layout.value = (order: const [], hidden: const {});
+    TrendsOverview.loadPace = readPace;
     TrendsOverview.loadMeasurements = () async => const [];
     loadBodyFrame = () async => null;
     summarizeMicros = summarizeNutrients;
@@ -97,6 +100,21 @@ void main() {
     homeLoads.add(null);
     await tester.pump();
     expect(bloc.events, contains(isA<RefreshTrendsEvent>()));
+  });
+
+  testWidgets('the goal with no target: the profile\'s pace, as on You', (
+    tester,
+  ) async {
+    TrendsOverview.loadPace = () async =>
+        (goal: UserWeightGoalEntity.loseWeight, kgPerWeek: -0.4);
+    layout.value = (order: ['goal'], hidden: const {});
+    await pump(tester);
+    final goal = tester.widget<HomeTile>(
+      find.byWidgetPredicate(
+        (w) => w is HomeTile && w.identifier == 'home-trends-tile-goal',
+      ),
+    );
+    expect((goal.value, goal.note), ('Losing', '0.4 kg a week'));
   });
 
   testWidgets('none of them until added', (tester) async {

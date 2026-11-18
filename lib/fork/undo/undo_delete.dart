@@ -72,14 +72,16 @@ class DeletedEntries {
       if (identical(_open?.bar, bar)) _open = null;
     }
 
+    final name = entries.length == 1 ? entries.single.meal.name : null;
     bar = messenger.showSnackBar(
       SnackBar(
         persist: undoBarPersists(messenger.context),
         // Twice the default: a delete is easy to miss undoing.
         duration: const Duration(seconds: 8),
         content: Text(
+          // the food by name, so a wrong swipe shows which one went
           entries.length == 1
-              ? 'Food deleted'
+              ? '${name ?? 'Food'} deleted'
               : '${entries.length} foods deleted',
         ),
         action: SnackBarAction(

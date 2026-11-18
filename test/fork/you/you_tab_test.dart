@@ -20,6 +20,7 @@ import 'package:opennutritracker/features/profile/presentation/widgets/set_targe
 import 'package:opennutritracker/fork/you/you_widgets.dart';
 import 'package:opennutritracker/fork/screens/profile/profile_page.dart';
 import 'package:opennutritracker/fork/display/display_prefs.dart';
+import 'package:opennutritracker/fork/trends/trend_stats.dart' show TrendMetric;
 import 'package:opennutritracker/fork/trends/trends_widgets.dart'
     show keepUnits;
 import 'package:opennutritracker/generated/l10n.dart';
@@ -108,7 +109,11 @@ void _register(UserEntity user) {
   addTearDown(bloc.close);
 }
 
-Future<List<String?>> _pump(WidgetTester tester, UserEntity user) async {
+Future<List<String?>> _pump(
+  WidgetTester tester,
+  UserEntity user, {
+  List<TrendMetric>? opened,
+}) async {
   _register(user);
   final pushed = <String?>[];
   await tester.binding.setSurfaceSize(const Size(400, 2400));
@@ -122,7 +127,9 @@ Future<List<String?>> _pump(WidgetTester tester, UserEntity user) async {
         GlobalCupertinoLocalizations.delegate,
       ],
       supportedLocales: S.supportedLocales,
-      home: const Scaffold(body: ProfilePage()),
+      home: Scaffold(
+        body: ProfilePage(openTrend: (_, metric) => opened?.add(metric)),
+      ),
       onGenerateRoute: (settings) {
         pushed.add(settings.name);
         return MaterialPageRoute<void>(builder: (_) => const SizedBox());
@@ -228,10 +235,17 @@ void main() {
     expect(find.text('Set'), findsNothing);
   });
 
-  testWidgets('the weight tile and Weight history open the history; '
-      'Settings opens its screen', (tester) async {
-    final pushed = await _pump(tester, _user());
+  testWidgets('the weight tile opens the weight trend, as on Home; Weight '
+      'history the history; Settings its screen', (tester) async {
+    final opened = <TrendMetric>[];
+    final pushed = await _pump(tester, _user(), opened: opened);
     await tester.tap(find.bySemanticsIdentifier('profile-weight-trend'));
+    await tester.pumpAndSettle();
+    expect(opened, [TrendMetric.weight]);
+    expect(pushed, isEmpty);
+    final history = find.bySemanticsIdentifier('profile-weight-history');
+    await tester.ensureVisible(history);
+    await tester.tap(history);
     await tester.pumpAndSettle();
     tester.state<NavigatorState>(find.byType(Navigator)).pop();
     await tester.pumpAndSettle();
@@ -297,9 +311,9 @@ void main() {
     expect(goal.label, 'Goal, Losing 0.4 kg a week');
     expect(goal.hint, 'Set a target weight');
     final budget = node('profile-budget');
-    expect(budget.label, 'Daily budget');
+    expect(budget.label, 'Calorie goal');
     expect(budget.hint, 'How it is worked out');
-    expect(node('profile-weight-trend').hint, 'Open the weight history');
+    expect(node('profile-weight-trend').hint, 'Open the weight trend');
     semantics.dispose();
   });
 
@@ -364,7 +378,7 @@ void main() {
     final data = tester
         .getSemantics(find.bySemanticsIdentifier('profile-budget'))
         .getSemanticsData();
-    expect(data.label, startsWith('Daily budget, 2400 kcal, '));
+    expect(data.label, startsWith('Calorie goal, 2400 kcal, '));
     for (final part in [
       '250 grams carbs',
       '80 grams fat',

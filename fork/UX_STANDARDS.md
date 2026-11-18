@@ -80,6 +80,7 @@ Sources, checked 2026-10-24:
 | food | entry | what is logged in the Diary |
 | meal | section | Breakfast, Lunch, Dinner, Snack |
 | weigh-in | weight entry | a logged body weight |
+| goal | budget | a day's calorie or macro goal |
 
 ## Severity
 

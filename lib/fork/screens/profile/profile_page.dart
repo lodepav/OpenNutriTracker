@@ -9,6 +9,9 @@ import 'package:opennutritracker/core/domain/entity/user_entity.dart';
 import 'package:opennutritracker/core/domain/entity/user_gender_entity.dart';
 import 'package:opennutritracker/core/domain/entity/user_pal_entity.dart';
 import 'package:opennutritracker/core/domain/entity/user_weight_goal_entity.dart';
+import 'package:opennutritracker/fork/adaptive/goal_saving.dart'
+    show goalOfPace, paceChanges;
+import 'package:opennutritracker/fork/goal/goal_direction.dart';
 import 'package:opennutritracker/fork/weight/weigh_in_log.dart';
 import 'package:opennutritracker/core/domain/usecase/get_user_usecase.dart';
 import 'package:opennutritracker/core/presentation/widgets/calories_profile_info_dialog.dart';
@@ -46,10 +49,16 @@ import 'package:opennutritracker/features/profile/presentation/widgets/profile_s
 import 'package:opennutritracker/features/settings/presentation/widgets/kcal_goal_info_screen.dart';
 import 'package:opennutritracker/fork/display/home_tiles.dart';
 import 'package:opennutritracker/fork/layout/width_cap.dart';
+import 'package:opennutritracker/fork/screens/trends/trends_page.dart'
+    show openTrendFromHome;
+import 'package:opennutritracker/fork/trends/trend_stats.dart' show TrendMetric;
 import 'package:opennutritracker/fork/you/you_widgets.dart';
 
 class ProfilePage extends StatefulWidget {
-  const ProfilePage({super.key});
+  /// Opens a metric's Trends page, as Home's tiles do; swapped out in tests.
+  final void Function(BuildContext context, TrendMetric metric) openTrend;
+
+  const ProfilePage({super.key, this.openTrend = openTrendFromHome});
 
   @override
   State<ProfilePage> createState() => _ProfilePageState();
@@ -147,10 +156,8 @@ class _ProfilePageState extends State<ProfilePage> {
               unit: bodyWeightUnit,
               load: () async => locator<GetWeightLogUsecase>().getAllEntries(),
               identifier: 'profile-weight-trend',
-              hint: 'Open the weight history',
-              onTap: () => Navigator.of(
-                context,
-              ).pushNamed(NavigationOptions.weightHistoryRoute),
+              hint: 'Open the weight trend',
+              onTap: () => widget.openTrend(context, TrendMetric.weight),
             ),
             GoalYouTile(
               title: S.of(context).goalLabel,
@@ -433,8 +440,11 @@ class _ProfilePageState extends State<ProfilePage> {
         userEntity.weeklyWeightGoalKg = null;
       case WeeklyWeightGoalSet(:final kgPerWeek):
         userEntity.weeklyWeightGoalKg = kgPerWeek;
+        // the formula follows the rate, so Direction says what it does
+        userEntity.goal = goalOfPace(kgPerWeek);
     }
     await _profileBloc.updateUser(userEntity);
+    paceChanges.value++;
   }
 
   Future<void> _showSetGoalDialog(
@@ -447,7 +457,12 @@ class _ProfilePageState extends State<ProfilePage> {
     );
     if (selectedGoal != null) {
       userEntity.goal = selectedGoal;
-      _profileBloc.updateUser(userEntity);
+      userEntity.weeklyWeightGoalKg = rateForDirection(
+        userEntity.weeklyWeightGoalKg,
+        selectedGoal,
+      );
+      await _profileBloc.updateUser(userEntity);
+      paceChanges.value++;
     }
   }
 
