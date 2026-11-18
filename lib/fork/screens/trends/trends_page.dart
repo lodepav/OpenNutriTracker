@@ -33,6 +33,7 @@ import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
 import 'package:opennutritracker/fork/trends/trend_detail.dart';
 import 'package:opennutritracker/fork/trends/trend_stats.dart';
 import 'package:opennutritracker/fork/trends/trends_range.dart';
+import 'package:opennutritracker/fork/trends/card_title.dart';
 import 'package:opennutritracker/fork/trends/trends_widgets.dart'
     show dayLabels, fittedRange, noData;
 
@@ -191,12 +192,14 @@ class _WaterTrendCard extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: AutoSizeText(
-                  S.of(context).trendsWaterLabel,
-                  style: text.titleMedium,
-                  maxLines: 1,
-                  minFontSize: 12,
-                  overflow: TextOverflow.ellipsis,
+                child: CardTitle(
+                  child: AutoSizeText(
+                    S.of(context).trendsWaterLabel,
+                    style: text.titleMedium,
+                    maxLines: 1,
+                    minFontSize: 12,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
               ),
               Text(
@@ -339,12 +342,14 @@ class _WeightCard extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: AutoSizeText(
-                  S.of(context).weightHistoryWeightLabel,
-                  style: text.titleMedium,
-                  maxLines: 1,
-                  minFontSize: 12,
-                  overflow: TextOverflow.ellipsis,
+                child: CardTitle(
+                  child: AutoSizeText(
+                    S.of(context).weightHistoryWeightLabel,
+                    style: text.titleMedium,
+                    maxLines: 1,
+                    minFontSize: 12,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
               ),
               Semantics(

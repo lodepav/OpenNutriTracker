@@ -270,11 +270,10 @@ class _ProfilePageState extends State<ProfilePage> {
               label: 'Profile weight',
               value: bodyWeightText(context, user.weightKG, bodyWeightUnit),
               // Says why it can differ from the Weight trend tile above.
-              detail: [
-                'The formula uses it; the trend smooths your weigh-ins',
-                if (user.targetWeightKg != null)
-                  _targetWeightSubLabel(context, user, bodyWeightUnit),
-              ].join(' · '),
+              subtitle: 'The formula uses it; the trend smooths your weigh-ins',
+              detail: user.targetWeightKg == null
+                  ? null
+                  : _targetWeightSubLabel(context, user, bodyWeightUnit),
               onTap: () => _showSetWeightDialog(context, user, bodyWeightUnit),
             ),
             YouRow(

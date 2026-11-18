@@ -93,10 +93,11 @@ class SettingsIndex extends StatelessWidget {
       ),
     );
     return ListView(
+      // the gutter every other page has
       padding: EdgeInsets.fromLTRB(
-        Dimens.spacing12,
+        Dimens.spacing16,
         Dimens.spacing8,
-        Dimens.spacing12,
+        Dimens.spacing16,
         Dimens.spacing32 + MediaQuery.paddingOf(context).bottom,
       ),
       children: [

@@ -275,7 +275,7 @@ void main() {
       await tester.tap(find.byKey(const ValueKey('compare-ai')));
       await tester.pumpAndSettle();
       expect(find.textContaining('to OpenRouter'), findsOne);
-      expect(find.text('Earlier, 2026-08-01'), findsOne);
+      expect(find.text('Earlier, Aug 1, 2026'), findsOne);
       expect(find.text('weigh-in 84.0 kg'), findsOne);
       expect(find.text('weigh-in 81.5 kg'), findsOne);
 

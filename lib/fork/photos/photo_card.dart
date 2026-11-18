@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
+import 'package:intl/intl.dart';
 import 'package:opennutritracker/core/utils/ai_credential_storage.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/features/add_meal/domain/meal_photo_interpreter.dart';
@@ -12,6 +13,7 @@ import 'package:opennutritracker/core/utils/calc/calendar_day_calc.dart';
 import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/fork/photos/photo_store.dart';
+import 'package:opennutritracker/fork/trends/card_title.dart';
 
 /// Takes or picks a photo, scaled down to keep backups small; null when
 /// cancelled.
@@ -30,9 +32,8 @@ Future<List<int>?> _pickWithImagePicker(ImageSource source) async {
 /// A photo with its image file.
 typedef ShownPhoto = ({ProgressPhoto photo, File file});
 
-String _date(DateTime d) =>
-    '${d.year}-${d.month.toString().padLeft(2, '0')}-'
-    '${d.day.toString().padLeft(2, '0')}';
+String _date(BuildContext context, DateTime d) =>
+    DateFormat.yMMMd(Localizations.localeOf(context).toLanguageTag()).format(d);
 
 /// Seam S40: progress photos on Trends, kept on the device and in the
 /// backup. A strip of thumbnails, each opening to view or delete, and a
@@ -139,7 +140,7 @@ class _ProgressPhotosCardState extends State<ProgressPhotosCard> {
     final delete = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(_date(shown.photo.date)),
+        title: Text(_date(context, shown.photo.date)),
         contentPadding: const EdgeInsets.all(Dimens.spacing8),
         content: Image.file(shown.file, fit: BoxFit.contain),
         actions: [
@@ -202,9 +203,11 @@ class _ProgressPhotosCardState extends State<ProgressPhotosCard> {
           Row(
             children: [
               Expanded(
-                child: Text(
-                  'Progress photos',
-                  style: theme.textTheme.titleMedium,
+                child: CardTitle(
+                  child: Text(
+                    'Progress photos',
+                    style: theme.textTheme.titleMedium,
+                  ),
                 ),
               ),
               if (photos.length > 1)
@@ -262,7 +265,7 @@ class _ProgressPhotosCardState extends State<ProgressPhotosCard> {
                           ),
                         ),
                         Text(
-                          _date(shown.photo.date),
+                          _date(context, shown.photo.date),
                           style: theme.textTheme.labelSmall,
                         ),
                       ],
@@ -464,7 +467,10 @@ class _ComparePhotosScreenState extends State<ComparePhotosScreen> {
           value: index,
           items: [
             for (final (i, s) in widget.photos.indexed)
-              DropdownMenuItem(value: i, child: Text(_date(s.photo.date))),
+              DropdownMenuItem(
+                value: i,
+                child: Text(_date(context, s.photo.date)),
+              ),
           ],
           onChanged: (i) {
             if (i != null) setState(() => set(i));
