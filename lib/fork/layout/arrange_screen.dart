@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
+import 'package:opennutritracker/core/utils/tracked_day_lock.dart';
 import 'package:opennutritracker/fork/layout/layout_store.dart';
 import 'package:opennutritracker/fork/undo/undo_delete.dart';
 
@@ -90,7 +91,9 @@ class _ArrangeScreenState extends State<ArrangeScreen> {
       for (final l in widget.lists)
         (order: l.names.keys.toList(), hidden: {...l.optional}),
     ]);
-    ScaffoldMessenger.of(context)
+    final stamp = ProfileStamp.now();
+    final messenger = ScaffoldMessenger.of(context);
+    messenger
       ..hideCurrentSnackBar()
       ..showSnackBar(
         SnackBar(
@@ -98,7 +101,18 @@ class _ArrangeScreenState extends State<ArrangeScreen> {
           content: const Text('Layout reset'),
           action: SnackBarAction(
             label: 'Undo',
-            onPressed: () => _restore(before),
+            onPressed: () {
+              if (!stamp.isCurrent) {
+                // It belongs to the profile left since: nothing is put back.
+                messenger.showSnackBar(
+                  const SnackBar(
+                    content: Text('Not restored: the profile changed.'),
+                  ),
+                );
+                return;
+              }
+              _restore(before);
+            },
           ),
         ),
       );

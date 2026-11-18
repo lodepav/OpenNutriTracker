@@ -535,4 +535,20 @@ void main() {
     expect(chart.left, 16);
     expect(chart.right, width - 16);
   });
+
+  testWidgets('scrolling a long log does not measure the rows again', (
+    tester,
+  ) async {
+    await _pump(tester, [
+      for (var i = 0; i < 700; i++)
+        WeightLogEntity(date: _ago(i), weightKg: 80 + i % 10 / 10),
+    ]);
+    final before = weighInStacksRuns;
+    for (var i = 0; i < 10; i++) {
+      await tester.drag(find.byType(CustomScrollView), const Offset(0, -300));
+      await tester.pump();
+    }
+    await tester.pumpAndSettle();
+    expect(weighInStacksRuns - before, 0);
+  });
 }

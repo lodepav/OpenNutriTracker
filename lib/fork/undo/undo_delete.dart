@@ -37,12 +37,16 @@ Future<void> restoreDeletedIntakes(
 /// of upstream's confirmation dialog: the delete happens at once, and Undo
 /// writes the entries back with their ids, so meal groups and the Health
 /// Connect export see them unchanged. Deletes of one day that follow each
-/// other while the bar is up (a meal's "Delete all") gather into one bar, and
-/// its Undo brings all of them back. [startedOn] is taken before the delete:
+/// other within the bar's time (a meal's "Delete all") gather into one bar,
+/// and its Undo brings all of them back. [startedOn] is taken before the delete:
 /// where the profile changed since, the delete did not happen there or the
 /// entry belongs to another profile, so no bar is shown.
 class DeletedEntries {
-  /// The bar on screen and what its Undo restores; null once it has gone.
+  // Twice the default: a delete is easy to miss undoing.
+  static const _time = Duration(seconds: 8);
+
+  /// The bar on screen and what its Undo restores; null once it has gone or
+  /// its time is up, as a bar kept up under TalkBack gathers no later delete.
   static ({
     ScaffoldFeatureController<SnackBar, SnackBarClosedReason> bar,
     List<IntakeEntity> entries,
@@ -76,13 +80,15 @@ class DeletedEntries {
     bar = messenger.showSnackBar(
       SnackBar(
         persist: undoBarPersists(messenger.context),
-        // Twice the default: a delete is easy to miss undoing.
-        duration: const Duration(seconds: 8),
-        content: Text(
-          // the food by name, so a wrong swipe shows which one went
-          entries.length == 1
-              ? '${name ?? 'Food'} deleted'
-              : '${entries.length} foods deleted',
+        duration: _time,
+        content: _Gathering(
+          onEnd: close,
+          child: Text(
+            // the food by name, so a wrong swipe shows which one went
+            entries.length == 1
+                ? '${name ?? 'Food'} deleted'
+                : '${entries.length} foods deleted',
+          ),
         ),
         action: SnackBarAction(
           label: 'Undo',
@@ -106,4 +112,35 @@ class DeletedEntries {
     _open = (bar: bar, entries: entries, day: day, stamp: startedOn);
     unawaited(bar.closed.then((_) => close()));
   }
+}
+
+/// Ends the bar's gathering after its time, even where the bar stays up: the
+/// timer lives with the bar's content, so it goes when the bar does.
+class _Gathering extends StatefulWidget {
+  final VoidCallback onEnd;
+  final Widget child;
+
+  const _Gathering({required this.onEnd, required this.child});
+
+  @override
+  State<_Gathering> createState() => _GatheringState();
+}
+
+class _GatheringState extends State<_Gathering> {
+  late final Timer _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer(DeletedEntries._time, widget.onEnd);
+  }
+
+  @override
+  void dispose() {
+    _timer.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
 }
