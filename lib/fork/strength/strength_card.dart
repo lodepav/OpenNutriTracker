@@ -9,11 +9,11 @@ import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_ui.dart'
     show refreshGoals;
-import 'package:opennutritracker/fork/adaptive/goal_saving.dart'
-    show savePace;
+import 'package:opennutritracker/fork/adaptive/goal_saving.dart' show savePace;
 import 'package:opennutritracker/fork/strength/strength_signal.dart';
 import 'package:opennutritracker/fork/strength/strength_suggestion.dart';
 import 'package:opennutritracker/fork/units/energy_text.dart';
+import 'package:opennutritracker/fork/undo/undo_delete.dart';
 
 const _answeredKey = 'strengthAnswered';
 
@@ -145,6 +145,7 @@ class _StrengthCardState extends State<StrengthCard> {
     String targetAfter,
   ) async {
     final messenger = ScaffoldMessenger.of(context);
+    final persists = undoBarPersists(context);
     final startedOn = ProfileStamp.now();
     final Future<bool> Function() undo;
     final String done;
@@ -179,8 +180,7 @@ class _StrengthCardState extends State<StrengthCard> {
     messenger.removeCurrentSnackBar();
     messenger.showSnackBar(
       SnackBar(
-        // An action keeps a bar up until dismissed: this one goes.
-        persist: false,
+        persist: persists,
         content: Text(done),
         action: SnackBarAction(
           label: 'Undo',

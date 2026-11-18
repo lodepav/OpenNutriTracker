@@ -20,6 +20,9 @@ import 'package:opennutritracker/fork/screens/profile/profile_page.dart';
 import 'package:opennutritracker/fork/screens/trends/trends_page.dart';
 // [/fork]
 import 'package:opennutritracker/generated/l10n.dart';
+// [fork] S274 nav-label
+import 'package:opennutritracker/fork/display/contrast.dart' show textAccent;
+// [/fork]
 // [fork] S76 releases: a new OpenBite offers itself (D16)
 import 'package:opennutritracker/fork/update/update_notice.dart';
 // [/fork]
@@ -276,7 +279,10 @@ class _NavItem extends StatelessWidget {
   Widget build(BuildContext context) {
     final selected = index == selectedIndex;
     final color = selected
-        ? Theme.of(context).colorScheme.primary
+        // [fork] S274 nav-label: a pale picked accent darkened to 4.5:1 as text
+        // ? Theme.of(context).colorScheme.primary
+        ? textAccent(context)
+        // [/fork]
         : palette.textMuted;
     return Expanded(
       child: Semantics(

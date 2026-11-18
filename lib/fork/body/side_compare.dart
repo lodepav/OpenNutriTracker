@@ -11,6 +11,7 @@ import 'package:opennutritracker/core/utils/hive_db_provider.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/fork/body/measurement_store.dart';
+import 'package:opennutritracker/fork/display/contrast.dart';
 import 'package:opennutritracker/fork/report/chart_touch.dart';
 import 'package:opennutritracker/fork/trends/detail_widgets.dart';
 import 'package:opennutritracker/fork/trends/trends_widgets.dart';
@@ -322,7 +323,7 @@ class _SidesChart extends StatelessWidget {
     final low = ys.reduce(math.min);
     final high = ys.reduce(math.max);
     final pad = math.max((high - low) * 0.15, 0.5);
-    final leftColor = theme.colorScheme.primary;
+    final leftColor = chartAccent(context);
     final rightColor = palette.fat;
     final small = theme.textTheme.labelSmall?.copyWith(
       color: palette.textMuted,

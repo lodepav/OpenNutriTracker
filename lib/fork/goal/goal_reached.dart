@@ -406,6 +406,7 @@ Future<bool> showExtendSheet(
     await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       showDragHandle: true,
       builder: (_) => ExtendSheet(
         plan: plan,

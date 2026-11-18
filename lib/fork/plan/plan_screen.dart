@@ -8,6 +8,7 @@ import 'package:opennutritracker/fork/basket/basket.dart';
 import 'package:opennutritracker/fork/copy/copy_ui.dart';
 import 'package:opennutritracker/fork/plan/plan_store.dart';
 import 'package:opennutritracker/fork/plan/plan_ui.dart';
+import 'package:opennutritracker/fork/undo/undo_delete.dart';
 
 /// How many days ahead, today included, the screen offers.
 const planDaysAhead = 14;
@@ -131,8 +132,7 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          // An action keeps a bar up until dismissed: this one goes.
-          persist: false,
+          persist: undoBarPersists(context),
           content: Text('Removed ${food.meal.name ?? 'food'}'),
           action: SnackBarAction(
             label: 'Undo',

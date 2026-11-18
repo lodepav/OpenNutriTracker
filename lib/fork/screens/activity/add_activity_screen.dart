@@ -29,6 +29,7 @@ import 'package:opennutritracker/features/home/presentation/bloc/home_bloc.dart'
 import 'package:opennutritracker/features/profile/presentation/utils/profile_display_format.dart';
 import 'package:opennutritracker/fork/activity/activity_picker.dart';
 import 'package:opennutritracker/fork/adaptive/activity_credit.dart';
+import 'package:opennutritracker/fork/undo/undo_delete.dart';
 
 class AddActivityScreen extends StatefulWidget {
   const AddActivityScreen({super.key});
@@ -154,8 +155,7 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
     ).popUntil(namedRouteOrFirst(NavigationOptions.mainRoute));
     messenger.showSnackBar(
       SnackBar(
-        // Goes after its time, as the other undos.
-        persist: false,
+        persist: undoBarPersists(messenger.context),
         content: Text('Added $what'),
         action: SnackBarAction(
           label: 'Undo',
@@ -176,6 +176,7 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       showDragHandle: true,
       builder: (_) => QuickAddActivityBottomSheet(day: _day),
     );

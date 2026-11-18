@@ -290,6 +290,7 @@ class AmountPicker extends StatelessWidget {
     final sure = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
+        scrollable: true,
         title: Text('Remove "$label"?'),
         content: const Text('Your diary keeps what was logged with it.'),
         actions: [
@@ -442,6 +443,7 @@ class _PortionDialogState extends State<_PortionDialog> {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
+    scrollable: true,
     title: const Text('Add a portion'),
     content: Column(
       mainAxisSize: MainAxisSize.min,

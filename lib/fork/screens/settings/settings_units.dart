@@ -87,6 +87,7 @@ extension _UnitsSettings on _SettingsScreenState {
       context: context,
       builder: (context) {
         return AlertDialog(
+          scrollable: true,
           contentPadding: EdgeInsets.zero,
           title: Text(S.of(context).settingsFoodUnitsLabel),
           content: StatefulBuilder(
@@ -151,6 +152,7 @@ extension _UnitsSettings on _SettingsScreenState {
       context: context,
       builder: (context) {
         return AlertDialog(
+          scrollable: true,
           contentPadding: EdgeInsets.zero,
           title: Text(S.of(context).settingsHeightUnitsLabel),
           content: StatefulBuilder(
@@ -293,6 +295,7 @@ extension _UnitsSettings on _SettingsScreenState {
       context: context,
       builder: (context) {
         return AlertDialog(
+          scrollable: true,
           contentPadding: EdgeInsets.zero,
           title: Text(S.of(context).settingsEnergyUnitLabel),
           content: StatefulBuilder(

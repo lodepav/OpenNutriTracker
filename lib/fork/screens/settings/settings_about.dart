@@ -85,6 +85,7 @@ extension _AboutSettings on _SettingsScreenState {
       context: context,
       builder: (context) {
         return AlertDialog(
+          scrollable: true,
           title: Text(S.of(context).settingsReportErrorLabel),
           content: Text(S.of(context).reportErrorDialogText),
           actions: [

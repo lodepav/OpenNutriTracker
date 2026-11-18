@@ -4,6 +4,7 @@ import 'package:opennutritracker/core/utils/tracked_day_lock.dart';
 import 'package:opennutritracker/fork/basket/basket_ui.dart'
     show refreshAfterLogging;
 import 'package:opennutritracker/fork/copy/copy_entries.dart';
+import 'package:opennutritracker/fork/undo/undo_delete.dart';
 
 /// Whether the food page asks before adding a food already in that meal
 /// that day (upstream #212). The fork doesn't: the bar's Undo takes a
@@ -41,9 +42,7 @@ void showLoggedBar(
   messenger.removeCurrentSnackBar();
   messenger.showSnackBar(
     SnackBar(
-      // An action keeps a bar up until dismissed: this one goes, except
-      // under a screen reader, which needs the time to reach Undo (WCAG 2.2.1).
-      persist: MediaQuery.accessibleNavigationOf(messenger.context),
+      persist: undoBarPersists(messenger.context),
       content: Text(text),
       action: SnackBarAction(
         label: 'Undo',

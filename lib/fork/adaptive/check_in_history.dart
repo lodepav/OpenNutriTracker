@@ -188,6 +188,7 @@ Future<void> _showParts(
   await showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
+    useSafeArea: true,
     showDragHandle: true,
     builder: (context) {
       final text = Theme.of(context).textTheme;

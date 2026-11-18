@@ -15,6 +15,7 @@ import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
 import 'package:opennutritracker/fork/display/day_totals_card.dart'
     show dayTotalLabel;
 import 'package:opennutritracker/fork/display/display_prefs.dart';
+import 'package:opennutritracker/fork/display/week_bars.dart';
 import 'package:opennutritracker/fork/off/off_kinds.dart';
 import 'package:opennutritracker/fork/trends/trends_widgets.dart'
     show keepUnits;
@@ -486,6 +487,7 @@ class _TodayAfterAddingState extends State<TodayAfterAdding> {
           required double eaten,
           required double added,
           required Color color,
+          Color? addedColor,
           int flex = 4,
         }) {
           // in [eaten]'s unit: [goal] is shown in the profile's (kJ or kcal)
@@ -535,7 +537,10 @@ class _TodayAfterAddingState extends State<TodayAfterAdding> {
                       // a zero flex would lay out unbounded.
                       for (final (flex, fill) in [
                         (part(eaten), color),
-                        (part(added), color.withValues(alpha: 0.45)),
+                        (
+                          part(added),
+                          addedColor ?? color.withValues(alpha: 0.45),
+                        ),
                         ((1 - part(eaten) - part(added)).clamp(0, 1), null),
                       ])
                         if ((flex * 1000).round() > 0)
@@ -611,6 +616,11 @@ class _TodayAfterAddingState extends State<TodayAfterAdding> {
         );
 
         final e = totals.eaten, g = totals.goal;
+        // eaten and added each at 3:1 on the track, and apart (as the week bars)
+        final energy = weekBarColors(
+          theme.colorScheme.primary,
+          palette.surfaceMuted,
+        );
         final body = Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -639,7 +649,8 @@ class _TodayAfterAddingState extends State<TodayAfterAdding> {
                 barGoal: g.kcal,
                 eaten: e.kcal,
                 added: widget.kcal,
-                color: theme.colorScheme.primary,
+                color: energy.today,
+                addedColor: energy.past,
                 // the longest figure, kept at the macros' size (as the Diary)
                 flex: 5,
               ),

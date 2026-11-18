@@ -9,8 +9,7 @@ import 'package:opennutritracker/core/domain/entity/user_entity.dart';
 import 'package:opennutritracker/core/domain/entity/user_gender_entity.dart';
 import 'package:opennutritracker/core/domain/entity/user_pal_entity.dart';
 import 'package:opennutritracker/core/domain/entity/user_weight_goal_entity.dart';
-import 'package:opennutritracker/core/domain/entity/weight_log_entity.dart';
-import 'package:opennutritracker/core/domain/usecase/add_weight_log_usecase.dart';
+import 'package:opennutritracker/fork/weight/weigh_in_log.dart';
 import 'package:opennutritracker/core/domain/usecase/get_user_usecase.dart';
 import 'package:opennutritracker/core/presentation/widgets/calories_profile_info_dialog.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
@@ -105,7 +104,9 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Widget _getLoadingContent() {
-    return const Center(child: CircularProgressIndicator());
+    return const Center(
+      child: CircularProgressIndicator(semanticsLabel: 'Loading'),
+    );
   }
 
   Widget _getLoadedContent(
@@ -470,27 +471,34 @@ class _ProfilePageState extends State<ProfilePage> {
     UserEntity userEntity,
     BodyWeightUnit bodyWeightUnit,
   ) async {
+    // A second weigh-in today says it replaces the first, and the save
+    // says so with an Undo that brings it back, as Home's does.
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final logged = await weighInsByDay();
+    if (!context.mounted) return;
     final newKg = await showDialog<double>(
       context: context,
-      builder: (context) =>
-          SetWeightDialog(initialKg: userEntity.weightKG, unit: bodyWeightUnit),
+      builder: (context) => SetWeightDialog(
+        initialKg: userEntity.weightKG,
+        unit: bodyWeightUnit,
+        logged: logged,
+      ),
     );
-    if (newKg != null) {
-      final now = DateTime.now();
-      await locator<AddWeightLogUsecase>().addEntry(
-        WeightLogEntity(
-          date: DateTime(now.year, now.month, now.day),
-          weightKg: newKg,
-        ),
-      );
-
-      // addEntry already persisted today's weight onto the user record, so
-      // reload it and route through ProfileBloc.updateUser purely so the
-      // profile screen, diary, and home all refresh in one go — mirrors
-      // QuickWeightWidget._showWeightDialog on the home screen.
-      final updatedUser = await locator<GetUserUsecase>().getUserData();
-      await _profileBloc.updateUser(updatedUser);
-    }
+    if (newKg == null || !context.mounted) return;
+    await logWeighIn(
+      context,
+      kg: newKg,
+      day: today,
+      unit: bodyWeightUnit,
+      replaced: logged[today],
+      refresh: () async {
+        // addEntry already put the weight on the user record: reload it so
+        // the profile, diary and home all refresh in one go.
+        final updatedUser = await locator<GetUserUsecase>().getUserData();
+        await _profileBloc.updateUser(updatedUser);
+      },
+    );
   }
 
   Future<void> _showSetTargetWeightDialog(

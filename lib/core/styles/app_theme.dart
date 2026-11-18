@@ -101,6 +101,17 @@ ThemeData buildAppTheme(AppPalette p) {
         shape: pill,
       ),
     ),
+    // [fork] S233 text-accent: an outlined button's label as a text button's
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: OutlinedButton.styleFrom(foregroundColor: textAccentOf(p)),
+    ),
+    // [/fork]
+    // [fork] S233 text-accent: a snackbar's Undo in the accent at 4.5:1 on
+    // the bar, where it fell back to the accent's on-colour
+    snackBarTheme: SnackBarThemeData(
+      actionTextColor: textSafe(p.accent, scheme.inverseSurface),
+    ),
+    // [/fork]
     inputDecorationTheme: InputDecorationThemeData(
       filled: true,
       fillColor: p.surfaceMuted,

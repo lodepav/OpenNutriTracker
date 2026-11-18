@@ -9,6 +9,9 @@ import 'package:opennutritracker/core/utils/user_image_storage.dart';
 import 'package:opennutritracker/core/presentation/widgets/user_image_picker_tile.dart';
 import 'package:opennutritracker/core/utils/demo/unsplash_attribution.dart';
 import 'package:opennutritracker/generated/l10n.dart';
+// [fork] S251 avatar-pick
+import 'package:opennutritracker/fork/display/sized_file_image.dart' show evictPhoto;
+// [/fork]
 
 /// Edits a single profile's name and picture. The picture is imported the
 /// moment it's picked (the profile already has an id to key the file by),
@@ -116,11 +119,7 @@ class _ProfileEditorScreenState extends State<ProfileEditorScreen> {
     // [fork] S251 avatar-pick: the avatars hold the photo at their own sizes
     // (S250), which the line above leaves cached; the new photo at that path
     // would not show.
-    // shortcut: drops every cached image, for a rare event; evict by size if
-    // this shows as reloads.
-    PaintingBinding.instance.imageCache
-      ..clear()
-      ..clearLiveImages();
+    await evictPhoto(relative);
     // [/fork]
     setState(() {
       _imagePath = relative;

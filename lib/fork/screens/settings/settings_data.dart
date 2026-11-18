@@ -129,6 +129,7 @@ extension _DataSettings on _SettingsScreenState {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
+        scrollable: true,
         title: Text(l10n.settingsDeleteAllDataConfirmTitle),
         content: Text(l10n.settingsDeleteAllDataConfirmContent),
         actions: [

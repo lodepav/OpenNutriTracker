@@ -284,7 +284,9 @@ class TopFoods extends StatelessWidget {
           if (intakes == null)
             const Padding(
               padding: EdgeInsets.all(Dimens.spacing16),
-              child: Center(child: CircularProgressIndicator()),
+              child: Center(
+                child: CircularProgressIndicator(semanticsLabel: 'Loading'),
+              ),
             )
           else if (shares.isEmpty)
             Padding(

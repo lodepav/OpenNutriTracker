@@ -16,6 +16,7 @@ import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/fork/adaptive/trend_points.dart';
 import 'package:opennutritracker/fork/body/measurement_store.dart';
 import 'package:opennutritracker/fork/body/side_compare.dart' show SideUnits;
+import 'package:opennutritracker/fork/display/contrast.dart';
 import 'package:opennutritracker/fork/report/chart_touch.dart';
 import 'package:opennutritracker/fork/trends/detail_widgets.dart';
 import 'package:opennutritracker/fork/trends/trends_widgets.dart';
@@ -340,7 +341,7 @@ class _RatioChart extends StatelessWidget {
     final low = ys.reduce(math.min);
     final high = ys.reduce(math.max);
     final pad = math.max((high - low) * 0.15, 0.02);
-    final color = theme.colorScheme.primary;
+    final color = chartAccent(context);
     final small = theme.textTheme.labelSmall?.copyWith(
       color: palette.textMuted,
     );

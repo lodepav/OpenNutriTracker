@@ -120,6 +120,7 @@ extension _FoodSettings on _SettingsScreenState {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
+        scrollable: true,
         title: Text(S.of(context).clearOffCacheConfirmTitle),
         content: Text(S.of(context).clearOffCacheConfirmContent),
         actions: [

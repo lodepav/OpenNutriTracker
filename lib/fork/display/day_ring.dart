@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:opennutritracker/core/domain/entity/tracked_day_entity.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
+import 'package:opennutritracker/fork/display/contrast.dart';
 
 /// A day of the Diary's calendar (seam S118, MacroFactor's week strip):
 /// its date inside a ring that fills with the energy eaten against the
@@ -51,7 +52,7 @@ class DayRing extends StatelessWidget {
       color: selected
           ? scheme.onPrimary
           : today
-          ? scheme.primary
+          ? textAccent(context)
           : outside
           ? palette.textMuted
           : palette.textStrong,
@@ -65,7 +66,7 @@ class DayRing extends StatelessWidget {
             track: palette.surfaceMuted,
             color:
                 trackedDay?.getCalendarDayRatingColor(context) ??
-                scheme.primary,
+                chartSafe(scheme.primary, palette.surfaceMuted),
             filled: selected ? scheme.primary : null,
           ),
           // A square whose corners clear the stroke, so a large font shrinks

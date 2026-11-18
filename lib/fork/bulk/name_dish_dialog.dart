@@ -36,6 +36,7 @@ class _NameDishDialogState extends State<_NameDishDialog> {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
+    scrollable: true,
     title: const Text('Name what you ate'),
     content: Semantics(
       identifier: 'name-dish-field',

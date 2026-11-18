@@ -10,6 +10,7 @@ import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dar
 import 'package:opennutritracker/features/home/domain/entity/nutrient_contribution_entity.dart';
 import 'package:opennutritracker/features/meal_detail/meal_detail_screen.dart';
 import 'package:opennutritracker/features/add_meal/util/food_emoji_resolver.dart';
+import 'package:opennutritracker/fork/display/week_bars.dart';
 import 'package:opennutritracker/fork/display/display_prefs.dart';
 import 'package:opennutritracker/fork/history/food_icon.dart';
 import 'package:opennutritracker/fork/off/off_kinds.dart';
@@ -133,7 +134,11 @@ class _MacroFoodsPageState extends State<MacroFoodsPage> {
   };
 
   Color _color(AppPalette palette, ColorScheme scheme) => switch (_metric) {
-    FoodsMetric.energy => scheme.primary,
+    // every use is a bar on surfaceMuted
+    FoodsMetric.energy => weekBarColors(
+      scheme.primary,
+      palette.surfaceMuted,
+    ).today,
     FoodsMetric.carbs => palette.carbs,
     FoodsMetric.fat => palette.fat,
     FoodsMetric.protein => palette.protein,

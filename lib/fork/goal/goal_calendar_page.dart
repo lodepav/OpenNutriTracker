@@ -11,6 +11,7 @@ import 'package:opennutritracker/fork/goal/phase_colors.dart';
 import 'package:opennutritracker/fork/goal/planner_screen.dart';
 import 'package:opennutritracker/fork/phases/phases.dart';
 import 'package:opennutritracker/fork/units/weight_text.dart';
+import 'package:opennutritracker/fork/undo/undo_delete.dart';
 
 DateTime _date(DateTime t) => DateTime(t.year, t.month, t.day);
 
@@ -355,6 +356,7 @@ class _GoalCalendarPageState extends State<GoalCalendarPage> {
         context: context,
         showDragHandle: true,
         isScrollControlled: true,
+        useSafeArea: true,
         builder: (sheet) => _NextSheet(
           upcoming: goals.upcoming,
           index: i,
@@ -426,6 +428,7 @@ Future<void> showRunningGoal(
   context: context,
   showDragHandle: true,
   isScrollControlled: true,
+  useSafeArea: true,
   builder: (sheet) => _NowSheet(
     plan: plan,
     next: next,
@@ -481,6 +484,7 @@ Future<void> _actOn(
     final sure = await showDialog<bool>(
       context: sheet,
       builder: (dialog) => AlertDialog(
+        scrollable: true,
         title: Text(confirm.title),
         content: Text(confirm.body),
         actions: [
@@ -536,6 +540,7 @@ void showGoalUndo(
 
   bar = (messenger..hideCurrentSnackBar()).showSnackBar(
     SnackBar(
+      persist: undoBarPersists(messenger.context),
       content: Text(message),
       action: SnackBarAction(
         label: 'Undo',

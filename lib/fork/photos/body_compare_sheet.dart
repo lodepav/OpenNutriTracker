@@ -146,6 +146,7 @@ Future<void> showBodyComparison(BuildContext context, BodyComparison result) =>
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       showDragHandle: true,
       builder: (context) => BodyComparisonView(result: result),
     );

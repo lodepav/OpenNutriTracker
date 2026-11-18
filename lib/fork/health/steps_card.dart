@@ -6,6 +6,7 @@ import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
+import 'package:opennutritracker/fork/display/contrast.dart';
 import 'package:opennutritracker/fork/health/steps.dart';
 
 typedef _Read = ({bool on, int goal, Map<DateTime, int>? days, bool failed});
@@ -234,7 +235,7 @@ class _StepsCardState extends State<StepsCard> {
     int goal,
     DateTime today,
   ) {
-    final accent = Theme.of(context).colorScheme.primary;
+    final accent = chartAccent(context);
     final first = DateTime(
       today.year,
       today.month,
@@ -321,6 +322,7 @@ class _GoalDialogState extends State<_GoalDialog> {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
+    scrollable: true,
     title: const Text('Daily step goal'),
     content: TextField(
       key: const ValueKey('steps-goal-field'),

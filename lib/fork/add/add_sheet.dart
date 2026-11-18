@@ -117,6 +117,7 @@ class _AddSheetState extends State<AddSheet> {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       showDragHandle: true,
       builder: (_) => QuickAddBottomSheet(
         intakeType: _type,

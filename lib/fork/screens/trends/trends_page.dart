@@ -76,7 +76,9 @@ class _TrendsView extends StatelessWidget {
     return BlocBuilder<TrendsBloc, TrendsState>(
       builder: (context, state) {
         if (state is! TrendsLoaded) {
-          return const Center(child: CircularProgressIndicator());
+          return const Center(
+            child: CircularProgressIndicator(semanticsLabel: 'Loading'),
+          );
         }
         // MacroFactor's tile grid in place of
         // upstream's streak card, range picker and cards; the weight and
@@ -158,7 +160,11 @@ class _WaterTrendCard extends StatelessWidget {
     var loggedDays = 0;
     for (int i = 0; i < rangeDays; i++) {
       // calendar days, as the labels count them
-      final day = DateTime(today.year, today.month, today.day - (rangeDays - 1 - i));
+      final day = DateTime(
+        today.year,
+        today.month,
+        today.day - (rangeDays - 1 - i),
+      );
       final ml = waterByDay[DateTime(day.year, day.month, day.day)] ?? 0;
       spots.add(FlSpot(i.toDouble(), _toUnit(ml)));
       if (ml > 0) {
@@ -185,19 +191,27 @@ class _WaterTrendCard extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: AutoSizeText(S.of(context).trendsWaterLabel,
-                    style: text.titleMedium,
-                    maxLines: 1,
-                    minFontSize: 12,
-                    overflow: TextOverflow.ellipsis),
+                child: AutoSizeText(
+                  S.of(context).trendsWaterLabel,
+                  style: text.titleMedium,
+                  maxLines: 1,
+                  minFontSize: 12,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
               Text(
                 usesImperialUnits
-                    ? S.of(context).waterChipLabelFlOz(
-                        _toUnit(avgMl).round(), goal.round())
+                    ? S
+                          .of(context)
+                          .waterChipLabelFlOz(
+                            _toUnit(avgMl).round(),
+                            goal.round(),
+                          )
                     : S.of(context).waterChipLabel(avgMl, goalMl),
                 style: text.bodySmall?.copyWith(
-                    color: palette.textMuted, fontWeight: FontWeight.w700),
+                  color: palette.textMuted,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ],
           ),
@@ -205,57 +219,61 @@ class _WaterTrendCard extends StatelessWidget {
           if (loggedDays == 0)
             noData(context, 'No water logged in this range.')
           else
-          Semantics(
-            label: S.of(context).trendsWaterLabel,
-            child: SizedBox(
-              height: 140,
-              child: LineChart(
-                duration: motionDuration(
-                  context,
-                  const Duration(milliseconds: 150),
-                ),
-                LineChartData(
-                  minX: 0,
-                  maxX: (rangeDays - 1).toDouble(),
-                  minY: range.min,
-                  maxY: maxY,
-                  gridData: const FlGridData(show: false),
-                  borderData: FlBorderData(show: false),
-                  titlesData: const FlTitlesData(show: false),
-                  lineTouchData: labelledTouch(
+            Semantics(
+              label: S.of(context).trendsWaterLabel,
+              child: SizedBox(
+                height: 140,
+                child: LineChart(
+                  duration: motionDuration(
                     context,
-                    (s) => '${s.y.round()}',
-                    after: (s) =>
-                        ' ${usesImperialUnits ? S.of(context).flOzUnit : 'ml'}'
-                        '\n${dayLabel(s.x.round())}',
+                    const Duration(milliseconds: 150),
                   ),
-                  extraLinesData: goalMl <= 0
-                      ? const ExtraLinesData()
-                      : ExtraLinesData(horizontalLines: [
-                          HorizontalLine(
-                            y: goal,
-                            color: palette.textMuted,
-                            strokeWidth: 1.2,
-                            dashArray: const [6, 4],
-                          ),
-                        ]),
-                  lineBarsData: [
-                    LineChartBarData(
-                      spots: spots,
-                      isCurved: true,
-                      preventCurveOverShooting: true,
-                      color: color,
-                      barWidth: 3,
-                      // a dot a day up to a month
-                      dotData: FlDotData(show: rangeDays <= 31),
-                      belowBarData: BarAreaData(
-                          show: true, color: color.withValues(alpha: 0.12)),
+                  LineChartData(
+                    minX: 0,
+                    maxX: (rangeDays - 1).toDouble(),
+                    minY: range.min,
+                    maxY: maxY,
+                    gridData: const FlGridData(show: false),
+                    borderData: FlBorderData(show: false),
+                    titlesData: const FlTitlesData(show: false),
+                    lineTouchData: labelledTouch(
+                      context,
+                      (s) => '${s.y.round()}',
+                      after: (s) =>
+                          ' ${usesImperialUnits ? S.of(context).flOzUnit : 'ml'}'
+                          '\n${dayLabel(s.x.round())}',
                     ),
-                  ],
+                    extraLinesData: goalMl <= 0
+                        ? const ExtraLinesData()
+                        : ExtraLinesData(
+                            horizontalLines: [
+                              HorizontalLine(
+                                y: goal,
+                                color: palette.textMuted,
+                                strokeWidth: 1.2,
+                                dashArray: const [6, 4],
+                              ),
+                            ],
+                          ),
+                    lineBarsData: [
+                      LineChartBarData(
+                        spots: spots,
+                        isCurved: true,
+                        preventCurveOverShooting: true,
+                        color: color,
+                        barWidth: 3,
+                        // a dot a day up to a month
+                        dotData: FlDotData(show: rangeDays <= 31),
+                        belowBarData: BarAreaData(
+                          show: true,
+                          color: color.withValues(alpha: 0.12),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
         ],
       ),
     );
@@ -284,7 +302,11 @@ class _WeightCard extends StatelessWidget {
     // points; all of them read a rate under "Log at least two days".
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
-    final start = DateTime(today.year, today.month, today.day - (rangeDays - 1));
+    final start = DateTime(
+      today.year,
+      today.month,
+      today.day - (rangeDays - 1),
+    );
     bool inRange(DateTime d) => !d.isBefore(start) && !d.isAfter(today);
     final readings = [
       for (final e in [...entries]..sort((a, b) => a.date.compareTo(b.date)))
@@ -294,9 +316,10 @@ class _WeightCard extends StatelessWidget {
     // days" is: carried on to today, over the range's days back from it;
     // a fit of the raw readings read -0.0 where the planner said -0.18.
     final from = DateTime(today.year, today.month, today.day - rangeDays);
-    final trend = trendPoints(entries, until: today)
-        .where((p) => !p.date.isBefore(from) && !p.date.isAfter(today))
-        .toList();
+    final trend = trendPoints(
+      entries,
+      until: today,
+    ).where((p) => !p.date.isBefore(from) && !p.date.isAfter(today)).toList();
     final projection = readings.length < 2
         ? null
         : weightProjection(
@@ -316,11 +339,13 @@ class _WeightCard extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: AutoSizeText(S.of(context).weightHistoryWeightLabel,
-                    style: text.titleMedium,
-                    maxLines: 1,
-                    minFontSize: 12,
-                    overflow: TextOverflow.ellipsis),
+                child: AutoSizeText(
+                  S.of(context).weightHistoryWeightLabel,
+                  style: text.titleMedium,
+                  maxLines: 1,
+                  minFontSize: 12,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
               Semantics(
                 identifier: 'trends-log-weight',
@@ -375,7 +400,8 @@ class _WeightCard extends StatelessWidget {
     };
     var label = 'Trend: ${signedRate(rate)} $unit a week';
     if (projection.weeksToTarget != null) {
-      label += ' · ~${projection.weeksToTarget} '
+      label +=
+          ' · ~${projection.weeksToTarget} '
           '${S.of(context).trendsWeeksToGoalLabel}';
     }
     return label;

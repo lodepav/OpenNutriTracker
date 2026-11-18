@@ -160,6 +160,7 @@ class _FastingScreenState extends State<FastingScreen> {
       context: context,
       builder: (ctx) {
         return AlertDialog(
+          scrollable: true,
           shape: Dimens.shapeL,
           title: Text(S.of(ctx).fastingPresetCustom),
           content: TextField(
@@ -244,6 +245,7 @@ class _FastingScreenState extends State<FastingScreen> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
+        scrollable: true,
         shape: Dimens.shapeL,
         title: Text(l10n.fastingCancelConfirmTitle),
         content: Text(l10n.fastingCancelConfirmBody),

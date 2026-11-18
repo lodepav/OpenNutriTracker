@@ -13,6 +13,7 @@ import 'package:opennutritracker/core/utils/calc/met_calc.dart';
 import 'package:opennutritracker/core/utils/id_generator.dart';
 import 'package:opennutritracker/features/activity_detail/presentation/widget/activity_info_button.dart';
 import 'package:opennutritracker/fork/adaptive/activity_credit.dart';
+import 'package:opennutritracker/fork/display/contrast.dart';
 import 'package:opennutritracker/fork/widget/toolbar_height.dart';
 import 'package:opennutritracker/fork/units/energy_text.dart';
 import 'package:opennutritracker/fork/display/sheet_inset.dart';
@@ -705,7 +706,7 @@ class _DurationSheetState extends State<DurationSheet> {
                   textAlign: TextAlign.center,
                   style: text.headlineSmall?.copyWith(
                     fontWeight: FontWeight.w700,
-                    color: Theme.of(context).colorScheme.primary,
+                    color: textAccent(context),
                   ),
                 ),
                 Text(

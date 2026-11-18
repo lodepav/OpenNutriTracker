@@ -4,6 +4,7 @@ import 'package:opennutritracker/core/domain/entity/tracked_day_entity.dart';
 import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
+import 'package:opennutritracker/fork/display/week_bars.dart';
 import 'package:opennutritracker/fork/display/display_prefs.dart';
 import 'package:opennutritracker/fork/trends/trends_widgets.dart'
     show keepUnits;
@@ -37,7 +38,11 @@ class DayTotalsCard extends StatelessWidget {
         goal: energyValue(context, trackedDay.calorieGoal),
         name: 'Energy',
         unit: energyUnit(context),
-        color: palette.accent,
+        // the picked accent as Home's and the food page's energy bars draw it
+        color: weekBarColors(
+          Theme.of(context).colorScheme.primary,
+          palette.surfaceMuted,
+        ).today,
       ),
       ...inMacroOrder(
         carbs: _Total(

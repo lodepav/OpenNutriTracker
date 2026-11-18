@@ -208,6 +208,7 @@ Future<void> openLaunchAction(BuildContext context, LaunchAction action) async {
       showModalBottomSheet<void>(
         context: context,
         isScrollControlled: true,
+        useSafeArea: true,
         showDragHandle: true,
         // only the sheet closes, back on the screen it opened over, not a
         // fresh Home

@@ -22,6 +22,7 @@ import 'package:opennutritracker/fork/adaptive/check_in.dart';
 import 'package:opennutritracker/fork/adaptive/choice.dart';
 import 'package:opennutritracker/fork/adaptive/expenditure.dart';
 import 'package:opennutritracker/fork/adaptive/expenditure_settings_ui.dart';
+import 'package:opennutritracker/fork/display/contrast.dart';
 import 'package:opennutritracker/fork/units/energy_text.dart';
 import 'package:opennutritracker/fork/units/weight_text.dart';
 import 'package:opennutritracker/fork/goal/phase_colors.dart';
@@ -552,7 +553,7 @@ class _CheckInScreenState extends State<CheckInScreen> {
               _row(
                 daily ? 'Proposed target before activity' : 'Proposed target',
                 _kcal(checkIn.proposedTargetKcal),
-                color: theme.colorScheme.primary,
+                color: textAccent(context),
                 large: true,
               ),
               if (current != null)

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/fork/layout/layout_store.dart';
+import 'package:opennutritracker/fork/undo/undo_delete.dart';
 
 /// One list the editor arranges: its heading, its store, and its items'
 /// names by id in their first order.
@@ -93,6 +94,7 @@ class _ArrangeScreenState extends State<ArrangeScreen> {
       ..hideCurrentSnackBar()
       ..showSnackBar(
         SnackBar(
+          persist: undoBarPersists(context),
           content: const Text('Layout reset'),
           action: SnackBarAction(
             label: 'Undo',

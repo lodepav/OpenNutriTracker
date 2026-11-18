@@ -16,6 +16,7 @@ import 'package:opennutritracker/fork/adaptive/expenditure_settings_ui.dart';
 import 'package:opennutritracker/fork/adaptive/macro_program.dart';
 import 'package:opennutritracker/fork/adaptive/macro_program_ui.dart';
 import 'package:opennutritracker/fork/adaptive/onboarding_macros.dart';
+import 'package:opennutritracker/fork/display/contrast.dart';
 import 'package:opennutritracker/fork/display/display_prefs.dart';
 import 'package:opennutritracker/fork/goal/goal_actions.dart';
 import 'package:opennutritracker/fork/goal/goal_plan_view.dart' show goalTitle;
@@ -493,6 +494,7 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
     final keep = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
+        scrollable: true,
         title: Text(
           widget.queuedAt != null || widget.editing != null
               ? 'Leave without saving?'
@@ -618,8 +620,12 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
                               child: Container(
                                 height: 4,
                                 decoration: BoxDecoration(
+                                  // on the app bar's canvas
                                   color: i <= _step
-                                      ? theme.colorScheme.primary
+                                      ? chartSafe(
+                                          theme.colorScheme.primary,
+                                          theme.scaffoldBackgroundColor,
+                                        )
                                       : theme.colorScheme.outlineVariant,
                                   borderRadius: BorderRadius.circular(2),
                                 ),
@@ -1370,7 +1376,7 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
                 ? '${energyText(context, settings.fixedTargetKcal)} a day'
                 : 'about ${energyText(context, _kcalAt(pace))} a day',
             style: theme.textTheme.headlineMedium?.copyWith(
-              color: theme.colorScheme.primary,
+              color: textAccent(context),
             ),
           ),
           if (settings.fixedTarget)
@@ -1682,6 +1688,12 @@ class _OptionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final tint = scheme.primaryContainer.withValues(alpha: 0.35);
+    // the selected border and radio at 3:1 on the tile's tint and the page
+    final mark = chartSafe(
+      chartSafe(scheme.primary, Color.alphaBlend(tint, scheme.surface)),
+      Theme.of(context).scaffoldBackgroundColor,
+    );
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
       child: Semantics(
@@ -1689,13 +1701,11 @@ class _OptionCard extends StatelessWidget {
         inMutuallyExclusiveGroup: true,
         checked: selected,
         child: Material(
-          color: selected
-              ? scheme.primaryContainer.withValues(alpha: 0.35)
-              : scheme.surface,
+          color: selected ? tint : scheme.surface,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
             side: BorderSide(
-              color: selected ? scheme.primary : scheme.outlineVariant,
+              color: selected ? mark : scheme.outlineVariant,
               width: selected ? 2 : 1,
             ),
           ),
@@ -1727,7 +1737,7 @@ class _OptionCard extends StatelessWidget {
                 selected
                     ? Icons.radio_button_checked_rounded
                     : Icons.radio_button_unchecked_rounded,
-                color: selected ? scheme.primary : scheme.onSurfaceVariant,
+                color: selected ? mark : scheme.onSurfaceVariant,
               ),
             ),
           ),

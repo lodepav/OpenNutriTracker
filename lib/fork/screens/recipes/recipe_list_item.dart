@@ -13,6 +13,7 @@ import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/core/utils/user_image_storage.dart';
+import 'package:opennutritracker/fork/display/contrast.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 import 'package:opennutritracker/fork/off/off_kinds.dart';
 import 'package:opennutritracker/fork/recipe/recipe_list.dart';
@@ -152,7 +153,14 @@ class RecipeListItem extends StatelessWidget {
                     padding: const EdgeInsets.only(left: Dimens.spacing8),
                     child: Icon(
                       Icons.check_circle_rounded,
-                      color: accent,
+                      // on the selected card's tint
+                      color: chartSafe(
+                        accent,
+                        Color.alphaBlend(
+                          accent.withValues(alpha: 0.12),
+                          palette.surface,
+                        ),
+                      ),
                       size: 24,
                     ),
                   )
@@ -160,7 +168,10 @@ class RecipeListItem extends StatelessWidget {
                   IconButton(
                     key: ValueKey('recipe-log-${recipe.id}'),
                     tooltip: logServingTooltip(context, recipe, logMeal),
-                    icon: Icon(Icons.add_circle_outline_rounded, color: accent),
+                    icon: Icon(
+                      Icons.add_circle_outline_rounded,
+                      color: chartAccent(context),
+                    ),
                     onPressed: onLog,
                   )
                 else

@@ -18,6 +18,7 @@ import 'package:opennutritracker/features/add_meal/presentation/bloc/search_debo
 import 'package:opennutritracker/features/add_meal/presentation/widgets/default_results_widget.dart';
 import 'package:opennutritracker/features/add_meal/presentation/widgets/meal_search_bar.dart';
 import 'package:opennutritracker/features/add_meal/presentation/widgets/no_results_widget.dart';
+import 'package:opennutritracker/fork/display/contrast.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 import 'package:opennutritracker/fork/off/off_kinds.dart';
 
@@ -365,7 +366,11 @@ class _PickableMealCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: Dimens.spacing8),
-                Icon(Icons.add_circle_outline_rounded, color: accent, size: 24),
+                Icon(
+                  Icons.add_circle_outline_rounded,
+                  color: chartAccent(context),
+                  size: 24,
+                ),
               ],
             ),
           ),

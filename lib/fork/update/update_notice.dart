@@ -162,6 +162,7 @@ Future<void> installUpdate(
       builder: (_) => PopScope(
         canPop: false,
         child: AlertDialog(
+          scrollable: true,
           title: const Text('Downloading update…'),
           content: Column(
             mainAxisSize: MainAxisSize.min,

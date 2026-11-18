@@ -4,7 +4,9 @@ import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/fork/body/measurement_store.dart';
+import 'package:opennutritracker/fork/display/contrast.dart';
 import 'package:opennutritracker/fork/report/chart_touch.dart';
+import 'package:opennutritracker/fork/undo/undo_delete.dart';
 
 const _cmPerInch = 2.54;
 
@@ -88,7 +90,7 @@ class _BodyMeasurementsCardState extends State<BodyMeasurementsCard> {
       ..hideCurrentSnackBar()
       ..showSnackBar(
         SnackBar(
-          persist: false,
+          persist: undoBarPersists(context),
           content: Text(
             only == null
                 ? 'Replaced ${saved.replaced.length} measurements '
@@ -115,8 +117,7 @@ class _BodyMeasurementsCardState extends State<BodyMeasurementsCard> {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        // goes on its own, as the other undo bars do
-        persist: false,
+        persist: undoBarPersists(context),
         content: const Text('Measurement deleted'),
         action: SnackBarAction(
           label: 'Undo',
@@ -256,7 +257,7 @@ class _BodyMeasurementsCardState extends State<BodyMeasurementsCard> {
     List<Measurement> points,
     DateTime from,
   ) {
-    final accent = Theme.of(context).colorScheme.primary;
+    final accent = chartAccent(context);
     final spots = [
       for (final m in points)
         FlSpot(m.date.difference(from).inHours / 24, _shown(metric, m.value)),

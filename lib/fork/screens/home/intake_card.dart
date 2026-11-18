@@ -13,6 +13,7 @@ import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/core/utils/energy_display.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/features/diary/presentation/widgets/diary_sort_type.dart';
+import 'package:opennutritracker/fork/display/contrast.dart';
 import 'package:opennutritracker/fork/units/amount_text.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 import 'package:opennutritracker/features/add_meal/util/food_emoji_resolver.dart';
@@ -176,8 +177,14 @@ class IntakeCard extends StatelessWidget {
                           picked
                               ? Icons.check_circle_rounded
                               : Icons.radio_button_unchecked_rounded,
+                          // on the picked card's secondaryContainer fill
                           color: picked
-                              ? Theme.of(context).colorScheme.primary
+                              ? chartSafe(
+                                  Theme.of(context).colorScheme.primary,
+                                  Theme.of(
+                                    context,
+                                  ).colorScheme.secondaryContainer,
+                                )
                               : palette.textMuted,
                         ),
                       )
