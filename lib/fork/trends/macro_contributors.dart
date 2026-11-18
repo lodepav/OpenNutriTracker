@@ -108,7 +108,7 @@ class _MacroDaysAndFoodsState extends State<MacroDaysAndFoods> {
         ),
         Expanded(
           child: Text(
-            '${intl.DateFormat.MMMEd().format(widget.dates[_day!])} · '
+            '${intl.DateFormat.MMMEd(Localizations.localeOf(context).toLanguageTag()).format(widget.dates[_day!])} · '
             '${grams == null ? 'nothing logged' : '${grams.round()} g'}',
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.bodyMedium,

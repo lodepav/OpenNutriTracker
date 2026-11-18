@@ -14,4 +14,11 @@ void main() {
   test('a pace small enough to be maintaining is kept for maintaining', () {
     expect(rateForDirection(-0.05, UserWeightGoalEntity.maintainWeight), -0.05);
   });
+
+  test('a rate too small to mean the new direction is dropped, so the '
+      "formula's own step for it applies", () {
+    expect(rateForDirection(0, UserWeightGoalEntity.loseWeight), isNull);
+    expect(rateForDirection(0.05, UserWeightGoalEntity.gainWeight), isNull);
+    expect(rateForDirection(-0.05, UserWeightGoalEntity.gainWeight), isNull);
+  });
 }

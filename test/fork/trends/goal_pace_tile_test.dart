@@ -64,6 +64,31 @@ void main() {
     expect((tile.value, tile.note), ('Losing', '0.4 kg a week'));
   });
 
+  testWidgets('a maintaining pace reads "Maintain", as a plan does', (
+    tester,
+  ) async {
+    TrendsOverview.loadPace = () async =>
+        (goal: UserWeightGoalEntity.maintainWeight, kgPerWeek: 0.0);
+    await pumpTrends(
+      tester,
+      loaded(weight: [WeightLogEntity(date: day(0), weightKg: 80)]),
+    );
+    await openTile(tester, 'weight');
+    await tester.scrollUntilVisible(
+      find.text('To your goal'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    final tile = tester.widget<FigureTile>(
+      find.ancestor(
+        of: find.text('To your goal'),
+        matching: find.byType(FigureTile),
+      ),
+    );
+    expect(tile.value, 'Maintain');
+    expect(tile.note, isNot(contains('your weight')));
+  });
+
   testWidgets('at 1x on a 360 dp phone the pace shows whole', (tester) async {
     await pumpOnPhone(
       tester,

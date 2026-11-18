@@ -53,10 +53,14 @@ String _sinceText(BuildContext context, DateTime since) =>
     return (value: 'Maintain', note: _sinceText(context, since));
   }
   if (pace == null) return (value: noGoalText, note: null);
+  // the word the plan and "since" tiles use for maintaining
+  if (pace == _keeping) return (value: 'Maintain', note: null);
   // Whole, "Losing 0.4 kg a week" is cut off in a 360 dp Trends tile.
   final verb = pace.indexOf(' ');
   return (value: pace.substring(0, verb), note: pace.substring(verb + 1));
 }
+
+const _keeping = 'Keeping your weight';
 
 /// "Maintaining since Oct 29".
 String maintainingSinceText(BuildContext context, DateTime since) =>
@@ -73,11 +77,11 @@ String plannedRateText(
   if (kgPerWeek == null) {
     return switch (goal) {
       UserWeightGoalEntity.loseWeight => 'Losing weight',
-      UserWeightGoalEntity.maintainWeight => 'Keeping your weight',
+      UserWeightGoalEntity.maintainWeight => _keeping,
       UserWeightGoalEntity.gainWeight => 'Gaining weight',
     };
   }
-  if (weeklyRateShown(kgPerWeek, unit) == 0) return 'Keeping your weight';
+  if (weeklyRateShown(kgPerWeek, unit) == 0) return _keeping;
   return '${kgPerWeek < 0 ? 'Losing' : 'Gaining'} '
       '${unsignedRateText(kgPerWeek, unit)}';
 }
