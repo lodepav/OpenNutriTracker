@@ -152,15 +152,17 @@ class _FitsLeftSwitchState extends State<FitsLeftSwitch> {
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      chosenChips(
-        context,
-        child: Semantics(
-          identifier: 'add-meal-fits-left',
-          child: FilterChip(
-            key: const ValueKey('add-meal-fits-left'),
-            label: const Text("Fits what's left"),
-            selected: _on,
-            onSelected: (on) => setState(() => _on = on),
+      WidthCap(
+        child: chosenChips(
+          context,
+          child: Semantics(
+            identifier: 'add-meal-fits-left',
+            child: FilterChip(
+              key: const ValueKey('add-meal-fits-left'),
+              label: const Text("Fits what's left"),
+              selected: _on,
+              onSelected: (on) => setState(() => _on = on),
+            ),
           ),
         ),
       ),

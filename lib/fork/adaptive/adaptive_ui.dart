@@ -202,28 +202,30 @@ class _AdaptiveCheckInCardState extends State<AdaptiveCheckInCard> {
   Widget build(BuildContext context) {
     final accepted = AutoCheckIn.accepted.value?.checkIn;
     if (accepted != null) {
-      return Card(
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        child: ListTile(
-          leading: const Icon(Icons.insights_rounded),
-          title: Text(switch (AutoCheckIn.accepted.value!.reason) {
-            _Due.first => 'Your first target is set',
-            _Due.goal => 'Target set for your new goal',
-            _Due.settings => 'Target set for your new settings',
-            _Due.weekly => 'Weekly check-in done',
-          }),
-          subtitle: Text(
-            'New target: ${energyText(context, accepted.proposedTargetKcal)}'
-            '${AdaptiveStore.settings.value.activityMode == ActivityMode.daily ? ' before activity' : ''}.',
-          ),
-          trailing: IconButton(
-            tooltip: 'Dismiss',
-            icon: const Icon(Icons.close_rounded),
-            onPressed: () => AutoCheckIn.accepted.value = null,
-          ),
-          onTap: () => Navigator.of(context).push(
-            MaterialPageRoute<void>(
-              builder: (_) => CheckInHistoryScreen(store: AdaptiveStore()),
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: AppCard(
+          child: ListTile(
+            leading: const Icon(Icons.insights_rounded),
+            title: Text(switch (AutoCheckIn.accepted.value!.reason) {
+              _Due.first => 'Your first target is set',
+              _Due.goal => 'Target set for your new goal',
+              _Due.settings => 'Target set for your new settings',
+              _Due.weekly => 'Weekly check-in done',
+            }),
+            subtitle: Text(
+              'New target: ${energyText(context, accepted.proposedTargetKcal)}'
+              '${AdaptiveStore.settings.value.activityMode == ActivityMode.daily ? ' before activity' : ''}.',
+            ),
+            trailing: IconButton(
+              tooltip: 'Dismiss',
+              icon: const Icon(Icons.close_rounded),
+              onPressed: () => AutoCheckIn.accepted.value = null,
+            ),
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => CheckInHistoryScreen(store: AdaptiveStore()),
+              ),
             ),
           ),
         ),
@@ -234,41 +236,43 @@ class _AdaptiveCheckInCardState extends State<AdaptiveCheckInCard> {
       builder: (context, snapshot) {
         final due = snapshot.data;
         if (due == null) return const SizedBox.shrink();
-        return Card(
-          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: ListTile(
-            leading: const Icon(Icons.insights_rounded),
-            title: Text(switch (due) {
-              _Due.first => 'Your first target',
-              _Due.goal => 'Your goal changed',
-              _Due.settings => 'Your target settings changed',
-              _Due.weekly => 'Weekly check-in',
-            }),
-            subtitle: Text(switch (due) {
-              _Due.first =>
-                'It is ready to check. From then on it follows your '
-                    'weigh-ins and what you log.',
-              _Due.goal => 'A target for it is ready to check.',
-              _Due.settings =>
-                _changed.isEmpty
-                    ? 'A target built under them is ready to check.'
-                    : 'You changed ${_changed.join(', ')}. A target built '
-                          'under the new settings is ready to check.',
-              _Due.weekly => 'Your expenditure and next target are ready.',
-            }),
-            trailing: const Icon(Icons.chevron_right_rounded),
-            onTap: () async {
-              final accepted = await Navigator.of(context).push<bool>(
-                MaterialPageRoute(
-                  builder: (_) => CheckInScreen(service: _service),
-                ),
-              );
-              if (accepted == true) {
-                _recheck();
-                await _refreshGoals();
-                widget.onAccepted();
-              }
-            },
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: AppCard(
+            child: ListTile(
+              leading: const Icon(Icons.insights_rounded),
+              title: Text(switch (due) {
+                _Due.first => 'Your first target',
+                _Due.goal => 'Your goal changed',
+                _Due.settings => 'Your target settings changed',
+                _Due.weekly => 'Weekly check-in',
+              }),
+              subtitle: Text(switch (due) {
+                _Due.first =>
+                  'It is ready to check. From then on it follows your '
+                      'weigh-ins and what you log.',
+                _Due.goal => 'A target for it is ready to check.',
+                _Due.settings =>
+                  _changed.isEmpty
+                      ? 'A target built under them is ready to check.'
+                      : 'You changed ${_changed.join(', ')}. A target built '
+                            'under the new settings is ready to check.',
+                _Due.weekly => 'Your expenditure and next target are ready.',
+              }),
+              trailing: const Icon(Icons.chevron_right_rounded),
+              onTap: () async {
+                final accepted = await Navigator.of(context).push<bool>(
+                  MaterialPageRoute(
+                    builder: (_) => CheckInScreen(service: _service),
+                  ),
+                );
+                if (accepted == true) {
+                  _recheck();
+                  await _refreshGoals();
+                  widget.onAccepted();
+                }
+              },
+            ),
           ),
         );
       },

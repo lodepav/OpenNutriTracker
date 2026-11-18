@@ -1,10 +1,10 @@
 // The Settings audit's findings, each pinned where it was seen.
 import 'dart:async';
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -149,6 +149,20 @@ Widget _app({
   home: SettingsScreen(section: section),
 );
 
+/// The app's heading font, which the 21 px overflow was measured in.
+Future<void> _loadFonts(WidgetTester tester) => tester.runAsync(() async {
+  final loader = FontLoader('Poppins');
+  for (final weight in ['Regular', 'Medium', 'SemiBold', 'Bold']) {
+    final bytes = await File('fonts/Poppins-$weight.ttf').readAsBytes();
+    loader.addFont(Future.value(ByteData.sublistView(bytes)));
+  }
+  await loader.load();
+  final headings = FontLoader('Nunito');
+  final bytes = await File('fonts/Nunito.ttf').readAsBytes();
+  headings.addFont(Future.value(ByteData.sublistView(bytes)));
+  await headings.load();
+});
+
 Future<void> _phone(WidgetTester tester, Size size) async {
   await tester.binding.setSurfaceSize(size);
   addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -233,7 +247,7 @@ void main() {
       disabled,
     );
     expect(
-      colourOf(find.descendant(of: row, matching: find.textContaining('0 B'))),
+      colourOf(find.descendant(of: row, matching: find.text('Nothing cached'))),
       disabled,
     );
     expect(
@@ -492,6 +506,120 @@ void main() {
       tester.getSize(find.textContaining('When you leave the app')).width,
       lessThanOrEqualTo(WidthCap.maxWidth),
     );
+  });
+
+  testWidgets('the search results keep a phone width on a tablet', (
+    tester,
+  ) async {
+    _register();
+    await _phone(tester, const Size(1280, 800));
+    await tester.pumpWidget(_app());
+    await tester.pumpAndSettle();
+    await tester.tap(find.bySemanticsIdentifier('settings-search'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'fasting');
+    await tester.pumpAndSettle();
+    final result = find.widgetWithText(ListTile, 'Show fasting');
+    expect(result, findsOneWidget);
+    expect(tester.getSize(result).width, lessThanOrEqualTo(WidthCap.maxWidth));
+    expect(tester.getCenter(result).dx, 640);
+  });
+
+  for (final (section, row, last) in [
+    (SettingsSection.units, l10nEn.settingsBodyWeightUnitLabel, l10nEn.stLabel),
+    (
+      SettingsSection.appearance,
+      l10nEn.settingsThemeLabel,
+      l10nEn.settingsThemeDarkLabel,
+    ),
+  ]) {
+    testWidgets('the $row dialog fits at 2x on a 640x360 phone', (
+      tester,
+    ) async {
+      _register();
+      await _loadFonts(tester);
+      await _phone(tester, const Size(640, 360));
+      await tester.pumpWidget(
+        _app(
+          section: section,
+          textScale: 2,
+          theme: buildAppTheme(AppPalette.light),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(row).first);
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      expect(find.byType(AlertDialog), findsOneWidget);
+      // The last option can be scrolled to.
+      await tester.scrollUntilVisible(
+        find.text(last),
+        100,
+        scrollable: find
+            .descendant(
+              of: find.byType(AlertDialog),
+              matching: find.byType(Scrollable),
+            )
+            .first,
+      );
+      expect(find.text(last).hitTestable(), findsOne);
+    });
+  }
+
+  testWidgets('"Reading files…" stays up, Back blocked, until the preview '
+      'is ready', (tester) async {
+    final dir = await tester.runAsync(
+      () => Directory.systemTemp.createTemp('history-plan'),
+    );
+    final file = File('${dir!.path}/weights.csv');
+    await tester.runAsync(
+      () => file.writeAsString(
+        'Date,Time,Food Name,Calories (kcal),Weight (kg)\n'
+        '2026-10-20,08:00,Egg,80,80\n',
+      ),
+    );
+    await tester.pumpWidget(
+      const MaterialApp(home: Scaffold(body: Text('import'))),
+    );
+    final context = tester.element(find.text('import'));
+    // made on the real clock, so they complete outside the fake one
+    late final Completer<void> started, planning;
+    var planned = false;
+    Future<({List<SheetTable> tables, HistoryFile first})?>? reading;
+    await tester.runAsync(() async {
+      started = Completer<void>();
+      planning = Completer<void>();
+      reading = HistoryImportTile.readFiles(
+        context,
+        [(name: 'weights.csv', path: file.path)],
+        BodyWeightUnit.kg,
+        prepare: (tables, first) async {
+          started.complete();
+          await planning.future;
+          planImport(
+            first,
+            existing: const HistoryExisting(),
+            today: DateTime(2026, 11, 1),
+            source: 'weights',
+          );
+          planned = true;
+        },
+      );
+      // the isolate's read is done; the plan waits on [planning]
+      await started.future;
+    });
+    await tester.pump();
+    expect(find.text('Reading files…'), findsOneWidget);
+    await tester.binding.handlePopRoute();
+    await tester.pump();
+    expect(find.text('Reading files…'), findsOneWidget, reason: 'Back');
+
+    planning.complete();
+    final read = await tester.runAsync(() => reading!);
+    await tester.pumpAndSettle();
+    expect(planned, isTrue);
+    expect(read, isNotNull);
+    expect(find.text('Reading files…'), findsNothing);
   });
 
   testWidgets('history files are read with "Reading files…" on screen', (

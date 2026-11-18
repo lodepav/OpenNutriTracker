@@ -90,6 +90,22 @@ class _WeekBarsState extends State<WeekBars> {
   );
 }
 
+/// Today's bar and the past days' in [accent] on [surface]: past days a
+/// paler tint, today further from the card, both at 3:1 on it (WCAG 1.4.11)
+/// and 1.5:1 apart, so a pale accent pinned at the floor still tells them
+/// apart by more than hue.
+({Color today, Color past}) weekBarColors(Color accent, Color surface) {
+  final mark = chartSafe(accent, surface);
+  final past = chartSafe(
+    Color.alphaBlend(mark.withValues(alpha: 0.45), surface),
+    surface,
+  );
+  final today = contrastRatio(mark, past) >= 1.5
+      ? mark
+      : shiftUntil(mark, past, 1.5, darken: surface.computeLuminance() > 0.18);
+  return (today: today, past: past);
+}
+
 class _Bars extends StatelessWidget {
   final List<_Day> week;
 
@@ -100,10 +116,8 @@ class _Bars extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = paletteOf(context);
-    // Past days lighter than today, both at 3:1 on the card (WCAG 1.4.11).
-    final today = chartAccent(context);
-    final past = chartSafe(
-      Color.alphaBlend(today.withValues(alpha: 0.45), palette.surface),
+    final (:today, :past) = weekBarColors(
+      Theme.of(context).colorScheme.primary,
       palette.surface,
     );
     final label = Theme.of(

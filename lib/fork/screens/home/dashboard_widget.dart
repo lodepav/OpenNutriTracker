@@ -17,6 +17,7 @@ import 'package:opennutritracker/features/home/presentation/screens/nutrient_con
 import 'package:opennutritracker/features/settings/presentation/widgets/kcal_goal_info_screen.dart';
 import 'package:percent_indicator/circular_percent_indicator.dart';
 import 'package:opennutritracker/generated/l10n.dart';
+import 'package:opennutritracker/fork/display/contrast.dart';
 import 'package:opennutritracker/fork/display/display_prefs.dart';
 import 'package:opennutritracker/fork/display/motion.dart';
 import 'package:opennutritracker/fork/screens/home/home_loads.dart';
@@ -203,7 +204,7 @@ class _DashboardWidgetState extends State<DashboardWidget> {
     final textTheme = Theme.of(context).textTheme;
     final progressColor = widget.totalKcalLeft < 0
         ? Theme.of(context).colorScheme.error
-        : Theme.of(context).colorScheme.primary;
+        : chartAccent(context);
 
     // MacroFactor's dashboard. A small ring beside
     // what was eaten, burned and the goal, the ring counting what is left

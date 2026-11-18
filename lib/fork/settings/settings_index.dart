@@ -252,12 +252,14 @@ class _SettingsSearchPageState extends State<SettingsSearchPage> {
           : ListView(
               children: [
                 for (final e in found)
-                  ListTile(
-                    leading: Icon(e.section.icon),
-                    title: Text(e.label),
-                    subtitle: Text(e.section.title),
-                    trailing: const Icon(Icons.chevron_right_rounded),
-                    onTap: () => widget.onOpen(e),
+                  WidthCap(
+                    child: ListTile(
+                      leading: Icon(e.section.icon),
+                      title: Text(e.label),
+                      subtitle: Text(e.section.title),
+                      trailing: const Icon(Icons.chevron_right_rounded),
+                      onTap: () => widget.onOpen(e),
+                    ),
                   ),
               ],
             ),

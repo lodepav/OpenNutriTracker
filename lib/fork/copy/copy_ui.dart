@@ -189,6 +189,7 @@ Future<void> copyActivitiesWithDialog(
   final where = await showModalBottomSheet<WhereTo>(
     context: context,
     isScrollControlled: true,
+    useSafeArea: true,
     showDragHandle: true,
     builder: (_) => WhereToSheet(
       today: today,

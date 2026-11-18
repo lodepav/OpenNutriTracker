@@ -1,5 +1,7 @@
 // Fork-owned copy of lib/features/add_meal/presentation/add_meal_screen.dart (D23); upstream's later changes to it
 // are ported by hand: fork/tools/upstream-copies.sh.
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:opennutritracker/core/domain/entity/intake_type_entity.dart';
 import 'package:opennutritracker/core/presentation/widgets/empty_hint.dart';
@@ -171,15 +173,26 @@ class _AddMealScreenState extends State<AddMealScreen> {
 
   Widget _screen(BuildContext context) {
     final palette = paletteOf(context);
+    // The bar rides on the keyboard as the results clear it: moved, not
+    // laid out higher, so the body keeps its full height (#165). The
+    // Scaffold still pads it over the gesture bar the keyboard covers.
+    final keyboard = Offset(
+      0,
+      -math.max(
+        0.0,
+        MediaQuery.viewInsetsOf(context).bottom -
+            MediaQuery.viewPaddingOf(context).bottom,
+      ),
+    );
     return Scaffold(
       // Let the keyboard overlay the results rather than compress the body.
       // In landscape the space above the keyboard is shorter than the pinned
       // search bar + tab bar, which otherwise overflows (issue #165 testing).
       resizeToAvoidBottomInset: false,
       // the foods picked so far, and "Log all"
-      bottomNavigationBar: BasketBar(
-        type: _mealType.getIntakeType(),
-        day: _day,
+      bottomNavigationBar: Transform.translate(
+        offset: keyboard,
+        child: BasketBar(type: _mealType.getIntakeType(), day: _day),
       ),
       // While planning (the meal plan's search) nothing here may log.
       floatingActionButton: _planning ? null : _aiAddFab(),
@@ -237,18 +250,21 @@ class _AddMealScreenState extends State<AddMealScreen> {
           child: Column(
             children: [
               const SizedBox(height: Dimens.spacing8),
-              MealSearchBar(
-                searchStringListener: _searchStringListener,
-                onSearchSubmit: _onSearchSubmit,
-                onSearchChanged: _onSearchChanged,
-                onBarcodePressed: _onBarcodeIconPressed,
-                // opened to search, so the keyboard is up
-                autofocus: true,
-                // the search button beside the field is the one magnifier
-                showSearchIcon: false,
+              // in the rows' column on a wide window
+              WidthCap(
+                child: MealSearchBar(
+                  searchStringListener: _searchStringListener,
+                  onSearchSubmit: _onSearchSubmit,
+                  onSearchChanged: _onSearchChanged,
+                  onBarcodePressed: _onBarcodeIconPressed,
+                  // opened to search, so the keyboard is up
+                  autofocus: true,
+                  // the search button beside the field is the one magnifier
+                  showSearchIcon: false,
+                ),
               ),
               const SizedBox(height: Dimens.spacing12),
-              _buildSourceChips(context, palette),
+              WidthCap(child: _buildSourceChips(context, palette)),
               const SizedBox(height: Dimens.spacing12),
               // Rebuild on every keystroke so the empty-state logic can tell
               // "no results for this query" apart from "a newer query is
@@ -526,16 +542,18 @@ class _AddMealScreenState extends State<AddMealScreen> {
     );
   }
 
-  Widget _resultsHeader(BuildContext context, AppPalette palette) => Container(
-    padding: const EdgeInsets.symmetric(vertical: Dimens.spacing4),
-    alignment: Alignment.centerLeft,
-    child: Semantics(
-      header: true,
-      child: Text(
-        S.of(context).searchResultsLabel,
-        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-          fontWeight: FontWeight.w700,
-          color: palette.textMuted,
+  Widget _resultsHeader(BuildContext context, AppPalette palette) => WidthCap(
+    child: Container(
+      padding: const EdgeInsets.symmetric(vertical: Dimens.spacing4),
+      alignment: Alignment.centerLeft,
+      child: Semantics(
+        header: true,
+        child: Text(
+          S.of(context).searchResultsLabel,
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w700,
+            color: palette.textMuted,
+          ),
         ),
       ),
     ),
@@ -1017,8 +1035,16 @@ class _AddMealScreenState extends State<AddMealScreen> {
         : BlocBuilder<AddMealBloc, AddMealState>(
             bloc: _addMealBloc,
             builder: (context, state) => state is AddMealLoadedState
-                ? AiAddFab(
-                    onPressed: () => _onBulkAddPressed(state.usesImperialUnits),
+                // above the keyboard; padded, not moved, as the FAB's slot
+                // takes taps only inside its own size
+                ? Padding(
+                    padding: EdgeInsets.only(
+                      bottom: MediaQuery.viewInsetsOf(context).bottom,
+                    ),
+                    child: AiAddFab(
+                      onPressed: () =>
+                          _onBulkAddPressed(state.usesImperialUnits),
+                    ),
                   )
                 : const SizedBox.shrink(),
           ),

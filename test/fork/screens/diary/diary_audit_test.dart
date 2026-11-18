@@ -24,6 +24,7 @@ import 'package:opennutritracker/fork/copy/copy_ui.dart';
 import 'package:opennutritracker/fork/copy/diary_selection.dart';
 import 'package:opennutritracker/fork/display/contrast.dart';
 import 'package:opennutritracker/fork/display/day_ring.dart';
+import 'package:opennutritracker/fork/layout/width_cap.dart';
 import 'package:opennutritracker/fork/screens/diary/day_info_widget.dart';
 import 'package:provider/provider.dart';
 
@@ -336,11 +337,30 @@ void main() {
   });
 
   group('the nutrient panel', () {
-    Future<void> openPanel(WidgetTester tester, {bool dark = false}) async {
+    Future<void> openPanel(
+      WidgetTester tester, {
+      bool dark = false,
+      double fibre = 20,
+      Color? accent,
+    }) async {
       await pumpOnPhone(
         tester,
-        SingleChildScrollView(
-          child: DailyNutrientPanel(intakes: [_intake('Bran', fiber100: 20)]),
+        Builder(
+          builder: (context) {
+            final theme = Theme.of(context);
+            return Theme(
+              data: accent == null
+                  ? theme
+                  : theme.copyWith(
+                      colorScheme: theme.colorScheme.copyWith(primary: accent),
+                    ),
+              child: SingleChildScrollView(
+                child: DailyNutrientPanel(
+                  intakes: [_intake('Bran', fiber100: fibre)],
+                ),
+              ),
+            );
+          },
         ),
         textScale: 1,
         dark: dark,
@@ -370,6 +390,38 @@ void main() {
       );
     });
 
+    // The reviewer's case: a yellow accent drew fibre at 3 g plainer than
+    // fibre met, as only the tint was floored.
+    testWidgets('with a pale accent a met bar stays plainer than one under '
+        'half', (tester) async {
+      Future<(Color, Color)> fibreBar(double grams) async {
+        // a fresh panel, closed, for each
+        await tester.pumpWidget(const SizedBox());
+        await openPanel(tester, fibre: grams, accent: const Color(0xFFFDD835));
+        final bar = tester.widget<LinearProgressIndicator>(
+          find
+              .descendant(
+                of: find.ancestor(
+                  of: find.text('fiber'),
+                  matching: find.byType(Column),
+                ),
+                matching: find.byType(LinearProgressIndicator),
+              )
+              .first,
+        );
+        return (bar.valueColor!.value!, bar.backgroundColor!);
+      }
+
+      final (met, track) = await fibreBar(200);
+      final (under, _) = await fibreBar(3);
+      expect(contrastRatio(met, track), greaterThanOrEqualTo(3));
+      expect(contrastRatio(under, track), greaterThanOrEqualTo(3));
+      expect(
+        contrastRatio(met, track),
+        greaterThan(contrastRatio(under, track)),
+      );
+    });
+
     for (final dark in [false, true]) {
       testWidgets('a part-met bar stands out at 3:1 on its track'
           '${dark ? ' (dark)' : ''}', (tester) async {
@@ -394,7 +446,65 @@ void main() {
           greaterThanOrEqualTo(3),
         );
       });
+
+      testWidgets('a bar under half its target stands out at 3:1 on its '
+          'track${dark ? ' (dark)' : ''}', (tester) async {
+        // fibre at 3 g is under half of any reference
+        await openPanel(tester, dark: dark, fibre: 3);
+        final bar = tester.widget<LinearProgressIndicator>(
+          find
+              .descendant(
+                of: find.ancestor(
+                  of: find.text('fiber'),
+                  matching: find.byType(Column),
+                ),
+                matching: find.byType(LinearProgressIndicator),
+              )
+              .first,
+        );
+        final track = bar.backgroundColor!;
+        final colour = bar.valueColor!.value!;
+        final palette = dark ? AppPalette.dark : AppPalette.light;
+        expect(
+          colour,
+          isNot(chartSafe(palette.carbsColor, track)),
+          reason: 'not the part-met amber',
+        );
+        // a see-through colour is seen over the track
+        expect(
+          contrastRatio(Color.alphaBlend(colour, track), track),
+          greaterThanOrEqualTo(3),
+        );
+      });
     }
+  });
+
+  testWidgets('the selection bar keeps the 600 dp column at 1280 dp', (
+    tester,
+  ) async {
+    final selection = DiarySelection()..toggleAll([_intake('Porridge')]);
+    await pumpOnPhone(
+      tester,
+      Align(
+        alignment: Alignment.bottomCenter,
+        child: DiarySelectionBar(
+          selection: selection,
+          day: _day,
+          onDelete: (_, _) {},
+          onEdit: (_, _) {},
+        ),
+      ),
+      textScale: 1,
+    );
+    tester.view.physicalSize = const Size(1280 * 2.625, 800 * 2.625);
+    await tester.pump();
+    final left = tester.getTopLeft(find.byKey(const Key('fork-selection-end')));
+    final right = tester.getTopRight(
+      find.byKey(const Key('fork-selection-more')),
+    );
+    expect(right.dx - left.dx, lessThanOrEqualTo(WidthCap.maxWidth));
+    // the bar's fill still spans the window
+    expect(tester.getSize(find.byType(DiarySelectionBar)).width, 1280);
   });
 
   for (final (name, open) in <(String, void Function(BuildContext))>[

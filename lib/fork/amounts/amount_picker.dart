@@ -129,6 +129,12 @@ class AmountPicker extends StatelessWidget {
                     border: const OutlineInputBorder(
                       borderRadius: Dimens.borderRadiusM,
                     ),
+                    // an edge at 3:1 (WCAG 1.4.11), as Quick add's fields:
+                    // the theme's field is a fill alone, about 1.2:1
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: Dimens.borderRadiusM,
+                      borderSide: BorderSide(color: palette.textMuted),
+                    ),
                     suffixText: selected == null
                         ? null
                         : _unitWord(context, selected),

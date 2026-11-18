@@ -399,36 +399,90 @@ class StatHeader extends StatelessWidget {
           ),
       ],
     );
-    // Large text leaves a third of the width too narrow for a label or a
-    // number and its unit: a row each, the label beside its figure.
-    if (MediaQuery.textScalerOf(context).scale(1) >= 1.5) {
-      return Column(
-        children: [
-          for (final s in stats)
-            MergeSemantics(
-              child: Padding(
-                padding: const EdgeInsets.only(bottom: Dimens.spacing4),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.baseline,
-                  textBaseline: TextBaseline.alphabetic,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        s.label,
-                        style: text.labelMedium?.copyWith(
-                          color: palette.textMuted,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: Dimens.spacing8),
-                    Text.rich(value(s)),
-                  ],
-                ),
-              ),
-            ),
-        ],
+    final scaler = MediaQuery.textScalerOf(context);
+    final labelStyle = text.labelMedium?.copyWith(color: palette.textMuted);
+    // Whether every label, and every figure at its smallest (12 sp, scaled),
+    // fits a third of [width] on one line.
+    bool fits(double width) {
+      final column =
+          (width - Dimens.spacing8 * (stats.length - 1)) / stats.length;
+      // AutoSizeText shrinks to 12 over the ambient size, before the scale
+      final shrink = math.min(
+        1.0,
+        12 / (DefaultTextStyle.of(context).style.fontSize ?? 14),
+      );
+      double wide(InlineSpan span) {
+        final painter = TextPainter(
+          text: span,
+          textScaler: scaler,
+          textDirection: Directionality.of(context),
+          maxLines: 1,
+        )..layout();
+        final w = painter.width;
+        painter.dispose();
+        return w;
+      }
+
+      return stats.every(
+        (s) =>
+            wide(TextSpan(text: s.label, style: labelStyle)) <= column &&
+            wide(value(s)) * shrink <= column,
       );
     }
+
+    return LayoutBuilder(
+      builder: (context, box) {
+        // Large text, or a narrow screen, leaves a third of the width too
+        // narrow for a label or a number and its unit: a row each, the label
+        // beside its figure.
+        if (scaler.scale(1) >= 1.5 || !fits(box.maxWidth)) {
+          return _stacked(context, value);
+        }
+        return _columns(context, value);
+      },
+    );
+  }
+
+  Widget _stacked(
+    BuildContext context,
+    TextSpan Function(({String label, String value, String? unit})) value,
+  ) {
+    final palette = paletteOf(context);
+    final text = Theme.of(context).textTheme;
+    return Column(
+      children: [
+        for (final s in stats)
+          MergeSemantics(
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: Dimens.spacing4),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.baseline,
+                textBaseline: TextBaseline.alphabetic,
+                children: [
+                  Expanded(
+                    child: Text(
+                      s.label,
+                      style: text.labelMedium?.copyWith(
+                        color: palette.textMuted,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: Dimens.spacing8),
+                  Text.rich(value(s)),
+                ],
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _columns(
+    BuildContext context,
+    TextSpan Function(({String label, String value, String? unit})) value,
+  ) {
+    final palette = paletteOf(context);
+    final text = Theme.of(context).textTheme;
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       spacing: Dimens.spacing8,
@@ -574,13 +628,7 @@ class DailyBarChart extends StatelessWidget {
       null => '${dayLabel(i)}, nothing logged',
       final v => '${dayLabel(i)}, ${format?.call(v) ?? v.round()} $unit',
     };
-    // A day picked without touch: up from none is the first, down the
-    // last; at either end the day stays.
-    int target(int step) =>
-        ((selected ?? (step > 0 ? -1 : values.length)) + step).clamp(
-          0,
-          values.length - 1,
-        );
+    int target(int step) => stepDay(selected, step, values.length);
     void move(int step) {
       if (target(step) != selected) onTap!(target(step));
     }
@@ -594,6 +642,7 @@ class DailyBarChart extends StatelessWidget {
       decreasedValue: picked == null ? null : spoken(target(-1)),
       onIncrease: onTap == null ? null : () => move(1),
       onDecrease: onTap == null ? null : () => move(-1),
+      hint: onTap == null ? null : 'Swipe up or down to change the day',
       // One node: the axis' weekdays are not read after its name.
       excludeSemantics: true,
       child: SizedBox(
@@ -670,6 +719,14 @@ class DailyBarChart extends StatelessWidget {
     );
   }
 }
+
+/// The day [step] days from [selected] of [count], picked without touch:
+/// up from none is the first, down the last; at either end the day stays.
+int stepDay(int? selected, int step, int count) =>
+    ((selected ?? (step > 0 ? -1 : count)) + step).clamp(0, count - 1);
+
+/// Whether [count] days across [width] leave each too narrow to tap.
+bool narrowDaySlots(double width, int count) => width / count < 8;
 
 /// A bar's width for [count] bars across [width].
 double barWidth(double width, int count) =>

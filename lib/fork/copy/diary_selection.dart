@@ -8,6 +8,7 @@ import 'package:opennutritracker/core/utils/hive_db_provider.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/features/home/domain/entity/shared_meal_payload.dart';
 import 'package:opennutritracker/fork/copy/copy_ui.dart';
+import 'package:opennutritracker/fork/layout/width_cap.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 
 /// The Diary's entries picked to copy, move or delete together, on the
@@ -172,47 +173,51 @@ class DiarySelectionBar extends StatelessWidget {
 
       return Material(
         color: Theme.of(context).colorScheme.surfaceContainerHigh,
-        child: Padding(
-          // clear of the add button that sits over the navigation bar
-          padding: const EdgeInsets.fromLTRB(4, 4, 8, 32),
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final painter = TextPainter(
-                text: TextSpan(text: label, style: style),
-                textDirection: Directionality.of(context),
-                textScaler: MediaQuery.textScalerOf(context),
-                maxLines: 1,
-              )..layout();
-              final width = painter.width;
-              painter.dispose();
-              // the close button and the actions are 48 dp each
-              final room = constraints.maxWidth - 48.0 * (1 + actions.length);
-              // the count whole: beside the actions, or on its own line
-              // above them at large text
-              return width <= room
-                  ? Row(
-                      children: [
-                        close,
-                        Expanded(child: Text(label, style: style)),
-                        ...actions,
-                      ],
-                    )
-                  : Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Row(
-                          children: [
-                            close,
-                            Expanded(child: Text(label, style: style)),
-                          ],
-                        ),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          children: actions,
-                        ),
-                      ],
-                    );
-            },
+        // the fill spans the window; the count and actions keep the Diary's
+        // column
+        child: WidthCap(
+          child: Padding(
+            // clear of the add button that sits over the navigation bar
+            padding: const EdgeInsets.fromLTRB(4, 4, 8, 32),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final painter = TextPainter(
+                  text: TextSpan(text: label, style: style),
+                  textDirection: Directionality.of(context),
+                  textScaler: MediaQuery.textScalerOf(context),
+                  maxLines: 1,
+                )..layout();
+                final width = painter.width;
+                painter.dispose();
+                // the close button and the actions are 48 dp each
+                final room = constraints.maxWidth - 48.0 * (1 + actions.length);
+                // the count whole: beside the actions, or on its own line
+                // above them at large text
+                return width <= room
+                    ? Row(
+                        children: [
+                          close,
+                          Expanded(child: Text(label, style: style)),
+                          ...actions,
+                        ],
+                      )
+                    : Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Row(
+                            children: [
+                              close,
+                              Expanded(child: Text(label, style: style)),
+                            ],
+                          ),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: actions,
+                          ),
+                        ],
+                      );
+              },
+            ),
           ),
         ),
       );

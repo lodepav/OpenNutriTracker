@@ -15,8 +15,10 @@ final dates = [for (var d = 20; d <= 26; d++) DateTime(2026, 10, d)];
 
 Future<List<(DateTime, DateTime)>> pump(
   WidgetTester tester,
-  List<IntakeEntity> Function(DateTime first, DateTime last) intakes,
-) async {
+  List<IntakeEntity> Function(DateTime first, DateTime last) intakes, {
+  List<DateTime>? days,
+}) async {
+  final shown = days ?? dates;
   final asked = <(DateTime, DateTime)>[];
   await tester.pumpWidget(
     ChangeNotifierProvider(
@@ -34,8 +36,8 @@ Future<List<(DateTime, DateTime)>> pump(
             children: [
               MacroDaysAndFoods(
                 metric: FoodsMetric.carbs,
-                series: [for (var i = 0; i < 7; i++) 200.0 + i],
-                dates: dates,
+                series: [for (var i = 0; i < shown.length; i++) 200.0 + i],
+                dates: shown,
                 goal: 250,
                 color: Colors.orange,
                 chartLabel: 'Carbs chart',
@@ -135,5 +137,92 @@ void main() {
       find.text('No foods logged with carbs in this range.'),
       findsOneWidget,
     );
+  });
+
+  group('day stepping', () {
+    int? picked(WidgetTester tester) =>
+        tester.widget<DailyBarChart>(find.byType(DailyBarChart)).selected;
+    IconButton button(WidgetTester tester, String tip) =>
+        tester.widget<IconButton>(
+          find.widgetWithIcon(IconButton, switch (tip) {
+            'Previous day' => Icons.chevron_left,
+            _ => Icons.chevron_right,
+          }),
+        );
+
+    testWidgets('pick a day starts at the last; the steps stop at the ends', (
+      tester,
+    ) async {
+      await pump(tester, (_, _) => foods);
+      expect(find.byTooltip('Previous day'), findsNothing);
+      await tester.tap(find.text('Pick a day'));
+      await tester.pumpAndSettle();
+      expect(picked(tester), 6);
+      expect(find.text('Mon, Oct 26 · 206 g'), findsOneWidget);
+      expect(button(tester, 'Next day').onPressed, isNull);
+
+      await tester.tap(find.byTooltip('Previous day'));
+      await tester.pumpAndSettle();
+      expect(picked(tester), 5);
+      expect(button(tester, 'Next day').onPressed, isNotNull);
+      for (var i = 0; i < 5; i++) {
+        await tester.tap(find.byTooltip('Previous day'));
+        await tester.pumpAndSettle();
+      }
+      expect(picked(tester), 0);
+      expect(find.text('Tue, Oct 20 · 200 g'), findsOneWidget);
+      expect(button(tester, 'Previous day').onPressed, isNull);
+      await tester.tap(find.byTooltip('Next day'));
+      await tester.pumpAndSettle();
+      expect(picked(tester), 1);
+    });
+
+    testWidgets('the day controls are 48 dp', (tester) async {
+      await pump(tester, (_, _) => foods);
+      expect(
+        tester.getSize(find.widgetWithText(TextButton, 'Pick a day')).height,
+        greaterThanOrEqualTo(48),
+      );
+      await tester.tap(find.text('Pick a day'));
+      await tester.pumpAndSettle();
+      for (final tip in ['Previous day', 'Next day']) {
+        final size = tester.getSize(
+          find.ancestor(
+            of: find.byTooltip(tip),
+            matching: find.byType(IconButton),
+          ),
+        );
+        expect(size.width, greaterThanOrEqualTo(48), reason: tip);
+        expect(size.height, greaterThanOrEqualTo(48), reason: tip);
+      }
+    });
+
+    testWidgets('a week says tap; a year, whose days are slivers, does not', (
+      tester,
+    ) async {
+      await pump(tester, (_, _) => foods);
+      expect(find.text('Tap a day for its foods.'), findsOneWidget);
+
+      final year = [for (var i = 0; i < 365; i++) DateTime(2025, 10, 27 + i)];
+      await tester.pumpWidget(const SizedBox());
+      await pump(tester, (_, _) => foods, days: year);
+      expect(find.textContaining('Tap'), findsNothing);
+      expect(find.text('Pick a day'), findsOneWidget);
+    });
+
+    testWidgets('the chart tells TalkBack to swipe; the tap hint is not read', (
+      tester,
+    ) async {
+      final semantics = tester.ensureSemantics();
+      await pump(tester, (_, _) => foods);
+      final node = tester.getSemantics(
+        find.byWidgetPredicate(
+          (w) => w is Semantics && w.properties.label == 'Carbs chart',
+        ),
+      );
+      expect(node.hint, 'Swipe up or down to change the day');
+      expect(find.bySemanticsLabel(RegExp('Tap a day')), findsNothing);
+      semantics.dispose();
+    });
   });
 }

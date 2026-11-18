@@ -827,7 +827,7 @@ class _Streak extends StatelessWidget {
           children: [
             Icon(
               Icons.local_fire_department_rounded,
-              color: scheme.primary,
+              color: textAccent(context),
               size: 20,
             ),
             const SizedBox(width: Dimens.spacing4),

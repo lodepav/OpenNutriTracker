@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
@@ -9,6 +11,7 @@ import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/core/utils/calc/calendar_day_calc.dart';
 import 'package:opennutritracker/fork/adaptive/trend_points.dart';
+import 'package:opennutritracker/fork/display/contrast.dart';
 import 'package:opennutritracker/fork/display/motion.dart';
 import 'package:opennutritracker/fork/layout/width_cap.dart';
 import 'package:opennutritracker/fork/report/chart_touch.dart';
@@ -245,6 +248,25 @@ class _WeightHistoryViewState extends State<WeightHistoryView> {
                         builder: (context, constraints) {
                           final spare =
                               constraints.crossAxisExtent - WidthCap.maxWidth;
+                          final rowsStack = _WeighInRow.stacks(
+                            context,
+                            [
+                              for (var i = 0; i < entries.length; i++)
+                                _WeighInRow.texts(
+                                  context,
+                                  entries[i],
+                                  i + 1 < entries.length
+                                      ? entries[i + 1]
+                                      : null,
+                                  unit,
+                                  today,
+                                ),
+                            ],
+                            math.min(
+                              constraints.crossAxisExtent,
+                              WidthCap.maxWidth,
+                            ),
+                          );
                           return SliverPadding(
                             padding: EdgeInsets.symmetric(
                               horizontal: spare > 0 ? spare / 2 : 0,
@@ -301,6 +323,7 @@ class _WeightHistoryViewState extends State<WeightHistoryView> {
                                         final edit? => () => edit(entry),
                                         null => null,
                                       },
+                                      stacked: rowsStack,
                                       onDelete: () {
                                         setState(() => _gone.add(entry));
                                         widget.onDelete(entry);
@@ -465,7 +488,7 @@ class WeightHistoryChart extends StatelessWidget {
         : weightIn(unit, targetWeightKg!);
     final showTarget =
         target != null && target >= minY - pad && target <= maxY + pad;
-    final line = theme.colorScheme.primary;
+    final line = chartAccent(context);
     final label = weightUnitLabel(context, unit);
     final dateFormat = DateFormat.MMMd(
       Localizations.localeOf(context).toLanguageTag(),
@@ -605,6 +628,10 @@ class _WeighInRow extends StatelessWidget {
   final VoidCallback? onEdit;
   final VoidCallback onDelete;
 
+  /// The weight under the day rather than beside it, chosen for the whole
+  /// list so the rows line up.
+  final bool stacked;
+
   const _WeighInRow({
     required this.dismissKey,
     required this.entry,
@@ -613,7 +640,81 @@ class _WeighInRow extends StatelessWidget {
     required this.today,
     this.onEdit,
     required this.onDelete,
+    required this.stacked,
   });
+
+  /// The row's day, its change from [previous] (with its unit) and weight.
+  static ({String title, String? change, String weight}) texts(
+    BuildContext context,
+    WeightLogEntity entry,
+    WeightLogEntity? previous,
+    BodyWeightUnit unit,
+    DateTime today,
+  ) {
+    final locale = Localizations.localeOf(context).toLanguageTag();
+    final date = DateTime(entry.date.year, entry.date.month, entry.date.day);
+    final ago = CalendarDayCalc.daysBetween(date, today);
+    return (
+      title: switch (ago) {
+        0 => 'Today',
+        1 => 'Yesterday',
+        > 1 && < 7 => DateFormat.EEEE(locale).format(date),
+        _ => DateFormat.yMMMd(locale).format(date),
+      },
+      change: previous == null
+          ? null
+          : '${signedText(weightIn(unit, entry.weightKg) - weightIn(unit, previous.weightKg), 1)}'
+                '\u00A0${weightUnitLabel(context, unit)}',
+      weight: bodyWeightText(context, entry.weightKg, unit),
+    );
+  }
+
+  /// Whether a row of [rows] leaves no room for its day, change and weight
+  /// side by side in [width]: then every row stacks. Measures the longest
+  /// of each, so a list of years costs a few layouts.
+  static bool stacks(
+    BuildContext context,
+    Iterable<({String title, String? change, String weight})> rows,
+    double width,
+  ) {
+    final theme = Theme.of(context);
+    final scaler = MediaQuery.textScalerOf(context);
+    double longest(Iterable<String> texts, TextStyle? style) {
+      final top = texts.toSet().toList()
+        ..sort((a, b) => b.length.compareTo(a.length));
+      var widest = 0.0;
+      for (final text in top.take(3)) {
+        final painter = TextPainter(
+          text: TextSpan(text: text, style: style),
+          textScaler: scaler,
+          textDirection: Directionality.of(context),
+          maxLines: 1,
+        )..layout();
+        if (painter.width > widest) widest = painter.width;
+        painter.dispose();
+      }
+      return widest;
+    }
+
+    final changes = [for (final r in rows) ?r.change];
+    final pill = changes.isEmpty
+        ? 0.0
+        : math.max(
+                44.0,
+                longest(changes, theme.textTheme.bodySmall) +
+                    2 * Dimens.spacing8,
+              ) +
+              Dimens.spacing12;
+    final need =
+        longest(rows.map((r) => r.title), theme.textTheme.bodyLarge) +
+        Dimens.spacing12 +
+        pill +
+        longest(
+          rows.map((r) => r.weight),
+          theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+        );
+    return need > width - 2 * Dimens.spacing12;
+  }
 
   /// Edit and Delete for a tap: a swipe was the only way to delete.
   Future<void> _actions(BuildContext context, String title) async {
@@ -663,29 +764,19 @@ class _WeighInRow extends StatelessWidget {
     final locale = Localizations.localeOf(context).toLanguageTag();
     final date = DateTime(entry.date.year, entry.date.month, entry.date.day);
     final ago = CalendarDayCalc.daysBetween(date, today);
-    final title = switch (ago) {
-      0 => 'Today',
-      1 => 'Yesterday',
-      > 1 && < 7 => DateFormat.EEEE(locale).format(date),
-      _ => DateFormat.yMMMd(locale).format(date),
-    };
+    final (:title, :change, :weight) = texts(
+      context,
+      entry,
+      previous,
+      unit,
+      today,
+    );
     final day = ago >= 0 && ago < 7
         ? (ago < 2 ? DateFormat.MMMEd(locale) : DateFormat.MMMd(locale)).format(
             date,
           )
         : null;
     final sub = [?day, if (entry.note?.isNotEmpty ?? false) entry.note!];
-    final change = previous == null
-        ? null
-        : signedText(
-            weightIn(unit, entry.weightKg) - weightIn(unit, previous!.weightKg),
-            1,
-          );
-    final weight = bodyWeightText(context, entry.weightKg, unit);
-    final unitLabel = weightUnitLabel(context, unit);
-    // Above 1.5x side by side left the day a letter a line: the weight goes
-    // under it, as YouRow's value does.
-    final stacked = MediaQuery.textScalerOf(context).scale(10) > 15;
     final changePill = change == null
         ? null
         : Container(
@@ -699,9 +790,10 @@ class _WeighInRow extends StatelessWidget {
               borderRadius: BorderRadius.circular(10),
             ),
             child: Text(
-              '$change\u00A0$unitLabel',
+              change,
               textAlign: TextAlign.center,
-              semanticsLabel: '$change $unitLabel since the one before',
+              semanticsLabel:
+                  '${change.replaceAll('\u00A0', ' ')} since the one before',
               style: theme.textTheme.bodySmall?.copyWith(
                 color: palette.textMuted,
               ),
@@ -744,34 +836,40 @@ class _WeighInRow extends StatelessWidget {
                   horizontal: Dimens.spacing12,
                   vertical: Dimens.spacing8,
                 ),
-                child: Row(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                    if (stacked) ...[
+                      Text(title, style: theme.textTheme.bodyLarge),
+                      Wrap(
+                        spacing: Dimens.spacing12,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [weightText, ?changePill],
+                      ),
+                    ] else
+                      Row(
                         children: [
-                          Text(title, style: theme.textTheme.bodyLarge),
-                          if (sub.isNotEmpty)
-                            Text(
-                              sub.join(' · '),
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: palette.textMuted,
-                              ),
+                          Expanded(
+                            child: Text(
+                              title,
+                              style: theme.textTheme.bodyLarge,
                             ),
-                          if (stacked)
-                            Wrap(
-                              spacing: Dimens.spacing12,
-                              crossAxisAlignment: WrapCrossAlignment.center,
-                              children: [weightText, ?changePill],
-                            ),
+                          ),
+                          if (changePill != null) ...[
+                            changePill,
+                            const SizedBox(width: Dimens.spacing12),
+                          ],
+                          weightText,
                         ],
                       ),
-                    ),
-                    if (!stacked) ...[
-                      ?changePill,
-                      const SizedBox(width: Dimens.spacing12),
-                      weightText,
-                    ],
+                    if (sub.isNotEmpty)
+                      Text(
+                        sub.join(' · '),
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: palette.textMuted,
+                        ),
+                      ),
                   ],
                 ),
               ),

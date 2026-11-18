@@ -10,6 +10,7 @@ import 'package:opennutritracker/core/utils/calc/unit_calc.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/core/utils/navigation_options.dart';
 import 'package:opennutritracker/features/fasting/presentation/bloc/fasting_bloc.dart';
+import 'package:opennutritracker/fork/display/contrast.dart';
 import 'package:opennutritracker/fork/display/display_prefs.dart';
 import 'package:opennutritracker/fork/display/home_trend_tiles.dart';
 import 'package:opennutritracker/fork/layout/home_layout.dart';
@@ -360,7 +361,7 @@ class _WeightTileState extends State<WeightTile> {
             ? null
             : Sparkline(
                 values: [for (final p in month) p.weightKg],
-                color: Theme.of(context).colorScheme.primary,
+                color: chartAccent(context),
                 bars: false,
               ),
       );
@@ -408,7 +409,7 @@ class _ExpenditureTileState extends State<ExpenditureTile> {
             ? null
             : Sparkline(
                 values: [for (final d in month) d.expenditureKcal],
-                color: Theme.of(context).colorScheme.primary,
+                color: chartAccent(context),
                 bars: false,
               ),
       );

@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
 import 'package:opennutritracker/fork/adaptive/activity.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:opennutritracker/core/domain/entity/tracked_day_entity.dart';
@@ -738,6 +739,9 @@ void main() {
     await tester.pumpAndSettle();
     // None accepted yet: the first, not a weekly one.
     expect(find.text('Weekly check-in'), findsNothing);
+    // the Home cards' surface
+    expect(find.byType(AppCard), findsOneWidget);
+    expect(find.byType(Card), findsNothing);
     await tester.tap(find.text('Your first target'));
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(
@@ -1203,6 +1207,8 @@ void main() {
     expect(memory.records, hasLength(1));
     expect(refreshed, 1);
     expect(find.text('Your first target is set'), findsOneWidget);
+    expect(find.byType(AppCard), findsOneWidget);
+    expect(find.byType(Card), findsNothing);
 
     await tester.tap(find.byTooltip('Dismiss'));
     await tester.pumpAndSettle();

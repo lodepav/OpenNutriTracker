@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:intl/intl.dart';
 import 'package:opennutritracker/core/domain/entity/body_weight_unit_entity.dart';
 import 'package:opennutritracker/core/domain/entity/weight_log_entity.dart';
 import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
@@ -379,6 +380,108 @@ void main() {
         expect(cutText(tester), isEmpty);
       });
     }
+  }
+
+  // The day and the weight side by side while they fit, one under the other
+  // when they don't: no scale threshold, so no word broken in between.
+  for (final unit in BodyWeightUnit.values) {
+    for (final scale in [1.0, 1.3, 1.4, 1.5, 2.0]) {
+      testWidgets('at ${scale}x text in ${unit.name} on a 360 dp phone no '
+          'weigh-in row breaks inside a word', (tester) async {
+        await _pumpLarge(tester, entries, textScale: scale, unit: unit);
+        // 360 dp wide, tall enough to build every row
+        tester.view.physicalSize = const Size(945, 7020);
+        await tester.pumpAndSettle();
+        final rows = find.byType(Dismissible);
+        expect(rows, findsNWidgets(entries.length));
+        expect(brokenInWords(tester, within: rows), isEmpty);
+        expect(cutText(tester), isEmpty);
+      });
+    }
+  }
+
+  testWidgets('at 1x a day alone sits in the middle of its row', (
+    tester,
+  ) async {
+    await _pumpLarge(tester, entries, textScale: 1);
+    final title = find.text(DateFormat.yMMMd('en').format(_ago(60)));
+    final row = find.ancestor(of: title, matching: find.byType(InkWell));
+    expect(
+      tester.getCenter(title).dy,
+      moreOrLessEquals(tester.getCenter(row).dy, epsilon: 1),
+    );
+  });
+
+  testWidgets('at 2x in stones a heavy weight and its change wrap, not '
+      'overflow', (tester) async {
+    await _pumpLarge(tester, [
+      WeightLogEntity(date: _ago(4), weightKg: 160.4),
+      WeightLogEntity(date: _ago(5), weightKg: 148.9),
+    ], unit: BodyWeightUnit.st);
+    tester.view.physicalSize = const Size(945, 7020);
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    expect(brokenInWords(tester, within: find.byType(Dismissible)), isEmpty);
+    expect(cutText(tester), isEmpty);
+  });
+
+  testWidgets('at 1x a long note leaves the weight beside the day', (
+    tester,
+  ) async {
+    await _pumpLarge(tester, [
+      WeightLogEntity(
+        date: _ago(4),
+        weightKg: 87.2,
+        note: 'after a long run along the river and a big breakfast',
+      ),
+    ], textScale: 1);
+    final day = tester.getRect(find.text('Wednesday'));
+    final weight = tester.getRect(
+      find.descendant(
+        of: find.byType(Dismissible),
+        matching: find.textContaining('87.2'),
+      ),
+    );
+    // the day's box fills the row up to the weight
+    expect(weight.left, greaterThanOrEqualTo(day.right));
+    expect(weight.top, lessThan(day.bottom));
+  });
+
+  // Seen at 2x: "88 kg" fit beside its date and "87.6 kg" didn't, so the
+  // rows took turns.
+  for (final (scale, beside) in [(1.0, true), (2.0, false)]) {
+    testWidgets('at ${scale}x every weigh-in row takes the same layout', (
+      tester,
+    ) async {
+      await _pumpLarge(tester, [
+        WeightLogEntity(date: _ago(30), weightKg: 87.6),
+        WeightLogEntity(date: _ago(32), weightKg: 88.0),
+        WeightLogEntity(date: _ago(35), weightKg: 88.1),
+        WeightLogEntity(date: _ago(38), weightKg: 88.0),
+        WeightLogEntity(date: _ago(41), weightKg: 88.4),
+      ], textScale: scale);
+      tester.view.physicalSize = const Size(945, 7020);
+      await tester.pumpAndSettle();
+      final rows = find.byType(Dismissible).evaluate().toList();
+      expect(rows, hasLength(5));
+      final layouts = {
+        for (final row in rows)
+          () {
+            final within = find.byElementPredicate((e) => e == row);
+            final day = tester.getRect(
+              find.descendant(of: within, matching: find.byType(Text)).first,
+            );
+            final weight = tester.getRect(
+              find.descendant(
+                of: within,
+                matching: find.textContaining(RegExp(r'^\d+(\.\d)? kg$')),
+              ),
+            );
+            return weight.top < day.bottom;
+          }(),
+      };
+      expect(layouts, {beside});
+    });
   }
 
   testWidgets('at 2x text the chart\'s last date stays inside the chart', (

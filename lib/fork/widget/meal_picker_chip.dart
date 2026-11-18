@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:opennutritracker/core/domain/entity/intake_type_entity.dart';
+import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/fork/copy/copy_ui.dart' show mealLabel;
 
@@ -29,7 +30,8 @@ class MealPickerChip extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: Dimens.spacing12),
       decoration: ShapeDecoration(
         shape: StadiumBorder(
-          side: BorderSide(color: Theme.of(context).colorScheme.outline),
+          // 3:1 (WCAG 1.4.11): the theme's outline is a 1.2:1 hairline
+          side: BorderSide(color: paletteOf(context).textMuted),
         ),
       ),
       child: Row(

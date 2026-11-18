@@ -466,7 +466,7 @@ class _Breakdown extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = paletteOf(context);
     final text = Theme.of(context).textTheme;
-    final accent = Theme.of(context).colorScheme.primary;
+    final accent = textAccent(context);
     final b = breakdown;
     final lost = b.fromWeight >= 0;
     final large = MediaQuery.textScalerOf(context).scale(10) > 15;

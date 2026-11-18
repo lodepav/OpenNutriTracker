@@ -19,6 +19,8 @@ import 'package:opennutritracker/generated/l10n.dart';
 import 'package:opennutritracker/core/utils/safe_url_launcher.dart';
 // [fork] S231 diary-panel
 import 'package:opennutritracker/fork/display/contrast.dart';
+import 'package:opennutritracker/fork/display/week_bars.dart'
+    show weekBarColors;
 // [/fork]
 
 /// Daily micronutrient summary that aggregates the nutrients reporters keep
@@ -853,21 +855,29 @@ class _NutrientRow extends StatelessWidget {
     // [fork] S231 diary-panel: the palette's amber, at 3:1 on the bar's track
     final palette = paletteOf(context);
     final amber = chartSafe(palette.carbsColor, palette.surfaceMuted);
+    // The accent bar and its tint at 3:1 on the track, the bar plainer
+    final (today: full, past: tint) = weekBarColors(
+      scheme.primary,
+      palette.surfaceMuted,
+    );
     // [/fork]
     if (excessMatters) {
       // Sodium / saturated fat / sugar: amber as you approach the reference,
       // red once you cross it, green while comfortably below.
       if (ratio >= 1.0) return scheme.error;
       if (ratio >= 0.8) return amber; // [fork] S231 Colors.amber.shade700
-      return scheme.primary;
+      return full; // [fork] S231 scheme.primary
     } else {
       // Fibre / calcium / iron / potassium / vitamin D / B12 / magnesium:
       // amber while still well short of the reference, primary green once
       // you reach it. Going over isn't a concern at these values from food
       // alone.
-      if (ratio >= 1.0) return scheme.primary;
+      if (ratio >= 1.0) return full; // [fork] S231 scheme.primary
       if (ratio >= 0.5) return amber; // [fork] S231 Colors.amber.shade700
-      return scheme.primary.withValues(alpha: 0.6);
+      // [fork] S231 diary-panel: the tint, past days' colour on Home's week
+      // return scheme.primary.withValues(alpha: 0.6);
+      return tint;
+      // [/fork]
     }
   }
 }

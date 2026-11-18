@@ -271,10 +271,13 @@ void main() {
       await tester.pumpAndSettle();
       expect(_withIdentifier('add-meal-products-list'), findsOneWidget);
 
+      // the chips scroll in the 600 dp column, as on a phone
+      await tester.ensureVisible(find.text(l10nEn.searchFoodPage));
       await tester.tap(find.text(l10nEn.searchFoodPage));
       await tester.pumpAndSettle();
       expect(_withIdentifier('add-meal-food-list'), findsOneWidget);
 
+      await tester.ensureVisible(find.text(l10nEn.recentlyAddedLabel));
       await tester.tap(find.text(l10nEn.recentlyAddedLabel));
       await tester.pumpAndSettle();
       expect(_withIdentifier('add-meal-recent-list'), findsOneWidget);

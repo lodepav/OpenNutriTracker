@@ -690,12 +690,14 @@ class HistoryImportTile extends StatelessWidget {
 
   /// The picked [files] as tables, and what they hold read in [unit];
   /// null, once it has said so, when a file could not be read. Read off the
-  /// UI isolate, a year of exports at a time, with "Reading files…" shown.
+  /// UI isolate, a year of exports at a time, with "Reading files…" shown
+  /// until [prepare] is done too.
   static Future<({List<SheetTable> tables, HistoryFile first})?> readFiles(
     BuildContext context,
     List<({String name, String path})> files,
-    BodyWeightUnit unit,
-  ) async {
+    BodyWeightUnit unit, {
+    Future<void> Function(List<SheetTable> tables, HistoryFile first)? prepare,
+  }) async {
     final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context, rootNavigator: true);
     final progress = DialogRoute<void>(
@@ -724,6 +726,8 @@ class HistoryImportTile extends StatelessWidget {
         messenger.showSnackBar(SnackBar(content: Text('Could not read $name')));
         return null;
       }
+      // still under "Reading files…": what is here and the first plan
+      await prepare?.call(read.tables, read.first!);
       return (tables: read.tables, first: read.first!);
     } finally {
       if (progress.isActive) navigator.removeRoute(progress);
@@ -807,20 +811,32 @@ class HistoryImportTile extends StatelessWidget {
         ? BodyWeightUnit.kg
         : BodyWeightUnit.lb;
     if (!context.mounted) return;
-    final read = await readFiles(context, [
-      for (final f in picked) (name: f.name, path: f.path!),
-    ], unit);
-    if (read == null) return;
-    final (:tables, :first) = read;
-    final existing = await _existing();
     final now = DateTime.now();
     final source = picked.first.name.replaceFirst(RegExp(r'\.[^.]*$'), '');
-    HistoryPlan plan(HistoryFile file) => planImport(
+    late final HistoryExisting existing;
+    HistoryPlan planOf(HistoryFile file) => planImport(
       file,
       existing: existing,
       today: DateTime(now.year, now.month, now.day),
       source: source,
     );
+    HistoryPlan? firstPlan;
+    final read = await readFiles(
+      context,
+      [for (final f in picked) (name: f.name, path: f.path!)],
+      unit,
+      // on the UI isolate (Hive), but before the dialog closes, so the
+      // screen never sits empty
+      prepare: (_, first) async {
+        existing = await _existing();
+        if (!first.isEmpty) firstPlan = planOf(first);
+      },
+    );
+    if (read == null) return;
+    final (:tables, :first) = read;
+    // the preview opens on the plan made under "Reading files…"
+    HistoryPlan plan(HistoryFile file) =>
+        identical(file, first) ? firstPlan! : planOf(file);
     if (first.isEmpty) {
       say('No days with calories or weight found in $names');
       return;

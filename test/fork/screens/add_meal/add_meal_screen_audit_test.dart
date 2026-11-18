@@ -13,6 +13,7 @@ import 'package:opennutritracker/core/domain/usecase/add_intake_usecase.dart';
 import 'package:opennutritracker/core/domain/usecase/add_tracked_day_usecase.dart';
 import 'package:opennutritracker/core/domain/usecase/get_config_usecase.dart';
 import 'package:opennutritracker/core/domain/usecase/get_intake_usecase.dart';
+import 'package:opennutritracker/core/utils/ai_credential_storage.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/styles/app_theme.dart';
 import 'package:opennutritracker/core/utils/navigation_options.dart';
@@ -30,6 +31,8 @@ import 'package:opennutritracker/features/add_meal/presentation/widgets/quick_ad
 import 'package:opennutritracker/features/diary/presentation/bloc/calendar_day_bloc.dart';
 import 'package:opennutritracker/features/diary/presentation/bloc/diary_bloc.dart';
 import 'package:opennutritracker/features/home/presentation/bloc/home_bloc.dart';
+import 'package:opennutritracker/fork/basket/basket.dart';
+import 'package:opennutritracker/fork/bulk/ai_add.dart';
 import 'package:opennutritracker/fork/display/contrast.dart';
 import 'package:opennutritracker/fork/layout/width_cap.dart';
 import 'package:opennutritracker/fork/screens/add_meal/add_meal_screen.dart';
@@ -134,6 +137,14 @@ class _Home extends Fake implements HomeBloc {
   void add(HomeEvent event) {}
 }
 
+class _AiOn implements AiCredentialStorage {
+  @override
+  Future<bool> isEnabled() async => true;
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
 class _Diary extends Fake implements DiaryBloc {
   @override
   void add(DiaryEvent event) {}
@@ -203,13 +214,17 @@ Future<void> _pump(
   WidgetTester tester, {
   Size size = const Size(411, 891),
   double keyboard = 0,
+  double gestureBar = 0,
   Brightness brightness = Brightness.light,
   bool settle = true,
 }) async {
   tester.view
     ..devicePixelRatio = 1
     ..physicalSize = size
-    ..viewInsets = FakeViewPadding(bottom: keyboard);
+    ..viewInsets = FakeViewPadding(bottom: keyboard)
+    // as Android reports it: the keyboard covers the gesture bar's padding
+    ..padding = FakeViewPadding(bottom: keyboard > 0 ? 0 : gestureBar)
+    ..viewPadding = FakeViewPadding(bottom: gestureBar);
   addTearDown(tester.view.reset);
   await tester.pumpWidget(
     MaterialApp(
@@ -417,4 +432,111 @@ void main() {
       lessThanOrEqualTo(WidthCap.maxWidth),
     );
   });
+
+  testWidgets('the basket bar and Log with AI sit above a 300 dp keyboard', (
+    tester,
+  ) async {
+    await _register(recent: _recents);
+    getIt.registerSingleton<AiCredentialStorage>(_AiOn());
+    FoodBasket.instance.add(
+      BasketItem(meal: _meal('Rice'), unit: 'g', amountText: '100', kcal: 130),
+      IntakeTypeEntity.lunch,
+      DateTime(2026, 10, 1),
+    );
+    addTearDown(FoodBasket.instance.clear);
+    await _pump(tester, keyboard: 300);
+
+    final bar = find.byKey(const ValueKey('basket-bar'));
+    expect(tester.getRect(bar).bottom, lessThanOrEqualTo(891 - 300));
+    // taps reach it where it is drawn
+    expect(bar.hitTestable(), findsOneWidget);
+    final fab = find.text(aiAddLabel);
+    expect(tester.getRect(fab).bottom, lessThanOrEqualTo(891 - 300));
+    expect(fab.hitTestable(), findsOneWidget);
+
+    // the last row still ends above the lifted bar
+    final list = find.descendant(
+      of: find.bySemanticsIdentifier('add-meal-recent-list'),
+      matching: find.byType(Scrollable),
+    );
+    final position = tester.state<ScrollableState>(list.first).position;
+    position.jumpTo(position.maxScrollExtent);
+    await tester.pumpAndSettle();
+    expect(
+      tester.getRect(find.textContaining('Food 9')).bottom,
+      lessThanOrEqualTo(tester.getRect(bar).top),
+    );
+  });
+
+  // Seen on the emulator: the bar rode a gesture bar's height above the
+  // keyboard, its SafeArea padding showing as an empty strip.
+  testWidgets('with a gesture bar the basket bar sits on the keyboard', (
+    tester,
+  ) async {
+    await _register(recent: _recents);
+    FoodBasket.instance.add(
+      BasketItem(meal: _meal('Rice'), unit: 'g', amountText: '100', kcal: 130),
+      IntakeTypeEntity.lunch,
+      DateTime(2026, 10, 1),
+    );
+    addTearDown(FoodBasket.instance.clear);
+    await _pump(tester, keyboard: 300, gestureBar: 48);
+    final bar = tester.getRect(find.byKey(const ValueKey('basket-bar')));
+    expect(bar.bottom, moreOrLessEquals(891 - 300, epsilon: 1));
+  });
+
+  testWidgets('on a wide window the search header shares the rows\' column', (
+    tester,
+  ) async {
+    await _register(recent: _recents);
+    await _pump(tester, size: const Size(1280, 800));
+    final row = tester.getRect(find.byType(MealItemCard).first);
+    final field = tester.getRect(find.byType(TextField).first);
+    final chip = tester.getRect(
+      find.widgetWithText(ChoiceChip, l10nEn.recentlyAddedLabel),
+    );
+    expect(field.left, row.left);
+    expect(chip.left, row.left);
+    expect(field.width, lessThanOrEqualTo(WidthCap.maxWidth));
+
+    // and the "Search results" title over the found rows
+    await tester.enterText(find.byType(TextField).first, 'food');
+    await tester.pumpAndSettle();
+    expect(tester.getRect(find.text(l10nEn.searchResultsLabel)).left, row.left);
+  });
+
+  for (final brightness in Brightness.values) {
+    testWidgets('the meal chip has a 3:1 edge (${brightness.name})', (
+      tester,
+    ) async {
+      await _register();
+      await _pump(tester, brightness: brightness);
+      final palette = brightness == Brightness.dark
+          ? AppPalette.dark
+          : AppPalette.light;
+      final decoration =
+          tester
+                  .widget<Container>(
+                    find.descendant(
+                      of: find.byKey(const ValueKey('add-meal-meal')),
+                      matching: find.byType(Container),
+                    ),
+                  )
+                  .decoration!
+              as ShapeDecoration;
+      final side = (decoration.shape as StadiumBorder).side;
+      expect(
+        contrastRatio(side.color, palette.canvas),
+        greaterThanOrEqualTo(3),
+      );
+      expect(
+        contrastRatio(side.color, palette.surface),
+        greaterThanOrEqualTo(3),
+      );
+      expect(
+        contrastRatio(side.color, palette.surfaceMuted),
+        greaterThanOrEqualTo(3),
+      );
+    });
+  }
 }
