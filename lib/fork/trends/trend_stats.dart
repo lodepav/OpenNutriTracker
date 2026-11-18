@@ -140,13 +140,38 @@ DaySeries waterSeries(
       null,
 ];
 
-/// The expenditure estimate a day over the window, from [history].
+/// The expenditure estimate a day over the window, from [history]; with
+/// [settledOnly], none while it is still the formula's prior, whose dip
+/// into the first update reads as a real drop on a small line.
 DaySeries expenditureSeries(
   List<ExpenditureDay> history,
-  List<DateTime> dates,
-) {
+  List<DateTime> dates, {
+  bool settledOnly = false,
+}) {
   final byDate = {for (final d in history) _date(d.date): d};
-  return [for (final date in dates) byDate[date]?.expenditureKcal];
+  return [
+    for (final date in dates)
+      if (byDate[date] case final d? when !settledOnly || d.settled)
+        d.expenditureKcal
+      else
+        null,
+  ];
+}
+
+/// [series] from [start], the day its estimate began, and that day; as
+/// it is, [from] null, when the window starts on or after it or there is
+/// none. A tile then draws no days the estimate never covered, while an
+/// unlogged day within it keeps its stub.
+({DaySeries values, DateTime? from}) fromDay(
+  DaySeries series,
+  List<DateTime> dates,
+  DateTime? start,
+) {
+  final first = start == null
+      ? -1
+      : dates.indexWhere((d) => !d.isBefore(_date(start)));
+  if (first <= 0) return (values: series, from: null);
+  return (values: series.sublist(first), from: dates[first]);
 }
 
 /// Eaten less burnt a day over the window, on the logged days.

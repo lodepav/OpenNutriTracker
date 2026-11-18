@@ -1,3 +1,4 @@
+import 'package:intl/intl.dart' show DateFormat;
 import 'package:opennutritracker/core/domain/entity/intake_entity.dart';
 import 'package:opennutritracker/core/domain/entity/tracked_day_entity.dart';
 import 'package:opennutritracker/core/domain/entity/weight_log_entity.dart';
@@ -12,6 +13,17 @@ import 'package:opennutritracker/fork/trends/trend_stats.dart';
 const expenditureChangeSpans = [3, 7, 14, 30, 90];
 
 DateTime _date(DateTime t) => DateTime(t.year, t.month, t.day);
+
+/// A highest or lowest day as every Trends page writes it: "2898 kcal ·
+/// Nov 13", or "64 g · today". A date, as a weekday alone is ambiguous
+/// over more than a week.
+String dayValueText(
+  String value,
+  DateTime date, {
+  required DateTime today,
+  required String locale,
+}) =>
+    '$value\u00A0·\u00A0${_date(date) == _date(today) ? 'today' : DateFormat.MMMd(locale).format(date)}';
 
 /// The estimate now against its value [spans] days before, each with what
 /// it was then; null where the history does not reach back that far.

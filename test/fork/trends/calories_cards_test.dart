@@ -39,7 +39,7 @@ void main() {
             underBy: 38.6,
             topThreeShare: 0.624,
           ),
-          week: false,
+          today: DateTime(2026, 11, 18),
           valueText: (_, g) => '${g.round()} g',
         ),
       );
@@ -54,7 +54,7 @@ void main() {
     testWidgets('no over days: no row of them', (tester) async {
       await _pump(
         tester,
-        const DaysWentCard(
+        DaysWentCard(
           outcomes: (
             onTarget: 3,
             under: 1,
@@ -66,7 +66,7 @@ void main() {
             underBy: 300,
             topThreeShare: null,
           ),
-          week: true,
+          today: DateTime(2026, 11, 18),
         ),
       );
       expect(find.text('Over by, on average'), findsNothing);

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart' as intl;
 import 'package:opennutritracker/core/domain/entity/intake_entity.dart';
 import 'package:opennutritracker/core/domain/entity/tracked_day_entity.dart';
 import 'package:opennutritracker/core/domain/entity/user_entity.dart';
@@ -145,9 +144,7 @@ class _MicroDetailState extends State<MicroDetail> {
           : counted
                 .where((v) => nutrient.isLimit ? v <= goal : v >= goal)
                 .length;
-      final format = intl.DateFormat.MMMd(
-        Localizations.localeOf(context).toLanguageTag(),
-      );
+      final locale = Localizations.localeOf(context).toLanguageTag();
       ({double v, DateTime on})? high;
       for (final (i, v) in series.indexed) {
         if (v != null && (high == null || v > high.v)) {
@@ -227,8 +224,12 @@ class _MicroDetailState extends State<MicroDetail> {
                 if (high != null)
                   (
                     label: 'Highest',
-                    value:
-                        '${nutrient.text(high.v)} $unit, ${high.on == widget.dates.last ? 'today' : format.format(high.on)}',
+                    value: dayValueText(
+                      '${nutrient.text(high.v)} $unit',
+                      high.on,
+                      today: widget.state.logicalToday,
+                      locale: locale,
+                    ),
                   ),
               ],
             ),

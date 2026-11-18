@@ -4,11 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:intl/intl.dart' show DateFormat;
 import 'package:opennutritracker/core/domain/entity/intake_entity.dart';
 import 'package:opennutritracker/core/domain/entity/intake_type_entity.dart';
 import 'package:opennutritracker/core/domain/entity/tracked_day_entity.dart';
 import 'package:opennutritracker/core/domain/entity/user_gender_entity.dart';
 import 'package:opennutritracker/core/domain/entity/weight_log_entity.dart';
+import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/utils/energy_unit_provider.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dart';
@@ -355,6 +357,73 @@ void main() {
       _tile(tester, 'expenditure').spokenLabel,
       'Expenditure, 3000 kcal a day',
     );
+  });
+
+  testWidgets('the balance tile starts where its estimate does; the '
+      'expenditure line leaves out the days still settling', (tester) async {
+    // A month whose estimate began 10 days ago, settled 3 days ago.
+    await _pumpOverview(
+      tester,
+      loaded(rangeDays: 30),
+      history: [
+        for (var i = -9; i <= 0; i++)
+          ExpenditureDay(
+            date: day(i),
+            expenditureKcal: 3000 + i * 10.0,
+            intakeKcal: 2500,
+            settled: i >= -2,
+          ),
+      ],
+    );
+    final balance = _tile(tester, 'balance');
+    final bars = (balance.chart as Sparkline).values;
+    expect(bars, hasLength(10));
+    expect(bars.first, isNotNull);
+    expect(balance.note, 'from ${DateFormat.MMMd('en').format(day(-9))}');
+    expect(balance.spokenLabel, endsWith(', ${balance.note}'));
+    // A fact, muted as the span line, not the amber of "over limit".
+    final noteText = tester.widget<Text>(
+      find.descendant(
+        of: find.byKey(const ValueKey('trends-tile-balance')),
+        matching: find.text(balance.note!),
+      ),
+    );
+    expect(
+      noteText.style?.color,
+      paletteOf(tester.element(find.text(balance.note!))).textMuted,
+    );
+    // The average is over the same days as before.
+    expect(balance.value, '−455');
+
+    final spent = _tile(tester, 'expenditure');
+    final line = (spent.chart as Sparkline).values;
+    expect(line.sublist(line.length - 10), [
+      for (var i = -9; i <= 0; i++) i >= -2 ? 3000 + i * 10.0 : null,
+    ]);
+    // The headline is the estimate now, as before.
+    expect(spent.value, '3000');
+  });
+
+  testWidgets('a week with an estimate throughout keeps an unlogged first '
+      'day\'s stub, with no note', (tester) async {
+    await _pumpOverview(
+      tester,
+      loaded(),
+      history: [
+        for (var i = -6; i <= 0; i++)
+          ExpenditureDay(
+            date: day(i),
+            expenditureKcal: 3000,
+            intakeKcal: i == -6 ? null : 2500,
+            settled: true,
+          ),
+      ],
+    );
+    final balance = _tile(tester, 'balance');
+    final bars = (balance.chart as Sparkline).values;
+    expect(bars, hasLength(7));
+    expect(bars.first, isNull);
+    expect(balance.note, isNull);
   });
 
   testWidgets('a saved order shows the tiles it does not list', (tester) async {

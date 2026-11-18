@@ -115,6 +115,34 @@ void main() {
     expect(balanceSeries(history, week).sublist(5), [null, -500]);
   });
 
+  test('the estimate still settling is no point on the tile line', () {
+    final history = [
+      ExpenditureDay(date: _d(-2), expenditureKcal: 2500, settled: false),
+      ExpenditureDay(date: _d(-1), expenditureKcal: 2800, settled: true),
+      ExpenditureDay(date: _d(0), expenditureKcal: 2900, settled: true),
+    ];
+    expect(expenditureSeries(history, week).sublist(4), [2500, 2800, 2900]);
+    expect(expenditureSeries(history, week, settledOnly: true).sublist(4), [
+      null,
+      2800,
+      2900,
+    ]);
+  });
+
+  test('a series from the day its estimate began, not its first value', () {
+    final days = week.sublist(0, 5);
+    // The estimate began on the third day, the fourth unlogged.
+    final trimmed = fromDay([null, null, 3, null, 5], days, days[2]);
+    expect(trimmed.values, [3, null, 5]);
+    expect(trimmed.from, days[2]);
+    // An estimate from the first day, its first day unlogged: as it is.
+    final unlogged = fromDay([null, 2, 3, null, 5], days, days[0]);
+    expect(unlogged.values, [null, 2, 3, null, 5]);
+    expect(unlogged.from, isNull);
+    // No estimate at all: as it is.
+    expect(fromDay([null, null], days.sublist(0, 2), null).from, isNull);
+  });
+
   test('a bar a bucket averages the days present', () {
     expect(Sparkline.bucketed([1, 2, 3], 14), [1, 2, 3]);
     expect(Sparkline.bucketed([1, 3, null, null, 5, 7], 3), [2, null, 6]);

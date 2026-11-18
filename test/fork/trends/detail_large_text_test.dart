@@ -136,14 +136,14 @@ void main() {
                     under: 0,
                     over: 0,
                     logged: 6,
-                    // A Wednesday and a Tuesday.
                     highest: (value: 2898, date: DateTime(2026, 11, 18)),
                     lowest: (value: 2292, date: DateTime(2026, 11, 17)),
                     overBy: null,
                     underBy: null,
                     topThreeShare: null,
                   ),
-                  week: true,
+                  // Both by date, the longer way a day is written.
+                  today: DateTime(2026, 11, 19),
                   valueText: (_, v) => '${v.round()} $unit',
                 ),
               // The Energy balance page's.
@@ -207,7 +207,7 @@ void main() {
                 underBy: null,
                 topThreeShare: null,
               ),
-              week: true,
+              today: DateTime(2026, 11, 19),
             ),
             TrendRows(
               rows: [

@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:intl/intl.dart' show DateFormat;
 import 'package:opennutritracker/fork/layout/arrange_screen.dart';
 import 'package:opennutritracker/fork/report/trends_layout.dart';
 import 'package:opennutritracker/core/domain/entity/intake_entity.dart';
@@ -317,6 +318,42 @@ void main() {
     expect(row('Under'), '1 day');
     expect(row('Over'), '0 days');
     expect(row('Highest'), startsWith('1560 kcal\u00A0·\u00A0'));
+  });
+
+  testWidgets('Highest reads the same on Calories and on Fibre', (
+    tester,
+  ) async {
+    TrendsOverview.loadIntakes = (first, last) async => [
+      _ate(-2, 'Oats', fibre: 20),
+      _ate(-1, 'Bran', fibre: 64),
+    ];
+    await pumpTrends(
+      tester,
+      loaded(days: [_logged(-2, kcal: 2000), _logged(-1, kcal: 2898)]),
+    );
+    final when = DateFormat.MMMd('en').format(day(-1));
+    Future<String> highest() async {
+      await tester.scrollUntilVisible(
+        find.widgetWithText(TrendRow, 'Highest'),
+        200,
+        scrollable: find.byType(Scrollable).last,
+      );
+      return tester
+          .widget<TrendRow>(
+            find.ancestor(
+              of: find.text('Highest'),
+              matching: find.byType(TrendRow),
+            ),
+          )
+          .value;
+    }
+
+    await openTile(tester, 'calories');
+    expect(await highest(), '2898 kcal · $when');
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    await openTile(tester, 'fibre');
+    expect(await highest(), '64 g · $when');
   });
 
   testWidgets('Calories: the days stacked by macro and the macro shares', (

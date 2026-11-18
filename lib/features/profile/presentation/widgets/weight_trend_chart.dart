@@ -14,6 +14,7 @@ import 'package:opennutritracker/fork/adaptive/trend_points.dart';
 // [/fork]
 // [fork] S96 chart-touch
 import 'package:opennutritracker/fork/report/chart_touch.dart';
+import 'package:opennutritracker/fork/report/weight_chart_label.dart';
 // [/fork]
 
 /// Smoothed weight trend line shared by the weight-history screen and the
@@ -222,11 +223,25 @@ class WeightTrendChart extends StatelessWidget {
       key: const Key('weightHistoryChart'),
       padding: const EdgeInsets.fromLTRB(16, 16, 24, 16),
       // [fork] S96 chart-touch: a legend under the chart, as the dashed line
-      // means the trend here and a plan on the Trend weight card
+      // means the trend here and a plan on the Trend weight card; the chart
+      // heard as one sentence on its data, not its axis labels read out
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
+          Semantics(
+            container: true,
+            label: weightChartLabel(
+              from: windowStart,
+              to: today,
+              locale: localeTag,
+              weighIns: [for (final s in spots) s.y],
+              // As drawn: no trend line under two points.
+              trend: [if (maSpots.length >= 2) for (final s in maSpots) s.y],
+              unit: unitLabel,
+            ),
+            child: ExcludeSemantics(
+              child:
       // [/fork]
       SizedBox(
         height: chartHeight,
@@ -301,13 +316,13 @@ class WeightTrendChart extends StatelessWidget {
               ],
             ),
             lineBarsData: [
-              // [fork] S96 chart-touch: as Weight history draws them,
-              // weigh-ins thin and muted, joined straight (a spline
-              // overshot them), the trend the bold line (JB4)
+              // [fork] S96 chart-touch: weigh-ins as muted dots with no
+              // line between them, as a line made a scale swing look like
+              // a path the weight took; the trend the bold line (JB4)
               LineChartBarData(
                 spots: spots,
                 color: theme.colorScheme.onSurfaceVariant,
-                barWidth: 1.5,
+                barWidth: 0,
                 dotData: FlDotData(
                   show: true,
                   getDotPainter: (spot, percent, bar, index) =>
@@ -342,6 +357,8 @@ class WeightTrendChart extends StatelessWidget {
         ),
       ),
       // [fork] S96 chart-touch
+            ),
+          ),
       if (maSpots.length >= 2)
         Padding(
           padding: const EdgeInsets.only(top: 8),
