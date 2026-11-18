@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+// [fork] S278 activity-dialog-name
+import 'package:intl/intl.dart' show toBeginningOfSentenceCase;
+// [/fork]
 import 'package:opennutritracker/core/domain/entity/user_activity_entity.dart';
 import 'package:opennutritracker/core/utils/calc/unit_calc.dart';
 import 'package:opennutritracker/core/utils/energy_unit_provider.dart';
@@ -61,8 +64,9 @@ class _EditActivityDialogState extends State<EditActivityDialog> {
 
     return AlertDialog(
       // [fork] S278 activity-dialog-name: named for the activity, as the
-      // food dialog is for the food (S83)
-      title: Text(widget.activityEntity.physicalActivityEntity.getName(context)),
+      // food dialog is for the food (S83), capitalised as the Diary row
+      title: Text(toBeginningOfSentenceCase(
+          widget.activityEntity.physicalActivityEntity.getName(context))),
       // title: Text(S.of(context).editItemDialogTitle),
       // [/fork]
       content: Column(

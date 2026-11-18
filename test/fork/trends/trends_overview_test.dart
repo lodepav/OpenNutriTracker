@@ -578,7 +578,8 @@ void main() {
     );
     expect(
       tileText(tester, 'weight'),
-      matches(RegExp(r'\d\d\.\d kg · \u2212\d\.\d+ kg a week')),
+      // the change on its own line, no "·" after the unit
+      matches(RegExp(r'\d\d\.\d kg \| \u2212\d\.\d+ kg a week')),
     );
     await openTile(tester, 'weight');
 

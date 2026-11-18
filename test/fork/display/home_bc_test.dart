@@ -184,6 +184,7 @@ void main() {
             .split(RegExp(r'\s+'));
         expect(words.length, greaterThan(1), reason: 'a lone word in "$text"');
         expect(words.last, isNot('·'), reason: 'a dot left behind in "$text"');
+        expect(words.first, isNot('·'), reason: 'a dot leading "$text"');
         if (line.end <= start) break;
         start = line.end;
       }
@@ -223,10 +224,8 @@ void main() {
       await tester.pump();
       expect(find.textContaining('79.5'), findsOne);
       expect(find.textContaining('81 kg'), findsNothing);
-      expect(
-        find.textContaining('·\u00A00\u00A0kg\u00A0in\u00A07\u00A0days'),
-        findsOne,
-      );
+      // Its own line under the trend, no "·" to join them.
+      expect(find.text('0\u00A0kg\u00A0in\u00A07\u00A0days'), findsOne);
       expect(find.textContaining('2712 ${keepUnits('kcal a day')}'), findsOne);
       expect(find.byType(Sparkline), findsNWidgets(2));
     });

@@ -231,10 +231,14 @@ class _WeightTileState extends State<WeightTile> {
         label: 'Weight trend',
         value: value,
         // The last 7 days by name, as Weight history's "per week" is over
-        // its range; held to its unit, so a wrap leaves no word alone.
-        suffix: kgPerWeek == null
+        // its range; its own line, as it never fits beside the trend.
+        note: kgPerWeek == null
             ? null
-            : '·\u00A0${weeklyRateText(kgPerWeek, widget.unit).replaceFirst(' a week', ' in 7 days').replaceAll(' ', '\u00A0')}',
+            : weeklyRateText(
+                kgPerWeek,
+                widget.unit,
+              ).replaceFirst(' a week', ' in 7 days').replaceAll(' ', '\u00A0'),
+        noteMuted: true,
         spokenLabel: weightSpoken(
           value,
           kgPerWeek,

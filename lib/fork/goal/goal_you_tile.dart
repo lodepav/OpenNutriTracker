@@ -175,8 +175,16 @@ class _GoalYouTileState extends State<GoalYouTile> {
         : plan != null && plan.targetKg == null
         ? untargetedGoal(context, plan, null)
         : null;
-    final value = untargeted?.value ?? widget.value;
-    final note = untargeted != null ? untargeted.note : widget.note;
+    // The profile's pace split as on Trends, "Losing" over "0.4 kg a week".
+    final paced = offer && since == null
+        ? untargetedGoal(context, null, null, pace: widget.value)
+        : null;
+    final value = untargeted?.value ?? paced?.value ?? widget.value;
+    final note = untargeted != null
+        ? untargeted.note
+        : paced != null
+        ? paced.note
+        : widget.note;
     final below = since != null
         ? 'Plan a goal'
         : untargeted != null

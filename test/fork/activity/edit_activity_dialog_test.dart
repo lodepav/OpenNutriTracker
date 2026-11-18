@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:intl/intl.dart' show toBeginningOfSentenceCase;
 import 'package:opennutritracker/core/domain/entity/user_activity_entity.dart';
 import 'package:opennutritracker/core/presentation/widgets/edit_activity_dialog.dart';
 import 'package:opennutritracker/core/utils/energy_unit_provider.dart';
@@ -9,12 +10,13 @@ import 'package:provider/provider.dart';
 
 import '../../fixture/physical_activity_entity_fixtures.dart';
 
+// Its name upstream is "aerobic", in lower case.
 final _ride = UserActivityEntity(
   'ride',
   43,
   249,
   DateTime(2026, 6, 15, 18),
-  PhysicalActivityFixtures.moderateBicycling,
+  PhysicalActivityFixtures.lightDancing,
 );
 
 void main() {
@@ -35,7 +37,10 @@ void main() {
           supportedLocales: S.supportedLocales,
           home: Builder(
             builder: (context) {
-              name = _ride.physicalActivityEntity.getName(context);
+              // As the Diary row has it: upstream's names are lowercase.
+              name = toBeginningOfSentenceCase(
+                _ride.physicalActivityEntity.getName(context),
+              );
               return TextButton(
                 onPressed: () => result = showDialog<double>(
                   context: context,
@@ -53,6 +58,7 @@ void main() {
 
     final dialog = tester.widget<AlertDialog>(find.byType(AlertDialog));
     expect((dialog.title! as Text).data, name);
+    expect(name, 'Aerobic');
 
     final delete = tester.getRect(find.text('Delete'));
     final cancel = tester.getRect(find.text('Cancel'));

@@ -335,7 +335,14 @@ void main() {
         );
     // With no target the page passes the plan's rate and an offer of one.
     await _pump(tester, tile(const []));
-    expect(find.text('Keeping your weight', findRichText: true), findsOne);
+    // As on Trends: the verb the value, the rest after it.
+    expect(
+      (
+        tester.widget<YouTile>(find.byType(YouTile)).value,
+        tester.widget<YouTile>(find.byType(YouTile)).note,
+      ),
+      ('Maintain', null),
+    );
     expect(find.text('Set a target weight'), findsOneWidget);
     expect(find.text(noGoalText), findsNothing);
 
@@ -364,6 +371,26 @@ void main() {
     expect(find.textContaining('Maintain', findRichText: true), findsNothing);
     final you = tester.widget<YouTile>(find.byType(YouTile));
     expect((you.value, you.note), ('Losing', '0.4 kg a week'));
+
+    // With no goal kept, too, and the offer of a target still under it.
+    await _pump(
+      tester,
+      Scaffold(
+        body: GoalYouTile(
+          key: UniqueKey(),
+          title: 'Goal',
+          value: 'Losing 0.4 kg a week',
+          note: null,
+          below: 'Set a target weight',
+          profileGoal: false,
+          onTap: () {},
+          load: () async => (plan: null, history: const <GoalRecord>[]),
+        ),
+      ),
+    );
+    final losing = tester.widget<YouTile>(find.byType(YouTile));
+    expect((losing.value, losing.note), ('Losing', '0.4 kg a week'));
+    expect(find.text('Set a target weight'), findsOneWidget);
 
     await _pump(tester, tile([_done], profileGoal: true));
     expect(find.text('Keep'), findsOneWidget);
