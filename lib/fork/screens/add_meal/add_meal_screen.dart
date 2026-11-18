@@ -235,6 +235,8 @@ class _AddMealScreenState extends State<AddMealScreen> {
                 onBarcodePressed: _onBarcodeIconPressed,
                 // opened to search, so the keyboard is up
                 autofocus: true,
+                // the search button beside the field is the one magnifier
+                showSearchIcon: false,
               ),
               const SizedBox(height: Dimens.spacing12),
               _buildSourceChips(context, palette),
@@ -472,25 +474,28 @@ class _AddMealScreenState extends State<AddMealScreen> {
         onSelected: (_) => _selectSource(source),
       ),
     );
+    final chips = [
+      chip(_SearchSource.recent, S.of(context).recentlyAddedLabel),
+      Semantics(
+        identifier: 'add-meal-source-favourites',
+        child: chip(_SearchSource.favourites, S.of(context).favouritesLabel),
+      ),
+      chip(_SearchSource.all, S.of(context).allItemsLabel),
+      chip(_SearchSource.products, S.of(context).searchProductsPage),
+      chip(_SearchSource.food, S.of(context).searchFoodPage),
+    ];
+    // Above 1.5x a scrolling row hides chips past the edge with no cue.
+    if (MediaQuery.textScalerOf(context).scale(10) > 15) {
+      return Align(
+        alignment: Alignment.centerLeft,
+        child: Wrap(runSpacing: Dimens.spacing8, children: chips),
+      );
+    }
     return Align(
       alignment: Alignment.centerLeft,
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
-        child: Row(
-          children: [
-            chip(_SearchSource.recent, S.of(context).recentlyAddedLabel),
-            Semantics(
-              identifier: 'add-meal-source-favourites',
-              child: chip(
-                _SearchSource.favourites,
-                S.of(context).favouritesLabel,
-              ),
-            ),
-            chip(_SearchSource.all, S.of(context).allItemsLabel),
-            chip(_SearchSource.products, S.of(context).searchProductsPage),
-            chip(_SearchSource.food, S.of(context).searchFoodPage),
-          ],
-        ),
+        child: Row(children: chips),
       ),
     );
   }

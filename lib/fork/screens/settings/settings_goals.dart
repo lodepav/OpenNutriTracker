@@ -1,5 +1,10 @@
 part of 'settings_screen.dart';
 
+/// "Carbs 60% · Fat 25%": a unit on each number, so a lone "%" never wraps
+/// onto a line of its own at large text.
+String percentsLine(List<(String, int)> parts) =>
+    [for (final (label, n) in parts) '$label $n%'].join(' · ');
+
 /// The Goals section: its rows and the dialogs they open.
 extension _GoalsSettings on _SettingsScreenState {
   List<Widget> _goalsRows(
@@ -96,18 +101,19 @@ extension _GoalsSettings on _SettingsScreenState {
     return kcal == 0 ? 'None' : energyText(context, kcal, signed: true);
   }
 
-  /// "Carbs 60 · Fat 25 · Protein 15 %", in the user's macro order.
+  /// "Carbs 60% · Fat 25% · Protein 15%", in the user's macro order.
   String? _macroSplitText() {
     final config = _goalsConfig;
     if (config == null) return null;
-    String pct(double? fraction, int fallback) =>
-        '${((fraction ?? fallback / 100) * 100).round()}';
-    final parts = inMacroOrder(
-      carbs: 'Carbs ${pct(config.userCarbGoalPct, 60)}',
-      fat: 'Fat ${pct(config.userFatGoalPct, 25)}',
-      protein: 'Protein ${pct(config.userProteinGoalPct, 15)}',
+    int pct(double? fraction, int fallback) =>
+        ((fraction ?? fallback / 100) * 100).round();
+    final split = percentsLine(
+      inMacroOrder(
+        carbs: ('Carbs', pct(config.userCarbGoalPct, 60)),
+        fat: ('Fat', pct(config.userFatGoalPct, 25)),
+        protein: ('Protein', pct(config.userProteinGoalPct, 15)),
+      ),
     );
-    final split = '${parts.join(' · ')} %';
     return splitOverridden(AdaptiveStore.settings.value)
         ? '$split. $_notUsed'
         : split;
@@ -116,12 +122,12 @@ extension _GoalsSettings on _SettingsScreenState {
   String? _mealSharesText() {
     final shares = _goalsConfig?.mealKcalSharesPct;
     if (shares == null) return null;
-    return [
-      'Breakfast ${shares[ConfigEntity.mealKeyBreakfast] ?? 0}',
-      'Lunch ${shares[ConfigEntity.mealKeyLunch] ?? 0}',
-      'Dinner ${shares[ConfigEntity.mealKeyDinner] ?? 0}',
-      'Snack ${shares[ConfigEntity.mealKeySnack] ?? 0} %',
-    ].join(' · ');
+    return percentsLine([
+      ('Breakfast', shares[ConfigEntity.mealKeyBreakfast] ?? 0),
+      ('Lunch', shares[ConfigEntity.mealKeyLunch] ?? 0),
+      ('Dinner', shares[ConfigEntity.mealKeyDinner] ?? 0),
+      ('Snack', shares[ConfigEntity.mealKeySnack] ?? 0),
+    ]);
   }
 
   String _dayStartText(BuildContext context, SettingsLoadedState state) {

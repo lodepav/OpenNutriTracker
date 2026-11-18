@@ -229,6 +229,25 @@ class _DiaryTableCalendarState extends State<DiaryTableCalendar> {
               ),
               ),
             ),
+            // "Mon Tue Wed" ran together at 2x: each name shrinks to its
+            // column, with a gap; silent, as the package's own, since each
+            // day cell says its weekday
+            dowBuilder: (context, day) => ExcludeSemantics(
+              child: Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 2),
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    DateFormat.E(
+                      Localizations.localeOf(context).toLanguageTag(),
+                    ).format(day),
+                    style: weekdayStyle,
+                  ),
+                ),
+              ),
+            ),
+            ),
             defaultBuilder: (context, day, _) => _ring(day),
             outsideBuilder: (context, day, _) => _ring(day, outside: true),
             todayBuilder: (context, day, _) => _ring(day, today: true),

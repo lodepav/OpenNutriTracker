@@ -22,35 +22,36 @@ enum SettingsSection {
   /// The first four are what people come to change; the rest, a second card.
   bool get isFirstCard => index < 4;
 
-  /// The accent for the first card, muted for the second: not the macro
-  /// colours, which mean carbs, fat and protein everywhere else (H4).
-  Color colorIn(AppPalette palette) =>
-      isFirstCard ? palette.accent : palette.textMuted;
+  /// The theme's primary for the first card, as the rows inside use, muted
+  /// for the second: not the macro colours, which mean carbs, fat and
+  /// protein everywhere else (H4).
+  Color colorIn(BuildContext context) => isFirstCard
+      ? Theme.of(context).colorScheme.primary
+      : paletteOf(context).textMuted;
 }
 
 /// A row of a section, for the search, with other words it goes by
 /// ([also]: "kJ" for the energy unit).
 typedef SettingsEntry = ({String label, SettingsSection section, String also});
 
-/// [entries] whose label, section or other words have every word of
-/// [query] in them.
+/// [entries] whose label, section or other words have a word starting with
+/// each word of [query]: "ai" finds "AI meal assistance", not "Daily".
 List<SettingsEntry> matchingSettings(
   List<SettingsEntry> entries,
   String query,
 ) {
-  final words = query
-      .toLowerCase()
-      .split(RegExp(r'\s+'))
-      .where((w) => w.isNotEmpty)
-      .toList();
+  // Unicode-aware, for the translated labels: "énergie" is one word
+  final split = RegExp(r'[^\p{L}\p{N}]+', unicode: true);
+  List<String> wordsOf(String text) =>
+      text.toLowerCase().split(split).where((w) => w.isNotEmpty).toList();
+  final words = wordsOf(query);
   if (words.isEmpty) return const [];
   return [
     for (final e in entries)
       if (words.every(
-        (w) =>
-            e.label.toLowerCase().contains(w) ||
-            e.section.title.toLowerCase().contains(w) ||
-            e.also.toLowerCase().contains(w),
+        (w) => wordsOf(
+          '${e.label} ${e.section.title} ${e.also}',
+        ).any((word) => word.startsWith(w)),
       ))
         e,
   ];
@@ -153,10 +154,17 @@ class _SectionRow extends StatelessWidget {
                       width: 38,
                       height: 38,
                       decoration: BoxDecoration(
-                        color: section.colorIn(palette),
+                        color: section.colorIn(context),
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      child: Icon(section.icon, color: Colors.white, size: 22),
+                      child: Icon(
+                        section.icon,
+                        // A dynamic primary can be pale, as in dark themes
+                        color: section.isFirstCard
+                            ? Theme.of(context).colorScheme.onPrimary
+                            : Colors.white,
+                        size: 22,
+                      ),
                     ),
                   ),
                   const SizedBox(width: Dimens.spacing12),

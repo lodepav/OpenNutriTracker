@@ -178,12 +178,12 @@ class _ProfilePageState extends State<ProfilePage> {
               identifier: 'profile-bmi',
               title: S.of(context).bmiLabel,
               value: '${userBMIEntity.bmiValue.roundToPrecision(1)}',
-              note: userBMIEntity.nutritionalStatus.getName(context),
+              note: bmiWords(userBMIEntity.nutritionalStatus),
               below: 'How it is worked out',
               spokenLabel:
                   '${S.of(context).bmiLabel}, '
                   '${userBMIEntity.bmiValue.roundToPrecision(1)}, '
-                  '${userBMIEntity.nutritionalStatus.getName(context)}',
+                  '${bmiWords(userBMIEntity.nutritionalStatus)}',
               hint: 'How it is worked out',
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(builder: (_) => const BmiInfoScreen()),

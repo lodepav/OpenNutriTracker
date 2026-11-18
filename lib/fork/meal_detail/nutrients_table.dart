@@ -187,7 +187,8 @@ class FoodNutrientsTable extends StatelessWidget {
                 row(s.saturatedFatLabel, n.saturatedFat100, 'g', sub: true),
                 row(s.carbohydrateLabel, n.carbohydrates100, 'g'),
                 row(s.sugarLabel, n.sugars100, 'g', sub: true),
-                row(s.fiberLabel, n.fiber100, 'g'),
+                // as Home and Trends spell it
+                row('Fibre', n.fiber100, 'g'),
                 row(s.proteinLabel, n.proteins100, 'g'),
               ]),
             ],

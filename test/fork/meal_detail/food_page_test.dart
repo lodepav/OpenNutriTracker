@@ -137,9 +137,42 @@ void main() {
       _app(const FoodMacroRing(kcal: 200, carbs: 25, fat: 0, protein: 25)),
     );
     expect(find.text('200'), findsOneWidget);
-    expect(find.text('25 g carbs · 50%'), findsOneWidget);
-    expect(find.text('0 g fat · 0%'), findsOneWidget);
-    expect(find.text('25 g protein · 50%'), findsOneWidget);
+    expect(find.text('25 g Carbs · 50%'), findsOneWidget);
+    expect(find.text('0 g Fat · 0%'), findsOneWidget);
+    expect(find.text('25 g Protein · 50%'), findsOneWidget);
+  });
+
+  test(
+    'a macro\'s share is of the energy, rounded, none when there is none',
+    () {
+      expect(macroEnergyShare(100, 200), 50);
+      expect(macroEnergyShare(76, 400), 19);
+      expect(macroEnergyShare(0, 200), 0);
+      expect(macroEnergyShare(0, 0), 0);
+    },
+  );
+
+  test('a macro is read as its name, amount and share of the energy', () {
+    expect(
+      macroSpokenLabel('Protein', 19.4, 79),
+      'Protein, 19 g, 79% of energy',
+    );
+    expect(macroSpokenLabel('Fat', null, 0), 'Fat, not known');
+  });
+
+  testWidgets('each macro is its own node, read in words', (tester) async {
+    final semantics = tester.ensureSemantics();
+    await tester.pumpWidget(
+      _app(const FoodMacroRing(kcal: 200, carbs: 25, fat: null, protein: 25)),
+    );
+    expect(find.bySemanticsLabel('Carbs, 25 g, 50% of energy'), findsOneWidget);
+    expect(find.bySemanticsLabel('Fat, not known'), findsOneWidget);
+    expect(
+      find.bySemanticsLabel('Protein, 25 g, 50% of energy'),
+      findsOneWidget,
+    );
+    expect(find.bySemanticsLabel(RegExp('·')), findsNothing);
+    semantics.dispose();
   });
 
   // #1474: what the food lacks is missing, not 0.
@@ -150,9 +183,9 @@ void main() {
       _app(const FoodMacroRing(kcal: null, carbs: 25, fat: null, protein: 25)),
     );
     expect(find.text('—'), findsOneWidget);
-    expect(find.text('— fat'), findsOneWidget);
-    expect(find.text('25 g carbs · 50%'), findsOneWidget);
-    expect(find.text('25 g protein · 50%'), findsOneWidget);
+    expect(find.text('— Fat'), findsOneWidget);
+    expect(find.text('25 g Carbs · 50%'), findsOneWidget);
+    expect(find.text('25 g Protein · 50%'), findsOneWidget);
   });
 
   testWidgets('the header names where the food comes from and its energy', (
@@ -216,6 +249,51 @@ void main() {
     );
     expect(find.bySemanticsLabel('Carbs 110 of 250 g'), findsOneWidget);
     semantics.dispose();
+  });
+
+  testWidgets('stacked at 2x, each name leads its figure, the bar under', (
+    tester,
+  ) async {
+    tester.view
+      ..physicalSize = const Size(360, 800)
+      ..devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      MediaQuery(
+        data: const MediaQueryData(
+          size: Size(360, 800),
+          textScaler: TextScaler.linear(2.0),
+        ),
+        child: _app(
+          SingleChildScrollView(
+            child: TodayAfterAdding(
+              day: DateTime(2026, 10, 25),
+              kcal: 200,
+              carbs: 10,
+              fat: 2,
+              protein: 5,
+              load: (_) async => (
+                eaten: (kcal: 1900.0, carbs: 100.0, fat: 50.0, protein: 60.0),
+                goal: (kcal: 2000.0, carbs: 250.0, fat: 70.0, protein: 120.0),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    final energy = tester.getRect(find.text('Energy'));
+    final energyFigure = tester.getRect(find.text('2100 / 2000\u00a0kcal'));
+    // on the figure's line, before it
+    expect(energy.top, lessThan(energyFigure.bottom));
+    expect(energy.bottom, greaterThan(energyFigure.top));
+    expect(energy.right, lessThanOrEqualTo(energyFigure.left));
+    // the energy bar sits between it and the next figure
+    final bar = tester.getRect(find.byType(ClipRRect).first);
+    final next = tester.getRect(find.text('110 / 250\u00a0g'));
+    expect(bar.top, greaterThanOrEqualTo(energyFigure.bottom));
+    expect(next.top, greaterThan(bar.bottom));
   });
 
   // The bar compares like with like: a kJ goal against kcal eaten filled

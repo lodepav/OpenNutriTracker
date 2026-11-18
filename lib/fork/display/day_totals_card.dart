@@ -123,6 +123,45 @@ class _Total extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = paletteOf(context);
     final textTheme = Theme.of(context).textTheme;
+    final nameText = Text(
+      name,
+      style: textTheme.labelSmall?.copyWith(color: palette.textMuted),
+    );
+    // One line, smaller if it must: "12124 / 12960" in kJ broke
+    // in two and pushed its bar below the others (JC8).
+    final figure = FittedBox(
+      fit: BoxFit.scaleDown,
+      alignment: AlignmentDirectional.centerStart,
+      child: Text.rich(
+        maxLines: 1,
+        TextSpan(
+          children: [
+            // A target, not a limit: passing it is not coloured,
+            // as on Home and Trends.
+            TextSpan(
+              text: '$value',
+              style: TextStyle(
+                fontWeight: FontWeight.w700,
+                color: palette.textStrong,
+              ),
+            ),
+            TextSpan(text: keepUnits(goal > 0 ? ' / $goal $unit' : ' $unit')),
+          ],
+        ),
+        style: textTheme.bodySmall?.copyWith(color: palette.textMuted),
+      ),
+    );
+    final bar = ClipRRect(
+      borderRadius: BorderRadius.circular(3),
+      child: LinearProgressIndicator(
+        value: goal > 0 ? (value / goal).clamp(0.0, 1.0) : 0,
+        minHeight: 5,
+        color: color,
+        backgroundColor: palette.surfaceMuted,
+      ),
+    );
+    // Stacked, a name under its bar read as the label of the figure below.
+    final stacked = MediaQuery.textScalerOf(context).scale(10) > 15;
     return Semantics(
       label: dayTotalLabel(name: name, value: value, goal: goal, unit: unit),
       excludeSemantics: true,
@@ -130,49 +169,25 @@ class _Total extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: Dimens.spacing4),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // One line, smaller if it must: "12124 / 12960" in kJ broke
-            // in two and pushed its bar below the others (JC8).
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              alignment: AlignmentDirectional.centerStart,
-              child: Text.rich(
-                maxLines: 1,
-                TextSpan(
-                  children: [
-                    // A target, not a limit: passing it is not coloured,
-                    // as on Home and Trends.
-                    TextSpan(
-                      text: '$value',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                        color: palette.textStrong,
-                      ),
-                    ),
-                    TextSpan(
-                      text: keepUnits(goal > 0 ? ' / $goal $unit' : ' $unit'),
-                    ),
-                  ],
-                ),
-                style: textTheme.bodySmall?.copyWith(color: palette.textMuted),
-              ),
-            ),
-            const SizedBox(height: Dimens.spacing4),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(3),
-              child: LinearProgressIndicator(
-                value: goal > 0 ? (value / goal).clamp(0.0, 1.0) : 0,
-                minHeight: 5,
-                color: color,
-                backgroundColor: palette.surfaceMuted,
-              ),
-            ),
-            const SizedBox(height: Dimens.spacing4),
-            Text(
-              name,
-              style: textTheme.labelSmall?.copyWith(color: palette.textMuted),
-            ),
-          ],
+          children: stacked
+              ? [
+                  Row(
+                    children: [
+                      nameText,
+                      const SizedBox(width: Dimens.spacing8),
+                      Expanded(child: figure),
+                    ],
+                  ),
+                  const SizedBox(height: Dimens.spacing4),
+                  bar,
+                ]
+              : [
+                  figure,
+                  const SizedBox(height: Dimens.spacing4),
+                  bar,
+                  const SizedBox(height: Dimens.spacing4),
+                  nameText,
+                ],
         ),
       ),
     );

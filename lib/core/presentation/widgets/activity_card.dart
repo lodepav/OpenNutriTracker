@@ -1,5 +1,8 @@
 import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/material.dart';
+// [fork] S224 activity-row
+import 'package:intl/intl.dart' show toBeginningOfSentenceCase;
+// [/fork]
 import 'package:opennutritracker/core/domain/entity/user_activity_entity.dart';
 import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
@@ -73,7 +76,14 @@ class ActivityCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       AutoSizeText(
-                        activityEntity.physicalActivityEntity.getName(context),
+                        // [fork] S224 activity-row: "Aerobic", as a name
+                        // starts everywhere else
+                        toBeginningOfSentenceCase(
+                          activityEntity.physicalActivityEntity.getName(
+                            context,
+                          ),
+                        ),
+                        // [/fork]
                         style: textTheme.titleSmall?.copyWith(color: palette.textStrong),
                         maxLines: 1,
                         minFontSize: 11,
@@ -89,7 +99,13 @@ class ActivityCard extends StatelessWidget {
                 ),
                 const SizedBox(width: Dimens.spacing8),
                 Text(
-                  "🔥${EnergyDisplay.formatWithUnit(context, activityEntity.burnedKcal)}",
+                  // [fork] S224 activity-row: the figure alone, as on the
+                  // meal rows; the emoji sat in the middle of a quiet list
+                  EnergyDisplay.formatWithUnit(
+                    context,
+                    activityEntity.burnedKcal,
+                  ),
+                  // [/fork]
                   style: textTheme.labelMedium?.copyWith(
                     color: palette.textStrong,
                     fontWeight: FontWeight.w700,

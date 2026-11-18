@@ -260,7 +260,7 @@ void main() {
     expect(goal.top, greaterThan(weight.bottom));
     expect(bmi.width, weight.width);
     expect(cutText(tester), isEmpty);
-    _whole(tester, 'Pre-obesity');
+    _whole(tester, 'Overweight');
     _whole(tester, '0.4 kg');
   });
 
@@ -279,7 +279,7 @@ void main() {
     );
     expect(goal.top, weight.top);
     expect(cutText(tester), isEmpty);
-    _whole(tester, 'Pre-obesity');
+    _whole(tester, 'Overweight');
     _whole(tester, '0.4 kg');
   });
 
@@ -291,7 +291,7 @@ void main() {
     SemanticsData node(String id) =>
         tester.getSemantics(find.bySemanticsIdentifier(id)).getSemanticsData();
     final bmi = node('profile-bmi');
-    expect(bmi.label, 'BMI, 27.5, Pre-obesity');
+    expect(bmi.label, 'BMI, 27.5, Overweight');
     expect(bmi.hint, 'How it is worked out');
     final goal = node('profile-goal-tile');
     expect(goal.label, 'Goal, Losing 0.4 kg a week');
@@ -438,6 +438,63 @@ void main() {
     expect(find.text('Profile weight'), findsOneWidget);
     expect(find.text('Data sources'), findsOneWidget);
     expect(find.text('View sources'), findsNothing);
+  });
+
+  test('the BMI band in plain words, every obese class as one', () {
+    expect(bmiWords(UserNutritionalStatus.underWeight), 'Underweight');
+    expect(bmiWords(UserNutritionalStatus.normalWeight), 'Healthy weight');
+    expect(bmiWords(UserNutritionalStatus.preObesity), 'Overweight');
+    for (final obese in [
+      UserNutritionalStatus.obesityClassI,
+      UserNutritionalStatus.obesityClassII,
+      UserNutritionalStatus.obesityClassIII,
+    ]) {
+      expect(bmiWords(obese), 'Obese');
+    }
+  });
+
+  Future<void> pumpRow(WidgetTester tester, double scale) async {
+    await pumpOnPhone(
+      tester,
+      // in a column, as a section holds it
+      Column(
+        children: [
+          YouRow(
+            identifier: 'row',
+            label: 'Weekly rate',
+            value: keepUnits('\u22120.4 kg a week'),
+            onTap: () {},
+          ),
+        ],
+      ),
+      textScale: scale,
+    );
+    // 360 x 800 dp at pumpOnPhone's 2.625.
+    tester.view.physicalSize = const Size(945, 2100);
+    await tester.pump();
+  }
+
+  testWidgets('at 2x on a 360 phone a row puts its value under its label, '
+      'the chevron at the end', (tester) async {
+    await pumpRow(tester, 2);
+    expect(tester.takeException(), isNull);
+    final label = tester.getRect(find.text('Weekly rate'));
+    final value = tester.getRect(find.textContaining('0.4'));
+    final chevron = tester.getRect(find.byIcon(Icons.chevron_right_rounded));
+    expect(value.top, greaterThanOrEqualTo(label.bottom));
+    expect(value.left, label.left);
+    expect(chevron.right, closeTo(360 - 16, 0.5));
+    // Each on one line: a line at 2x bodyLarge is 48 dp.
+    expect(label.height, lessThan(60));
+    expect(value.height, lessThan(60));
+  });
+
+  testWidgets('at 1x a row keeps its value beside its label', (tester) async {
+    await pumpRow(tester, 1);
+    final label = tester.getRect(find.text('Weekly rate'));
+    final value = tester.getRect(find.textContaining('0.4'));
+    expect(value.left, greaterThan(label.left + 100));
+    expect(value.center.dy, closeTo(label.center.dy, 4));
   });
 }
 

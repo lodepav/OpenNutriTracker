@@ -341,20 +341,30 @@ class _DashboardWidgetState extends State<DashboardWidget> {
                             },
                           ),
                           const SizedBox(height: Dimens.spacing8),
-                          SegmentedButton<bool>(
-                            key: const ValueKey('home-ring-mode'),
-                            showSelectedIcon: false,
-                            style: const ButtonStyle(
-                              visualDensity: VisualDensity.compact,
-                              tapTargetSize: MaterialTapTargetSize.padded,
+                          Semantics(
+                            container: true,
+                            label: 'Ring shows',
+                            child: SegmentedButton<bool>(
+                              key: const ValueKey('home-ring-mode'),
+                              showSelectedIcon: false,
+                              style: const ButtonStyle(
+                                visualDensity: VisualDensity.compact,
+                                tapTargetSize: MaterialTapTargetSize.padded,
+                              ),
+                              segments: const [
+                                ButtonSegment(
+                                  value: false,
+                                  label: Text('Left'),
+                                ),
+                                ButtonSegment(
+                                  value: true,
+                                  label: Text('Eaten'),
+                                ),
+                              ],
+                              selected: {showsEaten},
+                              onSelectionChanged: (picked) =>
+                                  DisplayPrefs.setHomeShowsEaten(picked.first),
                             ),
-                            segments: const [
-                              ButtonSegment(value: false, label: Text('Left')),
-                              ButtonSegment(value: true, label: Text('Eaten')),
-                            ],
-                            selected: {showsEaten},
-                            onSelectionChanged: (picked) =>
-                                DisplayPrefs.setHomeShowsEaten(picked.first),
                           ),
                         ],
                       ),
@@ -521,6 +531,8 @@ class _MacroLeft extends StatelessWidget {
           '$label: ${intake.round()} of ${goal.round()} g, '
           '$grams g ${over ? 'over' : 'left'}',
       excludeSemantics: true,
+      // excludeSemantics drops the InkWell's tap too, as on the ring.
+      onTap: onTap,
       child: InkWell(
         onTap: onTap,
         borderRadius: Dimens.borderRadiusS,

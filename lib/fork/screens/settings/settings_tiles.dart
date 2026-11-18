@@ -132,7 +132,9 @@ class _SettingsTile extends StatelessWidget {
     final tint = iconColor ?? accent;
     final tile = ListTile(
       enabled: enabled,
-      leading: _SettingsIconChip(palette: palette, icon: icon, color: tint),
+      leading: settingsRowsDropIcons(context)
+          ? null
+          : _SettingsIconChip(palette: palette, icon: icon, color: tint),
       title: _titleWithBadge(context, text, palette),
       subtitle: subtitle != null
           ? Text(
@@ -177,7 +179,9 @@ class _SettingsSwitchTile extends StatelessWidget {
     final accent = Theme.of(context).colorScheme.primary;
     final text = Theme.of(context).textTheme;
     final tile = SwitchListTile(
-      secondary: _SettingsIconChip(palette: palette, icon: icon, color: accent),
+      secondary: settingsRowsDropIcons(context)
+          ? null
+          : _SettingsIconChip(palette: palette, icon: icon, color: accent),
       title: Text(
         title,
         style: text.titleMedium?.copyWith(fontWeight: FontWeight.w700),

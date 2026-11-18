@@ -2,6 +2,7 @@
 // are ported by hand: fork/tools/upstream-copies.sh.
 import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart' show toBeginningOfSentenceCase;
 import 'package:opennutritracker/core/domain/entity/user_activity_entity.dart';
 import 'package:opennutritracker/core/presentation/widgets/activity_card.dart';
 import 'package:opennutritracker/core/presentation/widgets/placeholder_card.dart';
@@ -149,7 +150,10 @@ class _ActivityVerticalListState extends State<ActivityVerticalList> {
               Semantics(
                 container: true,
                 label: activityLabel(
-                  name: userActivity.physicalActivityEntity.getName(context),
+                  // upstream's names are lowercase ("aerobic")
+                  name: toBeginningOfSentenceCase(
+                    userActivity.physicalActivityEntity.getName(context),
+                  ),
                   minutes: userActivity.duration.toInt(),
                   energy: energyText(context, userActivity.burnedKcal),
                 ),
@@ -193,7 +197,7 @@ class _ActivityVerticalListState extends State<ActivityVerticalList> {
   }
 }
 
-/// An activity in words: "aerobic, 43 minutes, 249 kcal burned".
+/// An activity in words: "Aerobic, 43 minutes, 249 kcal burned".
 String activityLabel({
   required String name,
   required int minutes,

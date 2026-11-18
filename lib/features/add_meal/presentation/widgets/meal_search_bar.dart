@@ -17,6 +17,9 @@ class MealSearchBar extends StatefulWidget {
   // [fork] S163 search-autofocus
   final bool autofocus;
   // [/fork]
+  // [fork] S223 search-icon: off where a search button sits beside the field
+  final bool showSearchIcon;
+  // [/fork]
 
   const MealSearchBar({
     super.key,
@@ -26,6 +29,9 @@ class MealSearchBar extends StatefulWidget {
     this.onSearchChanged,
     // [fork] S163 search-autofocus
     this.autofocus = false,
+    // [/fork]
+    // [fork] S223 search-icon
+    this.showSearchIcon = true,
     // [/fork]
   });
 
@@ -76,7 +82,11 @@ class _MealSearchBarState extends State<MealSearchBar> {
               decoration: InputDecoration(
                 hintText: S.of(context).searchLabel,
                 hintStyle: Theme.of(context).textTheme.bodyLarge?.copyWith(color: palette.textMuted),
-                prefixIcon: Icon(Icons.search_rounded, size: 24, color: palette.textMuted),
+                // [fork] S223 search-icon
+                prefixIcon: widget.showSearchIcon
+                    ? Icon(Icons.search_rounded, size: 24, color: palette.textMuted)
+                    : null,
+                // [/fork]
                 suffixIcon: widget.onBarcodePressed != null
                     ? Semantics(
                         identifier: 'meal-search-barcode',

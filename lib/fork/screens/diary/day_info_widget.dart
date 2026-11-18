@@ -219,7 +219,8 @@ class _DayInfoWidgetState extends State<DayInfoWidget> {
             children: [
               Expanded(
                 child: Text(
-                  DateFormat.yMMMMEEEEd().format(widget.selectedDay),
+                  // the week strip above shows the year
+                  DateFormat.MMMMEEEEd().format(widget.selectedDay),
                   style: textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.w800,
                   ),

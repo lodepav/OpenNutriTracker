@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:opennutritracker/core/domain/entity/profile_entity.dart';
+import 'package:opennutritracker/core/domain/entity/user_bmi_entity.dart';
 import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
@@ -297,6 +298,22 @@ class YouRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
     final muted = paletteOf(context).textMuted;
+    final stacked = MediaQuery.textScalerOf(context).scale(10) > 15;
+    List<Widget> values(TextAlign align) => [
+      if (value != null)
+        Text(
+          value!,
+          semanticsLabel: spokenValue,
+          textAlign: align,
+          style: text.bodyMedium?.copyWith(color: muted),
+        ),
+      if (detail != null && detail!.isNotEmpty)
+        Text(
+          detail!,
+          textAlign: align,
+          style: text.bodySmall?.copyWith(color: muted),
+        ),
+    ];
     // Merged at the top, so the button says what it is (A2).
     return MergeSemantics(
       child: Semantics(
@@ -316,8 +333,21 @@ class YouRow extends StatelessWidget {
               child: LayoutBuilder(
                 builder: (context, constraints) => Row(
                   children: [
-                    Expanded(child: Text(label, style: text.bodyLarge)),
-                    if (value != null || (detail?.isNotEmpty ?? false)) ...[
+                    Expanded(
+                      // Above 1.5x side by side wrapped both: the value goes
+                      // under the label.
+                      child: stacked
+                          ? Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(label, style: text.bodyLarge),
+                                ...values(TextAlign.start),
+                              ],
+                            )
+                          : Text(label, style: text.bodyLarge),
+                    ),
+                    if (!stacked &&
+                        (value != null || (detail?.isNotEmpty ?? false))) ...[
                       const SizedBox(width: Dimens.spacing12),
                       ConstrainedBox(
                         constraints: BoxConstraints(
@@ -325,21 +355,7 @@ class YouRow extends StatelessWidget {
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            if (value != null)
-                              Text(
-                                value!,
-                                semanticsLabel: spokenValue,
-                                textAlign: TextAlign.end,
-                                style: text.bodyMedium?.copyWith(color: muted),
-                              ),
-                            if (detail != null && detail!.isNotEmpty)
-                              Text(
-                                detail!,
-                                textAlign: TextAlign.end,
-                                style: text.bodySmall?.copyWith(color: muted),
-                              ),
-                          ],
+                          children: values(TextAlign.end),
                         ),
                       ),
                     ],
@@ -393,3 +409,13 @@ class YouSwitchRow extends StatelessWidget {
     ),
   );
 }
+
+/// A BMI band in plain words: WHO's "Pre-obesity" reads as jargon.
+String bmiWords(UserNutritionalStatus status) => switch (status) {
+  UserNutritionalStatus.underWeight => 'Underweight',
+  UserNutritionalStatus.normalWeight => 'Healthy weight',
+  UserNutritionalStatus.preObesity => 'Overweight',
+  UserNutritionalStatus.obesityClassI ||
+  UserNutritionalStatus.obesityClassII ||
+  UserNutritionalStatus.obesityClassIII => 'Obese',
+};

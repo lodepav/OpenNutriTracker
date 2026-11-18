@@ -118,6 +118,9 @@ void main() {
     expect(find.bySemanticsLabel('Saturated fat <0.1 g'), findsOneWidget);
     expect(find.bySemanticsLabel(RegExp(r'^\s')), findsNothing);
     expect(find.bySemanticsLabel('Energy 402 kcal'), findsOneWidget);
+    // as Home and Trends spell it
+    expect(find.text('Fibre'), findsOneWidget);
+    expect(find.text('Fiber'), findsNothing);
     // the heading heads the card the table is in
     expect(
       tester.getSemantics(find.text('Nutrition information')),

@@ -189,6 +189,43 @@ void main() {
     },
   );
 
+  testWidgets('TalkBack can open a macro column and knows what the ring '
+      'toggle switches', (tester) async {
+    final semanticsHandle = tester.ensureSemantics();
+    await tester.binding.setSurfaceSize(const Size(500, 1600));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(_wrap(dashboardWidget(totalKcalLeft: 1900)));
+    await tester.pumpAndSettle();
+    final toggle = tester.getSemantics(
+      find.bySemanticsLabel(RegExp(r'^Ring shows')),
+    );
+    final inside = <String>[];
+    void collect(SemanticsNode n) {
+      inside.add(n.label);
+      n.visitChildren((c) {
+        collect(c);
+        return true;
+      });
+    }
+
+    toggle.visitChildren((c) {
+      collect(c);
+      return true;
+    });
+    // the label names the two segments it holds, not some node above them
+    expect(inside, containsAll(['Left', 'Eaten']));
+    final node = tester.getSemantics(
+      find.byWidgetPredicate(
+        (w) => w is Semantics && w.properties.identifier == 'home-macro-fat',
+      ),
+    );
+    expect(node.getSemanticsData().hasAction(SemanticsAction.tap), isTrue);
+    node.owner!.performAction(node.id, SemanticsAction.tap);
+    await tester.pumpAndSettle();
+    expect(find.byType(NutrientContributionsScreen), findsOneWidget);
+    semanticsHandle.dispose();
+  });
+
   testWidgets(
     'tapping a macro tile lists the foods its total came from (#1266)',
     (tester) async {
