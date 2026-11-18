@@ -146,9 +146,10 @@ class _WeightHistoryViewState extends State<WeightHistoryView> {
         child: WidthCap(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(
-              Dimens.spacing12,
+              // the gutter every other page has
+              Dimens.spacing16,
               Dimens.spacing8,
-              Dimens.spacing12,
+              Dimens.spacing16,
               Dimens.spacing12,
             ),
             child: Semantics(
@@ -180,9 +181,10 @@ class _WeightHistoryViewState extends State<WeightHistoryView> {
               slivers: [
                 SliverPadding(
                   padding: const EdgeInsets.fromLTRB(
-                    Dimens.spacing12,
+                    // the gutter every other page has
+                    Dimens.spacing16,
                     0,
-                    Dimens.spacing12,
+                    Dimens.spacing16,
                     Dimens.spacing16,
                   ),
                   sliver: SliverMainAxisGroup(

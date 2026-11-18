@@ -15,7 +15,9 @@ class AutoBackupTile extends StatelessWidget {
     title: 'Automatic backup',
     subtitle: ValueListenableBuilder(
       valueListenable: AutoBackup.state,
-      builder: (context, state, _) => Text(_summary(state)),
+      builder: (context, state, _) => Text(
+        _summary(state, Localizations.localeOf(context).toLanguageTag()),
+      ),
     ),
     onTap: () => Navigator.of(
       context,
@@ -23,21 +25,22 @@ class AutoBackupTile extends StatelessWidget {
   );
 }
 
-String _when(DateTime at) => DateFormat.yMMMd().add_jm().format(at);
+String _when(DateTime at, String locale) =>
+    DateFormat.yMMMd(locale).add_jm().format(at);
 
-String _summary(AutoBackupState state) {
+String _summary(AutoBackupState state, String locale) {
   if (!state.isOn) return 'Off';
   if (state.failed) return 'Last backup failed';
   final success = state.lastSuccessAt;
-  return success == null ? 'On' : 'Last backup ${_when(success)}';
+  return success == null ? 'On' : 'Last backup ${_when(success, locale)}';
 }
 
-/// The backup's state on Settings' Data row.
-String backupLine(AutoBackupState state) {
+/// The backup's state on Settings' Data row, its date in [locale].
+String backupLine(AutoBackupState state, String locale) {
   if (!state.isOn) return 'Backup off';
   if (state.failed) return 'Last backup failed';
   final success = state.lastSuccessAt;
-  return success == null ? 'Backup on' : 'Backed up ${_when(success)}';
+  return success == null ? 'Backup on' : 'Backed up ${_when(success, locale)}';
 }
 
 enum BackupNotice { none, failed, offAfterRestore }
@@ -138,13 +141,18 @@ class _AutoBackupScreenState extends State<AutoBackupScreen> {
                 contentPadding: EdgeInsets.zero,
                 leading: const Icon(Icons.folder_rounded),
                 title: Text(state.folderName ?? 'No folder chosen'),
-                subtitle: Text(_summary(state)),
+                subtitle: Text(
+                  _summary(
+                    state,
+                    Localizations.localeOf(context).toLanguageTag(),
+                  ),
+                ),
               ),
               if (state.failed)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 8),
                   child: Text(
-                    '${_errorText(state.lastError)} (${_when(error!)})',
+                    '${_errorText(state.lastError)} (${_when(error!, Localizations.localeOf(context).toLanguageTag())})',
                     style: textTheme.bodyMedium?.copyWith(
                       color: Theme.of(context).colorScheme.error,
                     ),

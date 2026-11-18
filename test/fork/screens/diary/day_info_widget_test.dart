@@ -1,6 +1,7 @@
 // Fork-owned copy of test/features/diary/presentation/widgets/day_info_widget_test.dart (D23); upstream's later changes to it
 // are ported by hand: fork/tools/upstream-copies.sh.
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get_it/get_it.dart';
 import 'package:opennutritracker/core/domain/entity/intake_entity.dart';
@@ -96,7 +97,10 @@ Future<void> _pumpOmadDay(
     ChangeNotifierProvider<EnergyUnitProvider>(
       create: (_) => EnergyUnitProvider(),
       child: MaterialApp(
-        localizationsDelegates: const [S.delegate],
+        localizationsDelegates: const [
+          S.delegate,
+          ...GlobalMaterialLocalizations.delegates,
+        ],
         supportedLocales: S.supportedLocales,
         home: Scaffold(
           body: SingleChildScrollView(
@@ -151,7 +155,10 @@ Future<void> _pumpLoggedDay(
     ChangeNotifierProvider<EnergyUnitProvider>(
       create: (_) => EnergyUnitProvider(),
       child: MaterialApp(
-        localizationsDelegates: const [S.delegate],
+        localizationsDelegates: const [
+          S.delegate,
+          ...GlobalMaterialLocalizations.delegates,
+        ],
         supportedLocales: S.supportedLocales,
         home: Scaffold(
           body: SingleChildScrollView(
@@ -477,7 +484,10 @@ void main() {
       ChangeNotifierProvider<EnergyUnitProvider>(
         create: (_) => EnergyUnitProvider(),
         child: MaterialApp(
-          localizationsDelegates: const [S.delegate],
+          localizationsDelegates: const [
+            S.delegate,
+            ...GlobalMaterialLocalizations.delegates,
+          ],
           supportedLocales: S.supportedLocales,
           home: Scaffold(
             body: SingleChildScrollView(

@@ -206,6 +206,7 @@ class _SideComparePageState extends State<SideComparePage> {
     // measured in this range", a range this page does not name.
     final charted = inRange.isEmpty ? sides : inRange;
     final last = pairs.lastOrNull;
+    final locale = Localizations.localeOf(context).toLanguageTag();
     return ListView(
       padding: EdgeInsets.fromLTRB(
         Dimens.spacing16,
@@ -254,7 +255,7 @@ class _SideComparePageState extends State<SideComparePage> {
           const SizedBox(height: Dimens.spacing8),
           Text(
             '${units.difference(last)}, '
-            '${DateFormat.yMMMd().format(last.date)}',
+            '${DateFormat.yMMMd(locale).format(last.date)}',
             style: Theme.of(context).textTheme.titleSmall,
           ),
         ],
@@ -265,7 +266,7 @@ class _SideComparePageState extends State<SideComparePage> {
           units: units,
           caption: inRange.isEmpty && sides.isNotEmpty
               ? 'None in the last ${widget.rangeDays} days; all since '
-                    '${DateFormat.yMMM().format(sides.first.date)}.'
+                    '${DateFormat.yMMM(locale).format(sides.first.date)}.'
               : null,
         ),
         if (pairs.isNotEmpty) ...[
@@ -274,7 +275,7 @@ class _SideComparePageState extends State<SideComparePage> {
             rows: [
               for (final p in pairs.reversed)
                 (
-                  label: DateFormat.yMMMd().format(p.date),
+                  label: DateFormat.yMMMd(locale).format(p.date),
                   value:
                       'L ${units.text(p.left)} · R ${units.text(p.right)}'
                       '\n${units.difference(p)}',

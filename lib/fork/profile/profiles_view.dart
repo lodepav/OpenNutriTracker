@@ -135,9 +135,10 @@ class ProfilesView extends StatelessWidget {
   @override
   Widget build(BuildContext context) => ListView(
     padding: const EdgeInsets.fromLTRB(
-      Dimens.spacing12,
+      // the gutter every other page has
+      Dimens.spacing16,
       Dimens.spacing8,
-      Dimens.spacing12,
+      Dimens.spacing16,
       Dimens.spacing32,
     ),
     children: [

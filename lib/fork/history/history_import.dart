@@ -920,11 +920,12 @@ class _HistoryImportDialogState extends State<HistoryImportDialog> {
   late var _file = widget.file;
   late var _plan = widget.plan(_file);
 
-  static final _date = DateFormat.yMMMd();
-
   String _span(Iterable<DateTime> days) {
+    final date = DateFormat.yMMMd(
+      Localizations.localeOf(context).toLanguageTag(),
+    );
     final sorted = days.toList()..sort();
-    return '${_date.format(sorted.first)} – ${_date.format(sorted.last)}';
+    return '${date.format(sorted.first)} – ${date.format(sorted.last)}';
   }
 
   @override

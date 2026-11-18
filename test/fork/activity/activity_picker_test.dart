@@ -125,9 +125,9 @@ void main() {
   });
 
   test('dayLabel', () {
-    expect(dayLabel(_day, _day), 'Today');
-    expect(dayLabel(DateTime(2026, 10, 24, 23), _day), 'Yesterday');
-    expect(dayLabel(DateTime(2026, 10, 20), _day), 'Tue, Oct 20');
+    expect(dayLabel(_day, _day, 'en_US'), 'Today');
+    expect(dayLabel(DateTime(2026, 10, 24, 23), _day, 'en_US'), 'Yesterday');
+    expect(dayLabel(DateTime(2026, 10, 20), _day, 'en_US'), 'Tue, Oct 20');
   });
 
   testWidgets('each row with what half an hour burns, and the weight', (

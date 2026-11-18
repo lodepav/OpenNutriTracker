@@ -502,7 +502,7 @@ class _BasketSheetState extends State<BasketSheet> {
                     key: const ValueKey('basket-plan'),
                     onPressed: _logging || items.isEmpty ? null : _plan,
                     child: Text(
-                      'Plan for ${DateFormat.MMMEd().format(widget.day)}',
+                      'Plan for ${DateFormat.MMMEd(Localizations.localeOf(context).toLanguageTag()).format(widget.day)}',
                     ),
                   ),
                 OutlinedButton(

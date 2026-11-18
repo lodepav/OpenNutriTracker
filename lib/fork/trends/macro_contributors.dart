@@ -160,7 +160,9 @@ class _MacroDaysAndFoodsState extends State<MacroDaysAndFoods> {
             intakes: snapshot.data,
             scope: day == null
                 ? 'Last ${widget.dates.length} days'
-                : intl.DateFormat.MMMEd().format(day),
+                : intl.DateFormat.MMMEd(
+                    Localizations.localeOf(context).toLanguageTag(),
+                  ).format(day),
             onClearDay: day == null ? null : () => setState(() => _day = null),
           ),
         ),

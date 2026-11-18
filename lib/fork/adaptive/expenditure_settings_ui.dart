@@ -358,7 +358,11 @@ class _SkippedDaysDialog extends StatelessWidget {
               for (final day in days)
                 ListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: Text(DateFormat.yMMMEd().format(day)),
+                  title: Text(
+                    DateFormat.yMMMEd(
+                      Localizations.localeOf(context).toLanguageTag(),
+                    ).format(day),
+                  ),
                   // The row reads as one: the date, then the button.
                   trailing: TextButton(
                     onPressed: () => store.setSkipped(day, false),
@@ -612,9 +616,9 @@ class _CheckInSection extends StatelessWidget {
     this.canOpen = true,
   ]);
 
-  static String _weekday(int weekday) =>
+  static String _weekday(int weekday, String locale) =>
       // 2024-01-01 was a Monday.
-      DateFormat.EEEE().format(DateTime(2024, 1, weekday));
+      DateFormat.EEEE(locale).format(DateTime(2024, 1, weekday));
 
   @override
   Widget build(BuildContext context) {
@@ -641,7 +645,7 @@ class _CheckInSection extends StatelessWidget {
             subtitle: Text(
               settings.checkInWeekday == null
                   ? 'A week after the last one'
-                  : 'Every ${_weekday(settings.checkInWeekday!)}; a missed '
+                  : 'Every ${_weekday(settings.checkInWeekday!, Localizations.localeOf(context).toLanguageTag())}; a missed '
                         'one stays due until done',
             ),
             trailing: const Icon(Icons.edit_rounded),
@@ -660,7 +664,12 @@ class _CheckInSection extends StatelessWidget {
                         title: Text(
                           day == null
                               ? 'A week after the last one'
-                              : _weekday(day),
+                              : _weekday(
+                                  day,
+                                  Localizations.localeOf(
+                                    context,
+                                  ).toLanguageTag(),
+                                ),
                         ),
                         onTap: () => Navigator.pop(context, (weekday: day)),
                       ),

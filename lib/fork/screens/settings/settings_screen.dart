@@ -453,7 +453,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         if (!_aiHidden) s.settingsAiAssistLabel,
       ].join(', '),
       SettingsSection.data:
-          '${backupLine(AutoBackup.state.value)} · $healthPlatformName, '
+          '${backupLine(AutoBackup.state.value, Localizations.localeOf(context).toLanguageTag())} · $healthPlatformName, '
           'import, export',
       SettingsSection.appearance: 'Theme, colour, language, what screens show',
       // The version is on About's own page, in Updates and the footer

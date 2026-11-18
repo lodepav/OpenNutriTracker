@@ -527,4 +527,12 @@ void main() {
     expect(chips.where((c) => c.selected), hasLength(1));
     expect(chips.every((c) => c.showCheckmark != false), isTrue);
   });
+
+  testWidgets('the cards keep the 16 dp gutter the tabs have', (tester) async {
+    await _pumpLarge(tester, entries, textScale: 1);
+    final width = tester.view.physicalSize.width / tester.view.devicePixelRatio;
+    final chart = tester.getRect(find.byType(AppCard).first);
+    expect(chart.left, 16);
+    expect(chart.right, width - 16);
+  });
 }

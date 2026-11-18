@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:opennutritracker/fork/dev/fake_health.dart';
 import 'package:opennutritracker/fork/health/weight_import.dart';
 
@@ -77,7 +78,8 @@ class _HealthWeightButtonState extends State<HealthWeightButton> {
     setState(() => _reading = false);
     widget.onNote(switch (read) {
       HealthWeightFound(:final measuredAt) =>
-        'From Health Connect, weighed ${_date(measuredAt)}.',
+        'From Health Connect, weighed '
+            '${DateFormat.yMMMd(Localizations.localeOf(context).toLanguageTag()).format(measuredAt)}.',
       HealthWeightRefused() =>
         "Health Connect didn't share your weight. Type it instead.",
       HealthWeightNone() =>
@@ -86,10 +88,6 @@ class _HealthWeightButtonState extends State<HealthWeightButton> {
     });
     if (read case HealthWeightFound(:final kg)) widget.onWeight(kg);
   }
-
-  static String _date(DateTime d) =>
-      '${d.year}-${d.month.toString().padLeft(2, '0')}-'
-      '${d.day.toString().padLeft(2, '0')}';
 
   @override
   Widget build(BuildContext context) => OutlinedButton.icon(

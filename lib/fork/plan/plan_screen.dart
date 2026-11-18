@@ -211,7 +211,13 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
             final date = DateTime(first.year, first.month, first.day + i);
             return ChoiceChip(
               key: ValueKey('plan-day-$i'),
-              label: Text(i == 0 ? 'Today' : DateFormat.MMMEd().format(date)),
+              label: Text(
+                i == 0
+                    ? 'Today'
+                    : DateFormat.MMMEd(
+                        Localizations.localeOf(context).toLanguageTag(),
+                      ).format(date),
+              ),
               selected: DateUtils.isSameDay(date, day),
               onSelected: (_) => setState(() => _picked = date),
             );

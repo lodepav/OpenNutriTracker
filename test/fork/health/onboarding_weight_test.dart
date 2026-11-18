@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:opennutritracker/features/onboarding/presentation/widgets/onboarding_body_measurements_page_body.dart';
 import 'package:opennutritracker/fork/health/onboarding_weight.dart';
@@ -79,7 +80,10 @@ void main() {
       void Function(bool active, double? weight) onWeight,
     ) => tester.pumpWidget(
       MaterialApp(
-        localizationsDelegates: const [S.delegate],
+        localizationsDelegates: const [
+          S.delegate,
+          ...GlobalMaterialLocalizations.delegates,
+        ],
         supportedLocales: S.supportedLocales,
         home: Scaffold(
           body: OnboardingBodyMeasurementsPageBody(
@@ -114,7 +118,7 @@ void main() {
         '80.4',
       );
       expect(
-        find.text('From Health Connect, weighed 2026-10-24.'),
+        find.text('From Health Connect, weighed Oct 24, 2026.'),
         findsOneWidget,
       );
       // With the height typed, Next is on with the read weight.

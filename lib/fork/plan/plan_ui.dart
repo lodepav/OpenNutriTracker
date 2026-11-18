@@ -154,6 +154,7 @@ class _PlannedFoodsCardState extends State<PlannedFoodsCard> {
 
   Future<void> _logAll(List<PlannedFood> foods) async {
     final messenger = ScaffoldMessenger.maybeOf(context);
+    final locale = Localizations.localeOf(context).toLanguageTag();
     final startedOn = ProfileStamp.now();
     final logged = <PlannedFood>[];
     final written = <IntakeEntity>[];
@@ -190,7 +191,7 @@ class _PlannedFoodsCardState extends State<PlannedFoodsCard> {
     final meals = logged.map((f) => f.type).toSet();
     final to = [
       if (meals.length == 1) _typeName(meals.single),
-      DateFormat.MMMEd().format(logged.first.day),
+      DateFormat.MMMEd(locale).format(logged.first.day),
     ];
     _showWithUndo(
       messenger,

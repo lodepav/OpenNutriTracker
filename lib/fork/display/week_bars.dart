@@ -127,8 +127,9 @@ class _Bars extends StatelessWidget {
         .expand((d) => [d.kcal, d.goal])
         .fold(1.0, (a, b) => b > a ? b : a);
     final unit = energyUnit(context);
+    final locale = Localizations.localeOf(context).toLanguageTag();
     String spoken(_Day d) =>
-        '${DateFormat.EEEE().format(d.day)} ${energyValue(context, d.kcal)}'
+        '${DateFormat.EEEE(locale).format(d.day)} ${energyValue(context, d.kcal)}'
         '${d.goal > 0 ? ' of ${energyValue(context, d.goal)}' : ''} $unit';
     // One node for the week, apart from the day's totals above it.
     return Semantics(
@@ -172,7 +173,7 @@ class _Bars extends StatelessWidget {
                   ),
                   const SizedBox(height: Dimens.spacing4),
                   Text(
-                    DateFormat.E().format(d.day).substring(0, 1),
+                    DateFormat.E(locale).format(d.day).substring(0, 1),
                     style: i == week.length - 1
                         ? label?.copyWith(
                             color: palette.textStrong,
