@@ -42,8 +42,12 @@ class _FakeProfileBloc extends Bloc<ProfileEvent, ProfileState>
   @override
   Future<void> setCaloriesTaperEnabled(bool enabled) async {}
 
+  /// What each save wrote: the goal and the weekly rate at that moment.
+  final saved = <(UserWeightGoalEntity, double?)>[];
+
   @override
-  Future<void> updateUser(UserEntity userEntity) async {}
+  Future<void> updateUser(UserEntity userEntity) async =>
+      saved.add((userEntity.goal, userEntity.weeklyWeightGoalKg));
 }
 
 class _Home extends Fake implements HomeBloc {
@@ -152,6 +156,51 @@ void main() {
   });
 
   tearDown(() => GetIt.instance.reset());
+
+  testWidgets('a picked direction turns the weekly rate with it, and a rate '
+      'too small for it is dropped', (tester) async {
+    await _pump(tester, _user());
+    final bloc = locator<ProfileBloc>() as _FakeProfileBloc;
+    Future<void> pick(String direction) async {
+      await tester.tap(
+        find.byWidgetPredicate(
+          (w) => w is YouRow && w.identifier == 'profile-goal',
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(direction).last);
+      await tester.pumpAndSettle();
+    }
+
+    await pick('Gain weight');
+    expect(bloc.saved.last, (UserWeightGoalEntity.gainWeight, 0.4));
+    await pick('Maintain weight');
+    expect(bloc.saved.last, (UserWeightGoalEntity.maintainWeight, 0.0));
+    await pick('Lose weight');
+    expect(bloc.saved.last, (UserWeightGoalEntity.loseWeight, null));
+  });
+
+  testWidgets('a set weekly rate sets the direction it means', (tester) async {
+    await _pump(tester, _user());
+    final bloc = locator<ProfileBloc>() as _FakeProfileBloc;
+    Future<void> setRate(double kg) async {
+      await tester.tap(
+        find.byWidgetPredicate(
+          (w) => w is YouRow && w.identifier == 'profile-weekly-goal',
+        ),
+      );
+      await tester.pumpAndSettle();
+      tester.widget<Slider>(find.byType(Slider)).onChanged!(kg);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('OK'));
+      await tester.pumpAndSettle();
+    }
+
+    await setRate(0.25);
+    expect(bloc.saved.last, (UserWeightGoalEntity.gainWeight, 0.25));
+    await setRate(0.05);
+    expect(bloc.saved.last, (UserWeightGoalEntity.maintainWeight, 0.05));
+  });
 
   testWidgets('who is active, with a Switch button', (tester) async {
     await _pump(tester, _user());

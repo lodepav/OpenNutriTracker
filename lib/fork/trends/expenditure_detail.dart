@@ -281,8 +281,6 @@ class ExpenditureChart extends StatelessWidget {
       ),
     );
   }
-
-  /// A round step near [raw]: 1, 2 or 5 times a power of ten.
 }
 
 /// The Expenditure chart's y axis for [values] (not empty): at least
@@ -306,6 +304,7 @@ class ExpenditureChart extends StatelessWidget {
   );
 }
 
+/// A round step near [raw]: 1, 2 or 5 times a power of ten.
 double _niceStep(double raw) {
   if (raw <= 0) return 100;
   final p = math.pow(10, (math.log(raw) / math.ln10).floor()).toDouble();

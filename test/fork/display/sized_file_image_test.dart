@@ -32,8 +32,8 @@ void main() {
     root.deleteSync(recursive: true);
   });
 
-  testWidgets('a photo re-picked at the same path is read afresh, at the '
-      'thumbnail size too', (tester) async {
+  testWidgets('evictPhoto drops the thumbnail-size and full-size cache '
+      'entries of a re-picked photo', (tester) async {
     Directory('${root.path}/meal_images').createSync();
     File('${root.path}/meal_images/m.jpg').writeAsBytesSync([0, 1, 2]);
     await tester.pumpWidget(

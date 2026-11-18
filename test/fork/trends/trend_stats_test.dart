@@ -225,6 +225,19 @@ void main() {
       expect(s, (current: 15, longest: 20));
     });
 
+    test(
+      'a history from before the spring clock change still counts '
+      "today in the best run (fails only where clocks change, as TZ=Europe/Prague)",
+      () {
+        final june = DateTime(2026, 6, 20);
+        final s = historyStreak({
+          DateTime(2026, 1, 10),
+          for (var i = 0; i < 15; i++) DateTime(2026, 6, 20 - i),
+        }, june);
+        expect(s, (current: 15, longest: 15));
+      },
+    );
+
     test('none yet: nothing', () {
       expect(historyStreak({}, today), (current: 0, longest: 0));
     });

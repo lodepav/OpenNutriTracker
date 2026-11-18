@@ -81,7 +81,13 @@ bool isLogged(TrackedDayEntity d) => d.caloriesTracked > 0;
 ) {
   if (onTrackDays.isEmpty) return (current: 0, longest: 0);
   final first = onTrackDays.reduce((a, b) => a.isBefore(b) ? a : b);
-  return streakStats(onTrackDays, first, today);
+  // At noon a spring clock change between them can't cut a day off
+  // streakStats' count of days, which divides hours.
+  return streakStats(
+    onTrackDays,
+    first,
+    DateTime(today.year, today.month, today.day, 12),
+  );
 }
 
 /// The tracked days over the window by date.
