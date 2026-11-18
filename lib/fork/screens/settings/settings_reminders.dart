@@ -8,11 +8,9 @@ extension _RemindersSettings on _SettingsScreenState {
     AppPalette palette,
   ) {
     return [
-      _categoryHeader(
-        context,
-        palette,
-        S.of(context).settingsNotificationsLabel,
-      ),
+      // The page's title is the heading; each card is one row of the same name
+      if (widget.embedded)
+        _categoryHeader(context, palette, SettingsSection.reminders.title),
       _SettingsGroup(
         palette: palette,
         tiles: [
@@ -57,7 +55,6 @@ extension _RemindersSettings on _SettingsScreenState {
         ],
       ),
       const SizedBox(height: Dimens.spacing20),
-      _categoryHeader(context, palette, 'Weigh-in and check-in'),
       _SettingsGroup(
         palette: palette,
         tiles: [

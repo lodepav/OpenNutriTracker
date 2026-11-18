@@ -33,7 +33,7 @@ extension _DataSettings on _SettingsScreenState {
         ],
       ),
       const SizedBox(height: Dimens.spacing20),
-      _categoryHeader(context, palette, 'Bring data in'),
+      _categoryHeader(context, palette, 'Bring Data In'),
       _SettingsGroup(
         palette: palette,
         tiles: [
@@ -49,7 +49,7 @@ extension _DataSettings on _SettingsScreenState {
         ],
       ),
       const SizedBox(height: Dimens.spacing20),
-      _categoryHeader(context, palette, 'Take data out'),
+      _categoryHeader(context, palette, 'Take Data Out'),
       _SettingsGroup(
         palette: palette,
         tiles: [
@@ -85,7 +85,7 @@ extension _DataSettings on _SettingsScreenState {
         ],
       ),
       const SizedBox(height: Dimens.spacing20),
-      _categoryHeader(context, palette, 'Start over'),
+      _categoryHeader(context, palette, 'Start Over'),
       _SettingsGroup(
         palette: palette,
         tiles: [

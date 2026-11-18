@@ -670,6 +670,38 @@ void main() {
       expect(chip, findsNothing);
     });
 
+    testWidgets('at 2x the source chips wrap, none past the edge', (
+      tester,
+    ) async {
+      await _register([_intake('Apple')]);
+      await pumpOnPhone(
+        tester,
+        Navigator(
+          onGenerateRoute: (settings) => MaterialPageRoute<void>(
+            settings: RouteSettings(
+              arguments: AddMealScreenArguments(
+                AddMealType.breakfastType,
+                DateTime(2026, 10, 1),
+              ),
+            ),
+            builder: (_) => const AddMealScreen(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final width =
+          tester.view.physicalSize.width / tester.view.devicePixelRatio;
+      final chips = find.byType(ChoiceChip);
+      expect(chips, findsNWidgets(5));
+      for (final chip in chips.evaluate()) {
+        expect(
+          tester.getRect(find.byWidget(chip.widget)).right,
+          lessThanOrEqualTo(width),
+        );
+      }
+    });
+
     testWidgets('the app bar fits at 2x on a 360 dp phone', (tester) async {
       await _register([_intake('Apple')]);
       await pumpOnPhone(

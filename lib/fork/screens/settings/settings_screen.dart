@@ -71,6 +71,8 @@ import 'package:opennutritracker/fork/export/csv_export.dart';
 // The user's Open Food Facts account
 import 'package:opennutritracker/fork/off/off_contribution_ui.dart';
 import 'package:opennutritracker/fork/display/display_prefs.dart';
+import 'package:opennutritracker/fork/display/settings_tile.dart'
+    show settingsRowsDropIcons;
 import 'package:opennutritracker/fork/units/energy_text.dart';
 import 'package:opennutritracker/core/domain/entity/config_entity.dart';
 import 'package:opennutritracker/core/domain/usecase/get_config_usecase.dart';
@@ -201,7 +203,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
   /// again whenever the route stops or starts being the top one.
   void _reloadOnReturn() {
     final isCurrent = ModalRoute.isCurrentOf(context) ?? true;
-    if (isCurrent && _wasCovered) _settingsBloc.add(LoadSettingsEvent());
+    if (isCurrent && _wasCovered) {
+      _settingsBloc.add(LoadSettingsEvent());
+      // Appearance may have hidden the AI, which the Food summary names
+      _refreshAiAssistState();
+    }
     _wasCovered = !isCurrent;
   }
 
@@ -384,7 +390,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             )
           : 'Daily reminder off · weigh-in and check-in',
-      SettingsSection.food: 'Food sources, Open Food Facts, AI assist',
+      // The rows' own names; no AI words while the AI is hidden
+      SettingsSection.food: [
+        'Search sources',
+        'Open Food Facts account',
+        if (!_aiHidden) s.settingsAiAssistLabel,
+      ].join(', '),
       SettingsSection.data:
           '${backupLine(AutoBackup.state.value)} · $healthPlatformName, '
           'import, export',
@@ -453,6 +464,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       e('Diary by the hour', appearance),
       e('Show water', appearance),
       e('Show fasting', appearance),
+      e(s.settingsShowAiFeaturesLabel, appearance, 'assistant hide'),
       e(s.settingsPrivacySettings, about, 'keep meal photos'),
       e(s.settingsDisclaimerLabel, about),
       e(s.settingsSourcesLabel, about),

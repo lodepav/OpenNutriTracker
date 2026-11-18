@@ -221,6 +221,11 @@ class _MealDetailBottomSheetState extends State<MealDetailBottomSheet> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final palette = isDark ? AppPalette.dark : AppPalette.light;
     return BottomSheet(
+      // [fork] S125 food-page: the amount card's round corners show the
+      // page behind them, not the sheet's square surface
+      backgroundColor:
+          widget.forkPart == FoodSheetPart.amount ? Colors.transparent : null,
+      // [/fork]
       elevation: 0,
       onClosing: () {},
       enableDrag: false,

@@ -58,7 +58,15 @@ class DayRing extends StatelessWidget {
                 scheme.primary,
             filled: selected ? scheme.primary : null,
           ),
-          child: Center(child: Text('${day.day}', style: style)),
+          // A square whose corners clear the stroke, so a large font shrinks
+          // the number rather than touching the ring.
+          child: Padding(
+            padding: const EdgeInsets.all(8),
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text('${day.day}', style: style),
+            ),
+          ),
         ),
       ),
     );

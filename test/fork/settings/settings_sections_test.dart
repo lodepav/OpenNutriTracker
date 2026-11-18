@@ -82,8 +82,10 @@ class _FakeTrendsBloc extends Fake implements TrendsBloc {
 }
 
 /// Nothing is configured, which is the state a user arrives in from a
-/// rejected key or a refused destination.
+/// rejected key or a refused destination; what a test writes stays.
 class _EmptyStorage implements FlutterSecureStorage {
+  final _values = <String, String>{};
+
   @override
   Future<String?> read({
     required String key,
@@ -93,7 +95,32 @@ class _EmptyStorage implements FlutterSecureStorage {
     WebOptions? webOptions,
     AppleOptions? mOptions,
     WindowsOptions? wOptions,
-  }) async => null;
+  }) async => _values[key];
+
+  @override
+  Future<void> write({
+    required String key,
+    required String? value,
+    AppleOptions? iOptions,
+    AndroidOptions? aOptions,
+    LinuxOptions? lOptions,
+    WebOptions? webOptions,
+    AppleOptions? mOptions,
+    WindowsOptions? wOptions,
+  }) async {
+    value == null ? _values.remove(key) : _values[key] = value;
+  }
+
+  @override
+  Future<void> delete({
+    required String key,
+    AppleOptions? iOptions,
+    AndroidOptions? aOptions,
+    LinuxOptions? lOptions,
+    WebOptions? webOptions,
+    AppleOptions? mOptions,
+    WindowsOptions? wOptions,
+  }) async => _values.remove(key);
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
@@ -118,7 +145,7 @@ void _register() {
   );
 }
 
-Widget _app({SettingsSection? section}) => MaterialApp(
+Widget _app({SettingsSection? section, double textScale = 1}) => MaterialApp(
   localizationsDelegates: const [
     S.delegate,
     GlobalMaterialLocalizations.delegate,
@@ -126,6 +153,12 @@ Widget _app({SettingsSection? section}) => MaterialApp(
     GlobalCupertinoLocalizations.delegate,
   ],
   supportedLocales: S.supportedLocales,
+  builder: (context, child) => MediaQuery(
+    data: MediaQuery.of(
+      context,
+    ).copyWith(textScaler: TextScaler.linear(textScale)),
+    child: child!,
+  ),
   home: SettingsScreen(section: section),
 );
 
@@ -158,8 +191,8 @@ Map<SettingsSection, List<String>> _rows() => {
   ],
   SettingsSection.data: [
     'Automatic backup',
-    'Bring data in',
-    'Take data out',
+    'Bring Data In',
+    'Take Data Out',
     'Import history',
     l10nEn.importCustomFoodDataLabel,
     l10nEn.exportImportAppDataLabel,
@@ -307,11 +340,11 @@ void main() {
     double top(String text) => tester.getTopLeft(find.text(text).first).dy;
     final order = [
       'Automatic backup',
-      'Bring data in',
+      'Bring Data In',
       'Import history',
-      'Take data out',
+      'Take Data Out',
       'Export diary as CSV',
-      'Start over',
+      'Start Over',
       l10nEn.clearOffCacheLabel,
       l10nEn.settingsDeleteAllDataLabel,
     ];
@@ -429,4 +462,154 @@ void main() {
       expect(find.text(row), findsWidgets, reason: row);
     }
   });
+
+  test('a search matches the start of a word, not inside one', () {
+    const entries = <SettingsEntry>[
+      (label: 'Daily reminder', section: SettingsSection.reminders, also: ''),
+      (label: 'AI meal assistance', section: SettingsSection.food, also: ''),
+      (label: 'Disclaimer', section: SettingsSection.about, also: ''),
+      (label: 'Goal planner', section: SettingsSection.goals, also: 'maintain'),
+      (
+        label: 'Weigh-in and check-in reminders',
+        section: SettingsSection.reminders,
+        also: '',
+      ),
+      (label: "Unité d'énergie", section: SettingsSection.units, also: ''),
+    ];
+    expect(matchingSettings(entries, 'ai'), [entries[1]]);
+    expect(matchingSettings(entries, 'check-in'), [entries[4]]);
+    expect(matchingSettings(entries, 'énergie'), [entries[5]]);
+    expect(matchingSettings(entries, 'nergie'), isEmpty);
+    expect(matchingSettings(entries, 'claim'), isEmpty);
+  });
+
+  test('a list of shares puts the unit on each number', () {
+    expect(
+      percentsLine([('Breakfast', 30), ('Dinner', 20), ('Snack', 10)]),
+      'Breakfast 30% · Dinner 20% · Snack 10%',
+    );
+  });
+
+  testWidgets('the search finds Show AI features, by ai or assistant', (
+    tester,
+  ) async {
+    await tester.pumpWidget(_app());
+    await tester.pumpAndSettle();
+    await tester.tap(find.bySemanticsIdentifier('settings-search'));
+    await tester.pumpAndSettle();
+    for (final word in ['ai', 'assistant']) {
+      await tester.enterText(find.byType(TextField), word);
+      await tester.pumpAndSettle();
+      expect(
+        find.text(l10nEn.settingsShowAiFeaturesLabel),
+        findsOneWidget,
+        reason: word,
+      );
+    }
+    await tester.enterText(find.byType(TextField), 'ai');
+    await tester.pumpAndSettle();
+    expect(find.text(l10nEn.settingsNotificationsLabel), findsNothing);
+    expect(find.text(l10nEn.settingsDisclaimerLabel), findsNothing);
+  });
+
+  testWidgets('the Food summary names its rows, and no AI once it is hidden', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(400, 3000));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(_app());
+    await tester.pumpAndSettle();
+    expect(
+      find.text('Search sources, Open Food Facts account, AI meal assistance'),
+      findsOneWidget,
+    );
+    await tester.tap(find.bySemanticsIdentifier('settings-section-appearance'));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.descendant(
+        of: find.bySemanticsIdentifier('settings-show-ai'),
+        matching: find.byType(Switch),
+      ),
+    );
+    await tester.pumpAndSettle();
+    Navigator.of(tester.element(find.byType(SettingsScreen).last)).pop();
+    await tester.pumpAndSettle();
+    expect(
+      find.text('Search sources, Open Food Facts account'),
+      findsOneWidget,
+    );
+    // and back when shown again
+    await tester.tap(find.bySemanticsIdentifier('settings-section-appearance'));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.descendant(
+        of: find.bySemanticsIdentifier('settings-show-ai'),
+        matching: find.byType(Switch),
+      ),
+    );
+    await tester.pumpAndSettle();
+    Navigator.of(tester.element(find.byType(SettingsScreen).last)).pop();
+    await tester.pumpAndSettle();
+    expect(
+      find.text('Search sources, Open Food Facts account, AI meal assistance'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('Reminders says each row once, under no heading of its own', (
+    tester,
+  ) async {
+    await tester.pumpWidget(_app(section: SettingsSection.reminders));
+    await tester.pumpAndSettle();
+    expect(find.text(l10nEn.settingsNotificationsLabel), findsOneWidget);
+    expect(find.text('Weigh-in and check-in'), findsNothing);
+  });
+
+  testWidgets('the index squares take the theme colour the rows use', (
+    tester,
+  ) async {
+    final theme = ThemeData(
+      colorScheme: ColorScheme.fromSeed(seedColor: Colors.indigo),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: theme,
+        home: Scaffold(
+          body: SettingsIndex(summaries: const {}, onOpen: (_) {}),
+        ),
+      ),
+    );
+    final square = tester.widget<Container>(
+      find
+          .ancestor(
+            of: find.byIcon(SettingsSection.goals.icon),
+            matching: find.byType(Container),
+          )
+          .first,
+    );
+    expect(
+      (square.decoration! as BoxDecoration).color,
+      theme.colorScheme.primary,
+    );
+  });
+
+  for (final section in SettingsSection.values) {
+    testWidgets('${section.name} at 2x: no row gives its width to an icon', (
+      tester,
+    ) async {
+      await tester.binding.setSurfaceSize(const Size(360, 800));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      List<Widget?> leading() => [
+        for (final t in tester.widgetList<ListTile>(find.byType(ListTile)))
+          t.leading,
+      ];
+      await tester.pumpWidget(_app(section: section));
+      await tester.pumpAndSettle();
+      expect(leading().whereType<Widget>(), isNotEmpty);
+      await tester.pumpWidget(_app(section: section, textScale: 2));
+      await tester.pumpAndSettle();
+      expect(leading(), isNotEmpty);
+      expect(leading().whereType<Widget>(), isEmpty);
+    });
+  }
 }

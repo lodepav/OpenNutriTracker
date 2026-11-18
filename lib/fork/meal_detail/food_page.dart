@@ -18,7 +18,6 @@ import 'package:opennutritracker/fork/off/off_kinds.dart';
 import 'package:opennutritracker/fork/trends/trends_widgets.dart'
     show keepUnits;
 import 'package:opennutritracker/fork/units/energy_text.dart';
-import 'package:opennutritracker/generated/l10n.dart';
 
 /// Seam S125: the food's page after the canvas's "Food page · A + B". A
 /// header with the food's photo or kind, a ring of where the amount's
@@ -39,6 +38,17 @@ bool foodPageInline(BuildContext context) =>
 
 /// Energy per gram of each macro, for the ring's shares.
 const _kcalPerG = (carbs: 4.0, fat: 9.0, protein: 4.0);
+
+/// [part]'s share of [total] energy as a whole percent; 0 when there is
+/// no energy to share.
+int macroEnergyShare(double part, double total) =>
+    total > 0 ? (part / total * 100).round() : 0;
+
+/// A macro's line as read aloud: "Protein, 19 g, 79% of energy", or
+/// "Fat, not known" when the food lacks it.
+String macroSpokenLabel(String name, double? grams, int share) => grams == null
+    ? '$name, not known'
+    : '$name, ${grams.round()} g, $share% of energy';
 
 /// The food's photo, else its kind, else a plain icon; then its name and
 /// where it comes from, with its energy per 100 g.
@@ -164,7 +174,6 @@ class FoodMacroRing extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final s = S.of(context);
     final theme = Theme.of(context);
     final palette = paletteOf(context);
     final energy = (
@@ -173,43 +182,52 @@ class FoodMacroRing extends StatelessWidget {
       protein: (protein ?? 0) * _kcalPerG.protein,
     );
     final sum = energy.carbs + energy.fat + energy.protein;
-    int share(double part) => sum > 0 ? (part / sum * 100).round() : 0;
-    Widget line(String name, double? grams, double part, Color color) =>
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 3),
-          child: Row(
-            children: [
-              Container(
-                width: 10,
-                height: 10,
-                decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-              ),
-              const SizedBox(width: Dimens.spacing8),
-              Expanded(
-                child: Text.rich(
-                  TextSpan(
-                    children: [
-                      TextSpan(
-                        text: grams == null
-                            ? '$missingNutrientPlaceholder '
-                            : '${grams.round()} g ',
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
+    int share(double part) => macroEnergyShare(part, sum);
+    Widget line(
+      String name,
+      double? grams,
+      double part,
+      Color color,
+    ) => Semantics(
+      container: true,
+      label: macroSpokenLabel(name, grams, share(part)),
+      excludeSemantics: true,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 3),
+        child: Row(
+          children: [
+            Container(
+              width: 10,
+              height: 10,
+              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+            ),
+            const SizedBox(width: Dimens.spacing8),
+            Expanded(
+              child: Text.rich(
+                TextSpan(
+                  children: [
+                    TextSpan(
+                      text: grams == null
+                          ? '$missingNutrientPlaceholder '
+                          : '${grams.round()} g ',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
                       ),
-                      TextSpan(
-                        text: grams == null ? name : '$name · ${share(part)}%',
-                      ),
-                    ],
-                  ),
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: palette.textMuted,
-                  ),
+                    ),
+                    TextSpan(
+                      text: grams == null ? name : '$name · ${share(part)}%',
+                    ),
+                  ],
+                ),
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: palette.textMuted,
                 ),
               ),
-            ],
-          ),
-        );
+            ),
+          ],
+        ),
+      ),
+    );
     return AppCard(
       padding: const EdgeInsets.all(Dimens.spacing16),
       child: Row(
@@ -256,10 +274,10 @@ class FoodMacroRing extends StatelessWidget {
           Expanded(
             child: Column(
               children: inMacroOrder(
-                carbs: line(s.carbsLabel, carbs, energy.carbs, palette.carbs),
-                fat: line(s.fatLabel, fat, energy.fat, palette.fat),
+                carbs: line('Carbs', carbs, energy.carbs, palette.carbs),
+                fat: line('Fat', fat, energy.fat, palette.fat),
                 protein: line(
-                  s.proteinLabel,
+                  'Protein',
                   protein,
                   energy.protein,
                   palette.protein,
@@ -419,6 +437,69 @@ class _TodayAfterAddingState extends State<TodayAfterAdding> {
           // in [eaten]'s unit: [goal] is shown in the profile's (kJ or kcal)
           final scale = math.max(barGoal, eaten + added);
           double part(double v) => scale > 0 ? (v / scale).clamp(0, 1) : 0;
+          final nameText = Text(
+            name,
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: palette.textMuted,
+            ),
+          );
+          // One line, smaller if it must, as the Diary's totals.
+          final figure = FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: AlignmentDirectional.centerStart,
+            child: Text.rich(
+              maxLines: 1,
+              TextSpan(
+                children: [
+                  TextSpan(
+                    text: '$value',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      color: palette.textStrong,
+                    ),
+                  ),
+                  TextSpan(
+                    text: keepUnits(goal > 0 ? ' / $goal $unit' : ' $unit'),
+                  ),
+                ],
+              ),
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: palette.textMuted,
+              ),
+            ),
+          );
+          final bar = ExcludeSemantics(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(3),
+              child: SizedBox(
+                height: 5,
+                child: ColoredBox(
+                  color: palette.surfaceMuted,
+                  child: Row(
+                    children: [
+                      // A part that rounds to nothing is left out:
+                      // a zero flex would lay out unbounded.
+                      for (final (flex, fill) in [
+                        (part(eaten), color),
+                        (part(added), color.withValues(alpha: 0.45)),
+                        ((1 - part(eaten) - part(added)).clamp(0, 1), null),
+                      ])
+                        if ((flex * 1000).round() > 0)
+                          Flexible(
+                            flex: (flex * 1000).round(),
+                            child: ColoredBox(
+                              color: fill ?? Colors.transparent,
+                              child: const SizedBox.expand(),
+                            ),
+                          ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+          // Stacked, a name under its bar read as the next figure's label.
+          final stacked = MediaQuery.textScalerOf(context).scale(10) > 15;
           return Expanded(
             flex: flex,
             // Words, "Fat 96 of 86 g, 10 g over" (A5).
@@ -434,76 +515,25 @@ class _TodayAfterAddingState extends State<TodayAfterAdding> {
               excludeSemantics: true,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // One line, smaller if it must, as the Diary's totals.
-                  FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: AlignmentDirectional.centerStart,
-                    child: Text.rich(
-                      maxLines: 1,
-                      TextSpan(
-                        children: [
-                          TextSpan(
-                            text: '$value',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w700,
-                              color: palette.textStrong,
-                            ),
-                          ),
-                          TextSpan(
-                            text: keepUnits(
-                              goal > 0 ? ' / $goal $unit' : ' $unit',
-                            ),
-                          ),
-                        ],
-                      ),
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: palette.textMuted,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  ExcludeSemantics(
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(3),
-                      child: SizedBox(
-                        height: 5,
-                        child: ColoredBox(
-                          color: palette.surfaceMuted,
-                          child: Row(
-                            children: [
-                              // A part that rounds to nothing is left out:
-                              // a zero flex would lay out unbounded.
-                              for (final (flex, fill) in [
-                                (part(eaten), color),
-                                (part(added), color.withValues(alpha: 0.45)),
-                                (
-                                  (1 - part(eaten) - part(added)).clamp(0, 1),
-                                  null,
-                                ),
-                              ])
-                                if ((flex * 1000).round() > 0)
-                                  Flexible(
-                                    flex: (flex * 1000).round(),
-                                    child: ColoredBox(
-                                      color: fill ?? Colors.transparent,
-                                      child: const SizedBox.expand(),
-                                    ),
-                                  ),
-                            ],
-                          ),
+                children: stacked
+                    ? [
+                        Row(
+                          children: [
+                            nameText,
+                            const SizedBox(width: Dimens.spacing8),
+                            Expanded(child: figure),
+                          ],
                         ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    name,
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: palette.textMuted,
-                    ),
-                  ),
-                ],
+                        const SizedBox(height: 4),
+                        bar,
+                      ]
+                    : [
+                        figure,
+                        const SizedBox(height: 4),
+                        bar,
+                        const SizedBox(height: 4),
+                        nameText,
+                      ],
               ),
             ),
           );

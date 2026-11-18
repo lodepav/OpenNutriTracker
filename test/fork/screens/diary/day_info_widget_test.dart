@@ -25,6 +25,7 @@ import 'package:opennutritracker/generated/l10n.dart';
 import 'package:provider/provider.dart';
 import '../../../fixture/physical_activity_entity_fixtures.dart';
 import '../../../helpers/test_l10n.dart';
+import '../../../helpers/ux_checks.dart';
 
 class _FakeMealDetailBloc extends Fake implements MealDetailBloc {}
 
@@ -329,10 +330,13 @@ void main() {
     expect(find.bySemanticsLabel('Carbs 20 of 250 g'), findsOneWidget);
     expect(find.bySemanticsLabel('Fat 10 of 6 g, 4 g over'), findsOneWidget);
     expect(
-      find.bySemanticsLabel(RegExp(r'^\w[^🔥]*, 43 minutes, 249 kcal burned$')),
+      find.bySemanticsLabel('Bicycling, 43 minutes, 249 kcal burned'),
       findsOneWidget,
     );
     expect(find.bySemanticsLabel(RegExp('🔥|/')), findsNothing);
+    // On screen too (S224): a capital, and the figure without its emoji.
+    expect(find.text('Bicycling'), findsOneWidget);
+    expect(find.textContaining('🔥'), findsNothing);
 
     // While selecting, a checkbox stands where the time was.
     DiarySelection.instance.start();
@@ -499,5 +503,40 @@ void main() {
     await tester.pump();
     expect(find.text(l10nEn.breakfastLabel), findsOneWidget);
     expect(find.byType(TimelineGap), findsNothing);
+  });
+
+  testWidgets('the day heading leaves the year to the strip: its longest '
+      'date one line at 1x on a 411 phone', (tester) async {
+    await pumpOnPhone(
+      tester,
+      ChangeNotifierProvider<EnergyUnitProvider>(
+        create: (_) => EnergyUnitProvider(),
+        child: SingleChildScrollView(
+          child: DayInfoWidget(
+            selectedDay: DateTime(2026, 11, 18),
+            currentDay: DateTime(2026, 11, 18),
+            trackedDayEntity: null,
+            userActivities: const [],
+            breakfastIntake: const [],
+            lunchIntake: const [],
+            dinnerIntake: const [],
+            snackIntake: const [],
+            usesImperialUnits: false,
+            onDeleteIntake: (_, _) {},
+            onDeleteActivity: (_, _) {},
+            onCopyActivity: (_, _) {},
+          ),
+        ),
+      ),
+      textScale: 1,
+    );
+    final heading = find.text('Wednesday, November 18');
+    expect(heading, findsOneWidget);
+    expect(find.textContaining('2026'), findsNothing);
+    final style = tester.widget<Text>(heading).style!;
+    expect(
+      tester.getSize(heading).height,
+      lessThan(style.fontSize! * style.height! * 1.5),
+    );
   });
 }

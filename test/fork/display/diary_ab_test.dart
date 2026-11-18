@@ -367,5 +367,31 @@ void main() {
     );
     expect(tester.takeException(), isNull);
     expect(find.text('October 2026'), findsOneWidget);
+    // "Mon Tue Wed" ran together at 2x: each name fits its column.
+    final mon = tester.getRect(find.text('Mon'));
+    final tue = tester.getRect(find.text('Tue'));
+    expect(tue.left - mon.right, greaterThanOrEqualTo(4));
+  });
+
+  testWidgets('the weekday headings stay silent: each day says its own', (
+    tester,
+  ) async {
+    final semantics = tester.ensureSemantics();
+    await tester.pumpWidget(
+      _app(
+        DiaryTableCalendar(
+          onDateSelected: (_, _) {},
+          calendarDurationDays: const Duration(days: 365),
+          focusedDate: _day,
+          currentDate: _day,
+          selectedDate: _day,
+          trackedDaysMap: const {},
+          daysWithEntries: const {},
+        ),
+      ),
+    );
+    expect(find.text('Mon'), findsOneWidget);
+    expect(find.bySemanticsLabel('Mon'), findsNothing);
+    semantics.dispose();
   });
 }

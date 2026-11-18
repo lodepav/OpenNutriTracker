@@ -142,7 +142,7 @@ void main() {
     await pumpMealDetail(tester, _driedApple(fat100: null));
 
     // [fork] S125: the ring in place of the macro summary
-    expect(inRing(find.text('— fat')), findsOneWidget);
+    expect(inRing(find.text('— Fat')), findsOneWidget);
     // [/fork]
     expect(inTable(find.text(missingNutrientPlaceholder)), findsOneWidget);
     expect(find.textContaining('0.0 g'), findsNothing);
@@ -160,7 +160,7 @@ void main() {
     await pumpMealDetail(tester, _driedApple(fat100: 0));
 
     // [fork] S125: the ring in place of the macro summary
-    expect(inRing(find.text('0 g fat · 0%')), findsOneWidget);
+    expect(inRing(find.text('0 g Fat · 0%')), findsOneWidget);
     // [/fork]
     // [fork] S221 food-nutrients-table: "0 g", a space before the unit
     expect(inTable(find.text('0 g')), findsOneWidget);
@@ -182,9 +182,9 @@ void main() {
     );
 
     // [fork] S125: the ring's kcal and the table's energy and fat rows; the
-    // ring's fat reads "— fat".
+    // ring's fat reads "— Fat".
     expect(find.text(missingNutrientPlaceholder), findsNWidgets(3));
-    expect(inRing(find.text('— fat')), findsOneWidget);
+    expect(inRing(find.text('— Fat')), findsOneWidget);
     // [/fork]
     expect(inTable(find.text(missingNutrientPlaceholder)), findsNWidgets(2));
     // [fork] S94: the fork's wording names them

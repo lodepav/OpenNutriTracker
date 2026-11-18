@@ -386,7 +386,7 @@ class _ExpenditureTileState extends State<ExpenditureTile> {
         value: days.isEmpty
             ? '—'
             : '${energyValue(context, days.last.expenditureKcal)}',
-        note: days.isEmpty ? 'after a weigh-in' : '${energyUnit(context)}/day',
+        note: days.isEmpty ? 'after a weigh-in' : '${energyUnit(context)} a day',
         spokenLabel: expenditureSpoken(
           days.isEmpty ? null : energyValue(context, days.last.expenditureKcal),
           energyUnit(context),

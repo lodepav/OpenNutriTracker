@@ -223,7 +223,7 @@ void main() {
       expect(find.textContaining('79.5'), findsOne);
       expect(find.textContaining('81 kg'), findsNothing);
       expect(find.textContaining('· 0\u00A0kg\u00A0a\u00A0week'), findsOne);
-      expect(find.textContaining('2712 ${keepUnits('kcal/day')}'), findsOne);
+      expect(find.textContaining('2712 ${keepUnits('kcal a day')}'), findsOne);
       expect(find.byType(Sparkline), findsNWidgets(2));
     });
   });

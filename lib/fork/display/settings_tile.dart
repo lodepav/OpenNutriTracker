@@ -2,6 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
 
+/// Whether settings rows drop their icon chip: above 1.5x text the 40 dp
+/// chip and a switch left the words under half the row (Settings critique).
+bool settingsRowsDropIcons(BuildContext context) =>
+    MediaQuery.textScalerOf(context).scale(10) > 15;
+
 /// The fork's rows in Settings, dressed as upstream's private
 /// `_SettingsTile`: the icon on a soft tinted chip, a bold title and a
 /// muted subtitle. A [ListTile] still, so its semantics carry through.
@@ -23,7 +28,7 @@ class ForkSettingsTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => ListTile(
-    leading: _IconChip(icon),
+    leading: settingsRowsDropIcons(context) ? null : _IconChip(icon),
     title: _title(context, title),
     subtitle: _subtitle(context, subtitle),
     onTap: onTap,
@@ -49,7 +54,7 @@ class ForkSettingsSwitchTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => SwitchListTile(
-    secondary: _IconChip(icon),
+    secondary: settingsRowsDropIcons(context) ? null : _IconChip(icon),
     title: _title(context, title),
     subtitle: _subtitle(context, subtitle),
     value: value,
