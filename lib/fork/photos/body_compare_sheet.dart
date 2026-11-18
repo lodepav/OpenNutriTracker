@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:opennutritracker/core/domain/usecase/get_tracked_day_usecase.dart';
 import 'package:opennutritracker/core/domain/usecase/get_weight_log_usecase.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
@@ -82,8 +83,7 @@ Future<bool> confirmBodyCompare(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          '$name, ${d.date.year}-${d.date.month.toString().padLeft(2, '0')}-'
-          '${d.date.day.toString().padLeft(2, '0')}',
+          '$name, ${DateFormat.yMMMd(Localizations.localeOf(context).toLanguageTag()).format(d.date)}',
           style: text.titleSmall,
         ),
         if (d.lines.isEmpty) Text('Nothing logged', style: text.bodySmall),

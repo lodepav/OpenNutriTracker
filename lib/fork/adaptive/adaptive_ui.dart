@@ -339,15 +339,14 @@ class _CheckInScreenState extends State<CheckInScreen> {
       ? '${_kcal(kcalPerKg)} a kg'
       : '${_kcal(kcalPerKg / 2.20462)} a lb';
 
-  static String _eta(int days) {
+  static String _eta(int days, String locale) {
     // A trend about flat reaches nothing in a date worth showing.
     if (days > maxPlanDays) return 'over a year';
     final now = DateTime.now();
     final date = DateTime(now.year, now.month, now.day + days);
     final weeks = (days / 7).round();
     return 'about $weeks week${weeks == 1 ? '' : 's'} '
-        '(${date.year}-${date.month.toString().padLeft(2, '0')}-'
-        '${date.day.toString().padLeft(2, '0')})';
+        '(${DateFormat.yMMMd(locale).format(date)})';
   }
 
   /// What changed since [last] when that made this check-in due, as
@@ -637,12 +636,18 @@ class _CheckInScreenState extends State<CheckInScreen> {
               if (checkIn.daysToTargetAtGoal != null)
                 _row(
                   'Target weight, chosen pace',
-                  _eta(checkIn.daysToTargetAtGoal!),
+                  _eta(
+                    checkIn.daysToTargetAtGoal!,
+                    Localizations.localeOf(context).toLanguageTag(),
+                  ),
                 ),
               if (checkIn.daysToTargetAtTrend != null)
                 _row(
                   'Target weight, current trend',
-                  _eta(checkIn.daysToTargetAtTrend!),
+                  _eta(
+                    checkIn.daysToTargetAtTrend!,
+                    Localizations.localeOf(context).toLanguageTag(),
+                  ),
                 ),
             ]),
             const SizedBox(height: 16),

@@ -1,5 +1,6 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
@@ -7,6 +8,7 @@ import 'package:opennutritracker/fork/body/measurement_store.dart';
 import 'package:opennutritracker/fork/display/contrast.dart';
 import 'package:opennutritracker/fork/report/chart_touch.dart';
 import 'package:opennutritracker/fork/undo/undo_delete.dart';
+import 'package:opennutritracker/fork/trends/card_title.dart';
 
 const _cmPerInch = 2.54;
 
@@ -71,9 +73,9 @@ class _BodyMeasurementsCardState extends State<BodyMeasurementsCard> {
         '${_unit(metric)}';
   }
 
-  static String _date(DateTime d) =>
-      '${d.year}-${d.month.toString().padLeft(2, '0')}-'
-      '${d.day.toString().padLeft(2, '0')}';
+  String _date(DateTime d) => DateFormat.yMMMd(
+    Localizations.localeOf(context).toLanguageTag(),
+  ).format(d);
 
   Future<void> _add() async {
     final values = await showDialog<(DateTime, Map<BodyMetric, double>)>(
@@ -174,9 +176,11 @@ class _BodyMeasurementsCardState extends State<BodyMeasurementsCard> {
           Row(
             children: [
               Expanded(
-                child: Text(
-                  'Body measurements',
-                  style: theme.textTheme.titleMedium,
+                child: CardTitle(
+                  child: Text(
+                    'Body measurements',
+                    style: theme.textTheme.titleMedium,
+                  ),
                 ),
               ),
               TextButton.icon(
@@ -369,8 +373,9 @@ class _AddMeasurementsDialogState extends State<_AddMeasurementsDialog> {
             contentPadding: EdgeInsets.zero,
             leading: const Icon(Icons.event_rounded),
             title: Text(
-              '${_date.year}-${_date.month.toString().padLeft(2, '0')}-'
-              '${_date.day.toString().padLeft(2, '0')}',
+              DateFormat.yMMMd(
+                Localizations.localeOf(context).toLanguageTag(),
+              ).format(_date),
             ),
             onTap: () async {
               final picked = await showDatePicker(

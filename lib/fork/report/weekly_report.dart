@@ -11,6 +11,7 @@ import 'package:opennutritracker/fork/trends/trends_widgets.dart'
     show keepUnits;
 import 'package:opennutritracker/fork/units/energy_text.dart';
 import 'package:opennutritracker/fork/display/display_prefs.dart';
+import 'package:opennutritracker/fork/trends/card_title.dart';
 
 /// Eaten against the goal, each a mean over a week's logged days.
 typedef Versus = ({double eaten, double goal});
@@ -200,9 +201,11 @@ class WeeklyReportCard extends StatelessWidget {
             Row(
               children: [
                 Expanded(
-                  child: Text(
-                    'Weekly report',
-                    style: theme.textTheme.titleMedium,
+                  child: CardTitle(
+                    child: Text(
+                      'Weekly report',
+                      style: theme.textTheme.titleMedium,
+                    ),
                   ),
                 ),
                 Semantics(

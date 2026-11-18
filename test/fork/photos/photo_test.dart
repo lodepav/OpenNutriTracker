@@ -249,8 +249,8 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Compare photos'), findsOneWidget);
-      expect(find.text('2026-08-01'), findsOneWidget);
-      expect(find.text('2026-10-01'), findsOneWidget);
+      expect(find.text('Aug 1, 2026'), findsOneWidget);
+      expect(find.text('Oct 1, 2026'), findsOneWidget);
       expect(find.text('61 days apart'), findsOneWidget);
     });
   });

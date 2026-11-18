@@ -8,6 +8,7 @@ import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/fork/display/contrast.dart';
 import 'package:opennutritracker/fork/health/steps.dart';
+import 'package:opennutritracker/fork/trends/card_title.dart';
 
 typedef _Read = ({bool on, int goal, Map<DateTime, int>? days, bool failed});
 
@@ -129,10 +130,7 @@ class _StepsCardState extends State<StepsCard> {
           Row(
             children: [
               Expanded(
-                // Its own node, so the heading is the title, not the card.
-                child: Semantics(
-                  container: true,
-                  header: true,
+                child: CardTitle(
                   child: Text('Steps', style: theme.textTheme.titleMedium),
                 ),
               ),

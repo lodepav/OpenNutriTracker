@@ -316,9 +316,10 @@ class _TrendsOverviewState extends State<TrendsOverview> {
                       final insets = MediaQuery.paddingOf(context);
                       return SingleChildScrollView(
                         padding: EdgeInsets.fromLTRB(
-                          Dimens.spacing12 + insets.left,
+                          // the gutter every other page has
+                          Dimens.spacing16 + insets.left,
                           Dimens.spacing8,
-                          Dimens.spacing12 + insets.right,
+                          Dimens.spacing16 + insets.right,
                           Dimens.spacing32,
                         ),
                         child: WidthCap(

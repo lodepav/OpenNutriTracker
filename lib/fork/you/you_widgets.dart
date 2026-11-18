@@ -282,6 +282,9 @@ class YouRow extends StatelessWidget {
 
   /// Under the value, smaller (the distance to the target weight).
   final String? detail;
+
+  /// Under the label, a line that explains the row.
+  final String? subtitle;
   final VoidCallback onTap;
 
   const YouRow({
@@ -291,6 +294,7 @@ class YouRow extends StatelessWidget {
     this.value,
     this.spokenValue,
     this.detail,
+    this.subtitle,
     required this.onTap,
   });
 
@@ -299,6 +303,11 @@ class YouRow extends StatelessWidget {
     final text = Theme.of(context).textTheme;
     final muted = paletteOf(context).textMuted;
     final stacked = MediaQuery.textScalerOf(context).scale(10) > 15;
+    final labelText = [
+      Text(label, style: text.bodyLarge),
+      if (subtitle != null)
+        Text(subtitle!, style: text.bodySmall?.copyWith(color: muted)),
+    ];
     List<Widget> values(TextAlign align) => [
       if (value != null)
         Text(
@@ -340,11 +349,14 @@ class YouRow extends StatelessWidget {
                           ? Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(label, style: text.bodyLarge),
+                                ...labelText,
                                 ...values(TextAlign.start),
                               ],
                             )
-                          : Text(label, style: text.bodyLarge),
+                          : Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: labelText,
+                            ),
                     ),
                     if (!stacked &&
                         (value != null || (detail?.isNotEmpty ?? false))) ...[
