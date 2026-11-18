@@ -124,7 +124,9 @@ class TrendDetailPage extends StatelessWidget {
     body: BlocBuilder<TrendsBloc, TrendsState>(
       builder: (context, state) {
         if (state is! TrendsLoaded) {
-          return const Center(child: CircularProgressIndicator());
+          return const Center(
+            child: CircularProgressIndicator(semanticsLabel: 'Loading'),
+          );
         }
         return ValueListenableBuilder(
           valueListenable: deps.expenditure,

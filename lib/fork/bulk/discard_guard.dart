@@ -28,6 +28,7 @@ Future<bool> confirmDiscard(BuildContext context) async {
   final discard = await showDialog<bool>(
     context: context,
     builder: (dialog) => AlertDialog(
+      scrollable: true,
       title: Text(s.discardChangesTitle),
       content: Text(s.discardChangesContent),
       actions: [

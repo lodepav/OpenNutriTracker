@@ -271,7 +271,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
         if (state is SettingsInitial) {
           _settingsBloc.add(LoadSettingsEvent());
         } else if (state is SettingsLoadingState) {
-          return const Center(child: CircularProgressIndicator());
+          return const Center(
+            child: CircularProgressIndicator(semanticsLabel: 'Loading'),
+          );
         } else if (state is SettingsLoadedState) {
           final palette = paletteOf(context);
           // The sections, each a page

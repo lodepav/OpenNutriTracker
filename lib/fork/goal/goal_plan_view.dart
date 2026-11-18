@@ -340,6 +340,7 @@ class _UpNext extends StatelessWidget {
     final sure = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
+        scrollable: true,
         title: Text('Remove $title?'),
         content: Text(
           i == upcoming.length - 1

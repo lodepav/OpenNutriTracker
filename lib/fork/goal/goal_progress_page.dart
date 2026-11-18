@@ -12,6 +12,7 @@ import 'package:opennutritracker/core/utils/calc/calendar_day_calc.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/fork/adaptive/goal_plan.dart';
 import 'package:opennutritracker/fork/adaptive/goal_saving.dart';
+import 'package:opennutritracker/fork/display/contrast.dart';
 import 'package:opennutritracker/fork/goal/goal_plan_view.dart';
 import 'package:opennutritracker/fork/goal/goal_planner.dart';
 import 'package:opennutritracker/fork/goal/goal_progress.dart';
@@ -492,7 +493,10 @@ class _ProgressCard extends StatelessWidget {
                         child: LinearProgressIndicator(
                           value: p.fraction,
                           minHeight: 10,
-                          color: Theme.of(context).colorScheme.primary,
+                          color: chartSafe(
+                            Theme.of(context).colorScheme.primary,
+                            palette.surfaceMuted,
+                          ),
                           backgroundColor: palette.surfaceMuted,
                         ),
                       ),
@@ -586,7 +590,7 @@ class _GoalChart extends StatelessWidget {
     final p = progress;
     final theme = Theme.of(context);
     final palette = paletteOf(context);
-    final line = theme.colorScheme.primary;
+    final line = chartAccent(context);
     double y(double kg) => weightIn(unit, kg);
     // Day 0 is the start, or the first day of the trend kept after it.
     final trendFirst = DateTime(

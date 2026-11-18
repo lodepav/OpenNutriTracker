@@ -5,6 +5,8 @@ import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/features/fasting/domain/entity/fasting_session_entity.dart';
 import 'package:opennutritracker/features/fasting/presentation/bloc/fasting_bloc.dart';
+import 'package:opennutritracker/fork/display/contrast.dart';
+import 'package:opennutritracker/fork/display/week_bars.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 
 /// The plans offered, by their fasting hours: 16 is 16:8.
@@ -265,7 +267,11 @@ class _Timer extends StatelessWidget {
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
     final palette = paletteOf(context);
-    final accent = Theme.of(context).colorScheme.primary;
+    // the ring on its track, 3:1 (WCAG 1.4.11)
+    final accent = chartSafe(
+      Theme.of(context).colorScheme.primary,
+      palette.surfaceMuted,
+    );
     final target = active.target;
     final progress = target.inSeconds == 0
         ? 0.0
@@ -521,7 +527,11 @@ class _History extends StatelessWidget {
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
     final palette = paletteOf(context);
-    final accent = Theme.of(context).colorScheme.primary;
+    // done and under way, each at 3:1 on the bar's track and apart
+    final bars = weekBarColors(
+      Theme.of(context).colorScheme.primary,
+      palette.surfaceMuted,
+    );
     final muted = text.bodySmall?.copyWith(color: palette.textMuted);
     final locale = Localizations.localeOf(context).toLanguageTag();
     final ended = fasts.where((f) => !f.ongoing).toList();
@@ -585,9 +595,7 @@ class _History extends StatelessWidget {
                             Container(
                               height: h(f.length),
                               decoration: BoxDecoration(
-                                color: f.ongoing
-                                    ? accent.withValues(alpha: 0.5)
-                                    : accent,
+                                color: f.ongoing ? bars.past : bars.today,
                                 borderRadius: BorderRadius.circular(4),
                               ),
                             ),

@@ -708,6 +708,7 @@ class HistoryImportTile extends StatelessWidget {
       builder: (_) => const PopScope(
         canPop: false,
         child: AlertDialog(
+          scrollable: true,
           content: Row(
             children: [
               CircularProgressIndicator(),
@@ -765,6 +766,7 @@ class HistoryImportTile extends StatelessWidget {
       await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
+          scrollable: true,
           title: const Text('Import history'),
           content: const Text(
             'From MacroFactor, export both the food log (CSV, with each '

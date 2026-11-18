@@ -9,6 +9,7 @@ import 'package:opennutritracker/core/presentation/widgets/placeholder_card.dart
 import 'package:opennutritracker/core/presentation/widgets/share_qr_dialog.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/core/utils/navigation_options.dart';
+import 'package:opennutritracker/fork/display/contrast.dart';
 import 'package:opennutritracker/fork/screens/activity/add_activity_screen.dart';
 import 'package:opennutritracker/features/home/domain/entity/shared_activity_payload.dart';
 import 'package:opennutritracker/fork/units/energy_text.dart';
@@ -86,7 +87,11 @@ class _ActivityVerticalListState extends State<ActivityVerticalList> {
                   tooltip: S.of(context).addToSectionLabel(widget.title),
                   icon: Icon(
                     Icons.add_rounded,
-                    color: Theme.of(context).colorScheme.primary,
+                    // on the page's canvas
+                    color: chartSafe(
+                      Theme.of(context).colorScheme.primary,
+                      Theme.of(context).scaffoldBackgroundColor,
+                    ),
                   ),
                   onPressed: () => _onPlaceholderCardTapped(context),
                 ),

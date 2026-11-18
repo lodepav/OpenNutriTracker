@@ -16,6 +16,7 @@ import 'package:opennutritracker/generated/l10n.dart';
 import 'package:opennutritracker/fork/health/weight_import_ui.dart';
 import 'package:opennutritracker/fork/weight/weigh_in_log.dart';
 import 'package:opennutritracker/fork/weight/weight_history_view.dart'; // S122 weight-history
+import 'package:opennutritracker/fork/undo/undo_delete.dart';
 
 /// Screen for browsing and adding weight log entries.
 ///
@@ -119,7 +120,9 @@ class _WeightHistoryScreenState extends State<WeightHistoryScreen> {
     if (_loading) {
       return Scaffold(
         appBar: AppBar(title: Text(S.of(context).profileWeightHistoryTitle)),
-        body: const Center(child: CircularProgressIndicator()),
+        body: const Center(
+          child: CircularProgressIndicator(semanticsLabel: 'Loading'),
+        ),
       );
     }
     return WeightHistoryView(
@@ -173,6 +176,7 @@ class _WeightHistoryScreenState extends State<WeightHistoryScreen> {
               )
               .firstOrNull;
     final messenger = ScaffoldMessenger.of(context);
+    final persists = undoBarPersists(context);
     final message = replaced == null
         ? null
         : 'Replaced ${replacedText(context, replaced, _bodyWeightUnit, DateTime.now())}';
@@ -196,8 +200,7 @@ class _WeightHistoryScreenState extends State<WeightHistoryScreen> {
       ..hideCurrentSnackBar()
       ..showSnackBar(
         SnackBar(
-          // Goes after its time, as the other undos.
-          persist: false,
+          persist: persists,
           content: Text(message!),
           action: SnackBarAction(
             label: 'Undo',
@@ -228,9 +231,7 @@ class _WeightHistoryScreenState extends State<WeightHistoryScreen> {
       ..hideCurrentSnackBar()
       ..showSnackBar(
         SnackBar(
-          // Goes after its time, as the food undo's; an action alone
-          // would keep it up on every screen.
-          persist: false,
+          persist: undoBarPersists(context),
           content: const Text('Weigh-in deleted'),
           action: SnackBarAction(
             label: 'Undo',

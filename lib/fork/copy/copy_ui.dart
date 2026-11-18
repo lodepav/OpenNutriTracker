@@ -11,6 +11,7 @@ import 'package:opennutritracker/fork/basket/basket_ui.dart'
     show refreshAfterLogging;
 import 'package:opennutritracker/fork/copy/copy_entries.dart';
 import 'package:opennutritracker/generated/l10n.dart';
+import 'package:opennutritracker/fork/undo/undo_delete.dart';
 
 String mealLabel(BuildContext context, IntakeTypeEntity meal) => switch (meal) {
   IntakeTypeEntity.breakfast => S.of(context).breakfastLabel,
@@ -108,6 +109,7 @@ Future<void> placeWithUndo(
   final entries = copier ?? CopyEntries.fromLocator();
   final messenger = ScaffoldMessenger.maybeOf(context);
   final mealName = meal == null ? null : mealLabel(context, meal);
+  final persists = undoBarPersists(context);
   final stamp = ProfileStamp.now();
   final placed = place != null
       ? await place(entries)
@@ -144,8 +146,7 @@ Future<void> placeWithUndo(
   }
   messenger.showSnackBar(
     SnackBar(
-      // An action keeps a bar up until dismissed: this one goes.
-      persist: false,
+      persist: persists,
       content: Text(
         '$done${count == 1 ? '' : ' $count foods'}'
         '${to.isEmpty ? '' : ' to ${to.join(', ')}'}',

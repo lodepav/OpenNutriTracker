@@ -160,6 +160,7 @@ class _ProgressPhotosCardState extends State<ProgressPhotosCard> {
     final sure = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
+        scrollable: true,
         title: const Text('Delete this photo?'),
         content: const Text("A photo of that day can't be taken again."),
         actions: [

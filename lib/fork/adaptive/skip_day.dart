@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
+import 'package:opennutritracker/fork/display/contrast.dart';
 
 /// Seam S84: a Diary day can be left out of the expenditure estimate (D17),
 /// for a day logged only in part: what was logged is not counted, the
@@ -83,7 +84,7 @@ class SkipDayNote extends StatelessWidget {
                     TextSpan(
                       text: 'Undo',
                       style: TextStyle(
-                        color: Theme.of(context).colorScheme.primary,
+                        color: textAccent(context),
                         fontWeight: FontWeight.w700,
                       ),
                     ),

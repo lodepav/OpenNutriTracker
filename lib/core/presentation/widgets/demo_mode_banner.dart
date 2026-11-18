@@ -7,6 +7,9 @@ import 'package:opennutritracker/generated/l10n.dart';
 // [fork] S232 banner-cap
 import 'package:opennutritracker/fork/layout/width_cap.dart';
 // [/fork]
+// [fork] S275 banner-text
+import 'package:opennutritracker/fork/display/contrast.dart' show textSafe;
+// [/fork]
 
 /// Persistent banner shown above every tab of `MainScreen` while the
 /// active profile holds seeded sample data (see
@@ -31,7 +34,12 @@ class DemoModeBanner extends StatelessWidget {
     // [/fork]
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final palette = isDark ? AppPalette.dark : AppPalette.light;
-    final accent = Theme.of(context).colorScheme.primary;
+    // [fork] S275 banner-text: the action and eye floored on the banner's tint
+    // final accent = Theme.of(context).colorScheme.primary;
+    final picked = Theme.of(context).colorScheme.primary;
+    final tint = Color.alphaBlend(picked.withValues(alpha: 0.12), palette.canvas);
+    final accent = textSafe(picked, tint);
+    // [/fork]
     final textTheme = Theme.of(context).textTheme;
     return Padding(
       padding: const EdgeInsets.fromLTRB(
@@ -54,7 +62,7 @@ class DemoModeBanner extends StatelessWidget {
                 vertical: Dimens.spacing12,
               ),
               decoration: BoxDecoration(
-                color: accent.withValues(alpha: 0.12),
+                color: picked.withValues(alpha: 0.12), // [fork] S275
                 borderRadius: Dimens.borderRadiusM,
                 border: Border.all(
                   color: palette.border,

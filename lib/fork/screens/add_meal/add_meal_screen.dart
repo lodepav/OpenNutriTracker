@@ -135,6 +135,7 @@ class _AddMealScreenState extends State<AddMealScreen> {
     final leave = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
+        scrollable: true,
         title: const Text('Leave without planning?'),
         content: Text(
           count == 1
@@ -1054,6 +1055,7 @@ class _AddMealScreenState extends State<AddMealScreen> {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       showDragHandle: true,
       builder: (sheetContext) => QuickAddBottomSheet(
         intakeType: _mealType.getIntakeType(),
@@ -1069,6 +1071,7 @@ class _AddMealScreenState extends State<AddMealScreen> {
       context: context,
       builder: (context) {
         return AlertDialog(
+          scrollable: true,
           title: Text(S.of(context).createCustomDialogTitle),
           content: Text(S.of(context).createCustomDialogContent),
           actions: [

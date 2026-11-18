@@ -90,6 +90,7 @@ Future<T> _whileChecking<T>(BuildContext context, Future<T> check) async {
       context: context,
       barrierDismissible: false,
       builder: (_) => const AlertDialog(
+        scrollable: true,
         content: Row(
           children: [
             SizedBox.square(

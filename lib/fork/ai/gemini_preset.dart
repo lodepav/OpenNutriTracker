@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:opennutritracker/core/utils/ai_credential_storage.dart';
 import 'package:opennutritracker/core/utils/gemini_endpoint.dart';
+import 'package:opennutritracker/fork/display/contrast.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 
 /// Google Gemini as a choice in AI settings (D43, S209).
@@ -192,7 +193,7 @@ class GeminiModelLine extends StatelessWidget {
           child: Text(
             s.aiAssistModelLabel,
             style: theme.textTheme.labelLarge?.copyWith(
-              color: theme.colorScheme.primary,
+              color: textAccent(context),
             ),
           ),
         ),

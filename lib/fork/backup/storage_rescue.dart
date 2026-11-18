@@ -185,6 +185,7 @@ class _StorageRescuePanelState extends State<StorageRescuePanel> {
     final go = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
+        scrollable: true,
         title: Text(title),
         content: Text(body),
         actions: [

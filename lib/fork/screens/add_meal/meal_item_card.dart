@@ -15,6 +15,7 @@ import 'package:opennutritracker/features/add_meal/presentation/add_meal_type.da
 import 'package:opennutritracker/features/add_meal/presentation/widgets/favourite_toggle_button.dart';
 // food_emoji_resolver.dart's import went to OffKinds
 import 'package:opennutritracker/features/meal_detail/meal_detail_screen.dart';
+import 'package:opennutritracker/fork/display/contrast.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 import 'package:opennutritracker/fork/basket/basket.dart';
 import 'package:opennutritracker/fork/display/meal_macros_line.dart';
@@ -65,6 +66,8 @@ class MealItemCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = paletteOf(context);
     final accent = Theme.of(context).colorScheme.primary;
+    // the buttons' labels are text: 4.5:1 on the card and the page
+    final ink = textAccent(context);
     final isRecipe = mealEntity.source == MealSourceEntity.recipe;
     // Colored emoji is reserved for FDC base-food items where the head
     // noun reliably identifies the food ("Milk, fluid, nonfat..." → milk).
@@ -185,7 +188,7 @@ class MealItemCard extends StatelessWidget {
               // Logs at once, so not while planning (the row opens the page).
               if (FoodBasket.instance.planning == null &&
                   choosesOnPage(mealEntity))
-                _chooseButton(context, accent, textTheme, large)
+                _chooseButton(context, ink, textTheme, large)
               else if (FoodBasket.instance.planning == null)
                 _OneTapLabel(
                   meal: mealEntity,
@@ -200,8 +203,8 @@ class MealItemCard extends StatelessWidget {
                         identifier: 'meal-item-add',
                         child: IconButton(
                           style: IconButton.styleFrom(
-                            foregroundColor: accent,
-                            side: BorderSide(color: accent, width: 1.5),
+                            foregroundColor: ink,
+                            side: BorderSide(color: ink, width: 1.5),
                             // D39: names what it adds, "+ 1 roll"
                             // a label wrapped at large text, "1 / serving",
                             // ran into a stadium's ends: a rounded rectangle
@@ -273,7 +276,7 @@ class MealItemCard extends StatelessWidget {
                                                           style: textTheme
                                                               .labelMedium
                                                               ?.copyWith(
-                                                                color: accent,
+                                                                color: ink,
                                                               ),
                                                         ),
                                                       ),
@@ -285,7 +288,7 @@ class MealItemCard extends StatelessWidget {
                                                   overflow:
                                                       TextOverflow.ellipsis,
                                                   style: textTheme.labelMedium
-                                                      ?.copyWith(color: accent),
+                                                      ?.copyWith(color: ink),
                                                 ),
                                         ),
                                       ],

@@ -178,6 +178,7 @@ class BasketBar extends StatelessWidget {
               onTap: () => showModalBottomSheet<void>(
                 context: context,
                 isScrollControlled: true,
+                useSafeArea: true,
                 builder: (_) => BasketSheet(
                   type: type,
                   day: day,

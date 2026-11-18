@@ -90,6 +90,7 @@ import 'package:opennutritracker/fork/add/logged_bar.dart';
 import 'package:opennutritracker/fork/bulk/bulk_log_undo.dart';
 import 'package:opennutritracker/fork/bulk/photo_disclosure.dart';
 import 'package:opennutritracker/fork/widget/meal_picker_chip.dart';
+import 'package:opennutritracker/fork/undo/undo_delete.dart';
 
 part 'bulk_add_body.dart';
 part 'bulk_add_row.dart';
@@ -1320,6 +1321,7 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       showDragHandle: true,
       builder: (_) => QuickAddBottomSheet(
         intakeType: _meal,

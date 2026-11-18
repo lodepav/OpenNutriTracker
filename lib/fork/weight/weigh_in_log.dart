@@ -7,6 +7,7 @@ import 'package:opennutritracker/core/domain/usecase/get_weight_log_usecase.dart
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/fork/units/weight_text.dart'
     show bodyWeightText;
+import 'package:opennutritracker/fork/undo/undo_delete.dart';
 
 DateTime _dayOf(DateTime d) => DateTime(d.year, d.month, d.day);
 
@@ -52,6 +53,7 @@ Future<void> logWeighIn(
   DateTime? today,
 }) async {
   final messenger = ScaffoldMessenger.of(context);
+  final persists = undoBarPersists(context);
   final entry = WeightLogEntity(date: _dayOf(day), weightKg: kg);
   final message =
       '${bodyWeightText(context, kg, unit)} logged for '
@@ -62,8 +64,7 @@ Future<void> logWeighIn(
     ..hideCurrentSnackBar()
     ..showSnackBar(
       SnackBar(
-        // Goes after its time, as the other undos.
-        persist: false,
+        persist: persists,
         content: Text(message),
         action: SnackBarAction(
           label: 'Undo',

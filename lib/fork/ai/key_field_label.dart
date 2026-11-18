@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:opennutritracker/fork/display/contrast.dart';
 
 /// An AI key field's label, drawn above the field rather than inside it
 /// (S211): a label in the field stays on one line, and at twice the font
@@ -19,7 +20,7 @@ class AiKeyLabel extends StatelessWidget {
         child: Text(
           text,
           style: theme.textTheme.labelLarge?.copyWith(
-            color: theme.colorScheme.primary,
+            color: textAccent(context),
           ),
         ),
       ),

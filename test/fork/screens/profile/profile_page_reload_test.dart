@@ -11,12 +11,16 @@ import 'package:opennutritracker/core/domain/entity/user_gender_entity.dart';
 import 'package:opennutritracker/core/domain/entity/user_pal_entity.dart';
 import 'package:opennutritracker/core/domain/entity/user_weight_goal_entity.dart';
 import 'package:opennutritracker/core/domain/entity/weight_log_entity.dart';
+import 'package:opennutritracker/core/domain/usecase/add_weight_log_usecase.dart';
 import 'package:opennutritracker/core/domain/usecase/get_profiles_usecase.dart';
+import 'package:opennutritracker/core/domain/usecase/get_user_usecase.dart';
 import 'package:opennutritracker/core/domain/usecase/get_weight_log_usecase.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/features/profile/presentation/bloc/profile_bloc.dart';
 import 'package:opennutritracker/fork/screens/profile/profile_page.dart';
 import 'package:opennutritracker/generated/l10n.dart';
+
+import '../../../helpers/recording_add_weight_log_usecase.dart';
 
 // The You tab keeps its list through a profile reload: an edit used to swap
 // it for a spinner, which reset the scroll and TalkBack's focus.
@@ -91,6 +95,11 @@ class _SlowWeighIns extends Fake implements GetWeightLogUsecase {
     await Future<void>.delayed(const Duration(milliseconds: 50));
     return [WeightLogEntity(date: DateTime.now(), weightKg: 85)];
   }
+}
+
+class _User extends Fake implements GetUserUsecase {
+  @override
+  Future<UserEntity> getUserData() async => _loaded(178).userEntity;
 }
 
 ProfileLoadedState _loaded(double heightCm) {
@@ -268,5 +277,36 @@ void main() {
       expect(rect.width, lessThanOrEqualTo(600), reason: id);
       expect(rect.center.dx, closeTo(600, 1), reason: id);
     }
+  });
+
+  // Profile weight files today's weigh-in as Home does: it says what it
+  // replaces, and Undo brings that one back.
+  testWidgets('a weight set on You replaces today\'s with an Undo', (
+    tester,
+  ) async {
+    final add = RecordingAddWeightLogUsecase();
+    await _pump(tester, _loaded(178), [], weighIns: _SlowWeighIns());
+    locator
+      ..registerSingleton<AddWeightLogUsecase>(add)
+      ..registerSingleton<GetUserUsecase>(_User());
+    await tester.pumpAndSettle();
+    final row = find.text('Profile weight');
+    await tester.drag(find.byType(ListView), const Offset(0, -300));
+    await tester.pumpAndSettle();
+    await tester.tap(row);
+    // the weigh-ins load from disk before the dialog opens
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Replaces today'), findsOneWidget);
+    await tester.enterText(find.byType(TextField), '84.2');
+    await tester.pump();
+    await tester.tap(find.text('OK'));
+    await tester.pumpAndSettle();
+    expect(add.entries.single.weightKg, 84.2);
+
+    await tester.tap(find.text('Undo'));
+    await tester.pumpAndSettle();
+    expect(add.entries, hasLength(2));
+    expect(add.entries.last.weightKg, 85);
   });
 }

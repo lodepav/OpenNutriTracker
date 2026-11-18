@@ -12,9 +12,11 @@ import 'package:opennutritracker/features/meal_detail/util/meal_quantity_convert
 import 'package:opennutritracker/fork/basket/basket.dart';
 import 'package:opennutritracker/fork/basket/basket_ui.dart';
 import 'package:opennutritracker/fork/copy/copy_entries.dart';
+import 'package:opennutritracker/fork/display/contrast.dart';
 import 'package:opennutritracker/fork/plan/plan_store.dart';
 import 'package:opennutritracker/fork/units/energy_text.dart';
 import 'package:opennutritracker/fork/display/display_prefs.dart';
+import 'package:opennutritracker/fork/undo/undo_delete.dart';
 
 final _log = Logger('PlannedFoodsCard');
 
@@ -231,8 +233,7 @@ class _PlannedFoodsCardState extends State<PlannedFoodsCard> {
     messenger.removeCurrentSnackBar();
     messenger.showSnackBar(
       SnackBar(
-        // An action keeps a bar up until dismissed: this one goes.
-        persist: false,
+        persist: undoBarPersists(messenger.context),
         content: Text(text),
         action: SnackBarAction(
           label: 'Undo',
@@ -371,9 +372,7 @@ class _PlannedFoodsCardState extends State<PlannedFoodsCard> {
                             : 'Repeat ${food.meal.name ?? 'it'}',
                         icon: Icon(
                           Icons.repeat_rounded,
-                          color: food.repeats
-                              ? Theme.of(context).colorScheme.primary
-                              : null,
+                          color: food.repeats ? chartAccent(context) : null,
                         ),
                         onPressed: _busy ? null : () => _repeat(food),
                       ),
@@ -449,6 +448,7 @@ class _RepeatDialogState extends State<RepeatDialog> {
   Widget build(BuildContext context) {
     final locale = Localizations.localeOf(context).toString();
     return AlertDialog(
+      scrollable: true,
       title: Text('Repeat ${widget.name}'),
       content: Column(
         mainAxisSize: MainAxisSize.min,

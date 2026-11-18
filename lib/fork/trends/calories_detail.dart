@@ -41,7 +41,9 @@ class CaloriesDetailPage extends StatelessWidget {
     body: BlocBuilder<TrendsBloc, TrendsState>(
       builder: (context, state) {
         if (state is! TrendsLoaded) {
-          return const Center(child: CircularProgressIndicator());
+          return const Center(
+            child: CircularProgressIndicator(semanticsLabel: 'Loading'),
+          );
         }
         final dates = windowDates(state.logicalToday, state.windowDays);
         final insets = MediaQuery.paddingOf(context);

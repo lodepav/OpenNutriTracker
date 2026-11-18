@@ -4,6 +4,7 @@ import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/core/utils/off_const.dart';
 import 'package:opennutritracker/features/add_meal/data/dto/sp/sp_const.dart';
+import 'package:opennutritracker/fork/display/contrast.dart';
 import 'package:opennutritracker/fork/layout/width_cap.dart';
 
 /// A database as the list names it: a short tag, a name, what it holds.
@@ -181,7 +182,7 @@ class _DatabaseRow extends StatelessWidget {
                 tag,
                 style: text.labelMedium?.copyWith(
                   fontWeight: FontWeight.w700,
-                  color: scheme.primary,
+                  color: textSafe(scheme.primary, palette.surfaceMuted),
                 ),
               ),
             ),

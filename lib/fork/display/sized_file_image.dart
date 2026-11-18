@@ -63,7 +63,7 @@ class _SizedFileImageState extends State<SizedFileImage> {
     if (path == null) return const SizedBox.shrink();
     final cacheWidth = (widget.size * MediaQuery.devicePixelRatioOf(context))
         .round();
-    (_decodedWidths[path] ??= {}).add(cacheWidth);
+    noteDecodedWidth(path, cacheWidth);
     return Image.file(
       File(path),
       fit: BoxFit.cover,
@@ -78,6 +78,11 @@ class _SizedFileImageState extends State<SizedFileImage> {
 /// The widths each photo, by absolute path, was decoded at here; the
 /// image cache keys a resized copy by its width.
 final _decodedWidths = <String, Set<int>>{};
+
+/// Notes that the photo at [absolutePath] was decoded [width] wide, so
+/// [evictPhoto] drops that copy too.
+void noteDecodedWidth(String absolutePath, int width) =>
+    (_decodedWidths[absolutePath] ??= {}).add(width);
 
 /// Drops the photo at [relativePath] from the image cache, at its own size
 /// and at each size a [SizedFileImage] decoded it, so a new photo saved at

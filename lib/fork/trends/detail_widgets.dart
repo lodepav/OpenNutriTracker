@@ -312,6 +312,8 @@ class ExplainerLink extends StatelessWidget {
       onTap: () => showDialog<void>(
         context: context,
         builder: (context) => AlertDialog(
+          // at large text on a small phone the body runs past the screen
+          scrollable: true,
           title: Text(title),
           content: Text(body),
           actions: [

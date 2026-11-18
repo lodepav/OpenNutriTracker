@@ -12,6 +12,7 @@ import 'package:opennutritracker/core/domain/usecase/get_profiles_usecase.dart';
 import 'package:opennutritracker/core/presentation/widgets/copy_to_profile_sheet.dart';
 // upstream's DeleteAllDialog import, unused since
 // import 'package:opennutritracker/core/presentation/widgets/delete_all_dialog.dart';
+import 'package:opennutritracker/fork/display/contrast.dart';
 import 'package:opennutritracker/fork/screens/home/intake_card.dart';
 import 'package:opennutritracker/core/presentation/widgets/placeholder_card.dart';
 import 'package:opennutritracker/core/presentation/widgets/share_qr_dialog.dart';
@@ -458,7 +459,11 @@ class _IntakeVerticalListState extends State<IntakeVerticalList> {
                     IconButton(
                       key: const ValueKey('timeline-add'),
                       tooltip: S.of(context).addToSectionLabel(widget.title),
-                      icon: Icon(Icons.add_rounded, color: accent),
+                      // on the page's canvas
+                      icon: Icon(
+                        Icons.add_rounded,
+                        color: chartSafe(accent, palette.canvas),
+                      ),
                       onPressed: () => _onPlaceholderCardTapped(context),
                     ),
                   Semantics(

@@ -11,6 +11,7 @@ import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_nutriments_entity.dart';
 import 'package:opennutritracker/features/diary/presentation/widgets/daily_nutrient_panel.dart';
 import 'package:opennutritracker/features/settings/presentation/widgets/nutrient_goals_screen.dart';
+import 'package:opennutritracker/fork/display/contrast.dart';
 import 'package:opennutritracker/fork/display/display_prefs.dart';
 import 'package:opennutritracker/fork/units/energy_text.dart';
 
@@ -502,7 +503,10 @@ class _NutrientTile extends StatelessWidget {
               padding: const EdgeInsets.only(top: 4),
               child: LinearProgressIndicator(
                 value: share.clamp(0.0, 1.0),
-                color: missed ? scheme.error : scheme.primary,
+                // the default track is secondaryContainer
+                color: missed
+                    ? scheme.error
+                    : chartSafe(scheme.primary, scheme.secondaryContainer),
               ),
             ),
           if (s.foodsWithout > 0)

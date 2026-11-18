@@ -6,6 +6,12 @@ import 'package:opennutritracker/core/utils/tracked_day_lock.dart';
 import 'package:opennutritracker/fork/basket/basket_ui.dart';
 import 'package:opennutritracker/fork/copy/copy_entries.dart';
 
+/// Whether an Undo bar stays up until dismissed. Under a screen reader it
+/// does, as reaching Undo takes time (WCAG 2.2.1); otherwise it goes after
+/// its time, so later bars are not held behind it.
+bool undoBarPersists(BuildContext context) =>
+    MediaQuery.accessibleNavigationOf(context);
+
 typedef RestoreIntakes =
     Future<void> Function(
       List<IntakeEntity> intakes,
@@ -68,9 +74,7 @@ class DeletedEntries {
 
     bar = messenger.showSnackBar(
       SnackBar(
-        // An action keeps a bar up until dismissed: this one goes, so later
-        // bars are not held behind it and a later delete starts its own.
-        persist: false,
+        persist: undoBarPersists(messenger.context),
         // Twice the default: a delete is easy to miss undoing.
         duration: const Duration(seconds: 8),
         content: Text(
