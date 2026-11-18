@@ -1,6 +1,7 @@
 // Fork-owned copy of lib/features/fasting/presentation/fasting_screen.dart (D23); upstream's later changes to it
 // are ported by hand: fork/tools/upstream-copies.sh.
 import 'package:flutter/material.dart';
+import 'package:opennutritracker/fork/display/contrast.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
@@ -210,7 +211,17 @@ class _FastingScreenState extends State<FastingScreen> {
               color: accent.withValues(alpha: 0.14),
               shape: BoxShape.circle,
             ),
-            child: Icon(Icons.check_rounded, size: 64, color: accent),
+            child: Icon(
+              Icons.check_rounded,
+              size: 64,
+              color: chartSafe(
+                accent,
+                Color.alphaBlend(
+                  accent.withValues(alpha: 0.14),
+                  palette.canvas,
+                ),
+              ),
+            ),
           ),
           const SizedBox(height: Dimens.spacing24),
           Text(

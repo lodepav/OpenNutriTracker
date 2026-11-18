@@ -80,7 +80,11 @@ class GoalExplainedBody extends StatelessWidget {
           text:
               'From your age, height, weight and how active you are '
               '(activity level ${b.palValue.toStringAsFixed(2)}), by the '
-              'IOM equations.',
+              'IOM equations.'
+              // Home's Expenditure tile shows another burn; say which is used.
+              '${showTargetNote && formulaIsGoal ? " Home's Expenditure is "
+                        'measured from your weight trend and what you log; '
+                        'it sets the goal only with the adaptive target.' : ''}',
           math: [
             _MathRow(
               l10n.kcalGoalInfoPalRowLabel,

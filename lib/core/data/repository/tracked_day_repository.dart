@@ -1,6 +1,10 @@
 import 'package:opennutritracker/core/data/data_source/tracked_day_data_source.dart';
 import 'package:opennutritracker/core/data/dbo/tracked_day_dbo.dart';
 import 'package:opennutritracker/core/domain/entity/tracked_day_entity.dart';
+// [fork] S276 day-macros-follow-kcal
+import 'package:opennutritracker/core/domain/usecase/get_macro_goal_usecase.dart';
+import 'package:opennutritracker/core/utils/locator.dart';
+// [/fork]
 
 class TrackedDayRepository {
   final TrackedDayDataSource _trackedDayDataSource;
@@ -45,6 +49,18 @@ class TrackedDayRepository {
 
   Future<void> updateDayCalorieGoal(DateTime day, double calorieGoal) async {
     await _trackedDayDataSource.updateDayCalorieGoal(day, calorieGoal);
+    // [fork] S276 day-macros-follow-kcal: a profile edit rewrote the kcal
+    // goal alone, so the Diary kept macros Home recomputes from the new one
+    if (locator.isRegistered<GetMacroGoalUsecase>()) {
+      final macros = locator<GetMacroGoalUsecase>();
+      await _trackedDayDataSource.updateDayMacroGoals(
+        day,
+        carbsGoal: await macros.getCarbsGoal(calorieGoal),
+        fatGoal: await macros.getFatsGoal(calorieGoal),
+        proteinGoal: await macros.getProteinsGoal(calorieGoal),
+      );
+    }
+    // [/fork]
   }
 
   Future<void> increaseDayCalorieGoal(DateTime day, double amount) async {

@@ -262,9 +262,12 @@ class _ProfilePageState extends State<ProfilePage> {
               // The trend tile shows another weight: this is the profile's.
               label: 'Profile weight',
               value: bodyWeightText(context, user.weightKG, bodyWeightUnit),
-              detail: user.targetWeightKg == null
-                  ? null
-                  : _targetWeightSubLabel(context, user, bodyWeightUnit),
+              // Says why it can differ from the Weight trend tile above.
+              detail: [
+                'The formula uses it; the trend smooths your weigh-ins',
+                if (user.targetWeightKg != null)
+                  _targetWeightSubLabel(context, user, bodyWeightUnit),
+              ].join(' · '),
               onTap: () => _showSetWeightDialog(context, user, bodyWeightUnit),
             ),
             YouRow(

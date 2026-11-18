@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:opennutritracker/fork/display/contrast.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
 
@@ -93,7 +94,17 @@ class _IconChip extends StatelessWidget {
         color: color.withValues(alpha: 0.12),
         borderRadius: Dimens.borderRadiusS,
       ),
-      child: Icon(icon, color: color, size: 22),
+      child: Icon(
+        icon,
+        color: chartSafe(
+          color,
+          Color.alphaBlend(
+            color.withValues(alpha: 0.12),
+            paletteOf(context).surface,
+          ),
+        ),
+        size: 22,
+      ),
     );
   }
 }

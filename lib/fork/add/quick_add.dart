@@ -26,6 +26,12 @@ double? quickAddKcal({
   return sum > 0 ? sum : null;
 }
 
+/// Whether the macros' energy is clearly more than the typed energy (by
+/// more than a fifth and 10), which no food can be: a typo, such as 50 g
+/// of fat for 5. Both in the same unit.
+bool quickAddMacrosOver({required double? typed, required double? macros}) =>
+    typed != null && typed > 0 && macros != null && macros > typed * 1.2 + 10;
+
 /// Says the entry was not added: the write [failed], or a profile switch
 /// dropped it. A sheet closes first, as a bar under it would be hidden.
 /// [stored]: the entry went in before a later step failed, so saying "not
@@ -95,14 +101,32 @@ class QuickAddEnergyField extends StatelessWidget {
         ),
         Text(unit, style: theme.textTheme.titleMedium),
         const SizedBox(height: Dimens.spacing4),
-        Text(
-          macrosKcal == null || controller.text.isNotEmpty
-              ? 'or let the macros add it up'
-              : 'added up from the macros',
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
+        if (macrosKcal != null &&
+            quickAddMacrosOver(
+              typed: double.tryParse(controller.text.replaceAll(',', '.')),
+              macros: energyValue(context, macrosKcal!).toDouble(),
+            ))
+          // A live region, so TalkBack hears it as the macro is typed.
+          Semantics(
+            liveRegion: true,
+            child: Text(
+              'The macros alone come to ${energyText(context, macrosKcal!)}: '
+              'check the numbers',
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.error,
+              ),
+            ),
+          )
+        else
+          Text(
+            macrosKcal == null || controller.text.isNotEmpty
+                ? 'or let the macros add it up'
+                : 'added up from the macros',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
           ),
-        ),
       ],
     );
   }

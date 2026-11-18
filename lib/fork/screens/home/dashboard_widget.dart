@@ -318,36 +318,43 @@ class _DashboardWidgetState extends State<DashboardWidget> {
                                       .round();
                               final burned = displayBurned.round();
                               // "Activity", not "Burned": the Expenditure
-                              // tile is the day's whole burn; "+" only where
-                              // it is added.
+                              // tile is the day's whole burn. Under the goal
+                              // and with no "+", so the rows do not read as
+                              // a sum when the goal already holds it.
                               final activity =
                                   credit.data == ActivityCredit.dailyCapped &&
                                       widget.totalKcalBurned >
                                           maxDailyActivityKcal
                                   // The goal counts the burn up to its cap
                                   ? (
-                                      label: 'Activity, up to',
-                                      value: '+$cap',
-                                      spoken: 'activity adds up to $cap $unit',
+                                      label: 'Incl. activity, up to',
+                                      value: '$cap',
+                                      spoken:
+                                          'goal ${displayGoal.round()} $unit '
+                                          'including up to $cap $unit of '
+                                          'activity',
                                     )
                                   : credit.data?.raisesGoal ?? true
                                   ? (
-                                      label: 'Activity',
-                                      value: '+$burned',
-                                      spoken: 'activity adds $burned $unit',
+                                      label: 'Incl. activity',
+                                      value: '$burned',
+                                      spoken:
+                                          'goal ${displayGoal.round()} $unit '
+                                          'including $burned $unit of '
+                                          'activity',
                                     )
                                   : (
                                       label: 'Activity, not added',
                                       value: '$burned',
                                       spoken:
+                                          'goal ${displayGoal.round()} $unit, '
                                           'activity $burned $unit, not added',
                                     );
                               return Semantics(
                                 container: true,
                                 label:
                                     'Eaten ${displaySupplied.round()} $unit, '
-                                    '${activity.spoken}, '
-                                    'goal ${displayGoal.round()} $unit',
+                                    '${activity.spoken}',
                                 excludeSemantics: true,
                                 child: Column(
                                   crossAxisAlignment:
@@ -358,12 +365,12 @@ class _DashboardWidgetState extends State<DashboardWidget> {
                                       value: '${displaySupplied.round()}',
                                     ),
                                     _StatLine(
-                                      label: activity.label,
-                                      value: activity.value,
-                                    ),
-                                    _StatLine(
                                       label: 'Goal',
                                       value: '${displayGoal.round()}',
+                                    ),
+                                    _StatLine(
+                                      label: activity.label,
+                                      value: activity.value,
                                     ),
                                   ],
                                 ),

@@ -24,6 +24,7 @@ import 'package:opennutritracker/fork/adaptive/adaptive_ui.dart';
 import 'package:opennutritracker/fork/adaptive/auto_check_in.dart';
 import 'package:opennutritracker/fork/adaptive/check_in.dart';
 import 'package:opennutritracker/fork/adaptive/expenditure.dart';
+import 'package:opennutritracker/fork/adaptive/activity_credit.dart';
 import 'package:opennutritracker/fork/adaptive/expenditure_settings_ui.dart';
 import 'package:opennutritracker/fork/adaptive/skip_day.dart';
 import 'package:opennutritracker/fork/health/steps.dart';
@@ -726,6 +727,28 @@ void main() {
       expect(AdaptiveStore.skipped.value, isEmpty);
       handle.dispose();
     });
+
+    for (final (credit, shown) in [
+      (ActivityCredit.added, true),
+      (ActivityCredit.notCounted, false),
+    ]) {
+      testWidgets('activity added anyway says so: $credit', (tester) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            home: ExpenditureSettingsScreen(
+              store: _MemoryStore(),
+              steps: StepCounts(_Steps({}), () async => _NoBox()),
+              credit: () async => credit,
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(
+          find.textContaining('start with the adaptive target'),
+          shown ? findsOneWidget : findsNothing,
+        );
+      });
+    }
 
     testWidgets('three groups; activity rows only while it counts', (
       tester,

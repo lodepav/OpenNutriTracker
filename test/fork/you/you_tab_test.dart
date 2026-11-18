@@ -436,6 +436,10 @@ void main() {
       'Data sources', (tester) async {
     await _pump(tester, _user());
     expect(find.text('Profile weight'), findsOneWidget);
+    expect(
+      find.textContaining('The formula uses it; the trend smooths'),
+      findsOneWidget,
+    );
     expect(find.text('Data sources'), findsOneWidget);
     expect(find.text('View sources'), findsNothing);
   });

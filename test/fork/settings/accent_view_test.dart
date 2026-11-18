@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'dart:ui' show Tristate;
+
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get_it/get_it.dart';
@@ -80,6 +82,7 @@ void main() {
           currentArgb: accentPresetColors[3].toARGB32(),
           onWallpaper: (_) {},
           onColor: picked.add,
+          onDefault: () {},
           onCustom: () {},
         ),
       ),
@@ -120,6 +123,7 @@ void main() {
           currentArgb: accentPresetColors[3].toARGB32(),
           onWallpaper: switched.add,
           onColor: (_) {},
+          onDefault: () {},
           onCustom: () => custom++,
         ),
       ),
@@ -129,6 +133,31 @@ void main() {
     expect(switched, [false]);
     await tester.tap(find.bySemanticsIdentifier('accent-custom-colour'));
     expect(custom, 1);
+  });
+
+  testWidgets('with no colour picked, Default is ticked', (tester) async {
+    var defaults = 0;
+    await tester.pumpWidget(
+      _wrap(
+        AccentColourView(
+          offersWallpaper: false,
+          matchesWallpaper: false,
+          currentArgb: null,
+          onWallpaper: (_) {},
+          onColor: (_) {},
+          onDefault: () => defaults++,
+          onCustom: () {},
+        ),
+      ),
+    );
+    final node = tester.getSemantics(
+      find.bySemanticsIdentifier('accent-default'),
+    );
+    expect(node.label, 'Default green');
+    expect(node.flagsCollection.isSelected, Tristate.isTrue);
+    expect(find.byIcon(Icons.check_rounded), findsOneWidget);
+    await tester.tap(find.bySemanticsIdentifier('accent-default'));
+    expect(defaults, 1);
   });
 
   group('the screen', () {
@@ -164,13 +193,18 @@ void main() {
       expect(settings.calls, ['colour ff00897b', 'wallpaper false']);
     });
 
-    testWidgets('or, with none, the first preset', (tester) async {
+    testWidgets('or, with none, the default green', (tester) async {
       final settings = await pump(tester);
       await tester.tap(find.text('Match my wallpaper'));
-      expect(settings.calls, [
-        'colour ${accentPresetColors.first.toARGB32().toRadixString(16)}',
-        'wallpaper false',
-      ]);
+      expect(settings.calls, ['colour null', 'wallpaper false']);
+    });
+
+    testWidgets('Default takes a picked colour back to the app\'s own', (
+      tester,
+    ) async {
+      final settings = await pump(tester, accent: 0xFFFDD835);
+      await tester.tap(find.bySemanticsIdentifier('accent-default'));
+      expect(settings.calls, ['colour null', 'wallpaper false']);
     });
   });
 }

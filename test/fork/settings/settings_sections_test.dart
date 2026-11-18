@@ -167,7 +167,7 @@ Widget _app({SettingsSection? section, double textScale = 1}) => MaterialApp(
 /// What each page must hold, by the row's text.
 Map<SettingsSection, List<String>> _rows() => {
   SettingsSection.goals: [
-    'Calorie Target',
+    'Calorie target',
     'Nutrition',
     'Diary',
     l10nEn.settingsKcalGoalInfoLabel,
@@ -198,8 +198,8 @@ Map<SettingsSection, List<String>> _rows() => {
   ],
   SettingsSection.data: [
     'Automatic backup',
-    'Bring Data In',
-    'Take Data Out',
+    'Bring data in',
+    'Take data out',
     'Import history',
     l10nEn.importCustomFoodDataLabel,
     l10nEn.exportImportAppDataLabel,
@@ -348,11 +348,11 @@ void main() {
     double top(String text) => tester.getTopLeft(find.text(text).first).dy;
     final order = [
       'Automatic backup',
-      'Bring Data In',
+      'Bring data in',
       'Import history',
-      'Take Data Out',
+      'Take data out',
       'Export diary as CSV',
-      'Start Over',
+      'Start over',
       l10nEn.settingsDeleteAllDataLabel,
     ];
     for (var i = 1; i < order.length; i++) {
@@ -639,7 +639,7 @@ void main() {
     await tester.pumpAndSettle();
     double top(String text) => tester.getTopLeft(find.text(text).first).dy;
     final order = [
-      'Calorie Target',
+      'Calorie target',
       'Goal planner',
       'Trend and calorie target',
       l10nEn.settingsKcalAdjustmentLabel,

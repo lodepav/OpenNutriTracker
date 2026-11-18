@@ -460,7 +460,7 @@ void main() {
   testWidgets('the weigh-in button says what it adds', (tester) async {
     await pumpTrends(tester, loaded());
     await openTile(tester, 'weight');
-    expect(find.byTooltip('Add weigh-in'), findsOneWidget);
+    expect(find.byTooltip('Weigh in'), findsOneWidget);
     expect(find.byTooltip('Add entry'), findsNothing);
   });
 

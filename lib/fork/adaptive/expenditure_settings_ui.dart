@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:opennutritracker/fork/display/contrast.dart';
 import 'package:intl/intl.dart';
 import 'package:opennutritracker/core/domain/entity/user_entity.dart';
 import 'package:opennutritracker/core/domain/entity/user_gender_entity.dart';
@@ -6,8 +7,10 @@ import 'package:opennutritracker/core/domain/usecase/get_user_usecase.dart';
 import 'package:opennutritracker/core/utils/calc/unit_calc.dart';
 import 'package:opennutritracker/core/utils/calc/workout_compensation_calc.dart';
 import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
+import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/fork/adaptive/activity.dart';
+import 'package:opennutritracker/fork/adaptive/activity_credit.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_ui.dart';
@@ -48,12 +51,16 @@ class ExpenditureSettingsScreen extends StatelessWidget {
   /// one).
   final AdaptiveService? service;
 
+  /// What a logged activity does to today's goal; tests pass their own.
+  final Future<ActivityCredit> Function() credit;
+
   const ExpenditureSettingsScreen({
     super.key,
     required this.store,
     this.steps,
     this.isFemale = _readFemale,
     this.service,
+    this.credit = activityCredit,
   });
 
   /// A profile that cannot be read (tests) is not one.
@@ -76,7 +83,9 @@ class ExpenditureSettingsScreen extends StatelessWidget {
         ),
         children: [
           _Card(_EstimateSection(settings, store, isFemale)),
-          _Card(_ActivitySection(settings, store, steps ?? StepCounts())),
+          _Card(
+            _ActivitySection(settings, store, steps ?? StepCounts(), credit),
+          ),
           _Card(_CheckInSection(settings, store, service)),
         ],
       ),
@@ -113,7 +122,14 @@ class ExpenditureGroups extends StatelessWidget {
                   ExpenditureSettingsScreen._readFemale,
                 ),
               ),
-              _Card(_ActivitySection(settings, store, steps ?? StepCounts())),
+              _Card(
+                _ActivitySection(
+                  settings,
+                  store,
+                  steps ?? StepCounts(),
+                  activityCredit,
+                ),
+              ),
             ],
     ),
   );
@@ -161,7 +177,20 @@ class _Heading extends StatelessWidget {
               child: CircleAvatar(
                 radius: 16,
                 backgroundColor: tint.withValues(alpha: 0.18),
-                child: Icon(icon, size: 18, color: tint),
+                child: Icon(
+                  icon,
+                  size: 18,
+                  // only the accent: a caller's colour keeps its look
+                  color: color != null
+                      ? tint
+                      : chartSafe(
+                          tint,
+                          Color.alphaBlend(
+                            tint.withValues(alpha: 0.18),
+                            paletteOf(context).canvas,
+                          ),
+                        ),
+                ),
               ),
             ),
             const SizedBox(width: 12),
@@ -353,8 +382,9 @@ class _ActivitySection extends StatefulWidget {
   final AdaptiveSettings settings;
   final AdaptiveStore store;
   final StepCounts steps;
+  final Future<ActivityCredit> Function() credit;
 
-  const _ActivitySection(this.settings, this.store, this.steps);
+  const _ActivitySection(this.settings, this.store, this.steps, this.credit);
 
   @override
   State<_ActivitySection> createState() => _ActivitySectionState();
@@ -375,6 +405,10 @@ class _ActivitySectionState extends State<_ActivitySection> {
     final on = await widget.steps.isOn().catchError((Object _) => false);
     if (mounted) setState(() => _stepsOn = on);
   }
+
+  /// What a logged activity does to today's goal: under the formula, or
+  /// before the first check-in, it is added whatever is chosen here.
+  late final Future<ActivityCredit> _credit = widget.credit();
 
   /// The share suggested from body composition, in percent; null until
   /// read, or where the profile cannot be read (tests).
@@ -423,6 +457,16 @@ class _ActivitySectionState extends State<_ActivitySection> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const _Heading('Activity', Icons.directions_run, color: waterColor),
+        FutureBuilder<ActivityCredit>(
+          future: _credit,
+          builder: (context, snapshot) => snapshot.data == ActivityCredit.added
+              ? const _Note(
+                  'For now each logged activity is added to its day\'s goal: '
+                  'these choices start with the adaptive target\'s first '
+                  'check-in.',
+                )
+              : const SizedBox.shrink(),
+        ),
         StackingChoice<ActivityMode>(
           identifier: 'expenditure-activity-mode',
           values: ActivityMode.values,

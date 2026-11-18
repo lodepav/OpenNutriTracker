@@ -353,7 +353,7 @@ class _WeightCard extends StatelessWidget {
                 // card's box (the container gotcha) and coordinate taps miss.
                 container: true,
                 child: IconButton(
-                  tooltip: 'Add weigh-in',
+                  tooltip: 'Weigh in',
                   icon: const Icon(Icons.add_rounded),
                   onPressed: () => _logWeight(context),
                 ),

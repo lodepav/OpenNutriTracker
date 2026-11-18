@@ -156,12 +156,29 @@ ThemeData buildAppTheme(AppPalette p) {
         backgroundColor: WidgetStateProperty.resolveWith(
           (states) => states.contains(WidgetState.selected) ? scheme.primary : null,
         ),
+        // [fork] S233 text-accent: an unselected segment's label and icon in
+        // the accent at 4.5:1, where null fell through to the raw accent
+        // foregroundColor: WidgetStateProperty.resolveWith(
+        //   (states) => states.contains(WidgetState.selected) ? scheme.onPrimary : null,
+        // ),
+        // iconColor: WidgetStateProperty.resolveWith(
+        //   (states) => states.contains(WidgetState.selected) ? scheme.onPrimary : null,
+        // ),
         foregroundColor: WidgetStateProperty.resolveWith(
-          (states) => states.contains(WidgetState.selected) ? scheme.onPrimary : null,
+          (states) => states.contains(WidgetState.selected)
+              ? scheme.onPrimary
+              : states.contains(WidgetState.disabled)
+              ? null
+              : textAccentOf(p),
         ),
         iconColor: WidgetStateProperty.resolveWith(
-          (states) => states.contains(WidgetState.selected) ? scheme.onPrimary : null,
+          (states) => states.contains(WidgetState.selected)
+              ? scheme.onPrimary
+              : states.contains(WidgetState.disabled)
+              ? null
+              : textAccentOf(p),
         ),
+        // [/fork]
       ),
     ),
     listTileTheme: const ListTileThemeData(shape: RoundedRectangleBorder(borderRadius: Dimens.borderRadiusM)),

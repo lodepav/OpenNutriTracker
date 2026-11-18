@@ -27,7 +27,7 @@ const accentPresetNames = [
 
 /// Seam S136: the accent colour as MacroFactor's (AccentA). A preview of
 /// the colour on a ring and a button, the wallpaper switch on Android, the
-/// presets as round swatches, and a custom colour.
+/// presets as round swatches after the app's own green, and a custom colour.
 class AccentColourView extends StatelessWidget {
   /// Whether the wallpaper switch is offered (Android).
   final bool offersWallpaper;
@@ -37,6 +37,9 @@ class AccentColourView extends StatelessWidget {
   final int? currentArgb;
   final ValueChanged<bool> onWallpaper;
   final ValueChanged<Color> onColor;
+
+  /// Back to the app's own accent, with no colour picked.
+  final VoidCallback onDefault;
   final VoidCallback onCustom;
 
   const AccentColourView({
@@ -46,6 +49,7 @@ class AccentColourView extends StatelessWidget {
     required this.currentArgb,
     required this.onWallpaper,
     required this.onColor,
+    required this.onDefault,
     required this.onCustom,
   });
 
@@ -148,16 +152,28 @@ class AccentColourView extends StatelessWidget {
                   // As many as fit at 48 dp each, the touch target's floor
                   final perRow = ((constraints.maxWidth + gap) / (48 + gap))
                       .floor()
-                      .clamp(1, accentPresetColors.length);
+                      .clamp(1, accentPresetColors.length + 1);
                   final size =
                       (constraints.maxWidth - gap * (perRow - 1)) / perRow;
                   return Wrap(
                     spacing: gap,
                     runSpacing: gap,
                     children: [
+                      // A picked colour seeds dark mode too, so only this
+                      // gives back the default's own dark shade.
+                      _Swatch(
+                        id: 'accent-default',
+                        name: 'Default green',
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? AppPalette.dark.accent
+                            : AppPalette.light.accent,
+                        size: size,
+                        selected: !matchesWallpaper && currentArgb == null,
+                        onTap: onDefault,
+                      ),
                       for (final (i, color) in accentPresetColors.indexed)
                         _Swatch(
-                          index: i,
+                          id: 'accent-preset-${i.toString().padLeft(2, '0')}',
                           name: accentPresetNames[i],
                           color: color,
                           size: size,
@@ -191,7 +207,7 @@ class AccentColourView extends StatelessWidget {
 }
 
 class _Swatch extends StatelessWidget {
-  final int index;
+  final String id;
   final Color color;
   final double size;
   final bool selected;
@@ -199,7 +215,7 @@ class _Swatch extends StatelessWidget {
 
   final String name;
   const _Swatch({
-    required this.index,
+    required this.id,
     required this.name,
     required this.color,
     required this.size,
@@ -212,7 +228,7 @@ class _Swatch extends StatelessWidget {
     final palette = paletteOf(context);
     // The tap target is the cell, at least 48 dp, whatever the swatch is.
     return Semantics(
-      identifier: 'accent-preset-${index.toString().padLeft(2, '0')}',
+      identifier: id,
       button: true,
       selected: selected,
       label: name,

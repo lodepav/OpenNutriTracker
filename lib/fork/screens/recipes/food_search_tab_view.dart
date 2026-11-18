@@ -338,7 +338,13 @@ class _PickableMealCard extends StatelessWidget {
                             meal.source == MealSourceEntity.recipe
                                 ? Icons.menu_book_rounded
                                 : Icons.restaurant_rounded,
-                            color: accent,
+                            color: chartSafe(
+                              accent,
+                              Color.alphaBlend(
+                                accent.withValues(alpha: 0.14),
+                                palette.surface,
+                              ),
+                            ),
                             size: 24,
                           ),
                         },

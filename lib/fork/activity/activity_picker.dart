@@ -357,7 +357,10 @@ class _Thumb extends StatelessWidget {
     child: Icon(
       activity.displayIcon,
       size: size / 2,
-      color: Theme.of(context).colorScheme.primary,
+      color: chartSafe(
+        Theme.of(context).colorScheme.primary,
+        paletteOf(context).surfaceMuted,
+      ),
     ),
   );
 }

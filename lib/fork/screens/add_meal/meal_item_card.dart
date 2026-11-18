@@ -375,7 +375,15 @@ class MealItemCard extends StatelessWidget {
           : Icon(
               isRecipe ? Icons.menu_book_rounded : Icons.restaurant_rounded,
               size: 18, //: was 26
-              color: isRecipe ? accent : palette.textMuted,
+              color: isRecipe
+                  ? chartSafe(
+                      accent,
+                      Color.alphaBlend(
+                        accent.withValues(alpha: 0.16),
+                        palette.surface,
+                      ),
+                    )
+                  : palette.textMuted,
             ),
     );
   }
@@ -395,7 +403,7 @@ class MealItemCard extends StatelessWidget {
     identifier: 'meal-item-choose',
     child: IconButton(
       style: IconButton.styleFrom(
-        foregroundColor: accent,
+        foregroundColor: textSafe(accent, paletteOf(context).surface),
         // the plus's shapes, a rounded rectangle at large text, no outline
         shape: large
             ? const RoundedRectangleBorder(
@@ -418,7 +426,9 @@ class MealItemCard extends StatelessWidget {
                   fit: BoxFit.scaleDown,
                   child: Text(
                     'Choose',
-                    style: textTheme.labelMedium?.copyWith(color: accent),
+                    style: textTheme.labelMedium?.copyWith(
+                      color: textSafe(accent, paletteOf(context).surface),
+                    ),
                   ),
                 ),
               ),

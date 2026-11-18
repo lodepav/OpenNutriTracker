@@ -543,6 +543,24 @@ void main() {
     });
   });
 
+  testWidgets('with no plan, the card says the pace You shows', (tester) async {
+    await _pump(
+      tester,
+      Scaffold(
+        body: GoalCard(
+          unit: BodyWeightUnit.kg,
+          load: () async => null,
+          pace: () async => 'Losing 0.4 kg a week',
+        ),
+      ),
+    );
+    expect(
+      find.textContaining('Losing 0.4 kg a week, with no end date.'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('No goal'), findsNothing);
+  });
+
   group('F10: the pace in calories', () {
     tearDown(() => AdaptiveStore.settings.value = const AdaptiveSettings());
 

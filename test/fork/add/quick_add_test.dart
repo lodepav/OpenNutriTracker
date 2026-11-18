@@ -249,6 +249,33 @@ void main() {
     expect(_submitLabel(tester), 'Add 450 kcal to Dinner');
   });
 
+  test('macros clearly over the typed energy are a typo', () {
+    expect(quickAddMacrosOver(typed: 50, macros: 450), isTrue);
+    // Within a fifth and 10: rounding, fibre.
+    expect(quickAddMacrosOver(typed: 100, macros: 130), isFalse);
+    expect(quickAddMacrosOver(typed: 100, macros: 131), isTrue);
+    expect(quickAddMacrosOver(typed: null, macros: 450), isFalse);
+    expect(quickAddMacrosOver(typed: 50, macros: null), isFalse);
+  });
+
+  testWidgets('50 kcal with 50 g of fat says to check the numbers', (
+    tester,
+  ) async {
+    await tester.pumpWidget(_app());
+    await tester.pumpAndSettle();
+    await tester.enterText(_field('quick-add-energy'), '50');
+    await tester.enterText(_field('quick-add-fat'), '50');
+    await tester.pump();
+    expect(
+      find.text('The macros alone come to 450 kcal: check the numbers'),
+      findsOneWidget,
+    );
+
+    await tester.enterText(_field('quick-add-fat'), '5');
+    await tester.pump();
+    expect(find.textContaining('check the numbers'), findsNothing);
+  });
+
   testWidgets('the entry goes to the meal picked, named Quick add by default', (
     tester,
   ) async {

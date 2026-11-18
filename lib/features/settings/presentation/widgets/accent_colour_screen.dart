@@ -38,6 +38,17 @@ class _AccentColourScreenState extends State<AccentColourScreen> {
     _settingsBloc.add(LoadSettingsEvent());
   }
 
+  // [fork] S136 accent-colour: back to the app's own green, light and dark
+  void _selectDefault() {
+    _settingsBloc.setAccentColor(null);
+    _settingsBloc.setUseMaterialYou(false);
+    final theme = Provider.of<ThemeModeProvider>(context, listen: false);
+    theme.updateAccentColor(null);
+    theme.updateUseMaterialYou(false);
+    _settingsBloc.add(LoadSettingsEvent());
+  }
+  // [/fork]
+
   void _selectColor(Color color) {
     final argb = color.toARGB32();
     _settingsBloc.setAccentColor(argb);
@@ -69,13 +80,11 @@ class _AccentColourScreenState extends State<AccentColourScreen> {
             currentArgb: state.accentColor,
             onWallpaper: (on) => on
                 ? _selectMaterialYou()
-                : _selectColor(
-                    Color(
-                      state.accentColor ??
-                          accentPresetColors.first.toARGB32(),
-                    ),
-                  ),
+                : state.accentColor == null
+                ? _selectDefault()
+                : _selectColor(Color(state.accentColor!)),
             onColor: _selectColor,
+            onDefault: _selectDefault,
             onCustom: () => _openCustomColourDialog(state.accentColor),
           );
           // [/fork]

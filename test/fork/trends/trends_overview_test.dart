@@ -584,7 +584,7 @@ void main() {
 
     expect(find.text('Trend weight'), findsOneWidget);
     expect(find.textContaining('Trend: '), findsOneWidget);
-    expect(find.byTooltip('Add weigh-in'), findsOneWidget);
+    expect(find.byTooltip('Weigh in'), findsOneWidget);
     await tester.scrollUntilVisible(
       find.text('79.4 kg'),
       200,

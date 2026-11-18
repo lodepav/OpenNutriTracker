@@ -5,6 +5,7 @@ import 'dart:io';
 
 import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/material.dart';
+import 'package:opennutritracker/fork/display/contrast.dart';
 import 'package:flutter/semantics.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/presentation/widgets/badged_title.dart';
@@ -795,7 +796,10 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
                   Icon(
                     Icons.auto_awesome_rounded,
                     size: 18,
-                    color: theme.colorScheme.primary,
+                    color: chartSafe(
+                      theme.colorScheme.primary,
+                      theme.scaffoldBackgroundColor,
+                    ),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
