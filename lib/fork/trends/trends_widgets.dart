@@ -36,23 +36,48 @@ String signedText(double v, [int digits = 0]) {
 }
 
 /// MacroFactor's 1W–All pills; picking one reloads Trends at that range,
-/// and Trends opens at it next time ([TrendsRange]).
+/// and Trends opens at it next time ([TrendsRange]). Given [ranges], the
+/// pills are those and a pick is not kept as Trends' range.
 class RangePills extends StatelessWidget {
   final int rangeDays;
   final ValueChanged<int> onChanged;
+
+  /// The ranges shown, Trends' when null.
+  final List<({int days, String label, String spoken})>? ranges;
+
+  /// The Semantics identifier and the start of each pill's key.
+  final String idPrefix;
 
   const RangePills({
     super.key,
     required this.rangeDays,
     required this.onChanged,
+    this.ranges,
+    this.idPrefix = 'trends-range',
   });
 
   @override
   Widget build(BuildContext context) {
     final palette = paletteOf(context);
     final text = Theme.of(context).textTheme;
+    final options =
+        ranges ??
+        [
+          for (final r in trendRanges)
+            (
+              days: r.days,
+              label: r.label,
+              spoken: switch (r.days) {
+                7 => '1 week',
+                30 => '1 month',
+                365 => '1 year',
+                0 => 'All',
+                _ => '${r.days ~/ 30} months',
+              },
+            ),
+        ];
     return Semantics(
-      identifier: 'trends-range',
+      identifier: idPrefix,
       container: true,
       child: Container(
         padding: const EdgeInsets.all(3),
@@ -62,17 +87,12 @@ class RangePills extends StatelessWidget {
         ),
         child: Row(
           children: [
-            for (final r in trendRanges)
+            for (final r in options)
               Expanded(
                 child: Semantics(
-                  identifier: 'trends-range-${r.label.toLowerCase()}',
-                  label: switch (r.days) {
-                    7 => '1 week',
-                    30 => '1 month',
-                    365 => '1 year',
-                    0 => 'All',
-                    _ => '${r.days ~/ 30} months',
-                  },
+                  identifier:
+                      '$idPrefix-${r.label.toLowerCase().replaceAll(' ', '')}',
+                  label: r.spoken,
                   button: true,
                   selected: r.days == rangeDays,
                   inMutuallyExclusiveGroup: true,
@@ -82,12 +102,12 @@ class RangePills extends StatelessWidget {
                         : Colors.transparent,
                     borderRadius: BorderRadius.circular(9),
                     child: InkWell(
-                      key: ValueKey('trends-range-${r.days}'),
+                      key: ValueKey('$idPrefix-${r.days}'),
                       borderRadius: BorderRadius.circular(9),
                       onTap: r.days == rangeDays
                           ? null
                           : () {
-                              TrendsRange.save(r.days);
+                              if (ranges == null) TrendsRange.save(r.days);
                               onChanged(r.days);
                             },
                       child: ConstrainedBox(

@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import 'package:opennutritracker/core/domain/entity/body_weight_unit_entity.dart';
 import 'package:opennutritracker/core/domain/entity/weight_log_entity.dart';
 import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
+import 'package:opennutritracker/fork/trends/trends_widgets.dart';
 import 'package:opennutritracker/fork/weight/weight_history_view.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 
@@ -279,16 +280,75 @@ void main() {
     expect(pill.semanticsLabel, '−0.2 kg since the one before');
   });
 
-  testWidgets('the range chips are spoken in words', (tester) async {
+  testWidgets('the range is picked on Trends\' pills, spoken in words', (
+    tester,
+  ) async {
+    final handle = tester.ensureSemantics();
     await _pump(tester, entries);
+    final pills = find.byType(RangePills);
+    expect(pills, findsOneWidget);
+    Finder pill(String label) =>
+        find.descendant(of: pills, matching: find.text(label));
     for (final (short, spoken) in [
       ('30 d', '30 days'),
       ('90 d', '90 days'),
       ('1 y', '1 year'),
       ('All', 'All time'),
     ]) {
-      expect(tester.widget<Text>(find.text(short)).semanticsLabel, spoken);
+      expect(tester.getSemantics(pill(short)).label, spoken);
+      expect(
+        tester
+            .getSize(
+              find.byKey(
+                ValueKey(
+                  'weight-history-range-${switch (short) {
+                    '30 d' => 30,
+                    '90 d' => 90,
+                    '1 y' => 365,
+                    _ => 0,
+                  }}',
+                ),
+              ),
+            )
+            .height,
+        greaterThanOrEqualTo(48),
+      );
     }
+    expect(
+      tester.getSemantics(pill('30 d')),
+      isSemantics(isSelected: true, isButton: true),
+    );
+    expect(
+      tester
+          .widget<LineChart>(find.byType(LineChart))
+          .data
+          .lineBarsData[1]
+          .spots
+          .last
+          .x,
+      29,
+      reason: 'today is the window\'s last day',
+    );
+
+    await tester.tap(pill('90 d'));
+    await tester.pumpAndSettle();
+    expect(
+      tester.getSemantics(pill('90 d')),
+      isSemantics(isSelected: true, isButton: true),
+    );
+    expect(_tile(tester, '90 days'), startsWith('90 days '));
+    expect(
+      tester
+          .widget<LineChart>(find.byType(LineChart))
+          .data
+          .lineBarsData[1]
+          .spots
+          .last
+          .x,
+      89,
+      reason: 'today is the window\'s last day',
+    );
+    handle.dispose();
   });
 
   testWidgets('1,000 weigh-ins build only the rows on screen', (tester) async {
@@ -523,9 +583,20 @@ void main() {
     await _pump(tester, [
       WeightLogEntity(date: DateTime(2026, 1, 1), weightKg: 80),
     ]);
-    final chips = tester.widgetList<ChoiceChip>(find.byType(ChoiceChip));
-    expect(chips.where((c) => c.selected), hasLength(1));
-    expect(chips.every((c) => c.showCheckmark != false), isTrue);
+    // the weight marks the chosen range, beside its fill and colour
+    FontWeight? weight(String label) => tester
+        .widget<Text>(
+          find.descendant(
+            of: find.byType(RangePills),
+            matching: find.text(label),
+          ),
+        )
+        .style
+        ?.fontWeight;
+    expect(weight('30 d'), FontWeight.w700);
+    for (final other in ['90 d', '1 y', 'All']) {
+      expect(weight(other), FontWeight.w500);
+    }
   });
 
   testWidgets('the cards keep the 16 dp gutter the tabs have', (tester) async {

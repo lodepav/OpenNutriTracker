@@ -207,9 +207,18 @@ class _WeightHistoryViewState extends State<WeightHistoryView> {
                       sliver: SliverMainAxisGroup(
                         slivers: [
                           item(
-                            _RangeChips(
+                            RangePills(
                               rangeDays: _rangeDays,
                               onChanged: (d) => setState(() => _rangeDays = d),
+                              ranges: [
+                                for (final (days, label) in weightRanges)
+                                  (
+                                    days: days,
+                                    label: label,
+                                    spoken: weightRangeLabel(days),
+                                  ),
+                              ],
+                              idPrefix: 'weight-history-range',
                             ),
                           ),
                           item(const SizedBox(height: Dimens.spacing8)),
@@ -398,38 +407,6 @@ class _StatTile extends StatelessWidget {
       ),
     );
   }
-}
-
-class _RangeChips extends StatelessWidget {
-  final int rangeDays;
-  final ValueChanged<int> onChanged;
-
-  const _RangeChips({required this.rangeDays, required this.onChanged});
-
-  @override
-  Widget build(BuildContext context) => Semantics(
-    identifier: 'weight-history-range-selector',
-    child: Wrap(
-      spacing: Dimens.spacing8,
-      children: [
-        for (final (days, label) in weightRanges)
-          Semantics(
-            identifier: 'weight-history-range-$days',
-            child: ChoiceChip(
-              key: ValueKey('weight-history-range-$days'),
-              label: Text(label, semanticsLabel: weightRangeLabel(days)),
-              // the check marks the chosen range, as the search chips do;
-              // the fill alone is the unselected one's
-              selected: days == rangeDays,
-              materialTapTargetSize: MaterialTapTargetSize.padded,
-              onSelected: (_) {
-                if (days != rangeDays) onChanged(days);
-              },
-            ),
-          ),
-      ],
-    ),
-  );
 }
 
 /// The trend, thick, over the weigh-ins, thin; the goal weight dashed when
