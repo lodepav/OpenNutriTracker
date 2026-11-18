@@ -8,7 +8,6 @@ import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
-import 'package:opennutritracker/core/utils/off_const.dart';
 import 'package:opennutritracker/core/utils/navigation_options.dart';
 import 'package:opennutritracker/features/add_meal/data/dto/sp/sp_const.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dart';
@@ -27,6 +26,17 @@ import 'package:opennutritracker/fork/add/one_tap_log.dart';
 import 'package:opennutritracker/fork/basket/basket_ui.dart'
     show entriesChanged;
 
+/// The database [meal] comes from, short for a row's macro line: "USDA",
+/// "BLS", "OFF"; null for the user's own foods.
+// shortcut: other tables keep upstream's names, "Matvaretabellen" is cut at
+// 1x; give them short forms once their rows reach the hosted database.
+String? shortSourceName(MealEntity meal) {
+  final backend = meal.backendSource;
+  if (backend != null && backend.startsWith('fdc')) return 'USDA';
+  return SPConst.foodSourceShortNames[backend] ??
+      (meal.source == MealSourceEntity.off ? 'OFF' : null);
+}
+
 class MealItemCard extends StatelessWidget {
   final DateTime day;
   final AddMealType addMealType;
@@ -36,6 +46,8 @@ class MealItemCard extends StatelessWidget {
   // a recent's latest entry; the row then shows
   // that amount's energy and macros instead of those per 100 g
   final IntakeEntity? forkLastLogged;
+  // off in a section whose header names the source already
+  final bool forkShowsSource;
   static const double forkThumb = 32;
 
   const MealItemCard({
@@ -46,6 +58,7 @@ class MealItemCard extends StatelessWidget {
     required this.usesImperialUnits,
     this.favouriteSemanticsIdentifier,
     this.forkLastLogged,
+    this.forkShowsSource = true,
   });
 
   @override
@@ -79,7 +92,9 @@ class MealItemCard extends StatelessWidget {
         : 'per 100 ${mealEntity.isLiquid ? 'ml' : 'g'}';
     final source = isRecipe
         ? S.of(context).additionalInfoLabelRecipe
-        : _sourceLabel();
+        : forkShowsSource
+        ? shortSourceName(mealEntity)
+        : null;
     // with large text the energy goes under the name
     // and the macros may wrap, so the name keeps its width (A6)
     final large = MediaQuery.textScalerOf(context).scale(10) > 13;
@@ -133,7 +148,7 @@ class MealItemCard extends StatelessWidget {
                       fat: last?.totalFatsGram ?? n.fat100,
                       protein: last?.totalProteinsGram ?? n.proteins100,
                       tail: source == null ? null : '· $source',
-                      // the whole source at large text, "FDC Survey" (A6)
+                      // the whole source at large text, "Matvaretabellen" (A6)
                       maxLines: large ? null : 1,
                     ),
                     if (large && kcal != null)
@@ -168,7 +183,10 @@ class MealItemCard extends StatelessWidget {
                 semanticsIdentifier: favouriteSemanticsIdentifier,
               ),
               // Logs at once, so not while planning (the row opens the page).
-              if (FoodBasket.instance.planning == null)
+              if (FoodBasket.instance.planning == null &&
+                  choosesOnPage(mealEntity))
+                _chooseButton(context, accent, textTheme, large)
+              else if (FoodBasket.instance.planning == null)
                 _OneTapLabel(
                   meal: mealEntity,
                   last: forkLastLogged,
@@ -362,17 +380,60 @@ class MealItemCard extends StatelessWidget {
   // upstream's _buildSubtitle and _labelChip
   // went with the source chip
 
-  /// Database-of-origin label: the Supabase backend source (BLS, FDC SR
-  /// Legacy...) when known, Open Food Facts for OFF products, null for the
-  /// user's own custom meals.
-  String? _sourceLabel() {
-    final backendLabel = SPConst.foodSourceShortNames[mealEntity.backendSource];
-    if (backendLabel != null) return backendLabel;
-    if (mealEntity.source == MealSourceEntity.off) {
-      return OFFConst.offSourceName;
-    }
-    return null;
-  }
+  /// The button of a food the plus cannot log at once ([choosesOnPage]):
+  /// it opens the page, as the row does, and looks unlike the plus, so the
+  /// plus always logs.
+  Widget _chooseButton(
+    BuildContext context,
+    Color accent,
+    TextTheme textTheme,
+    bool large,
+  ) => Semantics(
+    identifier: 'meal-item-choose',
+    child: IconButton(
+      style: IconButton.styleFrom(
+        foregroundColor: accent,
+        // the plus's shapes, a rounded rectangle at large text, no outline
+        shape: large
+            ? const RoundedRectangleBorder(
+                borderRadius: BorderRadius.all(Radius.circular(16)),
+              )
+            : const StadiumBorder(),
+        minimumSize: const Size(32, 32),
+        padding: large
+            ? const EdgeInsetsDirectional.fromSTEB(12, 6, 8, 6)
+            : const EdgeInsetsDirectional.fromSTEB(10, 0, 6, 0),
+      ),
+      icon: ExcludeSemantics(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 112),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Flexible(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    'Choose',
+                    style: textTheme.labelMedium?.copyWith(color: accent),
+                  ),
+                ),
+              ),
+              const Icon(Icons.chevron_right_rounded, size: 18),
+            ],
+          ),
+        ),
+      ),
+      // S142: the brand tells like-named foods apart (A4), as on the plus
+      tooltip: 'Choose an amount of ${_nameAndBrand()}',
+      onPressed: () => _onItemPressed(context),
+    ),
+  );
+
+  String _nameAndBrand() => [
+    mealEntity.name ?? '',
+    if (mealEntity.brands case final b? when b.trim().isNotEmpty) b.trim(),
+  ].join(', ');
 
   void _onItemPressed(BuildContext context) {
     // The plus is logging it: its page would not count that entry yet.

@@ -249,6 +249,34 @@ void main() {
     expect(find.text('Riviana Foods Inc., Minute'), findsOne);
   });
 
+  testWidgets('a row leaves its source to its section\'s header', (
+    tester,
+  ) async {
+    await tester.pumpWidget(app([brands.first, _usda('Rice, cooked')]));
+    // the headers name them, the rows do not
+    expect(find.textContaining('USDA', findRichText: true), findsOneWidget);
+    expect(find.textContaining('FDC', findRichText: true), findsNothing);
+    expect(
+      find.textContaining('Open Food Facts', findRichText: true),
+      findsOneWidget,
+    );
+    expect(find.textContaining('OFF', findRichText: true), findsNothing);
+  });
+
+  testWidgets('a basic food from a table the header leaves out names it', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      app([
+        _usda('Rice, cooked'),
+        _meal('Riz, cuit', MealSourceEntity.fdc, backend: 'ciqual'),
+      ]),
+    );
+    expect(find.text('Basic foods · USDA'), findsOneWidget);
+    expect(find.textContaining('· CIQUAL', findRichText: true), findsOneWidget);
+    expect(find.textContaining('FDC', findRichText: true), findsNothing);
+  });
+
   testWidgets('a footer comes last, under the products', (tester) async {
     await tester.pumpWidget(
       app([...brands, _usda('Rice, cooked')], footer: const Text('footer')),

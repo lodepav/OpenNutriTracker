@@ -69,12 +69,17 @@ class _ResultSectionsState extends State<ResultSections> {
     }
   }
 
-  MealItemCard _row(MealEntity meal) => MealItemCard(
+  MealItemCard _row(MealEntity meal, {bool showsSource = true}) => MealItemCard(
     day: widget.day,
     mealEntity: meal,
     addMealType: widget.addMealType,
     usesImperialUnits: widget.usesImperialUnits,
+    forkShowsSource: showsSource,
   );
+
+  // The products' header, or the Products tab, names Open Food Facts.
+  MealItemCard _product(MealEntity meal) =>
+      _row(meal, showsSource: (shortSourceName(meal) ?? 'OFF') != 'OFF');
 
   Widget _more(String label, VoidCallback onPressed) => Align(
     alignment: Alignment.centerLeft,
@@ -89,14 +94,17 @@ class _ResultSectionsState extends State<ResultSections> {
       query: widget.query,
     );
     final basic = sections.basic;
+    final basicSources = _basicSources(basic);
     final basicShown = _allBasic
         ? basic.length
         : basic.length.clamp(0, ResultSections.basicShown);
     final rows = <Widget>[
       for (final meal in sections.own) _row(meal),
       if (basic.isNotEmpty)
-        SearchSectionHeader(title: 'Basic foods · ${_basicSources(basic)}'),
-      for (final meal in basic.take(basicShown)) _row(meal),
+        SearchSectionHeader(title: 'Basic foods · ${basicSources.join(', ')}'),
+      // A row names its source only where the header does not.
+      for (final meal in basic.take(basicShown))
+        _row(meal, showsSource: !basicSources.contains(shortSourceName(meal))),
       if (basicShown < basic.length)
         _more(
           'Show ${basic.length - basicShown} more basic foods',
@@ -114,7 +122,7 @@ class _ResultSectionsState extends State<ResultSections> {
   }
 
   List<Widget> _group(List<MealEntity> group) {
-    if (group.length == 1) return [_row(group.single)];
+    if (group.length == 1) return [_product(group.single)];
     final key = productGroupKey(group.first);
     final open = _open.contains(key);
     final shown = _openAll.contains(key)
@@ -130,7 +138,7 @@ class _ResultSectionsState extends State<ResultSections> {
         for (final meal in group.take(shown))
           Padding(
             padding: const EdgeInsets.only(left: Dimens.spacing24),
-            child: _row(meal),
+            child: _product(meal),
           ),
         if (shown < group.length)
           Padding(
@@ -145,7 +153,7 @@ class _ResultSectionsState extends State<ResultSections> {
   }
 
   /// The tables [basic] comes from, as the user knows them.
-  static String _basicSources(List<MealEntity> basic) {
+  static List<String> _basicSources(List<MealEntity> basic) {
     final names = <String>{
       for (final meal in basic)
         switch (meal.backendSource) {
@@ -158,7 +166,7 @@ class _ResultSectionsState extends State<ResultSections> {
     return [
       for (final name in ['USDA', 'BLS', 'OpenBite'])
         if (names.contains(name)) name,
-    ].join(', ');
+    ];
   }
 }
 

@@ -67,3 +67,5 @@ there before changing anything a line touches. After adding or rewording a decis
 - **D39** The basket shows its meal; the plus names what it adds
 - **D40** A photo's foods are the foods as eaten, at the amounts on the plate
 - **D41** Upstream 2.7.0 beside the fork's features
+- **D42** Settings keeps the AI switch and the cache with the food sources
+- **D43** A result's + always logs and says grams; Choose opens a food it cannot log

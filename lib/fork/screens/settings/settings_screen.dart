@@ -205,7 +205,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final isCurrent = ModalRoute.isCurrentOf(context) ?? true;
     if (isCurrent && _wasCovered) {
       _settingsBloc.add(LoadSettingsEvent());
-      // Appearance may have hidden the AI, which the Food summary names
+      // Food may have hidden the AI, which the Food summary names
       _refreshAiAssistState();
     }
     _wasCovered = !isCurrent;
@@ -272,7 +272,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   if (AutoBackup.state.value.failed) SettingsSection.data,
                 },
                 onOpen: _forkOpen,
-                footer: AppBannerVersion(versionNumber: state.versionNumber),
               ),
             );
           }
@@ -400,8 +399,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
           '${backupLine(AutoBackup.state.value)} · $healthPlatformName, '
           'import, export',
       SettingsSection.appearance: 'Theme, colour, language, what screens show',
-      SettingsSection.about:
-          'OpenBite ${state.versionNumber} · privacy · sources',
+      // The version is on About's own page, in Updates and the footer
+      SettingsSection.about: 'Privacy, sources, updates',
     };
   }
 
@@ -444,13 +443,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
       e(s.settingsAiAssistLabel, food, 'api key model provider'),
       e('What happens to a meal photo', food, 'privacy camera'),
       e('Open Food Facts account', food),
+      e(s.clearOffCacheLabel, food, 'search results storage'),
+      e(s.settingsShowAiFeaturesLabel, food, 'assistant hide'),
       e(healthPlatformName, data, 'sync workouts weight steps'),
       e('Import history', data),
       e(s.importCustomFoodDataLabel, data),
       e(s.exportImportAppDataLabel, data, 'backup restore json'),
       e('Automatic backup', data, 'restore'),
       e('Export diary as CSV', data, 'spreadsheet'),
-      e(s.clearOffCacheLabel, data),
       e(s.manageProfilesLabel, data, 'profiles switch'),
       e(s.settingsDeleteAllDataLabel, data),
       e(s.settingsThemeLabel, appearance, 'dark light'),
@@ -464,7 +464,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
       e('Diary by the hour', appearance),
       e('Show water', appearance),
       e('Show fasting', appearance),
-      e(s.settingsShowAiFeaturesLabel, appearance, 'assistant hide'),
       e(s.settingsPrivacySettings, about, 'keep meal photos'),
       e(s.settingsDisclaimerLabel, about),
       e(s.settingsSourcesLabel, about),

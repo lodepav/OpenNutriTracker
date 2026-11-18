@@ -20,6 +20,7 @@ import 'package:opennutritracker/fork/amounts/own_portions.dart';
 import 'package:opennutritracker/fork/amounts/remembered_amounts.dart';
 import 'package:opennutritracker/fork/basket/basket_ui.dart'
     show refreshAfterLogging;
+import 'package:opennutritracker/fork/bulk/amount_question.dart' show pieceWord;
 import 'package:opennutritracker/fork/copy/copy_ui.dart' show mealLabel;
 import 'package:opennutritracker/fork/meal_detail/missing_info.dart';
 import 'package:opennutritracker/fork/units/amount_text.dart'
@@ -97,10 +98,11 @@ Future<OneTapAmount> rowAmount(
 }
 
 /// What the plus says it adds (D39): "1 roll" when it adds one of the
-/// food's servings and the serving names itself, else the amount as the
-/// Diary will show it, "60 g". Null when the amount is not known before
-/// the tap: a text-search hit's serving comes with its record, and a
-/// Quick add of energy alone has no amount to name.
+/// food's servings and the serving is one counted thing, else the amount
+/// as the Diary will show it, "60 g": "1 serving" or "1 cup" said nothing
+/// of its size. Null when the amount is not known before the tap: a
+/// text-search hit's serving comes with its record, and a Quick add of
+/// energy alone has no amount to name.
 String? oneTapLabel(
   MealEntity meal,
   OneTapAmount amount, {
@@ -111,10 +113,8 @@ String? oneTapLabel(
   if (isPortionUnit(amount.unit) &&
       serving != null &&
       (amount.amount - serving).abs() < 0.01) {
-    final named = RegExp(
-      r'^\s*1\s+([^\d(),]{1,12}?)\s*(?:\(|$)',
-    ).firstMatch(meal.servingSize ?? '');
-    if (named != null) return '1 ${named.group(1)}';
+    final piece = pieceWord(meal.servingSize ?? '');
+    if (piece != null && piece.length <= 12) return '1 $piece';
   }
   return amountText(
     IntakeEntity(
@@ -130,6 +130,11 @@ String? oneTapLabel(
 }
 
 final _log = Logger('OneTapLog');
+
+/// Whether the row's button opens [meal]'s page to choose an amount rather
+/// than logging at once: the page must complete the food first, as the
+/// plus would find on its tap.
+bool choosesOnPage(MealEntity meal) => missingForLog(meal, 'kcal').isNotEmpty;
 
 /// An Open Food Facts text-search hit: no serving, no micronutrients.
 bool _isThin(MealEntity meal) =>
