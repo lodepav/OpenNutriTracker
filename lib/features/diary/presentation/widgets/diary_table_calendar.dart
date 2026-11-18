@@ -256,6 +256,19 @@ class _DiaryTableCalendarState extends State<DiaryTableCalendar> {
               selected: true,
               today: isSameDay(day, widget.currentDate),
             ),
+            // The package hides a day builder's semantics behind the date it
+            // reads; the marker sits beside the day, so TalkBack hears it.
+            markerBuilder: (context, day, _) {
+              final selected = isSameDay(day, widget.selectedDate);
+              final today = isSameDay(day, widget.currentDate);
+              if (!selected && !today) return null;
+              return Positioned.fill(
+                child: Semantics(
+                  selected: selected ? true : null,
+                  label: today ? 'today' : null,
+                ),
+              );
+            },
             // [/fork]
           ),
         ),

@@ -34,6 +34,7 @@ import 'package:opennutritracker/generated/l10n.dart';
 
 import '../../fixture/intake_entity_fixtures.dart';
 import '../../helpers/fake_favourites.dart';
+import '../../helpers/ux_checks.dart';
 
 MealEntity _food({
   String? name = 'Oats',
@@ -642,6 +643,74 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('1 roll'), findsNothing);
       expect(find.text('45 g'), findsOneWidget);
+    });
+
+    testWidgets('at 2x the plus\'s wrapped label sits inside its outline', (
+      tester,
+    ) async {
+      GetIt.instance.registerSingleton<GetConfigUsecase>(_Config());
+      final kept = RememberedAmounts.current;
+      RememberedAmounts.current = RememberedAmounts(
+        () async => throw StateError('no box'),
+        () async => [],
+      );
+      addTearDown(() => RememberedAmounts.current = kept);
+      final bar = MealEntity(
+        code: 'bar',
+        name: 'Protein bar',
+        url: null,
+        mealQuantity: null,
+        mealUnit: 'g',
+        servingQuantity: 30,
+        servingUnit: 'g',
+        servingSize: '1 serving (30 g)',
+        nutriments: _food().nutriments,
+        source: MealSourceEntity.custom,
+      );
+      await pumpOnPhone(
+        tester,
+        MealItemCard(
+          day: DateTime(2026, 10, 30),
+          mealEntity: bar,
+          addMealType: AddMealType.lunchType,
+          usesImperialUnits: false,
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byTooltip('Add Protein bar, 1 serving'), findsOneWidget);
+      final button = find.ancestor(
+        of: find.text('serving'),
+        matching: find.byType(IconButton),
+      );
+      // The nearest Material draws the outline.
+      final outline = find
+          .ancestor(of: find.text('serving'), matching: find.byType(Material))
+          .first;
+      final rect = tester.getRect(outline);
+      final shape = tester.widget<Material>(outline).shape!;
+      final inside = shape.getInnerPath(rect);
+      // It wraps at this size, "1 / serving", the case that ran into the
+      // outline.
+      final one = tester.getRect(find.text('1'));
+      final word = tester.getRect(find.text('serving'));
+      expect(word.top, greaterThan(one.top));
+      for (final r in [one, word]) {
+        expect(r.left - rect.left, greaterThanOrEqualTo(6), reason: '$r');
+        expect(rect.right - r.right, greaterThanOrEqualTo(6), reason: '$r');
+        expect(r.top - rect.top, greaterThanOrEqualTo(6), reason: '$r');
+        expect(rect.bottom - r.bottom, greaterThanOrEqualTo(6), reason: '$r');
+        for (final corner in [
+          r.topLeft,
+          r.topRight,
+          r.bottomLeft,
+          r.bottomRight,
+        ]) {
+          expect(inside.contains(corner), isTrue, reason: '$corner in $rect');
+        }
+      }
+      final target = tester.getSize(button);
+      expect(target.width, greaterThanOrEqualTo(48));
+      expect(target.height, greaterThanOrEqualTo(48));
     });
 
     testWidgets('the plus logs at once and stays', (tester) async {
