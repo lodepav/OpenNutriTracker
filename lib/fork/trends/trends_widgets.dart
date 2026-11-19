@@ -10,6 +10,7 @@ import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/fork/display/motion.dart';
 import 'package:opennutritracker/fork/trends/trend_stats.dart';
 import 'package:opennutritracker/fork/trends/trends_range.dart';
+import 'package:opennutritracker/fork/trends/value_axis.dart';
 
 /// Water's colour on Trends.
 Color waterColor(BuildContext context) => paletteOf(context).water;
@@ -571,9 +572,20 @@ String Function(int i) dayLabels(BuildContext context, List<DateTime> dates) {
 }
 
 /// The x axis of a daily chart: the weekday under each bar for a week,
-/// else none.
-FlTitlesData weekdayTitles(BuildContext context, List<DateTime> dates) {
-  if (dates.length > 7) return const FlTitlesData(show: false);
+/// else none; [right], its value axis.
+FlTitlesData weekdayTitles(
+  BuildContext context,
+  List<DateTime> dates, {
+  AxisTitles right = const AxisTitles(),
+}) {
+  if (dates.length > 7) {
+    return FlTitlesData(
+      leftTitles: const AxisTitles(),
+      topTitles: const AxisTitles(),
+      bottomTitles: const AxisTitles(),
+      rightTitles: right,
+    );
+  }
   final format = intl.DateFormat.E(
     Localizations.localeOf(context).toLanguageTag(),
   );
@@ -582,7 +594,7 @@ FlTitlesData weekdayTitles(BuildContext context, List<DateTime> dates) {
   ).textTheme.labelSmall?.copyWith(color: paletteOf(context).textMuted);
   return FlTitlesData(
     leftTitles: const AxisTitles(),
-    rightTitles: const AxisTitles(),
+    rightTitles: right,
     topTitles: const AxisTitles(),
     bottomTitles: AxisTitles(
       sideTitles: SideTitles(
@@ -591,7 +603,15 @@ FlTitlesData weekdayTitles(BuildContext context, List<DateTime> dates) {
         reservedSize: MediaQuery.textScalerOf(context).scale(22),
         getTitlesWidget: (x, meta) => SideTitleWidget(
           meta: meta,
-          child: Text(format.format(dates[x.toInt()]), style: style),
+          // Shrunk to its day's slot, which the value axis narrows, with a
+          // gap to the next.
+          child: SizedBox(
+            width: math.max(0, meta.parentAxisSize / dates.length - 4),
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(format.format(dates[x.toInt()]), style: style),
+            ),
+          ),
         ),
       ),
     ),
@@ -673,6 +693,12 @@ class DailyBarChart extends StatelessWidget {
       if (goal != null && goal! > 0) goal!,
       if (negativeColor != null || present.any((v) => v < 0)) 0,
     ]);
+    final axis = valueAxis(
+      context,
+      range.min,
+      range.max,
+      bothSides: present.any((v) => v < 0) && present.any((v) => v > 0),
+    );
     final goals = goalLine(context, goal).horizontalLines;
     final base = range.min > 0 ? range.min : 0.0;
     final dayLabel = dayLabels(context, dates);
@@ -707,12 +733,12 @@ class DailyBarChart extends StatelessWidget {
               const Duration(milliseconds: 150),
             ),
             BarChartData(
-              minY: range.min,
-              maxY: range.max,
+              minY: axis.min,
+              maxY: axis.max,
               alignment: BarChartAlignment.spaceAround,
               gridData: const FlGridData(show: false),
               borderData: FlBorderData(show: false),
-              titlesData: weekdayTitles(context, dates),
+              titlesData: weekdayTitles(context, dates, right: axis.titles),
               extraLinesData: ExtraLinesData(
                 horizontalLines: [
                   if (negativeColor != null)
@@ -751,7 +777,10 @@ class DailyBarChart extends StatelessWidget {
                       BarChartRodData(
                         fromY: base,
                         toY: v ?? base,
-                        width: barWidth(box.maxWidth, values.length),
+                        width: barWidth(
+                          box.maxWidth - axis.width,
+                          values.length,
+                        ),
                         color: ((v ?? 0) < 0 ? negativeColor ?? color : color)
                             .withValues(
                               alpha: selected == null || selected == i

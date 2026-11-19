@@ -22,6 +22,7 @@ import 'package:opennutritracker/fork/trends/detail_stats.dart';
 import 'package:opennutritracker/fork/trends/detail_widgets.dart';
 import 'package:opennutritracker/fork/trends/trend_stats.dart';
 import 'package:opennutritracker/fork/trends/trends_widgets.dart';
+import 'package:opennutritracker/fork/trends/value_axis.dart';
 import 'package:opennutritracker/fork/units/energy_text.dart';
 
 /// The Expenditure page, after the canvas's TdExpB with TdExpA's table of
@@ -296,22 +297,12 @@ class ExpenditureChart extends StatelessWidget {
     lo = mid - minSpan / 2;
     hi = mid + minSpan / 2;
   }
-  final step = _niceStep((hi - lo) / 3);
+  final step = niceStep((hi - lo) / 3);
   return (
     min: (lo / step).floor() * step,
     max: (hi / step).ceil() * step,
     step: step,
   );
-}
-
-/// A round step near [raw]: 1, 2 or 5 times a power of ten.
-double _niceStep(double raw) {
-  if (raw <= 0) return 100;
-  final p = math.pow(10, (math.log(raw) / math.ln10).floor()).toDouble();
-  for (final m in [1, 2, 5, 10]) {
-    if (m * p >= raw) return m * p;
-  }
-  return 10 * p;
 }
 
 /// The estimate now against 3, 7, 14, 30 and 90 days before: the change,
