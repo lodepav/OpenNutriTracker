@@ -25,6 +25,7 @@ import 'package:opennutritracker/fork/trends/macro_contributors.dart';
 import 'package:opennutritracker/fork/trends/trend_detail.dart';
 import 'package:opennutritracker/fork/trends/trend_stats.dart';
 import 'package:opennutritracker/fork/trends/trends_widgets.dart';
+import 'package:opennutritracker/fork/trends/value_axis.dart';
 import 'package:opennutritracker/fork/units/energy_text.dart';
 import 'package:opennutritracker/fork/display/chart_semantics.dart';
 
@@ -221,6 +222,7 @@ class MacroEnergyChart extends StatelessWidget {
       if (goal != null) shown(goal),
       1.0,
     ].reduce(math.max);
+    final axis = valueAxis(context, 0, top * 1.12);
 
     return AppCard(
       padding: const EdgeInsets.all(Dimens.spacing16),
@@ -249,7 +251,11 @@ class MacroEnergyChart extends StatelessWidget {
                       alignment: BarChartAlignment.spaceAround,
                       gridData: const FlGridData(show: false),
                       borderData: FlBorderData(show: false),
-                      titlesData: weekdayTitles(context, dates),
+                      titlesData: weekdayTitles(
+                        context,
+                        dates,
+                        right: axis.titles,
+                      ),
                       extraLinesData: goalLine(
                         context,
                         goal == null ? null : shown(goal),
@@ -271,7 +277,7 @@ class MacroEnergyChart extends StatelessWidget {
                           _group(
                             i,
                             byDate[date],
-                            box.maxWidth,
+                            box.maxWidth - axis.width,
                             macros,
                             shown,
                             palette.textMuted,
