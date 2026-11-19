@@ -978,6 +978,23 @@ does not drop the plate's oil: five passes each, the chip kept oil in all
 five (twice inside "rice with oil"), 543-597 kcal against the typed
 note's 500-595 (650).
 
+After those fixes, three passes each of the note evals: weighed plates
+13/16 every pass, the same three cases as on Nov 10 (the controls without
+a weight, where the model still guesses grams); the hard notes 2-3/8
+against 3/8 on Nov 10, the same misses (a note that contradicts the
+photo, a fraction, a count). No regression from the note-weight changes.
+
+The label reader, first time live: `test/fork/eval/label_eval_test.dart`
+on 20 popular Open Food Facts nutrition photos
+(`fork/tools/fetch_label_photos.py`), three passes, about $0.03. Every
+pass parsed 19/20, the same numbers each time: kcal 16-17/20, fat 18/20,
+carbs 15/20, protein 16/20 against the typed entries. Each miss checked
+on its photo was the entry or the photo, not the reader: a chat
+screenshot (read as nothing, right), a jar front with a tiny panel, a
+label printing no carbs, a pack whose entry has other values (protein 29
+printed, 27 typed; a Bulgarian can at 45 kcal against 42). The
+`key=value` answer that half failed for the body comparison holds here.
+
 ## What the tests measure
 
 Each sends real photos or typed meals through the app's logging code,
