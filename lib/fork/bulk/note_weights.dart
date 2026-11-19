@@ -19,12 +19,30 @@ class NoteWeights {
   /// into weighs what the note says. "chicken 150g, rice" names two.
   final bool namesOneThing;
 
+  /// The one thing a lone weight at an end is given with ("plov" in "plov
+  /// 150g", "chicken" in "chicken 150"): the read says whether it is the
+  /// plate or one of its foods.
+  final String? totalName;
+
   const NoteWeights({
     this.totalGrams,
     this.foods = const [],
     this.namesOneThing = false,
+    this.totalName,
   });
 }
+
+/// The most pieces a count on a plate can be, as `portionThatFits` takes
+/// it (`lib/fork/amounts/amount_units.dart`).
+const mostPieces = 20;
+
+/// A number with no unit that ends an item: "chicken 150", "chicken 150, rice".
+// shortcut: a number in a dish's name ("chicken 65") reads as grams; upgrade
+// if notes show such names.
+final _bareNumber = RegExp(
+  r'(?<![\d.,/\p{L}])(\d+(?:[.,]\d+)?)(?![\d.,]*\d)(?=\s*(?:$|[,;+&\n.)]))',
+  unicode: true,
+);
 
 final _amount = RegExp(
   r'(\d+(?:[.,]\d+)?)\s*(kg|grams?|gr|g|ml|l|oz|lb)\b',
@@ -56,7 +74,13 @@ const _separators = '-–—:=';
 /// read's, not this.
 NoteWeights? noteWeights(String? note) {
   // the note chips' words are no food (D49)
-  final text = withoutChipWords(note?.trim() ?? '');
+  final text = withoutChipWords(note?.trim() ?? '').replaceAllMapped(
+    _bareNumber,
+    // above any count of things it is grams, as on the model's reply
+    (m) => double.parse(m[1]!.replaceAll(',', '.')) > mostPieces
+        ? '${m[1]}g'
+        : m[0]!,
+  );
   final amounts = _amount.allMatches(text).toList();
   if (amounts.isEmpty) return null;
   // "200g rice, 2 eggs": a count stays the photo read's to keep (S170)
@@ -67,6 +91,7 @@ NoteWeights? noteWeights(String? note) {
   }
 
   RegExpMatch? total;
+  String? totalName;
   for (final m in amounts) {
     // "350g total", "total 350g", "in total: 350 g"
     final around = text.substring(
@@ -85,6 +110,9 @@ NoteWeights? noteWeights(String? note) {
         text.substring(0, m.start).trim().isEmpty &&
             (_separators.contains(after[0]) || _list.hasMatch(after))) {
       total = m;
+      totalName = _name(
+        text.replaceRange(m.start, m.end, '').replaceAll(RegExp(r'[()]'), ''),
+      );
     }
   }
 
@@ -98,6 +126,9 @@ NoteWeights? noteWeights(String? note) {
   return NoteWeights(
     totalGrams: total == null ? null : _grams(total),
     namesOneThing: !_list.hasMatch(text),
+    totalName: _list.hasMatch(text) || totalName == null || totalName.isEmpty
+        ? null
+        : totalName,
     foods: [
       for (final item in parseMealText(
         // "spinach 30g." and "spinach 30g -" read as no weight at all

@@ -112,6 +112,18 @@ void main() {
       expect(w.foods, [(name: 'chicken', grams: 150.0)]);
     });
 
+    test('a bare number above any count after a food is its grams', () {
+      // as "chicken 150g" reads: the one weight at the end is the plate's
+      expect(noteWeights('chicken 150')!.totalGrams, 150);
+      expect(noteWeights('chicken 150, rice 200g')!.foods, [
+        (name: 'chicken', grams: 150.0),
+        (name: 'rice', grams: 200.0),
+      ]);
+      expect(noteWeights('chicken, rice 350')!.totalGrams, 350);
+      expect(noteWeights('egg 2'), isNull);
+      expect(noteWeights('23 cm pizza'), isNull);
+    });
+
     test('counts and names alone state no weight', () {
       expect(noteWeights('2 eggs'), isNull);
       expect(noteWeights('200g rice, 2 eggs'), isNull);
@@ -197,6 +209,63 @@ void main() {
         ('tomato, raw', 14),
         ('lettuce, raw', 7),
         ('french fries, fast food', 170),
+      ]);
+    });
+
+    test('a food the dish name names beside a split one is no part', () {
+      final items = weighedPlateItems([
+        const ParsedMealItem(query: 'dish=Burger with fries'),
+        _g('hamburger bun', 60),
+        _g('beef patty, grilled', 110),
+        _g('french fries, fast food', 80),
+      ], noteWeights('burger 250g, fries')!);
+      expect(items.map((i) => (i.query, i.quantity)), [
+        ('hamburger bun', 88),
+        ('beef patty, grilled', 162),
+        ('french fries, fast food', 80),
+      ]);
+      // a word that only agrees softly ("fried") does not take a part out
+      final egg = weighedPlateItems([
+        const ParsedMealItem(query: 'dish=Burger with fries'),
+        _g('hamburger bun', 60),
+        _g('beef patty, grilled', 90),
+        _g('egg, fried', 20),
+        _g('french fries, fast food', 80),
+      ], noteWeights('burger 250g, fries')!);
+      expect(egg.map((i) => (i.query, i.quantity)), [
+        ('hamburger bun', 88),
+        ('beef patty, grilled', 133),
+        ('egg, fried', 29),
+        ('french fries, fast food', 80),
+      ]);
+    });
+
+    test('a lone weight is the food\'s when the dish names others', () {
+      // Haiku's reply to "burger 250 g" on a burger with fries.
+      final items = weighedPlateItems([
+        const ParsedMealItem(query: 'dish=Burger with fries'),
+        _g('hamburger bun', 60),
+        _g('beef patty, grilled', 110),
+        _g('french fries, fast food', 80),
+      ], noteWeights('burger 250 g')!);
+      expect(items.map((i) => (i.query, i.quantity)), [
+        ('hamburger bun', 88),
+        ('beef patty, grilled', 162),
+        ('french fries, fast food', 80),
+      ]);
+    });
+
+    test('a lone weight is the food\'s it names among several', () {
+      final items = weighedPlateItems([
+        const ParsedMealItem(query: 'dish=Plov'),
+        _g('rice, white, cooked', 200),
+        _g('chicken, cooked', 100),
+        _g('carrots, cooked', 40),
+      ], noteWeights('chicken 150')!);
+      expect(items.map((i) => (i.query, i.quantity)), [
+        ('rice, white, cooked', 200),
+        ('chicken, cooked', 150),
+        ('carrots, cooked', 40),
       ]);
     });
 

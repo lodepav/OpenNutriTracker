@@ -965,6 +965,15 @@ Diary. Found, one run each:
 - 51 of 74 home dishes carry their alias lists in the name, cut off on
   the review row.
 
+**Fixed the same day.** The body prompt now says every key always
+applies and the list is never empty (the fork's tool description invites
+an empty list when nothing applies): 48/48 answers parsed over three
+runs, 15/16 pairs right in each. "burger 250 g" on "Burger with fries"
+now weighs the burger and leaves the fries their own row: 681 to
+790-883 kcal (1,135). "chicken 150" weighs the chicken at 150 g: the plov
+plate 852 to 558-567 (650), no raw rows. Accepted cost: "plov 150g" on a
+"Plov with lamb" read weighs the plov's other words apart.
+
 ## What the tests measure
 
 Each sends real photos or typed meals through the app's logging code,
