@@ -920,6 +920,51 @@ All merged, the same Haiku passes: weights in the note 29/33 within 25%,
 median 13%, total 102% (from 25/33, 17%, 113%); no note 27/33, 15%, 93%,
 within run-to-run noise of before.
 
+## A firm Haiku baseline, and the body comparison live (2026-11-19, about $0.37)
+
+Five passes of each scenario on fork/main at 87139e34, `FORK_EVAL_ONLINE=1`,
+merged with `eval_merge.dart`. Spread is a plate's highest run less its
+lowest, against the reference: the noise floor a later change must beat.
+
+| Scenario | Plates | Median off | Median spread | Within 25% every run |
+|---|---|---|---|---|
+| Nutrition5k set 1 | 51 | 29% | 28% | 9/51 |
+| Nutrition5k set 2 | 48 | 36% | 26% | 7/48 |
+| Held-out calorie | 33 | 24% | 25% | 8/33 |
+| Weighed own meals, no note | 11 | 14% | 18% | 8/11 |
+| Weighed own meals, weights in the note | 11 | 13% | 1% | 9/11 |
+| Meat plate, no note | 1 | 34% | 64% | 0/1 |
+| Meat plate, "meat assortment" | 1 | 57% | 93% | 0/1 |
+
+A lab plate moves about a quarter of its reference between runs, so a
+change measured on three passes needs more than that to count. Weights in
+the note all but remove the noise. The note "burger 250g, fries 170g"
+logs 1,103-1,365 against 1,135; "burger 250 g" alone sizes the fries into
+the burger (the emulator check below).
+
+**The body comparison, live for the first time: half its answers fail.**
+Three runs over the 16 pairs: Haiku answered every pair, but 8-9 a run
+came back as `{"items":[]}` or as `key=fat` with no value, so the app
+throws "No comparison in the answer". Which pairs fail changes between
+runs. The replay runs never showed it: the subagent followed the
+`key=value` format. Where an answer parsed, the verdicts were right (8/8
+in the first run, certainty within the pair's limit, lighting named).
+
+**Emulator, the real key (Haiku), the flows since 2026-11-11.** Worked:
+Log with AI from a meal chip, its Undo, the photo notice once, a Latvian
+typed dish, the Size scaling only unset amounts, totals on Home and the
+Diary. Found, one run each:
+- "burger 250 g" on the burger-and-fries photo: bun, patty and fries
+  sized to 250 g together, 681 kcal against about 1,135 (the `shortcut:`
+  in `weighed_plate.dart`).
+- "chicken 150", no unit, does nothing: the note's amount needs a unit.
+  The plov's breakdown also listed raw chicken and raw rice beside the
+  stewed chicken; the read had no dish header, so the breakdown likely
+  still got the photo (D42's case).
+- The cooking-fat answer adds sunflower oil beside the breakdown's own oil.
+- 51 of 74 home dishes carry their alias lists in the name, cut off on
+  the review row.
+
 ## What the tests measure
 
 Each sends real photos or typed meals through the app's logging code,
