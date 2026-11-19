@@ -2,6 +2,73 @@
 
 Written by fork/tools/release_notes.dart at each release (D16).
 
+## 1.0.0 · 2026-11-19
+
+Based on OpenNutriTracker 2.7.0.
+
+### New
+
+- D42 and D43
+- the Edit item dialog takes its amount with the food page's picker in the logged unit, and a goal that exists is edited from its plan
+- the size of the misses, weekdays against their own goal, what the weekend gives back, why a check-in moved the target, waist beside trend weight
+- Trends keeps its range, the recipe + names its meal, Copy day opens on tomorrow, search finds key, model and photo, the update download can be cancelled, own portions have a remove button
+- the backup's state shows on Settings and Home, and restored reminders ask for the notification permission
+- automatic check-ins run without Home's card, settings open the check-in, and its buttons are pinned
+- Home's Weigh in tile opens the dialog over Home, and the weigh-in reminder's tap opens it too
+- the food page and Quick add end with Undo, and a food already in the meal is added without asking
+- the meal is a chip on search and Recent foods, and the centre + says it adds to today
+- the Edit item dialog selects the amount on tap and offers a meal's leftovers itself
+- Log with AI has a meal chip, an Undo after Log, and shows the photo notice once per destination
+- the backup carries the reminders, the meal groups and the meal-photo switch
+
+### Fixes and changes
+
+- live label reader eval
+- review and UX review fixes
+- the Weighed chip keeps a plate's oil
+- body comparison answers parse; short weight notes weigh their food
+- Haiku baseline and live checks
+- a value axis on the Calories and Energy balance charts
+- one goal summary for every goal tile and card
+- the user's decisions and one tile widget
+- review fixes since 8793376f
+- audit round 5 fixes
+- audit round 4 fixes
+- second round of critique fixes
+- first round of critique fixes
+- third round of audit fixes
+- two rounds of page audit fixes
+- Trends fourth critique round
+- last clear-cut critique issues on Add, Settings, Diary and Trends
+- Trends third critique round
+- Trends second critique round, and the food page at 2x
+- second critique round on Home, Diary, Add flow, You and Settings
+- You tab fits large text and says what the plan does
+- Add flow fits large text and reads in words
+- Diary reads in words and gathers its day actions in one menu
+- Home reads in words, says Activity, and starts without Search and Recent foods
+- Trends opens on six tiles, says its span once and reads in words
+- split weighed foods, plate breakdowns and bare numbers no longer double count; 173 more everyday rows
+- a scorer for weighed own meals and the idea 7 results
+- borscht, burger, elk and breaded chicken find their rows, seaweed salad added, the eval scores weighed plates
+- a release checks the manifest and the sources before it builds, and leaves the strict suite to GitHub
+- an edited goal keeps its diet breaks and shows one row per stretch, a dismissed backup failure stays quiet while it repeats, the Edit item dialog keeps its width
+- a begun goal on plan, opened and saved unchanged, keeps its end date
+- the Edit item dialog opens a stored portion entry in grams when the food cannot name it, and OK without a change keeps the logged unit
+- verify warns when GitHub's Fork checks didn't follow the last push
+- the decision index lists D53
+- a photo review's amount rules are a controller with unit tests
+- a fork PR that lands on develop is taken then, by steps rehearsed twice
+- Trends and the You tab are fork-owned copies, upstream's pages are back to v2.7.0
+- the goal planner's calories and grams come from tested functions
+- the seam list is a quarter shorter and the feature list matches 0.13.0
+- two reports show what upstream has coming and which of our PRs landed
+- an update is tested against every stored fork setting, from the next release on
+- the checks can no longer start a billed AI run
+- a past day's goal no longer includes today's burned calories
+- a regression snapshot of what the user sees, and a stored-fields list
+- the scanner's manual-entry button clears the navigation bar
+
 ## 0.13.0 · 2026-11-11
 
 Based on OpenNutriTracker 2.7.0.
