@@ -402,6 +402,7 @@ List<ParsedMealItem> weighedPlateItems(
     ));
   }
 
+  final asNoted = weights;
   if (_oneFoodsWeight(weights, dish, foods) case final grams?) {
     weights = NoteWeights(foods: [(name: weights.totalName!, grams: grams)]);
   }
@@ -440,6 +441,12 @@ List<ParsedMealItem> weighedPlateItems(
     dish,
     withTotal: weights.totalGrams != null,
   );
+  // A one food's weight that no food took is the plate's after all ("soup
+  // 400g" on a chicken soup's broth, chicken and noodles), not one more food.
+  if (!identical(weights, asNoted) && unmatched.isNotEmpty) {
+    weights = asNoted;
+    unmatched.clear();
+  }
   for (final weight in unmatched) {
     foods.add((query: weight.name, grams: null, count: null));
     stated[foods.length - 1] = weight.grams;

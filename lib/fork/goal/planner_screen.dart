@@ -859,8 +859,8 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
                   ),
                   if (target != null && problem == null)
                     Text(
-                      '${weightChangeText(target - _draft.startKg, _unit)} '
-                      'to go',
+                      // The amount, as on the goal tiles; the kind says which way.
+                      '${_kg((target - _draft.startKg).abs())} to go',
                     ),
                   const SizedBox(width: 8),
                   const Icon(Icons.edit_rounded),

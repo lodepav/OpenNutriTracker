@@ -330,6 +330,10 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.bySemanticsIdentifier('weight-history-add'));
       await tester.pumpAndSettle();
+      expect(
+        find.widgetWithText(AlertDialog, 'Log a weigh-in'),
+        findsOneWidget,
+      );
       return tester
           .widget<TextField>(
             find.descendant(
@@ -481,6 +485,11 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.bySemanticsIdentifier('weigh-in-edit'));
     await tester.pumpAndSettle();
+    expect(find.widgetWithText(AlertDialog, 'Edit weigh-in'), findsOneWidget);
+    expect(
+      find.widgetWithText(AlertDialog, 'Log a weigh-in'),
+      findsNothing,
+    );
     expect(find.widgetWithText(TextField, 'after the run'), findsOneWidget);
     await tester.tap(find.text(l10nEn.dialogOKLabel));
     await tester.pumpAndSettle();

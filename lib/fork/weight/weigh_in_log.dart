@@ -11,6 +11,10 @@ import 'package:opennutritracker/fork/undo/undo_delete.dart';
 
 DateTime _dayOf(DateTime d) => DateTime(d.year, d.month, d.day);
 
+/// Bumped after a weigh-in is logged or undone, for what reads the trend
+/// outside a bloc (the goal card and tile).
+final weighInChanges = ValueNotifier(0);
+
 /// The weigh-ins by the day they are filed under, which a time-zone change
 /// can part from the date they show. A day holds one: a second replaces it.
 Future<Map<DateTime, WeightLogEntity>> weighInsByDay() async => {
@@ -60,6 +64,7 @@ Future<void> logWeighIn(
       '${_dayName(context, day, today ?? DateTime.now())}';
   await locator<AddWeightLogUsecase>().addEntry(entry);
   await refresh();
+  weighInChanges.value++;
   messenger
     ..hideCurrentSnackBar()
     ..showSnackBar(
@@ -75,6 +80,7 @@ Future<void> logWeighIn(
               await locator<DeleteWeightLogUsecase>().deleteEntry(entry);
             }
             await refresh();
+            weighInChanges.value++;
           },
         ),
       ),

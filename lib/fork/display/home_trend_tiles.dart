@@ -13,11 +13,14 @@ import 'package:opennutritracker/fork/adaptive/goal_saving.dart'
 import 'package:opennutritracker/fork/body/measurement_store.dart';
 import 'package:opennutritracker/fork/body/side_compare.dart';
 import 'package:opennutritracker/fork/body/waist_ratio.dart';
+import 'package:opennutritracker/fork/phases/phases.dart' show PhaseStore;
 import 'package:opennutritracker/fork/report/nutrient_explorer.dart'
     show intakesBetween;
 import 'package:opennutritracker/fork/trends/nutrient_trends.dart';
 import 'package:opennutritracker/fork/trends/trend_stats.dart';
 import 'package:opennutritracker/fork/trends/trends_overview.dart';
+import 'package:opennutritracker/fork/weight/weigh_in_log.dart'
+    show weighInChanges;
 import 'package:opennutritracker/fork/trends/trends_widgets.dart'
     show TrendTile;
 
@@ -79,10 +82,19 @@ class _HomeTrendTilesState extends State<HomeTrendTiles> {
   /// keeps its arrangement.
   Map<String, Widget> _last = const {};
 
-  /// Read again for a new state, or once the measurements or the pace
-  /// change.
+  /// Read again for a new state, or once the measurements, the pace, the
+  /// goals or the weigh-ins change.
   Future<_Extras>? _extras;
   TrendsLoaded? _extrasFor;
+
+  // Completing a goal saves the pace before the history: the history's own
+  // change reloads too.
+  final _changes = Listenable.merge([
+    MeasurementStore.changes,
+    paceChanges,
+    PhaseStore.changes,
+    weighInChanges,
+  ]);
 
   Future<_Extras> _extrasOf(TrendsLoaded state, List<DateTime> dates) {
     if (_extrasFor != state || _extras == null) {
@@ -120,8 +132,7 @@ class _HomeTrendTilesState extends State<HomeTrendTiles> {
     super.initState();
     if (_bloc.state is! TrendsLoaded) _bloc.add(const LoadTrendsEvent());
     SidePartPref.ensureLoaded();
-    MeasurementStore.changes.addListener(_remeasure);
-    paceChanges.addListener(_remeasure);
+    _changes.addListener(_remeasure);
     final homeLoads =
         widget.homeLoads ??
         (locator.isRegistered<HomeBloc>()
@@ -141,8 +152,7 @@ class _HomeTrendTilesState extends State<HomeTrendTiles> {
 
   @override
   void dispose() {
-    MeasurementStore.changes.removeListener(_remeasure);
-    paceChanges.removeListener(_remeasure);
+    _changes.removeListener(_remeasure);
     _homeLoads?.cancel();
     super.dispose();
   }

@@ -30,7 +30,7 @@ ALLOWED = {
 
 STRING = re.compile(r"'(?:[^'\\\n]|\\.)*'|\"(?:[^\"\\\n]|\\.)*\"")
 INTERPOLATED = re.compile(r"\$\{[^}]*\}|\$\w+")
-NOT_SHOWN = re.compile(r"Key\(|identifier:|^\s*import |^\s*part |[lL]og\w*\.|Logger\(")
+NOT_SHOWN = re.compile(r"Key\(|identifier:|^\s*id:|^\s*import |^\s*part |[lL]og\w*\.|Logger\(")
 
 
 def hits():

@@ -40,7 +40,7 @@ const mostPieces = 20;
 // shortcut: a number in a dish's name ("chicken 65") reads as grams; upgrade
 // if notes show such names.
 final _bareNumber = RegExp(
-  r'(?<![\d.,/\p{L}])(\d+(?:[.,]\d+)?)(?![\d.,]*\d)(?=\s*(?:$|[,;+&\n.)]))',
+  r'(?<![\d.,/:\p{L}])(\d+(?:[.,]\d+)?)(?![\d.,]*\d)(?=\s*(?:$|[,;+&\n.)]))',
   unicode: true,
 );
 

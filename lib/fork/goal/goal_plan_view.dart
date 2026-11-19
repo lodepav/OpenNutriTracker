@@ -83,7 +83,7 @@ class GoalPlanSection extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(switch (maintainingSince(null, history)) {
+                Text(switch (maintainingSince(history)) {
                   final since? => maintainingSinceText(context, since),
                   null => noGoalText,
                 }, style: Theme.of(context).textTheme.titleMedium),

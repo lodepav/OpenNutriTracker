@@ -19,6 +19,7 @@ import 'package:opennutritracker/fork/body/side_compare.dart';
 import 'package:opennutritracker/fork/display/home_tiles.dart';
 import 'package:opennutritracker/fork/layout/home_layout.dart';
 import 'package:opennutritracker/fork/layout/layout_store.dart';
+import 'package:opennutritracker/fork/phases/phases.dart';
 import 'package:opennutritracker/fork/report/nutrient_explorer.dart';
 import 'package:opennutritracker/fork/trends/nutrient_trends.dart';
 import 'package:opennutritracker/fork/trends/trends_overview.dart';
@@ -43,10 +44,12 @@ class _Intakes extends Fake implements IntakeDataSource {
 void main() {
   final layout = LayoutStore.current(homeTilesKey);
   final readPace = TrendsOverview.loadPace;
+  final readPhases = TrendsOverview.loadPhases;
 
   tearDown(() async {
     layout.value = (order: const [], hidden: const {});
     TrendsOverview.loadPace = readPace;
+    TrendsOverview.loadPhases = readPhases;
     TrendsOverview.loadMeasurements = () async => const [];
     loadBodyFrame = () async => null;
     summarizeMicros = summarizeNutrients;
@@ -117,6 +120,38 @@ void main() {
       ),
     );
     expect((goal.value, goal.suffix), ('Losing', '0.4 kg a week'));
+  });
+
+  testWidgets('a goal kept in the history after the pace reaches the tile', (
+    tester,
+  ) async {
+    TrendsOverview.loadPace = () async =>
+        (goal: UserWeightGoalEntity.maintainWeight, kgPerWeek: 0.0);
+    final history = <GoalRecord>[];
+    TrendsOverview.loadPhases = () async => (plan: null, history: history);
+    layout.value = (order: ['goal'], hidden: const {});
+    await pump(tester);
+    TrendTile goal() => tester.widget<TrendTile>(
+      find.byWidgetPredicate(
+        (w) => w is TrendTile && w.id == 'home-trends-tile-goal',
+      ),
+    );
+    expect(goal().suffix, isNot(contains('since')));
+
+    // As GoalActions.complete: the history is kept after the pace's change.
+    history.add(
+      GoalRecord(
+        kind: PhaseKind.cut,
+        start: DateTime(2026, 1, 5),
+        end: DateTime(2026, 4, 6),
+        startKg: 88,
+        endKg: 81.2,
+        targetKg: 81,
+      ),
+    );
+    PhaseStore.changes.value++;
+    await tester.pumpAndSettle();
+    expect((goal().value, goal().suffix), ('Maintain', 'since Apr 6'));
   });
 
   testWidgets('none of them until added', (tester) async {

@@ -140,8 +140,7 @@ GoalSummary goalSummary({
       : plan?.startKg != null
       ? (kg: plan!.startKg!, day: plan.start)
       : null;
-  double? barOf(double target, double now) {
-    final from = startOf()?.kg;
+  double? barOf(double target, double now, double? from) {
     if (from == null || (target - from).abs() < 0.1) return null;
     return ((now - from) / (target - from)).clamp(0.0, 1.0);
   }
@@ -178,16 +177,25 @@ GoalSummary goalSummary({
       );
     }
     if (target != null && nowKg != null) {
-      final left = goalLeftKg(target, nowKg, kept);
+      // Not reached by the plan's way, so the gap left whichever way a
+      // start kept for an earlier goal ran (78 to 80, then a cut from 85).
+      final left = (target - nowKg).abs();
+      bool towards(double from) => (target - from) * (target - nowKg) > 0;
+      final first = startOf();
+      final start = first != null && towards(first.kg)
+          ? first
+          : plan.startKg != null && towards(plan.startKg!)
+          ? (kg: plan.startKg!, day: plan.start)
+          : null;
       return GoalSummary(
         value: weightIn(unit, left).toStringAsFixed(1),
         suffix: '$unitLabel to go',
         note: '${plan.kind.label} · about ${day(plan.lastDay)}',
-        bar: barOf(target, nowKg),
+        bar: barOf(target, nowKg, start?.kg),
         tap: GoalTap.progress,
         plan: plan,
         nowKg: nowKg,
-        start: startOf(),
+        start: start,
         targetKg: target,
       );
     }
@@ -236,7 +244,7 @@ GoalSummary goalSummary({
           ? 'Not at your 30-day pace'
           : 'About ${day(DateTime(t.year, t.month, t.day + days))} '
                 'at your 30-day pace',
-      bar: barOf(targetKg, nowKg),
+      bar: barOf(targetKg, nowKg, startOf()?.kg),
       action: GoalAction.plan,
       tap: GoalTap.progress,
       nowKg: nowKg,
@@ -266,7 +274,7 @@ GoalSummary untargetedGoal(
       (rate == null
           ? pace.goal != UserWeightGoalEntity.maintainWeight
           : weeklyRateShown(rate, unit) != 0);
-  final since = maintainingSince(null, history);
+  final since = maintainingSince(history);
   if (since != null && !moving) {
     final last = history.firstWhere((r) => r.end == since);
     final target = last.targetKg;

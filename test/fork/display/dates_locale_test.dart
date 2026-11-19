@@ -38,18 +38,21 @@ class _OneProfile implements GetProfilesUsecase {
 }
 
 /// The app in German: fork strings stay English, its dates must not.
-Widget _german(Widget child) => ChangeNotifierProvider<EnergyUnitProvider>(
-  create: (_) => EnergyUnitProvider(usesKilojoules: false),
-  child: MaterialApp(
-    locale: const Locale('de'),
-    localizationsDelegates: const [
-      S.delegate,
-      ...GlobalMaterialLocalizations.delegates,
-    ],
-    supportedLocales: S.supportedLocales,
-    home: Scaffold(body: SingleChildScrollView(child: child)),
-  ),
-);
+Widget _german(Widget child) => _inLocale(const Locale('de'), child);
+
+Widget _inLocale(Locale locale, Widget child) =>
+    ChangeNotifierProvider<EnergyUnitProvider>(
+      create: (_) => EnergyUnitProvider(usesKilojoules: false),
+      child: MaterialApp(
+        locale: locale,
+        localizationsDelegates: const [
+          S.delegate,
+          ...GlobalMaterialLocalizations.delegates,
+        ],
+        supportedLocales: S.supportedLocales,
+        home: Scaffold(body: SingleChildScrollView(child: child)),
+      ),
+    );
 
 void main() {
   setUpAll(() {
@@ -103,5 +106,45 @@ void main() {
     );
     // The day initials under the bars: Mo, Di, Mi, Do, Fr, Sa, So.
     expect(find.text('D'), findsNWidgets(2));
+  });
+
+  testWidgets('the week bars\' initials tell the days apart in Chinese', (
+    tester,
+  ) async {
+    Future<List<String>> initials(Locale locale) async {
+      await tester.pumpWidget(
+        _inLocale(
+          locale,
+          WeekBars(
+            today: DateTime(2026, 10, 25),
+            todayKcal: 1800,
+            todayGoalKcal: 2500,
+            load: (_, _) async => const [],
+          ),
+        ),
+      );
+      await tester.pump();
+      return [
+        for (final t in tester.widgetList<Text>(
+          find.descendant(
+            of: find.byType(WeekBars),
+            matching: find.byType(Text),
+          ),
+        ))
+          t.data!,
+      ];
+    }
+
+    // Not the first letter of "周一", "周二": every day was "周".
+    expect((await initials(const Locale('zh'))).toSet(), hasLength(7));
+    expect(await initials(const Locale('en')), [
+      'M',
+      'T',
+      'W',
+      'T',
+      'F',
+      'S',
+      'S',
+    ]);
   });
 }

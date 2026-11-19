@@ -122,6 +122,7 @@ void main() {
       expect(noteWeights('chicken, rice 350')!.totalGrams, 350);
       expect(noteWeights('egg 2'), isNull);
       expect(noteWeights('23 cm pizza'), isNull);
+      expect(noteWeights('lunch at 19:45'), isNull);
     });
 
     test('counts and names alone state no weight', () {
@@ -266,6 +267,32 @@ void main() {
         ('rice, white, cooked', 200),
         ('chicken, cooked', 150),
         ('carrots, cooked', 40),
+      ]);
+    });
+
+    test('a lone weight no food takes is the plate\'s', () {
+      final items = weighedPlateItems([
+        const ParsedMealItem(query: 'dish=Chicken soup'),
+        _g('chicken broth', 300),
+        _g('chicken, boiled', 60),
+        _g('noodles, cooked', 50),
+      ], noteWeights('soup 400g')!);
+      expect(items.map((i) => i.query), isNot(contains('soup')));
+      expect(items.map((i) => i.quantity).reduce((a, b) => a! + b!), 400);
+    });
+
+    test('a lone weight on a dish naming another food sizes the rest', () {
+      // accepted: the lamb the dish name names keeps the model's grams
+      final items = weighedPlateItems([
+        const ParsedMealItem(query: 'dish=Plov with lamb'),
+        _g('rice, white, cooked', 200),
+        _g('lamb, cooked', 100),
+        _g('carrots, cooked', 40),
+      ], noteWeights('plov 150g')!);
+      expect(items.map((i) => (i.query, i.quantity)), [
+        ('rice, white, cooked', 125),
+        ('lamb, cooked', 100),
+        ('carrots, cooked', 25),
       ]);
     });
 

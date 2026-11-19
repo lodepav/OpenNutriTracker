@@ -173,7 +173,7 @@ class _Bars extends StatelessWidget {
                   ),
                   const SizedBox(height: Dimens.spacing4),
                   Text(
-                    DateFormat.E(locale).format(d.day).substring(0, 1),
+                    DateFormat.EEEEE(locale).format(d.day),
                     style: i == week.length - 1
                         ? label?.copyWith(
                             color: palette.textStrong,

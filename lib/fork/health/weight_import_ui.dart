@@ -7,11 +7,14 @@ import 'package:opennutritracker/fork/health/body_fat_import.dart';
 import 'package:opennutritracker/fork/health/health_sync_cards.dart';
 import 'package:opennutritracker/fork/health/nutrition_export.dart';
 import 'package:opennutritracker/fork/health/weight_import.dart';
+import 'package:opennutritracker/fork/weight/weigh_in_log.dart'
+    show weighInChanges;
 
 /// After an import filed something: the weight chart, BMI and the goals.
 void refreshAfterWeightImport() {
   locator<ProfileBloc>().add(LoadProfileEvent());
   locator<DiaryBloc>().updateHomePage();
+  weighInChanges.value++;
 }
 
 /// "Weight in" on the health sync screen (seam S27), under upstream's

@@ -12,27 +12,25 @@ import 'package:opennutritracker/fork/trends/trend_detail.dart'
     show weightUnitLabel;
 import 'package:opennutritracker/fork/trends/trends_overview.dart'
     show TrendsGoal, TrendsOverview;
+import 'package:opennutritracker/fork/weight/weigh_in_log.dart'
+    show weighInChanges;
 
 /// What the app calls having no goal, on the You tile, Goal progress and
 /// Trends alike.
 const noGoalText = 'No goal';
 
 /// The day the last completed goal ended, so maintenance began: null
-/// while a goal runs, or before any was completed.
-DateTime? maintainingSince(PhasePlan? plan, List<GoalRecord> history) {
-  if (plan != null || history.isEmpty) return null;
+/// before any was completed.
+DateTime? maintainingSince(List<GoalRecord> history) {
+  if (history.isEmpty) return null;
   return history.map((r) => r.end).reduce((a, b) => a.isAfter(b) ? a : b);
 }
-
-/// "since Oct 29".
-String _sinceText(BuildContext context, DateTime since) =>
-    'since ${intl.DateFormat.MMMd(Localizations.localeOf(context).toLanguageTag()).format(since)}';
 
 const _keeping = 'Keeping your weight';
 
 /// "Maintaining since Oct 29".
 String maintainingSinceText(BuildContext context, DateTime since) =>
-    'Maintaining ${_sinceText(context, since)}';
+    'Maintaining since ${intl.DateFormat.MMMd(Localizations.localeOf(context).toLanguageTag()).format(since)}';
 
 /// The profile's plan with no target weight: "Losing 0.4 kg a week" at its
 /// weekly rate, which the budget follows over the direction; the direction
@@ -81,11 +79,17 @@ class GoalYouTile extends StatefulWidget {
 class _GoalYouTileState extends State<GoalYouTile> {
   TrendsGoal? _goal;
 
+  // A weigh-in moves the trend, so the kg to go.
+  final _changes = Listenable.merge([
+    PhaseStore.changes,
+    paceChanges,
+    weighInChanges,
+  ]);
+
   @override
   void initState() {
     super.initState();
-    PhaseStore.changes.addListener(_reload);
-    paceChanges.addListener(_reload);
+    _changes.addListener(_reload);
     _reload();
   }
 
@@ -98,8 +102,7 @@ class _GoalYouTileState extends State<GoalYouTile> {
 
   @override
   void dispose() {
-    PhaseStore.changes.removeListener(_reload);
-    paceChanges.removeListener(_reload);
+    _changes.removeListener(_reload);
     super.dispose();
   }
 
