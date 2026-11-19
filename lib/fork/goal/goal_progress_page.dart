@@ -16,6 +16,7 @@ import 'package:opennutritracker/fork/display/contrast.dart';
 import 'package:opennutritracker/fork/goal/goal_plan_view.dart';
 import 'package:opennutritracker/fork/goal/goal_planner.dart';
 import 'package:opennutritracker/fork/goal/goal_progress.dart';
+import 'package:opennutritracker/fork/goal/goal_summary.dart';
 import 'package:opennutritracker/fork/phases/phases.dart';
 import 'package:opennutritracker/fork/report/chart_touch.dart';
 import 'package:opennutritracker/fork/report/rate_text.dart';
@@ -186,7 +187,14 @@ class _GoalProgressPageState extends State<GoalProgressPage> {
             else if (goal.progress == null)
               ..._noTarget(context, goal.inputs!.nowKg, plans.plan)
             else
-              ..._body(context, goal.progress!, calories, step, plans.plan),
+              ..._body(
+                context,
+                goal.progress!,
+                calories,
+                step,
+                plans.plan,
+                plans.history,
+              ),
             const SizedBox(height: Dimens.spacing16),
             section,
           ],
@@ -225,6 +233,7 @@ class _GoalProgressPageState extends State<GoalProgressPage> {
     GoalCalories calories,
     int step,
     PhasePlan? plan,
+    List<GoalRecord> history,
   ) {
     final label = weightUnitLabel(context, widget.unit);
     final format = intl.DateFormat.MMMd(
@@ -262,7 +271,23 @@ class _GoalProgressPageState extends State<GoalProgressPage> {
         ],
       ),
       gap,
-      _ProgressCard(progress: p, kg: _kg, unit: label),
+      _ProgressCard(
+        progress: p,
+        kg: _kg,
+        unit: label,
+        summary: goalSummary(
+          locale: Localizations.localeOf(context).toLanguageTag(),
+          unit: widget.unit,
+          unitLabel: label,
+          today: p.today,
+          plan: plan,
+          history: history,
+          targetKg: p.targetKg,
+          nowKg: p.nowKg,
+          progress: p,
+          kgPerDay: kgPerDay30(p),
+        ),
+      ),
       gap,
       AppCard(
         padding: const EdgeInsets.all(Dimens.spacing16),
@@ -426,16 +451,19 @@ class _GoalProgressPageState extends State<GoalProgressPage> {
   }
 }
 
-/// How far along, against where the plan has you today.
+/// Where you are, as the goal's summary says it ([goalSummary]), against
+/// where the plan has you today.
 class _ProgressCard extends StatelessWidget {
   final GoalProgress progress;
   final String Function(double kg) kg;
   final String unit;
+  final GoalSummary summary;
 
   const _ProgressCard({
     required this.progress,
     required this.kg,
     required this.unit,
+    required this.summary,
   });
 
   @override
@@ -443,7 +471,6 @@ class _ProgressCard extends StatelessWidget {
     final p = progress;
     final palette = paletteOf(context);
     final text = Theme.of(context).textTheme;
-    final percent = (p.fraction * 100).round();
     final planPercent = (p.planFraction * 100).round();
     final status = p.reached
         ? 'Target reached'
@@ -457,7 +484,7 @@ class _ProgressCard extends StatelessWidget {
       padding: const EdgeInsets.all(Dimens.spacing16),
       child: Semantics(
         label:
-            '$percent percent there, ${kg(p.toGoKg.abs())} $unit to go. '
+            '${summary.spoken()}. '
             'The plan has you $planPercent percent there by today. $status.',
         excludeSemantics: true,
         child: Column(
@@ -465,12 +492,12 @@ class _ProgressCard extends StatelessWidget {
           children: [
             Text.rich(
               TextSpan(
-                text: '$percent% there',
+                text: summary.value,
                 style: text.titleLarge?.copyWith(fontWeight: FontWeight.w700),
                 children: [
-                  if (!p.reached)
+                  if (summary.suffix != null)
                     TextSpan(
-                      text: ' · ${kg(p.toGoKg.abs())} $unit to go',
+                      text: ' ${summary.suffix}',
                       style: text.bodyMedium?.copyWith(
                         color: palette.textMuted,
                       ),
@@ -478,6 +505,11 @@ class _ProgressCard extends StatelessWidget {
                 ],
               ),
             ),
+            if (summary.note != null)
+              Text(
+                summary.note!,
+                style: text.bodySmall?.copyWith(color: palette.textMuted),
+              ),
             const SizedBox(height: Dimens.spacing12),
             LayoutBuilder(
               builder: (context, box) => SizedBox(
@@ -492,7 +524,7 @@ class _ProgressCard extends StatelessWidget {
                       child: ClipRRect(
                         borderRadius: Dimens.borderRadiusS,
                         child: LinearProgressIndicator(
-                          value: p.fraction,
+                          value: summary.bar ?? p.fraction,
                           minHeight: 10,
                           color: chartSafe(
                             Theme.of(context).colorScheme.primary,

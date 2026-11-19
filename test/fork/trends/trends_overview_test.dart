@@ -636,7 +636,7 @@ void main() {
     expect(find.text('Daily weigh-ins steady the trend'), findsNothing);
     expect(find.text('To your goal'), findsOneWidget);
     // Ten days of trend: no 30 days' pace to date the goal by.
-    expect(find.text('under 30 days of trend'), findsOneWidget);
+    expect(find.text('Under 30 days of trend'), findsOneWidget);
   });
 
   testWidgets('Weight: the scale swings, and the jumps after carb days', (
@@ -826,7 +826,7 @@ void main() {
           of: find.text('To your goal'),
           matching: find.byType(FigureTile),
         ),
-        matching: find.text('Maintain'),
+        matching: find.textContaining('Maintain until'),
       ),
       findsOne,
     );

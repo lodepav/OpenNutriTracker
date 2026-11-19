@@ -104,7 +104,10 @@ void main() {
     expect(find.text('Trend now'), findsOneWidget);
     expect(
       find.bySemanticsLabel(
-        RegExp('^20 percent there, 8.0 kg to go.*3.0 kg behind the plan'),
+        RegExp(
+          '^Goal, 8.0 kg to go, About .* at your 30-day pace\\. '
+          '.*3.0 kg behind the plan',
+        ),
       ),
       findsOneWidget,
     );

@@ -25,7 +25,8 @@ import 'package:opennutritracker/fork/report/trends_layout.dart';
 import 'package:opennutritracker/fork/adaptive/goal_saving.dart'
     show paceChanges;
 import 'package:opennutritracker/fork/goal/goal_progress.dart';
-import 'package:opennutritracker/fork/goal/goal_progress_page.dart';
+import 'package:opennutritracker/fork/goal/goal_summary.dart';
+import 'package:opennutritracker/fork/goal/goal_summary_view.dart';
 import 'package:opennutritracker/fork/goal/goal_you_tile.dart';
 import 'package:opennutritracker/fork/phases/phases.dart';
 import 'package:opennutritracker/fork/report/nutrient_explorer.dart'
@@ -90,15 +91,14 @@ class TrendsOverview extends StatefulWidget {
   };
 
   /// The goal as Goal progress loads it, keeping the start when none is
-  /// kept yet, with the goal running and, after a completed one, when
-  /// maintenance began, and the profile's pace; nulls with none, or no
-  /// store (widget tests).
+  /// kept yet, and the trend now, with the goal running, those completed,
+  /// and the profile's pace; nulls with none, or no store (widget tests).
   static Future<TrendsGoal> goal() async {
-    GoalProgress? progress;
+    GoalState? state;
     ({PhasePlan? plan, List<GoalRecord> history})? phases;
     ProfilePace? pace;
     try {
-      progress = (await loadGoal()).progress;
+      state = await loadGoal();
     } catch (_) {}
     try {
       phases = await loadPhases();
@@ -107,9 +107,10 @@ class TrendsOverview extends StatefulWidget {
       pace = await loadPace();
     } catch (_) {}
     return (
-      progress: progress,
+      progress: state?.progress,
+      nowKg: state?.inputs?.nowKg ?? state?.progress?.nowKg,
       plan: phases?.plan,
-      since: maintainingSince(phases?.plan, phases?.history ?? const []),
+      history: phases?.history ?? const <GoalRecord>[],
       pace: pace,
     );
   }
@@ -713,52 +714,31 @@ TrendTile _waistTile(
   );
 }
 
-/// Goal progress: the way left to the target, none once there or past
-/// it, as Goal progress counts from [goal]'s start; it opens Goal progress.
+/// The goal's summary ([goalSummary]) at the range's trend now; it goes
+/// where the summary does.
 TrendTile _goalTile(
   BuildContext context,
   TrendsLoaded state,
   WeightTrendStats weight,
   TrendsGoal? goal,
-) {
-  final wu = state.bodyWeightUnit;
-  final target = state.targetWeightKg;
-  final now = weight.nowKg;
-  final left = target == null || now == null
-      ? null
-      : goalLeftKg(target, now, goal?.progress);
-  final untargeted = untargetedGoal(
-    context,
-    goal?.plan,
-    goal?.since,
-    pace: goalPaceText(goal, wu),
-  );
-  return TrendTile(
-    id: 'trends-tile-goal',
-    label: 'Goal',
-    value: left == null
-        ? untargeted.value
-        : left < 0.1
-        ? 'There'
-        : weightIn(wu, left).toStringAsFixed(1),
-    suffix: left == null
-        ? untargeted.note
-        : left < 0.1
-        ? null
-        : '${weightUnitLabel(context, wu)} to go',
-    spokenLabel: left == null
-        ? 'Goal, ${untargeted.value}'
-              '${untargeted.note == null ? '' : ' ${untargeted.note}'}'
-        : left < 0.1
-        ? 'Goal, target reached'
-        : 'Goal, ${weightIn(wu, left).toStringAsFixed(1)} '
-              '${weightUnitLabel(context, wu)} to go',
-    chart: target == null || now == null
-        ? const SizedBox()
-        : _GoalBar(progress: goal?.progress),
-    onTap: () => openGoalProgress(context, wu),
-  );
-}
+) => goalSummaryTile(
+  context,
+  goalSummary(
+    locale: Localizations.localeOf(context).toLanguageTag(),
+    unit: state.bodyWeightUnit,
+    unitLabel: weightUnitLabel(context, state.bodyWeightUnit),
+    today: DateTime.now(),
+    plan: goal?.plan,
+    history: goal?.history ?? const [],
+    pace: goal?.pace,
+    targetKg: state.targetWeightKg,
+    nowKg: weight.nowKg,
+    progress: goal?.progress,
+    kgPerDay: kgPerDay30(goal?.progress),
+  ),
+  id: 'trends-tile-goal',
+  unit: state.bodyWeightUnit,
+);
 
 /// Left against right: the latest difference of the pair picked and the
 /// bigger side; it opens their comparison.
@@ -791,39 +771,6 @@ TrendTile _sidesTile(
       rangeDays: state.windowDays,
     ),
   );
-}
-
-/// How far along the goal is, from its kept start; nothing before one is
-/// kept.
-class _GoalBar extends StatelessWidget {
-  final GoalProgress? progress;
-
-  const _GoalBar({required this.progress});
-
-  @override
-  Widget build(BuildContext context) {
-    final progress = this.progress;
-    if (progress == null || progress.totalKg.abs() < 0.1) {
-      return const SizedBox();
-    }
-    final palette = paletteOf(context);
-    // The tile's text says it; the bar's percent would only be read
-    // before it.
-    return ExcludeSemantics(
-      child: Align(
-        alignment: Alignment.bottomCenter,
-        child: ClipRRect(
-          borderRadius: Dimens.borderRadiusS,
-          child: LinearProgressIndicator(
-            value: progress.fraction,
-            minHeight: 8,
-            color: chartAccent(context),
-            backgroundColor: palette.surfaceMuted,
-          ),
-        ),
-      ),
-    );
-  }
 }
 
 /// The on-track streak over all of [days], whatever the range: upstream's
@@ -879,18 +826,12 @@ class _Streak extends StatelessWidget {
 /// The profile's goal and weekly rate, kg a week, as the You tab reads them.
 typedef ProfilePace = ({UserWeightGoalEntity goal, double? kgPerWeek});
 
-/// The Goal tile's goal: its progress to the target, the goal running,
-/// when maintenance began after a completed one, and the profile's pace.
+/// The Goal tile's goal: its progress to the target, the trend now, the
+/// goal running, those completed, and the profile's pace.
 typedef TrendsGoal = ({
   GoalProgress? progress,
+  double? nowKg,
   PhasePlan? plan,
-  DateTime? since,
+  List<GoalRecord> history,
   ProfilePace? pace,
 });
-
-/// [goal]'s profile pace as You says it ("Losing 0.4 kg a week"); null
-/// when it could not be read.
-String? goalPaceText(TrendsGoal? goal, BodyWeightUnit unit) {
-  final pace = goal?.pace;
-  return pace == null ? null : plannedRateText(pace.goal, pace.kgPerWeek, unit);
-}

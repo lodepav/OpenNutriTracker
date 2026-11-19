@@ -536,7 +536,16 @@ void main() {
       await _pump(
         tester,
         Scaffold(
-          body: GoalCard(unit: BodyWeightUnit.kg, load: () async => plan),
+          body: GoalCard(
+            unit: BodyWeightUnit.kg,
+            load: () async => (
+              progress: null,
+              nowKg: null,
+              plan: plan,
+              history: const <GoalRecord>[],
+              pace: null,
+            ),
+          ),
         ),
       );
       expect(find.textContaining('until Jan 3, 2027'), findsOneWidget);
@@ -549,16 +558,93 @@ void main() {
       Scaffold(
         body: GoalCard(
           unit: BodyWeightUnit.kg,
-          load: () async => null,
-          pace: () async => 'Losing 0.4 kg a week',
+          load: () async => (
+            progress: null,
+            nowKg: null,
+            plan: null,
+            history: const <GoalRecord>[],
+            pace: (goal: UserWeightGoalEntity.loseWeight, kgPerWeek: -0.4),
+          ),
         ),
       ),
     );
     expect(
-      find.textContaining('Losing 0.4 kg a week, with no end date.'),
+      find.text('Losing 0.4 kg a week', findRichText: true),
       findsOneWidget,
     );
+    expect(find.text('No end date'), findsOneWidget);
+    expect(find.text('Plan a goal'), findsOneWidget);
     expect(find.textContaining('No goal'), findsNothing);
+    // The goal's summary, not the paragraph it replaced.
+    expect(find.textContaining('step by step'), findsNothing);
+  });
+
+  testWidgets('the card: the way to go, start and target under the bar, '
+      'and the plan\'s buttons', (tester) async {
+    final today = DateTime.now();
+    final start = DateTime(today.year, today.month, today.day - 20);
+    final plan = _cutFrom(start);
+    await _pump(
+      tester,
+      Scaffold(
+        body: GoalCard(
+          unit: BodyWeightUnit.kg,
+          load: () async => (
+            progress: GoalProgress(
+              start: GoalStart(date: start, kg: 86.4, targetKg: 80),
+              nowKg: 85.4,
+              paceKgPerWeek: -0.5,
+              trend: const [86.4, 85.4],
+              today: today,
+            ),
+            nowKg: 85.4,
+            plan: plan,
+            history: const <GoalRecord>[],
+            pace: null,
+          ),
+        ),
+      ),
+    );
+    expect(find.text('5.4 kg to go', findRichText: true), findsOneWidget);
+    expect(find.textContaining('Cut · about '), findsOneWidget);
+    expect(find.textContaining('86.4 kg '), findsOneWidget);
+    expect(find.text('80.0 kg'), findsOneWidget);
+    expect(find.text('Goal and plan'), findsOneWidget);
+    expect(find.text('Edit plan'), findsOneWidget);
+    expect(find.text('Plan a goal'), findsNothing);
+  });
+
+  testWidgets('the card after a completed goal offers the completed goals', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      Scaffold(
+        body: GoalCard(
+          unit: BodyWeightUnit.kg,
+          load: () async => (
+            progress: null,
+            nowKg: null,
+            plan: null,
+            history: [
+              GoalRecord(
+                kind: PhaseKind.cut,
+                start: DateTime(2026, 6, 1),
+                end: DateTime(2026, 10, 29),
+                startKg: 90,
+                endKg: 82,
+                targetKg: 82,
+              ),
+            ],
+            pace: null,
+          ),
+        ),
+      ),
+    );
+    expect(find.textContaining('Maintain since Oct 29'), findsOneWidget);
+    expect(find.text('Last goal: cut to 82.0 kg'), findsOneWidget);
+    expect(find.text('Plan a goal'), findsOneWidget);
+    expect(find.text('Completed goals'), findsOneWidget);
   });
 
   group('F10: the pace in calories', () {

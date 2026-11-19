@@ -36,7 +36,6 @@ import 'package:opennutritracker/fork/trends/trends_widgets.dart';
 import 'package:opennutritracker/fork/units/weight_text.dart'
     show bodyWeightText;
 import 'package:opennutritracker/fork/display/display_prefs.dart';
-import 'package:opennutritracker/fork/goal/goal_progress_page.dart';
 import 'package:opennutritracker/fork/goal/goal_you_tile.dart';
 import 'package:opennutritracker/fork/report/rate_text.dart';
 import 'package:opennutritracker/generated/l10n.dart';
@@ -161,30 +160,9 @@ class _ProfilePageState extends State<ProfilePage> {
             ),
             GoalYouTile(
               title: S.of(context).goalLabel,
-              // A weekly rate alone is no goal, as Goal progress counts.
-              profileGoal: user.targetWeightKg != null,
-              // Without a target, the plan the budget follows (the rate).
-              value: user.targetWeightKg == null
-                  ? plannedRateText(
-                      user.goal,
-                      user.weeklyWeightGoalKg,
-                      bodyWeightUnit,
-                    )
-                  : switch (user.goal) {
-                      UserWeightGoalEntity.loseWeight => 'Lose',
-                      UserWeightGoalEntity.maintainWeight => 'Keep',
-                      UserWeightGoalEntity.gainWeight => 'Gain',
-                    },
-              note: user.targetWeightKg == null
-                  ? null
-                  : _forkRate(user, bodyWeightUnit),
-              below: user.targetWeightKg == null
-                  ? 'Set a target weight'
-                  : 'Target ${bodyWeightText(context, user.targetWeightKg!, bodyWeightUnit)}',
-              onTap: () => openGoalProgress(context, bodyWeightUnit),
-              // As the Target weight row: the tile says "Set a target weight".
-              onSetTarget: () =>
-                  _showSetTargetWeightDialog(context, user, bodyWeightUnit),
+              unit: bodyWeightUnit,
+              targetKg: user.targetWeightKg,
+              pace: (goal: user.goal, kgPerWeek: user.weeklyWeightGoalKg),
             ),
             BudgetTile(
               onTap: () => Navigator.of(context).push(
@@ -379,13 +357,6 @@ class _ProfilePageState extends State<ProfilePage> {
         ),
       ].map((child) => WidthCap(child: child)).toList(),
     );
-  }
-
-  /// The goal tile's weekly rate, unsigned: the goal says which way.
-  String? _forkRate(UserEntity user, BodyWeightUnit unit) {
-    final kg = user.weeklyWeightGoalKg;
-    if (kg == null || kg == 0) return null;
-    return unsignedRateText(kg, unit);
   }
 
   Future<void> _showSetPALCategoryDialog(
