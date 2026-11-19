@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:opennutritracker/features/add_meal/domain/meal_items_api.dart';
 import 'package:opennutritracker/features/add_meal/domain/meal_photo_interpreter.dart';
@@ -160,10 +161,6 @@ $rules "query" its name, with your
 
 const _dishKey = 'dish=';
 const _bones = 'bones';
-
-/// The most pieces a count on a plate can be, as `portionThatFits` takes
-/// it (`lib/fork/amounts/amount_units.dart`).
-const _mostPieces = 20;
 
 /// Reads [photo] as a weighed plate; [weights] is what [note] states.
 Future<MealTextParseResult> readWeighedPlate(
@@ -393,7 +390,7 @@ List<ParsedMealItem> weighedPlateItems(
     // read logged 150 g of chicken as 150 servings (113,597 kcal).
     // shortcut: a bare 14 (a tablespoon of oil) still reads as a count;
     // upgrade if reads show small foods without a unit.
-    final bareGrams = item.unit == null && (item.quantity ?? 0) > _mostPieces;
+    final bareGrams = item.unit == null && (item.quantity ?? 0) > mostPieces;
     final grams = item.unit == 'g' || item.unit == 'ml' || bareGrams
         ? item.quantity
         : null;
@@ -403,6 +400,10 @@ List<ParsedMealItem> weighedPlateItems(
       // a count is the model's to give (S170), a weight is not
       count: item.unit == null && !bareGrams ? item.quantity : null,
     ));
+  }
+
+  if (_oneFoodsWeight(weights, dish, foods) case final grams?) {
+    weights = NoteWeights(foods: [(name: weights.totalName!, grams: grams)]);
   }
 
   // The one weight a note naming one thing gives, on what the model split as
@@ -481,18 +482,61 @@ List<ParsedMealItem> weighedPlateItems(
   ];
 }
 
+/// Words that name the plate, not a food on it: "whole plate 150g", "bowl -
+/// 150g".
+const _plateWords = {'whole', 'plate', 'bowl', 'weighed', 'meal', 'dish'};
+
+/// The grams of a lone weight at a note's end ("burger 250 g", "chicken 150")
+/// when the read shows it is one food's and not the plate's, else null: the
+/// [dish] name names other foods beside it ("Burger with fries"), or the name
+/// agrees with one of several foods better than with the dish's name.
+/// shortcut: the foods beside it keep the model's grams (fries at 80 g where
+/// 170 g were eaten), as it sized them to the weight it was told; upgrade
+/// if live reads show the note's weight is taken as the plate's.
+double? _oneFoodsWeight(
+  NoteWeights weights,
+  String? dish,
+  List<({String query, double? grams, double? count})> foods,
+) {
+  final name = weights.totalName;
+  final grams = weights.totalGrams;
+  if (name == null || grams == null || weights.foods.isNotEmpty) return null;
+  final own = tokenize(name);
+  if (own.every(_plateWords.contains)) return null;
+  final eaten = [
+    for (final food in foods)
+      if (food.query.toLowerCase() != _bones) food,
+  ];
+  if (dish != null && dish.isNotEmpty && scoreText(dish, own) > 0) {
+    final others = {
+      for (final word in tokenize(dish))
+        if (scoreText(word, own) == 0) word,
+    };
+    final beside = eaten.any(
+      (food) => tokenize(food.query).intersection(others).isNotEmpty,
+    );
+    return beside ? grams : null;
+  }
+  if (eaten.length < 2) return null;
+  final best = eaten.map((food) => scoreText(food.query, own)).reduce(max);
+  return best > scoreText(dish, own) ? grams : null;
+}
+
 /// A weighed food no food's name agrees with, that the meal's [dish] name
 /// does name, is one the model split into parts ("burger 250g" as a bun, a
 /// patty and the salad in it), not one it missed: added as the note names
 /// it, it was counted twice. A food the note does not weigh at exactly its
 /// grams is that food ("salad 163g" as "coleslaw" 163 g); else, with one such
 /// weight and no total, the foods the note does not weigh are its parts,
-/// sized to it when they come to half to twice it. Each weight placed so is
-/// taken out of [unmatched]; the rest are added as before.
-/// shortcut: a food the note leaves unweighed beside a split one counts as
-/// one of its parts, and two split foods, or one beside a total, are added
-/// as before; upgrade when the model marks which food each part is of (a
-/// prompt change, live runs).
+/// sized to it when they come to half to twice it, except those the dish
+/// name names by its other words ("fries" in "Burger with fries"). Each
+/// weight placed so is taken out of [unmatched]; the rest are added as
+/// before.
+/// shortcut: an unweighed food beside a split one that the dish name does
+/// not name ("Burger" with fries beside it) counts as one of its parts, a
+/// part the dish name names ("Burger with beef patty") is not one, and two
+/// split foods, or one beside a total, are added as before; upgrade when
+/// the model marks which food each part is of (a prompt change, live runs).
 void _claimSplitFood(
   List<({String query, double? grams, double? count})> foods,
   Map<int, double> stated,
@@ -522,9 +566,15 @@ void _claimSplitFood(
   if (withTotal) return;
   if (unmatched.length != 1 || !named.contains(unmatched.single)) return;
   final weight = unmatched.single;
+  final own = tokenize(weight.name);
+  final others = {
+    for (final word in tokenize(dish))
+      if (scoreText(word, own) == 0) word,
+  };
   final parts = [
     for (var i = 0; i < foods.length; i++)
-      if (free(i)) i,
+      // exact words: "fries" agrees softly with an egg's "fried"
+      if (free(i) && tokenize(foods[i].query).intersection(others).isEmpty) i,
   ];
   final sum = parts.fold<double>(0, (s, i) => s + foods[i].grams!);
   if (parts.isEmpty || sum < weight.grams / 2 || sum > weight.grams * 2) {
