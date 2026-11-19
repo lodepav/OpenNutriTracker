@@ -21,6 +21,8 @@ import 'package:opennutritracker/fork/phases/phases.dart' show GoalRecord;
 import 'package:opennutritracker/fork/trends/trends_overview.dart'
     show TrendsOverview;
 import 'package:opennutritracker/fork/you/you_widgets.dart';
+import 'package:opennutritracker/fork/adaptive/goal_saving.dart'
+    show paceChanges;
 import 'package:opennutritracker/fork/screens/profile/profile_page.dart';
 import 'package:opennutritracker/fork/display/display_prefs.dart';
 import 'package:opennutritracker/fork/trends/trend_stats.dart' show TrendMetric;
@@ -203,6 +205,20 @@ void main() {
     expect(bloc.saved.last, (UserWeightGoalEntity.gainWeight, 0.25));
     await setRate(0.05);
     expect(bloc.saved.last, (UserWeightGoalEntity.maintainWeight, 0.05));
+  });
+
+  testWidgets('a target set tells the goal summaries', (tester) async {
+    await _pump(tester, _user(targetKg: 80));
+    final before = paceChanges.value;
+    await tester.tap(
+      find.byWidgetPredicate(
+        (w) => w is YouRow && w.identifier == 'profile-target-weight',
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('OK'));
+    await tester.pumpAndSettle();
+    expect(paceChanges.value, before + 1);
   });
 
   testWidgets('who is active, with a Switch button', (tester) async {

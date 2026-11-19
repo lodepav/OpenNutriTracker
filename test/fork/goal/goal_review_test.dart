@@ -8,6 +8,8 @@ import 'package:opennutritracker/core/domain/entity/user_pal_entity.dart';
 import 'package:opennutritracker/core/domain/entity/user_weight_goal_entity.dart';
 import 'package:opennutritracker/core/utils/energy_unit_provider.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
+import 'package:opennutritracker/fork/adaptive/goal_saving.dart'
+    show paceChanges;
 import 'package:opennutritracker/fork/goal/goal_actions.dart';
 import 'package:opennutritracker/fork/goal/goal_card.dart';
 import 'package:opennutritracker/fork/goal/goal_planner.dart';
@@ -577,6 +579,38 @@ void main() {
     expect(find.textContaining('No goal'), findsNothing);
     // The goal's summary, not the paragraph it replaced.
     expect(find.textContaining('step by step'), findsNothing);
+  });
+
+  testWidgets('a target set on You reaches the card', (tester) async {
+    final today = DateTime.now();
+    GoalProgress? progress;
+    await _pump(
+      tester,
+      Scaffold(
+        body: GoalCard(
+          unit: BodyWeightUnit.kg,
+          load: () async => (
+            progress: progress,
+            nowKg: 87.1,
+            plan: null,
+            history: const <GoalRecord>[],
+            pace: (goal: UserWeightGoalEntity.loseWeight, kgPerWeek: -0.4),
+          ),
+        ),
+      ),
+    );
+    expect(find.text('No end date'), findsOneWidget);
+    progress = GoalProgress(
+      start: GoalStart(date: today, kg: 87.1, targetKg: 80),
+      nowKg: 87.1,
+      paceKgPerWeek: -0.4,
+      trend: const [87.1],
+      today: today,
+    );
+    // The You tab's target and rate rows say so through paceChanges.
+    paceChanges.value++;
+    await tester.pumpAndSettle();
+    expect(find.text('7.1 kg to go', findRichText: true), findsOneWidget);
   });
 
   testWidgets('the card: the way to go, start and target under the bar, '

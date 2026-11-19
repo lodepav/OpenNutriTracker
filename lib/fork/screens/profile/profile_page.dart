@@ -515,7 +515,9 @@ class _ProfilePageState extends State<ProfilePage> {
       // The dialog now returns kg directly.
       userEntity.targetWeightKg = result.value;
     }
-    _profileBloc.updateUser(userEntity);
+    await _profileBloc.updateUser(userEntity);
+    // The goal summaries on Trends read the target through the goal start.
+    paceChanges.value++;
   }
 
   Future<void> _showSetBirthdayDialog(

@@ -5,6 +5,8 @@ import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/core/utils/hive_db_provider.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
+import 'package:opennutritracker/fork/adaptive/goal_saving.dart'
+    show paceChanges;
 import 'package:opennutritracker/fork/goal/completed_goals_page.dart';
 import 'package:opennutritracker/fork/goal/goal_progress_page.dart';
 import 'package:opennutritracker/fork/goal/goal_summary.dart';
@@ -50,6 +52,8 @@ class _GoalCardState extends State<GoalCard> {
   void initState() {
     super.initState();
     PhaseStore.changes.addListener(_reload);
+    // A target or rate set on You changes the summary too.
+    paceChanges.addListener(_reload);
     if (locator.isRegistered<HiveDBProvider>()) {
       locator<HiveDBProvider>().addListener(_reload);
     }
@@ -58,6 +62,7 @@ class _GoalCardState extends State<GoalCard> {
   @override
   void dispose() {
     PhaseStore.changes.removeListener(_reload);
+    paceChanges.removeListener(_reload);
     if (locator.isRegistered<HiveDBProvider>()) {
       locator<HiveDBProvider>().removeListener(_reload);
     }
