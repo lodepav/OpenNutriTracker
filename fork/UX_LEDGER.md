@@ -52,3 +52,16 @@ deferred finding again without new evidence. Newest last.
 | 2026-11-11 | 1 | L5 | low | - | Photo review additions: note chips | Weighed and Counts open the letter keyboard | reject | The note is free text |
 | 2026-11-11 | 1 | I1 | improvement | - | Photo review additions: meal card | The offer, Size and fat question fill the review window | defer | Revisit with use. Eased by D50: the window now runs from the app bar to Log |
 | 2026-11-11 | 1 | N1 | low | - | Photo review additions: usual sizes | Deleting a logged photo meal does not unlearn its size | defer | To ask the user |
+| 2026-11-19 | 1 | U1 | low | H1 | Home Goal tile | After "Mark completed and maintain" Home keeps "Maintain, No end date" while Trends and You say "Maintain since" | accept | Home's tiles also reload on PhaseStore and weigh-in changes, as the goal card and You tile do |
+| 2026-11-19 | 1 | L1 | low | C5, H4 | Weight history, Edit | The edit dialog is titled "Add entry" | accept | Titled "Edit weigh-in" when editing |
+| 2026-11-19 | 1 | L2 | low | H2 | Goal reached | A goal started and reached the same day reads "1 week" | reject | Edge case; the dates beside it are right |
+| 2026-11-19 | 1 | L3 | low | H4 | Planner, step 1 | "-1.0 kg to go" with a hyphen sign, where the tiles say "1.0 kg to go" | accept | Shown without the sign |
+| 2026-11-19 | 1 | L4 | low | C3 | Energy balance, 1W | "In surplus: 0 days" | reject | True and short |
+| 2026-11-19 | 1 | L5 | low | H2 | Calories, 1Y | "Nov 20 – Nov 19" reads as a backwards range without years | defer | Needs a rule for when a range shows its years |
+| 2026-11-19 | 1 | I1 | improvement | H6 | Edit plan after an overshoot | The goal's own target shows red and Save is off; a hint to "Complete or extend" would help | defer | Revisit with use |
+| 2026-11-19 | 1 | I2 | improvement | H6 | Extend for more weeks | Extending drops the target without saying so | defer | Revisit with use |
+| 2026-11-19 | 1 | I3 | improvement | A3 | Energy balance chart | Its spoken label gives no range, unlike Calories | defer | Revisit with use |
+| 2026-11-19 | 2 | - | - | - | Home Goal tile, Weight history Edit, Planner step 1 | U1, L1 and L3 fixed on screen | - | - |
+| 2026-11-19 | 2 | L1 | low | H1, H4 | Home Expenditure tile | One weigh-in behind until something else reloads it | defer | Cause unverified (the estimate may be read before it is recomputed); to debug |
+| 2026-11-19 | 2 | L2 | low | C5 | Weight history, Weigh in | The Add dialog is titled "Add entry" | accept | Titled "Log a weigh-in", as Home's dialog |
+| 2026-11-19 | 2 | I1 | improvement | H5 | Weight history, Weigh in | No warning that it replaces the day's weigh-in, as Home's dialog gives | defer | Revisit with use |

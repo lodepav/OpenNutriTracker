@@ -34,8 +34,10 @@ double niceStep(double raw) {
   var step = niceStep((max - min) / 3);
   var ticks = at(step);
   if (ticks.length < 3) {
-    // Down a round step: 5, 2, 1.
-    final p = math.pow(10, (math.log(step) / math.ln10).floor()).toDouble();
+    // Down a round step: 5, 2, 1. The slack keeps log10(1000) from flooring to 2.
+    final p = math
+        .pow(10, (math.log(step) / math.ln10 + 1e-9).floor())
+        .toDouble();
     final finer = switch ((step / p).round()) {
       1 => p / 2,
       2 => p,

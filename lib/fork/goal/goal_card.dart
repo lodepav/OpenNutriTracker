@@ -18,6 +18,8 @@ import 'package:opennutritracker/fork/trends/trend_detail.dart'
     show weightUnitLabel;
 import 'package:opennutritracker/fork/trends/trends_overview.dart'
     show TrendsGoal, TrendsOverview;
+import 'package:opennutritracker/fork/weight/weigh_in_log.dart'
+    show weighInChanges;
 import 'package:opennutritracker/fork/units/weight_text.dart';
 
 /// Trends' goal card: the goal's summary ([goalSummary]) larger, the start
@@ -48,12 +50,18 @@ class _GoalCardState extends State<GoalCard> {
     }
   }
 
+  // A target or rate set on You changes the summary too, and a weigh-in
+  // moves the trend, so the kg to go.
+  final _changes = Listenable.merge([
+    PhaseStore.changes,
+    paceChanges,
+    weighInChanges,
+  ]);
+
   @override
   void initState() {
     super.initState();
-    PhaseStore.changes.addListener(_reload);
-    // A target or rate set on You changes the summary too.
-    paceChanges.addListener(_reload);
+    _changes.addListener(_reload);
     if (locator.isRegistered<HiveDBProvider>()) {
       locator<HiveDBProvider>().addListener(_reload);
     }
@@ -61,8 +69,7 @@ class _GoalCardState extends State<GoalCard> {
 
   @override
   void dispose() {
-    PhaseStore.changes.removeListener(_reload);
-    paceChanges.removeListener(_reload);
+    _changes.removeListener(_reload);
     if (locator.isRegistered<HiveDBProvider>()) {
       locator<HiveDBProvider>().removeListener(_reload);
     }

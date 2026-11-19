@@ -448,6 +448,25 @@ void main() {
     );
   });
 
+  testWidgets('the target says the way to go with no sign, as the tiles do', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      GoalPlannerScreen(
+        setup: const PlannerSetup(
+          nowKg: 86.4,
+          unit: BodyWeightUnit.kg,
+          expenditureKcal: 2600,
+          bodyFatPercent: 22,
+        ),
+        draft: GoalDraft.fresh(86.4, _start, targetKg: 80),
+        onStart: (_) async => true,
+      ),
+    );
+    expect(find.text('6.4 kg to go'), findsOneWidget);
+  });
+
   testWidgets('a selected card keeps its subtitle readable (A2)', (
     tester,
   ) async {

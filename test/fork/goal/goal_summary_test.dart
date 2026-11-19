@@ -77,6 +77,30 @@ PhasePlan _cutTo80({DateTime? start, int weeks = 25}) => PhasePlan(
 void main() {
   setUpAll(() => initializeDateFormatting('en'));
 
+  test('a cut back to a target first gained to: the way back, not the old '
+      'start', () {
+    // 78 to 80 kept as a gain, an overshoot to 85, then a cut back to 80.
+    final s = _summary(
+      plan: PhasePlan(
+        start: _start,
+        startKg: 86,
+        targetKg: 80,
+        phases: [DietPhase(kind: PhaseKind.cut, kgPerWeek: -0.5, weeks: 25)],
+      ),
+      nowKg: 85,
+      progress: GoalProgress(
+        start: GoalStart(date: DateTime(2026, 6, 1), kg: 78, targetKg: 80),
+        nowKg: 85,
+        paceKgPerWeek: 0.25,
+        trend: const [85],
+        today: _today,
+      ),
+    );
+    expect((s.value, s.suffix), ('5.0', 'kg to go'));
+    expect(s.start?.kg, 86);
+    expect(s.bar, closeTo(1 / 6, 0.001));
+  });
+
   test('no goal: no target, no plan, no rate', () {
     const none = [
       'No goal',

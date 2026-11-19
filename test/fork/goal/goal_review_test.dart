@@ -6,7 +6,11 @@ import 'package:opennutritracker/core/domain/entity/user_entity.dart';
 import 'package:opennutritracker/core/domain/entity/user_gender_entity.dart';
 import 'package:opennutritracker/core/domain/entity/user_pal_entity.dart';
 import 'package:opennutritracker/core/domain/entity/user_weight_goal_entity.dart';
+import 'package:opennutritracker/core/domain/usecase/add_weight_log_usecase.dart';
 import 'package:opennutritracker/core/utils/energy_unit_provider.dart';
+import 'package:opennutritracker/core/utils/locator.dart';
+import 'package:opennutritracker/features/diary/presentation/bloc/diary_bloc.dart';
+import 'package:opennutritracker/features/profile/presentation/bloc/profile_bloc.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/fork/adaptive/goal_saving.dart'
     show paceChanges;
@@ -14,10 +18,20 @@ import 'package:opennutritracker/fork/goal/goal_actions.dart';
 import 'package:opennutritracker/fork/goal/goal_card.dart';
 import 'package:opennutritracker/fork/goal/goal_planner.dart';
 import 'package:opennutritracker/fork/goal/goal_progress.dart';
+import 'package:opennutritracker/fork/goal/goal_you_tile.dart';
 import 'package:opennutritracker/fork/goal/planner_screen.dart';
+import 'package:opennutritracker/fork/health/weight_import_ui.dart'
+    show refreshAfterWeightImport;
 import 'package:opennutritracker/fork/phases/phases.dart';
+import 'package:opennutritracker/fork/trends/trends_overview.dart'
+    show TrendsGoal;
+import 'package:opennutritracker/fork/trends/trends_widgets.dart'
+    show TrendTile;
+import 'package:opennutritracker/fork/weight/weigh_in_log.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 import 'package:provider/provider.dart';
+
+import '../../helpers/recording_add_weight_log_usecase.dart';
 
 class _MemoryPhases extends PhaseStore {
   PhasePlan? saved;
@@ -46,6 +60,16 @@ class _MemoryPhases extends PhaseStore {
   @override
   Future<void> addToHistory(List<GoalRecord> records) async =>
       goals.addAll(records);
+}
+
+class _Profile extends Fake implements ProfileBloc {
+  @override
+  void add(ProfileEvent event) {}
+}
+
+class _Diary extends Fake implements DiaryBloc {
+  @override
+  void updateHomePage() {}
 }
 
 /// The adaptive box's keys in memory.
@@ -611,6 +635,62 @@ void main() {
     paceChanges.value++;
     await tester.pumpAndSettle();
     expect(find.text('7.1 kg to go', findRichText: true), findsOneWidget);
+  });
+
+  testWidgets('a weigh-in reaches the card and the You tile', (tester) async {
+    locator.registerSingleton<AddWeightLogUsecase>(
+      RecordingAddWeightLogUsecase(),
+    );
+    addTearDown(locator.reset);
+    var nowKg = 87.1;
+    Future<TrendsGoal> load() async => (
+      progress: null,
+      nowKg: nowKg,
+      plan: null,
+      history: const <GoalRecord>[],
+      pace: null,
+    );
+    const pace = (goal: UserWeightGoalEntity.loseWeight, kgPerWeek: -0.4);
+    await _pump(
+      tester,
+      Scaffold(
+        body: Column(
+          children: [
+            GoalCard(unit: BodyWeightUnit.kg, load: load),
+            GoalYouTile(
+              title: 'Goal',
+              unit: BodyWeightUnit.kg,
+              targetKg: 80,
+              pace: pace,
+              load: load,
+            ),
+          ],
+        ),
+      ),
+    );
+    TrendTile tile() => tester.widget<TrendTile>(find.byType(TrendTile));
+    expect(find.text('7.1 kg to go', findRichText: true), findsOneWidget);
+    expect(tile().value, '7.1');
+    nowKg = 85;
+    await logWeighIn(
+      tester.element(find.byType(GoalCard)),
+      kg: 85,
+      day: DateTime.now(),
+      unit: BodyWeightUnit.kg,
+      replaced: null,
+      refresh: () async {},
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('5.0 kg to go', findRichText: true), findsOneWidget);
+    expect(tile().value, '5.0');
+    // Weight history's add, edit, delete and Undo, and the health import.
+    locator
+      ..registerSingleton<ProfileBloc>(_Profile())
+      ..registerSingleton<DiaryBloc>(_Diary());
+    nowKg = 83;
+    refreshAfterWeightImport();
+    await tester.pumpAndSettle();
+    expect(tile().value, '3.0');
   });
 
   testWidgets('the card: the way to go, start and target under the bar, '

@@ -54,6 +54,12 @@ void main() {
       expect((a.min, a.max), (0, 2925 * 1.12));
     });
 
+    test('a step of a power of ten goes down to half of it', () {
+      // log10(1000) comes out a hair under 3
+      expect(axisTicks(0, 1600 * 1.12).ticks, [0, 500, 1000, 1500]);
+      expect(axisTicks(1135, 2865).ticks, [1500, 2000, 2500]);
+    });
+
     test('a range off 0 is labelled inside it, not widened', () {
       final a = axisTicks(191, 269);
       expect(a.step, 20);

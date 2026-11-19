@@ -155,6 +155,7 @@ class _WeightHistoryScreenState extends State<WeightHistoryScreen> {
         initialWeightKg: editing?.weightKg ?? initialWeightKg,
         initialNote: editing?.note,
         bodyWeightUnit: _bodyWeightUnit,
+        editing: editing != null,
       ),
     );
     if (result == null || !mounted) return;
@@ -260,12 +261,14 @@ class _AddWeightEntryDialog extends StatefulWidget {
   final double initialWeightKg;
   final String? initialNote;
   final BodyWeightUnit bodyWeightUnit;
+  final bool editing;
 
   const _AddWeightEntryDialog({
     required this.initialDate,
     required this.initialWeightKg,
     this.initialNote,
     required this.bodyWeightUnit,
+    required this.editing,
   });
 
   @override
@@ -328,7 +331,9 @@ class _AddWeightEntryDialogState extends State<_AddWeightEntryDialog> {
     final invalid = _weightKg == null || _weightKg! <= 0;
 
     return AlertDialog(
-      title: Text(S.of(context).weightHistoryAddEntry),
+      title: Text(
+        widget.editing ? 'Edit weigh-in' : 'Log a weigh-in',
+      ),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
