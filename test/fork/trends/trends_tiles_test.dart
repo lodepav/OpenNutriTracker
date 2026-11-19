@@ -505,7 +505,7 @@ void main() {
     );
     expect(
       _tile(tester, 'goal').spokenLabel,
-      matches(RegExp(r'^Goal, \d+\.\d kg to go$')),
+      matches(RegExp(r'^Goal, \d+\.\d kg to go, Under 30 days of trend$')),
     );
   });
 
@@ -528,7 +528,10 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(_tile(tester, 'goal').spokenLabel, 'Goal, target reached');
+    expect(
+      _tile(tester, 'goal').spokenLabel,
+      matches(RegExp(r'^Goal, There, 75\.0 kg on \w+ \d+, keep it or go on$')),
+    );
   });
 
   testWidgets('a goal with no target, in words', (tester) async {
@@ -548,7 +551,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(
       _tile(tester, 'goal').spokenLabel,
-      matches(RegExp(r'^Goal, Maintain until \w+ \d+$')),
+      matches(RegExp(r'^Goal, Maintain until \w+ \d+, Now: maintenance$')),
     );
   });
 

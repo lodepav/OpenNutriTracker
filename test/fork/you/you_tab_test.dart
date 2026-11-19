@@ -16,8 +16,13 @@ import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/core/utils/navigation_options.dart';
 import 'package:opennutritracker/features/home/presentation/bloc/home_bloc.dart';
 import 'package:opennutritracker/features/profile/presentation/bloc/profile_bloc.dart';
-import 'package:opennutritracker/features/profile/presentation/widgets/set_target_weight_dialog.dart';
+import 'package:opennutritracker/fork/goal/goal_progress.dart';
+import 'package:opennutritracker/fork/phases/phases.dart' show GoalRecord;
+import 'package:opennutritracker/fork/trends/trends_overview.dart'
+    show TrendsOverview;
 import 'package:opennutritracker/fork/you/you_widgets.dart';
+import 'package:opennutritracker/fork/adaptive/goal_saving.dart'
+    show paceChanges;
 import 'package:opennutritracker/fork/screens/profile/profile_page.dart';
 import 'package:opennutritracker/fork/display/display_prefs.dart';
 import 'package:opennutritracker/fork/trends/trend_stats.dart' show TrendMetric;
@@ -202,6 +207,20 @@ void main() {
     expect(bloc.saved.last, (UserWeightGoalEntity.maintainWeight, 0.05));
   });
 
+  testWidgets('a target set tells the goal summaries', (tester) async {
+    await _pump(tester, _user(targetKg: 80));
+    final before = paceChanges.value;
+    await tester.tap(
+      find.byWidgetPredicate(
+        (w) => w is YouRow && w.identifier == 'profile-target-weight',
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('OK'));
+    await tester.pumpAndSettle();
+    expect(paceChanges.value, before + 1);
+  });
+
   testWidgets('who is active, with a Switch button', (tester) async {
     await _pump(tester, _user());
     expect(find.text('Alex'), findsOneWidget);
@@ -270,8 +289,12 @@ void main() {
 
   testWidgets('the goal and BMI tiles', (tester) async {
     await _pump(tester, _user(targetKg: 80));
-    expect(find.text(keepUnits('Lose 0.4 kg a week')), findsOneWidget);
-    expect(find.text(keepUnits('Target 80 kg')), findsOneWidget);
+    // No trend in a test: the pace, and a goal to plan.
+    expect(
+      find.text(keepUnits('Losing 0.4 kg a week'), findRichText: true),
+      findsOne,
+    );
+    expect(find.text('Plan a goal'), findsOneWidget);
     expect(find.textContaining('27.5'), findsOneWidget);
     // Before Home has loaded the budget is a dash.
     expect(find.text('— kcal'), findsOneWidget);
@@ -279,7 +302,7 @@ void main() {
 
   testWidgets('a target not set says so', (tester) async {
     await _pump(tester, _user());
-    // The Target weight row (JC5); the goal tile offers to set one.
+    // The Target weight row (JC5); the goal tile offers a goal.
     expect(find.text('Not set'), findsOneWidget);
     expect(find.text('Set'), findsNothing);
   });
@@ -357,8 +380,8 @@ void main() {
     expect(bmi.label, 'BMI, 27.5, Overweight');
     expect(bmi.hint, 'How it is worked out');
     final goal = node('profile-goal-tile');
-    expect(goal.label, 'Goal, Losing 0.4 kg a week');
-    expect(goal.hint, 'Set a target weight');
+    expect(goal.label, 'Goal, Losing 0.4 kg a week, No end date');
+    expect(goal.hint, 'Plan a goal');
     final budget = node('profile-budget');
     expect(budget.label, 'Calorie goal');
     expect(budget.hint, 'How it is worked out');
@@ -366,16 +389,36 @@ void main() {
     semantics.dispose();
   });
 
-  testWidgets('with a target the goal tile says it once, and opens the goal', (
+  testWidgets('with a target the goal tile says the way to go once', (
     tester,
   ) async {
     final semantics = tester.ensureSemantics();
+    final read = TrendsOverview.loadGoal;
+    final phases = TrendsOverview.loadPhases;
+    addTearDown(() {
+      TrendsOverview.loadGoal = read;
+      TrendsOverview.loadPhases = phases;
+    });
+    TrendsOverview.loadPhases = () async =>
+        (plan: null, history: const <GoalRecord>[]);
+    final today = DateTime.now();
+    TrendsOverview.loadGoal = () async => (
+      inputs: null,
+      progress: GoalProgress(
+        start: GoalStart(date: today, kg: 89.4, targetKg: 80),
+        nowKg: 87.1,
+        paceKgPerWeek: -0.4,
+        trend: const [87.1],
+        today: today,
+      ),
+    );
     await _pump(tester, _user(targetKg: 80));
     final goal = tester
         .getSemantics(find.bySemanticsIdentifier('profile-goal-tile'))
         .getSemanticsData();
-    expect(goal.label, 'Goal, Lose 0.4 kg a week, Target 80 kg');
-    expect(goal.hint, 'Open the goal');
+    expect(goal.label, 'Goal, 7.1 kg to go, Under 30 days of trend');
+    // Its tap opens Goal progress, so it offers no planner.
+    expect(goal.hint, isEmpty);
     semantics.dispose();
   });
 
@@ -439,13 +482,13 @@ void main() {
     semantics.dispose();
   });
 
-  testWidgets('with no target, the goal tile\'s tap sets one, as it says', (
+  testWidgets('with no target, the goal tile offers a goal, not a target', (
     tester,
   ) async {
+    // The planner asks for the target; the tile no longer does.
     await _pump(tester, _user());
-    await tester.tap(find.bySemanticsIdentifier('profile-goal-tile'));
-    await tester.pumpAndSettle();
-    expect(find.byType(SetTargetWeightDialog), findsOneWidget);
+    expect(find.text('Plan a goal'), findsOneWidget);
+    expect(find.text('Set a target weight'), findsNothing);
   });
 
   testWidgets('section titles are headings in Title Case, '
@@ -477,7 +520,8 @@ void main() {
       find.text(keepUnits('Losing 0.4 kg a week'), findRichText: true),
       findsOne,
     );
-    expect(find.text('Set a target weight'), findsOneWidget);
+    expect(find.text('No end date'), findsOneWidget);
+    expect(find.text('Plan a goal'), findsOneWidget);
     expect(find.text('No goal'), findsNothing);
   });
 

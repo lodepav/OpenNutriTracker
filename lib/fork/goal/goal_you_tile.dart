@@ -2,10 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart' as intl;
 import 'package:opennutritracker/core/domain/entity/body_weight_unit_entity.dart';
 import 'package:opennutritracker/core/domain/entity/user_weight_goal_entity.dart';
-import 'package:opennutritracker/fork/goal/goal_planner.dart';
+import 'package:opennutritracker/fork/adaptive/goal_saving.dart'
+    show paceChanges;
+import 'package:opennutritracker/fork/goal/goal_summary.dart';
+import 'package:opennutritracker/fork/goal/goal_summary_view.dart';
 import 'package:opennutritracker/fork/phases/phases.dart';
 import 'package:opennutritracker/fork/report/rate_text.dart';
-import 'package:opennutritracker/fork/you/you_widgets.dart';
+import 'package:opennutritracker/fork/trends/trend_detail.dart'
+    show weightUnitLabel;
+import 'package:opennutritracker/fork/trends/trends_overview.dart'
+    show TrendsGoal, TrendsOverview;
 
 /// What the app calls having no goal, on the You tile, Goal progress and
 /// Trends alike.
@@ -21,46 +27,6 @@ DateTime? maintainingSince(PhasePlan? plan, List<GoalRecord> history) {
 /// "since Oct 29".
 String _sinceText(BuildContext context, DateTime since) =>
     'since ${intl.DateFormat.MMMd(Localizations.localeOf(context).toLanguageTag()).format(since)}';
-
-/// The goal with no target weight: a goal running, a maintenance one,
-/// until it ends; maintenance since the last goal completed, or since a
-/// goal ended that is not yet marked, unless [pace] loses or gains; or the
-/// profile's [pace]
-/// ([plannedRateText]) in the You tile's words, its verb the value; or none.
-({String value, String? note}) untargetedGoal(
-  BuildContext context,
-  PhasePlan? plan,
-  DateTime? since, {
-  DateTime? today,
-  String? pace,
-}) {
-  if (plan != null && !(today ?? DateTime.now()).isBefore(plan.end)) {
-    return (value: 'Maintain', note: _sinceText(context, plan.end));
-  }
-  if (plan != null) {
-    final until = intl.DateFormat.MMMd(
-      Localizations.localeOf(context).toLanguageTag(),
-    ).format(plan.lastDay);
-    return (
-      value: switch (plan.kind) {
-        PhaseKind.cut => 'Cut',
-        PhaseKind.maintain => 'Maintain',
-        PhaseKind.bulk => 'Bulk',
-      },
-      note: 'until $until',
-    );
-  }
-  // A rate set on You after the goal ended is what the budget follows.
-  if (since != null && (pace == null || pace == _keeping)) {
-    return (value: 'Maintain', note: _sinceText(context, since));
-  }
-  if (pace == null) return (value: noGoalText, note: null);
-  // the word the plan and "since" tiles use for maintaining
-  if (pace == _keeping) return (value: 'Maintain', note: null);
-  // Whole, "Losing 0.4 kg a week" is cut off in a 360 dp Trends tile.
-  final verb = pace.indexOf(' ');
-  return (value: pace.substring(0, verb), note: pace.substring(verb + 1));
-}
 
 const _keeping = 'Keeping your weight';
 
@@ -88,38 +54,23 @@ String plannedRateText(
       '${unsignedRateText(kgPerWeek, unit)}';
 }
 
-typedef GoalTileLoad =
-    Future<({PhasePlan? plan, List<GoalRecord> history})> Function();
-
-/// The You tab's goal tile: [value], [note] and [below] while a goal
-/// runs or one is set in the profile, or the profile's plan with an offer
-/// to set a target; "Maintain since …" after a completed one, and "Plan a
-/// goal".
+/// The You tab's goal tile: the goal's summary ([goalSummary]) from the
+/// profile's [targetKg] and [pace] and the goal kept ([TrendsOverview.goal]).
 class GoalYouTile extends StatefulWidget {
-  final String value;
-  final String? note;
-  final String? below;
-
-  /// Whether the profile has a target weight of its own; its weekly rate
-  /// alone is no goal (the user, 2026-10-31).
-  final bool profileGoal;
   final String title;
-  final VoidCallback onTap;
+  final BodyWeightUnit unit;
+  final double? targetKg;
+  final ({UserWeightGoalEntity goal, double? kgPerWeek}) pace;
 
-  /// The tap while the tile offers to set a target ("Set a target weight");
-  /// [onTap] without one.
-  final VoidCallback? onSetTarget;
-  final GoalTileLoad? load;
+  /// The goal kept; [TrendsOverview.goal] by default.
+  final Future<TrendsGoal> Function()? load;
 
   const GoalYouTile({
     super.key,
     required this.title,
-    required this.value,
-    required this.note,
-    required this.below,
-    required this.profileGoal,
-    required this.onTap,
-    this.onSetTarget,
+    required this.unit,
+    required this.targetKg,
+    required this.pace,
     this.load,
   });
 
@@ -128,83 +79,63 @@ class GoalYouTile extends StatefulWidget {
 }
 
 class _GoalYouTileState extends State<GoalYouTile> {
-  ({PhasePlan? plan, List<GoalRecord> history})? _goals;
+  TrendsGoal? _goal;
 
   @override
   void initState() {
     super.initState();
     PhaseStore.changes.addListener(_reload);
+    paceChanges.addListener(_reload);
     _reload();
+  }
+
+  @override
+  void didUpdateWidget(GoalYouTile old) {
+    super.didUpdateWidget(old);
+    // The kept start follows the target.
+    if (old.targetKg != widget.targetKg || old.pace != widget.pace) _reload();
   }
 
   @override
   void dispose() {
     PhaseStore.changes.removeListener(_reload);
+    paceChanges.removeListener(_reload);
     super.dispose();
   }
 
   Future<void> _reload() async {
-    final ({PhasePlan? plan, List<GoalRecord> history}) goals;
+    final TrendsGoal goal;
     try {
-      goals = await (widget.load ?? _loadGoals)();
+      goal = await (widget.load ?? TrendsOverview.goal)();
     } catch (_) {
       // No store in a test: the profile's own goal shows.
       return;
     }
-    if (mounted) setState(() => _goals = goals);
-  }
-
-  static Future<({PhasePlan? plan, List<GoalRecord> history})>
-  _loadGoals() async {
-    final store = PhaseStore();
-    return (plan: await store.plan(), history: await store.history());
+    if (mounted) setState(() => _goal = goal);
   }
 
   @override
   Widget build(BuildContext context) {
-    final goals = _goals;
-    final plan = goals?.plan;
-    // No target and no goal running: [below] offers one, as the tap does.
-    final offer = !widget.profileGoal && plan == null;
-    final since = offer && goals != null
-        ? maintainingSince(null, goals.history)
-        : null;
-    final untargeted = since != null
-        // [value] is the profile's rate here: with no target it is the pace.
-        ? untargetedGoal(context, null, since, pace: widget.value)
-        : plan != null && plan.targetKg == null
-        ? untargetedGoal(context, plan, null)
-        : null;
-    // The profile's pace split as on Trends, "Losing" over "0.4 kg a week".
-    final paced = offer && since == null
-        ? untargetedGoal(context, null, null, pace: widget.value)
-        : null;
-    final value = untargeted?.value ?? paced?.value ?? widget.value;
-    final note = untargeted != null
-        ? untargeted.note
-        : paced != null
-        ? paced.note
-        : widget.note;
-    final below = since != null
-        ? 'Plan a goal'
-        : untargeted != null
-        ? null
-        : widget.below;
-    return YouTile(
-      identifier: 'profile-goal-tile',
-      title: widget.title,
-      value: value,
-      note: note,
-      below: below,
-      spokenLabel: [
-        widget.title,
-        note == null ? value : '$value $note',
-        if (!offer && below != null) below,
-      ].join(', '),
-      hint: offer && below != null ? below : 'Open the goal',
-      onTap: offer && since == null
-          ? widget.onSetTarget ?? widget.onTap
-          : widget.onTap,
+    final goal = _goal;
+    final summary = goalSummary(
+      locale: Localizations.localeOf(context).toLanguageTag(),
+      unit: widget.unit,
+      unitLabel: weightUnitLabel(context, widget.unit),
+      today: DateTime.now(),
+      plan: goal?.plan,
+      history: goal?.history ?? const [],
+      pace: widget.pace,
+      targetKg: widget.targetKg,
+      nowKg: goal?.nowKg,
+      progress: goal?.progress,
+      kgPerDay: kgPerDay30(goal?.progress),
+    );
+    return goalSummaryTile(
+      context,
+      summary,
+      id: 'profile-goal-tile',
+      label: widget.title,
+      unit: widget.unit,
     );
   }
 }

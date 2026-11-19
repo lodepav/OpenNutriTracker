@@ -4,11 +4,10 @@ import 'package:opennutritracker/core/domain/entity/body_weight_unit_entity.dart
 import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/features/trends/presentation/bloc/trends_bloc.dart';
-import 'package:opennutritracker/fork/adaptive/goal_plan.dart';
 import 'package:opennutritracker/fork/adaptive/trend_points.dart';
-import 'package:opennutritracker/fork/goal/goal_progress.dart';
-import 'package:opennutritracker/fork/goal/goal_progress_page.dart';
-import 'package:opennutritracker/fork/goal/goal_you_tile.dart';
+import 'package:opennutritracker/fork/goal/goal_summary.dart';
+import 'package:opennutritracker/fork/goal/goal_summary_view.dart';
+import 'package:opennutritracker/fork/phases/phases.dart' show PhaseStore;
 import 'package:opennutritracker/fork/report/nutrient_explorer.dart';
 import 'package:opennutritracker/fork/report/rate_text.dart';
 import 'package:opennutritracker/fork/trends/detail_stats.dart';
@@ -16,7 +15,7 @@ import 'package:opennutritracker/fork/trends/detail_widgets.dart';
 import 'package:opennutritracker/fork/trends/trend_detail.dart';
 import 'package:opennutritracker/fork/trends/trend_stats.dart';
 import 'package:opennutritracker/fork/trends/trends_overview.dart'
-    show TrendsGoal, TrendsOverview, goalPaceText;
+    show TrendsGoal, TrendsOverview;
 import 'package:opennutritracker/fork/trends/trends_widgets.dart';
 
 /// The spans the weight page's change chips compare, in days, as
@@ -326,7 +325,22 @@ class _GoalFigure extends StatefulWidget {
 }
 
 class _GoalFigureState extends State<_GoalFigure> {
-  late final _goal = TrendsOverview.goal();
+  late var _goal = TrendsOverview.goal();
+
+  // Its taps plan, extend or complete a goal.
+  void _reload() => setState(() => _goal = TrendsOverview.goal());
+
+  @override
+  void initState() {
+    super.initState();
+    PhaseStore.changes.addListener(_reload);
+  }
+
+  @override
+  void dispose() {
+    PhaseStore.changes.removeListener(_reload);
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) => FutureBuilder(
@@ -341,8 +355,8 @@ class _GoalFigureState extends State<_GoalFigure> {
   );
 }
 
-/// "To your goal": the way left and the day at this pace; it opens Goal
-/// progress.
+/// "To your goal": the goal's summary ([goalSummary]) at the trend now and
+/// its last 30 days' pace; it goes where the summary does.
 Widget _goalTile(
   BuildContext context,
   TrendsLoaded state,
@@ -350,45 +364,36 @@ Widget _goalTile(
   double? kgPerDay,
   TrendsGoal? goal,
 ) {
+  const label = 'To your goal';
   final wu = state.bodyWeightUnit;
-  void open() => openGoalProgress(context, wu);
-  final target = state.targetWeightKg;
-  if (target == null || now == null) {
-    final untargeted = untargetedGoal(
-      context,
-      goal?.plan,
-      goal?.since,
-      pace: goalPaceText(goal, wu),
-    );
-    return FigureTile(
-      label: 'To your goal',
-      value: untargeted.value,
-      note: untargeted.note ?? 'Plan one to see your progress',
-      onTap: open,
-    );
-  }
-  final left = goalLeftKg(target, now, goal?.progress);
-  final days = kgPerDay == null || left < 0.1
-      ? null
-      : daysToTarget(now, target, kgPerDay);
-  final t = DateTime.now();
-  final locale = Localizations.localeOf(context).toLanguageTag();
-  final on = days == null ? null : DateTime(t.year, t.month, t.day + days);
-  final format = on?.year == t.year
-      ? intl.DateFormat.MMMd(locale)
-      : intl.DateFormat.yMMMd(locale);
-  return FigureTile(
-    label: 'To your goal',
-    value: left < 0.1 ? 'There' : weightIn(wu, left).toStringAsFixed(1),
-    unit: left < 0.1 ? null : weightUnitLabel(context, wu),
-    note: left < 0.1
-        ? null
-        : kgPerDay == null
-        ? 'under 30 days of trend'
-        : on == null
-        ? 'not at your last 30 days’ pace'
-        : '${format.format(on)} at your last 30 days’ pace',
+  final summary = goalSummary(
+    locale: Localizations.localeOf(context).toLanguageTag(),
+    unit: wu,
+    unitLabel: weightUnitLabel(context, wu),
+    today: DateTime.now(),
+    plan: goal?.plan,
+    history: goal?.history ?? const [],
+    pace: goal?.pace,
+    targetKg: state.targetWeightKg,
+    nowKg: now,
+    progress: goal?.progress,
+    kgPerDay: kgPerDay,
+  );
+  void open() => openGoalSummary(context, summary, wu);
+  return Semantics(
+    container: true,
+    button: true,
+    label: summary.spoken(label),
+    hint: summary.tileAction?.label,
     onTap: open,
+    excludeSemantics: true,
+    child: FigureTile(
+      label: label,
+      value: summary.value,
+      unit: summary.suffix,
+      below: GoalSummaryBelow(summary),
+      onTap: open,
+    ),
   );
 }
 

@@ -9,11 +9,13 @@ import 'package:opennutritracker/fork/body/body_card.dart';
 import 'package:opennutritracker/fork/body/measurement_store.dart';
 import 'package:opennutritracker/fork/goal/goal_card.dart';
 import 'package:opennutritracker/fork/health/steps.dart';
+import 'package:opennutritracker/fork/phases/phases.dart' show GoalRecord;
 import 'package:opennutritracker/fork/health/steps_card.dart';
 import 'package:opennutritracker/fork/photos/photo_card.dart';
 import 'package:opennutritracker/fork/photos/photo_store.dart';
 import 'package:opennutritracker/fork/report/trends_layout.dart';
 import 'package:opennutritracker/fork/report/weekly_report.dart';
+import 'package:opennutritracker/generated/l10n.dart';
 
 class _Measurements extends Fake implements MeasurementStore {
   final entries = <Measurement>[];
@@ -41,6 +43,8 @@ class _Photos extends PhotoStore {
 Future<void> _pump(WidgetTester tester, Widget card) async {
   await tester.pumpWidget(
     MaterialApp(
+      // The goal card names the weight unit as the app does.
+      localizationsDelegates: const [S.delegate],
       home: Scaffold(body: SingleChildScrollView(child: card)),
     ),
   );
@@ -76,8 +80,13 @@ void main() {
       ),
       'goalPlan': GoalCard(
         unit: BodyWeightUnit.kg,
-        load: () async => null,
-        pace: () async => null,
+        load: () async => (
+          progress: null,
+          nowKg: null,
+          plan: null,
+          history: const <GoalRecord>[],
+          pace: null,
+        ),
       ),
       'body': _body(_Measurements()),
       'steps': StepsCard(

@@ -118,6 +118,9 @@ class FigureTile extends StatelessWidget {
   final String value;
   final String? unit;
   final String? note;
+
+  /// Under the [note]: a bar, a line (the goal's summary).
+  final Widget? below;
   final VoidCallback? onTap;
 
   const FigureTile({
@@ -126,6 +129,7 @@ class FigureTile extends StatelessWidget {
     required this.value,
     this.unit,
     this.note,
+    this.below,
     this.onTap,
   });
 
@@ -160,6 +164,7 @@ class FigureTile extends StatelessWidget {
             ),
           ),
           if (note != null) Text(note!, style: muted),
+          ?below,
         ],
       ),
     );
