@@ -15,16 +15,27 @@ class HomeAppbar extends StatelessWidget implements PreferredSizeWidget {
         children: [
           const SizedBox(width: 40, child: OpenBiteLogo() /* [fork] S35 */),
           Expanded(
-            child: RichText(
-              text: TextSpan(
-                text: S.of(context).appTitle,
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurface,
-                    ),
-              ),
+            // [fork] S280 home-title-scales: Text follows the text size,
+            // which RichText ignores
+            child: Text(
+              S.of(context).appTitle,
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
+            // child: RichText(
+            //   text: TextSpan(
+            //     text: S.of(context).appTitle,
+            //     style: Theme.of(context).textTheme.titleLarge?.copyWith(
+            //           color: Theme.of(context).colorScheme.onSurface,
+            //         ),
+            //   ),
+            //   maxLines: 1,
+            //   overflow: TextOverflow.ellipsis,
+            // ),
+            // [/fork]
           ),
         ],
       ),

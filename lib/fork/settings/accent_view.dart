@@ -60,9 +60,10 @@ class AccentColourView extends StatelessWidget {
     final accent = Theme.of(context).colorScheme.primary;
     return ListView(
       padding: EdgeInsets.fromLTRB(
-        Dimens.spacing12,
+        // the gutter every other page has
+        Dimens.spacing16,
         Dimens.spacing8,
-        Dimens.spacing12,
+        Dimens.spacing16,
         Dimens.spacing32 + MediaQuery.paddingOf(context).bottom,
       ),
       children: [

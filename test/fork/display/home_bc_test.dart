@@ -17,7 +17,7 @@ import 'package:opennutritracker/fork/layout/home_layout.dart';
 import 'package:opennutritracker/fork/layout/layout_store.dart';
 import 'package:opennutritracker/fork/trends/trend_stats.dart' show TrendMetric;
 import 'package:opennutritracker/fork/trends/trends_widgets.dart'
-    show Sparkline, keepUnits;
+    show Sparkline, TrendTile, keepUnits;
 import 'package:opennutritracker/fork/display/week_bars.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 import 'package:provider/provider.dart';
@@ -184,6 +184,7 @@ void main() {
             .split(RegExp(r'\s+'));
         expect(words.length, greaterThan(1), reason: 'a lone word in "$text"');
         expect(words.last, isNot('·'), reason: 'a dot left behind in "$text"');
+        expect(words.first, isNot('·'), reason: 'a dot leading "$text"');
         if (line.end <= start) break;
         start = line.end;
       }
@@ -223,10 +224,8 @@ void main() {
       await tester.pump();
       expect(find.textContaining('79.5'), findsOne);
       expect(find.textContaining('81 kg'), findsNothing);
-      expect(
-        find.textContaining('·\u00A00\u00A0kg\u00A0in\u00A07\u00A0days'),
-        findsOne,
-      );
+      // Its own line under the trend, no "·" to join them.
+      expect(find.text('0\u00A0kg\u00A0in\u00A07\u00A0days'), findsOne);
       expect(find.textContaining('2712 ${keepUnits('kcal a day')}'), findsOne);
       expect(find.byType(Sparkline), findsNWidgets(2));
     });
@@ -430,19 +429,19 @@ void main() {
           width: 180,
           child: Column(
             children: [
-              HomeTile(
-                identifier: 'w',
-                title: 'Weight trend',
+              TrendTile(
+                id: 'w',
+                label: 'Weight trend',
                 value: '87.1 kg',
-                note: '· -0.16 kg/wk',
+                suffix: '· -0.16 kg/wk',
                 onTap: () {},
                 onAction: () {},
               ),
-              HomeTile(
-                identifier: 'e',
-                title: 'Expenditure',
+              TrendTile(
+                id: 'e',
+                label: 'Expenditure',
                 value: '3045',
-                note: 'kcal/day',
+                suffix: 'kcal/day',
               ),
             ],
           ),

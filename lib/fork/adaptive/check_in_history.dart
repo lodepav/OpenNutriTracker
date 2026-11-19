@@ -97,7 +97,10 @@ class CheckInHistoryScreen extends StatelessWidget {
       ),
       subtitle: Text(
         [
-          DateFormat('d MMM yyyy').format(r.date),
+          DateFormat(
+            'd MMM yyyy',
+            Localizations.localeOf(context).toLanguageTag(),
+          ).format(r.date),
           'expenditure ${energyText(context, r.expenditureKcal)}',
           if (edited) 'proposed ${energyText(context, r.proposedKcal)}',
         ].join(' · '),
@@ -212,7 +215,7 @@ Future<void> _showParts(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
-                'Why it moved from ${DateFormat('d MMM').format(before.date)}',
+                'Why it moved from ${DateFormat('d MMM', Localizations.localeOf(context).toLanguageTag()).format(before.date)}',
                 style: text.titleMedium,
               ),
               for (final p in parts)

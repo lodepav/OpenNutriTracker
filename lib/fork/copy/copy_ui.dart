@@ -110,6 +110,7 @@ Future<void> placeWithUndo(
   final messenger = ScaffoldMessenger.maybeOf(context);
   final mealName = meal == null ? null : mealLabel(context, meal);
   final persists = undoBarPersists(context);
+  final locale = Localizations.localeOf(context).toLanguageTag();
   final stamp = ProfileStamp.now();
   final placed = place != null
       ? await place(entries)
@@ -134,7 +135,7 @@ Future<void> placeWithUndo(
   final to = [
     ?mealName,
     if (movedFrom == null || !DateUtils.isSameDay(placed.day, movedFrom))
-      DateFormat.MMMEd().format(placed.day),
+      DateFormat.MMMEd(locale).format(placed.day),
   ];
   final count = placed.written.length;
   // A day of activities only: no foods to take back.
@@ -209,16 +210,18 @@ Future<void> copyActivitiesWithDialog(
 }
 
 /// "Copied to [day]", or, null, that a profile switch stopped the copy.
-void _copied(BuildContext context, DateTime? day) =>
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          day == null
-              ? 'Nothing copied: the profile changed.'
-              : 'Copied to ${DateFormat.MMMEd().format(day)}',
-        ),
-      ),
-    );
+void _copied(
+  BuildContext context,
+  DateTime? day,
+) => ScaffoldMessenger.of(context).showSnackBar(
+  SnackBar(
+    content: Text(
+      day == null
+          ? 'Nothing copied: the profile changed.'
+          : 'Copied to ${DateFormat.MMMEd(Localizations.localeOf(context).toLanguageTag()).format(day)}',
+    ),
+  ),
+);
 
 /// "Copy day" in the Diary's Day menu (seam S26): every entry of [day],
 /// each in its own meal, and its activities if wanted, to a day picked on
@@ -431,7 +434,11 @@ class _WhereToSheetState extends State<WhereToSheet> {
                   ),
                 _chip(
                   'pick-day',
-                  _pickedDay ? DateFormat.MMMEd().format(_day) : 'Pick…',
+                  _pickedDay
+                      ? DateFormat.MMMEd(
+                          Localizations.localeOf(context).toLanguageTag(),
+                        ).format(_day)
+                      : 'Pick…',
                   _pickedDay,
                   _pickDay,
                 ),

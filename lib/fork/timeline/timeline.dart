@@ -211,7 +211,9 @@ class _TimelineScreenState extends State<TimelineScreen> {
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
-      title: Text('Timeline, ${DateFormat.MMMEd().format(widget.day)}'),
+      title: Text(
+        'Timeline, ${DateFormat.MMMEd(Localizations.localeOf(context).toLanguageTag()).format(widget.day)}',
+      ),
     ),
     floatingActionButton: FloatingActionButton.extended(
       key: const ValueKey('timeline-add'),

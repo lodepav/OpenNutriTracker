@@ -38,7 +38,7 @@ void main() {
         const StatHeader(
           stats: [
             (label: 'Trend weight', value: '87.1', unit: 'kg'),
-            (label: 'Change', value: '-0.2', unit: 'kg'),
+            (label: 'Change', value: '−0.20', unit: 'kg'),
             (label: 'Per week', value: '-0.16', unit: 'kg'),
           ],
         ),

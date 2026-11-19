@@ -14,7 +14,7 @@ typedef _Stat = ({String label, String value, String? unit});
 Map<String, List<_Stat>> _headers(String w) => {
   'Weight ($w)': [
     (label: 'Trend weight', value: '288.8', unit: w),
-    (label: 'Change', value: '−18.0', unit: w),
+    (label: 'Change', value: '−18.00', unit: w),
     (label: 'Per week', value: '−1.40', unit: w),
   ],
   'Goal progress ($w)': [

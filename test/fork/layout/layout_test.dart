@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:opennutritracker/core/utils/tracked_day_lock.dart';
 import 'package:opennutritracker/fork/layout/arrange_screen.dart';
 import 'package:opennutritracker/fork/layout/layout_store.dart';
 
@@ -326,6 +327,20 @@ void main() {
             .value,
         isFalse,
       );
+    });
+    testWidgets('Undo after a profile switch writes nothing', (tester) async {
+      await pump(tester);
+      await tester.tap(find.byKey(const ValueKey('arrange-reset')));
+      await tester.pumpAndSettle();
+      await tester.runAsync(() => withProfileSwitchLock(() async {}));
+      // The new profile's layout, which the old one's Undo must not replace.
+      const other = (order: ['c', 'b', 'a'], hidden: <String>{});
+      LayoutStore.current('one').value = other;
+
+      await tester.tap(find.text('Undo'));
+      await tester.pumpAndSettle();
+      expect(LayoutStore.current('one').value, other);
+      expect(find.text('Not restored: the profile changed.'), findsOneWidget);
     });
   });
 }

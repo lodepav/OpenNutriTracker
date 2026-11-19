@@ -211,4 +211,62 @@ void main() {
     await tester.pumpAndSettle();
     expect(restored.last.$1, [milk]);
   });
+
+  group('under TalkBack, where the bar stays up', () {
+    setUp(() {
+      final binding = TestWidgetsFlutterBinding.instance;
+      binding.platformDispatcher.accessibilityFeaturesTestValue =
+          const FakeAccessibilityFeatures(accessibleNavigation: true);
+    });
+    tearDown(
+      TestWidgetsFlutterBinding
+          .instance
+          .platformDispatcher
+          .clearAccessibilityFeaturesTestValue,
+    );
+
+    testWidgets('a delete after the bar\'s time starts a bar of its own', (
+      tester,
+    ) async {
+      final context = await pumpScaffold(tester);
+      void show(IntakeEntity intake) => DeletedEntries.show(
+        context,
+        intake,
+        today,
+        startedOn: ProfileStamp.now(),
+        restore: restore,
+      );
+
+      show(oats);
+      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 9));
+      await tester.pumpAndSettle();
+      expect(find.text('oats deleted'), findsOneWidget);
+
+      show(milk);
+      await tester.pumpAndSettle();
+      expect(find.text('milk deleted'), findsOneWidget);
+      await tester.tap(find.text('Undo'));
+      await tester.pumpAndSettle();
+      expect(restored.single.$1, [milk]);
+    });
+
+    testWidgets('quick deletes still gather', (tester) async {
+      final context = await pumpScaffold(tester);
+      for (final intake in [oats, milk]) {
+        DeletedEntries.show(
+          context,
+          intake,
+          today,
+          startedOn: ProfileStamp.now(),
+          restore: restore,
+        );
+      }
+      await tester.pumpAndSettle();
+      expect(find.text('2 foods deleted'), findsOneWidget);
+      await tester.tap(find.text('Undo'));
+      await tester.pumpAndSettle();
+      expect(restored.single.$1, [oats, milk]);
+    });
+  });
 }

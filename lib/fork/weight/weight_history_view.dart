@@ -146,9 +146,10 @@ class _WeightHistoryViewState extends State<WeightHistoryView> {
         child: WidthCap(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(
-              Dimens.spacing12,
+              // the gutter every other page has
+              Dimens.spacing16,
               Dimens.spacing8,
-              Dimens.spacing12,
+              Dimens.spacing16,
               Dimens.spacing12,
             ),
             child: Semantics(
@@ -176,99 +177,108 @@ class _WeightHistoryViewState extends State<WeightHistoryView> {
                 ),
               ),
             )
-          : CustomScrollView(
-              slivers: [
-                SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(
-                    Dimens.spacing12,
-                    0,
-                    Dimens.spacing12,
-                    Dimens.spacing16,
-                  ),
-                  sliver: SliverMainAxisGroup(
-                    slivers: [
-                      item(
-                        _RangeChips(
-                          rangeDays: _rangeDays,
-                          onChanged: (d) => setState(() => _rangeDays = d),
-                        ),
+          // Measured on the width alone: a SliverLayoutBuilder measured
+          // every row again on each scroll frame.
+          : LayoutBuilder(
+              builder: (context, box) {
+                // the SliverPadding's gutters
+                final width = box.maxWidth - 2 * Dimens.spacing16;
+                final spare = width - WidthCap.maxWidth;
+                final rowsStack = _WeighInRow.stacks(context, [
+                  for (var i = 0; i < entries.length; i++)
+                    _WeighInRow.texts(
+                      context,
+                      entries[i],
+                      i + 1 < entries.length ? entries[i + 1] : null,
+                      unit,
+                      today,
+                    ),
+                ], math.min(width, WidthCap.maxWidth));
+                return CustomScrollView(
+                  slivers: [
+                    SliverPadding(
+                      padding: const EdgeInsets.fromLTRB(
+                        // the gutter every other page has
+                        Dimens.spacing16,
+                        0,
+                        Dimens.spacing16,
+                        Dimens.spacing16,
                       ),
-                      item(const SizedBox(height: Dimens.spacing8)),
-                      item(
-                        AppCard(
-                          padding: const EdgeInsets.fromLTRB(
-                            Dimens.spacing8,
-                            Dimens.spacing12,
-                            Dimens.spacing12,
-                            Dimens.spacing8,
-                          ),
-                          child: WeightHistoryChart(
-                            entries: entries,
-                            unit: unit,
-                            targetWeightKg: widget.targetWeightKg,
-                            dates: dates,
-                          ),
-                        ),
-                      ),
-                      item(const SizedBox(height: Dimens.spacing8)),
-                      item(
-                        // As YouRow: past 1.5x text three in a row broke
-                        // "−0.20 kg" inside its unit, so they stack.
-                        Flex(
-                          direction: stacked ? Axis.vertical : Axis.horizontal,
-                          crossAxisAlignment: stacked
-                              ? CrossAxisAlignment.stretch
-                              : CrossAxisAlignment.center,
-                          children: [
-                            for (final (i, (title, value)) in [
-                              (
-                                'Trend',
-                                w(stats.nowKg).map((v) => '$v\u00A0$label'),
-                              ),
-                              (rangeLabel, change(stats.changeKg, 1)),
-                              ('Per week', change(stats.perWeekKg, 2)),
-                            ].indexed) ...[
-                              if (i > 0)
-                                const SizedBox.square(
-                                  dimension: Dimens.spacing8,
-                                ),
-                              (stacked
-                                  ? (Widget c) => c
-                                  : (Widget c) => Expanded(child: c))(
-                                _StatTile(label: title, value: value ?? '–'),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-                      item(const SizedBox(height: Dimens.spacing8)),
-                      // The weigh-ins are built as they scroll in: an imported
-                      // log runs to years of rows. The card is drawn behind
-                      // the list, capped as WidthCap caps the items above.
-                      SliverLayoutBuilder(
-                        builder: (context, constraints) {
-                          final spare =
-                              constraints.crossAxisExtent - WidthCap.maxWidth;
-                          final rowsStack = _WeighInRow.stacks(
-                            context,
-                            [
-                              for (var i = 0; i < entries.length; i++)
-                                _WeighInRow.texts(
-                                  context,
-                                  entries[i],
-                                  i + 1 < entries.length
-                                      ? entries[i + 1]
-                                      : null,
-                                  unit,
-                                  today,
-                                ),
-                            ],
-                            math.min(
-                              constraints.crossAxisExtent,
-                              WidthCap.maxWidth,
+                      sliver: SliverMainAxisGroup(
+                        slivers: [
+                          item(
+                            RangePills(
+                              rangeDays: _rangeDays,
+                              onChanged: (d) => setState(() => _rangeDays = d),
+                              ranges: [
+                                for (final (days, label) in weightRanges)
+                                  (
+                                    days: days,
+                                    label: label,
+                                    spoken: weightRangeLabel(days),
+                                  ),
+                              ],
+                              idPrefix: 'weight-history-range',
                             ),
-                          );
-                          return SliverPadding(
+                          ),
+                          item(const SizedBox(height: Dimens.spacing8)),
+                          item(
+                            AppCard(
+                              padding: const EdgeInsets.fromLTRB(
+                                Dimens.spacing8,
+                                Dimens.spacing12,
+                                Dimens.spacing12,
+                                Dimens.spacing8,
+                              ),
+                              child: WeightHistoryChart(
+                                entries: entries,
+                                unit: unit,
+                                targetWeightKg: widget.targetWeightKg,
+                                dates: dates,
+                              ),
+                            ),
+                          ),
+                          item(const SizedBox(height: Dimens.spacing8)),
+                          item(
+                            // As YouRow: past 1.5x text three in a row broke
+                            // "−0.20 kg" inside its unit, so they stack.
+                            Flex(
+                              direction: stacked
+                                  ? Axis.vertical
+                                  : Axis.horizontal,
+                              crossAxisAlignment: stacked
+                                  ? CrossAxisAlignment.stretch
+                                  : CrossAxisAlignment.center,
+                              children: [
+                                for (final (i, (title, value)) in [
+                                  (
+                                    'Trend',
+                                    w(stats.nowKg).map((v) => '$v\u00A0$label'),
+                                  ),
+                                  (rangeLabel, change(stats.changeKg, 1)),
+                                  ('Per week', change(stats.perWeekKg, 2)),
+                                ].indexed) ...[
+                                  if (i > 0)
+                                    const SizedBox.square(
+                                      dimension: Dimens.spacing8,
+                                    ),
+                                  (stacked
+                                      ? (Widget c) => c
+                                      : (Widget c) => Expanded(child: c))(
+                                    _StatTile(
+                                      label: title,
+                                      value: value ?? '–',
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                          item(const SizedBox(height: Dimens.spacing8)),
+                          // The weigh-ins are built as they scroll in: an imported
+                          // log runs to years of rows. The card is drawn behind
+                          // the list, capped as WidthCap caps the items above.
+                          SliverPadding(
                             padding: EdgeInsets.symmetric(
                               horizontal: spare > 0 ? spare / 2 : 0,
                             ),
@@ -334,22 +344,22 @@ class _WeightHistoryViewState extends State<WeightHistoryView> {
                                 },
                               ),
                             ),
-                          );
-                        },
+                          ),
+                          item(const SizedBox(height: Dimens.spacing8)),
+                          item(
+                            Text(
+                              'Tap a weigh-in to edit or delete it',
+                              textAlign: TextAlign.center,
+                              style: Theme.of(context).textTheme.bodySmall
+                                  ?.copyWith(color: palette.textMuted),
+                            ),
+                          ),
+                        ],
                       ),
-                      item(const SizedBox(height: Dimens.spacing8)),
-                      item(
-                        Text(
-                          'Tap a weigh-in to edit or delete it',
-                          textAlign: TextAlign.center,
-                          style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(color: palette.textMuted),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+                    ),
+                  ],
+                );
+              },
             ),
     );
   }
@@ -397,38 +407,6 @@ class _StatTile extends StatelessWidget {
       ),
     );
   }
-}
-
-class _RangeChips extends StatelessWidget {
-  final int rangeDays;
-  final ValueChanged<int> onChanged;
-
-  const _RangeChips({required this.rangeDays, required this.onChanged});
-
-  @override
-  Widget build(BuildContext context) => Semantics(
-    identifier: 'weight-history-range-selector',
-    child: Wrap(
-      spacing: Dimens.spacing8,
-      children: [
-        for (final (days, label) in weightRanges)
-          Semantics(
-            identifier: 'weight-history-range-$days',
-            child: ChoiceChip(
-              key: ValueKey('weight-history-range-$days'),
-              label: Text(label, semanticsLabel: weightRangeLabel(days)),
-              // the check marks the chosen range, as the search chips do;
-              // the fill alone is the unselected one's
-              selected: days == rangeDays,
-              materialTapTargetSize: MaterialTapTargetSize.padded,
-              onSelected: (_) {
-                if (days != rangeDays) onChanged(days);
-              },
-            ),
-          ),
-      ],
-    ),
-  );
 }
 
 /// The trend, thick, over the weigh-ins, thin; the goal weight dashed when
@@ -621,6 +599,10 @@ class WeightHistoryChart extends StatelessWidget {
   }
 }
 
+/// How often the weigh-ins were measured for stacking, for tests.
+@visibleForTesting
+var weighInStacksRuns = 0;
+
 /// A weigh-in: its day, its change from the one before and its weight.
 /// Swiped left, or from its TalkBack actions, it is deleted.
 class _WeighInRow extends StatelessWidget {
@@ -681,6 +663,7 @@ class _WeighInRow extends StatelessWidget {
     Iterable<({String title, String? change, String weight})> rows,
     double width,
   ) {
+    weighInStacksRuns++;
     final theme = Theme.of(context);
     final scaler = MediaQuery.textScalerOf(context);
     double longest(Iterable<String> texts, TextStyle? style) {

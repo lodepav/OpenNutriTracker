@@ -172,9 +172,10 @@ class _FastingViewState extends State<FastingView> {
     final l10n = S.of(context);
     return ListView(
       padding: EdgeInsets.fromLTRB(
-        Dimens.spacing12,
+        // the gutter every other page has
+        Dimens.spacing16,
         0,
-        Dimens.spacing12,
+        Dimens.spacing16,
         Dimens.spacing32 + MediaQuery.paddingOf(context).bottom,
       ),
       children: [

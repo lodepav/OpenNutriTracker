@@ -229,6 +229,7 @@ class _WaistRatioPageState extends State<WaistRatioPage> {
     final hipNote = cutOff == null
         ? 'WHO: over 0.90 for men, 0.85 for women'
         : 'WHO: over ${cutOff.toStringAsFixed(2)} raises the risk';
+    final locale = Localizations.localeOf(context).toLanguageTag();
     return ListView(
       padding: EdgeInsets.fromLTRB(
         Dimens.spacing16,
@@ -270,7 +271,7 @@ class _WaistRatioPageState extends State<WaistRatioPage> {
           const SizedBox(height: Dimens.spacing8),
           Text(
             '${toBeginningOfSentenceCase(waistBand(last.ratio))}, '
-            '${DateFormat.yMMMd().format(last.date)}',
+            '${DateFormat.yMMMd(locale).format(last.date)}',
             style: Theme.of(context).textTheme.titleSmall,
           ),
           if (last.hipRatio != null)
@@ -282,8 +283,8 @@ class _WaistRatioPageState extends State<WaistRatioPage> {
               '${units.shown(against.waistCm).toStringAsFixed(1)} '
               '${units.unit} · trend weight '
               '${weightChangeText(against.trendKg, widget.imperial ? BodyWeightUnit.lb : BodyWeightUnit.kg)}, '
-              '${DateFormat.MMMd().format(against.from)} to '
-              '${DateFormat.MMMd().format(against.to)}',
+              '${DateFormat.MMMd(locale).format(against.from)} to '
+              '${DateFormat.MMMd(locale).format(against.to)}',
               style: Theme.of(context).textTheme.bodyMedium,
             ),
           ],
@@ -293,7 +294,7 @@ class _WaistRatioPageState extends State<WaistRatioPage> {
           points: charted,
           caption: inRange.isEmpty && points.isNotEmpty
               ? 'None in the last ${widget.rangeDays} days; all since '
-                    '${DateFormat.yMMM().format(points.first.date)}.'
+                    '${DateFormat.yMMM(locale).format(points.first.date)}.'
               : null,
         ),
         const SizedBox(height: Dimens.spacing12),
@@ -307,7 +308,7 @@ class _WaistRatioPageState extends State<WaistRatioPage> {
             rows: [
               for (final p in points.reversed)
                 (
-                  label: DateFormat.yMMMd().format(p.date),
+                  label: DateFormat.yMMMd(locale).format(p.date),
                   value:
                       '${p.ratio.toStringAsFixed(2)} · waist '
                       '${units.text(p.waistCm)}'

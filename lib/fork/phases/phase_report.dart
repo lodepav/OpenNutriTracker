@@ -241,7 +241,9 @@ class _ReportCard extends StatelessWidget {
     final r = report;
     final text = Theme.of(context).textTheme;
     final muted = paletteOf(context).textMuted;
-    final format = DateFormat.MMMd();
+    final format = DateFormat.MMMd(
+      Localizations.localeOf(context).toLanguageTag(),
+    );
     String weeks(int days) {
       final w = (days / 7).round();
       return w == 1 ? '1 week' : '$w weeks';

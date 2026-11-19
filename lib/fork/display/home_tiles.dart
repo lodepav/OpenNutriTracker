@@ -3,7 +3,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:opennutritracker/core/domain/entity/body_weight_unit_entity.dart';
 import 'package:opennutritracker/core/domain/entity/weight_log_entity.dart';
 import 'package:opennutritracker/core/domain/usecase/get_weight_log_usecase.dart';
-import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/core/utils/calc/unit_calc.dart';
@@ -24,7 +23,7 @@ import 'package:opennutritracker/fork/adaptive/trend_points.dart';
 import 'package:opennutritracker/fork/report/rate_text.dart';
 import 'package:opennutritracker/fork/trends/trend_stats.dart' show TrendMetric;
 import 'package:opennutritracker/fork/trends/trends_widgets.dart'
-    show Sparkline, keepUnits;
+    show Sparkline, TrendTile;
 import 'package:opennutritracker/fork/units/energy_text.dart';
 import 'package:opennutritracker/fork/units/weight_text.dart' show weightText;
 
@@ -164,123 +163,6 @@ class HomeTiles extends StatelessWidget {
   }
 }
 
-/// One tile: its title, its value with a smaller note after it, and a
-/// chart or bar under them.
-class HomeTile extends StatelessWidget {
-  final String identifier;
-  final String title;
-  final String value;
-  final String? note;
-  final Color? valueColor;
-  final Widget? below;
-  final VoidCallback? onTap;
-  final String? hint;
-
-  /// What a screen reader says for the card, in words ("Expenditure,
-  /// 3045 kcal a day"); its text as shown when null.
-  final String? spokenLabel;
-
-  /// A + in the corner that logs (a weigh-in, water), [actionTooltip] its
-  /// name; beside the card rather than in it, a button in a button being
-  /// one target to a screen reader.
-  final VoidCallback? onAction;
-  final String? actionTooltip;
-
-  const HomeTile({
-    super.key,
-    required this.identifier,
-    required this.title,
-    required this.value,
-    this.note,
-    this.valueColor,
-    this.below,
-    this.onTap,
-    this.hint,
-    this.spokenLabel,
-    this.onAction,
-    this.actionTooltip,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = paletteOf(context);
-    final textTheme = Theme.of(context).textTheme;
-    final card = Semantics(
-      identifier: identifier,
-      container: spokenLabel != null,
-      button: onTap != null,
-      label: spokenLabel,
-      hint: hint,
-      // Excluding the text drops the card's tap too, so the node has its own.
-      onTap: spokenLabel == null ? null : onTap,
-      excludeSemantics: spokenLabel != null,
-      child: AppCard(
-        onTap: onTap,
-        padding: const EdgeInsets.all(Dimens.spacing12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              // Clear of the + in the corner.
-              padding: EdgeInsetsDirectional.only(
-                end: onAction == null ? 0 : 32,
-              ),
-              child: Text(
-                title,
-                style: textTheme.labelMedium?.copyWith(
-                  color: palette.textMuted,
-                ),
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text.rich(
-              TextSpan(
-                children: [
-                  TextSpan(
-                    text: value,
-                    style: textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: valueColor ?? palette.textStrong,
-                    ),
-                  ),
-                  if (note != null)
-                    TextSpan(
-                      text: ' ${keepUnits(note!)}',
-                      style: textTheme.labelSmall?.copyWith(
-                        color: palette.textMuted,
-                      ),
-                    ),
-                ],
-              ),
-            ),
-            if (below != null) ...[
-              const SizedBox(height: Dimens.spacing8),
-              below!,
-            ],
-          ],
-        ),
-      ),
-    );
-    if (onAction == null) return card;
-    return Stack(
-      fit: StackFit.passthrough,
-      children: [
-        card,
-        PositionedDirectional(
-          top: 0,
-          end: 0,
-          child: IconButton(
-            key: Key('$identifier-add'),
-            tooltip: actionTooltip,
-            icon: const Icon(Icons.add_rounded),
-            onPressed: onAction,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
 /// The weight trend now, its change over the last week, and the last
 /// month of it; the last weigh-in while there is no trend.
 class WeightTile extends StatefulWidget {
@@ -344,15 +226,19 @@ class _WeightTileState extends State<WeightTile> {
         weightKg: widget.weightKg,
         bodyWeightUnit: widget.unit,
       );
-      return HomeTile(
-        identifier: widget.identifier,
-        title: 'Weight trend',
+      return TrendTile(
+        id: widget.identifier,
+        label: 'Weight trend',
         value: value,
         // The last 7 days by name, as Weight history's "per week" is over
-        // its range; held to its unit, so a wrap leaves no word alone.
+        // its range; its own line, as it never fits beside the trend.
         note: kgPerWeek == null
             ? null
-            : '·\u00A0${weeklyRateText(kgPerWeek, widget.unit).replaceFirst(' a week', ' in 7 days').replaceAll(' ', '\u00A0')}',
+            : weeklyRateText(
+                kgPerWeek,
+                widget.unit,
+              ).replaceFirst(' a week', ' in 7 days').replaceAll(' ', '\u00A0'),
+        noteMuted: true,
         spokenLabel: weightSpoken(
           value,
           kgPerWeek,
@@ -362,7 +248,7 @@ class _WeightTileState extends State<WeightTile> {
         onTap: widget.onTap ?? weighIn,
         onAction: weighIn,
         actionTooltip: 'Weigh in',
-        below: month.length < 2
+        chart: month.length < 2
             ? null
             : Sparkline(
                 values: [for (final p in month) p.weightKg],
@@ -395,22 +281,22 @@ class _ExpenditureTileState extends State<ExpenditureTile> {
     builder: (context, snapshot) {
       final days = snapshot.data ?? const [];
       final month = days.length > 30 ? days.sublist(days.length - 30) : days;
-      return HomeTile(
-        identifier: 'home-expenditure-tile',
-        title: 'Expenditure',
+      return TrendTile(
+        id: 'home-expenditure-tile',
+        label: 'Expenditure',
         hint: widget.onTap == null ? null : 'Open the expenditure trend',
         onTap: widget.onTap,
         value: days.isEmpty
             ? '—'
             : '${energyValue(context, days.last.expenditureKcal)}',
-        note: days.isEmpty
+        suffix: days.isEmpty
             ? 'after a weigh-in'
             : '${energyUnit(context)} a day',
         spokenLabel: expenditureSpoken(
           days.isEmpty ? null : energyValue(context, days.last.expenditureKcal),
           energyUnit(context),
         ),
-        below: month.length < 2
+        chart: month.length < 2
             ? null
             : Sparkline(
                 values: [for (final d in month) d.expenditureKcal],
@@ -451,11 +337,11 @@ class WaterTile extends StatelessWidget {
     String shown(int ml) => usesImperialUnits
         ? '${UnitCalc.mlToFlOz(ml.toDouble()).round()}'
         : '$ml';
-    return HomeTile(
-      identifier: 'home-water-chip',
-      title: 'Water',
+    return TrendTile(
+      id: 'home-water-chip',
+      label: 'Water',
       value: shown(ml),
-      note: '/ ${shown(goalMl)} ${usesImperialUnits ? 'fl oz' : 'ml'}',
+      suffix: '/ ${shown(goalMl)} ${usesImperialUnits ? 'fl oz' : 'ml'}',
       spokenLabel:
           'Water, ${shown(ml)} of ${shown(goalMl)} '
           '${usesImperialUnits ? 'fluid ounces' : 'milliliters'}',
@@ -463,7 +349,7 @@ class WaterTile extends StatelessWidget {
       onTap: onTap ?? logWater,
       onAction: logWater,
       actionTooltip: 'Log water',
-      below: TileBar(
+      chart: TileBar(
         value: goalMl <= 0 ? 0 : ml / goalMl,
         color: palette.protein,
       ),
@@ -500,16 +386,16 @@ class FastingTileView extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = paletteOf(context);
     final active = state is FastingActive ? state as FastingActive : null;
-    return HomeTile(
-      identifier: 'home-fasting-chip',
-      title: 'Fasting',
+    return TrendTile(
+      id: 'home-fasting-chip',
+      label: 'Fasting',
       value: active == null ? 'Not fasting' : _hoursMinutes(active.remaining),
-      note: active == null ? null : 'left',
+      suffix: active == null ? null : 'left',
       spokenLabel: fastingSpoken(active?.remaining),
       hint: 'Open fasting',
       onTap: () =>
           Navigator.of(context).pushNamed(NavigationOptions.fastingRoute),
-      below: active == null
+      chart: active == null
           ? null
           : TileBar(
               value: active.target.inSeconds <= 0

@@ -367,24 +367,25 @@ class _TrendsOverviewState extends State<TrendsOverview> {
                                   padding: const EdgeInsets.only(
                                     bottom: Dimens.spacing8,
                                   ),
-                                  // The tiles are alike, so a row's two are one height;
-                                  // AutoSizeText measures, so no IntrinsicHeight here.
+                                  // A row's two one height, as on Home.
                                   child: perRow == 1
                                       ? tiles[i]
-                                      : Row(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Expanded(child: tiles[i]),
-                                            const SizedBox(
-                                              width: Dimens.spacing8,
-                                            ),
-                                            Expanded(
-                                              child: i + 1 < tiles.length
-                                                  ? tiles[i + 1]
-                                                  : const SizedBox.shrink(),
-                                            ),
-                                          ],
+                                      : IntrinsicHeight(
+                                          child: Row(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.stretch,
+                                            children: [
+                                              Expanded(child: tiles[i]),
+                                              const SizedBox(
+                                                width: Dimens.spacing8,
+                                              ),
+                                              Expanded(
+                                                child: i + 1 < tiles.length
+                                                    ? tiles[i + 1]
+                                                    : const SizedBox.shrink(),
+                                              ),
+                                            ],
+                                          ),
                                         ),
                                 ),
                               Center(
@@ -598,10 +599,12 @@ List<TrendTile> trendTiles(
       value: weight.nowKg == null
           ? '–'
           : weightIn(wu, weight.nowKg!).toStringAsFixed(1),
-      suffix: weight.perWeekKg == null
-          ? wLabel
-          // "a week" held to its unit, as on Home.
-          : '$wLabel · ${weeklyRateText(weight.perWeekKg!, wu).replaceAll(' ', '\u00A0')}',
+      suffix: wLabel,
+      // Its own line, as on Home: beside the trend it never fits.
+      note: weight.perWeekKg == null
+          ? null
+          : weeklyRateText(weight.perWeekKg!, wu).replaceAll(' ', '\u00A0'),
+      noteMuted: true,
       spark: weight.trend,
       sparkColor: chartAccent(context),
       bars: false,

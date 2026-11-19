@@ -60,12 +60,12 @@ UserActivityEntity repeatEntry(
   return activityEntry(activity, user, recent.duration.round(), day);
 }
 
-/// "Today", "Yesterday" or the date.
-String dayLabel(DateTime day, DateTime today) {
+/// "Today", "Yesterday" or the date in [locale].
+String dayLabel(DateTime day, DateTime today, String locale) {
   final ago = CalendarDayCalc.daysBetween(day, today);
   if (ago == 0) return 'Today';
   if (ago == 1) return 'Yesterday';
-  return DateFormat.MMMEd().format(day);
+  return DateFormat.MMMEd(locale).format(day);
 }
 
 /// Seam S128: Add activity as MacroFactor's (ActivityAB). The recent
@@ -588,7 +588,7 @@ class _DurationSheetState extends State<DurationSheet> {
                       ),
                     ),
                     Text(
-                      '${dayLabel(widget.day, widget.today)} · about '
+                      '${dayLabel(widget.day, widget.today, Localizations.localeOf(context).toLanguageTag())} · about '
                       '${energyText(context, perMinute)} a minute',
                       style: text.bodySmall?.copyWith(color: palette.textMuted),
                     ),

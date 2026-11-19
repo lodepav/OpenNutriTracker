@@ -14,6 +14,7 @@ import 'package:opennutritracker/fork/goal/goal_progress.dart';
 import 'package:opennutritracker/fork/goal/goal_progress_page.dart';
 import 'package:opennutritracker/fork/goal/goal_you_tile.dart';
 import 'package:opennutritracker/fork/phases/phases.dart';
+import 'package:opennutritracker/fork/you/you_widgets.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 import 'package:provider/provider.dart';
 
@@ -247,6 +248,37 @@ void main() {
     expect(after, (value: 'Maintain', note: 'since Feb 1'));
   });
 
+  testWidgets('after a goal, a rate set on You wins over "since"', (
+    tester,
+  ) async {
+    late ({String value, String? note}) losing, keeping, none;
+    final since = DateTime(2026, 10, 29);
+    await _pump(
+      tester,
+      Builder(
+        builder: (context) {
+          losing = untargetedGoal(
+            context,
+            null,
+            since,
+            pace: 'Losing 0.4 kg a week',
+          );
+          keeping = untargetedGoal(
+            context,
+            null,
+            since,
+            pace: 'Keeping your weight',
+          );
+          none = untargetedGoal(context, null, since);
+          return const SizedBox();
+        },
+      ),
+    );
+    expect(losing, (value: 'Losing', note: '0.4 kg a week'));
+    expect(keeping, (value: 'Maintain', note: 'since Oct 29'));
+    expect(none, (value: 'Maintain', note: 'since Oct 29'));
+  });
+
   testWidgets('the two plan buttons stack full width', (tester) async {
     await _pump(tester, section(_MemoryPhases(_cut, [_hold])));
     final edit = tester.getRect(_id('goal-plan-edit'));
@@ -303,7 +335,14 @@ void main() {
         );
     // With no target the page passes the plan's rate and an offer of one.
     await _pump(tester, tile(const []));
-    expect(find.text('Keeping your weight', findRichText: true), findsOne);
+    // As on Trends: the verb the value, the rest after it.
+    expect(
+      (
+        tester.widget<YouTile>(find.byType(YouTile)).value,
+        tester.widget<YouTile>(find.byType(YouTile)).note,
+      ),
+      ('Maintain', null),
+    );
     expect(find.text('Set a target weight'), findsOneWidget);
     expect(find.text(noGoalText), findsNothing);
 
@@ -312,6 +351,46 @@ void main() {
       find.text('Maintain since Apr 6', findRichText: true),
       findsOneWidget,
     );
+
+    // A rate set on You after the goal is shown, not "Maintain since".
+    await _pump(
+      tester,
+      Scaffold(
+        body: GoalYouTile(
+          key: UniqueKey(),
+          title: 'Goal',
+          value: 'Losing 0.4 kg a week',
+          note: null,
+          below: 'Set a target weight',
+          profileGoal: false,
+          onTap: () {},
+          load: () async => (plan: null, history: [_done]),
+        ),
+      ),
+    );
+    expect(find.textContaining('Maintain', findRichText: true), findsNothing);
+    final you = tester.widget<YouTile>(find.byType(YouTile));
+    expect((you.value, you.note), ('Losing', '0.4 kg a week'));
+
+    // With no goal kept, too, and the offer of a target still under it.
+    await _pump(
+      tester,
+      Scaffold(
+        body: GoalYouTile(
+          key: UniqueKey(),
+          title: 'Goal',
+          value: 'Losing 0.4 kg a week',
+          note: null,
+          below: 'Set a target weight',
+          profileGoal: false,
+          onTap: () {},
+          load: () async => (plan: null, history: const <GoalRecord>[]),
+        ),
+      ),
+    );
+    final losing = tester.widget<YouTile>(find.byType(YouTile));
+    expect((losing.value, losing.note), ('Losing', '0.4 kg a week'));
+    expect(find.text('Set a target weight'), findsOneWidget);
 
     await _pump(tester, tile([_done], profileGoal: true));
     expect(find.text('Keep'), findsOneWidget);

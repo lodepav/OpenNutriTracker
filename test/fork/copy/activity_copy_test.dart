@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get_it/get_it.dart';
 import 'package:opennutritracker/core/domain/entity/profile_entity.dart';
@@ -34,7 +35,10 @@ Future<void> _pumpToday(
     ChangeNotifierProvider(
       create: (_) => EnergyUnitProvider(),
       child: MaterialApp(
-        localizationsDelegates: const [S.delegate],
+        localizationsDelegates: const [
+          S.delegate,
+          ...GlobalMaterialLocalizations.delegates,
+        ],
         supportedLocales: S.supportedLocales,
         home: Scaffold(
           body: SingleChildScrollView(
@@ -113,7 +117,10 @@ void main() {
     WhereTo? picked;
     await tester.pumpWidget(
       MaterialApp(
-        localizationsDelegates: const [S.delegate],
+        localizationsDelegates: const [
+          S.delegate,
+          ...GlobalMaterialLocalizations.delegates,
+        ],
         supportedLocales: S.supportedLocales,
         home: Builder(
           builder: (context) => TextButton(

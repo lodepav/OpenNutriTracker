@@ -14,10 +14,16 @@ final _fail = DateTime(2026, 11, 12, 9);
 void main() {
   group('backupLine', () {
     test('off, on, backed up, failed', () {
-      expect(backupLine(const AutoBackupState()), 'Backup off');
-      expect(backupLine(const AutoBackupState(folderUri: 'f')), 'Backup on');
+      expect(backupLine(const AutoBackupState(), 'en_US'), 'Backup off');
       expect(
-        backupLine(AutoBackupState(folderUri: 'f', lastSuccessAt: _ok)),
+        backupLine(const AutoBackupState(folderUri: 'f'), 'en_US'),
+        'Backup on',
+      );
+      expect(
+        backupLine(
+          AutoBackupState(folderUri: 'f', lastSuccessAt: _ok),
+          'en_US',
+        ),
         'Backed up ${DateFormat.yMMMd().add_jm().format(_ok)}',
       );
       expect(
@@ -27,6 +33,7 @@ void main() {
             lastSuccessAt: _ok,
             lastErrorAt: _fail,
           ),
+          'en_US',
         ),
         'Last backup failed',
       );

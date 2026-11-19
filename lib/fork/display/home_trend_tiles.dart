@@ -13,12 +13,13 @@ import 'package:opennutritracker/fork/adaptive/goal_saving.dart'
 import 'package:opennutritracker/fork/body/measurement_store.dart';
 import 'package:opennutritracker/fork/body/side_compare.dart';
 import 'package:opennutritracker/fork/body/waist_ratio.dart';
-import 'package:opennutritracker/fork/display/home_tiles.dart';
 import 'package:opennutritracker/fork/report/nutrient_explorer.dart'
     show intakesBetween;
 import 'package:opennutritracker/fork/trends/nutrient_trends.dart';
 import 'package:opennutritracker/fork/trends/trend_stats.dart';
 import 'package:opennutritracker/fork/trends/trends_overview.dart';
+import 'package:opennutritracker/fork/trends/trends_widgets.dart'
+    show TrendTile;
 
 /// Trends' tiles whose number is a daily average, by id.
 const _averaged = {
@@ -176,31 +177,23 @@ class _HomeTrendTilesState extends State<HomeTrendTiles> {
                   if (widget.ids.contains(
                     t.id.substring('trends-tile-'.length),
                   ))
-                    t.id.substring('trends-tile-'.length): Semantics(
-                      container: true,
-                      identifier: 'home-${t.id}',
-                      button: true,
-                      label: t.spokenLabel,
-                      hint: 'Open ${t.label}',
+                    t.id.substring('trends-tile-'.length): TrendTile(
+                      id: 'home-${t.id}',
+                      // Home has no line saying these are averages.
+                      label: _averaged.contains(t.id)
+                          ? '${t.label} · avg'
+                          : t.label,
+                      value: t.value,
+                      valueColor: t.valueColor,
+                      suffix: t.note == null
+                          ? t.suffix
+                          : '${t.suffix} · ${t.note}',
+                      // No room kept for a tile with no chart.
+                      chart: t.chart is SizedBox ? null : t.chart,
                       onTap: t.onTap,
                       // Read as on Trends, in words, not the tile's text.
-                      excludeSemantics: true,
-                      child: HomeTile(
-                        identifier: 'home-${t.id}',
-                        // Home has no line saying these are averages.
-                        title: _averaged.contains(t.id)
-                            ? '${t.label} · avg'
-                            : t.label,
-                        value: t.value,
-                        valueColor: t.valueColor,
-                        note: t.note == null
-                            ? t.suffix
-                            : '${t.suffix} · ${t.note}',
-                        // No room kept for a tile with no chart.
-                        below: t.chart is SizedBox ? null : t.chart,
-                        onTap: t.onTap,
-                        hint: 'Open ${t.label}',
-                      ),
+                      spokenLabel: t.spokenLabel,
+                      hint: 'Open ${t.label}',
                     ),
               },
             );

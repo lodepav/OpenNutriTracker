@@ -231,7 +231,9 @@ class _DayInfoWidgetState extends State<DayInfoWidget> {
                   header: true,
                   child: Text(
                     // the week strip above shows the year
-                    DateFormat.MMMMEEEEd().format(widget.selectedDay),
+                    DateFormat.MMMMEEEEd(
+                      Localizations.localeOf(context).toLanguageTag(),
+                    ).format(widget.selectedDay),
                     style: textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.w800,
                     ),
