@@ -973,6 +973,10 @@ now weighs the burger and leaves the fries their own row: 681 to
 790-883 kcal (1,135). "chicken 150" weighs the chicken at 150 g: the plov
 plate 852 to 558-567 (650), no raw rows. Accepted cost: "plov 150g" on a
 "Plov with lamb" read weighs the plov's other words apart.
+On the emulator the Weighed chip gives the same results. Its "weighed:"
+does not drop the plate's oil: five passes each, the chip kept oil in all
+five (twice inside "rice with oil"), 543-597 kcal against the typed
+note's 500-595 (650).
 
 ## What the tests measure
 
