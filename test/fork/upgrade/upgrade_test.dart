@@ -97,6 +97,12 @@ void main() {
     // the value it wrote.
     final forkState = _forkStateOf(fixture);
     if (forkState == null) continue;
+    // 1.0.0's fixture was written at UTC+2, before the offset was recorded.
+    // shortcut: one offset per fixture, wrong for dates across a DST change;
+    // record each date's offset if a release is cut days after one.
+    final offset = Duration(
+      minutes: forkState['utcOffsetMinutes'] as int? ?? 120,
+    );
     group('$version: fork state', () {
       setUpAll(() async {
         await _unpackAndBoot(fixture, version);
@@ -109,7 +115,7 @@ void main() {
           test('$box.$key reads back', () async {
             final read = _fieldReaders[box]?[key];
             expect(read, isNotNull, reason: 'no reader: add one below');
-            expect(jsonOf(await read!()), written);
+            expect(jsonOf(_asWritten(await read!(), offset)), written);
           });
         }
       }
@@ -118,7 +124,7 @@ void main() {
         test('$box reads back', () async {
           final read = _boxReaders[box];
           expect(read, isNotNull, reason: 'no reader: add one below');
-          expect(jsonOf(await read!()), written);
+          expect(jsonOf(_asWritten(await read!(), offset)), written);
         });
       }
     });
@@ -217,6 +223,19 @@ Map<String, dynamic>? _forkStateOf(File fixture) {
   final facts = jsonDecode(json.stdout as String) as Map<String, dynamic>;
   return facts['forkState'] as Map<String, dynamic>?;
 }
+
+/// [value] with each date as the writer's wall clock read it, in jsonOf's
+/// text: Hive gives back the instant, in this machine's time zone.
+Object? _asWritten(Object? value, Duration offset) => switch (value) {
+  DateTime() =>
+    value.toUtc().add(offset).toIso8601String().replaceFirst('Z', ''),
+  Map() => {
+    for (final MapEntry(:key, :value) in value.entries)
+      key: _asWritten(value, offset),
+  },
+  Iterable() => [for (final v in value) _asWritten(v, offset)],
+  _ => value,
+};
 
 /// Today's settings, as the release stored them.
 Future<Object?> _setting(String key) async =>

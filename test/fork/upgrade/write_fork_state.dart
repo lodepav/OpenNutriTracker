@@ -68,7 +68,11 @@ void main() {
 
     final file = File('${out.path}/fixture.json');
     final facts = jsonDecode(file.readAsStringSync()) as Map<String, dynamic>;
-    facts['forkState'] = {'fields': fields, 'boxes': boxes};
+    facts['forkState'] = {
+      'fields': fields,
+      'boxes': boxes,
+      'utcOffsetMinutes': DateTime.now().timeZoneOffset.inMinutes,
+    };
     file.writeAsStringSync(jsonEncode(facts));
   }, timeout: const Timeout(Duration(minutes: 5)));
 }
