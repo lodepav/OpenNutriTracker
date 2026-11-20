@@ -139,6 +139,7 @@ Details live in the seam rows ([SEAMS.md](SEAMS.md), `Sxx`) and decisions (`Dxx`
 | Editing a food whose serving the simple form cannot hold opens the advanced form (S188) | Sent (#1607) | A bug fix. |
 | Number fields take digits and one separator only (S141) | Sent (#1604) | A bug fix: "120-" saved an empty value. |
 | A Diary day can be left out of the expenditure estimate (D17) | Fork only | Part of the adaptive target. |
+| The check-in asks about a day that looks partly logged, and the estimate holds back while the intake changes (D64, D65) | Fork only | Part of the adaptive target. |
 
 ## The redesign (MacroFactor's look)
 

@@ -272,6 +272,10 @@ final _fieldReaders = <String, Map<String, Future<Object?> Function()>>{
       for (final d in (await AdaptiveStore().skippedDays()).toList()..sort())
         d.toIso8601String().substring(0, 10),
     ],
+    'wholeDays': () async => [
+      for (final d in (await AdaptiveStore().wholeDays()).toList()..sort())
+        d.toIso8601String().substring(0, 10),
+    ],
     'phasePlan': () async => (await PhaseStore().plan())?.toJson(),
     'goalHistory': () async => [
       for (final r in await PhaseStore().history()) r.toJson(),

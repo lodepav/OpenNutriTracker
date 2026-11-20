@@ -417,6 +417,7 @@ class AdaptiveStore {
   Future<void> load() async {
     settings.value = await read();
     skipped.value = await skippedDays();
+    whole.value = await wholeDays();
   }
 
   Future<AdaptiveSettings> read() async =>
@@ -494,12 +495,29 @@ class AdaptiveStore {
     if (_active) skipped.value = Set.unmodifiable(days);
   }
 
+  /// Days that looked partly logged and were said to be whole (D65), so
+  /// they are not asked about again. Kept as `yyyy-MM-dd`.
+  Future<Set<DateTime>> wholeDays() async => {
+    for (final key in (await _box()).get(wholeKey, defaultValue: []) as List)
+      DateTime.parse(key as String),
+  };
+
+  Future<void> setWhole(DateTime day, bool isWhole) async {
+    final days = await wholeDays();
+    final key = DateTime(day.year, day.month, day.day);
+    isWhole ? days.add(key) : days.remove(key);
+    final sorted = days.toList()..sort();
+    await (await _box()).put(wholeKey, [for (final d in sorted) _dayKey(d)]);
+    if (_active) whole.value = Set.unmodifiable(days);
+  }
+
   static String _dayKey(DateTime d) =>
       '${d.year.toString().padLeft(4, '0')}-'
       '${d.month.toString().padLeft(2, '0')}-'
       '${d.day.toString().padLeft(2, '0')}';
 
   static const skippedKey = 'skippedDays';
+  static const wholeKey = 'wholeDays';
 
   /// What else of this box a backup carries, as stored: step counts and
   /// their switch and goal, where the goal began and whether its phase was
@@ -507,6 +525,7 @@ class AdaptiveStore {
   /// reminders' times, and how the app shows and arranges things.
   static const keptKeys = [
     ..._dayMaps,
+    wholeKey,
     'goalStart',
     'goalStartNoTarget',
     'phaseApplied',
@@ -556,6 +575,7 @@ class AdaptiveStore {
       );
     }
     if (_active) {
+      whole.value = Set.unmodifiable(await wholeDays());
       StepCounts.changes.value++;
       if (locator.isRegistered<HiveDBProvider>()) {
         await DisplayPrefs.reload();
@@ -567,4 +587,7 @@ class AdaptiveStore {
   /// The active profile's [skippedDays] in memory, as [settings], for the
   /// estimate, the Diary's switch and the Trends card.
   static final skipped = ValueNotifier<Set<DateTime>>(const {});
+
+  /// The active profile's [wholeDays] in memory.
+  static final whole = ValueNotifier<Set<DateTime>>(const {});
 }
