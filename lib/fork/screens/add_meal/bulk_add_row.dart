@@ -63,7 +63,7 @@ extension _BulkAddRow on _BulkAddScreenState {
             children: [
               // User content: shrinks before ellipsizing (A6)
               AutoSizeText(
-                _rowTitle(row),
+                shownRowTitle(row),
                 maxLines: 2,
                 minFontSize: 11,
                 overflow: TextOverflow.ellipsis,
@@ -302,7 +302,7 @@ extension _BulkAddRow on _BulkAddScreenState {
       ..showSnackBar(
         SnackBar(
           persist: undoBarPersists(messenger.context),
-          content: Text('Left out: ${_rowTitle(row)}'),
+          content: Text('Left out: ${shownRowTitle(row)}'),
           action: SnackBarAction(
             label: 'Undo',
             onPressed: () {
@@ -375,13 +375,6 @@ extension _BulkAddRow on _BulkAddScreenState {
     _portionBase.remove(row.dishIngredient?.group);
     _bloc.add(ToggleRowSkippedEvent(index));
   }
-
-  /// What the row is called, on screen and in any message about it: the
-  /// matched food, or the words the user typed when nothing matched.
-  String _rowTitle(BulkAddRow row) => switch (row.meal) {
-    final meal? when meal.name != null => shownDishName(meal),
-    _ => row.resolved.parsed.query,
-  };
 
   /// The row's actions besides keeping it: a quick add for no match, the
   /// breakdown of a doubtful dish, and a separate dish's recipe and undo.

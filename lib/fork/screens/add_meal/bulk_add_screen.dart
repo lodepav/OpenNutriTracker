@@ -1428,7 +1428,7 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
             invalid.entries
                 .map(
                   (entry) =>
-                      '${_rowTitle(state.rows[entry.key])}: '
+                      '${shownRowTitle(state.rows[entry.key])}: '
                       '${_quantityErrorText(context, entry.value)}',
                 )
                 .join('\n'),

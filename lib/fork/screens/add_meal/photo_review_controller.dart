@@ -238,12 +238,10 @@ class PhotoReviewController extends ChangeNotifier {
       if (!amounts.containsKey(row.resolved)) continue;
       final key = foodKeyOf(row.meal!);
       if (usual.foods[key] case final factor?) {
-        // named as the row's title reads
-        final name = switch (row.meal) {
-          final meal? when meal.name != null => shownDishName(meal),
-          _ => row.resolved.parsed.query,
-        };
-        foods.putIfAbsent(key, () => (name: name, factor: factor));
+        foods.putIfAbsent(
+          key,
+          () => (name: shownRowTitle(row), factor: factor),
+        );
       }
     }
     final before = _mealScale.snapshot();
