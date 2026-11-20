@@ -29,7 +29,7 @@ abstract final class AutoCheckIn {
   static final accepted =
       ValueNotifier<({CheckIn checkIn, CheckInReason reason})?>(null);
 
-  /// A weekly check-in the last [run] held back for an answer on a day
+  /// A check-in the last [run] held back for an answer on a day
   /// that looks partly logged, by the date of the check-in before it; null
   /// when none waits.
   static final waiting =
@@ -73,7 +73,7 @@ abstract final class AutoCheckIn {
       return; // Home's card stays, to be done by hand.
     }
     if (checkIn == null) {
-      waiting.value = await _waitingOnPartial(adaptive, reason);
+      waiting.value = await _waitingOnPartial(adaptive);
       return;
     }
     waiting.value = null;
@@ -87,13 +87,11 @@ abstract final class AutoCheckIn {
   /// [waiting]'s value after a run that accepted nothing.
   static Future<({AdaptiveService service, DateTime since})?> _waitingOnPartial(
     AdaptiveService adaptive,
-    CheckInReason reason,
   ) async {
     try {
-      final since = (await adaptive.lastCheckIn())?.date;
-      return since != null &&
-              reason == CheckInReason.weekly &&
-              await adaptive.checkInDue() &&
+      // a first check-in has none before it
+      final since = (await adaptive.lastCheckIn())?.date ?? DateTime(0);
+      return await adaptive.checkInDue() &&
               (await adaptive.partialDays()).isNotEmpty
           ? (service: adaptive, since: since)
           : null;

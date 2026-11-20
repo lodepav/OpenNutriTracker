@@ -466,5 +466,37 @@ void main() {
       await tester.pumpAndSettle();
       expect(store.records, hasLength(2));
     });
+
+    testWidgets('with the card hidden, Home says a first check-in waits too', (
+      tester,
+    ) async {
+      AdaptiveStore.settings.value = const AdaptiveSettings(
+        adaptiveTarget: true,
+        autoAcceptCheckIn: true,
+      );
+      LayoutStore.current(homeSectionsKey).value = (
+        order: const [],
+        hidden: {'checkIn'},
+      );
+
+      await AutoCheckIn.run(service);
+      expect(store.records, isEmpty);
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: HomeSectionsList(sections: {'dashboard': Text('Summary')}),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text(
+          'A check-in is waiting for your answer on a day that looks partly '
+          'logged.',
+        ),
+        findsOneWidget,
+      );
+    });
   });
 }
