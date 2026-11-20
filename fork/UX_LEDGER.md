@@ -11,11 +11,11 @@ deferred finding again without new evidence. Newest last.
 | 2026-11-01 | 1 | U4 | medium | H6 | Goal planner | Next is disabled with no reason | accept | "Set the target weight to go on." above the buttons |
 | 2026-11-01 | 1 | U5 | medium | H4, C5 | Nutrient goals editor | Editor sets sodium in mg while the rest of the app shows salt in g | accept | Row says what the value is in g of salt |
 | 2026-11-01 | 1 | U6 | medium | H4 | You | "Goal: No goal" sits above "Goal: Lose weight" | accept | Row renamed Direction |
-| 2026-11-01 | 1 | U7 | medium | A8 | Arrange Home | Reorder has no tap path | defer | ReorderableListView gives TalkBack move actions; occasional setting; a fix costs more |
+| 2026-11-01 | 1 | U7 | medium | A8 | Arrange Home | Reorder has no tap path | defer | ReorderableListView gives TalkBack move actions; occasional setting; a fix costs more. Fixed 2026-11-18 (8618a567): tapping a row's handle offers Move up and Move down |
 | 2026-11-01 | 1 | U8 | medium | A7 | Plan card, Meal plan | Sections have no headings for screen readers | accept | Planned and Recurring meals are headers |
-| 2026-11-01 | 1 | U9 | medium | A1 | Nutrient panel | Reference intake target is 40 dp | defer | Upstream's panel, deliberately compact |
+| 2026-11-01 | 1 | U9 | medium | A1 | Nutrient panel | Reference intake target is 40 dp | defer | Upstream's panel, deliberately compact. Fixed 2026-11-18 (8618a567, S231): the info button and the view switch are 48 dp |
 | 2026-11-01 | 1 | U10 | low | - | Nutrient goals | Potassium shows 3400 and 3500 | defer | Upstream default |
-| 2026-11-01 | 1 | U11 | low | - | Arrange Home | Reset has no Undo | reject | It resets layout only; nothing is lost |
+| 2026-11-01 | 1 | U11 | low | - | Arrange Home | Reset has no Undo | reject | It resets layout only; nothing is lost. Undo added anyway 2026-11-18 (8618a567) |
 | 2026-11-01 | 1 | U12 | low | - | Plan card | Logging on a future day is unclear | accept | Fixed by U1's message, which names the day |
 | 2026-11-01 | 1 | U13 | low | A6 | Goals & nutrition | Expenditure title is cut at 200% text | reject | Only at 200%, and the row names it |
 | 2026-11-01 | 1 | U14 | low | C1 | Expenditure settings | The limit sentence is unclear | accept | Reworded |

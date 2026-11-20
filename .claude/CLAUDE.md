@@ -15,7 +15,11 @@ The fork's five rules, in full in [fork/README.md](../fork/README.md#the-rules):
 
 Decisions are numbered in [fork/DECISIONS.md](../fork/DECISIONS.md), one line each in
 [fork/DECISIONS-INDEX.md](../fork/DECISIONS-INDEX.md), seams in
-[fork/SEAMS.md](../fork/SEAMS.md). Before a merge, run the `seam-check` and `verify` skills.
+[fork/SEAMS.md](../fork/SEAMS.md). A decision row starts `| D<n> | **lead sentence**`, or
+`fork/tools/decision-index.sh` misses it. After a new decision, run
+`fork/tools/decision-index.sh > fork/DECISIONS-INDEX.md`: a full verify run and the Fork checks on
+GitHub fail until the index matches (a docs-only commit can pass verify on its stamp).
+Before a merge, run the `seam-check` and `verify` skills.
 
 Strings in fork code are hard-coded English: no l10n keys.
 

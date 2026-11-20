@@ -1,7 +1,7 @@
 # OpenBite's own features
 
-What the fork adds to OpenNutriTracker, as of OpenBite 0.13.0 and the merges after it (based on ONT
-2.7.0), 2026-11-15.
+What the fork adds to OpenNutriTracker, as of OpenBite 1.0.0 and the merge after it (based on ONT
+2.7.0), 2026-11-20.
 Each feature is marked:
 
 - **Fork only**: stays in the fork, for the reason given: it goes against an upstream rule, is
@@ -49,6 +49,10 @@ Details live in the seam rows ([SEAMS.md](SEAMS.md), `Sxx`) and decisions (`Dxx`
 | The added-food snackbar names the meal (S110) | #1651, open |
 | A recipe's serving reads as one serving and its weight (S91) | #1652, open |
 | The scanner's manual-entry button clear of the navigation bar (S217) | #1653, open |
+| Take what was left over off a logged entry, typed or as ¼ ⅓ ½ ¾ (D14, manual part) | #1663, open |
+| A note typed in the box goes with a meal photo (`feat/photo-note`) | #1664, open |
+| Tapping a Home macro lists the foods behind it (#1266, `feat/nutrient-contributions`) | #1665, open |
+| A meal logged on an earlier day no longer adds today's workout to that day's goal | #1666, open |
 | Trends opens on range pills and a tile per metric, a page each (from S120) | #1669, open |
 | Headings, labelled menus and plus buttons, Home text that fits at large font sizes (from S92) | #1670, open |
 
@@ -65,7 +69,11 @@ Details live in the seam rows ([SEAMS.md](SEAMS.md), `Sxx`) and decisions (`Dxx`
 | Activities leave a fixed or adaptive target alone (S62, S68) | Candidate (fixed part) | For upstream's fixed target (#671) a logged activity still moves the goal; the adaptive part is the fork's. |
 | "Allow for a monthly cycle" on a woman's profile only (S146) | Fork only | A setting of the adaptive estimate. |
 | Weigh-in and check-in reminders (S46) | Candidate (weigh-in) | The weigh-in reminder fits upstream's reminders; the check-in one is the fork's. |
-| A past day's goal leaves out today's burned calories when a meal, quick add, copy or import writes its row (S65, S66, S69) | Fork only | A fix to the fork's per-day goals. |
+| A past day's goal leaves out today's burned calories when a meal, quick add, copy or import writes its row (S63, S65, S66, S69) | Sent (#1666) | Upstream's goal lookup had the same bug; the fork's per-day goals keep their own part. |
+| Home's Weigh in opens the weigh-in dialog over Home, and so does a tap on the weigh-in reminder (D57, S46) | Candidate (reminder tap) | Goes with the weigh-in reminder; Home's tile is the fork's. |
+| Automatic check-ins run without Home's check-in card; Expenditure settings open the check-in; its buttons are pinned (D58) | Fork only | Part of the adaptive target. |
+| A goal that exists is edited from its plan, one step at a time, and keeps its end date and diet breaks (D63) | Fork only | Part of the goal planner. |
+| Five stats from stored data: how far the days missed, the weekday furthest from its own goal, what the weekend gives back, why a check-in moved the target, waist beside trend weight (D61) | Fork only | On the fork's Trends and check-in history. |
 | Strength from Go Hevier suggests a calorie change; OpenBite shares its phase with Go Hevier (D28, D29, S182, S183) | Fork only | Depends on the user's own gym app and signing key. |
 
 ## Logging with AI
@@ -86,9 +94,9 @@ Details live in the seam rows ([SEAMS.md](SEAMS.md), `Sxx`) and decisions (`Dxx`
 | On an imperial profile Log with AI's review shows and edits a row held in grams in ounces, as the Diary does (S210) | Candidate | Any imperial user would want it; the screen part is the fork's review, so upstream's screen needs its own change. |
 | A broken-down dish keeps its portion, and an unmatched food inside a dish can be broken down too (D12) | Fork only | Part of the breakdown. |
 | The model is told each rule once: the tool's field texts defer to the fork's prompts (D51, S216) | Fork only | The fork's own prompts. |
-| Leftovers: subtract what was left from an entry or a meal (D14, S9, S10) | Candidate (manual) | D14: the manual amount or fraction goes upstream; the AI photo of the leftovers is fork only (#250). |
+| Leftovers: subtract what was left from an entry or a meal (D14, S9, S10) | Sent (#1663, manual) | D14: the manual amount or fraction went upstream; the AI photo of the leftovers is fork only (#250). The whole meal's leftovers use the fork's meal groups. |
 | Read a nutrition label into a custom food (S29), and "Add it from its label" when a barcode is not found (S36) | Sent (#1616) | Reads printed numbers; it does not estimate them. |
-| Photo prompt: counts of halves and pieces, counts the note states (S60, S170) | Candidate | The first part went upstream as #1496. The note counts need the photo note upstream first (`feat/photo-note`, not opened). |
+| Photo prompt: counts of halves and pieces, counts the note states (S60, S170) | Candidate | The first part went upstream as #1496. The note counts need the photo note upstream first, sent as #1664. |
 | Photo prompt lists the user's saved recipe names (S172) | Sent (#1613) | |
 | A 429 from the model is retried once, within the read's timeout (S171) | Sent (#1612) | |
 | A counted food's full-record lookup waits 5 s, not 60 s (S181) | Sent (#1609) | A slow network holds upstream's review screen. |
@@ -99,6 +107,7 @@ Details live in the seam rows ([SEAMS.md](SEAMS.md), `Sxx`) and decisions (`Dxx`
 | Log with AI's review list as Diary rows with the meal's macros, swipe to leave out (D35–D38) | Fork only | Part of the redesign. |
 | Back on "Add several items" asks before the foods found are lost (S90) | Candidate | |
 | "Save all as a recipe" from Add several items, and a recipe link read from its schema.org data (S30) | Candidate | Builds on upstream's recipe builder; the screen is the fork's copy (D23), so upstream needs its own entry point. |
+| Log with AI: a meal chip in the app bar, Undo after Log, and the photo notice once per provider, destination and keep-photos setting (D53) | Fork only | Part of the fork's review (D35–D38). |
 | A fake model and replayed answers for emulator runs (`FORK_FAKE_AI`) | Fork only | Development tooling. |
 
 ## Food data and search
@@ -138,6 +147,11 @@ Details live in the seam rows ([SEAMS.md](SEAMS.md), `Sxx`) and decisions (`Dxx`
 | The food page's Add says when the write failed (S189) | Sent (#1608) | A bug fix. |
 | Editing a food whose serving the simple form cannot hold opens the advanced form (S188) | Sent (#1607) | A bug fix. |
 | Number fields take digits and one separator only (S141) | Sent (#1604) | A bug fix: "120-" saved an empty value. |
+| The meal is a chip on search and Home's Recent foods; the centre + says it adds to today when the Diary shows another day (D55, S131) | Candidate | |
+| The food page's Add and Quick add end with Undo, and a food already in the meal is added without asking (D56) | Candidate (Undo) | Skipping upstream's "add it again?" (#212) relies on the Undo. |
+| The Edit item dialog selects its amount on tap, takes it with the food page's picker in the unit logged, and offers a meal's leftovers itself (D54, D62, S220) | Candidate (tap selects) | The picker is the fork's (D33) and the whole meal is the fork's meal groups. |
+| A search result's + always logs and says what ("+ 85 g", "+ 1 slice"); "Choose ›" opens a food it cannot log (D67) | Fork only | The fork's search rows (S116, S117). |
+| Six small eases: Trends keeps its range, a recipe's + names its meal, Copy day opens on tomorrow, Settings' search finds key, model and photo, the update download can be cancelled, an own portion has a remove button (D60) | Fork only | Each sits on a fork screen or feature. |
 | A Diary day can be left out of the expenditure estimate (D17) | Fork only | Part of the adaptive target. |
 | The check-in asks about a day that looks partly logged, and the estimate holds back while the intake changes (D64, D65) | Fork only | Part of the adaptive target. |
 
@@ -145,12 +159,13 @@ Details live in the seam rows ([SEAMS.md](SEAMS.md), `Sxx`) and decisions (`Dxx`
 
 | Feature | Mark | Why / notes |
 |---|---|---|
-| Home: one summary card, quick actions, recent foods, repeat a meal, sections arranged by the user (S119, S162, D30, D31) | Fork only | The fork's taste; whole screens copied under D23. |
+| Home: one summary card, quick actions, repeat a meal, sections and quick actions arranged by the user; Search and Recent foods start off (S119, S162, D30, D31) | Fork only | The fork's taste; whole screens copied under D23. |
 | Diary: a week calendar of rings filling with the day's energy, the day card (S118, S149) | Fork only | |
 | Trends: tiles over 1W to All, with a page each (S120) | Sent (#1669) | Upstream's version is four tiles over its own cards; the fork's tile set and arrangement stay fork only. |
-| You tab, the foods behind a macro, the recipe page, accent colour, Health Connect page (S121, S124, S126, S136, S138) | Fork only | |
+| You tab, the foods behind a macro, the recipe page, accent colour, Health Connect page (S121, S124, S126, S136, S138) | Fork only | A plainer list of the foods behind a macro went upstream as #1665; the fork's page stays. |
 | Muted macro colours on every macro line (D38) | Fork only | |
 | Home's Photo log follows the Show AI features switch without a restart | Fork only | A fix to the fork's Home. |
+| Settings: Show AI features and Clear cached items under Food databases, Goals in three groups (D66) | Fork only | The fork's copy of Settings. |
 
 ## Health and body
 
@@ -172,6 +187,7 @@ Details live in the seam rows ([SEAMS.md](SEAMS.md), `Sxx`) and decisions (`Dxx`
 | Automatic backup into a folder a sync app mirrors (D10, S22) | Sent | Issue #1356. |
 | The fork's own data in the backup: water, fasting, check-ins, phases, settings (S21) | Fork only | The fork's boxes. |
 | The backup also carries both reminders' times, which entries were logged as one meal and the meal-photo switch; a test lists every stored key as backed up or not (D52) | Fork only | The fork's settings and boxes. |
+| The backup's state on Settings' Data row and as a notice on Home; restored reminders ask for the notification permission (D59, S219) | Fork only | Goes with the fork's automatic backup (issue #1356) and Home. |
 | Restore a backup from onboarding (S37); restored settings apply without a restart (S38) | Candidate | |
 | Data that will not open: restore the newest backup or start again, files set aside, never deleted (S112) | Candidate | |
 | Import another app's history, e.g. MacroFactor's export (`lib/fork/history/`) | Candidate | The user's own export never goes in the repo. |
@@ -195,6 +211,7 @@ Details live in the seam rows ([SEAMS.md](SEAMS.md), `Sxx`) and decisions (`Dxx`
 |---|---|---|
 | Chart touches name each number with its unit and day; an empty range says so (S96, S97) | Sent (#1648) | Upstream's lines and 7-day average stay; the fork's trend line and legend are not in it. |
 | Charts fit the period shown; dots up to a month (S161, S166) | Sent (#1648) | |
+| A value axis on the Calories, Energy balance, nutrient and macro charts (`lib/fork/trends/value_axis.dart`) | Candidate | Built in the fork's Trends charts, so upstream's charts need their own change. |
 | Trends' windows end on the Diary's logical today (S190) | Sent (#1646) | A bug fix past midnight. The water average over the days logged is not in it. |
 | Daily averages over the days logged, rounded not cut (S87, S114, now in S120) | Sent (#1610) | Bug fixes to upstream's Daily average card. |
 | Screen-reader labels and large-text fixes beyond what 2.7.0 took (S81, S83, S92, S111, S211) | Sent (part) | Partly upstream via #1494. Sent: the typed weigh-in field (#1643), the edit dialog's Delete (#1644), key field names and Go to today (#1650). The rest of S81 and S83 is not sent. |

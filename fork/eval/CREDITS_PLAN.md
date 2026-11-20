@@ -1,9 +1,14 @@
 # Spending the Anthropic promo credits on real evals
 
 Plan agreed 2026-11-05 (about $100 of personal Anthropic API credits),
-revised 2026-11-08 with measured call counts and a step 0. Steps 0, 1, 5
-and 6 ran on 2026-11-08 (Results below). The credits expire on
-**2026-11-26**. The photo and
+revised 2026-11-08 with measured call counts and a step 0. Steps 0-7 ran
+on 2026-11-08 and 2026-11-09, step 8 on 2026-11-10, the photo portion ideas
+on 2026-11-11, the weighed own meals (idea 7) on 2026-11-17 and a firm
+Haiku baseline on 2026-11-19 (Results below). Not run yet: the app's Gemini
+preset against Google itself (needs a Google AI Studio key) and the
+about 30 weighed plates the idea 7 section asks for (needs the user's
+meals). The credits
+expire on **2026-11-26**. The photo and
 text evals in `test/fork/eval/` have run on answers a Claude Code subagent
 wrote (`REPLAY.md`). This spends the credits on the same tests with real API
 calls, through the app's own Anthropic client.
@@ -14,6 +19,7 @@ calls, through the app's own Anthropic client.
   own instructions, without the app's tool schema, image encoding or
   thinking settings. Its answers are close to the API's, not the same: on
   one pork plate the app's call said 180 g of potatoes, the subagent 300 g.
+  Step 2 (2026-11-09) found that the replay does not stand in for live.
 - **Answers vary between runs.** One plate's meatballs came back three
   ways. Repeats show whether a fix holds or got lucky once, and at these
   prices repeats are cheap.
@@ -76,7 +82,8 @@ Step 0 (2026-11-08) gave the harness what the steps below need:
 - **`kcal.json`** beside the calorie and portion reports: each read's
   logged and reference kcal.
 - **`fork/eval/split.json`**: the 91 photos (photos.json and ilunch.json)
-  in two halves, `tune` (46) and `held` (45), each cuisine split evenly.
+  in two halves, `tune` (46) and `held` (45), each cuisine split evenly
+  (134 photos, 68 and 66, since step 7, round 3).
   `FORK_EVAL_SPLIT=tune` or `held` runs one half in the calorie, portion,
   photo and iLunch suites. A private set (`FORK_EVAL_PHOTOS`) is not split.
 - **`fork/tools/eval_merge.dart`** sets repeated runs side by side:
@@ -90,7 +97,8 @@ Prices per million tokens: Haiku 5.5 $0.10 in, $0.50 out; Sonnet 5.5 $2 in,
 $10 out. A photo read is about 3,000 tokens in and a few hundred to a
 thousand out: well under a tenth of a cent on Haiku, $0.01-0.02 on Sonnet.
 
-One pass of the four main suites is about **280 calls**: calorie about 100
+On the 2026-11-08 photo set, one pass of the four main suites is about
+**280 calls**: calorie about 100
 (65 photos, a second read where a photo has a note), portion 65, photo 65,
 iLunch 26. That was estimated at $0.30 on Haiku and $6-8 on Sonnet a pass.
 
@@ -105,13 +113,22 @@ four suites cost $0.24 over three passes on Haiku.
 | 0 | Harness: usage, split, merge | - | done, $0 |
 | 1 | Baseline on Haiku 5.5 | 3 × the four main suites | done, about $0.25 |
 | 2 | Replay against live, same photos | 1 replay + 3 live Haiku | done, $0.05 |
-| 3 | Your own meals | done, $0.02 | cents |
-| 4 | Tune the photo prompts on `tune`, check on `held` | rounds 1-4 done, $0.45 | $1-10 |
+| 3 | Your own meals | 3 × | done, $0.02 |
+| 4 | Tune the photo prompts on `tune`, check on `held` | rounds 1-4, 2 × each half | done, $0.45 |
 | 5 | Typed meals and the harder cases | 3 × | done, $0.24 |
 | 6 | Sonnet 5.5, three passes | 3 × the four main suites | done, $4.17 |
-| 7 | Global checks: typed meals, a resolution audit, photo prompt bias, repeated reads, counting | typed 6 ×, audit 1 judge, photos 9 × | done, about $0.15 |
+| 7 | Global checks: typed meals, a resolution audit, photo prompt bias, repeated reads, counting | typed 6 ×, audit 1 judge, photos 9 × | done, six rounds; round 1 about $0.15, rounds 3-5 about $6-7 |
+| 8 | A photo with no note estimates grams | three rounds | done, about $2.06 |
+| | Photo portion ideas, rounds 10-12 | | done, about $1.66 (Gemini $2.68 on OpenRouter) |
+| | Idea 7: weighed own meals, six trials | | done, about $1.35 ($0.18 on OpenRouter) |
+| | Firm Haiku baseline and body comparison | 5 × the scenarios, 3 × the body pairs | done, about $0.37 |
+| | Label reader, and the note evals after the fixes | 3 × | done, label about $0.03 |
 | | Spent by 2026-11-08, with the fix checks | | about $4.40 |
-| | Left, for steps 2-4, the emulator and repeats | | about $95 |
+| | Recorded by 2026-11-19 in the runs' `usage.json` files under `build/fork-eval` | | about $23 |
+
+The `usage.json` total counts cache reads at the full input price and
+leaves out the emulator's calls with the key, so it is not the balance;
+the Anthropic Console has that.
 
 **1. Baseline (Haiku, three times).** Where the photo path stands and how
 much it varies, and a check that the recent prompt changes (foods named as
@@ -761,6 +778,11 @@ Results, 2026-11-11 (round 12, $0.43), measured before any design:
 Every idea that an eval can measure is now tried. What is left is below, and ideas 1, 4, 5 and 13, which are app
 features, and idea 7.
 
+Since then: idea 1 is the Size (D44), idea 5 the amount question on the
+food with the most kcal and idea 4 the user's earlier amounts and usual
+sizes (D45, D46), all 2026-11-11. Idea 7 ran on 2026-11-17 (below). Idea
+13 is not built (D44).
+
 ### If none of them shows a gain
 
 - **The photo is a draft; correcting it is fast.** The foods are named
@@ -792,6 +814,7 @@ Preferred: the first two together.
    the meat plate with and without the note. From them a noise floor per
    scenario and a spread per plate. About $0.25 on the Anthropic key;
    after the Sonnet chain runs, which use the same checkout.
+   Done 2026-11-19 (below).
 2. **The same scenarios on gemini-3.8-flash**, the app preset's model,
    through OpenRouter for now: three passes, about 180 photos a pass,
    about $1.10 and 40 minutes a pass, about $3.30 of the $4.60 left.
@@ -1014,14 +1037,23 @@ tapped without changes), and scores the result against known values.
    the recipe's per-serving values.
 4. **Typed meals.** `text_eval_test`: "2 eggs, 100 g toast" and the like,
    in English and Latvian.
+5. **Private sets and other readers.** `fresh_eval_test`: a photo set
+   under `build/` (`FORK_EVAL_PHOTOS`), with or without its note; the
+   Nutrition5k plates and the weighed own meals ran through it, and
+   `fork/tools/weighed_grams.py` scores the weighed meals' runs.
+   `label_eval_test`: the nutrition label reader on Open Food Facts
+   photos (`fork/tools/fetch_label_photos.py`).
+   `resolution_dump_test`: resolves a list of food names
+   (`FORK_EVAL_AUDIT_QUERIES`) for a judge to read, with no model call.
 
 Each report gives the typical kcal error, how many plates land within the
 margin, the worst misses, the foods the model got wrong, and what the run
 used.
 
-Skipped for now: `macrofactor_photo_test` and `macrofactor_search_test`
-need a list built from a MacroFactor log kept outside the repo, and
-`body_compare_eval_test` is the progress-photo feature, not meal logging.
+Not in a plain pass: `macrofactor_photo_test` and `macrofactor_search_test`
+need a list built from a MacroFactor log kept outside the repo (they ran in
+step 7, rounds 3 and 5), and `body_compare_eval_test` is the progress-photo
+feature, not meal logging (live on 2026-11-19).
 
 ## After a run
 
@@ -1036,3 +1068,5 @@ one.
   screens with real answers. The OpenRouter key never; the fake AI stays
   the default.
 - **When the credits expire:** 2026-11-26.
+- **No Opus or Fable app evals** (as of 2026-11-20). The Claude Max
+  subscription ends on 2026-11-23.

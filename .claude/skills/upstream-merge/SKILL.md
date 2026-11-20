@@ -13,7 +13,7 @@ description: Merge a new upstream OpenNutriTracker release into fork/main, resol
    - `fork/tools/upstream-copies.sh $TARGET`: what upstream changed in the files the fork owns a copy of (D23). These never conflict, and are ported by hand.
    - SEAMS.md, "Carried upstream changes": what this release lets the fork drop (D15).
    - `fork/tools/upstream_status.py`: which of the fork's upstream PRs are merged and in $TARGET, and which seams, carried rows, branches and worktrees that makes ready to drop.
-   - Each new feature or behaviour change that meets something the fork does gets a question to the user, with options and a recommendation. Record the answers in DECISIONS.md. Don't decide them yourself.
+   - Each new feature or behaviour change that meets something the fork does gets a question to the user, with options and a recommendation. Record the answers in DECISIONS.md, then `fork/tools/decision-index.sh > fork/DECISIONS-INDEX.md`. Don't decide them yourself.
    - An answer of the form "upstream's feature applies only where X" covers every place the feature is used, not only the one a conflict or a seam shows. Take every name the feature adds (setting, function, use case) from `git diff fork/main...$TARGET`, then `git grep -n <name> $TARGET` for each, over the whole tree: `android/` draws numbers too. List each call site in the decision as `file:line`. Step 6 gates each one.
 4. **Merge on a branch.** `git checkout -b fork/merge-$TARGET fork/main`, then `git merge --no-ff $TARGET`.
 5. **Resolve.**
@@ -24,7 +24,7 @@ description: Merge a new upstream OpenNutriTracker release into fork/main, resol
    - `fork/SEAMS.md` merges by union; fix rows for seams that moved.
 6. **Silent drift.** A clean merge can still break the fork:
    - generated code: `dart run build_runner build --delete-conflicting-outputs`, `flutter gen-l10n`;
-   - port what step 3 listed into the fork's copies, and move each copy's `sha` in SEAMS.md;
+   - port what step 3 listed into the fork's copies, and set each copy's "Upstream at copy" in SEAMS.md to the release's short commit sha (`git rev-parse --short $TARGET^{commit}`);
    - `flutter test -j 1 test/fork/open/open_snapshot_test.dart`, before touching its fixture: each `path: before → after` line is something the user sees that the merge changed. A line no decision in DECISIONS.md explains stops the merge: on a line a decision rules out, fix the fork; on any other, ask the user;
    - a feature a decision limits: grep its names again in the merged tree (a ported copy can bring a call site), gate every call site, then make the snapshot able to see the limit: the data in `test/fork/open/open_fixture.dart`, the settings variants and what is read in `open_snapshot.dart`. Run it again: lines only where the decision allows the feature;
    - when every remaining line is explained, `OPEN_SNAPSHOT_WRITE=1` in front rewrites the whole kept file. Name the accepted lines in the body of the merge into `fork/main`;
