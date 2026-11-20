@@ -29,16 +29,16 @@ The header of `fork/tools/ux-drive.sh` lists its helpers; `tools/adb/adb-driver.
 - Don't sleep after a tap: `shot` and `look` wait, and a new dump takes long enough to see the new screen. Sleep only for something slow that you can name: a network result, or another app's screen such as the system file picker, which `settle` can't watch.
 - `press_back` closes one layer at a time, and on the main screen it leaves the app: check `id_exists nav-home` before pressing it again.
 
-- Bottom navigation ids: `nav-home`, `nav-diary`, `nav-trends`, `nav-you`; the add button is `fab-add-item`. Settings is a collapsed "Settings" tile near the bottom of the You tab.
+- Bottom navigation ids: `nav-home`, `nav-diary`, `nav-trends`, `nav-you`; the add button is `fab-add-item`. Settings is the `profile-settings` row under "App" at the bottom of the You tab; it opens a page of sections (Goals & nutrition, Units, Reminders, Food databases, Data, Appearance, About).
 - Look at every screenshot you take with Read. A screenshot is 1080×2340; 48 dp is 126 px.
-- `/sdcard/Download` holds `MacroFactor-sample.csv` and `MacroFactor-2024.csv` for the history import (Settings, Import and export, Import history; long-press one file, tap the other, then Select). Nothing else there may be imported.
+- `/sdcard/Download` holds `MacroFactor-sample.csv` and `MacroFactor-2024.csv` for the history import (Settings › Data › Import history, then Choose files; long-press one file, tap the other, then Select). Nothing else there may be imported.
 - The app runs a seeded demo profile with a fake AI, so photo recognition answers from canned data.
 
 ## What to cover
 
 The prompt names the focus: stay on those screens and the path that reaches them. Check each at 200% font and in dark theme once. Something you meet on the way still counts, but don't go looking beyond the focus.
 
-Only when the focus says `full sweep`, walk the main path and the fork's own screens: log a food from Home (search, recents, amount, save), the Diary (by meal and, after turning on Settings › Display › Diary by the hour, by the hour), Trends, the You tab, every row in Settings, the history import, the AI model picker.
+Only when the focus says `full sweep`, walk the main path and the fork's own screens: log a food from Home (search, recents, amount, save), the Diary (by meal and, after turning on Settings › Appearance › Diary by the hour, id `settings-diary-by-hour`, by the hour), Trends, the You tab, every row in Settings, the history import, the AI model picker.
 
 ## Severity
 

@@ -1,6 +1,6 @@
 # Replay: a Claude Code subagent plays the model
 
-The real-model checks (archive/PLAN-phases.md, phase 4) run first on answers written by a Haiku subagent
+The real-model checks (`fork/archive/PLAN-phases.md`, phase 4) ran first on answers written by a Haiku subagent
 of Claude Code, not on a paid API call. The app's code runs unchanged from the request it
 builds to the screen; only the HTTP call is swapped for `ReplayAiClient`
 (`lib/fork/dev/replay_ai.dart`), which answers from files.
@@ -8,7 +8,12 @@ builds to the screen; only the HTTP call is swapped for `ReplayAiClient`
 What this does not check: the clients' own request and response handling against a real
 API (one live call per client does that), and models other than Claude's current Haiku
 (OpenRouter does that). The subagent also runs under Claude Code's own instructions, so its
-answers are close to the raw API's, not identical.
+answers are not the raw API's. Set beside live Haiku on 2026-11-09 (`CREDITS_PLAN.md`, step 2),
+the medians landed close but a replay read fell inside the live runs' range only 3 times in 22
+and 5 in 17, and 10 of 39 answers had the wrong shape. On 2026-11-19 half the live body
+comparison answers failed to parse (an empty list, or a key with no value; a prompt fix the
+same day ended it), which the replay runs never showed. A replay score says little about
+the app's real call; the replay is for checks that need no real model.
 
 ## Live runs with an Anthropic key
 
@@ -35,7 +40,8 @@ FORK_EVAL_MODELS=direct:claude-haiku-5-5,direct:claude-sonnet-5-5 \
   flutter test test/fork/eval/calorie_eval_test.dart   # both, side by side
 ```
 
-Each run writes its report under `build/fork-eval/<time>-<kind>/report.md`.
+Each run writes its report under `build/fork-eval/<time>-<kind>/report.md`
+(`photo_eval_test` under `build/fork-eval/<time>/`).
 A Haiku 5.5 pass of one test file is cents; Sonnet 5.5 about twenty times
 that.
 
@@ -65,8 +71,8 @@ FORK_EVAL_REPLAY=build/fork-eval/replay/haiku flutter test test/fork/eval   # re
 FORK_EVAL_REPLAY=build/fork-eval/replay/haiku flutter test test/fork/eval   # scores
 ```
 
-The report lands in `build/fork-eval/<time>/report.md` as usual, under the model
-`replay:haiku`.
+Each test file's report lands in its own `build/fork-eval/<time>-<kind>/` as usual, under
+the model `replay:haiku`.
 
 ### Progress-photo pairs (AI body comparison)
 
@@ -107,4 +113,6 @@ fork/tools/ai_replay.sh push build/fork-eval/replay/app
 A Haiku subagent once wrote answers under the wrong keys, and once re-answered requests that
 already had answers. For Haiku, list the keys to answer in the prompt
 (`for f in <dir>/requests/*.json; do k=$(basename $f .json); [ -f <dir>/answers/$k.json ] ||
-echo $k; done`), and check the answers' timestamps afterwards.
+echo $k; done`), and check the answers' timestamps afterwards. Also check each answer's
+shape: on 2026-11-09 10 of 39 were one item instead of `{"items": [...]}`, which a forced
+tool call cannot return.

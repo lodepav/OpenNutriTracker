@@ -18,7 +18,7 @@ Not built anywhere else when listed; all done since:
   and a log in another meal counts a quarter. On the emulator, breakfast and dinner list the
   demo foods in different orders.
 - *Done 2026-10-23:* top contributors per nutrient (#1266), on `feat/nutrient-contributions` off
-  `develop`, carried by cherry-pick (PR not opened yet).
+  `develop`, carried by cherry-pick; sent as #1665 (2026-11-15).
   - Tapping carbs, fat or protein on Home lists the day's foods, most first, with grams and
     share. A food logged in two meals is one row.
   - Checked on the emulator.
@@ -46,13 +46,15 @@ Lower: already built elsewhere (§0b), ported after a review, not waited for (D1
   Ported after review from theoleuthardt `personal` #127 (`CopyEntriesUsecase`). Review: sound
   (new ids, the logged food kept, the same time of the target logical day, totals added); it
   writes one entry after another, which fixes upstream's meal-section copy that fires them all at
-  once and under-counts the day (worth an upstream PR). Simpler here: no water copy; upstream's
+  once and under-counts the day (worth an upstream PR; the copy into another meal of the same day
+  went as #1614). Simpler here: no water copy; upstream's
   goal lookups; upstream's `CopyDialog` swapped at its two call sites instead of their rewrite of
   four upstream files. On the emulator, a copied day's totals match the source's.
   Since 2026-10-23 today's entries and meals copy too, and "Select entries" beside "Copy day"
   picks entries one by one, by meal or by the hour, as MacroFactor does, and copies them to now,
   to today at the same times, or to a picked day (same times, or all at a picked time), into
-  their own meals or one meal (`lib/fork/copy/select_entries_screen.dart`). A long-pressed
+  their own meals or one meal. Since 2026-10-30 the Diary selects on its own rows instead
+  (`lib/fork/copy/diary_selection.dart`, 89e48be2) and that screen is gone. A long-pressed
   activity, today's included, copies to a picked day (2026-10-23, `copyActivitiesWithDialog`);
   the activity section's menu still copies other days' to today, as upstream does.
 - *Done 2026-10-23:* contribute to Open Food Facts (`lib/fork/off/`, S32, S33), ported after
@@ -103,5 +105,5 @@ feature of its own; (c) run the backend ourselves, which is a server (D2 rules i
 ## 7. Risks
 
 - **Upstream speed:** 100+ commits in 90 days, mostly by the maintainer. Merge each release and keep seams few.
-- **Storage:** the fork must not change upstream's Hive types. Fork data goes in its own box, and it needs to be included in backups (phase 2.4).
+- **Storage:** the fork must not change upstream's Hive types. Fork data goes in its own box, and it needs to be included in backups (phase 2.4; since D52 a new stored key must be on the backup's list, `test/fork/backup/stored_fields.dart`).
 - **Grounded AI** may disappoint on mixed home-cooked dishes; phase 1c's check measures it.

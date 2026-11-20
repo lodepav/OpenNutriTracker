@@ -22,18 +22,22 @@ flutter test -j 1 <the test files of what changed>
 fork/tools/verify.sh    # about 2.5 min: Bash timeout 500000
 ```
 
-No conflict marker, `fork/tools/seam_check.py`, analyze, and the whole suite bundled (`fork/tools/test-fast.sh`). A red upstream test means the fork changed behaviour it shouldn't have: fix the fork, never the test (fork/README.md, rule 4).
+No conflict marker, `fork/tools/seam_check.py`, the tests of `upstream_status.py` and `actions_status.py` (`test/fork/tools/`), `fork/tools/sibling_check.sh` (the same `heavy.sh` lock and emulator `-gpu` flag as openGym-Hevier's), `fork/DECISIONS-INDEX.md` against `fork/tools/decision-index.sh` (after a new decision: `fork/tools/decision-index.sh > fork/DECISIONS-INDEX.md`), analyze, and the whole suite bundled (`fork/tools/test-fast.sh`). A red upstream test means the fork changed behaviour it shouldn't have: fix the fork, never the test (fork/README.md, rule 4).
 
-A clean pass is remembered by commit: merge, then push, and the hook doesn't run it again.
+A clean pass is remembered by commit: merge, then push, and the hook doesn't run it again. A later commit that changes only `.md` files or `fork/VERSION`, or adds an upgrade fixture, passes on that stamp too.
 
-A `verify: warning:` line that names GitHub's Fork checks (from `fork/tools/actions_status.py`, printed by every `verify.sh` run) is about what was already pushed, not about this tree: the line says whether the run for `origin/fork/main` is missing or ended red. It doesn't fail the pass or block the merge. Go on, and tell the user the line in your reply.
+`fork/tools/verify.sh --strict` is the strict level: it rebuilds the `*.g.dart` files (a stale committed one fails) and the strings, then runs plain `flutter test`, a process a file, as upstream's CI. The Fork checks workflow runs it on GitHub, and it never passes on a stamp. To tell a bundled failure from a file's own, run that file alone: `flutter test -j 1 <file>`.
+
+A `verify: warning:` line that names GitHub's Fork checks (from `fork/tools/actions_status.py`, printed by every `verify.sh` run) is about what was already pushed, not about this tree: the line says whether the run for `origin/fork/main` is missing or ended red, or that GitHub couldn't be read. It doesn't fail the pass or block the merge. Go on, and tell the user the line in your reply.
 
 ## What enforces it
 
 `fork/hooks/`, on once a clone by `fork/tools/install-hooks.sh`:
 
-- **pre-push**: a push to `fork/main` runs `verify.sh` on the working tree, so it needs that commit checked out and a clean tree. Give the push a Bash timeout of 500000 unless verify just passed. A push after a docs-only commit doesn't run it again.
-- **commit-msg**: a merge into `fork/main` needs the subject `Merge fork/<branch>: what it does`, which is what the release notes read.
+- **pre-push**: a push to `fork/main` runs `verify.sh` on the working tree, so it needs that commit checked out and a clean tree. Give the push a Bash timeout of 500000 unless verify just passed. A push after a docs-only commit passes on the stamp.
+- **commit-msg**: a merge into `fork/main` needs the subject `Merge fork/<branch>: what it does`, which is what the release notes read. It also lets through `Merge upstream release ...` and git's own subjects for pulling `origin/fork/main`.
+
+`verify.sh` warns when `core.hooksPath` isn't `fork/hooks`: run `fork/tools/install-hooks.sh`.
 
 `--no-verify` skips them. Use it only when the user says so.
 
