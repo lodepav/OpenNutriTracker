@@ -57,6 +57,7 @@ fi
 python3 fork/tools/seam_check.py
 python3 -B test/fork/tools/upstream_status_test.py
 python3 -B test/fork/tools/actions_status_test.py
+python3 -B test/fork/tools/seam_check_test.py
 fork/tools/sibling_check.sh
 diff <(fork/tools/decision-index.sh) fork/DECISIONS-INDEX.md || {
   echo "verify: run fork/tools/decision-index.sh > fork/DECISIONS-INDEX.md" >&2

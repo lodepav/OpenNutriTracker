@@ -35,7 +35,7 @@ deferred finding again without new evidence. Newest last.
 | 2026-11-01 | 2 | I7 | improvement | H7 | Search while planning | Plan a single food straight from its page | defer | Saves two taps, but is a new path past the amount and basket review |
 | 2026-11-11 | 1 | U1 | medium | A4 | Photo review, Size | After "Use your amounts", "As shown" stays ticked and the chips are spoken "times the photo's amounts" | accept | The 1× chip reads "Your amounts" and the others are spoken "times your amounts" until Undo |
 | 2026-11-11 | 1 | U2 | low | H3 | Photo review | Undo does not bring back the amount question | reject | One question a read (D45); the stepper remains |
-| 2026-11-11 | 1 | U3 | low | A6, H1 | Photo review at 200% | The review scrolls in a short window and the Log button drops the energy | defer | The fixed entry block is an earlier choice (#820); nothing is cut off. Window fixed by D50: the entry block goes while a photo's foods show; the Log button's energy still drops at 2x |
+| 2026-11-11 | 1 | U3 | low | A6, H1 | Photo review at 200% | The review scrolls in a short window and the Log button drops the energy | defer | The fixed entry block is an earlier choice (#820); nothing is cut off. Window fixed by D50: the entry block goes while a photo's foods show; the Log button's energy still drops at 2x. Fixed 2026-11-20: above 1.5x text the Log button shows its label and the energy on two lines |
 | 2026-11-11 | 1 | U4 | low | A4 | Photo review, meal card | TalkBack reads the Size hint and the day totals before the offer and the chips | accept | The hint and the day totals have their own nodes, after the chips |
 | 2026-11-11 | 1 | L1 | low | A1 | Amount question | Rows of chips touch | accept | 8 dp between rows, as the Size chips |
 | 2026-11-11 | 1 | L2 | low | A5, H4 | Photo review row | The amount field reads "0.5 × khachapuri" after the "½" chip | reject | The field's format for every amount |
@@ -46,12 +46,46 @@ deferred finding again without new evidence. Newest last.
 | 2026-11-11 | 1 | U1 | medium | H1 | Photo review additions: Size | A chip's ×0.8 on top of the usual ×0.8 was unseen | accept | Fixed: the hint says sizes change the usual amounts; the whole-meal usual size it also stated was dropped later the same day (D46) |
 | 2026-11-11 | 1 | U2 | medium | - | Photo review additions: fat question | The question keyed on the matched name: "without dressing" read as a fat, a fried table food asked again | accept | Fixed: the cooked word comes from the model's row on a plain table food; a fat named as absent is none (D48) |
 | 2026-11-11 | 1 | L1 | low | - | Photo review additions: note chips | Opposite chips could stand together | accept | Fixed: Small/Large plate and Restaurant/Home-cooked take each other's words out |
-| 2026-11-11 | 1 | L2 | low | - | Photo review additions: fat question | Answering for butter adds sunflower oil | reject | The row is ordinary and can be changed; oil is the commoner case |
-| 2026-11-11 | 1 | L3 | low | - | Photo review additions: fat question | The oil row lands at the bottom, away from the question | defer | Revisit with use |
+| 2026-11-11 | 1 | L2 | low | - | Photo review additions: fat question | Answering for butter adds sunflower oil | reject | The row is ordinary and can be changed; oil is the commoner case. Changed 2026-11-20 (D48): with an oil or butter row on the read, the answer goes into that row |
+| 2026-11-11 | 1 | L3 | low | - | Photo review additions: fat question | The oil row lands at the bottom, away from the question | defer | Revisit with use. Since 2026-11-20 (D48) a read with an oil or butter row gets no new row: the answer goes into that row |
 | 2026-11-11 | 1 | L4 | low | - | Photo review additions: fat question | None closes the question for good | defer | Revisit with use |
 | 2026-11-11 | 1 | L5 | low | - | Photo review additions: note chips | Weighed and Counts open the letter keyboard | reject | The note is free text |
 | 2026-11-11 | 1 | I1 | improvement | - | Photo review additions: meal card | The offer, Size and fat question fill the review window | defer | Revisit with use. Eased by D50: the window now runs from the app bar to Log |
 | 2026-11-11 | 1 | N1 | low | - | Photo review additions: usual sizes | Deleting a logged photo meal does not unlearn its size | defer | To ask the user |
+| 2026-11-17 | 1 | U1 | medium | A6 | Food page at 200% | The fixed amount panel fills the page, and labels are cut | accept | Above 1.5x text the amount and the meal sit on the page after the food's summary, with only Add and the basket pinned; labels wrap or shrink (fd4451bd) |
+| 2026-11-17 | 1 | L1 | low | A3 | Add food results | Add buttons are read with a stray comma before the source | accept | Read "Add Chicken breast, 60 g" |
+| 2026-11-17 | 1 | L2 | low | H2 | Food page | The weight unit's chip is a lone "g" | accept | Says Grams |
+| 2026-11-17 | 1 | L3 | low | - | Food page | The nutrient table's heading sits outside its card | accept | A fork table (S221): a "Per 100 g" heading in its card, rows read "Fat 21 g" |
+| 2026-11-17 | 1 | L4 | low | A6, H4 | Food page at 200% | "Today after adding" does not follow the Diary's totals card | accept | One figure a line above 1.5x, as the Diary's totals |
+| 2026-11-17 | 1 | L5 | low | H8 | Add food | Three bare icon buttons in the app bar | accept | One "More ways to add" menu |
+| 2026-11-17 | 1 | L6 | low | - | + sheet | Its search looks like a second field to type in | accept | A button into Add food, with the field focused |
+| 2026-11-17 | 1 | L7 | low | A5 | Food page | The header is read as one run of lines | accept | The header, a total and a row read as words |
+| 2026-11-17 | 1 | L8 | low | H4 | Food page, Today after adding | A target passed shows in the error colour | accept | Not red, as in the Diary |
+| 2026-11-18 | 2 | U1 | medium | H4 | Add food results | One list shows "+ 60 g", "+ 1 serving" and a bare +, and a + on a food missing its values opens its page instead of logging | accept | + shows the grams unless the serving is one counted thing; such a food shows "Choose ›" (D67) |
+| 2026-11-18 | 2 | L1 | low | H8 | Add food results | A row repeats the source its section's header names | accept | Left out there, kept short elsewhere (D67) |
+| 2026-11-18 | 2 | L2 | low | A6 | Add food results at 200% | The add button's wrapped "1 / serving" runs into the button's rounded ends | accept | A rounded rectangle at large text (50d5a13b) |
+| 2026-11-18 | 2 | L3 | low | A5 | Food page | The macro split is read in one run | accept | Read one macro at a time (60e2c7df) |
+| 2026-11-18 | 2 | L4 | low | - | Food page | The amount card loses its round corners | accept | The sheet is transparent on the amount part (S125) |
+| 2026-11-18 | 2 | L5 | low | C5 | Food page | The nutrient table says "Fiber" | accept | "Fibre" |
+| 2026-11-18 | 2 | L6 | low | H8 | Add food | More than one magnifier | accept | One (S223) |
+| 2026-11-18 | 2 | L7 | low | A6 | Food page at 200% | The source chips do not wrap, and in "Today after adding" a name under its bar reads as the next figure's label | accept | The chips wrap, and each figure's name comes first |
+| 2026-11-18 | 2 | U2 | medium | - | Settings | Show AI features sits under Appearance, away from AI meal assistance | accept | Moved to Food databases, beside AI meal assistance (D66) |
+| 2026-11-18 | 2 | U3 | medium | H5 | Settings, Data | Clear cached items sits in Start Over, beside the red Reset | accept | Moved to Food databases, as the cache holds food search results (D66) |
+| 2026-11-18 | 2 | L8 | low | H8 | Settings, About | The version shows on the index's footer and About's summary as well | accept | On the Updates row and About's footer only (D66) |
+| 2026-11-18 | 2 | L9 | low | - | Settings, Goals | The rows are not grouped | accept | Calorie Target, Nutrition, then Diary (D66) |
+| 2026-11-18 | 2 | L10 | low | A6 | Settings at 200% | A row's 40 dp icon and a switch leave the words under half the row | accept | Above 1.5x text rows drop their icon (60e2c7df) |
+| 2026-11-18 | 2 | L11 | low | A6 | Macro split, Per-meal kcal share | A share lacks its "%", and at large text a "Name N%" breaks apart | accept | Each share carries its "%" and breaks only after a dot (60e2c7df, 50d5a13b) |
+| 2026-11-18 | 2 | L12 | low | - | Settings search | Search does not find Show AI features | accept | Matches the start of words and finds it |
+| 2026-11-18 | 2 | L13 | low | H4 | Settings, Food | The summary does not use the row names, and names AI while it is hidden | accept | Uses the row names and leaves AI out while hidden |
+| 2026-11-18 | 2 | L14 | low | H8 | Settings, Reminders | Headings repeat | accept | Gone |
+| 2026-11-18 | 2 | L15 | low | H4 | Settings | Group headings are not in Title Case | accept | Title Case; back to sentence case in the whole-app critique the same day (d78cfebf) |
+| 2026-11-18 | 1 | U1 | medium | - | Add audit: Quick add | Closing Quick add closes more than its sheet | accept | Closes only its sheet (audit, 8618a567) |
+| 2026-11-18 | 1 | U2 | medium | H3 | Add audit: Undo | The Undo bar goes before a TalkBack user reaches it | accept | Stays up under TalkBack (audit, 8618a567) |
+| 2026-11-18 | 1 | L1 | low | - | Add audit: results | The keyboard stays over the results | accept | Results clear the keyboard (audit, 8618a567) |
+| 2026-11-18 | 1 | L2 | low | - | Add audit: food page | The food page does not fit a landscape phone | accept | It fits (audit, 8618a567) |
+| 2026-11-18 | 1 | L3 | low | A6 | Settings audit: privacy dialog | The dialog does not scroll at 200% | accept | It scrolls (audit, 8618a567) |
+| 2026-11-18 | 1 | L4 | low | - | Settings audit: history import | The import reads its files on the UI isolate | accept | Read off the UI isolate (audit, 8618a567) |
+| 2026-11-18 | 1 | L5 | low | - | Settings audit: search | A search result does not open at its row | accept | Opens at its row (audit, 8618a567) |
 | 2026-11-19 | 1 | U1 | low | H1 | Home Goal tile | After "Mark completed and maintain" Home keeps "Maintain, No end date" while Trends and You say "Maintain since" | accept | Home's tiles also reload on PhaseStore and weigh-in changes, as the goal card and You tile do |
 | 2026-11-19 | 1 | L1 | low | C5, H4 | Weight history, Edit | The edit dialog is titled "Add entry" | accept | Titled "Edit weigh-in" when editing |
 | 2026-11-19 | 1 | L2 | low | H2 | Goal reached | A goal started and reached the same day reads "1 week" | reject | Edge case; the dates beside it are right |
@@ -65,3 +99,5 @@ deferred finding again without new evidence. Newest last.
 | 2026-11-19 | 2 | L1 | low | H1, H4 | Home Expenditure tile | One weigh-in behind until something else reloads it | defer | Cause unverified (the estimate may be read before it is recomputed); to debug |
 | 2026-11-19 | 2 | L2 | low | C5 | Weight history, Weigh in | The Add dialog is titled "Add entry" | accept | Titled "Log a weigh-in", as Home's dialog |
 | 2026-11-19 | 2 | I1 | improvement | H5 | Weight history, Weigh in | No warning that it replaces the day's weigh-in, as Home's dialog gives | defer | Revisit with use |
+| 2026-11-20 | 1 | U1 | medium | - | Photo review, fat question | The answer adds sunflower oil beside the breakdown's own oil (emulator, 2026-11-19) | accept | Fixed 2026-11-20: the answer goes into the read's own oil or butter row (D48) |
+| 2026-11-20 | 1 | L1 | low | - | Photo review row | 51 of 74 home dishes carry their alias lists in the name, cut off on the row (emulator, 2026-11-19) | accept | Fixed 2026-11-20: the row shows a home dish without its list. The amount sheet's title and the usual-sizes line still show the full name |

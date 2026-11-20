@@ -29,6 +29,8 @@ import 'package:opennutritracker/fork/units/energy_text.dart';
 import 'package:opennutritracker/fork/units/weight_text.dart';
 import 'package:opennutritracker/fork/goal/phase_colors.dart';
 import 'package:opennutritracker/fork/phases/phases.dart';
+import 'package:opennutritracker/fork/undo/undo_delete.dart'
+    show undoBarPersists;
 import 'package:opennutritracker/fork/trends/trends_widgets.dart'
     show signedText, waterColor;
 import 'package:opennutritracker/fork/display/display_prefs.dart';
@@ -112,9 +114,17 @@ class _AdaptiveCheckInCardState extends State<AdaptiveCheckInCard> {
   /// What changed, for [_Due.settings]; empty when it can't be told.
   List<String> _changed = const [];
 
+  /// For [_Due.weekly]: an automatic check-in waits on
+  /// [AdaptiveService.partialDays].
+  bool _waitsOnPartial = false;
+
   Future<_Due?> _readDue() async {
     if (!await _service.checkInDue()) return null;
     final reason = await checkInReason(_service);
+    _waitsOnPartial =
+        reason == _Due.weekly &&
+        AdaptiveStore.settings.value.autoAcceptCheckIn &&
+        (await _service.partialDays()).isNotEmpty;
     if (reason == _Due.settings) {
       _changed = changedTargetSettings(
         (await _service.lastCheckIn())?.basis,
@@ -260,7 +270,11 @@ class _AdaptiveCheckInCardState extends State<AdaptiveCheckInCard> {
                       ? 'A target built under them is ready to check.'
                       : 'You changed ${_changed.join(', ')}. A target built '
                             'under the new settings is ready to check.',
-                _Due.weekly => 'Your expenditure and next target are ready.',
+                _Due.weekly =>
+                  _waitsOnPartial
+                      ? 'Waiting for your answer on a day that looks partly '
+                            'logged.'
+                      : 'Your expenditure and next target are ready.',
               }),
               trailing: const Icon(Icons.chevron_right_rounded),
               onTap: () async {
@@ -273,6 +287,9 @@ class _AdaptiveCheckInCardState extends State<AdaptiveCheckInCard> {
                   _recheck();
                   await _refreshGoals();
                   widget.onAccepted();
+                } else if (_waitsOnPartial && mounted) {
+                  // The day may be answered now: the automatic one goes on.
+                  _recheck();
                 }
               },
             ),
@@ -281,6 +298,82 @@ class _AdaptiveCheckInCardState extends State<AdaptiveCheckInCard> {
       },
     );
   }
+}
+
+/// With Home's check-in card hidden: says once per due check-in that an
+/// automatic one waits on a day that looks partly logged
+/// ([AutoCheckIn.waiting]), as the card would; nothing to see.
+class CheckInWaitingNote extends StatefulWidget {
+  const CheckInWaitingNote({super.key});
+
+  @override
+  State<CheckInWaitingNote> createState() => _CheckInWaitingNoteState();
+}
+
+class _CheckInWaitingNoteState extends State<CheckInWaitingNote> {
+  @override
+  void initState() {
+    super.initState();
+    AutoCheckIn.waiting.addListener(_onWaiting);
+    // The run at the app's start may have ended before Home was built.
+    _onWaiting();
+  }
+
+  @override
+  void dispose() {
+    AutoCheckIn.waiting.removeListener(_onWaiting);
+    super.dispose();
+  }
+
+  Future<void> _onWaiting() async {
+    final waiting = AutoCheckIn.waiting.value;
+    if (waiting == null) return;
+    final (:service, :since) = waiting;
+    try {
+      if (await service.waitingNoted(since)) return;
+      // answered by hand, or switched off, since the run that set it
+      if (!AdaptiveStore.settings.value.autoAcceptCheckIn ||
+          !await service.checkInDue()) {
+        return;
+      }
+      if (!mounted) return;
+      final messenger = ScaffoldMessenger.maybeOf(context);
+      if (messenger == null) return;
+      final navigator = Navigator.of(context);
+      final persist = undoBarPersists(context);
+      await service.markWaitingNoted(since);
+      messenger.showSnackBar(
+        SnackBar(
+          persist: persist,
+          content: const Text(
+            'A check-in is waiting for your answer on a day that looks '
+            'partly logged.',
+          ),
+          action: SnackBarAction(
+            label: 'Open',
+            onPressed: () async {
+              final accepted = await navigator.push<bool>(
+                MaterialPageRoute(
+                  builder: (_) => CheckInScreen(service: service),
+                ),
+              );
+              if (accepted == true) {
+                await _refreshGoals();
+              } else {
+                // The day may be answered now: the automatic one goes on.
+                await AutoCheckIn.run(service);
+              }
+            },
+          ),
+        ),
+      );
+    } catch (_) {
+      // Unread or unsaved: the next run tries again.
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => const SizedBox.shrink();
 }
 
 class CheckInScreen extends StatefulWidget {
@@ -318,14 +411,23 @@ class _CheckInScreenState extends State<CheckInScreen> {
   late var _data = (_checkIn, _last, _goalNow, _weightUnit).wait;
   final _target = TextEditingController();
 
-  /// The check-in [_target] was filled from: an answer brings a new one,
-  /// after a build that still shows the old.
-  CheckIn? _filledFrom;
+  /// The proposal, rounded, [_target] was filled for: an answer that moves
+  /// it refills the field, one that doesn't leaves what was typed.
+  int? _filledFor;
+
+  /// While an answer on a partly logged day is saved, the check-in on
+  /// screen is the one before it.
+  bool _answering = false;
 
   /// Saves the answer on a day that looks partly logged (D65), then reads
   /// the check-in again: a day left out moves the proposal.
   Future<void> _answerPartial(Future<void> Function() save) async {
-    await save();
+    setState(() => _answering = true);
+    try {
+      await save();
+    } finally {
+      if (mounted) setState(() => _answering = false);
+    }
     if (!mounted) return;
     setState(() {
       _checkIn = widget.service.checkIn();
@@ -445,7 +547,15 @@ class _CheckInScreenState extends State<CheckInScreen> {
             if (snapshot.hasError || data == null) {
               return const SizedBox.shrink();
             }
-            return _actions(context, data.$1, data.$2?.acceptedKcal ?? data.$3);
+            return _actions(
+              context,
+              data.$1,
+              data.$2?.acceptedKcal ?? data.$3,
+              // the check-in before an answer, until it is read again
+              enabled:
+                  snapshot.connectionState == ConnectionState.done &&
+                  !_answering,
+            );
           },
         ),
     body: FutureBuilder<(CheckIn, CheckInRecord?, double?, BodyWeightUnit)>(
@@ -463,8 +573,8 @@ class _CheckInScreenState extends State<CheckInScreen> {
         }
         // A proposal of nothing or less is no target to offer.
         final proposed = energyValue(context, checkIn.proposedTargetKcal);
-        if (!identical(_filledFrom, checkIn)) {
-          _filledFrom = checkIn;
+        if (_filledFor != checkIn.proposedTargetKcal.round()) {
+          _filledFor = checkIn.proposedTargetKcal.round();
           _target.clear();
         }
         if (_target.text.isEmpty && proposed > 0) _target.text = '$proposed';
@@ -700,8 +810,13 @@ class _CheckInScreenState extends State<CheckInScreen> {
   );
 
   /// Accept, and Keep below it while there is a target in use; above the
-  /// keyboard while the target field has it.
-  Widget _actions(BuildContext context, CheckIn checkIn, double? current) {
+  /// keyboard while the target field has it. Off unless [enabled].
+  Widget _actions(
+    BuildContext context,
+    CheckIn checkIn,
+    double? current, {
+    required bool enabled,
+  }) {
     // read here, not in a button's handler
     final unit = energyUnit(context);
     return SafeArea(
@@ -719,29 +834,33 @@ class _CheckInScreenState extends State<CheckInScreen> {
           children: [
             FilledButton(
               key: const ValueKey('check-in-accept'),
-              onPressed: () async {
-                final typed = double.tryParse(_target.text.trim());
-                if (typed == null || !typed.isFinite || typed <= 0) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Enter a daily target above 0 $unit.'),
-                    ),
-                  );
-                  return;
-                }
-                final target = kcalFromInput(context, typed);
-                await widget.service.accept(checkIn, target);
-                if (!context.mounted) return;
-                // said on Home, which comes back away from the ring
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      'Daily target set to ${_target.text.trim()} $unit',
-                    ),
-                  ),
-                );
-                Navigator.of(context).pop(true);
-              },
+              onPressed: !enabled
+                  ? null
+                  : () async {
+                      final typed = double.tryParse(_target.text.trim());
+                      if (typed == null || !typed.isFinite || typed <= 0) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              'Enter a daily target above 0 $unit.',
+                            ),
+                          ),
+                        );
+                        return;
+                      }
+                      final target = kcalFromInput(context, typed);
+                      await widget.service.accept(checkIn, target);
+                      if (!context.mounted) return;
+                      // said on Home, which comes back away from the ring
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            'Daily target set to ${_target.text.trim()} $unit',
+                          ),
+                        ),
+                      );
+                      Navigator.of(context).pop(true);
+                    },
               child: const Text('Accept'),
             ),
             // Done for the week at the target in use, so it isn't due again.
@@ -750,10 +869,12 @@ class _CheckInScreenState extends State<CheckInScreen> {
                 padding: const EdgeInsets.only(top: 8),
                 child: OutlinedButton(
                   key: const ValueKey('check-in-keep'),
-                  onPressed: () async {
-                    await widget.service.accept(checkIn, current);
-                    if (context.mounted) Navigator.of(context).pop(true);
-                  },
+                  onPressed: !enabled
+                      ? null
+                      : () async {
+                          await widget.service.accept(checkIn, current);
+                          if (context.mounted) Navigator.of(context).pop(true);
+                        },
                   child: const Text('Keep current target'),
                 ),
               ),

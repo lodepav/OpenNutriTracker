@@ -17,10 +17,14 @@ import 'package:opennutritracker/features/add_meal/util/meal_text_parser.dart';
 import 'package:opennutritracker/fork/bulk/photo_meal_memory.dart';
 import 'package:opennutritracker/fork/screens/add_meal/photo_review_controller.dart';
 
+/// Foods named otherwise than the model's words, as the fork's own dishes.
+final _dishNames = <String, String>{};
+
 /// 100 kcal per 100 g, so a row's grams are its kcal.
 MealEntity _meal(String name) => MealEntity(
   code: name,
-  name: name,
+  name: _dishNames[name] ?? name,
+  backendSource: _dishNames.containsKey(name) ? 'fork_dishes' : null,
   url: null,
   mealQuantity: null,
   mealUnit: 'g',
@@ -135,6 +139,7 @@ void main() {
   late PhotoReviewController review;
 
   setUp(() {
+    _dishNames.clear();
     reader = _PhotoReader();
     bloc = BulkAddBloc(_Resolver(), _TextReader(), reader);
     kept = [];
@@ -221,6 +226,13 @@ void main() {
       expect(review.usualInForce, isTrue);
     });
 
+    test('a dish is named as its row reads', () async {
+      _dishNames['rice'] = 'Plov, chicken (chicken pilaf, pilau)';
+      kept.addAll([_sized(1), _sized(2), _sized(3)]);
+      await read();
+      expect(review.usualFoods.first.name, 'Plov, chicken');
+    });
+
     test('none with 2 like corrections', () async {
       kept.addAll([_sized(1), _sized(2)]);
       await read();
@@ -261,6 +273,96 @@ void main() {
       expect(amounts(), ['180', '120', '96']);
       expect(review.usualShown(rows()), isFalse);
     });
+  });
+
+  group('the cooking fat question', () {
+    // fried in the model's words, a plain food in the table's
+    setUp(() => _dishNames['egg, fried'] = 'Egg, whole');
+    const egg = ParsedMealItem(query: 'egg, fried', quantity: 100, unit: 'g');
+    const oil = ParsedMealItem(query: 'olive oil', quantity: 5, unit: 'g');
+
+    test('None after a chip gives the read\'s oil back as read: the Size '
+        'scales it, and the meal is not corrected', () async {
+      await read(const [egg, oil]);
+      expect(review.fatAsk, isNotNull);
+      await review.chooseCookingFat(1);
+      await pumpEventQueue();
+      expect(amounts(), ['100', '15']);
+      expect(review.photoCorrected(rows()), isTrue);
+
+      await review.chooseCookingFat(-1);
+      await pumpEventQueue();
+      expect(amounts(), ['100', '5']);
+      expect(review.mealScale.isPinned(rows()[1]), isFalse);
+      expect(review.photoCorrected(rows()), isFalse);
+      await size(1.4);
+      expect(amounts(), ['140', '7']);
+    });
+
+    test('None at another size than the chip\'s: the oil at its read grams '
+        'times the size now', () async {
+      await read(const [egg, oil]);
+      await review.chooseCookingFat(1);
+      await pumpEventQueue();
+      await size(1.4);
+      await review.chooseCookingFat(-1);
+      await pumpEventQueue();
+      expect(amounts(), ['140', '7']);
+      await size(1);
+      expect(amounts(), ['100', '5']);
+
+      await read(const [egg, oil]);
+      await size(1.4);
+      await review.chooseCookingFat(1);
+      await pumpEventQueue();
+      expect(amounts(), ['140', '17']);
+      await review.chooseCookingFat(-1);
+      await pumpEventQueue();
+      expect(amounts(), ['140', '7']);
+      await size(1);
+      expect(amounts(), ['100', '5']);
+    });
+
+    test('a hand edit of the oil after None counts', () async {
+      await read(const [egg, oil]);
+      await review.chooseCookingFat(1);
+      await pumpEventQueue();
+      await review.chooseCookingFat(-1);
+      await pumpEventQueue();
+      await setByUser(1, '12');
+      await setByUser(1, '5');
+      expect(review.photoCorrected(rows()), isTrue);
+    });
+
+    test(
+      'None after a chip keeps another amount the user set counted',
+      () async {
+        await read(const [egg, oil]);
+        await review.chooseCookingFat(1);
+        await pumpEventQueue();
+        await setByUser(0, '120');
+        await setByUser(0, '100');
+        await review.chooseCookingFat(-1);
+        await pumpEventQueue();
+        expect(amounts(), ['100', '5']);
+        expect(review.photoCorrected(rows()), isTrue);
+      },
+    );
+
+    test(
+      'None after a chip leaves an oil the user set before it set',
+      () async {
+        await read(const [egg, oil]);
+        await setByUser(1, '5');
+        await review.chooseCookingFat(1);
+        await pumpEventQueue();
+        await review.chooseCookingFat(-1);
+        await pumpEventQueue();
+        expect(review.mealScale.isPinned(rows()[1]), isTrue);
+        await size(1.4);
+        expect(amounts(), ['140', '5']);
+      },
+    );
   });
 
   group('a remembered meal', () {

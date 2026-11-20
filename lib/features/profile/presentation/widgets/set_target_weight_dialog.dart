@@ -5,6 +5,9 @@ import 'package:opennutritracker/core/utils/calc/unit_calc.dart';
 import 'package:opennutritracker/features/profile/presentation/utils/profile_picker_bounds.dart';
 import 'package:opennutritracker/features/profile/presentation/widgets/body_weight_input.dart';
 import 'package:opennutritracker/generated/l10n.dart';
+// [fork] S283 target-half-steps
+import 'package:opennutritracker/fork/weight/half_step_picker.dart';
+// [/fork]
 
 /// Outcome of [SetTargetWeightDialog]. The dialog has three exits:
 ///
@@ -64,11 +67,23 @@ class _SetTargetWeightDialogState extends State<SetTargetWeightDialog> {
   bool _typedLast = false;
   // [/fork]
 
+  // [fork] S283 target-half-steps: a target needs no 0.1 precision, so the
+  // ruler steps by 0.5; the picker reads its bounds only once.
+  late final ({double min, double max, int divisions}) _halfSteps;
+  // [/fork]
+
   @override
   void initState() {
     super.initState();
     _pickerDisplayWeight = _toDisplay(widget.initialKg);
     _stKg = widget.initialKg;
+    // [fork] S283: centred on the nearest half; an untouched ruler still
+    // saves the exact initial weight
+    _halfSteps = halfStepPickerBounds(
+      _pickerDisplayWeight,
+      widget.unit == BodyWeightUnit.lb,
+    );
+    // [/fork]
   }
 
   double _toDisplay(double kg) {
@@ -116,8 +131,10 @@ class _SetTargetWeightDialogState extends State<SetTargetWeightDialog> {
   @override
   Widget build(BuildContext context) {
     final isImperial = widget.unit == BodyWeightUnit.lb;
-    final minWeight = minSelectableWeight(_pickerDisplayWeight, isImperial);
-    final maxWeight = maxSelectableWeight(_pickerDisplayWeight, isImperial);
+    // [fork] S283: bounds from _halfSteps
+    // final minWeight = minSelectableWeight(_pickerDisplayWeight, isImperial);
+    // final maxWeight = maxSelectableWeight(_pickerDisplayWeight, isImperial);
+    // [/fork]
     // [fork] S111: a typed weight out of range says so, and OK waits for it
     final invalid =
         (widget.unit == BodyWeightUnit.st || _typedLast) && _stKg == null;
@@ -148,10 +165,16 @@ class _SetTargetWeightDialogState extends State<SetTargetWeightDialog> {
                   child: HorizontalPicker(
                   height: 100,
                   backgroundColor: Colors.transparent,
-                  minValue: minWeight,
-                  maxValue: maxWeight,
+                  // [fork] S283 target-half-steps
+                  minValue: _halfSteps.min,
+                  maxValue: _halfSteps.max,
                   initialPosition: InitialPosition.center,
-                  divisions: 1000,
+                  divisions: _halfSteps.divisions,
+                  // minValue: minWeight,
+                  // maxValue: maxWeight,
+                  // initialPosition: InitialPosition.center,
+                  // divisions: 1000,
+                  // [/fork]
                   suffix: isImperial
                       ? S.of(context).lbsLabel
                       : S.of(context).kgLabel,

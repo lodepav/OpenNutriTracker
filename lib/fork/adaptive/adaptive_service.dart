@@ -210,7 +210,7 @@ class AdaptiveService {
       for (final found in likelyPartlyLogged(
         days.sublist(0, days.length - 1),
       ).reversed)
-        if (days.length - 1 - found.day <= partialDayAskDays &&
+        if (days.length - 1 - found.day < partialDayAskDays &&
             !whole.contains(date(found.day)))
           (
             date: date(found.day),
@@ -239,6 +239,16 @@ class AdaptiveService {
     await accept(due, due.proposedTargetKcal);
     return due;
   }
+
+  static const _waitingNoteKey = 'checkInWaitingNote';
+
+  /// Whether Home said a check-in after the one of [since] waits on a day
+  /// that looks partly logged ([markWaitingNoted]).
+  Future<bool> waitingNoted(DateTime since) async =>
+      await _store.readKey(_waitingNoteKey) == since.toIso8601String();
+
+  Future<void> markWaitingNoted(DateTime since) =>
+      _store.writeKey(_waitingNoteKey, since.toIso8601String());
 
   /// Expenditure as estimated on each day since the first weigh-in in
   /// the check-in's history, with what was logged; empty with no

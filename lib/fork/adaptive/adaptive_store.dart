@@ -561,7 +561,8 @@ class AdaptiveStore {
     };
   }
 
-  /// Writes what [kept] gave.
+  /// Writes what [kept] gave; days said whole join those here, as
+  /// [mergeSkippedDays] does.
   Future<void> restoreKept(Map<String, dynamic> kept) async {
     final box = await _box();
     for (final key in keptKeys) {
@@ -571,6 +572,11 @@ class AdaptiveStore {
         key,
         _dayMaps.contains(key)
             ? {...value as Map, ...box.get(key, defaultValue: {}) as Map}
+            : key == wholeKey
+            ? {
+                ...value as List,
+                ...box.get(key, defaultValue: []) as List,
+              }.toList()
             : value,
       );
     }

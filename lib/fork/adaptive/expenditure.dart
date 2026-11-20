@@ -200,8 +200,10 @@ estimateExpenditureRun(
   // After a break (D27) the weight came back moved on food nobody logged,
   // and its first days back swing with water. Each break's last day starts
   // a trend of its own at the first weigh-in from there (its anchor), and
-  // the estimate holds until a week after it.
-  final restarts = <int, ({List<double?> trend, int? anchor})>{};
+  // the estimate holds until a week after it. The intake's trend restarts
+  // at the anchor too, so the damping reads only the shift since.
+  final restarts =
+      <int, ({List<double?> trend, int? anchor, List<double?> intake})>{};
   var unlogged = 0;
   for (var i = firstLogged + 1; firstLogged >= 0 && i < days.length; i++) {
     if (!logged(days[i])) {
@@ -221,6 +223,9 @@ estimateExpenditureRun(
       restarts[from] = (
         trend: [...List<double?>.filled(from, null), ...segment],
         anchor: anchor < 0 ? null : from + anchor,
+        intake: anchor < 0
+            ? intakeTrend
+            : _intakeTrend(days, logged, settings.alpha, from: from + anchor),
       );
     }
     unlogged = 0;
@@ -242,6 +247,7 @@ estimateExpenditureRun(
         week.any((d) => d.weightKg != null);
     var start = max(day - settings.window, firstLogged - 1).clamp(0, day);
     var dayTrend = trend;
+    var dayIntake = intakeTrend;
     if (restart != null && segment != null) {
       final anchor = segment.anchor;
       final held = anchor == null || day - anchor < settings.warmupDays;
@@ -254,6 +260,7 @@ estimateExpenditureRun(
       enoughData = enoughData && !held;
       start = max(day - settings.window, anchor ?? day).clamp(0, day);
       dayTrend = segment.trend;
+      dayIntake = segment.intake;
     }
     final from = dayTrend[start], to = dayTrend[day];
     final window = days.sublist(start + 1, day + 1);
@@ -277,8 +284,7 @@ estimateExpenditureRun(
       final damping = calibrating
           ? 1.0
           : settings.shiftDamping(
-              intakeTrend[day]! -
-                  (intakeTrend[start] ?? intakeTrend[firstLogged])!,
+              dayIntake[day]! - (dayIntake[start] ?? dayIntake.nonNulls.first),
               meanIntake,
             );
       if (damping > 0) {
@@ -301,13 +307,14 @@ estimateExpenditureRun(
 /// The trend of the logged intake, smoothed as the weight's is so the two
 /// lag alike; it starts at the mean of the first week's logged days (one
 /// day is too noisy a start), carries over unlogged days and is null
-/// before logging began.
+/// before logging began, or before [from].
 List<double?> _intakeTrend(
   List<AdaptiveDay> days,
   bool Function(AdaptiveDay) logged,
-  double alpha,
-) {
-  final first = days.indexWhere(logged);
+  double alpha, {
+  int from = 0,
+}) {
+  final first = days.indexWhere(logged, from);
   if (first < 0) return List.filled(days.length, null);
   final week = [
     for (final d in days.skip(first).take(7))

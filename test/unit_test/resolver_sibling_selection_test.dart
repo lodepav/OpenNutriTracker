@@ -1351,7 +1351,9 @@ void main() {
         BackendPoolFixtures.potatoFrenchFriesFromFreshFried,
       );
       expect(scoreMealForResolution(fromPage, query), closeTo(0.96, 1e-3));
+      // [fork] S75 everyday-row: skipped, "fried potato" means the home fries
     }, skip: 'the fork names "fried potato" home fries (S75)');
+    // [/fork]
 
     test('without the flag: twenty portionless rows ahead of the record '
         'the resolver would pick', () {

@@ -55,6 +55,7 @@ import 'package:opennutritracker/fork/bulk/shown_unit.dart';
 import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/fork/display/meal_macros_line.dart';
+import 'package:opennutritracker/fork/food/dish_name.dart';
 import 'package:opennutritracker/fork/off/off_kinds.dart';
 import 'package:opennutritracker/fork/meal_detail/food_page.dart'
     show TodayAfterAdding, DayTotals, loadDayTotals;
@@ -1013,10 +1014,14 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
 
   Widget _buildSubmitBar(BuildContext context, BulkAddLoadedState state) {
     final count = loggedEntries(state.rows, separate: _separateDishes);
-    // What the button will log, summed as the rows show it (#1469). Not at a
-    // large font: a second line on the button comes out of the rows above.
-    final showTotal = MediaQuery.textScalerOf(context).scale(1) <= 1.5;
-    final rowKcals = loggedKcals(state.rows);
+    // What the button will log, summed as the rows show it (#1469); at a
+    // large font on a line of its own, so neither is cut (U3).
+    final oneLine = MediaQuery.textScalerOf(context).scale(1) <= 1.5;
+    final label = S.of(context).bulkAddSubmitLabel(count);
+    final energy = EnergyDisplay.formatSumWithUnit(
+      context,
+      loggedKcals(state.rows),
+    );
     return SafeArea(
       top: false,
       child: Padding(
@@ -1028,12 +1033,14 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
                 ? null
                 : () => _onSubmitPressed(state),
             icon: const Icon(Icons.add_rounded),
-            label: Text(
-              count == 0 || !showTotal
-                  ? S.of(context).bulkAddSubmitLabel(count)
-                  : '${S.of(context).bulkAddSubmitLabel(count)} · '
-                        '${EnergyDisplay.formatSumWithUnit(context, rowKcals)}',
-            ),
+            label: count == 0
+                ? Text(label)
+                : oneLine
+                ? Text('$label · $energy')
+                : Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [Text(label), Text(energy)],
+                  ),
           ),
         ),
       ),
@@ -1421,7 +1428,7 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
             invalid.entries
                 .map(
                   (entry) =>
-                      '${_rowTitle(state.rows[entry.key])}: '
+                      '${shownRowTitle(state.rows[entry.key])}: '
                       '${_quantityErrorText(context, entry.value)}',
                 )
                 .join('\n'),

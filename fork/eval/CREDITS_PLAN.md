@@ -984,9 +984,13 @@ Diary. Found, one run each:
   The plov's breakdown also listed raw chicken and raw rice beside the
   stewed chicken; the read had no dish header, so the breakdown likely
   still got the photo (D42's case).
-- The cooking-fat answer adds sunflower oil beside the breakdown's own oil.
-- 51 of 74 home dishes carry their alias lists in the name, cut off on
-  the review row.
+- ~~The cooking-fat answer adds sunflower oil beside the breakdown's own
+  oil.~~ fixed 2026-11-20: the answer goes into the read's own oil or
+  butter row (D48)
+- ~~51 of 74 home dishes carry their alias lists in the name, cut off on
+  the review row.~~ fixed 2026-11-20: the review row shows a home dish
+  without its list; the amount sheet's title and the usual-sizes line
+  still show the full name
 
 **Fixed the same day.** The body prompt now says every key always
 applies and the list is never empty (the fork's tool description invites

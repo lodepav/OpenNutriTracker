@@ -22,7 +22,7 @@ flutter test -j 1 <the test files of what changed>
 fork/tools/verify.sh    # about 2.5 min: Bash timeout 500000
 ```
 
-No conflict marker, `fork/tools/seam_check.py`, the tests of `upstream_status.py` and `actions_status.py` (`test/fork/tools/`), `fork/tools/sibling_check.sh` (the same `heavy.sh` lock and emulator `-gpu` flag as openGym-Hevier's), `fork/DECISIONS-INDEX.md` against `fork/tools/decision-index.sh` (after a new decision: `fork/tools/decision-index.sh > fork/DECISIONS-INDEX.md`), analyze, and the whole suite bundled (`fork/tools/test-fast.sh`). A red upstream test means the fork changed behaviour it shouldn't have: fix the fork, never the test (fork/README.md, rule 4).
+No conflict marker, `fork/tools/seam_check.py`, the tests of `upstream_status.py`, `actions_status.py` and `seam_check.py` (`test/fork/tools/`), `fork/tools/sibling_check.sh` (the same `heavy.sh` lock and emulator `-gpu` flag as openGym-Hevier's), `fork/DECISIONS-INDEX.md` against `fork/tools/decision-index.sh` (after a new decision: `fork/tools/decision-index.sh > fork/DECISIONS-INDEX.md`), analyze, and the whole suite bundled (`fork/tools/test-fast.sh`). A red upstream test means the fork changed behaviour it shouldn't have: fix the fork, never the test (fork/README.md, rule 4).
 
 A clean pass is remembered by commit: merge, then push, and the hook doesn't run it again. A later commit that changes only `.md` files or `fork/VERSION`, or adds an upgrade fixture, passes on that stamp too.
 

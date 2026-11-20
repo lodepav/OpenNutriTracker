@@ -137,4 +137,36 @@ void main() {
       lessThan(5),
     );
   });
+  test('an intake changed across a break is not held once back', () {
+    // 60 days at 2,000 kcal, a week not logged nor weighed, then a steady
+    // 1,500: the first weigh-in back, day 67, anchors the restart.
+    var kg = 90.0;
+    final days = [
+      for (var d = 0; d < 120; d++)
+        () {
+          final intake = d < 60 ? 2000.0 : (d < 67 ? null : 1500.0);
+          kg += ((intake ?? _expenditure) - _expenditure) / _kcalPerKg;
+          return AdaptiveDay(
+            intakeKcal: intake,
+            weightKg: intake == null ? null : kg,
+          );
+        }(),
+    ];
+    int updates(int length) => estimateExpenditureRun(
+      days.sublist(0, length),
+      priorKcal: _expenditure,
+      settings: _damped,
+    ).updates;
+    const resumes = 67 + ExpenditureSettings.defaultWarmupDays;
+    expect(
+      estimateExpenditureRun(
+        days.sublist(0, resumes),
+        priorKcal: _expenditure,
+        settings: _damped,
+      ).breakHold,
+      isNotNull,
+    );
+    // Every day from then on is weighed and logged at the same intake.
+    expect(updates(resumes + 14) - updates(resumes), 14);
+  });
 }
