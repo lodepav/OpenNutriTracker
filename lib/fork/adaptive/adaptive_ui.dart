@@ -112,9 +112,17 @@ class _AdaptiveCheckInCardState extends State<AdaptiveCheckInCard> {
   /// What changed, for [_Due.settings]; empty when it can't be told.
   List<String> _changed = const [];
 
+  /// For [_Due.weekly]: an automatic check-in waits on
+  /// [AdaptiveService.partialDays].
+  bool _waitsOnPartial = false;
+
   Future<_Due?> _readDue() async {
     if (!await _service.checkInDue()) return null;
     final reason = await checkInReason(_service);
+    _waitsOnPartial =
+        reason == _Due.weekly &&
+        AdaptiveStore.settings.value.autoAcceptCheckIn &&
+        (await _service.partialDays()).isNotEmpty;
     if (reason == _Due.settings) {
       _changed = changedTargetSettings(
         (await _service.lastCheckIn())?.basis,
@@ -260,7 +268,11 @@ class _AdaptiveCheckInCardState extends State<AdaptiveCheckInCard> {
                       ? 'A target built under them is ready to check.'
                       : 'You changed ${_changed.join(', ')}. A target built '
                             'under the new settings is ready to check.',
-                _Due.weekly => 'Your expenditure and next target are ready.',
+                _Due.weekly =>
+                  _waitsOnPartial
+                      ? 'Waiting for your answer on a day that looks partly '
+                            'logged.'
+                      : 'Your expenditure and next target are ready.',
               }),
               trailing: const Icon(Icons.chevron_right_rounded),
               onTap: () async {
@@ -273,6 +285,9 @@ class _AdaptiveCheckInCardState extends State<AdaptiveCheckInCard> {
                   _recheck();
                   await _refreshGoals();
                   widget.onAccepted();
+                } else if (_waitsOnPartial && mounted) {
+                  // The day may be answered now: the automatic one goes on.
+                  _recheck();
                 }
               },
             ),

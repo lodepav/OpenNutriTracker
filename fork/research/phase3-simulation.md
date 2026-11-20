@@ -180,6 +180,28 @@ thresholds (5% and 15% of the mean intake) were the best of a small sweep: wider
 from the first update was worse in five of the six. The first two weeks' target is the
 formula's, and weeks 3–8 are still off by 100–250 kcal either way: open.
 
+2026-11-20, a second try at the cold start. Score: mean |estimate − truth| over check-ins 3–8
+and 9–15, 30 seeds, the six cold starts on Standard. "Prior ±20%" starts at +738 and −318
+logged kcal, as the prior is not scaled by the 0.9 logging share. The signed error goes
+opposite ways: with the prior 20% high it ends weeks 4–8 near −120 with no water and near
++120 with 2 kg, and at 1 kg the two cancel. So each change below helps some cold starts and
+hurts others, and none ships.
+
+| Run | Water 0, +20% | 0, −20% | 1, +20% | 1, −20% | 2, +20% | 2, −20% | Settled |
+|---|---|---|---|---|---|---|---|
+| Standard | 197 / 73 | 166 / 71 | 124 / 75 | 104 / 67 | 135 / 95 | 92 / 72 | 69 |
+| Intake trend in the raw, calibrating | 127 / 71 | 123 / 71 | 173 / 91 | 81 / 66 | 243 / 119 | 71 / 68 | 73 |
+| Calibration blend 0.1, 45 days | 168 / 67 | 148 / 76 | 105 / 68 | 99 / 68 | 147 / 100 | 81 / 66 | 66 |
+| First update on day 10 | 183 / 74 | 156 / 72 | 128 / 74 | 105 / 68 | 126 / 94 | 97 / 72 | 69 |
+| First update on day 14 | 158 / 73 | 136 / 75 | 134 / 73 | 104 / 69 | 125 / 88 | 111 / 74 | 70 |
+
+"Intake trend in the raw" takes the window's mean of the intake's trend, which lags as the
+weight's does, in place of its mean intake. It removes the lag's misreading and leaves the
+water's, which the lag had been cancelling. The blend at 0.1, 0.2 or 0.3 with 30 or 45 days
+moved the mean of the six by at most 11 kcal. The check-in cap does not apply while
+calibrating, so it is no lever here. What is left is the water: a cut's first days shed it,
+and the estimate has no way to tell it from tissue.
+
 **Days logged at half (D65).** At maintenance, the user following the target:
 
 | Days at half | Bias | Real drift | With the days pointed out left out |

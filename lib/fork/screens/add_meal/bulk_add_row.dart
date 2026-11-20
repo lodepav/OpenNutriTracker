@@ -378,8 +378,10 @@ extension _BulkAddRow on _BulkAddScreenState {
 
   /// What the row is called, on screen and in any message about it: the
   /// matched food, or the words the user typed when nothing matched.
-  String _rowTitle(BulkAddRow row) =>
-      row.meal?.name ?? row.resolved.parsed.query;
+  String _rowTitle(BulkAddRow row) => switch (row.meal) {
+    final meal? when meal.name != null => shownDishName(meal),
+    _ => row.resolved.parsed.query,
+  };
 
   /// The row's actions besides keeping it: a quick add for no match, the
   /// breakdown of a doubtful dish, and a separate dish's recipe and undo.

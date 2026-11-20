@@ -918,9 +918,12 @@ void main() {
     expect(find.text('3 × slice · 114 g'), findsOneWidget);
   });
 
-  testWidgets('a weight has no grams line, and 2x has no total on the button', (
-    tester,
-  ) async {
+  testWidgets('a weight has no grams line, and at 2x the button keeps its '
+      'total on a line of its own', (tester) async {
+    // U3: at 2x on an ordinary phone the total used to be dropped.
+    tester.view.physicalSize = const Size(411 * 3, 891 * 3);
+    tester.view.devicePixelRatio = 3.0;
+    addTearDown(tester.view.reset);
     await _register({
       'toast': [_meal('Toast')],
     });
@@ -935,7 +938,26 @@ void main() {
     await _parse(tester, '100g toast');
 
     expect(find.textContaining('≈'), findsNothing);
-    expect(find.text('Log 1 item'), findsOneWidget);
+    final submit = find.ancestor(
+      of: find.text('Log 1 item'),
+      matching: find.byWidgetPredicate((w) => w is FilledButton),
+    );
+    final button = tester.getRect(submit);
+    for (final text in ['Log 1 item', '100 kcal']) {
+      final found = find.descendant(of: submit, matching: find.text(text));
+      expect(found, findsOneWidget, reason: text);
+      final paragraph = tester.renderObject<RenderParagraph>(found);
+      expect(paragraph.didExceedMaxLines, isFalse, reason: text);
+      final rect = tester.getRect(found);
+      expect(button.contains(rect.topLeft), isTrue, reason: text);
+      expect(button.contains(rect.bottomRight - const Offset(1, 1)), isTrue);
+      expect(
+        rect.width,
+        greaterThanOrEqualTo(paragraph.getMaxIntrinsicWidth(double.infinity)),
+        reason: '$text is cut',
+      );
+    }
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('a row says the word the food uses, not "serving"', (

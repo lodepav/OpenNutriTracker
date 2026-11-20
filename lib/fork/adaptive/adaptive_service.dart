@@ -210,7 +210,7 @@ class AdaptiveService {
       for (final found in likelyPartlyLogged(
         days.sublist(0, days.length - 1),
       ).reversed)
-        if (days.length - 1 - found.day <= partialDayAskDays &&
+        if (days.length - 1 - found.day < partialDayAskDays &&
             !whole.contains(date(found.day)))
           (
             date: date(found.day),

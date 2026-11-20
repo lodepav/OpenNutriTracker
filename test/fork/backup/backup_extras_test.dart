@@ -213,6 +213,22 @@ void main() {
     });
   });
 
+  test('days said whole here stay beside the backup\'s', () async {
+    final from = device();
+    await from.adaptive.setWhole(DateTime(2026, 10, 18), true);
+    final archive = Archive();
+    await from.extras.addTo(archive);
+
+    final to = device();
+    await to.adaptive.setWhole(DateTime(2026, 10, 20), true);
+    await to.extras.prepareRestore(archive)();
+
+    expect(await to.adaptive.wholeDays(), {
+      DateTime(2026, 10, 18),
+      DateTime(2026, 10, 20),
+    });
+  });
+
   test('what one device backs up, another restores, twice without '
       'duplicates', () async {
     final from = device();

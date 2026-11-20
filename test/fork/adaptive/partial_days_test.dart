@@ -46,9 +46,13 @@ class _Weights extends Fake implements GetWeightLogUsecase {
   ];
 }
 
-/// 60 days at 2,000 kcal, [_halfDay] at 1,000 and today, still being
-/// eaten, at 400.
+/// 60 days at 2,000 kcal, the days [halfBack] back (by default
+/// [_halfDay]) at 1,000 and today, still being eaten, at 400.
 class _TrackedDays extends Fake implements GetTrackedDayUsecase {
+  final Set<int> halfBack;
+
+  _TrackedDays([this.halfBack = const {5}]);
+
   @override
   Future<List<TrackedDayEntity>> getTrackedDaysByRange(
     DateTime start,
@@ -60,7 +64,7 @@ class _TrackedDays extends Fake implements GetTrackedDayUsecase {
         calorieGoal: 2000,
         caloriesTracked: d == 0
             ? 400
-            : d == 5
+            : halfBack.contains(d)
             ? 1000
             : 2000,
       ),
@@ -173,6 +177,20 @@ void main() {
       expect(days.single.usualKcal, 2000);
     });
 
+    test('a day 27 days back is asked about; 28 back, outside the '
+        'window, is not', () async {
+      service = AdaptiveService(
+        _User(),
+        _Weights(),
+        _TrackedDays({27, 28}),
+        store,
+        () => _today.add(const Duration(hours: 9)),
+      );
+      expect((await service.partialDays()).map((d) => d.date), [
+        DateTime(2026, 9, 25),
+      ]);
+    });
+
     test('a day kept or left out is not asked about again', () async {
       await service.keepDay(_halfDay);
       expect(await service.partialDays(), isEmpty);
@@ -200,6 +218,61 @@ void main() {
       await service.keepDay(_halfDay);
       await AutoCheckIn.run(service);
       expect(store.records, hasLength(1));
+    });
+
+    testWidgets('Home says an automatic check-in waits for the answer', (
+      tester,
+    ) async {
+      // A week old, with no goal or settings behind it: a weekly one is due.
+      store.records.add(
+        CheckInRecord(
+          date: _today.subtract(const Duration(days: 8)),
+          expenditureKcal: 2600,
+          proposedKcal: 2100,
+          acceptedKcal: 2100,
+        ),
+      );
+      Future<void> pump() async {
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: AdaptiveCheckInCard(service: service, onAccepted: () {}),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+      }
+
+      AdaptiveStore.settings.value = const AdaptiveSettings(
+        adaptiveTarget: true,
+      );
+      await pump();
+      expect(find.text('Weekly check-in'), findsOneWidget);
+      expect(find.textContaining('partly logged'), findsNothing);
+
+      AdaptiveStore.settings.value = const AdaptiveSettings(
+        adaptiveTarget: true,
+        autoAcceptCheckIn: true,
+      );
+      await pump();
+      expect(find.text('Weekly check-in'), findsOneWidget);
+      expect(
+        find.text('Waiting for your answer on a day that looks partly logged.'),
+        findsOneWidget,
+      );
+
+      // Answered on the check-in and back without accepting: it goes ahead.
+      tester.view.physicalSize = const Size(1080, 4000);
+      tester.view.devicePixelRatio = 2;
+      addTearDown(tester.view.reset);
+      await tester.tap(find.text('Weekly check-in'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Keep'));
+      await tester.pumpAndSettle();
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      expect(find.textContaining('partly logged'), findsNothing);
+      expect(store.records, hasLength(2));
     });
 
     testWidgets('the screen shows the day and takes the answer', (

@@ -372,6 +372,62 @@ void main() {
     expect(cookingFatText(10), '10');
   });
 
+  group('the row an answer goes into', () {
+    test('the first oil or butter on the read, with its grams', () {
+      final rows = [
+        _row('chicken, stewed'),
+        _row('vegetable oil', matched: 'Vegetable oil, NFS', grams: '15'),
+        _row('butter', matched: 'Butter, salted', grams: '5'),
+      ];
+      final target = cookingFatTargetIn(rows)!;
+      expect(target.row, same(rows[1]));
+      expect(target.grams, 15);
+      expect(
+        cookingFatTargetIn([
+          _row('oil', matched: 'Oil, olive', grams: '4'),
+        ])?.grams,
+        4,
+      );
+    });
+
+    test('none for a dish, a sauce, a nut butter, a food holding its fat, '
+        'or a row left out', () {
+      for (final matched in [
+        'Butter chicken (murgh makhani)',
+        'Mayonnaise, regular',
+        'Sauce, cheese',
+        'Peanut butter, smooth',
+        'Sesame butter',
+        'Pear butter',
+        'Fish oil, cod liver',
+        'Cod-liver oil',
+        'Tuna, canned in oil',
+        'Potatoes, home fries',
+      ]) {
+        expect(
+          cookingFatTargetIn([_row('x', matched: matched)]),
+          isNull,
+          reason: matched,
+        );
+      }
+      expect(
+        cookingFatTargetIn([_row('oil', matched: 'Oil, olive', skipped: true)]),
+        isNull,
+      );
+    });
+
+    test('"Any more" adds to the read\'s grams; the others set them', () {
+      expect(cookingFatAnswer(CookingFatAsk.cookedMore, 4, 0), 9);
+      expect(cookingFatAnswer(CookingFatAsk.saladMore, 4, 2), 24);
+      expect(cookingFatAnswer(CookingFatAsk.cooked, 15, 0), 5);
+      expect(cookingFatAnswer(CookingFatAsk.salad, 15, 1), 10);
+      expect(cookingFatAnswer(CookingFatAsk.cookedMore, 13.64, 0), 18.6);
+      expect(cookingFatChipAt(CookingFatAsk.cookedMore, 4, 14), 1);
+      expect(cookingFatChipAt(CookingFatAsk.cooked, 15, 15), isNull);
+      expect(cookingFatChipAt(CookingFatAsk.cooked, 15, 20), 2);
+    });
+  });
+
   group('a row put', () {
     final state = BulkAddLoadedState(
       rows: [_row('egg, fried')],

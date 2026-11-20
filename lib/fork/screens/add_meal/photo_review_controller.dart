@@ -128,6 +128,10 @@ class PhotoReviewController extends ChangeNotifier {
   /// The chip tapped while the table's oil is looked up.
   int? _fatPending;
 
+  /// The read's own oil or butter row the chips set, as it was before
+  /// them, and its grams then.
+  ({BulkAddRow row, double grams})? _fatTarget;
+
   /// A read starting takes a new scale; a photo's rows arriving are its
   /// base, and every later state is followed: what the user changed is
   /// pinned, and rows a breakdown wrote or a put-back food take the size.
@@ -153,6 +157,7 @@ class PhotoReviewController extends ChangeNotifier {
       _fatClosed = false;
       _fatItem = null;
       _fatPending = null;
+      _fatTarget = null;
       return;
     }
     if (state.source != BulkAddReadSource.photo) return;
@@ -553,7 +558,11 @@ class PhotoReviewController extends ChangeNotifier {
   /// The fat row the chips added, as it is on the review; null when none.
   BulkAddRow? _fatRow(List<BulkAddRow> rows) {
     final item = _fatItem;
-    if (item == null) return null;
+    return item == null ? null : _rowOf(rows, item);
+  }
+
+  /// The row of [rows] for [item]; null when it is not there.
+  static BulkAddRow? _rowOf(List<BulkAddRow> rows, ResolvedMealItem item) {
     for (final row in rows) {
       if (identical(row.resolved, item)) return row;
     }
@@ -562,27 +571,71 @@ class PhotoReviewController extends ChangeNotifier {
 
   /// The chip of the fat question that shows as chosen: the one at the
   /// added row's amount, or the one tapped while its oil is looked up.
-  /// None while the row is in another unit than the chips' grams.
-  int? fatChosen(List<BulkAddRow> rows) => switch (_fatRow(rows)) {
-    final row? when row.effectiveUnit == row.resolved.parsed.unit =>
-      cookingFatChipOf(row.amountText),
-    final _? => null,
-    null => _fatPending,
-  };
+  /// None while the row is in another unit than the chips' grams. For the
+  /// read's own fat row, the one whose answer its grams are now.
+  int? fatChosen(List<BulkAddRow> rows) {
+    if (_fatTarget case (:final row, :final grams)) {
+      final ask = _fatAsk;
+      final now = _rowOf(rows, row.resolved);
+      final at = now == null ? null : cookingFatGramsOf(now);
+      return ask == null || at == null
+          ? null
+          : cookingFatChipAt(ask, grams, at);
+    }
+    return switch (_fatRow(rows)) {
+      final row? when row.effectiveUnit == row.resolved.parsed.unit =>
+        cookingFatChipOf(row.amountText),
+      final _? => null,
+      null => _fatPending,
+    };
+  }
 
   /// None (-1) takes the added row off and ends the question; an amount
   /// adds the table's oil at it, pinned as the user's (the Size leaves
-  /// it), or sets the row it added before to it. True when the table had
-  /// no oil to add, for the screen to say so.
+  /// it), or sets the row it added before to it. With an oil or butter of
+  /// the read's own, an amount goes into that row instead and None puts
+  /// it back as it was. True when the table had no oil to add, for the
+  /// screen to say so.
   Future<bool> chooseCookingFat(int choice) async {
     final state = _bloc.state;
     if (state is! BulkAddLoadedState) return false;
     final current = _fatRow(state.rows);
+    // a row taken off the review since takes no answer
+    if (_fatTarget case (
+      :final row,
+      grams: _,
+    ) when _rowOf(state.rows, row.resolved) == null) {
+      _fatTarget = null;
+    }
+    final target =
+        _fatTarget ??
+        (current == null && _fatPending == null
+            ? cookingFatTargetIn(state.rows)
+            : null);
     if (choice < 0) {
       _fatClosed = true;
       _fatPending = null;
       notifyListeners();
       if (current != null) _bloc.add(PutRowEvent(current.resolved, null));
+      if (_fatTarget case (:final row, grams: _)) {
+        final now = _rowOf(state.rows, row.resolved)!;
+        _bloc.add(
+          PutRowEvent(
+            row.resolved,
+            now.copyWith(
+              amountText: row.amountText,
+              unit: row.unit,
+              unitChosenByUser: row.unitChosenByUser,
+              amountEditedByUser: row.amountEditedByUser,
+            ),
+          ),
+        );
+      }
+      return false;
+    }
+    if (target != null) {
+      _fatTarget = target;
+      _setFatTarget(_rowOf(state.rows, target.row.resolved)!, target, choice);
       return false;
     }
     final grams = cookingFatGrams[choice];
@@ -624,6 +677,30 @@ class PhotoReviewController extends ChangeNotifier {
     notifyListeners();
     _bloc.add(PutRowEvent(row.resolved, row));
     return false;
+  }
+
+  /// The read's own fat row at [choice]'s answer, in grams as the user's
+  /// amount: the Size leaves it, and a photo's amount changed is learnt.
+  void _setFatTarget(
+    BulkAddRow row,
+    ({BulkAddRow row, double grams}) target,
+    int choice,
+  ) {
+    final grams = cookingFatAnswer(
+      _fatAsk ?? CookingFatAsk.cooked,
+      target.grams,
+      choice,
+    );
+    final g = UnitDropdownItem.g.toString();
+    final set = row.copyWith(
+      amountText: cookingFatText(grams),
+      unit: row.allowedUnits.contains(g) ? g : UnitDropdownItem.gml.toString(),
+      unitChosenByUser: true,
+      amountEditedByUser: true,
+    );
+    _mealScale.pin(set);
+    notifyListeners();
+    _bloc.add(PutRowEvent(row.resolved, set));
   }
 
   /// An ordinary row of [found] at [grams], as the user's amount: in grams,

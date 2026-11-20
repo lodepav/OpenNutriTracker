@@ -9,12 +9,12 @@ Fork rule 2 (fork/README.md): an upstream file is edited only at a seam, a short
 
 Before adding a seam to an upstream file, check SEAMS.md, "Fork-owned copies": if the file has a fork copy, edit the copy instead.
 
-1. Commit, then run `fork/tools/seam_check.py` (`verify.sh` runs it too). It compares the merge base with `HEAD`, and only files that exist on both sides, so it sees neither uncommitted edits nor a file newly added under an upstream path (`lib/features/...`, `test/...`): read those by hand. It finds:
+1. Commit, then run `fork/tools/seam_check.py` (`verify.sh` runs it too). It compares the merge base with `HEAD`, so it doesn't see uncommitted edits. A file the fork adds under `lib/` or `test/` (outside `lib/fork` and `test/fork`) needs a row naming it, or markers. It finds:
    - a seam id on two rows. `merge=union` keeps both sides of a SEAMS.md merge, so two branches can take the same next number: renumber the later one, in its row and its markers;
    - a `[fork] S<n>` marker with no row;
    - an upstream file changed from upstream with no marker and no row.
 
-   It doesn't find a row whose markers are all gone, and it reads only the first id after `[fork]` on a line: a line naming two seams counts for the first.
+   It doesn't find a row whose markers are all gone. A marker counts for every `S<n>` id before its first colon; an id wrapped onto the next comment line isn't read.
 2. The script works file by file, so read the diff of each upstream file this change touches:
    ```bash
    git diff --name-only HEAD -- . ':!fork' ':!lib/fork' ':!test/fork' ':!lib/generated' ':!pubspec.lock'   # uncommitted

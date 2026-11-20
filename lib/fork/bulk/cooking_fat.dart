@@ -164,7 +164,7 @@ bool _saidCooked(BulkAddRow row) => _cooked.hasMatch(
 );
 
 /// [row]'s grams or millilitres; null when it has none to say.
-double? _grams(BulkAddRow row) {
+double? cookingFatGramsOf(BulkAddRow row) {
   final meal = row.meal;
   final amount = double.tryParse(row.amountText.trim().replaceAll(',', '.'));
   if (meal == null || amount == null) return null;
@@ -196,7 +196,7 @@ CookingFatAsk? cookingFatAskFor(List<BulkAddRow> rows, {String? note}) {
   var anyFat = false;
   for (final (i, row) in kept.indexed) {
     if (own[i] || !_fat.hasMatch(_words(row))) continue;
-    final grams = _grams(row);
+    final grams = cookingFatGramsOf(row);
     if (grams == null) return null;
     anyFat = true;
     fat += grams;
@@ -225,3 +225,56 @@ int? cookingFatChipOf(String amountText) {
 String cookingFatText(double grams) => grams == grams.roundToDouble()
     ? grams.toInt().toString()
     : grams.toString();
+
+/// The head of a table food that is a fat by itself: "Oil, olive",
+/// "Vegetable oil, NFS", "Butter, salted"; not "Butter chicken". A cream
+/// sauce or mayonnaise is no place for an oil's grams.
+final _plainFatHead = RegExp(
+  r'^(.*\s)?(oils?|ghee|lard|margarine|butter)$',
+  caseSensitive: false,
+);
+
+/// Heads the table has that end so and are no cooking fat: a nut, seed or
+/// fruit butter, a fish oil.
+final _notPlainFat = RegExp(
+  r'\b(peanut|nut|almond|cashew|sesame|seed|apple|pear|plum|fruit|cocoa|'
+  r'shea)\s+butter$|\b(fish|liver)\s+oil$',
+  caseSensitive: false,
+);
+
+/// The row of [rows] a chip's answer goes into instead of a row of its own,
+/// with its grams: the first kept oil, butter, ghee, lard or margarine the
+/// read or a breakdown has, whose amount can be weighed. Null when there is
+/// none, and the chips add the table's oil.
+({BulkAddRow row, double grams})? cookingFatTargetIn(List<BulkAddRow> rows) {
+  for (final row in rows) {
+    if (row.skipped || _tableHoldsFat(row) || _dressed(row)) continue;
+    final head = (row.meal?.name ?? '').split(RegExp(r'[,(]')).first.trim();
+    if (!_plainFatHead.hasMatch(head) || _notPlainFat.hasMatch(head)) {
+      continue;
+    }
+    final grams = cookingFatGramsOf(row);
+    if (grams != null) return (row: row, grams: grams);
+  }
+  return null;
+}
+
+/// The grams a fat row of [base] grams holds after the chip of
+/// [cookingFatGrams] at [chip]: "Any more …?" adds the chip's grams to the
+/// read's, the other questions ask how much fat there was, so set it.
+double cookingFatAnswer(CookingFatAsk ask, double base, int chip) {
+  final grams = cookingFatGrams[chip];
+  final total = switch (ask) {
+    CookingFatAsk.cookedMore || CookingFatAsk.saladMore => base + grams,
+    CookingFatAsk.cooked || CookingFatAsk.salad => grams,
+  };
+  return (total * 10).round() / 10;
+}
+
+/// The chip whose [cookingFatAnswer] from [base] is [grams]; null for none.
+int? cookingFatChipAt(CookingFatAsk ask, double base, double grams) {
+  for (var i = 0; i < cookingFatGrams.length; i++) {
+    if ((cookingFatAnswer(ask, base, i) - grams).abs() < 0.05) return i;
+  }
+  return null;
+}

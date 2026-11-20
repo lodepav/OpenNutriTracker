@@ -655,7 +655,7 @@ void main() {
 
       await tester.longPress(find.text('Toast'));
       await settle(tester);
-      // [fork] feat/leftovers: the dialog's first field is the amount
+      // [fork] upstream-pr/leftovers: the dialog's first field is the amount
       await tester.enterText(find.byType(TextFormField).first, '50');
       // [/fork]
       await passMidnight(tester);
