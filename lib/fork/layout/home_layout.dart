@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:opennutritracker/fork/adaptive/adaptive_ui.dart'
+    show CheckInWaitingNote;
 import 'package:opennutritracker/fork/bulk/ai_add.dart';
 import 'package:opennutritracker/fork/display/display_prefs.dart';
 import 'package:opennutritracker/fork/layout/arrange_screen.dart';
@@ -148,6 +150,8 @@ class HomeSectionsList extends StatelessWidget {
     valueListenable: LayoutStore.current(homeSectionsKey),
     builder: (context, layout, _) => ListView(
       children: [
+        // shown, the card says it itself
+        if (layout.hidden.contains('checkIn')) const CheckInWaitingNote(),
         // each capped, so the list's sides still scroll on a wide window
         for (final section in arranged(sections, (
           order: layout.order,

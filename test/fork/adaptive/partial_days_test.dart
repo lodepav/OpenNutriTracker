@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:opennutritracker/core/domain/entity/tracked_day_entity.dart';
@@ -15,6 +17,8 @@ import 'package:opennutritracker/fork/adaptive/adaptive_ui.dart';
 import 'package:opennutritracker/fork/adaptive/auto_check_in.dart';
 import 'package:opennutritracker/fork/adaptive/expenditure.dart';
 import 'package:opennutritracker/fork/adaptive/partial_days.dart';
+import 'package:opennutritracker/fork/layout/home_layout.dart';
+import 'package:opennutritracker/fork/layout/layout_store.dart';
 
 final _today = DateTime(2026, 10, 22);
 
@@ -40,7 +44,7 @@ class _Weights extends Fake implements GetWeightLogUsecase {
   Future<List<WeightLogEntity>> getAllEntries() async => [
     for (var d = 59; d >= 0; d -= 2)
       WeightLogEntity(
-        date: _today.subtract(Duration(days: d)),
+        date: DateTime(_today.year, _today.month, _today.day - d),
         weightKg: 90 - 0.5 * (59 - d) / 7,
       ),
   ];
@@ -51,28 +55,44 @@ class _Weights extends Fake implements GetWeightLogUsecase {
 class _TrackedDays extends Fake implements GetTrackedDayUsecase {
   final Set<int> halfBack;
 
+  /// While set and not completed, the days are not read yet.
+  Completer<void>? gate;
+
   _TrackedDays([this.halfBack = const {5}]);
 
   @override
   Future<List<TrackedDayEntity>> getTrackedDaysByRange(
     DateTime start,
     DateTime end,
-  ) async => [
-    for (var d = 0; d < 60; d++)
-      TrackedDayEntity(
-        day: _today.subtract(Duration(days: d)),
-        calorieGoal: 2000,
-        caloriesTracked: d == 0
-            ? 400
-            : halfBack.contains(d)
-            ? 1000
-            : 2000,
-      ),
-  ];
+  ) async {
+    await gate?.future;
+    return [
+      for (var d = 0; d < 60; d++)
+        TrackedDayEntity(
+          day: DateTime(_today.year, _today.month, _today.day - d),
+          calorieGoal: 2000,
+          caloriesTracked: d == 0
+              ? 400
+              : halfBack.contains(d)
+              ? 1000
+              : 2000,
+        ),
+    ];
+  }
 }
 
 class _MemoryStore extends AdaptiveStore {
   final records = <CheckInRecord>[];
+  final keys = <String, Object?>{};
+
+  /// While set and not completed, a day left out is not saved yet.
+  Completer<void>? saveGate;
+
+  @override
+  Future<Object?> readKey(String key) async => keys[key];
+
+  @override
+  Future<void> writeKey(String key, Object? value) async => keys[key] = value;
 
   @override
   Future<List<CheckInRecord>> history() async => records;
@@ -81,8 +101,10 @@ class _MemoryStore extends AdaptiveStore {
   Future<void> addCheckIn(CheckInRecord record) async => records.add(record);
 
   @override
-  Future<void> setSkipped(DateTime day, bool skipped) async =>
-      AdaptiveStore.skipped.value = {...AdaptiveStore.skipped.value, day};
+  Future<void> setSkipped(DateTime day, bool skipped) async {
+    await saveGate?.future;
+    AdaptiveStore.skipped.value = {...AdaptiveStore.skipped.value, day};
+  }
 
   @override
   Future<void> setWhole(DateTime day, bool isWhole) async =>
@@ -168,7 +190,25 @@ void main() {
       AdaptiveStore.skipped.value = const {};
       AdaptiveStore.whole.value = const {};
       AutoCheckIn.accepted.value = null;
+      AutoCheckIn.waiting.value = null;
+      LayoutStore.current(homeSectionsKey).value = (
+        order: const [],
+        hidden: const {},
+      );
     });
+
+    /// A week old, with no goal or settings behind it: a weekly one is due.
+    CheckInRecord weekOld() => CheckInRecord(
+      date: DateTime(_today.year, _today.month, _today.day - 8),
+      expenditureKcal: 2600,
+      proposedKcal: 2100,
+      acceptedKcal: 2100,
+    );
+
+    String field(WidgetTester tester) => tester
+        .widget<TextField>(find.byKey(const ValueKey('check-in-target')))
+        .controller!
+        .text;
 
     test('the half day is asked about; today, still eaten, is not', () async {
       final days = await service.partialDays();
@@ -293,6 +333,11 @@ void main() {
           .controller!
           .text;
       final before = field();
+      // typed, then moved by the answer: the new proposal replaces it
+      await tester.enterText(
+        find.byKey(const ValueKey('check-in-target')),
+        '1234',
+      );
 
       await tester.tap(find.text('Leave out'));
       await tester.pumpAndSettle();
@@ -303,6 +348,131 @@ void main() {
       final proposed = (await service.checkIn()).proposedTargetKcal.round();
       expect(field(), isNot(before));
       expect(field(), '$proposed');
+    });
+
+    testWidgets('Keep leaves a typed target', (tester) async {
+      tester.view.physicalSize = const Size(1080, 4000);
+      tester.view.devicePixelRatio = 2;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        MaterialApp(home: CheckInScreen(service: service)),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.byKey(const ValueKey('check-in-target')),
+        '1800',
+      );
+      await tester.tap(find.text('Keep'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Logged only in part?'), findsNothing);
+      expect(field(tester), '1800');
+    });
+
+    testWidgets('Accept and Keep current target wait for the check-in an '
+        'answer reads again', (tester) async {
+      tester.view.physicalSize = const Size(1080, 4000);
+      tester.view.devicePixelRatio = 2;
+      addTearDown(tester.view.reset);
+      store.records.add(weekOld());
+      final tracked = _TrackedDays();
+      service = AdaptiveService(
+        _User(),
+        _Weights(),
+        tracked,
+        store,
+        () => _today.add(const Duration(hours: 9)),
+      );
+      await tester.pumpWidget(
+        MaterialApp(home: CheckInScreen(service: service)),
+      );
+      await tester.pumpAndSettle();
+      bool enabled(String key) =>
+          tester.widget<ButtonStyleButton>(find.byKey(ValueKey(key))).enabled;
+      expect(enabled('check-in-accept'), isTrue);
+      expect(enabled('check-in-keep'), isTrue);
+
+      store.saveGate = Completer();
+      tracked.gate = Completer();
+      await tester.tap(find.text('Leave out'));
+      await tester.pump();
+
+      // saving the answer
+      expect(enabled('check-in-accept'), isFalse);
+      expect(enabled('check-in-keep'), isFalse);
+      await tester.tap(find.text('Accept'), warnIfMissed: false);
+      await tester.pump();
+      expect(store.records, hasLength(1));
+
+      // reading the check-in again
+      store.saveGate!.complete();
+      await tester.pump();
+      expect(AdaptiveStore.skipped.value, {_halfDay});
+      expect(enabled('check-in-accept'), isFalse);
+      expect(enabled('check-in-keep'), isFalse);
+
+      tracked.gate!.complete();
+      tracked.gate = null;
+      await tester.pumpAndSettle();
+      expect(enabled('check-in-accept'), isTrue);
+      expect(enabled('check-in-keep'), isTrue);
+    });
+
+    testWidgets('with the card hidden, Home says once that an automatic '
+        'check-in waits, and opens it', (tester) async {
+      tester.view.physicalSize = const Size(1080, 4000);
+      tester.view.devicePixelRatio = 2;
+      addTearDown(tester.view.reset);
+      store.records.add(weekOld());
+      AdaptiveStore.settings.value = const AdaptiveSettings(
+        adaptiveTarget: true,
+        autoAcceptCheckIn: true,
+      );
+      final layout = LayoutStore.current(homeSectionsKey);
+      const note =
+          'A check-in is waiting for your answer on a day that looks partly '
+          'logged.';
+      Future<void> home() async {
+        await tester.pumpWidget(const SizedBox());
+        await tester.pumpWidget(
+          const MaterialApp(
+            home: Scaffold(
+              body: HomeSectionsList(sections: {'dashboard': Text('Summary')}),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+      }
+
+      await AutoCheckIn.run(service);
+      expect(store.records, hasLength(1));
+
+      // The card shown says it itself.
+      await home();
+      expect(find.text(note), findsNothing);
+
+      layout.value = (order: const [], hidden: {'checkIn'});
+      await home();
+      expect(find.text(note), findsOneWidget);
+
+      // Not again for the same check-in, on a resume or a new Home.
+      await AutoCheckIn.run(service);
+      await home();
+      expect(find.text(note), findsNothing);
+
+      store.keys.clear();
+      await home();
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+      expect(find.byType(CheckInScreen), findsOneWidget);
+
+      // Answered and back without accepting: it goes ahead.
+      await tester.tap(find.text('Keep'));
+      await tester.pumpAndSettle();
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      expect(store.records, hasLength(2));
     });
   });
 }

@@ -22,11 +22,18 @@ Future<CheckInReason> checkInReason(AdaptiveService service) async =>
     : CheckInReason.weekly;
 
 /// Automatic check-ins (D17), run by Home's card, the main screen's start
-/// and each resume, so a target is set with the card hidden too.
+/// and each resume, so a target is set with the card hidden too; one that
+/// waits on a day that looks partly logged (D65) is said in [waiting].
 abstract final class AutoCheckIn {
   /// The check-in last accepted on its own and why; null once dismissed.
   static final accepted =
       ValueNotifier<({CheckIn checkIn, CheckInReason reason})?>(null);
+
+  /// A weekly check-in the last [run] held back for an answer on a day
+  /// that looks partly logged, by the date of the check-in before it; null
+  /// when none waits.
+  static final waiting =
+      ValueNotifier<({AdaptiveService service, DateTime since})?>(null);
 
   /// True while [run] runs: two callers must not accept the same check-in
   /// twice.
@@ -46,7 +53,11 @@ abstract final class AutoCheckIn {
   }
 
   static Future<void> _runOnce(AdaptiveService? service) async {
-    if (!AdaptiveStore.settings.value.autoAcceptCheckIn) return;
+    if (!AdaptiveStore.settings.value.autoAcceptCheckIn) {
+      waiting.value = null;
+      return;
+    }
+    final AdaptiveService adaptive;
     final CheckIn? checkIn;
     final CheckInReason reason;
     try {
@@ -55,17 +66,39 @@ abstract final class AutoCheckIn {
           !await locator<UserRepository>().hasUserData()) {
         return;
       }
-      final adaptive = service ?? AdaptiveService.fromLocator();
+      adaptive = service ?? AdaptiveService.fromLocator();
       reason = await checkInReason(adaptive);
       checkIn = await adaptive.autoAcceptIfDue();
     } catch (_) {
       return; // Home's card stays, to be done by hand.
     }
-    if (checkIn == null) return;
+    if (checkIn == null) {
+      waiting.value = await _waitingOnPartial(adaptive, reason);
+      return;
+    }
+    waiting.value = null;
     try {
       await refreshGoals();
     } finally {
       accepted.value = (checkIn: checkIn, reason: reason);
+    }
+  }
+
+  /// [waiting]'s value after a run that accepted nothing.
+  static Future<({AdaptiveService service, DateTime since})?> _waitingOnPartial(
+    AdaptiveService adaptive,
+    CheckInReason reason,
+  ) async {
+    try {
+      final since = (await adaptive.lastCheckIn())?.date;
+      return since != null &&
+              reason == CheckInReason.weekly &&
+              await adaptive.checkInDue() &&
+              (await adaptive.partialDays()).isNotEmpty
+          ? (service: adaptive, since: since)
+          : null;
+    } catch (_) {
+      return null; // Home's card, when shown, still says it.
     }
   }
 }
