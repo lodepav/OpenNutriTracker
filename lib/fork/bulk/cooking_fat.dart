@@ -235,9 +235,10 @@ final _plainFatHead = RegExp(
 );
 
 /// Heads the table has that end so and are no cooking fat: a nut, seed or
-/// fruit butter, a fish oil.
+/// fruit butter, a fish oil. No word boundary before the nut, as in [_fat]:
+/// "Hazelnut butter".
 final _notPlainFat = RegExp(
-  r'\b(peanut|nut|almond|cashew|sesame|seed|apple|pear|plum|fruit|cocoa|'
+  r'(peanut|nut|almond|cashew|sesame|seed|apple|pear|plum|fruit|cocoa|'
   r'shea)\s+butter$|\b(fish|liver)\s+oil$',
   caseSensitive: false,
 );

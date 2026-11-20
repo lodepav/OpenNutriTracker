@@ -1039,7 +1039,6 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
                 ? Text('$label · $energy')
                 : Column(
                     mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [Text(label), Text(energy)],
                   ),
           ),

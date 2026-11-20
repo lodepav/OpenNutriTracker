@@ -155,6 +155,45 @@ void main() {
     expect(_question, findsNothing);
   });
 
+  testWidgets('None after a chip gives the read\'s oil back to the Size', (
+    tester,
+  ) async {
+    await openReview(tester);
+    await readReviewPhoto(tester, const [
+      _egg,
+      ParsedMealItem(query: 'olive oil', quantity: 5, unit: 'g'),
+    ]);
+    await tapAndSettle(tester, _chip(1));
+    expect(reviewRow(1).amountText, '15');
+    await tapAndSettle(tester, _none);
+    expect(reviewRow(1).amountText, '5');
+    expect(find.byKey(const ValueKey('bulk-add-set-by-you-1')), findsNothing);
+    await tapAndSettle(tester, mealSize(1.4));
+    expect(reviewRow(0).amountText, '140');
+    expect(reviewRow(1).amountText, '7');
+    await tapAndSettle(tester, mealSize(1));
+    expect(reviewRow(1).amountText, '5');
+  });
+
+  testWidgets('a chip after the read\'s oil was left out adds the table\'s '
+      'oil and leaves that row', (tester) async {
+    await openReview(tester);
+    await readReviewPhoto(tester, const [
+      _egg,
+      ParsedMealItem(query: 'olive oil', quantity: 5, unit: 'g'),
+    ]);
+    await tapAndSettle(tester, _chip(0));
+    expect(reviewRow(1).amountText, '10');
+    reviewBloc.add(const ToggleRowSkippedEvent(1));
+    await tester.pumpAndSettle();
+    await tapAndSettle(tester, _chip(1));
+    expect(looked, [10]);
+    expect(reviewRows().length, 3);
+    expect(reviewRow(1).amountText, '10');
+    expect(reviewRow(2).meal!.name, 'Sunflower oil');
+    expect(reviewRow(2).amountText, '10');
+  });
+
   testWidgets('a fried food with a little butter asks for more oil or '
       'butter', (tester) async {
     await openReview(tester);

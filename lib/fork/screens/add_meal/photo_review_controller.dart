@@ -15,6 +15,7 @@ import 'package:opennutritracker/fork/bulk/put_row.dart';
 import 'package:opennutritracker/fork/bulk/scale_rows.dart';
 import 'package:opennutritracker/fork/bulk/shown_unit.dart';
 import 'package:opennutritracker/fork/bulk/usual_sizes.dart';
+import 'package:opennutritracker/fork/food/dish_name.dart';
 
 /// A row as the photo's read gave it: its food, unit, grams or millilitres
 /// and amount text, and whether a size could change it then.
@@ -129,8 +130,8 @@ class PhotoReviewController extends ChangeNotifier {
   int? _fatPending;
 
   /// The read's own oil or butter row the chips set, as it was before
-  /// them, and its grams then.
-  ({BulkAddRow row, double grams})? _fatTarget;
+  /// them, its grams then, and whether the user had set it.
+  ({BulkAddRow row, double grams, bool pinned})? _fatTarget;
 
   /// A read starting takes a new scale; a photo's rows arriving are its
   /// base, and every later state is followed: what the user changed is
@@ -238,7 +239,10 @@ class PhotoReviewController extends ChangeNotifier {
       final key = foodKeyOf(row.meal!);
       if (usual.foods[key] case final factor?) {
         // named as the row's title reads
-        final name = row.meal?.name ?? row.resolved.parsed.query;
+        final name = switch (row.meal) {
+          final meal? when meal.name != null => shownDishName(meal),
+          _ => row.resolved.parsed.query,
+        };
         foods.putIfAbsent(key, () => (name: name, factor: factor));
       }
     }
@@ -312,6 +316,8 @@ class PhotoReviewController extends ChangeNotifier {
         row.resolved,
         () => baseAmountOf(row),
       );
+      // the fat chips' answer counts until None, which takes it back
+      if (identical(row.resolved, _fatTarget?.row.resolved)) continue;
       if (_amountChanged || !_mealScale.isPinned(row)) continue;
       if (_moved(first, baseAmountOf(row))) _amountChanged = true;
     }
@@ -574,7 +580,7 @@ class PhotoReviewController extends ChangeNotifier {
   /// None while the row is in another unit than the chips' grams. For the
   /// read's own fat row, the one whose answer its grams are now.
   int? fatChosen(List<BulkAddRow> rows) {
-    if (_fatTarget case (:final row, :final grams)) {
+    if (_fatTarget case (:final row, :final grams, pinned: _)) {
       final ask = _fatAsk;
       final now = _rowOf(rows, row.resolved);
       final at = now == null ? null : cookingFatGramsOf(now);
@@ -600,36 +606,48 @@ class PhotoReviewController extends ChangeNotifier {
     final state = _bloc.state;
     if (state is! BulkAddLoadedState) return false;
     final current = _fatRow(state.rows);
-    // a row taken off the review since takes no answer
+    // a row taken off the review or left out since takes no answer
     if (_fatTarget case (
       :final row,
       grams: _,
-    ) when _rowOf(state.rows, row.resolved) == null) {
+      pinned: _,
+    ) when _rowOf(state.rows, row.resolved)?.skipped ?? true) {
       _fatTarget = null;
     }
     final target =
         _fatTarget ??
-        (current == null && _fatPending == null
+        switch (current == null && _fatPending == null
             ? cookingFatTargetIn(state.rows)
-            : null);
+            : null) {
+          (:final row, :final grams) => (
+            row: row,
+            grams: grams,
+            pinned: _mealScale.isPinned(row),
+          ),
+          null => null,
+        };
     if (choice < 0) {
       _fatClosed = true;
       _fatPending = null;
       notifyListeners();
       if (current != null) _bloc.add(PutRowEvent(current.resolved, null));
-      if (_fatTarget case (:final row, grams: _)) {
+      if (_fatTarget case (:final row, grams: _, :final pinned)) {
         final now = _rowOf(state.rows, row.resolved)!;
-        _bloc.add(
-          PutRowEvent(
-            row.resolved,
-            now.copyWith(
-              amountText: row.amountText,
-              unit: row.unit,
-              unitChosenByUser: row.unitChosenByUser,
-              amountEditedByUser: row.amountEditedByUser,
-            ),
-          ),
+        var back = now.copyWith(
+          amountText: row.amountText,
+          unit: row.unit,
+          unitChosenByUser: row.unitChosenByUser,
+          amountEditedByUser: row.amountEditedByUser,
         );
+        if (!pinned) {
+          // the Size's again, from the base it kept, at the size chosen now
+          final bases = _mealScale.snapshot();
+          _mealScale.setBase(back);
+          final sized = _mealScale.restore([back], bases)[row.resolved];
+          if (sized != null) back = back.copyWith(amountText: sized);
+        }
+        _bloc.add(PutRowEvent(row.resolved, back));
+        _fatTarget = null;
       }
       return false;
     }
@@ -683,7 +701,7 @@ class PhotoReviewController extends ChangeNotifier {
   /// amount: the Size leaves it, and a photo's amount changed is learnt.
   void _setFatTarget(
     BulkAddRow row,
-    ({BulkAddRow row, double grams}) target,
+    ({BulkAddRow row, double grams, bool pinned}) target,
     int choice,
   ) {
     final grams = cookingFatAnswer(

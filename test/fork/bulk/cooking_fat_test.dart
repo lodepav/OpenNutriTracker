@@ -397,6 +397,7 @@ void main() {
         'Mayonnaise, regular',
         'Sauce, cheese',
         'Peanut butter, smooth',
+        'Hazelnut butter (100 % pure)',
         'Sesame butter',
         'Pear butter',
         'Fish oil, cod liver',
