@@ -263,15 +263,7 @@ void main() {
     testWidgets('Home says an automatic check-in waits for the answer', (
       tester,
     ) async {
-      // A week old, with no goal or settings behind it: a weekly one is due.
-      store.records.add(
-        CheckInRecord(
-          date: _today.subtract(const Duration(days: 8)),
-          expenditureKcal: 2600,
-          proposedKcal: 2100,
-          acceptedKcal: 2100,
-        ),
-      );
+      store.records.add(weekOld());
       Future<void> pump() async {
         await tester.pumpWidget(
           MaterialApp(

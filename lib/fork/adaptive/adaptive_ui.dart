@@ -29,6 +29,8 @@ import 'package:opennutritracker/fork/units/energy_text.dart';
 import 'package:opennutritracker/fork/units/weight_text.dart';
 import 'package:opennutritracker/fork/goal/phase_colors.dart';
 import 'package:opennutritracker/fork/phases/phases.dart';
+import 'package:opennutritracker/fork/undo/undo_delete.dart'
+    show undoBarPersists;
 import 'package:opennutritracker/fork/trends/trends_widgets.dart'
     show signedText, waterColor;
 import 'package:opennutritracker/fork/display/display_prefs.dart';
@@ -329,13 +331,20 @@ class _CheckInWaitingNoteState extends State<CheckInWaitingNote> {
     final (:service, :since) = waiting;
     try {
       if (await service.waitingNoted(since)) return;
+      // answered by hand, or switched off, since the run that set it
+      if (!AdaptiveStore.settings.value.autoAcceptCheckIn ||
+          !await service.checkInDue()) {
+        return;
+      }
       if (!mounted) return;
       final messenger = ScaffoldMessenger.maybeOf(context);
       if (messenger == null) return;
       final navigator = Navigator.of(context);
+      final persist = undoBarPersists(context);
       await service.markWaitingNoted(since);
       messenger.showSnackBar(
         SnackBar(
+          persist: persist,
           content: const Text(
             'A check-in is waiting for your answer on a day that looks '
             'partly logged.',

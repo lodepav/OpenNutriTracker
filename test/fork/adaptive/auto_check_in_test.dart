@@ -83,6 +83,7 @@ void main() {
   tearDown(() {
     AdaptiveStore.settings.value = const AdaptiveSettings();
     AutoCheckIn.accepted.value = null;
+    AutoCheckIn.waiting.value = null;
   });
 
   test('accepts a due check-in once and publishes it, with why', () async {
@@ -112,6 +113,15 @@ void main() {
 
     expect(store.records, isEmpty);
     expect(AutoCheckIn.accepted.value, isNull);
+  });
+
+  test('switched off, no check-in is said to wait', () async {
+    AutoCheckIn.waiting.value = (service: service, since: _today);
+    AdaptiveStore.settings.value = const AdaptiveSettings(adaptiveTarget: true);
+
+    await AutoCheckIn.run(service);
+
+    expect(AutoCheckIn.waiting.value, isNull);
   });
 
   test('two callers at once accept it once', () async {
