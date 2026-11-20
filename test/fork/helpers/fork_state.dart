@@ -127,6 +127,7 @@ Future<void> fillForkState({
     ),
   );
   await store.setSkipped(day(-15), true);
+  await store.setWhole(day(-16), true);
   // In 2100: the phase runner leaves a plan not yet begun alone, so the
   // start after an update reads it as it was written.
   final phases = PhaseStore();

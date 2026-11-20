@@ -23,6 +23,7 @@ import 'package:opennutritracker/fork/adaptive/check_in.dart';
 import 'package:opennutritracker/fork/adaptive/choice.dart';
 import 'package:opennutritracker/fork/adaptive/expenditure.dart';
 import 'package:opennutritracker/fork/adaptive/expenditure_settings_ui.dart';
+import 'package:opennutritracker/fork/adaptive/partial_days_ui.dart';
 import 'package:opennutritracker/fork/display/contrast.dart';
 import 'package:opennutritracker/fork/units/energy_text.dart';
 import 'package:opennutritracker/fork/units/weight_text.dart';
@@ -292,7 +293,8 @@ class CheckInScreen extends StatefulWidget {
 }
 
 class _CheckInScreenState extends State<CheckInScreen> {
-  late final Future<CheckIn> _checkIn = widget.service.checkIn();
+  late Future<CheckIn> _checkIn = widget.service.checkIn();
+  late Future<List<PartialDay>> _partial = widget.service.partialDays();
   late final Future<CheckInRecord?> _last = widget.service.lastCheckIn();
 
   /// Before the first check-in, the target Home uses now (the formula's,
@@ -313,8 +315,21 @@ class _CheckInScreenState extends State<CheckInScreen> {
     if (!locator.isRegistered<GetConfigUsecase>()) return BodyWeightUnit.kg;
     return (await locator<GetConfigUsecase>().getConfig()).bodyWeightUnit;
   }();
-  late final _data = (_checkIn, _last, _goalNow, _weightUnit).wait;
+  late var _data = (_checkIn, _last, _goalNow, _weightUnit).wait;
   final _target = TextEditingController();
+
+  /// Saves the answer on a day that looks partly logged (D65), then reads
+  /// the check-in again: a day left out moves the proposal.
+  Future<void> _answerPartial(Future<void> Function() save) async {
+    await save();
+    if (!mounted) return;
+    setState(() {
+      _checkIn = widget.service.checkIn();
+      _partial = widget.service.partialDays();
+      _data = (_checkIn, _last, _goalNow, _weightUnit).wait;
+      _target.clear();
+    });
+  }
 
   @override
   void dispose() {
@@ -476,6 +491,17 @@ class _CheckInScreenState extends State<CheckInScreen> {
                 ),
               const SizedBox(height: 16),
             ],
+            FutureBuilder<List<PartialDay>>(
+              future: _partial,
+              builder: (context, partial) => PartialDaysCard(
+                days: partial.data ?? const [],
+                heldBack: settings.autoAcceptCheckIn,
+                onLeaveOut: (day) =>
+                    _answerPartial(() => widget.service.leaveOutDay(day)),
+                onKeep: (day) =>
+                    _answerPartial(() => widget.service.keepDay(day)),
+              ),
+            ),
             if (checkIn.fromProfile)
               Text(_fromProfileText(checkIn))
             else

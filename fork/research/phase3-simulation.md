@@ -126,6 +126,73 @@ Five days 1,500 kcal over moved it +108 when logged in full (the replay put the 
 the usual intake logged, which is what the log says. Each faded within about five weeks, and
 none reached the cap.
 
+## Closed loop (D64, D65)
+
+2026-11-20. The simulator above and the journey replay both feed the estimator an intake and a
+weight decided beforehand, so a target it proposes changes nothing it later reads. In
+`fork/tools/closed_loop.dart` (`flutter test fork/tools/closed_loop.dart`) the simulated user
+eats each weekly check-in's target, and the truth is not the estimator's own model: glycogen
+and gut water follow the intake (0, 1 or 2 kg per 1,000 kcal/day, a 3-day lag; an assumption),
+tissue can count a flat 7,700 kcal/kg, and 5% of days are logged at half. 280 days, 12–30
+seeds. Error is |estimate − truth| in logged calories from day 42.
+
+**The settings.** None makes the loop unstable; the achieved pace holds whatever is chosen.
+
+| Setting | Bias | Error | Weekly target move | Moves that turn back | Pace (goal −0.50) |
+|---|---|---|---|---|---|
+| Steady | +66 | 73 | 17 | 5% | −0.50 |
+| Standard | +63 | 69 | 20 | 3% | −0.51 |
+| Responsive | +56 | 67 | 33 | 12% | −0.52 |
+| Standard, 7,700 kcal/kg | +104 | 107 | 21 | 3% | −0.51 |
+| Standard, truth at 7,700 | +13 | 38 | 20 | 3% | −0.50 |
+| 1 kg cycle (goal −0.30), Standard | +30 | 48 | 45 | 39% | −0.31 |
+| 1 kg cycle, Responsive | +16 | 64 | 76 | 44% | −0.32 |
+| 1 kg cycle, Standard, cycle window | +29 | 40 | 16 | 1% | −0.31 |
+
+- The kcal per kg moves the estimate shown, by the goal's energy times the mismatch, and not
+  the pace: at the loop's fixed point the weight changes at the goal's pace whatever a kg is
+  counted as.
+- The check-in limit at 200 or 300 never bound after calibration.
+- A cycle without its window is the one case where the target chases water.
+- A 300 kcal step in expenditure is followed without ringing: Standard closes it in about 9
+  weeks, Responsive in about 6 with an overshoot under 10 kcal, Steady in about 12.
+
+**A change in what is eaten (D64).** Pace 0 to −0.75 kg/week at day 140; estimate − truth by
+week, from two weeks before (30 seeds):
+
+| Water | Run | Weeks |
+|---|---|---|
+| 0 | Standard, before | −49 −47 −53 −54 −84 −112 −94 −58 −18 20 56 82 |
+| 0 | Standard, D64 | −52 −50 −55 −26 −2 20 37 49 62 72 87 86 |
+| 0 | Responsive, before | −53 −53 −63 −90 −144 −183 −136 −68 −2 55 101 125 |
+| 0 | Responsive, D64 | −55 −56 −64 −42 −16 4 23 39 57 71 85 88 |
+| 2 | Standard, before | −49 −48 −54 −6 66 142 193 187 161 133 118 112 |
+| 2 | Standard, D64 | −48 −46 −52 −12 12 33 52 76 100 109 111 100 |
+| 2 | Responsive, before | −50 −51 −59 2 107 203 239 183 120 84 84 97 |
+| 2 | Responsive, D64 | −48 −47 −56 −13 12 32 53 90 115 107 96 88 |
+
+Both runs end near +100: the estimate trails an expenditure that falls with the weight. The
+thresholds (5% and 15% of the mean intake) were the best of a small sweep: wider ones (10% and
+25–30%) let the water bump through (87–133 kcal), none at all gave the rows marked before.
+
+**A cold start** is not damped. Mean |estimate − truth| over weeks 3–12 of six cold starts
+(prior ±20%, water 0, 1, 2) was 109 undamped and 112 with damping after calibration; damping
+from the first update was worse in five of the six. The first two weeks' target is the
+formula's, and weeks 3–8 are still off by 100–250 kcal either way: open.
+
+**Days logged at half (D65).** At maintenance, the user following the target:
+
+| Days at half | Bias | Real drift | With the days pointed out left out |
+|---|---|---|---|
+| 0% | −3 | 0.0 kg/year | −3 |
+| 5% | −57 | −3.6 | −3 |
+| 10% | −100 | −6.2 | −6 |
+| 20% | −188 | −12.0 | −16 |
+
+Days not logged at all and a steady under-logging move nothing. With no half days and an
+intake that swings 25% a day, leaving out every day pointed out reads +74 kcal high, which is
+why the day is asked about.
+
 ## Findings
 
 - **Forbes beats the flat 6,000 kcal/kg:** error 73 against 86. The lean and the heavy users

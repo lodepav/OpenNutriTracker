@@ -48,6 +48,7 @@ const storedFields = <String, Map<String, StoredField>>{
     'flatEnergy': backedUp,
     'checkIns': backedUp,
     'skippedDays': backedUp,
+    'wholeDays': backedUp,
     // PhaseStore.
     'phasePlan': backedUp,
     'goalHistory': backedUp,

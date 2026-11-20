@@ -54,6 +54,15 @@ class ExpenditureSettings {
   /// the logged days' intake (D18).
   final double minLoggedShare;
 
+  /// How far the intake's own trend may move across the window, as a share
+  /// of its mean intake, before an update is taken at less than its weight
+  /// ([shiftDeadband]) and at none ([shiftHold], null for no damping): the
+  /// weight trend lags a change in what is eaten by about 9 days and the
+  /// first days' water goes with it, so a window that holds one misreads
+  /// the expenditure by up to about half the change, either way (D64).
+  final double shiftDeadband;
+  final double? shiftHold;
+
   const ExpenditureSettings({
     this.alpha = 0.1,
     this.window = 20,
@@ -62,8 +71,23 @@ class ExpenditureSettings {
     this.calibrationDays = 30,
     this.warmupDays = defaultWarmupDays,
     this.minLoggedShare = defaultMinLoggedShare,
+    this.shiftDeadband = defaultShiftDeadband,
+    this.shiftHold = defaultShiftHold,
     this.kcalPerKg,
   });
+
+  static const defaultShiftDeadband = 0.05;
+  static const defaultShiftHold = 0.15;
+
+  /// The share of an update's weight kept when the intake's trend moved
+  /// [shiftKcal] across a window of [meanIntakeKcal]: all of it up to
+  /// [shiftDeadband], none from [shiftHold], linear between.
+  double shiftDamping(double shiftKcal, double meanIntakeKcal) {
+    final hold = shiftHold;
+    if (hold == null || meanIntakeKcal <= 0) return 1;
+    final share = shiftKcal.abs() / meanIntakeKcal;
+    return 1 - ((share - shiftDeadband) / (hold - shiftDeadband)).clamp(0, 1);
+  }
 
   static const defaultMinLoggedShare = 0.6;
   static const defaultWarmupDays = 7;
@@ -89,8 +113,10 @@ class ExpenditureSettings {
     double minLoggedShare = defaultMinLoggedShare,
     int warmupDays = defaultWarmupDays,
     double? kcalPerKg,
+    double? shiftHold = defaultShiftHold,
   }) => ExpenditureSettings(
     window: cycleWindow ? 28 : 20,
+    shiftHold: shiftHold,
     minLoggedShare: minLoggedShare,
     warmupDays: warmupDays,
     kcalPerKg: kcalPerKg,
@@ -115,6 +141,10 @@ const breakDays = 5;
 /// past week has under 4 logged days or no weigh-in carries the last
 /// estimate (MacroFactor's data rules). [bodyFatPercent] null uses the
 /// flat 6,000 kcal/kg.
+///
+/// An update is taken at less than its weight, or not at all, while the
+/// window holds a change in what is eaten
+/// ([ExpenditureSettings.shiftDamping], D64).
 ///
 /// With activity counted (D17) the window's mean counted activity is
 /// taken off too, so the estimate is the base that activity is added
@@ -155,6 +185,8 @@ estimateExpenditureRun(
     alpha: settings.alpha,
   );
   bool logged(AdaptiveDay d) => (d.intakeKcal ?? 0) >= minLoggedKcal;
+
+  final intakeTrend = _intakeTrend(days, logged, settings.alpha);
 
   var estimate = priorKcal;
   // Calibration counts updates, not days: weigh-ins before logging began
@@ -238,12 +270,23 @@ estimateExpenditureRun(
       final density = settings.kcalPerKgAt((from + to) / 2, bodyFatPercent);
       final stored = (to - from) * density / (day - start);
       final raw = meanIntake - stored - (meanActivity(window) ?? 0);
-      final weight = updates < settings.calibrationUpdates
-          ? settings.calibrationBlend
-          : settings.blend;
-      estimate += weight * (raw - estimate);
-      firstUpdate ??= day;
-      updates++;
+      final calibrating = updates < settings.calibrationUpdates;
+      // Not while calibrating: leaving the formula's prior fast is worth
+      // more than the misreading costs (the closed-loop runs, D64). The
+      // window's first day may fall before logging began.
+      final damping = calibrating
+          ? 1.0
+          : settings.shiftDamping(
+              intakeTrend[day]! -
+                  (intakeTrend[start] ?? intakeTrend[firstLogged])!,
+              meanIntake,
+            );
+      if (damping > 0) {
+        final weight = calibrating ? settings.calibrationBlend : settings.blend;
+        estimate += damping * weight * (raw - estimate);
+        firstUpdate ??= day;
+        updates++;
+      }
     }
     out.add(estimate);
   }
@@ -253,6 +296,34 @@ estimateExpenditureRun(
     firstUpdate: firstUpdate,
     breakHold: hold,
   );
+}
+
+/// The trend of the logged intake, smoothed as the weight's is so the two
+/// lag alike; it starts at the mean of the first week's logged days (one
+/// day is too noisy a start), carries over unlogged days and is null
+/// before logging began.
+List<double?> _intakeTrend(
+  List<AdaptiveDay> days,
+  bool Function(AdaptiveDay) logged,
+  double alpha,
+) {
+  final first = days.indexWhere(logged);
+  if (first < 0) return List.filled(days.length, null);
+  final week = [
+    for (final d in days.skip(first).take(7))
+      if (logged(d)) d.intakeKcal!,
+  ];
+  double? trend;
+  return [
+    for (final (i, d) in days.indexed)
+      trend = i < first
+          ? null
+          : trend == null
+          ? week.reduce((a, b) => a + b) / week.length
+          : logged(d)
+          ? trend + alpha * (d.intakeKcal! - trend)
+          : trend,
+  ];
 }
 
 /// The estimate held after a break in logging (D27): until a week of

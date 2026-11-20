@@ -21,6 +21,7 @@ import 'package:opennutritracker/fork/adaptive/check_in.dart';
 import 'package:opennutritracker/fork/adaptive/energy.dart';
 import 'package:opennutritracker/fork/adaptive/expenditure.dart';
 import 'package:opennutritracker/fork/adaptive/goal_plan.dart';
+import 'package:opennutritracker/fork/adaptive/partial_days.dart';
 import 'package:opennutritracker/fork/adaptive/trend.dart';
 import 'package:opennutritracker/fork/body/measurement_store.dart';
 
@@ -29,6 +30,14 @@ final _log = Logger('AdaptiveService');
 /// How far back a check-in reads: long enough for the estimate to settle
 /// from the prior (fork/research/phase3-simulation.md).
 const _historyDays = 120;
+
+/// How far back a day that looks partly logged is asked about (D65): the
+/// days the estimate's window still reads, at its longest.
+const partialDayAskDays = 28;
+
+/// A day that looks partly logged: what was logged on it and the usual
+/// intake around it.
+typedef PartialDay = ({DateTime date, double kcal, double usualKcal});
 
 /// Days between check-ins.
 const checkInEveryDays = 7;
@@ -185,14 +194,48 @@ class AdaptiveService {
     );
   }
 
+  /// The days of the past [partialDayAskDays] that look partly logged
+  /// (D65), newest first: not today, which is still being eaten, nor a day
+  /// left out or said to be whole.
+  Future<List<PartialDay>> partialDays() async {
+    final history = await _history();
+    final days = history.days;
+    final whole = AdaptiveStore.whole.value;
+    DateTime date(int i) => DateTime(
+      history.first.year,
+      history.first.month,
+      history.first.day + i,
+    );
+    return [
+      for (final found in likelyPartlyLogged(
+        days.sublist(0, days.length - 1),
+      ).reversed)
+        if (days.length - 1 - found.day <= partialDayAskDays &&
+            !whole.contains(date(found.day)))
+          (
+            date: date(found.day),
+            kcal: days[found.day].intakeKcal!,
+            usualKcal: found.usualKcal,
+          ),
+    ];
+  }
+
+  /// Answers [partialDays] for [day]: left out of the estimate as the
+  /// Diary's switch leaves it, or whole and counted as logged.
+  Future<void> leaveOutDay(DateTime day) => _store.setSkipped(day, true);
+  Future<void> keepDay(DateTime day) => _store.setWhole(day, true);
+
   /// Accepts a due check-in as proposed when the settings say so; the
   /// check-in accepted, or null when none was due or it is asked. A proposal
-  /// under the advised floor is left to be done by hand.
+  /// under the advised floor is left to be done by hand, as is one with a
+  /// day that looks partly logged.
   Future<CheckIn?> autoAcceptIfDue() async {
     if (!AdaptiveStore.settings.value.autoAcceptCheckIn) return null;
     if (!await checkInDue()) return null;
     final due = await checkIn();
     if (due.belowRecommendedFloor || due.activityUnreadable) return null;
+    // A day logged in part would pull the target down unseen (D65).
+    if ((await partialDays()).isNotEmpty) return null;
     await accept(due, due.proposedTargetKcal);
     return due;
   }
