@@ -318,6 +318,10 @@ class _CheckInScreenState extends State<CheckInScreen> {
   late var _data = (_checkIn, _last, _goalNow, _weightUnit).wait;
   final _target = TextEditingController();
 
+  /// The check-in [_target] was filled from: an answer brings a new one,
+  /// after a build that still shows the old.
+  CheckIn? _filledFrom;
+
   /// Saves the answer on a day that looks partly logged (D65), then reads
   /// the check-in again: a day left out moves the proposal.
   Future<void> _answerPartial(Future<void> Function() save) async {
@@ -327,7 +331,6 @@ class _CheckInScreenState extends State<CheckInScreen> {
       _checkIn = widget.service.checkIn();
       _partial = widget.service.partialDays();
       _data = (_checkIn, _last, _goalNow, _weightUnit).wait;
-      _target.clear();
     });
   }
 
@@ -460,6 +463,10 @@ class _CheckInScreenState extends State<CheckInScreen> {
         }
         // A proposal of nothing or less is no target to offer.
         final proposed = energyValue(context, checkIn.proposedTargetKcal);
+        if (!identical(_filledFrom, checkIn)) {
+          _filledFrom = checkIn;
+          _target.clear();
+        }
         if (_target.text.isEmpty && proposed > 0) _target.text = '$proposed';
         final theme = Theme.of(context);
         final capped =

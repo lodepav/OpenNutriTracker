@@ -575,6 +575,7 @@ class AdaptiveStore {
       );
     }
     if (_active) {
+      whole.value = Set.unmodifiable(await wholeDays());
       StepCounts.changes.value++;
       if (locator.isRegistered<HiveDBProvider>()) {
         await DisplayPrefs.reload();

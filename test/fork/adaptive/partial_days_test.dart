@@ -215,12 +215,21 @@ void main() {
 
       expect(find.text('Logged only in part?'), findsOneWidget);
       expect(find.textContaining('usually about'), findsOneWidget);
+      String field() => tester
+          .widget<TextField>(find.byKey(const ValueKey('check-in-target')))
+          .controller!
+          .text;
+      final before = field();
 
       await tester.tap(find.text('Leave out'));
       await tester.pumpAndSettle();
 
       expect(find.text('Logged only in part?'), findsNothing);
       expect(AdaptiveStore.skipped.value, {_halfDay});
+      // The field follows the new proposal, not the one before the answer.
+      final proposed = (await service.checkIn()).proposedTargetKcal.round();
+      expect(field(), isNot(before));
+      expect(field(), '$proposed');
     });
   });
 }
