@@ -175,6 +175,12 @@ Both runs end near +100: the estimate trails an expenditure that falls with the 
 thresholds (5% and 15% of the mean intake) were the best of a small sweep: wider ones (10% and
 25–30%) let the water bump through (87–133 kcal), none at all gave the rows marked before.
 
+Open, not run: a slow change in intake. D64 was measured on a step. A reverse diet adding
+about 150 kcal a week moves the intake trend about 15% of the mean across a 20-day window, so
+the damping stays near 0 and the estimate would not follow a rising expenditure; after a step
+cut of 2500 to 1800 updates stop for about 28 days (review of 2026-11-20, from reading the
+code). A ramp run in `fork/tools/closed_loop.dart` would say how far the estimate trails.
+
 **A cold start** is not damped. Mean |estimate − truth| over weeks 3–12 of six cold starts
 (prior ±20%, water 0, 1, 2) was 109 undamped and 112 with damping after calibration; damping
 from the first update was worse in five of the six. The first two weeks' target is the
