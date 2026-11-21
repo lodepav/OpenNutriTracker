@@ -884,7 +884,7 @@ class _CheckInScreenState extends State<CheckInScreen> {
   String _breakHoldText(BreakHold hold) {
     final left = hold.resumesIn;
     final when = left == null
-        ? 'a week after your first weigh-in back'
+        ? 'a week and a day after your first weigh-in back'
         : left == 1
         ? 'tomorrow'
         : 'in $left days';

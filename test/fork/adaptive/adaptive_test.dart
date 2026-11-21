@@ -82,11 +82,12 @@ void main() {
       test('the estimate holds for a week after the first weigh-in back', () {
         final run = estimateExpenditureRun(trip(), priorKcal: 2400);
         final before = run.estimates[49];
-        // back on day 50, its weigh-in the anchor: held to day 56
-        for (var d = 50; d < 57; d++) {
+        // back on day 50; the anchor is the weigh-in a week on, day 57,
+        // whose window is empty: held to day 57 (D68)
+        for (var d = 50; d < 58; d++) {
           expect(run.estimates[d], before, reason: 'day $d');
         }
-        expect(run.estimates[57], isNot(before));
+        expect(run.estimates[58], isNot(before));
       });
 
       test('the jump is not priced as eating more than was logged', () {
@@ -110,7 +111,8 @@ void main() {
           priorKcal: 2400,
         ).breakHold!;
         expect(held.daysBack, 3);
-        expect(held.resumesIn, 5);
+        // back on day 50, the first update on day 58
+        expect(held.resumesIn, 6);
 
         final unweighed = estimateExpenditureRun([
           ...trip(back: 0),
@@ -118,8 +120,16 @@ void main() {
         ], priorKcal: 2400).breakHold!;
         expect(unweighed.resumesIn, isNull);
 
+        // the anchor, day 57, is the last day
         expect(
-          estimateExpenditureRun(trip(back: 8), priorKcal: 2400).breakHold,
+          estimateExpenditureRun(
+            trip(back: 8),
+            priorKcal: 2400,
+          ).breakHold!.resumesIn,
+          1,
+        );
+        expect(
+          estimateExpenditureRun(trip(back: 9), priorKcal: 2400).breakHold,
           isNull,
         );
       });
@@ -131,9 +141,69 @@ void main() {
           for (var d = 0; d < 10; d++)
             const AdaptiveDay(intakeKcal: 2400, weightKg: 82),
         ], priorKcal: 2400);
-        // the anchor is day 53: held to day 59
-        expect(run.estimates[59], run.estimates[49]);
-        expect(run.estimates[60], isNot(run.estimates[49]));
+        // the first weigh-in back is day 53, the anchor day 60: held to it
+        expect(run.estimates[60], run.estimates[49]);
+        expect(run.estimates[61], isNot(run.estimates[49]));
+      });
+
+      test('no weigh-in a week on: held, at the earliest tomorrow\'s', () {
+        // weighed days 50 to 56, then logging without weighing
+        List<AdaptiveDay> unweighed(int n) => [
+          ...trip(back: 7),
+          for (var d = 0; d < n; d++) const AdaptiveDay(intakeKcal: 2400),
+        ];
+        final run = estimateExpenditureRun(unweighed(3), priorKcal: 2400);
+        expect(run.estimates.last, run.estimates[49]);
+        // a weigh-in tomorrow anchors, the day after it updates
+        expect(run.breakHold!.resumesIn, 2);
+        // a week with no weigh-in: no hold, the week's data rule says why
+        final week = estimateExpenditureRun(unweighed(8), priorKcal: 2400);
+        expect(week.estimates.last, week.estimates[49]);
+        expect(week.breakHold, isNull);
+      });
+
+      test('a second break before the anchor holds to its own', () {
+        final run = estimateExpenditureRun([
+          ...trip(back: 3),
+          for (var d = 0; d < 6; d++) const AdaptiveDay(),
+          for (var d = 0; d < 20; d++)
+            const AdaptiveDay(intakeKcal: 2400, weightKg: 84),
+        ], priorKcal: 2400);
+        // back on day 50, away 53 to 58, back on 59: anchor day 66
+        for (var d = 50; d < 67; d++) {
+          expect(run.estimates[d], run.estimates[49], reason: 'day $d');
+        }
+        expect(run.estimates[67], isNot(run.estimates[49]));
+        expect(run.estimates.last, closeTo(2400, 25));
+      });
+
+      test('first back, as before D68: held a week from it', () {
+        final run = estimateExpenditureRun(
+          trip(),
+          priorKcal: 2400,
+          settings: const ExpenditureSettings(
+            breakAnchor: BreakAnchor.firstBack,
+          ),
+        );
+        expect(run.estimates[56], run.estimates[49]);
+        expect(run.estimates[57], isNot(run.estimates[49]));
+      });
+
+      test('the first updates after a break move little', () {
+        // back 1 kg lighter each week, so every update moves the estimate
+        final days = [
+          for (final (i, d) in trip(back: 40).indexed)
+            i < 50
+                ? d
+                : AdaptiveDay(intakeKcal: 2400, weightKg: 82 - (i - 50) / 7),
+        ];
+        final soft = estimateExpenditure(days, priorKcal: 2400);
+        // anchor day 57, the first update day 58
+        expect(soft[57], soft[49]);
+        final step = (soft[58] - soft[57]).abs();
+        expect(step, greaterThan(0));
+        // a 1-day window at 1/20 of an update, against a full window's
+        expect(step, lessThan((soft[78] - soft[77]).abs() / 5));
       });
 
       test('four unlogged days are no break', () {

@@ -71,3 +71,4 @@ there before changing anything a line touches. After adding or rewording a decis
 - **D65** A day that looks partly logged is asked about, never left out unasked
 - **D66** Settings keeps the AI switch and the cache with the food sources
 - **D67** A result's + always logs and says grams; Choose opens a food it cannot log
+- **D68** After a break the trend starts again a week after the first weigh-in back, and its updates ramp in

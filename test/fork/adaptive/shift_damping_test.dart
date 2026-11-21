@@ -139,7 +139,8 @@ void main() {
   });
   test('an intake changed across a break is not held once back', () {
     // 60 days at 2,000 kcal, a week not logged nor weighed, then a steady
-    // 1,500: the first weigh-in back, day 67, anchors the restart.
+    // 1,500: the weigh-in a week after the first one back (day 67), day 74,
+    // anchors the restart (D68).
     var kg = 90.0;
     final days = [
       for (var d = 0; d < 120; d++)
@@ -157,7 +158,7 @@ void main() {
       priorKcal: _expenditure,
       settings: _damped,
     ).updates;
-    const resumes = 67 + ExpenditureSettings.defaultWarmupDays;
+    const resumes = 67 + ExpenditureSettings.defaultWarmupDays + 1;
     expect(
       estimateExpenditureRun(
         days.sublist(0, resumes),
