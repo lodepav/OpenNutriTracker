@@ -140,6 +140,20 @@ class StepCounts {
       DateTime.parse(key as String): value as int,
   };
 
+  /// Adds [days] from another app's export, each only where no count is
+  /// kept: a day read from the health store stays as read.
+  Future<void> addImported(Map<DateTime, int> days) async {
+    final box = await _box();
+    final kept = Map<dynamic, dynamic>.of(
+      box.get(_days, defaultValue: {}) as Map,
+    );
+    for (final MapEntry(key: day, value: steps) in days.entries) {
+      kept.putIfAbsent(day.toParsedDay(), () => steps);
+    }
+    await box.put(_days, kept);
+    changes.value++;
+  }
+
   /// Steps within the workout [id] (`[from, to)`), which its own calories
   /// already hold. Each read is kept; once the workout is a day old, when
   /// a late watch sync has had its time, the kept count is final and the

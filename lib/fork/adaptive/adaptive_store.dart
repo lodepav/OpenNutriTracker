@@ -506,6 +506,22 @@ class AdaptiveStore {
     final days = await wholeDays();
     final key = DateTime(day.year, day.month, day.day);
     isWhole ? days.add(key) : days.remove(key);
+    await _saveWhole(days);
+  }
+
+  /// Adds [days] another app said were logged in full, all but those left
+  /// out here: the answer given here stands.
+  Future<void> mergeWholeDays(Iterable<DateTime> days) async {
+    final skipped = await skippedDays();
+    await _saveWhole({
+      ...await wholeDays(),
+      for (final d in days)
+        if (!skipped.contains(DateTime(d.year, d.month, d.day)))
+          DateTime(d.year, d.month, d.day),
+    });
+  }
+
+  Future<void> _saveWhole(Set<DateTime> days) async {
     final sorted = days.toList()..sort();
     await (await _box()).put(wholeKey, [for (final d in sorted) _dayKey(d)]);
     if (_active) whole.value = Set.unmodifiable(days);

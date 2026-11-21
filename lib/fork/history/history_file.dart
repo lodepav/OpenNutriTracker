@@ -118,6 +118,47 @@ class HistoryRecipe {
   const HistoryRecipe({required this.food, this.servings, this.notes = ''});
 }
 
+/// A day's targets: energy, and the macros in grams where given.
+typedef DayGoals = ({double kcal, double? carbs, double? fat, double? protein});
+
+/// One update of a nutrition program (MacroFactor's "Nutrition Program
+/// Settings"): the targets of each weekday from that date, Monday 1, and
+/// the expenditure, the week's mean target and the weight it was set at.
+class ProgramUpdate {
+  final DateTime date;
+  final Map<int, DayGoals> weekdays;
+  final double? expenditureKcal;
+  final double? averageKcal;
+  final double? weightKg;
+
+  const ProgramUpdate({
+    required this.date,
+    required this.weekdays,
+    this.expenditureKcal,
+    this.averageKcal,
+    this.weightKg,
+  });
+}
+
+/// A goal of a sheet of goals with its pace (MacroFactor's "Weight Goals"),
+/// the one in progress too (no end): the pace as a share of body weight a
+/// week, unsigned.
+class GoalPace {
+  final PhaseKind kind;
+  final DateTime start;
+  final DateTime? end;
+  final double? ratePctPerWeek;
+  final double? targetKg;
+
+  const GoalPace({
+    required this.kind,
+    required this.start,
+    this.end,
+    this.ratePctPerWeek,
+    this.targetKg,
+  });
+}
+
 /// The history found in an export: food by day (and meal, where the file
 /// has meals; null for a day's total) and one weigh-in a day.
 class HistoryFile {
@@ -155,9 +196,23 @@ class HistoryFile {
   /// Logging"), to leave out of the expenditure estimate.
   final Set<DateTime> partialDays;
 
+  /// Days the user marked as logged in full (MacroFactor's "Partial
+  /// Logging" No), not to be asked about (D65).
+  final Set<DateTime> wholeDays;
+
   /// The goals over (MacroFactor's "Weight Goals"), oldest first; never
   /// the one in progress.
   final List<GoalRecord> goals;
+
+  /// The same sheet's goals with their paces, the one in progress too,
+  /// oldest first.
+  final List<GoalPace> paces;
+
+  /// Steps by day (MacroFactor's "Steps"), days of none left out.
+  final Map<DateTime, int> steps;
+
+  /// The program's updates, oldest first.
+  final List<ProgramUpdate> programs;
 
   /// The tables food was read from, in order; none when none had it.
   final List<String> foodTables;
@@ -180,7 +235,11 @@ class HistoryFile {
     this.customFoodNames = const {},
     this.recipes = const [],
     this.partialDays = const {},
+    this.wholeDays = const {},
     this.goals = const [],
+    this.paces = const [],
+    this.steps = const {},
+    this.programs = const [],
     this.foodTables = const [],
     this.weightTable,
     required this.weightUnit,
@@ -194,7 +253,10 @@ class HistoryFile {
       customFoods.isEmpty &&
       recipes.isEmpty &&
       partialDays.isEmpty &&
-      goals.isEmpty;
+      wholeDays.isEmpty &&
+      goals.isEmpty &&
+      steps.isEmpty &&
+      programs.isEmpty;
 }
 
 /// Reads food and weight history from an export's [tables] by their
@@ -225,7 +287,11 @@ HistoryFile readHistory(
   final customFoodNames = <String>{};
   final recipes = <HistoryRecipe>[];
   final partialDays = <DateTime>{};
+  final wholeDays = <DateTime>{};
   final goals = <GoalRecord>[];
+  final paces = <GoalPace>[];
+  final steps = <DateTime, int>{};
+  final programs = <ProgramUpdate>[];
   final weights = <DateTime, double>{};
   final foodTables = <String>[];
   String? weightTable;
@@ -243,6 +309,8 @@ HistoryFile readHistory(
     }
     if (recipes.isEmpty) recipes.addAll(_recipes(table.rows));
     if (goals.isEmpty) goals.addAll(_goals(table.rows, unit));
+    if (paces.isEmpty) paces.addAll(_paces(table.rows, unit));
+    if (programs.isEmpty) programs.addAll(_programs(table.rows, unit));
     final layout = _Layout.find(table.rows);
     if (layout == null) continue;
     final rows = table.rows.sublist(layout.headerRow + 1);
@@ -255,10 +323,10 @@ HistoryFile readHistory(
       for (final row in rows) {
         final day = dates.parse(_at(row, layout.date));
         final yes = const ['yes', 'true', '1'];
-        if (day != null &&
-            yes.contains(_at(row, partial).trim().toLowerCase())) {
-          partialDays.add(day);
-        }
+        final no = const ['no', 'false', '0'];
+        final answer = _at(row, partial).trim().toLowerCase();
+        if (day != null && yes.contains(answer)) partialDays.add(day);
+        if (day != null && no.contains(answer)) wholeDays.add(day);
       }
     }
 
@@ -324,6 +392,26 @@ HistoryFile readHistory(
       if (added) foodTables.add(table.name);
     }
 
+    // A day's steps: only from a table of one row a day, not a log's rows
+    // (a workout's steps). MacroFactor writes 0 for the days before it read
+    // steps, so 0 is no count.
+    if (steps.isEmpty &&
+        layout.steps != null &&
+        layout.kcal == null &&
+        layout.name == null) {
+      final seen = <DateTime>{};
+      final counts = <DateTime, int>{};
+      var daily = true;
+      for (final row in rows) {
+        final day = dates.parse(_at(row, layout.date));
+        if (day == null) continue;
+        if (!seen.add(day)) daily = false;
+        final count = _number(_at(row, layout.steps));
+        if (count != null && count >= 1) counts[day] = count.round();
+      }
+      if (daily) steps.addAll(counts);
+    }
+
     // A sheet of the day's nutrients beside one of its calories.
     if (dayNutrients.isEmpty &&
         layout.kcal == null &&
@@ -384,7 +472,11 @@ HistoryFile readHistory(
     customFoodNames: customFoodNames,
     recipes: recipes,
     partialDays: partialDays,
+    wholeDays: wholeDays,
     goals: goals,
+    paces: paces..sort((a, b) => a.start.compareTo(b.start)),
+    steps: steps,
+    programs: programs..sort((a, b) => a.date.compareTo(b.date)),
     foodTables: foodTables,
     weightTable: weightTable,
     weightUnit: stated ? weightUnit : unit,
@@ -429,6 +521,9 @@ class _Layout {
   final int? weight;
   final BodyWeightUnit? weightUnit;
 
+  /// A day's step count.
+  final int? steps;
+
   /// A food log's: the food's name, the time it was eaten, the grams of a
   /// serving and the servings eaten, and the other nutrients by
   /// [nutrientColumns] key.
@@ -459,6 +554,7 @@ class _Layout {
     this.meal,
     this.weight,
     this.weightUnit,
+    this.steps,
     this.name,
     this.time,
     this.servingGrams,
@@ -533,6 +629,7 @@ class _Layout {
         ),
         nutrients: _nutrientsIn(h),
         measures: _measures(h),
+        steps: first((c) => c == 'steps'),
         weight: weight,
         weightUnit: weight == null || metric != null
             ? null
@@ -840,6 +937,99 @@ List<GoalRecord> _goals(List<List<String>> rows, BodyWeightUnit unit) {
         ),
   ];
   return goals..sort((a, b) => a.start.compareTo(b.start));
+}
+
+/// The goals of a sheet of goals with their paces, the one in progress
+/// too, which has no end yet.
+List<GoalPace> _paces(List<List<String>> rows, BodyWeightUnit unit) {
+  final h = _undatedHeaders(rows);
+  if (h == null) return const [];
+  final goal = _col(h, (c) => c == 'goal' || c == 'goal type');
+  final start = _col(h, (c) => c == 'start date');
+  final end = _col(h, (c) => c == 'end date');
+  final rate = _col(h, (c) => c.startsWith('goal rate'));
+  if (goal == null || start == null || rate == null) return const [];
+  final targetKg = _col(
+    h,
+    (c) => c.startsWith('goal weight') || c.startsWith('target weight'),
+  );
+  final body = rows.skip(1).toList();
+  final dates = _DateColumn([
+    for (final r in body) ...[_at(r, start), _at(r, end)],
+  ]);
+  return [
+    for (final row in body)
+      if ((_kindOf(_at(row, goal)), dates.parse(_at(row, start))) case (
+        final kind?,
+        final from?,
+      ))
+        GoalPace(
+          kind: kind,
+          start: from,
+          end: dates.parse(_at(row, end)),
+          ratePctPerWeek: _number(_at(row, rate))?.abs(),
+          targetKg: switch (_number(_at(row, targetKg))) {
+            final v?
+                when targetKg != null && v > 0 && kind != PhaseKind.maintain =>
+              _kg(v, _unitIn(h[targetKg]) ?? unit),
+            _ => null,
+          },
+        ),
+  ];
+}
+
+const _weekdays = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+
+/// The updates of a sheet of a nutrition program (MacroFactor's "Nutrition
+/// Program Settings"): one row per update date and weekday.
+List<ProgramUpdate> _programs(List<List<String>> rows, BodyWeightUnit unit) {
+  final h = _undatedHeaders(rows);
+  if (h == null) return const [];
+  final date = _col(h, (c) => c.endsWith('update date'));
+  final weekday = _col(h, (c) => c.contains('weekday'));
+  final kcal = _col(h, (c) => _names(c, 'calories'));
+  if (date == null || weekday == null || kcal == null) return const [];
+  final protein = _col(h, (c) => _names(c, 'protein'));
+  final carbs = _col(h, (c) => _names(c, 'carbs'));
+  final fat = _col(h, (c) => _names(c, 'fat'));
+  final expenditure = _col(
+    h,
+    (c) => _names(c, 'expenditure') && !c.contains('mode'),
+  );
+  final average = _col(h, (c) => c.startsWith('daily average'));
+  final weight = _col(h, _isWeight);
+  final body = rows.skip(1).toList();
+  final dates = _DateColumn([for (final r in body) _at(r, date)]);
+  final byDate = <DateTime, ProgramUpdate>{};
+  for (final row in body) {
+    final day = dates.parse(_at(row, date));
+    final name = _at(row, weekday).trim().toLowerCase();
+    final i = _weekdays.indexWhere(name.startsWith);
+    final energy = _number(_at(row, kcal));
+    if (day == null || i < 0 || energy == null || energy <= 0) continue;
+    final was = byDate[day];
+    final kg = _number(_at(row, weight));
+    byDate[day] = ProgramUpdate(
+      date: day,
+      weekdays: {
+        ...?was?.weekdays,
+        i + 1: (
+          kcal: energy,
+          carbs: _number(_at(row, carbs)),
+          fat: _number(_at(row, fat)),
+          protein: _number(_at(row, protein)),
+        ),
+      },
+      expenditureKcal: was?.expenditureKcal ?? _number(_at(row, expenditure)),
+      averageKcal: was?.averageKcal ?? _number(_at(row, average)),
+      weightKg:
+          was?.weightKg ??
+          (kg == null || kg <= 0 || weight == null
+              ? null
+              : _kg(kg, _unitIn(h[weight]) ?? unit)),
+    );
+  }
+  return byDate.values.toList();
 }
 
 PhaseKind? _kindOf(String goal) {
