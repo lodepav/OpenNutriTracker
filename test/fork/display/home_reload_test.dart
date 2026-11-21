@@ -2,7 +2,9 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:opennutritracker/core/domain/entity/body_weight_unit_entity.dart';
 import 'package:opennutritracker/core/domain/entity/tracked_day_entity.dart';
+import 'package:opennutritracker/core/domain/entity/weight_log_entity.dart';
 import 'package:opennutritracker/core/utils/energy_unit_provider.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
 import 'package:opennutritracker/fork/display/home_tiles.dart';
@@ -77,5 +79,36 @@ void main() {
     homeLoads.add(null);
     await tester.pumpAndSettle();
     expect(shown(), '2650');
+  });
+
+  // An import adds weigh-ins in the past only, so today's weight, the
+  // tile's key on Home, stays the same.
+  testWidgets('the weight tile reads the weigh-ins again on a Home load', (
+    tester,
+  ) async {
+    final homeLoads = StreamController<Object?>.broadcast();
+    addTearDown(homeLoads.close);
+    var loads = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: WeightTile(
+            weightKg: 93,
+            unit: BodyWeightUnit.kg,
+            load: () async {
+              loads++;
+              return const <WeightLogEntity>[];
+            },
+            homeLoads: homeLoads.stream,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(loads, 1);
+
+    homeLoads.add(null);
+    await tester.pumpAndSettle();
+    expect(loads, 2);
   });
 }

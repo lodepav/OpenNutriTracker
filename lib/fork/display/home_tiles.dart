@@ -99,6 +99,7 @@ class HomeTiles extends StatelessWidget {
           weightKg: weightKg,
           unit: bodyWeightUnit,
           load: loadWeights,
+          homeLoads: homeLoads,
           hint: 'Open the weight trend',
           onTap: () => openTrend(context, TrendMetric.weight),
         ),
@@ -184,12 +185,16 @@ class WeightTile extends StatefulWidget {
   /// a new key instead would flash [weightKg] and replace TalkBack's node.
   final Object? reload;
 
+  /// Home's loads, for tests; the app's from the HomeBloc.
+  final Stream<Object?>? homeLoads;
+
   const WeightTile({
     super.key,
     required this.weightKg,
     required this.unit,
     required this.load,
     this.reload,
+    this.homeLoads,
     this.identifier = 'home-weight-chip',
     this.hint = 'Weigh in',
     this.onTap,
@@ -201,6 +206,26 @@ class WeightTile extends StatefulWidget {
 
 class _WeightTileState extends State<WeightTile> {
   late var _entries = widget.load();
+
+  // An import adds past weigh-ins only, so today's weight, Home's key for
+  // this tile, stays; it reaches Home as a load.
+  late final StreamSubscription<Object?> _homeLoads;
+
+  @override
+  void initState() {
+    super.initState();
+    _homeLoads = (widget.homeLoads ?? homeLoads()).listen(
+      (_) => setState(() {
+        _entries = widget.load()..ignore();
+      }),
+    );
+  }
+
+  @override
+  void dispose() {
+    _homeLoads.cancel();
+    super.dispose();
+  }
 
   @override
   void didUpdateWidget(WeightTile oldWidget) {
