@@ -686,6 +686,7 @@ void main() {
         file,
         existing: HistoryExisting(
           partialDays: {DateTime(2025, 8, 9), ...plan.partialDays},
+          wholeDays: plan.wholeDays,
           goals: plan.goals,
           recipeNames: {for (final r in plan.recipes) r.name.toLowerCase()},
         ),

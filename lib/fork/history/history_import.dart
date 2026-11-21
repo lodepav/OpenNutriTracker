@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:isolate';
 
+import 'package:collection/collection.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -10,6 +11,7 @@ import 'package:opennutritracker/core/data/dbo/meal_dbo.dart';
 import 'package:opennutritracker/core/data/repository/intake_repository.dart';
 import 'package:opennutritracker/core/data/repository/recipe_repository.dart';
 import 'package:opennutritracker/core/data/repository/tracked_day_repository.dart';
+import 'package:opennutritracker/core/data/repository/user_repository.dart';
 import 'package:opennutritracker/core/data/repository/weight_log_repository.dart';
 import 'package:opennutritracker/core/domain/entity/body_weight_unit_entity.dart';
 import 'package:opennutritracker/core/domain/entity/intake_entity.dart';
@@ -19,6 +21,7 @@ import 'package:opennutritracker/core/domain/entity/recipe_ingredient_entity.dar
 import 'package:opennutritracker/core/domain/entity/weight_log_entity.dart';
 import 'package:opennutritracker/core/domain/usecase/get_config_usecase.dart';
 import 'package:opennutritracker/core/utils/calc/day_boundary_calc.dart';
+import 'package:opennutritracker/core/utils/hive_db_provider.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/core/utils/meal_type_suggester.dart';
 import 'package:opennutritracker/core/utils/tracked_day_lock.dart';
@@ -26,14 +29,18 @@ import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dar
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_nutriments_entity.dart';
 import 'package:opennutritracker/features/recipes/presentation/bloc/recipes_bloc.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
+import 'package:opennutritracker/fork/adaptive/adaptive_ui.dart'
+    show refreshGoals;
 import 'package:opennutritracker/fork/basket/basket_ui.dart';
 import 'package:opennutritracker/fork/body/measurement_store.dart';
 import 'package:opennutritracker/fork/copy/copy_entries.dart';
+import 'package:opennutritracker/fork/health/steps.dart';
 import 'package:opennutritracker/fork/health/weight_import_ui.dart';
 import 'package:opennutritracker/fork/history/history_file.dart';
 import 'package:opennutritracker/fork/history/table_reader.dart';
 import 'package:opennutritracker/fork/display/settings_tile.dart';
 import 'package:opennutritracker/fork/phases/phases.dart';
+import 'package:opennutritracker/fork/units/weight_text.dart';
 
 /// What an import writes, and what it keeps of the app's own.
 class HistoryPlan {
@@ -67,6 +74,22 @@ class HistoryPlan {
   /// Goals over that overlap none of the goals here.
   final List<GoalRecord> goals;
 
+  /// Days said to be logged in full, not left out or said whole here.
+  final Set<DateTime> wholeDays;
+
+  /// Step counts of days with none kept here.
+  final Map<DateTime, int> steps;
+
+  /// The targets of the program in force on each day only an import
+  /// wrote, set after its entries.
+  final Map<DateTime, DayGoals> dayGoals;
+
+  /// One check-in a program update, on days before the app's own first.
+  final List<CheckInRecord> checkIns;
+
+  /// The newest weigh-in, to become the profile's weight; null to keep it.
+  final double? profileWeightKg;
+
   /// Days of the file already logged here, and weigh-ins already here:
   /// the app's own are never replaced or added to.
   final int keptDays;
@@ -92,6 +115,11 @@ class HistoryPlan {
     this.recipes = const [],
     this.partialDays = const {},
     this.goals = const [],
+    this.wholeDays = const {},
+    this.steps = const {},
+    this.dayGoals = const {},
+    this.checkIns = const [],
+    this.profileWeightKg,
     required this.keptDays,
     required this.keptWeighIns,
     this.keptImportedDays = 0,
@@ -129,7 +157,12 @@ class HistoryPlan {
       customFoods.isEmpty &&
       recipes.isEmpty &&
       partialDays.isEmpty &&
-      goals.isEmpty;
+      goals.isEmpty &&
+      wholeDays.isEmpty &&
+      steps.isEmpty &&
+      dayGoals.isEmpty &&
+      checkIns.isEmpty &&
+      profileWeightKg == null;
 }
 
 /// "1 day", "2 days".
@@ -165,6 +198,25 @@ class HistoryExisting {
   /// The goals over.
   final List<GoalRecord> goals;
 
+  /// Days said to be whole (D65).
+  final Set<DateTime> wholeDays;
+
+  /// Days with a step count kept.
+  final Set<DateTime> stepDays;
+
+  /// The goals of the days in [importedDays].
+  final Map<DateTime, DayGoals> importedDayGoals;
+
+  /// The check-ins accepted, and the settings a target is built under now
+  /// ([AdaptiveSettings.targetBasis]).
+  final List<CheckInRecord> checkIns;
+  final String? targetBasis;
+
+  /// The profile's weight and when the profile was made; null weight with
+  /// no profile.
+  final double? profileWeightKg;
+  final DateTime? profileCreatedAt;
+
   /// The day start, in minutes after midnight: a food eaten before it
   /// belongs to the day before, as one logged here does.
   final int dayStartMinutes;
@@ -182,6 +234,13 @@ class HistoryExisting {
     this.recipeIds = const {},
     this.partialDays = const {},
     this.goals = const [],
+    this.wholeDays = const {},
+    this.stepDays = const {},
+    this.importedDayGoals = const {},
+    this.checkIns = const [],
+    this.targetBasis,
+    this.profileWeightKg,
+    this.profileCreatedAt,
     this.dayStartMinutes = 0,
     this.mealSharesPct,
   });
@@ -340,6 +399,17 @@ HistoryPlan planImport(
     for (final day in file.partialDays)
       if (!day.isAfter(today) && !existing.partialDays.contains(day)) day,
   };
+  final wholeDays = {
+    for (final day in file.wholeDays)
+      if (!day.isAfter(today) &&
+          !existing.partialDays.contains(day) &&
+          !existing.wholeDays.contains(day))
+        day,
+  };
+  final steps = {
+    for (final MapEntry(key: day, value: count) in file.steps.entries)
+      if (!day.isAfter(today) && !existing.stepDays.contains(day)) day: count,
+  };
   final goals = [
     for (final goal in file.goals)
       if (!goal.end.isAfter(today) &&
@@ -350,6 +420,16 @@ HistoryPlan planImport(
           ))
         goal,
   ];
+  // Days written now, and days an earlier import wrote whose goals differ;
+  // not today, whose goal is the app's now.
+  final written = {for (final day in intakes.keys) _date(day)};
+  final dayGoals = <DateTime, DayGoals>{
+    for (final day in {...written, ...existing.importedDays.keys})
+      if (_goalsOn(file.programs, day) case final g?
+          when day.isBefore(today) &&
+              (written.contains(day) || existing.importedDayGoals[day] != g))
+        day: g,
+  };
   return HistoryPlan(
     intakes: intakes,
     weights: weights,
@@ -360,6 +440,11 @@ HistoryPlan planImport(
     recipes: recipes,
     partialDays: partialDays,
     goals: goals,
+    wholeDays: wholeDays,
+    steps: steps,
+    dayGoals: dayGoals,
+    checkIns: _checkIns(file, existing, today),
+    profileWeightKg: _profileWeight(file, existing, misread, today),
     keptDays: keptDays,
     keptWeighIns: keptWeighIns,
     keptImportedDays: keptImportedDays,
@@ -375,6 +460,108 @@ HistoryPlan planImport(
 }
 
 DateTime _date(DateTime d) => DateTime(d.year, d.month, d.day);
+
+/// The targets of [day]'s weekday in the program in force on it: the
+/// latest update on or before it. Null before the first.
+DayGoals? _goalsOn(List<ProgramUpdate> programs, DateTime day) {
+  final update = programs.lastWhereOrNull((p) => !p.date.isAfter(day));
+  return update?.weekdays[day.weekday];
+}
+
+/// A check-in an import wrote: dated a day, where the app's own carry the
+/// time they were accepted at.
+bool _importedCheckIn(CheckInRecord r) => r.date == _date(r.date);
+
+/// One check-in for each update of [file]'s program, as if accepted here
+/// that day: its expenditure, the week's mean target as proposed and
+/// accepted, under the settings here now, for the goal running then. Only
+/// before the app's own first check-in, so the app's own run is never
+/// followed by an imported one; none on a day with one here.
+List<CheckInRecord> _checkIns(
+  HistoryFile file,
+  HistoryExisting existing,
+  DateTime today,
+) {
+  final own = [
+    for (final r in existing.checkIns)
+      if (!_importedCheckIn(r)) _date(r.date),
+  ]..sort();
+  final here = {for (final r in existing.checkIns) _date(r.date)};
+  final weighIns = file.weightsKg.keys.toList()..sort();
+  final records = <CheckInRecord>[];
+  for (final p in file.programs) {
+    final (burn, target) = (p.expenditureKcal, p.averageKcal);
+    if (burn == null || target == null || p.date.isAfter(today)) continue;
+    if (own.isNotEmpty && !p.date.isBefore(own.first)) continue;
+    if (here.contains(p.date)) continue;
+    final goal = file.paces.lastWhereOrNull(
+      (g) =>
+          !g.start.isAfter(p.date) &&
+          (g.end == null || !g.end!.isBefore(p.date)),
+    );
+    final weighIn = weighIns.lastWhereOrNull((d) => !d.isAfter(p.date));
+    final kg = p.weightKg ?? (weighIn == null ? null : file.weightsKg[weighIn]);
+    final pct = goal?.ratePctPerWeek;
+    final rate = goal == null
+        ? null
+        : goal.kind == PhaseKind.maintain
+        ? 0.0
+        : pct == null || kg == null
+        ? null
+        : (goal.kind == PhaseKind.cut ? -1 : 1) * pct / 100 * kg;
+    records.add(
+      CheckInRecord(
+        date: p.date,
+        expenditureKcal: burn,
+        proposedKcal: target,
+        acceptedKcal: target,
+        // shortcut: the base is the other app's whole expenditure and no
+        // activity is counted in the target, which is right with activity
+        // off; in the weekly or daily mode the next cap holds a base
+        // without the counted activity to one with it. Upgrade by taking
+        // the imported steps' mean of the week before off.
+        activityKcal: 0,
+        baseKcal: burn,
+        goalRateKgPerWeek: rate,
+        targetWeightKg: rate == null ? null : goal?.targetKg,
+        basis: existing.targetBasis,
+      ),
+    );
+  }
+  return records;
+}
+
+/// The newest weigh-in, as the profile's weight, when it is newer than
+/// every weigh-in here and than the profile (a weigh-in is set at the
+/// start of its day, so one on the day the profile was made does not
+/// replace the weight typed then), and differs from it. Nothing records
+/// when the weight was last set but those: onboarding, and a weigh-in of
+/// the day, which is in the log.
+double? _profileWeight(
+  HistoryFile file,
+  HistoryExisting existing,
+  List<WeightLogEntity> misread,
+  DateTime today,
+) {
+  final current = existing.profileWeightKg;
+  // Only with MacroFactor's workbook, its program sheet the mark: other
+  // apps' exports leave the weight as before.
+  if (current == null || file.programs.isEmpty) return null;
+  final days = file.weightsKg.keys.where((d) => !d.isAfter(today)).toList();
+  if (days.isEmpty) return null;
+  final newest = days.reduce((a, b) => b.isAfter(a) ? b : a);
+  final kg = file.weightsKg[newest]!;
+  for (final w in existing.weighIns) {
+    if (misread.contains(w)) continue;
+    final day = _date(w.date);
+    if (day.isAfter(newest)) return null;
+    // The same weigh-in an earlier import wrote is the file's own.
+    if (day == newest && (w.weightKg - kg).abs() >= 1e-6) return null;
+  }
+  final made = existing.profileCreatedAt;
+  if (made != null && !newest.isAfter(made)) return null;
+  return (current - kg).abs() < 1e-6 ? null : kg;
+}
 
 /// When [food] was eaten, for ordering: its day, then its minute.
 DateTime _at(FoodRow food) =>
@@ -576,11 +763,23 @@ Future<HistoryExisting> _existing() async {
     }
   }
   imported.removeWhere((day, _) => own.contains(day));
+  final importedGoals = <DateTime, DayGoals>{};
   for (final t
       in await locator<TrackedDayRepository>().getAllTrackedDaysDBO()) {
     final day = _date(t.day);
+    if (imported.containsKey(day)) {
+      importedGoals[day] = (
+        kcal: t.calorieGoal,
+        carbs: t.carbsGoal,
+        fat: t.fatGoal,
+        protein: t.proteinGoal,
+      );
+    }
     if (t.caloriesTracked > 0 && !imported.containsKey(day)) own.add(day);
   }
+  final users = locator<UserRepository>();
+  final db = locator<HiveDBProvider>();
+  final adaptive = AdaptiveStore();
   return HistoryExisting(
     loggedDays: own,
     importedDays: imported,
@@ -606,6 +805,15 @@ Future<HistoryExisting> _existing() async {
           endKg: null,
         ),
     ],
+    wholeDays: await adaptive.wholeDays(),
+    stepDays: (await StepCounts().cached()).keys.toSet(),
+    importedDayGoals: importedGoals,
+    checkIns: await adaptive.history(),
+    targetBasis: AdaptiveStore.settings.value.targetBasis,
+    profileWeightKg: await users.hasUserData()
+        ? (await users.getUserData()).weightKG
+        : null,
+    profileCreatedAt: db.profileBox.get(db.activeProfileId)?.createdAt,
     dayStartMinutes: offset,
     mealSharesPct: config.mealKcalSharesPct,
   );
@@ -652,10 +860,35 @@ Future<bool> writeHistory(HistoryPlan plan, ProfileStamp startedOn) async {
       for (final recipe in plan.recipes) {
         await locator<RecipeRepository>().saveRecipe(recipe);
       }
+      final adaptive = AdaptiveStore();
       if (plan.partialDays.isNotEmpty) {
-        await AdaptiveStore().mergeSkippedDays(plan.partialDays);
+        await adaptive.mergeSkippedDays(plan.partialDays);
+      }
+      if (plan.wholeDays.isNotEmpty) {
+        await adaptive.mergeWholeDays(plan.wholeDays);
       }
       if (plan.goals.isNotEmpty) await PhaseStore().addToHistory(plan.goals);
+      // After the entries: a day's row is made with today's goals.
+      for (final MapEntry(key: day, value: goals) in plan.dayGoals.entries) {
+        // Sets the macros from the energy (S276), then the program's own.
+        await days.updateDayCalorieGoal(day, goals.kcal);
+        await days.updateDayMacroGoal(
+          day,
+          carbGoal: goals.carbs,
+          fatGoal: goals.fat,
+          proteinGoal: goals.protein,
+        );
+      }
+      if (plan.steps.isNotEmpty) await StepCounts().addImported(plan.steps);
+      if (plan.checkIns.isNotEmpty) await adaptive.mergeCheckIns(plan.checkIns);
+      if (plan.profileWeightKg case final kg?) {
+        final users = locator<UserRepository>();
+        if (await users.hasUserData()) {
+          final user = await users.getUserData();
+          user.weightKG = kg;
+          await users.updateUserData(user);
+        }
+      }
       return true;
     },
   );
@@ -664,8 +897,15 @@ Future<bool> writeHistory(HistoryPlan plan, ProfileStamp startedOn) async {
   if (plan.recipes.isNotEmpty && locator.isRegistered<RecipesBloc>()) {
     locator<RecipesBloc>().add(const LoadRecipesEvent());
   }
-  if (plan.weights.isNotEmpty || plan.misread.isNotEmpty) {
+  if (plan.weights.isNotEmpty ||
+      plan.misread.isNotEmpty ||
+      plan.profileWeightKg != null) {
     refreshAfterWeightImport();
+  }
+  // Today's goal follows the last check-in and the weight, as after an
+  // automatic check-in.
+  if (plan.checkIns.isNotEmpty || plan.profileWeightKg != null) {
+    await refreshGoals();
   }
   return true;
 }
@@ -887,6 +1127,19 @@ class HistoryImportTile extends StatelessWidget {
             'day left out of expenditure',
             'days left out of expenditure',
           ),
+        if (chosen.steps.isNotEmpty)
+          n(chosen.steps.length, 'day of steps', 'days of steps'),
+        if (chosen.checkIns.isNotEmpty)
+          n(chosen.checkIns.length, 'check-in', 'check-ins'),
+        if (chosen.dayGoals.isNotEmpty)
+          n(chosen.dayGoals.length, "day's targets", "days' targets"),
+        if (chosen.wholeDays.isNotEmpty)
+          n(
+            chosen.wholeDays.length,
+            'day marked logged in full',
+            'days marked logged in full',
+          ),
+        if (chosen.profileWeightKg != null) 'the current weight',
       ];
       say(
         '${parts.isEmpty ? 'Imported nothing new' : 'Imported ${parts.join(', ')}'}'
@@ -1024,6 +1277,39 @@ class _HistoryImportDialogState extends State<HistoryImportDialog> {
                 '${_count(plan.partialDays.length, 'day')} logged in part, '
                 'to leave out of the expenditure estimate.',
                 key: const ValueKey('history-partial'),
+              ),
+            ],
+            if (plan.steps.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text(
+                'Steps: ${_count(plan.steps.length, 'day')} to add, '
+                '${_span(plan.steps.keys)}.',
+                key: const ValueKey('history-steps'),
+              ),
+            ],
+            if (plan.checkIns.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text(
+                '${_count(plan.checkIns.length, 'check-in')} to add, '
+                '${_span(plan.checkIns.map((c) => c.date))}, one for each '
+                'update of the program.',
+                key: const ValueKey('history-check-ins'),
+              ),
+            ],
+            if (plan.dayGoals.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text(
+                'Targets of ${_count(plan.dayGoals.length, 'day')} set as the '
+                'program had them that day.',
+                key: const ValueKey('history-day-goals'),
+              ),
+            ],
+            if (plan.profileWeightKg case final kg?) ...[
+              const SizedBox(height: 8),
+              Text(
+                'Your current weight becomes ${weightText(kg, file.weightUnit)}, '
+                'the newest weigh-in.',
+                key: const ValueKey('history-profile-weight'),
               ),
             ],
             if (plan.replaced.isNotEmpty) ...[
