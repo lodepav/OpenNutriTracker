@@ -49,6 +49,15 @@ class World {
   /// The user answers D65's question, leaving out every day pointed out.
   bool leavesOutFlagged;
 
+  /// Days the water takes to follow the intake (its time constant).
+  double waterLag;
+
+  /// A break in logging and weighing from [breakDay] for [breakLength]
+  /// days, eating [breakEat] more (a share) than the target.
+  int? breakDay;
+  int breakLength;
+  double breakEat;
+
   World({
     this.startKg = 90,
     this.bodyFat = 30,
@@ -69,14 +78,23 @@ class World {
     this.goalChangeDay,
     this.goalAfter = 0,
     this.leavesOutFlagged = false,
+    this.waterLag = 3,
+    this.breakDay,
+    this.breakLength = 0,
+    this.breakEat = 0,
   });
+
+  bool away(int day) =>
+      breakDay != null && day >= breakDay! && day < breakDay! + breakLength;
 }
 
 class Knobs {
   final Responsiveness resp;
   final bool cycle, flat, damping;
   final double? cap;
+  final BreakAnchor anchor;
   const Knobs({
+    this.anchor = BreakAnchor.afterHoldSoft,
     this.resp = Responsiveness.standard,
     this.cycle = false,
     this.flat = false,
@@ -89,11 +107,13 @@ class Knobs {
     cycleWindow: cycle,
     kcalPerKg: flat ? 7700 : null,
     shiftHold: damping ? ExpenditureSettings.defaultShiftHold : null,
+    breakAnchor: anchor,
   );
 
   String get label =>
       '${resp.name}${cycle ? ' +cycle' : ''}${flat ? ' +7700' : ''}'
-      '${damping ? '' : ' undamped'}';
+      '${damping ? '' : ' undamped'}'
+      '${anchor == BreakAnchor.afterHoldSoft ? '' : ' ${anchor.name}'}';
 }
 
 class Result {
@@ -103,6 +123,10 @@ class Result {
 
   /// True tissue kg a week from day 42 on.
   double pace = 0;
+
+  /// True tissue each day, and runs of 5 or more unlogged days.
+  var tissueAt = <double>[];
+  var breaks = 0;
 }
 
 Result run(World w, Knobs k, {int days = 280, int seed = 1}) {
@@ -161,13 +185,18 @@ Result run(World w, Knobs k, {int days = 280, int seed = 1}) {
       r.errors.add(checkIn.expenditureKcal - tdee * w.loggingShare);
     }
 
-    final eaten = target / w.loggingShare * (1 + w.adherenceSd * g());
+    final eaten =
+        target /
+        w.loggingShare *
+        (1 + (w.away(day) ? w.breakEat : 0)) *
+        (1 + w.adherenceSd * g());
     deficit += 0.1 * ((tdee - eaten) - deficit);
     final change = (eaten - tdee) / (w.truthKcalPerKg ?? energyDensity(fat));
     fat += fatShare(fat) * change;
     tissue += change;
     tissueAt.add(tissue);
-    water += (w.waterPer1000 * (eaten - w.baseKcal) / 1000 - water) / 3;
+    water +=
+        (w.waterPer1000 * (eaten - w.baseKcal) / 1000 - water) / w.waterLag;
     final scale =
         tissue +
         water +
@@ -179,20 +208,25 @@ Result run(World w, Knobs k, {int days = 280, int seed = 1}) {
         ].fold(0.0, (a, b) => a + b) +
         w.noiseKg * g();
     final roll = rnd.nextDouble();
+    final weighed = rnd.nextDouble() >= w.missedWeighIn && !w.away(day);
     observed.add(
       AdaptiveDay(
-        intakeKcal: roll < w.unlogged
+        intakeKcal: w.away(day) || roll < w.unlogged
             ? null
             : eaten *
                   w.loggingShare *
                   (roll < w.unlogged + w.partial ? 0.5 : 1),
-        weightKg: rnd.nextDouble() < w.missedWeighIn
-            ? null
-            : double.parse(scale.toStringAsFixed(1)),
+        weightKg: weighed ? double.parse(scale.toStringAsFixed(1)) : null,
       ),
     );
   }
   r.pace = (tissueAt.last - tissueAt[42]) / (days - 43) * 7;
+  r.tissueAt = tissueAt;
+  var run = 0;
+  for (final d in observed) {
+    run = (d.intakeKcal ?? 0) < minLoggedKcal ? run + 1 : 0;
+    if (run == breakDays) r.breaks++;
+  }
   return r;
 }
 
@@ -238,6 +272,37 @@ List<double> trace(
     pace += r.pace / seeds;
   }
   return (bias: bias, error: error, move: move, turns: turns, pace: pace);
+}
+
+/// Over the check-ins from the one after the return to 8 weeks on: mean
+/// bias and |error|, the largest weekly target move, and the true pace.
+void _breakRow(
+  String label,
+  World Function() world,
+  Knobs k, {
+  int seeds = 30,
+}) {
+  var bias = 0.0, error = 0.0, move = 0.0, pace = 0.0;
+  for (var seed = 1; seed <= seeds; seed++) {
+    final w = world();
+    final r = run(w, k, seed: seed);
+    final back = w.breakDay! + w.breakLength;
+    final from = (back / 7).ceil(), to = from + 8;
+    var biggest = 0.0;
+    for (var i = from; i <= to; i++) {
+      bias += r.errors[i] / 9 / seeds;
+      error += r.errors[i].abs() / 9 / seeds;
+      biggest = max(biggest, (r.targets[i] - r.targets[i - 1]).abs());
+    }
+    move += biggest / seeds;
+    pace += (r.tissueAt[to * 7] - r.tissueAt[from * 7]) / 8 / seeds;
+  }
+  print(
+    '${label.padRight(44)} | ${bias.round().toString().padLeft(5)} '
+    '| ${error.round().toString().padLeft(4)} '
+    '| ${move.round().toString().padLeft(4)} '
+    '| ${pace.toStringAsFixed(2)}',
+  );
 }
 
 String _weeks(List<double> v, [int from = 0, int? to]) =>
@@ -378,6 +443,89 @@ void main() {
         () => maintaining(0, leavesOut, 0.25),
         standard,
       );
+    }
+
+    final anchors = [for (final a in BreakAnchor.values) Knobs(anchor: a)];
+    print('\n## Break anchors, no break (bias | error | move | turns | pace)');
+    for (final (label, world) in <(String, World Function())>[
+      ('default', World.new),
+      ('truth 7,700', () => World(truthKcalPerKg: 7700)),
+      ('water 2', () => World(waterPer1000: 2)),
+      ('20% at half, flagged left out', () => maintaining(0.2, true)),
+      ('SD 25%, flagged left out', () => maintaining(0, true, 0.25)),
+    ]) {
+      for (final k in anchors) {
+        _row('$label, ${k.anchor.name}', world, k);
+      }
+    }
+    print('   ...runs of 5+ unlogged days a run (12 seeds, mean)');
+    for (final (label, world) in <(String, World Function())>[
+      ('default', World.new),
+      ('20% at half, flagged left out', () => maintaining(0.2, true)),
+      ('SD 25%, flagged left out', () => maintaining(0, true, 0.25)),
+    ]) {
+      var n = 0;
+      for (var seed = 1; seed <= 12; seed++) {
+        n += run(world(), standard, seed: seed).breaks;
+      }
+      print('$label: ${(n / 12).toStringAsFixed(2)}');
+    }
+
+    // Break from day 147; the return's weigh-in carries the break's water.
+    final breaks = <(String, World Function())>[
+      (
+        '14d 0% water 2.0 lag 7, maintenance',
+        () => World(
+          breakDay: 147,
+          breakLength: 14,
+          waterPer1000: 2,
+          waterLag: 7,
+          goalKgPerWeek: 0,
+        ),
+      ),
+      for (final (length, eat, water, lag) in [
+        (14, 0.0, 2.0, 7.0),
+        (14, 0.2, 1.0, 3.0),
+        (14, 0.2, 2.0, 7.0),
+        (21, 0.2, 2.0, 7.0),
+        (10, 0.25, 2.0, 7.0),
+        (14, -0.2, 2.0, 7.0),
+        (21, -0.2, 2.0, 7.0),
+      ])
+        (
+          '${length}d ${eat > 0 ? '+' : ''}${(eat * 100).round()}% water $water lag ${lag.round()}',
+          () => World(
+            breakDay: 147,
+            breakLength: length,
+            breakEat: eat,
+            waterPer1000: water,
+            waterLag: lag,
+          ),
+        ),
+    ];
+    print(
+      '\n## Breaks, check-ins from the return to 8 weeks on, 30 seeds '
+      '(bias | error | max weekly move | pace)',
+    );
+    for (final (label, world) in breaks) {
+      for (final k in anchors) {
+        _breakRow('$label, ${k.anchor.name}', world, k);
+      }
+    }
+    print('\n## Breaks, whole run (bias | error | move | turns | pace)');
+    for (final (label, world) in breaks) {
+      for (final k in anchors) {
+        _row('$label, ${k.anchor.name}', world, k);
+      }
+    }
+    print('\n## Breaks, estimate - truth by week, weeks 19-32');
+    for (final (label, world) in breaks) {
+      for (final k in anchors) {
+        print(
+          '${'$label, ${k.anchor.name}'.padRight(44)}: '
+          '${_weeks(trace(world, k), 19, 33)}',
+        );
+      }
     }
   });
 }

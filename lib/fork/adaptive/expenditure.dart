@@ -26,6 +26,13 @@ enum Responsiveness {
   const Responsiveness(this.label);
 }
 
+/// Where a trend starts after a break (D27, D68): the first weigh-in a
+/// week after the first one back, past the water the break's eating left,
+/// its updates ramping in by the share of a full window they cover
+/// ([afterHoldSoft]); or the first weigh-in back, as before D68
+/// ([firstBack], kept as the closed-loop tool's baseline).
+enum BreakAnchor { firstBack, afterHoldSoft }
+
 /// The weights the simulator tunes (fork/research/phase3-simulation.md).
 class ExpenditureSettings {
   /// Weight of each new day in the trend.
@@ -63,6 +70,8 @@ class ExpenditureSettings {
   final double shiftDeadband;
   final double? shiftHold;
 
+  final BreakAnchor breakAnchor;
+
   const ExpenditureSettings({
     this.alpha = 0.1,
     this.window = 20,
@@ -74,6 +83,7 @@ class ExpenditureSettings {
     this.shiftDeadband = defaultShiftDeadband,
     this.shiftHold = defaultShiftHold,
     this.kcalPerKg,
+    this.breakAnchor = BreakAnchor.afterHoldSoft,
   });
 
   static const defaultShiftDeadband = 0.05;
@@ -114,9 +124,11 @@ class ExpenditureSettings {
     int warmupDays = defaultWarmupDays,
     double? kcalPerKg,
     double? shiftHold = defaultShiftHold,
+    BreakAnchor breakAnchor = BreakAnchor.afterHoldSoft,
   }) => ExpenditureSettings(
     window: cycleWindow ? 28 : 20,
     shiftHold: shiftHold,
+    breakAnchor: breakAnchor,
     minLoggedShare: minLoggedShare,
     warmupDays: warmupDays,
     kcalPerKg: kcalPerKg,
@@ -199,11 +211,16 @@ estimateExpenditureRun(
   final firstLogged = days.indexWhere(logged);
   // After a break (D27) the weight came back moved on food nobody logged,
   // and its first days back swing with water. Each break's last day starts
-  // a trend of its own at the first weigh-in from there (its anchor), and
-  // the estimate holds until a week after it. The intake's trend restarts
-  // at the anchor too, so the damping reads only the shift since.
+  // a trend of its own at the first weigh-in a week after the first one
+  // back ([back]): its anchor (D68). The estimate holds to the anchor, and
+  // its updates ramp in from there. The intake's trend restarts at the
+  // anchor too, so the damping reads only the shift since. Under
+  // [BreakAnchor.firstBack] the anchor is [back], held a week from it.
   final restarts =
-      <int, ({List<double?> trend, int? anchor, List<double?> intake})>{};
+      <
+        int,
+        ({List<double?> trend, int? anchor, int? back, List<double?> intake})
+      >{};
   var unlogged = 0;
   for (var i = firstLogged + 1; firstLogged >= 0 && i < days.length; i++) {
     if (!logged(days[i])) {
@@ -219,13 +236,37 @@ estimateExpenditureRun(
         }, days.length - from),
         alpha: settings.alpha,
       );
-      final anchor = segment.indexWhere((t) => t != null);
+      final first = segment.indexWhere((t) => t != null);
+      final back = first < 0 ? null : from + first;
+      var trend = [...List<double?>.filled(from, null), ...segment];
+      var anchor = back;
+      if (back != null && settings.breakAnchor != BreakAnchor.firstBack) {
+        final later = days.indexWhere(
+          (d) => d.weightKg != null,
+          back + settings.warmupDays,
+        );
+        anchor = later < 0 ? null : later;
+        trend = later < 0
+            ? List.filled(days.length, null)
+            : [
+                ...List<double?>.filled(later, null),
+                ...smoothedTrend(
+                  dailyWeights({
+                    for (var j = later; j < days.length; j++)
+                      if (days[j].weightKg != null)
+                        j - later: days[j].weightKg!,
+                  }, days.length - later),
+                  alpha: settings.alpha,
+                ),
+              ];
+      }
       restarts[from] = (
-        trend: [...List<double?>.filled(from, null), ...segment],
-        anchor: anchor < 0 ? null : from + anchor,
-        intake: anchor < 0
+        trend: trend,
+        anchor: anchor,
+        back: back,
+        intake: anchor == null
             ? intakeTrend
-            : _intakeTrend(days, logged, settings.alpha, from: from + anchor),
+            : _intakeTrend(days, logged, settings.alpha, from: anchor),
       );
     }
     unlogged = 0;
@@ -248,19 +289,43 @@ estimateExpenditureRun(
     var start = max(day - settings.window, firstLogged - 1).clamp(0, day);
     var dayTrend = trend;
     var dayIntake = intakeTrend;
+    var ramp = 1.0;
     if (restart != null && segment != null) {
-      final anchor = segment.anchor;
-      final held = anchor == null || day - anchor < settings.warmupDays;
+      final (anchor, back) = (segment.anchor, segment.back);
+      final w = settings.warmupDays;
+      // The first update is the day after the anchor, the anchor's own
+      // window being empty. A week on with no weigh-in the week's own data
+      // rule says what is missing.
+      // shortcut: with no anchor yet, resumesIn assumes a weigh-in on
+      // back + w (or tomorrow); say "at the soonest" if users read it late.
+      final (held, resumesIn) = switch (settings.breakAnchor) {
+        BreakAnchor.firstBack => (
+          anchor == null || day - anchor < w,
+          anchor == null ? null : anchor + w - day,
+        ),
+        BreakAnchor.afterHoldSoft => (
+          anchor != null
+              ? day <= anchor
+              : back == null || day < back + w + 7,
+          anchor != null
+              ? anchor + 1 - day
+              : back == null
+              ? null
+              : max(back + w, day + 1) + 1 - day,
+        ),
+      };
       if (held && day == days.length - 1) {
-        hold = BreakHold(
-          daysBack: day - restart,
-          resumesIn: anchor == null ? null : anchor + settings.warmupDays - day,
-        );
+        hold = BreakHold(daysBack: day - restart, resumesIn: resumesIn);
       }
       enoughData = enoughData && !held;
       start = max(day - settings.window, anchor ?? day).clamp(0, day);
       dayTrend = segment.trend;
       dayIntake = segment.intake;
+      // A window short of full moves the estimate by as much of an update
+      // as it covers, so its noise is a full window's.
+      if (settings.breakAnchor == BreakAnchor.afterHoldSoft && anchor != null) {
+        ramp = ((day - anchor) / settings.window).clamp(0.0, 1.0);
+      }
     }
     final from = dayTrend[start], to = dayTrend[day];
     final window = days.sublist(start + 1, day + 1);
@@ -289,7 +354,7 @@ estimateExpenditureRun(
             );
       if (damping > 0) {
         final weight = calibrating ? settings.calibrationBlend : settings.blend;
-        estimate += damping * weight * (raw - estimate);
+        estimate += ramp * damping * weight * (raw - estimate);
         firstUpdate ??= day;
         updates++;
       }
@@ -333,8 +398,8 @@ List<double?> _intakeTrend(
   ];
 }
 
-/// The estimate held after a break in logging (D27): until a week of
-/// weigh-ins and logging after the first weigh-in back.
+/// The estimate held after a break in logging (D27, D68): to the first
+/// weigh-in a week after the first one back.
 class BreakHold {
   /// Days since the break's last unlogged day: 1 on the first day back.
   final int daysBack;
