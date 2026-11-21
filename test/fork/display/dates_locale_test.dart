@@ -96,6 +96,7 @@ void main() {
           todayKcal: 1800,
           todayGoalKcal: 2500,
           load: (_, _) async => const [],
+          homeLoads: const Stream.empty(),
         ),
       ),
     );
@@ -120,6 +121,7 @@ void main() {
             todayKcal: 1800,
             todayGoalKcal: 2500,
             load: (_, _) async => const [],
+            homeLoads: const Stream.empty(),
           ),
         ),
       );

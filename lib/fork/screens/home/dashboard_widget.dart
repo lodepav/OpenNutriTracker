@@ -491,6 +491,7 @@ class _DashboardWidgetState extends State<DashboardWidget> {
                   today: widget.forkDay ?? DateTime.now(),
                   todayKcal: widget.totalKcalSupplied,
                   todayGoalKcal: widget.totalKcalDaily,
+                  homeLoads: widget.homeLoads,
                 ),
               ],
             ),

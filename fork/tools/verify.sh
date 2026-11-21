@@ -72,7 +72,9 @@ if [[ -n "$strict" ]]; then
     exit 1
   }
   flutter gen-l10n
-  fork/tools/heavy.sh flutter test
+  # Far from the zones that write fixtures (UTC+2/+3) and from CI's UTC: a
+  # date read back in another zone shows up here, not on someone's phone.
+  TZ=Pacific/Honolulu fork/tools/heavy.sh flutter test
 else
   fork/tools/test-fast.sh
 fi

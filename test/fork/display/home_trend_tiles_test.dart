@@ -96,7 +96,7 @@ void main() {
     tester,
   ) async {
     layout.value = (order: ['goal'], hidden: const {});
-    final homeLoads = StreamController<Object?>();
+    final homeLoads = StreamController<Object?>.broadcast();
     addTearDown(homeLoads.close);
     final bloc = await pump(tester, homeLoads: homeLoads.stream);
     tester.element(find.byType(HomeTiles)).markNeedsBuild();
@@ -261,7 +261,7 @@ void main() {
       order: ['weight', 'expenditure', 'water', 'fasting', 'goal'],
       hidden: const {},
     );
-    final homeLoads = StreamController<Object?>();
+    final homeLoads = StreamController<Object?>.broadcast();
     addTearDown(homeLoads.close);
     final bloc = await pump(tester, homeLoads: homeLoads.stream);
     final goal = find.byWidgetPredicate(

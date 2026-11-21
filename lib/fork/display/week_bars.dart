@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:opennutritracker/core/domain/entity/tracked_day_entity.dart';
@@ -6,6 +8,7 @@ import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/fork/display/contrast.dart';
+import 'package:opennutritracker/fork/screens/home/home_loads.dart';
 import 'package:opennutritracker/fork/units/energy_text.dart';
 
 /// The tracked days from one day to another, both included.
@@ -26,12 +29,16 @@ class WeekBars extends StatefulWidget {
   final double todayGoalKcal;
   final TrackedDaysLoader load;
 
+  /// Home's loads, for tests; the app's from the HomeBloc.
+  final Stream<Object?>? homeLoads;
+
   const WeekBars({
     super.key,
     required this.today,
     required this.todayKcal,
     required this.todayGoalKcal,
     this.load = _trackedDays,
+    this.homeLoads,
   });
 
   @override
@@ -48,6 +55,26 @@ class _WeekBarsState extends State<WeekBars> {
 
   Future<List<TrackedDayEntity>> _load() =>
       widget.load(_first, DateUtils.dateOnly(widget.today));
+
+  // A past day edited in the Diary reaches Home as a load.
+  late final StreamSubscription<Object?> _homeLoads;
+
+  @override
+  void initState() {
+    super.initState();
+    _homeLoads = (widget.homeLoads ?? homeLoads()).listen(
+      (_) => setState(() {
+        // a failed read shows empty days, as the first one does
+        _days = _load()..ignore();
+      }),
+    );
+  }
+
+  @override
+  void dispose() {
+    _homeLoads.cancel();
+    super.dispose();
+  }
 
   @override
   void didUpdateWidget(WeekBars old) {
