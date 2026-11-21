@@ -165,6 +165,13 @@ class _SetTargetWeightDialogState extends State<SetTargetWeightDialog> {
                   child: HorizontalPicker(
                   height: 100,
                   backgroundColor: Colors.transparent,
+                  // [fork] S285 target-ruler-colours: the package's grey,
+                  // blue and red fail contrast on the dialog
+                  passiveItemsTextColor:
+                      Theme.of(context).colorScheme.onSurfaceVariant,
+                  activeItemTextColor: Theme.of(context).colorScheme.primary,
+                  cursorColor: Theme.of(context).colorScheme.primary,
+                  // [/fork]
                   // [fork] S283 target-half-steps
                   minValue: _halfSteps.min,
                   maxValue: _halfSteps.max,

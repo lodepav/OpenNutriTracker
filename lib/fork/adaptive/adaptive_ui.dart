@@ -114,15 +114,13 @@ class _AdaptiveCheckInCardState extends State<AdaptiveCheckInCard> {
   /// What changed, for [_Due.settings]; empty when it can't be told.
   List<String> _changed = const [];
 
-  /// For [_Due.weekly]: an automatic check-in waits on
-  /// [AdaptiveService.partialDays].
+  /// An automatic check-in waits on [AdaptiveService.partialDays].
   bool _waitsOnPartial = false;
 
   Future<_Due?> _readDue() async {
     if (!await _service.checkInDue()) return null;
     final reason = await checkInReason(_service);
     _waitsOnPartial =
-        reason == _Due.weekly &&
         AdaptiveStore.settings.value.autoAcceptCheckIn &&
         (await _service.partialDays()).isNotEmpty;
     if (reason == _Due.settings) {
@@ -149,10 +147,9 @@ class _AdaptiveCheckInCardState extends State<AdaptiveCheckInCard> {
     // Home rebuilds after an activity is logged, the app resumes or the
     // profile (its goal) changes.
     _syncDailyGoal();
-    if (AutoCheckIn.accepted.value == null) {
-      _due = _readDue();
-      _autoAccept();
-    }
+    // behind the banner too: a goal changed under it makes another due
+    if (AutoCheckIn.accepted.value == null) _due = _readDue();
+    _autoAccept();
   }
 
   @override
@@ -176,10 +173,11 @@ class _AdaptiveCheckInCardState extends State<AdaptiveCheckInCard> {
   /// refreshed the goals by then.
   void _onAutoAccepted() {
     final accepted = AutoCheckIn.accepted.value;
+    if (accepted == null) return _recheck(); // one may be due behind it
     setState(() {
-      if (accepted != null) _due = Future.value(null);
+      _due = Future.value(null);
     });
-    if (accepted != null) widget.onAccepted();
+    widget.onAccepted();
   }
 
   /// Today's counted activity when the goal was last written, and when.
@@ -261,6 +259,9 @@ class _AdaptiveCheckInCardState extends State<AdaptiveCheckInCard> {
                 _Due.weekly => 'Weekly check-in',
               }),
               subtitle: Text(switch (due) {
+                _ when _waitsOnPartial =>
+                  'Waiting for your answer on a day that looks partly '
+                      'logged.',
                 _Due.first =>
                   'It is ready to check. From then on it follows your '
                       'weigh-ins and what you log.',
@@ -270,11 +271,7 @@ class _AdaptiveCheckInCardState extends State<AdaptiveCheckInCard> {
                       ? 'A target built under them is ready to check.'
                       : 'You changed ${_changed.join(', ')}. A target built '
                             'under the new settings is ready to check.',
-                _Due.weekly =>
-                  _waitsOnPartial
-                      ? 'Waiting for your answer on a day that looks partly '
-                            'logged.'
-                      : 'Your expenditure and next target are ready.',
+                _Due.weekly => 'Your expenditure and next target are ready.',
               }),
               trailing: const Icon(Icons.chevron_right_rounded),
               onTap: () async {
