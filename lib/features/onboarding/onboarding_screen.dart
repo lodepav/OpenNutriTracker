@@ -85,6 +85,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final _forkBodyBlocked = ValueNotifier<String?>(null);
   // [/fork]
 
+  // [fork] S420 onboarding-about-you-blocked: About you's message naming
+  // the one wrong field; null keeps the general one
+  final _forkAboutYouBlocked = ValueNotifier<String?>(null);
+  // [/fork]
+
   // [fork] S332 onboarding-back: the page shown, so system Back can step back
   int _forkPage = 0;
   // [/fork]
@@ -116,6 +121,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     // [/fork]
     _bodyMeasurementsShowErrors.dispose();
     _forkBodyBlocked.dispose(); // [fork] S368
+    _forkAboutYouBlocked.dispose(); // [fork] S420
     super.dispose();
   }
 
@@ -258,13 +264,20 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           initialGender: selection.gender,
           initialCaloriesProfile: selection.caloriesProfile,
           initialBirthday: selection.birthday,
+          blockedMessage: _forkAboutYouBlocked, // [fork] S420
         ),
         footer: HighlightButton(
           buttonLabel: S.of(context).buttonNextLabel,
           onButtonPressed: () =>
               _scrollToPage(_OnboardingPage.bodyMeasurements),
           buttonActive: _aboutYouPageButtonActive,
-          inactiveMessage: S.of(context).onboardingBlockedProfileSnack,
+          // [fork] S420 onboarding-about-you-blocked: set before
+          // setPageContent's rebuild, so it is current
+          inactiveMessage:
+              _forkAboutYouBlocked.value ??
+              S.of(context).onboardingBlockedProfileSnack,
+          // inactiveMessage: S.of(context).onboardingBlockedProfileSnack,
+          // [/fork]
         ),
       ),
       PageViewModel(

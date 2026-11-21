@@ -20,7 +20,7 @@ import 'package:opennutritracker/fork/screens/activity/activity_vertial_list.dar
 import 'package:opennutritracker/core/presentation/widgets/edit_activity_dialog.dart';
 import 'package:opennutritracker/core/presentation/widgets/edit_dialog.dart';
 import 'package:opennutritracker/core/presentation/widgets/delete_dialog.dart';
-import 'package:opennutritracker/core/presentation/widgets/disclaimer_dialog.dart';
+// import 'package:opennutritracker/core/presentation/widgets/disclaimer_dialog.dart'; // [fork] S419
 import 'package:opennutritracker/core/domain/usecase/import_workouts_usecase.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/features/add_meal/presentation/add_meal_type.dart';
@@ -65,6 +65,7 @@ import 'package:opennutritracker/fork/copy/copy_ui.dart';
 import 'package:opennutritracker/core/utils/tracked_day_lock.dart';
 import 'package:opennutritracker/fork/undo/undo_delete.dart';
 // [/fork]
+import 'package:opennutritracker/fork/launch/disclaimer_once.dart'; // [fork] S419
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -80,6 +81,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   bool _isIntakeDragging = false;
   bool _isActivityDragging = false;
   bool get _isDragging => _isIntakeDragging || _isActivityDragging;
+  final _forkDisclaimer = DisclaimerOnce(); // [fork] S419
 
   @override
   void initState() {
@@ -203,7 +205,14 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     int waterGoalMl,
   ) {
     if (showDisclaimerDialog) {
-      _showDisclaimerDialog(context);
+      // [fork] S419 disclaimer-once: every build queued another dialog, and
+      // the barrier closed it without saving
+      _forkDisclaimer.show(context, (accepted) {
+        _homeBloc.saveConfigData(accepted);
+        _homeBloc.add(const LoadItemsEvent());
+      });
+      // _showDisclaimerDialog(context);
+      // [/fork]
     }
     return Stack(
       children: [
@@ -637,21 +646,23 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     });
   }
 
-  /// Show disclaimer dialog after build method
-  void _showDisclaimerDialog(BuildContext context) async {
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      final dialogConfirmed = await showDialog<bool>(
-        context: context,
-        builder: (context) {
-          return const DisclaimerDialog();
-        },
-      );
-      if (dialogConfirmed != null) {
-        _homeBloc.saveConfigData(dialogConfirmed);
-        _homeBloc.add(const LoadItemsEvent());
-      }
-    });
-  }
+  // [fork] S419 disclaimer-once: replaced by DisclaimerOnce
+  // /// Show disclaimer dialog after build method
+  // void _showDisclaimerDialog(BuildContext context) async {
+  //   WidgetsBinding.instance.addPostFrameCallback((_) async {
+  //     final dialogConfirmed = await showDialog<bool>(
+  //       context: context,
+  //       builder: (context) {
+  //         return const DisclaimerDialog();
+  //       },
+  //     );
+  //     if (dialogConfirmed != null) {
+  //       _homeBloc.saveConfigData(dialogConfirmed);
+  //       _homeBloc.add(const LoadItemsEvent());
+  //     }
+  //   });
+  // }
+  // [/fork]
 
   /// Refresh page when day changes
   ///

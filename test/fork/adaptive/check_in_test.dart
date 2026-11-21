@@ -1228,7 +1228,8 @@ void main() {
       );
       // The pace as Goal progress prints it.
       expect(find.textContaining('for \u22121.10 lb a week'), findsOneWidget);
-      final perLb = (checkIn.kcalPerKg! / 2.20462).round();
+      // To the nearest 100, as 7700 a kg is the familiar 3500 a lb.
+      final perLb = (checkIn.kcalPerKg! / 2.20462 / 100).round() * 100;
       expect(
         find.textContaining('at $perLb kcal a lb of weight change'),
         findsOneWidget,

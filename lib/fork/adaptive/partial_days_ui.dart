@@ -5,7 +5,7 @@ import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
 import 'package:opennutritracker/fork/units/energy_text.dart';
 
 /// The check-in's question on days that look partly logged (D65): each is
-/// left out of the estimate or kept as a whole day. Nothing while there is
+/// left out of the estimate or counted as a full day. Nothing while there is
 /// none.
 class PartialDaysCard extends StatelessWidget {
   final List<PartialDay> days;
@@ -42,7 +42,7 @@ class PartialDaysCard extends StatelessWidget {
               '${days.length == 1 ? 'This day is' : 'These days are'} far '
               'under what you usually log. A day logged in part counts as a '
               'day of eating little, which lowers your expenditure and your '
-              'target. Leave it out, or keep it if that is all you ate'
+              'target. Leave it out, or count it as a full day if that is all you ate'
               '${heldBack ? '; the check-in waits for your answer' : ''}.',
               style: theme.textTheme.bodySmall,
             ),
@@ -68,7 +68,7 @@ class PartialDaysCard extends StatelessWidget {
                     identifier: 'partial-day-keep-${_id(day.date)}',
                     child: TextButton(
                       onPressed: () => onKeep(day.date),
-                      child: const Text('Keep'),
+                      child: const Text('Count as full day'),
                     ),
                   ),
                 ],

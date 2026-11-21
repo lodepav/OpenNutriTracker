@@ -15,6 +15,7 @@ import 'package:opennutritracker/core/utils/energy_unit_provider.dart';
 import 'package:opennutritracker/core/utils/navigation_options.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_nutriments_entity.dart';
+import 'package:opennutritracker/features/add_meal/domain/entity/meal_portion_entity.dart';
 import 'package:opennutritracker/features/add_meal/domain/usecase/read_meal_photo_usecase.dart';
 import 'package:opennutritracker/features/add_meal/domain/usecase/read_meal_text_usecase.dart';
 import 'package:opennutritracker/features/add_meal/domain/usecase/resolve_parsed_meals_usecase.dart';
@@ -76,27 +77,32 @@ class _FakeSearch implements SearchProductsUseCase {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
-MealEntity _food(String name, {double kcal100 = 100, double? serving}) =>
-    MealEntity(
-      code: name,
-      name: name,
-      url: null,
-      mealQuantity: null,
-      mealUnit: 'g',
-      servingQuantity: serving,
-      servingUnit: null,
-      servingSize: null,
-      source: MealSourceEntity.off,
-      nutriments: MealNutrimentsEntity(
-        energyKcal100: kcal100,
-        carbohydrates100: 0,
-        fat100: 0,
-        proteins100: 0,
-        sugars100: null,
-        saturatedFat100: null,
-        fiber100: null,
-      ),
-    );
+MealEntity _food(
+  String name, {
+  double kcal100 = 100,
+  double? serving,
+  List<MealPortionEntity> portions = const [],
+}) => MealEntity(
+  portions: portions,
+  code: name,
+  name: name,
+  url: null,
+  mealQuantity: null,
+  mealUnit: 'g',
+  servingQuantity: serving,
+  servingUnit: null,
+  servingSize: null,
+  source: MealSourceEntity.off,
+  nutriments: MealNutrimentsEntity(
+    energyKcal100: kcal100,
+    carbohydrates100: 0,
+    fat100: 0,
+    proteins100: 0,
+    sugars100: null,
+    saturatedFat100: null,
+    fiber100: null,
+  ),
+);
 
 final _getIt = GetIt.instance;
 late _FakeSearch _search;
@@ -309,9 +315,7 @@ void main() {
       expect(noteFocused(tester), isFalse);
     });
 
-    testWidgets('the amount sheet opened from a focused note', (
-      tester,
-    ) async {
+    testWidgets('the amount sheet opened from a focused note', (tester) async {
       await _register({
         'toast': [_food('Toast')],
       });
@@ -464,6 +468,77 @@ void main() {
       await _tap(tester, find.byKey(const ValueKey('bulk-add-leave-out-0')));
 
       expect(_submitText(tester), 'Log 0 items');
+    });
+  });
+
+  group('Check the unit (crit r3 P2)', () {
+    testWidgets('Keep clears the check and changes nothing', (tester) async {
+      await _register({
+        'eggs': [_food('Egg', kcal100: 150)],
+      });
+      await _parse(tester, '2 eggs');
+      expect(find.text(l10nEn.bulkAddCheckAmountLabel), findsOneWidget);
+      expect(_submitText(tester), 'Check 1 row to log');
+      final amount = tester
+          .widgetList<Text>(
+            find.descendant(
+              of: find.byKey(const ValueKey('bulk-add-unit-0')),
+              matching: find.byType(Text),
+            ),
+          )
+          .map((t) => t.data)
+          .join();
+
+      await _tap(tester, find.text('Egg'));
+      final keep = find.byKey(const ValueKey('bulk-add-keep-unit'));
+      expect(
+        find.descendant(of: keep, matching: find.text('Keep 2 g')),
+        findsOneWidget,
+      );
+      await _tap(tester, keep);
+
+      expect(find.byKey(const ValueKey('bulk-add-amount-done')), findsNothing);
+      expect(find.text(l10nEn.bulkAddCheckAmountLabel), findsNothing);
+      expect(_submitText(tester), startsWith('Log 1 item'));
+      expect(
+        tester
+            .widgetList<Text>(
+              find.descendant(
+                of: find.byKey(const ValueKey('bulk-add-unit-0')),
+                matching: find.byType(Text),
+              ),
+            )
+            .map((t) => t.data)
+            .join(),
+        amount,
+      );
+    });
+
+    testWidgets('a row with no check offers no Keep', (tester) async {
+      await _register({
+        'toast': [_food('Toast')],
+      });
+      await _parse(tester, '100g toast');
+
+      await _tap(tester, find.text('Toast'));
+      expect(find.byKey(const ValueKey('bulk-add-keep-unit')), findsNothing);
+    });
+
+    testWidgets('a flagged food\'s own portions are chips', (tester) async {
+      final egg = _food(
+        'Egg',
+        portions: const [
+          MealPortionEntity(label: '1 large', gramWeight: 50, localized: true),
+        ],
+      );
+      await _register({
+        'eggs': [egg],
+      });
+      await _parse(tester, '2 eggs');
+      expect(find.text(l10nEn.bulkAddCheckAmountLabel), findsOneWidget);
+
+      await _tap(tester, find.text('Egg'));
+      expect(find.textContaining('large'), findsWidgets);
     });
   });
 

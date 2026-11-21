@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:opennutritracker/fork/display/contrast.dart';
 import 'package:intl/intl.dart';
+import 'package:opennutritracker/core/domain/entity/body_weight_unit_entity.dart';
 import 'package:opennutritracker/core/domain/entity/user_entity.dart';
 import 'package:opennutritracker/core/domain/entity/user_gender_entity.dart';
+import 'package:opennutritracker/core/domain/usecase/get_config_usecase.dart';
 import 'package:opennutritracker/core/domain/usecase/get_user_usecase.dart';
 import 'package:opennutritracker/core/utils/calc/unit_calc.dart';
 import 'package:opennutritracker/core/utils/calc/workout_compensation_calc.dart';
@@ -55,6 +57,9 @@ class ExpenditureSettingsScreen extends StatelessWidget {
   /// What a logged activity does to today's goal; tests pass their own.
   final Future<ActivityCredit> Function() credit;
 
+  /// The weight unit energy a unit of weight is said in.
+  final Future<BodyWeightUnit> Function() weightUnit;
+
   const ExpenditureSettingsScreen({
     super.key,
     required this.store,
@@ -62,7 +67,14 @@ class ExpenditureSettingsScreen extends StatelessWidget {
     this.isFemale = _readFemale,
     this.service,
     this.credit = activityCredit,
+    this.weightUnit = _readUnit,
   });
+
+  /// kg where no config can be read (tests).
+  static Future<BodyWeightUnit> _readUnit() async {
+    if (!locator.isRegistered<GetConfigUsecase>()) return BodyWeightUnit.kg;
+    return (await locator<GetConfigUsecase>().getConfig()).bodyWeightUnit;
+  }
 
   /// A profile that cannot be read (tests) is not one.
   static Future<bool> _readFemale() async {
@@ -83,7 +95,7 @@ class ExpenditureSettingsScreen extends StatelessWidget {
           bottom: 24 + MediaQuery.paddingOf(context).bottom,
         ),
         children: [
-          _Card(_EstimateSection(settings, store, isFemale)),
+          _Card(_EstimateSection(settings, store, isFemale, weightUnit)),
           _Card(
             _ActivitySection(settings, store, steps ?? StepCounts(), credit),
           ),
@@ -100,13 +112,24 @@ class ExpenditureGroups extends StatelessWidget {
   final AdaptiveStore store;
   final bool checkIn;
   final StepCounts? steps;
+  final BodyWeightUnit unit;
 
-  const ExpenditureGroups.estimate({super.key, required this.store, this.steps})
-    : checkIn = false;
+  /// At first run: leaves out what needs days logged already.
+  final bool onboarding;
+
+  const ExpenditureGroups.estimate({
+    super.key,
+    required this.store,
+    this.steps,
+    this.unit = BodyWeightUnit.kg,
+    this.onboarding = false,
+  }) : checkIn = false;
 
   const ExpenditureGroups.checkIn({super.key, required this.store})
     : checkIn = true,
-      steps = null;
+      steps = null,
+      unit = BodyWeightUnit.kg,
+      onboarding = false;
 
   @override
   Widget build(BuildContext context) => ValueListenableBuilder(
@@ -121,16 +144,20 @@ class ExpenditureGroups extends StatelessWidget {
                   settings,
                   store,
                   ExpenditureSettingsScreen._readFemale,
+                  () async => unit,
+                  onboarding: onboarding,
                 ),
               ),
-              _Card(
-                _ActivitySection(
-                  settings,
-                  store,
-                  steps ?? StepCounts(),
-                  activityCredit,
+              // Its choices start with Adaptive's first check-in.
+              if (!onboarding)
+                _Card(
+                  _ActivitySection(
+                    settings,
+                    store,
+                    steps ?? StepCounts(),
+                    activityCredit,
+                  ),
                 ),
-              ),
             ],
     ),
   );
@@ -227,8 +254,16 @@ class _EstimateSection extends StatefulWidget {
   final AdaptiveSettings settings;
   final AdaptiveStore store;
   final Future<bool> Function() isFemale;
+  final Future<BodyWeightUnit> Function() weightUnit;
+  final bool onboarding;
 
-  const _EstimateSection(this.settings, this.store, this.isFemale);
+  const _EstimateSection(
+    this.settings,
+    this.store,
+    this.isFemale,
+    this.weightUnit, {
+    this.onboarding = false,
+  });
 
   @override
   State<_EstimateSection> createState() => _EstimateSectionState();
@@ -236,6 +271,9 @@ class _EstimateSection extends StatefulWidget {
 
 class _EstimateSectionState extends State<_EstimateSection> {
   late final _female = widget.isFemale().catchError((Object _) => false);
+  late final _unit = widget.weightUnit().catchError(
+    (Object _) => BodyWeightUnit.kg,
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -284,21 +322,29 @@ class _EstimateSectionState extends State<_EstimateSection> {
                       _save(store, settings.copyWith(cycleWindow: v)),
                 ),
         ),
-        SwitchListTile(
-          key: const ValueKey('flat-energy'),
-          title: Text(
-            'Count every kg as '
-            '${energyText(context, AdaptiveSettings.commonKcalPerKg)}',
-          ),
-          subtitle: const Text(
-            'As most apps do. Off, a kg follows your body composition: part '
-            'of a change is lean tissue, which holds less. On, the same pace '
-            'takes a larger deficit or surplus.',
-          ),
-          value: settings.flatEnergy,
-          onChanged: (v) => _save(store, settings.copyWith(flatEnergy: v)),
+        FutureBuilder<BodyWeightUnit>(
+          future: _unit,
+          builder: (context, unit) {
+            final u = unit.data ?? BodyWeightUnit.kg;
+            return SwitchListTile(
+              key: const ValueKey('flat-energy'),
+              title: Text(
+                'Count every '
+                '${energyPerWeightText(context, AdaptiveSettings.commonKcalPerKg, u)}',
+              ),
+              subtitle: Text(
+                'As most apps do. Off, a${u == BodyWeightUnit.kg ? ' kg' : 'n lb'} '
+                'follows your body composition: part of a change is lean '
+                'tissue, which holds less. On, the same pace takes a larger '
+                'deficit or surplus.',
+              ),
+              value: settings.flatEnergy,
+              onChanged: (v) => _save(store, settings.copyWith(flatEnergy: v)),
+            );
+          },
         ),
-        _SkippedDaysTile(store),
+        // Leaving a day out is done from the Diary, not met at first run.
+        if (!widget.onboarding) _SkippedDaysTile(store),
       ],
     );
   }

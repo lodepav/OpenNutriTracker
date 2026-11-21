@@ -494,6 +494,11 @@ class _NutrientExplorerScreenState extends State<NutrientExplorerScreen> {
   );
 }
 
+/// The row's name: salt says where it comes from, as the editor and the
+/// Nutrients list call it Sodium.
+String goalRowLabel(ExplorerNutrient n) =>
+    n.driKey == NutrientPanelKeys.sodium ? '${n.label} (from sodium)' : n.label;
+
 String _amount(BuildContext context, ExplorerNutrient n, double value) =>
     n.unit == 'kcal'
     ? energyText(context, value)
@@ -559,8 +564,12 @@ class _NutrientTile extends StatelessWidget {
       // narrowed that row's bar, so a full bar stopped short of the others.
       title: Row(
         children: [
-          Expanded(child: Text(n.label)),
+          Expanded(child: Text(goalRowLabel(n))),
           if (share != null) Text('${(share * 100).round()}%'),
+          // In the title row too, so a row that opens its foods keeps its bar
+          // as wide as one that doesn't.
+          if (foods.isNotEmpty)
+            const Icon(Icons.chevron_right_rounded, key: ValueKey('opens')),
         ],
       ),
       subtitle: Column(
@@ -620,21 +629,28 @@ class _FoodsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final n = summary.nutrient;
+    final label = goalRowLabel(n);
     final total = summary.foods.fold<double>(0, (s, f) => s + f.amount);
     final foods = summary.foodsGiving;
+    final days = summary.daysLogged;
     return Scaffold(
-      appBar: AppBar(title: Text('${n.label} by food')),
+      appBar: AppBar(title: Text('$label by food')),
       body: ListView(
         children: [
           _RangeLine(first, last, summary.daysLogged),
           for (final f in foods)
             ListTile(
               title: Text(f.name),
+              // Over the days logged, as the explorer's "a day", so the
+              // foods add up to its figure.
               subtitle: Text(
-                '${_amount(context, n, f.amount)} ${_inLine(n.label)}',
-              ),
-              trailing: Text(
-                total == 0 ? '' : '${(f.amount / total * 100).round()}%',
+                [
+                  '${_amount(context, n, days == 0 ? 0 : f.amount / days)} '
+                      'a day',
+                  if (total > 0)
+                    '${(f.amount / total * 100).round()}% of the '
+                        '${_inLine(label)} logged',
+                ].join(' · '),
               ),
             ),
         ],

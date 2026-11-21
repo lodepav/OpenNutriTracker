@@ -1,4 +1,5 @@
 import 'package:flutter/widgets.dart';
+import 'package:opennutritracker/core/domain/entity/body_weight_unit_entity.dart';
 import 'package:opennutritracker/core/utils/calc/unit_calc.dart';
 import 'package:opennutritracker/core/utils/energy_unit_provider.dart';
 import 'package:opennutritracker/generated/l10n.dart';
@@ -30,6 +31,22 @@ String energyText(BuildContext context, double kcal, {bool signed = false}) {
       : '$value';
   return '$text ${energyUnit(context)}';
 }
+
+/// [kcalPerKg] a unit of [unit]'s weight: per kg, or per lb for lb and st,
+/// to the nearest 100, so 7700 a kg reads as the familiar 3500 a lb.
+double kcalPerWeightUnit(double kcalPerKg, BodyWeightUnit unit) =>
+    unit == BodyWeightUnit.kg
+    ? kcalPerKg
+    : (kcalPerKg / UnitCalc.kgToLbs(1) / 100).round() * 100;
+
+/// "kg as 7700 kcal", or "lb as 3500 kcal" for lb and st.
+String energyPerWeightText(
+  BuildContext context,
+  double kcalPerKg,
+  BodyWeightUnit unit,
+) =>
+    '${unit == BodyWeightUnit.kg ? 'kg' : 'lb'} as '
+    '${energyText(context, kcalPerWeightUnit(kcalPerKg, unit))}';
 
 /// A typed value in the display unit, back to kcal.
 double kcalFromInput(BuildContext context, double value) =>

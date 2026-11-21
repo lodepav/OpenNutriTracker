@@ -36,6 +36,13 @@ abstract final class OnboardingGoal {
     if (await (actions ?? GoalActions()).start(plan)) pending.value = null;
   }
 
+  /// [goal] picked on the page: one the plan is not for drops the plan,
+  /// so the page never shows a plan Start would not use.
+  static void picked(UserGoalSelectionEntity goal) {
+    final plan = pending.value;
+    if (plan != null && choiceFor(plan.kind) != goal) pending.value = null;
+  }
+
   /// [plan] from a weight corrected after planning; null when its target is
   /// no longer ahead of it.
   static PhasePlan? replanned(PhasePlan plan, double? weightKg) {

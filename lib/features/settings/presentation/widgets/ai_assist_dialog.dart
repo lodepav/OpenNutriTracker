@@ -1529,7 +1529,9 @@ class _AiAssistDialogState extends State<AiAssistDialog> {
                             // [/fork]
                             // [fork] S209 gemini-preset
                             errorText: _forkKeyError,
-                            errorMaxLines: 3,
+                            // a refused key's two sentences and the
+                            // provider's words, at twice the font size
+                            errorMaxLines: 12,
                             // [/fork]
                             // [fork] S318 ai-consent-words
                             helperText: _forkKeyNote,

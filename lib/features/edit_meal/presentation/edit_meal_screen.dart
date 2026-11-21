@@ -251,6 +251,12 @@ class _EditMealScreenState extends State<EditMealScreen> {
     // [/fork]
   }
 
+  // [fork] S428 food-name-error: a name without a letter is an error on the
+  // field, which Save scrolls to
+  String? _forkNameError;
+  final _forkNameKey = GlobalKey();
+  // [/fork]
+
   // [fork] S132 custom-food: Back asks before dropping what was typed, as
   // the recipe builder does
   List<String> _forkSeeded = const [];
@@ -340,7 +346,10 @@ class _EditMealScreenState extends State<EditMealScreen> {
       onPopInvokedWithResult: (didPop, _) {
         if (!didPop) _forkOnBack();
       },
-      child: SafeArea(
+      // [fork] S426 edit-meal-system-bars: a SafeArea outside the Scaffold
+      // left the system bars black; the app bar and Save bar take the insets
+      // child: SafeArea(
+      // [/fork]
       // [/fork]
       child: Scaffold(
         backgroundColor: palette.canvas,
@@ -416,7 +425,9 @@ class _EditMealScreenState extends State<EditMealScreen> {
           },
         ),
       ),
-      ), // [fork] S132 custom-food: PopScope
+      // [fork] S426 edit-meal-system-bars: the SafeArea's close
+      // ), // [fork] S132 custom-food: PopScope
+      // [/fork]
     );
   }
 
@@ -520,9 +531,17 @@ class _EditMealScreenState extends State<EditMealScreen> {
     // selector (now the first Advanced field) so the labels and the per-100
     // helper all track the user's choice (#495).
     final unitSuffix = _massUnitSuffix(context);
+    // [fork] S407 edit-meal-per-100-unit: the base quantity is saved as
+    // typed, in grams or ml, so its label says so even for imperial
+    // final String advancedHelper = _isTotal
+    //     ? S.of(context).mealNutrientsTotalLabel
+    //     : S.of(context).mealNutrientsPerQtyLabel(_getDisplayQuantity(), unitSuffix);
+    final baseUnitSuffix = _forkBaseUnitSuffix(context);
     final String advancedHelper = _isTotal
         ? S.of(context).mealNutrientsTotalLabel
-        : S.of(context).mealNutrientsPerQtyLabel(_getDisplayQuantity(), unitSuffix);
+        : S.of(context).mealNutrientsPerQtyLabel(
+            _getDisplayQuantity(), baseUnitSuffix);
+    // [/fork]
     // [fork] S132 custom-food: the field helpers go; the facts card's "Per"
     // says what the values are for
     // [/fork]
@@ -565,12 +584,19 @@ class _EditMealScreenState extends State<EditMealScreen> {
         // [/fork]
         TextFormField(
           controller: _nameTextController,
+          // [fork] S428 food-name-error
+          key: _forkNameKey,
+          onChanged: (_) {
+            if (_forkNameError != null) setState(() => _forkNameError = null);
+          },
+          // [/fork]
           decoration: InputDecoration(
             // [fork] S290 food-name-label: a new custom food is a food;
             // editing keeps upstream's label, which its tests find the field by
             // labelText: S.of(context).mealNameLabel,
             labelText: _forkNew ? 'Food name' : S.of(context).mealNameLabel,
             // [/fork]
+            errorText: _forkNameError, // [fork] S428
             border: const OutlineInputBorder(borderRadius: Dimens.borderRadiusM),
           ),
           keyboardType: TextInputType.text,
@@ -682,7 +708,7 @@ class _EditMealScreenState extends State<EditMealScreen> {
                 inputFormatters: CustomTextInputFormatter.doubleOnly(),
                 onChanged: (_) => setState(() {}),
                 decoration: InputDecoration(
-                    labelText: '${S.of(context).baseQuantityLabel} ($unitSuffix)',
+                    labelText: '${S.of(context).baseQuantityLabel} ($baseUnitSuffix)',
                     border: const OutlineInputBorder(borderRadius: Dimens.borderRadiusM)),
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
               ),
@@ -694,7 +720,7 @@ class _EditMealScreenState extends State<EditMealScreen> {
                     ButtonSegment(
                       value: false,
                       label: Text(S.of(context).mealNutrientsPerQtyLabel(
-                          _getDisplayQuantity(), unitSuffix)),
+                          _getDisplayQuantity(), baseUnitSuffix)),
                     ),
                     ButtonSegment(
                       value: true,
@@ -835,6 +861,18 @@ class _EditMealScreenState extends State<EditMealScreen> {
     }
   }
 
+  // [fork] S407 edit-meal-per-100-unit: the unit the base quantity and the
+  // per-base values are stored in, which no imperial setting converts
+  String _forkBaseUnitSuffix(BuildContext context) {
+    final s = S.of(context);
+    return switch (selectedUnit ?? _units[2]) {
+      'g' => s.gramUnit,
+      'ml' => s.milliliterUnit,
+      _ => s.gramMilliliterUnit,
+    };
+  }
+  // [/fork]
+
   /// Set while a save runs, so a second tap on Save before the first one has
   /// navigated away does nothing. A second run would build the meal again
   /// from the same pre-edit [_mealEntity]: after a barcode clear that is a
@@ -855,8 +893,15 @@ class _EditMealScreenState extends State<EditMealScreen> {
     try {
       // Validate meal name: non-empty and contains at least one letter (#211, #214)
       if (!FoodNameValidator.isValid(_nameTextController.text)) {
-        ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(S.of(context).mealNameValidationError)));
+        // [fork] S428 food-name-error: on the field, named as its label (H9)
+        // ScaffoldMessenger.of(context).showSnackBar(
+        //     SnackBar(content: Text(S.of(context).mealNameValidationError)));
+        setState(() => _forkNameError = _forkNew
+            ? 'Food name must contain at least one letter'
+            : S.of(context).mealNameValidationError);
+        final field = _forkNameKey.currentContext;
+        if (field != null) unawaited(Scrollable.ensureVisible(field));
+        // [/fork]
         return;
       }
 
@@ -1249,6 +1294,9 @@ class _EditMealScreenState extends State<EditMealScreen> {
   }
 
   String _convertToImperial(String value, String unit) {
+    // [fork] S407 edit-meal-per-100-unit: an empty size stays empty, not 0.00
+    if (value.trim().isEmpty) return value;
+    // [/fork]
     final double quantityValue = double.tryParse(value) ?? 0.0;
     switch (unit) {
       case 'g':
@@ -1261,6 +1309,9 @@ class _EditMealScreenState extends State<EditMealScreen> {
   }
 
   String _convertToMetric(String value, String unit) {
+    // [fork] S407 edit-meal-per-100-unit: an empty size stays empty, not 0.00
+    if (value.trim().isEmpty) return value;
+    // [/fork]
     final double quantityValue = double.tryParse(value) ?? 0.0;
     switch (unit) {
       case 'g':

@@ -140,6 +140,35 @@ void main() {
       expect(range, hasLength(30));
     });
 
+    test('a step goal is whole digits from 1,000 to 100,000', () {
+      expect(parseStepGoal('7500'), 7500);
+      expect(parseStepGoal(' 1000 '), 1000);
+      expect(parseStepGoal('100000'), 100000);
+      // Thousands grouped as people type them.
+      expect(parseStepGoal('8,000'), 8000);
+      expect(parseStepGoal('8.000'), 8000);
+      expect(parseStepGoal('8 000'), 8000);
+      expect(parseStepGoal('8\u202F000'), 8000);
+      expect(parseStepGoal('10,500'), 10500);
+      expect(parseStepGoal('100,000'), 100000);
+      // Any other separator is refused, not stripped: "7.5" was saved as 75.
+      for (final typed in [
+        '7.5',
+        '7,5',
+        '75,00',
+        '8,000.000',
+        '8,0000',
+        '1000,000',
+        '-8000',
+        '7.5k',
+        '',
+      ]) {
+        expect(parseStepGoal(typed), isNull, reason: typed);
+      }
+      expect(parseStepGoal('999'), isNull);
+      expect(parseStepGoal('100001'), isNull);
+    });
+
     test('the goal is kept', () async {
       expect(await steps.goal(), StepCounts.defaultGoal);
       await steps.setGoal(10000);
@@ -266,20 +295,20 @@ void main() {
       await tester.pumpAndSettle();
       final field = find.byKey(const ValueKey('steps-goal-field'));
 
-      for (final typed in ['0', '100001', '']) {
+      for (final typed in ['0', '999', '7.5', '100001', '']) {
         await tester.enterText(field, typed);
         await tester.pump();
-        expect(find.text('Enter 1 to 100,000 steps'), findsNothing);
+        expect(find.text('Enter 1,000 to 100,000 steps'), findsNothing);
         await tester.tap(find.text('Save'));
         await tester.pumpAndSettle();
-        expect(find.text('Enter 1 to 100,000 steps'), findsOneWidget);
+        expect(find.text('Enter 1,000 to 100,000 steps'), findsOneWidget);
       }
       expect(await steps.goal(), StepCounts.defaultGoal);
 
       // The error goes as the text changes.
       await tester.enterText(field, '9000');
       await tester.pump();
-      expect(find.text('Enter 1 to 100,000 steps'), findsNothing);
+      expect(find.text('Enter 1,000 to 100,000 steps'), findsNothing);
     });
   });
 }

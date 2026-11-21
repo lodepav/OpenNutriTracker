@@ -37,6 +37,18 @@ String _valueText(
 String _dateText(BuildContext context, DateTime d) =>
     DateFormat.yMMMd(Localizations.localeOf(context).toLanguageTag()).format(d);
 
+/// A chart's ends in words, "X on date → Y on date", for a chart without
+/// a date axis.
+String fromToCaption(
+  BuildContext context,
+  (String, DateTime) first,
+  (String, DateTime) last,
+) {
+  final day = DateFormat.MMMd(Localizations.localeOf(context).toLanguageTag());
+  return '${first.$1} on ${day.format(first.$2)} \u2192 '
+      '${last.$1} on ${day.format(last.$2)}';
+}
+
 /// What an adult measures, in cm or %: a dropped digit falls outside.
 (int, int) _plausible(BodyMetric metric) => switch (metric) {
   BodyMetric.bodyFat => (2, 70),
@@ -96,7 +108,7 @@ Future<BodyMetric?> addMeasurements(
           content: Text(
             only == null
                 ? 'Replaced ${saved.replaced.length} measurements from $day'
-                : 'Replaced ${only.metric.label} '
+                : 'Replaced ${only.metric.label.toLowerCase()} '
                       '${_valueText(only.metric, only.value, imperial)} '
                       'from $day',
           ),
@@ -317,10 +329,11 @@ class _BodyMeasurementsCardState extends State<BodyMeasurementsCard> {
               _chart(context, metric, inRange, from),
               // The sparkline has no axis: its ends in words give the scale.
               Text(
-                '${_text(metric, inRange.first.value)} on '
-                '${_shortDate(inRange.first.date)} \u2192 '
-                '${_text(metric, inRange.last.value)} on '
-                '${_shortDate(inRange.last.date)}',
+                fromToCaption(
+                  context,
+                  (_text(metric, inRange.first.value), inRange.first.date),
+                  (_text(metric, inRange.last.value), inRange.last.date),
+                ),
                 style: theme.textTheme.bodySmall,
               ),
             ],
@@ -423,10 +436,6 @@ class _BodyMeasurementsCardState extends State<BodyMeasurementsCard> {
     );
   }
 
-  String _shortDate(DateTime d) => DateFormat.MMMd(
-    Localizations.localeOf(context).toLanguageTag(),
-  ).format(d);
-
   Widget _link(Key key, String label, VoidCallback onTap) => ListTile(
     key: key,
     contentPadding: EdgeInsets.zero,
@@ -511,13 +520,16 @@ class _AddMeasurementsDialogState extends State<_AddMeasurementsDialog> {
         mainAxisSize: MainAxisSize.min,
         children: [
           ListTile(
+            key: const ValueKey('measure-date'),
             contentPadding: EdgeInsets.zero,
             leading: const Icon(Icons.event_rounded),
-            title: Text(
+            title: const Text('Date'),
+            subtitle: Text(
               DateFormat.yMMMd(
                 Localizations.localeOf(context).toLanguageTag(),
               ).format(_date),
             ),
+            trailing: const Icon(Icons.edit_outlined),
             onTap: () async {
               final picked = await showDatePicker(
                 context: context,
@@ -536,16 +548,17 @@ class _AddMeasurementsDialogState extends State<_AddMeasurementsDialog> {
                 key: ValueKey('measure-${metric.name}'),
                 controller: field,
                 focusNode: _focus[metric],
-                // A refusal stays only until the field is typed in again.
-                onChanged: (_) {
-                  if (!_errors.containsKey(metric)) return;
-                  setState(
-                    () => _errors = {
-                      for (final e in _errors.entries)
-                        if (e.key != metric) e.key: e.value,
-                    },
-                  );
-                },
+                // A refusal stays only until the field is typed in again;
+                // a rebuild also sets Save on or off.
+                onChanged: (_) => setState(
+                  () => _errors = {
+                    for (final e in _errors.entries)
+                      if (e.key != metric) e.key: e.value,
+                  },
+                ),
+                textInputAction: metric == BodyMetric.values.last
+                    ? TextInputAction.done
+                    : TextInputAction.next,
                 keyboardType: const TextInputType.numberWithOptions(
                   decimal: true,
                 ),
@@ -567,7 +580,13 @@ class _AddMeasurementsDialogState extends State<_AddMeasurementsDialog> {
         onPressed: () => Navigator.pop(context),
         child: const Text('Cancel'),
       ),
-      TextButton(onPressed: _save, child: const Text('Save')),
+      // Off until a value is typed: an empty Save would close as if saved.
+      TextButton(
+        onPressed: _fields.values.any((f) => f.text.trim().isNotEmpty)
+            ? _save
+            : null,
+        child: const Text('Save'),
+      ),
     ],
   );
 }

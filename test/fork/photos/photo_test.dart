@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:opennutritracker/fork/photos/photo_card.dart';
@@ -302,7 +303,23 @@ void main() {
       final right = tester.getRect(find.byKey(const ValueKey('compare-right')));
       expect(left.left, greaterThanOrEqualTo(16));
       expect(right.right, lessThanOrEqualTo(width - 16));
-      expect(right.left - left.right, greaterThanOrEqualTo(8));
+      // Stacked, each a full row, so its date fits on one line.
+      expect(right.top - left.bottom, greaterThanOrEqualTo(8));
+      for (final text in ['Nov 1, 2026', 'Nov 21, 2026']) {
+        final paragraph = tester.renderObject<RenderParagraph>(
+          find.descendant(
+            of: find.text(text).last,
+            matching: find.byType(RichText),
+          ),
+        );
+        final tops = {
+          for (final box in paragraph.getBoxesForSelection(
+            TextSelection(baseOffset: 0, extentOffset: text.length),
+          ))
+            box.top,
+        };
+        expect(tops, hasLength(1), reason: text);
+      }
       // Outlined, so the two read as separate fields, not one underline.
       for (final key in ['compare-left', 'compare-right']) {
         final decorator = tester.widget<InputDecorator>(
@@ -333,6 +350,103 @@ void main() {
       for (final image in tester.widgetList<Image>(find.byType(Image))) {
         expect(image.alignment, Alignment.topCenter);
       }
+    });
+
+    for (final scale in [1.0, 1.15, 1.29]) {
+      testWidgets(
+        'compare at ${(scale * 100).round()}% text: each date on one line, '
+        'side by side or stacked',
+        (tester) async {
+          await pumpOnPhone(tester, const SizedBox(), textScale: scale);
+          Navigator.of(tester.element(find.byType(SizedBox).first)).push(
+            MaterialPageRoute<void>(
+              builder: (_) => ComparePhotosScreen(
+                photos: [
+                  for (final (id, day) in [('a', 1), ('b', 21)])
+                    (
+                      photo: ProgressPhoto(
+                        id: id,
+                        date: DateTime(2026, 11, day),
+                      ),
+                      file: File('missing-$id.jpg'),
+                    ),
+                ],
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+          final left = tester.getRect(
+            find.byKey(const ValueKey('compare-left')),
+          );
+          final right = tester.getRect(
+            find.byKey(const ValueKey('compare-right')),
+          );
+          // At the default size they sit side by side.
+          if (scale == 1.0) {
+            expect(right.left - left.right, greaterThanOrEqualTo(8));
+          }
+          // Side by side while the dates fit, else stacked.
+          expect(
+            right.left - left.right >= 8 || right.top - left.bottom >= 8,
+            isTrue,
+          );
+          for (final text in ['Nov 1, 2026', 'Nov 21, 2026']) {
+            final paragraph = tester.renderObject<RenderParagraph>(
+              find.descendant(
+                of: find.text(text).last,
+                matching: find.byType(RichText),
+              ),
+            );
+            final tops = {
+              for (final box in paragraph.getBoxesForSelection(
+                TextSelection(baseOffset: 0, extentOffset: text.length),
+              ))
+                box.top,
+            };
+            expect(tops, hasLength(1), reason: text);
+          }
+        },
+      );
+    }
+
+    testWidgets("compare: the other side's date is left out, the menu within "
+        'its field', (tester) async {
+      await pumpOnPhone(tester, const SizedBox(), textScale: 1);
+      Navigator.of(tester.element(find.byType(SizedBox).first)).push(
+        MaterialPageRoute<void>(
+          builder: (_) => ComparePhotosScreen(
+            photos: [
+              for (final (id, day) in [('a', 1), ('b', 21)])
+                (
+                  photo: ProgressPhoto(id: id, date: DateTime(2026, 11, day)),
+                  file: File('missing-$id.jpg'),
+                ),
+            ],
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final field = tester.getRect(find.byKey(const ValueKey('compare-left')));
+      await tester.tap(find.byKey(const ValueKey('compare-left')));
+      await tester.pumpAndSettle();
+
+      // The right side's date: only on the right picker, not in the menu.
+      expect(find.text('Nov 21, 2026'), findsOne);
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('compare-right')),
+          matching: find.text('Nov 21, 2026'),
+        ),
+        findsOne,
+      );
+      final menu = tester.getRect(
+        find.ancestor(
+          of: find.text('Nov 1, 2026').last,
+          matching: find.byType(InkWell),
+        ),
+      );
+      expect(menu.left, greaterThanOrEqualTo(field.left));
+      expect(menu.right, lessThanOrEqualTo(field.right));
     });
 
     testWidgets('compare starts with the oldest and the newest', (

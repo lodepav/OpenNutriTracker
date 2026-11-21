@@ -6,6 +6,29 @@ part of 'settings_screen.dart';
 String percentsLine(List<(String, int)> parts) =>
     [for (final (label, n) in parts) '$label\u00a0$n%'].join('\u00a0· ');
 
+/// The Nutrient goals row's line: how many of today's ten goals the user
+/// set; an unset one is the reference amount the editor shows.
+String nutrientGoalsText(TrackedDayEntity? today) {
+  final goals = [
+    today?.fibreGoal,
+    today?.satFatGoal,
+    today?.sugarsGoal,
+    today?.sodiumGoal,
+    today?.calciumGoal,
+    today?.ironGoal,
+    today?.potassiumGoal,
+    today?.magnesiumGoal,
+    today?.vitaminDGoal,
+    today?.vitaminB12Goal,
+  ];
+  final set = goals.whereType<double>().length;
+  return switch (set) {
+    0 => 'Reference amounts',
+    _ when set == goals.length => 'All ${goals.length} set by you',
+    _ => '$set of ${goals.length} set by you',
+  };
+}
+
 /// The Goals section: its rows and the dialogs they open.
 extension _GoalsSettings on _SettingsScreenState {
   List<Widget> _goalsRows(
@@ -80,6 +103,7 @@ extension _GoalsSettings on _SettingsScreenState {
             palette: palette,
             icon: Icons.spa_rounded,
             title: S.of(context).settingsNutrientGoalsLabel,
+            subtitle: _nutrientGoals,
             showChevron: true,
             onTap: () => _openNutrientGoalsScreen(context),
           ),
@@ -188,10 +212,10 @@ extension _GoalsSettings on _SettingsScreenState {
     _refreshGoalsConfig();
   }
 
-  void _openNutrientGoalsScreen(BuildContext context) {
+  Future<void> _openNutrientGoalsScreen(BuildContext context) async {
     // Today's bars first, the goal list behind
     // Edit
-    Navigator.of(context).push(
+    await Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => NutrientGoalsOverview(
           onEdit: (context) => Navigator.of(context).push(
@@ -208,6 +232,7 @@ extension _GoalsSettings on _SettingsScreenState {
         ),
       ),
     );
+    _refreshGoalsConfig();
   }
 
   void _showDayBoundaryDialog(BuildContext context) {

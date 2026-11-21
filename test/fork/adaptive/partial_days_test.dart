@@ -103,7 +103,10 @@ class _MemoryStore extends AdaptiveStore {
   @override
   Future<void> setSkipped(DateTime day, bool skipped) async {
     await saveGate?.future;
-    AdaptiveStore.skipped.value = {...AdaptiveStore.skipped.value, day};
+    AdaptiveStore.skipped.value = {
+      ...AdaptiveStore.skipped.value.where((d) => d != day),
+      if (skipped) day,
+    };
   }
 
   @override
@@ -299,7 +302,7 @@ void main() {
       addTearDown(tester.view.reset);
       await tester.tap(find.text('Weekly check-in'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Keep'));
+      await tester.tap(find.text('Count as full day'));
       await tester.pumpAndSettle();
       await tester.pageBack();
       await tester.pumpAndSettle();
@@ -333,7 +336,7 @@ void main() {
       addTearDown(tester.view.reset);
       await tester.tap(find.text('Your first target'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Keep'));
+      await tester.tap(find.text('Count as full day'));
       await tester.pumpAndSettle();
       await tester.pageBack();
       await tester.pumpAndSettle();
@@ -407,7 +410,59 @@ void main() {
       expect(field(), '$proposed');
     });
 
-    testWidgets('Keep leaves a typed target', (tester) async {
+    testWidgets('Leave out says so, and Undo counts the day again', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(1080, 4000);
+      tester.view.devicePixelRatio = 2;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        MaterialApp(home: CheckInScreen(service: service)),
+      );
+      await tester.pumpAndSettle();
+      final before = (await service.checkIn()).proposedTargetKcal;
+
+      await tester.tap(find.text('Leave out'));
+      await tester.pumpAndSettle();
+      expect(find.text('Oct 17 left out of the check-in'), findsOneWidget);
+      expect(AdaptiveStore.skipped.value, {_halfDay});
+
+      await tester.tap(find.text('Undo'));
+      await tester.pumpAndSettle();
+      expect(AdaptiveStore.skipped.value, isEmpty);
+      // asked again, on the check-in before the answer
+      expect(find.text('Logged only in part?'), findsOneWidget);
+      expect(
+        (await service.checkIn()).proposedTargetKcal,
+        closeTo(before, 0.01),
+      );
+
+      // Undone, the automatic check-in waits for the answer again.
+      AdaptiveStore.settings.value = const AdaptiveSettings(
+        adaptiveTarget: true,
+        autoAcceptCheckIn: true,
+      );
+      await tester.runAsync(() => AutoCheckIn.run(service));
+      expect(store.records, isEmpty);
+      expect(AutoCheckIn.waiting.value, isNotNull);
+    });
+
+    testWidgets('the day is counted by "Count as full day", not "Keep"', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(1080, 4000);
+      tester.view.devicePixelRatio = 2;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        MaterialApp(home: CheckInScreen(service: service)),
+      );
+      await tester.pumpAndSettle();
+      // Only the check-in's own Keep, of the target, is called that.
+      expect(find.text('Keep'), findsNothing);
+      expect(find.text('Count as full day'), findsOneWidget);
+    });
+
+    testWidgets('Count as full day leaves a typed target', (tester) async {
       tester.view.physicalSize = const Size(1080, 4000);
       tester.view.devicePixelRatio = 2;
       addTearDown(tester.view.reset);
@@ -420,7 +475,7 @@ void main() {
         find.byKey(const ValueKey('check-in-target')),
         '1800',
       );
-      await tester.tap(find.text('Keep'));
+      await tester.tap(find.text('Count as full day'));
       await tester.pumpAndSettle();
 
       expect(find.text('Logged only in part?'), findsNothing);
@@ -525,7 +580,7 @@ void main() {
       expect(find.byType(CheckInScreen), findsOneWidget);
 
       // Answered and back without accepting: it goes ahead.
-      await tester.tap(find.text('Keep'));
+      await tester.tap(find.text('Count as full day'));
       await tester.pumpAndSettle();
       await tester.pageBack();
       await tester.pumpAndSettle();

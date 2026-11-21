@@ -59,7 +59,7 @@ void main() {
     await pumpOnPhone(tester, const SourcesScreen(), textScale: 1);
     await tester.pumpAndSettle();
     expect(
-      tester.getRect(find.text(l10nEn.sourcesScreenIntro)).top,
+      tester.getRect(find.textContaining('The calculations below')).top,
       lessThan(kToolbarHeight + 40),
     );
   });

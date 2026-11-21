@@ -8,6 +8,7 @@ import 'package:opennutritracker/core/domain/usecase/get_user_usecase.dart';
 import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/utils/calc/calendar_day_calc.dart';
+import 'package:opennutritracker/core/utils/calc/unit_calc.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/core/utils/reload_diary_and_trends.dart';
 import 'package:opennutritracker/features/home/presentation/bloc/home_bloc.dart';
@@ -129,6 +130,18 @@ String todayGoalText(
     activityDropped: dailyActivityKcal == null && shown(todayActivityKcal) != 0,
   );
 }
+
+/// The bar after a check-in is done: today's goal, shown [before] and
+/// [after], in [unit], and why when [activityDropped].
+String checkInDoneText({
+  required int before,
+  required int after,
+  required bool activityDropped,
+  required String unit,
+}) =>
+    "Today's goal ${after == before ? 'stays' : 'is now'} $after $unit"
+    '${after == before ? '' : ', from $before'}'
+    '${activityDropped ? ' (activity is now part of the target)' : ''}';
 
 /// The settings that differ between two [AdaptiveSettings.targetBasis]
 /// strings, named as Expenditure settings names them.
@@ -561,6 +574,106 @@ class _CheckInScreenState extends State<CheckInScreen> {
     });
   }
 
+  /// Leaves [day] out, with an Undo that counts it again.
+  Future<void> _leaveOut(DateTime day) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final persist = undoBarPersists(context);
+    final locale = Localizations.localeOf(context).toLanguageTag();
+    final service = widget.service;
+    await _answerPartial(() => service.leaveOutDay(day));
+    messenger.removeCurrentSnackBar();
+    messenger.showSnackBar(
+      SnackBar(
+        persist: persist,
+        content: Text(
+          '${DateFormat.MMMd(locale).format(day)} left out of the check-in',
+        ),
+        action: SnackBarAction(
+          label: 'Undo',
+          // The screen may be gone by then: the day is counted again anyway.
+          onPressed: () => mounted
+              ? _answerPartial(() => service.putBackDay(day))
+              : service.putBackDay(day),
+        ),
+      ),
+    );
+  }
+
+  /// Today's goal as shown before and after a check-in done at
+  /// [targetKcal]; null when today's goal is not read.
+  /// [shown] rounds as [energyValue] does.
+  ({int before, int after, bool activityDropped})? _goalMove(
+    _TodayGoal? now,
+    double targetKcal,
+    int Function(double kcal) shown,
+  ) {
+    if (now == null) return null;
+    final before = shown(now.total);
+    final settings = AdaptiveStore.settings.value;
+    // Accepting moves Home's goal only on an Adaptive target.
+    if (!settings.adaptiveTarget || settings.fixedTarget) {
+      return (before: before, after: before, activityDropped: false);
+    }
+    final change = todayGoalChange(
+      todayKcal: now.total,
+      todayActivityKcal: now.activity,
+      proposedKcal: targetKcal,
+      weekdayOffsetKcal: now.offset,
+      dailyActivityKcal: now.daily,
+      shown: shown,
+    );
+    return (
+      before: before,
+      after: before + change.change,
+      activityDropped: change.activityDropped,
+    );
+  }
+
+  /// Does [checkIn] at [targetKcal] and leaves, with a bar naming today's
+  /// goal after it, or [unread] when that is not read, and an Undo.
+  Future<void> _done(
+    CheckIn checkIn,
+    double targetKcal,
+    String unread, {
+    required String unit,
+    required int Function(double kcal) shown,
+  }) async {
+    final now = await _today.catchError((Object _) => null);
+    if (!mounted) return;
+    final move = _goalMove(now, targetKcal, shown);
+    final messenger = ScaffoldMessenger.of(context);
+    final persist = undoBarPersists(context);
+    final service = widget.service;
+    final before = await service.checkIns();
+    await service.accept(checkIn, targetKcal);
+    messenger.removeCurrentSnackBar();
+    // said on Home, which comes back away from the ring
+    messenger.showSnackBar(
+      SnackBar(
+        persist: persist,
+        content: Text(
+          move == null
+              ? unread
+              : checkInDoneText(
+                  before: move.before,
+                  after: move.after,
+                  activityDropped: move.activityDropped,
+                  unit: unit,
+                ),
+        ),
+        action: SnackBarAction(
+          label: 'Undo',
+          // Home reloads, so its card shows the check-in due again.
+          onPressed: () async {
+            await service.restoreCheckIns(before);
+            await _refreshGoals();
+          },
+        ),
+      ),
+    );
+    if (mounted) Navigator.of(context).pop(true);
+  }
+
   @override
   void dispose() {
     _target.dispose();
@@ -580,9 +693,8 @@ class _CheckInScreenState extends State<CheckInScreen> {
 
   /// [kcalPerKg] a kg, or a pound where weight changes are shown in pounds.
   String _perWeightUnit(double kcalPerKg, BodyWeightUnit unit) =>
-      unit == BodyWeightUnit.kg
-      ? '${_kcal(kcalPerKg)} a kg'
-      : '${_kcal(kcalPerKg / 2.20462)} a lb';
+      '${_kcal(kcalPerWeightUnit(kcalPerKg, unit))} a '
+      '${unit == BodyWeightUnit.kg ? 'kg' : 'lb'}';
 
   static String _eta(DateTime date, String locale) {
     final now = DateTime.now();
@@ -738,8 +850,7 @@ class _CheckInScreenState extends State<CheckInScreen> {
               builder: (context, partial) => PartialDaysCard(
                 days: partial.data ?? const [],
                 heldBack: settings.autoAcceptCheckIn,
-                onLeaveOut: (day) =>
-                    _answerPartial(() => widget.service.leaveOutDay(day)),
+                onLeaveOut: _leaveOut,
                 onKeep: (day) =>
                     _answerPartial(() => widget.service.keepDay(day)),
               ),
@@ -971,6 +1082,7 @@ class _CheckInScreenState extends State<CheckInScreen> {
                     context,
                   ).toLanguageTag();
                   return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       if (a.byPlan case final day?)
                         _row(
@@ -1008,6 +1120,9 @@ class _CheckInScreenState extends State<CheckInScreen> {
   }) {
     // read here, not in a button's handler
     final unit = energyUnit(context);
+    final kj = usesKj(context);
+    int shown(double kcal) => (kj ? UnitCalc.kcalToKj(kcal) : kcal).round();
+    final keepText = current == null ? '' : _kcal(current);
     return SafeArea(
       top: false,
       child: Padding(
@@ -1037,18 +1152,13 @@ class _CheckInScreenState extends State<CheckInScreen> {
                         );
                         return;
                       }
-                      final target = kcalFromInput(context, typed);
-                      await widget.service.accept(checkIn, target);
-                      if (!context.mounted) return;
-                      // said on Home, which comes back away from the ring
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            'Daily target set to ${_target.text.trim()} $unit',
-                          ),
-                        ),
+                      await _done(
+                        checkIn,
+                        kcalFromInput(context, typed),
+                        'Daily target set to ${_target.text.trim()} $unit',
+                        unit: unit,
+                        shown: shown,
                       );
-                      Navigator.of(context).pop(true);
                     },
               child: const Text('Accept'),
             ),
@@ -1060,12 +1170,37 @@ class _CheckInScreenState extends State<CheckInScreen> {
                   key: const ValueKey('check-in-keep'),
                   onPressed: !enabled
                       ? null
-                      : () async {
-                          await widget.service.accept(checkIn, current);
-                          if (context.mounted) Navigator.of(context).pop(true);
-                        },
-                  child: Text('Keep ${_kcal(current)}'),
+                      : () => _done(
+                          checkIn,
+                          current,
+                          'Target kept at $keepText',
+                          unit: unit,
+                          shown: shown,
+                        ),
+                  child: Text('Keep $keepText'),
                 ),
+              ),
+            // "Keep" reads as no change, so a move of today's goal is said.
+            if (current != null)
+              FutureBuilder<_TodayGoal?>(
+                future: _today,
+                builder: (context, today) {
+                  final move = today.hasError
+                      ? null
+                      : _goalMove(today.data, current, shown);
+                  if (move == null || move.after == move.before) {
+                    return const SizedBox.shrink();
+                  }
+                  return Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      key: const ValueKey('check-in-keep-moves'),
+                      "Today's goal: ${move.before} → ${move.after} $unit",
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  );
+                },
               ),
           ],
         ),

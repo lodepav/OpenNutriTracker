@@ -14,6 +14,7 @@ import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/core/utils/calc/calendar_day_calc.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/fork/adaptive/trend_points.dart';
+import 'package:opennutritracker/fork/body/body_card.dart' show fromToCaption;
 import 'package:opennutritracker/fork/body/measurement_store.dart';
 import 'package:opennutritracker/fork/body/side_compare.dart'
     show SideUnits, axisFit;
@@ -430,11 +431,21 @@ class _RatioChart extends StatelessWidget {
               ),
             ),
           ),
+          // The chart has no date axis: its ends in words give the span.
+          if (points.length > 1)
+            Text(
+              fromToCaption(
+                context,
+                (points.first.ratio.toStringAsFixed(2), points.first.date),
+                (points.last.ratio.toStringAsFixed(2), points.last.date),
+              ),
+              style: small,
+            ),
           const SizedBox(height: Dimens.spacing8),
           ChartLegend(
             entries: [
               (label: 'Waist to height', color: color, line: true),
-              (label: '0.5', color: palette.textMuted, line: true),
+              (label: '0.5 risk line', color: palette.textMuted, line: true),
             ],
           ),
           if (caption != null) ...[

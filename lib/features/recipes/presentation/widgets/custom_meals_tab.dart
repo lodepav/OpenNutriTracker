@@ -63,11 +63,32 @@ class CustomMealsTab extends StatelessWidget {
             return Center(
               child: Padding(
                 padding: const EdgeInsets.all(Dimens.spacing32),
-                child: Text(
-                  S.of(context).customMealsEmptyLabel,
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: palette.textMuted),
+                // [fork] S429 custom-foods-empty: say what a custom food is
+                // and how to add one (H10)
+                // child: Text(
+                //   S.of(context).customMealsEmptyLabel,
+                //   textAlign: TextAlign.center,
+                //   style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: palette.textMuted),
+                // ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      // upstream's says meals; the list and its button say foods
+                      'No custom foods yet.',
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: palette.textMuted),
+                    ),
+                    const SizedBox(height: Dimens.spacing8),
+                    Text(
+                      'A custom food is your own food with its nutrition, '
+                      'logged like any other. Add one with New custom food.',
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: palette.textMuted),
+                    ),
+                  ],
                 ),
+                // [/fork]
               ),
             );
           }

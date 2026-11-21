@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -444,38 +445,68 @@ class _ComparePhotosScreenState extends State<ComparePhotosScreen> {
     ).abs();
     final (earlier, later) = _pair;
     final answered = _answers.containsKey((earlier.photo.id, later.photo.id));
-    final aiIconOnly = MediaQuery.textScalerOf(context).scale(10) >= 13;
+    // At large text the AI label pushes the title into "Compare ph…".
+    final aiBelow = MediaQuery.textScalerOf(context).scale(10) >= 13;
+    final stacked = _datesCut(context);
+    final ai = _provider == null
+        ? null
+        : TextButton.icon(
+            key: const ValueKey('compare-ai'),
+            onPressed: _busy ? null : _ask,
+            icon: const Icon(Icons.auto_awesome_outlined),
+            label: Text(answered ? 'AI result' : 'Ask AI'),
+          );
+    // Stacked, each picker names the photo it sets.
+    final left = _picker(
+      'compare-left',
+      _left,
+      _right,
+      (i) => _left = i,
+      label: stacked ? 'Left photo' : null,
+    );
+    final right = _picker(
+      'compare-right',
+      _right,
+      _left,
+      (i) => _right = i,
+      label: stacked ? 'Right photo' : null,
+    );
     return Scaffold(
       appBar: AppBar(
         title: const Text('Compare photos'),
-        actions: [
-          // At large text the label would push the title into "Compare ph…".
-          if (_provider != null && aiIconOnly)
-            IconButton(
-              key: const ValueKey('compare-ai'),
-              tooltip: answered ? 'AI result' : 'Ask AI',
-              onPressed: _busy ? null : _ask,
-              icon: const Icon(Icons.auto_awesome_outlined),
-            )
-          else if (_provider != null)
-            TextButton.icon(
-              key: const ValueKey('compare-ai'),
-              onPressed: _busy ? null : _ask,
-              icon: const Icon(Icons.auto_awesome_outlined),
-              label: Text(answered ? 'AI result' : 'Ask AI'),
-            ),
-        ],
+        actions: [if (!aiBelow) ?ai],
       ),
       body: SafeArea(
         child: Column(
           children: [
             Padding(
               padding: const EdgeInsets.all(Dimens.spacing8),
-              child: Text('$days days apart'),
+              child: Wrap(
+                alignment: WrapAlignment.center,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: Dimens.spacing8,
+                children: [Text('$days days apart'), if (aiBelow) ?ai],
+              ),
             ),
             if (_busy)
               const LinearProgressIndicator(
                 semanticsLabel: 'Comparing the photos',
+              ),
+            if (stacked)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  Dimens.spacing16,
+                  0,
+                  Dimens.spacing16,
+                  Dimens.spacing8,
+                ),
+                child: Column(
+                  children: [
+                    left,
+                    const SizedBox(height: Dimens.spacing8),
+                    right,
+                  ],
+                ),
               ),
             Expanded(
               child: Padding(
@@ -485,9 +516,9 @@ class _ComparePhotosScreenState extends State<ComparePhotosScreen> {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _side('compare-left', _left, (i) => _left = i),
+                    _side(_left, stacked ? null : left),
                     const SizedBox(width: Dimens.spacing12),
-                    _side('compare-right', _right, (i) => _right = i),
+                    _side(_right, stacked ? null : right),
                   ],
                 ),
               ),
@@ -498,35 +529,84 @@ class _ComparePhotosScreenState extends State<ComparePhotosScreen> {
     );
   }
 
-  Widget _side(String key, int index, void Function(int) set) => Expanded(
-    child: Column(
-      children: [
-        // Outlined, so the two pickers read as separate controls.
-        DropdownButtonFormField<int>(
+  /// Whether the longest date overflows a half-width picker at the user's
+  /// text size; a wrapped date was cut to "Nov 1," on a phone.
+  bool _datesCut(BuildContext context) {
+    final style = Theme.of(context).textTheme.titleMedium;
+    final scaler = MediaQuery.textScalerOf(context);
+    final widest = widget.photos
+        .map((s) {
+          final painter = TextPainter(
+            text: TextSpan(text: _date(context, s.photo.date), style: style),
+            textScaler: scaler,
+            textDirection: Directionality.of(context),
+            maxLines: 1,
+          )..layout();
+          final width = painter.width;
+          painter.dispose();
+          return width;
+        })
+        .fold(0.0, math.max);
+    // The page's gutters and the gap, then the field's padding and arrow.
+    final half =
+        (MediaQuery.sizeOf(context).width -
+                2 * Dimens.spacing16 -
+                Dimens.spacing12) /
+            2 -
+        2 * Dimens.spacing12 -
+        24 -
+        Dimens.spacing8;
+    return widest > half;
+  }
+
+  /// The date picker of one side, without [other]'s photo: comparing a
+  /// photo with itself says nothing.
+  Widget _picker(
+    String key,
+    int index,
+    int other,
+    void Function(int) set, {
+    String? label,
+  }) =>
+      // Aligned, the menu opens as wide as its field instead of past it to
+      // the screen edge.
+      ButtonTheme(
+        alignedDropdown: true,
+        child: DropdownButtonFormField<int>(
           key: ValueKey(key),
           // Within its half of the page: a long date overflowed it at 200%.
           isExpanded: true,
           // Unset, a date wraps to two lines at large text instead of cutting.
           itemHeight: null,
           initialValue: index,
-          decoration: const InputDecoration(
-            border: OutlineInputBorder(),
-            contentPadding: EdgeInsets.symmetric(
+          // Outlined, so the two pickers read as separate controls.
+          decoration: InputDecoration(
+            labelText: label,
+            border: const OutlineInputBorder(),
+            contentPadding: const EdgeInsets.symmetric(
               horizontal: Dimens.spacing12,
               vertical: Dimens.spacing8,
             ),
           ),
           items: [
             for (final (i, s) in widget.photos.indexed)
-              DropdownMenuItem(
-                value: i,
-                child: Text(_date(context, s.photo.date)),
-              ),
+              // Its own value stays, as the picker must hold it.
+              if (i == index || i != other)
+                DropdownMenuItem(
+                  value: i,
+                  child: Text(_date(context, s.photo.date)),
+                ),
           ],
           onChanged: (i) {
             if (i != null) setState(() => set(i));
           },
         ),
+      );
+
+  Widget _side(int index, Widget? picker) => Expanded(
+    child: Column(
+      children: [
+        ?picker,
         Expanded(
           child: Padding(
             padding: const EdgeInsets.only(top: Dimens.spacing8),

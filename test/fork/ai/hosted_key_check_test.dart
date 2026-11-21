@@ -4,6 +4,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -62,6 +63,10 @@ class _MemoryStorage implements FlutterSecureStorage {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
+const _openRouterRefused =
+    "OpenRouter didn't accept this key. It was not saved. Check it on your "
+    'OpenRouter keys page.\nOpenRouter said: invalid x-api-key';
+
 const _refusal =
     '{"type":"error","error":{"type":"authentication_error",'
     '"message":"invalid x-api-key"}}';
@@ -93,20 +98,28 @@ void main() {
       expect(asked[2].headers['authorization'], 'Bearer k1');
     });
 
-    test("a 401 is refused, in the provider's words", () async {
+    test("a 401 is refused in the app's words, then the provider's", () async {
       final result = await checkHostedKey(
         MockClient((_) async => http.Response(_refusal, 401)),
         AiProvider.anthropic,
         'bad',
       );
       expect(result.verdict, HostedKeyVerdict.refused);
-      expect(result.message, 'invalid x-api-key');
+      expect(
+        result.message,
+        "Anthropic didn't accept this key. It was not saved. Check it on "
+        'your Anthropic keys page.\nAnthropic said: invalid x-api-key',
+      );
       final bare = await checkHostedKey(
         MockClient((_) async => http.Response('nope', 401)),
         AiProvider.openai,
         'bad',
       );
-      expect(bare.message, 'The provider refused this key');
+      expect(
+        bare.message,
+        "OpenAI didn't accept this key. It was not saved. Check it on your "
+        'OpenAI keys page.',
+      );
     });
 
     test('no answer is offline, any other answer unchecked', () async {
@@ -195,14 +208,29 @@ void main() {
 
       expect(asked.single.url.path, '/api/v1/key');
       expect(find.byType(AiAssistDialog), findsOneWidget);
-      expect(find.text('invalid x-api-key'), findsOneWidget);
+      expect(find.text(_openRouterRefused), findsOneWidget);
       expect(await storage.readApiKey(provider: AiProvider.openrouter), isNull);
       expect(await storage.isEnabled(), isFalse);
 
       // The next edit clears the reason.
       await tester.enterText(keyField(), 'sk-or-right');
       await tester.pump();
-      expect(find.text('invalid x-api-key'), findsNothing);
+      expect(find.text(_openRouterRefused), findsNothing);
+    });
+
+    testWidgets('a refused key reads in full at twice the font size', (
+      tester,
+    ) async {
+      tester.platformDispatcher.textScaleFactorTestValue = 2;
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      await storage.setTermsAccepted(true);
+      answer = (_) async => http.Response(_refusal, 401);
+      await typeOpenRouterKey(tester, 'sk-or-typo');
+
+      final paragraph = tester.renderObject<RenderParagraph>(
+        find.text(_openRouterRefused),
+      );
+      expect(paragraph.didExceedMaxLines, isFalse);
     });
 
     testWidgets('an agreement first given on a refused OK is taken back', (
@@ -217,7 +245,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(asked, hasLength(1));
-      expect(find.text('invalid x-api-key'), findsOneWidget);
+      expect(find.text(_openRouterRefused), findsOneWidget);
       expect(await storage.hasAcceptedTerms(), isFalse);
     });
 

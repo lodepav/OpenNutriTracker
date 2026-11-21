@@ -339,7 +339,10 @@ Future<void> exitDemoMode() async {
   await locator<UpdateProfileUsecase>().updateProfile(
     ProfileEntity(
       id: active.id,
-      name: '',
+      // [fork] S427 demo-keeps-name: leaving demo keeps a typed name too
+      // name: '',
+      name: active.name == _demoProfileName ? '' : active.name,
+      // [/fork]
       createdAt: active.createdAt,
       boxSuffix: active.boxSuffix,
       imagePath: null,
@@ -412,7 +415,11 @@ Future<void> _setupActiveProfile() async {
   await locator<UpdateProfileUsecase>().updateProfile(
     ProfileEntity(
       id: active.id,
-      name: _demoProfileName,
+      // [fork] S427 demo-keeps-name: a profile added with a name keeps it,
+      // else two profiles read "Alex Demo" (H3, H6)
+      // name: _demoProfileName,
+      name: active.name.trim().isEmpty ? _demoProfileName : active.name,
+      // [/fork]
       createdAt: active.createdAt,
       boxSuffix: active.boxSuffix,
       imagePath: imagePath ?? active.imagePath,

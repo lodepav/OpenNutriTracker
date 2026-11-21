@@ -179,24 +179,48 @@ class _ActivityDetailBottomSheetState extends State<ActivityDetailBottomSheet> {
     final usesKj = context.watch<EnergyUnitProvider>().usesKilojoules;
     final customUnitSuffix =
         usesKj ? S.of(context).kjLabel : S.of(context).kcalLabel;
+    // [fork] S411 activity-unit-below
+    final stackUnit = MediaQuery.textScalerOf(context).scale(16) / 16 >= 1.5;
+    // [/fork]
     return BottomSheet(
       elevation: 0,
       backgroundColor: Colors.transparent,
       onClosing: () {},
       enableDrag: false,
       builder: (context) {
+        // [fork] S410 activity-sheet-material: the sheet's colour and border
+        // move to a Material, so "Save as template"'s ListTile has its ink
+        // under it instead of under a coloured DecoratedBox
+        // return Container(
+        //   decoration: BoxDecoration(
+        //     border: Border.all(color: palette.border, width: Dimens.hairline),
+        //     color: palette.surface,
+        //     borderRadius: const BorderRadius.only(
+        //       topLeft: Radius.circular(Dimens.radiusXL),
+        //       topRight: Radius.circular(Dimens.radiusXL),
+        //     ),
+        //     boxShadow: [
+        //       BoxShadow(color: palette.shadow, blurRadius: 18, offset: const Offset(0, -6)),
+        //     ],
+        //   ),
+        const corners = BorderRadius.only(
+          topLeft: Radius.circular(Dimens.radiusXL),
+          topRight: Radius.circular(Dimens.radiusXL),
+        );
         return Container(
           decoration: BoxDecoration(
-            border: Border.all(color: palette.border, width: Dimens.hairline),
-            color: palette.surface,
-            borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(Dimens.radiusXL),
-              topRight: Radius.circular(Dimens.radiusXL),
-            ),
+            borderRadius: corners,
             boxShadow: [
               BoxShadow(color: palette.shadow, blurRadius: 18, offset: const Offset(0, -6)),
             ],
           ),
+          child: Material(
+            color: palette.surface,
+            shape: RoundedRectangleBorder(
+              borderRadius: corners,
+              side: BorderSide(color: palette.border, width: Dimens.hairline),
+            ),
+        // [/fork]
           // SafeArea(top: false) — keeps the sticky bottom Add button above
           // the gesture-nav strip on devices that don't reserve insets
           // (#156). top:false because the curved top edge handles that side.
@@ -249,9 +273,23 @@ class _ActivityDetailBottomSheetState extends State<ActivityDetailBottomSheet> {
                         ),
                         const SizedBox(height: Dimens.spacing8),
                       ],
-                      Row(
+                      // [fork] S411 activity-unit-below: at 150% text and
+                      // up the Unit goes under the amount, so its label
+                      // ("Calories burned") has the whole width
+                      // Row(
+                      //   children: [
+                      //     Expanded(
+                      Flex(
+                        direction: stackUnit ? Axis.vertical : Axis.horizontal,
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: stackUnit
+                            ? CrossAxisAlignment.stretch
+                            : CrossAxisAlignment.center,
                         children: [
+                          // flex 0 when stacked: the column's height is open
                           Expanded(
+                            flex: stackUnit ? 0 : 1,
+                      // [/fork]
                             child: Semantics(
                               identifier: 'activity-detail-quantity-input',
                               container: true,
@@ -284,8 +322,16 @@ class _ActivityDetailBottomSheetState extends State<ActivityDetailBottomSheet> {
                               ),
                             ),
                           ),
-                          const SizedBox(width: Dimens.spacing16),
+                          // [fork] S411 activity-unit-below
+                          // const SizedBox(width: Dimens.spacing16),
+                          // Expanded(
+                          const SizedBox(
+                            width: Dimens.spacing16,
+                            height: Dimens.spacing8,
+                          ),
                           Expanded(
+                            flex: stackUnit ? 0 : 1,
+                          // [/fork]
                             child: DropdownButtonFormField(
                               itemHeight: null,
                               decoration: _fieldDecoration(
@@ -370,6 +416,9 @@ class _ActivityDetailBottomSheetState extends State<ActivityDetailBottomSheet> {
               ],
             ),
           ),
+          // [fork] S410 activity-sheet-material: the Material's close
+          ),
+          // [/fork]
         );
       },
     );

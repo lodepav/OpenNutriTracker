@@ -89,6 +89,16 @@ void main() {
     expect(stat('1.0'), findsOne);
     expect(find.textContaining('Right bigger by 1.0 cm, '), findsOne);
     expect(find.textContaining('Right bigger by 0.6 cm'), findsOne);
+    // Each side's ends in words: the chart has no dates.
+    String d(int offset) => DateFormat.MMMd().format(_day(offset));
+    expect(
+      find.text('Left 35.0 cm on ${d(-10)} \u2192 35.4 cm on ${d(-1)}'),
+      findsOne,
+    );
+    expect(
+      find.text('Right 35.6 cm on ${d(-10)} \u2192 36.4 cm on ${d(-1)}'),
+      findsOne,
+    );
     // A line a side, a point a measurement.
     final bars = tester.widget<LineChart>(find.byType(LineChart)).data;
     expect(

@@ -290,6 +290,20 @@ void main() {
     expect(find.textContaining('· reached'), findsOneWidget);
   });
 
+  testWidgets('a row\'s label keeps a gap before its number', (tester) async {
+    await tester.pumpWidget(app());
+    await tester.pumpAndSettle();
+    final texts = find.descendant(
+      of: find.bySemanticsIdentifier('nutrient-goal-Fibre'),
+      matching: find.byType(RichText),
+    );
+    // A wrapped "· reached" ran into "18 / 15 µg" at 200% text.
+    expect(
+      tester.getRect(texts.at(1)).left - tester.getRect(texts.at(0)).right,
+      greaterThanOrEqualTo(8),
+    );
+  });
+
   testWidgets('Edit opens the goal list, and the bars are read again', (
     tester,
   ) async {

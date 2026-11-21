@@ -221,10 +221,11 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('measure-add')));
     await tester.pumpAndSettle();
     await tester.enterText(find.byKey(const ValueKey('measure-waist')), '75');
+    await tester.pump();
     await tester.tap(find.text('Save'));
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('Replaced Waist 80.0 cm'), findsOneWidget);
+    expect(find.textContaining('Replaced waist 80.0 cm'), findsOneWidget);
     expect(memory.entries.single.value, 75);
 
     await tester.tap(find.text('Undo'));
@@ -269,6 +270,7 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('measure-add')));
     await tester.pumpAndSettle();
     await tester.enterText(find.byKey(const ValueKey('measure-bodyFat')), '95');
+    await tester.pump();
     await tester.tap(find.text('Save'));
     await tester.pumpAndSettle();
 
@@ -401,10 +403,47 @@ void main() {
 
     // Corrected, the day saves.
     await tester.enterText(find.byKey(const ValueKey('measure-bodyFat')), '');
-    await tester.enterText(find.byKey(const ValueKey('measure-hips')), '');
+    await tester.enterText(find.byKey(const ValueKey('measure-hips')), '90');
     await tester.tap(find.text('Save'));
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('measure-bodyFat')), findsNothing);
+  });
+
+  testWidgets('the dialog: a labelled date to edit, Next between fields, '
+      'Save off until a value is typed', (tester) async {
+    await pumpCard(tester, _Memory());
+    await tester.tap(find.byKey(const ValueKey('measure-add')));
+    await tester.pumpAndSettle();
+
+    final date = find.byKey(const ValueKey('measure-date'));
+    expect(find.descendant(of: date, matching: find.text('Date')), findsOne);
+    expect(
+      find.descendant(of: date, matching: find.byIcon(Icons.edit_outlined)),
+      findsOne,
+    );
+
+    TextInputAction? action(BodyMetric m) => tester
+        .widget<TextField>(find.byKey(ValueKey('measure-${m.name}')))
+        .textInputAction;
+    for (final m in BodyMetric.values) {
+      expect(
+        action(m),
+        m == BodyMetric.values.last
+            ? TextInputAction.done
+            : TextInputAction.next,
+        reason: m.name,
+      );
+    }
+
+    TextButton save() =>
+        tester.widget<TextButton>(find.widgetWithText(TextButton, 'Save'));
+    expect(save().onPressed, isNull);
+    await tester.enterText(find.byKey(const ValueKey('measure-waist')), '80');
+    await tester.pump();
+    expect(save().onPressed, isNotNull);
+    await tester.enterText(find.byKey(const ValueKey('measure-waist')), ' ');
+    await tester.pump();
+    expect(save().onPressed, isNull);
   });
 
   testWidgets('the chart states its ends and the range, with a true minus', (

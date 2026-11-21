@@ -6,7 +6,6 @@ import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
-import 'package:opennutritracker/features/diary/presentation/widgets/daily_nutrient_panel.dart';
 import 'package:opennutritracker/fork/copy/copy_ui.dart';
 import 'package:opennutritracker/fork/report/goal_standing.dart';
 import 'package:opennutritracker/fork/report/nutrient_explorer.dart';
@@ -26,11 +25,6 @@ List<NutrientSummary> goalRows(List<NutrientSummary> all) => [
     for (final s in all)
       if (s.nutrient.marksMiss && nutrientRank(s.nutrient) == rank) s,
 ];
-
-/// The row's name: salt says where it comes from, as the editor and the
-/// Nutrients list call it Sodium.
-String goalRowLabel(ExplorerNutrient n) =>
-    n.driKey == NutrientPanelKeys.sodium ? '${n.label} (from sodium)' : n.label;
 
 String _number(double value) =>
     value < 10 ? value.toStringAsFixed(1) : '${value.round()}';
@@ -234,6 +228,8 @@ class _GoalBar extends StatelessWidget {
                     style: text.bodyLarge,
                   ),
                 ),
+                // Keeps a wrapped label off the number at large text.
+                const SizedBox(width: Dimens.spacing8),
                 Text.rich(
                   TextSpan(
                     children: [

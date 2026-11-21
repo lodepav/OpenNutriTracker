@@ -10,7 +10,8 @@ import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/core/utils/hive_db_provider.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
-import 'package:opennutritracker/fork/body/body_card.dart' show addMeasurements;
+import 'package:opennutritracker/fork/body/body_card.dart'
+    show addMeasurements, fromToCaption;
 import 'package:opennutritracker/fork/body/measurement_store.dart';
 import 'package:opennutritracker/fork/display/contrast.dart';
 import 'package:opennutritracker/fork/report/chart_touch.dart';
@@ -393,6 +394,17 @@ class _SidesChart extends StatelessWidget {
       ),
     );
     final lastX = x(measurements.last.date);
+    // The chart has no date axis: each side's ends in words give the span.
+    String? ends(String name, BodyMetric metric) {
+      final side = [
+        for (final m in measurements)
+          if (m.metric == metric) m,
+      ];
+      if (side.length < 2) return null;
+      return '$name ${fromToCaption(context, (units.text(side.first.value), side.first.date), (units.text(side.last.value), side.last.date))}';
+    }
+
+    final sideEnds = [?ends('Left', part.left), ?ends('Right', part.right)];
     String fromTo(List<FlSpot> s) => spokenFromTo(
       s.first.y.toStringAsFixed(1),
       s.last.y.toStringAsFixed(1),
@@ -458,6 +470,7 @@ class _SidesChart extends StatelessWidget {
               ),
             ),
           ),
+          for (final line in sideEnds) Text(line, style: small),
           const SizedBox(height: Dimens.spacing8),
           ChartLegend(
             entries: [

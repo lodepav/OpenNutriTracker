@@ -24,6 +24,18 @@ typedef GoalHistory = ({
   DateTime today,
 });
 
+/// The time [history] took in all, counted as its rows count each goal
+/// (a day at least): in days under a week, else in weeks.
+({String label, String value}) timeInGoals(List<GoalRecord> history) {
+  final days = history.fold(0, (s, r) {
+    final d = CalendarDayCalc.daysBetween(r.start, r.end);
+    return s + (d < 1 ? 1 : d);
+  });
+  return days < 7
+      ? (label: 'Days in goals', value: '$days')
+      : (label: 'Weeks in goals', value: '${(days / 7).round()}');
+}
+
 Future<GoalHistory> _loadHistory() async {
   final store = PhaseStore();
   final history = await store.history();
@@ -108,7 +120,7 @@ class _CompletedGoalsPageState extends State<CompletedGoalsPage> {
     double sum(PhaseKind kind) => history
         .where((r) => r.kind == kind && r.startKg != null && r.endKg != null)
         .fold(0.0, (s, r) => s + (r.endKg! - r.startKg!));
-    final weeks = history.fold(0, (w, r) => w + r.weeks);
+    final time = timeInGoals(history);
     final lost = sum(PhaseKind.cut);
     final gained = sum(PhaseKind.bulk);
     final bands = <GoalBand>[
@@ -158,8 +170,8 @@ class _CompletedGoalsPageState extends State<CompletedGoalsPage> {
           tiles: [
             FigureTile(label: 'Goals completed', value: '${history.length}'),
             FigureTile(
-              label: 'Weeks in goals',
-              value: '$weeks',
+              label: time.label,
+              value: time.value,
               note: running == null ? null : 'and the one running',
             ),
             // A kind with no goal completed has no tile; a cut that ended

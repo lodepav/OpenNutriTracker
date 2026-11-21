@@ -920,10 +920,9 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
                   staged != null ? Icons.send_rounded : Icons.search,
                 );
                 // with foods found, Log is the one primary action
-                final again =
-                    staged == null &&
-                    state is BulkAddLoadedState &&
-                    state.rows.isNotEmpty;
+                final rowsShown =
+                    state is BulkAddLoadedState && state.rows.isNotEmpty;
+                final again = staged == null && rowsShown;
                 final label = Text(
                   _readingStaged
                       ? 'Reading the photo…'
@@ -935,7 +934,7 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
                 );
                 return Semantics(
                   identifier: 'bulk-add-parse',
-                  child: again
+                  child: rowsShown
                       // outlined: the theme fills every FilledButton alike
                       ? OutlinedButton.icon(
                           onPressed: onPressed,
@@ -1285,13 +1284,20 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
   }
 
   /// Sends the photo waiting by the buttons, with the box as its note.
-  /// The photo stays until rows come back; the note leaves the box.
-  void _readStagedPhoto() {
-    final photo = _stagedPhoto;
-    if (photo == null) return;
+  /// The photo stays until rows come back; the note leaves the box. Rows
+  /// the user changed are only replaced once they say so, as Find again.
+  Future<void> _readStagedPhoto() async {
+    if (_stagedPhoto == null) return;
     // A note still being dictated would land after the photo went.
     _voice.currentState?.cancel();
     _dropFocus();
+    if (_bloc.state case BulkAddLoadedState(:final rows)) {
+      final changed = rows.where(_rowChanged).length;
+      if (changed > 0 && !await _confirmReplace(changed)) return;
+      if (!mounted) return;
+    }
+    final photo = _stagedPhoto;
+    if (photo == null) return;
     final note = _textController.text.trim();
     _photoNote = note.isEmpty ? null : note;
     _textController.clear();
@@ -1342,6 +1348,12 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
   Future<void> _rereadPhotoWithNote() async {
     final photo = _forkMealPhoto;
     if (photo == null) return;
+    // asked before the name, so no name is typed for a read that won't run
+    if (_bloc.state case BulkAddLoadedState(:final rows)) {
+      final changed = rows.where(_rowChanged).length;
+      if (changed > 0 && !await _confirmReplace(changed)) return;
+      if (!mounted) return;
+    }
     final note = await askDishName(context, initial: _photoNote ?? '');
     if (note == null || !mounted) return;
     _photoNote = note;

@@ -331,12 +331,12 @@ void main() {
       );
     });
 
-    testWidgets('the target step prints the pace as Goal progress does', (
+    testWidgets('the target step prints the pace as the pace step does', (
       tester,
     ) async {
       await _pump(tester, planner());
       await toStep(tester, 'target');
-      expect(find.text('Pace, −0.50 kg a week'), findsOneWidget);
+      expect(find.text('Pace, 0.5 kg a week'), findsOneWidget);
     });
   });
 

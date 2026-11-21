@@ -57,3 +57,17 @@ String? bodyBlockedMessage({
   ];
   return wrong.length == 1 ? wrong.single : null;
 }
+
+/// About you's blocked Next message when exactly one field is wrong, naming
+/// it, with the birthday's [birthdayError] when it has one; null otherwise,
+/// where upstream's message names both.
+String? aboutYouBlockedMessage({
+  required bool genderOk,
+  required bool birthdayOk,
+  String? birthdayError,
+}) {
+  if (genderOk == birthdayOk) return null;
+  return genderOk
+      ? birthdayError ?? 'Enter your birthday to continue'
+      : 'Select your gender to continue';
+}

@@ -63,6 +63,8 @@ class _FoodSearchTabViewState extends State<FoodSearchTabView>
     _tabController.addListener(() {
       _onSearchSubmit(_searchStringListener.value);
     });
+    // the landing tab lists them until a search is typed
+    _recentMealBloc.add(const LoadRecentMealEvent(searchString: ''));
   }
 
   @override
@@ -77,14 +79,23 @@ class _FoodSearchTabViewState extends State<FoodSearchTabView>
       padding: const EdgeInsets.symmetric(horizontal: 8),
       child: Column(
         children: [
-          MealSearchBar(
-            searchStringListener: _searchStringListener,
-            onSearchSubmit: _onSearchSubmit,
-            onSearchChanged: _onSearchChanged,
-            onBarcodePressed: widget.onBarcodePressed,
+          // the cards' gutter, so the search button is off the edge
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: Dimens.spacing8),
+            child: MealSearchBar(
+              searchStringListener: _searchStringListener,
+              onSearchSubmit: _onSearchSubmit,
+              onSearchChanged: _onSearchChanged,
+              onBarcodePressed: widget.onBarcodePressed,
+            ),
           ),
           const SizedBox(height: 16),
           TabBar(
+            // three equal tabs cut their labels off at large text (A6)
+            isScrollable: MediaQuery.textScalerOf(context).scale(1) > 1.3,
+            tabAlignment: MediaQuery.textScalerOf(context).scale(1) > 1.3
+                ? TabAlignment.start
+                : null,
             tabs: [
               Tab(text: S.of(context).searchProductsPage),
               Tab(text: S.of(context).searchFoodPage),
@@ -129,6 +140,8 @@ class _FoodSearchTabViewState extends State<FoodSearchTabView>
       builder: (context, query, _) => BlocBuilder<ProductsBloc, ProductsState>(
         bloc: _productsBloc,
         builder: (context, state) {
+          // what was eaten lately, rather than a bare prompt (H7)
+          if (query.trim().isEmpty) return _buildLandingRecents(context);
           if (state is ProductsInitial) {
             return query.trim().length >= minQueryLength
                 ? _pendingSpinner
@@ -215,6 +228,43 @@ class _FoodSearchTabViewState extends State<FoodSearchTabView>
     );
   }
 
+  /// The recent foods under an empty search on the Products tab; the prompt
+  /// to search where there are none.
+  Widget _buildLandingRecents(BuildContext context) {
+    return BlocBuilder<RecentMealBloc, RecentMealState>(
+      bloc: _recentMealBloc,
+      builder: (context, state) {
+        // nothing while they load, so the prompt does not flash on each open
+        if (state is RecentMealInitial || state is RecentMealLoadingState) {
+          return const SizedBox.shrink();
+        }
+        if (state is! RecentMealLoadedState || state.recentMeals.isEmpty) {
+          return const DefaultsResultsWidget();
+        }
+        return ListView.builder(
+          itemCount: state.recentMeals.length + 1,
+          itemBuilder: (context, index) => index == 0
+              ? Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    Dimens.spacing8,
+                    0,
+                    Dimens.spacing8,
+                    Dimens.spacing8,
+                  ),
+                  child: Text(
+                    'Your recent foods',
+                    style: Theme.of(context).textTheme.titleSmall,
+                  ),
+                )
+              : _PickableMealCard(
+                  meal: state.recentMeals[index - 1],
+                  onTap: widget.onMealSelected,
+                ),
+        );
+      },
+    );
+  }
+
   Widget _buildRecentTab(BuildContext context) {
     return BlocBuilder<RecentMealBloc, RecentMealState>(
       bloc: _recentMealBloc,
@@ -272,6 +322,10 @@ class _FoodSearchTabViewState extends State<FoodSearchTabView>
   /// Debounced search-as-you-type for the ingredient picker. Recent-added
   /// (tab 2) stays submit-only — local-history filter, nothing to debounce.
   void _onSearchChanged(String inputText) {
+    // a cleared search shows all recents again, on either tab that lists them
+    if (inputText.trim().isEmpty) {
+      _recentMealBloc.add(const RecentMealSearchChangedEvent(searchString: ''));
+    }
     switch (_tabController.index) {
       case 0:
         _productsBloc.add(SearchInputChangedEvent(searchString: inputText));

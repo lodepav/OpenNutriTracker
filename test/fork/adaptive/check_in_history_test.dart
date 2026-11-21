@@ -68,7 +68,8 @@ void main() {
         {
           'Your estimate moved': -50,
           'Counted activity': 120,
-          'You edited it': 105,
+          "Last time's change to the proposal ends": 50,
+          'You edited it': 55,
           "Goal's pace or the plan": 175,
         },
       );
@@ -136,7 +137,7 @@ void main() {
 
     await tester.tap(tappable);
     await tester.pumpAndSettle();
-    expect(find.text('Why it moved from 5 Oct'), findsOneWidget);
+    expect(find.text('Why it moved from Oct 5'), findsOneWidget);
     expect(find.text('Your estimate moved'), findsOneWidget);
     expect(find.text('\u221250 kcal'), findsOneWidget);
     expect(find.text("Goal's pace or the plan"), findsOneWidget);
@@ -145,7 +146,10 @@ void main() {
     expect(find.text('Counted activity'), findsNothing);
     expect(find.text('You edited it'), findsNothing);
     expect(find.text('In all'), findsOneWidget);
-    expect(find.text('Pace went from -0.5 to -0.25 kg a week.'), findsOne);
+    expect(
+      find.text('Pace went from \u22120.5 to \u22120.25 kg a week.'),
+      findsOne,
+    );
     expect(
       find.text('How activity or a kg is counted changed in Settings.'),
       findsOne,
@@ -204,12 +208,12 @@ void main() {
     ]);
     expect(find.text('2150 kcal'), findsNWidgets(2));
     expect(
-      find.text('12 Oct 2026 · expenditure 2550 kcal · proposed 2050 kcal'),
+      find.text('Oct 12, 2026 · expenditure 2550 kcal · proposed 2050 kcal'),
       findsOneWidget,
     );
     expect(find.text('+50 kcal'), findsOneWidget);
     expect(find.text('no change'), findsOneWidget);
-    expect(find.text('5 Oct 2026 · expenditure 2600 kcal'), findsOneWidget);
+    expect(find.text('Oct 5, 2026 · expenditure 2600 kcal'), findsOneWidget);
   });
 
   testWidgets('says when there are none yet', (tester) async {

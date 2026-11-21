@@ -280,6 +280,8 @@ void main() {
         );
         await tester.pumpAndSettle();
         expect(find.byKey(const ValueKey('compare-ai')), findsOne);
+        // Its label kept: an icon alone doesn't say what it does.
+        expect(find.text('Ask AI'), findsOne);
         expect(cutText(tester), isEmpty);
         await expectAccessible(tester);
       });

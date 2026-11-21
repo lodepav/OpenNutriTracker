@@ -409,8 +409,11 @@ class _AccountDialogState extends State<_AccountDialog> {
             key: const Key('fork-off-user'),
             controller: _user,
             autocorrect: false,
+            // A helper line wraps; at 200% the label's "not the e-mail" was cut
             decoration: const InputDecoration(
-              labelText: 'User name (not the e-mail)',
+              labelText: 'User name',
+              helperText: 'Not your e-mail address',
+              helperMaxLines: 3,
             ),
           ),
           TextField(

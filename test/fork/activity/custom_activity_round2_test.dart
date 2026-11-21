@@ -145,7 +145,7 @@ void main() {
     expect(cutText(tester), isEmpty);
   });
 
-  testWidgets('the third line still fits the header at 200%', (tester) async {
+  testWidgets('every line fits the header at 200%', (tester) async {
     await pumpOnPhone(
       tester,
       ChangeNotifierProvider<EnergyUnitProvider>(
@@ -153,7 +153,8 @@ void main() {
         child: const Align(
           alignment: Alignment.topCenter,
           child: SizedBox(
-            height: 200,
+            // the screen's header at 200% (S409)
+            height: 400,
             child: ActivityTitleExpanded(
               activity: PhysicalActivityEntity.custom,
             ),
@@ -162,6 +163,7 @@ void main() {
       ),
     );
     expect(tester.takeException(), isNull);
+    expect(cutText(tester), isEmpty);
     final title = tester.getRect(find.byType(RichText));
     // Below the 56 dp toolbar row that holds the back button.
     expect(title.top, greaterThanOrEqualTo(56));

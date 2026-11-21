@@ -576,6 +576,7 @@ extension _BulkAddRow on _BulkAddScreenState {
         text: text,
         imperial: imperial,
         send: send,
+        flagged: row.amountNeedsCheck,
         // another of the foods the search found, from the sheet (D37)
         onOtherMatch: row.resolved.candidates.length > 1
             ? () {
@@ -670,6 +671,9 @@ class _RowAmountSheet extends StatefulWidget {
   /// Picks another match for the food; null when the search found one.
   final VoidCallback? onOtherMatch;
 
+  /// The row asks to check its unit: the sheet offers to keep it as it is.
+  final bool flagged;
+
   const _RowAmountSheet({
     required this.base,
     required this.meal,
@@ -678,6 +682,7 @@ class _RowAmountSheet extends StatefulWidget {
     required this.imperial,
     required this.send,
     this.onOtherMatch,
+    this.flagged = false,
   });
 
   @override
@@ -689,6 +694,7 @@ class _RowAmountSheetState extends State<_RowAmountSheet> {
   late String _unit = widget.unit;
   late MealEntity _meal = widget.meal;
   var _setting = false;
+  late var _flagged = widget.flagged;
 
   @override
   void initState() {
@@ -712,6 +718,16 @@ class _RowAmountSheetState extends State<_RowAmountSheet> {
     final own = await OwnPortions.current.of(widget.base);
     if (mounted) setState(() => _meal = withOwnPortions(widget.base, own));
     return _meal;
+  }
+
+  /// "1 oz", "2 slice": the amount as the field shows it.
+  String _keptAmount(BuildContext context) {
+    final option = amountUnitOptions(
+      _meal,
+      selected: _unit,
+      imperial: widget.imperial,
+    ).firstWhere((o) => o.unit == _unit);
+    return '${_controller.text.trim()} ${amountUnitWord(context, _meal, option)}';
   }
 
   @override
@@ -745,7 +761,7 @@ class _RowAmountSheetState extends State<_RowAmountSheet> {
             _controller.text = text;
             _setting = false;
             widget.send(text, to, _meal, true);
-            setState(() {});
+            setState(() => _flagged = false);
           },
           onAddPortion: (label, grams) async {
             await OwnPortions.current.add(widget.base, label, grams);
@@ -756,6 +772,23 @@ class _RowAmountSheetState extends State<_RowAmountSheet> {
             return _reload();
           },
         ),
+        // the answer the row's check asks for, without a new portion (G2 r3)
+        if (_flagged) ...[
+          const SizedBox(height: 12),
+          OutlinedButton.icon(
+            key: const ValueKey('bulk-add-keep-unit'),
+            onPressed: () {
+              widget.send(_controller.text, _unit, _meal, true);
+              Navigator.pop(context);
+            },
+            icon: const Icon(Icons.check_rounded),
+            // follows what is typed, which is what Keep keeps
+            label: ListenableBuilder(
+              listenable: _controller,
+              builder: (context, _) => Text('Keep ${_keptAmount(context)}'),
+            ),
+          ),
+        ],
         const SizedBox(height: 16),
         Row(
           children: [

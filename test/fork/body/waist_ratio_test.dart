@@ -80,6 +80,10 @@ void main() {
     expect(find.text('WHO: over 0.85 raises the risk'), findsOne);
     // inches for imperial; the older day has no hips
     expect(find.textContaining('waist 36.0 in'), findsOne);
+    // The chart's ends in words, and what its dashed line is.
+    String d(int offset) => DateFormat.MMMd().format(_day(offset));
+    expect(find.text('0.51 on ${d(-12)} \u2192 0.48 on ${d(-1)}'), findsOne);
+    expect(find.text('0.5 risk line'), findsOne);
 
     await tester.ensureVisible(find.text('What is waist to height?'));
     await tester.tap(find.text('What is waist to height?'));

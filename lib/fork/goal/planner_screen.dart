@@ -21,8 +21,6 @@ import 'package:opennutritracker/fork/display/display_prefs.dart';
 import 'package:opennutritracker/fork/goal/goal_actions.dart';
 import 'package:opennutritracker/fork/goal/goal_plan_view.dart' show goalTitle;
 import 'package:opennutritracker/fork/goal/goal_planner.dart';
-import 'package:opennutritracker/fork/goal/goal_status.dart'
-    show signedPaceText;
 import 'package:opennutritracker/fork/goal/phase_colors.dart';
 import 'package:opennutritracker/fork/phases/phases.dart';
 import 'package:opennutritracker/fork/units/energy_text.dart';
@@ -413,6 +411,16 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
     }
   }();
 
+  /// The last check-in accepted; null when none or unread.
+  late final Future<CheckInRecord?> _lastCheckIn = () async {
+    try {
+      return await _store.lastCheckIn();
+    } catch (_) {
+      // No store in a test: nothing said.
+      return null;
+    }
+  }();
+
   /// The goal edited, once begun: its start stays.
   bool get _begun =>
       widget.editing != null && widget.editing!.indexOn(_today) >= 0;
@@ -506,10 +514,11 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
       Padding(
         padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
         child: Text(
-          'On Adaptive a kg counts as about '
-          '${energyText(context, _kcalPerKg)}, as part of a change is lean '
-          'tissue, which holds less; Formula counts every kg as '
-          '${energyText(context, AdaptiveSettings.commonKcalPerKg)}.',
+          'On Adaptive a ${_perLb ? 'lb' : 'kg'} counts as about '
+          '${energyText(context, kcalPerWeightUnit(_kcalPerKg, _unit))}, as '
+          'part of a change is lean tissue, which holds less; Formula counts '
+          'every '
+          '${energyPerWeightText(context, AdaptiveSettings.commonKcalPerKg, _unit)}.',
           style: Theme.of(context).textTheme.bodySmall,
         ),
       ),
@@ -1359,8 +1368,11 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
     _question(
       context,
       'Your expenditure',
-      'What you burn a day. An Adaptive target is built on it, so a good '
-          'estimate matters more than the pace.',
+      // At first run Adaptive is not met yet.
+      _setup.onboarding
+          ? 'What you burn a day, which your target starts from.'
+          : 'What you burn a day. An Adaptive target is built on it, so a '
+                'good estimate matters more than the pace.',
     ),
     _Panel(
       children: [
@@ -1381,7 +1393,7 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
                     'below.',
           style: Theme.of(context).textTheme.bodySmall,
         ),
-        if (_formula)
+        if (_formula && !_setup.onboarding)
           Text(
             'Your target is on Formula, which goes by your profile, '
             '${energyText(context, _setup.formulaKcal)}; this estimate sets '
@@ -1389,18 +1401,22 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
             style: Theme.of(context).textTheme.bodySmall,
           ),
         // The switch below also sets the estimate, so it stays as set.
-        if (_formula)
+        if (_formula && !_setup.onboarding)
           Text(
             key: const ValueKey('goal-burn-formula-per-kg'),
-            'Formula counts every kg as '
-            '${energyText(context, AdaptiveSettings.commonKcalPerKg)} '
+            'Formula counts every '
+            '${energyPerWeightText(context, AdaptiveSettings.commonKcalPerKg, _unit)} '
             'whatever the switch below says; the switch sets it for this '
             'estimate and Adaptive.',
             style: Theme.of(context).textTheme.bodySmall,
           ),
       ],
     ),
-    ExpenditureGroups.estimate(store: _store),
+    ExpenditureGroups.estimate(
+      store: _store,
+      unit: _unit,
+      onboarding: _setup.onboarding,
+    ),
   ];
 
   // -------------------------------------------------------------- target
@@ -1453,7 +1469,8 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
             ),
             if (pace != 0)
               line(
-                'Pace, ${signedPaceText(pace, _unit)}',
+                // The signed figure beside it gives the direction.
+                'Pace, ${_rate(pace.abs())}',
                 energyText(context, shift.toDouble(), signed: true),
               ),
             if (breaks && pace != 0) line('On diet breaks', base),
@@ -1475,26 +1492,42 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
             ),
           ),
         ),
-      if (_formula && _setup.onboarding)
+      // At first run Adaptive has nothing to go by yet: the choice waits
+      // folded, open when one other than Formula is already picked.
+      if (_setup.onboarding)
+        ExpansionTile(
+          key: const ValueKey('goal-target-more'),
+          title: const Text('Other ways to set the target'),
+          initiallyExpanded: !_formula,
+          childrenPadding: const EdgeInsets.symmetric(horizontal: 16),
+          children: [
+            if (_formula)
+              Text(
+                'After a few weeks of weigh-ins and logging, Adaptive follows '
+                'what you actually burn: switch in Settings, or here when you '
+                'edit the plan.',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            TargetModeFields(
+              _store,
+              perLb: _perLb,
+              showMacros: false,
+              showExpenditure: false,
+            ),
+          ],
+        )
+      else
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-          child: Text(
-            'After a few weeks of weigh-ins and logging, Adaptive follows '
-            'what you actually burn: switch in Settings, or here when you '
-            'edit the plan.',
-            style: Theme.of(context).textTheme.bodySmall,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: TargetModeFields(
+            _store,
+            perLb: _perLb,
+            showMacros: false,
+            showExpenditure: false,
           ),
         ),
-      Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: TargetModeFields(
-          _store,
-          perLb: _perLb,
-          showMacros: false,
-          showExpenditure: false,
-        ),
-      ),
-      ExpenditureGroups.checkIn(store: _store),
+      // Check-ins come after a week of use.
+      if (!_setup.onboarding) ExpenditureGroups.checkIn(store: _store),
     ];
   }
 
@@ -1678,6 +1711,32 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
                         style: theme.textTheme.bodySmall,
                       ),
                     ),
+            ),
+          // The rows are the pace's figures, which a check-in kept or
+          // typed over leaves; the target Home uses is said beside them.
+          if (settings.adaptiveTarget && !settings.fixedTarget)
+            FutureBuilder<CheckInRecord?>(
+              future: _lastCheckIn,
+              builder: (context, last) {
+                final kept = last.data?.acceptedKcal;
+                if (kept == null ||
+                    energyValue(context, kept) ==
+                        energyValue(context, _kcalAt(_draft.signedPace))) {
+                  return const SizedBox.shrink();
+                }
+                return Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: Text(
+                    key: const ValueKey('goal-plan-target-now'),
+                    'Your target now is ${energyText(context, kept)}'
+                    '${settings.activityMode == ActivityMode.daily ? ' before activity' : ''}, '
+                    'from your last check-in. The figures above are what '
+                    'the pace works out to; each check-in proposes one '
+                    'again.',
+                    style: theme.textTheme.bodySmall,
+                  ),
+                );
+              },
             ),
         ],
       ),

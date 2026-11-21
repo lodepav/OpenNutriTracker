@@ -77,6 +77,7 @@ import 'package:opennutritracker/fork/display/settings_tile.dart'
     show settingsRowsDropIcons;
 import 'package:opennutritracker/fork/units/energy_text.dart';
 import 'package:opennutritracker/core/domain/entity/config_entity.dart';
+import 'package:opennutritracker/core/domain/entity/tracked_day_entity.dart';
 import 'package:opennutritracker/core/domain/usecase/get_config_usecase.dart';
 import 'package:opennutritracker/fork/brand/openbite_logo.dart';
 import 'package:opennutritracker/fork/settings/settings_index.dart';
@@ -164,6 +165,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   /// What Goals & nutrition shows under its rows (H6); null until read.
   ConfigEntity? _goalsConfig;
   bool _hasCheckIn = false;
+  String? _nutrientGoals;
 
   /// Null when the stored name is unrecognised — see #753.
   AiProvider? _aiProvider;
@@ -560,10 +562,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (!locator.isRegistered<GetConfigUsecase>()) return; // widget tests
     final config = await locator<GetConfigUsecase>().getConfig();
     final checkIn = await AdaptiveStore().lastCheckIn();
+    final today = await _settingsBloc.getTodayTrackedDay(
+      await _settingsBloc.getCurrentLogicalDay(),
+    );
     if (mounted) {
       setState(() {
         _goalsConfig = config;
         _hasCheckIn = checkIn != null;
+        _nutrientGoals = nutrientGoalsText(today);
       });
     }
   }

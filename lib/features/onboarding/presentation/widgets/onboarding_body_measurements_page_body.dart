@@ -588,6 +588,10 @@ class _OnboardingBodyMeasurementsPageBodyState
                         errorText: _showHeightError && _parsedHeight == null
                             ? S.of(context).onboardingWrongHeightLabel
                             : null,
+                        // [fork] S367 onboarding-body-errors: inches over 11
+                        // get their own range line
+                        onInchesOver: (over) => _forkInchesOver = over,
+                        // [/fork]
                         onChangedCm: (cm) {
                           setState(() => _parsedHeight = cm);
                           checkCorrectInput();
@@ -637,10 +641,14 @@ class _OnboardingBodyMeasurementsPageBodyState
                   ),
             // [fork] S367 onboarding-body-errors: the range a refused value is
             // held to, in the unit shown, under upstream's message
-            // shortcut: an unfinished ft/in or st/lb pair gets the range too, as
-            // the page sees only null; upgrade when FeetInchesInput says which
+            // shortcut: a half-typed ft/in or st/lb pair gets the range too, as
+            // the page sees only null; upgrade when the inputs say a half is missing
             if (_showHeightError && _parsedHeight == null)
-              _forkRangeLine(heightRangeText(imperial: _isHeightImperial)),
+              _forkRangeLine(
+                _isHeightImperial && _forkInchesOver
+                    ? 'Inches 0 to 11'
+                    : heightRangeText(imperial: _isHeightImperial),
+              ),
             // [/fork]
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 8.0),
@@ -650,6 +658,9 @@ class _OnboardingBodyMeasurementsPageBodyState
                 onPressed: (int index) {
                   setState(() {
                     _isHeightImperial = index == 1;
+                    // [fork] S367: a new pair starts empty
+                    _forkInchesOver = false;
+                    // [/fork]
                     // Metric is a single field; when returning to it from
                     // ft/in, rewrite the displayed cm text from the live
                     // parsed value rather than leaving whatever was typed
@@ -978,6 +989,8 @@ class _OnboardingBodyMeasurementsPageBodyState
   }
 
   // [fork] S367 onboarding-body-errors: the range lines and what they read
+  bool _forkInchesOver = false;
+
   bool get _forkTargetRefused =>
       _showTargetError &&
       (_isWeightSt

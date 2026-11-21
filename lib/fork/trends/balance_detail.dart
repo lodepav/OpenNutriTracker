@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:opennutritracker/core/domain/entity/body_weight_unit_entity.dart';
 import 'package:opennutritracker/fork/display/contrast.dart';
 import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
@@ -136,7 +137,8 @@ class _WeightTiles extends StatelessWidget {
           unit: label,
           note:
               'the average day over ${days(dates.length)}, at '
-              '${energyValue(context, 7700)} ${energyUnit(context)} a kg',
+              '${energyText(context, kcalPerWeightUnit(7700, wu))} a '
+              '${wu == BodyWeightUnit.kg ? 'kg' : 'lb'}',
         ),
         FigureTile(
           label: 'Trend weight',

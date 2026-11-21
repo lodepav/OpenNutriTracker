@@ -111,7 +111,6 @@ class _OnboardingGoalPageBodyState extends State<OnboardingGoalPageBody> {
       spacing: Dimens.spacing8,
       runSpacing: Dimens.spacing4,
       children: [
-        // [/fork]
         Semantics(
           identifier: 'onboarding-goal-${_identifierSuffix[goal]}',
           child: ChoiceChip(
@@ -189,6 +188,9 @@ class _OnboardingGoalPageBodyState extends State<OnboardingGoalPageBody> {
   }
 
   void _onSelected(UserGoalSelectionEntity goal) {
+    // [fork] S88 onboarding-goal: a goal against the plan clears it
+    OnboardingGoal.picked(goal);
+    // [/fork]
     setState(() => _selected = goal);
     widget.setButtonContent(true, goal);
   }

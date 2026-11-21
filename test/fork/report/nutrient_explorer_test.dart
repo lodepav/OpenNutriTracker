@@ -207,8 +207,9 @@ void main() {
 
     expect(find.text('Fibre by food'), findsOneWidget);
     expect(find.text('Lentils'), findsOneWidget);
-    expect(find.text('16 g fibre'), findsOneWidget);
-    expect(find.text('52%'), findsOneWidget);
+    // 16 g over the 2 days logged, as the explorer's 16 g a day is.
+    expect(find.text('8.0 g a day · 52% of the fibre logged'), findsOneWidget);
+    expect(find.text('7.5 g a day · 48% of the fibre logged'), findsOneWidget);
     expect(find.text('Oct 17 – Oct 23 · 7 days, 2 logged'), findsOneWidget);
   });
 
@@ -331,6 +332,22 @@ void main() {
     expect(node.value, isEmpty);
     expect(node.label, startsWith('Energy'));
     semantics.dispose();
+  });
+
+  testWidgets('salt is named as on Nutrient goals; a row with foods shows '
+      'it opens', (tester) async {
+    tester.view.physicalSize = const Size(1080, 7020);
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(explorer(_intakes));
+    await tester.pumpAndSettle();
+    expect(find.text('Salt (from sodium)'), findsOneWidget);
+    Finder chevron(String nutrient) => find.descendant(
+      of: find.byKey(ValueKey('nutrient-$nutrient')),
+      matching: find.byIcon(Icons.chevron_right_rounded),
+    );
+    expect(chevron('Fibre'), findsOneWidget);
+    // No food gave salt, so its row opens nothing.
+    expect(chevron('Salt'), findsNothing);
   });
 
   testWidgets('a food that gave none of a nutrient is not listed', (

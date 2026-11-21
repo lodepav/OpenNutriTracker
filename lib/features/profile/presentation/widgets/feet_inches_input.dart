@@ -21,6 +21,11 @@ class FeetInchesInput extends StatefulWidget {
   /// quiet until the user leaves the field.
   final String? errorText;
 
+  // [fork] S369 feet-inches-entry: told whether the inches are over 11, so
+  // the caller can name them
+  final ValueChanged<bool>? onInchesOver;
+  // [/fork]
+
   const FeetInchesInput({
     super.key,
     required this.initialCm,
@@ -28,6 +33,7 @@ class FeetInchesInput extends StatefulWidget {
     required this.identifierPrefix,
     this.autofocus = false,
     this.errorText,
+    this.onInchesOver, // [fork] S369
   });
 
   @override
@@ -62,7 +68,9 @@ class _FeetInchesInputState extends State<FeetInchesInput> {
     final feet = int.tryParse(_feetController.text.trim());
     final inches = double.tryParse(_inchesController.text.trim());
     // [fork] S369 feet-inches-entry: 12 in or more is a typo, not a height
-    if (inches != null && inches > 11) {
+    final over = inches != null && inches > 11;
+    widget.onInchesOver?.call(over);
+    if (over) {
       widget.onChangedCm(null);
       return;
     }

@@ -10,6 +10,9 @@ import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
+import 'package:opennutritracker/core/presentation/widgets/image_full_screen.dart';
+import 'package:opennutritracker/core/utils/navigation_options.dart';
+import 'package:opennutritracker/fork/display/sized_file_image.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dart';
 import 'package:opennutritracker/features/meal_detail/presentation/widgets/meal_detail_nutriments_table.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
@@ -114,8 +117,38 @@ class FoodPageHeader extends StatelessWidget {
     final theme = Theme.of(context);
     final palette = paletteOf(context);
     final photo = meal.mainImageUrl ?? meal.thumbnailImageUrl;
+    final local = meal.localImagePath;
     final Widget thumb;
-    if (photo != null && photo.isNotEmpty) {
+    // The user's own photo first, as the Diary rows show it.
+    if (local != null && local.isNotEmpty) {
+      thumb = Semantics(
+        button: true,
+        label: 'Photo of ${meal.name ?? 'the food'}',
+        child: InkWell(
+          // The screen's tap opens the network photo, so this one opens
+          // the file itself.
+          onTap: () => Navigator.of(context).pushNamed(
+            NavigationOptions.imageFullScreenRoute,
+            arguments: ImageFullScreenArguments(
+              photo ?? '',
+              localImagePath: local,
+            ),
+          ),
+          borderRadius: Dimens.borderRadiusM,
+          child: ClipRRect(
+            borderRadius: Dimens.borderRadiusM,
+            child: SizedBox.square(
+              dimension: 56,
+              child: SizedFileImage(
+                relativePath: local,
+                size: 56,
+                fallback: (context) => _kind(context, palette),
+              ),
+            ),
+          ),
+        ),
+      );
+    } else if (photo != null && photo.isNotEmpty) {
       thumb = Semantics(
         button: true,
         label: 'Photo of ${meal.name ?? 'the food'}',

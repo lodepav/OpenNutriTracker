@@ -11,9 +11,11 @@ import 'package:opennutritracker/fork/units/energy_text.dart';
 import 'package:opennutritracker/fork/units/weight_text.dart';
 
 /// What moved the target from [before] to [now], in parts that add up to
-/// the change: the estimate, the counted activity, the user's edits, and
-/// the rest, which the goal's pace or the plan made (its energy is not
-/// stored). Null when either record is older than its goal and basis.
+/// the change: the estimate, the counted activity, the figure set at
+/// [before] in place of its proposal no longer applying, the one set at
+/// [now], and the rest, which the goal's pace or the plan made (its energy
+/// is not stored). Null when either record is older than its goal and
+/// basis.
 List<({String label, double kcal})>? checkInChangeParts(
   CheckInRecord before,
   CheckInRecord now,
@@ -29,14 +31,20 @@ List<({String label, double kcal})>? checkInChangeParts(
     return by.abs() >= 1 ? by : 0;
   }
 
-  final edited = edit(now) - edit(before);
+  // The proposal is built afresh, so last time's own figure drops out.
+  final earlier = -edit(before);
+  final edited = edit(now);
+  // shortcut: a Keep that adds the day's activity reads as an edit, the
+  // record has no flag for it; store one if that misleads.
+  final kept = edited != 0 && total.abs() < 1;
   return [
     (label: 'Your estimate moved', kcal: estimate),
     (label: 'Counted activity', kcal: activity),
-    (label: 'You edited it', kcal: edited),
+    (label: "Last time's change to the proposal ends", kcal: earlier),
+    (label: kept ? 'You kept the last target' : 'You edited it', kcal: edited),
     (
       label: "Goal's pace or the plan",
-      kcal: total - estimate - activity - edited,
+      kcal: total - estimate - activity - earlier - edited,
     ),
   ];
 }
@@ -97,8 +105,7 @@ class CheckInHistoryScreen extends StatelessWidget {
       ),
       subtitle: Text(
         [
-          DateFormat(
-            'd MMM yyyy',
+          DateFormat.yMMMd(
             Localizations.localeOf(context).toLanguageTag(),
           ).format(r.date),
           'expenditure ${energyText(context, r.expenditureKcal)}',
@@ -157,12 +164,14 @@ Future<BodyWeightUnit> _weightUnit() async {
   return (await locator<GetConfigUsecase>().getConfig()).bodyWeightUnit;
 }
 
-/// [kgPerWeek] signed, to the quarter kilo a pace is set in.
+/// [kgPerWeek] signed with a true minus, never "−0.0", to the quarter
+/// kilo a pace is set in.
 String _pace(double kgPerWeek, BodyWeightUnit unit) {
   final v = unit == BodyWeightUnit.kg ? kgPerWeek : kgPerWeek * 2.20462;
-  final text = v.toStringAsFixed(2);
-  final trimmed = text.endsWith('0') ? v.toStringAsFixed(1) : text;
-  return '${v > 0 ? '+' : ''}$trimmed';
+  final text = v.abs().toStringAsFixed(2);
+  final trimmed = text.endsWith('0') ? v.abs().toStringAsFixed(1) : text;
+  if (double.parse(trimmed) == 0) return trimmed;
+  return '${v > 0 ? '+' : '\u2212'}$trimmed';
 }
 
 Future<void> _showParts(
@@ -215,7 +224,7 @@ Future<void> _showParts(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
-                'Why it moved from ${DateFormat('d MMM', Localizations.localeOf(context).toLanguageTag()).format(before.date)}',
+                'Why it moved from ${DateFormat.MMMd(Localizations.localeOf(context).toLanguageTag()).format(before.date)}',
                 style: text.titleMedium,
               ),
               for (final p in parts)

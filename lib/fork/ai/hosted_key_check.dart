@@ -25,7 +25,8 @@ enum HostedKeyVerdict {
 class HostedKeyResult {
   final HostedKeyVerdict verdict;
 
-  /// The provider's own words for a refusal, or a plain fallback.
+  /// For a refusal: the app's sentence naming the next step, then the
+  /// provider's own words, if it gave any, on a line of their own.
   final String? message;
 
   const HostedKeyResult(this.verdict, [this.message]);
@@ -77,10 +78,26 @@ Future<HostedKeyResult> checkHostedKey(
   if (response.statusCode == 401) {
     return HostedKeyResult(
       HostedKeyVerdict.refused,
-      _providerMessage(response.body) ?? 'The provider refused this key',
+      _refusedKeyMessage(provider, _providerMessage(response.body)),
     );
   }
   return const HostedKeyResult(HostedKeyVerdict.unchecked);
+}
+
+/// A refusal in the app's words: the provider's own ("Missing
+/// Authentication header") read as an app bug and gave no next step.
+String _refusedKeyMessage(AiProvider provider, String? providerSaid) {
+  final name = switch (provider) {
+    AiProvider.anthropic => 'Anthropic',
+    AiProvider.openai => 'OpenAI',
+    AiProvider.openrouter => 'OpenRouter',
+    // Never asked: its request is not built (hostedKeyCheckRequest)
+    AiProvider.ownServer => throw ArgumentError.value(provider, 'provider'),
+  };
+  final lead =
+      "$name didn't accept this key. It was not saved. "
+      'Check it on your $name keys page.';
+  return providerSaid == null ? lead : '$lead\n$name said: $providerSaid';
 }
 
 /// `error.message` in the shape all three providers answer a refusal with.

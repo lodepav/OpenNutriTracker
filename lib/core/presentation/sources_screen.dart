@@ -29,9 +29,16 @@ class SourcesScreen extends StatelessWidget {
         sources: const [
           _SourceLink(
             citation:
+                // [fork] S416 sources-cited-once: the chapter the inline
+                // "Source:" gave, which the card no longer prints
+                // 'Institute of Medicine (2005). Dietary Reference Intakes for '
+                // 'Energy, Carbohydrate, Fiber, Fat, Fatty Acids, Cholesterol, '
+                // 'Protein, and Amino Acids. National Academies Press.',
                 'Institute of Medicine (2005). Dietary Reference Intakes for '
                 'Energy, Carbohydrate, Fiber, Fat, Fatty Acids, Cholesterol, '
-                'Protein, and Amino Acids. National Academies Press.',
+                'Protein, and Amino Acids, Chapter 5 and Table 5-5. National '
+                'Academies Press.',
+                // [/fork]
             url: URLConst.sourceEnergyIomDriURL,
           ),
         ],
@@ -136,6 +143,50 @@ class SourcesScreen extends StatelessWidget {
           ),
         ],
       ),
+      // [fork] S415 sources-own-method: the numbers Home shows first, which
+      // no single paper gives; what each step rests on is cited
+      const _SourceEntry(
+        title: 'Expenditure and weight trend',
+        description:
+            "The expenditure and weight trend are the app's own method, "
+            'built on the structure MacroFactor describes. Weigh-ins are '
+            'filled in day by day and smoothed into a trend, as in The '
+            "Hacker's Diet. Expenditure starts from the Institute of Medicine "
+            'estimate above, then follows what you logged less the energy '
+            "stored in the trend's change over 20 days: about 9,400 kcal a kg "
+            "of fat and 1,800 of lean, the fat share by Forbes's rule as Hall "
+            '(2008) applies it, with body fat from your latest measurement or '
+            'else estimated from BMI (Deurenberg 1991). How fast it follows a '
+            "change is the app's own choice, tested in simulation; no paper "
+            'covers it. '
+            'Settings → Goals & nutrition → How your goal is calculated shows '
+            'each step with your numbers.',
+        sources: [
+          _SourceLink(
+            citation: 'MacroFactor. Expenditure. MacroFactor help centre.',
+            url: 'https://help.macrofactorapp.com/en/articles/20-expenditure',
+          ),
+          _SourceLink(
+            citation: "Walker J. The Hacker's Diet. Fourmilab.",
+            url:
+                'https://fourmilab.ch/hackdiet/www/subsubsection1_2_4_0_4_4.html',
+          ),
+          _SourceLink(
+            citation:
+                'Hall KD (2008). What is the required energy deficit per unit '
+                'weight loss? International Journal of Obesity.',
+            url: 'https://pubmed.ncbi.nlm.nih.gov/17848938/',
+          ),
+          _SourceLink(
+            citation:
+                'Deurenberg P, Weststrate JA, Seidell JC (1991). Body mass '
+                'index as a measure of body fatness: age- and sex-specific '
+                'prediction formulas. British Journal of Nutrition.',
+            url: 'https://pubmed.ncbi.nlm.nih.gov/2043597',
+          ),
+        ],
+      ),
+      // [/fork]
     ];
 
     return Scaffold(
@@ -149,8 +200,14 @@ class SourcesScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+          // The intro claims only what is listed (round-3 critique)
+          // Text(
+          //   l10n.sourcesScreenIntro,
+          //   style: Theme.of(context).textTheme.bodyMedium,
+          // ),
           Text(
-            l10n.sourcesScreenIntro,
+            'The calculations below follow the sources cited under each '
+            'one, so you can check a number yourself.',
             style: Theme.of(context).textTheme.bodyMedium,
           ),
           const SizedBox(height: Dimens.spacing16),
@@ -251,10 +308,20 @@ class _SourceCard extends StatelessWidget {
             // ),
             // [/fork]
             const SizedBox(height: Dimens.spacing8),
+            // [fork] S416 sources-cited-once: the italic citation below
+            // already names it
+            // Text(
+            //   entry.description,
+            //   style: theme.textTheme.bodyMedium,
+            // ),
             Text(
-              entry.description,
+              entry.description.replaceFirst(
+                RegExp(r'\s*Source: .*$', dotAll: true),
+                '',
+              ),
               style: theme.textTheme.bodyMedium,
             ),
+            // [/fork]
             const SizedBox(height: Dimens.spacing12),
             ...entry.sources.map(
               (source) => Padding(

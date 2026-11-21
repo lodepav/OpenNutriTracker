@@ -26,12 +26,17 @@ class OnboardingAboutYouPageBody extends StatefulWidget {
   final CaloriesProfileEntity? initialCaloriesProfile;
   final DateTime? initialBirthday;
 
+  /// Set to the blocked Next's message naming the one field wrong; null
+  /// keeps the general one.
+  final ValueNotifier<String?>? blockedMessage;
+
   const OnboardingAboutYouPageBody({
     super.key,
     required this.setPageContent,
     this.initialGender,
     this.initialCaloriesProfile,
     this.initialBirthday,
+    this.blockedMessage,
   });
 
   @override
@@ -323,6 +328,12 @@ class _OnboardingAboutYouPageBodyState
   }
 
   void checkCorrectInput() {
+    // Before setPageContent, whose rebuild reads it.
+    widget.blockedMessage?.value = aboutYouBlockedMessage(
+      genderOk: _selectedGender != null,
+      birthdayOk: _selectedDate != null,
+      birthdayError: _forkBirthdayError,
+    );
     if (_selectedGender != null && _selectedDate != null) {
       widget.setPageContent(
         true,
