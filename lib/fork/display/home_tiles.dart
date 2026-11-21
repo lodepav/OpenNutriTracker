@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:opennutritracker/core/domain/entity/body_weight_unit_entity.dart';
@@ -14,6 +16,7 @@ import 'package:opennutritracker/fork/display/display_prefs.dart';
 import 'package:opennutritracker/fork/display/home_trend_tiles.dart';
 import 'package:opennutritracker/fork/layout/home_layout.dart';
 import 'package:opennutritracker/fork/layout/layout_store.dart';
+import 'package:opennutritracker/fork/screens/home/home_loads.dart';
 import 'package:opennutritracker/features/home/presentation/widgets/log_water_dialog.dart';
 import 'package:opennutritracker/features/home/presentation/widgets/quick_weight_widget.dart';
 import 'package:opennutritracker/fork/screens/trends/trends_page.dart'
@@ -101,6 +104,7 @@ class HomeTiles extends StatelessWidget {
         ),
         'expenditure': ExpenditureTile(
           load: loadExpenditure,
+          homeLoads: homeLoads,
           onTap: () => openTrend(context, TrendMetric.expenditure),
         ),
         if (DisplayPrefs.showWater.value)
@@ -266,14 +270,41 @@ class ExpenditureTile extends StatefulWidget {
   final Future<List<ExpenditureDay>> Function() load;
   final VoidCallback? onTap;
 
-  const ExpenditureTile({super.key, required this.load, this.onTap});
+  /// Home's loads, for tests; the app's from the HomeBloc.
+  final Stream<Object?>? homeLoads;
+
+  const ExpenditureTile({
+    super.key,
+    required this.load,
+    this.onTap,
+    this.homeLoads,
+  });
 
   @override
   State<ExpenditureTile> createState() => _ExpenditureTileState();
 }
 
 class _ExpenditureTileState extends State<ExpenditureTile> {
-  late final _days = widget.load();
+  late var _days = widget.load();
+
+  // A weigh-in or a past day edited in the Diary reaches Home as a load.
+  late final StreamSubscription<Object?> _homeLoads;
+
+  @override
+  void initState() {
+    super.initState();
+    _homeLoads = (widget.homeLoads ?? homeLoads()).listen(
+      (_) => setState(() {
+        _days = widget.load()..ignore();
+      }),
+    );
+  }
+
+  @override
+  void dispose() {
+    _homeLoads.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) => FutureBuilder<List<ExpenditureDay>>(
