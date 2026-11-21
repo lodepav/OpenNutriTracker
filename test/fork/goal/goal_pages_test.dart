@@ -1059,15 +1059,28 @@ void main() {
     await tester.tap(find.text('Done'));
     await tester.pumpAndSettle();
     await _change(tester, 'pace');
-    // Seven weeks begun, then from 84 kg at 0.5 a week: 8 more, from
+    // Unchanged, the plan as saved.
+    await tester.scrollUntilVisible(
+      find.text('13 weeks'),
+      100,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.textContaining('Jan 3, 2027'), findsWidgets);
+    // Seven weeks begun, then from 84 kg at 0.75 a week: 5 more, from
     // the start kept.
     await tester.scrollUntilVisible(
-      find.text('15 weeks'),
+      find.textContaining('Fast ·'),
+      -100,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.textContaining('Fast ·'));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('12 weeks'),
       100,
       scrollable: find.byType(Scrollable).first,
     );
     expect(find.textContaining('Oct 5'), findsOneWidget);
-    expect(find.textContaining('Jan 17, 2027'), findsWidgets);
   });
 
   group('a goal edited opens on its plan', () {
@@ -1142,10 +1155,12 @@ void main() {
     });
 
     testWidgets('system Back in a detour returns to the plan; on the plan it '
-        'asks to leave', (tester) async {
+        'asks to leave once something changed', (tester) async {
       await _pump(tester, editing());
-      await _change(tester, 'target');
-      expect(find.text('Your plan › Calorie target'), findsOneWidget);
+      await _change(tester, 'pace');
+      expect(find.text('Your plan › Pace'), findsOneWidget);
+      await tester.tap(find.textContaining('Fast ·'));
+      await tester.pumpAndSettle();
       await tester.binding.handlePopRoute();
       await tester.pumpAndSettle();
       expect(find.text('Your plan'), findsOneWidget);

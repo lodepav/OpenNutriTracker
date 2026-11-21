@@ -76,6 +76,9 @@ class _DiaryDayBoundaryDialogState extends State<DiaryDayBoundaryDialog> {
   Widget build(BuildContext context) {
     final s = S.of(context);
     return AlertDialog(
+      // [fork] S347 day-start-quarters: the chips' row needs room at 200%
+      scrollable: true,
+      // [/fork]
       title: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -107,8 +110,84 @@ class _DiaryDayBoundaryDialogState extends State<DiaryDayBoundaryDialog> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // [fork] S347 day-start-quarters: 60 minute steps on a slider
+                // half a dialog wide could not be hit, so the minutes are
+                // quarter-hour chips; upstream's description and row:
+                // Text(
+                //   s.settingsDayStartDescription,
+                //   style: Theme.of(context).textTheme.bodySmall,
+                // ),
+                // const SizedBox(height: 16),
+                // Row(
+                //   crossAxisAlignment: CrossAxisAlignment.start,
+                //   children: [
+                //     Expanded(
+                //       child: Semantics(
+                //         identifier: 'day-boundary-hours-slider',
+                //         child: Column(
+                //           crossAxisAlignment: CrossAxisAlignment.start,
+                //           children: [
+                //             Text(
+                //               s.settingsDayStartHoursPickerLabel,
+                //               style: Theme.of(context).textTheme.bodySmall,
+                //             ),
+                //             Slider(
+                //               min: 0,
+                //               max: 23,
+                //               divisions: 23,
+                //               value: _hours.toDouble(),
+                //               label: '$_hours',
+                //               semanticFormatterCallback: (v) =>
+                //                   '${v.round()} ${s.hourShortLabel}',
+                //               onChanged: (v) =>
+                //                   setState(() => _hours = v.round()),
+                //             ),
+                //           ],
+                //         ),
+                //       ),
+                //     ),
+                //     const SizedBox(width: 8),
+                //     Expanded(
+                //       child: Semantics(
+                //         identifier: 'day-boundary-minutes-slider',
+                //         child: Column(
+                //           crossAxisAlignment: CrossAxisAlignment.start,
+                //           children: [
+                //             Text(
+                //               s.settingsDayStartMinutesPickerLabel,
+                //               style: Theme.of(context).textTheme.bodySmall,
+                //             ),
+                //             Slider(
+                //               min: 0,
+                //               max: 59,
+                //               divisions: 59,
+                //               value: _minutes.toDouble(),
+                //               label: _minutes.toString().padLeft(2, '0'),
+                //               semanticFormatterCallback: (v) =>
+                //                   '${v.round()} ${s.minuteShortLabel}',
+                //               onChanged: (v) =>
+                //                   setState(() => _minutes = v.round()),
+                //             ),
+                //           ],
+                //         ),
+                //       ),
+                //     ),
+                //     SizedBox(
+                //       width: 64,
+                //       child: Text(
+                //         s.settingsDayStartTimeLabel(
+                //           _hours,
+                //           _minutes.toString().padLeft(2, '0'),
+                //         ),
+                //         textAlign: TextAlign.right,
+                //       ),
+                //     ),
+                //   ],
+                // ),
                 Text(
-                  s.settingsDayStartDescription,
+                  'Choose the time your day begins. Meals and activities '
+                  'logged before it count toward the previous day: useful '
+                  'if you work nights or eat late.',
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
                 const SizedBox(height: 16),
@@ -141,43 +220,42 @@ class _DiaryDayBoundaryDialogState extends State<DiaryDayBoundaryDialog> {
                       ),
                     ),
                     const SizedBox(width: 8),
-                    Expanded(
-                      child: Semantics(
-                        identifier: 'day-boundary-minutes-slider',
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              s.settingsDayStartMinutesPickerLabel,
-                              style: Theme.of(context).textTheme.bodySmall,
-                            ),
-                            Slider(
-                              min: 0,
-                              max: 59,
-                              divisions: 59,
-                              value: _minutes.toDouble(),
-                              label: _minutes.toString().padLeft(2, '0'),
-                              semanticFormatterCallback: (v) =>
-                                  '${v.round()} ${s.minuteShortLabel}',
-                              onChanged: (v) =>
-                                  setState(() => _minutes = v.round()),
-                            ),
-                          ],
-                        ),
+                    Text(
+                      s.settingsDayStartTimeLabel(
+                        _hours,
+                        _minutes.toString().padLeft(2, '0'),
                       ),
-                    ),
-                    SizedBox(
-                      width: 64,
-                      child: Text(
-                        s.settingsDayStartTimeLabel(
-                          _hours,
-                          _minutes.toString().padLeft(2, '0'),
-                        ),
-                        textAlign: TextAlign.right,
-                      ),
+                      textAlign: TextAlign.right,
                     ),
                   ],
                 ),
+                const SizedBox(height: 8),
+                Text(
+                  s.settingsDayStartMinutesPickerLabel,
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                const SizedBox(height: 4),
+                // A minute stored before the chips (say 37) stays until one
+                // is picked, so OK alone does not move foods across days.
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 4,
+                  children: [
+                    for (final m in const [0, 15, 30, 45])
+                      Semantics(
+                        identifier: 'day-boundary-minutes-$m',
+                        child: ChoiceChip(
+                          label: Text(
+                            m.toString().padLeft(2, '0'),
+                            semanticsLabel: '$m ${s.minuteShortLabel}',
+                          ),
+                          selected: _minutes == m,
+                          onSelected: (_) => setState(() => _minutes = m),
+                        ),
+                      ),
+                  ],
+                ),
+                // [/fork]
               ],
             ),
       actions: [

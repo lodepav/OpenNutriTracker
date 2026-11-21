@@ -316,6 +316,7 @@ class _GoalDialog extends StatefulWidget {
 
 class _GoalDialogState extends State<_GoalDialog> {
   late final _field = TextEditingController(text: '${widget.goal}');
+  String? _error;
 
   @override
   void dispose() {
@@ -333,7 +334,10 @@ class _GoalDialogState extends State<_GoalDialog> {
       autofocus: true,
       keyboardType: TextInputType.number,
       inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-      decoration: const InputDecoration(suffixText: 'steps'),
+      decoration: InputDecoration(suffixText: 'steps', errorText: _error),
+      onChanged: (_) {
+        if (_error != null) setState(() => _error = null);
+      },
     ),
     actions: [
       TextButton(
@@ -345,6 +349,8 @@ class _GoalDialogState extends State<_GoalDialog> {
           final steps = int.tryParse(_field.text);
           if (steps != null && steps > 0 && steps <= 100000) {
             Navigator.pop(context, steps);
+          } else {
+            setState(() => _error = 'Enter 1 to 100,000 steps');
           }
         },
         child: const Text('Save'),

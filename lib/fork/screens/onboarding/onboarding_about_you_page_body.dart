@@ -11,6 +11,7 @@ import 'package:opennutritracker/core/utils/bounds/validator.dart';
 import 'package:opennutritracker/features/onboarding/domain/entity/user_gender_selection_entity.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 import 'package:opennutritracker/fork/onboarding/birthday_input.dart';
+import 'package:opennutritracker/fork/screens/onboarding/onboarding_limits.dart';
 
 class OnboardingAboutYouPageBody extends StatefulWidget {
   final Function(
@@ -214,7 +215,7 @@ class _OnboardingAboutYouPageBodyState
               decoration: InputDecoration(
                 hintText: _forkBirthday.hint,
                 labelText: S.of(context).onboardingEnterBirthdayLabel,
-                errorText: _forkBirthdayBad ? 'Not a date in range' : null,
+                errorText: _forkBirthdayError,
                 prefixIcon: IconButton(
                   icon: const Icon(Icons.calendar_month_outlined),
                   tooltip: 'Pick from a calendar',
@@ -283,20 +284,16 @@ class _OnboardingAboutYouPageBodyState
 
   BirthdayFormat get _forkBirthday =>
       BirthdayFormat.of(MaterialLocalizations.of(context));
-  bool _forkBirthdayBad = false;
+  String? _forkBirthdayError;
 
   /// A complete date in the picker's range is the birthday; anything else
   /// is none yet, and a complete one that is not says so.
   void _forkBirthdayTyped(String text) {
     final date = _forkBirthday.parse(text);
-    final ok =
-        date != null &&
-        !date.isBefore(ValueValidator.getFirstDate()) &&
-        !date.isAfter(ValueValidator.getLastDate());
+    final error = birthdayError(text, _forkBirthday);
     setState(() {
-      _forkBirthdayBad =
-          !ok && text.replaceAll(RegExp(r'[^0-9]'), '').length == 8;
-      _selectedDate = ok ? date : null;
+      _forkBirthdayError = error;
+      _selectedDate = date != null && error == null ? date : null;
       checkCorrectInput();
     });
   }
@@ -318,7 +315,7 @@ class _OnboardingAboutYouPageBodyState
     if (pickedDate == null || !mounted) return;
     final formattedDate = _forkBirthday.write(pickedDate);
     setState(() {
-      _forkBirthdayBad = false;
+      _forkBirthdayError = null;
       _selectedDate = pickedDate;
       _dateInput.text = formattedDate;
       checkCorrectInput();

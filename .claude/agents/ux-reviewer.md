@@ -27,7 +27,9 @@ The header of `fork/tools/ux-drive.sh` lists its helpers; `tools/adb/adb-driver.
 - Use `look NAME` to see a screen: it waits for the app to stop drawing, then takes the screenshot and the labels together, from a new dump. `tap_id X; look x` is a whole step.
 - `tap_sub`, `labels` and `nodes` reuse the last dump until something could have changed the screen (see the script's header), so don't dump again by hand. If the screen changes by itself, a load finishing, `look` again.
 - Don't sleep after a tap: `shot` and `look` wait, and a new dump takes long enough to see the new screen. Sleep only for something slow that you can name: a network result, or another app's screen such as the system file picker, which `settle` can't watch.
-- `press_back` closes one layer at a time, and on the main screen it leaves the app: check `id_exists nav-home` before pressing it again.
+- Use `back` to close one layer: it refuses on the main screen, where Back would leave the app and the next launch reseeds the demo data, wiping what you added. To undo your test data on purpose, `reseed`.
+- Take the 200% and dark views on the first visit with `states NAME` (three screenshots, back to 1.0 light after). The page stays open while font and theme change, so never walk the pages a second time for them. A long page at 200% may need one more swipe and `shot`.
+- Each turn costs about 3 s before any device wait, so batch: Read the new screenshots in the same message as the next drive call when it doesn't depend on them, and fire a snackbar and tap its Undo in one call. Flip 3-button navigation before you add test data: it relaunches the app.
 
 - Bottom navigation ids: `nav-home`, `nav-diary`, `nav-trends`, `nav-you`; the add button is `fab-add-item`. Settings is the `profile-settings` row under "App" at the bottom of the You tab; it opens a page of sections (Goals & nutrition, Units, Reminders, Food databases, Data, Appearance, About).
 - Look at every screenshot you take with Read. A screenshot is 1080×2340; 48 dp is 126 px.

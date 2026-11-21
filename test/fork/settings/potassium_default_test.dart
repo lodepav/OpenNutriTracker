@@ -15,11 +15,11 @@ import 'package:opennutritracker/features/home/presentation/bloc/home_bloc.dart'
 import 'package:opennutritracker/features/profile/presentation/bloc/profile_bloc.dart';
 import 'package:opennutritracker/features/settings/presentation/bloc/settings_bloc.dart';
 import 'package:opennutritracker/features/settings/presentation/widgets/nutrient_goals_screen.dart';
+import 'package:opennutritracker/fork/report/nutrient_order.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 
 class _FakeSettingsBloc extends Fake implements SettingsBloc {
   TrackedDayEntity? today;
-
 
   @override
   Future<TrackedDayEntity?> getTodayTrackedDay(DateTime day) async => today;
@@ -183,5 +183,28 @@ void main() {
 
     expect(_potassiumText(tester), '3400');
     expect(_potassiumSlider(tester), 3400);
+  });
+
+  testWidgets('the rows run in the overview\'s and Nutrients list\'s order', (
+    tester,
+  ) async {
+    await _open(tester, user: _user(40, UserGenderEntity.male));
+
+    final ids = [
+      for (final key in nutrientOrder)
+        switch (key) {
+          NutrientPanelKeys.fiber => 'fibre',
+          NutrientPanelKeys.saturatedFat => 'sat-fat',
+          NutrientPanelKeys.sugar => 'sugars',
+          NutrientPanelKeys.vitaminD => 'vitamin-d',
+          NutrientPanelKeys.vitaminB12 => 'vitamin-b12',
+          _ => key,
+        },
+    ];
+    final tops = [
+      for (final id in ids)
+        tester.getTopLeft(find.bySemanticsIdentifier('nutrient-$id-slider')).dy,
+    ];
+    expect(tops, [...tops]..sort());
   });
 }

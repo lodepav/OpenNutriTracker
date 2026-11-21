@@ -29,6 +29,8 @@ Future<List<int>?> _pickWithImagePicker(ImageSource source) async {
   return picked?.readAsBytes();
 }
 
+const _thumbWidth = 96.0;
+
 /// A photo with its image file.
 typedef ShownPhoto = ({ProgressPhoto photo, File file});
 
@@ -195,19 +197,22 @@ class _ProgressPhotosCardState extends State<ProgressPhotosCard> {
 
   Widget _card(BuildContext context, List<ShownPhoto> photos) {
     final theme = Theme.of(context);
-    // The strip as tall as a photo and its date at the user's font: a
-    // fixed height cut the date at large text.
-    final dateLine = TextPainter(
-      text: TextSpan(
-        text: photos.isEmpty ? '' : _date(context, photos.first.photo.date),
-        style: theme.textTheme.labelSmall,
-      ),
-      textScaler: MediaQuery.textScalerOf(context),
-      textDirection: Directionality.of(context),
-      maxLines: 1,
-    )..layout();
-    final stripHeight = 128 + dateLine.height;
-    dateLine.dispose();
+    // The strip as tall as a photo and its tallest date, wrapped to the
+    // photo's width at the user's font: a fixed height cut it at large text.
+    var dateHeight = 0.0;
+    for (final shown in photos) {
+      final dateLine = TextPainter(
+        text: TextSpan(
+          text: _date(context, shown.photo.date),
+          style: theme.textTheme.labelSmall,
+        ),
+        textScaler: MediaQuery.textScalerOf(context),
+        textDirection: Directionality.of(context),
+      )..layout(maxWidth: _thumbWidth);
+      if (dateLine.height > dateHeight) dateHeight = dateLine.height;
+      dateLine.dispose();
+    }
+    final stripHeight = 128 + dateHeight;
     return AppCard(
       padding: const EdgeInsets.all(Dimens.spacing20),
       child: Column(
@@ -260,28 +265,33 @@ class _ProgressPhotosCardState extends State<ProgressPhotosCard> {
                   return InkWell(
                     key: ValueKey('photo-${shown.photo.id}'),
                     onTap: () => _open(shown),
-                    child: Column(
-                      children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: Image.file(
-                            shown.file,
-                            width: 96,
-                            height: 128,
-                            fit: BoxFit.cover,
-                            cacheWidth: 192,
-                            errorBuilder: (_, _, _) => const SizedBox(
-                              width: 96,
+                    // The date wraps under its photo: at 200% it ran into the next.
+                    child: SizedBox(
+                      width: _thumbWidth,
+                      child: Column(
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Image.file(
+                              shown.file,
+                              width: _thumbWidth,
                               height: 128,
-                              child: Icon(Icons.broken_image_outlined),
+                              fit: BoxFit.cover,
+                              cacheWidth: 192,
+                              errorBuilder: (_, _, _) => const SizedBox(
+                                width: _thumbWidth,
+                                height: 128,
+                                child: Icon(Icons.broken_image_outlined),
+                              ),
                             ),
                           ),
-                        ),
-                        Text(
-                          _date(context, shown.photo.date),
-                          style: theme.textTheme.labelSmall,
-                        ),
-                      ],
+                          Text(
+                            _date(context, shown.photo.date),
+                            style: theme.textTheme.labelSmall,
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
+                      ),
                     ),
                   );
                 },
@@ -468,11 +478,18 @@ class _ComparePhotosScreenState extends State<ComparePhotosScreen> {
                 semanticsLabel: 'Comparing the photos',
               ),
             Expanded(
-              child: Row(
-                children: [
-                  _side('compare-left', _left, (i) => _left = i),
-                  _side('compare-right', _right, (i) => _right = i),
-                ],
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: Dimens.spacing16,
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _side('compare-left', _left, (i) => _left = i),
+                    const SizedBox(width: Dimens.spacing12),
+                    _side('compare-right', _right, (i) => _right = i),
+                  ],
+                ),
               ),
             ),
           ],
@@ -484,11 +501,21 @@ class _ComparePhotosScreenState extends State<ComparePhotosScreen> {
   Widget _side(String key, int index, void Function(int) set) => Expanded(
     child: Column(
       children: [
-        DropdownButton<int>(
+        // Outlined, so the two pickers read as separate controls.
+        DropdownButtonFormField<int>(
           key: ValueKey(key),
           // Within its half of the page: a long date overflowed it at 200%.
           isExpanded: true,
-          value: index,
+          // Unset, a date wraps to two lines at large text instead of cutting.
+          itemHeight: null,
+          initialValue: index,
+          decoration: const InputDecoration(
+            border: OutlineInputBorder(),
+            contentPadding: EdgeInsets.symmetric(
+              horizontal: Dimens.spacing12,
+              vertical: Dimens.spacing8,
+            ),
+          ),
           items: [
             for (final (i, s) in widget.photos.indexed)
               DropdownMenuItem(
@@ -502,10 +529,11 @@ class _ComparePhotosScreenState extends State<ComparePhotosScreen> {
         ),
         Expanded(
           child: Padding(
-            padding: const EdgeInsets.all(4),
+            padding: const EdgeInsets.only(top: Dimens.spacing8),
             child: Image.file(
               widget.photos[index].file,
               fit: BoxFit.contain,
+              alignment: Alignment.topCenter,
               errorBuilder: (_, _, _) =>
                   const Center(child: Icon(Icons.broken_image_outlined)),
             ),

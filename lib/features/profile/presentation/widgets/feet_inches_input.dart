@@ -61,6 +61,12 @@ class _FeetInchesInputState extends State<FeetInchesInput> {
   void _emit() {
     final feet = int.tryParse(_feetController.text.trim());
     final inches = double.tryParse(_inchesController.text.trim());
+    // [fork] S369 feet-inches-entry: 12 in or more is a typo, not a height
+    if (inches != null && inches > 11) {
+      widget.onChangedCm(null);
+      return;
+    }
+    // [/fork]
     widget.onChangedCm(ValueValidator.parseFeetInchesHeightInCm(feet, inches));
   }
 
@@ -98,6 +104,10 @@ class _FeetInchesInputState extends State<FeetInchesInput> {
               controller: _feetController,
               autofocus: widget.autofocus,
               keyboardType: TextInputType.number,
+              // [fork] S369 feet-inches-entry: the keyboard goes on to inches,
+              // where done left the pair half typed and showed its error
+              textInputAction: TextInputAction.next,
+              // [/fork]
               inputFormatters: [FilteringTextInputFormatter.digitsOnly],
               decoration: InputDecoration(labelText: S.of(context).ftLabel),
               onChanged: (_) => _emit(),

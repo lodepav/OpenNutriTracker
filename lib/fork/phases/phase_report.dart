@@ -67,6 +67,9 @@ class PhaseReport {
 
   int get length => CalendarDayCalc.daysBetween(first, last) + 1;
 
+  /// On its first day the start and the end are one figure.
+  bool get oneDay => length == 1;
+
   double? get changeKg =>
       startKg == null || endKg == null ? null : endKg! - startKg!;
 
@@ -286,9 +289,10 @@ class _ReportCard extends StatelessWidget {
               if (r.startKg != null && r.endKg != null)
                 (
                   label: 'Trend weight',
-                  value:
-                      '${weightText(r.startKg!, unit)} → '
-                      '${weightText(r.endKg!, unit)}',
+                  value: r.oneDay
+                      ? weightText(r.endKg!, unit)
+                      : '${weightText(r.startKg!, unit)} → '
+                            '${weightText(r.endKg!, unit)}',
                 ),
               if (r.showsTrend) ...[
                 (
@@ -317,9 +321,10 @@ class _ReportCard extends StatelessWidget {
               if (r.startBurnKcal != null && r.endBurnKcal != null)
                 (
                   label: 'Expenditure',
-                  value:
-                      '${energyText(context, r.startBurnKcal!)} → '
-                      '${energyText(context, r.endBurnKcal!)}',
+                  value: r.oneDay
+                      ? energyText(context, r.endBurnKcal!)
+                      : '${energyText(context, r.startBurnKcal!)} → '
+                            '${energyText(context, r.endBurnKcal!)}',
                 ),
             ],
           ),

@@ -51,4 +51,37 @@ void main() {
     expect(find.text('fiber', skipOffstage: false), findsNothing);
     expect(find.text('sugar', skipOffstage: false), findsNothing);
   });
+
+  testWidgets('the list runs in the goals editor\'s order', (tester) async {
+    tester.view.physicalSize = const Size(800, 3000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: const [S.delegate],
+        supportedLocales: S.supportedLocales,
+        home: const NutrientVisibilityScreen(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final names = [
+      for (final tile in tester.widgetList<CheckboxListTile>(
+        find.byType(CheckboxListTile),
+      ))
+        (tile.title! as Text).data,
+    ];
+    expect(names, [
+      'Fibre',
+      'Saturated fat',
+      'Sugars',
+      'Sodium',
+      'Calcium',
+      'iron',
+      'Potassium',
+      'Magnesium',
+      'Vitamin D',
+      'Vitamin B12',
+    ]);
+  });
 }

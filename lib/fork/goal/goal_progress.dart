@@ -7,6 +7,8 @@ import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/fork/adaptive/goal_plan.dart';
 import 'package:opennutritracker/fork/adaptive/goal_saving.dart'
     show paceChanges;
+import 'package:opennutritracker/fork/goal/goal_planner.dart';
+import 'package:opennutritracker/fork/phases/phases.dart';
 
 /// Where a goal began: the day its target was set and the trend weight
 /// then. A target set before the fork kept one starts at the first day of
@@ -274,6 +276,35 @@ class GoalProgress {
 
   DateTime? _dayAt(int? days) =>
       days == null ? null : DateTime(today.year, today.month, today.day + days);
+}
+
+/// When the goal is reached, as Goal progress and the check-in both say
+/// it: [byPlan] is the running plan's last day while it reaches the
+/// target ([planEnds]), its diet breaks and whole weeks counted, else the
+/// day from today at the plan's pace; [atRecent] the day at the trend's
+/// [recent] pace. A date is null where that pace leads away or is none.
+typedef GoalArrivals = ({
+  DateTime? byPlan,
+  bool planEnds,
+  ({double kgPerWeek, int days})? recent,
+  DateTime? atRecent,
+});
+
+/// [GoalArrivals] for [progress] under the running [plan], if any.
+GoalArrivals goalArrivals(GoalProgress progress, PhasePlan? plan) {
+  final planEnds =
+      plan?.targetKg != null &&
+      endKgOf(plan!) == plan.targetKg &&
+      plan.end.isAfter(progress.today);
+  final recent = progress.recentPace();
+  return (
+    byPlan: planEnds
+        ? plan.lastDay
+        : progress.arrivalAt(progress.paceKgPerWeek),
+    planEnds: planEnds,
+    recent: recent,
+    atRecent: progress.arrivalAt(recent?.kgPerWeek),
+  );
 }
 
 /// The goal as the page shows it: [inputs] null before the first

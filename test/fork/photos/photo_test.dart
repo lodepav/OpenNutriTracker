@@ -242,21 +242,97 @@ void main() {
       expect(find.byKey(const ValueKey('photo-old0')), findsNothing);
     });
 
-    testWidgets('at 200% text the strip fits its dates', (tester) async {
-      final store = _MemoryPhotos();
-      for (var i = 0; i < 2; i++) {
-        store.photos.add(
-          ProgressPhoto(id: 'old$i', date: DateTime(2026, 8 + i, 1)),
-        );
-      }
+    testWidgets('at 200% text each date stays within its photo', (
+      tester,
+    ) async {
+      final store = _MemoryPhotos()
+        ..photos.addAll([
+          ProgressPhoto(id: 'a', date: DateTime(2026, 11, 1)),
+          ProgressPhoto(id: 'b', date: DateTime(2026, 11, 21)),
+        ]);
       await pumpOnPhone(
         tester,
         ProgressPhotosCard(store: store, pick: (_) async => null),
       );
       await tester.pumpAndSettle();
-      expect(find.text('Aug 1, 2026'), findsOneWidget);
       expect(tester.takeException(), isNull);
       expect(cutText(tester), isEmpty);
+      for (final id in ['a', 'b']) {
+        final tile = tester.getRect(find.byKey(ValueKey('photo-$id')));
+        final image = tester.getRect(
+          find.descendant(
+            of: find.byKey(ValueKey('photo-$id')),
+            matching: find.byType(Image),
+          ),
+        );
+        final date = tester.getRect(
+          find.descendant(
+            of: find.byKey(ValueKey('photo-$id')),
+            matching: find.byType(Text),
+          ),
+        );
+        expect(date.left, greaterThanOrEqualTo(image.left - 0.5), reason: id);
+        expect(date.right, lessThanOrEqualTo(image.right + 0.5), reason: id);
+        expect(date.bottom, lessThanOrEqualTo(tile.bottom + 0.5), reason: id);
+      }
+    });
+
+    testWidgets('compare at 200% text: two pickers inside the page gutter, '
+        'each date in full in its own', (tester) async {
+      await pumpOnPhone(tester, const SizedBox());
+      Navigator.of(tester.element(find.byType(SizedBox).first)).push(
+        MaterialPageRoute<void>(
+          builder: (_) => ComparePhotosScreen(
+            photos: [
+              for (final (id, day) in [('a', 1), ('b', 21)])
+                (
+                  photo: ProgressPhoto(id: id, date: DateTime(2026, 11, day)),
+                  file: File('missing-$id.jpg'),
+                ),
+            ],
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      expect(cutText(tester), isEmpty);
+      final width =
+          tester.view.physicalSize.width / tester.view.devicePixelRatio;
+      final left = tester.getRect(find.byKey(const ValueKey('compare-left')));
+      final right = tester.getRect(find.byKey(const ValueKey('compare-right')));
+      expect(left.left, greaterThanOrEqualTo(16));
+      expect(right.right, lessThanOrEqualTo(width - 16));
+      expect(right.left - left.right, greaterThanOrEqualTo(8));
+      // Outlined, so the two read as separate fields, not one underline.
+      for (final key in ['compare-left', 'compare-right']) {
+        final decorator = tester.widget<InputDecorator>(
+          find.descendant(
+            of: find.byKey(ValueKey(key)),
+            matching: find.byType(InputDecorator),
+          ),
+        );
+        expect(decorator.decoration.border, isA<OutlineInputBorder>());
+      }
+      for (final (key, text) in [
+        ('compare-left', 'Nov 1, 2026'),
+        ('compare-right', 'Nov 21, 2026'),
+      ]) {
+        final picker = tester.getRect(find.byKey(ValueKey(key)));
+        final date = tester.getRect(
+          find
+              .descendant(
+                of: find.byKey(ValueKey(key)),
+                matching: find.text(text),
+              )
+              .last,
+        );
+        expect(picker.contains(date.topLeft), isTrue, reason: text);
+        expect(picker.contains(date.bottomRight), isTrue, reason: text);
+      }
+      // Each photo sits at the top of the room left under its picker.
+      for (final image in tester.widgetList<Image>(find.byType(Image))) {
+        expect(image.alignment, Alignment.topCenter);
+      }
     });
 
     testWidgets('compare starts with the oldest and the newest', (

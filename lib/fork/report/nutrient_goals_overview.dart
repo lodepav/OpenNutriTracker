@@ -6,9 +6,11 @@ import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
+import 'package:opennutritracker/features/diary/presentation/widgets/daily_nutrient_panel.dart';
 import 'package:opennutritracker/fork/copy/copy_ui.dart';
 import 'package:opennutritracker/fork/report/goal_standing.dart';
 import 'package:opennutritracker/fork/report/nutrient_explorer.dart';
+import 'package:opennutritracker/fork/report/nutrient_order.dart';
 
 /// The tracked days from the first to the last.
 typedef TrackedDayLoader =
@@ -17,14 +19,18 @@ typedef TrackedDayLoader =
 Future<List<TrackedDayEntity>> _trackedDays(DateTime first, DateTime last) =>
     locator<TrackedDayRepository>().getTrackedDayByRange(first, last);
 
-/// The nutrients with a goal of their own (not energy or the macros), the
-/// ones to reach first, then the limits.
+/// The nutrients with a goal of their own (not energy or the macros), in
+/// [nutrientOrder], as the editor and the Nutrients list show them.
 List<NutrientSummary> goalRows(List<NutrientSummary> all) => [
-  for (final s in all)
-    if (s.nutrient.marksMiss && !s.nutrient.isLimit) s,
-  for (final s in all)
-    if (s.nutrient.marksMiss && s.nutrient.isLimit) s,
+  for (var rank = 0; rank <= nutrientOrder.length; rank++)
+    for (final s in all)
+      if (s.nutrient.marksMiss && nutrientRank(s.nutrient) == rank) s,
 ];
+
+/// The row's name: salt says where it comes from, as the editor and the
+/// Nutrients list call it Sodium.
+String goalRowLabel(ExplorerNutrient n) =>
+    n.driKey == NutrientPanelKeys.sodium ? '${n.label} (from sodium)' : n.label;
 
 String _number(double value) =>
     value < 10 ? value.toStringAsFixed(1) : '${value.round()}';
@@ -186,6 +192,7 @@ class _GoalBar extends StatelessWidget {
       isLimit: s.nutrient.isLimit,
       perDay: s.perDay,
       goal: goal,
+      isBand: s.nutrient.isBand,
     );
     final color = goalStandingColor(
       standing,
@@ -194,14 +201,15 @@ class _GoalBar extends StatelessWidget {
     );
     final share = goal == null || goal == 0 ? 0.0 : s.perDay / goal;
     final of = goal == null ? '' : ' of ${_number(goal)} $unit';
-    final says = switch (standing) {
-      GoalStanding.toReach when share >= 1 => ', reached',
-      GoalStanding.over => ', over the limit',
-      _ => '',
-    };
+    final word = goalStandingWord(
+      standing,
+      isLimit: s.nutrient.isLimit,
+      isBand: s.nutrient.isBand,
+    );
+    final says = word == null ? '' : ', $word';
     return Semantics(
       identifier: 'nutrient-goal-${s.nutrient.label}',
-      label: '${s.nutrient.label}, ${_number(s.perDay)}$of$says',
+      label: '${goalRowLabel(s.nutrient)}, ${_number(s.perDay)}$of$says',
       excludeSemantics: true,
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: Dimens.spacing8),
@@ -209,7 +217,23 @@ class _GoalBar extends StatelessWidget {
           children: [
             Row(
               children: [
-                Expanded(child: Text(s.nutrient.label, style: text.bodyLarge)),
+                Expanded(
+                  child: Text.rich(
+                    TextSpan(
+                      children: [
+                        TextSpan(text: goalRowLabel(s.nutrient)),
+                        if (word != null)
+                          TextSpan(
+                            text: ' · $word',
+                            style: text.bodySmall?.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                      ],
+                    ),
+                    style: text.bodyLarge,
+                  ),
+                ),
                 Text.rich(
                   TextSpan(
                     children: [

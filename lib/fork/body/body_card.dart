@@ -37,6 +37,16 @@ String _valueText(
 String _dateText(BuildContext context, DateTime d) =>
     DateFormat.yMMMd(Localizations.localeOf(context).toLanguageTag()).format(d);
 
+/// What an adult measures, in cm or %: a dropped digit falls outside.
+(int, int) _plausible(BodyMetric metric) => switch (metric) {
+  BodyMetric.bodyFat => (2, 70),
+  BodyMetric.waist => (40, 200),
+  BodyMetric.hips || BodyMetric.chest => (50, 200),
+  BodyMetric.neck => (20, 60),
+  BodyMetric.leftArm || BodyMetric.rightArm => (15, 70),
+  BodyMetric.leftThigh || BodyMetric.rightThigh => (30, 100),
+};
+
 /// Why [text] typed for [metric] is refused, with the range it takes;
 /// null when it is empty or fits. Lengths are typed in the shown unit.
 String? measurementError(
@@ -47,8 +57,12 @@ String? measurementError(
   final trimmed = text.trim().replaceAll(',', '.');
   if (trimmed.isEmpty) return null;
   final typed = double.tryParse(trimmed);
-  final (low, high) = metric.isLength ? (0, 400) : (2, 70);
-  if (typed != null && typed > low && typed < high) return null;
+  final (lowCm, highCm) = _plausible(metric);
+  // Inches: the whole ones inside the cm range, so the message names them.
+  final (low, high) = metric.isLength && imperial
+      ? ((lowCm / _cmPerInch).ceil(), (highCm / _cmPerInch).floor())
+      : (lowCm, highCm);
+  if (typed != null && typed >= low && typed <= high) return null;
   // "a hips" reads wrong; every other metric is singular.
   final name = metric == BodyMetric.hips
       ? 'hips'
@@ -269,6 +283,7 @@ class _BodyMeasurementsCardState extends State<BodyMeasurementsCard> {
           else ...[
             Wrap(
               spacing: 6,
+              runSpacing: 8,
               children: [
                 for (final m in BodyMetric.values)
                   if (measured.contains(m))
@@ -288,11 +303,14 @@ class _BodyMeasurementsCardState extends State<BodyMeasurementsCard> {
             if (inRange.length > 1)
               _row(
                 'Change, last ${widget.rangeDays} days',
-                _text(
-                  metric,
-                  inRange.last.value - inRange.first.value,
-                  signed: true,
-                ),
+                // A body fat change in % reads as relative: it is in points.
+                metric == BodyMetric.bodyFat
+                    ? '${signedText(inRange.last.value - inRange.first.value, 1)} pts'
+                    : _text(
+                        metric,
+                        inRange.last.value - inRange.first.value,
+                        signed: true,
+                      ),
               ),
             if (inRange.length > 1) ...[
               const SizedBox(height: Dimens.spacing16),
@@ -518,6 +536,16 @@ class _AddMeasurementsDialogState extends State<_AddMeasurementsDialog> {
                 key: ValueKey('measure-${metric.name}'),
                 controller: field,
                 focusNode: _focus[metric],
+                // A refusal stays only until the field is typed in again.
+                onChanged: (_) {
+                  if (!_errors.containsKey(metric)) return;
+                  setState(
+                    () => _errors = {
+                      for (final e in _errors.entries)
+                        if (e.key != metric) e.key: e.value,
+                    },
+                  );
+                },
                 keyboardType: const TextInputType.numberWithOptions(
                   decimal: true,
                 ),

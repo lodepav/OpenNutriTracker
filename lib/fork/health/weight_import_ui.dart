@@ -112,6 +112,20 @@ class BodyFatImportTile extends StatelessWidget {
   }
 }
 
+/// What Nutrition out's disclosure says before its permission is asked.
+String nutritionOutDisclosure() =>
+    'OpenBite will write each food in your diary from the last '
+    '${NutritionExport.window.inDays} days to $healthPlatformName: '
+    'the food\'s name, the meal, the time, its calories and '
+    'macros, and fibre, sugars, saturated fat and sodium where the '
+    'food has them. It keeps them up to '
+    'date when you open or leave the app: an edited food is '
+    'written again, a deleted one removed.\n\n'
+    'Other apps you let read nutrition in $healthPlatformName can '
+    'see them. OpenBite sends them nowhere else.\n\n'
+    'Untick Nutrition out to stop. Records already written stay in '
+    '$healthPlatformName; you can delete them in its settings.';
+
 /// "Write nutrition": the diary's calories and macros to Health Connect.
 class NutritionExportTile extends StatelessWidget {
   final bool available;
@@ -132,18 +146,7 @@ class NutritionExportTile extends StatelessWidget {
             detail: 'Other apps see what you ate',
             what: 'nutrition',
             disclosureTitle: 'Write nutrition to $healthPlatformName?',
-            disclosure:
-                'OpenBite will write each diary entry of the last '
-                '${NutritionExport.window.inDays} days to $healthPlatformName: '
-                'the food\'s name, the meal, the time, its calories and '
-                'macros, and fiber, sugar, saturated fat and sodium where the '
-                'food has them. It keeps them up to '
-                'date when you open or leave the app: an edited entry is '
-                'written again, a deleted one removed.\n\n'
-                'Other apps you let read nutrition in $healthPlatformName can '
-                'see them. OpenBite sends them nowhere else.\n\n'
-                'Untick Nutrition out to stop. Records already written stay in '
-                '$healthPlatformName; you can delete them in its settings.',
+            disclosure: nutritionOutDisclosure(),
             verb: 'write',
             offMessage: 'Nutrition writing off; what was written stays',
             done: (n) => n == 0

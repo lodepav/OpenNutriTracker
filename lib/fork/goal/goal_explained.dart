@@ -1,12 +1,71 @@
 import 'package:flutter/material.dart';
+import 'package:opennutritracker/core/domain/entity/body_weight_unit_entity.dart';
 import 'package:opennutritracker/core/domain/entity/kcal_goal_breakdown_entity.dart';
+import 'package:opennutritracker/core/domain/usecase/get_config_usecase.dart';
 import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
+import 'package:opennutritracker/core/utils/calc/unit_calc.dart';
+import 'package:opennutritracker/core/utils/locator.dart';
+import 'package:opennutritracker/features/onboarding/presentation/bloc/onboarding_bloc.dart';
+import 'package:opennutritracker/features/profile/presentation/utils/profile_display_format.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_ui.dart';
 import 'package:opennutritracker/fork/adaptive/check_in_history.dart';
 import 'package:opennutritracker/fork/units/energy_text.dart';
 import 'package:opennutritracker/generated/l10n.dart';
+
+/// The units the goal's inputs are shown in.
+typedef InputUnits = ({bool heightImperial, BodyWeightUnit weight});
+
+const metricInputUnits = (heightImperial: false, weight: BodyWeightUnit.kg);
+
+/// Onboarding's units, as chosen on its body page; metric with no
+/// onboarding.
+InputUnits onboardingInputUnits() {
+  if (!locator.isRegistered<OnboardingBloc>()) return metricInputUnits;
+  final selection = locator<OnboardingBloc>().userSelection;
+  return (
+    heightImperial: selection.heightUsesImperial,
+    weight: selection.bodyWeightUnit,
+  );
+}
+
+/// The saved profile's units; metric when they cannot be read.
+Future<InputUnits> savedInputUnits() async {
+  if (!locator.isRegistered<GetConfigUsecase>()) return metricInputUnits;
+  try {
+    final config = await locator<GetConfigUsecase>().getConfig();
+    return (
+      heightImperial: config.usesImperialHeightUnits,
+      weight: config.bodyWeightUnit,
+    );
+  } catch (_) {
+    return metricInputUnits;
+  }
+}
+
+/// [cm] as the user measures it, with the cm the formula uses in brackets.
+String heightInputText(S l10n, double cm, bool imperial) {
+  final metric = '${cm.toStringAsFixed(0)} ${l10n.cmLabel}';
+  if (!imperial) return metric;
+  final (feet, inches) = UnitCalc.cmToFeetInches(cm);
+  return '$feet ${l10n.ftLabel} $inches ${l10n.inLabel} ($metric)';
+}
+
+/// [kg] as the user weighs, with the kg the formula uses in brackets.
+String weightInputText(S l10n, double kg, BodyWeightUnit unit) {
+  final metric = '${kg.toStringAsFixed(1)} ${l10n.kgLabel}';
+  if (unit == BodyWeightUnit.kg) return metric;
+  final own = formatBodyWeight(
+    kg,
+    unit,
+    kgLabel: l10n.kgLabel,
+    // "lb", as the planner and Home write it.
+    lbLabel: 'lb',
+    stLabel: l10n.stLabel,
+  );
+  return '$own ($metric)';
+}
 
 /// Seam S134: "How your goal is calculated" after the canvas's picks:
 /// A's card with today's goal, B's three numbered steps from what you burn
@@ -20,6 +79,7 @@ class GoalExplainedBody extends StatelessWidget {
   final bool showTargetNote;
   final VoidCallback onInputs;
   final VoidCallback onEquations;
+  final InputUnits units;
 
   const GoalExplainedBody({
     super.key,
@@ -27,6 +87,7 @@ class GoalExplainedBody extends StatelessWidget {
     required this.showTargetNote,
     required this.onInputs,
     required this.onEquations,
+    this.units = metricInputUnits,
   });
 
   @override
@@ -47,8 +108,8 @@ class GoalExplainedBody extends StatelessWidget {
     final rate = b.weeklyWeightGoalKg;
     final inputs = [
       '${b.age} y',
-      '${b.heightCM.toStringAsFixed(0)} ${l10n.cmLabel}',
-      '${b.weightKG.toStringAsFixed(1)} ${l10n.kgLabel}',
+      heightInputText(l10n, b.heightCM, units.heightImperial),
+      weightInputText(l10n, b.weightKG, units.weight),
       b.palCategory.getName(context),
     ].join(' · ');
     return ListView(

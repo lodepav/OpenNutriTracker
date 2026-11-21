@@ -207,8 +207,9 @@ void main() {
 
     expect(find.text('Fibre by food'), findsOneWidget);
     expect(find.text('Lentils'), findsOneWidget);
-    expect(find.text('16 g in the range'), findsOneWidget);
+    expect(find.text('16 g fibre'), findsOneWidget);
     expect(find.text('52%'), findsOneWidget);
+    expect(find.text('Oct 17 – Oct 23 · 7 days, 2 logged'), findsOneWidget);
   });
 
   Widget explorer(List<IntakeEntity> intakes) => MaterialApp(
@@ -243,12 +244,81 @@ void main() {
     final scheme = Theme.of(
       tester.element(find.byType(NutrientExplorerScreen)),
     ).colorScheme;
-    // Fibre at 52% of its goal is to reach, not missed.
-    expect(bar('Fibre'), AppPalette.light.accent);
-    expect(bar('Energy'), AppPalette.light.accent);
+    // Fibre at 52% of its goal is not reached yet: grey, not green.
+    expect(bar('Fibre'), AppPalette.light.textMuted);
+    expect(bar('Energy'), AppPalette.light.textMuted);
     expect(bar('Sugars'), scheme.error);
     expect(bar('Saturated fat'), AppPalette.light.textMuted);
+    expect(find.textContaining('· over the limit'), findsOneWidget);
+    expect(find.textContaining('· reached'), findsNothing);
     expect(find.textContaining(goalStandingKey), findsOneWidget);
+    expect(find.text('Oct 20 – Oct 21 · 2 days, 2 logged'), findsOneWidget);
+  });
+
+  testWidgets('a target met is green and says so; energy over its band is '
+      'red', (tester) async {
+    tester.view.physicalSize = const Size(1080, 7020);
+    addTearDown(tester.view.reset);
+    // 2 kg at 200 kcal per 100 g over two days: 2000 kcal over the 1300 a
+    // day the goal below makes it; fibre 100 g a day against 30.
+    await tester.pumpWidget(
+      MaterialApp(
+        home: NutrientExplorerScreen(
+          days: [
+            for (final d in [20, 21])
+              TrackedDayEntity(
+                day: DateTime(2026, 10, d),
+                calorieGoal: 1300,
+                caloriesTracked: 1,
+                carbsGoal: 280,
+                fatGoal: 40,
+                proteinGoal: 50,
+              ),
+          ],
+          first: DateTime(2026, 10, 20),
+          last: DateTime(2026, 10, 21),
+          load: (first, last) async => [
+            _eat('Bran', 20, 1000, fiber: 10),
+            _eat('Bran', 21, 1000, fiber: 10),
+          ],
+          user: () async => null,
+          goalHistory: () async => null,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    LinearProgressIndicator bar(String nutrient) =>
+        tester.widget<LinearProgressIndicator>(
+          find.descendant(
+            of: find.byKey(ValueKey('nutrient-$nutrient')),
+            matching: find.byType(LinearProgressIndicator),
+          ),
+        );
+    final scheme = Theme.of(
+      tester.element(find.byType(NutrientExplorerScreen)),
+    ).colorScheme;
+    expect(bar('Fibre').color, AppPalette.light.accent);
+    expect(find.text('100 g a day · goal 30 g · reached'), findsOneWidget);
+    expect(bar('Energy').color, scheme.error);
+    expect(find.textContaining('goal 1300 kcal · over'), findsOneWidget);
+    // Carbs and fat are bands as Home reads them; protein is a target.
+    expect(find.text('300 g a day · goal 280 g · on target'), findsOneWidget);
+    expect(bar('Fat').color, scheme.error);
+    expect(find.text('50 g a day · goal 40 g · over'), findsOneWidget);
+    expect(bar('Protein').color, AppPalette.light.accent);
+    expect(find.text('100 g a day · goal 50 g · reached'), findsOneWidget);
+
+    // A full bar ends where the others' tracks end, whatever its share's
+    // width (333% against 0%).
+    double right(String nutrient) => tester
+        .getTopRight(
+          find.descendant(
+            of: find.byKey(ValueKey('nutrient-$nutrient')),
+            matching: find.byType(LinearProgressIndicator),
+          ),
+        )
+        .dx;
+    expect(right('Fibre'), right('Saturated fat'));
   });
 
   testWidgets('TalkBack reads the row, not the bar\'s value', (tester) async {

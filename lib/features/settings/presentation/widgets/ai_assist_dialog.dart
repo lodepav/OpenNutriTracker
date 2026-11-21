@@ -23,6 +23,11 @@ import 'package:opennutritracker/fork/ai/gemini_preset.dart';
 // [fork] S211 key-label-above
 import 'package:opennutritracker/fork/ai/key_field_label.dart';
 // [/fork]
+// [fork] S357 hosted-key-check
+import 'package:http/http.dart' as http;
+import 'package:opennutritracker/core/utils/locator.dart';
+import 'package:opennutritracker/fork/ai/hosted_key_check.dart';
+// [/fork]
 
 /// Where the user chooses a provider, supplies a key for it, picks a model,
 /// and pauses or removes any of it.
@@ -62,11 +67,20 @@ class AiAssistDialog extends StatefulWidget {
   /// worse than none.
   final AiEndpointProbeRunner? probeRunner;
 
+  // [fork] S357 hosted-key-check: what asks a hosted provider about a typed
+  // key; null takes the app's client when the locator has one, and checks
+  // nothing when it has none, as in upstream's tests
+  final http.Client? forkKeyCheckClient;
+  // [/fork]
+
   const AiAssistDialog({
     super.key,
     required this.storage,
     this.modelList,
     this.probeRunner,
+    // [fork] S357 hosted-key-check
+    this.forkKeyCheckClient,
+    // [/fork]
   });
 
   /// Returns true when the stored state changed, so the caller can refresh
@@ -83,6 +97,9 @@ class AiAssistDialog extends StatefulWidget {
     AiCredentialStorage storage, {
     AiModelListApi? modelList,
     AiEndpointProbeRunner? probeRunner,
+    // [fork] S357 hosted-key-check
+    http.Client? forkKeyCheckClient,
+    // [/fork]
   }) => showDialog<bool>(
     context: context,
     barrierDismissible: false,
@@ -90,6 +107,9 @@ class AiAssistDialog extends StatefulWidget {
       storage: storage,
       modelList: modelList,
       probeRunner: probeRunner,
+      // [fork] S357 hosted-key-check
+      forkKeyCheckClient: forkKeyCheckClient,
+      // [/fork]
     ),
   ).then((changed) => changed ?? false);
 
@@ -213,6 +233,72 @@ class _AiAssistDialogState extends State<AiAssistDialog> {
   /// agreement already on file, and Google needs its own (#1257).
   String? get _forkConsentTitle =>
       _forkOnAtOpen == true && _forkGemini ? 'Send meals to Google?' : null;
+  // [/fork]
+
+  // [fork] S357 hosted-key-check: a typed key is being checked, so OK waits
+  bool _forkChecking = false;
+
+  http.Client? get _forkKeyCheckClient =>
+      widget.forkKeyCheckClient ??
+      (locator.isRegistered<http.Client>() ? locator<http.Client>() : null);
+
+  void _forkAnnounce(String message) => unawaited(
+    SemanticsService.sendAnnouncement(
+      View.of(context),
+      message,
+      Directionality.of(context),
+    ),
+  );
+  // [/fork]
+
+  // [fork] S358 remove-undo: what the last Remove took, for its Undo
+  ({
+    AiProvider provider,
+    String? key,
+    String? model,
+    String? endpoint,
+    bool enabled,
+    bool terms,
+    bool googleTerms,
+  })?
+  _forkRemoved;
+
+  Future<void> _forkUndoRemove() async {
+    final removed = _forkRemoved;
+    if (removed == null) return;
+    // Text typed since Remove must not be saved over the restored key.
+    _apiKeyController.clear();
+    setState(() => _forkRemoved = null);
+    final storage = widget.storage;
+    final endpoint = removed.endpoint;
+    final model = removed.model;
+    if (removed.provider == AiProvider.ownServer &&
+        endpoint != null &&
+        model != null) {
+      await storage.writeOwnServerConfiguration(
+        endpoint: endpoint,
+        model: model,
+        provider: removed.provider,
+      );
+    } else if (model != null) {
+      await storage.writeModel(model, provider: removed.provider);
+    }
+    final key = removed.key;
+    if (key != null) await storage.writeApiKey(key, provider: removed.provider);
+    if (removed.terms) {
+      await storage.setTermsAccepted(
+        true,
+        endpoint: removed.googleTerms ? endpoint : null,
+      );
+    }
+    // The writes above turn AI on; a paused one stays paused. The setup
+    // check's verdict is not restored: the next save runs it again.
+    await storage.setEnabled(removed.enabled);
+    _changed = true;
+    if (!mounted) return;
+    _forkAnnounce('Key restored');
+    await _load();
+  }
   // [/fork]
 
   /// This provider has what it needs to be used — a key for the hosted three,
@@ -436,6 +522,9 @@ class _AiAssistDialogState extends State<AiAssistDialog> {
       _enabled = summary.enabled;
       // [fork] S318 ai-consent-words
       _forkOnAtOpen ??= summary.enabled;
+      // [/fork]
+      // [fork] S358 remove-undo: another provider's reload ends the Undo
+      _forkRemoved = null;
       // [/fork]
       _model = AiModelCatalogue.resolve(provider, modelId);
       _endpointController.text = summary.endpoint ?? '';
@@ -853,6 +942,11 @@ class _AiAssistDialogState extends State<AiAssistDialog> {
 
   Future<void> _save() async {
     final s = S.of(context);
+    // [fork] S357 hosted-key-check: the page's messenger, for the verdict
+    // once the dialog has closed
+    final forkMessenger = ScaffoldMessenger.maybeOf(context);
+    String? forkVerdict;
+    // [/fork]
     // Read before the first `await`, because the check below is started after
     // one and `context` may no longer be usable by then.
     final localeCode = Localizations.localeOf(context).languageCode;
@@ -963,7 +1057,50 @@ class _AiAssistDialogState extends State<AiAssistDialog> {
       // The own-server branch above has already asked, and asking is
       // idempotent: it returns true without a screen once the agreement is on
       // file, so a server configured with a key does not answer twice.
+      // [fork] S357 hosted-key-check: an agreement first given on this OK
+      // goes again if the provider refuses the key
+      final forkHadTerms = await widget.storage.hasAcceptedTerms(
+        provider: provider,
+      );
+      // [/fork]
       if (!await _agreedBeforeAnythingIsStored(provider)) return;
+      // [fork] S357 hosted-key-check: a hosted key is asked about before it
+      // is saved; only a refusal stops the save, being offline does not
+      final forkClient = _forkKeyCheckClient;
+      if (provider != AiProvider.ownServer && forkClient != null) {
+        if (!mounted) return;
+        setState(() {
+          _forkChecking = true;
+          _forkKeyNote = 'Checking key…';
+        });
+        final result = await checkHostedKey(forkClient, provider, typed);
+        final abandoned =
+            !mounted ||
+            ModalRoute.of(context)?.isCurrent == false ||
+            provider != _provider ||
+            _apiKeyController.text.trim() != typed;
+        if ((abandoned || result.verdict == HostedKeyVerdict.refused) &&
+            !forkHadTerms) {
+          await widget.storage.setTermsAccepted(false);
+        }
+        if (!mounted) return;
+        setState(() {
+          _forkChecking = false;
+          if (_forkKeyNote == 'Checking key…') _forkKeyNote = null;
+        });
+        if (abandoned) return;
+        if (result.verdict == HostedKeyVerdict.refused) {
+          setState(() => _forkKeyError = result.message);
+          _forkAnnounce(result.message!);
+          return;
+        }
+        forkVerdict = switch (result.verdict) {
+          HostedKeyVerdict.checked => 'Key checked',
+          HostedKeyVerdict.offline => 'Saved, not checked (offline)',
+          _ => 'Saved, not checked',
+        };
+      }
+      // [/fork]
       await widget.storage.writeApiKey(typed, provider: provider);
       changed = true;
     }
@@ -975,6 +1112,11 @@ class _AiAssistDialogState extends State<AiAssistDialog> {
 
     if (!mounted) return;
     Navigator.of(context).pop(changed);
+    // [fork] S357 hosted-key-check
+    if (forkVerdict != null) {
+      forkMessenger?.showSnackBar(SnackBar(content: Text(forkVerdict)));
+    }
+    // [/fork]
   }
 
   /// Brings a refused field into view and puts the cursor in it, once the
@@ -1061,11 +1203,36 @@ class _AiAssistDialogState extends State<AiAssistDialog> {
   /// was looking at when they pressed it. Everything this writes afterwards
   /// goes through [_load], which carries its own guard.
   Future<void> _remove() async {
-    await widget.storage.clear(provider: _provider);
+    // [fork] S358 remove-undo: what Remove takes is read first, for Undo
+    // await widget.storage.clear(provider: _provider);
+    final provider = _provider;
+    final storage = widget.storage;
+    final endpoint = await storage.readEndpoint(provider: provider);
+    final removed = (
+      provider: provider,
+      key: await storage.readApiKey(provider: provider),
+      model: await storage.readModel(provider: provider),
+      endpoint: endpoint,
+      enabled: await storage.isEnabled(),
+      terms: await storage.hasAcceptedTerms(),
+      googleTerms: await storage.hasAcceptedTerms(
+        provider: AiProvider.ownServer,
+        endpoint: endpoint,
+      ),
+    );
+    await storage.clear(provider: provider);
+    // [/fork]
     if (!mounted) return;
     _apiKeyController.clear();
     _changed = true;
     await _load();
+    // [fork] S358 remove-undo
+    // A second tap before the reload finds nothing, and keeps the first Undo.
+    if (!mounted || provider != _provider) return;
+    if (removed.key == null && removed.endpoint == null) return;
+    setState(() => _forkRemoved = removed);
+    _forkAnnounce('Key removed');
+    // [/fork]
   }
 
   /// The flag itself is not per provider, so the *write* is safe whoever is
@@ -1316,6 +1483,21 @@ class _AiAssistDialogState extends State<AiAssistDialog> {
                         ],
                       )
                     else ...[
+                      // [fork] S358 remove-undo
+                      if (_forkRemoved != null)
+                        Row(
+                          children: [
+                            const Expanded(child: Text('Key removed')),
+                            Semantics(
+                              identifier: 'ai-assist-undo-remove',
+                              child: TextButton(
+                                onPressed: _forkUndoRemove,
+                                child: const Text('Undo'),
+                              ),
+                            ),
+                          ],
+                        ),
+                      // [/fork]
                       Text(
                         s.aiAssistNoKeyForProviderLabel,
                         style: theme.textTheme.bodySmall?.copyWith(
@@ -1492,7 +1674,13 @@ class _AiAssistDialogState extends State<AiAssistDialog> {
             (!_hasKey || _provider == AiProvider.ownServer || _changed))
           Semantics(
             identifier: 'ai-assist-save-key',
-            child: TextButton(onPressed: _save, child: Text(s.dialogOKLabel)),
+            // [fork] S357 hosted-key-check: no second OK while one checks
+            // child: TextButton(onPressed: _save, child: Text(s.dialogOKLabel)),
+            child: TextButton(
+              onPressed: _forkChecking ? null : _save,
+              child: Text(s.dialogOKLabel),
+            ),
+            // [/fork]
           ),
       ],
     );

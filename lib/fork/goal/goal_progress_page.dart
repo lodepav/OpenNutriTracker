@@ -14,7 +14,6 @@ import 'package:opennutritracker/fork/adaptive/goal_plan.dart';
 import 'package:opennutritracker/fork/adaptive/goal_saving.dart';
 import 'package:opennutritracker/fork/display/contrast.dart';
 import 'package:opennutritracker/fork/goal/goal_plan_view.dart';
-import 'package:opennutritracker/fork/goal/goal_planner.dart';
 import 'package:opennutritracker/fork/goal/goal_progress.dart';
 import 'package:opennutritracker/fork/goal/goal_status.dart';
 import 'package:opennutritracker/fork/goal/goal_summary.dart';
@@ -248,15 +247,11 @@ class _GoalProgressPageState extends State<GoalProgressPage> {
         : d.year == p.today.year
         ? format.format(d)
         : yearFormat.format(d);
-    final recent = p.recentPace();
-    final atPace = p.arrivalAt(recent?.kgPerWeek);
+    final arrivals = goalArrivals(p, plan);
+    final recent = arrivals.recent;
+    final atPace = arrivals.atRecent;
     final atPlan = p.arrivalAt(p.paceKgPerWeek);
-    // The plan's own last day, while that is still ahead and reaches the
-    // target: a capped plan stops short of it.
-    final planEnds =
-        plan?.targetKg != null &&
-        endKgOf(plan!) == plan.targetKg &&
-        plan.end.isAfter(DateTime.now());
+    final planEnds = arrivals.planEnds;
     // shortcut: on days 14-29 the 30-day pace still spans days before the
     // plan; a pace since the plan's start would need its own figure.
     final verdict = goalVerdict(
@@ -307,7 +302,7 @@ class _GoalProgressPageState extends State<GoalProgressPage> {
           progress: p,
           unit: widget.unit,
           atPace: recent?.kgPerWeek,
-          planLastDay: planEnds ? plan.lastDay : null,
+          planLastDay: planEnds ? arrivals.byPlan : null,
         ),
       ),
       trendSection(context, 'Pace'),
@@ -326,11 +321,13 @@ class _GoalProgressPageState extends State<GoalProgressPage> {
           rows: [
             // The plan's own end counts its diet breaks.
             if (planEnds)
-              (label: 'By your plan', value: date(plan.lastDay))
+              (label: 'By your plan', value: date(arrivals.byPlan))
             else
               (
                 label: 'From today at your plan’s pace',
-                value: atPlan == null ? 'Not at this pace' : date(atPlan),
+                value: arrivals.byPlan == null
+                    ? 'Not at this pace'
+                    : date(arrivals.byPlan),
               ),
             if (recent != null)
               (
@@ -375,9 +372,10 @@ class _GoalProgressPageState extends State<GoalProgressPage> {
         body:
             'The plan runs from where your trend weight was when you set '
             'the target, at the pace in your goal planner, until it reaches '
-            'the target. When you change the pace, the plan starts again '
-            'from that day. The dates ahead assume your trend keeps the pace '
-            'they name.',
+            'the target. When you change the pace, the weeks so far stay '
+            'as they were and the change applies from the end of the '
+            'current week, where the plan starts again. The dates ahead '
+            'assume your trend keeps the pace they name.',
       ),
     ];
   }

@@ -11,7 +11,8 @@ import 'package:opennutritracker/features/recipes/domain/entity/shared_recipe_pa
 import '../../helpers/ux_checks.dart';
 
 // Copying is confirmed on the button inside the dialog, not by a snackbar
-// behind it, and a line says where the receiver scans the code.
+// behind it, a line says where the receiver scans the code, and the image says
+// what it is for.
 
 String _mealCode() => SharedMealPayload.fromJsonString(
   jsonEncode([
@@ -115,6 +116,31 @@ void main() {
     testWidgets('a $kind code says where to scan it', (tester) async {
       await pump(tester, code());
       expect(find.textContaining(where), findsOneWidget);
+    });
+  }
+
+  for (final (kind, code, label) in [
+    (
+      'meal',
+      _mealCode,
+      "QR code for this meal, scan it in OpenBite's Import shared meal",
+    ),
+    (
+      'recipe',
+      _recipeCode,
+      "QR code for Soup, scan it in OpenBite's Import recipe",
+    ),
+    (
+      'workout',
+      _workoutCode,
+      "QR code for this workout, scan it in OpenBite's Import shared workout",
+    ),
+  ]) {
+    testWidgets('a $kind QR image says what it is for', (tester) async {
+      final semantics = tester.ensureSemantics();
+      await pump(tester, code());
+      expect(find.bySemanticsLabel(label), findsOneWidget);
+      semantics.dispose();
     });
   }
 

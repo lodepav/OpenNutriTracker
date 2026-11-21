@@ -280,24 +280,52 @@ void main() {
     String? check(BodyMetric m, String text, {bool imperial = false}) =>
         measurementError(m, text, imperial: imperial);
     expect(check(BodyMetric.bodyFat, ''), isNull);
-    expect(check(BodyMetric.bodyFat, '2.1'), isNull);
+    expect(check(BodyMetric.bodyFat, '2'), isNull);
+    expect(check(BodyMetric.bodyFat, '70'), isNull);
     expect(check(BodyMetric.bodyFat, '69,9'), isNull);
-    for (final bad in ['2', '70', 'abc', '-5']) {
+    for (final bad in ['1.9', '70.1', 'abc', '-5']) {
       expect(
         check(BodyMetric.bodyFat, bad),
         'Enter a body fat between 2 and 70 %',
         reason: bad,
       );
     }
-    expect(check(BodyMetric.waist, '0.1'), isNull);
-    expect(check(BodyMetric.waist, '0'), 'Enter a waist between 0 and 400 cm');
+    // A dropped digit is refused: a 3 cm arm, a 9 cm waist.
     expect(
-      check(BodyMetric.waist, '400'),
-      'Enter a waist between 0 and 400 cm',
+      check(BodyMetric.rightArm, '3'),
+      'Enter a right arm between 15 and 70 cm',
     );
+    expect(check(BodyMetric.waist, '9'), 'Enter a waist between 40 and 200 cm');
+    expect(check(BodyMetric.waist, '40'), isNull);
+    expect(check(BodyMetric.waist, '200'), isNull);
+    expect(check(BodyMetric.waist, '200.1'), isNotNull);
+    const cm = {
+      BodyMetric.waist: (40, 200),
+      BodyMetric.hips: (50, 200),
+      BodyMetric.chest: (50, 200),
+      BodyMetric.neck: (20, 60),
+      BodyMetric.leftArm: (15, 70),
+      BodyMetric.rightArm: (15, 70),
+      BodyMetric.leftThigh: (30, 100),
+      BodyMetric.rightThigh: (30, 100),
+    };
+    for (final MapEntry(key: m, value: (low, high)) in cm.entries) {
+      expect(check(m, '$low'), isNull, reason: '$m $low');
+      expect(check(m, '$high'), isNull, reason: '$m $high');
+      expect(check(m, '${low - 1}'), isNotNull, reason: '$m below');
+      expect(check(m, '${high + 1}'), isNotNull, reason: '$m above');
+    }
+    // Inches: whole ones inside the cm range, checked as worded.
     expect(
-      check(BodyMetric.leftArm, '400', imperial: true),
-      'Enter a left arm between 0 and 400 in',
+      check(BodyMetric.leftArm, '5', imperial: true),
+      'Enter a left arm between 6 and 27 in',
+    );
+    expect(check(BodyMetric.leftArm, '6', imperial: true), isNull);
+    expect(check(BodyMetric.leftArm, '27', imperial: true), isNull);
+    expect(check(BodyMetric.leftArm, '28', imperial: true), isNotNull);
+    expect(
+      check(BodyMetric.hips, '10', imperial: true),
+      'Enter hips between 20 and 78 in',
     );
   });
 
@@ -354,7 +382,7 @@ void main() {
       decoration('bodyFat').errorText,
       'Enter a body fat between 2 and 70 %',
     );
-    expect(decoration('hips').errorText, 'Enter hips between 0 and 400 cm');
+    expect(decoration('hips').errorText, 'Enter hips between 50 and 200 cm');
     expect(decoration('waist').errorText, isNull);
     // The first refused field takes the focus, so it scrolls into view.
     expect(
@@ -365,7 +393,13 @@ void main() {
       isTrue,
     );
 
-    // Corrected, the error goes and the day saves.
+    // Typed again, its error goes before any Save; the other stays.
+    await tester.enterText(find.byKey(const ValueKey('measure-hips')), '5');
+    await tester.pump();
+    expect(decoration('hips').errorText, isNull);
+    expect(decoration('bodyFat').errorText, isNotNull);
+
+    // Corrected, the day saves.
     await tester.enterText(find.byKey(const ValueKey('measure-bodyFat')), '');
     await tester.enterText(find.byKey(const ValueKey('measure-hips')), '');
     await tester.tap(find.text('Save'));
@@ -397,7 +431,8 @@ void main() {
     await pumpCard(tester, memory, rangeDays: 7);
 
     expect(find.text('Change, last 7 days'), findsOneWidget);
-    expect(find.text('\u22120.7 %'), findsOneWidget);
+    // Body fat's change is in percentage points, not a relative %.
+    expect(find.text('\u22120.7 pts'), findsOneWidget);
     expect(
       find.text(
         '22.5 % on ${DateFormat.MMMd().format(start)} \u2192 '
@@ -431,6 +466,39 @@ void main() {
       ),
     );
     expect(label.top, greaterThanOrEqualTo(fat.bottom));
+  });
+
+  testWidgets('at 200% text the rows of metric chips keep apart', (
+    tester,
+  ) async {
+    final memory = _Memory()
+      ..entries.addAll([
+        for (final m in BodyMetric.values)
+          Measurement(id: m.name, date: DateTime.now(), metric: m, value: 30),
+      ]);
+    await pumpOnPhone(
+      tester,
+      SingleChildScrollView(
+        child: BodyMeasurementsCard(
+          rangeDays: 30,
+          palette: AppPalette.light,
+          imperial: false,
+          store: memory,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final chips = find.byType(ChoiceChip);
+    final rects = [
+      for (var i = 0; i < chips.evaluate().length; i++)
+        tester.getRect(chips.at(i)),
+    ];
+    final rows = {for (final r in rects) r.top}.toList()..sort();
+    expect(rows.length, greaterThan(1));
+    for (var i = 1; i < rows.length; i++) {
+      final above = rects.where((r) => r.top == rows[i - 1]).first;
+      expect(rows[i] - above.bottom, greaterThanOrEqualTo(8));
+    }
   });
 
   group('links', () {

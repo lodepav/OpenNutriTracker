@@ -156,7 +156,7 @@ Widget _app() => ChangeNotifierProvider<EnergyUnitProvider>(
 
 final _findButton = find.bySemanticsIdentifier('bulk-add-parse');
 final _submit = find.bySemanticsIdentifier('bulk-add-submit');
-const _replaceTitle = 'Replace your checked foods?';
+const _replaceTitle = 'Replace your edited foods?';
 
 Future<void> _parse(
   WidgetTester tester,
@@ -282,6 +282,105 @@ void main() {
         findsOneWidget,
       );
     });
+  });
+
+  group('closing a sheet or dialog leaves the keyboard down', () {
+    // the note field's own EditableText: focused means the keyboard is up
+    bool noteFocused(WidgetTester tester) => tester
+        .widget<EditableText>(
+          find.descendant(
+            of: find.bySemanticsIdentifier('bulk-add-input'),
+            matching: find.byType(EditableText),
+          ),
+        )
+        .focusNode
+        .hasFocus;
+
+    testWidgets('the amount sheet\'s Done', (tester) async {
+      await _register({
+        'toast': [_food('Toast')],
+      });
+      await _parse(tester, '100g toast');
+      expect(noteFocused(tester), isFalse);
+
+      await _tap(tester, find.text('Toast'));
+      await _tap(tester, find.byKey(const ValueKey('bulk-add-amount-done')));
+
+      expect(noteFocused(tester), isFalse);
+    });
+
+    testWidgets('the amount sheet opened from a focused note', (
+      tester,
+    ) async {
+      await _register({
+        'toast': [_food('Toast')],
+      });
+      await _parse(tester, '100g toast');
+      await _tap(tester, find.bySemanticsIdentifier('bulk-add-input'));
+      expect(noteFocused(tester), isTrue);
+
+      await _tap(tester, find.text('Toast'));
+      await _tap(tester, find.byKey(const ValueKey('bulk-add-amount-done')));
+
+      expect(noteFocused(tester), isFalse);
+    });
+
+    testWidgets('Other match', (tester) async {
+      await _register({
+        'toast': [_food('Toast'), _food('French toast')],
+      });
+      await _parse(tester, '100g toast');
+
+      await _tap(tester, find.text('Toast'));
+      await _tap(tester, find.byKey(const ValueKey('bulk-add-other-match')));
+      await _tap(tester, find.text('French toast').last);
+
+      expect(noteFocused(tester), isFalse);
+    });
+
+    testWidgets('Find again\'s Cancel', (tester) async {
+      await _register({
+        'toast': [_food('Toast')],
+      });
+      await _parse(tester, '100g toast');
+      await _tap(tester, find.byKey(const ValueKey('bulk-add-leave-out-0')));
+
+      await _tap(tester, _findButton);
+      await _tap(tester, find.text(l10nEn.dialogCancelLabel));
+
+      expect(noteFocused(tester), isFalse);
+    });
+
+    testWidgets('Back\'s discard Cancel', (tester) async {
+      await _register({
+        'toast': [_food('Toast')],
+      });
+      await _parse(tester, '100g toast');
+
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      await _tap(tester, find.text(l10nEn.dialogCancelLabel));
+
+      expect(noteFocused(tester), isFalse);
+    });
+  });
+
+  testWidgets('Find again is outlined, so Log stays the one filled button', (
+    tester,
+  ) async {
+    await _register({
+      'toast': [_food('Toast')],
+    });
+    await _parse(tester, '100g toast');
+
+    expect(
+      find.descendant(of: _findButton, matching: find.byType(OutlinedButton)),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: _findButton, matching: find.byType(FilledButton)),
+      findsNothing,
+    );
   });
 
   testWidgets('Other match shows each candidate\'s energy per 100 g', (

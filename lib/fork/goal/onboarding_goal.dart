@@ -44,6 +44,19 @@ abstract final class OnboardingGoal {
     return queuedProblem(moved) == null ? moved : null;
   }
 
+  /// A new plan's draft, on the goal [chosen] on the page when one was.
+  static GoalDraft freshDraft(
+    double nowKg,
+    DateTime today, {
+    double? targetKg,
+    UserGoalSelectionEntity? chosen,
+  }) {
+    final draft = GoalDraft.fresh(nowKg, today, targetKg: targetKg);
+    if (chosen == null) return draft;
+    final kind = PhaseKind.values.firstWhere((k) => choiceFor(k) == chosen);
+    return kind == draft.kind ? draft : draftOfKind(draft, kind);
+  }
+
   /// Upstream's goal choice for [kind].
   static UserGoalSelectionEntity choiceFor(PhaseKind kind) => switch (kind) {
     PhaseKind.cut => UserGoalSelectionEntity.loseWeight,
@@ -77,10 +90,11 @@ class OnboardingPlanRow extends StatelessWidget {
     final pending = OnboardingGoal.pending.value;
     final draft = pending != null
         ? GoalDraft.of(pending, setup.nowKg).copyWith(startKg: setup.nowKg)
-        : GoalDraft.fresh(
+        : OnboardingGoal.freshDraft(
             setup.nowKg,
             DateTime.now(),
             targetKg: setup.targetKg,
+            chosen: chosen,
           );
     await Navigator.of(context).push<bool>(
       MaterialPageRoute(

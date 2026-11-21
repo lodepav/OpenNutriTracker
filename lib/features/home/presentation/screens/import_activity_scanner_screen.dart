@@ -14,6 +14,7 @@ import 'package:opennutritracker/features/diary/presentation/bloc/calendar_day_b
 import 'package:opennutritracker/features/diary/presentation/bloc/diary_bloc.dart';
 import 'package:opennutritracker/features/home/domain/entity/shared_activity_payload.dart';
 import 'package:opennutritracker/features/home/presentation/bloc/home_bloc.dart';
+import 'package:opennutritracker/fork/scan/scan_hint.dart'; // [fork] S294
 import 'package:opennutritracker/fork/scan/scanner_error.dart'; // [fork] S294
 import 'package:opennutritracker/fork/scan/shared_code_dialog.dart'; // [fork] S295
 import 'package:opennutritracker/generated/l10n.dart';
@@ -111,10 +112,15 @@ class _ImportActivityScannerScreenState
       body: MobileScanner(
         controller: _cameraController,
         onDetect: _onDetect,
-        // [fork] S294 workout-scanner-camera-refused: a way on, not a black box
+        // [fork] S294 workout-scanner-camera-refused: a way on, not a black box,
+        // and over the feed what to scan
         errorBuilder: (_, error) => ScannerError(
           error: error,
           controller: _cameraController,
+          onPaste: _showPasteCodeDialog,
+        ),
+        overlayBuilder: (_, _) => ScanHint(
+          text: 'Point at the QR code from Share workout',
           onPaste: _showPasteCodeDialog,
         ),
         // [/fork]
@@ -170,7 +176,7 @@ class _ImportActivityScannerScreenState
       context: context,
       builder: (ctx) => SharedCodeDialog(
         hint: 'Paste the shared workout code here',
-        actionLabel: S.of(ctx).importActivityLabel,
+        actionLabel: 'Import workout',
         invalidLabel: "This isn't a workout code",
         isValid: (code) {
           try {

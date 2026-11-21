@@ -27,6 +27,9 @@ import 'package:opennutritracker/fork/basket/basket.dart';
 // [fork] S36 missing-product: a barcode nobody knows becomes a custom food
 import 'package:opennutritracker/fork/scan/missing_product.dart';
 // [/fork]
+// [fork] S343 scanner-title-fits
+import 'package:opennutritracker/fork/widget/toolbar_height.dart';
+// [/fork]
 import 'package:opennutritracker/generated/l10n.dart';
 
 class ScannerScreen extends StatefulWidget {
@@ -196,9 +199,16 @@ class _ScannerScreenState extends State<ScannerScreen>
       backgroundColor: palette.canvas,
       appBar: AppBar(
         backgroundColor: palette.canvas,
-        toolbarHeight: MediaQuery.textScalerOf(context).scale(kToolbarHeight),
+        // [fork] S343 scanner-title-fits: a phone's 200% grows 56 less than
+        // the title, so two lines spilled out of the bar
+        // toolbarHeight: MediaQuery.textScalerOf(context).scale(kToolbarHeight),
+        toolbarHeight: twoLineToolbarHeight(context),
+        // [/fork]
         title: Text(
           S.of(context).scanProductLabel,
+          // [fork] S343 scanner-title-fits: the AppBar turns wrapping off
+          softWrap: true,
+          // [/fork]
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
         ),
@@ -330,12 +340,20 @@ class _ScannerScreenState extends State<ScannerScreen>
 
   Future<void> _showManualEntryDialog(BuildContext context) async {
     final controller = TextEditingController();
-    final rootMessenger = ScaffoldMessenger.of(context);
+    // [fork] S342 scanner-code-in-dialog: a mistyped code closed the dialog
+    // and lost the digits; it is checked in the dialog, under the field
+    // final rootMessenger = ScaffoldMessenger.of(context);
+    String? error;
+    // [/fork]
     final invalidMessage = S.of(context).scannerManualEntryInvalid;
 
     final submitted = await showDialog<String>(
       context: context,
-      builder: (dialogContext) {
+      // [fork] S342 scanner-code-in-dialog
+      // builder: (dialogContext) {
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) {
+        // [/fork]
         return AlertDialog(
           shape: Dimens.shapeL,
           title: Text(S.of(dialogContext).scannerManualEntryDialogTitle),
@@ -351,7 +369,16 @@ class _ScannerScreenState extends State<ScannerScreen>
               ],
               decoration: InputDecoration(
                 hintText: S.of(dialogContext).scannerManualEntryFieldHint,
+                // [fork] S342 scanner-code-in-dialog
+                errorText: error,
+                errorMaxLines: 4,
+                // [/fork]
               ),
+              // [fork] S342 scanner-code-in-dialog: editing clears the error
+              onChanged: (_) {
+                if (error != null) setDialogState(() => error = null);
+              },
+              // [/fork]
             ),
           ),
           actions: [
@@ -362,22 +389,37 @@ class _ScannerScreenState extends State<ScannerScreen>
             Semantics(
               identifier: 'scanner-manual-entry-submit',
               child: TextButton(
-                onPressed: () => Navigator.of(dialogContext).pop(controller.text.trim()),
+                // [fork] S342 scanner-code-in-dialog
+                // onPressed: () => Navigator.of(dialogContext).pop(controller.text.trim()),
+                onPressed: () {
+                  final code = controller.text.trim();
+                  if (code.isNotEmpty && !isValidBarcodeCheckDigit(code)) {
+                    setDialogState(() => error = invalidMessage);
+                    return;
+                  }
+                  Navigator.of(dialogContext).pop(code);
+                },
+                // [/fork]
                 child: Text(S.of(dialogContext).scannerManualEntrySubmit),
               ),
             ),
           ],
         );
       },
+      // [fork] S342 scanner-code-in-dialog
+      ),
+      // [/fork]
     );
 
     if (!mounted) return;
     if (submitted == null || submitted.isEmpty) return;
 
-    if (!isValidBarcodeCheckDigit(submitted)) {
-      rootMessenger.showSnackBar(SnackBar(content: Text(invalidMessage)));
-      return;
-    }
+    // [fork] S342 scanner-code-in-dialog: the dialog checked it
+    // if (!isValidBarcodeCheckDigit(submitted)) {
+    //   rootMessenger.showSnackBar(SnackBar(content: Text(invalidMessage)));
+    //   return;
+    // }
+    // [/fork]
 
     _scannedBarcode = submitted;
     log.fine('Manual barcode entered: $submitted');

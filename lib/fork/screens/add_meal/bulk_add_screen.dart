@@ -864,6 +864,8 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
                 child: TextField(
                   controller: _textController,
                   focusNode: _noteFocus,
+                  // a tap on a row lets go too, or its sheet hands focus back
+                  onTapOutside: (_) => _dropFocus(),
                   minLines: 2,
                   maxLines: 4,
                   textInputAction: TextInputAction.newline,
@@ -894,7 +896,13 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
             // words for the photo's note (D49)
             if (staged != null && !busy) ...[
               const SizedBox(height: 8),
-              NoteChipsView(controller: _textController, focus: _noteFocus),
+              // a chip types into the note, so tapping one keeps the keyboard
+              TextFieldTapRegion(
+                child: NoteChipsView(
+                  controller: _textController,
+                  focus: _noteFocus,
+                ),
+              ),
             ],
             const SizedBox(height: 12),
             // nothing to send on an empty box, or while a read runs
@@ -928,7 +936,8 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
                 return Semantics(
                   identifier: 'bulk-add-parse',
                   child: again
-                      ? FilledButton.tonalIcon(
+                      // outlined: the theme fills every FilledButton alike
+                      ? OutlinedButton.icon(
                           onPressed: onPressed,
                           icon: icon,
                           label: label,
@@ -1097,7 +1106,7 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
       context: context,
       builder: (dialog) => AlertDialog(
         scrollable: true,
-        title: const Text('Replace your checked foods?'),
+        title: const Text('Replace your edited foods?'),
         content: Text(
           'Your changes to $changed ${changed == 1 ? 'food' : 'foods'} '
           'will be lost.',
@@ -1117,8 +1126,11 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
     return replace == true;
   }
 
+  // the page scope's unfocus leaves the field for a closing sheet to refocus
+  void _dropFocus() => FocusManager.instance.primaryFocus?.unfocus();
+
   void _onParsePressed() {
-    FocusScope.of(context).unfocus();
+    _dropFocus();
     // a recipe link reads as its ingredient lines
     if (recipeLinkIn(_textController.text) case final link?) {
       _readRecipeLink(link);
@@ -1144,7 +1156,7 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
     String? sharedPath,
     ImageSource from = ImageSource.camera,
   }) async {
-    FocusScope.of(context).unfocus();
+    _dropFocus();
     final destination = await _photoDestination;
     // say so when the photo is kept for leftovers
     final keepsPhoto = await MealPhotoCache().keepsPhotos;
@@ -1279,7 +1291,7 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
     if (photo == null) return;
     // A note still being dictated would land after the photo went.
     _voice.currentState?.cancel();
-    FocusScope.of(context).unfocus();
+    _dropFocus();
     final note = _textController.text.trim();
     _photoNote = note.isEmpty ? null : note;
     _textController.clear();

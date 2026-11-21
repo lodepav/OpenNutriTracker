@@ -64,15 +64,27 @@ class ScannerError extends StatelessWidget {
                 ),
                 const SizedBox(height: Dimens.spacing12),
               ],
-              OutlinedButton.icon(
-                icon: const Icon(Icons.keyboard_rounded),
-                label: const Text('Paste a code instead'),
-                onPressed: onPaste,
-              ),
+              PasteCodeButton(onPaste: onPaste),
             ],
           ),
         ),
       ),
+    );
+  }
+}
+
+/// The way around the camera on a QR import scanner: opens the paste dialog.
+class PasteCodeButton extends StatelessWidget {
+  final VoidCallback onPaste;
+
+  const PasteCodeButton({super.key, required this.onPaste});
+
+  @override
+  Widget build(BuildContext context) {
+    return OutlinedButton.icon(
+      icon: const Icon(Icons.keyboard_rounded),
+      label: const Text('Paste a code instead'),
+      onPressed: onPaste,
     );
   }
 }

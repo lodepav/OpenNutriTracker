@@ -16,6 +16,7 @@ import 'package:opennutritracker/generated/l10n.dart';
 import 'package:opennutritracker/fork/health/onboarding_weight.dart';
 import 'package:opennutritracker/fork/health/weight_import.dart';
 // [/fork]
+import 'package:opennutritracker/fork/screens/onboarding/onboarding_limits.dart'; // [fork] S367
 
 class OnboardingBodyMeasurementsPageBody extends StatefulWidget {
   final Function(
@@ -58,6 +59,11 @@ class OnboardingBodyMeasurementsPageBody extends StatefulWidget {
   final WeightSource? healthWeightSource;
   // [/fork]
 
+  // [fork] S367 onboarding-body-errors: set to the blocked Next's message
+  // when one field alone is wrong, for the footer to name it
+  final ValueNotifier<String?>? blockedMessage;
+  // [/fork]
+
   const OnboardingBodyMeasurementsPageBody({
     super.key,
     required this.setButtonContent,
@@ -71,6 +77,7 @@ class OnboardingBodyMeasurementsPageBody extends StatefulWidget {
     // [fork] S99 onboarding-health-weight
     this.healthWeightSource,
     // [/fork]
+    this.blockedMessage, // [fork] S367
   });
 
   @override
@@ -628,6 +635,13 @@ class _OnboardingBodyMeasurementsPageBodyState
                       ),
                     ),
                   ),
+            // [fork] S367 onboarding-body-errors: the range a refused value is
+            // held to, in the unit shown, under upstream's message
+            // shortcut: an unfinished ft/in or st/lb pair gets the range too, as
+            // the page sees only null; upgrade when FeetInchesInput says which
+            if (_showHeightError && _parsedHeight == null)
+              _forkRangeLine(heightRangeText(imperial: _isHeightImperial)),
+            // [/fork]
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 8.0),
               child: ToggleButtons(
@@ -790,6 +804,10 @@ class _OnboardingBodyMeasurementsPageBodyState
                       ),
                     ),
                   ),
+            // [fork] S367 onboarding-body-errors
+            if (_showWeightError && _parsedWeight == null)
+              _forkRangeLine(_forkWeightRange()),
+            // [/fork]
             // [fork] S99 onboarding-health-weight: what the read came to,
             // under the field it filled
             if (_healthWeightNote case final note?)
@@ -891,6 +909,9 @@ class _OnboardingBodyMeasurementsPageBodyState
                       ),
                     ),
                   ),
+            // [fork] S367 onboarding-body-errors
+            if (_forkTargetRefused) _forkRangeLine(_forkWeightRange()),
+            // [/fork]
             if (_parsedHeight != null && _parsedWeight != null) ...[
               const SizedBox(height: 16.0),
               _buildHealthyRangeCard(),
@@ -955,6 +976,34 @@ class _OnboardingBodyMeasurementsPageBodyState
       ),
     );
   }
+
+  // [fork] S367 onboarding-body-errors: the range lines and what they read
+  bool get _forkTargetRefused =>
+      _showTargetError &&
+      (_isWeightSt
+          ? _targetHasInput
+          : _targetWeightController.text.trim().isNotEmpty) &&
+      _parsedTargetWeight == null;
+
+  String _forkWeightRange() => weightRangeText(
+    _bodyWeightUnit,
+    switch (_bodyWeightUnit) {
+      BodyWeightUnit.kg => S.of(context).kgLabel,
+      BodyWeightUnit.lb => S.of(context).lbsLabel,
+      BodyWeightUnit.st => S.of(context).stLabel,
+    },
+  );
+
+  Widget _forkRangeLine(String text) => Padding(
+    padding: const EdgeInsets.only(left: 12, top: 4),
+    child: Text(
+      text,
+      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+        color: Theme.of(context).colorScheme.error,
+      ),
+    ),
+  );
+  // [/fork]
 
   String? validateHeight(String? value) {
     // Silence until the field has been left or Next was tried: the button
@@ -1028,6 +1077,14 @@ class _OnboardingBodyMeasurementsPageBodyState
       final targetText = _targetWeightController.text.trim();
       isTargetValid = targetText.isEmpty || _parsedTargetWeight != null;
     }
+    // [fork] S367 onboarding-body-errors: set before the parent rebuilds
+    // its footer from setButtonContent
+    widget.blockedMessage?.value = bodyBlockedMessage(
+      heightOk: _parsedHeight != null,
+      weightOk: _parsedWeight != null,
+      targetOk: isTargetValid,
+    );
+    // [/fork]
 
     if (isTargetValid && _parsedHeight != null && _parsedWeight != null) {
       widget.setButtonContent(

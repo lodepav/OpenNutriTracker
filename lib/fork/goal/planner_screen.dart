@@ -21,6 +21,8 @@ import 'package:opennutritracker/fork/display/display_prefs.dart';
 import 'package:opennutritracker/fork/goal/goal_actions.dart';
 import 'package:opennutritracker/fork/goal/goal_plan_view.dart' show goalTitle;
 import 'package:opennutritracker/fork/goal/goal_planner.dart';
+import 'package:opennutritracker/fork/goal/goal_status.dart'
+    show signedPaceText;
 import 'package:opennutritracker/fork/goal/phase_colors.dart';
 import 'package:opennutritracker/fork/phases/phases.dart';
 import 'package:opennutritracker/fork/units/energy_text.dart';
@@ -210,6 +212,18 @@ Future<bool> openGoalPlanner(
   return started ?? false;
 }
 
+/// [draft] turned to [kind], at that kind's steady pace; breaks only on a
+/// cut.
+GoalDraft draftOfKind(GoalDraft draft, PhaseKind kind) => draft.copyWith(
+  kind: kind,
+  paceKg: switch (kind) {
+    PhaseKind.cut => cutPacesKg[1],
+    PhaseKind.bulk => bulkPacesKg[1],
+    PhaseKind.maintain => 0,
+  },
+  breaks: kind == PhaseKind.cut && draft.breaks,
+);
+
 enum _Step {
   goal('Goal'),
   pace('Pace'),
@@ -375,7 +389,29 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
       // A goal that cannot be planned as it is says why at once.
       if (_draft.problem != null) _detour = _Step.goal;
     }
+    _draftAtOpen = _draft;
   }
+
+  /// The draft as the planner opened, to tell whether anything changed.
+  late final GoalDraft _draftAtOpen;
+
+  /// Nothing to lose by leaving: the draft, the settings and the pending
+  /// macros are as they were.
+  bool get _unchanged =>
+      _draft == _draftAtOpen &&
+      identical(AdaptiveStore.settings.value, _before) &&
+      identical(OnboardingMacros.pending.value, _macrosBefore);
+
+  /// The Adaptive target is chosen but no check-in accepted yet, so Home
+  /// runs on the formula until the first one is; false when unread.
+  late final Future<bool> _beforeFirstCheckIn = () async {
+    try {
+      return await _store.lastCheckIn() == null;
+    } catch (_) {
+      // No store in a test: nothing said.
+      return false;
+    }
+  }();
 
   /// The goal edited, once begun: its start stays.
   bool get _begun =>
@@ -461,6 +497,25 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
   double _kcalAt(double kgPerWeek) =>
       _baseKcal + paceKcalPerDay(kgPerWeek, _kcalPerKg);
 
+  /// Why a pace's deficit or surplus differs from the Formula's: on
+  /// Adaptive a kg counts by body composition, not the flat 7700.
+  List<Widget> _perKgNote(BuildContext context) {
+    final s = AdaptiveStore.settings.value;
+    if (!s.adaptiveTarget || s.fixedTarget || s.flatEnergy) return const [];
+    return [
+      Padding(
+        padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+        child: Text(
+          'On Adaptive a kg counts as about '
+          '${energyText(context, _kcalPerKg)}, as part of a change is lean '
+          'tissue, which holds less; Formula counts every kg as '
+          '${energyText(context, AdaptiveSettings.commonKcalPerKg)}.',
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
+      ),
+    ];
+  }
+
   /// The grams at the main phase's target: by weight with a program,
   /// else the macro split's shares.
   FixedMacros _gramsAt(double kcal, MacroProgram? program) =>
@@ -485,6 +540,11 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
   }
 
   Future<void> _leave() async {
+    // A planner left as it opened has nothing to ask about.
+    if (_unchanged) {
+      Navigator.of(context).pop(false);
+      return;
+    }
     final keep = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -494,11 +554,16 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
               ? 'Leave without saving?'
               : _queued
               ? 'Leave without adding it?'
+              : _setup.onboarding
+              ? 'Leave the planner?'
               : 'Leave without a plan?',
         ),
         content: Text(
-          '${_place == null ? 'Your goal stays' : 'Your plan stays'} as it '
-          'is, and the settings changed here go back.',
+          // In onboarding there is no goal yet to stay.
+          _setup.onboarding
+              ? 'Nothing you set here is kept.'
+              : '${_place == null ? 'Your goal stays' : 'Your plan stays'} '
+                    'as it is, and the settings changed here go back.',
         ),
         actions: [
           TextButton(
@@ -813,15 +878,7 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
             // The kind it is already: a custom pace stays.
             if (_draft.kind == kind) return;
             _customPace = false;
-            _draft = _draft.copyWith(
-              kind: kind,
-              paceKg: switch (kind) {
-                PhaseKind.cut => cutPacesKg[1],
-                PhaseKind.bulk => bulkPacesKg[1],
-                PhaseKind.maintain => 0,
-              },
-              breaks: kind == PhaseKind.cut && _draft.breaks,
-            );
+            _draft = draftOfKind(_draft, kind);
             final place = _place;
             if (place != null) _moveTo(place);
           }),
@@ -1250,6 +1307,7 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
           },
         ),
       ..._customPaceRows(context, cut),
+      ..._perKgNote(context),
       ..._floorWarning(context),
       ..._capWarning(context),
       if (cut)
@@ -1330,6 +1388,16 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
             'it only on Adaptive.',
             style: Theme.of(context).textTheme.bodySmall,
           ),
+        // The switch below also sets the estimate, so it stays as set.
+        if (_formula)
+          Text(
+            key: const ValueKey('goal-burn-formula-per-kg'),
+            'Formula counts every kg as '
+            '${energyText(context, AdaptiveSettings.commonKcalPerKg)} '
+            'whatever the switch below says; the switch sets it for this '
+            'estimate and Adaptive.',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
       ],
     ),
     ExpenditureGroups.estimate(store: _store),
@@ -1385,13 +1453,14 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
             ),
             if (pace != 0)
               line(
-                'Pace, ${weightChangeText(pace, _unit)} a week',
+                'Pace, ${signedPaceText(pace, _unit)}',
                 energyText(context, shift.toDouble(), signed: true),
               ),
             if (breaks && pace != 0) line('On diet breaks', base),
           ],
         ],
       ),
+      if (pace != 0) ..._perKgNote(context),
       if (_formula && !_setup.onboarding)
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
@@ -1594,6 +1663,22 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
                 ? 'Maintenance'
                 : '${goalTitle(_nextGoal!, _unit)}, up next',
           ),
+          if (settings.adaptiveTarget && !settings.fixedTarget)
+            FutureBuilder<bool>(
+              future: _beforeFirstCheckIn,
+              builder: (context, before) => before.data != true
+                  ? const SizedBox.shrink()
+                  : Padding(
+                      padding: const EdgeInsets.only(top: 6),
+                      child: Text(
+                        key: const ValueKey('goal-plan-adaptive-starts'),
+                        'Adaptive starts at your first check-in. Until you '
+                        'accept it, your goal stays on the formula, with '
+                        'logged activities added.',
+                        style: theme.textTheme.bodySmall,
+                      ),
+                    ),
+            ),
         ],
       ),
       _Panel(

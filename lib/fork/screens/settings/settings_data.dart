@@ -96,7 +96,10 @@ extension _DataSettings on _SettingsScreenState {
             iconColor: error,
             titleColor: error,
             title: S.of(context).settingsDeleteAllDataLabel,
-            subtitle: S.of(context).settingsDeleteAllDataSubtitle,
+            // The shared AI key is named here too: it goes for every profile
+            subtitle:
+                'Profile, logged foods, activities, weight history, fasting '
+                'sessions and the shared AI key',
             onTap: () => _confirmDeleteAllData(context),
           ),
         ],
@@ -131,7 +134,15 @@ extension _DataSettings on _SettingsScreenState {
       builder: (ctx) => AlertDialog(
         scrollable: true,
         title: Text(l10n.settingsDeleteAllDataConfirmTitle),
-        content: Text(l10n.settingsDeleteAllDataConfirmContent),
+        // The one effect beyond this profile comes first
+        content: const Text(
+          'This also removes the AI provider key and server address, which '
+          'every profile on this device shares. It removes your profile, '
+          'logged foods, activities, weight history and fasting sessions for '
+          'the current profile only. Shared content (custom meals, recipes, '
+          'activity templates) and the Open Food Facts and USDA Food Data '
+          'Central catalogues are not affected. This cannot be undone.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),

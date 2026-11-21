@@ -29,7 +29,7 @@ class HealthSyncHeading extends StatelessWidget {
             ),
           ),
           Text(
-            'Pick what to share; Android asks once for each.',
+            'Pick what to sync; Android asks once for each.',
             style: text.bodySmall?.copyWith(
               color: paletteOf(context).textMuted,
             ),

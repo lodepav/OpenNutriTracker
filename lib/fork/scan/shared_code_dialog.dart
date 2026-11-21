@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 
-/// The paste dialog of the recipe and workout importers: a code that isn't
-/// one keeps the dialog open with the error under the field and the text kept.
-/// Pops the trimmed code.
+/// The paste dialog of the recipe, meal and workout importers: a code that
+/// isn't one keeps the dialog open with the error under the field and the text
+/// kept, until the text changes. Pops the trimmed code.
 class SharedCodeDialog extends StatefulWidget {
   final String hint;
   final String actionLabel;
@@ -38,7 +38,11 @@ class _SharedCodeDialogState extends State<SharedCodeDialog> {
     if (code.isNotEmpty && widget.isValid(code)) {
       Navigator.of(context).pop(code);
     } else {
-      setState(() => _error = widget.invalidLabel);
+      setState(
+        () => _error =
+            "${widget.invalidLabel}. Copy the whole code from the sender's "
+            'Share dialog.',
+      );
     }
   }
 
@@ -53,10 +57,14 @@ class _SharedCodeDialogState extends State<SharedCodeDialog> {
           minLines: 3,
           maxLines: 5,
           autofocus: true,
+          // The error is about the text that was there, not the new text.
+          onChanged: (_) {
+            if (_error != null) setState(() => _error = null);
+          },
           decoration: InputDecoration(
             hintText: widget.hint,
             errorText: _error,
-            errorMaxLines: 3,
+            errorMaxLines: 6,
             border: const OutlineInputBorder(
               borderRadius: Dimens.borderRadiusS,
             ),

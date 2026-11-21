@@ -411,6 +411,10 @@ class _RecipeBuilderScreenState extends State<RecipeBuilderScreen> {
   }
 
   Future<void> _onAddIngredient(BuildContext context) async {
+    // [fork] S346 builder-stale-save-error: a save error would stay on the
+    // picker and on the return, long after it was about the empty recipe
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    // [/fork]
     final selectedMeal = await Navigator.of(context).push<MealEntity>(
       MaterialPageRoute(
         builder: (searchContext) => Scaffold(

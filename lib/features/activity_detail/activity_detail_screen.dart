@@ -49,7 +49,11 @@ class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
   void initState() {
     _activityDetailBloc = locator<ActivityDetailBloc>();
     quantityTextController = TextEditingController();
-    quantityTextController.text = "0";
+    // [fork] S338 activity-amount-empty: typing into a "0" gave "0300"; the
+    // field starts empty with its hint, and Add stays off until a number
+    // quantityTextController.text = "0";
+    quantityTextController.text = "";
+    // [/fork]
     quantityTextController.addListener(_onQuantityChanged);
     totalQuantity = 0; // TODO change to 60
     totalKcal = 0;
@@ -106,12 +110,22 @@ class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
           ),
           // [/fork]
         ),
-        bottomSheet: ActivityDetailBottomSheet(
+        // [fork] S287 activity-detail-bars: the Scaffold strips the bottom
+        // inset from its bottomSheet; give the screen's back so the sheet's
+        // SafeArea keeps Add above the navigation bar
+        // bottomSheet: ActivityDetailBottomSheet(
+        bottomSheet: MediaQuery(
+          data: MediaQuery.of(context),
+          child: ActivityDetailBottomSheet(
+          // [/fork]
           onAddButtonPressed: onAddButtonPressed,
           quantityTextController: quantityTextController,
           activityEntity: activityEntity,
           activityDetailBloc: _activityDetailBloc,
         ),
+        // [fork] S287 activity-detail-bars
+        ),
+        // [/fork]
       // [fork] S287 activity-detail-bars: the SafeArea's close
       // ),
       // [/fork]

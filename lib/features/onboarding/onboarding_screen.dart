@@ -80,6 +80,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   /// that page reveals the errors for fields the user never left.
   final _bodyMeasurementsShowErrors = ValueNotifier<int>(0);
 
+  // [fork] S368 onboarding-body-blocked: the body page's message naming the
+  // one wrong field; null keeps the general one
+  final _forkBodyBlocked = ValueNotifier<String?>(null);
+  // [/fork]
+
   // [fork] S332 onboarding-back: the page shown, so system Back can step back
   int _forkPage = 0;
   // [/fork]
@@ -110,6 +115,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     AdaptiveStore.settings.removeListener(_forkMacrosChanged);
     // [/fork]
     _bodyMeasurementsShowErrors.dispose();
+    _forkBodyBlocked.dispose(); // [fork] S368
     super.dispose();
   }
 
@@ -275,12 +281,18 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           initialBodyWeightUnit: selection.bodyWeightUnit,
           initialFoodImperial: selection.foodUsesImperial,
           showErrorsSignal: _bodyMeasurementsShowErrors,
+          blockedMessage: _forkBodyBlocked, // [fork] S368
         ),
         footer: HighlightButton(
           buttonLabel: S.of(context).buttonNextLabel,
           onButtonPressed: () => _scrollToPage(_OnboardingPage.activity),
           buttonActive: _bodyMeasurementsPageButtonActive,
-          inactiveMessage: S.of(context).onboardingBlockedBodySnack,
+          // [fork] S368 onboarding-body-blocked: set before setButtonContent's
+          // rebuild, so it is current
+          inactiveMessage:
+              _forkBodyBlocked.value ?? S.of(context).onboardingBlockedBodySnack,
+          // inactiveMessage: S.of(context).onboardingBlockedBodySnack,
+          // [/fork]
           onBlockedPressed: () => _bodyMeasurementsShowErrors.value++,
         ),
       ),

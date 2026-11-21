@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/core/utils/shared_payload_router.dart'; // [fork] S298
+import 'package:opennutritracker/features/recipes/domain/entity/shared_recipe_payload.dart'; // [fork] S298
 import 'package:opennutritracker/generated/l10n.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
@@ -76,6 +77,23 @@ class _ShareQrDialogState extends State<ShareQrDialog> {
       'Scan it in OpenBite with Recipes › Import recipe, or + › Scan.',
     null => null,
   };
+
+  // Says what the image is for: a screen reader user can't tell it from
+  // "qr code".
+  String get _qrLabel {
+    final (name, where) = switch (classifySharedPayload(widget.code)) {
+      SharedPayloadKind.meal => ('this meal', 'Import shared meal'),
+      SharedPayloadKind.activity => ('this workout', 'Import shared workout'),
+      SharedPayloadKind.recipe => (
+        SharedRecipePayload.fromJsonString(widget.code).name,
+        'Import recipe',
+      ),
+      null => (widget.title, null),
+    };
+    return where == null
+        ? 'QR code for $name'
+        : "QR code for $name, scan it in OpenBite's $where";
+  }
   // [/fork]
 
   @override
@@ -141,6 +159,7 @@ class _ShareQrDialogState extends State<ShareQrDialog> {
                 child: QrImageView.withQr(
                   qr: qr,
                   size: size,
+                  semanticsLabel: _qrLabel, // [fork] S298
                   backgroundColor: Colors.white,
                   padding: EdgeInsets.all(
                     _quietZoneModules *

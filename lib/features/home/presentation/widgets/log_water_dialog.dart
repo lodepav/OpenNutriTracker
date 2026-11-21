@@ -52,7 +52,9 @@ class _LogWaterDialogState extends State<LogWaterDialog> {
           Expanded(
             child: Text(
               s.logWaterDialogTitle,
-              overflow: TextOverflow.ellipsis,
+              // [fork] S341 water-title-wraps: at 200% it read "Log water i..."
+              // overflow: TextOverflow.ellipsis,
+              // [/fork]
             ),
           ),
           const SizedBox(width: 8),
@@ -151,6 +153,11 @@ class _LogWaterDialogState extends State<LogWaterDialog> {
 
   Future<void> _onUndoPressed() async {
     final messenger = ScaffoldMessenger.of(context);
+    // [fork] S340 water-undo-says: Undo was silent and left OK to log the
+    // same drink again; it now closes and says what it removed
+    final navigator = Navigator.of(context);
+    final removed = _undoneMessage(locator<HomeBloc>().state);
+    // [/fork]
     final undone = await locator<HomeBloc>().undoLastWaterIntake();
     if (!mounted) return;
     if (!undone) {
@@ -158,5 +165,32 @@ class _LogWaterDialogState extends State<LogWaterDialog> {
         SnackBar(content: Text(S.of(context).logWaterNothingToUndoLabel)),
       );
     }
+    // [fork] S340 water-undo-says
+    else {
+      navigator.pop();
+      messenger.showSnackBar(SnackBar(content: Text(removed)));
+    }
+    // [/fork]
   }
+
+  // [fork] S340 water-undo-says: the drink the bloc's undo picks, the latest
+  // by time, and what today comes to without it.
+  // shortcut: read from the loaded Home state, so a drink logged elsewhere
+  // since its last load is missed; upgrade when undoLastWaterIntake returns
+  // the removed entry.
+  String _undoneMessage(HomeState state) {
+    if (state is! HomeLoadedState || state.waterIntakes.isEmpty) {
+      return 'Removed the last drink';
+    }
+    final last = state.waterIntakes.reduce(
+      (a, b) => b.dateTime.isBefore(a.dateTime) ? a : b,
+    );
+    String shown(int ml) => widget.usesImperialUnits
+        ? '${UnitCalc.mlToFlOz(ml.toDouble()).round()} fl oz'
+        : '$ml ml';
+    return 'Removed ${shown(last.amountMl)} · '
+        'today ${shown(state.waterMlToday - last.amountMl)}';
+  }
+
+  // [/fork]
 }

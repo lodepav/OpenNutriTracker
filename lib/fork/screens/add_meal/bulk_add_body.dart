@@ -212,8 +212,72 @@ extension _BulkAddBody on _BulkAddScreenState {
       // a wrong dish name is the costliest photo error, and a note fixes it
       action: photo && _forkMealPhoto != null ? _rereadPhotoWithNote : null,
       actionLabel: 'Name the dish',
+      // each food is checked against the photo, so the photo stays in view
+      leading: photo && _forkMealPhoto != null
+          ? _buildPhotoThumbnail(context, _forkMealPhoto!)
+          : null,
     );
   }
+
+  /// The photo the foods were read from, small; a tap shows it whole.
+  Widget _buildPhotoThumbnail(BuildContext context, MealPhoto photo) {
+    const size = 48.0;
+    return Semantics(
+      identifier: 'bulk-add-review-photo',
+      button: true,
+      image: true,
+      label: 'Show the photo',
+      child: InkWell(
+        onTap: () => unawaited(_showPhoto(context, photo)),
+        borderRadius: BorderRadius.circular(8),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: Image.memory(
+            photo.bytes,
+            width: size,
+            height: size,
+            fit: BoxFit.cover,
+            excludeFromSemantics: true,
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// The photo full screen, to zoom into, with a way back.
+  Future<void> _showPhoto(BuildContext context, MealPhoto photo) =>
+      showDialog<void>(
+        context: context,
+        builder: (dialog) => Dialog.fullscreen(
+          backgroundColor: Colors.black,
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: InteractiveViewer(
+                  child: Semantics(
+                    identifier: 'bulk-add-review-photo-full',
+                    image: true,
+                    label: 'The meal photo',
+                    child: Image.memory(
+                      photo.bytes,
+                      fit: BoxFit.contain,
+                      excludeFromSemantics: true,
+                    ),
+                  ),
+                ),
+              ),
+              SafeArea(
+                child: IconButton(
+                  onPressed: () => Navigator.of(dialog).pop(),
+                  icon: const Icon(Icons.close_rounded),
+                  color: Colors.white,
+                  tooltip: MaterialLocalizations.of(dialog).closeButtonTooltip,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
 
   /// The meal's card, as the Diary's day card reads (D37): what Log logs,
   /// its energy and its macros on the Diary's line, and that day's energy
@@ -416,6 +480,7 @@ extension _BulkAddBody on _BulkAddScreenState {
     bool emphasised = false,
     VoidCallback? action,
     String? actionLabel,
+    Widget? leading,
   }) {
     final scheme = Theme.of(context).colorScheme;
     // The ceiling is a share of what this widget was actually given, not of
@@ -449,11 +514,14 @@ extension _BulkAddBody on _BulkAddScreenState {
                     children: [
                       Row(
                         children: [
-                          Icon(
-                            icon,
-                            size: 16,
-                            color: emphasised ? scheme.onErrorContainer : null,
-                          ),
+                          leading ??
+                              Icon(
+                                icon,
+                                size: 16,
+                                color: emphasised
+                                    ? scheme.onErrorContainer
+                                    : null,
+                              ),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(

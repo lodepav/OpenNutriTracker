@@ -31,6 +31,10 @@ import 'package:opennutritracker/fork/adaptive/expenditure.dart';
 import 'package:opennutritracker/fork/adaptive/goal_plan.dart';
 import 'package:opennutritracker/fork/adaptive/goal_saving.dart';
 import 'package:opennutritracker/fork/body/measurement_store.dart';
+import 'package:opennutritracker/fork/goal/goal_planner.dart';
+import 'package:opennutritracker/fork/goal/goal_progress.dart';
+import 'package:opennutritracker/fork/phases/phases.dart';
+import 'package:intl/intl.dart' show DateFormat;
 import 'package:opennutritracker/core/domain/entity/body_weight_unit_entity.dart';
 import 'package:opennutritracker/fork/adaptive/trend_points.dart';
 import 'package:opennutritracker/fork/units/weight_text.dart';
@@ -131,6 +135,16 @@ class _NoLogs extends Fake implements GetTrackedDayUsecase {
 }
 
 /// The check-in on a phone's width at 200% text.
+/// A cut from 87.1 to 82 at 0.5 a week begun [today], as Goal progress
+/// reads it.
+GoalProgress _progress(DateTime today) => GoalProgress(
+  start: GoalStart(date: today, kg: 87.1, targetKg: 82, paceKgPerWeek: -0.5),
+  nowKg: 87.1,
+  paceKgPerWeek: -0.5,
+  trend: const [87.1],
+  today: today,
+);
+
 Future<void> _pumpLarge(WidgetTester tester, AdaptiveService service) async {
   tester.view.physicalSize = const Size(1080, 2400);
   tester.view.devicePixelRatio = 3;
@@ -874,6 +888,8 @@ void main() {
   ) async {
     locator.registerSingleton<GetKcalGoalUsecase>(_Goal());
     addTearDown(locator.unregister<GetKcalGoalUsecase>);
+    AdaptiveStore.settings.value = const AdaptiveSettings(adaptiveTarget: true);
+    addTearDown(() => AdaptiveStore.settings.value = const AdaptiveSettings());
     final service = AdaptiveService(
       _User(),
       _Weights(),
@@ -888,16 +904,22 @@ void main() {
     // Home's goal adds the day's activity to it.
     expect(find.text('Formula target without activity'), findsOneWidget);
     expect(find.text('2847 kcal'), findsOneWidget);
-    expect(find.text('Change'), findsOneWidget);
-    // The rows add up as shown.
+    // From Home's goal today, 3096 with the day's activity, which the
+    // check-in's target does not add.
+    expect(find.text('Change'), findsNothing);
+    expect(find.text("Change from today's goal"), findsOneWidget);
     final proposed = checkIn!.proposedTargetKcal.round();
     // A cut: the change down, with a true minus.
     expect(proposed, lessThan(2847));
-    expect(find.text('\u2212${2847 - proposed} kcal'), findsOneWidget);
+    expect(
+      find.text('\u2212${3096 - proposed} kcal (activity no longer added)'),
+      findsOneWidget,
+    );
     expect(
       find.textContaining(
         'That is the expenditure less '
-        '${checkIn.expenditureKcal.round() - proposed} kcal',
+        '${checkIn.expenditureKcal.round() - proposed} kcal '
+        'for \u22120.50 kg a week',
       ),
       findsOneWidget,
     );
@@ -1204,7 +1226,8 @@ void main() {
         find.text(weightChangeText(checkIn.weekChangeKg!, BodyWeightUnit.lb)),
         findsOneWidget,
       );
-      expect(find.textContaining('for \u22121.1 lb a week'), findsOneWidget);
+      // The pace as Goal progress prints it.
+      expect(find.textContaining('for \u22121.10 lb a week'), findsOneWidget);
       final perLb = (checkIn.kcalPerKg! / 2.20462).round();
       expect(
         find.textContaining('at $perLb kcal a lb of weight change'),
@@ -1505,6 +1528,142 @@ void main() {
     expect(find.text('Keep current target'), findsNothing);
   });
 
+  testWidgets("off Adaptive, accepting leaves Home's goal: the change is "
+      "the target's", (tester) async {
+    locator.registerSingleton<GetKcalGoalUsecase>(_Goal());
+    addTearDown(locator.unregister<GetKcalGoalUsecase>);
+    tester.view.physicalSize = const Size(1000, 4000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final service = AdaptiveService(
+      _User(),
+      _Weights(),
+      _TrackedDays(),
+      _MemoryStore(),
+      () => _today.add(const Duration(hours: 9)),
+    );
+    await tester.pumpWidget(MaterialApp(home: CheckInScreen(service: service)));
+    await tester.pumpAndSettle();
+    expect(find.text('Change'), findsOneWidget);
+    expect(find.text("Change from today's goal"), findsNothing);
+  });
+
+  testWidgets('the arrival dates are the ones Goal progress gives', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1000, 4000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final t = DateTime.now();
+    final now = DateTime(t.year, t.month, t.day);
+    // 87.1 to 82 at 0.5 a week: whole weeks, 11, where the pace alone
+    // would take 72 days.
+    final plan = GoalDraft(
+      kind: PhaseKind.cut,
+      startKg: 87.1,
+      targetKg: 82,
+      start: now,
+      paceKg: 0.5,
+    ).toPlan();
+    final service = AdaptiveService(
+      _User(),
+      _Weights(),
+      _TrackedDays(),
+      _MemoryStore(),
+      () => _today.add(const Duration(hours: 9)),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: CheckInScreen(
+          service: service,
+          loadArrivals: () async => goalArrivals(_progress(now), plan),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('By your plan'), findsOneWidget);
+    expect(
+      find.text(
+        'about 11 weeks (${DateFormat.yMMMd('en_US').format(plan.lastDay)})',
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Target weight, chosen pace'), findsNothing);
+  });
+
+  test("today's goal changes to the proposal with today's shift, and only "
+      "the daily mode's activity", () {
+    int shown(double kcal) => kcal.round();
+    // The critique's: 2988 with 249 of activity, to 2545 with none.
+    final off = todayGoalChange(
+      todayKcal: 2987.8,
+      todayActivityKcal: 249.4,
+      proposedKcal: 2545.2,
+      weekdayOffsetKcal: 0,
+      dailyActivityKcal: null,
+      shown: shown,
+    );
+    expect(off, (change: -443, activityDropped: true));
+    // A shift today is in the goal after too.
+    expect(
+      todayGoalChange(
+        todayKcal: 3088,
+        todayActivityKcal: 0,
+        proposedKcal: 2545,
+        weekdayOffsetKcal: 300,
+        dailyActivityKcal: null,
+        shown: shown,
+      ),
+      (change: -243, activityDropped: false),
+    );
+    // The daily mode adds the day's counted activity, at most its cap.
+    expect(
+      todayGoalChange(
+        todayKcal: 2988,
+        todayActivityKcal: 249,
+        proposedKcal: 2545,
+        weekdayOffsetKcal: 0,
+        dailyActivityKcal: 1000,
+        shown: shown,
+      ),
+      (
+        change: 2545 + maxDailyActivityKcal.round() - 2988,
+        activityDropped: false,
+      ),
+    );
+  });
+
+  testWidgets("today's goal's parts add up to its total as shown", (
+    tester,
+  ) async {
+    late String text;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) {
+            text = todayGoalText(context, 2987.8, 249.4);
+            return const SizedBox.shrink();
+          },
+        ),
+      ),
+    );
+    // 2738.4 and 249.4 rounded apart made 2738 + 249 under 2988.
+    expect(text, '2988 kcal (2738 + 250 activity)');
+    // Activity that rounds to nothing beside the total is not named.
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) {
+            text = todayGoalText(context, 2988.4, 0.6);
+            return const SizedBox.shrink();
+          },
+        ),
+      ),
+    );
+    expect(text, '2988 kcal');
+  });
+
   test("today's goal's activity: the daily mode's on a check-in's target, "
       'else what the logged activities add', () {
     // formula: 3096 with the logged activities, 2847 without
@@ -1554,9 +1713,28 @@ void main() {
       _MemoryStore(),
       () => _today.add(const Duration(hours: 9)),
     );
-    await _pumpLarge(tester, service);
+    final t = DateTime.now();
+    final now = DateTime(t.year, t.month, t.day);
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      MaterialApp(
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(
+            context,
+          ).copyWith(textScaler: const TextScaler.linear(2)),
+          child: child!,
+        ),
+        home: CheckInScreen(
+          service: service,
+          loadArrivals: () async => goalArrivals(_progress(now), null),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
 
-    final label = find.text('Target weight, chosen pace');
+    final label = find.text('From today at your plan’s pace');
     await tester.scrollUntilVisible(label, 200);
     // Squeezed beside its value it took a letter a line.
     expect(tester.getSize(label).height, lessThan(200));

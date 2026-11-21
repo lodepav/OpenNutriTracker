@@ -282,9 +282,10 @@ void main() {
 
     test('for showing, the week begun and the weeks after are one cut', () {
       final plan = _cut().toPlan();
+      // Unchanged it stays as it is: a target moved a little, as long.
       final edited = editedPlan(
         plan,
-        GoalDraft.of(plan, 86.4).copyWith(startKg: 86.4),
+        GoalDraft.of(plan, 86.4).copyWith(startKg: 86.4, targetKg: () => 80.1),
         today: _start,
         nowKg: 86.4,
       );

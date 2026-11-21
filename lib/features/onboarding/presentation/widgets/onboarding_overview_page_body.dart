@@ -231,9 +231,11 @@ class OnboardingOverviewPageBody extends StatelessWidget {
                   MaterialPageRoute(
                     // [fork] S134 goal-explained: the steps are on this page
                     // already, so the link goes to every number
+                    // titled as this link, the inputs in onboarding's units
                     builder: (_) => KcalGoalInfoScreen(
                       breakdown: breakdown,
                       equations: true,
+                      onboarding: true,
                     ),
                     // [/fork]
                   ),

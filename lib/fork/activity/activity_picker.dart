@@ -693,6 +693,8 @@ class _DurationSheetState extends State<DurationSheet> {
                     identifier: 'activity-duration-$m',
                     child: ChoiceChip(
                       materialTapTargetSize: MaterialTapTargetSize.padded,
+                      // The fill marks the choice; a check mark cut "30" at 200%.
+                      showCheckmark: false,
                       label: SizedBox(
                         width: double.infinity,
                         child: Text(

@@ -7,8 +7,12 @@ import 'package:opennutritracker/core/domain/entity/intake_type_entity.dart';
 import 'package:opennutritracker/core/presentation/scanner_orientation_mixin.dart';
 import 'package:opennutritracker/features/add_meal/presentation/add_meal_type.dart';
 import 'package:opennutritracker/features/home/domain/entity/shared_meal_payload.dart';
-import 'package:opennutritracker/features/home/presentation/widgets/shared_meal_import_dialogs.dart';
+// [fork] S344 meal-paste-dialog
+// import 'package:opennutritracker/features/home/presentation/widgets/shared_meal_import_dialogs.dart';
+import 'package:opennutritracker/fork/scan/shared_code_dialog.dart';
+// [/fork]
 import 'package:opennutritracker/features/home/presentation/widgets/shared_meal_importer.dart';
+import 'package:opennutritracker/fork/scan/scan_hint.dart'; // [fork] S296
 import 'package:opennutritracker/fork/scan/scanner_error.dart'; // [fork] S296
 import 'package:opennutritracker/generated/l10n.dart';
 
@@ -118,10 +122,15 @@ class _ImportMealScannerScreenState extends State<ImportMealScannerScreen>
       body: MobileScanner(
         controller: _cameraController,
         onDetect: _onDetect,
-        // [fork] S296 meal-scanner-camera-refused: a way on, not a black box
+        // [fork] S296 meal-scanner-camera-refused: a way on, not a black box,
+        // and over the feed what to scan
         errorBuilder: (_, error) => ScannerError(
           error: error,
           controller: _cameraController,
+          onPaste: _showPasteCodeDialog,
+        ),
+        overlayBuilder: (_, _) => ScanHint(
+          text: 'Point at the QR code from Share meal',
           onPaste: _showPasteCodeDialog,
         ),
         // [/fork]
@@ -144,16 +153,41 @@ class _ImportMealScannerScreenState extends State<ImportMealScannerScreen>
   Future<void> _showPasteCodeDialog() async {
     if (_isProcessing) return;
     setState(() => _isProcessing = true);
-    final payload = await showDialog<SharedMealPayload>(
+    // [fork] S344 meal-paste-dialog: the recipe and workout importers' dialog,
+    // so the button says what it does and a bad code says what to do
+    // final payload = await showDialog<SharedMealPayload>(
+    //   context: context,
+    //   builder: (_) => const SharedMealCodeDialog(),
+    // );
+    // if (!mounted) return;
+    // if (payload == null) {
+    //   setState(() => _isProcessing = false);
+    //   return;
+    // }
+    // await _processImport((importer) => importer.importPayload(payload));
+    final code = await showDialog<String>(
       context: context,
-      builder: (_) => const SharedMealCodeDialog(),
+      builder: (_) => SharedCodeDialog(
+        hint: 'Paste the shared meal code here',
+        actionLabel: 'Import meal',
+        invalidLabel: "This isn't a meal code",
+        isValid: (code) {
+          try {
+            SharedMealPayload.fromJsonString(code);
+            return true;
+          } on SharedMealParseException {
+            return false;
+          }
+        },
+      ),
     );
     if (!mounted) return;
-    if (payload == null) {
+    if (code == null) {
       setState(() => _isProcessing = false);
       return;
     }
-    await _processImport((importer) => importer.importPayload(payload));
+    await _processCode(code);
+    // [/fork]
   }
 
   Future<void> _processCode(String raw) =>

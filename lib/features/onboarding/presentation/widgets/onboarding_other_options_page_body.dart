@@ -312,6 +312,11 @@ class _OnboardingOtherOptionsPageBodyState
     ); // [fork] S336
   }
 
+  // [fork] S337 theme-segments
+  bool get _forkThemeStacked =>
+      MediaQuery.textScalerOf(context).scale(10) > 15;
+  // [/fork]
+
   String _themeLabel(BuildContext context, AppThemeEntity theme) {
     switch (theme) {
       case AppThemeEntity.system:
@@ -350,13 +355,28 @@ class _OnboardingOtherOptionsPageBodyState
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // [fork] S337 theme-segments: stacked, the card's
+                      // width, as content width left rows cut
+                      SizedBox(
+                        width: _forkThemeStacked ? double.infinity : null,
+                        child:
+                      // [/fork]
                       SegmentedButton<AppThemeEntity>(
                         // [fork] S337 theme-segments: stacked at large text,
-                        // where "System default" broke mid-word
-                        direction:
-                            MediaQuery.textScalerOf(context).scale(10) > 15
+                        // where "System default" broke mid-word, in a rounded
+                        // box, as a stadium cut the first and last rows
+                        direction: _forkThemeStacked
                             ? Axis.vertical
                             : Axis.horizontal,
+                        style: _forkThemeStacked
+                            ? ButtonStyle(
+                                shape: WidgetStatePropertyAll(
+                                  RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                              )
+                            : null,
                         // [/fork]
                         segments: [
                           for (final theme in AppThemeEntity.values)
@@ -369,6 +389,7 @@ class _OnboardingOtherOptionsPageBodyState
                         onSelectionChanged: (selection) =>
                             _onThemeSelected(selection.first),
                       ),
+                      ), // [fork] S337
                       const SizedBox(height: Dimens.spacing16),
                       Text(
                         s.settingsAccentColourTitle,

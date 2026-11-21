@@ -256,5 +256,30 @@ void main() {
       expect(find.text('Goal 10,000'), findsOneWidget);
       expect(find.text('0 of 1'), findsOneWidget);
     });
+
+    testWidgets('a goal out of range says why and is not saved', (
+      tester,
+    ) async {
+      final steps = _MemorySteps(_Source(), on: true);
+      await pump(tester, steps);
+      await tester.tap(find.byKey(const ValueKey('steps-goal')));
+      await tester.pumpAndSettle();
+      final field = find.byKey(const ValueKey('steps-goal-field'));
+
+      for (final typed in ['0', '100001', '']) {
+        await tester.enterText(field, typed);
+        await tester.pump();
+        expect(find.text('Enter 1 to 100,000 steps'), findsNothing);
+        await tester.tap(find.text('Save'));
+        await tester.pumpAndSettle();
+        expect(find.text('Enter 1 to 100,000 steps'), findsOneWidget);
+      }
+      expect(await steps.goal(), StepCounts.defaultGoal);
+
+      // The error goes as the text changes.
+      await tester.enterText(field, '9000');
+      await tester.pump();
+      expect(find.text('Enter 1 to 100,000 steps'), findsNothing);
+    });
   });
 }

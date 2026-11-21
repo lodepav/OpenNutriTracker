@@ -14,14 +14,16 @@ import 'package:opennutritracker/features/home/presentation/screens/import_activ
 import 'package:opennutritracker/features/home/presentation/screens/import_meal_scanner_screen.dart';
 import 'package:opennutritracker/features/recipes/domain/entity/shared_recipe_payload.dart';
 import 'package:opennutritracker/features/recipes/presentation/screens/import_recipe_scanner_screen.dart';
+import 'package:opennutritracker/fork/scan/scan_hint.dart';
 import 'package:opennutritracker/fork/scan/scanner_error.dart';
 import 'package:opennutritracker/fork/scan/shared_code_dialog.dart';
 
 import '../../helpers/ux_checks.dart';
 
-// A refused camera shows a way on instead of a black box, the recipe and
-// workout paste dialogs say what they take and keep a bad code in the field,
-// and the recipe confirm reads "Import".
+// A refused camera shows a way on instead of a black box, the recipe, meal
+// and workout paste dialogs say what they take and keep a bad code in the
+// field with a next step until the text changes, and the recipe confirm
+// reads "Import".
 
 class _Fake
     implements ActivityDetailBloc, GetPhysicalActivityUsecase, GetUserUsecase {
@@ -180,39 +182,51 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  for (final (kind, screen, hint, error) in [
+  for (final (kind, hint, action, error) in [
     (
       'recipe',
-      const ImportRecipeScannerScreen(),
       'Paste the shared recipe code here',
+      'Import recipe',
       "This isn't a recipe code",
     ),
     (
+      'meal',
+      'Paste the shared meal code here',
+      'Import meal',
+      "This isn't a meal code",
+    ),
+    (
       'workout',
-      const ImportActivityScannerScreen(),
       'Paste the shared workout code here',
+      'Import workout',
       "This isn't a workout code",
     ),
   ]) {
     testWidgets('a bad $kind code stays in the open paste dialog', (
       tester,
     ) async {
-      await pump(tester, screen);
+      final (screen, args) = screens[kind]!;
+      await pump(tester, screen, args);
       await openPaste(tester);
       expect(find.text(hint), findsOneWidget);
 
       await tester.enterText(find.byType(TextField), 'not a code');
-      await tester.tap(
-        find
-            .text(kind == 'recipe' ? 'Import recipe' : 'Import shared workout')
-            .last,
-      );
+      await tester.tap(find.widgetWithText(TextButton, action));
       await tester.pumpAndSettle();
 
       expect(find.byType(AlertDialog), findsOneWidget);
-      expect(find.text(error), findsOneWidget);
+      expect(
+        find.text(
+          "$error. Copy the whole code from the sender's Share dialog.",
+        ),
+        findsOneWidget,
+      );
       expect(find.text('not a code'), findsOneWidget);
       expect(find.byType(SnackBar), findsNothing);
+
+      await tester.enterText(find.byType(TextField), 'not a code either');
+      await tester.pump();
+      expect(find.textContaining(error), findsNothing);
     });
   }
 
@@ -230,9 +244,55 @@ void main() {
     );
     await tester.tap(find.text('Import recipe'));
     await tester.pumpAndSettle();
-    expect(find.text("This isn't a recipe code"), findsOneWidget);
+    expect(find.textContaining("This isn't a recipe code"), findsOneWidget);
     expect(cutText(tester), isEmpty);
     await expectAccessible(tester);
+  });
+
+  group('with the camera running', () {
+    setUp(() {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(_channel, (call) async {
+            if (call.method == 'state') return 1;
+            if (call.method == 'start') {
+              return <String, Object?>{
+                'textureId': 1,
+                'handlesCropAndRotation': true,
+                'naturalDeviceOrientation': 'PORTRAIT_UP',
+                'sensorOrientation': 0,
+                'numberOfCameras': 1,
+                'size': {'width': 480.0, 'height': 640.0},
+              };
+            }
+            return null;
+          });
+    });
+
+    for (final MapEntry(key: kind, value: (screen, args)) in screens.entries) {
+      testWidgets('the $kind importer says what to scan over the feed', (
+        tester,
+      ) async {
+        await pump(tester, screen, args);
+        expect(find.text('Camera access is off'), findsNothing);
+        expect(
+          find.text('Point at the QR code from Share $kind'),
+          findsOneWidget,
+        );
+
+        await tester.tap(find.text('Paste a code instead'));
+        await tester.pumpAndSettle();
+        expect(find.byType(AlertDialog), findsOneWidget);
+      });
+    }
+  });
+
+  testWidgets('the line over the feed passes the screen checks', (
+    tester,
+  ) async {
+    await checkScreen(
+      tester,
+      ScanHint(text: 'Point at the QR code from Share recipe', onPaste: () {}),
+    );
   });
 
   testWidgets('the recipe confirm imports with "Import"', (tester) async {

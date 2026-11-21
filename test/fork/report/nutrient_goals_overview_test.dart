@@ -94,29 +94,95 @@ void main() {
       .getSemantics(find.bySemanticsIdentifier('nutrient-goal-$nutrient'))
       .label;
 
-  test('a limit passed is over; a target is to reach, however far', () {
-    GoalStanding s(bool isLimit, double perDay, double? goal) =>
-        goalStanding(isLimit: isLimit, perDay: perDay, goal: goal);
+  test('a limit passed is over; a target is reached at its goal; energy '
+      'is a band', () {
+    GoalStanding s(
+      bool isLimit,
+      double perDay,
+      double? goal, {
+      bool isBand = false,
+    }) => goalStanding(
+      isLimit: isLimit,
+      perDay: perDay,
+      goal: goal,
+      isBand: isBand,
+    );
     expect(s(true, 5.76, 5.75), GoalStanding.over);
     expect(s(true, 5.75, 5.75), GoalStanding.under);
     expect(s(true, 99, null), GoalStanding.under);
-    expect(s(false, 90, 30), GoalStanding.toReach);
+    expect(s(false, 90, 30), GoalStanding.reached);
+    expect(s(false, 30, 30), GoalStanding.reached);
+    expect(s(false, 29.9, 30), GoalStanding.toReach);
     expect(s(false, 1, 30), GoalStanding.toReach);
+    expect(s(false, 50, null), GoalStanding.toReach);
+    // Energy within a tenth of its goal either way is reached.
+    expect(s(false, 2400, 2000, isBand: true), GoalStanding.over);
+    expect(s(false, 2200, 2000, isBand: true), GoalStanding.reached);
+    expect(s(false, 1800, 2000, isBand: true), GoalStanding.reached);
+    expect(s(false, 1700, 2000, isBand: true), GoalStanding.toReach);
+
     final scheme = ThemeData().colorScheme;
     const p = AppPalette.light;
-    expect(goalStandingColor(GoalStanding.toReach, p, scheme), p.accent);
+    expect(goalStandingColor(GoalStanding.reached, p, scheme), p.accent);
+    expect(goalStandingColor(GoalStanding.toReach, p, scheme), p.textMuted);
     expect(goalStandingColor(GoalStanding.under, p, scheme), p.textMuted);
     expect(goalStandingColor(GoalStanding.over, p, scheme), scheme.error);
+
+    expect(goalStandingWord(GoalStanding.reached, isLimit: false), 'reached');
+    expect(goalStandingWord(GoalStanding.over, isLimit: false), 'over');
+    expect(
+      goalStandingWord(GoalStanding.over, isLimit: true),
+      'over the limit',
+    );
+    expect(
+      goalStandingWord(GoalStanding.reached, isLimit: false, isBand: true),
+      'on target',
+    );
+    expect(goalStandingWord(GoalStanding.toReach, isLimit: false), isNull);
+    expect(goalStandingWord(GoalStanding.under, isLimit: true), isNull);
   });
 
-  test('the goals only, targets first, then limits', () {
+  test('the range line names its dates, its days and the days logged', () {
+    expect(
+      nutrientRangeLine(DateTime(2026, 10, 23), DateTime(2026, 11, 21), 28),
+      'Oct 23 – Nov 21 · 30 days, 28 logged',
+    );
+    // A clock change inside the range, and a time of day on the end.
+    expect(
+      nutrientRangeLine(
+        DateTime(2026, 3, 25),
+        DateTime(2026, 3, 31, 23, 59, 59),
+        7,
+      ),
+      'Mar 25 – Mar 31 · 7 days, 7 logged',
+    );
+    expect(
+      nutrientRangeLine(DateTime(2026, 10, 25), DateTime(2026, 10, 25), 1),
+      'Oct 25 · 1 day, 1 logged',
+    );
+    expect(
+      nutrientRangeLine(DateTime(2026, 12, 20), DateTime(2027, 1, 18), 30),
+      'Dec 20, 2026 – Jan 18, 2027 · 30 days, 30 logged',
+    );
+  });
+
+  test('the goals only, in the editor\'s and Nutrients list\'s order', () {
     final rows = goalRows(summarizeNutrients(const [], const [], null));
-    final names = [for (final r in rows) r.nutrient.label];
-    expect(names, isNot(contains('Energy')));
-    expect(names, isNot(contains('Protein')));
-    final firstLimit = rows.indexWhere((r) => r.nutrient.isLimit);
-    expect(rows.skip(firstLimit).every((r) => r.nutrient.isLimit), isTrue);
-    expect(names.take(firstLimit), contains('Fibre'));
+    expect(
+      [for (final r in rows) goalRowLabel(r.nutrient)],
+      [
+        'Fibre',
+        'Saturated fat',
+        'Sugars',
+        'Salt (from sodium)',
+        'Calcium',
+        'Iron',
+        'Potassium',
+        'Magnesium',
+        'Vitamin D',
+        'Vitamin B12',
+      ],
+    );
   });
 
   testWidgets('today against today\'s goals, then the week', (tester) async {
@@ -126,14 +192,22 @@ void main() {
     expect(asked.single, (DateTime(2026, 10, 25), DateTime(2026, 10, 25)));
     expect(label(tester, 'Fibre'), 'Fibre, 20 of 30 g');
     // 3000 mg of sodium is 7.5 g of salt, against 2300 mg's 5.75 g.
-    expect(label(tester, 'Salt'), 'Salt, 7.5 of 5.8 g, over the limit');
+    expect(
+      label(tester, 'Salt'),
+      'Salt (from sodium), 7.5 of 5.8 g, over the limit',
+    );
 
     await tester.tap(find.bySemanticsIdentifier('nutrient-goals-week'));
     await tester.pumpAndSettle();
     expect(asked.last, (DateTime(2026, 10, 19), DateTime(2026, 10, 25)));
     // A mean over the two days with food: 30 g, 1500 mg of sodium.
     expect(label(tester, 'Fibre'), 'Fibre, 30 of 30 g, reached');
-    expect(label(tester, 'Salt'), 'Salt, 3.8 of 5.8 g');
+    expect(label(tester, 'Salt'), 'Salt (from sodium), 3.8 of 5.8 g');
+    // Under the ten bars, past the first screen in the test font.
+    await tester.scrollUntilVisible(
+      find.textContaining('days with food logged'),
+      200,
+    );
     expect(find.textContaining('days with food logged'), findsOneWidget);
     semantics.dispose();
   });
@@ -203,9 +277,17 @@ void main() {
         )
         .color;
     final context = tester.element(find.byType(NutrientGoalsOverview));
-    expect(bar('Fibre'), AppPalette.light.accent);
+    // Fibre at 20 of 30 g is not reached: grey, not green.
+    expect(bar('Fibre'), AppPalette.light.textMuted);
     expect(bar('Salt'), Theme.of(context).colorScheme.error);
     expect(bar('Sugars'), AppPalette.light.textMuted);
+    expect(find.textContaining('· reached'), findsNothing);
+
+    await tester.tap(find.bySemanticsIdentifier('nutrient-goals-week'));
+    await tester.pumpAndSettle();
+    // 30 of 30 g: green, and the word shows as well as is spoken.
+    expect(bar('Fibre'), AppPalette.light.accent);
+    expect(find.textContaining('· reached'), findsOneWidget);
   });
 
   testWidgets('Edit opens the goal list, and the bars are read again', (

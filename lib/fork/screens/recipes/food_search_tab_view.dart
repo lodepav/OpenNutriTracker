@@ -21,6 +21,7 @@ import 'package:opennutritracker/features/add_meal/presentation/widgets/no_resul
 import 'package:opennutritracker/fork/display/contrast.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 import 'package:opennutritracker/fork/off/off_kinds.dart';
+import 'package:opennutritracker/fork/units/energy_text.dart';
 
 /// Reusable 3-tab food search (Products / Food / Recently) that delegates the
 /// "selected" action to a callback rather than pushing MealDetailScreen.
@@ -351,24 +352,38 @@ class _PickableMealCard extends StatelessWidget {
                       ),
                 const SizedBox(width: Dimens.spacing12),
                 Expanded(
-                  child: AutoSizeText.rich(
-                    TextSpan(
-                      text: meal.name ?? '?',
-                      style: textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                      children: [
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      AutoSizeText.rich(
                         TextSpan(
-                          text: ' ${meal.brands ?? ''}',
+                          text: meal.name ?? '?',
+                          style: textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                          children: [
+                            TextSpan(
+                              text: ' ${meal.brands ?? ''}',
+                              style: textTheme.bodyMedium?.copyWith(
+                                color: palette.textMuted,
+                              ),
+                            ),
+                          ],
+                        ),
+                        style: textTheme.titleSmall,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      // the energy tells two similar foods apart before the pick
+                      if (meal.nutriments.energyKcal100 case final kcal?)
+                        Text(
+                          '${energyText(context, kcal)} per 100 '
+                          '${meal.isLiquid ? 'ml' : 'g'}',
                           style: textTheme.bodyMedium?.copyWith(
                             color: palette.textMuted,
                           ),
                         ),
-                      ],
-                    ),
-                    style: textTheme.titleSmall,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
+                    ],
                   ),
                 ),
                 const SizedBox(width: Dimens.spacing8),

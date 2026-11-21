@@ -7,6 +7,7 @@ import 'package:opennutritracker/core/domain/usecase/get_kcal_goal_usecase.dart'
 import 'package:opennutritracker/core/domain/usecase/get_user_usecase.dart';
 import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
+import 'package:opennutritracker/core/utils/calc/calendar_day_calc.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/core/utils/reload_diary_and_trends.dart';
 import 'package:opennutritracker/features/home/presentation/bloc/home_bloc.dart';
@@ -29,6 +30,9 @@ import 'package:opennutritracker/fork/body/measurement_store.dart';
 import 'package:opennutritracker/fork/display/contrast.dart';
 import 'package:opennutritracker/fork/units/energy_text.dart';
 import 'package:opennutritracker/fork/units/weight_text.dart';
+import 'package:opennutritracker/fork/goal/goal_progress.dart';
+import 'package:opennutritracker/fork/goal/goal_status.dart'
+    show signedPaceText;
 import 'package:opennutritracker/fork/goal/phase_colors.dart';
 import 'package:opennutritracker/fork/phases/phases.dart';
 import 'package:opennutritracker/fork/undo/undo_delete.dart'
@@ -58,6 +62,16 @@ class AdaptiveCheckInCard extends StatefulWidget {
 
 typedef _Due = CheckInReason;
 
+/// Home's goal today: its [total], the [activity] in it, today's weekday
+/// [offset], and the [daily] mode's counted activity for a check-in's
+/// target (null outside the daily mode).
+typedef _TodayGoal = ({
+  double total,
+  double activity,
+  double offset,
+  double? daily,
+});
+
 /// The due check-in's title, on Home's card and atop its screen alike.
 String _dueTitle(_Due due) => switch (due) {
   _Due.first => 'Your first target',
@@ -77,17 +91,43 @@ double todayGoalActivity(
 ) => fork?.target != null ? fork!.activityKcal : totalKcal - withoutLoggedKcal;
 
 /// Today's goal as Home shows it: [totalKcal], and the [activityKcal] it
-/// holds named apart, each rounded on its own as Home's rows are.
+/// holds named apart. The total and the part before activity are rounded
+/// as the rows beside them are, and the activity is what is left, so the
+/// three add up as shown.
 String todayGoalText(
   BuildContext context,
   double totalKcal,
   double activityKcal,
 ) {
-  final activity = energyValue(context, activityKcal);
-  if (activity == 0) return energyText(context, totalKcal);
-  return '${energyText(context, totalKcal)} '
-      '(${energyValue(context, totalKcal - activityKcal)} + $activity '
+  final total = energyValue(context, totalKcal);
+  final base = energyValue(context, totalKcal - activityKcal);
+  if (total == base) return energyText(context, totalKcal);
+  return '${energyText(context, totalKcal)} ($base + ${total - base} '
       'activity)';
+}
+
+/// What accepting [proposedKcal] does to today's goal, as Home shows it
+/// ([forkKcalGoal]), each figure rounded by [shown]: the change from
+/// [todayKcal], the goal now with [todayActivityKcal] of activity in it,
+/// to the proposal with today's [weekdayOffsetKcal] and, in the daily
+/// mode only, the day's counted [dailyActivityKcal] (at most
+/// [maxDailyActivityKcal]); null [dailyActivityKcal] outside it, where no
+/// activity is added, so what today's goal held of it is dropped.
+({int change, bool activityDropped}) todayGoalChange({
+  required double todayKcal,
+  required double todayActivityKcal,
+  required double proposedKcal,
+  required double weekdayOffsetKcal,
+  required double? dailyActivityKcal,
+  required int Function(double kcal) shown,
+}) {
+  final daily = dailyActivityKcal == null
+      ? 0.0
+      : dailyActivityKcal.clamp(0.0, maxDailyActivityKcal);
+  return (
+    change: shown(proposedKcal + weekdayOffsetKcal + daily) - shown(todayKcal),
+    activityDropped: dailyActivityKcal == null && shown(todayActivityKcal) != 0,
+  );
 }
 
 /// The settings that differ between two [AdaptiveSettings.targetBasis]
@@ -405,7 +445,11 @@ class _CheckInWaitingNoteState extends State<CheckInWaitingNote> {
 class CheckInScreen extends StatefulWidget {
   final AdaptiveService service;
 
-  const CheckInScreen({super.key, required this.service});
+  /// When the goal is reached, as Goal progress says it; the profile's
+  /// goal and plan by default, none when they cannot be read.
+  final Future<GoalArrivals?> Function()? loadArrivals;
+
+  const CheckInScreen({super.key, required this.service, this.loadArrivals});
 
   @override
   State<CheckInScreen> createState() => _CheckInScreenState();
@@ -418,28 +462,58 @@ class _CheckInScreenState extends State<CheckInScreen> {
   late final Future<_Due> _reason = checkInReason(widget.service);
 
   /// Home's goal for today and the activity in it: the logged activities
-  /// on the formula, the daily mode's own on a check-in's target.
-  late final Future<({double total, double activity})?> _today = () async {
+  /// on the formula, the daily mode's own on a check-in's target; with
+  /// today's weekday shift and, in the daily mode, the day's counted
+  /// activity a check-in's target adds.
+  late final Future<_TodayGoal?> _today = () async {
     if (!locator.isRegistered<GetKcalGoalUsecase>()) return null;
     final usecase = locator<GetKcalGoalUsecase>();
     final total = await usecase.getKcalGoal();
     final settings = AdaptiveStore.settings.value;
-    // Only the daily mode adds activity to a check-in's target.
-    final fork =
-        settings.adaptiveTarget &&
-            !settings.fixedTarget &&
-            settings.activityMode == ActivityMode.daily
-        ? await forkKcalGoal(await logicalToday())
+    final daily = settings.activityMode == ActivityMode.daily;
+    final shifts = settings.weekdayOffsets;
+    // Only read when needed, as [_goalNow] does.
+    final today = daily || shifts.any((s) => s != 0)
+        ? await logicalToday()
         : null;
+    // Only the daily mode adds activity to a check-in's target.
+    final fork = settings.adaptiveTarget && !settings.fixedTarget && daily
+        ? await forkKcalGoal(today!)
+        : null;
+    final activity = todayGoalActivity(
+      total,
+      await usecase.getKcalGoal(totalKcalActivitiesParam: 0),
+      fork,
+    );
     return (
       total: total,
-      activity: todayGoalActivity(
-        total,
-        await usecase.getKcalGoal(totalKcalActivitiesParam: 0),
-        fork,
-      ),
+      activity: activity,
+      offset: today == null ? 0.0 : shifts[today.weekday - 1],
+      daily: !daily
+          ? null
+          : fork?.target != null
+          ? fork!.activityKcal
+          : await widget.service
+                .activityOn(today!)
+                .catchError((Object _) => 0.0),
     );
   }();
+
+  late final Future<GoalArrivals?> _arrivals =
+      (widget.loadArrivals ?? _loadArrivals)().catchError((Object _) => null);
+
+  Future<GoalArrivals?> _loadArrivals() async {
+    try {
+      final goal = await GoalStartStore().load(service: widget.service);
+      final progress = goal.progress;
+      // Reached, Goal progress gives no dates either.
+      if (progress == null || progress.reached) return null;
+      return goalArrivals(progress, await PhaseStore().plan());
+    } catch (_) {
+      // No store in a test, or none to read: the dates go unsaid.
+      return null;
+    }
+  }
 
   /// Before the first check-in, the target Home uses now (the formula's,
   /// or a fixed one), before the day's activity and, as the proposal,
@@ -510,11 +584,14 @@ class _CheckInScreenState extends State<CheckInScreen> {
       ? '${_kcal(kcalPerKg)} a kg'
       : '${_kcal(kcalPerKg / 2.20462)} a lb';
 
-  static String _eta(int days, String locale) {
+  static String _eta(DateTime date, String locale) {
+    final now = DateTime.now();
+    final days = CalendarDayCalc.daysBetween(
+      DateTime(now.year, now.month, now.day),
+      date,
+    );
     // A trend about flat reaches nothing in a date worth showing.
     if (days > maxPlanDays) return 'over a year';
-    final now = DateTime.now();
-    final date = DateTime(now.year, now.month, now.day + days);
     final weeks = (days / 7).round();
     return 'about $weeks week${weeks == 1 ? '' : 's'} '
         '(${DateFormat.yMMMd(locale).format(date)})';
@@ -732,7 +809,7 @@ class _CheckInScreenState extends State<CheckInScreen> {
             ),
             const SizedBox(height: 12),
             _card(context, Icons.flag_outlined, theme.colorScheme.primary, 'Target', [
-              FutureBuilder<({double total, double activity})?>(
+              FutureBuilder<_TodayGoal?>(
                 future: _today,
                 builder: (context, today) => switch (today.data) {
                   final today? => _row(
@@ -773,11 +850,45 @@ class _CheckInScreenState extends State<CheckInScreen> {
                   ),
                 ),
               ),
-              if (current != null)
-                _row(
-                  'Change',
-                  _shownDiff(checkIn.proposedTargetKcal, current, signed: true),
-                ),
+              FutureBuilder<_TodayGoal?>(
+                future: _today,
+                builder: (context, today) {
+                  if (today.connectionState != ConnectionState.done) {
+                    return const SizedBox.shrink();
+                  }
+                  final now = today.data;
+                  // Accepting moves Home's goal only on an Adaptive target.
+                  if (now == null ||
+                      !settings.adaptiveTarget ||
+                      settings.fixedTarget) {
+                    // The change to the target in use.
+                    return current == null
+                        ? const SizedBox.shrink()
+                        : _row(
+                            'Change',
+                            _shownDiff(
+                              checkIn.proposedTargetKcal,
+                              current,
+                              signed: true,
+                            ),
+                          );
+                  }
+                  final change = todayGoalChange(
+                    todayKcal: now.total,
+                    todayActivityKcal: now.activity,
+                    proposedKcal: checkIn.proposedTargetKcal,
+                    weekdayOffsetKcal: now.offset,
+                    dailyActivityKcal: now.daily,
+                    shown: (kcal) => energyValue(context, kcal),
+                  );
+                  return _row(
+                    "Change from today's goal",
+                    '${signedText(change.change.toDouble())} '
+                        '${energyUnit(context)}'
+                        '${change.activityDropped ? ' (activity no longer added)' : ''}',
+                  );
+                },
+              ),
               if (checkIn.activityUnreadable)
                 Text(
                   key: const ValueKey('check-in-activity-unreadable'),
@@ -811,7 +922,7 @@ class _CheckInScreenState extends State<CheckInScreen> {
                   'That is the expenditure '
                   '${checkIn.goalRateKgPerWeek < 0 ? 'less' : 'plus'} '
                   '${_shownDiff(checkIn.expenditureKcal, checkIn.proposedTargetKcal)} '
-                  'for ${weightChangeText(checkIn.goalRateKgPerWeek, weightUnit)} a week'
+                  'for ${signedPaceText(checkIn.goalRateKgPerWeek, weightUnit)}'
                   '${_perKg(checkIn, settings, weightUnit)}.',
                   style: theme.textTheme.bodySmall,
                 ),
@@ -850,22 +961,36 @@ class _CheckInScreenState extends State<CheckInScreen> {
                   'expenditure is still calibrating.',
                   style: theme.textTheme.bodySmall,
                 ),
-              if (checkIn.daysToTargetAtGoal != null)
-                _row(
-                  'Target weight, chosen pace',
-                  _eta(
-                    checkIn.daysToTargetAtGoal!,
-                    Localizations.localeOf(context).toLanguageTag(),
-                  ),
-                ),
-              if (checkIn.daysToTargetAtTrend != null)
-                _row(
-                  'Target weight, current trend',
-                  _eta(
-                    checkIn.daysToTargetAtTrend!,
-                    Localizations.localeOf(context).toLanguageTag(),
-                  ),
-                ),
+              // The dates Goal progress gives, from the same goal and plan.
+              FutureBuilder<GoalArrivals?>(
+                future: _arrivals,
+                builder: (context, arrivals) {
+                  final a = arrivals.data;
+                  if (a == null) return const SizedBox.shrink();
+                  final locale = Localizations.localeOf(
+                    context,
+                  ).toLanguageTag();
+                  return Column(
+                    children: [
+                      if (a.byPlan case final day?)
+                        _row(
+                          a.planEnds
+                              ? 'By your plan'
+                              : 'From today at your plan’s pace',
+                          _eta(day, locale),
+                        ),
+                      if ((a.recent, a.atRecent) case (
+                        final recent?,
+                        final day?,
+                      ))
+                        _row(
+                          'At your last ${recent.days} days’ pace',
+                          _eta(day, locale),
+                        ),
+                    ],
+                  );
+                },
+              ),
             ]),
           ],
         );

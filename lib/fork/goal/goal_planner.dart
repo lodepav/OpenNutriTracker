@@ -131,6 +131,28 @@ class GoalDraft {
     maintainWeeks: maintainWeeks ?? this.maintainWeeks,
   );
 
+  @override
+  bool operator ==(Object other) =>
+      other is GoalDraft &&
+      other.kind == kind &&
+      other.startKg == startKg &&
+      other.targetKg == targetKg &&
+      other.start == start &&
+      other.paceKg == paceKg &&
+      other.breaks == breaks &&
+      other.maintainWeeks == maintainWeeks;
+
+  @override
+  int get hashCode => Object.hash(
+    kind,
+    startKg,
+    targetKg,
+    start,
+    paceKg,
+    breaks,
+    maintainWeeks,
+  );
+
   /// The paces offered for the kind; none for maintenance.
   List<double> get paces => switch (kind) {
     PhaseKind.cut => cutPacesKg,
@@ -406,7 +428,8 @@ PhaseKind? kindOn(
 /// begun, the phases run so far stay as they were, and [draft]'s follow
 /// from the end of this week; not begun yet, [draft]'s plan. Either keeps
 /// [plan]'s extensions. A begun maintenance goal's length is the whole
-/// goal's, the weeks so far included; unchanged, the plan stays as it is.
+/// goal's, the weeks so far included; before its end, a draft that
+/// chooses as [plan]'s own does ([GoalDraft.of]) leaves the plan as it is.
 PhasePlan editedPlan(
   PhasePlan plan,
   GoalDraft draft, {
@@ -414,6 +437,13 @@ PhasePlan editedPlan(
   required double nowKg,
 }) {
   final day = _date(today);
+  final was = GoalDraft.of(plan, draft.startKg);
+  // Planned again from the trend now, an unchanged goal moved its end date;
+  // one past its end is still planned on from now.
+  if (plan.indexOn(day) < plan.phases.length &&
+      draft.copyWith(startKg: was.startKg) == was) {
+    return plan;
+  }
   if (plan.indexOn(day) < 0) {
     final fresh = draft.toPlan();
     return PhasePlan(
