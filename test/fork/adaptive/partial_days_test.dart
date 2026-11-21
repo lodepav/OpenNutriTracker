@@ -307,6 +307,39 @@ void main() {
       expect(store.records, hasLength(2));
     });
 
+    testWidgets('Home says a first automatic check-in waits too', (
+      tester,
+    ) async {
+      AdaptiveStore.settings.value = const AdaptiveSettings(
+        adaptiveTarget: true,
+        autoAcceptCheckIn: true,
+      );
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: AdaptiveCheckInCard(service: service, onAccepted: () {}),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Your first target'), findsOneWidget);
+      expect(
+        find.text('Waiting for your answer on a day that looks partly logged.'),
+        findsOneWidget,
+      );
+
+      tester.view.physicalSize = const Size(1080, 4000);
+      tester.view.devicePixelRatio = 2;
+      addTearDown(tester.view.reset);
+      await tester.tap(find.text('Your first target'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Keep'));
+      await tester.pumpAndSettle();
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      expect(store.records, hasLength(1));
+    });
+
     testWidgets('the screen shows the day and takes the answer', (
       tester,
     ) async {

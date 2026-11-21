@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:horizontal_picker/horizontal_picker.dart';
 import 'package:opennutritracker/core/domain/entity/body_weight_unit_entity.dart';
 import 'package:opennutritracker/features/profile/presentation/widgets/set_target_weight_dialog.dart';
 import 'package:opennutritracker/generated/l10n.dart';
@@ -34,6 +35,17 @@ void main() {
     );
     await tester.tap(find.text('open'));
     await tester.pumpAndSettle();
+
+    // the package's grey, blue and red fail contrast on the dialog
+    final scheme = Theme.of(
+      tester.element(find.byType(HorizontalPicker)),
+    ).colorScheme;
+    final picker = tester.widget<HorizontalPicker>(
+      find.byType(HorizontalPicker),
+    );
+    expect(picker.passiveItemsTextColor, scheme.onSurfaceVariant);
+    expect(picker.activeItemTextColor, scheme.primary);
+    expect(picker.cursorColor, scheme.primary);
 
     final controller = ruler(tester);
     controller.jumpToItem(controller.selectedItem + 1);
