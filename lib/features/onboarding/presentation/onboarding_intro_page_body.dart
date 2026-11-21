@@ -11,6 +11,9 @@ import 'package:opennutritracker/features/profile/presentation/utils/profile_swi
 // [fork] S37 onboarding-restore
 import 'package:opennutritracker/fork/backup/onboarding_restore.dart';
 // [/fork]
+// [fork] S430 demo-one-profile
+import 'package:opennutritracker/fork/onboarding/demo_one_profile.dart';
+// [/fork]
 import 'package:opennutritracker/generated/l10n.dart';
 import 'package:opennutritracker/core/utils/safe_url_launcher.dart';
 
@@ -133,6 +136,10 @@ class _OnboardingIntroPageBodyState extends State<OnboardingIntroPageBody> {
                 ),
                 ), // [fork] S334
                 const SizedBox(height: 16.0),
+                // [fork] S430 demo-one-profile: the demo wipe clears boxes
+                // every profile shares, so only a lone profile gets it
+                if (canOfferDemo()) ...[
+                // [/fork]
                 Semantics(
                   identifier: 'onboarding-try-demo',
                   child: SizedBox(
@@ -176,6 +183,7 @@ class _OnboardingIntroPageBodyState extends State<OnboardingIntroPageBody> {
                   ),
                   textAlign: TextAlign.center,
                 ),
+                ], // [fork] S430
                 // [fork] S37 onboarding-restore: start from a backup (#1355)
                 const SizedBox(height: 12.0),
                 RestoreBackupButton(
