@@ -167,6 +167,15 @@ class _NutrientGoalsScreenState extends State<NutrientGoalsScreen> {
         DailyNutrientPanel.defaultFibreRefG,
       );
 
+  // [fork] S313 potassium-default: the DRI value the goals overview judges
+  // against for this profile, not the panel's flat 3500 mg
+  double _forkPotassiumDefault() => DailyNutrientPanel.defaultReferenceFor(
+        NutrientPanelKeys.potassium,
+        _user,
+        DailyNutrientPanel.defaultPotassiumRefMg,
+      );
+  // [/fork]
+
   /// Iron RDA splits female 18 / male 8 (mg). 14 mg is the
   /// gender-neutral midpoint we pick for non-binary / unknown,
   /// matching the panel's existing fallback.
@@ -252,7 +261,10 @@ class _NutrientGoalsScreenState extends State<NutrientGoalsScreen> {
     _ironController.text =
         _formatGoal(_iron ?? _ironDefaultForGender());
     _potassiumController.text =
-        (_potassium ?? DailyNutrientPanel.defaultPotassiumRefMg)
+        // [fork] S313 potassium-default
+        // (_potassium ?? DailyNutrientPanel.defaultPotassiumRefMg)
+        (_potassium ?? _forkPotassiumDefault())
+        // [/fork]
             .round()
             .toString();
     _magnesiumController.text =
@@ -370,6 +382,7 @@ class _NutrientGoalsScreenState extends State<NutrientGoalsScreen> {
         title: Text(
           s.settingsNutrientGoalsLabel,
           maxLines: 2,
+          softWrap: true, // [fork] S135 AppBar titles default to no wrap
           overflow: TextOverflow.ellipsis,
         ),
         actions: [
@@ -522,9 +535,11 @@ class _NutrientGoalsScreenState extends State<NutrientGoalsScreen> {
                 ),
                 _NutrientRow(
                   label: s.settingsPotassiumGoalLabel,
-                  description: s.settingsPotassiumGoalDescription,
-                  value:
-                      _potassium ?? DailyNutrientPanel.defaultPotassiumRefMg,
+                  // [fork] S313 potassium-default: the hint names the default applied
+                  description: 'Daily potassium target in milligrams. '
+                      'Default for you: ${_forkPotassiumDefault().round()} mg.',
+                  value: _potassium ?? _forkPotassiumDefault(),
+                  // [/fork]
                   min: _potassiumMin,
                   max: _potassiumMax,
                   divisions: _potassiumDivisions,

@@ -258,7 +258,7 @@ void main() {
     expect(upstream, startsWith('With an address saved, '));
     expect(
       find.textContaining(
-        'With a key saved, the text you type on the multi-item add screen, '
+        'With a key saved, the text you type in Log with AI and Photo log, '
         "and any photo you choose to read there, is sent to Google's Gemini "
         'API at $_host. This is not a server you run: Google receives it',
       ),
@@ -311,7 +311,9 @@ void main() {
 
     expect(find.byType(AiConsentScreen), findsOneWidget);
     expect(
-      find.text(l10nEn.aiAssistDisclosureOwnServerGemini(_host)),
+      find.text(
+        forkGeminiRowDisclosure(l10nEn.aiAssistDisclosureOwnServerGemini(_host)),
+      ),
       findsOneWidget,
     );
     // Below the fold of the agreement's list.

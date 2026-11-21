@@ -1,5 +1,6 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart'; // [fork] S334
 import 'package:opennutritracker/core/presentation/sources_screen.dart';
 import 'package:opennutritracker/core/presentation/widgets/app_banner_version.dart';
 import 'package:opennutritracker/core/utils/app_const.dart';
@@ -61,9 +62,22 @@ class _OnboardingIntroPageBodyState extends State<OnboardingIntroPageBody> {
                 ),
                 const SizedBox(height: 16.0),
                 // Policy first: both Start (footer) and Try Demo require it.
+                // [fork] S334 consent-rows: each checkbox and its sentence
+                // are one labelled control; the policy link is its action
+                MergeSemantics(
+                  child: Semantics(
+                    customSemanticsActions: {
+                      const CustomSemanticsAction(label: 'Open privacy policy'):
+                          _launchUrl,
+                    },
+                    child:
+                // [/fork]
                 ListTile(
                   onTap: () => _togglePolicy(),
                   title: Text.rich(
+                    // [fork] S334: the link is the row's action, not a node
+                    semanticsLabel: S.of(context).readLabel,
+                    // [/fork]
                     textAlign: TextAlign.center,
                     TextSpan(
                       text: S.of(context).readLabel,
@@ -96,6 +110,12 @@ class _OnboardingIntroPageBodyState extends State<OnboardingIntroPageBody> {
                     ),
                   ),
                 ),
+                // [fork] S334
+                  ),
+                ),
+                MergeSemantics(
+                  child:
+                // [/fork]
                 ListTile(
                   onTap: () => _toggleDataCollection(),
                   title: Text(
@@ -111,6 +131,7 @@ class _OnboardingIntroPageBodyState extends State<OnboardingIntroPageBody> {
                     ),
                   ),
                 ),
+                ), // [fork] S334
                 const SizedBox(height: 16.0),
                 Semantics(
                   identifier: 'onboarding-try-demo',

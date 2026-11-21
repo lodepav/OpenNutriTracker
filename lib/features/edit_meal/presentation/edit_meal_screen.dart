@@ -352,6 +352,7 @@ class _EditMealScreenState extends State<EditMealScreen> {
             // [fork] S132 custom-food
             _forkNew ? 'New custom food' : S.of(context).editMealLabel,
             maxLines: 2,
+            softWrap: true, // [fork] S132 AppBar titles default to no wrap
             overflow: TextOverflow.ellipsis,
             style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
           ),
@@ -565,7 +566,11 @@ class _EditMealScreenState extends State<EditMealScreen> {
         TextFormField(
           controller: _nameTextController,
           decoration: InputDecoration(
-            labelText: S.of(context).mealNameLabel,
+            // [fork] S290 food-name-label: a new custom food is a food;
+            // editing keeps upstream's label, which its tests find the field by
+            // labelText: S.of(context).mealNameLabel,
+            labelText: _forkNew ? 'Food name' : S.of(context).mealNameLabel,
+            // [/fork]
             border: const OutlineInputBorder(borderRadius: Dimens.borderRadiusM),
           ),
           keyboardType: TextInputType.text,

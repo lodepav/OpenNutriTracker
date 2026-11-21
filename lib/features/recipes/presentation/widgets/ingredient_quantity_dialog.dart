@@ -5,6 +5,11 @@ import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/core/utils/sheet_bottom_inset.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dart';
 import 'package:opennutritracker/generated/l10n.dart';
+// [fork] S300 ingredient-amount: a serving prefilled, the typed amount's energy and macros
+import 'package:opennutritracker/core/domain/usecase/compute_recipe_nutrition_usecase.dart';
+import 'package:opennutritracker/fork/recipe/recipe_list.dart' show macroSpans;
+import 'package:opennutritracker/fork/units/energy_text.dart';
+// [/fork]
 
 class IngredientQuantitySelection {
   final double amount;
@@ -57,7 +62,10 @@ class _IngredientQuantitySheetState extends State<_IngredientQuantitySheet> {
     _amountController = TextEditingController(
       text: widget.initialAmount != null
           ? widget.initialAmount!.toString()
-          : '',
+          // [fork] S300 ingredient-amount: a new pick starts at one serving when it has a weight
+          // : '',
+          : _forkServingPrefill(),
+          // [/fork]
     );
     _unit = widget.initialUnit ?? _defaultUnit(widget.meal);
   }
@@ -67,6 +75,57 @@ class _IngredientQuantitySheetState extends State<_IngredientQuantitySheet> {
     _amountController.dispose();
     super.dispose();
   }
+
+  // [fork] S300 ingredient-amount
+  // "1" only where the default unit is a serving that converts to grams.
+  String _forkServingPrefill() =>
+      widget.initialUnit == null &&
+              widget.meal.hasServingValues &&
+              (widget.meal.servingQuantity ?? 0) > 0
+          ? '1'
+          : '';
+
+  /// The typed amount's energy and macros, or nothing while it can not be
+  /// worked out (no amount, no energy figure, a serving without a weight).
+  Widget _forkPreview(BuildContext context) {
+    return ValueListenableBuilder<TextEditingValue>(
+      valueListenable: _amountController,
+      builder: (context, value, _) {
+        final amount = double.tryParse(value.text.replaceAll(',', '.'));
+        final n = widget.meal.nutriments;
+        final grams = amount == null || amount <= 0
+            ? null
+            : ComputeRecipeNutritionUseCase().convertAmountToGrams(
+                amount: amount,
+                unit: _unit,
+                servingQuantityG: widget.meal.servingQuantity,
+              );
+        if (grams == null || n.energyKcal100 == null) {
+          return const SizedBox.shrink();
+        }
+        double of(double? per100) => (per100 ?? 0) * grams / 100;
+        final theme = Theme.of(context);
+        return Padding(
+          padding: const EdgeInsets.only(top: Dimens.spacing8),
+          child: Text.rich(
+            TextSpan(children: [
+              TextSpan(text: energyText(context, of(n.energyKcal100))),
+              const TextSpan(text: ' · ', semanticsLabel: ', '),
+              ...macroSpans(context, (
+                kcal: of(n.energyKcal100),
+                carbs: of(n.carbohydrates100),
+                fat: of(n.fat100),
+                protein: of(n.proteins100),
+              )),
+            ]),
+            key: const ValueKey('ingredient-amount-preview'),
+            style: theme.textTheme.bodyMedium,
+          ),
+        );
+      },
+    );
+  }
+  // [/fork]
 
   String _defaultUnit(MealEntity meal) {
     if (meal.hasServingValues) return 'serving';
@@ -187,6 +246,9 @@ class _IngredientQuantitySheetState extends State<_IngredientQuantitySheet> {
                 ),
               ],
             ),
+            // [fork] S300 ingredient-amount
+            _forkPreview(context),
+            // [/fork]
             const SizedBox(height: Dimens.spacing24),
             SizedBox(
               width: double.infinity,

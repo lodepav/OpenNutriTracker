@@ -52,10 +52,10 @@ void main() {
     final trend = [for (var d = 0; d < 10; d++) 81.0 - 0.06 * d];
     final kg = WeightWidgetFigures.fromTrend(trend, BodyWeightUnit.kg)!;
     expect(kg.trend, '80.5 kg');
-    expect(kg.change, '-0.4 kg in 7 days');
+    expect(kg.change, '\u22120.4 kg in 7 days');
     final lb = WeightWidgetFigures.fromTrend(trend, BodyWeightUnit.lb)!;
     expect(lb.trend, '177.4 lb');
-    expect(lb.change, '-0.9 lb in 7 days');
+    expect(lb.change, '\u22120.9 lb in 7 days');
   });
 
   test('a short trend has no change; none has no figures', () {

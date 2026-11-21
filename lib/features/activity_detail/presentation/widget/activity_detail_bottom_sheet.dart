@@ -329,8 +329,18 @@ class _ActivityDetailBottomSheetState extends State<ActivityDetailBottomSheet> {
                         width: double.infinity, // Make button full width
                         child: Semantics(
                           identifier: 'activity-detail-add-button',
-                          child: ElevatedButton.icon(
-                            onPressed: _saving ? null : _onAddPressed,
+                          // [fork] S288 activity-add-needs-amount: no Add at
+                          // 0 or empty, which would log nothing burned
+                          // child: ElevatedButton.icon(
+                          child: ValueListenableBuilder(
+                            valueListenable: widget.quantityTextController,
+                            builder: (context, quantity, _) {
+                              final amount = double.tryParse(quantity.text);
+                              final none = amount == null || amount <= 0;
+                              return ElevatedButton.icon(
+                            // onPressed: _saving ? null : _onAddPressed,
+                            onPressed: _saving || none ? null : _onAddPressed,
+                            // [/fork]
                             style: ElevatedButton.styleFrom(
                               foregroundColor: Theme.of(context)
                                   .colorScheme
@@ -347,7 +357,11 @@ class _ActivityDetailBottomSheetState extends State<ActivityDetailBottomSheet> {
                             ),
                             icon: const Icon(Icons.add_rounded),
                             label: Text(S.of(context).addLabel),
+                          // [fork] S288 activity-add-needs-amount
+                              );
+                            },
                           ),
+                          // [/fork]
                         ),
                       ),
                     ],

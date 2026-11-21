@@ -106,7 +106,7 @@ void main() {
       find.bySemanticsLabel(
         RegExp(
           '^Goal, 8.0 kg to go, About .* at your 30-day pace\\. '
-          '.*3.0 kg behind the plan',
+          '.*Behind plan',
         ),
       ),
       findsOneWidget,

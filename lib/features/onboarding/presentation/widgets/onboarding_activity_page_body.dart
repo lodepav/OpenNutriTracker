@@ -130,7 +130,12 @@ class _OnboardingActivityPageBodyState
               isSelected
                   ? Icons.radio_button_checked
                   : Icons.radio_button_unchecked,
-              color: isSelected ? colors.onPrimaryContainer : colors.outline,
+              // [fork] S335 activity-radio: outline read 1.3:1 on the card
+              color: isSelected
+                  ? colors.onPrimaryContainer
+                  : colors.onSurfaceVariant,
+              // color: isSelected ? colors.onPrimaryContainer : colors.outline,
+              // [/fork]
             ),
           ],
         ),

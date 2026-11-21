@@ -9,6 +9,7 @@ import 'package:opennutritracker/features/add_meal/presentation/add_meal_type.da
 import 'package:opennutritracker/features/home/domain/entity/shared_meal_payload.dart';
 import 'package:opennutritracker/features/home/presentation/widgets/shared_meal_import_dialogs.dart';
 import 'package:opennutritracker/features/home/presentation/widgets/shared_meal_importer.dart';
+import 'package:opennutritracker/fork/scan/scanner_error.dart'; // [fork] S296
 import 'package:opennutritracker/generated/l10n.dart';
 
 
@@ -117,6 +118,13 @@ class _ImportMealScannerScreenState extends State<ImportMealScannerScreen>
       body: MobileScanner(
         controller: _cameraController,
         onDetect: _onDetect,
+        // [fork] S296 meal-scanner-camera-refused: a way on, not a black box
+        errorBuilder: (_, error) => ScannerError(
+          error: error,
+          controller: _cameraController,
+          onPaste: _showPasteCodeDialog,
+        ),
+        // [/fork]
       ),
     );
   }

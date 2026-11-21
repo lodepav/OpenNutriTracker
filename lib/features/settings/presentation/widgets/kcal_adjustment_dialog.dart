@@ -301,12 +301,25 @@ class _KcalAdjustmentDialogState extends State<KcalAdjustmentDialog> {
                         ),
                         Semantics(
                           identifier: 'kcal-adjustment-slider',
-                          child: Slider(
+                          // [fork] S317 slider-values: the value shows live beside the slider, so
+                          // its label names it for a screen reader instead of a drag bubble
+                          child: SliderTheme(
+                            data: SliderTheme.of(context).copyWith(
+                              showValueIndicator: ShowValueIndicator.never,
+                            ),
+                            child: Slider(
+                          // [/fork]
                             min: displayMin,
                             max: displayMax,
                             divisions: _kcalDivisions,
                             value: display.clamp(displayMin, displayMax),
-                            label: '${display.round()} $unitLabel',
+                            // [fork] S317 slider-values: named, and the amount
+                            // rather than the slider's position (A5)
+                            // label: '${display.round()} $unitLabel',
+                            label: s.settingsKcalAdjustmentLabel,
+                            semanticFormatterCallback: (v) =>
+                                '${v.round()} $unitLabel',
+                            // [/fork]
                             onChanged: (value) {
                               final asKcal = usesKj
                                   ? UnitCalc.kjToKcal(value)
@@ -316,6 +329,9 @@ class _KcalAdjustmentDialogState extends State<KcalAdjustmentDialog> {
                               _kcalTextEdited = false;
                             },
                           ),
+                          // [fork] S317 slider-values
+                          ),
+                          // [/fork]
                         ),
                       ],
                     );

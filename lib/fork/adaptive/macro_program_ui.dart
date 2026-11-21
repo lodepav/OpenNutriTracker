@@ -1,15 +1,40 @@
 import 'package:flutter/material.dart';
+import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/fork/adaptive/macro_program.dart';
+import 'package:opennutritracker/fork/display/display_prefs.dart';
+
+/// What a program's grams a day are worked out from: the day's goal, the
+/// body weight and fat, and what the goal adds to maintenance (D34).
+typedef MacroBasis = ({
+  double kcal,
+  double weightKg,
+  double bodyFatPercent,
+  double goalKcal,
+});
+
+/// A day's grams in one line, in the user's macro order.
+String macroGramsText(FixedMacros g) => inMacroOrder(
+  protein: 'Protein ${g.proteinG.round()} g',
+  carbs: 'Carbs ${g.carbsG.round()} g',
+  fat: 'Fat ${g.fatG.round()} g',
+).join(' · ');
 
 /// The macro program, or none for upstream's percentages; pops a record
 /// so "off" and "cancelled" differ. Settings' Macros row and onboarding's
 /// goal page open it. Grams per pound where body weight is in pounds
-/// ([perLb]); the program keeps them per kg.
+/// ([perLb]); the program keeps them per kg. With a [basis], a line says
+/// what the choices give in grams a day.
 class MacroProgramDialog extends StatefulWidget {
   final MacroProgram? program;
   final bool perLb;
+  final Future<MacroBasis?>? basis;
 
-  const MacroProgramDialog(this.program, {super.key, this.perLb = false});
+  const MacroProgramDialog(
+    this.program, {
+    super.key,
+    this.perLb = false,
+    this.basis,
+  });
 
   @override
   State<MacroProgramDialog> createState() => _MacroProgramDialogState();
@@ -23,6 +48,8 @@ class _MacroProgramDialogState extends State<MacroProgramDialog> {
   Widget build(BuildContext context) => AlertDialog(
     title: const Text('Macros'),
     content: SingleChildScrollView(
+      // room under the footnote, so its last line doesn't sit on the edge
+      padding: const EdgeInsets.only(bottom: 16),
       child: MacroProgramForm(
         widget.program,
         perLb: widget.perLb,
@@ -30,6 +57,30 @@ class _MacroProgramDialogState extends State<MacroProgramDialog> {
           _program = program;
           _valid = valid;
         }),
+        grams: FutureBuilder<MacroBasis?>(
+          future: widget.basis,
+          builder: (context, snapshot) {
+            final basis = snapshot.data;
+            final program = _program;
+            if (basis == null || program == null || !_valid) {
+              return const SizedBox.shrink();
+            }
+            final grams = program.macrosFor(
+              kcal: basis.kcal,
+              weightKg: basis.weightKg,
+              bodyFatPercent: basis.bodyFatPercent,
+              goalKcal: basis.goalKcal,
+            );
+            return Padding(
+              key: const ValueKey('macro-program-grams'),
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Text(
+                'Today: ${macroGramsText(grams)}',
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
+            );
+          },
+        ),
       ),
     ),
     actions: [
@@ -49,17 +100,20 @@ class _MacroProgramDialogState extends State<MacroProgramDialog> {
 
 /// The dialog's fields: the program, or null when off, and whether the
 /// typed values are numbers in range, to [onChanged] on every change. The
-/// goal planner's macros step shows it on its own.
+/// goal planner's macros step shows it on its own. [grams] goes under the
+/// fat choices, above the footnote.
 class MacroProgramForm extends StatefulWidget {
   final MacroProgram? program;
   final bool perLb;
   final void Function(MacroProgram? program, bool valid) onChanged;
+  final Widget? grams;
 
   const MacroProgramForm(
     this.program, {
     super.key,
     this.perLb = false,
     required this.onChanged,
+    this.grams,
   });
 
   @override
@@ -239,6 +293,7 @@ class _MacroProgramFormState extends State<MacroProgramForm> {
                 }
               }),
             ),
+          ?widget.grams,
           Text(
             style == MacroStyle.perKg
                 ? '${shown(_program.fatGPerKg)} g per $per of '

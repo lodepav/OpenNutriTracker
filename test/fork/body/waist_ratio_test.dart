@@ -7,6 +7,7 @@ import 'package:opennutritracker/fork/body/measurement_store.dart';
 import 'package:opennutritracker/fork/body/waist_ratio.dart';
 
 import '../../helpers/ux_checks.dart';
+import 'axis_labels.dart';
 
 DateTime _day(int offset) {
   final now = DateTime.now();
@@ -154,7 +155,7 @@ void main() {
     // A steady weight: its trend has not moved.
     expect(
       find.text(
-        'Waist -2.0 cm · trend weight 0.0 kg, '
+        'Waist \u22122.0 cm · trend weight 0.0 kg, '
         '${DateFormat.MMMd().format(_day(-20))} to '
         '${DateFormat.MMMd().format(_day(-1))}',
       ),
@@ -209,5 +210,24 @@ void main() {
         ],
       ),
     );
+  });
+
+  testWidgets('at 200% text the axis numbers stay whole and apart', (
+    tester,
+  ) async {
+    await pumpOnPhone(
+      tester,
+      WaistRatioPage(
+        imperial: false,
+        rangeDays: 30,
+        frame: () async => (heightCm: 178.0, gender: UserGenderEntity.male),
+        load: () async => [
+          _m(-6, BodyMetric.waist, 92),
+          _m(-1, BodyMetric.waist, 90.5),
+        ],
+      ),
+    );
+    await tester.pumpAndSettle();
+    expectAxisReadable(tester);
   });
 }

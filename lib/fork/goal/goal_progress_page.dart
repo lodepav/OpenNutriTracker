@@ -16,6 +16,7 @@ import 'package:opennutritracker/fork/display/contrast.dart';
 import 'package:opennutritracker/fork/goal/goal_plan_view.dart';
 import 'package:opennutritracker/fork/goal/goal_planner.dart';
 import 'package:opennutritracker/fork/goal/goal_progress.dart';
+import 'package:opennutritracker/fork/goal/goal_status.dart';
 import 'package:opennutritracker/fork/goal/goal_summary.dart';
 import 'package:opennutritracker/fork/phases/phases.dart';
 import 'package:opennutritracker/fork/report/chart_touch.dart';
@@ -256,6 +257,18 @@ class _GoalProgressPageState extends State<GoalProgressPage> {
         plan?.targetKg != null &&
         endKgOf(plan!) == plan.targetKg &&
         plan.end.isAfter(DateTime.now());
+    // shortcut: on days 14-29 the 30-day pace still spans days before the
+    // plan; a pace since the plan's start would need its own figure.
+    final verdict = goalVerdict(
+      reached: p.reached,
+      planDays: CalendarDayCalc.daysBetween(p.start.planDate, p.today),
+      recentKgPerWeek: recent?.kgPerWeek,
+      paceArrival: atPace,
+      // Not the plan's own end: like the recent pace, no diet breaks.
+      planArrival: atPlan,
+      behindKg: p.behindKg,
+      planKgPerWeek: p.paceKgPerWeek,
+    );
     const gap = SizedBox(height: Dimens.spacing16);
 
     return [
@@ -273,8 +286,7 @@ class _GoalProgressPageState extends State<GoalProgressPage> {
       gap,
       _ProgressCard(
         progress: p,
-        kg: _kg,
-        unit: label,
+        verdict: verdict,
         summary: goalSummary(
           locale: Localizations.localeOf(context).toLanguageTag(),
           unit: widget.unit,
@@ -331,9 +343,8 @@ class _GoalProgressPageState extends State<GoalProgressPage> {
       const SizedBox(height: Dimens.spacing12),
       FigureGrid(
         tiles: [
-          if (p.daysIn <= 0)
-            const FigureTile(label: 'Since the start', value: 'Started today')
-          else
+          // No figure on the first day: no tile.
+          if (p.daysIn > 0)
             FigureTile(
               label: 'Since the start',
               value: signedText(weightIn(widget.unit, p.nowKg - p.start.kg), 1),
@@ -455,14 +466,12 @@ class _GoalProgressPageState extends State<GoalProgressPage> {
 /// where the plan has you today.
 class _ProgressCard extends StatelessWidget {
   final GoalProgress progress;
-  final String Function(double kg) kg;
-  final String unit;
+  final GoalVerdict verdict;
   final GoalSummary summary;
 
   const _ProgressCard({
     required this.progress,
-    required this.kg,
-    required this.unit,
+    required this.verdict,
     required this.summary,
   });
 
@@ -472,14 +481,11 @@ class _ProgressCard extends StatelessWidget {
     final palette = paletteOf(context);
     final text = Theme.of(context).textTheme;
     final planPercent = (p.planFraction * 100).round();
-    final status = p.reached
-        ? 'Target reached'
-        : p.behindKg.abs() < 0.2
-        ? 'On plan'
-        : p.behindKg > 0
-        ? '${kg(p.behindKg)} $unit behind the plan'
-        : '${kg(-p.behindKg)} $unit ahead of the plan';
-    final good = p.reached || p.behindKg < 0.2;
+    final status = verdict.label;
+    final good = switch (verdict) {
+      GoalVerdict.reached || GoalVerdict.ahead || GoalVerdict.onPlan => true,
+      GoalVerdict.tooEarly || GoalVerdict.behind => false,
+    };
     return AppCard(
       padding: const EdgeInsets.all(Dimens.spacing16),
       child: Semantics(

@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:opennutritracker/core/domain/entity/recipe_ingredient_entity.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
+import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_nutriments_entity.dart';
 import 'package:opennutritracker/features/add_meal/util/food_emoji_resolver.dart';
 import 'package:opennutritracker/fork/display/display_prefs.dart';
@@ -16,6 +17,11 @@ import 'package:opennutritracker/generated/l10n.dart';
 /// Seam S127: the recipe builder after the canvas's "Recipe builder · A".
 /// The name, then the ingredients with their amounts typed in place, the
 /// rest folded under "Optional", and the totals with Save at the bottom.
+
+/// An ingredient's emoji, the same in the builder and on the recipe page:
+/// its food kind, else one by its name; null for the leaf.
+String? ingredientEmoji(MealEntity meal) =>
+    OffKinds.emojiFor(meal) ?? resolveFoodEmoji(meal.name);
 
 /// [amount] without a trailing ".0".
 String _amountText(double amount) => amount == amount.roundToDouble()
@@ -79,7 +85,7 @@ class _BuilderIngredientRowState extends State<BuilderIngredientRow> {
       fat: of(n.fat100),
       protein: of(n.proteins100),
     );
-    final emoji = OffKinds.emojiFor(meal) ?? resolveFoodEmoji(meal.name);
+    final emoji = ingredientEmoji(meal);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: Dimens.spacing4),
       child: Row(

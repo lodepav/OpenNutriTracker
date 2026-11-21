@@ -6,6 +6,21 @@ import 'package:opennutritracker/generated/l10n.dart';
 import 'package:opennutritracker/fork/ai/gemini_preset.dart';
 // [/fork]
 
+// [fork] S318 ai-consent-words: the Google Gemini row's paragraph, shared by
+// the settings dialog and this screen so the two cannot disagree. A key is
+// saved there, and the features carry the names the app shows. A locale
+// whose wording differs keeps upstream's words for the features.
+String forkGeminiRowDisclosure(String paragraph) =>
+    geminiKeyDisclosure(paragraph).replaceFirst(
+      'on the multi-item add screen',
+      'in Log with AI and Photo log',
+    );
+
+/// The agree button in sentence case; upstream's English is all capitals.
+String forkAgreeLabel(S s) =>
+    s.aiConsentAgreeLabel == 'I UNDERSTAND' ? 'I understand' : s.aiConsentAgreeLabel;
+// [/fork]
+
 /// The agreement that stands between pressing OK and a credential being
 /// stored.
 ///
@@ -27,6 +42,10 @@ class AiConsentScreen extends StatelessWidget {
     super.key,
     required this.provider,
     required this.typedEndpoint,
+    // [fork] S318 ai-consent-words
+    this.forkGeminiRow = false,
+    this.forkTitle,
+    // [/fork]
   });
 
   /// The destination selected at this moment. Named on screen, because the
@@ -37,12 +56,22 @@ class AiConsentScreen extends StatelessWidget {
   /// runs. #736: an address they can check on sight.
   final String typedEndpoint;
 
+  // [fork] S318 ai-consent-words: the Google Gemini row, which saves a key;
+  // and a title naming the provider, for AI that is already on
+  final bool forkGeminiRow;
+  final String? forkTitle;
+  // [/fork]
+
   /// Returns true only if the user agreed. A dismissed route — back gesture,
   /// system back — is not agreement, so it reads as false.
   static Future<bool> show(
     BuildContext context, {
     required AiProvider provider,
     required String typedEndpoint,
+    // [fork] S318 ai-consent-words
+    bool forkGeminiRow = false,
+    String? forkTitle,
+    // [/fork]
   }) async =>
       await Navigator.of(context).push<bool>(
         MaterialPageRoute(
@@ -50,6 +79,10 @@ class AiConsentScreen extends StatelessWidget {
           builder: (_) => AiConsentScreen(
             provider: provider,
             typedEndpoint: typedEndpoint,
+            // [fork] S318 ai-consent-words
+            forkGeminiRow: forkGeminiRow,
+            forkTitle: forkTitle,
+            // [/fork]
           ),
         ),
       ) ??
@@ -64,7 +97,10 @@ class AiConsentScreen extends StatelessWidget {
     final body = theme.textTheme.bodyLarge;
 
     return Scaffold(
-      appBar: AppBar(title: Text(s.aiConsentTitle)),
+      // [fork] S318 ai-consent-words
+      // appBar: AppBar(title: Text(s.aiConsentTitle)),
+      appBar: AppBar(title: Text(forkTitle ?? s.aiConsentTitle)),
+      // [/fork]
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
@@ -72,11 +108,17 @@ class AiConsentScreen extends StatelessWidget {
             // The destination first, because it is the fact that changes
             // between one user's decision and another's.
             Text(
+              // [fork] S318 ai-consent-words
+              (forkGeminiRow ? forkGeminiRowDisclosure : (String p) => p)(
+              // [/fork]
               aiDisclosureFor(
                 s,
                 provider: provider,
                 typedEndpoint: typedEndpoint,
               ),
+              // [fork] S318 ai-consent-words
+              ),
+              // [/fork]
               style: body,
             ),
             const SizedBox(height: 20),
@@ -130,7 +172,10 @@ class AiConsentScreen extends StatelessWidget {
               identifier: 'ai-consent-agree',
               child: FilledButton(
                 onPressed: () => Navigator.of(context).pop(true),
-                child: Text(s.aiConsentAgreeLabel),
+                // [fork] S318 ai-consent-words
+                // child: Text(s.aiConsentAgreeLabel),
+                child: Text(forkAgreeLabel(s)),
+                // [/fork]
               ),
             ),
             const SizedBox(height: 8),

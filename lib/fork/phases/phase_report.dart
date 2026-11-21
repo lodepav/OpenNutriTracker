@@ -9,6 +9,7 @@ import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
 import 'package:opennutritracker/fork/adaptive/trend_points.dart';
+import 'package:opennutritracker/fork/goal/goal_status.dart';
 import 'package:opennutritracker/fork/phases/phases.dart';
 import 'package:opennutritracker/fork/trends/detail_stats.dart';
 import 'package:opennutritracker/fork/trends/detail_widgets.dart';
@@ -19,6 +20,10 @@ import 'package:opennutritracker/fork/units/energy_text.dart';
 import 'package:opennutritracker/fork/units/weight_text.dart';
 
 DateTime _date(DateTime t) => DateTime(t.year, t.month, t.day);
+
+/// Days of trend before a phase's change and pace show: in its first week
+/// they are day-to-day noise.
+const phaseTrendFloorDays = 7;
 
 /// How one phase of a plan went, from its first day to its last, or to
 /// today while it runs.
@@ -70,6 +75,11 @@ class PhaseReport {
     final days = CalendarDayCalc.daysBetween(first, last);
     return changeKg == null || days < 7 ? null : changeKg! / days * 7;
   }
+
+  /// True once the trend spans [phaseTrendFloorDays] of the phase.
+  bool get showsTrend =>
+      changeKg != null &&
+      CalendarDayCalc.daysBetween(first, last) >= phaseTrendFloorDays;
 }
 
 /// A report for each phase of [plan] that has begun by [today], the
@@ -256,7 +266,7 @@ class _ReportCard extends StatelessWidget {
               '${weeks(r.length)}';
     final planPace = r.phase.kgPerWeek == 0
         ? 'maintenance'
-        : '${weightChangeText(r.phase.kgPerWeek, unit)} a week';
+        : signedPaceText(r.phase.kgPerWeek, unit);
     return Padding(
       padding: const EdgeInsets.only(top: Dimens.spacing16),
       child: Column(
@@ -280,20 +290,20 @@ class _ReportCard extends StatelessWidget {
                       '${weightText(r.startKg!, unit)} → '
                       '${weightText(r.endKg!, unit)}',
                 ),
-              (
-                label: 'Change',
-                value: r.changeKg == null
-                    ? '– · plan ${weightChangeText(r.plannedKg, unit)}'
-                    : '${weightChangeText(r.changeKg!, unit)} · plan '
-                          '${weightChangeText(r.plannedKg, unit)}',
-              ),
-              (
-                label: 'Pace',
-                value: r.kgPerWeek == null
-                    ? '– · plan $planPace'
-                    : '${weightChangeText(r.kgPerWeek!, unit)} a week · '
-                          'plan $planPace',
-              ),
+              if (r.showsTrend) ...[
+                (
+                  label: 'Change',
+                  value:
+                      '${signedWeightText(r.changeKg!, unit)} · plan '
+                      '${signedWeightText(r.plannedKg, unit)}',
+                ),
+                (
+                  label: 'Pace',
+                  value:
+                      '${signedPaceText(r.kgPerWeek!, unit)} · '
+                      'plan $planPace',
+                ),
+              ],
               (
                 label: 'Eaten a day',
                 value: r.eatenKcal == null

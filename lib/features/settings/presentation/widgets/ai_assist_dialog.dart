@@ -2,6 +2,9 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+// [fork] S318 ai-consent-words
+import 'package:flutter/semantics.dart';
+// [/fork]
 import 'package:opennutritracker/core/presentation/ai_assist_summary.dart';
 import 'package:opennutritracker/core/utils/ai_credential_storage.dart';
 import 'package:opennutritracker/core/utils/ai_model_catalogue.dart';
@@ -194,6 +197,22 @@ class _AiAssistDialogState extends State<AiAssistDialog> {
   String _forkKeyName(S s) => s.aiAssistKeyFieldLabel(
     _forkGemini ? geminiChoiceLabel : _providerName(context, _provider),
   );
+  // [/fork]
+
+  // [fork] S318 ai-consent-words: whether AI was on when the dialog opened,
+  // from its first read; a declined key's note; and OK's own rule, which
+  // makes the other button Close when there is nothing to keep or undo
+  bool? _forkOnAtOpen;
+  String? _forkKeyNote;
+
+  bool get _forkShowsOk =>
+      !_loading && (!_hasKey || _provider == AiProvider.ownServer || _changed);
+
+  /// While AI is already on the user is adding a key, not turning anything
+  /// on. Only Google's row can ask then: the hosted three share the
+  /// agreement already on file, and Google needs its own (#1257).
+  String? get _forkConsentTitle =>
+      _forkOnAtOpen == true && _forkGemini ? 'Send meals to Google?' : null;
   // [/fork]
 
   /// This provider has what it needs to be used — a key for the hosted three,
@@ -415,6 +434,9 @@ class _AiAssistDialogState extends State<AiAssistDialog> {
       _savedEndpoint = summary.endpoint;
       _configured = summary.provider == null ? false : summary.configured;
       _enabled = summary.enabled;
+      // [fork] S318 ai-consent-words
+      _forkOnAtOpen ??= summary.enabled;
+      // [/fork]
       _model = AiModelCatalogue.resolve(provider, modelId);
       _endpointController.text = summary.endpoint ?? '';
       _modelController.text = modelId ?? '';
@@ -559,6 +581,9 @@ class _AiAssistDialogState extends State<AiAssistDialog> {
   void _keyTyped(String key) {
     // [fork] S209 gemini-preset
     if (_forkKeyError != null) setState(() => _forkKeyError = null);
+    // [/fork]
+    // [fork] S318 ai-consent-words
+    if (_forkKeyNote != null) setState(() => _forkKeyNote = null);
     // [/fork]
     final address = _endpointController.text.trim();
     _typedKeyServer =
@@ -1002,9 +1027,27 @@ class _AiAssistDialogState extends State<AiAssistDialog> {
       context,
       provider: provider,
       typedEndpoint: _endpointController.text,
+      // [fork] S318 ai-consent-words
+      forkGeminiRow: _forkGemini,
+      forkTitle: _forkConsentTitle,
+      // [/fork]
     );
     if (!agreed) {
-      if (mounted) _apiKeyController.clear();
+      // [fork] S318 ai-consent-words: the cleared key is said, not silent
+      // if (mounted) _apiKeyController.clear();
+      if (mounted) {
+        final hadKey = _apiKeyController.text.trim().isNotEmpty;
+        _apiKeyController.clear();
+        if (hadKey) {
+          setState(() => _forkKeyNote = 'Key not saved');
+          final view = View.of(context);
+          final direction = Directionality.of(context);
+          unawaited(
+            SemanticsService.sendAnnouncement(view, 'Key not saved', direction),
+          );
+        }
+      }
+      // [/fork]
       return false;
     }
     // Written only once the answer is yes, so a dismissed screen leaves no
@@ -1306,6 +1349,9 @@ class _AiAssistDialogState extends State<AiAssistDialog> {
                             errorText: _forkKeyError,
                             errorMaxLines: 3,
                             // [/fork]
+                            // [fork] S318 ai-consent-words
+                            helperText: _forkKeyNote,
+                            // [/fork]
                             border: const OutlineInputBorder(),
                           ),
                         ),
@@ -1382,8 +1428,9 @@ class _AiAssistDialogState extends State<AiAssistDialog> {
                     // which is the fact that changes — then the sentences that
                     // are true whichever provider is chosen.
                     Text(
-                      // [fork] S209 gemini-preset: the row saves a key
-                      '${_forkGemini ? geminiKeyDisclosure(aiDisclosureFor(s, provider: _provider, typedEndpoint: _endpointController.text)) :
+                      // [fork] S209 gemini-preset: the row saves a key; its
+                      // words are S318's forkGeminiRowDisclosure
+                      '${_forkGemini ? forkGeminiRowDisclosure(aiDisclosureFor(s, provider: _provider, typedEndpoint: _endpointController.text)) :
                       // [/fork]
                       aiDisclosureFor(s, provider: _provider, typedEndpoint: _endpointController.text)}'
                       '\n\n${s.aiAssistDisclosureCommon}',
@@ -1411,7 +1458,12 @@ class _AiAssistDialogState extends State<AiAssistDialog> {
           identifier: 'ai-assist-cancel',
           child: TextButton(
             onPressed: _cancel,
-            child: Text(s.dialogCancelLabel),
+            // [fork] S318 ai-consent-words
+            // child: Text(s.dialogCancelLabel),
+            child: Text(
+              !_loading && !_forkShowsOk ? 'Close' : s.dialogCancelLabel,
+            ),
+            // [/fork]
           ),
         ),
         // Offered whenever something on screen can still be typed into, **or

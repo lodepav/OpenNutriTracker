@@ -473,12 +473,6 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
       ) ??
       splitGrams(kcal, _setup.split);
 
-  static String _gramsText(FixedMacros g) => inMacroOrder(
-    protein: 'Protein ${g.proteinG.round()} g',
-    carbs: 'Carbs ${g.carbsG.round()} g',
-    fat: 'Fat ${g.fatG.round()} g',
-  ).join(' · ');
-
   String get _splitText {
     final s = _setup.split;
     String pct(double f) => '${(f * 100).round()}';
@@ -1472,7 +1466,7 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
             Semantics(
               identifier: 'goal-macros-grams',
               child: Text(
-                _gramsText(grams),
+                macroGramsText(grams),
                 style: Theme.of(context).textTheme.titleMedium,
               ),
             ),
@@ -1546,7 +1540,7 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
               identifier: 'goal-carried-macros',
               title: 'Macros',
               subtitle:
-                  '${_gramsText(_gramsAt(_mainKcal, settings.macroProgram))} · '
+                  '${macroGramsText(_gramsAt(_mainKcal, settings.macroProgram))} · '
                   '${settings.macroProgram?.summary(perLb: _perLb) ?? 'your split, $_splitText'}',
               onChange: () => _goTo(_Step.macros),
             ),
@@ -1644,7 +1638,7 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
             title: 'Macros',
             subtitle: settings.fixedTarget && settings.fixedMacros != null
                 ? 'The fixed target\'s grams'
-                : '${_gramsText(_gramsAt(_mainKcal, program))} · '
+                : '${macroGramsText(_gramsAt(_mainKcal, program))} · '
                       '${program?.summary(perLb: _perLb) ?? 'your split, $_splitText'}',
             onChange: () => _goTo(_Step.macros),
           ),

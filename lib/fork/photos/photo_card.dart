@@ -195,6 +195,19 @@ class _ProgressPhotosCardState extends State<ProgressPhotosCard> {
 
   Widget _card(BuildContext context, List<ShownPhoto> photos) {
     final theme = Theme.of(context);
+    // The strip as tall as a photo and its date at the user's font: a
+    // fixed height cut the date at large text.
+    final dateLine = TextPainter(
+      text: TextSpan(
+        text: photos.isEmpty ? '' : _date(context, photos.first.photo.date),
+        style: theme.textTheme.labelSmall,
+      ),
+      textScaler: MediaQuery.textScalerOf(context),
+      textDirection: Directionality.of(context),
+      maxLines: 1,
+    )..layout();
+    final stripHeight = 128 + dateLine.height;
+    dateLine.dispose();
     return AppCard(
       padding: const EdgeInsets.all(Dimens.spacing20),
       child: Column(
@@ -236,7 +249,7 @@ class _ProgressPhotosCardState extends State<ProgressPhotosCard> {
             )
           else
             SizedBox(
-              height: 150,
+              height: stripHeight,
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 itemCount: photos.length,
@@ -421,11 +434,20 @@ class _ComparePhotosScreenState extends State<ComparePhotosScreen> {
     ).abs();
     final (earlier, later) = _pair;
     final answered = _answers.containsKey((earlier.photo.id, later.photo.id));
+    final aiIconOnly = MediaQuery.textScalerOf(context).scale(10) >= 13;
     return Scaffold(
       appBar: AppBar(
         title: const Text('Compare photos'),
         actions: [
-          if (_provider != null)
+          // At large text the label would push the title into "Compare ph…".
+          if (_provider != null && aiIconOnly)
+            IconButton(
+              key: const ValueKey('compare-ai'),
+              tooltip: answered ? 'AI result' : 'Ask AI',
+              onPressed: _busy ? null : _ask,
+              icon: const Icon(Icons.auto_awesome_outlined),
+            )
+          else if (_provider != null)
             TextButton.icon(
               key: const ValueKey('compare-ai'),
               onPressed: _busy ? null : _ask,
@@ -464,6 +486,8 @@ class _ComparePhotosScreenState extends State<ComparePhotosScreen> {
       children: [
         DropdownButton<int>(
           key: ValueKey(key),
+          // Within its half of the page: a long date overflowed it at 200%.
+          isExpanded: true,
           value: index,
           items: [
             for (final (i, s) in widget.photos.indexed)

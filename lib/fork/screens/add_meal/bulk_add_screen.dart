@@ -900,28 +900,46 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
             // nothing to send on an empty box, or while a read runs
             ListenableBuilder(
               listenable: _textController,
-              builder: (context, _) => Semantics(
-                identifier: 'bulk-add-parse',
-                child: FilledButton.icon(
-                  onPressed: busy
-                      ? null
+              builder: (context, _) {
+                final onPressed = busy
+                    ? null
+                    : staged != null
+                    ? _readStagedPhoto
+                    : _textController.text.trim().isEmpty
+                    ? null
+                    : _onParseButtonPressed;
+                final icon = Icon(
+                  staged != null ? Icons.send_rounded : Icons.search,
+                );
+                // with foods found, Log is the one primary action
+                final again =
+                    staged == null &&
+                    state is BulkAddLoadedState &&
+                    state.rows.isNotEmpty;
+                final label = Text(
+                  _readingStaged
+                      ? 'Reading the photo…'
                       : staged != null
-                      ? _readStagedPhoto
-                      : _textController.text.trim().isEmpty
-                      ? null
-                      : _onParseButtonPressed,
-                  icon: Icon(
-                    staged != null ? Icons.send_rounded : Icons.search,
-                  ),
-                  label: Text(
-                    _readingStaged
-                        ? 'Reading the photo…'
-                        : staged != null
-                        ? S.of(context).bulkAddPhotoLabel
-                        : S.of(context).bulkAddParseLabel,
-                  ),
-                ),
-              ),
+                      ? S.of(context).bulkAddPhotoLabel
+                      : again
+                      ? 'Find again'
+                      : S.of(context).bulkAddParseLabel,
+                );
+                return Semantics(
+                  identifier: 'bulk-add-parse',
+                  child: again
+                      ? FilledButton.tonalIcon(
+                          onPressed: onPressed,
+                          icon: icon,
+                          label: label,
+                        )
+                      : FilledButton.icon(
+                          onPressed: onPressed,
+                          icon: icon,
+                          label: label,
+                        ),
+                );
+              },
             ),
           ],
         ),
@@ -1017,7 +1035,13 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
     // What the button will log, summed as the rows show it (#1469); at a
     // large font on a line of its own, so neither is cut (U3).
     final oneLine = MediaQuery.textScalerOf(context).scale(1) <= 1.5;
-    final label = S.of(context).bulkAddSubmitLabel(count);
+    // rows held back for a unit check: the disabled button says so
+    final held = state.rows
+        .where((r) => r.isResolved && !r.skipped && r.amountWouldBeWrong)
+        .length;
+    final label = count == 0 && held > 0
+        ? 'Check $held ${held == 1 ? 'row' : 'rows'} to log'
+        : S.of(context).bulkAddSubmitLabel(count);
     final energy = EnergyDisplay.formatSumWithUnit(
       context,
       loggedKcals(state.rows),
@@ -1049,10 +1073,48 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
 
   /// Find foods pressed by hand. Dictation in progress ends first, or its
   /// pause timeout would match the text again and reset the rows the user
-  /// may already be correcting.
-  void _onParseButtonPressed() {
+  /// may already be correcting. Rows the user changed are only replaced
+  /// once they say so.
+  Future<void> _onParseButtonPressed() async {
     _voice.currentState?.cancel();
+    if (_bloc.state case BulkAddLoadedState(:final rows)) {
+      final changed = rows.where(_rowChanged).length;
+      if (changed > 0 && !await _confirmReplace(changed)) return;
+      if (!mounted) return;
+    }
     _onParsePressed();
+  }
+
+  /// Edited, matched to another food, or left out by the user.
+  bool _rowChanged(BulkAddRow row) =>
+      row.skipped ||
+      !row.isPristine ||
+      row.selectedIndex != row.resolved.selectedIndex;
+
+  /// Whether the user lets [changed] corrected foods go to a new search.
+  Future<bool> _confirmReplace(int changed) async {
+    final replace = await showDialog<bool>(
+      context: context,
+      builder: (dialog) => AlertDialog(
+        scrollable: true,
+        title: const Text('Replace your checked foods?'),
+        content: Text(
+          'Your changes to $changed ${changed == 1 ? 'food' : 'foods'} '
+          'will be lost.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialog).pop(false),
+            child: Text(S.of(dialog).dialogCancelLabel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialog).pop(true),
+            child: const Text('Replace'),
+          ),
+        ],
+      ),
+    );
+    return replace == true;
   }
 
   void _onParsePressed() {
@@ -1311,9 +1373,10 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
               for (var i = 0; i < row.resolved.candidates.length; i++)
                 ListTile(
                   title: Text(row.resolved.candidates[i].name ?? ''),
-                  subtitle: row.resolved.candidates[i].brands != null
-                      ? Text(row.resolved.candidates[i].brands!)
-                      : null,
+                  subtitle: _candidateSubtitle(
+                    context,
+                    row.resolved.candidates[i],
+                  ),
                   trailing: i == row.selectedIndex
                       ? const Icon(Icons.check)
                       : null,
@@ -1325,6 +1388,20 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
       ),
     );
     if (chosen != null) _bloc.add(ChangeRowCandidateEvent(index, chosen));
+  }
+
+  /// A candidate's brand and its energy per 100 g (or ml), on one basis
+  /// for all, so candidates of one name can be told apart.
+  Widget? _candidateSubtitle(BuildContext context, MealEntity meal) {
+    final perUnit = meal.nutriments.energyPerUnit;
+    final s = S.of(context);
+    final parts = [
+      ?meal.brands,
+      if (perUnit != null)
+        '${EnergyDisplay.formatWithUnit(context, perUnit * 100)} per 100 '
+            '${meal.isLiquid ? s.milliliterUnit : s.gramUnit}',
+    ];
+    return parts.isEmpty ? null : Text(parts.join(' · '));
   }
 
   /// Quick add for [row]: the other rows stay to review, and [row] is done.

@@ -60,6 +60,13 @@ UserActivityEntity repeatEntry(
   return activityEntry(activity, user, recent.duration.round(), day);
 }
 
+/// [activity]'s name to stand on its own: the Compendium's are lowercase
+/// ("bicycling"), a name the user typed stays as typed.
+String activityTitle(BuildContext context, PhysicalActivityEntity activity) {
+  final name = activity.getName(context);
+  return activity.isCustom ? name : toBeginningOfSentenceCase(name);
+}
+
 /// "Today", "Yesterday" or the date in [locale].
 String dayLabel(DateTime day, DateTime today, String locale) {
   final ago = CalendarDayCalc.daysBetween(day, today);
@@ -195,7 +202,7 @@ class ActivityPickerView extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: palette.canvas,
         toolbarHeight: twoLineToolbarHeight(context),
-        title: Text(title, maxLines: 2, overflow: TextOverflow.ellipsis),
+        title: Text(title, maxLines: 2, softWrap: true, overflow: TextOverflow.ellipsis),
         actions: [
           Semantics(
             identifier: 'add-activity-quick-add',
@@ -391,7 +398,7 @@ class _RecentChip extends StatelessWidget {
           avatar: Icon(activity.displayIcon, size: 18),
           label: Text.rich(
             TextSpan(
-              text: '$name ',
+              text: '${activityTitle(context, activity)} ',
               children: [
                 TextSpan(
                   text: amount,
@@ -452,7 +459,10 @@ class _ActivityRow extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(activity.getName(context), style: text.bodyLarge),
+                        Text(
+                          activityTitle(context, activity),
+                          style: text.bodyLarge,
+                        ),
                         if (description.isNotEmpty)
                           Text(
                             description,
@@ -549,7 +559,7 @@ class _DurationSheetState extends State<DurationSheet> {
     final palette = paletteOf(context);
     final text = Theme.of(context).textTheme;
     final activity = widget.activity;
-    final name = activity.getName(context);
+    final name = activityTitle(context, activity);
     final kcal = METCalc.getTotalBurnedKcal(
       widget.user,
       activity,

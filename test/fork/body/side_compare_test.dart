@@ -6,6 +6,7 @@ import 'package:opennutritracker/fork/body/measurement_store.dart';
 import 'package:opennutritracker/fork/body/side_compare.dart';
 
 import '../../helpers/ux_checks.dart';
+import 'axis_labels.dart';
 
 DateTime _day(int offset) {
   final now = DateTime.now();
@@ -156,5 +157,50 @@ void main() {
         ],
       ),
     );
+  });
+
+  test('the axis step: round, and wider apart for taller labels', () {
+    // 180 dp at 40 dp a row: 4 rows over 2 cm, half a cm each.
+    expect(axisStep(2, 16), 0.5);
+    // 32 dp labels need 48 dp: 3 rows, a step of 1 rather than 0.67.
+    expect(axisStep(2, 32), 1);
+    expect(axisStep(0.06, 32), 0.02);
+  });
+
+  testWidgets('at 200% text the axis numbers stay whole and apart', (
+    tester,
+  ) async {
+    await pumpOnPhone(
+      tester,
+      SideComparePage(
+        imperial: false,
+        rangeDays: 30,
+        load: () async => [
+          _m(-10, BodyMetric.leftArm, 35),
+          _m(-10, BodyMetric.rightArm, 36.5),
+          _m(-1, BodyMetric.leftArm, 37.5),
+          _m(-1, BodyMetric.rightArm, 38),
+        ],
+      ),
+    );
+    await tester.pumpAndSettle();
+    expectAxisReadable(tester);
+  });
+
+  testWidgets('none measured: a button opens Add measurements', (tester) async {
+    SidePartPref.current.value = SidePart.thighs;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: SideComparePage(
+          imperial: false,
+          rangeDays: 30,
+          load: () async => [_m(-1, BodyMetric.leftThigh, 58)],
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('sides-add')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('measure-leftThigh')), findsOne);
   });
 }

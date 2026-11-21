@@ -6,6 +6,8 @@ import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:opennutritracker/fork/photos/photo_card.dart';
 import 'package:opennutritracker/fork/photos/photo_store.dart';
 
+import '../../helpers/ux_checks.dart';
+
 /// In memory, as real Hive hangs under `testWidgets`.
 class _MemoryPhotos extends PhotoStore {
   final photos = <ProgressPhoto>[];
@@ -238,6 +240,23 @@ void main() {
 
       expect(store.photos, isEmpty);
       expect(find.byKey(const ValueKey('photo-old0')), findsNothing);
+    });
+
+    testWidgets('at 200% text the strip fits its dates', (tester) async {
+      final store = _MemoryPhotos();
+      for (var i = 0; i < 2; i++) {
+        store.photos.add(
+          ProgressPhoto(id: 'old$i', date: DateTime(2026, 8 + i, 1)),
+        );
+      }
+      await pumpOnPhone(
+        tester,
+        ProgressPhotosCard(store: store, pick: (_) async => null),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Aug 1, 2026'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      expect(cutText(tester), isEmpty);
     });
 
     testWidgets('compare starts with the oldest and the newest', (

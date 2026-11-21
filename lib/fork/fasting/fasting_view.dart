@@ -553,19 +553,26 @@ class _History extends StatelessWidget {
       padding: const EdgeInsets.all(Dimens.spacing12),
       child: Column(
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                fasts.length == 1 ? 'Last fast' : 'Last ${fasts.length} fasts',
-                style: muted,
-              ),
-              if (ended.isNotEmpty)
+          // At large text the count goes under the title rather than off the card.
+          SizedBox(
+            width: double.infinity,
+            child: Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              spacing: Dimens.spacing8,
+              children: [
                 Text(
-                  '$reached of ${ended.length} reached $targetText',
+                  fasts.length == 1
+                      ? 'Last fast'
+                      : 'Last ${fasts.length} fasts',
                   style: muted,
                 ),
-            ],
+                if (ended.isNotEmpty)
+                  Text(
+                    '$reached of ${ended.length} reached $targetText',
+                    style: muted,
+                  ),
+              ],
+            ),
           ),
           const SizedBox(height: Dimens.spacing8),
           Row(

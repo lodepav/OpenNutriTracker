@@ -84,6 +84,7 @@ class _KcalGoalInfoScreenState extends State<KcalGoalInfoScreen> {
         title: Text(
           widget.equations ? 'The equations' : l10n.settingsKcalGoalInfoLabel,
           maxLines: 2,
+          softWrap: true, // [fork] S134 AppBar titles default to no wrap
           overflow: TextOverflow.ellipsis,
         ),
       ),

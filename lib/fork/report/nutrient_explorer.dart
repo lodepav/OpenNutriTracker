@@ -6,13 +6,14 @@ import 'package:opennutritracker/core/domain/entity/tracked_day_entity.dart';
 import 'package:opennutritracker/core/domain/entity/user_entity.dart';
 import 'package:opennutritracker/core/domain/usecase/get_config_usecase.dart';
 import 'package:opennutritracker/core/domain/usecase/get_user_usecase.dart';
+import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/utils/calc/day_boundary_calc.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_nutriments_entity.dart';
 import 'package:opennutritracker/features/diary/presentation/widgets/daily_nutrient_panel.dart';
 import 'package:opennutritracker/features/settings/presentation/widgets/nutrient_goals_screen.dart';
-import 'package:opennutritracker/fork/display/contrast.dart';
 import 'package:opennutritracker/fork/display/display_prefs.dart';
+import 'package:opennutritracker/fork/report/goal_standing.dart';
 import 'package:opennutritracker/fork/units/energy_text.dart';
 
 /// One nutrient the explorer follows.
@@ -215,6 +216,12 @@ class NutrientSummary {
     required this.foods,
     required this.foodsWithout,
   });
+
+  /// [foods] less those that added none of it, as the by-food list shows.
+  List<FoodShare> get foodsGiving => [
+    for (final f in foods)
+      if (f.amount > 0) f,
+  ];
 }
 
 String _foodKey(IntakeEntity i) => i.meal.code ?? i.meal.name ?? '';
@@ -454,7 +461,8 @@ class _NutrientExplorerScreenState extends State<NutrientExplorerScreen> {
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
               child: Text(
-                'A day\'s mean over the days logged, against their goals.',
+                'A day\'s mean over the days logged, against their goals. '
+                '$goalStandingKey',
                 style: Theme.of(context).textTheme.bodySmall,
               ),
             ),
@@ -482,9 +490,13 @@ class _NutrientTile extends StatelessWidget {
     final n = s.nutrient;
     final goal = s.goal;
     final share = goal == null || goal == 0 ? null : s.perDay / goal;
-    final scheme = Theme.of(context).colorScheme;
-    final missed =
-        n.marksMiss && share != null && (n.isLimit ? share > 1 : share < 0.9);
+    final palette = paletteOf(context);
+    final color = goalStandingColor(
+      goalStanding(isLimit: n.isLimit, perDay: s.perDay, goal: goal),
+      palette,
+      Theme.of(context).colorScheme,
+    );
+    final foods = s.foodsGiving;
     return ListTile(
       key: ValueKey('nutrient-${n.label}'),
       title: Text(n.label),
@@ -501,12 +513,14 @@ class _NutrientTile extends StatelessWidget {
           if (share != null)
             Padding(
               padding: const EdgeInsets.only(top: 4),
-              child: LinearProgressIndicator(
-                value: share.clamp(0.0, 1.0),
-                // the default track is secondaryContainer
-                color: missed
-                    ? scheme.error
-                    : chartSafe(scheme.primary, scheme.secondaryContainer),
+              // The row's text says the amount and goal; the bar's own value
+              // would be read first.
+              child: ExcludeSemantics(
+                child: LinearProgressIndicator(
+                  value: share.clamp(0.0, 1.0),
+                  color: color,
+                  backgroundColor: palette.surfaceMuted,
+                ),
               ),
             ),
           if (s.foodsWithout > 0)
@@ -518,7 +532,7 @@ class _NutrientTile extends StatelessWidget {
         ],
       ),
       trailing: share == null ? null : Text('${(share * 100).round()}%'),
-      onTap: s.foods.isEmpty
+      onTap: foods.isEmpty
           ? null
           : () => Navigator.push(
               context,
@@ -537,11 +551,12 @@ class _FoodsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final n = summary.nutrient;
     final total = summary.foods.fold<double>(0, (s, f) => s + f.amount);
+    final foods = summary.foodsGiving;
     return Scaffold(
       appBar: AppBar(title: Text('${n.label} by food')),
       body: ListView(
         children: [
-          for (final f in summary.foods)
+          for (final f in foods)
             ListTile(
               title: Text(f.name),
               subtitle: Text('${_amount(context, n, f.amount)} in the range'),

@@ -123,7 +123,6 @@ class _OnboardingAboutYouPageBodyState
                 ),
               ),
               IconButton(
-                visualDensity: VisualDensity.compact,
                 tooltip: S.of(context).sourcesIconTooltip,
                 icon: const Icon(Icons.info_outline),
                 onPressed: () => Navigator.of(context).push(

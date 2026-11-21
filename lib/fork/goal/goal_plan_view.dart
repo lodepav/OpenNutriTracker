@@ -206,7 +206,8 @@ class GoalPlanSection extends StatelessWidget {
           // Stacked, full width: the longer label stays on one line.
           Semantics(
             identifier: 'goal-plan-edit',
-            child: OutlinedButton(
+            // The page's main action; planning the next stays outlined.
+            child: FilledButton.tonal(
               onPressed: () => _plan(context, fresh: false),
               child: const Text('Edit plan'),
             ),

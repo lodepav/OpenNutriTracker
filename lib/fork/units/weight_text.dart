@@ -2,6 +2,8 @@ import 'package:flutter/widgets.dart';
 import 'package:opennutritracker/core/domain/entity/body_weight_unit_entity.dart';
 import 'package:opennutritracker/core/utils/calc/unit_calc.dart';
 import 'package:opennutritracker/features/profile/presentation/utils/profile_display_format.dart';
+import 'package:opennutritracker/fork/trends/trends_widgets.dart'
+    show signedText;
 import 'package:opennutritracker/generated/l10n.dart';
 
 /// [kg] in the user's body weight unit, to a tenth.
@@ -13,12 +15,11 @@ String weightText(double kg, BodyWeightUnit unit) => switch (unit) {
   },
 };
 
-/// A change of [kg], signed, in kg or (for lb and st) pounds.
-String weightChangeText(double kg, BodyWeightUnit unit) {
-  final shown = unit == BodyWeightUnit.kg ? kg : kg * 2.20462;
-  return '${shown > 0 ? '+' : ''}${shown.toStringAsFixed(1)} '
-      '${unit == BodyWeightUnit.kg ? 'kg' : 'lb'}';
-}
+/// A change of [kg], signed with a true minus, never "−0.0": in kg or
+/// (for lb and st) pounds.
+String weightChangeText(double kg, BodyWeightUnit unit) =>
+    '${signedText(unit == BodyWeightUnit.kg ? kg : kg * 2.20462, 1)} '
+    '${unit == BodyWeightUnit.kg ? 'kg' : 'lb'}';
 
 /// [kg] as the profile shows a body weight, with the app's unit labels.
 String bodyWeightText(BuildContext context, double kg, BodyWeightUnit unit) =>

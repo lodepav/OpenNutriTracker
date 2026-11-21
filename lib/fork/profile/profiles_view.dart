@@ -26,6 +26,44 @@ typedef ProfileStats = ({
   int daysLogged,
 });
 
+/// The delete confirm for [name]: true on Delete. [daysLogged] from its
+/// card names what goes with it; without it, or at none, the text is general.
+Future<bool?> confirmDeleteProfile(
+  BuildContext context, {
+  required String name,
+  int? daysLogged,
+}) {
+  final s = S.of(context);
+  final days = daysLogged ?? 0;
+  final what = days > 0
+      ? 'Its $days ${days == 1 ? 'day' : 'days'} of logged food, weigh-ins and recipes are deleted for good.'
+      : 'Its logged food, weigh-ins and recipes are deleted for good.';
+  return showDialog<bool>(
+    context: context,
+    builder: (dialogContext) {
+      final scheme = Theme.of(dialogContext).colorScheme;
+      return AlertDialog(
+        title: Text('Delete $name?'),
+        content: Text(what),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(s.dialogCancelLabel),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: scheme.error,
+              foregroundColor: scheme.onError,
+            ),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(s.dialogDeleteLabel),
+          ),
+        ],
+      );
+    },
+  );
+}
+
 /// [ProfileStats] from a profile's boxes: the goal of its latest tracked
 /// day up to [today], its weight trend on [today], and the days it logged
 /// food on.
@@ -291,7 +329,10 @@ class _ProfileCard extends StatelessWidget {
                     trend == null ? '—' : weightText(trend, weightUnit),
                     'trend',
                   ),
-                  figure('${stats?.daysLogged ?? '—'}', 'days logged'),
+                  figure(
+                    '${stats?.daysLogged ?? '—'}',
+                    stats?.daysLogged == 1 ? 'day logged' : 'days logged',
+                  ),
                 ],
               ),
               if (!active || canDelete) ...[

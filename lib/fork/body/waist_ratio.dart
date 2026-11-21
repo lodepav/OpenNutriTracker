@@ -15,7 +15,8 @@ import 'package:opennutritracker/core/utils/calc/calendar_day_calc.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/fork/adaptive/trend_points.dart';
 import 'package:opennutritracker/fork/body/measurement_store.dart';
-import 'package:opennutritracker/fork/body/side_compare.dart' show SideUnits;
+import 'package:opennutritracker/fork/body/side_compare.dart'
+    show SideUnits, axisFit;
 import 'package:opennutritracker/fork/display/contrast.dart';
 import 'package:opennutritracker/fork/report/chart_touch.dart';
 import 'package:opennutritracker/fork/trends/detail_widgets.dart';
@@ -279,8 +280,7 @@ class _WaistRatioPageState extends State<WaistRatioPage> {
           if (against != null) ...[
             const SizedBox(height: Dimens.spacing8),
             Text(
-              'Waist ${against.waistCm > 0 ? '+' : ''}'
-              '${units.shown(against.waistCm).toStringAsFixed(1)} '
+              'Waist ${signedText(units.shown(against.waistCm), 1)} '
               '${units.unit} · trend weight '
               '${weightChangeText(against.trendKg, widget.imperial ? BodyWeightUnit.lb : BodyWeightUnit.kg)}, '
               '${DateFormat.MMMd(locale).format(against.from)} to '
@@ -347,6 +347,13 @@ class _RatioChart extends StatelessWidget {
     final small = theme.textTheme.labelSmall?.copyWith(
       color: palette.textMuted,
     );
+    final axis = axisFit(
+      context,
+      small,
+      min: low - pad,
+      max: high + pad,
+      digits: 2,
+    );
     return AppCard(
       padding: const EdgeInsets.all(Dimens.spacing16),
       child: Column(
@@ -366,6 +373,7 @@ class _RatioChart extends StatelessWidget {
                   maxY: high + pad,
                   gridData: FlGridData(
                     drawVerticalLine: false,
+                    horizontalInterval: axis.step,
                     getDrawingHorizontalLine: (_) =>
                         FlLine(color: palette.border, strokeWidth: 1),
                   ),
@@ -387,7 +395,8 @@ class _RatioChart extends StatelessWidget {
                     rightTitles: AxisTitles(
                       sideTitles: SideTitles(
                         showTitles: true,
-                        reservedSize: 44,
+                        reservedSize: axis.width,
+                        interval: axis.step,
                         // Not the padded ends: they crowd the line's.
                         getTitlesWidget: (y, meta) =>
                             y == meta.min || y == meta.max

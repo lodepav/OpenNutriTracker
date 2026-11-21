@@ -51,6 +51,23 @@ class _NutrientVisibilityScreenState extends State<NutrientVisibilityScreen> {
 
   String _labelFor(BuildContext context, String key) {
     final s = S.of(context);
+    // [fork] S314 nutrient-names: sentence case, spelled as the goals editor
+    // and overview spell them. Iron keeps upstream's label, which upstream's
+    // test taps by its text.
+    final forkName = switch (key) {
+      NutrientPanelKeys.fiber => 'Fibre',
+      NutrientPanelKeys.sodium => 'Sodium',
+      NutrientPanelKeys.saturatedFat => 'Saturated fat',
+      NutrientPanelKeys.sugar => 'Sugars',
+      NutrientPanelKeys.calcium => 'Calcium',
+      NutrientPanelKeys.potassium => 'Potassium',
+      NutrientPanelKeys.vitaminD => 'Vitamin D',
+      NutrientPanelKeys.vitaminB12 => 'Vitamin B12',
+      NutrientPanelKeys.magnesium => 'Magnesium',
+      _ => null,
+    };
+    if (forkName != null) return forkName;
+    // [/fork]
     switch (key) {
       case NutrientPanelKeys.fiber:
         return s.fiberLabel;

@@ -156,6 +156,7 @@ class _RecipeBuilderScreenState extends State<RecipeBuilderScreen> {
                   ? S.of(context).editRecipeTitle
                   : S.of(context).createRecipeTitle,
               maxLines: 2,
+              softWrap: true, // [fork] S127 AppBar titles default to no wrap
               overflow: TextOverflow.ellipsis,
             ),
             // [fork] S127 recipe-builder: Save is at the bottom, with the

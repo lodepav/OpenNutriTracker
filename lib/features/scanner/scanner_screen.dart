@@ -203,24 +203,44 @@ class _ScannerScreenState extends State<ScannerScreen>
           overflow: TextOverflow.ellipsis,
         ),
         actions: [
-          IconButton(
-            icon: ValueListenableBuilder(
-              valueListenable: _cameraController,
-              builder: (context, state, child) {
-                switch (state.torchState) {
-                  case TorchState.off || TorchState.unavailable:
-                    return Icon(
-                      Icons.flash_off_rounded,
-                      color: palette.textMuted,
-                    );
-                  case TorchState.on || TorchState.auto:
-                    return const Icon(Icons.flash_on_rounded);
-                }
-              },
-            ),
-            onPressed: () => _cameraController.toggleTorch(),
+          // [fork] S286 scanner-controls: the torch and camera buttons say what
+          // they do; the builder moves out to give the tooltip the state too
+          // IconButton(
+          //   icon: ValueListenableBuilder(
+          //     valueListenable: _cameraController,
+          //     builder: (context, state, child) {
+          //       switch (state.torchState) {
+          //         case TorchState.off || TorchState.unavailable:
+          //           return Icon(
+          //             Icons.flash_off_rounded,
+          //             color: palette.textMuted,
+          //           );
+          //         case TorchState.on || TorchState.auto:
+          //           return const Icon(Icons.flash_on_rounded);
+          //       }
+          //     },
+          //   ),
+          //   onPressed: () => _cameraController.toggleTorch(),
+          // ),
+          ValueListenableBuilder(
+            valueListenable: _cameraController,
+            builder: (context, state, child) {
+              final on = switch (state.torchState) {
+                TorchState.off || TorchState.unavailable => false,
+                TorchState.on || TorchState.auto => true,
+              };
+              return IconButton(
+                tooltip: on ? 'Turn off torch' : 'Turn on torch',
+                icon: on
+                    ? const Icon(Icons.flash_on_rounded)
+                    : Icon(Icons.flash_off_rounded, color: palette.textMuted),
+                onPressed: () => _cameraController.toggleTorch(),
+              );
+            },
           ),
           IconButton(
+            tooltip: 'Switch camera',
+            // [/fork]
             icon: const Icon(Icons.flip_camera_android_rounded),
             onPressed: () => _cameraController.switchCamera(),
           ),
@@ -232,6 +252,13 @@ class _ScannerScreenState extends State<ScannerScreen>
           Expanded(
             child: MobileScanner(
               controller: _cameraController,
+              // [fork] S286 scanner-controls: progress, not a black box, while
+              // the camera starts
+              placeholderBuilder: (_) => const ColoredBox(
+                color: Colors.black,
+                child: Center(child: CircularProgressIndicator()),
+              ),
+              // [/fork]
               onDetect: (capture) {
                 if (_scannedBarcode != null) return;
                 final List<Barcode> barcodes = capture.barcodes;
@@ -285,7 +312,10 @@ class _ScannerScreenState extends State<ScannerScreen>
                 style: OutlinedButton.styleFrom(
                   shape: Dimens.shapeM,
                   side: BorderSide(color: palette.border, width: Dimens.hairline),
-                  padding: const EdgeInsets.symmetric(vertical: Dimens.spacing16),
+                  // [fork] S286 scanner-controls: at large text the label met the outline
+                  // padding: const EdgeInsets.symmetric(vertical: Dimens.spacing16),
+                  padding: const EdgeInsets.all(Dimens.spacing16),
+                  // [/fork]
                 ),
                 icon: const Icon(Icons.keyboard_rounded),
                 label: Text(S.of(context).scannerManualEntryButton),

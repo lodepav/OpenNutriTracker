@@ -6,6 +6,7 @@ import 'package:opennutritracker/core/domain/entity/tracked_day_entity.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_nutriments_entity.dart';
+import 'package:opennutritracker/fork/report/goal_standing.dart';
 import 'package:opennutritracker/fork/report/nutrient_explorer.dart';
 import 'package:opennutritracker/fork/report/nutrient_goals_overview.dart';
 
@@ -94,18 +95,18 @@ void main() {
       .label;
 
   test('a limit passed is over; a target is to reach, however far', () {
-    NutrientSummary s(String label, double perDay, double goal) =>
-        NutrientSummary(
-          nutrient: explorerNutrients.firstWhere((n) => n.label == label),
-          perDay: perDay,
-          goal: goal,
-          foods: const [],
-          foodsWithout: 0,
-        );
-    expect(standingOf(s('Salt', 5.76, 5.75)), GoalStanding.over);
-    expect(standingOf(s('Salt', 5.75, 5.75)), GoalStanding.under);
-    expect(standingOf(s('Fibre', 90, 30)), GoalStanding.toReach);
-    expect(standingOf(s('Fibre', 1, 30)), GoalStanding.toReach);
+    GoalStanding s(bool isLimit, double perDay, double? goal) =>
+        goalStanding(isLimit: isLimit, perDay: perDay, goal: goal);
+    expect(s(true, 5.76, 5.75), GoalStanding.over);
+    expect(s(true, 5.75, 5.75), GoalStanding.under);
+    expect(s(true, 99, null), GoalStanding.under);
+    expect(s(false, 90, 30), GoalStanding.toReach);
+    expect(s(false, 1, 30), GoalStanding.toReach);
+    final scheme = ThemeData().colorScheme;
+    const p = AppPalette.light;
+    expect(goalStandingColor(GoalStanding.toReach, p, scheme), p.accent);
+    expect(goalStandingColor(GoalStanding.under, p, scheme), p.textMuted);
+    expect(goalStandingColor(GoalStanding.over, p, scheme), scheme.error);
   });
 
   test('the goals only, targets first, then limits', () {

@@ -17,6 +17,8 @@ import 'package:opennutritracker/fork/photos/body_compare_sheet.dart';
 import 'package:opennutritracker/fork/photos/photo_card.dart';
 import 'package:opennutritracker/fork/photos/photo_store.dart';
 
+import '../../helpers/ux_checks.dart';
+
 List<ParsedMealItem> _items(List<String> queries) => [
   for (final q in queries) ParsedMealItem(query: q),
 ];
@@ -261,6 +263,27 @@ void main() {
       signs: ['narrower waist'],
       summary: 'A little leaner.',
     );
+
+    for (final scale in [1.15, 1.3, 2.0]) {
+      testWidgets('at ${(scale * 100).round()}% text the title shows in full '
+          'beside Ask AI', (tester) async {
+        await pumpOnPhone(tester, const SizedBox(), textScale: scale);
+        // Pushed, as from the card, so the back button takes its room.
+        Navigator.of(tester.element(find.byType(SizedBox).first)).push(
+          MaterialPageRoute<void>(
+            builder: (_) => ComparePhotosScreen(
+              photos: photos,
+              useCase: _UseCase(),
+              loadDay: (d) async => BodyDay(date: d),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(find.byKey(const ValueKey('compare-ai')), findsOne);
+        expect(cutText(tester), isEmpty);
+        await expectAccessible(tester);
+      });
+    }
 
     testWidgets('no model set up: no Ask AI', (tester) async {
       await pump(tester, null);

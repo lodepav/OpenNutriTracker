@@ -354,7 +354,7 @@ class _MacroSplitDialogState extends State<MacroSplitDialog> {
                   // [fork] S168 the app's macro colours and order
                   ...inMacroOrder(
                     carbs: _MacroRow(
-                      label: s.carbsLabel,
+                      label: 'Carbs', // [fork] S316 sentence case
                       value: _carbsPct,
                       color: paletteOf(context).carbs,
                       controller: _carbsController,
@@ -376,7 +376,7 @@ class _MacroSplitDialogState extends State<MacroSplitDialog> {
                       onTextSubmitted: _applyPendingTextInputs,
                     ),
                     fat: _MacroRow(
-                      label: s.fatLabel,
+                      label: 'Fat', // [fork] S316 sentence case
                       value: _fatPct,
                       color: paletteOf(context).fat,
                       controller: _fatController,
@@ -398,7 +398,7 @@ class _MacroSplitDialogState extends State<MacroSplitDialog> {
                       onTextSubmitted: _applyPendingTextInputs,
                     ),
                     protein: _MacroRow(
-                      label: s.proteinLabel,
+                      label: 'Protein', // [fork] S316 sentence case
                       value: _proteinPct,
                       color: paletteOf(context).protein,
                       controller: _proteinController,
@@ -483,7 +483,13 @@ class _MacroRow extends StatelessWidget {
               // Scale the field width with the user's text setting so the
               // value and its % suffix stay readable at large font scales.
               width: MediaQuery.textScalerOf(context).scale(96),
-              child: TextField(
+              // [fork] S316 macro-names: the field says which macro it sets,
+              // merged into the field's own node
+              child: MergeSemantics(
+                child: Semantics(
+                label: label,
+                child: TextField(
+                // [/fork]
                 controller: controller,
                 focusNode: focusNode,
                 keyboardType: TextInputType.number,
@@ -500,7 +506,11 @@ class _MacroRow extends StatelessWidget {
                 onChanged: onTextChanged,
                 onSubmitted: (_) => onTextSubmitted(),
                 onEditingComplete: onTextSubmitted,
+              // [fork] S316 macro-names
               ),
+              ),
+              ),
+              // [/fork]
             ),
           ],
         ),
@@ -509,10 +519,17 @@ class _MacroRow extends StatelessWidget {
             activeTrackColor: color,
             thumbColor: color,
             inactiveTrackColor: color.withValues(alpha: 0.2),
+            // [fork] S316 macro-names: the label below names the slider for a
+            // screen reader, not a drag bubble
+            showValueIndicator: ShowValueIndicator.never,
+            // [/fork]
           ),
           child: Semantics(
             identifier: semanticIdentifier,
             child: Slider(
+              // [fork] S316 macro-names: three sliders sit together
+              label: label,
+              // [/fork]
               min: _MacroSplitDialogState._minMacroPct,
               max: _MacroSplitDialogState._maxMacroPct,
               value: value.clamp(

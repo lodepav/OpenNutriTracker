@@ -10,11 +10,13 @@ import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/core/utils/hive_db_provider.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
+import 'package:opennutritracker/fork/body/body_card.dart' show addMeasurements;
 import 'package:opennutritracker/fork/body/measurement_store.dart';
 import 'package:opennutritracker/fork/display/contrast.dart';
 import 'package:opennutritracker/fork/report/chart_touch.dart';
 import 'package:opennutritracker/fork/trends/detail_widgets.dart';
 import 'package:opennutritracker/fork/trends/trends_widgets.dart';
+import 'package:opennutritracker/fork/trends/value_axis.dart' show niceStep;
 import 'package:opennutritracker/fork/display/chart_semantics.dart';
 
 const _cmPerInch = 2.54;
@@ -108,6 +110,40 @@ class SideUnits {
     if (shown(diff.abs()) < 0.05) return 'Both equal';
     return '${diff > 0 ? 'Right' : 'Left'} bigger by ${text(diff.abs())}';
   }
+}
+
+/// A round step between axis labels [labelHeight] high, on a plot
+/// [plotHeight] high showing [span]: at least 40 dp apart (fl_chart's own
+/// spacing), more at a large font so the labels do not run into each other.
+double axisStep(double span, double labelHeight, {double plotHeight = 180}) {
+  final rows = (plotHeight / math.max(40, labelHeight * 1.5)).floor();
+  return niceStep(span / math.max(rows, 1));
+}
+
+/// The right axis from [min] to [max] at the user's font, its labels to
+/// [digits]: as wide as the widest label, so it stays on one line (a fixed
+/// 44 dp wrapped them at 200%), and stepped by [axisStep].
+({double width, double step}) axisFit(
+  BuildContext context,
+  TextStyle? style, {
+  required double min,
+  required double max,
+  required int digits,
+}) {
+  var width = 0.0, height = 0.0;
+  for (final value in [min, max]) {
+    final painter = TextPainter(
+      text: TextSpan(text: value.toStringAsFixed(digits), style: style),
+      textScaler: MediaQuery.textScalerOf(context),
+      textDirection: Directionality.of(context),
+      maxLines: 1,
+    )..layout();
+    width = math.max(width, painter.width);
+    height = math.max(height, painter.height);
+    painter.dispose();
+  }
+  // SideTitleWidget's own 8 dp gap from the plot.
+  return (width: width + 8, step: axisStep(max - min, height));
 }
 
 /// The Trends tile's figures: the latest difference and which side is
@@ -225,12 +261,22 @@ class _SideComparePageState extends State<SideComparePage> {
           onSelectionChanged: (s) => SidePartPref.save(s.single),
         ),
         const SizedBox(height: Dimens.spacing16),
-        if (last == null)
+        if (last == null) ...[
           Text(
             'Measure your left and right ${part.label.toLowerCase()} on the '
             'same day, under Body measurements, to compare them.',
-          )
-        else ...[
+          ),
+          Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: TextButton.icon(
+              key: const ValueKey('sides-add'),
+              onPressed: () =>
+                  addMeasurements(context, imperial: widget.imperial),
+              icon: const Icon(Icons.add_rounded),
+              label: const Text('Add measurements'),
+            ),
+          ),
+        ] else ...[
           StatHeader(
             stats: [
               (
@@ -330,6 +376,13 @@ class _SidesChart extends StatelessWidget {
     final small = theme.textTheme.labelSmall?.copyWith(
       color: palette.textMuted,
     );
+    final axis = axisFit(
+      context,
+      small,
+      min: low - pad,
+      max: high + pad,
+      digits: 1,
+    );
     LineChartBarData line(List<FlSpot> s, Color color) => LineChartBarData(
       spots: s,
       color: color,
@@ -366,6 +419,7 @@ class _SidesChart extends StatelessWidget {
                   maxY: high + pad,
                   gridData: FlGridData(
                     drawVerticalLine: false,
+                    horizontalInterval: axis.step,
                     getDrawingHorizontalLine: (_) =>
                         FlLine(color: palette.border, strokeWidth: 1),
                   ),
@@ -377,7 +431,8 @@ class _SidesChart extends StatelessWidget {
                     rightTitles: AxisTitles(
                       sideTitles: SideTitles(
                         showTitles: true,
-                        reservedSize: 44,
+                        reservedSize: axis.width,
+                        interval: axis.step,
                         // Not the padded ends: they crowd the lines'.
                         getTitlesWidget: (y, meta) =>
                             y == meta.min || y == meta.max

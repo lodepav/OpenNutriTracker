@@ -47,7 +47,13 @@ class _ExportImportDialogState extends State<ExportImportDialog> {
         overflow: TextOverflow.ellipsis,
         maxLines: 2,
       ),
-      content: Wrap(
+      // [fork] S315 export-dialog-scrolls: at 200% text the warning ran under
+      // the buttons. Not `scrollable: true`: its IntrinsicWidth cannot
+      // measure the SegmentedButton and throws
+      // content: Wrap(
+      content: SingleChildScrollView(
+        child: Wrap(
+      // [/fork]
         children: [
           Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -159,8 +165,17 @@ class _ExportImportDialogState extends State<ExportImportDialog> {
             ],
           ),
         ],
+      // [fork] S315 export-dialog-scrolls
+      ),
+      // [/fork]
       ),
       actions: <Widget>[
+        // [fork] S315 export-dialog-scrolls: an exit that does neither
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(S.of(context).dialogCancelLabel),
+        ),
+        // [/fork]
         TextButton(
           onPressed: () => _exportImportBloc.add(
             ExportDataEvent(format: _exportFormat),

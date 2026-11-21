@@ -84,6 +84,22 @@ void main() {
     expect(bulk.days.logged, 0);
   });
 
+  test('change and pace show once a phase has a week of trend', () {
+    final r = reports(plan);
+    expect(r.first.showsTrend, isFalse);
+    expect(r.last.showsTrend, isTrue);
+    // Six days in with trend all through: still too early.
+    final early = phaseReports(
+      plan,
+      today: day(9, 13),
+      trendByDay: trend,
+      trackedDays: days,
+      burnByDay: burn,
+    ).single;
+    expect(early.changeKg, isNotNull);
+    expect(early.showsTrend, isFalse);
+  });
+
   test('a phase to a weight plans no further than it', () {
     final toWeight = PhasePlan(
       start: day(9, 7),
@@ -115,7 +131,9 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Bulk (now)'), findsOneWidget);
     expect(find.text('Since Oct 19 · week 2 of 4'), findsOneWidget);
-    expect(find.text('– · plan +0.3 kg'), findsOneWidget);
+    // A week in with no trend yet: no change or pace to show.
+    expect(find.textContaining('plan +0.3 kg'), findsNothing);
+    expect(find.textContaining('plan +0.25 kg a week'), findsNothing);
     expect(
       tester.getTopLeft(find.text('Bulk (now)')).dy,
       lessThan(tester.getTopLeft(find.text('Maintenance')).dy),
@@ -125,8 +143,11 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Sep 7 – Oct 4 · 4 weeks'), findsOneWidget);
     expect(find.text('90.0 kg → 88.4 kg'), findsOneWidget);
-    expect(find.text('-1.6 kg · plan -1.9 kg'), findsOneWidget);
-    expect(find.text('-0.4 kg a week · plan -0.5 kg a week'), findsOneWidget);
+    expect(find.text('\u22121.6 kg · plan \u22121.9 kg'), findsOneWidget);
+    expect(
+      find.text('\u22120.42 kg a week · plan \u22120.50 kg a week'),
+      findsOneWidget,
+    );
     expect(find.text('2200 kcal'), findsOneWidget);
     expect(find.text('2 of 3 days logged'), findsOneWidget);
     expect(find.text('2600 kcal → 2500 kcal'), findsOneWidget);

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
+import 'package:opennutritracker/core/styles/app_theme.dart';
 import 'package:opennutritracker/fork/health/steps.dart';
 import 'package:opennutritracker/fork/health/steps_card.dart';
 
@@ -208,6 +209,30 @@ void main() {
     testWidgets('a refused read says so', (tester) async {
       await pump(tester, _MemorySteps(_Source()..refused = true, on: true));
       expect(find.textContaining('refused the read'), findsOneWidget);
+    });
+
+    testWidgets('the goal button is a 48 dp target in the app theme', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: buildAppTheme(AppPalette.light),
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: StepsCard(
+                rangeDays: 7,
+                palette: AppPalette.light,
+                steps: _MemorySteps(_Source(), on: true),
+                clock: () => _now,
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final size = tester.getSize(find.byKey(const ValueKey('steps-goal')));
+      expect(size.height, greaterThanOrEqualTo(48));
+      expect(size.width, greaterThanOrEqualTo(48));
     });
 
     testWidgets('the goal is edited', (tester) async {

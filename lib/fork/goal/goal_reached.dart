@@ -12,6 +12,7 @@ import 'package:opennutritracker/fork/goal/goal_actions.dart';
 import 'package:opennutritracker/fork/goal/goal_chart.dart';
 import 'package:opennutritracker/fork/goal/goal_plan_view.dart' show goalTitle;
 import 'package:opennutritracker/fork/goal/goal_planner.dart';
+import 'package:opennutritracker/fork/goal/goal_status.dart';
 import 'package:opennutritracker/fork/goal/phase_colors.dart';
 import 'package:opennutritracker/fork/goal/planner_screen.dart';
 import 'package:opennutritracker/fork/phases/phases.dart';
@@ -172,12 +173,28 @@ class _GoalReachedPageState extends State<GoalReachedPage> {
     if (!mounted) return;
     setState(() => _busy = false);
     if (done) {
+      // Shown from here, it stays up on the page this one returns to.
+      if (_next == _Next.maintain) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(_completedText())));
+      }
       Navigator.of(context).pop(true);
     } else if (_next != _Next.extend) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Not saved: the profile changed.')),
       );
     }
+  }
+
+  /// "Cut to 82.0 kg completed. Maintaining now.", or the goal next.
+  String _completedText() {
+    final target = widget.plan.targetKg;
+    final next = _queued;
+    return '${widget.plan.kind.label}'
+        '${target == null ? '' : ' to ${weightText(target, widget.unit)}'} '
+        'completed. '
+        '${next == null ? 'Maintaining now.' : '${goalTitle(next, widget.unit)} starts today.'}';
   }
 
   @override
@@ -189,6 +206,7 @@ class _GoalReachedPageState extends State<GoalReachedPage> {
     final locale = Localizations.localeOf(context).toLanguageTag();
     final format = intl.DateFormat.yMMMd(locale);
     final weeks = goalWeeks(plan.start, today);
+    final days = CalendarDayCalc.daysBetween(plan.start, today);
     final startKg = plan.startKg;
     final target = plan.targetKg;
     return Scaffold(
@@ -221,7 +239,7 @@ class _GoalReachedPageState extends State<GoalReachedPage> {
           ),
           Text(
             '${format.format(plan.start)} – ${format.format(today)} · '
-            '$weeks ${weeks == 1 ? 'week' : 'weeks'}',
+            '${goalLengthText(plan.start, today)}',
             textAlign: TextAlign.center,
             style: theme.textTheme.bodyMedium,
           ),
@@ -267,15 +285,16 @@ class _GoalReachedPageState extends State<GoalReachedPage> {
                         label: 'Change',
                         value: startKg == null
                             ? '–'
-                            : weightChangeText(widget.nowKg - startKg, unit),
+                            : signedWeightText(widget.nowKg - startKg, unit),
                         note: startKg == null
                             ? null
                             : '${weightText(startKg, unit)} → '
                                   '${weightText(widget.nowKg, unit)}',
                       ),
+                      // Under a week, as the line above counts it.
                       FigureTile(
-                        label: 'Weeks',
-                        value: '$weeks',
+                        label: days < 7 ? 'Days' : 'Weeks',
+                        value: days < 7 ? '${days < 1 ? 1 : days}' : '$weeks',
                         note: plan.extensions == 0
                             ? 'as planned: ${_plannedWeeks(plan)}'
                             : 'extended ${plan.extensions}×',

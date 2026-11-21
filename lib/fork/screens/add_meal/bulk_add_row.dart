@@ -14,8 +14,9 @@ extension _BulkAddRow on _BulkAddScreenState {
   /// name and its macros under it, its energy and amount on the trailing
   /// edge. A tap opens its amount (the food page's picker, with another
   /// match a tap away). A food that needs a look shows a warning in place
-  /// of its picture and a short note, and comes first. A swipe to the left
-  /// leaves it out, with Undo; a left-out food says so and puts it back.
+  /// of its picture and a short note, and comes first. A swipe to the left,
+  /// or its Leave out button, leaves it out, with Undo; a left-out food says
+  /// so and puts it back.
   Widget _buildRow(BuildContext context, BulkAddLoadedState state, int index) {
     final row = state.rows[index];
     // an amount set by a chip, said once a row is built
@@ -126,6 +127,17 @@ extension _BulkAddRow on _BulkAddScreenState {
                     ),
                   ),
               ],
+            ),
+          ),
+        // the swipe's visible twin; a left-out row has Put back instead
+        if (!row.skipped)
+          IconButton(
+            key: ValueKey('bulk-add-leave-out-$index'),
+            tooltip: 'Leave out',
+            onPressed: () => _leaveOut(index, row),
+            icon: Icon(
+              Icons.remove_circle_outline_rounded,
+              color: palette.textMuted,
             ),
           ),
       ],

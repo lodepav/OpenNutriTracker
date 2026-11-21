@@ -96,7 +96,11 @@ class _HighlightButtonState extends State<HighlightButton> {
             icon: const Icon(Icons.navigate_next_outlined),
             label: Text(
               widget.buttonLabel,
-              style: Theme.of(context).textTheme.labelLarge,
+              // [fork] S331 onboarding-button-label: labelLarge's own colour
+              // overrode the active foreground (2.2:1); blocked keeps it
+              style: active ? null : Theme.of(context).textTheme.labelLarge,
+              // style: Theme.of(context).textTheme.labelLarge,
+              // [/fork]
             ),
           ),
         ),

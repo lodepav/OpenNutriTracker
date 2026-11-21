@@ -6,6 +6,7 @@ import 'package:opennutritracker/core/domain/entity/tracked_day_entity.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_nutriments_entity.dart';
+import 'package:opennutritracker/fork/report/goal_standing.dart';
 import 'package:opennutritracker/fork/report/nutrient_explorer.dart';
 import 'package:opennutritracker/fork/report/weekly_report.dart';
 
@@ -16,6 +17,7 @@ IntakeEntity _eat(
   int day,
   double grams, {
   double? fiber,
+  double? sugars,
   int hour = 12,
 }) => IntakeEntity(
   id: '$food-$day-$grams',
@@ -36,7 +38,7 @@ IntakeEntity _eat(
       carbohydrates100: 30,
       fat100: 5,
       proteins100: 10,
-      sugars100: null,
+      sugars100: sugars,
       saturatedFat100: null,
       fiber100: fiber,
     ),
@@ -207,6 +209,73 @@ void main() {
     expect(find.text('Lentils'), findsOneWidget);
     expect(find.text('16 g in the range'), findsOneWidget);
     expect(find.text('52%'), findsOneWidget);
+  });
+
+  Widget explorer(List<IntakeEntity> intakes) => MaterialApp(
+    home: NutrientExplorerScreen(
+      days: [_day(20), _day(21)],
+      first: DateTime(2026, 10, 20),
+      last: DateTime(2026, 10, 21),
+      load: (first, last) async => intakes,
+      user: () async => null,
+      goalHistory: () async => null,
+    ),
+  );
+
+  testWidgets('the bars colour as Nutrient goals does, with its key', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1080, 7020);
+    addTearDown(tester.view.reset);
+    // Sugars 60 g a day, over the 50 g limit.
+    await tester.pumpWidget(
+      explorer([..._intakes, _eat('Jam', 21, 240, sugars: 50)]),
+    );
+    await tester.pumpAndSettle();
+    Color? bar(String nutrient) => tester
+        .widget<LinearProgressIndicator>(
+          find.descendant(
+            of: find.byKey(ValueKey('nutrient-$nutrient')),
+            matching: find.byType(LinearProgressIndicator),
+          ),
+        )
+        .color;
+    final scheme = Theme.of(
+      tester.element(find.byType(NutrientExplorerScreen)),
+    ).colorScheme;
+    // Fibre at 52% of its goal is to reach, not missed.
+    expect(bar('Fibre'), AppPalette.light.accent);
+    expect(bar('Energy'), AppPalette.light.accent);
+    expect(bar('Sugars'), scheme.error);
+    expect(bar('Saturated fat'), AppPalette.light.textMuted);
+    expect(find.textContaining(goalStandingKey), findsOneWidget);
+  });
+
+  testWidgets('TalkBack reads the row, not the bar\'s value', (tester) async {
+    final semantics = tester.ensureSemantics();
+    await tester.pumpWidget(explorer(_intakes));
+    await tester.pumpAndSettle();
+    final node = tester.getSemantics(
+      find.byKey(const ValueKey('nutrient-Energy')),
+    );
+    expect(node.value, isEmpty);
+    expect(node.label, startsWith('Energy'));
+    semantics.dispose();
+  });
+
+  testWidgets('a food that gave none of a nutrient is not listed', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1080, 7020);
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      explorer([..._intakes, _eat('Water', 21, 500, fiber: 0)]),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('nutrient-Fibre')));
+    await tester.pumpAndSettle();
+    expect(find.text('Lentils'), findsOneWidget);
+    expect(find.text('Water'), findsNothing);
   });
 
   testWidgets(

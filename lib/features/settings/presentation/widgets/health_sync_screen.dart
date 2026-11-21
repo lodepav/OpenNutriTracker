@@ -263,9 +263,17 @@ class _HealthSyncScreenState extends State<HealthSyncScreen> {
   }
 
   void _openSources() {
-    Navigator.of(
-      context,
-    ).push(MaterialPageRoute<void>(builder: (_) => const SourcesScreen()));
+    // [fork] S303 credit-card: Sources opens at the credit's own entry
+    // Navigator.of(
+    //   context,
+    // ).push(MaterialPageRoute<void>(builder: (_) => const SourcesScreen()));
+    final entry = S.of(context).sourcesEnergyCompensationTitle;
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => SourcesScreen(initialEntry: entry),
+      ),
+    );
+    // [/fork]
   }
 
   /// Puts the disclosure up and reports whether the user chose to go on.
@@ -463,9 +471,14 @@ class _HealthSyncScreenState extends State<HealthSyncScreen> {
               max: ConfigEntity.maxHealthWorkoutKcalMultiplier,
               divisions: _multiplierDivisions,
               value: _multiplier,
-              label: s.healthSyncKcalMultiplierValueLabel(
-                _percentOf(_multiplier),
-              ),
+              // [fork] S303 credit-card: TalkBack read the label and the
+              // value, "100%, 100%"; the figure above shows it while dragging
+              // label: s.healthSyncKcalMultiplierValueLabel(
+              //   _percentOf(_multiplier),
+              // ),
+              semanticFormatterCallback: (value) =>
+                  '${_percentOf(value)}% of workout calories',
+              // [/fork]
               onChanged: canEdit
                   ? (value) => setState(() => _multiplier = value)
                   : null,
@@ -473,6 +486,22 @@ class _HealthSyncScreenState extends State<HealthSyncScreen> {
             ),
           ),
           Text(s.healthSyncKcalMultiplierSubtitle, style: textTheme.bodySmall),
+          // [fork] S303 credit-card: before opt-in, what the first opt-in
+          // sets (the suggestion is applied only while nothing is stored)
+          if (!_importEnabled && _storedMultiplier == null)
+            Padding(
+              padding: const EdgeInsets.only(top: Dimens.spacing4),
+              child: Text(
+                healthStoreReadsBodyFat
+                    ? 'When you turn on Workouts in, OpenBite sets the credit '
+                          'from your body fat in $healthPlatformName, or from '
+                          'your height and weight without one.'
+                    : 'When you turn on Workouts in, OpenBite sets the credit '
+                          'from your height and weight.',
+                style: textTheme.bodySmall,
+              ),
+            ),
+          // [/fork]
           if (canEdit && suggested != null)
             Align(
               alignment: AlignmentDirectional.centerStart,

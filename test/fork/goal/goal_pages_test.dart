@@ -256,7 +256,7 @@ void main() {
       ),
     );
     expect(find.text('Cut to 80.0 kg: done'), findsOneWidget);
-    expect(find.text('-6.5 kg'), findsOneWidget);
+    expect(find.text('\u22126.5 kg'), findsOneWidget);
     expect(find.text('92%'), findsOneWidget);
     await tester.scrollUntilVisible(find.text('Continue'), 200);
     await tester.tap(find.text('Continue'));

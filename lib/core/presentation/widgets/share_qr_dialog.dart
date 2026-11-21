@@ -1,3 +1,4 @@
+import 'dart:async'; // [fork] S297
 import 'dart:io';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
@@ -5,6 +6,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
+import 'package:opennutritracker/core/utils/shared_payload_router.dart'; // [fork] S298
 import 'package:opennutritracker/generated/l10n.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
@@ -42,6 +44,39 @@ class _ShareQrDialogState extends State<ShareQrDialog> {
 
   final GlobalKey _shareButtonKey = GlobalKey();
   late QrValidationResult _validation = _validateQr();
+  // [fork] S297 share-copied-in-dialog: a snackbar would show behind the dialog
+  Timer? _copiedTimer;
+
+  @override
+  void dispose() {
+    _copiedTimer?.cancel();
+    super.dispose();
+  }
+
+  void _copy() {
+    Clipboard.setData(ClipboardData(text: widget.code));
+    _copiedTimer?.cancel();
+    setState(() {
+      _copiedTimer = Timer(const Duration(seconds: 2), () {
+        if (mounted) setState(() => _copiedTimer = null);
+      });
+    });
+  }
+  // [/fork]
+
+  // [fork] S298 share-where-to-scan: tells the receiver where to scan the code
+  String? get _whereToScan => switch (classifySharedPayload(widget.code)) {
+    SharedPayloadKind.meal =>
+      "Scan it in OpenBite with + › Scan, or a meal's menu › Import shared "
+          'meal.',
+    SharedPayloadKind.activity =>
+      'Scan it in OpenBite with + › Scan, or the Activity menu › Import '
+          'shared workout.',
+    SharedPayloadKind.recipe =>
+      'Scan it in OpenBite with Recipes › Import recipe, or + › Scan.',
+    null => null,
+  };
+  // [/fork]
 
   @override
   void didUpdateWidget(covariant ShareQrDialog oldWidget) {
@@ -122,6 +157,18 @@ class _ShareQrDialogState extends State<ShareQrDialog> {
                     ? S.of(context).shareQrTooLargeLabel
                     : S.of(context).shareQrUnavailableLabel,
               ),
+            // [fork] S298 share-where-to-scan
+            if (qr != null && _whereToScan != null) ...[
+              const SizedBox(height: Dimens.spacing8),
+              Text(
+                _whereToScan!,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+            // [/fork]
             const SizedBox(height: Dimens.spacing12),
             Wrap(
               spacing: Dimens.spacing8,
@@ -132,14 +179,32 @@ class _ShareQrDialogState extends State<ShareQrDialog> {
                   identifier: 'share-copy-code',
                   child: OutlinedButton.icon(
                     style: _pillStyle,
-                    icon: const Icon(Icons.copy_rounded, size: 18),
-                    label: Text(S.of(context).copyCodeLabel),
-                    onPressed: () {
-                      Clipboard.setData(ClipboardData(text: widget.code));
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text(S.of(context).codeCopiedLabel)),
-                      );
-                    },
+                    // [fork] S297 share-copied-in-dialog: the button says it copied
+                    // icon: const Icon(Icons.copy_rounded, size: 18),
+                    // label: Text(S.of(context).copyCodeLabel),
+                    // onPressed: () {
+                    //   Clipboard.setData(ClipboardData(text: widget.code));
+                    //   ScaffoldMessenger.of(context).showSnackBar(
+                    //     SnackBar(content: Text(S.of(context).codeCopiedLabel)),
+                    //   );
+                    // },
+                    icon: Icon(
+                      _copiedTimer != null
+                          ? Icons.check_rounded
+                          : Icons.copy_rounded,
+                      size: 18,
+                    ),
+                    // A live region, so TalkBack hears the copy as well.
+                    label: Semantics(
+                      liveRegion: true,
+                      child: Text(
+                        _copiedTimer != null
+                            ? 'Copied'
+                            : S.of(context).copyCodeLabel,
+                      ),
+                    ),
+                    onPressed: _copy,
+                    // [/fork]
                   ),
                 ),
                 Semantics(

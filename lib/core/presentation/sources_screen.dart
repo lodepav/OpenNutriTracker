@@ -11,7 +11,13 @@ import 'package:opennutritracker/core/utils/safe_url_launcher.dart';
 /// and the disclaimer dialog — so anyone scanning the app for citations
 /// (Apple's reviewers included) can find them within one tap.
 class SourcesScreen extends StatelessWidget {
-  const SourcesScreen({super.key});
+  // [fork] S304 sources-anchor: a caller's info button opens at its entry
+  // const SourcesScreen({super.key});
+  /// The title of the entry to open scrolled to; null opens at the top.
+  final String? initialEntry;
+
+  const SourcesScreen({super.key, this.initialEntry});
+  // [/fork]
 
   @override
   Widget build(BuildContext context) {
@@ -134,20 +140,57 @@ class SourcesScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.settingsSourcesLabel)),
-      body: ListView(
+      // [fork] S304 sources-anchor: every card is built, so the anchored one
+      // exists to scroll to (a lazy ListView had not built the fifth)
+      // body: ListView(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: Dimens.spacing16, vertical: Dimens.spacing16),
-        children: [
+        // children: [
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
           Text(
             l10n.sourcesScreenIntro,
             style: Theme.of(context).textTheme.bodyMedium,
           ),
           const SizedBox(height: Dimens.spacing16),
-          ...entries.map((entry) => _SourceCard(entry: entry)),
-        ],
+          // ...entries.map((entry) => _SourceCard(entry: entry)),
+          ...entries.map(
+            (entry) => entry.title == initialEntry
+                ? _ScrollIntoView(child: _SourceCard(entry: entry))
+                : _SourceCard(entry: entry),
+          ),
+          ],
+        ),
       ),
+      // [/fork]
     );
   }
 }
+
+// [fork] S304 sources-anchor: scrolls its child to the top once laid out
+class _ScrollIntoView extends StatefulWidget {
+  final Widget child;
+
+  const _ScrollIntoView({required this.child});
+
+  @override
+  State<_ScrollIntoView> createState() => _ScrollIntoViewState();
+}
+
+class _ScrollIntoViewState extends State<_ScrollIntoView> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) Scrollable.ensureVisible(context);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
+}
+// [/fork]
 
 class _SourceEntry {
   final String title;
@@ -193,10 +236,20 @@ class _SourceCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              entry.title,
-              style: theme.textTheme.titleMedium,
+            // [fork] S305 sources-a11y: titles are headings, so TalkBack can
+            // jump card to card
+            Semantics(
+              header: true,
+              child: Text(
+                entry.title,
+                style: theme.textTheme.titleMedium,
+              ),
             ),
+            // Text(
+            //   entry.title,
+            //   style: theme.textTheme.titleMedium,
+            // ),
+            // [/fork]
             const SizedBox(height: Dimens.spacing8),
             Text(
               entry.description,
@@ -220,12 +273,22 @@ class _SourceCard extends StatelessWidget {
                       child: TextButton.icon(
                         onPressed: () => _launch(context, source.url),
                         icon: const Icon(Icons.open_in_new_rounded, size: 18),
-                        label: Text(S.of(context).sourcesOpenSourceLabel),
+                        // [fork] S305 sources-a11y: 48 dp, and each says which
+                        // source it opens rather than all "View source"
+                        // label: Text(S.of(context).sourcesOpenSourceLabel),
+                        label: Text(
+                          S.of(context).sourcesOpenSourceLabel,
+                          semanticsLabel:
+                              '${S.of(context).sourcesOpenSourceLabel}: '
+                              '${_shortCitation(source.citation)}',
+                        ),
                         style: TextButton.styleFrom(
                           padding: const EdgeInsets.symmetric(horizontal: Dimens.spacing8),
-                          minimumSize: const Size(0, 32),
-                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          // minimumSize: const Size(0, 32),
+                          // tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          minimumSize: const Size(48, 48),
                         ),
+                        // [/fork]
                       ),
                     ),
                   ],
@@ -238,3 +301,10 @@ class _SourceCard extends StatelessWidget {
     );
   }
 }
+
+// [fork] S305 sources-a11y: the author and year ("Careau V, et al. (2021)"),
+// or the author alone where the citation has no year
+String _shortCitation(String citation) =>
+    RegExp(r'^[^()]*?\(\d{4}\)').stringMatch(citation) ??
+    citation.split('.').first;
+// [/fork]

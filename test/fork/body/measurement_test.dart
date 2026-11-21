@@ -3,9 +3,15 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
+import 'package:intl/intl.dart';
+import 'package:opennutritracker/core/domain/entity/user_gender_entity.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/fork/body/body_card.dart';
 import 'package:opennutritracker/fork/body/measurement_store.dart';
+import 'package:opennutritracker/fork/body/side_compare.dart';
+import 'package:opennutritracker/fork/body/waist_ratio.dart';
+
+import '../../helpers/ux_checks.dart';
 
 final _today = DateTime(2026, 10, 23);
 
@@ -266,8 +272,246 @@ void main() {
     await tester.tap(find.text('Save'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Body fat is not a measurement.'), findsOneWidget);
+    expect(find.text('Enter a body fat between 2 and 70 %'), findsOneWidget);
     expect(memory.saved, isEmpty);
+  });
+
+  test('each field is checked against its own range, at the edges', () {
+    String? check(BodyMetric m, String text, {bool imperial = false}) =>
+        measurementError(m, text, imperial: imperial);
+    expect(check(BodyMetric.bodyFat, ''), isNull);
+    expect(check(BodyMetric.bodyFat, '2.1'), isNull);
+    expect(check(BodyMetric.bodyFat, '69,9'), isNull);
+    for (final bad in ['2', '70', 'abc', '-5']) {
+      expect(
+        check(BodyMetric.bodyFat, bad),
+        'Enter a body fat between 2 and 70 %',
+        reason: bad,
+      );
+    }
+    expect(check(BodyMetric.waist, '0.1'), isNull);
+    expect(check(BodyMetric.waist, '0'), 'Enter a waist between 0 and 400 cm');
+    expect(
+      check(BodyMetric.waist, '400'),
+      'Enter a waist between 0 and 400 cm',
+    );
+    expect(
+      check(BodyMetric.leftArm, '400', imperial: true),
+      'Enter a left arm between 0 and 400 in',
+    );
+  });
+
+  Future<void> pumpCard(
+    WidgetTester tester,
+    _Memory memory, {
+    int rangeDays = 30,
+  }) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: BodyMeasurementsCard(
+              rangeDays: rangeDays,
+              palette: AppPalette.light,
+              imperial: false,
+              store: memory,
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+  }
+
+  testWidgets('the dialog: units from the start, an error on each field, '
+      'room between fields', (tester) async {
+    await pumpCard(tester, _Memory());
+    await tester.tap(find.byKey(const ValueKey('measure-add')));
+    await tester.pumpAndSettle();
+
+    // Nothing typed yet, the units show.
+    for (final unit in ['%', 'cm']) {
+      final opacity = tester.widget<AnimatedOpacity>(
+        find.ancestor(
+          of: find.text(unit).first,
+          matching: find.byType(AnimatedOpacity),
+        ),
+      );
+      expect(opacity.opacity, 1, reason: unit);
+    }
+    final fat = tester.getRect(find.byKey(const ValueKey('measure-bodyFat')));
+    final waist = tester.getRect(find.byKey(const ValueKey('measure-waist')));
+    expect(waist.top - fat.bottom, inInclusiveRange(8, 12));
+
+    await tester.enterText(find.byKey(const ValueKey('measure-bodyFat')), '1');
+    await tester.enterText(find.byKey(const ValueKey('measure-hips')), '500');
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+    InputDecoration decoration(String key) => tester
+        .widget<TextField>(find.byKey(ValueKey('measure-$key')))
+        .decoration!;
+    expect(
+      decoration('bodyFat').errorText,
+      'Enter a body fat between 2 and 70 %',
+    );
+    expect(decoration('hips').errorText, 'Enter hips between 0 and 400 cm');
+    expect(decoration('waist').errorText, isNull);
+    // The first refused field takes the focus, so it scrolls into view.
+    expect(
+      tester
+          .widget<TextField>(find.byKey(const ValueKey('measure-bodyFat')))
+          .focusNode!
+          .hasFocus,
+      isTrue,
+    );
+
+    // Corrected, the error goes and the day saves.
+    await tester.enterText(find.byKey(const ValueKey('measure-bodyFat')), '');
+    await tester.enterText(find.byKey(const ValueKey('measure-hips')), '');
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('measure-bodyFat')), findsNothing);
+  });
+
+  testWidgets('the chart states its ends and the range, with a true minus', (
+    tester,
+  ) async {
+    final now = DateTime.now();
+    final start = DateTime(now.year, now.month, now.day - 5);
+    final end = DateTime(now.year, now.month, now.day);
+    final memory = _Memory()
+      ..entries.addAll([
+        Measurement(
+          id: 'a',
+          date: start,
+          metric: BodyMetric.bodyFat,
+          value: 22.5,
+        ),
+        Measurement(
+          id: 'b',
+          date: end,
+          metric: BodyMetric.bodyFat,
+          value: 21.8,
+        ),
+      ]);
+    await pumpCard(tester, memory, rangeDays: 7);
+
+    expect(find.text('Change, last 7 days'), findsOneWidget);
+    expect(find.text('\u22120.7 %'), findsOneWidget);
+    expect(
+      find.text(
+        '22.5 % on ${DateFormat.MMMd().format(start)} \u2192 '
+        '21.8 % on ${DateFormat.MMMd().format(end)}',
+      ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets("in the app's theme a floating label clears the field above", (
+    tester,
+  ) async {
+    await pumpOnPhone(
+      tester,
+      BodyMeasurementsCard(
+        rangeDays: 30,
+        palette: AppPalette.light,
+        imperial: false,
+        store: _Memory(),
+      ),
+      textScale: 1,
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('measure-add')));
+    await tester.pumpAndSettle();
+    final fat = tester.getRect(find.byKey(const ValueKey('measure-bodyFat')));
+    final label = tester.getRect(
+      find.descendant(
+        of: find.byKey(const ValueKey('measure-waist')),
+        matching: find.text('Waist'),
+      ),
+    );
+    expect(label.top, greaterThanOrEqualTo(fat.bottom));
+  });
+
+  group('links', () {
+    final frame = loadBodyFrame;
+    tearDown(() {
+      loadBodyFrame = frame;
+      SidePartPref.current.value = SidePart.arms;
+    });
+
+    Measurement m(BodyMetric metric, double value) => Measurement(
+      id: metric.name,
+      date: DateTime.now(),
+      metric: metric,
+      value: value,
+    );
+
+    testWidgets('none without the data for them', (tester) async {
+      loadBodyFrame = () async => null;
+      await pumpCard(
+        tester,
+        _Memory()
+          ..entries.addAll([
+            m(BodyMetric.waist, 90),
+            m(BodyMetric.leftArm, 35),
+          ]),
+      );
+      expect(find.byKey(const ValueKey('measure-waist-ratio')), findsNothing);
+      expect(find.byKey(const ValueKey('measure-sides')), findsNothing);
+    });
+
+    testWidgets('a waist and a height open Waist to height', (tester) async {
+      loadBodyFrame = () async =>
+          (heightCm: 180.0, gender: UserGenderEntity.male);
+      await pumpCard(tester, _Memory()..entries.add(m(BodyMetric.waist, 90)));
+      expect(find.byKey(const ValueKey('measure-sides')), findsNothing);
+      await tester.tap(find.byKey(const ValueKey('measure-waist-ratio')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(find.byType(WaistRatioPage), findsOneWidget);
+    });
+
+    testWidgets('both thighs open left and right on the thighs', (
+      tester,
+    ) async {
+      loadBodyFrame = () async => null;
+      await pumpCard(
+        tester,
+        _Memory()
+          ..entries.addAll([
+            m(BodyMetric.leftThigh, 58),
+            m(BodyMetric.rightThigh, 59),
+            m(BodyMetric.leftArm, 35),
+          ]),
+      );
+      await tester.tap(find.byKey(const ValueKey('measure-sides')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(find.byType(SideComparePage), findsOneWidget);
+      expect(SidePartPref.current.value, SidePart.thighs);
+    });
+
+    testWidgets('the part picked on the page is kept when both have pairs', (
+      tester,
+    ) async {
+      loadBodyFrame = () async => null;
+      await pumpCard(
+        tester,
+        _Memory()
+          ..entries.addAll([
+            m(BodyMetric.leftThigh, 58),
+            m(BodyMetric.rightThigh, 59),
+            m(BodyMetric.leftArm, 35),
+            m(BodyMetric.rightArm, 35.5),
+          ]),
+      );
+      // Picked on the page since the card was built.
+      SidePartPref.current.value = SidePart.thighs;
+      await tester.tap(find.byKey(const ValueKey('measure-sides')));
+      await tester.pump();
+      expect(SidePartPref.current.value, SidePart.thighs);
+    });
   });
 }
 

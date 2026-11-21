@@ -77,10 +77,18 @@ class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final palette = isDark ? AppPalette.dark : AppPalette.light;
-    return SafeArea(
-      child: Scaffold(
+    // [fork] S287 activity-detail-bars: the Scaffold paints behind the system
+    // bars, the SafeArea moves into its body
+    // return SafeArea(
+    //   child: Scaffold(
+    return Scaffold(
+        // [/fork]
         backgroundColor: palette.canvas,
-        body: BlocBuilder<ActivityDetailBloc, ActivityDetailState>(
+        // [fork] S287 activity-detail-bars
+        // body: BlocBuilder<ActivityDetailBloc, ActivityDetailState>(
+        body: SafeArea(
+          child: BlocBuilder<ActivityDetailBloc, ActivityDetailState>(
+            // [/fork]
           bloc: _activityDetailBloc,
           builder: (context, state) {
             if (state is ActivityDetailInitial) {
@@ -94,6 +102,9 @@ class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
               return const SizedBox();
             }
           },
+          // [fork] S287 activity-detail-bars
+          ),
+          // [/fork]
         ),
         bottomSheet: ActivityDetailBottomSheet(
           onAddButtonPressed: onAddButtonPressed,
@@ -101,7 +112,9 @@ class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
           activityEntity: activityEntity,
           activityDetailBloc: _activityDetailBloc,
         ),
-      ),
+      // [fork] S287 activity-detail-bars: the SafeArea's close
+      // ),
+      // [/fork]
     );
   }
 

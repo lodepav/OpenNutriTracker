@@ -13,6 +13,9 @@ import 'package:opennutritracker/core/domain/usecase/get_config_usecase.dart';
 import 'package:opennutritracker/core/utils/hive_db_provider.dart';
 import 'package:opennutritracker/fork/profile/profiles_view.dart';
 // [/fork]
+// [fork] S301 profile-delete-confirm
+import 'package:opennutritracker/features/profile/presentation/utils/profile_display_name.dart';
+// [/fork]
 
 class ManageProfilesScreen extends StatefulWidget {
   const ManageProfilesScreen({super.key});
@@ -115,24 +118,31 @@ class _ManageProfilesScreenState extends State<ManageProfilesScreen> {
   }
 
   Future<void> _onDelete(ProfileEntity profile) async {
-    final s = S.of(context);
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(s.deleteProfileConfirmTitle),
-        content: Text(s.deleteProfileConfirmContent),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: Text(s.dialogCancelLabel),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: Text(s.dialogDeleteLabel),
-          ),
-        ],
-      ),
+    // [fork] S301 profile-delete-confirm: names the profile and its logged days, Delete in the error colour
+    // final s = S.of(context);
+    // final confirmed = await showDialog<bool>(
+    //   context: context,
+    //   builder: (dialogContext) => AlertDialog(
+    //     title: Text(s.deleteProfileConfirmTitle),
+    //     content: Text(s.deleteProfileConfirmContent),
+    //     actions: [
+    //       TextButton(
+    //         onPressed: () => Navigator.of(dialogContext).pop(false),
+    //         child: Text(s.dialogCancelLabel),
+    //       ),
+    //       TextButton(
+    //         onPressed: () => Navigator.of(dialogContext).pop(true),
+    //         child: Text(s.dialogDeleteLabel),
+    //       ),
+    //     ],
+    //   ),
+    // );
+    final confirmed = await confirmDeleteProfile(
+      context,
+      name: profileDisplayName(context, profile),
+      daysLogged: _forkStats[profile.id]?.daysLogged,
     );
+    // [/fork]
     if (confirmed != true) return;
 
     // Deleting the active profile switches to another first, which routes

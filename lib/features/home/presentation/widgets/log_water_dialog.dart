@@ -63,7 +63,11 @@ class _LogWaterDialogState extends State<LogWaterDialog> {
               onPressed: _selected == 0
                   ? null
                   : () => setState(() => _selected = 0),
-              child: Text(s.buttonResetLabel),
+              // [fork] S289 water-dialog-words: it only zeroes the slider,
+              // nothing logged is reset
+              // child: Text(s.buttonResetLabel),
+              child: const Text('Clear'),
+              // [/fork]
             ),
           ),
         ],

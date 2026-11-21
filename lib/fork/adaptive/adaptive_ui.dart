@@ -4,6 +4,7 @@ import 'package:opennutritracker/core/data/repository/user_repository.dart';
 import 'package:opennutritracker/core/domain/entity/body_weight_unit_entity.dart';
 import 'package:opennutritracker/core/domain/usecase/get_config_usecase.dart';
 import 'package:opennutritracker/core/domain/usecase/get_kcal_goal_usecase.dart';
+import 'package:opennutritracker/core/domain/usecase/get_user_usecase.dart';
 import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
@@ -24,6 +25,7 @@ import 'package:opennutritracker/fork/adaptive/choice.dart';
 import 'package:opennutritracker/fork/adaptive/expenditure.dart';
 import 'package:opennutritracker/fork/adaptive/expenditure_settings_ui.dart';
 import 'package:opennutritracker/fork/adaptive/partial_days_ui.dart';
+import 'package:opennutritracker/fork/body/measurement_store.dart';
 import 'package:opennutritracker/fork/display/contrast.dart';
 import 'package:opennutritracker/fork/units/energy_text.dart';
 import 'package:opennutritracker/fork/units/weight_text.dart';
@@ -55,6 +57,38 @@ class AdaptiveCheckInCard extends StatefulWidget {
 }
 
 typedef _Due = CheckInReason;
+
+/// The due check-in's title, on Home's card and atop its screen alike.
+String _dueTitle(_Due due) => switch (due) {
+  _Due.first => 'Your first target',
+  _Due.goal => 'Your goal changed',
+  _Due.settings => 'Your target settings changed',
+  _Due.weekly => 'Weekly check-in',
+};
+
+/// The activity in today's goal of [totalKcal]: on a check-in's target
+/// ([fork] with one), what the daily mode added; else what the logged
+/// activities add over the goal without them, [withoutLoggedKcal], which
+/// a fixed or check-in's target ignores.
+double todayGoalActivity(
+  double totalKcal,
+  double withoutLoggedKcal,
+  ForkKcalGoal? fork,
+) => fork?.target != null ? fork!.activityKcal : totalKcal - withoutLoggedKcal;
+
+/// Today's goal as Home shows it: [totalKcal], and the [activityKcal] it
+/// holds named apart, each rounded on its own as Home's rows are.
+String todayGoalText(
+  BuildContext context,
+  double totalKcal,
+  double activityKcal,
+) {
+  final activity = energyValue(context, activityKcal);
+  if (activity == 0) return energyText(context, totalKcal);
+  return '${energyText(context, totalKcal)} '
+      '(${energyValue(context, totalKcal - activityKcal)} + $activity '
+      'activity)';
+}
 
 /// The settings that differ between two [AdaptiveSettings.targetBasis]
 /// strings, named as Expenditure settings names them.
@@ -252,12 +286,7 @@ class _AdaptiveCheckInCardState extends State<AdaptiveCheckInCard> {
           child: AppCard(
             child: ListTile(
               leading: const Icon(Icons.insights_rounded),
-              title: Text(switch (due) {
-                _Due.first => 'Your first target',
-                _Due.goal => 'Your goal changed',
-                _Due.settings => 'Your target settings changed',
-                _Due.weekly => 'Weekly check-in',
-              }),
+              title: Text(_dueTitle(due)),
               subtitle: Text(switch (due) {
                 _ when _waitsOnPartial =>
                   'Waiting for your answer on a day that looks partly '
@@ -386,6 +415,31 @@ class _CheckInScreenState extends State<CheckInScreen> {
   late Future<CheckIn> _checkIn = widget.service.checkIn();
   late Future<List<PartialDay>> _partial = widget.service.partialDays();
   late final Future<CheckInRecord?> _last = widget.service.lastCheckIn();
+  late final Future<_Due> _reason = checkInReason(widget.service);
+
+  /// Home's goal for today and the activity in it: the logged activities
+  /// on the formula, the daily mode's own on a check-in's target.
+  late final Future<({double total, double activity})?> _today = () async {
+    if (!locator.isRegistered<GetKcalGoalUsecase>()) return null;
+    final usecase = locator<GetKcalGoalUsecase>();
+    final total = await usecase.getKcalGoal();
+    final settings = AdaptiveStore.settings.value;
+    // Only the daily mode adds activity to a check-in's target.
+    final fork =
+        settings.adaptiveTarget &&
+            !settings.fixedTarget &&
+            settings.activityMode == ActivityMode.daily
+        ? await forkKcalGoal(await logicalToday())
+        : null;
+    return (
+      total: total,
+      activity: todayGoalActivity(
+        total,
+        await usecase.getKcalGoal(totalKcalActivitiesParam: 0),
+        fork,
+      ),
+    );
+  }();
 
   /// Before the first check-in, the target Home uses now (the formula's,
   /// or a fixed one), before the day's activity and, as the proposal,
@@ -526,13 +580,10 @@ class _CheckInScreenState extends State<CheckInScreen> {
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
-      title: FutureBuilder<CheckInRecord?>(
-        future: _last,
-        builder: (context, snapshot) => Text(
-          _changedSince(snapshot.data).isEmpty
-              ? 'Weekly check-in'
-              : 'Target settings changed',
-        ),
+      title: FutureBuilder<_Due>(
+        future: _reason,
+        builder: (context, snapshot) =>
+            Text(_dueTitle(snapshot.data ?? _Due.weekly)),
       ),
     ),
     // Pinned under the list, which would leave them below the fold.
@@ -681,6 +732,16 @@ class _CheckInScreenState extends State<CheckInScreen> {
             ),
             const SizedBox(height: 12),
             _card(context, Icons.flag_outlined, theme.colorScheme.primary, 'Target', [
+              FutureBuilder<({double total, double activity})?>(
+                future: _today,
+                builder: (context, today) => switch (today.data) {
+                  final today? => _row(
+                    "Today's goal",
+                    todayGoalText(context, today.total, today.activity),
+                  ),
+                  null => const SizedBox.shrink(),
+                },
+              ),
               if (current != null)
                 _row(switch ((daily, last == null)) {
                   // Before the first check-in it is the formula's, which
@@ -690,11 +751,27 @@ class _CheckInScreenState extends State<CheckInScreen> {
                   (true, false) => 'Current target before activity',
                   (false, false) => 'Current target',
                 }, _kcal(current)),
-              _row(
-                daily ? 'Proposed target before activity' : 'Proposed target',
-                _kcal(checkIn.proposedTargetKcal),
-                color: textAccent(context),
-                large: true,
+              // Not filled in when it is nothing or less, so said apart.
+              if (proposed <= 0)
+                _row(
+                  daily ? 'Proposed target before activity' : 'Proposed target',
+                  _kcal(checkIn.proposedTargetKcal),
+                  color: textAccent(context),
+                  large: true,
+                ),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: TextField(
+                  key: const ValueKey('check-in-target'),
+                  controller: _target,
+                  keyboardType: TextInputType.number,
+                  decoration: InputDecoration(
+                    labelText: daily
+                        ? 'Daily target before activity'
+                        : 'Daily target',
+                    suffixText: energyUnit(context),
+                  ),
+                ),
               ),
               if (current != null)
                 _row(
@@ -790,16 +867,6 @@ class _CheckInScreenState extends State<CheckInScreen> {
                   ),
                 ),
             ]),
-            const SizedBox(height: 16),
-            TextField(
-              key: const ValueKey('check-in-target'),
-              controller: _target,
-              keyboardType: TextInputType.number,
-              decoration: InputDecoration(
-                labelText: 'Daily target',
-                suffixText: energyUnit(context),
-              ),
-            ),
           ],
         );
       },
@@ -872,7 +939,7 @@ class _CheckInScreenState extends State<CheckInScreen> {
                           await widget.service.accept(checkIn, current);
                           if (context.mounted) Navigator.of(context).pop(true);
                         },
-                  child: const Text('Keep current target'),
+                  child: Text('Keep ${_kcal(current)}'),
                 ),
               ),
           ],
@@ -1178,7 +1245,7 @@ class TargetModeFields extends StatelessWidget {
               subtitle: Text(
                 settings.fixedMacros == null
                     ? 'Macros from your split'
-                    : _macroText(settings.fixedMacros!),
+                    : macroGramsText(settings.fixedMacros!),
               ),
               trailing: const Icon(Icons.edit_rounded),
               onTap: () async {
@@ -1238,10 +1305,19 @@ class TargetModeFields extends StatelessWidget {
               ),
               trailing: const Icon(Icons.edit_rounded),
               onTap: () async {
+                // read once, not on each of the dialog's rebuilds
+                final basis =
+                    // a fixed target's own grams stand over the program's
+                    settings.fixedTarget && settings.fixedMacros != null
+                    ? null
+                    : _macroBasis(settings);
                 final edited = await showDialog<({MacroProgram? program})>(
                   context: context,
-                  builder: (_) =>
-                      MacroProgramDialog(settings.macroProgram, perLb: perLb),
+                  builder: (_) => MacroProgramDialog(
+                    settings.macroProgram,
+                    perLb: perLb,
+                    basis: basis,
+                  ),
                 );
                 if (edited != null) {
                   await _save(
@@ -1256,11 +1332,31 @@ class TargetModeFields extends StatelessWidget {
   );
 }
 
-String _macroText(FixedMacros m) => inMacroOrder(
-  protein: 'Protein ${m.proteinG.round()} g',
-  carbs: 'Carbs ${m.carbsG.round()} g',
-  fat: 'Fat ${m.fatG.round()} g',
-).join(' · ');
+/// Today's inputs to the program's grams, as [forkMacroGoal] reads them,
+/// so the dialog's line is what Home shows after Save; null unread.
+/// shortcut: mirrors forkMacroGoal's reads, until it takes a program to try.
+Future<MacroBasis?> _macroBasis(AdaptiveSettings settings) async {
+  if (!locator.isRegistered<GetUserUsecase>() ||
+      !locator.isRegistered<GetKcalGoalUsecase>()) {
+    return null;
+  }
+  try {
+    final user = await locator<GetUserUsecase>().getUserData();
+    final bodyFat =
+        await MeasurementStore().recentBodyFat(DateTime.now()) ??
+        bodyFatPercent(user);
+    return (
+      kcal: await locator<GetKcalGoalUsecase>().getKcalGoal(),
+      weightKg: user.weightKG,
+      bodyFatPercent: bodyFat,
+      goalKcal: settings.fixedTarget
+          ? 0.0
+          : goalKcalOf(user, settings, bodyFat),
+    );
+  } catch (_) {
+    return null; // the dialog works without the line
+  }
+}
 
 /// The fixed target's energy, or its macros in grams, whose energy it
 /// then is.
@@ -1549,7 +1645,7 @@ class AdaptiveGoalNote extends StatelessWidget {
               title: const Text('Fixed target is on'),
               subtitle: Text(
                 '${goal(settings.fixedTargetKcal)}'
-                '${settings.fixedMacros == null ? '' : ', from ${_macroText(settings.fixedMacros!)}'}, '
+                '${settings.fixedMacros == null ? '' : ', from ${macroGramsText(settings.fixedMacros!)}'}, '
                 'as set in Settings. The formula below is not used; logged '
                 'activities and the kcal adjustment are not added.',
               ),
