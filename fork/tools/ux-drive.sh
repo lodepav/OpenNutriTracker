@@ -30,8 +30,15 @@
 # on another app's screen, the system file picker, sleep instead.
 #
 # UX defaults to build/ux; set it before sourcing to put shots elsewhere.
+# The device is ANDROID_SERIAL (what fork/tools/emulator.sh and ~/.claude/bin/emu
+# print), else DEVICE. One must be set: another session's emulator may be up.
 
 export PATH="$HOME/Android/Sdk/platform-tools:$PATH"
+DEVICE="${ANDROID_SERIAL:-${DEVICE:-}}"
+if [[ -z $DEVICE ]]; then
+  echo "ux-drive: set ANDROID_SERIAL to your emulator's serial (emu list)" >&2
+  return 1 2>/dev/null || exit 1
+fi
 _ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 # shellcheck source=/dev/null
 source "$_ROOT/tools/adb/adb-driver.sh" >/dev/null 2>&1
@@ -191,7 +198,8 @@ states() {
   shot "$1-200"
   font_scale 1.0
   night yes
-  command sleep 1
+  # the theme change redraws later than the font change
+  command sleep 2
   shot "$1-dark"
   night no
   command sleep 1
@@ -211,7 +219,8 @@ reseed() {
   adb -s "$DEVICE" shell monkey -p io.github.lodepav.openbite.develop \
     -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1
   for _ in $(seq 1 20); do
-    id_exists nav-home && return 0
+    # the seed loads after Home first draws
+    id_exists nav-home && { command sleep 5; rm -f "$LOCAL_DUMP"; return 0; }
     command sleep 1
     rm -f "$LOCAL_DUMP"
   done

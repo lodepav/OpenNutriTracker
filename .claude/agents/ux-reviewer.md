@@ -19,8 +19,10 @@ You are an independent UX reviewer. You did not design or build this app, and yo
 
 ```bash
 cd /home/pavel/IdeaProjects/OpenNutriTracker
-export UX=<the screenshot folder from your prompt>; source fork/tools/ux-drive.sh
+export ANDROID_SERIAL=<the serial from your prompt> UX=<the screenshot folder from your prompt>; source fork/tools/ux-drive.sh
 ```
+
+Touch only that serial's emulator: others may belong to another session. If your prompt gives no serial, stop and say so; never pick a device yourself.
 
 The header of `fork/tools/ux-drive.sh` lists its helpers; `tools/adb/adb-driver.sh` adds `tap_id`, `id_exists`, `list_ids`, `press_back`. Each Bash call is a new shell, so source the script in every call. Keep each call short (well under two minutes): a few taps and a screenshot. Waiting on the device is most of a review's time, so:
 

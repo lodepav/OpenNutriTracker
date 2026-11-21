@@ -7,7 +7,7 @@ description: Run OpenBite's checks. Before a merge into fork/main the seams, ana
 
 Report the counts, and quote any failure in full. A failure that shows only in the bundled run is a bug to fix, not a baseline: a test leaves state behind.
 
-The emulator can stay up for all of this: with it at 3 GB, the whole suite beside it ended with 4.3 GB free and swap untouched (2026-10-31). Builds and whole suites queue on one lock (`fork/tools/heavy.sh`), shared with openGym-Hevier, so a wait of a few minutes may be another session's build.
+The emulators can stay up for all of this: with the 3 GB one up, the whole suite beside it ended with 4.3 GB free and swap untouched (2026-10-31). `~/.claude/bin/test-slot` runs one test command at a time while any emulator is up, and with three up it runs `flutter test -j 2`: four test processes beside three emulators left under 1 GB free (2026-11-21). Builds and whole suites queue on one lock (`fork/tools/heavy.sh`), shared with openGym-Hevier, so a wait of a few minutes may be another session's build.
 
 ## Every commit
 
@@ -22,7 +22,7 @@ flutter test -j 1 <the test files of what changed>
 fork/tools/verify.sh    # about 2.5 min: Bash timeout 500000
 ```
 
-No conflict marker, `fork/tools/seam_check.py`, the tests of `upstream_status.py`, `actions_status.py` and `seam_check.py` (`test/fork/tools/`), `fork/tools/sibling_check.sh` (the same `heavy.sh` lock and emulator `-gpu` flag as openGym-Hevier's), `fork/DECISIONS-INDEX.md` against `fork/tools/decision-index.sh` (after a new decision: `fork/tools/decision-index.sh > fork/DECISIONS-INDEX.md`), analyze, and the whole suite bundled (`fork/tools/test-fast.sh`). A red upstream test means the fork changed behaviour it shouldn't have: fix the fork, never the test (fork/README.md, rule 4).
+No conflict marker, `fork/tools/seam_check.py`, the Python tool tests (`test/fork/tools/*_test.py`), `fork/tools/sibling_check.sh` (the same `heavy.sh` lock as openGym-Hevier's, and both emulator launchers boot through `~/.claude/bin/emu`), `fork/DECISIONS-INDEX.md` against `fork/tools/decision-index.sh` (after a new decision: `fork/tools/decision-index.sh > fork/DECISIONS-INDEX.md`), analyze, and the whole suite bundled (`fork/tools/test-fast.sh`). A red upstream test means the fork changed behaviour it shouldn't have: fix the fork, never the test (fork/README.md, rule 4).
 
 A clean pass is remembered by commit: merge, then push, and the hook doesn't run it again. A later commit that changes only `.md` files or `fork/VERSION`, or adds an upgrade fixture, passes on that stamp too.
 

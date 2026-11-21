@@ -12,6 +12,9 @@ mode="${1:?pull or push}"
 dir="${2:?host folder}"
 mkdir -p "$dir"
 
+# Plain adb below: only the caller's emulator, never another session's.
+[[ -n ${ANDROID_SERIAL:-} ]] || { echo "ai_replay: set ANDROID_SERIAL to your emulator (emu list)" >&2; exit 1; }
+
 case "$mode" in
   pull)
     adb exec-out run-as "$APP_ID" tar c -C files/ai-replay requests | tar x -C "$dir"

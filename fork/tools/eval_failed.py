@@ -36,6 +36,10 @@ def typed_failed(run):
     for line in (run / 'report.md').read_text().splitlines():
         if line.startswith('## '):
             spec = line[3:].strip()
+            # the cost section addUsage appends is not a model
+            if spec == 'Usage':
+                spec = None
+                continue
             answered[spec] = set()
             continue
         cells = [c.strip() for c in line.split('|')]
