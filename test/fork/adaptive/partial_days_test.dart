@@ -340,6 +340,38 @@ void main() {
       expect(store.records, hasLength(1));
     });
 
+    testWidgets('a check-in due behind the banner shows once it is dismissed', (
+      tester,
+    ) async {
+      store.records.add(weekOld());
+      AdaptiveStore.settings.value = const AdaptiveSettings(
+        adaptiveTarget: true,
+        autoAcceptCheckIn: true,
+      );
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: AdaptiveCheckInCard(service: service, onAccepted: () {}),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      // an earlier one set, then the goal changed: another is due
+      AutoCheckIn.accepted.value = (
+        checkIn: await service.checkIn(),
+        reason: CheckInReason.first,
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byTooltip('Dismiss'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Waiting for your answer on a day that looks partly logged.'),
+        findsOneWidget,
+      );
+    });
+
     testWidgets('the screen shows the day and takes the answer', (
       tester,
     ) async {

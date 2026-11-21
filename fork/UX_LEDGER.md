@@ -110,3 +110,6 @@ deferred finding again without new evidence. Newest last.
 | 2026-11-21 | 1 | L4 | low | C5 | Photo review | "This meal · 4 foods", "Meal · 3 foods" and "Log 2 items" on one screen | defer | Revisit with use |
 | 2026-11-21 | 1 | L5 | low | H4 | You › Plan | "lb a week" beside the ruler's "lbs" | reject | Upstream's strings |
 | 2026-11-21 | 1 | I1 | improvement | H3, H6, H1 | Check-in screen, Home card | Undo after an answer; say which choice the proposal assumes; name the day on the card | defer | Revisit with use |
+| 2026-11-21 | 2 | U1 | medium | H1 | Home, check-in card | After a goal change under the "target set" banner, the due check-in neither runs nor shows until the app resumes | accept | Home's rebuild runs the automatic check-in behind the banner too, and dismissing the banner reads what is due |
+| 2026-11-21 | 2 | U2 | medium | H1 | Home, 7-day bars | Bars keep old totals after a past day is edited in the Diary | defer | Same cause family as 11-19 L1 (Home not reloaded after a past-day edit): to debug together |
+| 2026-11-21 | 2 | L1 | low | A2, A6, H4, H8 | Target weight ruler | Cursor drawn at 30% opacity, labels don't grow at 200%, the centred label opens grey, lb labels nearly touch | reject | The package's drawing; the field below shows the value at full contrast and size |

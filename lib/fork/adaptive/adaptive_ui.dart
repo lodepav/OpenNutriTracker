@@ -147,10 +147,9 @@ class _AdaptiveCheckInCardState extends State<AdaptiveCheckInCard> {
     // Home rebuilds after an activity is logged, the app resumes or the
     // profile (its goal) changes.
     _syncDailyGoal();
-    if (AutoCheckIn.accepted.value == null) {
-      _due = _readDue();
-      _autoAccept();
-    }
+    // behind the banner too: a goal changed under it makes another due
+    if (AutoCheckIn.accepted.value == null) _due = _readDue();
+    _autoAccept();
   }
 
   @override
@@ -174,10 +173,11 @@ class _AdaptiveCheckInCardState extends State<AdaptiveCheckInCard> {
   /// refreshed the goals by then.
   void _onAutoAccepted() {
     final accepted = AutoCheckIn.accepted.value;
+    if (accepted == null) return _recheck(); // one may be due behind it
     setState(() {
-      if (accepted != null) _due = Future.value(null);
+      _due = Future.value(null);
     });
-    if (accepted != null) widget.onAccepted();
+    widget.onAccepted();
   }
 
   /// Today's counted activity when the goal was last written, and when.
