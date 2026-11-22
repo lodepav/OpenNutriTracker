@@ -117,6 +117,44 @@ void main() {
     expect(find.text('No thighs measured yet.'), findsOne);
   });
 
+  testWidgets('the chart and the rows speak sides and units in words', (
+    tester,
+  ) async {
+    final semantics = tester.ensureSemantics();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: SideComparePage(
+          imperial: true,
+          rangeDays: 30,
+          load: () async => [
+            _m(-10, BodyMetric.leftArm, 35),
+            _m(-10, BodyMetric.rightArm, 35.6),
+            _m(-1, BodyMetric.leftArm, 35.4),
+            _m(-1, BodyMetric.rightArm, 36.4),
+          ],
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      find.bySemanticsLabel(
+        'Arms chart, left from 13.8 to 13.9 inches, '
+        'right from 14.0 to 14.3 inches',
+      ),
+      findsOne,
+    );
+    final day = DateFormat.yMMMd().format(_day(-1));
+    await tester.scrollUntilVisible(find.text(day).last, 200);
+    expect(
+      find.bySemanticsLabel(
+        '$day, left 13.9 inches, right 14.3 inches, '
+        'right bigger by 0.4 inches',
+      ),
+      findsOne,
+    );
+    semantics.dispose();
+  });
+
   testWidgets('none in the range charts them all, and says so', (tester) async {
     SidePartPref.current.value = SidePart.arms;
     await tester.pumpWidget(

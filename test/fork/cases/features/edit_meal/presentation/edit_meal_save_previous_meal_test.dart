@@ -156,6 +156,8 @@ void main() {
       find.widgetWithText(TextFormField, 'Food name'),
       'Oats, rolled',
     );
+    // A frame between typing and Back: canPop follows the fields (G3)
+    await tester.pump();
     await tester.pageBack();
     await tester.pumpAndSettle();
     expect(find.text(l10nEn.discardChangesTitle), findsOneWidget);

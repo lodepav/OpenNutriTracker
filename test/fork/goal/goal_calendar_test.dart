@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
@@ -224,6 +225,42 @@ void main() {
     expect(saved, [(0.0, null)]);
     // A completed day opens nothing.
     expect(find.text('Cut · now'), findsNothing);
+  });
+
+  testWidgets('a day opens from its semantics tap, in a 48 dp row', (
+    tester,
+  ) async {
+    final handle = tester.ensureSemantics();
+    final store = _MemoryPhases(_cut, [_hold]);
+    await _pump(
+      tester,
+      GoalCalendarPage(
+        unit: BodyWeightUnit.kg,
+        nowKg: 85.1,
+        today: today,
+        store: store,
+        actions: GoalActions(
+          store: store,
+          save: (_, _) async => true,
+          clock: () => today,
+        ),
+      ),
+    );
+    final node = tester.getSemantics(_day(2026, 10, 29));
+    expect(node.getSemanticsData().hasAction(SemanticsAction.tap), isTrue);
+    // before the cut: nothing to open
+    expect(
+      tester
+          .getSemantics(_day(2026, 10, 2))
+          .getSemanticsData()
+          .hasAction(SemanticsAction.tap),
+      isFalse,
+    );
+    expect(tester.getSize(_day(2026, 10, 29)).height, greaterThanOrEqualTo(48));
+    node.owner!.performAction(node.id, SemanticsAction.tap);
+    await tester.pumpAndSettle();
+    expect(find.text('Cut · now'), findsOneWidget);
+    handle.dispose();
   });
 
   testWidgets('the Today button and the edit row', (tester) async {

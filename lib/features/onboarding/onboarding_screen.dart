@@ -94,6 +94,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   int _forkPage = 0;
   // [/fork]
 
+  // [fork] S466 start-busy: set while Start saves, so a second tap does not
+  // save again and push the main route twice
+  bool _forkStarting = false;
+  // [/fork]
+
   @override
   void initState() {
     _onboardingBloc = locator<OnboardingBloc>();
@@ -429,6 +434,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           },
           buttonActive: _overviewPageButtonActive,
           inactiveMessage: S.of(context).onboardingBlockedOverviewSnack,
+          busy: _forkStarting, // [fork] S466
         ),
       ),
     ];
@@ -600,7 +606,20 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     return true;
   }
 
+  // [fork] S466 start-busy: one save at a time, Start off while it runs
   Future<void> _onOverviewStartButtonPressed(BuildContext context) async {
+    if (_forkStarting) return;
+    setState(() => _forkStarting = true);
+    try {
+      await _forkStart(context);
+    } finally {
+      if (mounted) setState(() => _forkStarting = false);
+    }
+  }
+
+  Future<void> _forkStart(BuildContext context) async {
+  // Future<void> _onOverviewStartButtonPressed(BuildContext context) async {
+  // [/fork]
     final userEntity = _onboardingBloc.userSelection.toUserEntity();
     final hasAcceptedDataCollection =
         _onboardingBloc.userSelection.acceptDataCollection;

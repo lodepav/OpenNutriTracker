@@ -14,6 +14,7 @@ import 'package:opennutritracker/fork/trends/card_title.dart';
 import 'package:opennutritracker/fork/trends/trends_widgets.dart'
     show signedText;
 import 'package:opennutritracker/fork/display/chart_semantics.dart';
+import 'package:opennutritracker/fork/units/amount_text.dart' show spokenUnit;
 
 const _cmPerInch = 2.54;
 
@@ -308,7 +309,7 @@ class _BodyMeasurementsCardState extends State<BodyMeasurementsCard> {
             )
           else ...[
             Wrap(
-              spacing: 6,
+              spacing: Dimens.spacing8,
               runSpacing: 8,
               children: [
                 for (final m in BodyMetric.values)
@@ -422,10 +423,11 @@ class _BodyMeasurementsCardState extends State<BodyMeasurementsCard> {
     final high = ys.reduce((a, b) => a > b ? a : b);
     final pad = ((high - low) * 0.2).clamp(0.5, double.infinity);
     String digits(double y) => y.toStringAsFixed(1);
+    final spoken = spokenUnit(_unit(metric));
     return ChartSemantics(
       label:
           '${metric.label}, '
-          '${spokenFromTo(digits(ys.first), digits(ys.last), _unit(metric))}',
+          '${spokenFromTo(digits(ys.first), digits(ys.last), spoken)}',
       child: SizedBox(
         height: 120,
         child: LineChart(

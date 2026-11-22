@@ -1,4 +1,6 @@
-import 'dart:io';
+// [fork] S478 photo-staging: no File left here
+// import 'dart:io';
+// [/fork]
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -10,7 +12,15 @@ import 'package:opennutritracker/core/presentation/widgets/user_image_picker_til
 import 'package:opennutritracker/core/utils/demo/unsplash_attribution.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 // [fork] S251 avatar-pick
-import 'package:opennutritracker/fork/display/sized_file_image.dart' show evictPhoto;
+// S478 photo-staging: StagedPhoto evicts the avatars' copies
+// import 'package:opennutritracker/fork/display/sized_file_image.dart' show evictPhoto;
+// [/fork]
+// [fork] S478 photo-staging
+import 'package:opennutritracker/fork/photos/staged_photo.dart';
+// [/fork]
+// [fork] S479 profile-editor-guard
+import 'package:opennutritracker/fork/recipe/recipe_delete.dart'
+    show destructiveFilledStyle;
 // [/fork]
 
 /// Edits a single profile's name and picture. The picture is imported the
@@ -30,11 +40,17 @@ class _ProfileEditorScreenState extends State<ProfileEditorScreen> {
   late String? _imagePath;
   Future<({String name, String profileUrl})?>? _imageCredit;
   String? _nameError; // [fork] S439 profile-editor-name-required
+  // [fork] S478 photo-staging: a picked or removed photo waits for Save (H3)
+  final _forkPhoto = StagedPhoto(UserImageKind.profile);
+  // [/fork]
 
   @override
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.profile.name);
+    // [fork] S479 profile-editor-guard: Back asks once the name changed
+    _nameController.addListener(() => setState(() {}));
+    // [/fork]
     _imagePath = widget.profile.imagePath;
     _imageCredit = _creditFor(_imagePath);
   }
@@ -42,8 +58,40 @@ class _ProfileEditorScreenState extends State<ProfileEditorScreen> {
   @override
   void dispose() {
     _nameController.dispose();
+    _forkPhoto.discard(); // [fork] S478 photo-staging
     super.dispose();
   }
+
+  // [fork] S479 profile-editor-guard: Back asks before dropping a change, as
+  // the recipe builder does (H3)
+  bool get _forkDirty =>
+      _nameController.text != widget.profile.name ||
+      _imagePath != widget.profile.imagePath ||
+      _forkPhoto.pending;
+
+  Future<void> _forkOnBack() async {
+    final s = S.of(context);
+    final discard = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(s.discardChangesTitle),
+        content: Text(s.discardChangesContent),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(s.dialogCancelLabel),
+          ),
+          FilledButton(
+            style: destructiveFilledStyle(ctx),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(s.discardChangesConfirmLabel),
+          ),
+        ],
+      ),
+    );
+    if (discard == true && mounted) Navigator.of(context).pop();
+  }
+  // [/fork]
 
   Future<({String name, String profileUrl})?>? _creditFor(String? path) =>
       path == null ? null : UserImageStorage.readCredit(path);
@@ -51,7 +99,15 @@ class _ProfileEditorScreenState extends State<ProfileEditorScreen> {
   @override
   Widget build(BuildContext context) {
     final s = S.of(context);
-    return Scaffold(
+    // [fork] S479 profile-editor-guard
+    // return Scaffold(
+    return PopScope(
+      canPop: !_forkDirty,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _forkOnBack();
+      },
+      child: Scaffold(
+    // [/fork]
       appBar: AppBar(
         toolbarHeight: MediaQuery.textScalerOf(context).scale(kToolbarHeight),
         title: Text(
@@ -75,7 +131,10 @@ class _ProfileEditorScreenState extends State<ProfileEditorScreen> {
           Center(
             child: UserImagePickerTile(
               kind: UserImageKind.profile,
-              imagePath: _imagePath,
+              // [fork] S478 photo-staging
+              // imagePath: _imagePath,
+              imagePath: _forkPhoto.shown(_imagePath),
+              // [/fork]
               onPickFromGallery: () =>
                   _onPickImage(source: ImageSource.gallery),
               onTakePhoto: () => _onPickImage(source: ImageSource.camera),
@@ -105,10 +164,14 @@ class _ProfileEditorScreenState extends State<ProfileEditorScreen> {
           ),
         ],
       ),
+    ), // [fork] S479 profile-editor-guard: PopScope
     );
   }
 
   Future<void> _onPickImage({required ImageSource source}) async {
+    // [fork] S479 profile-editor-guard: a failed pick says so (H9)
+    try {
+    // [/fork]
     // [fork] S251 avatar-pick: a camera photo is not taken in at full size
     final picked = await ImagePicker().pickImage(
       source: source,
@@ -117,28 +180,52 @@ class _ProfileEditorScreenState extends State<ProfileEditorScreen> {
     );
     // [/fork]
     if (picked == null) return;
-    final relative = await UserImageStorage.importFrom(
-      kind: UserImageKind.profile,
-      ownerId: widget.profile.id,
-      sourcePath: picked.path,
-    );
-    FileImage(File(await UserImageStorage.absolutePath(relative))).evict();
+    // [fork] S478 photo-staging: staged; Save writes it to the stored path
+    // final relative = await UserImageStorage.importFrom(
+    //   kind: UserImageKind.profile,
+    //   ownerId: widget.profile.id,
+    //   sourcePath: picked.path,
+    // );
+    // FileImage(File(await UserImageStorage.absolutePath(relative))).evict();
+    // [/fork]
     // [fork] S251 avatar-pick: the avatars hold the photo at their own sizes
     // (S250), which the line above leaves cached; the new photo at that path
     // would not show.
-    await evictPhoto(relative);
+    // await evictPhoto(relative);
+    // [/fork]
+    // [fork] S478 photo-staging
+    final relative = await _forkPhoto.pick(
+      ownerId: widget.profile.id,
+      sourcePath: picked.path,
+    );
+    if (!mounted) return;
     // [/fork]
     setState(() {
       _imagePath = relative;
       // importFrom deletes any stale credit sidecar, so re-read once.
-      _imageCredit = _creditFor(relative);
+      // [fork] S478 photo-staging: Save deletes it with the old photo
+      // _imageCredit = _creditFor(relative);
+      _imageCredit = null;
+      // [/fork]
     });
+    // [fork] S479 profile-editor-guard
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not add the photo')),
+      );
+    }
+    // [/fork]
   }
 
   Future<void> _onRemoveImage() async {
     final current = _imagePath;
     if (current == null) return;
-    await UserImageStorage.delete(current);
+    // [fork] S478 photo-staging: deleted on Save
+    // await UserImageStorage.delete(current);
+    await _forkPhoto.remove(current);
+    if (!mounted) return;
+    // [/fork]
     setState(() {
       _imagePath = null;
       _imageCredit = null;
@@ -161,7 +248,15 @@ class _ProfileEditorScreenState extends State<ProfileEditorScreen> {
       imagePath: _imagePath,
     );
     await locator<UpdateProfileUsecase>().updateProfile(toSave);
+    // [fork] S478 photo-staging: the photo once the profile is saved
+    final photoSaved = await _forkPhoto.commit();
     if (!mounted) return;
+    if (!photoSaved) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not save the photo')),
+      );
+    }
+    // [/fork]
     Navigator.of(context).pop(true);
   }
 }

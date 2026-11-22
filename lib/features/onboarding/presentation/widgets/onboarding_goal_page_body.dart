@@ -71,10 +71,16 @@ class _OnboardingGoalPageBodyState extends State<OnboardingGoalPageBody> {
           mainAxisAlignment: MainAxisAlignment.start,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // [fork] S464 step-headings: a heading TalkBack can jump to
+            Semantics(
+              header: true,
+              child:
+            // [/fork]
             Text(
               S.of(context).goalLabel,
               style: Theme.of(context).textTheme.headlineSmall,
             ),
+            ), // [fork] S464
             Text(
               S.of(context).onboardingGoalQuestionSubtitle,
               style: Theme.of(context).textTheme.titleMedium,

@@ -27,7 +27,12 @@ class SectionHeader extends StatelessWidget {
             : AppPalette.light);
     return Padding(
       padding: const EdgeInsets.only(left: Dimens.spacing4),
-      child: Text(
+      // [fork] S464 step-headings: a heading TalkBack can jump to
+      child: Semantics(
+        header: true,
+        child:
+      // [/fork]
+      Text(
         label,
         style: Theme.of(context).textTheme.labelLarge?.copyWith(
           color: resolved.textMuted,
@@ -35,6 +40,7 @@ class SectionHeader extends StatelessWidget {
           letterSpacing: 0.3,
         ),
       ),
+      ), // [fork] S464
     );
   }
 }

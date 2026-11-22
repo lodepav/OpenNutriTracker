@@ -76,6 +76,9 @@ class ReviewPhotoReader implements ReadMealPhotoUseCase {
   List<ParsedMealItem> items = const [];
   final notes = <String?>[];
 
+  /// What the read answers instead of [items], such as a failure.
+  MealPhotoReadResult? answer;
+
   @override
   Future<MealPhotoReadResult> read(
     MealPhoto photo, {
@@ -83,7 +86,8 @@ class ReviewPhotoReader implements ReadMealPhotoUseCase {
     String? note,
   }) async {
     notes.add(note);
-    return MealPhotoRead(MealTextParseResult(items: items, errors: const []));
+    return answer ??
+        MealPhotoRead(MealTextParseResult(items: items, errors: const []));
   }
 
   @override

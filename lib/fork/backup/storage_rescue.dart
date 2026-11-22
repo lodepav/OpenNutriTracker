@@ -12,6 +12,8 @@ import 'package:opennutritracker/features/settings/presentation/bloc/export_impo
 import 'package:opennutritracker/fork/backup/auto_backup.dart';
 import 'package:opennutritracker/fork/backup/backup_folder.dart';
 import 'package:opennutritracker/fork/backup/onboarding_restore.dart';
+import 'package:opennutritracker/fork/recipe/recipe_delete.dart'
+    show destructiveFilledStyle;
 import 'package:path_provider/path_provider.dart';
 
 /// A way out when the local data will not open (seam S112): Android can
@@ -181,6 +183,7 @@ class _StorageRescuePanelState extends State<StorageRescuePanel> {
     required String body,
     required String action,
     required Future<void> Function() step,
+    bool destructive = false,
   }) async {
     final go = await showDialog<bool>(
       context: context,
@@ -193,10 +196,17 @@ class _StorageRescuePanelState extends State<StorageRescuePanel> {
             onPressed: () => Navigator.pop(context, false),
             child: const Text('Cancel'),
           ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: Text(action),
-          ),
+          if (destructive)
+            FilledButton(
+              style: destructiveFilledStyle(context),
+              onPressed: () => Navigator.pop(context, true),
+              child: Text(action),
+            )
+          else
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: Text(action),
+            ),
         ],
       ),
     );
@@ -268,6 +278,7 @@ class _StorageRescuePanelState extends State<StorageRescuePanel> {
                         'restore a backup file.',
                     action: 'Start again',
                     step: _rescue.setAside,
+                    destructive: true,
                   ),
             child: const Text('Start again without this data'),
           ),

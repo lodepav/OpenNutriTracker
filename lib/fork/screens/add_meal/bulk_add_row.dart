@@ -19,8 +19,6 @@ extension _BulkAddRow on _BulkAddScreenState {
   /// so and puts it back.
   Widget _buildRow(BuildContext context, BulkAddLoadedState state, int index) {
     final row = state.rows[index];
-    // an amount set by a chip, said once a row is built
-    _sayAmountAnswer(context);
     final theme = Theme.of(context);
     final textTheme = theme.textTheme;
     final palette = paletteOf(context);
@@ -133,7 +131,7 @@ extension _BulkAddRow on _BulkAddScreenState {
         if (!row.skipped)
           IconButton(
             key: ValueKey('bulk-add-leave-out-$index'),
-            tooltip: 'Leave out',
+            tooltip: 'Leave out ${shownRowTitle(row)}',
             onPressed: () => _leaveOut(index, row),
             icon: Icon(
               Icons.remove_circle_outline_rounded,
@@ -301,7 +299,7 @@ extension _BulkAddRow on _BulkAddScreenState {
       shownEditUnit(row, imperial);
 
   /// The amber of a card that needs a look: the tertiary colour, which is
-  /// the app's warning hue.
+  /// the app's warning hue. For fills and icons; its text is warningText.
   Color _warnColor(BuildContext context) =>
       Theme.of(context).colorScheme.tertiary;
 
@@ -338,7 +336,9 @@ extension _BulkAddRow on _BulkAddScreenState {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final warn = _warnColor(context);
-    Widget pill(String text, Color color) => Container(
+    // light tertiary is under 4.5:1 as text
+    final warnText = paletteOf(context).warningText;
+    Widget pill(String text, Color color, [Color? ink]) => Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.14),
@@ -347,7 +347,7 @@ extension _BulkAddRow on _BulkAddScreenState {
       child: Text(
         text,
         style: theme.textTheme.labelSmall?.copyWith(
-          color: color,
+          color: ink ?? color,
           fontWeight: FontWeight.w600,
         ),
       ),
@@ -358,13 +358,13 @@ extension _BulkAddRow on _BulkAddScreenState {
       return pill(S.of(context).bulkAddNoMatchLabel, scheme.error);
     }
     if (_dishBreakdown.isPending(row)) {
-      return line(DishStrings.breakingDown, scheme.tertiary);
+      return line(DishStrings.breakingDown, warnText);
     }
     if (row.isLowConfidence) {
-      return pill(S.of(context).bulkAddUncertainLabel, warn);
+      return pill(S.of(context).bulkAddUncertainLabel, warn, warnText);
     }
     if (row.amountNeedsCheck) {
-      return pill(S.of(context).bulkAddCheckAmountLabel, warn);
+      return pill(S.of(context).bulkAddCheckAmountLabel, warn, warnText);
     }
     // Only that the number is the app's, not the user's (#864): muted.
     if (row.amountIsProvisional) {
@@ -376,7 +376,7 @@ extension _BulkAddRow on _BulkAddScreenState {
     // under its dish's heading it needs no line of its own
     if (row.dishIngredient case final ingredient?
         when _separateDishes.contains(ingredient.group)) {
-      return line(DishStrings.ingredientOf(ingredient.dish), scheme.tertiary);
+      return line(DishStrings.ingredientOf(ingredient.dish), warnText);
     }
     return null;
   }
@@ -459,7 +459,7 @@ extension _BulkAddRow on _BulkAddScreenState {
       children: [
         IconButton.filledTonal(
           key: ValueKey('bulk-add-less-$index'),
-          tooltip: 'Less',
+          tooltip: 'Less ${shownRowTitle(row)}',
           style: _stepperStyle,
           onPressed: quantity == null ? null : () => step(up: false),
           icon: const Icon(Icons.remove),
@@ -491,7 +491,7 @@ extension _BulkAddRow on _BulkAddScreenState {
         const SizedBox(width: 4),
         IconButton.filledTonal(
           key: ValueKey('bulk-add-more-$index'),
-          tooltip: 'More',
+          tooltip: 'More ${shownRowTitle(row)}',
           style: _stepperStyle,
           onPressed: () => step(up: true),
           icon: const Icon(Icons.add),

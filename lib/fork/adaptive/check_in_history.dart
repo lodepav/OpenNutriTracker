@@ -3,8 +3,10 @@ import 'package:intl/intl.dart';
 import 'package:opennutritracker/core/domain/entity/body_weight_unit_entity.dart';
 import 'package:opennutritracker/core/domain/usecase/get_config_usecase.dart';
 import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
+import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
+import 'package:opennutritracker/fork/display/contrast.dart';
 import 'package:opennutritracker/fork/goal/phase_colors.dart';
 import 'package:opennutritracker/fork/phases/phases.dart';
 import 'package:opennutritracker/fork/units/energy_text.dart';
@@ -52,16 +54,30 @@ List<({String label, double kcal})>? checkInChangeParts(
 /// The weekly check-ins as accepted, newest first: the target each set,
 /// how far it moved from the one before, and the expenditure and proposal
 /// it came from. A row whose move can be split opens the split.
-class CheckInHistoryScreen extends StatelessWidget {
+class CheckInHistoryScreen extends StatefulWidget {
   final AdaptiveStore store;
 
   const CheckInHistoryScreen({super.key, required this.store});
 
   @override
+  State<CheckInHistoryScreen> createState() => _CheckInHistoryScreenState();
+}
+
+class _CheckInHistoryScreenState extends State<CheckInHistoryScreen> {
+  // read once, not on every rebuild
+  late Future<List<CheckInRecord>> _history = widget.store.history();
+
+  @override
+  void didUpdateWidget(CheckInHistoryScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.store != oldWidget.store) _history = widget.store.history();
+  }
+
+  @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(title: const Text('Check-in history')),
     body: FutureBuilder<List<CheckInRecord>>(
-      future: store.history(),
+      future: _history,
       builder: (context, snapshot) {
         final all = snapshot.data;
         if (all == null) {
@@ -80,7 +96,10 @@ class CheckInHistoryScreen extends StatelessWidget {
           );
         }
         return ListView(
-          padding: const EdgeInsets.only(top: 12),
+          padding: EdgeInsets.only(
+            top: 12,
+            bottom: MediaQuery.paddingOf(context).bottom,
+          ),
           children: [
             for (var i = all.length - 1; i >= 0; i--)
               _row(context, all[i], i == 0 ? null : all[i - 1]),
@@ -144,15 +163,22 @@ class CheckInHistoryScreen extends StatelessWidget {
     final color = none
         ? Theme.of(context).colorScheme.onSurfaceVariant
         : phaseColor(context, change < 0 ? PhaseKind.cut : PhaseKind.bulk);
+    final tint = color.withValues(alpha: 0.15);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.15),
+        color: tint,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Text(
         none ? 'no change' : energyText(context, change, signed: true),
-        style: TextStyle(color: color, fontWeight: FontWeight.w600),
+        style: TextStyle(
+          color: textSafe(
+            color,
+            Color.alphaBlend(tint, paletteOf(context).surface),
+          ),
+          fontWeight: FontWeight.w600,
+        ),
       ),
     );
   }
@@ -245,7 +271,10 @@ Future<void> _showParts(
               ),
               for (final n in notes)
                 Padding(
-                  padding: const EdgeInsets.only(top: 12),
+                  padding: EdgeInsets.only(
+            top: 12,
+            bottom: MediaQuery.paddingOf(context).bottom,
+          ),
                   child: Text(n, style: text.bodySmall),
                 ),
             ],

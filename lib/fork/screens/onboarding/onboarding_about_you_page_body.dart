@@ -61,6 +61,12 @@ class _OnboardingAboutYouPageBodyState
   }
 
   @override
+  void dispose() {
+    _dateInput.dispose();
+    super.dispose();
+  }
+
+  @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (_selectedDate != null && _dateInput.text.isEmpty) {
@@ -120,12 +126,15 @@ class _OnboardingAboutYouPageBodyState
           Row(
             children: [
               Expanded(
-                child: AutoSizeText(
-                  S.of(context).genderLabel,
-                  maxLines: 1,
-                  minFontSize: 16,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.headlineSmall,
+                child: Semantics(
+                  header: true,
+                  child: AutoSizeText(
+                    S.of(context).genderLabel,
+                    maxLines: 1,
+                    minFontSize: 16,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.headlineSmall,
+                  ),
                 ),
               ),
               IconButton(
@@ -199,9 +208,12 @@ class _OnboardingAboutYouPageBodyState
             ),
           ],
           const SizedBox(height: 32.0),
-          Text(
-            S.of(context).ageLabel,
-            style: Theme.of(context).textTheme.headlineSmall,
+          Semantics(
+            header: true,
+            child: Text(
+              S.of(context).ageLabel,
+              style: Theme.of(context).textTheme.headlineSmall,
+            ),
           ),
           Text(
             S.of(context).onboardingBirthdayQuestionSubtitle,
@@ -342,7 +354,13 @@ class _OnboardingAboutYouPageBodyState
         _selectedDate,
       );
     } else {
-      widget.setPageContent(false, null, null, null);
+      // What is chosen stays chosen while the rest is missing.
+      widget.setPageContent(
+        false,
+        _selectedGender,
+        _selectedCaloriesProfile,
+        _selectedDate,
+      );
     }
   }
 }

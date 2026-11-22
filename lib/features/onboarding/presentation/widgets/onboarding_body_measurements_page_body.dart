@@ -564,10 +564,16 @@ class _OnboardingBodyMeasurementsPageBodyState
           mainAxisAlignment: MainAxisAlignment.start,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // [fork] S464 step-headings: a heading TalkBack can jump to
+            Semantics(
+              header: true,
+              child:
+            // [/fork]
             Text(
               S.of(context).heightLabel,
               style: Theme.of(context).textTheme.headlineSmall,
             ),
+            ), // [fork] S464
             Text(
               S.of(context).onboardingHeightQuestionSubtitle,
               style: Theme.of(context).textTheme.titleMedium,
@@ -699,10 +705,16 @@ class _OnboardingBodyMeasurementsPageBodyState
               crossAxisAlignment: WrapCrossAlignment.center,
               spacing: 8.0,
               children: [
+                // [fork] S464 step-headings: a heading TalkBack can jump to
+                Semantics(
+                  header: true,
+                  child:
+                // [/fork]
                 Text(
                   S.of(context).weightLabel,
                   style: Theme.of(context).textTheme.headlineSmall,
                 ),
+                ), // [fork] S464
                 if (defaultTargetPlatform == TargetPlatform.android)
                   HealthWeightButton(
                     onWeight: _applyHealthWeight,
@@ -838,10 +850,16 @@ class _OnboardingBodyMeasurementsPageBodyState
             // Target weight — optional. A new user can set it once in onboarding
             // instead of having to find Profile after first-run. Leaving it blank
             // keeps the user without a target and is valid.
+            // [fork] S464 step-headings: a heading TalkBack can jump to
+            Semantics(
+              header: true,
+              child:
+            // [/fork]
             Text(
               S.of(context).profileTargetWeightLabel,
               style: Theme.of(context).textTheme.headlineSmall,
             ),
+            ), // [fork] S464
             Text(
               S.of(context).onboardingTargetWeightSubtitle,
               style: Theme.of(context).textTheme.titleMedium,
@@ -935,10 +953,16 @@ class _OnboardingBodyMeasurementsPageBodyState
             // Food units are chosen explicitly rather than inferred from the
             // height toggle, so a UK user on feet and stones can still log
             // food in grams.
+            // [fork] S464 step-headings: a heading TalkBack can jump to
+            Semantics(
+              header: true,
+              child:
+            // [/fork]
             Text(
               S.of(context).settingsFoodUnitsLabel,
               style: Theme.of(context).textTheme.headlineSmall,
             ),
+            ), // [fork] S464
             Text(
               S.of(context).onboardingFoodUnitsSubtitle,
               style: Theme.of(context).textTheme.titleMedium,

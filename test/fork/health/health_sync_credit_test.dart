@@ -110,6 +110,20 @@ void main() {
     semantics.dispose();
   });
 
+  testWidgets('Workouts in off says what stays, as the other cards do', (
+    tester,
+  ) async {
+    config.config = _config(on: true, multiplier: 1);
+    await pumpOnPhone(tester, const HealthSyncScreen(), textScale: 1);
+    await tester.pumpAndSettle();
+    await tester.tap(find.bySemanticsIdentifier('health-sync-auto-import'));
+    await tester.pumpAndSettle();
+    expect(
+      find.text('Workout import off; imported workouts stay in the diary'),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('the info button opens Sources at the credit entry', (
     tester,
   ) async {

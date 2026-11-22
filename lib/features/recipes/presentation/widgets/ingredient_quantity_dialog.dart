@@ -28,6 +28,7 @@ Future<IngredientQuantitySelection?> showIngredientQuantityDialog(
   return showModalBottomSheet<IngredientQuantitySelection>(
     context: context,
     isScrollControlled: true,
+    showDragHandle: true, // [fork] S487 drag-handle: the platform's (P1)
     builder: (ctx) => _IngredientQuantitySheet(
       meal: meal,
       initialAmount: initialAmount,
@@ -171,7 +172,10 @@ class _IngredientQuantitySheetState extends State<_IngredientQuantitySheet> {
     return Padding(
       padding: EdgeInsets.only(bottom: sheetBottomInset(context)),
       child: Container(
-        padding: const EdgeInsets.fromLTRB(Dimens.spacing24, Dimens.spacing24, Dimens.spacing24, Dimens.spacing16),
+        // [fork] S487 drag-handle: the handle's own space is above
+        // padding: const EdgeInsets.fromLTRB(Dimens.spacing24, Dimens.spacing24, Dimens.spacing24, Dimens.spacing16),
+        padding: const EdgeInsets.fromLTRB(Dimens.spacing24, 0, Dimens.spacing24, Dimens.spacing16),
+        // [/fork]
         decoration: BoxDecoration(
           color: palette.surface,
           borderRadius: const BorderRadius.only(
@@ -183,21 +187,23 @@ class _IngredientQuantitySheetState extends State<_IngredientQuantitySheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: palette.border,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            const SizedBox(height: Dimens.spacing20),
+            // [fork] S487 drag-handle
+            // Center(
+            //   child: Container(
+            //     width: 40,
+            //     height: 4,
+            //     decoration: BoxDecoration(
+            //       color: palette.border,
+            //       borderRadius: BorderRadius.circular(2),
+            //     ),
+            //   ),
+            // ),
+            // const SizedBox(height: Dimens.spacing20),
+            // [/fork]
             Text(
               widget.meal.name ?? '?',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
-              maxLines: 1,
+              maxLines: 2, // [fork] S486 two-line-names: A6
               overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: Dimens.spacing16),

@@ -354,6 +354,7 @@ class _RecipesPageState extends State<RecipesPage>
                     prefixIcon: Icon(Icons.search_rounded, color: palette.textMuted),
                     suffixIcon: _searchQuery.isNotEmpty
                         ? IconButton(
+                            tooltip: 'Clear search', // [fork] S480 recipes-no-match: A3
                             icon: Icon(Icons.clear_rounded, color: palette.textMuted),
                             onPressed: () {
                               _searchController.clear();
@@ -409,13 +410,40 @@ class _RecipesPageState extends State<RecipesPage>
                     ? Center(
                         child: Padding(
                           padding: const EdgeInsets.all(Dimens.spacing32),
-                          child: Text(
-                            S.of(context).recipesEmptyLabel,
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodyLarge
-                                ?.copyWith(color: palette.textMuted),
+                          // [fork] S480 recipes-no-match: there are recipes,
+                          // the search or tag hides them (H9)
+                          // child: Text(
+                          //   S.of(context).recipesEmptyLabel,
+                          //   style: Theme.of(context)
+                          //       .textTheme
+                          //       .bodyLarge
+                          //       ?.copyWith(color: palette.textMuted),
+                          // ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                'No recipes match',
+                                textAlign: TextAlign.center,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodyLarge
+                                    ?.copyWith(color: palette.textMuted),
+                              ),
+                              const SizedBox(height: Dimens.spacing8),
+                              TextButton(
+                                onPressed: () {
+                                  _searchController.clear();
+                                  setState(() {
+                                    _searchQuery = '';
+                                    _activeTag = null;
+                                  });
+                                },
+                                child: const Text('Clear filters'),
+                              ),
+                            ],
                           ),
+                          // [/fork]
                         ),
                       )
                     : Column(

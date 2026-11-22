@@ -266,6 +266,10 @@ class _GoalProgressPageState extends State<GoalProgressPage> {
       planKgPerWeek: p.paceKgPerWeek,
     );
     const gap = SizedBox(height: Dimens.spacing16);
+    final averaged = calories.meanKcal == null
+        ? null
+        : 'you averaged ${energyText(context, calories.meanKcal!)} '
+              'over 30 days';
 
     return [
       StatHeader(
@@ -353,17 +357,19 @@ class _GoalProgressPageState extends State<GoalProgressPage> {
                 final w => 'in $w weeks',
               },
             ),
-          FigureTile(
-            label: 'Calorie goal now',
-            value: calories.goalKcal == null
-                ? '–'
-                : '${energyValue(context, calories.goalKcal!)}',
-            unit: calories.goalKcal == null ? null : energyUnit(context),
-            note: calories.meanKcal == null
-                ? null
-                : 'you averaged ${energyText(context, calories.meanKcal!)} '
-                      'over 30 days',
-          ),
+          if (calories.goalKcal == null)
+            noDataTile(
+              'Calorie goal now',
+              note: averaged,
+              FigureTile(label: 'Calorie goal now', value: '–', note: averaged),
+            )
+          else
+            FigureTile(
+              label: 'Calorie goal now',
+              value: '${energyValue(context, calories.goalKcal!)}',
+              unit: energyUnit(context),
+              note: averaged,
+            ),
         ],
       ),
       ..._milestones(context, p, step, recent, date),
@@ -430,7 +436,9 @@ class _GoalProgressPageState extends State<GoalProgressPage> {
                             ? Icons.check_circle_rounded
                             : Icons.radio_button_unchecked_rounded,
                         size: 20,
-                        color: m.reached ? palette.accent : palette.textMuted,
+                        color: m.reached
+                            ? chartAccent(context)
+                            : palette.textMuted,
                       ),
                       const SizedBox(width: Dimens.spacing12),
                       Expanded(
@@ -446,6 +454,9 @@ class _GoalProgressPageState extends State<GoalProgressPage> {
                                   ? 'Reached'
                                   : 'Reached ${date(m.on)}')
                             : (m.on == null ? '–' : 'About ${date(m.on)}'),
+                        semanticsLabel: !m.reached && m.on == null
+                            ? 'no data'
+                            : null,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: palette.textMuted,
                         ),
@@ -577,7 +588,7 @@ class _ProgressCard extends StatelessWidget {
                   ),
                   decoration: BoxDecoration(
                     color: good
-                        ? palette.accent.withValues(alpha: 0.14)
+                        ? chartAccent(context).withValues(alpha: 0.14)
                         : palette.surfaceMuted,
                     borderRadius: Dimens.borderRadiusM,
                   ),
@@ -781,7 +792,7 @@ class _GoalChart extends StatelessWidget {
                   horizontalLines: [
                     HorizontalLine(
                       y: y(p.targetKg),
-                      color: palette.accent,
+                      color: line,
                       strokeWidth: 1.4,
                       dashArray: const [6, 4],
                     ),

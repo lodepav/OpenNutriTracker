@@ -10,6 +10,7 @@ import 'package:opennutritracker/fork/copy/copy_ui.dart';
 import 'package:opennutritracker/fork/report/goal_standing.dart';
 import 'package:opennutritracker/fork/report/nutrient_explorer.dart';
 import 'package:opennutritracker/fork/report/nutrient_order.dart';
+import 'package:opennutritracker/fork/units/amount_text.dart' show spokenUnit;
 
 /// The tracked days from the first to the last.
 typedef TrackedDayLoader =
@@ -194,7 +195,7 @@ class _GoalBar extends StatelessWidget {
       Theme.of(context).colorScheme,
     );
     final share = goal == null || goal == 0 ? 0.0 : s.perDay / goal;
-    final of = goal == null ? '' : ' of ${_number(goal)} $unit';
+    final of = goal == null ? '' : ' of ${_number(goal)}';
     final word = goalStandingWord(
       standing,
       isLimit: s.nutrient.isLimit,
@@ -203,7 +204,9 @@ class _GoalBar extends StatelessWidget {
     final says = word == null ? '' : ', $word';
     return Semantics(
       identifier: 'nutrient-goal-${s.nutrient.label}',
-      label: '${goalRowLabel(s.nutrient)}, ${_number(s.perDay)}$of$says',
+      label:
+          '${goalRowLabel(s.nutrient)}, ${_number(s.perDay)}$of '
+          '${spokenUnit(unit)}$says',
       excludeSemantics: true,
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: Dimens.spacing8),

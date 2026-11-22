@@ -11,6 +11,9 @@ import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/core/utils/url_const.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 import 'package:opennutritracker/core/utils/safe_url_launcher.dart';
+// [fork] S453 bmi-band-accent
+import 'package:opennutritracker/fork/display/contrast.dart';
+// [/fork]
 
 /// Transparency screen for the BMI shown on the Profile tab: the inputs,
 /// the formula with the user's numbers substituted in, and the full WHO
@@ -174,7 +177,11 @@ class _ClassificationRow extends StatelessWidget {
     final style = isUsers
         ? theme.textTheme.bodyMedium?.copyWith(
             fontWeight: FontWeight.bold,
-            color: theme.colorScheme.primary,
+            // [fork] S453 bmi-band-accent: a light picked accent fell under
+            // 4.5:1 as text on the card
+            // color: theme.colorScheme.primary,
+            color: textAccent(context),
+            // [/fork]
           )
         : theme.textTheme.bodyMedium;
     return Padding(

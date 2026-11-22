@@ -10,6 +10,8 @@ import 'package:opennutritracker/fork/goal/goal_plan_view.dart' show goalTitle;
 import 'package:opennutritracker/fork/goal/phase_colors.dart';
 import 'package:opennutritracker/fork/goal/planner_screen.dart';
 import 'package:opennutritracker/fork/phases/phases.dart';
+import 'package:opennutritracker/fork/recipe/recipe_delete.dart'
+    show destructiveFilledStyle;
 import 'package:opennutritracker/fork/units/weight_text.dart';
 import 'package:opennutritracker/fork/undo/undo_delete.dart';
 
@@ -397,14 +399,14 @@ class _GoalCalendarPageState extends State<GoalCalendarPage> {
               ? null
               : () => _act(
                   sheet,
-                  undo: 'Moved',
+                  undo: '${goalTitle(goals.upcoming[i], widget.unit)} moved',
                   () => _actions.moveUpcoming(i, i - 1),
                 ),
           onLater: i == goals.upcoming.length - 1
               ? null
               : () => _act(
                   sheet,
-                  undo: 'Moved',
+                  undo: '${goalTitle(goals.upcoming[i], widget.unit)} moved',
                   () => _actions.moveUpcoming(i, i + 1),
                 ),
           onRemove: () => _act(
@@ -414,7 +416,7 @@ class _GoalCalendarPageState extends State<GoalCalendarPage> {
               body: 'It is taken out of the goals up next.',
               action: 'Remove',
             ),
-            undo: 'Removed',
+            undo: '${goalTitle(goals.upcoming[i], widget.unit)} removed',
             () => _actions.removeUpcoming(i),
           ),
         ),
@@ -494,7 +496,7 @@ Future<void> showRunningGoal(
         body: 'It is not saved in your completed goals.',
         action: 'Remove',
       ),
-      undo: 'Removed',
+      undo: '${goalTitle(plan, unit)} removed',
       () => actions.remove(nowKg),
     ),
   ),
@@ -525,7 +527,8 @@ Future<void> _actOn(
           ),
           Semantics(
             identifier: 'goal-calendar-confirm',
-            child: TextButton(
+            child: FilledButton(
+              style: destructiveFilledStyle(dialog),
               onPressed: () => Navigator.of(dialog).pop(true),
               child: Text(confirm.action),
             ),
@@ -719,27 +722,21 @@ class _Month extends StatelessWidget {
             ),
           ),
           for (var w = 0; w < cells.length; w += 7)
-            Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Row(
-                children: [
-                  for (var i = w; i < w + 7; i++)
-                    Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 2),
-                        child: i < cells.length && cells[i] != null
-                            ? _Day(
-                                day: cells[i]!,
-                                at: goals.on(cells[i]!),
-                                today: today,
-                                locale: locale,
-                                onTap: onDay,
-                              )
-                            : const SizedBox(height: 40),
-                      ),
-                    ),
-                ],
-              ),
+            Row(
+              children: [
+                for (var i = w; i < w + 7; i++)
+                  Expanded(
+                    child: i < cells.length && cells[i] != null
+                        ? _Day(
+                            day: cells[i]!,
+                            at: goals.on(cells[i]!),
+                            today: today,
+                            locale: locale,
+                            onTap: onDay,
+                          )
+                        : const SizedBox(height: 48),
+                  ),
+              ],
             ),
         ],
       ),
@@ -828,14 +825,25 @@ class _Day extends StatelessWidget {
         ),
       ),
     );
+    final open = tappable ? () => onTap(at) : null;
+    // The whole slot, 48 dp tall, takes the tap around the 40 dp chip; the
+    // node carries the tap itself, as it excludes the detector's.
     return Semantics(
       identifier: 'goal-calendar-day-${day.year}-${day.month}-${day.day}',
       button: tappable,
       label: label,
+      onTap: open,
       excludeSemantics: true,
       child: GestureDetector(
-        onTap: tappable ? () => onTap(at) : null,
-        child: ClipRRect(borderRadius: BorderRadius.circular(9), child: cell),
+        behavior: HitTestBehavior.opaque,
+        onTap: open,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 4),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(9),
+            child: cell,
+          ),
+        ),
       ),
     );
   }

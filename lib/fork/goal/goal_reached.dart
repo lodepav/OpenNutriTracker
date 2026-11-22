@@ -319,6 +319,10 @@ class _GoalReachedPageState extends State<GoalReachedPage> {
                   child: Center(child: CircularProgressIndicator()),
                 );
               }
+              final onTarget = run.onTargetShare == null
+                  ? null
+                  : '${(run.onTargetShare! * 100).round()}% '
+                        'within 10% of the target';
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -346,16 +350,19 @@ class _GoalReachedPageState extends State<GoalReachedPage> {
                   const SizedBox(height: Dimens.spacing12),
                   GoalFigureGrid(
                     tiles: [
-                      FigureTile(
-                        label: 'Change',
-                        value: startKg == null
-                            ? '–'
-                            : signedWeightText(widget.nowKg - startKg, unit),
-                        note: startKg == null
-                            ? null
-                            : '${weightText(startKg, unit)} → '
-                                  '${weightText(widget.nowKg, unit)}',
-                      ),
+                      if (startKg == null)
+                        noDataTile(
+                          'Change',
+                          const FigureTile(label: 'Change', value: '–'),
+                        )
+                      else
+                        FigureTile(
+                          label: 'Change',
+                          value: signedWeightText(widget.nowKg - startKg, unit),
+                          note:
+                              '${weightText(startKg, unit)} → '
+                              '${weightText(widget.nowKg, unit)}',
+                        ),
                       // Under a week, as the line above counts it.
                       FigureTile(
                         label: days < 7 ? 'Days' : 'Weeks',
@@ -364,23 +371,38 @@ class _GoalReachedPageState extends State<GoalReachedPage> {
                             ? 'as planned: ${_plannedWeeks(plan)}'
                             : 'extended ${plan.extensions}×',
                       ),
-                      FigureTile(
-                        label: 'Average eaten',
-                        value: run.meanKcal == null
-                            ? '–'
-                            : energyText(context, run.meanKcal!),
-                        note: 'a logged day',
-                      ),
-                      FigureTile(
-                        label: 'Days logged',
-                        value: run.loggedShare == null
-                            ? '–'
-                            : '${(run.loggedShare! * 100).round()}%',
-                        note: run.onTargetShare == null
-                            ? null
-                            : '${(run.onTargetShare! * 100).round()}% '
-                                  'within 10% of the target',
-                      ),
+                      if (run.meanKcal == null)
+                        noDataTile(
+                          'Average eaten',
+                          note: 'a logged day',
+                          const FigureTile(
+                            label: 'Average eaten',
+                            value: '–',
+                            note: 'a logged day',
+                          ),
+                        )
+                      else
+                        FigureTile(
+                          label: 'Average eaten',
+                          value: energyText(context, run.meanKcal!),
+                          note: 'a logged day',
+                        ),
+                      if (run.loggedShare == null)
+                        noDataTile(
+                          'Days logged',
+                          note: onTarget,
+                          FigureTile(
+                            label: 'Days logged',
+                            value: '–',
+                            note: onTarget,
+                          ),
+                        )
+                      else
+                        FigureTile(
+                          label: 'Days logged',
+                          value: '${(run.loggedShare! * 100).round()}%',
+                          note: onTarget,
+                        ),
                       if (run.expenditureKcal != null)
                         FigureTile(
                           label: 'You burn now',

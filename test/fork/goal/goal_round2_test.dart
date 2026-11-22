@@ -331,7 +331,7 @@ void main() {
     await tester.tap(_id('goal-calendar-confirm'));
     await tester.pumpAndSettle();
     expect(store.saved!.kind, PhaseKind.maintain);
-    expect(find.text('Removed'), findsOneWidget);
+    expect(find.text('Cut to 80.0 kg removed'), findsOneWidget);
     await tester.tap(find.text('Undo'));
     await tester.pumpAndSettle();
     expect(store.saved, same(_cut));

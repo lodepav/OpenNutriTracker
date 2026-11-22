@@ -106,14 +106,14 @@ void main() {
     expect(find.text('Add 150 kcal to Lunch'), findsOneWidget);
     expect(find.text('1 serving, 100 g · per 100 g 150 kcal'), findsOneWidget);
 
-    await tester.tap(find.byTooltip('More'));
+    await tester.tap(find.byTooltip('More servings'));
     await tester.pump();
     expect(find.text('Add 225 kcal to Lunch'), findsOneWidget);
     expect(find.text('30'), findsOneWidget); // carbs in 150 g
 
-    await tester.tap(find.byTooltip('Less'));
+    await tester.tap(find.byTooltip('Fewer servings'));
     await tester.pump();
-    await tester.tap(find.byTooltip('Less'));
+    await tester.tap(find.byTooltip('Fewer servings'));
     await tester.pump();
     expect(find.text('½ serving'), findsOneWidget);
     final less = tester.widget<IconButton>(

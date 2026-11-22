@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -1327,6 +1328,73 @@ void main() {
     expect(keep.hitTestable(), findsOneWidget);
   });
 
+  testWidgets('a second tap on Accept or Keep records no second check-in', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1000, 4000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final memory = _SlowStore();
+    final service = AdaptiveService(
+      _User(),
+      _Weights(),
+      _TrackedDays(),
+      memory,
+      () => _today.add(const Duration(hours: 9)),
+    );
+    await service.accept(await service.checkIn(), 2100);
+    await tester.pumpWidget(MaterialApp(home: CheckInScreen(service: service)));
+    await tester.pumpAndSettle();
+
+    // Saving takes a while, as on a phone; the taps come meanwhile.
+    memory.gate = Completer<void>();
+    await tester.tap(find.byKey(const ValueKey('check-in-accept')));
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.tap(find.byKey(const ValueKey('check-in-accept')));
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.tap(find.byKey(const ValueKey('check-in-keep')));
+    await tester.pump(const Duration(milliseconds: 100));
+    memory.gate!.complete();
+    await tester.pumpAndSettle();
+    expect(memory.accepts, 2);
+  });
+
+  testWidgets('the target field takes digits and says what is wrong in it', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1000, 4000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final memory = _MemoryStore();
+    final service = AdaptiveService(
+      _User(),
+      _Weights(),
+      _TrackedDays(),
+      memory,
+      () => _today.add(const Duration(hours: 9)),
+    );
+    await tester.pumpWidget(MaterialApp(home: CheckInScreen(service: service)));
+    await tester.pumpAndSettle();
+    final field = find.byKey(const ValueKey('check-in-target'));
+    TextField widget() => tester.widget<TextField>(field);
+
+    await tester.enterText(field, '2a1x0');
+    expect(widget().controller!.text, '210');
+
+    await tester.enterText(field, '');
+    await tester.tap(find.byKey(const ValueKey('check-in-accept')));
+    await tester.pump();
+    expect(widget().decoration!.errorText, 'Enter a daily target above 0 kcal.');
+    // not refilled with the proposal under its own error
+    expect(widget().controller!.text, isEmpty);
+    expect(find.byType(SnackBar), findsNothing);
+    expect(memory.records, isEmpty);
+
+    await tester.enterText(field, '2000');
+    await tester.pump();
+    expect(widget().decoration!.errorText, isNull);
+  });
+
   testWidgets('Keep current target records the check-in at it', (tester) async {
     final memory = _MemoryStore();
     final service = AdaptiveService(
@@ -1854,6 +1922,17 @@ class _MemoryStore extends AdaptiveStore {
   Future<void> replaceLastCheckIn(CheckInRecord record) async {
     accepts++;
     records[records.length - 1] = record;
+  }
+}
+
+/// Holds each check-in saved while [gate] is open.
+class _SlowStore extends _MemoryStore {
+  Completer<void>? gate;
+
+  @override
+  Future<void> addCheckIn(CheckInRecord record) async {
+    await gate?.future;
+    return super.addCheckIn(record);
   }
 }
 

@@ -335,6 +335,19 @@ void main() {
     semantics.dispose();
   });
 
+  testWidgets('a row speaks its units in words', (tester) async {
+    final semantics = tester.ensureSemantics();
+    await tester.pumpWidget(explorer(_intakes));
+    await tester.pumpAndSettle();
+    String label(String nutrient) =>
+        tester.getSemantics(find.byKey(ValueKey('nutrient-$nutrient'))).label;
+    expect(label('Energy'), contains('650 kilocalories a day'));
+    expect(label('Energy'), contains('goal 2000 kilocalories'));
+    expect(label('Fibre'), contains('grams a day'));
+    expect(label('Fibre'), isNot(contains(' g ')));
+    semantics.dispose();
+  });
+
   testWidgets('salt is named as on Nutrient goals; a row with foods shows '
       'it opens', (tester) async {
     tester.view.physicalSize = const Size(1080, 7020);

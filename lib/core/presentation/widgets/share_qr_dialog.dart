@@ -65,6 +65,10 @@ class _ShareQrDialogState extends State<ShareQrDialog> {
   }
   // [/fork]
 
+  // [fork] S485 share-error-in-dialog: a snackbar would show behind the dialog
+  bool _shareFailed = false;
+  // [/fork]
+
   // [fork] S298 share-where-to-scan: tells the receiver where to scan the code
   String? get _whereToScan => switch (classifySharedPayload(widget.code)) {
     SharedPayloadKind.meal =>
@@ -238,6 +242,21 @@ class _ShareQrDialogState extends State<ShareQrDialog> {
                 ),
               ],
             ),
+            // [fork] S485 share-error-in-dialog
+            if (_shareFailed) ...[
+              const SizedBox(height: Dimens.spacing8),
+              Semantics(
+                liveRegion: true,
+                child: Text(
+                  S.of(context).shareCodeErrorLabel,
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.error,
+                  ),
+                ),
+              ),
+            ],
+            // [/fork]
             if (widget.onCopyToProfile != null) ...[
               const SizedBox(height: Dimens.spacing8),
               Semantics(
@@ -266,6 +285,7 @@ class _ShareQrDialogState extends State<ShareQrDialog> {
   }
 
   Future<void> _share() async {
+    if (_shareFailed) setState(() => _shareFailed = false); // [fork] S485
     final origin = _shareButtonOrigin();
     final sharePlus = widget.sharePlus ?? SharePlus.instance;
     final qr = _validation.qrCode;
@@ -296,9 +316,12 @@ class _ShareQrDialogState extends State<ShareQrDialog> {
       );
     } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(S.of(context).shareCodeErrorLabel)),
-      );
+      // [fork] S485 share-error-in-dialog
+      // ScaffoldMessenger.of(context).showSnackBar(
+      //   SnackBar(content: Text(S.of(context).shareCodeErrorLabel)),
+      // );
+      setState(() => _shareFailed = true);
+      // [/fork]
     }
   }
 

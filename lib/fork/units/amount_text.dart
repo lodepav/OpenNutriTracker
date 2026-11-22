@@ -36,6 +36,8 @@ String spokenUnit(String unit) => switch (unit) {
   'fl.oz' || 'fl oz' => 'fluid ounces',
   'kcal' => 'kilocalories',
   'kJ' => 'kilojoules',
+  'cm' => 'centimetres',
+  'in' => 'inches',
   _ => unit,
 };
 

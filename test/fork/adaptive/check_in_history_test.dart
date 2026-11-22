@@ -3,6 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_ui.dart';
 import 'package:opennutritracker/fork/adaptive/check_in_history.dart';
+import 'package:opennutritracker/core/styles/app_palette.dart';
+import 'package:opennutritracker/fork/display/contrast.dart';
 
 import '../../helpers/ux_checks.dart';
 
@@ -255,4 +257,42 @@ void main() {
       );
     },
   );
+
+  for (final brightness in Brightness.values) {
+    testWidgets('the change chips are 4.5:1 on their tint, ${brightness.name}', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: ThemeData(brightness: brightness),
+          home: CheckInHistoryScreen(
+            store: _Store([
+              _record(1, 2600, 2100, 2100),
+              _record(8, 2600, 2100, 1900), // down: the cut's orange
+              _record(15, 2600, 2100, 2200), // up: the bulk's blue
+            ]),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final card = (brightness == Brightness.dark
+          ? AppPalette.dark
+          : AppPalette.light).surface;
+      for (final text in ['\u2212200 kcal', '+300 kcal']) {
+        final chip = find.ancestor(
+          of: find.text(text),
+          matching: find.byType(Container),
+        );
+        final tint =
+            (tester.widget<Container>(chip.first).decoration! as BoxDecoration)
+                .color!;
+        final color = tester.widget<Text>(find.text(text)).style!.color!;
+        expect(
+          contrastRatio(color, Color.alphaBlend(tint, card)),
+          greaterThanOrEqualTo(4.5),
+          reason: text,
+        );
+      }
+    });
+  }
 }

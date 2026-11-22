@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart' as intl;
+import 'package:logging/logging.dart';
 import 'package:opennutritracker/core/domain/entity/body_weight_unit_entity.dart';
 import 'package:opennutritracker/core/domain/entity/user_entity.dart';
 import 'package:opennutritracker/core/domain/usecase/get_config_usecase.dart';
@@ -601,11 +602,23 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
   Future<void> _start() async {
     setState(() => _saving = true);
     final place = _place;
-    final saved = place == null
-        ? await widget.onStart(_planOf(_draft))
-        : await widget.onQueue!(place, _draft.toPlan());
+    final bool saved;
+    try {
+      saved = place == null
+          ? await widget.onStart(_planOf(_draft))
+          : await widget.onQueue!(place, _draft.toPlan());
+    } catch (error, stackTrace) {
+      Logger('GoalPlannerScreen').severe('Plan save failed', error, stackTrace);
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Not saved. Try again.')));
+      }
+      return;
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
     if (!mounted) return;
-    setState(() => _saving = false);
     if (saved) {
       Navigator.of(context).pop(true);
     } else {

@@ -1,7 +1,5 @@
 // Fork-owned copy of lib/features/recipes/presentation/widgets/recipe_list_item.dart (D23); upstream's later changes to it
 // are ported by hand: fork/tools/upstream-copies.sh.
-import 'dart:io';
-
 import 'package:auto_size_text/auto_size_text.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
@@ -12,8 +10,8 @@ import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
-import 'package:opennutritracker/core/utils/user_image_storage.dart';
 import 'package:opennutritracker/fork/display/contrast.dart';
+import 'package:opennutritracker/fork/display/sized_file_image.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 import 'package:opennutritracker/fork/off/off_kinds.dart';
 import 'package:opennutritracker/fork/recipe/recipe_list.dart';
@@ -258,22 +256,14 @@ class _UserImageThumbnail extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = paletteOf(context);
     final accent = Theme.of(context).colorScheme.primary;
-    return FutureBuilder<String>(
-      future: UserImageStorage.absolutePath(relativePath),
-      builder: (context, snapshot) {
-        final fallback = RecipeListItem._fallbackThumb(palette, accent);
-        if (!snapshot.hasData) return fallback;
-        return ClipRRect(
-          borderRadius: Dimens.borderRadiusS,
-          child: Image.file(
-            File(snapshot.data!),
-            fit: BoxFit.cover,
-            width: RecipeListItem._thumbSize,
-            height: RecipeListItem._thumbSize,
-            errorBuilder: (_, error, stack) => fallback,
-          ),
-        );
-      },
+    // Decoded at the tile's size, the path looked up once (G3)
+    return ClipRRect(
+      borderRadius: Dimens.borderRadiusS,
+      child: SizedFileImage(
+        relativePath: relativePath,
+        size: RecipeListItem._thumbSize,
+        fallback: (_) => RecipeListItem._fallbackThumb(palette, accent),
+      ),
     );
   }
 }

@@ -5,9 +5,12 @@ import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/core/utils/navigation_options.dart';
 import 'package:opennutritracker/core/utils/url_const.dart';
 import 'package:opennutritracker/features/profile/presentation/utils/profile_switch_coordinator.dart';
+import 'package:opennutritracker/features/settings/domain/export_import_failure.dart';
 import 'package:opennutritracker/features/settings/domain/usecase/export_data_usecase.dart';
 import 'package:opennutritracker/features/settings/presentation/bloc/export_import_bloc.dart';
+import 'package:opennutritracker/features/settings/presentation/widgets/export_import_error_text.dart';
 import 'package:opennutritracker/fork/backup/after_restore.dart';
+import 'package:opennutritracker/generated/l10n.dart';
 
 /// What a restore from onboarding does, apart from the screen.
 class OnboardingRestore {
@@ -21,7 +24,9 @@ class OnboardingRestore {
       final done = await bloc.stream.firstWhere(
         (state) => state is! ExportImportLoadingState,
       );
-      if (done is ExportImportError) throw StateError('${done.reason}');
+      if (done is ExportImportError) {
+        throw ExportImportFailure(done.reason, 'onboarding restore');
+      }
       return done is ExportImportSuccess;
     } finally {
       await bloc.close();
@@ -89,6 +94,8 @@ class _RestoreBackupButtonState extends State<RestoreBackupButton> {
       await _restore.accept(dataCollection: widget.acceptedDataCollection);
       if (!mounted) return;
       (widget.onRestored ?? _intoApp)();
+    } on ExportImportFailure catch (failure) {
+      if (mounted) _say(exportImportErrorText(S.of(context), failure.reason));
     } catch (_) {
       if (mounted) _say('That file could not be restored.');
     } finally {

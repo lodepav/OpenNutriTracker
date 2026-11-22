@@ -682,6 +682,15 @@ class _NutrientRow extends StatelessWidget {
     // [/fork]
   });
 
+  // [fork] S454 goal-field-name: the range, for a typed value outside it
+  String? _rangeError(String text) {
+    final typed = double.tryParse(text);
+    if (typed == null || (typed >= min && typed <= max)) return null;
+    const shown = _NutrientGoalsScreenState._formatGoal;
+    return 'From ${shown(min)} to ${shown(max)} $unit';
+  }
+  // [/fork]
+
   @override
   Widget build(BuildContext context) {
     final clamped = value.clamp(min, max).toDouble();
@@ -720,7 +729,19 @@ class _NutrientRow extends StatelessWidget {
                   onFocusChange: (hasFocus) {
                     if (!hasFocus) onTextSubmitted();
                   },
-                  child: TextField(
+                  // [fork] S454 goal-field-name: the field's name, as the
+                  // slider has it; and a typed value past the range says
+                  // the range before leaving the field pulls it in
+                  // child: TextField(
+                  child: Semantics(
+                    // Its own node: unboxed, the row's words merged into it.
+                    container: true,
+                    label: label,
+                    textField: true,
+                    child: ValueListenableBuilder<TextEditingValue>(
+                      valueListenable: controller,
+                      builder: (context, typed, _) => TextField(
+                  // [/fork]
                     controller: controller,
                     keyboardType: TextInputType.numberWithOptions(
                       decimal: decimalStep || decimalInput,
@@ -746,11 +767,19 @@ class _NutrientRow extends StatelessWidget {
                         horizontal: 8,
                         vertical: 12,
                       ),
+                      // [fork] S454 goal-field-name
+                      errorText: _rangeError(typed.text),
+                      errorMaxLines: 3,
+                      // [/fork]
                     ),
                     onChanged: (_) => onTextEdited(controller),
                     onSubmitted: (_) => onTextSubmitted(),
                     onEditingComplete: onTextSubmitted,
                   ),
+                  // [fork] S454 goal-field-name
+                    ),
+                  ),
+                  // [/fork]
                 ),
               ),
             ],

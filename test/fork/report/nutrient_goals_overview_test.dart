@@ -192,21 +192,21 @@ void main() {
     await tester.pumpWidget(app());
     await tester.pumpAndSettle();
     expect(asked.single, (DateTime(2026, 10, 25), DateTime(2026, 10, 25)));
-    expect(label(tester, 'Fibre'), 'Fibre, 20 of 30 g');
+    expect(label(tester, 'Fibre'), 'Fibre, 20 of 30 grams');
     // 3000 mg of sodium is 7.5 g of salt, against 2300 mg's 5.75 g.
     expect(
       label(tester, 'Salt'),
-      'Salt (from sodium), 7.5 of 5.8 g, over the limit',
+      'Salt (from sodium), 7.5 of 5.8 grams, over the limit',
     );
 
     await tester.tap(find.bySemanticsIdentifier('nutrient-goals-week'));
     await tester.pumpAndSettle();
     expect(asked.last, (DateTime(2026, 10, 19), DateTime(2026, 10, 25)));
     // A mean over the two days with food: 30 g, 1500 mg of sodium.
-    expect(label(tester, 'Fibre'), 'Fibre, 30 of 30 g, reached');
+    expect(label(tester, 'Fibre'), 'Fibre, 30 of 30 grams, reached');
     expect(
       label(tester, 'Salt'),
-      'Salt (from sodium), 3.8 of 5.8 g, within limit',
+      'Salt (from sodium), 3.8 of 5.8 grams, within limit',
     );
     // Under the ten bars, past the first screen in the test font.
     await tester.scrollUntilVisible(

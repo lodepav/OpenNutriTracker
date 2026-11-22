@@ -37,6 +37,10 @@ class _LogWaterDialogState extends State<LogWaterDialog> {
       ? LogWaterDialog.sliderDefaultFlOz.toDouble()
       : LogWaterDialog.sliderDefaultMl.toDouble();
 
+  // [fork] S474 water-log-once: a write under way, so Log can't add it twice
+  bool _saving = false;
+  // [/fork]
+
   int get _selectedMl => widget.usesImperialUnits
       ? UnitCalc.flOzToMl(_selected).round()
       : _selected.round();
@@ -103,6 +107,12 @@ class _LogWaterDialogState extends State<LogWaterDialog> {
               label: widget.usesImperialUnits
                   ? '${_selected.round()} ${s.flOzUnit}'
                   : '${_selected.round()} ${s.mlLabel}',
+              // [fork] S473 water-slider-says: TalkBack read a percent while
+              // the dialog shows the amount
+              semanticFormatterCallback: (value) => widget.usesImperialUnits
+                  ? '${value.round()} ${s.flOzUnit}'
+                  : '${value.round()} ${s.mlLabel}',
+              // [/fork]
               onChanged: (value) {
                 setState(() => _selected = value);
               },
@@ -132,7 +142,10 @@ class _LogWaterDialogState extends State<LogWaterDialog> {
         Semantics(
           identifier: 'log-water-save',
           child: FilledButton(
-            onPressed: _onSavePressed,
+            // [fork] S474 water-log-once
+            // onPressed: _onSavePressed,
+            onPressed: _saving ? null : _onSavePressed,
+            // [/fork]
             child: Text(s.dialogOKLabel),
           ),
         ),
@@ -141,10 +154,23 @@ class _LogWaterDialogState extends State<LogWaterDialog> {
   }
 
   Future<void> _onSavePressed() async {
+    // [fork] S474 water-log-once: a second tap while the write ran logged the
+    // drink twice; Log waits for it, and comes back if the write fails
+    if (_saving) return;
+    setState(() => _saving = true);
+    // [/fork]
     final amount = _selectedMl;
     final navigator = Navigator.of(context);
     if (amount > 0) {
-      await locator<HomeBloc>().addWaterIntake(amount);
+      // [fork] S474 water-log-once
+      // await locator<HomeBloc>().addWaterIntake(amount);
+      try {
+        await locator<HomeBloc>().addWaterIntake(amount);
+      } catch (_) {
+        if (mounted) setState(() => _saving = false);
+        rethrow;
+      }
+      // [/fork]
     }
     if (mounted) {
       navigator.pop();

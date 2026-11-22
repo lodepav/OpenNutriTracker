@@ -1,4 +1,6 @@
-import 'dart:io';
+// [fork] S481 thumb-sized-decode: no File left here
+// import 'dart:io';
+// [/fork]
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -7,7 +9,9 @@ import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/core/utils/navigation_options.dart';
-import 'package:opennutritracker/core/utils/user_image_storage.dart';
+// [fork] S481 thumb-sized-decode: SizedFileImage looks the path up
+// import 'package:opennutritracker/core/utils/user_image_storage.dart';
+// [/fork]
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dart';
 import 'package:opennutritracker/features/edit_meal/presentation/edit_meal_screen.dart';
 import 'package:opennutritracker/features/settings/presentation/bloc/custom_meals_bloc.dart';
@@ -17,6 +21,9 @@ import 'package:opennutritracker/core/utils/meal_type_suggester.dart';
 import 'package:opennutritracker/features/meal_detail/meal_detail_screen.dart';
 import 'package:opennutritracker/fork/recipe/recipe_list.dart' show macroSpans;
 import 'package:opennutritracker/fork/units/energy_text.dart';
+// [/fork]
+// [fork] S481 thumb-sized-decode
+import 'package:opennutritracker/fork/display/sized_file_image.dart';
 // [/fork]
 // [fork] S438 custom-food-delete-undo
 import 'package:opennutritracker/core/data/data_source/custom_meal_data_source.dart';
@@ -125,7 +132,7 @@ class CustomMealsTab extends StatelessWidget {
                               children: [
                                 Text(
                                   meal.name ?? '',
-                                  maxLines: 1,
+                                  maxLines: 2, // [fork] S486 two-line-names: as recipe rows (A6)
                                   overflow: TextOverflow.ellipsis,
                                   style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
                                 ),
@@ -484,17 +491,28 @@ class _MealLeadingThumbnail extends StatelessWidget {
       child: Icon(Icons.restaurant_rounded, color: accent, size: 24),
     );
     if (relative == null) return fallback;
-    return FutureBuilder<String>(
-      future: UserImageStorage.absolutePath(relative),
-      builder: (context, snapshot) {
-        if (!snapshot.hasData) return fallback;
-        final file = File(snapshot.data!);
-        if (!file.existsSync()) return fallback;
-        return ClipRRect(
-          borderRadius: Dimens.borderRadiusS,
-          child: Image.file(file, width: _size, height: _size, fit: BoxFit.cover),
-        );
-      },
+    // [fork] S481 thumb-sized-decode: decoded at the tile's size, the path
+    // looked up once, no file check on the UI thread
+    // return FutureBuilder<String>(
+    //   future: UserImageStorage.absolutePath(relative),
+    //   builder: (context, snapshot) {
+    //     if (!snapshot.hasData) return fallback;
+    //     final file = File(snapshot.data!);
+    //     if (!file.existsSync()) return fallback;
+    //     return ClipRRect(
+    //       borderRadius: Dimens.borderRadiusS,
+    //       child: Image.file(file, width: _size, height: _size, fit: BoxFit.cover),
+    //     );
+    //   },
+    // );
+    return ClipRRect(
+      borderRadius: Dimens.borderRadiusS,
+      child: SizedFileImage(
+        relativePath: relative,
+        size: _size,
+        fallback: (_) => fallback,
+      ),
     );
+    // [/fork]
   }
 }

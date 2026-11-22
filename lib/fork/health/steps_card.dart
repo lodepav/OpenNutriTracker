@@ -153,7 +153,7 @@ class _StepsCardState extends State<StepsCard> {
               style: theme.textTheme.bodySmall,
             ),
             Align(
-              alignment: Alignment.centerRight,
+              alignment: AlignmentDirectional.centerEnd,
               child: TextButton(
                 key: const ValueKey('steps-on'),
                 onPressed: _turnOn,
@@ -167,7 +167,7 @@ class _StepsCardState extends State<StepsCard> {
               style: theme.textTheme.bodySmall,
             ),
             Align(
-              alignment: Alignment.centerRight,
+              alignment: AlignmentDirectional.centerEnd,
               child: TextButton(
                 onPressed: _turnOn,
                 child: const Text('Connect again'),
@@ -186,7 +186,7 @@ class _StepsCardState extends State<StepsCard> {
             ),
           if (read.on)
             Align(
-              alignment: Alignment.centerRight,
+              alignment: AlignmentDirectional.centerEnd,
               child: TextButton(
                 key: const ValueKey('steps-off'),
                 onPressed: _steps.turnOff,

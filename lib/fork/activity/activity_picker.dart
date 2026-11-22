@@ -146,7 +146,8 @@ class ActivityPickerView extends StatelessWidget {
               filled: true,
               fillColor: palette.surface,
               prefixIcon: Icon(Icons.search_rounded, color: palette.textMuted),
-              hintText: 'Search activities',
+              // a label, not a hint: it stays once the user types
+              labelText: 'Search activities',
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(24),
                 borderSide: BorderSide(color: palette.border),

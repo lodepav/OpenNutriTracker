@@ -14,6 +14,7 @@ import 'package:opennutritracker/features/diary/presentation/widgets/daily_nutri
 import 'package:opennutritracker/features/settings/presentation/widgets/nutrient_goals_screen.dart';
 import 'package:opennutritracker/fork/display/display_prefs.dart';
 import 'package:opennutritracker/fork/report/goal_standing.dart';
+import 'package:opennutritracker/fork/units/amount_text.dart' show spokenUnit;
 import 'package:opennutritracker/fork/units/energy_text.dart';
 
 /// One nutrient the explorer follows.
@@ -504,6 +505,13 @@ String _amount(BuildContext context, ExplorerNutrient n, double value) =>
     ? energyText(context, value)
     : '${value < 10 ? value.toStringAsFixed(1) : value.round()} ${n.unit}';
 
+/// [_amount] as a screen reader should say it: "12.0 micrograms" (A5).
+String _spokenAmount(BuildContext context, ExplorerNutrient n, double value) {
+  final text = _amount(context, n, value);
+  final cut = text.lastIndexOf(' ');
+  return '${text.substring(0, cut)} ${spokenUnit(text.substring(cut + 1))}';
+}
+
 /// The dated range a page averages over, under its title.
 class _RangeLine extends StatelessWidget {
   final DateTime first;
@@ -582,6 +590,13 @@ class _NutrientTile extends StatelessWidget {
                 '${n.isLimit ? 'limit' : 'goal'} ${_amount(context, n, goal)}',
               ?word,
             ].join(' · '),
+            semanticsLabel: [
+              '${_spokenAmount(context, n, s.perDay)} a day',
+              if (goal != null)
+                '${n.isLimit ? 'limit' : 'goal'} '
+                    '${_spokenAmount(context, n, goal)}',
+              ?word,
+            ].join(', '),
           ),
           if (share != null)
             Padding(

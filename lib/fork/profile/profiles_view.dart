@@ -14,6 +14,7 @@ import 'package:opennutritracker/core/utils/hive_db_provider.dart';
 import 'package:opennutritracker/features/profile/presentation/utils/profile_display_name.dart';
 import 'package:opennutritracker/features/profile/presentation/widgets/profile_avatar.dart';
 import 'package:opennutritracker/fork/adaptive/trend_points.dart';
+import 'package:opennutritracker/fork/display/contrast.dart' show textAccent;
 import 'package:opennutritracker/fork/units/energy_text.dart';
 import 'package:opennutritracker/fork/units/weight_text.dart' show weightText;
 import 'package:opennutritracker/generated/l10n.dart';
@@ -284,15 +285,15 @@ class _ProfileCard extends StatelessWidget {
                                     vertical: 1,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: palette.accent.withValues(
-                                      alpha: 0.12,
-                                    ),
+                                    color: textAccent(
+                                      context,
+                                    ).withValues(alpha: 0.12),
                                     borderRadius: BorderRadius.circular(8),
                                   ),
                                   child: Text(
                                     s.profileActiveLabel,
                                     style: text.labelSmall?.copyWith(
-                                      color: palette.accent,
+                                      color: textAccent(context),
                                     ),
                                   ),
                                 ),

@@ -19,6 +19,7 @@ import 'package:opennutritracker/fork/trends/detail_widgets.dart';
 import 'package:opennutritracker/fork/trends/trends_widgets.dart';
 import 'package:opennutritracker/fork/trends/value_axis.dart' show niceStep;
 import 'package:opennutritracker/fork/display/chart_semantics.dart';
+import 'package:opennutritracker/fork/units/amount_text.dart' show spokenUnit;
 
 const _cmPerInch = 2.54;
 
@@ -104,12 +105,27 @@ class SideUnits {
 
   String text(double cm) => '${shown(cm).toStringAsFixed(1)} $unit';
 
+  /// [text] as a screen reader should say it: "13.9 inches" (A5).
+  String spoken(double cm) =>
+      '${shown(cm).toStringAsFixed(1)} ${spokenUnit(unit)}';
+
   /// The way [pair] differs: "Right bigger by 0.8 cm", or equal when it
   /// rounds to nothing.
   String difference(SidePair pair) {
     final diff = pair.right - pair.left;
     if (shown(diff.abs()) < 0.05) return 'Both equal';
     return '${diff > 0 ? 'Right' : 'Left'} bigger by ${text(diff.abs())}';
+  }
+
+  /// [pair] as a screen reader should say it: "left 13.9 inches, right
+  /// 14.3 inches, right bigger by 0.4 inches", where "L" and "R" were
+  /// read as letters.
+  String spokenPair(SidePair pair) {
+    final diff = pair.right - pair.left;
+    final differs = shown(diff.abs()) < 0.05
+        ? 'both equal'
+        : '${diff > 0 ? 'right' : 'left'} bigger by ${spoken(diff.abs())}';
+    return 'left ${spoken(pair.left)}, right ${spoken(pair.right)}, $differs';
   }
 }
 
@@ -318,16 +334,28 @@ class _SideComparePageState extends State<SideComparePage> {
         ),
         if (pairs.isNotEmpty) ...[
           trendSection(context, 'Both sides measured'),
-          TrendRows(
-            rows: [
-              for (final p in pairs.reversed)
-                (
-                  label: DateFormat.yMMMd(locale).format(p.date),
-                  value:
-                      'L ${units.text(p.left)} · R ${units.text(p.right)}'
-                      '\n${units.difference(p)}',
-                ),
-            ],
+          // TrendRows' rows, each with its spoken form.
+          AppCard(
+            padding: const EdgeInsets.symmetric(horizontal: Dimens.spacing16),
+            child: Column(
+              children: [
+                for (final (i, p) in pairs.reversed.indexed)
+                  Semantics(
+                    container: true,
+                    label:
+                        '${DateFormat.yMMMd(locale).format(p.date)}, '
+                        '${units.spokenPair(p)}',
+                    excludeSemantics: true,
+                    child: TrendRow(
+                      label: DateFormat.yMMMd(locale).format(p.date),
+                      value:
+                          'L ${units.text(p.left)} · R ${units.text(p.right)}'
+                          '\n${units.difference(p)}',
+                      first: i == 0,
+                    ),
+                  ),
+              ],
+            ),
           ),
         ],
       ],
@@ -408,7 +436,7 @@ class _SidesChart extends StatelessWidget {
     String fromTo(List<FlSpot> s) => spokenFromTo(
       s.first.y.toStringAsFixed(1),
       s.last.y.toStringAsFixed(1),
-      units.unit,
+      spokenUnit(units.unit),
     );
     return AppCard(
       padding: const EdgeInsets.all(Dimens.spacing16),

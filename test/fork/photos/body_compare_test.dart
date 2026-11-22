@@ -254,6 +254,24 @@ void main() {
       await tester.pumpAndSettle();
     }
 
+    // The photos are read off the disk, which a fake clock never finishes.
+    Future<void> send(WidgetTester tester) async {
+      await tester.tap(find.byKey(const ValueKey('body-compare-send')));
+      // Past the dialog's close, then until the reads finish.
+      await tester.pump(const Duration(milliseconds: 500));
+      for (
+        var i = 0;
+        i < 100 && find.byType(LinearProgressIndicator).evaluate().isNotEmpty;
+        i++
+      ) {
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 10)),
+        );
+        await tester.pump(const Duration(milliseconds: 16));
+      }
+      await tester.pumpAndSettle();
+    }
+
     const answer = BodyComparison(
       fat: BodyChange.less,
       muscle: BodyChange.same,
@@ -311,8 +329,7 @@ void main() {
 
       await tester.tap(find.byKey(const ValueKey('compare-ai')));
       await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const ValueKey('body-compare-send')));
-      await tester.pumpAndSettle();
+      await send(tester);
       expect(useCase.calls, 1);
       expect(find.text('Less body fat'), findsOne);
       expect(find.text('Muscle looks the same'), findsOne);
@@ -353,8 +370,7 @@ void main() {
       await pump(tester, _UseCase());
       await tester.tap(find.byKey(const ValueKey('compare-ai')));
       await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const ValueKey('body-compare-send')));
-      await tester.pumpAndSettle();
+      await send(tester);
       expect(find.text('Set up an AI model in Settings to compare.'), findsOne);
     });
 
@@ -365,8 +381,7 @@ void main() {
       );
       await tester.tap(find.byKey(const ValueKey('compare-ai')));
       await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const ValueKey('body-compare-send')));
-      await tester.pumpAndSettle();
+      await send(tester);
       expect(find.text("Couldn't compare the photos. Try again."), findsOne);
     });
   });

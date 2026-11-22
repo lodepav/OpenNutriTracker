@@ -7,6 +7,7 @@ class DisclaimerDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
+      scrollable: true, // [fork] S467 disclaimer-scroll: long at 200% font
       title: Text(S.of(context).settingsDisclaimerLabel),
       content: Text(S.of(context).disclaimerText),
       actions: [

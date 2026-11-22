@@ -28,6 +28,9 @@ import 'package:http/http.dart' as http;
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/fork/ai/hosted_key_check.dart';
 // [/fork]
+// [fork] S455 ai-label-accent
+import 'package:opennutritracker/fork/display/contrast.dart';
+// [/fork]
 
 /// Where the user chooses a provider, supplies a key for it, picks a model,
 /// and pauses or removes any of it.
@@ -1942,7 +1945,11 @@ class _AiAssistDialogState extends State<AiAssistDialog> {
     child: Text(
       text,
       style: theme.textTheme.labelLarge?.copyWith(
-        color: theme.colorScheme.primary,
+        // [fork] S455 ai-label-accent: a light picked accent fell under
+        // 4.5:1 as text
+        // color: theme.colorScheme.primary,
+        color: textAccent(context),
+        // [/fork]
       ),
     ),
   );

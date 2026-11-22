@@ -82,6 +82,13 @@ void main() {
     expect(calls.ended, 1);
   });
 
+  testWidgets('the ring says the hours fasted of the target', (tester) async {
+    final semantics = tester.ensureSemantics();
+    await _pump(tester, FastingActive(session: active, now: _now));
+    expect(find.semantics.byLabel('Fasted 5 of 16 hours'), findsOne);
+    semantics.dispose();
+  });
+
   testWidgets('a plan picked during a fast is its new target', (tester) async {
     final calls = await _pump(
       tester,

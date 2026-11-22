@@ -449,6 +449,36 @@ void main() {
       expect(menu.right, lessThanOrEqualTo(field.right));
     });
 
+    testWidgets('the strip, the compare pickers and photos are named', (
+      tester,
+    ) async {
+      final semantics = tester.ensureSemantics();
+      await pump(tester, photos: 3);
+      expect(find.bySemanticsLabel('Progress photo, Aug 1, 2026'), findsOne);
+      final tile = tester.getSemantics(
+        find.bySemanticsLabel('Progress photo, Aug 1, 2026'),
+      );
+      expect(tile.flagsCollection.isButton, isTrue);
+      expect(tile.getSemanticsData().hasAction(SemanticsAction.tap), isTrue);
+
+      await tester.tap(find.byKey(const ValueKey('photo-compare')));
+      await tester.pumpAndSettle();
+      // Side by side the pickers show no label; they are named all the same.
+      expect(find.text('Left photo'), findsNothing);
+      expect(find.bySemanticsLabel(RegExp('^Left photo')), findsOne);
+      expect(find.bySemanticsLabel(RegExp('^Right photo')), findsOne);
+      expect(
+        tester
+            .widgetList<Image>(find.byType(Image))
+            .map((i) => i.semanticLabel),
+        containsAll([
+          'Progress photo, Aug 1, 2026',
+          'Progress photo, Oct 1, 2026',
+        ]),
+      );
+      semantics.dispose();
+    });
+
     testWidgets('compare starts with the oldest and the newest', (
       tester,
     ) async {

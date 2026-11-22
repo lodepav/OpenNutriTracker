@@ -241,6 +241,9 @@ class BasketSheet extends StatefulWidget {
 class _BasketSheetState extends State<BasketSheet> {
   bool _logging = false;
 
+  /// Log all, not a plan, is under way: its button shows it.
+  bool _loggingAll = false;
+
   /// Why the last "Log all" wrote nothing: said here, as a bar would show
   /// under this sheet, which stays open for another go.
   String? _failed;
@@ -339,6 +342,7 @@ class _BasketSheetState extends State<BasketSheet> {
   Future<void> _logAll() async {
     setState(() {
       _logging = true;
+      _loggingAll = true;
       _failed = null;
     });
     final items = widget.basket.itemsFor(widget.type, widget.day);
@@ -371,6 +375,7 @@ class _BasketSheetState extends State<BasketSheet> {
       if (failed) {
         setState(() {
           _logging = false;
+          _loggingAll = false;
           _failed = unwritten;
         });
         return;
@@ -479,7 +484,13 @@ class _BasketSheetState extends State<BasketSheet> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text('Basket', style: Theme.of(context).textTheme.titleLarge),
+              Semantics(
+                header: true,
+                child: Text(
+                  'Basket',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+              ),
               if (items.isNotEmpty) ...[
                 const SizedBox(height: 12),
                 _mealCard(context, items),
@@ -539,9 +550,16 @@ class _BasketSheetState extends State<BasketSheet> {
                 ),
               const SizedBox(height: 12),
               if (widget.basket.planning == null) ...[
-                FilledButton(
+                FilledButton.icon(
                   onPressed: _logging || items.isEmpty ? null : _logAll,
-                  child: Text(
+                  // a slow log shows it is under way
+                  icon: _loggingAll
+                      ? const SizedBox.square(
+                          dimension: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : null,
+                  label: Text(
                     'Log all ${items.length} to '
                     '${mealLabel(context, widget.type)}',
                   ),

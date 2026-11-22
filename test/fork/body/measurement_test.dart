@@ -481,6 +481,32 @@ void main() {
     );
   });
 
+  testWidgets('the chart speaks its unit in words', (tester) async {
+    final semantics = tester.ensureSemantics();
+    final now = DateTime.now();
+    final memory = _Memory()
+      ..entries.addAll([
+        Measurement(
+          id: 'a',
+          date: DateTime(now.year, now.month, now.day - 5),
+          metric: BodyMetric.waist,
+          value: 80,
+        ),
+        Measurement(
+          id: 'b',
+          date: DateTime(now.year, now.month, now.day),
+          metric: BodyMetric.waist,
+          value: 79,
+        ),
+      ]);
+    await pumpCard(tester, memory, rangeDays: 7);
+    expect(
+      find.bySemanticsLabel('Waist, from 80.0 to 79.0 centimetres'),
+      findsOneWidget,
+    );
+    semantics.dispose();
+  });
+
   testWidgets("in the app's theme a floating label clears the field above", (
     tester,
   ) async {

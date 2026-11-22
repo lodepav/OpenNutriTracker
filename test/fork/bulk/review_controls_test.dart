@@ -1,6 +1,8 @@
 import 'dart:io';
+import 'dart:ui' show Tristate;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -408,6 +410,42 @@ void main() {
     );
   });
 
+  testWidgets('Other match says which match is chosen', (tester) async {
+    final semantics = tester.ensureSemantics();
+    await _register({
+      'toast': [_food('Toast', kcal100: 265), _food('French toast')],
+    });
+    await _parse(tester, '100g toast');
+    await _tap(tester, find.text('Toast'));
+    await _tap(tester, find.byKey(const ValueKey('bulk-add-other-match')));
+
+    final list = find.bySemanticsIdentifier('bulk-add-candidate-list');
+    SemanticsNode tile(String name) => tester.getSemantics(
+      find.ancestor(
+        of: find.descendant(of: list, matching: find.text(name)),
+        matching: find.byType(ListTile),
+      ),
+    );
+    expect(tile('Toast').flagsCollection.isSelected, Tristate.isTrue);
+    expect(
+      tile('French toast').flagsCollection.isSelected,
+      isNot(Tristate.isTrue),
+    );
+    semantics.dispose();
+  });
+
+  testWidgets('the model hint is said as a button', (tester) async {
+    final semantics = tester.ensureSemantics();
+    await _register(const {});
+    await _parse(tester, '');
+    final hint = tester.getSemantics(
+      find.bySemanticsIdentifier('bulk-add-model-hint'),
+    );
+    expect(hint.flagsCollection.isButton, isTrue);
+    expect(hint.getSemanticsData().hasAction(SemanticsAction.tap), isTrue);
+    semantics.dispose();
+  });
+
   testWidgets('each row has a 48 dp Leave out that leaves it out, with Undo', (
     tester,
   ) async {
@@ -417,7 +455,10 @@ void main() {
     await _parse(tester, '100g toast');
     final button = find.byKey(const ValueKey('bulk-add-leave-out-0'));
 
-    expect(find.byTooltip('Leave out'), findsOneWidget);
+    // in a list of foods each says which
+    expect(find.byTooltip('Leave out Toast'), findsOneWidget);
+    expect(find.byTooltip('Less Toast'), findsOneWidget);
+    expect(find.byTooltip('More Toast'), findsOneWidget);
     final size = tester.getSize(button);
     expect(size.width, greaterThanOrEqualTo(48));
     expect(size.height, greaterThanOrEqualTo(48));

@@ -195,6 +195,7 @@ class _MacroProgramFormState extends State<MacroProgramForm> {
           if (_proteinManual)
             _PerKgField(
               key: const ValueKey('macro-protein-kg'),
+              label: 'Protein',
               initial: _program.proteinGPerKg,
               min: 0.8,
               max: 3.5,
@@ -282,6 +283,7 @@ class _MacroProgramFormState extends State<MacroProgramForm> {
           if (style == MacroStyle.perKg && _fatManual)
             _PerKgField(
               key: const ValueKey('macro-fat-kg'),
+              label: 'Fat',
               initial: _program.fatGPerKg,
               min: 0.3,
               max: 2.0,
@@ -314,6 +316,8 @@ class _MacroProgramFormState extends State<MacroProgramForm> {
 /// while the text is no such number. Typed per pound with [perLb], and
 /// still told per kg.
 class _PerKgField extends StatefulWidget {
+  /// The nutrient, said with the field.
+  final String label;
   final double initial;
   final double min;
   final double max;
@@ -322,6 +326,7 @@ class _PerKgField extends StatefulWidget {
 
   const _PerKgField({
     super.key,
+    required this.label,
     required this.initial,
     required this.min,
     required this.max,
@@ -351,6 +356,7 @@ class _PerKgFieldState extends State<_PerKgField> {
     controller: _text,
     keyboardType: const TextInputType.numberWithOptions(decimal: true),
     decoration: InputDecoration(
+      labelText: widget.label,
       suffixText: MacroProgram.unitOf(widget.perLb),
       errorText: _bad
           ? 'From ${_shown(widget.min)} to ${_shown(widget.max)}'

@@ -15,6 +15,10 @@ class HighlightButton extends StatefulWidget {
   /// page can also point at the fields that are holding it up.
   final VoidCallback? onBlockedPressed;
 
+  // [fork] S466 start-busy: off with a spinner while the tap's work runs
+  final bool busy;
+  // [/fork]
+
   const HighlightButton({
     super.key,
     required this.buttonLabel,
@@ -22,6 +26,7 @@ class HighlightButton extends StatefulWidget {
     required this.buttonActive,
     this.inactiveMessage,
     this.onBlockedPressed,
+    this.busy = false, // [fork] S466
   });
 
   @override
@@ -54,9 +59,16 @@ class _HighlightButtonState extends State<HighlightButton> {
     // genuinely disabled.
     final hasBlockedBehaviour =
         widget.inactiveMessage != null || widget.onBlockedPressed != null;
-    final onPressed = active
+    // [fork] S466 start-busy
+    final onPressed = widget.busy
+        ? null
+        : active
         ? widget.onButtonPressed
         : (hasBlockedBehaviour ? _onBlockedPressed : null);
+    // final onPressed = active
+    //     ? widget.onButtonPressed
+    //     : (hasBlockedBehaviour ? _onBlockedPressed : null);
+    // [/fork]
     // A blocked button reads as an ordinary one to a screen reader: the grey
     // is the only cue that the step can't be completed, and that cue is
     // visual. Publish the reason as the button's hint so it is announced
@@ -93,7 +105,16 @@ class _HighlightButtonState extends State<HighlightButton> {
                     backgroundColor: colors.primaryContainer,
                   ).copyWith(elevation: ButtonStyleButton.allOrNull(0.0))
                 : _inactiveStyle(colors),
-            icon: const Icon(Icons.navigate_next_outlined),
+            // [fork] S466 start-busy
+            icon: widget.busy
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.navigate_next_outlined),
+            // icon: const Icon(Icons.navigate_next_outlined),
+            // [/fork]
             label: Text(
               widget.buttonLabel,
               // [fork] S331 onboarding-button-label: labelLarge's own colour

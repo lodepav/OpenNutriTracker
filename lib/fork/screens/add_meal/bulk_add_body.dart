@@ -22,26 +22,12 @@ extension _BulkAddBody on _BulkAddScreenState {
       );
     }
     if (state is BulkAddErrorState) {
-      return _centeredMessage(context, S.of(context).bulkAddSearchFailedLabel);
+      return _centeredMessage(context, _readFailedText(context, state)!);
     }
     if (state is BulkAddPhotoErrorState) {
       return _centeredMessage(
         context,
-        switch (state.error) {
-          BulkAddPhotoError.unavailable =>
-            S.of(context).bulkAddPhotoUnavailableLabel,
-          BulkAddPhotoError.auth => S.of(context).bulkAddPhotoKeyRejectedLabel,
-          BulkAddPhotoError.transient => S.of(context).bulkAddPhotoFailedLabel,
-          BulkAddPhotoError.camera =>
-            S.of(context).bulkAddPhotoCameraFailedLabel,
-          BulkAddPhotoError.unreadable =>
-            S.of(context).bulkAddPhotoUnreadableLabel,
-          BulkAddPhotoError.unsupported =>
-            S.of(context).bulkAddPhotoUnsupportedLabel,
-          BulkAddPhotoError.insecureDestination =>
-            S.of(context).bulkAddModelInsecureServerLabel,
-          BulkAddPhotoError.billing => S.of(context).bulkAddPhotoNoCreditLabel,
-        },
+        _readFailedText(context, state)!,
         // #992. Three of these sentences send the user to Settings by name and
         // the fourth is answered there too, but only the *text* path ever
         // carried a way in — the photo path said "check it in Settings" and
@@ -81,21 +67,7 @@ extension _BulkAddBody on _BulkAddScreenState {
     if (state.rows.isEmpty) {
       return _withModelHint(
         context,
-        _centeredMessage(context, switch (state) {
-          // A bad segment explains itself; that outranks either generic line.
-          _ when state.parseErrors.isNotEmpty => _parseErrorsText(
-            context,
-            state.parseErrors,
-          ),
-          // The model looked at a photograph and reported no food. "Nothing to
-          // log yet" is true but reads as though nothing happened, and the
-          // notice that would have said a photo was read is not drawn on this
-          // branch — so the one screen where the user most needs to know a
-          // machine answered was the one screen that never said so.
-          _ when state.source == BulkAddReadSource.photo =>
-            S.of(context).bulkAddPhotoNoFoodLabel,
-          _ => S.of(context).bulkAddNothingToLogLabel,
-        }),
+        _centeredMessage(context, _nothingFoundText(context, state)),
       );
     }
 
@@ -162,18 +134,7 @@ extension _BulkAddBody on _BulkAddScreenState {
           // declined to send in the clear.
           MealTextModelFailure.insecureDestination => Icons.lock_outline,
         },
-        text: switch (failure) {
-          MealTextModelFailure.auth =>
-            S.of(context).bulkAddModelKeyRejectedLabel,
-          MealTextModelFailure.unsupported =>
-            S.of(context).bulkAddModelUnsupportedLabel,
-          MealTextModelFailure.billing =>
-            S.of(context).bulkAddModelNoCreditLabel,
-          MealTextModelFailure.timeout =>
-            S.of(context).bulkAddModelTimedOutLabel,
-          MealTextModelFailure.insecureDestination =>
-            S.of(context).bulkAddModelInsecureServerLabel,
-        },
+        text: _modelFailureText(context, failure),
         // Coloured as a warning, unlike the neutral "read by AI" banner:
         // this one is asking the user to go and change something.
         emphasised: true,
@@ -596,6 +557,62 @@ extension _BulkAddBody on _BulkAddScreenState {
   void _openAiSettings(BuildContext context) => unawaited(
     _openSettings(arguments: const SettingsScreenArguments(openAiAssist: true)),
   );
+
+  /// What a failed read says, on screen and to a screen reader; null when
+  /// [state] is no failure.
+  String? _readFailedText(
+    BuildContext context,
+    BulkAddState state,
+  ) => switch (state) {
+    BulkAddErrorState() => S.of(context).bulkAddSearchFailedLabel,
+    BulkAddPhotoErrorState(:final error) => switch (error) {
+      BulkAddPhotoError.unavailable =>
+        S.of(context).bulkAddPhotoUnavailableLabel,
+      BulkAddPhotoError.auth => S.of(context).bulkAddPhotoKeyRejectedLabel,
+      BulkAddPhotoError.transient => S.of(context).bulkAddPhotoFailedLabel,
+      BulkAddPhotoError.camera => S.of(context).bulkAddPhotoCameraFailedLabel,
+      BulkAddPhotoError.unreadable => S.of(context).bulkAddPhotoUnreadableLabel,
+      BulkAddPhotoError.unsupported =>
+        S.of(context).bulkAddPhotoUnsupportedLabel,
+      BulkAddPhotoError.insecureDestination =>
+        S.of(context).bulkAddModelInsecureServerLabel,
+      BulkAddPhotoError.billing => S.of(context).bulkAddPhotoNoCreditLabel,
+    },
+    _ => null,
+  };
+
+  /// Why the model did not read typed text, above the parser's rows; on
+  /// screen and to a screen reader.
+  String _modelFailureText(
+    BuildContext context,
+    MealTextModelFailure failure,
+  ) => switch (failure) {
+    MealTextModelFailure.auth => S.of(context).bulkAddModelKeyRejectedLabel,
+    MealTextModelFailure.unsupported =>
+      S.of(context).bulkAddModelUnsupportedLabel,
+    MealTextModelFailure.billing => S.of(context).bulkAddModelNoCreditLabel,
+    MealTextModelFailure.timeout => S.of(context).bulkAddModelTimedOutLabel,
+    MealTextModelFailure.insecureDestination =>
+      S.of(context).bulkAddModelInsecureServerLabel,
+  };
+
+  /// What a read that found no food says, on screen and to a screen reader.
+  String _nothingFoundText(BuildContext context, BulkAddLoadedState state) =>
+      switch (state) {
+        // A bad segment explains itself; that outranks either generic line.
+        _ when state.parseErrors.isNotEmpty => _parseErrorsText(
+          context,
+          state.parseErrors,
+        ),
+        // The model looked at a photograph and reported no food. "Nothing to
+        // log yet" is true but reads as though nothing happened, and the
+        // notice that would have said a photo was read is not drawn on this
+        // branch — so the one screen where the user most needs to know a
+        // machine answered was the one screen that never said so.
+        _ when state.source == BulkAddReadSource.photo =>
+          S.of(context).bulkAddPhotoNoFoodLabel,
+        _ => S.of(context).bulkAddNothingToLogLabel,
+      };
 
   /// A message that fills the body, optionally with something to do about it.
   ///

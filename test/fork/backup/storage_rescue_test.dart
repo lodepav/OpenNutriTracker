@@ -239,7 +239,7 @@ void main() {
     expect(retried, 1);
     await tester.tap(find.text('Start again without this data'));
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(TextButton, 'Start again'));
+    await tester.tap(find.widgetWithText(FilledButton, 'Start again'));
     await tester.pumpAndSettle();
     expect(asides, 1);
     expect(retried, 2);

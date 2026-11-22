@@ -195,7 +195,15 @@ class SourcesScreen extends StatelessWidget {
       // exists to scroll to (a lazy ListView had not built the fifth)
       // body: ListView(
       body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: Dimens.spacing16, vertical: Dimens.spacing16),
+        // The last card clears the navigation bar: a SingleChildScrollView
+        // adds no inset of its own.
+        // padding: const EdgeInsets.symmetric(horizontal: Dimens.spacing16, vertical: Dimens.spacing16),
+        padding: EdgeInsets.fromLTRB(
+          Dimens.spacing16,
+          Dimens.spacing16,
+          Dimens.spacing16,
+          Dimens.spacing16 + MediaQuery.paddingOf(context).bottom,
+        ),
         // children: [
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,

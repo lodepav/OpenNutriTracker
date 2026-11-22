@@ -337,10 +337,16 @@ class _OnboardingOtherOptionsPageBodyState
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // [fork] S464 step-headings: a heading TalkBack can jump to
+            Semantics(
+              header: true,
+              child:
+            // [/fork]
             Text(
               s.onboardingOtherOptionsLabel,
               style: Theme.of(context).textTheme.headlineSmall,
             ),
+            ), // [fork] S464
             Text(
               s.onboardingOtherOptionsSubtitle,
               style: Theme.of(context).textTheme.titleMedium,

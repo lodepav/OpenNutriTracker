@@ -193,9 +193,12 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
           const SizedBox(height: Dimens.spacing12),
           RecipeTotalsStrip(portion: RecipePortion(recipe, _count)),
           const SizedBox(height: Dimens.spacing16),
-          Text(
-            S.of(context).recipeIngredientsLabel,
-            style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+          Semantics(
+            header: true, // TalkBack's heading navigation (A7)
+            child: Text(
+              S.of(context).recipeIngredientsLabel,
+              style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+            ),
           ),
           const SizedBox(height: Dimens.spacing4),
           for (final (i, ingredient) in recipe.ingredients.indexed) ...[
@@ -346,10 +349,13 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
 
   Future<IntakeTypeEntity?> _pickIntakeType(BuildContext context) {
     final s = S.of(context);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final palette = isDark ? AppPalette.dark : AppPalette.light;
+    // [fork] S487 drag-handle: the handle was the palette's only use
+    // final isDark = Theme.of(context).brightness == Brightness.dark;
+    // final palette = isDark ? AppPalette.dark : AppPalette.light;
+    // [/fork]
     return showModalBottomSheet<IntakeTypeEntity>(
       context: context,
+      showDragHandle: true, // [fork] S487 drag-handle: the platform's (P1)
       builder: (ctx) {
         Widget tile(IntakeTypeEntity type, String label) {
           final accent = Theme.of(ctx).colorScheme.primary;
@@ -375,16 +381,18 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const SizedBox(height: Dimens.spacing12),
-              Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: palette.border,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(height: Dimens.spacing8),
+              // [fork] S487 drag-handle
+              // const SizedBox(height: Dimens.spacing12),
+              // Container(
+              //   width: 40,
+              //   height: 4,
+              //   decoration: BoxDecoration(
+              //     color: palette.border,
+              //     borderRadius: BorderRadius.circular(2),
+              //   ),
+              // ),
+              // const SizedBox(height: Dimens.spacing8),
+              // [/fork]
               tile(IntakeTypeEntity.breakfast, s.breakfastLabel),
               tile(IntakeTypeEntity.lunch, s.lunchLabel),
               tile(IntakeTypeEntity.dinner, s.dinnerLabel),

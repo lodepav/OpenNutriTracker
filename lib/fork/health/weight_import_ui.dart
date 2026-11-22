@@ -151,7 +151,8 @@ class NutritionExportTile extends StatelessWidget {
             offMessage: 'Nutrition writing off; what was written stays',
             done: (n) => n == 0
                 ? 'Nutrition writing on; nothing new to write'
-                : 'Wrote $n ${n == 1 ? 'food' : 'foods'} to the health store',
+                : 'Wrote $n ${n == 1 ? 'food' : 'foods'} to '
+                      '$healthPlatformName',
             isOn: export.isOn,
             turnOn: export.turnOn,
             turnOff: export.turnOff,
@@ -249,8 +250,8 @@ class _HealthImportTileState extends State<HealthImportTile> {
       }
     } catch (_) {
       message = widget.verb == 'read'
-          ? 'Could not read ${widget.what} from the health store'
-          : 'Could not write ${widget.what} to the health store';
+          ? 'Could not read ${widget.what} from $healthPlatformName'
+          : 'Could not write ${widget.what} to $healthPlatformName';
     }
     final now = await widget.isOn();
     if (!mounted) return;

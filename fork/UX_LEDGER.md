@@ -262,3 +262,38 @@ deferred finding again without new evidence. Newest last.
 | 2026-11-22 | C4 | G1-22 | P2 | A2, A10 | Body unit toggles | The selected unit is marked only by a 1.18:1 fill | accept | primaryContainer fill with onPrimaryContainer text (critique G1 r4) |
 | 2026-11-22 | C4 | G1-23 | P3 | H1, H3 | Goal page | Maintain clears a plan without notice | accept | "Plan cleared" with Undo (critique G1 r4) |
 | 2026-11-22 | C4 | G1-24 | P3 | H2, C1 | Goal planner at first run | Jargon in steps 3, 5 and 6 | defer | The planner is shared with Settings; wording pass later (critique G1 r4) |
+| 2026-11-22 | A1 | G5-21 | P2 | A5 | Body card, side compare, nutrient pages | Units spoken as written (in, cm, µg, mg) | accept | Labels go through spokenUnit, which learns in and cm (audit G5 a1) |
+| 2026-11-22 | A1 | G5-22 | P2 | A3, A4 | Compare photos | Images, pickers and strip tiles have no spoken names | accept | "Left photo"/"Right photo", image and tile labels (audit G5 a1) |
+| 2026-11-22 | A1 | G5-23 | P2 | H2, H4 | BMI info | Shows cm and kg to an imperial user | defer | Upstream page; upstream PR candidate (audit G5 a1) |
+| 2026-11-22 | A1 | G5-24 | P2 | A2, A10 | BMI info | Band text in the raw picked accent | accept | textAccent(context) (audit G5 a1) |
+| 2026-11-22 | A1 | G5-25 | P3 | A1, perf | Steps card, photo card, body card | Physical alignment; synchronous photo reads; 6 dp chip spacing | accept | AlignmentDirectional, await readAsBytes, spacing8 (audit G5 a1) |
+| 2026-11-22 | A1 | G5-26 | P3 | adapt | Compare photos | A fixed Column that can't scroll in landscape | defer | Phone portrait is the app's layout (audit G5 a1) |
+| 2026-11-22 | A1 | G6-21 | P2 | A3, A4 | Nutrient goals editor | Number fields have no spoken name | accept | Semantics label "<nutrient> goal" (audit G6 a1) |
+| 2026-11-22 | A1 | G6-22 | P2 | A9 | Health Connect, Sources | Last rows sit under the 3-button navigation bar | accept | Bottom inset added at the seams (audit G6 a1) |
+| 2026-11-22 | A1 | G6-23 | P2 | H5, H9 | OFF contribution review | A mistyped value is dropped silently and Send goes ahead | accept | Field error; Send off until fixed (audit G6 a1) |
+| 2026-11-22 | A1 | G6-24 | P2 | A2, A10 | AI dialog | Section labels in the raw picked accent | accept | textAccent(context) (audit G6 a1) |
+| 2026-11-22 | A1 | G6-25 | P2 | perf | Export / import | refreshScreens runs inside build, on every rebuild and after an export | defer | A listener misses an import that ends after the dialog closes, and flips upstream's #1363 test (audit G6 a1) |
+| 2026-11-22 | A1 | G6-26 | P3 | H1, H2, H5 | Health Connect, nutrient goals editor | Workouts in turns off silently; "the health store"; a typed value clamps silently | accept | The same message as the other cards; healthPlatformName; the range shown (audit G6 a1) |
+| 2026-11-22 | A1 | G6-27 | P3 | P3 | AI setup | A settings page inside an AlertDialog | defer | Upstream file; upstream PR candidate (audit G6 a1) |
+| 2026-11-22 | A1 | G1-25 | P1 | A2 | Overview | Hint text 3.7-3.9:1 in light | accept | onSurfaceVariant (audit G1 a1) |
+| 2026-11-22 | A1 | G1-26 | P2 | A7, A3 | Onboarding steps | No step title is a heading; activity cards don't say which is chosen | accept | header semantics; checked in a mutually exclusive group (audit G1 a1) |
+| 2026-11-22 | A1 | G1-27 | P2 | H5, A6 | Overview Start, disclaimer | Start can save twice; the disclaimer can't scroll | accept | A busy guard; scrollable dialog (audit G1 a1) |
+| 2026-11-22 | A1 | G1-28 | P2 | A2 | Light error colour | C4453A is 4.49:1 on the canvas | accept | Darkened to pass 4.5:1 (audit G1 a1) |
+| 2026-11-22 | A1 | G1-29 | P2 | adapt | Onboarding, planner | No width cap | defer | Phone portrait is the app's layout (audit G1 a1) |
+| 2026-11-22 | A1 | G1-30 | P3 | H3, H9, A3 | About you, restore, wipe confirms, demo banner | Gender wiped with a partial birthday; restore error drops its reason; plain wipe buttons; banner not a button | accept | Keep gender; show the reason; destructive style; button semantics (audit G1 a1) |
+| 2026-11-22 | A1 | G1-31 | P3 | perf | Intro, About you, planner | Version future built in build; undisposed recognizer and controller; _saving stuck on a throw | accept | initState and dispose; try/finally (audit G1 a1) |
+| 2026-11-22 | A1 | G1-32 | P3 | perf | Splash | Fixed 2 s wait on every launch | defer | Splash timing is a deferred area (audit G1 a1) |
+| 2026-11-22 | A1 | G2-34 | P2 | H1, A3 | Log with AI | Read start, end and failure are silent to TalkBack | accept | One announcement per state change (audit G2 a1) |
+| 2026-11-22 | A1 | G2-35 | P2 | A2 | Bulk add rows, leftovers | Amber text at 3.2-3.8:1 | accept | palette.warningText for text (audit G2 a1) |
+| 2026-11-22 | A1 | G2-36 | P2 | A3, A4, A5, H5 | Candidate picker, Log water | Chosen match only a check; slider speaks a percent; OK can log twice | accept | selected semantics; amount formatter; a saving guard (audit G2 a1) |
+| 2026-11-22 | A1 | G2-37 | P3 | A3, A4 | Bulk add, activity search, fasting, basket, water | Tooltips without the food; announce from build; model hint not a button; search without a label; bare percent ring; basket title not a heading; "OK" | accept | As the audit says; the ring keeps its size; "Log" for OK is an upstream PR candidate, as upstream's water test taps OK (audit G2 a1) |
+| 2026-11-22 | A1 | G3-23 | P1 | H3, H5 | Recipe builder, Edit meal, profile editor | A picked or removed photo reaches disk before Save; Discard can't undo it | accept | The photo is staged and written on Save (audit G3 a1) |
+| 2026-11-22 | A1 | G3-24 | P2 | H9, A7, A5 | Recipes list, builder, detail, copy sheet | "No recipes yet" for a filter with no hits; titles not headings; "29 Carbs g" spoken; photo and copy errors unhandled | accept | "No recipes match" with Clear; header semantics; spoken label; try/catch with a message (audit G3 a1) |
+| 2026-11-22 | A1 | G3-25 | P2 | H7 | Custom foods | No search | defer | New feature (audit G3 a1) |
+| 2026-11-22 | A1 | G3-26 | P2 | perf, A6, A10 | Thumbnails, totals strip, Active badge | Full-size decodes and existsSync in build; one-line totals at 200%; static accent | accept | Sized images with cached futures; wrapping strip; textAccent (audit G3 a1) |
+| 2026-11-22 | A1 | G3-27 | P3 | H3, H9, A3, A6, P1 | Profile editor, share QR, steppers, search, dialogs | No discard guard; snackbar behind the dialog; vague tooltips; one-line names; hand-drawn handles; canPop false | accept | As the audit says (audit G3 a1) |
+| 2026-11-22 | A1 | G3-28 | P3 | H8 | Recipes page | Hard-coded radii; the + menu repeats the footer | defer | Polish only (audit G3 a1) |
+| 2026-11-22 | A1 | G4-26 | P1 | A2 | Check-in history | Phase chip text 2.06:1 (cut) and 4.45:1 (bulk) | accept | Text colour through the 4.5:1 helper (audit G4 a1) |
+| 2026-11-22 | A1 | G4-27 | P2 | A3, A1, A7, A4 | Goal calendar, check-in, macro program | Day cells expose no tap action and are 40 dp; titles not headings; per-kg fields unnamed | accept | onTap on the Semantics, 48 dp; header semantics; labelText (audit G4 a1) |
+| 2026-11-22 | A1 | G4-28 | P2 | H5, H9 | Check-in review | Accept and Keep can add two check-ins; an invalid target only gets a snackbar | accept | A busy flag; field error and a digits formatter (audit G4 a1) |
+| 2026-11-22 | A1 | G4-29 | P3 | H4, H5, A5, A9, perf | Calendar, partial days, goal pages, plan, history | Plain destructive confirms; repeated buttons; static accent; "–" spoken; re-reads on rebuild; no bottom inset | accept | As the audit says (audit G4 a1) |

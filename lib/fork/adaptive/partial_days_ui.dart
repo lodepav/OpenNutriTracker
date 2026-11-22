@@ -12,6 +12,9 @@ class PartialDaysCard extends StatelessWidget {
 
   /// Automatic check-ins wait for the answer, which the card says.
   final bool heldBack;
+
+  /// While an answer is saved, the buttons are off.
+  final bool saving;
   final void Function(DateTime day) onLeaveOut;
   final void Function(DateTime day) onKeep;
 
@@ -19,6 +22,7 @@ class PartialDaysCard extends StatelessWidget {
     super.key,
     required this.days,
     required this.heldBack,
+    this.saving = false,
     required this.onLeaveOut,
     required this.onKeep,
   });
@@ -36,7 +40,13 @@ class PartialDaysCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('Logged only in part?', style: theme.textTheme.titleMedium),
+            Semantics(
+              header: true,
+              child: Text(
+                'Logged only in part?',
+                style: theme.textTheme.titleMedium,
+              ),
+            ),
             const SizedBox(height: 4),
             Text(
               '${days.length == 1 ? 'This day is' : 'These days are'} far '
@@ -60,15 +70,25 @@ class PartialDaysCard extends StatelessWidget {
                   Semantics(
                     identifier: 'partial-day-leave-out-${_id(day.date)}',
                     child: TextButton(
-                      onPressed: () => onLeaveOut(day.date),
-                      child: const Text('Leave out'),
+                      onPressed: saving ? null : () => onLeaveOut(day.date),
+                      // the date said after the name: the pairs repeat
+                      child: Text(
+                        'Leave out',
+                        semanticsLabel:
+                            'Leave out, ${DateFormat.MMMd(locale).format(day.date)}',
+                      ),
                     ),
                   ),
                   Semantics(
                     identifier: 'partial-day-keep-${_id(day.date)}',
                     child: TextButton(
-                      onPressed: () => onKeep(day.date),
-                      child: const Text('Count as full day'),
+                      onPressed: saving ? null : () => onKeep(day.date),
+                      child: Text(
+                        'Count as full day',
+                        semanticsLabel:
+                            'Count as full day, '
+                            '${DateFormat.MMMd(locale).format(day.date)}',
+                      ),
                     ),
                   ),
                 ],

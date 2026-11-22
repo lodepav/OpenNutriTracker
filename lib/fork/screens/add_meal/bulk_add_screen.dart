@@ -10,6 +10,7 @@ import 'package:flutter/semantics.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/presentation/widgets/badged_title.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:logging/logging.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -18,7 +19,9 @@ import 'package:opennutritracker/features/add_meal/presentation/add_meal_type.da
 import 'package:opennutritracker/core/utils/ai_credential_storage.dart';
 import 'package:opennutritracker/features/add_meal/domain/usecase/run_ai_endpoint_probe_usecase.dart';
 import 'package:opennutritracker/core/utils/ai_model_catalogue.dart';
+import 'package:opennutritracker/core/utils/calc/unit_calc.dart';
 import 'package:opennutritracker/core/utils/energy_display.dart';
+import 'package:opennutritracker/core/utils/energy_unit_provider.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/core/utils/navigation_options.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dart';
@@ -535,6 +538,8 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
         _quantityErrors.containsKey(index)) {
       _clearQuantityError(index);
     }
+    // said here, where it was answered, so a rebuild cannot say it again
+    _sayAmountAnswer(context);
   }
 
   Future<void> _chooseCookingFat(int choice) async {
@@ -549,14 +554,48 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
   void _sayAmountAnswer(BuildContext context) {
     final said = _review.takeAmountSaid();
     if (said == null) return;
+    // EnergyDisplay.formatSumWithUnit's sum of rounded rows, read without
+    // listening: this runs from the tap, where watching is not allowed
+    final kj = Provider.of<EnergyUnitProvider>(
+      context,
+      listen: false,
+    ).usesKilojoules;
+    final sum = loggedKcals(said.rows).fold(
+      0,
+      (sum, kcal) => sum + (kj ? UnitCalc.kcalToKj(kcal) : kcal).round(),
+    );
     final message = DishStrings.amountSaid(
       said.amount,
-      EnergyDisplay.formatSumWithUnit(context, loggedKcals(said.rows)),
+      '$sum ${EnergyDisplay.unitLabelStatic(context)}',
     );
     final view = View.of(context);
     final direction = Directionality.of(context);
     WidgetsBinding.instance.addPostFrameCallback(
       (_) => SemanticsService.sendAnnouncement(view, message, direction),
+    );
+  }
+
+  /// A read to a screen reader, once as it changes: started, the foods it
+  /// found, or why it failed. The list and the messages say it on screen.
+  void _sayReadStatus(BuildContext context, BulkAddState state) {
+    final message = switch (state) {
+      BulkAddLoadingState() => 'Reading the meal',
+      BulkAddLoadedState(:final rows) when rows.isEmpty => _nothingFoundText(
+        context,
+        state,
+      ),
+      BulkAddLoadedState(:final rows, :final modelFailure) => [
+        'Found ${rows.length} ${rows.length == 1 ? 'food' : 'foods'}',
+        // the parser's rows, and why the model did not read them
+        if (modelFailure != null) _modelFailureText(context, modelFailure),
+      ].join('. '),
+      _ => _readFailedText(context, state),
+    };
+    if (message == null) return;
+    SemanticsService.sendAnnouncement(
+      View.of(context),
+      message,
+      Directionality.of(context),
     );
   }
 
@@ -688,8 +727,13 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
         ],
       ),
       body: SafeArea(
-        child: BlocBuilder<BulkAddBloc, BulkAddState>(
+        child: BlocConsumer<BulkAddBloc, BulkAddState>(
           bloc: _bloc,
+          // into and out of a read only: a row edit is a new loaded state too
+          listenWhen: (previous, next) =>
+              (previous is BulkAddLoadingState) !=
+              (next is BulkAddLoadingState),
+          listener: _sayReadStatus,
           builder: (context, state) => LayoutBuilder(
             builder: (context, constraints) => Column(
               children: [
@@ -779,6 +823,7 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
       final theme = Theme.of(context);
       return Semantics(
         identifier: 'bulk-add-model-hint',
+        button: true,
         child: Padding(
           // The screen's 16 dp edge, which the list below it has not
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
@@ -1409,6 +1454,8 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
               ),
               for (var i = 0; i < row.resolved.candidates.length; i++)
                 ListTile(
+                  // said as selected, not only drawn with a check
+                  selected: i == row.selectedIndex,
                   title: Text(row.resolved.candidates[i].name ?? ''),
                   subtitle: _candidateSubtitle(
                     context,

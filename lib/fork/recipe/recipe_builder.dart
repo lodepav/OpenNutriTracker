@@ -227,29 +227,33 @@ class BuilderSaveBar extends StatelessWidget {
     final theme = Theme.of(context);
     final palette = paletteOf(context);
     double of(double? value) => (value ?? 0) * totalWeightG / 100;
-    Widget figure(String value, String label, Color? color) => Expanded(
-      child: MergeSemantics(
-        child: Column(
-          children: [
-            Text(
-              value,
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w800,
-                color: color,
-              ),
+    // Spoken "29 grams carbs", as the totals strip says it (A5)
+    Widget figure(String value, String label, Color? color, {String? macro}) =>
+        Expanded(
+          child: Semantics(
+            label: macro == null ? '$value $label' : '$value grams $macro',
+            excludeSemantics: true,
+            child: Column(
+              children: [
+                Text(
+                  value,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    color: color,
+                  ),
+                ),
+                // Wraps at large text rather than cut "protein" (A6)
+                Text(
+                  label,
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: palette.textMuted,
+                  ),
+                ),
+              ],
             ),
-            // Wraps at large text rather than cut "protein" (A6)
-            Text(
-              label,
-              textAlign: TextAlign.center,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: palette.textMuted,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+          ),
+        );
     return Material(
       color: palette.surface,
       child: SafeArea(
@@ -276,16 +280,19 @@ class BuilderSaveBar extends StatelessWidget {
                       '${of(per100.carbohydrates100).round()}',
                       '${s.carbsLabel} g',
                       palette.carbs,
+                      macro: s.carbsLabel.toLowerCase(),
                     ),
                     fat: figure(
                       '${of(per100.fat100).round()}',
                       '${s.fatLabel} g',
                       palette.fat,
+                      macro: s.fatLabel.toLowerCase(),
                     ),
                     protein: figure(
                       '${of(per100.proteins100).round()}',
                       '${s.proteinLabel} g',
                       palette.protein,
+                      macro: s.proteinLabel.toLowerCase(),
                     ),
                   ),
                 ],

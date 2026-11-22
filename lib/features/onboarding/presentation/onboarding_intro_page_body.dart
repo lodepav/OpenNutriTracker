@@ -39,10 +39,25 @@ class _OnboardingIntroPageBodyState extends State<OnboardingIntroPageBody> {
   late bool _acceptedDataCollection = widget.initialAcceptedDataCollection;
   bool _seedingDemo = false;
 
+  // [fork] S470 intro-init: made once, not on every checkbox tap's rebuild
+  late final Future<String> _forkVersion = AppConst.getVersionNumber();
+  late final TapGestureRecognizer _forkPolicyTap = TapGestureRecognizer()
+    ..onTap = _launchUrl;
+
+  @override
+  void dispose() {
+    _forkPolicyTap.dispose();
+    super.dispose();
+  }
+  // [/fork]
+
   @override
   Widget build(BuildContext context) {
     return FutureBuilder(
-      future: AppConst.getVersionNumber(),
+      // [fork] S470 intro-init
+      future: _forkVersion,
+      // future: AppConst.getVersionNumber(),
+      // [/fork]
       builder: (BuildContext context, AsyncSnapshot<dynamic> snapshot) {
         if (snapshot.hasData) {
           // Scroll so the demo CTA + checkboxes still fit on shorter
@@ -93,10 +108,13 @@ class _OnboardingIntroPageBodyState extends State<OnboardingIntroPageBody> {
                                 color: Theme.of(context).colorScheme.primary,
                                 decoration: TextDecoration.underline,
                               ),
-                          recognizer: TapGestureRecognizer()
-                            ..onTap = () {
-                              _launchUrl();
-                            },
+                          // [fork] S470 intro-init
+                          recognizer: _forkPolicyTap,
+                          // recognizer: TapGestureRecognizer()
+                          //   ..onTap = () {
+                          //     _launchUrl();
+                          //   },
+                          // [/fork]
                         ),
                       ],
                     ),

@@ -296,13 +296,22 @@ class _Timer extends StatelessWidget {
                 child: Stack(
                   alignment: Alignment.center,
                   children: [
-                    SizedBox.expand(
-                      child: CircularProgressIndicator(
-                        value: progress,
-                        strokeWidth: 12,
-                        strokeCap: StrokeCap.round,
-                        color: accent,
-                        backgroundColor: palette.surfaceMuted,
+                    // hours, not the bare percent the ring says by itself
+                    // (its value must be a number, so it is left out)
+                    Semantics(
+                      label:
+                          'Fasted ${active.elapsed.isNegative ? 0 : active.elapsed.inHours} '
+                          'of $hoursText hours',
+                      child: ExcludeSemantics(
+                        child: SizedBox.expand(
+                          child: CircularProgressIndicator(
+                            value: progress,
+                            strokeWidth: 12,
+                            strokeCap: StrokeCap.round,
+                            color: accent,
+                            backgroundColor: palette.surfaceMuted,
+                          ),
+                        ),
                       ),
                     ),
                     // The ring is fixed; the text scales down into it at

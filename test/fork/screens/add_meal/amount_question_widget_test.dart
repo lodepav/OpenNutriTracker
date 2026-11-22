@@ -171,9 +171,9 @@ final _getIt = GetIt.instance;
 late BulkAddBloc _bloc;
 late _PhotoReader _reader;
 
-Widget _app({String? sharedPhotoPath}) =>
+Widget _app({String? sharedPhotoPath, bool kj = false}) =>
     ChangeNotifierProvider<EnergyUnitProvider>(
-      create: (_) => EnergyUnitProvider(usesKilojoules: false),
+      create: (_) => EnergyUnitProvider(usesKilojoules: kj),
       child: MaterialApp(
         localizationsDelegates: const [
           S.delegate,
@@ -230,12 +230,12 @@ Future<void> _register({bool photos = false}) async {
     ..registerSingleton<BulkAddBloc>(_bloc);
 }
 
-Future<void> _open(WidgetTester tester) async {
+Future<void> _open(WidgetTester tester, {bool kj = false}) async {
   tester.view.physicalSize = const Size(800, 2400);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
   await _register();
-  await tester.pumpWidget(_app());
+  await tester.pumpWidget(_app(kj: kj));
   tester.state<NavigatorState>(find.byType(Navigator)).pushNamed('/bulk');
   await tester.pumpAndSettle();
 }
@@ -335,9 +335,13 @@ void main() {
     expect(_selected(tester, 1), 3);
     expect(find.text(DishStrings.amountAnswered), findsOneWidget);
     expect(find.text('How much chicken was it?'), findsNothing);
+    // once, from the tap: not again as the rows rebuild
     expect(
-      tester.takeAnnouncements().map((a) => a.message),
-      contains('150 grams. Meal now 460 kcal'),
+      tester
+          .takeAnnouncements()
+          .map((a) => a.message)
+          .where((m) => m.startsWith('150 grams')),
+      ['150 grams. Meal now 460 kcal'],
     );
 
     await _tap(tester, _size(0.6));
@@ -349,6 +353,24 @@ void main() {
     await _tap(tester, _choice(1, 1));
     expect(_row(1).amountText, '75');
     expect(_selected(tester, 1), 1);
+    semantics.dispose();
+  });
+
+  testWidgets('the answer says the meal in kJ when the profile shows kJ', (
+    tester,
+  ) async {
+    final semantics = tester.ensureSemantics();
+    await _open(tester, kj: true);
+    await _readPhoto(tester);
+    await _tap(tester, _choice(1, 3));
+    expect(
+      tester
+          .takeAnnouncements()
+          .map((a) => a.message)
+          .where((m) => m.startsWith('150 grams')),
+      // 669 + 1255, the rows rounded: 460 kcal exactly would be 1925
+      ['150 grams. Meal now 1924 kJ'],
+    );
     semantics.dispose();
   });
 

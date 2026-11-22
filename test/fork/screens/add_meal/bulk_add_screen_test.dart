@@ -765,6 +765,30 @@ void main() {
     expect(find.textContaining('Toast'), findsWidgets);
   });
 
+  testWidgets('a model that failed on typed text is said with the foods '
+      'found', (tester) async {
+    final semantics = tester.ensureSemantics();
+    await _registerWithFailingReader(
+      {
+        'toast': [_meal('Toast')],
+      },
+      const MealInterpreterException(
+        'request timed out',
+        failure: MealInterpreterFailure.timeout,
+      ),
+    );
+    await tester.pumpWidget(_app());
+    await tester.pumpAndSettle();
+    tester.takeAnnouncements();
+    await _parse(tester, '100g toast');
+
+    expect(tester.takeAnnouncements().map((a) => a.message), [
+      'Reading the meal',
+      'Found 1 food. ${l10nEn.bulkAddModelTimedOutLabel}',
+    ]);
+    semantics.dispose();
+  });
+
   testWidgets('the whole notice is readable at 2x on a narrow screen', (
     tester,
   ) async {
@@ -2360,7 +2384,8 @@ void main() {
       final l10n = await S.delegate.load(const Locale('en'));
       for (final imperial in [false, true]) {
         for (final typed in [false, true]) {
-          final reason = '${imperial ? 'imperial' : 'metric'}, '
+          final reason =
+              '${imperial ? 'imperial' : 'metric'}, '
               '${typed ? 'typed' : 'stepped'}';
           await tester.pumpWidget(_app(imperial: imperial));
           await _parse(tester, '2 eggs');

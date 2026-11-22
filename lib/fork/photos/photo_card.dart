@@ -38,6 +38,10 @@ typedef ShownPhoto = ({ProgressPhoto photo, File file});
 String _date(BuildContext context, DateTime d) =>
     DateFormat.yMMMd(Localizations.localeOf(context).toLanguageTag()).format(d);
 
+/// A photo's spoken name: "Progress photo, Nov 1, 2026".
+String _photoName(BuildContext context, DateTime d) =>
+    'Progress photo, ${_date(context, d)}';
+
 /// Seam S40: progress photos on Trends, kept on the device and in the
 /// backup. A strip of thumbnails, each opening to view or delete, and a
 /// side-by-side compare of any two.
@@ -264,35 +268,43 @@ class _ProgressPhotosCardState extends State<ProgressPhotosCard> {
                 // Newest first.
                 itemBuilder: (context, i) {
                   final shown = photos[photos.length - 1 - i];
-                  return InkWell(
-                    key: ValueKey('photo-${shown.photo.id}'),
+                  // One button that says it is a photo, not a bare date.
+                  return Semantics(
+                    container: true,
+                    button: true,
+                    label: _photoName(context, shown.photo.date),
                     onTap: () => _open(shown),
-                    // The date wraps under its photo: at 200% it ran into the next.
-                    child: SizedBox(
-                      width: _thumbWidth,
-                      child: Column(
-                        children: [
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
-                            child: Image.file(
-                              shown.file,
-                              width: _thumbWidth,
-                              height: 128,
-                              fit: BoxFit.cover,
-                              cacheWidth: 192,
-                              errorBuilder: (_, _, _) => const SizedBox(
+                    excludeSemantics: true,
+                    child: InkWell(
+                      key: ValueKey('photo-${shown.photo.id}'),
+                      onTap: () => _open(shown),
+                      // The date wraps under its photo: at 200% it ran into the next.
+                      child: SizedBox(
+                        width: _thumbWidth,
+                        child: Column(
+                          children: [
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.file(
+                                shown.file,
                                 width: _thumbWidth,
                                 height: 128,
-                                child: Icon(Icons.broken_image_outlined),
+                                fit: BoxFit.cover,
+                                cacheWidth: 192,
+                                errorBuilder: (_, _, _) => const SizedBox(
+                                  width: _thumbWidth,
+                                  height: 128,
+                                  child: Icon(Icons.broken_image_outlined),
+                                ),
                               ),
                             ),
-                          ),
-                          Text(
-                            _date(context, shown.photo.date),
-                            style: theme.textTheme.labelSmall,
-                            textAlign: TextAlign.center,
-                          ),
-                        ],
+                            Text(
+                              _date(context, shown.photo.date),
+                              style: theme.textTheme.labelSmall,
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   );
@@ -393,11 +405,15 @@ class _ComparePhotosScreenState extends State<ComparePhotosScreen> {
     }
     setState(() => _busy = true);
     try {
-      MealPhoto read(File f) =>
-          MealPhoto(bytes: f.readAsBytesSync(), mediaType: 'image/jpeg');
+      Future<MealPhoto> read(File f) async =>
+          MealPhoto(bytes: await f.readAsBytes(), mediaType: 'image/jpeg');
+      final (earlierPhoto, laterPhoto) = await (
+        read(earlier.file),
+        read(later.file),
+      ).wait;
       final result = await _useCase!.compare(
-        earlier: read(earlier.file),
-        later: read(later.file),
+        earlier: earlierPhoto,
+        later: laterPhoto,
         earlierDay: earlierDay,
         laterDay: laterDay,
       );
@@ -457,20 +473,23 @@ class _ComparePhotosScreenState extends State<ComparePhotosScreen> {
             icon: const Icon(Icons.auto_awesome_outlined),
             label: Text(answered ? 'AI result' : 'Ask AI'),
           );
-    // Stacked, each picker names the photo it sets.
+    // Stacked, each picker shows the photo it sets; side by side, it is
+    // only spoken.
     final left = _picker(
       'compare-left',
       _left,
       _right,
       (i) => _left = i,
-      label: stacked ? 'Left photo' : null,
+      label: 'Left photo',
+      shown: stacked,
     );
     final right = _picker(
       'compare-right',
       _right,
       _left,
       (i) => _right = i,
-      label: stacked ? 'Right photo' : null,
+      label: 'Right photo',
+      shown: stacked,
     );
     return Scaffold(
       appBar: AppBar(
@@ -567,42 +586,47 @@ class _ComparePhotosScreenState extends State<ComparePhotosScreen> {
     int index,
     int other,
     void Function(int) set, {
-    String? label,
-  }) =>
-      // Aligned, the menu opens as wide as its field instead of past it to
-      // the screen edge.
-      ButtonTheme(
-        alignedDropdown: true,
-        child: DropdownButtonFormField<int>(
-          key: ValueKey(key),
-          // Within its half of the page: a long date overflowed it at 200%.
-          isExpanded: true,
-          // Unset, a date wraps to two lines at large text instead of cutting.
-          itemHeight: null,
-          initialValue: index,
-          // Outlined, so the two pickers read as separate controls.
-          decoration: InputDecoration(
-            labelText: label,
-            border: const OutlineInputBorder(),
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: Dimens.spacing12,
-              vertical: Dimens.spacing8,
+    required String label,
+    required bool shown,
+  }) => Semantics(
+    // Once: a shown label is the field's own name already.
+    label: shown ? null : label,
+    child:
+        // Aligned, the menu opens as wide as its field instead of past it to
+        // the screen edge.
+        ButtonTheme(
+          alignedDropdown: true,
+          child: DropdownButtonFormField<int>(
+            key: ValueKey(key),
+            // Within its half of the page: a long date overflowed it at 200%.
+            isExpanded: true,
+            // Unset, a date wraps to two lines at large text instead of cutting.
+            itemHeight: null,
+            initialValue: index,
+            // Outlined, so the two pickers read as separate controls.
+            decoration: InputDecoration(
+              labelText: shown ? label : null,
+              border: const OutlineInputBorder(),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: Dimens.spacing12,
+                vertical: Dimens.spacing8,
+              ),
             ),
+            items: [
+              for (final (i, s) in widget.photos.indexed)
+                // Its own value stays, as the picker must hold it.
+                if (i == index || i != other)
+                  DropdownMenuItem(
+                    value: i,
+                    child: Text(_date(context, s.photo.date)),
+                  ),
+            ],
+            onChanged: (i) {
+              if (i != null) setState(() => set(i));
+            },
           ),
-          items: [
-            for (final (i, s) in widget.photos.indexed)
-              // Its own value stays, as the picker must hold it.
-              if (i == index || i != other)
-                DropdownMenuItem(
-                  value: i,
-                  child: Text(_date(context, s.photo.date)),
-                ),
-          ],
-          onChanged: (i) {
-            if (i != null) setState(() => set(i));
-          },
         ),
-      );
+  );
 
   Widget _side(int index, Widget? picker) => Expanded(
     child: Column(
@@ -613,6 +637,10 @@ class _ComparePhotosScreenState extends State<ComparePhotosScreen> {
             padding: const EdgeInsets.only(top: Dimens.spacing8),
             child: Image.file(
               widget.photos[index].file,
+              semanticLabel: _photoName(
+                context,
+                widget.photos[index].photo.date,
+              ),
               fit: BoxFit.contain,
               alignment: Alignment.topCenter,
               errorBuilder: (_, _, _) =>

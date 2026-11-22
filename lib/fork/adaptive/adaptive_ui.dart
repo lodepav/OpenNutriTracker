@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:opennutritracker/core/data/repository/user_repository.dart';
 import 'package:opennutritracker/core/domain/entity/body_weight_unit_entity.dart';
@@ -239,8 +240,30 @@ class _AdaptiveCheckInCardState extends State<AdaptiveCheckInCard> {
     // profile (its goal) changes.
     _syncDailyGoal();
     // behind the banner too: a goal changed under it makes another due
-    if (AutoCheckIn.accepted.value == null) _due = _readDue();
+    if (AutoCheckIn.accepted.value == null) _rereadDue();
     _autoAccept();
+  }
+
+  /// A read of [_due] from a rebuild is under way, and one more is asked.
+  bool _reading = false, _readAgain = false;
+
+  /// Reads [_due] again, once more after the read under way rather than
+  /// one a rebuild.
+  // shortcut: still a read per burst of Home rebuilds; a notifier for a
+  // goal or day change would let it read only then.
+  void _rereadDue() {
+    if (_reading) {
+      _readAgain = true;
+      return;
+    }
+    _reading = true;
+    _due = _readDue().whenComplete(() {
+      _reading = false;
+      if (_readAgain && mounted) {
+        _readAgain = false;
+        if (AutoCheckIn.accepted.value == null) setState(_rereadDue);
+      }
+    });
   }
 
   @override
@@ -553,6 +576,13 @@ class _CheckInScreenState extends State<CheckInScreen> {
   late var _data = (_checkIn, _last, _goalNow, _weightUnit).wait;
   final _target = TextEditingController();
 
+  /// Accept's complaint about the target, said under the field.
+  final _targetError = ValueNotifier<String?>(null);
+
+  /// While a check-in is saved, Accept and Keep are off: a second tap
+  /// would record a second one.
+  bool _accepting = false;
+
   /// The proposal, rounded, [_target] was filled for: an answer that moves
   /// it refills the field, one that doesn't leaves what was typed.
   int? _filledFor;
@@ -642,14 +672,27 @@ class _CheckInScreenState extends State<CheckInScreen> {
     required String unit,
     required int Function(double kcal) shown,
   }) async {
-    final now = await _today.catchError((Object _) => null);
-    if (!mounted) return;
-    final move = _goalMove(now, targetKcal, shown);
-    final messenger = ScaffoldMessenger.of(context);
-    final persist = undoBarPersists(context);
+    // Set before the first await: two taps in one frame both get here.
+    if (_accepting) return;
+    setState(() => _accepting = true);
+    final _TodayGoal? now;
+    final List<CheckInRecord> before;
+    final ScaffoldMessengerState messenger;
+    final bool persist;
     final service = widget.service;
-    final before = await service.checkIns();
-    await service.accept(checkIn, targetKcal);
+    try {
+      now = await _today.catchError((Object _) => null);
+      if (!mounted) return;
+      messenger = ScaffoldMessenger.of(context);
+      persist = undoBarPersists(context);
+      before = await service.checkIns();
+      await service.accept(checkIn, targetKcal);
+    } catch (_) {
+      // kept off once saved, as the screen leaves
+      if (mounted) setState(() => _accepting = false);
+      rethrow;
+    }
+    final move = _goalMove(now, targetKcal, shown);
     messenger.removeCurrentSnackBar();
     // said on Home, which comes back away from the ring
     messenger.showSnackBar(
@@ -681,6 +724,7 @@ class _CheckInScreenState extends State<CheckInScreen> {
   @override
   void dispose() {
     _target.dispose();
+    _targetError.dispose();
     super.dispose();
   }
 
@@ -795,7 +839,8 @@ class _CheckInScreenState extends State<CheckInScreen> {
               // the check-in before an answer, until it is read again
               enabled:
                   snapshot.connectionState == ConnectionState.done &&
-                  !_answering,
+                  !_answering &&
+                  !_accepting,
             );
           },
         ),
@@ -854,6 +899,7 @@ class _CheckInScreenState extends State<CheckInScreen> {
               builder: (context, partial) => PartialDaysCard(
                 days: partial.data ?? const [],
                 heldBack: settings.autoAcceptCheckIn,
+                saving: _answering,
                 onLeaveOut: _leaveOut,
                 onKeep: (day) =>
                     _answerPartial(() => widget.service.keepDay(day)),
@@ -925,7 +971,7 @@ class _CheckInScreenState extends State<CheckInScreen> {
             const SizedBox(height: 12),
             // The rows under the field follow what is typed in it.
             ListenableBuilder(
-              listenable: _target,
+              listenable: Listenable.merge([_target, _targetError]),
               builder: (context, _) {
                 final target = _typedTarget(checkIn, proposed);
                 final edited =
@@ -969,11 +1015,15 @@ class _CheckInScreenState extends State<CheckInScreen> {
                       key: const ValueKey('check-in-target'),
                       controller: _target,
                       keyboardType: TextInputType.number,
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                      onChanged: (_) => _targetError.value = null,
                       decoration: InputDecoration(
                         labelText: daily
                             ? 'Daily target before activity'
                             : 'Daily target',
                         suffixText: energyUnit(context),
+                        // gone once the field holds a target again
+                        errorText: target == null ? _targetError.value : null,
                       ),
                     ),
                   ),
@@ -1213,13 +1263,8 @@ class _CheckInScreenState extends State<CheckInScreen> {
                   : () async {
                       final typed = double.tryParse(_target.text.trim());
                       if (typed == null || !typed.isFinite || typed <= 0) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              'Enter a daily target above 0 $unit.',
-                            ),
-                          ),
-                        );
+                        _targetError.value =
+                            'Enter a daily target above 0 $unit.';
                         return;
                       }
                       await _done(
@@ -1315,11 +1360,10 @@ class _CheckInScreenState extends State<CheckInScreen> {
             Text(label),
             Text(
               value,
-              style: TextStyle(
-                fontWeight: large ? FontWeight.w700 : FontWeight.w600,
-                fontSize: large ? 20 : null,
-                color: color,
-              ),
+              style:
+                  (large ? Theme.of(context).textTheme.titleLarge : null)
+                      ?.copyWith(fontWeight: FontWeight.w700, color: color) ??
+                  TextStyle(fontWeight: FontWeight.w600, color: color),
             ),
           ],
         ),
@@ -1357,9 +1401,12 @@ class _CheckInScreenState extends State<CheckInScreen> {
             ),
             const SizedBox(width: 12),
             Flexible(
-              child: Text(
-                title,
-                style: Theme.of(context).textTheme.titleMedium,
+              child: Semantics(
+                header: true,
+                child: Text(
+                  title,
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
               ),
             ),
           ],

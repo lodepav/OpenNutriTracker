@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:opennutritracker/features/settings/presentation/widgets/health_sync_screen.dart'
+    show healthPlatformName;
 import 'package:opennutritracker/fork/health/health_sync_cards.dart';
 import 'package:opennutritracker/fork/health/weight_import_ui.dart';
 import 'package:opennutritracker/generated/l10n.dart';
@@ -67,6 +69,29 @@ void main() {
       isTrue,
     );
     expect(find.text('Imported 3 days'), findsOneWidget);
+  });
+
+  testWidgets('a failed read names the health store as the page does', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _app(
+        _weightTile(
+          isOn: () async => false,
+          turnOn: () async => throw Exception('down'),
+          turnOff: () async {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.bySemanticsIdentifier('health-sync-weight'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Continue'));
+    await tester.pumpAndSettle();
+    expect(
+      find.text('Could not read weight from $healthPlatformName'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('Cancel on the disclosure asks nothing and leaves it off', (

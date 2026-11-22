@@ -151,6 +151,17 @@ class _HealthSyncScreenState extends State<HealthSyncScreen> {
     if (!enabled) {
       setState(() => _importEnabled = false);
       await locator<SettingsBloc>().setHealthImportEnabled(false);
+      // [fork] S457 workouts-off-says: what stays, as the other cards say
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Workout import off; imported workouts stay in the diary',
+            ),
+          ),
+        );
+      }
+      // [/fork]
       return;
     }
 
@@ -336,12 +347,13 @@ class _HealthSyncScreenState extends State<HealthSyncScreen> {
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : ListView(
-              // [fork] S138 health-connect
-              padding: const EdgeInsets.fromLTRB(
+              // [fork] S138 health-connect: the last row clears the
+              // navigation bar, as explicit padding drops the inset
+              padding: EdgeInsets.fromLTRB(
                 Dimens.spacing12,
                 0,
                 Dimens.spacing12,
-                Dimens.spacing32,
+                Dimens.spacing32 + MediaQuery.paddingOf(context).bottom,
               ),
               // [/fork]
               children: [
