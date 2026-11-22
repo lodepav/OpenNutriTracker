@@ -320,6 +320,22 @@ void main() {
       expect(updates, {'rice': 100, 'curry': 150});
     });
 
+    testWidgets('the chosen fraction is filled in the accent (G2-13)', (
+      tester,
+    ) async {
+      await tap(tester, _curry);
+      await openWholeMeal(tester);
+      await tester.tap(find.text('½'));
+      await tester.pump();
+
+      final chip = find.ancestor(
+        of: find.text('½'),
+        matching: find.byType(ChoiceChip),
+      );
+      final scheme = Theme.of(tester.element(chip)).colorScheme;
+      expect(scheme.secondaryContainer, scheme.primary);
+    });
+
     testWidgets('each field names its food, and a name can wrap', (
       tester,
     ) async {
@@ -346,11 +362,12 @@ void main() {
       final updates = await tap(tester, _curry, imperial: true);
 
       await openWholeMeal(tester);
-      // 200 g of rice, shown as what it is in ounces, not "200 oz".
-      expect(find.text('7.1 → 7.1 oz'), findsOneWidget);
+      // 200 g of rice, shown as what it is in ounces, not "200 oz"; both
+      // amounts carry the unit (G2-25).
+      expect(find.text('7.1 oz → 7.1 oz'), findsOneWidget);
       await tester.enterText(find.byKey(const ValueKey('left-rice')), '3.5');
       await tester.pump();
-      expect(find.text('7.1 → 3.6 oz'), findsOneWidget);
+      expect(find.text('7.1 oz → 3.6 oz'), findsOneWidget);
       await tester.tap(find.text(LeftoverStrings.save));
       await tester.pumpAndSettle();
 

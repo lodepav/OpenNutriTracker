@@ -172,7 +172,8 @@ class BasketBar extends StatelessWidget {
               leading: const Icon(Icons.shopping_basket_rounded),
               title: Text(
                 '${items.length} ${target.planning != null ? 'to plan' : 'in the basket'} · '
-                '${energyText(context, target.totalKcal)}',
+                '${basketShownEnergy(items, (kcal) => energyValue(context, kcal))} '
+                '${energyUnit(context)}',
               ),
               trailing: const Text('Review'),
               onTap: () => showModalBottomSheet<void>(
@@ -194,6 +195,13 @@ class BasketBar extends StatelessWidget {
     );
   }
 }
+
+/// The basket's energy as its rows show it, each rounded by [shown] and
+/// then summed, so the bar and the meal card agree with the rows (#1469).
+int basketShownEnergy(
+  Iterable<BasketItem> items,
+  int Function(double kcal) shown,
+) => items.fold(0, (sum, i) => sum + shown(i.kcal));
 
 /// The day's totals for the basket's meal card; tests swap it.
 Future<DayTotals> Function(DateTime day) basketDayTotals = loadDayTotals;
@@ -264,7 +272,12 @@ class _BasketSheetState extends State<BasketSheet> {
   }
 
   void _empty() {
-    _closeWithUndo('Emptied the basket.', widget.basket.setAside());
+    _closeWithUndo(
+      widget.basket.planning != null
+          ? 'Cleared the foods to plan.'
+          : 'Emptied the basket.',
+      widget.basket.setAside(),
+    );
   }
 
   /// Closes the sheet and offers [restore] on the screen under it.
@@ -436,7 +449,7 @@ class _BasketSheetState extends State<BasketSheet> {
               ),
               // summed as the rows show it (#1469)
               Text(
-                '${items.fold(0, (sum, i) => sum + energyValue(context, i.kcal))} '
+                '${basketShownEnergy(items, (kcal) => energyValue(context, kcal))} '
                 '${energyUnit(context)}',
                 key: const ValueKey('basket-meal-kcal'),
                 style: theme.textTheme.titleMedium?.copyWith(
@@ -487,7 +500,8 @@ class _BasketSheetState extends State<BasketSheet> {
               Semantics(
                 header: true,
                 child: Text(
-                  'Basket',
+                  // as the bar names it while planning
+                  widget.basket.planning != null ? 'To plan' : 'Basket',
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
               ),
@@ -560,8 +574,8 @@ class _BasketSheetState extends State<BasketSheet> {
                         )
                       : null,
                   label: Text(
-                    'Log all ${items.length} to '
-                    '${mealLabel(context, widget.type)}',
+                    '${items.length == 1 ? 'Log 1 food' : 'Log all ${items.length}'} '
+                    'to ${mealLabel(context, widget.type)}',
                   ),
                 ),
                 OutlinedButton(
@@ -592,7 +606,11 @@ class _BasketSheetState extends State<BasketSheet> {
               ],
               TextButton(
                 onPressed: _logging ? null : _empty,
-                child: const Text('Empty the basket'),
+                child: Text(
+                  widget.basket.planning != null
+                      ? 'Clear the foods to plan'
+                      : 'Empty the basket',
+                ),
               ),
             ],
           ),

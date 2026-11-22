@@ -82,6 +82,11 @@ void main() {
     expect(find.text('Bicycling'), findsNWidgets(2));
     // Mid-sentence it stays lowercase.
     expect(find.text('Add 30 min bicycling'), findsOneWidget);
+    // and said in words, not "min" (audit G2 a3)
+    expect(
+      tester.widget<Text>(find.text('Add 30 min bicycling')).semanticsLabel,
+      'Add 30 minutes bicycling',
+    );
   });
 
   testWidgets(

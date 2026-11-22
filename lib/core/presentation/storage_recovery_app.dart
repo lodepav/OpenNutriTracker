@@ -2,6 +2,11 @@ import 'package:flutter/material.dart';
 // [fork] S112 storage-rescue
 import 'package:opennutritracker/fork/backup/storage_rescue.dart';
 // [/fork]
+// [fork] S544 recovery-theme-help
+import 'package:opennutritracker/core/styles/app_palette.dart';
+import 'package:opennutritracker/core/styles/app_theme.dart';
+import 'package:opennutritracker/core/utils/app_const.dart';
+// [/fork]
 
 class StorageRecoveryApp extends StatelessWidget {
   const StorageRecoveryApp({
@@ -17,6 +22,11 @@ class StorageRecoveryApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
+      // [fork] S544 recovery-theme-help: the app's palette, light and dark,
+      // in place of Flutter's default; it needs nothing startup sets up
+      theme: buildAppTheme(AppPalette.light),
+      darkTheme: buildAppTheme(AppPalette.dark),
+      // [/fork]
       home: _StorageRecoveryScreen(errorCode: errorCode, onRetry: onRetry),
     );
   }
@@ -93,9 +103,16 @@ class _StorageRecoveryScreenState extends State<_StorageRecoveryScreen> {
                               'the files that will not open aside on the phone '
                               'instead of deleting them. Do not clear the app '
                               'data or reinstall.'
+                        // [fork] S544 recovery-theme-help: an open-source app
+                        // has no support desk; say where to report it
+                        // : 'Your data files have not been changed. Try again. '
+                        //       'If the problem persists, contact support before '
+                        //       'clearing the app data or reinstalling.',
                         : 'Your data files have not been changed. Try again. '
-                              'If the problem persists, contact support before '
-                              'clearing the app data or reinstalling.',
+                              'If the problem persists, report the error code '
+                              'at ${AppConst.sourceCodeUrl.replaceFirst('https://', '')}/issues '
+                              'before clearing the app data or reinstalling.',
+                        // [/fork]
                     textAlign: TextAlign.center,
                   ),
                   // [/fork]

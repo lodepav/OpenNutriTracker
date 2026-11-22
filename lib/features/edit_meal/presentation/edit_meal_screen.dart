@@ -58,6 +58,7 @@ import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:opennutritracker/fork/widget/toolbar_height.dart'; // [fork] S132
 import 'package:opennutritracker/fork/edit_meal/simple_form.dart'; // [fork] S188
 import 'package:opennutritracker/fork/scan/scanner_error.dart'; // [fork] S520
+import 'package:opennutritracker/fork/custom_food/serving_mode.dart'; // [fork] S560
 
 class EditMealScreen extends StatefulWidget {
   const EditMealScreen({super.key});
@@ -1173,6 +1174,15 @@ class _EditMealScreenState extends State<EditMealScreen> {
           newMealEntity,
           previous: _mealEntity,
         );
+        // [fork] S560 custom-food-per-serving: the list says per serving
+        // for a food typed per serving (H2); the label updates at once and
+        // the save doesn't wait on the write
+        unawaited(CustomFoodModes().record(
+          CustomFoodModes.keyOf(newMealEntity),
+          perServing: _formMode == CustomMealFormMode.simple,
+          previousKey: CustomFoodModes.keyOf(_mealEntity),
+        ));
+        // [/fork]
       }
       // [fork] S478 photo-staging: the photo once the food is saved; a
       // one-off entry logs it too

@@ -19,6 +19,7 @@ import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dar
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_nutriments_entity.dart';
 import 'package:opennutritracker/features/edit_meal/presentation/bloc/edit_meal_bloc.dart';
 import 'package:opennutritracker/features/edit_meal/presentation/edit_meal_screen.dart';
+import 'package:opennutritracker/fork/custom_food/serving_mode.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 import 'package:provider/provider.dart';
 
@@ -117,6 +118,30 @@ void main() {
   }
 
   // the label card's "Per" is the form's mode
+  // S560 (G3-19): the Custom foods list says per serving for a food saved
+  // per serving, and per 100 g once it is saved per 100 g
+  testWidgets('the mode a food is saved in is recorded', (tester) async {
+    CustomFoodModes.perServing.value = const {};
+    addTearDown(() => CustomFoodModes.perServing.value = const {});
+    await pumpEditor(tester, customMeal(code: 'uuid-oats', name: 'Oats'));
+    await save(tester);
+    expect(CustomFoodModes.perServing.value, {'uuid-oats'});
+  });
+
+  testWidgets('a food saved per 100 g drops its per serving mark', (
+    tester,
+  ) async {
+    CustomFoodModes.perServing.value = const {'uuid-oats'};
+    addTearDown(() => CustomFoodModes.perServing.value = const {});
+    await pumpEditor(tester, customMeal(code: 'uuid-oats', name: 'Oats'));
+    await tester.tap(find.text('Per serving'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.textContaining('Per 100').last);
+    await tester.pumpAndSettle();
+    await save(tester);
+    expect(CustomFoodModes.perServing.value, isEmpty);
+  });
+
   testWidgets('per 100 g opens the label rows, and the rarer ones save too', (
     tester,
   ) async {

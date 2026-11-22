@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -58,6 +60,27 @@ class _SwitchingDb extends FakeHiveDBProvider {
 }
 
 void main() {
+  // G3-7: a profile onboarded today has no tracked day yet; its card asks
+  // for today's goal, as Home shows it, rather than "—"
+  test('the active profile without a tracked day shows today\'s goal',
+      () async {
+    final dir = Directory.systemTemp.createTempSync('profile_goal');
+    addTearDown(() => Hive.close());
+    Hive.init(dir.path);
+    final db = FakeHiveDBProvider(
+      activeProfileId: 'sam',
+      userBox: await Hive.openBox<UserDBO>('u'),
+      trackedDayBox: await Hive.openBox<TrackedDayDBO>('t'),
+      weightLogBox: await Hive.openBox<WeightLogDBO>('w'),
+    );
+    final stats = await readProfileStats(
+      db,
+      _sam,
+      todayGoal: () async => 2363,
+    );
+    expect(stats.kcalGoal, 2363);
+  });
+
   test('a profile switched to while its figures are read keeps its boxes '
       'open', () async {
     final db = _SwitchingDb('sam');
@@ -95,6 +118,7 @@ void main() {
     expect(stats.kcalGoal, 3097);
     expect(stats.trendKg, 87.1);
     expect(stats.daysLogged, 2);
+    expect(stats.firstDay, DateTime(2026, 10, 23));
   });
 
   test('a profile with nothing yet has no figures', () {
@@ -135,6 +159,8 @@ void main() {
                     kcalGoal: 3097,
                     trendKg: 87.1,
                     daysLogged: 41,
+                    // G3-12: history from before the profile was made
+                    firstDay: DateTime(2025, 11, 20),
                   ),
                 },
                 weightUnit: BodyWeightUnit.kg,
@@ -169,13 +195,23 @@ void main() {
       expect(read.first, contains('Active'));
       expect(read, contains('3097\nkcal goal'));
       expect(find.text('Active'), findsOneWidget);
-      expect(find.text('Lose weight · since Mar 2026'), findsOneWidget);
+      expect(find.text('Lose weight · since Nov 2025'), findsOneWidget);
       expect(find.text('3097'), findsOneWidget);
       expect(find.text('87.1 kg'), findsOneWidget);
       expect(find.text('41'), findsOneWidget);
       // Sam's figures are not read yet: dashes, and since when.
       expect(find.text('since Aug 2026'), findsOneWidget);
       expect(find.text('—'), findsNWidgets(3));
+      // G3 audit P3: a dash is spoken in words
+      final sam = tester.getSemantics(
+        find.bySemanticsIdentifier('profile-card-sam'),
+      );
+      final samRead = <String>[];
+      sam.visitChildren((n) {
+        samRead.add(n.label);
+        return true;
+      });
+      expect(samRead, contains('not known yet\nkcal goal'));
 
       expect(find.bySemanticsIdentifier('profile-switch-alex'), findsNothing);
       await tester.tap(find.bySemanticsIdentifier('profile-switch-sam'));

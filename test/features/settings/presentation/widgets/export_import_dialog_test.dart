@@ -1,3 +1,7 @@
+// [fork] S580 import-refresh-once
+import 'dart:async';
+
+// [/fork]
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -13,15 +17,37 @@ import 'package:opennutritracker/features/settings/presentation/widgets/export_i
 import 'package:opennutritracker/features/trends/presentation/bloc/trends_bloc.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 
-/// Sits in the state an import ends in, so the dialog runs its reload.
+// [fork] S580 import-refresh-once: the reload follows an import that ends,
+// not a build in the success state, which an export reaches too
+// /// Sits in the state an import ends in, so the dialog runs its reload.
+// class _SucceededExportImportBloc extends Fake implements ExportImportBloc {
+//   @override
+//   ExportImportState get state => ExportImportSuccess();
+//
+//   @override
+//   Stream<ExportImportState> get stream =>
+//       const Stream<ExportImportState>.empty();
+// }
+/// Ends an import in success, as the real bloc does.
 class _SucceededExportImportBloc extends Fake implements ExportImportBloc {
-  @override
-  ExportImportState get state => ExportImportSuccess();
+  final _states = StreamController<ExportImportState>.broadcast();
 
   @override
-  Stream<ExportImportState> get stream =>
-      const Stream<ExportImportState>.empty();
+  ExportImportState state = ExportImportInitial();
+
+  @override
+  Stream<ExportImportState> get stream => _states.stream;
+
+  @override
+  void add(ExportImportEvent event) {
+    if (event is! ImportDataEvent) return;
+    for (final next in [ExportImportLoadingState(), ExportImportSuccess()]) {
+      state = next;
+      _states.add(next);
+    }
+  }
 }
+// [/fork]
 
 final _events = <Object>[];
 
@@ -105,6 +131,10 @@ void main() {
     );
 
     await pumpDialog(tester);
+    // [fork] S580 import-refresh-once
+    await tester.tap(find.text('Import'));
+    await tester.pumpAndSettle();
+    // [/fork]
 
     expect(_events, contains(isA<LoadSettingsEvent>()));
     expect(_events, contains(isA<LoadProfileEvent>()));
@@ -119,6 +149,10 @@ void main() {
     register(const TrendsInitial());
 
     await pumpDialog(tester);
+    // [fork] S580 import-refresh-once
+    await tester.tap(find.text('Import'));
+    await tester.pumpAndSettle();
+    // [/fork]
 
     expect(_events.whereType<LoadTrendsEvent>(), isEmpty);
   });

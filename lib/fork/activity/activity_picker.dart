@@ -152,9 +152,10 @@ class ActivityPickerView extends StatelessWidget {
                 borderRadius: BorderRadius.circular(24),
                 borderSide: BorderSide(color: palette.border),
               ),
+              // an edge at 3:1 (WCAG 1.4.11); the border colour read 1.1:1
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(24),
-                borderSide: BorderSide(color: palette.border),
+                borderSide: BorderSide(color: palette.textMuted),
               ),
             ),
             onChanged: onSearch,
@@ -388,11 +389,14 @@ class _RecentChip extends StatelessWidget {
     final amount = activity.isCustom
         ? energyText(context, entry.burnedKcal)
         : '${entry.duration.round()} min';
+    final spoken = activity.isCustom
+        ? amount
+        : '${entry.duration.round()} minutes';
     return Center(
       child: Semantics(
         identifier: 'add-activity-recent-${activity.code}',
         button: true,
-        label: 'Log $name, $amount, again',
+        label: 'Log $name, $spoken, again',
         // Its own tap, since the chip's below is left out.
         onTap: onTap,
         excludeSemantics: true,
@@ -762,6 +766,7 @@ class _DurationSheetState extends State<DurationSheet> {
                   : null,
               child: Text(
                 'Add $_minutes min ${name.toLowerCase()}',
+                semanticsLabel: 'Add $_minutes minutes ${name.toLowerCase()}',
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.center,

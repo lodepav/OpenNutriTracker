@@ -316,6 +316,8 @@ void main() {
     await tester.pumpWidget(app());
     await tester.pumpAndSettle();
     final before = asked.length;
+    // G5-13: "Edit" alone did not say what it edits.
+    expect(find.text('Edit goals'), findsOneWidget);
     await tester.tap(find.bySemanticsIdentifier('nutrient-goals-edit'));
     await tester.pumpAndSettle();
     expect(edits, 1);

@@ -920,7 +920,7 @@ void main() {
       find.textContaining(
         'That is the expenditure less '
         '${checkIn.expenditureKcal.round() - proposed} kcal '
-        'for \u22120.50 kg a week',
+        'for \u22120.5 kg a week',
       ),
       findsOneWidget,
     );
@@ -1234,7 +1234,7 @@ void main() {
         findsOneWidget,
       );
       // The pace as Goal progress prints it.
-      expect(find.textContaining('for \u22121.10 lb a week'), findsOneWidget);
+      expect(find.textContaining('for \u22121.1 lb a week'), findsOneWidget);
       // To the nearest 100, as 7700 a kg is the familiar 3500 a lb.
       final perLb = (checkIn.kcalPerKg! / 2.20462 / 100).round() * 100;
       expect(

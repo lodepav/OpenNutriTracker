@@ -34,6 +34,7 @@ import 'package:opennutritracker/fork/widget/macro_widget.dart';
 // [fork] S182 shared-phase
 import 'package:opennutritracker/fork/phase/shared_phase.dart';
 // [/fork]
+import 'package:opennutritracker/fork/water/last_logged_water.dart'; // [fork] S550
 import 'package:opennutritracker/core/utils/calc/macro_calc.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/core/utils/tracked_day_lock.dart';
@@ -547,8 +548,12 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       dayStartOffsetTotalMinutes: config.dayStartOffsetTotalMinutes,
     );
     if (entries.isEmpty) return false;
-    entries.sort((a, b) => a.dateTime.compareTo(b.dateTime));
-    await _deleteWaterIntakeUsecase.deleteEntry(entries.last.id);
+    // [fork] S550 water-undo-logged-last: the latest by time could be a sample
+    // drink timed later than the one just logged
+    // entries.sort((a, b) => a.dateTime.compareTo(b.dateTime));
+    // await _deleteWaterIntakeUsecase.deleteEntry(entries.last.id);
+    await _deleteWaterIntakeUsecase.deleteEntry(lastLoggedWater(entries)!.id);
+    // [/fork]
     add(const LoadItemsEvent());
     return true;
   }

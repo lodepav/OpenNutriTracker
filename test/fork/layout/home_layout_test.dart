@@ -62,6 +62,9 @@ void main() {
     await tester.pumpAndSettle();
     expect(names, containsPair('strength', 'Strength'));
     expect(names, containsPair('checkIn', 'Weekly check-in'));
+    // A due check-in is a decision: above the tiles, not under the fold.
+    final ids = names.keys.toList();
+    expect(ids.indexOf('checkIn'), ids.indexOf('tiles') - 1);
   });
 
   testWidgets('the sections as arranged; the notices follow the plan', (

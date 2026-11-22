@@ -924,6 +924,34 @@ void main() {
     }
   });
 
+  testWidgets('the meal field has a label, not only a hint', (tester) async {
+    await _register({});
+    await tester.pumpWidget(_app());
+    tester.state<NavigatorState>(find.byType(Navigator)).pushNamed('/bulk');
+    await tester.pumpAndSettle();
+
+    final field = tester.widget<TextField>(find.byType(TextField).first);
+    expect(field.decoration!.hintText, l10nEn.bulkAddInputHint);
+    expect(field.decoration!.labelText, 'What you ate');
+  });
+
+  testWidgets('a row\'s Less and More sit 8 dp from its amount', (
+    tester,
+  ) async {
+    await _register({
+      'toast': [_meal('Toast', servingQuantity: 30)],
+    });
+    await tester.pumpWidget(_app());
+    await tester.pumpAndSettle();
+    await _parse(tester, '100g toast');
+
+    final less = tester.getRect(find.byKey(const ValueKey('bulk-add-less-0')));
+    final unit = tester.getRect(find.byKey(const ValueKey('bulk-add-unit-0')));
+    final more = tester.getRect(find.byKey(const ValueKey('bulk-add-more-0')));
+    expect(unit.left - less.right, greaterThanOrEqualTo(8));
+    expect(more.left - unit.right, greaterThanOrEqualTo(8));
+  });
+
   testWidgets('the button adds up the rows; a count says the grams it is', (
     tester,
   ) async {
@@ -1615,6 +1643,14 @@ void main() {
       findsOneWidget,
     );
     expect(picks, 0);
+    // a title, and a way out that says so (G2-19)
+    expect(find.text('What happens to a meal photo'), findsOneWidget);
+    await tester.tap(find.bySemanticsIdentifier('bulk-add-photo-cancel'));
+    await tester.pumpAndSettle();
+    expect(sheet, findsNothing);
+    expect(picks, 0);
+    await tester.tap(camera);
+    await tester.pumpAndSettle();
     await tester.tap(sheet);
     await tester.pumpAndSettle();
     expect(picks, 1);
@@ -3005,9 +3041,24 @@ void main() {
     // from the row's amount sheet (D37)
     await tester.tap(find.text('Egg'));
     await tester.pumpAndSettle();
+    // a search icon: ⇄ also marks "= 1 × Serving" in the same sheet (G2-19)
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('bulk-add-other-match')),
+        matching: find.byIcon(Icons.manage_search_rounded),
+      ),
+      findsOneWidget,
+    );
     await tester.tap(find.byKey(const ValueKey('bulk-add-other-match')));
     await tester.pumpAndSettle();
     expect(find.text(l10nEn.bulkAddChooseFoodLabel), findsOneWidget);
+    // the sheet's title is a heading (audit G2 a3)
+    final semantics = tester.ensureSemantics();
+    expect(
+      tester.getSemantics(find.text(l10nEn.bulkAddChooseFoodLabel)),
+      isSemantics(label: l10nEn.bulkAddChooseFoodLabel, isHeader: true),
+    );
+    semantics.dispose();
 
     await tester.tap(find.text('Egg, boxed').last);
     await tester.pumpAndSettle();

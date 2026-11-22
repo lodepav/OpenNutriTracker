@@ -259,16 +259,19 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
               ],
             ),
             'recentFoods': const RecentFoodsCard(),
+            // [fork] S600 check-in-first: a due check-in is a decision, so
+            // it comes before the tiles, where it sat below the fold
+            // S13 adaptive-check-in
+            'checkIn': AdaptiveCheckInCard(
+              onAccepted: () => _homeBloc.add(const LoadItemsEvent()),
+            ),
+            // [/fork]
             'tiles': HomeTiles(
               weightKg: userWeightKg,
               bodyWeightUnit: bodyWeightUnit,
               waterMl: waterMlToday,
               waterGoalMl: waterGoalMl,
               usesImperialUnits: usesImperialUnits,
-            ),
-            // S13 adaptive-check-in
-            'checkIn': AdaptiveCheckInCard(
-              onAccepted: () => _homeBloc.add(const LoadItemsEvent()),
             ),
             // [fork] S183 strength-signal: a calorie change to apply or
             // put off, from what Go Hevier reports

@@ -101,6 +101,7 @@ dependencies:
   # Dictating a meal on the Describe fields. Uses the platform recognizer
   # (Android SpeechRecognizer / iOS SFSpeech); no audio is sent by the app.
   speech_to_text: ^7.5.0
+  permission_handler: ^13.0.2
 
 dev_dependencies:
   flutter_test:

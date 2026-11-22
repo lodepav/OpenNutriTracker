@@ -110,8 +110,9 @@ String? measurementRangeHint({
 }
 
 /// The Add measurements dialog, its day saved to [store], with Undo for
-/// what it replaced; the first metric saved, or null when cancelled.
-Future<BodyMetric?> addMeasurements(
+/// what it replaced; the metrics saved, or null when cancelled or not
+/// saved.
+Future<Set<BodyMetric>?> addMeasurements(
   BuildContext context, {
   required bool imperial,
   MeasurementStore? store,
@@ -122,8 +123,20 @@ Future<BodyMetric?> addMeasurements(
   );
   if (values == null || values.$2.isEmpty) return null;
   final target = store ?? MeasurementStore();
-  final saved = await target.addDay(values.$1, values.$2);
-  if (!context.mounted) return values.$2.keys.first;
+  final ({List<Measurement> added, List<Measurement> replaced}) saved;
+  try {
+    saved = await target.addDay(values.$1, values.$2);
+  } catch (_) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Couldn't save the measurements. Try again."),
+        ),
+      );
+    }
+    return null;
+  }
+  if (!context.mounted) return values.$2.keys.toSet();
   if (saved.replaced.isNotEmpty) {
     final only = saved.replaced.length == 1 ? saved.replaced.single : null;
     final day = _dateText(context, values.$1);
@@ -151,7 +164,7 @@ Future<BodyMetric?> addMeasurements(
         ),
       );
   }
-  return values.$2.keys.first;
+  return values.$2.keys.toSet();
 }
 
 /// Seam S40: body measurements and body fat % on Trends, one metric
@@ -179,6 +192,9 @@ class _BodyMeasurementsCardState extends State<BodyMeasurementsCard> {
   late final _store = widget.store ?? MeasurementStore();
   late Future<(List<Measurement>, BodyFrame?)> _all = _load();
   BodyMetric? _picked;
+
+  /// The metric the chart shows, picked or the first measured.
+  BodyMetric? _inView;
 
   @override
   void initState() {
@@ -221,17 +237,30 @@ class _BodyMeasurementsCardState extends State<BodyMeasurementsCard> {
   String _date(DateTime d) => _dateText(context, d);
 
   Future<void> _add() async {
-    final first = await addMeasurements(
+    final saved = await addMeasurements(
       context,
       imperial: widget.imperial,
       store: _store,
     );
-    if (first != null && mounted) setState(() => _picked = first);
+    if (saved == null || !mounted) return;
+    // The chip stays on the metric in view when it was saved too.
+    setState(() => _picked = saved.contains(_inView) ? _inView : saved.first);
   }
 
   /// Deleted at once, with Undo, as diary entries and weigh-ins are.
   Future<void> _delete(Measurement m) async {
-    await _store.remove(m.id);
+    try {
+      await _store.remove(m.id);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Couldn't delete the measurement. Try again."),
+          ),
+        );
+      }
+      return;
+    }
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -269,6 +298,7 @@ class _BodyMeasurementsCardState extends State<BodyMeasurementsCard> {
             measured.contains,
             orElse: () => BodyMetric.bodyFat,
           );
+    _inView = measured.isEmpty ? null : metric;
     final now = DateTime.now();
     // Not a Duration: across a clock change it lands an hour off midnight.
     final from = DateTime(
@@ -624,7 +654,13 @@ class _AddMeasurementsDialogState extends State<_AddMeasurementsDialog> {
                   labelText: metric.label,
                   // The label floats so the unit shows before anything is typed.
                   floatingLabelBehavior: FloatingLabelBehavior.always,
-                  suffixText: _unitOf(metric, widget.imperial),
+                  // A widget, so TalkBack says "centimetres", not "c m".
+                  suffix: Text(
+                    _unitOf(metric, widget.imperial),
+                    semanticsLabel: spokenUnit(
+                      _unitOf(metric, widget.imperial),
+                    ),
+                  ),
                   errorText: _errors[metric],
                   errorMaxLines: 3,
                 ),

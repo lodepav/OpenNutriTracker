@@ -70,7 +70,24 @@ void main() {
   testWidgets('one profile: Try Demo shows', (tester) async {
     await pump(tester, 1);
     expect(tryDemo(), findsOneWidget);
-    expect(find.text(l10nEn.onboardingTryDemoSubtitle), findsOneWidget);
+    expect(
+      find.text(
+        'Skip setup and explore the app with sample data. Accept the privacy '
+        'policy first.',
+      ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('with the policy accepted, the demo caption stops asking for '
+      'it', (tester) async {
+    await pump(tester, 1);
+    await tester.tap(find.bySemanticsIdentifier('onboarding-checkbox-privacy'));
+    await tester.pumpAndSettle();
+    expect(
+      find.text('Skip setup and explore the app with sample data.'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('two profiles: Try Demo and its captions are gone', (
@@ -79,7 +96,7 @@ void main() {
     await pump(tester, 2);
     expect(tryDemo(), findsNothing);
     expect(find.text(l10nEn.onboardingTryDemoLabel), findsNothing);
-    expect(find.text(l10nEn.onboardingTryDemoSubtitle), findsNothing);
+    expect(find.textContaining('Skip setup'), findsNothing);
     expect(find.text(l10nEn.onboardingTryDemoDisclaimer), findsNothing);
     expect(find.text('Restore a backup'), findsOneWidget);
   });

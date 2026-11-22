@@ -91,6 +91,10 @@ void main() {
     await tester.pumpAndSettle();
 
     // Don't enter anything; just tap Add.
+    // [fork] S565 ingredient-prefill-100: the field starts at 100 g, so it
+    // is emptied first
+    await tester.enterText(find.byType(TextFormField).first, '');
+    // [/fork]
     await tester.tap(find.text('Add'));
     await tester.pumpAndSettle();
 

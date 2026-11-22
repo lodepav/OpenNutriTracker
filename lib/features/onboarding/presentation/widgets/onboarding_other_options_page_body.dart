@@ -14,6 +14,10 @@ import 'package:opennutritracker/core/utils/off_const.dart';
 import 'package:opennutritracker/core/utils/theme_mode_provider.dart';
 import 'package:opennutritracker/features/add_meal/data/dto/sp/sp_const.dart';
 import 'package:opennutritracker/generated/l10n.dart';
+// [fork] S594 fork English for stale strings
+import 'package:opennutritracker/fork/onboarding/onboarding_copy.dart'
+    as fork_copy;
+// [/fork]
 import 'package:provider/provider.dart';
 
 /// Onboarding "Other options" page: app theme, the food databases used by
@@ -186,10 +190,15 @@ class _OnboardingOtherOptionsPageBodyState
     final materialYouSelected = _useMaterialYou && _accentColor == null;
     // [fork] S336 accent-swatches: 48 dp swatches, each named for a screen
     // reader; the row is as tall as they are
-    return SizedBox(
-      height: 48,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
+    // [fork] S548 swatch-wrap: every colour in view, in rows; the scrolling
+    // row hid the rest with no cue
+    // return SizedBox(
+    //   height: 48,
+    //   child: ListView(
+    //     scrollDirection: Axis.horizontal,
+    return Wrap(
+        runSpacing: 8,
+    // [/fork]
         children: [
           if (isAndroid)
             Padding(
@@ -223,7 +232,9 @@ class _OnboardingOtherOptionsPageBodyState
               ),
             ),
         ],
-      ),
+    // [fork] S548 swatch-wrap
+    //   ),
+    // [/fork]
     );
     // return SizedBox(
     //   height: 44,
@@ -348,7 +359,10 @@ class _OnboardingOtherOptionsPageBodyState
             ),
             ), // [fork] S464
             Text(
-              s.onboardingOtherOptionsSubtitle,
+              // [fork] S594 options-copy: "Personalize" and an em dash
+              // s.onboardingOtherOptionsSubtitle,
+              fork_copy.otherOptionsSubtitle,
+              // [/fork]
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: Dimens.spacing24),
@@ -422,7 +436,10 @@ class _OnboardingOtherOptionsPageBodyState
                   child: SwitchListTile(
                     dense: true,
                     title: Text(s.settingsNotificationsLabel),
-                    subtitle: Text(s.notificationsDailyReminderBody),
+                    // [fork] S594 options-copy: the notification's own text
+                    // subtitle: Text(s.notificationsDailyReminderBody),
+                    subtitle: const Text(fork_copy.dailyReminderSubtitle),
+                    // [/fork]
                     value: _dailyReminderEnabled,
                     onChanged: (value) {
                       setState(() => _dailyReminderEnabled = value);

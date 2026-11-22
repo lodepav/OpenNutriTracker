@@ -30,8 +30,13 @@ class SplashScreen extends StatefulWidget {
 class _SplashScreenState extends State<SplashScreen>
     with SingleTickerProviderStateMixin {
   static const _logoSize = 168.0;
-  static const _startDelay = Duration(milliseconds: 350);
-  static const _spinDuration = Duration(milliseconds: 1700);
+  // [fork] S541 splash-quick: startup is done before runApp, so the splash
+  // only bridges the native launch canvas; the bite plays in 250 ms
+  // static const _startDelay = Duration(milliseconds: 350);
+  // static const _spinDuration = Duration(milliseconds: 1700);
+  static const _startDelay = Duration.zero;
+  static const _spinDuration = Duration(milliseconds: 250);
+  // [/fork]
 
   late final AnimationController _controller;
   late final Animation<double> _spin;
@@ -57,7 +62,10 @@ class _SplashScreenState extends State<SplashScreen>
     final reduceMotion = WidgetsBinding.instance.platformDispatcher
         .accessibilityFeatures.disableAnimations;
     if (reduceMotion) {
-      _startTimer = Timer(const Duration(milliseconds: 600), _goNext);
+      // [fork] S541 splash-quick
+      // _startTimer = Timer(const Duration(milliseconds: 600), _goNext);
+      _startTimer = Timer(_spinDuration, _goNext);
+      // [/fork]
     } else {
       // A short beat on the upright logo before the spin begins.
       _startTimer = Timer(_startDelay, () {
@@ -85,7 +93,13 @@ class _SplashScreenState extends State<SplashScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: Center(
+      // [fork] S541 splash-quick: the logo is named for TalkBack
+      // body: Center(
+      body: Semantics(
+        label: 'OpenBite',
+        image: true,
+        child: Center(
+      // [/fork]
         child: SizedBox(
           width: _logoSize,
           height: _logoSize,
@@ -95,6 +109,9 @@ class _SplashScreenState extends State<SplashScreen>
           // [/fork]
         ),
       ),
+      // [fork] S541 splash-quick
+      ),
+      // [/fork]
     );
   }
 }

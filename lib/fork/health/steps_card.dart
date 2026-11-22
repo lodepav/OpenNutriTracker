@@ -8,6 +8,8 @@ import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/fork/display/contrast.dart';
 import 'package:opennutritracker/fork/health/steps.dart';
 import 'package:opennutritracker/fork/trends/card_title.dart';
+import 'package:opennutritracker/fork/trends/detail_widgets.dart'
+    show ChartLegend;
 import 'package:opennutritracker/fork/display/chart_semantics.dart';
 
 typedef _Read = ({bool on, int goal, Map<DateTime, int>? days, bool failed});
@@ -224,6 +226,39 @@ class _StepsCardState extends State<StepsCard> {
       ],
       const SizedBox(height: Dimens.spacing16),
       _chart(context, days, goal, today),
+      // The bars have no axis: their span, and what the colours mean.
+      ExcludeSemantics(
+        child: Padding(
+          padding: const EdgeInsets.only(top: Dimens.spacing4),
+          child: Row(
+            key: const ValueKey('steps-chart-dates'),
+            children: [
+              Text(
+                DateFormat.MMMd(
+                  Localizations.localeOf(context).toLanguageTag(),
+                ).format(
+                  DateTime(
+                    today.year,
+                    today.month,
+                    today.day - widget.rangeDays + 1,
+                  ),
+                ),
+                style: Theme.of(context).textTheme.labelSmall,
+              ),
+              const Spacer(),
+              Text('Today', style: Theme.of(context).textTheme.labelSmall),
+            ],
+          ),
+        ),
+      ),
+      const SizedBox(height: Dimens.spacing8),
+      ChartLegend(
+        entries: [
+          (label: 'At the goal', color: chartAccent(context), line: false),
+          (label: 'Under it', color: widget.palette.textMuted, line: false),
+          (label: 'Goal', color: widget.palette.textMuted, line: true),
+        ],
+      ),
     ];
   }
 

@@ -13,6 +13,9 @@ import 'package:opennutritracker/features/profile/presentation/bloc/profile_bloc
 import 'package:opennutritracker/features/recipes/presentation/bloc/recipes_bloc.dart';
 import 'package:opennutritracker/features/settings/presentation/bloc/custom_meals_bloc.dart';
 import 'package:opennutritracker/features/settings/presentation/bloc/settings_bloc.dart';
+// [fork] S563 demo-per-profile
+import 'package:opennutritracker/fork/demo/demo_profile.dart';
+// [/fork]
 
 /// Owns the ordering of a profile switch so it lives in exactly one place:
 /// swap the open box-set first, then refresh the cached tab BLoCs, then
@@ -42,7 +45,11 @@ class ProfileSwitchCoordinator {
     // finishing, so they're never stranded on an empty profile.
     final previousProfileId = locator<GetProfilesUsecase>().activeProfileId;
 
+    // [fork] S563 demo-per-profile: the demo banner follows the profile
+    // that holds the demo (H1)
     await _switchProfileUsecase.switchProfile(profile);
+    await syncDemoFlag();
+    // [/fork]
     final hasUserData = await _userRepository.hasUserData();
     // The widget still shows the outgoing profile. For an empty profile
     // nothing republishes it, and for an onboarded one only the Home

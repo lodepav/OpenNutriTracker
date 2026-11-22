@@ -11,6 +11,7 @@ import 'package:opennutritracker/features/fasting/data/data_source/fasting_data_
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/fork/backup/backup_extras.dart';
 import 'package:opennutritracker/fork/backup/profile_wipe.dart';
+import 'package:opennutritracker/fork/custom_food/serving_mode.dart';
 import 'package:opennutritracker/fork/health/steps.dart';
 import 'package:opennutritracker/fork/leftovers/meal_groups.dart';
 import 'package:opennutritracker/fork/leftovers/meal_photo_cache.dart';
@@ -62,7 +63,8 @@ Map<dynamic, Object?> _restored(String name, Map<dynamic, Object?> before) =>
       };
 
 /// Keys whose default is not null, false or empty.
-const _ownDefaults = {'keepMealPhotos': true};
+// isDemoProfile: unset is the default; false is a real mark, and the only one a restore brings back.
+const _ownDefaults = {'keepMealPhotos': true, 'isDemoProfile': null};
 
 /// Null, false, empty, or [AdaptiveSettings]' own default.
 bool _isDefault(String key, Object? value) {
@@ -101,6 +103,7 @@ void main() {
     await disposeOpenFixture(fixture);
     fixture = null;
     PhaseStore.changes.value = 0;
+    CustomFoodModes.perServing.value = const {};
     PhaseStore.goalNotice.value = null;
     PlanStore.changes.value = 0;
     PhotoStore.changes.value = 0;

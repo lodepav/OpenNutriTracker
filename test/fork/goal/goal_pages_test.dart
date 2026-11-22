@@ -906,6 +906,9 @@ void main() {
   testWidgets('an upcoming goal left behind its target says so at once', (
     tester,
   ) async {
+    tester.view.physicalSize = const Size(800, 2000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
     // A bulk to 84 that a move left starting at 85.
     final stale = GoalDraft(
       kind: PhaseKind.bulk,

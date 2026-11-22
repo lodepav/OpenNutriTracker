@@ -135,6 +135,13 @@ void main() {
     expect(_sliderLabel('40%'), 'Lunch');
     expect(_sliderLabel('20%'), 'Dinner');
     expect(_sliderLabel('10%'), 'Snack');
+    // The row's own word, and the rebalance said before it surprises
+    // (G6-7, G6-12)
+    expect(
+      find.textContaining('dinner and snack. Moving one share moves the '
+          'other three'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('macro split names each macro in sentence case, on its '

@@ -1,10 +1,30 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
+import 'package:permission_handler/permission_handler.dart';
+
+/// The camera permission calls [ScannerError] makes, swapped in tests so
+/// they don't reach the plugin.
+class CameraPermission {
+  const CameraPermission();
+
+  Future<PermissionStatus> request() => Permission.camera.request();
+
+  Future<PermissionStatus> status() => Permission.camera.status;
+
+  /// True after one refusal, while Android still shows the prompt.
+  Future<bool> canPrompt() => Permission.camera.shouldShowRequestRationale;
+
+  Future<bool> openSettings() => openAppSettings();
+}
 
 /// What a QR import scanner shows when its camera can't start: why, a way to
 /// ask for the camera again, and the paste dialog as the way around it.
-class ScannerError extends StatelessWidget {
+class ScannerError extends StatefulWidget {
+  /// What Allow camera asks through; tests set a fake.
+  @visibleForTesting
+  static CameraPermission permission = const CameraPermission();
+
   final MobileScannerException error;
   final MobileScannerController controller;
   final VoidCallback onPaste;
@@ -17,10 +37,60 @@ class ScannerError extends StatelessWidget {
   });
 
   @override
+  State<ScannerError> createState() => _ScannerErrorState();
+}
+
+class _ScannerErrorState extends State<ScannerError>
+    with WidgetsBindingObserver {
+  /// Set while the app's settings page is open, so coming back re-checks.
+  bool _inSettings = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && _inSettings) _recheck();
+  }
+
+  Future<void> _recheck() async {
+    _inSettings = false;
+    final status = await ScannerError.permission.status();
+    if (status.isGranted && mounted) await widget.controller.start();
+  }
+
+  Future<void> _allow() async {
+    final permission = ScannerError.permission;
+    final couldPrompt = await permission.canPrompt();
+    final status = await permission.request();
+    if (status.isGranted) {
+      if (mounted) await widget.controller.start();
+      return;
+    }
+    // Refused twice, Android answers without a prompt and the switch is in
+    // the app's settings. A refusal in a prompt just shown stays here.
+    // Not the plugin's permanentlyDenied: the refusals went through
+    // mobile_scanner, so the plugin never saw them and reads "denied".
+    if (!couldPrompt && !await permission.canPrompt()) {
+      _inSettings = true;
+      await permission.openSettings();
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final text = Theme.of(context).textTheme;
-    final refused = error.errorCode == MobileScannerErrorCode.permissionDenied;
+    final refused = widget.error.errorCode == MobileScannerErrorCode.permissionDenied;
     return ColoredBox(
       color: colors.surface,
       child: Center(
@@ -42,13 +112,10 @@ class ScannerError extends StatelessWidget {
               ),
               const SizedBox(height: Dimens.spacing8),
               Text(
-                // shortcut: no settings opener in the app (no permission
-                // package, no channel), so the text names the switch; add a
-                // button once a channel opens the app's settings page.
                 refused
                     ? 'Allow the camera to scan a code. If no prompt appears, '
-                          "turn on Camera in your phone's Settings › Apps › "
-                          'OpenBite › Permissions.'
+                          "Allow camera opens the app's settings: turn on "
+                          'Camera there and come back.'
                     : 'You can paste the code instead.',
                 style: text.bodyMedium?.copyWith(color: colors.onSurface),
                 textAlign: TextAlign.center,
@@ -58,13 +125,11 @@ class ScannerError extends StatelessWidget {
                 FilledButton.icon(
                   icon: const Icon(Icons.photo_camera_outlined),
                   label: const Text('Allow camera'),
-                  // start() asks for the permission again while Android still
-                  // shows the prompt.
-                  onPressed: controller.start,
+                  onPressed: _allow,
                 ),
                 const SizedBox(height: Dimens.spacing12),
               ],
-              PasteCodeButton(onPaste: onPaste),
+              PasteCodeButton(onPaste: widget.onPaste),
             ],
           ),
         ),

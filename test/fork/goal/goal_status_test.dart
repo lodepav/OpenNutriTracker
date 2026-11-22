@@ -77,8 +77,8 @@ void main() {
     expect(signedWeightText(-0.01, BodyWeightUnit.kg), '0.0 kg');
     expect(signedWeightText(0.3, BodyWeightUnit.kg), '+0.3 kg');
     expect(signedWeightText(-1, BodyWeightUnit.st), '−2.2 lb');
-    expect(signedPaceText(-0.5, BodyWeightUnit.kg), '−0.50 kg a week');
-    expect(signedPaceText(-0.001, BodyWeightUnit.kg), '0.00 kg a week');
+    expect(signedPaceText(-0.5, BodyWeightUnit.kg), '−0.5 kg a week');
+    expect(signedPaceText(-0.001, BodyWeightUnit.kg), '0.0 kg a week');
   });
 
   test('a goal under a week counts in days, at least one', () {

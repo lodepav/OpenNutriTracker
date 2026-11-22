@@ -291,11 +291,33 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
           servingsCount: draft.servingsCount,
           tags: draft.tags,
         );
-        await Navigator.of(context).pushNamed(
+        // [fork] S564 duplicate-saved: the builder pops with the saved
+        // copy's id; say so and offer the copy (H1)
+        // await Navigator.of(context).pushNamed(
+        final navigator = Navigator.of(context);
+        final messenger = ScaffoldMessenger.of(context);
+        final copyId = await navigator.pushNamed(
+        // [/fork]
           NavigationOptions.recipeBuilderRoute,
           arguments: RecipeBuilderArguments(existing: fresh),
         );
         if (mounted) _bloc.add(LoadRecipeEvent(recipe.id));
+        // [fork] S564 duplicate-saved
+        if (copyId is String && mounted) {
+          messenger.showSnackBar(
+            SnackBar(
+              content: const Text('Copy saved'),
+              action: SnackBarAction(
+                label: 'Open',
+                onPressed: () => navigator.pushNamed(
+                  NavigationOptions.recipeDetailRoute,
+                  arguments: RecipeDetailArguments(recipeId: copyId),
+                ),
+              ),
+            ),
+          );
+        }
+        // [/fork]
       case _RecipeMenuAction.delete:
         await _confirmDelete(context);
     }
@@ -332,8 +354,12 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
   }
 
   Future<void> _onLogPressed(BuildContext context, RecipeEntity recipe) async {
-    final intakeType = await _pickIntakeType(context);
-    if (intakeType == null || !context.mounted) return;
+    // [fork] S564 recipe-other-amount: to the meal the page has picked, not
+    // through a second meal sheet repeating its chip (H8)
+    // final intakeType = await _pickIntakeType(context);
+    // if (intakeType == null || !context.mounted) return;
+    final intakeType = _meal;
+    // [/fork]
     final config = await locator<GetConfigUsecase>().getConfig();
     if (!context.mounted) return;
     Navigator.of(context).pushNamed(
@@ -347,60 +373,62 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
     );
   }
 
-  Future<IntakeTypeEntity?> _pickIntakeType(BuildContext context) {
-    final s = S.of(context);
-    // [fork] S487 drag-handle: the handle was the palette's only use
-    // final isDark = Theme.of(context).brightness == Brightness.dark;
-    // final palette = isDark ? AppPalette.dark : AppPalette.light;
-    // [/fork]
-    return showModalBottomSheet<IntakeTypeEntity>(
-      context: context,
-      showDragHandle: true, // [fork] S487 drag-handle: the platform's (P1)
-      builder: (ctx) {
-        Widget tile(IntakeTypeEntity type, String label) {
-          final accent = Theme.of(ctx).colorScheme.primary;
-          return ListTile(
-            leading: Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: accent.withValues(alpha: 0.14),
-                borderRadius: Dimens.borderRadiusS,
-              ),
-              child: Icon(type.getIconData(), color: accent, size: 22),
-            ),
-            title: Text(
-              label,
-              style: Theme.of(ctx).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
-            ),
-            onTap: () => Navigator.of(ctx).pop(type),
-          );
-        }
-
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // [fork] S487 drag-handle
-              // const SizedBox(height: Dimens.spacing12),
-              // Container(
-              //   width: 40,
-              //   height: 4,
-              //   decoration: BoxDecoration(
-              //     color: palette.border,
-              //     borderRadius: BorderRadius.circular(2),
-              //   ),
-              // ),
-              // const SizedBox(height: Dimens.spacing8),
-              // [/fork]
-              tile(IntakeTypeEntity.breakfast, s.breakfastLabel),
-              tile(IntakeTypeEntity.lunch, s.lunchLabel),
-              tile(IntakeTypeEntity.dinner, s.dinnerLabel),
-              tile(IntakeTypeEntity.snack, s.snackLabel),
-            ],
-          ),
-        );
-      },
-    );
-  }
+  // [fork] S564 recipe-other-amount: no meal sheet left to pick from
+  // Future<IntakeTypeEntity?> _pickIntakeType(BuildContext context) {
+  //   final s = S.of(context);
+  //   // [fork] S487 drag-handle: the handle was the palette's only use
+  //   // final isDark = Theme.of(context).brightness == Brightness.dark;
+  //   // final palette = isDark ? AppPalette.dark : AppPalette.light;
+  //   // [/fork]
+  //   return showModalBottomSheet<IntakeTypeEntity>(
+  //     context: context,
+  //     showDragHandle: true, // [fork] S487 drag-handle: the platform's (P1)
+  //     builder: (ctx) {
+  //       Widget tile(IntakeTypeEntity type, String label) {
+  //         final accent = Theme.of(ctx).colorScheme.primary;
+  //         return ListTile(
+  //           leading: Container(
+  //             width: 44,
+  //             height: 44,
+  //             decoration: BoxDecoration(
+  //               color: accent.withValues(alpha: 0.14),
+  //               borderRadius: Dimens.borderRadiusS,
+  //             ),
+  //             child: Icon(type.getIconData(), color: accent, size: 22),
+  //           ),
+  //           title: Text(
+  //             label,
+  //             style: Theme.of(ctx).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+  //           ),
+  //           onTap: () => Navigator.of(ctx).pop(type),
+  //         );
+  //       }
+  //
+  //       return SafeArea(
+  //         child: Column(
+  //           mainAxisSize: MainAxisSize.min,
+  //           children: [
+  //             // [fork] S487 drag-handle
+  //             // const SizedBox(height: Dimens.spacing12),
+  //             // Container(
+  //             //   width: 40,
+  //             //   height: 4,
+  //             //   decoration: BoxDecoration(
+  //             //     color: palette.border,
+  //             //     borderRadius: BorderRadius.circular(2),
+  //             //   ),
+  //             // ),
+  //             // const SizedBox(height: Dimens.spacing8),
+  //             // [/fork]
+  //             tile(IntakeTypeEntity.breakfast, s.breakfastLabel),
+  //             tile(IntakeTypeEntity.lunch, s.lunchLabel),
+  //             tile(IntakeTypeEntity.dinner, s.dinnerLabel),
+  //             tile(IntakeTypeEntity.snack, s.snackLabel),
+  //           ],
+  //         ),
+  //       );
+  //     },
+  //   );
+  // }
+  // [/fork]
 }

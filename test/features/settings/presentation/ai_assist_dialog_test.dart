@@ -15,6 +15,10 @@ import 'package:opennutritracker/core/utils/ai_model_list_api.dart';
 import 'package:opennutritracker/features/add_meal/domain/usecase/probe_ai_endpoint_usecase.dart';
 import 'package:opennutritracker/features/add_meal/domain/usecase/run_ai_endpoint_probe_usecase.dart';
 import 'package:opennutritracker/features/settings/presentation/widgets/ai_assist_dialog.dart';
+// [fork] S581 ai-feature-names
+import 'package:opennutritracker/features/settings/presentation/widgets/ai_consent_screen.dart'
+    show forkFeatureNames;
+// [/fork]
 import 'package:opennutritracker/generated/l10n.dart';
 
 import '../../../helpers/test_l10n.dart';
@@ -260,7 +264,10 @@ void main() {
     // the split is an implementation detail, the words reaching the user
     // are not.
     expect(
-      find.textContaining(l10nEn.aiAssistDisclosureAnthropic),
+      // [fork] S581 ai-feature-names
+      // find.textContaining(l10nEn.aiAssistDisclosureAnthropic),
+      find.textContaining(forkFeatureNames(l10nEn.aiAssistDisclosureAnthropic)),
+      // [/fork]
       findsOneWidget,
     );
     expect(
@@ -281,7 +288,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(
-      find.textContaining(l10nEn.aiAssistDisclosureOpenRouter),
+      // [fork] S581 ai-feature-names
+      // find.textContaining(l10nEn.aiAssistDisclosureOpenRouter),
+      find.textContaining(forkFeatureNames(l10nEn.aiAssistDisclosureOpenRouter)),
+      // [/fork]
       findsOneWidget,
     );
     expect(
@@ -307,7 +317,10 @@ void main() {
 
     expect(await storage.activeProvider(), AiProvider.openrouter);
     expect(
-      find.textContaining(l10nEn.aiAssistDisclosureOpenRouter),
+      // [fork] S581 ai-feature-names
+      // find.textContaining(l10nEn.aiAssistDisclosureOpenRouter),
+      find.textContaining(forkFeatureNames(l10nEn.aiAssistDisclosureOpenRouter)),
+      // [/fork]
       findsOneWidget,
     );
   });
@@ -382,7 +395,10 @@ void main() {
 
     final title = tester.widget<Text>(
       find.descendant(
-        of: find.byType(AlertDialog),
+        // [fork] S582 ai-setup-page: a page now, not an AlertDialog
+        // of: find.byType(AlertDialog),
+        of: find.byType(AiAssistDialog),
+        // [/fork]
         matching: find.text(l10nEn.settingsAiAssistLabel),
       ),
     );
@@ -416,7 +432,10 @@ void main() {
 
     expect(await storage.activeProvider(), AiProvider.openai);
     expect(
-      find.textContaining(l10nEn.aiAssistDisclosureOpenAI),
+      // [fork] S581 ai-feature-names
+      // find.textContaining(l10nEn.aiAssistDisclosureOpenAI),
+      find.textContaining(forkFeatureNames(l10nEn.aiAssistDisclosureOpenAI)),
+      // [/fork]
       findsOneWidget,
     );
     // The retention sentence is the whole reason this paragraph differs from
@@ -762,7 +781,10 @@ void main() {
       // "stays on your own network" claim from this very sentence.
       expect(
         find.textContaining(
-          l10nEn.aiAssistDisclosureOwnServerPlaintext('192.168.1.5:11434'),
+          // [fork] S581 ai-feature-names
+          // l10nEn.aiAssistDisclosureOwnServerPlaintext('192.168.1.5:11434'),
+          forkFeatureNames(l10nEn.aiAssistDisclosureOwnServerPlaintext('192.168.1.5:11434')),
+          // [/fork]
         ),
         findsOneWidget,
         reason: 'the dialog is the only place a user learns this',
@@ -775,7 +797,10 @@ void main() {
       await tester.pumpAndSettle();
       expect(
         find.textContaining(
-          l10nEn.aiAssistDisclosureOwnServerSecure('ollama.example.com'),
+          // [fork] S581 ai-feature-names
+          // l10nEn.aiAssistDisclosureOwnServerSecure('ollama.example.com'),
+          forkFeatureNames(l10nEn.aiAssistDisclosureOwnServerSecure('ollama.example.com')),
+          // [/fork]
         ),
         findsOneWidget,
       );
@@ -3868,11 +3893,20 @@ void main() {
 
       expect(find.text(l10nEn.aiConsentTitle), findsOneWidget);
       expect(
+        // [fork] S581 ai-feature-names
+        // find.text(
+        //   l10nEn.aiAssistDisclosureOwnServerGemini(
+        //     'generativelanguage.googleapis.com',
+        //   ),
+        // ),
         find.text(
-          l10nEn.aiAssistDisclosureOwnServerGemini(
-            'generativelanguage.googleapis.com',
+          forkFeatureNames(
+            l10nEn.aiAssistDisclosureOwnServerGemini(
+              'generativelanguage.googleapis.com',
+            ),
           ),
         ),
+        // [/fork]
         findsOneWidget,
       );
 
@@ -3922,11 +3956,20 @@ void main() {
 
         expect(find.text(l10nEn.aiConsentTitle), findsOneWidget);
         expect(
+          // [fork] S581 ai-feature-names
+          // find.text(
+          //   l10nEn.aiAssistDisclosureOwnServerGemini(
+          //     'generativelanguage.googleapis.com',
+          //   ),
+          // ),
           find.text(
-            l10nEn.aiAssistDisclosureOwnServerGemini(
-              'generativelanguage.googleapis.com',
+            forkFeatureNames(
+              l10nEn.aiAssistDisclosureOwnServerGemini(
+                'generativelanguage.googleapis.com',
+              ),
             ),
           ),
+          // [/fork]
           findsOneWidget,
         );
         final agree = find.bySemanticsIdentifier('ai-consent-agree');
@@ -3977,7 +4020,10 @@ void main() {
       // The provider selected at this moment, not whichever the dialog opened
       // on — an agreement naming the wrong company is worth nothing.
       expect(
-        find.textContaining(l10nEn.aiAssistDisclosureOpenAI),
+        // [fork] S581 ai-feature-names
+        // find.textContaining(l10nEn.aiAssistDisclosureOpenAI),
+        find.textContaining(forkFeatureNames(l10nEn.aiAssistDisclosureOpenAI)),
+        // [/fork]
         findsOneWidget,
       );
       expect(
@@ -4011,7 +4057,10 @@ void main() {
       final smallest = Theme.of(context).textTheme.bodySmall?.fontSize;
       final rendered = tester
           .widget<Text>(
-            find.textContaining(l10nEn.aiAssistDisclosureAnthropic),
+            // [fork] S581 ai-feature-names
+            // find.textContaining(l10nEn.aiAssistDisclosureAnthropic),
+            find.textContaining(forkFeatureNames(l10nEn.aiAssistDisclosureAnthropic)),
+            // [/fork]
           )
           .style
           ?.fontSize;

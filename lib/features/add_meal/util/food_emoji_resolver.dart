@@ -114,8 +114,12 @@ const Map<String, List<String>> _emojiToNouns = {
   '🥥': ['coconut', 'coconut water', 'coconut flour'],
 
   // nuts + seeds
-  '🥜': ['nut', 'peanut', 'almond', 'walnut'],
-  '🌰': ['seed', 'chestnut', 'chia seed', 'flaxseed', 'hemp seed', 'sesame seed', 'sunflower seed', 'pumpkin seed'],
+  // [fork] S597 almond-tree-nut: an almond is no peanut
+  // '🥜': ['nut', 'peanut', 'almond', 'walnut'],
+  // '🌰': ['seed', 'chestnut', 'chia seed', 'flaxseed', 'hemp seed', 'sesame seed', 'sunflower seed', 'pumpkin seed'],
+  '🥜': ['nut', 'peanut', 'walnut'],
+  '🌰': ['seed', 'chestnut', 'almond', 'chia seed', 'flaxseed', 'hemp seed', 'sesame seed', 'sunflower seed', 'pumpkin seed'],
+  // [/fork]
 
   // sweets
   '🍬': ['candy', 'candies', 'sugar'],

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:opennutritracker/fork/onboarding/content_width.dart';
 import 'package:intl/intl.dart' as intl;
 import 'package:logging/logging.dart';
 import 'package:opennutritracker/core/domain/entity/body_weight_unit_entity.dart';
@@ -722,96 +723,100 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
         // The mode toggled on the target step changes its figures.
         body: ValueListenableBuilder(
           valueListenable: AdaptiveStore.settings,
-          builder: (context, _, _) => ListView(
-            key: ValueKey('goal-planner-step-${_at.name}'),
-            padding: const EdgeInsets.only(bottom: Dimens.spacing24),
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-                // Live, so TalkBack says the new step on Next and Back.
-                child: Semantics(
-                  liveRegion: true,
-                  child: Text(
-                    '${_editingGoal ? '' : 'Step ${_step + 1} of ${steps.length} · '}'
-                    '${_label(steps[_step])}'
-                    '${_detour == null ? '' : ' › ${_label(_detour!)}'}',
-                    style: theme.textTheme.labelMedium?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
+          builder: (context, _, _) => ContentWidth(
+            child: ListView(
+              key: ValueKey('goal-planner-step-${_at.name}'),
+              padding: const EdgeInsets.only(bottom: Dimens.spacing24),
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                  // Live, so TalkBack says the new step on Next and Back.
+                  child: Semantics(
+                    liveRegion: true,
+                    child: Text(
+                      '${_editingGoal ? '' : 'Step ${_step + 1} of ${steps.length} · '}'
+                      '${_label(steps[_step])}'
+                      '${_detour == null ? '' : ' › ${_label(_detour!)}'}',
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
                     ),
                   ),
                 ),
-              ),
-              ...switch (_at) {
-                _Step.goal => _goalStep(context),
-                _Step.pace => _paceStep(context),
-                _Step.burn => _burnStep(context),
-                _Step.target => _targetStep(context),
-                _Step.macros => _macrosStep(context),
-                _Step.carried => _carriedStep(context),
-                _Step.plan => _planStep(context),
-              },
-            ],
+                ...switch (_at) {
+                  _Step.goal => _goalStep(context),
+                  _Step.pace => _paceStep(context),
+                  _Step.burn => _burnStep(context),
+                  _Step.target => _targetStep(context),
+                  _Step.macros => _macrosStep(context),
+                  _Step.carried => _carriedStep(context),
+                  _Step.plan => _planStep(context),
+                },
+              ],
+            ),
           ),
         ),
         bottomNavigationBar: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-            child: _withWhyNotOn(
-              theme,
-              Row(
-                children: [
-                  if ((_step > 0 && !_editingGoal) || _detour != null) ...[
-                    Semantics(
-                      identifier: 'goal-planner-back',
-                      child: OutlinedButton(
-                        onPressed: () => setState(() {
-                          if (_detour != null) {
-                            _detour = null;
-                          } else {
-                            _step--;
-                          }
-                        }),
-                        child: const Text('Back'),
+          child: ContentWidth(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+              child: _withWhyNotOn(
+                theme,
+                Row(
+                  children: [
+                    if ((_step > 0 && !_editingGoal) || _detour != null) ...[
+                      Semantics(
+                        identifier: 'goal-planner-back',
+                        child: OutlinedButton(
+                          onPressed: () => setState(() {
+                            if (_detour != null) {
+                              _detour = null;
+                            } else {
+                              _step--;
+                            }
+                          }),
+                          child: const Text('Back'),
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                  ],
-                  Expanded(
-                    child: Semantics(
-                      identifier: _detour != null
-                          ? 'goal-planner-done'
-                          : last
-                          ? 'goal-planner-start'
-                          : 'goal-planner-next',
-                      child: FilledButton(
-                        onPressed: !_canGoOn || _saving
-                            ? null
-                            : _detour != null
-                            ? () => setState(() => _detour = null)
+                      const SizedBox(width: 8),
+                    ],
+                    Expanded(
+                      child: Semantics(
+                        identifier: _detour != null
+                            ? 'goal-planner-done'
                             : last
-                            ? _start
-                            : () => setState(() => _step++),
-                        child: Text(
-                          _detour != null
-                              ? 'Done'
-                              : _at == _Step.carried
-                              ? 'Keep all and go on'
-                              : !last
-                              ? 'Next'
-                              : widget.queuedAt != null
-                              ? 'Save goal'
-                              : _queued
-                              ? 'Add to the plan'
-                              : _setup.onboarding
-                              ? 'Use this plan'
-                              : widget.editing != null
-                              ? 'Save plan'
-                              : 'Start plan',
+                            ? 'goal-planner-start'
+                            : 'goal-planner-next',
+                        child: FilledButton(
+                          onPressed: !_canGoOn || _saving
+                              ? null
+                              : _detour != null
+                              ? () => setState(() => _detour = null)
+                              : last
+                              ? _start
+                              : () => setState(() => _step++),
+                          child: Text(
+                            _detour != null
+                                ? 'Done'
+                                : _at == _Step.carried
+                                ? 'Keep all and go on'
+                                : !last
+                                ? 'Next'
+                                : widget.queuedAt != null
+                                ? 'Save goal'
+                                : _queued
+                                ? 'Add to the plan'
+                                : _setup.onboarding
+                                ? 'Use this plan'
+                                : widget.editing != null
+                                ? 'Save plan'
+                                : 'Start plan',
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -1429,11 +1434,22 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
           ),
       ],
     ),
-    ExpenditureGroups.estimate(
-      store: _store,
-      unit: _unit,
-      onboarding: _setup.onboarding,
-    ),
+    // At first run the estimate's settings keep their defaults unless opened.
+    if (_setup.onboarding)
+      ExpansionTile(
+        key: const ValueKey('goal-burn-fine-tune'),
+        title: const Text('Fine-tune the estimate'),
+        subtitle: const Text('Optional. The defaults suit a first start.'),
+        children: [
+          ExpenditureGroups.estimate(
+            store: _store,
+            unit: _unit,
+            onboarding: true,
+          ),
+        ],
+      )
+    else
+      ExpenditureGroups.estimate(store: _store, unit: _unit),
   ];
 
   // -------------------------------------------------------------- target
@@ -1561,8 +1577,9 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
       _question(
         context,
         'Protein, fat and carbs',
-        'Set protein and fat by your weight, and carbs take the rest. Off, '
-            'the percentages of your macro split stand.',
+        'The grams of each to aim for a day, from your calorie target. They '
+            'go by percentages, or set protein and fat by your weight with '
+            'the switch below.',
       ),
       if (settings.fixedTarget && settings.fixedMacros != null)
         _Panel(
@@ -1578,7 +1595,7 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
           children: [
             Text(
               'At about ${energyText(context, kcal)}'
-              '${program == null ? ', by your split: $_splitText' : ''}',
+              '${program == null ? ', ${_setup.onboarding ? 'as percentages' : 'by your split'}: $_splitText' : ''}',
               style: Theme.of(context).textTheme.labelMedium,
             ),
             const SizedBox(height: 4),
@@ -1780,7 +1797,10 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
           _ChangeRow(
             identifier: 'goal-plan-change-burn',
             title: 'Expenditure',
-            subtitle: _formula
+            subtitle: _setup.onboarding
+                ? '${energyText(context, _formula ? _setup.formulaKcal : _setup.expenditureKcal)} '
+                      'a day, from your age, height, weight and activity'
+                : _formula
                 ? '${energyText(context, _setup.formulaKcal)} by the formula, '
                       'which your target uses · estimate '
                       '${energyText(context, _setup.expenditureKcal)}'
@@ -1800,7 +1820,7 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
             subtitle: settings.fixedTarget && settings.fixedMacros != null
                 ? 'The fixed target\'s grams'
                 : '${macroGramsText(_gramsAt(_mainKcal, program))} · '
-                      '${program?.summary(perLb: _perLb) ?? 'your split, $_splitText'}',
+                      '${program?.summary(perLb: _perLb) ?? '${_setup.onboarding ? 'as percentages' : 'your split'}, $_splitText'}',
             onChange: () => _goTo(_Step.macros),
           ),
         ],

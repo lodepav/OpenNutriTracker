@@ -9,13 +9,13 @@ import 'package:opennutritracker/fork/adaptive/goal_saving.dart'
     show paceChanges;
 import 'package:opennutritracker/fork/goal/completed_goals_page.dart';
 import 'package:opennutritracker/fork/goal/goal_progress_page.dart';
+import 'package:opennutritracker/fork/goal/goal_status.dart'
+    show goalWeightLabel;
 import 'package:opennutritracker/fork/goal/goal_summary.dart';
 import 'package:opennutritracker/fork/goal/goal_summary_view.dart';
 import 'package:opennutritracker/fork/goal/planner_screen.dart';
 import 'package:opennutritracker/fork/phases/phases.dart';
 import 'package:opennutritracker/fork/trends/card_title.dart';
-import 'package:opennutritracker/fork/trends/trend_detail.dart'
-    show weightUnitLabel;
 import 'package:opennutritracker/fork/trends/trends_overview.dart'
     show TrendsGoal, TrendsOverview;
 import 'package:opennutritracker/fork/weight/weigh_in_log.dart'
@@ -94,7 +94,7 @@ class _GoalCardState extends State<GoalCard> {
         final summary = goalSummary(
           locale: locale,
           unit: unit,
-          unitLabel: weightUnitLabel(context, unit),
+          unitLabel: goalWeightLabel(unit),
           today: today,
           plan: goal?.plan,
           history: goal?.history ?? const [],

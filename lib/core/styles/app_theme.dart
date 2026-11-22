@@ -117,7 +117,19 @@ ThemeData buildAppTheme(AppPalette p) {
       fillColor: p.surfaceMuted,
       contentPadding: const EdgeInsets.symmetric(horizontal: Dimens.spacing16, vertical: Dimens.spacing12),
       border: const OutlineInputBorder(borderRadius: Dimens.borderRadiusM, borderSide: BorderSide.none),
-      enabledBorder: const OutlineInputBorder(borderRadius: Dimens.borderRadiusM, borderSide: BorderSide.none),
+      // [fork] S552 field-edge: the fill alone read about 1.1:1 on the canvas; an
+      // edge in the muted text colour reaches 3:1 (WCAG 1.4.11), as the fork's
+      // amount and Quick add fields drew it
+      // enabledBorder: const OutlineInputBorder(borderRadius: Dimens.borderRadiusM, borderSide: BorderSide.none),
+      enabledBorder: OutlineInputBorder(borderRadius: Dimens.borderRadiusM, borderSide: BorderSide(color: p.textMuted)),
+      // with an error the field fell back to the borderless `border` and lost
+      // its edge; it keeps one, in the error colour
+      errorBorder: OutlineInputBorder(borderRadius: Dimens.borderRadiusM, borderSide: BorderSide(color: scheme.error)),
+      focusedErrorBorder: OutlineInputBorder(
+        borderRadius: Dimens.borderRadiusM,
+        borderSide: BorderSide(color: scheme.error, width: 2),
+      ),
+      // [/fork]
       focusedBorder: OutlineInputBorder(
         borderRadius: Dimens.borderRadiusM,
         borderSide: BorderSide(color: p.accent, width: 2),
@@ -148,6 +160,10 @@ ThemeData buildAppTheme(AppPalette p) {
             : p.textMuted,
       ),
     ),
+    // [fork] S605 slider-track: the default inactive track was close to
+    // invisible in dark; the muted text colour reaches 3:1 (WCAG 1.4.11)
+    sliderTheme: SliderThemeData(inactiveTrackColor: p.textMuted),
+    // [/fork]
     // The chosen segment in the accent with its on-colour, so the choice
     // shows without the check mark (WCAG 1.4.11); `secondaryContainer`, its
     // default, is about 1.1:1 against the rest.

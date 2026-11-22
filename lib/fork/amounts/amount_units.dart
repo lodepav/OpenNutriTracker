@@ -1,4 +1,5 @@
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dart';
+import 'package:opennutritracker/features/add_meal/domain/entity/meal_portion_entity.dart';
 import 'package:opennutritracker/features/add_meal/util/portion_unit.dart';
 import 'package:opennutritracker/features/meal_detail/presentation/bloc/meal_detail_bloc.dart';
 import 'package:opennutritracker/features/meal_detail/util/meal_quantity_converter.dart';
@@ -48,16 +49,18 @@ List<AmountUnitOption> amountUnitOptions(
   required String selected,
   required bool imperial,
 }) {
+  final shown = _distinctPortions(meal.portions, selected);
   final options = <AmountUnitOption>[
-    if (meal.portions.isNotEmpty)
+    if (meal.portions.isNotEmpty) ...[
       for (final (i, p) in meal.portions.indexed)
-        AmountUnitOption(
-          portionUnit(i),
-          portionLabel: p.label,
-          grams: p.gramWeight,
-          own: p is OwnPortionEntity,
-        )
-    else if (meal.scalableServingQuantity case final serving?)
+        if (shown.contains(i))
+          AmountUnitOption(
+            portionUnit(i),
+            portionLabel: p.label,
+            grams: p.gramWeight,
+            own: p is OwnPortionEntity,
+          ),
+    ] else if (meal.scalableServingQuantity case final serving?)
       AmountUnitOption(
         _serving,
         portionLabel: meal.servingSize,
@@ -84,6 +87,32 @@ List<AmountUnitOption> amountUnitOptions(
     }
   }
   return options;
+}
+
+/// The indexes of [portions] to show: a food's portion weighing what one
+/// before it does is the same amount twice, so only the first shows, or
+/// the one [selected] when it is among them. The user's own all show.
+Set<int> _distinctPortions(List<MealPortionEntity> portions, String selected) {
+  final byWeight = <String, int>{};
+  final shown = <int>{};
+  for (final (i, p) in portions.indexed) {
+    if (p is OwnPortionEntity) {
+      shown.add(i);
+      continue;
+    }
+    final weight = p.gramWeight.toStringAsFixed(1);
+    final first = byWeight[weight];
+    if (first == null) {
+      byWeight[weight] = i;
+      shown.add(i);
+    } else if (portionUnit(i) == selected) {
+      shown
+        ..remove(first)
+        ..add(i);
+      byWeight[weight] = i;
+    }
+  }
+  return shown;
 }
 
 /// How far the − and + move [quantity] in [unit]: one portion (a half

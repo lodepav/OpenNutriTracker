@@ -99,7 +99,10 @@ class _ImportActivityScannerScreenState
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(S.of(context).importActivityLabel),
+        // [fork] S598 workout-scanner-title: cut to "Import shared wor…"
+        // title: Text(S.of(context).importActivityLabel),
+        title: const Text('Import workout'),
+        // [/fork]
         actions: [
           IconButton(
             icon: const Icon(Icons.keyboard_rounded),

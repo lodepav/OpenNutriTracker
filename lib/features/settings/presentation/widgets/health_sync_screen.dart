@@ -207,9 +207,12 @@ class _HealthSyncScreenState extends State<HealthSyncScreen> {
       _log.warning('Enabling workout import failed', error, stackTrace);
       if (!mounted) return;
       setState(() => _importEnabled = false);
-      _showMessage(
-        S.of(context).healthSyncPermissionDeniedLabel(healthPlatformName),
-      );
+      // [fork] S584 workout-import-error
+      // _showMessage(
+      //   S.of(context).healthSyncPermissionDeniedLabel(healthPlatformName),
+      // );
+      _showMessage('Could not read workouts from $healthPlatformName');
+      // [/fork]
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -236,9 +239,14 @@ class _HealthSyncScreenState extends State<HealthSyncScreen> {
       // read access this app was granted.
       _log.warning('Workout import failed', error, stackTrace);
       if (!mounted) return;
-      _showMessage(
-        S.of(context).healthSyncPermissionDeniedLabel(healthPlatformName),
-      );
+      // [fork] S584 workout-import-error: a refusal is said where it is
+      // known (granted false); a throw is a failed read, as the fork's cards
+      // say it
+      // _showMessage(
+      //   S.of(context).healthSyncPermissionDeniedLabel(healthPlatformName),
+      // );
+      _showMessage('Could not read workouts from $healthPlatformName');
+      // [/fork]
     }
   }
 
@@ -340,9 +348,7 @@ class _HealthSyncScreenState extends State<HealthSyncScreen> {
     return Scaffold(
       appBar: AppBar(title: Text(healthPlatformName)),
       // [fork] S138 health-connect
-      backgroundColor: Theme.of(context).brightness == Brightness.dark
-          ? AppPalette.dark.canvas
-          : AppPalette.light.canvas,
+      backgroundColor: paletteOf(context).canvas,
       // [/fork]
       body: _loading
           ? const Center(child: CircularProgressIndicator())

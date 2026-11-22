@@ -175,7 +175,7 @@ void main() {
       expect(
         policy,
         isSemantics(
-          label: l10nEn.readLabel,
+          label: 'I have read and accept the privacy policy.',
           hasCheckedState: true,
           isChecked: false,
           hasTapAction: true,
@@ -245,13 +245,14 @@ void main() {
       await pumpOptions(tester);
       tester.view.physicalSize = const Size(1080, 7020);
       await tester.pumpAndSettle();
-      final row = find.byWidgetPredicate(
-        (w) => w is Scrollable && w.axisDirection == AxisDirection.right,
-      );
+      final row = find
+          .ancestor(
+            of: find.bySemanticsLabel(accentPresetNames.first),
+            matching: find.byType(Wrap),
+          )
+          .first;
       for (final name in accentPresetNames) {
         final swatch = find.bySemanticsLabel(name);
-        // A lazy scrolling row: later swatches are built once scrolled to.
-        await tester.scrollUntilVisible(swatch, 100, scrollable: row);
         expect(swatch, findsOneWidget, reason: name);
         final rect = tester.getRect(swatch);
         expect(rect.width, greaterThanOrEqualTo(48), reason: name);

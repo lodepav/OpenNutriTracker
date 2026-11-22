@@ -4,12 +4,12 @@ import 'package:opennutritracker/core/domain/entity/body_weight_unit_entity.dart
 import 'package:opennutritracker/core/domain/entity/user_weight_goal_entity.dart';
 import 'package:opennutritracker/fork/adaptive/goal_saving.dart'
     show paceChanges;
+import 'package:opennutritracker/fork/goal/goal_status.dart'
+    show goalWeightLabel;
 import 'package:opennutritracker/fork/goal/goal_summary.dart';
 import 'package:opennutritracker/fork/goal/goal_summary_view.dart';
 import 'package:opennutritracker/fork/phases/phases.dart';
 import 'package:opennutritracker/fork/report/rate_text.dart';
-import 'package:opennutritracker/fork/trends/trend_detail.dart'
-    show weightUnitLabel;
 import 'package:opennutritracker/fork/trends/trends_overview.dart'
     show TrendsGoal, TrendsOverview;
 import 'package:opennutritracker/fork/weight/weigh_in_log.dart'
@@ -123,7 +123,7 @@ class _GoalYouTileState extends State<GoalYouTile> {
     final summary = goalSummary(
       locale: Localizations.localeOf(context).toLanguageTag(),
       unit: widget.unit,
-      unitLabel: weightUnitLabel(context, widget.unit),
+      unitLabel: goalWeightLabel(widget.unit),
       today: DateTime.now(),
       plan: goal?.plan,
       history: goal?.history ?? const [],

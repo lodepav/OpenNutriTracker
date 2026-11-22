@@ -155,6 +155,26 @@ class _CompletedGoalsPageState extends State<CompletedGoalsPage> {
                     '${weightText(data.trend.first, unit)}, to '
                     '${weightText(data.trend.last, unit)} today',
               ),
+              // The chart has no date axis: its span, said in its label.
+              ExcludeSemantics(
+                child: Padding(
+                  padding: const EdgeInsets.only(top: Dimens.spacing4),
+                  child: Row(
+                    key: const ValueKey('completed-goals-chart-dates'),
+                    children: [
+                      Text(
+                        format.format(first),
+                        style: Theme.of(context).textTheme.labelSmall,
+                      ),
+                      const Spacer(),
+                      Text(
+                        'Today',
+                        style: Theme.of(context).textTheme.labelSmall,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
               // Only the colours drawn, none for a chart with no band.
               if (drawn.isNotEmpty) ...[
                 const SizedBox(height: Dimens.spacing8),

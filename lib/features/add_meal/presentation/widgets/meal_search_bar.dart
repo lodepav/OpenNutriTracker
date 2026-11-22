@@ -59,7 +59,10 @@ class _MealSearchBarState extends State<MealSearchBar> {
     final accent = Theme.of(context).colorScheme.primary;
     final border = OutlineInputBorder(
       borderRadius: Dimens.borderRadiusL,
-      borderSide: BorderSide(color: palette.border, width: Dimens.hairline),
+      // [fork] S552 field-edge: the hairline read about 1.1:1, 3:1 now
+      // borderSide: BorderSide(color: palette.border, width: Dimens.hairline),
+      borderSide: BorderSide(color: palette.textMuted, width: Dimens.hairline),
+      // [/fork]
     );
     return Row(
       children: [

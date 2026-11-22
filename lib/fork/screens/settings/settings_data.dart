@@ -140,8 +140,9 @@ extension _DataSettings on _SettingsScreenState {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Deletes this profile and its goals, logged foods, water, '
-              'favourites, activities, weigh-ins, body measurements, '
+              // "For good" up front: at 200% the last line is below the fold
+              'Deletes this profile for good, with its goals, logged foods, '
+              'water, favourites, activities, weigh-ins, body measurements, '
               'progress photos and fasting sessions, and the AI key and '
               'server address every profile shares.',
             ),

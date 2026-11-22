@@ -51,7 +51,10 @@ void main() {
     await showDisclaimer(tester);
 
     expect(find.text(l10nEn.settingsDisclaimerLabel), findsOneWidget);
-    expect(find.text(l10nEn.disclaimerText), findsOneWidget);
+    // [fork] S595 disclaimer-you-tab: the tab is "You"
+    // expect(find.text(l10nEn.disclaimerText), findsOneWidget);
+    expect(find.textContaining('the Home or You screen.'), findsOneWidget);
+    // [/fork]
   });
 
   testWidgets('acknowledging closes the dialog and reports acceptance', (

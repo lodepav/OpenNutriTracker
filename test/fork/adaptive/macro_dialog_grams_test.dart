@@ -31,7 +31,7 @@ void main() {
   }
 
   String line(MacroProgram program) =>
-      'Today: ${macroGramsText(program.macrosFor(kcal: basis.kcal, weightKg: basis.weightKg, bodyFatPercent: basis.bodyFatPercent, goalKcal: basis.goalKcal))}';
+      'Today: ${macroGramsText(program.macrosFor(kcal: basis.kcal, weightKg: basis.weightKg, bodyFatPercent: basis.bodyFatPercent, goalKcal: basis.goalKcal)).replaceAll(' g', '\u00A0g')}';
 
   testWidgets('the dialog says the grams a day the choices give, live', (
     tester,
@@ -46,9 +46,16 @@ void main() {
             .dy,
       ),
     );
+    // G4-12: "a weekday's shift" was jargon; the switch says what it does.
+    expect(find.textContaining("weekday's shift"), findsNothing);
+    expect(
+      find.textContaining('Sets protein and fat in grams for your body'),
+      findsOneWidget,
+    );
     // 80 kg at 1.6 and 0.8 g/kg: 128 g protein, 64 g fat, carbs the rest.
     expect(
-      find.text('Today: Carbs 353 g · Fat 64 g · Protein 128 g'),
+      // A number and its "g" kept together (G4-12).
+      find.text('Today: Carbs 353\u00A0g · Fat 64\u00A0g · Protein 128\u00A0g'),
       findsOneWidget,
     );
 

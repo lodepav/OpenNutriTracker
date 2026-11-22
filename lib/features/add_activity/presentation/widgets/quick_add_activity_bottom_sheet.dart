@@ -16,6 +16,7 @@ import 'package:opennutritracker/features/diary/presentation/bloc/calendar_day_b
 import 'package:opennutritracker/features/diary/presentation/bloc/diary_bloc.dart';
 import 'package:opennutritracker/features/home/presentation/bloc/home_bloc.dart';
 import 'package:opennutritracker/generated/l10n.dart';
+import 'package:opennutritracker/fork/activity/entry_hints.dart'; // [fork] S553
 import 'package:provider/provider.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 
@@ -152,6 +153,17 @@ class _QuickAddActivityBottomSheetState
                 textAlign: TextAlign.center,
               ),
             ),
+            // [fork] S553 activity-entry-words: Quick add and Custom activity
+            // name their fields alike and each says when it is the one to use
+            Padding(
+              padding: const EdgeInsets.only(bottom: Dimens.spacing16),
+              child: Text(
+                quickAddActivityWhen,
+                style: Theme.of(context).textTheme.bodySmall,
+                textAlign: TextAlign.center,
+              ),
+            ),
+            // [/fork]
             _field(
               controller: _nameController,
               identifier: 'quick-add-activity-name',
@@ -159,6 +171,7 @@ class _QuickAddActivityBottomSheetState
               isRequired: false,
               numeric: false,
               autofocus: true,
+              hint: s.customActivityNameFieldHint, // [fork] S553
             ),
             _field(
               controller: _energyController,
@@ -167,6 +180,7 @@ class _QuickAddActivityBottomSheetState
                   ? s.quickAddActivityEnergyLabelKj
                   : s.quickAddActivityEnergyLabelKcal,
               isRequired: true,
+              hint: s.customActivityKcalHint, // [fork] S553
             ),
             _field(
               controller: _durationController,
@@ -205,6 +219,7 @@ class _QuickAddActivityBottomSheetState
     required bool isRequired,
     bool numeric = true,
     bool autofocus = false,
+    String? hint, // [fork] S553
   }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final palette = isDark ? AppPalette.dark : AppPalette.light;
@@ -226,6 +241,7 @@ class _QuickAddActivityBottomSheetState
               : null,
           decoration: InputDecoration(
             labelText: isRequired ? '$label *' : label,
+            hintText: hint, // [fork] S553
             filled: true,
             fillColor: palette.surfaceMuted,
             border: OutlineInputBorder(
@@ -234,7 +250,10 @@ class _QuickAddActivityBottomSheetState
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: Dimens.borderRadiusM,
-              borderSide: BorderSide(color: palette.border, width: Dimens.hairline),
+              // [fork] S552 field-edge: the hairline read about 1.1:1, 3:1 now
+              // borderSide: BorderSide(color: palette.border, width: Dimens.hairline),
+              borderSide: BorderSide(color: palette.textMuted, width: Dimens.hairline),
+              // [/fork]
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: Dimens.borderRadiusM,

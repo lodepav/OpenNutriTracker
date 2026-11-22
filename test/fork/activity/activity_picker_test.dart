@@ -365,7 +365,7 @@ void main() {
         find.bySemanticsIdentifier('add-activity-recent-01015'),
       ),
       isSemantics(
-        label: 'Log bicycling, 45 min, again',
+        label: 'Log bicycling, 45 minutes, again',
         isButton: true,
         hasTapAction: true,
       ),

@@ -140,7 +140,7 @@ class _ActivityVerticalListState extends State<ActivityVerticalList> {
                         ),
                       PopupMenuItem<_ActivityPopupMenuSelection>(
                         value: _ActivityPopupMenuSelection.onImport,
-                        child: Text(S.of(context).importActivityLabel),
+                        child: const Text('Import workout'),
                       ),
                     ],
               ),

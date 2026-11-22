@@ -30,6 +30,7 @@ Future<void> pumpGoal(
   GoalState goal, {
   Future<GoalState> Function()? loadGoal,
   GoalCalories calories = (goalKcal: null, meanKcal: null),
+  BodyWeightUnit unit = BodyWeightUnit.kg,
 }) async {
   await tester.pumpWidget(
     ChangeNotifierProvider(
@@ -43,7 +44,7 @@ Future<void> pumpGoal(
         ],
         supportedLocales: S.supportedLocales,
         home: GoalProgressPage(
-          unit: BodyWeightUnit.kg,
+          unit: unit,
           loadGoal: loadGoal ?? () async => goal,
           loadCalories: () async => calories,
         ),
@@ -113,7 +114,7 @@ void main() {
     );
     await tester.scrollUntilVisible(find.text('Since the start'), 200);
     expect(find.text('Last 30 days'), findsOneWidget);
-    expect(find.text('−0.20 kg a week'), findsNWidgets(2));
+    expect(find.text('−0.2 kg a week'), findsNWidgets(2));
     await tester.scrollUntilVisible(find.text('Calorie goal now'), 200);
     expect(find.text('Since the start'), findsWidgets);
     expect(find.text('in 10 weeks'), findsOneWidget);
@@ -122,6 +123,8 @@ void main() {
       find.text('Milestones, at your last 30 days’ pace'),
       200,
     );
+    // A milestone's weight keeps its unit on its line (G4-12).
+    expect(find.textContaining(RegExp('\\d\u00A0kg')), findsWidgets);
     await tester.scrollUntilVisible(find.text('Plan a goal'), 200);
     expect(find.textContaining('Reached'), findsWidgets);
   });
@@ -146,5 +149,32 @@ void main() {
         loadCalories: () async => (goalKcal: null, meanKcal: null),
       ),
     );
+  });
+
+  // G4-19: one label, "lb" as the phase rows write it, not upstream's "lbs".
+  testWidgets('a pound profile reads lb and one pace format', (tester) async {
+    final trend = [for (var i = 0; i <= 70; i++) 90 - 2 / 70 * i];
+    await pumpGoal(
+      tester,
+      (
+        inputs: inputs(trend, targetKg: 80),
+        progress: GoalProgress(
+          start: GoalStart(
+            date: today.subtract(const Duration(days: 70)),
+            kg: 90,
+            targetKg: 80,
+          ),
+          nowKg: trend.last,
+          paceKgPerWeek: -0.5,
+          trend: trend,
+          today: today,
+        ),
+      ),
+      unit: BodyWeightUnit.lb,
+    );
+    expect(find.textContaining('lbs', findRichText: true), findsNothing);
+    expect(find.textContaining(RegExp(r'\blb\b'), findRichText: true), findsWidgets);
+    await tester.scrollUntilVisible(find.text('Your plan'), 200);
+    expect(find.text('−1.1 lb a week'), findsOneWidget);
   });
 }

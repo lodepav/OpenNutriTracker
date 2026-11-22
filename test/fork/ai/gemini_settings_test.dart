@@ -279,7 +279,9 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(
-      find.textContaining(l10nEn.aiAssistDisclosureOwnServerGemini(_host)),
+      find.textContaining(
+        forkFeatureNames(l10nEn.aiAssistDisclosureOwnServerGemini(_host)),
+      ),
       findsOneWidget,
     );
   });

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:archive/archive.dart';
+import 'package:hive_ce/hive.dart';
 import 'package:logging/logging.dart';
 import 'package:opennutritracker/core/data/data_source/config_data_source.dart';
 import 'package:opennutritracker/core/data/data_source/custom_meal_data_source.dart';
@@ -21,6 +22,8 @@ import 'package:opennutritracker/features/settings/domain/export_import_failure.
 import 'package:opennutritracker/fork/amounts/own_portions.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/fork/body/measurement_store.dart';
+import 'package:opennutritracker/fork/custom_food/serving_mode.dart';
+import 'package:opennutritracker/fork/demo/demo_profile.dart';
 import 'package:opennutritracker/fork/leftovers/meal_groups.dart';
 import 'package:opennutritracker/fork/leftovers/meal_photo_cache.dart';
 import 'package:opennutritracker/fork/phases/phases.dart';
@@ -33,15 +36,16 @@ import 'package:opennutritracker/fork/reminders/reminders.dart';
 /// the water log, fasting sessions, saved custom meals, the adaptive
 /// target's settings, check-ins and diet phases, the meal plan, body measurements,
 /// progress photos, the reminders' times, which entries were logged as one
-/// meal, the switch that keeps meal photos (not the photos), the profile,
-/// the app settings, and every other profile ([ProfilesBackup]).
+/// meal, the switch that keeps meal photos (not the photos), which custom
+/// foods were typed per serving, whether the profile holds the demo, the
+/// profile, the app settings, and every other profile ([ProfilesBackup]).
 ///
 /// Ported from theoleuthardt's `PersonalBackupExtras` (GPL-3.0, their #93,
 /// #94, #95, #97). Every file is optional on restore, so upstream's zips and
 /// older ones still import.
 class BackupExtras {
-  /// A restore wrote the fork's files; `afterRestore` takes it, since
-  /// Settings' dialog also refreshes after an export.
+  /// A restore wrote the fork's files; `afterRestore` takes it, so its
+  /// follow-ups run once per restore.
   static var restored = false;
 
   static const waterFileName = 'water_intake.json';
@@ -57,13 +61,15 @@ class BackupExtras {
   static const appSettingsFileName = 'app_settings.json';
   static const mealGroupsFileName = 'fork_meal_groups.json';
   static const flagsFileName = 'fork_flags.json';
+  static const customFoodModesFileName = 'fork_custom_food_modes.json';
   static const keepMealPhotosKey = 'keepMealPhotos';
 
   static final _log = Logger('BackupExtras');
 
   /// The `ConfigDBO` keys `app_settings.json` carries: the device-wide
   /// preferences. Left out on purpose: the legal and consent flags (a restore
-  /// must not accept a policy for the user), the demo flag, the goals (in
+  /// must not accept a policy for the user), the demo flag (it follows the
+  /// profile's own mark, in `fork_adaptive.json`), the goals (in
   /// `goal_settings.json`), the health import's per-device state, the day
   /// boundary (it keys the tracked days), and the reminder switch, which on
   /// a new phone would read on without the reminder being scheduled.
@@ -102,6 +108,10 @@ class BackupExtras {
   final OwnPortions Function() _ownPortions;
   final MealGroupStore Function() _mealGroups;
   final MealPhotoCache Function() _mealPhotos;
+  final CustomFoodModes Function() _customFoodModes;
+
+  /// The profile's adaptive box, for its demo mark ([demoProfileKey]).
+  final Future<Box<dynamic>> Function() _adaptiveBox;
 
   /// Run when a restore wrote a reminder's time: a time alone schedules
   /// nothing.
@@ -126,6 +136,8 @@ class BackupExtras {
     OwnPortions Function()? ownPortions,
     MealGroupStore Function()? mealGroups,
     MealPhotoCache Function()? mealPhotos,
+    CustomFoodModes Function()? customFoodModes,
+    Future<Box<dynamic>> Function()? adaptiveBox,
     Future<void> Function()? replanReminders,
     UserDataSource? user,
     ConfigDataSource? config,
@@ -138,6 +150,8 @@ class BackupExtras {
        _ownPortions = ownPortions ?? OwnPortions.new,
        _mealGroups = mealGroups ?? MealGroupStore.new,
        _mealPhotos = mealPhotos ?? MealPhotoCache.new,
+       _customFoodModes = customFoodModes ?? CustomFoodModes.new,
+       _adaptiveBox = adaptiveBox ?? AdaptiveStore.openActiveBox,
        _replanReminders = replanReminders ?? (() => Reminders().replan()),
        _user = user,
        _config = config,
@@ -169,7 +183,11 @@ class BackupExtras {
       PhaseStore.upcomingKey: [
         for (final p in await _phases().upcoming()) p.toJson(),
       ],
-      keptKey: await adaptive.kept(),
+      keptKey: {
+        ...await adaptive.kept(),
+        if ((await _adaptiveBox()).get(demoProfileKey) case final bool demo)
+          demoProfileKey: demo,
+      },
     });
     _addJson(archive, planFileName, [
       for (final food in await _plans().all()) food.toJson(),
@@ -186,6 +204,12 @@ class BackupExtras {
     _addJson(archive, flagsFileName, {
       keepMealPhotosKey: await _mealPhotos().enabled,
     });
+    // Install-wide, as the custom foods: a profile's folder drops it.
+    _addJson(
+      archive,
+      customFoodModesFileName,
+      await _customFoodModes().stored(),
+    );
     final photos = _photos();
     final photoIndex = await photos.all();
     _addJson(archive, photosFileName, [for (final p in photoIndex) p.toJson()]);
@@ -362,6 +386,11 @@ class BackupExtras {
       }
       return value as bool?;
     });
+    final customFoodModes = _decodeOrSkip(
+      archive,
+      customFoodModesFileName,
+      (json) => [for (final key in json as List) key as String],
+    );
     final otherProfiles = _profiles?.prepareRestore(archive);
 
     return () async {
@@ -371,6 +400,16 @@ class BackupExtras {
       }
       for (final meal in customMeals ?? const <MealDBO>[]) {
         await _customMeals.saveCustomMeal(meal);
+      }
+      if (customFoodModes != null) {
+        await _customFoodModes().restore(
+          customFoodModes,
+          restored: {
+            // CustomFoodModes.keyOf, on the stored row.
+            for (final meal in customMeals ?? const <MealDBO>[])
+              meal.code ?? meal.name ?? '',
+          },
+        );
       }
       if (adaptive?.plan case final plan?) await _phases().save(plan);
       if (adaptive?.upcoming case final upcoming?) {
@@ -385,6 +424,11 @@ class BackupExtras {
       // After the plan: saving one clears the phase already applied.
       if (adaptive?.kept case final kept?) {
         await _adaptive().restoreKept(kept);
+        // Only "not a demo" comes back: a restore merges into real data, and
+        // leaving a demo wipes the profile.
+        if (kept[demoProfileKey] == false) {
+          await (await _adaptiveBox()).put(demoProfileKey, false);
+        }
         // Not awaited: it reads the diary, and the import holds its lock.
         if (kept.keys.any(_reminderKeys.contains)) {
           unawaited(_replanReminders());
@@ -444,13 +488,20 @@ class BackupExtras {
 
   static final _reminderKeys = {for (final k in ReminderKind.values) k.key};
 
-  /// [kept] without a reminder that is not a time of day, which is skipped
-  /// with a warning: the reminders' tile and schedule read it as one.
+  /// [kept] without a reminder that is not a time of day, or a demo mark
+  /// that is not true or false, each skipped with a warning: the reminders'
+  /// tile and schedule read it as one, and the banner as a flag.
   static Map<String, dynamic>? _checkReminders(Map<String, dynamic>? kept) {
     if (kept == null) return null;
     final checked = <String, dynamic>{};
     for (final MapEntry(:key, :value) in kept.entries) {
-      if (!_reminderKeys.contains(key)) {
+      if (key == demoProfileKey) {
+        if (value is bool) {
+          checked[key] = value;
+        } else {
+          _log.warning('Skipped $key in $adaptiveFileName: not true or false');
+        }
+      } else if (!_reminderKeys.contains(key)) {
         checked[key] = value;
       } else if (value case {
         'hour': final int hour,

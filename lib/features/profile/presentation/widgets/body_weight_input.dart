@@ -124,7 +124,15 @@ class _BodyWeightInputState extends State<BodyWeightInput> {
     );
     final stones = int.tryParse(stonesText);
     final pounds = double.tryParse(poundsText.replaceAll(',', '.'));
-    widget.onChangedKg(ValueValidator.parseStLbWeightInKg(stones, pounds));
+    // [fork] S540 half-empty-pair: "11 st" with pounds left empty is 11 st 0 lb
+    // widget.onChangedKg(ValueValidator.parseStLbWeightInKg(stones, pounds));
+    widget.onChangedKg(
+      ValueValidator.parseStLbWeightInKg(
+        stones,
+        pounds ?? (stones != null && poundsText.isEmpty ? 0 : null),
+      ),
+    );
+    // [/fork]
   }
 
   @override

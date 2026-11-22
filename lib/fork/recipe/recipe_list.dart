@@ -35,6 +35,8 @@ String? recipeEmoji(RecipeEntity recipe) {
   return null;
 }
 
+const _supplement = '\u{1F9EC}';
+
 /// The longest run of the name's words that names a food, the first
 /// such when two are as long: "Greek yogurt parfait" is yogurt.
 String? _nameKind(String name) {
@@ -48,7 +50,8 @@ String? _nameKind(String name) {
       final kind = resolveFoodEmoji(
         words.sublist(start, start + length).join(' '),
       );
-      if (kind != null) return kind;
+      // "Protein bowl" is a dish, not a supplement: its ingredients say
+      if (kind != null && kind != _supplement) return kind;
     }
   }
   return null;
@@ -99,6 +102,8 @@ List<InlineSpan> macroSpans(
             decoration: BoxDecoration(color: color, shape: BoxShape.circle),
           ),
         ),
+      // a word joiner: a line never breaks between the dot and its letter
+      if (small) const TextSpan(text: '\u2060', semanticsLabel: ''),
       TextSpan(
         text: letter,
         semanticsLabel: '$g ${g == 1 ? 'gram' : 'grams'} $name',

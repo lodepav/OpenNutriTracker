@@ -292,7 +292,8 @@ class _OnboardingAboutYouPageBodyState
       identifier: 'onboarding-gender-${selection.name}',
       child: ChoiceChip(
         label: Text(entity.getName(context)),
-        avatar: entity.getIcon(size: 18),
+        // Chosen, the check takes the symbol's place instead of covering it.
+        avatar: _selectedGender == selection ? null : entity.getIcon(size: 18),
         selected: _selectedGender == selection,
         onSelected: (_) => _onGenderSelected(selection),
       ),

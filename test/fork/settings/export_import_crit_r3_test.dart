@@ -249,7 +249,7 @@ void main() {
           final warning = tester.getRect(find.text(_warning));
           final buttons = tester.getRect(find.text(l10nEn.exportAction));
           final description = tester.getRect(
-            find.text(l10nEn.exportImportDescription),
+            find.textContaining('Export saves a backup file'),
           );
           expect(warning.bottom, lessThanOrEqualTo(buttons.top));
           expect(warning.bottom, lessThanOrEqualTo(description.top));

@@ -118,6 +118,7 @@ class _RecipeBuilderScreenState extends State<RecipeBuilderScreen> {
     _servingsController.dispose();
     _totalWeightController.dispose();
     _tagsController.dispose();
+    _forkList.dispose(); // [fork] S564 builder-name-error
     _forkPhoto.discard(); // [fork] S478 photo-staging
     super.dispose();
   }
@@ -125,7 +126,11 @@ class _RecipeBuilderScreenState extends State<RecipeBuilderScreen> {
   InputBorder _fieldBorder(AppPalette palette) {
     return OutlineInputBorder(
       borderRadius: Dimens.borderRadiusS,
-      borderSide: BorderSide(color: palette.border, width: Dimens.hairline),
+      // [fork] S568 recipes-audit-p3: the theme's 3:1 field edge (S552),
+      // not the 1.1:1 hairline (A4)
+      // borderSide: BorderSide(color: palette.border, width: Dimens.hairline),
+      borderSide: BorderSide(color: palette.textMuted),
+      // [/fork]
     );
   }
 
@@ -147,14 +152,36 @@ class _RecipeBuilderScreenState extends State<RecipeBuilderScreen> {
         // Sync the auto-computed total weight into the controller so the
         // user sees the running sum until they manually override it.
         if (!state.totalWeightOverridden) {
-          final newText = state.totalWeightG.toStringAsFixed(0);
+          // [fork] S565 builder-weight-empty: no ingredients, no weight
+          // rather than a 0 among placeholders (C2)
+          // final newText = state.totalWeightG.toStringAsFixed(0);
+          final newText = state.totalWeightG == 0
+              ? ''
+              : state.totalWeightG.toStringAsFixed(0);
+          // [/fork]
           if (_totalWeightController.text != newText) {
             _totalWeightController.text = newText;
           }
         }
-        if (state.saveError != null) {
+        // [fork] S564 builder-name-error: a missing name is said on the
+        // name field (H9)
+        // if (state.saveError != null) {
+        if (state.saveError != null &&
+            state.saveError != SaveError.nameRequired) {
+        // [/fork]
           _showSaveError(context, state.saveError!);
         }
+        // [fork] S564 builder-name-error: Save is in the footer; the name
+        // field is at the list's top, maybe scrolled away
+        if (state.saveError == SaveError.nameRequired &&
+            _forkList.hasClients) {
+          _forkList.animateTo(
+            0,
+            duration: const Duration(milliseconds: 250),
+            curve: Curves.easeOut,
+          );
+        }
+        // [/fork]
       },
       builder: (context, state) {
         return PopScope(
@@ -182,6 +209,7 @@ class _RecipeBuilderScreenState extends State<RecipeBuilderScreen> {
             // [/fork]
           ),
           body: ListView(
+            controller: _forkList, // [fork] S564 builder-name-error
             padding: const EdgeInsets.all(Dimens.spacing16),
             children: [
               // [fork] S127 recipe-builder: the name, the ingredients, then
@@ -192,6 +220,11 @@ class _RecipeBuilderScreenState extends State<RecipeBuilderScreen> {
                   labelText: S.of(context).recipeNameLabel,
                   border: fieldBorder,
                   enabledBorder: fieldBorder,
+                  // S564: until a name is typed
+                  errorText: state.saveError == SaveError.nameRequired &&
+                          _nameController.text.trim().isEmpty
+                      ? S.of(context).recipeNameRequiredLabel
+                      : null,
                 ),
                 onChanged: (v) => _bloc.add(UpdateNameEvent(v)),
               ),
@@ -406,6 +439,10 @@ class _RecipeBuilderScreenState extends State<RecipeBuilderScreen> {
   bool _optionalOpenAtStart = false;
   // [/fork]
 
+  // [fork] S564 builder-name-error
+  final _forkList = ScrollController();
+  // [/fork]
+
   bool _hasUnsavedChanges(RecipeBuilderState state) {
     if (state.didSave || state.isSaving) return false;
     // [fork] S478 photo-staging: a new photo keeps the stored path
@@ -594,7 +631,9 @@ class _RecipeBuilderScreenState extends State<RecipeBuilderScreen> {
         const SnackBar(content: Text('Could not save the photo')),
       );
     }
-    Navigator.of(context).pop();
+    // S564 duplicate-saved: the saved recipe's id, for the page that opened
+    // a duplicate
+    Navigator.of(context).pop(_bloc.state.id);
   }
   // [/fork]
 

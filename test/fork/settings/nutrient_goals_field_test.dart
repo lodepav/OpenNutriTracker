@@ -112,6 +112,27 @@ void main() {
     semantics.dispose();
   });
 
+  testWidgets('the help text spaces its units, as the fields do (S586)', (
+    tester,
+  ) async {
+    await openScreen(tester);
+    expect(find.textContaining('Default reference is 1000 mg.'), findsOneWidget);
+    expect(find.textContaining('1000mg'), findsNothing);
+  });
+
+  testWidgets('the editor is titled apart from the overview it opens from '
+      '(G5-13)', (tester) async {
+    await openScreen(tester);
+    expect(
+      find.descendant(
+        of: find.byType(AppBar),
+        matching: find.text('Edit nutrient goals'),
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Nutrient goals'), findsNothing);
+  });
+
   testWidgets('a value past the range says the range, then is held to it', (
     tester,
   ) async {

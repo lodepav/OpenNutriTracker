@@ -218,6 +218,8 @@ void main() {
     final deletes = lines.indexWhere((l) => l.startsWith('Deletes '));
     expect(deletes, isNonNegative, reason: '$lines');
     expect(lines[deletes], contains('logged foods'));
+    // Final from the first line, which is on screen at 200% (G6-16)
+    expect(lines[deletes], startsWith('Deletes this profile for good'));
     expect(lines[deletes], contains('progress photos'));
     expect(lines[deletes], contains('every profile shares'));
     expect(lines[deletes], isNot(contains(' meals, activities')));

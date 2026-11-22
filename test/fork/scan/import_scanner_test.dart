@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get_it/get_it.dart';
@@ -17,6 +18,7 @@ import 'package:opennutritracker/features/recipes/presentation/screens/import_re
 import 'package:opennutritracker/fork/scan/scan_hint.dart';
 import 'package:opennutritracker/fork/scan/scanner_error.dart';
 import 'package:opennutritracker/fork/scan/shared_code_dialog.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 import '../../helpers/ux_checks.dart';
 
@@ -68,9 +70,34 @@ String _recipeCode() => SharedRecipePayload.fromJsonString(
   ]),
 ).toJsonString();
 
+/// The camera permission as Android answers it, without the plugin.
+class _FakePermission implements CameraPermission {
+  // Refused once: the prompt shows, and the camera is allowed in it.
+  bool prompts = true;
+  PermissionStatus answer = PermissionStatus.granted;
+  PermissionStatus now = PermissionStatus.denied;
+  int settingsOpened = 0;
+
+  @override
+  Future<bool> canPrompt() async => prompts;
+
+  @override
+  Future<PermissionStatus> request() async => answer;
+
+  @override
+  Future<PermissionStatus> status() async => now;
+
+  @override
+  Future<bool> openSettings() async {
+    settingsOpened++;
+    return true;
+  }
+}
+
 void main() {
   final getIt = GetIt.instance;
   var requests = 0;
+  late _FakePermission permission;
 
   setUp(() async {
     await getIt.reset();
@@ -80,6 +107,8 @@ void main() {
       ..registerSingleton<GetPhysicalActivityUsecase>(fake)
       ..registerSingleton<GetUserUsecase>(fake);
     requests = 0;
+    permission = _FakePermission();
+    ScannerError.permission = permission;
     for (final stream in _streams) {
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(stream, (_) async => null);
@@ -99,6 +128,7 @@ void main() {
   tearDown(() async {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(_channel, null);
+    ScannerError.permission = const CameraPermission();
     await getIt.reset();
   });
 
@@ -146,6 +176,42 @@ void main() {
       expect(find.byType(AlertDialog), findsOneWidget);
     });
   }
+
+  // G3-20: refused for good, Allow camera opens the app's settings, and
+  // coming back with the camera allowed starts it.
+  testWidgets('a camera refused for good opens the app settings', (
+    tester,
+  ) async {
+    await pump(tester, const ImportRecipeScannerScreen());
+    // refused twice: no prompt, and the plugin reads plain "denied"
+    permission
+      ..prompts = false
+      ..answer = PermissionStatus.denied;
+
+    await tester.tap(find.text('Allow camera'));
+    await tester.pumpAndSettle();
+    expect(permission.settingsOpened, 1);
+    expect(requests, 1, reason: 'no camera start while in settings');
+
+    permission.now = PermissionStatus.granted;
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await tester.pumpAndSettle();
+    expect(requests, 2, reason: 'back from settings, the camera starts');
+  });
+
+  testWidgets('a refusal in the prompt just shown stays on the message', (
+    tester,
+  ) async {
+    await pump(tester, const ImportRecipeScannerScreen());
+    // the second refusal, given in the prompt this tap showed
+    permission.answer = PermissionStatus.permanentlyDenied;
+    await tester.tap(find.text('Allow camera'));
+    await tester.pumpAndSettle();
+    expect(permission.settingsOpened, 0);
+    expect(requests, 1, reason: 'no camera start without the permission');
+    expect(find.text('Camera access is off'), findsOneWidget);
+  });
 
   testWidgets('the camera message passes the screen checks', (tester) async {
     await checkScreen(
@@ -284,6 +350,25 @@ void main() {
         expect(find.byType(AlertDialog), findsOneWidget);
       });
     }
+  });
+
+  testWidgets('the workout scanner title fits beside its actions', (
+    tester,
+  ) async {
+    // G3-7: "Import shared wor…" at font 1.0
+    await pump(tester, const ImportActivityScannerScreen());
+    final title = find.descendant(
+      of: find.byType(AppBar),
+      matching: find.text('Import workout'),
+    );
+    expect(title, findsOneWidget);
+    // the app bar sets no maxLines, so an ellipsis shows only as a box
+    // narrower than the text
+    final paragraph = tester.renderObject<RenderParagraph>(title);
+    expect(
+      paragraph.getMaxIntrinsicWidth(double.infinity),
+      lessThanOrEqualTo(paragraph.size.width),
+    );
   });
 
   testWidgets('the line over the feed passes the screen checks', (

@@ -107,6 +107,23 @@ extension _GoalsSettings on _SettingsScreenState {
             showChevron: true,
             onTap: () => _openNutrientGoalsScreen(context),
           ),
+          // With the other daily goals; You keeps its row too
+          if (DisplayPrefs.showWater.value)
+            _SettingsTile(
+              identifier: 'settings-water-goal',
+              palette: palette,
+              icon: Icons.water_drop_outlined,
+              title: S.of(context).settingsWaterGoalLabel,
+              subtitle: 'How much water a day',
+              onTap: () => showDialog<void>(
+                context: context,
+                builder: (_) => WaterGoalDialog(
+                  settingsBloc: _settingsBloc,
+                  homeBloc: locator<HomeBloc>(),
+                  usesImperialUnits: state.usesImperialFoodUnits,
+                ),
+              ),
+            ),
         ],
       ),
       const SizedBox(height: Dimens.spacing20),

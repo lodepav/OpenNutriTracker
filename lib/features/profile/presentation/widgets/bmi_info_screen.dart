@@ -14,6 +14,11 @@ import 'package:opennutritracker/core/utils/safe_url_launcher.dart';
 // [fork] S453 bmi-band-accent
 import 'package:opennutritracker/fork/display/contrast.dart';
 // [/fork]
+// [fork] S570 bmi-user-units: the inputs in the units the user picked
+import 'package:opennutritracker/fork/goal/goal_explained.dart'
+    show InputUnits, heightInputText, metricInputUnits, savedInputUnits,
+        weightInputText;
+// [/fork]
 
 /// Transparency screen for the BMI shown on the Profile tab: the inputs,
 /// the formula with the user's numbers substituted in, and the full WHO
@@ -33,6 +38,9 @@ class BmiInfoScreen extends StatefulWidget {
 
 class _BmiInfoScreenState extends State<BmiInfoScreen> {
   late final Future<UserEntity> _user;
+  // [fork] S570 bmi-user-units
+  late final Future<InputUnits> _units = savedInputUnits();
+  // [/fork]
 
   @override
   void initState() {
@@ -73,16 +81,43 @@ class _BmiInfoScreenState extends State<BmiInfoScreen> {
               _SectionCard(
                 title: l10n.kcalGoalInfoInputsSection,
                 children: [
-                  _ValueRow(
-                    label: l10n.heightLabel,
-                    value:
-                        '${user.heightCM.toStringAsFixed(0)} ${l10n.cmLabel}',
+                  // [fork] S570 bmi-user-units: an imperial user's own
+                  // units, with the metric the formula below uses
+                  // _ValueRow(
+                  //   label: l10n.heightLabel,
+                  //   value:
+                  //       '${user.heightCM.toStringAsFixed(0)} ${l10n.cmLabel}',
+                  // ),
+                  // _ValueRow(
+                  //   label: l10n.weightLabel,
+                  //   value:
+                  //       '${user.weightKG.toStringAsFixed(1)} ${l10n.kgLabel}',
+                  // ),
+                  FutureBuilder<InputUnits>(
+                    future: _units,
+                    initialData: metricInputUnits,
+                    builder: (context, units) => Column(
+                      children: [
+                        _ValueRow(
+                          label: l10n.heightLabel,
+                          value: heightInputText(
+                            l10n,
+                            user.heightCM,
+                            units.requireData.heightImperial,
+                          ),
+                        ),
+                        _ValueRow(
+                          label: l10n.weightLabel,
+                          value: weightInputText(
+                            l10n,
+                            user.weightKG,
+                            units.requireData.weight,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                  _ValueRow(
-                    label: l10n.weightLabel,
-                    value:
-                        '${user.weightKG.toStringAsFixed(1)} ${l10n.kgLabel}',
-                  ),
+                  // [/fork]
                 ],
               ),
               const SizedBox(height: Dimens.spacing12),
@@ -195,6 +230,10 @@ class _ClassificationRow extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Expanded(child: Text(row.status.getName(context), style: style)),
+          // [fork] S571 bmi-band-you: the user's band is named, not only
+          // coloured and bold
+          if (isUsers) Text('You', style: style),
+          // [/fork]
           const SizedBox(width: Dimens.spacing8),
           Text(row.range, style: style),
         ],

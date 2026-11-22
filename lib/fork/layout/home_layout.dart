@@ -76,8 +76,9 @@ Map<String, String> homeSectionNames(BuildContext context) => {
   'quickActions': 'Quick actions',
   'repeatMeal': 'Repeat a meal',
   'recentFoods': 'Recent foods',
-  'tiles': 'Tiles',
+  // a due check-in is a decision: above the tiles
   'checkIn': 'Weekly check-in',
+  'tiles': 'Tiles',
   'strength': 'Strength',
   'plan': 'Meal plan',
   'diaryActivity': S.of(context).activityLabel,

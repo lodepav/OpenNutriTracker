@@ -5,6 +5,8 @@ import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/features/home/presentation/bloc/home_bloc.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 import 'package:opennutritracker/fork/units/amount_text.dart'; // [fork] S473
+import 'package:opennutritracker/fork/water/last_logged_water.dart'; // [fork] S550
+import 'package:opennutritracker/fork/display/contrast.dart'; // [fork] S554
 
 /// #32: simple "how much did you just drink?" dialog. A slider feels
 /// kinder than a numeric keypad for the common case where the person
@@ -26,7 +28,21 @@ class LogWaterDialog extends StatefulWidget {
 
   final bool usesImperialUnits;
 
-  const LogWaterDialog({super.key, this.usesImperialUnits = false});
+  // [fork] S554 water-today: today's water and goal, for the line saying what
+  // today comes to so far; no line without them
+  final int? todayMl;
+  final int? goalMl;
+  // [/fork]
+
+  // [fork] S554 water-today
+  // const LogWaterDialog({super.key, this.usesImperialUnits = false});
+  const LogWaterDialog({
+    super.key,
+    this.usesImperialUnits = false,
+    this.todayMl,
+    this.goalMl,
+  });
+  // [/fork]
 
   @override
   State<LogWaterDialog> createState() => _LogWaterDialogState();
@@ -93,10 +109,23 @@ class _LogWaterDialogState extends State<LogWaterDialog> {
             // [/fork]
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  color: Theme.of(context).colorScheme.primary,
+                  // [fork] S554 water-today: the accent as text, at 4.5:1 on
+                  // the dialog whichever accent the user picked
+                  // color: Theme.of(context).colorScheme.primary,
+                  color: textAccent(context),
+                  // [/fork]
                   fontWeight: FontWeight.w800,
                 ),
           ),
+          // [fork] S554 water-today: what today comes to so far, so the amount
+          // is picked against it
+          if (_todayText case final today?)
+            Text(
+              today,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          // [/fork]
           const SizedBox(height: 8),
           Semantics(
             identifier: 'log-water-slider',
@@ -204,8 +233,8 @@ class _LogWaterDialogState extends State<LogWaterDialog> {
     // [/fork]
   }
 
-  // [fork] S340 water-undo-says: the drink the bloc's undo picks, the latest
-  // by time, and what today comes to without it.
+  // [fork] S340 water-undo-says: the drink the bloc's undo picks, the one
+  // logged last (S550), and what today comes to without it.
   // shortcut: read from the loaded Home state, so a drink logged elsewhere
   // since its last load is missed; upgrade when undoLastWaterIntake returns
   // the removed entry.
@@ -213,14 +242,26 @@ class _LogWaterDialogState extends State<LogWaterDialog> {
     if (state is! HomeLoadedState || state.waterIntakes.isEmpty) {
       return 'Removed the last drink';
     }
-    final last = state.waterIntakes.reduce(
-      (a, b) => b.dateTime.isBefore(a.dateTime) ? a : b,
-    );
-    String shown(int ml) => widget.usesImperialUnits
-        ? '${UnitCalc.mlToFlOz(ml.toDouble()).round()} fl oz'
-        : '$ml ml';
-    return 'Removed ${shown(last.amountMl)} · '
-        'today ${shown(state.waterMlToday - last.amountMl)}';
+    final last = lastLoggedWater(state.waterIntakes)!;
+    return 'Removed ${_shown(last.amountMl)} · '
+        'today ${_shown(state.waterMlToday - last.amountMl)}';
+  }
+
+  // [/fork]
+
+  // [fork] S554 water-today: what today comes to so far, in the dialog's unit
+  int _inUnit(int ml) => widget.usesImperialUnits
+      ? UnitCalc.mlToFlOz(ml.toDouble()).round()
+      : ml;
+
+  String get _unit => widget.usesImperialUnits ? 'fl oz' : 'ml';
+
+  String _shown(int ml) => '${_inUnit(ml)} $_unit';
+
+  String? get _todayText {
+    final (today, goal) = (widget.todayMl, widget.goalMl);
+    if (today == null || goal == null) return null;
+    return 'Today so far: ${_inUnit(today)} of ${_shown(goal)}';
   }
 
   // [/fork]

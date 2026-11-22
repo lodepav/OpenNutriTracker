@@ -4,6 +4,7 @@ import 'dart:io';
 // [/fork]
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart'; // [fork] S556
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/core/utils/user_image_storage.dart'; // [fork] S408
@@ -48,6 +49,14 @@ class _ImageFullScreenState extends State<ImageFullScreen> {
         elevation: 0,
         backgroundColor: Colors.transparent,
         foregroundColor: Colors.white,
+        // S556 full-photo-bars: the light theme drew grey scrims over the
+        // black at the status and navigation bars
+        systemOverlayStyle: SystemUiOverlayStyle.light.copyWith(
+          statusBarColor: Colors.transparent,
+          systemNavigationBarColor: Colors.black,
+          systemNavigationBarContrastEnforced: false,
+          systemStatusBarContrastEnforced: false,
+        ),
       ),
       // appBar: AppBar(elevation: 0, backgroundColor: Colors.transparent),
       // [/fork]

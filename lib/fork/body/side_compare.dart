@@ -280,9 +280,11 @@ class _SideComparePageState extends State<SideComparePage> {
         ),
         const SizedBox(height: Dimens.spacing16),
         if (last == null) ...[
+          // One line by its button, not a second "none yet" down the page.
           Text(
+            '${sides.isEmpty ? 'No ${part.label.toLowerCase()} measured yet. ' : ''}'
             'Measure your left and right ${part.label.toLowerCase()} on the '
-            'same day, under Body measurements, to compare them.',
+            'same day to compare them.',
           ),
           Align(
             alignment: AlignmentDirectional.centerStart,
@@ -335,16 +337,19 @@ class _SideComparePageState extends State<SideComparePage> {
             style: Theme.of(context).textTheme.titleSmall,
           ),
         ],
-        const SizedBox(height: Dimens.spacing16),
-        _SidesChart(
-          part: part,
-          measurements: charted,
-          units: units,
-          caption: inRange.isEmpty && sides.isNotEmpty
-              ? 'None in the last ${widget.rangeDays} days; all since '
-                    '${DateFormat.yMMM(locale).format(sides.first.date)}.'
-              : null,
-        ),
+        // A single day is two lone dots: the figures above say it.
+        if ({for (final m in charted) _date(m.date)}.length >= 2) ...[
+          const SizedBox(height: Dimens.spacing16),
+          _SidesChart(
+            part: part,
+            measurements: charted,
+            units: units,
+            caption: inRange.isEmpty && sides.isNotEmpty
+                ? 'None in the last ${widget.rangeDays} days; all since '
+                      '${DateFormat.yMMM(locale).format(sides.first.date)}.'
+                : null,
+          ),
+        ],
         if (pairs.isNotEmpty) ...[
           trendSection(context, 'Both sides measured'),
           // TrendRows' rows, each with its spoken form.
@@ -376,6 +381,8 @@ class _SideComparePageState extends State<SideComparePage> {
   }
 }
 
+DateTime _date(DateTime t) => DateTime(t.year, t.month, t.day);
+
 /// Each side's sizes over the range, a line apiece.
 class _SidesChart extends StatelessWidget {
   final SidePart part;
@@ -396,9 +403,6 @@ class _SidesChart extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = paletteOf(context);
     final theme = Theme.of(context);
-    if (measurements.isEmpty) {
-      return noData(context, 'No ${part.label.toLowerCase()} measured yet.');
-    }
     final first = measurements.first.date;
     double x(DateTime d) => CalendarDayCalc.daysBetween(first, d).toDouble();
     List<FlSpot> spots(BodyMetric metric) => [

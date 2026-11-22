@@ -21,6 +21,8 @@ import 'package:opennutritracker/fork/amounts/own_portions.dart';
 import 'package:opennutritracker/fork/backup/auto_backup.dart';
 import 'package:opennutritracker/fork/bulk/photo_disclosure.dart';
 import 'package:opennutritracker/fork/body/measurement_store.dart';
+import 'package:opennutritracker/fork/custom_food/serving_mode.dart';
+import 'package:opennutritracker/fork/demo/demo_profile.dart';
 import 'package:opennutritracker/fork/display/display_prefs.dart';
 import 'package:opennutritracker/fork/food/moved_dish_ids.dart';
 import 'package:opennutritracker/fork/goal/goal_progress.dart';
@@ -364,7 +366,15 @@ final _fieldReaders = <String, Map<String, Future<Object?> Function()>>{
         _stored(AdaptiveStore.boxName, MovedDishIds.profileFlag),
     'photoDisclosureSeen': () =>
         _stored(AdaptiveStore.boxName, PhotoDisclosureSeen.key),
+    'isDemoProfile': () => _stored(AdaptiveStore.boxName, demoProfileKey),
   },
+  CustomFoodModes.boxName: {
+    'perServing': () async {
+      await CustomFoodModes().load();
+      return CustomFoodModes.perServing.value.toList();
+    },
+  },
+  'fork_demo_mark': {'adopted': () => _stored('fork_demo_mark', 'adopted')},
   WeightImport.boxName: {
     'enabled': () => _weightImport.isOn(),
     'lastImportAt': () => _weightImport.lastImportAt(),

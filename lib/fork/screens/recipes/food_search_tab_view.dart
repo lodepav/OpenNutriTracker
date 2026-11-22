@@ -21,6 +21,8 @@ import 'package:opennutritracker/features/add_meal/presentation/widgets/no_resul
 import 'package:opennutritracker/fork/display/contrast.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 import 'package:opennutritracker/fork/off/off_kinds.dart';
+import 'package:opennutritracker/fork/recipe/recipe_builder.dart'
+    show ingredientEmoji;
 import 'package:opennutritracker/fork/units/energy_text.dart';
 
 /// Reusable 3-tab food search (Products / Food / Recently) that delegates the
@@ -59,12 +61,23 @@ class _FoodSearchTabViewState extends State<FoodSearchTabView>
     _productsBloc = locator<ProductsBloc>();
     _foodBloc = locator<FoodBloc>();
     _recentMealBloc = locator<RecentMealBloc>();
-    _tabController = TabController(length: 3, vsync: this);
+    // On Recently, which the builder mostly picks from; Products and Food
+    // are for a search (G3-21, H8)
+    _tabController = TabController(length: 3, vsync: this, initialIndex: 2);
     _tabController.addListener(() {
       _onSearchSubmit(_searchStringListener.value);
     });
-    // the landing tab lists them until a search is typed
     _recentMealBloc.add(const LoadRecentMealEvent(searchString: ''));
+    // nothing recent: the search tab instead of an empty list
+    _recentMealBloc.stream
+        .firstWhere((state) => state is RecentMealLoadedState)
+        .then((state) {
+          if (!mounted || _tabController.index != 2) return;
+          if (_searchStringListener.value.trim().isNotEmpty) return;
+          if ((state as RecentMealLoadedState).recentMeals.isEmpty) {
+            _tabController.index = 0;
+          }
+        }, onError: (_) {});
   }
 
   @override
@@ -140,8 +153,6 @@ class _FoodSearchTabViewState extends State<FoodSearchTabView>
       builder: (context, query, _) => BlocBuilder<ProductsBloc, ProductsState>(
         bloc: _productsBloc,
         builder: (context, state) {
-          // what was eaten lately, rather than a bare prompt (H7)
-          if (query.trim().isEmpty) return _buildLandingRecents(context);
           if (state is ProductsInitial) {
             return query.trim().length >= minQueryLength
                 ? _pendingSpinner
@@ -225,43 +236,6 @@ class _FoodSearchTabViewState extends State<FoodSearchTabView>
           return const SizedBox.shrink();
         },
       ),
-    );
-  }
-
-  /// The recent foods under an empty search on the Products tab; the prompt
-  /// to search where there are none.
-  Widget _buildLandingRecents(BuildContext context) {
-    return BlocBuilder<RecentMealBloc, RecentMealState>(
-      bloc: _recentMealBloc,
-      builder: (context, state) {
-        // nothing while they load, so the prompt does not flash on each open
-        if (state is RecentMealInitial || state is RecentMealLoadingState) {
-          return const SizedBox.shrink();
-        }
-        if (state is! RecentMealLoadedState || state.recentMeals.isEmpty) {
-          return const DefaultsResultsWidget();
-        }
-        return ListView.builder(
-          itemCount: state.recentMeals.length + 1,
-          itemBuilder: (context, index) => index == 0
-              ? Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    Dimens.spacing8,
-                    0,
-                    Dimens.spacing8,
-                    Dimens.spacing8,
-                  ),
-                  child: Text(
-                    'Your recent foods',
-                    style: Theme.of(context).textTheme.titleSmall,
-                  ),
-                )
-              : _PickableMealCard(
-                  meal: state.recentMeals[index - 1],
-                  onTap: widget.onMealSelected,
-                ),
-        );
-      },
     );
   }
 
@@ -380,9 +354,8 @@ class _PickableMealCard extends StatelessWidget {
                           borderRadius: Dimens.borderRadiusS,
                         ),
                         alignment: Alignment.center,
-                        // an Open Food Facts product shows its
-                        // kind, as in the meal search
-                        child: switch (OffKinds.emojiFor(meal)) {
+                        // the food's picture, as the builder shows it
+                        child: switch (ingredientEmoji(meal)) {
                           final emoji? => ExcludeSemantics(
                             child: Text(
                               emoji,

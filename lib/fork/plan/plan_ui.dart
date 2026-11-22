@@ -20,6 +20,12 @@ import 'package:opennutritracker/fork/undo/undo_delete.dart';
 
 final _log = Logger('PlannedFoodsCard');
 
+/// The food's name for a row or a title; a food with none still gets one.
+String plannedName(PlannedFood food) {
+  final name = food.meal.name?.trim() ?? '';
+  return name.isEmpty ? 'Unnamed food' : name;
+}
+
 /// The amount as picked: [PlannedFood.amountText] is in the food's own unit,
 /// so a serving of 180 g reads "1 serving", not "180 serving".
 String plannedAmountLabel(PlannedFood food) {
@@ -256,7 +262,7 @@ class _PlannedFoodsCardState extends State<PlannedFoodsCard> {
     final weekdays = await showDialog<Set<int>>(
       context: context,
       builder: (_) => RepeatDialog(
-        name: food.meal.name ?? '',
+        name: plannedName(food),
         initial: food.repeats ? food.weekdays : {food.day.weekday},
         repeating: food.repeats,
       ),
@@ -357,7 +363,7 @@ class _PlannedFoodsCardState extends State<PlannedFoodsCard> {
                 ListTile(
                   dense: true,
                   contentPadding: EdgeInsets.zero,
-                  title: Text(food.meal.name ?? ''),
+                  title: Text(plannedName(food)),
                   subtitle: Text(
                     '${_typeName(food.type)} · ${plannedAmountLabel(food)} · '
                     '${energyText(context, food.kcal)}'

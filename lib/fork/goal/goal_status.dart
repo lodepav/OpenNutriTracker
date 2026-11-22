@@ -60,11 +60,26 @@ GoalVerdict goalVerdict({
 String signedWeightText(double kg, BodyWeightUnit unit) =>
     weightChangeText(kg, unit);
 
-/// A pace of [kgPerWeek] as Goal progress prints it, "−0.20 kg a week", in
-/// kg or in pounds for lb and st.
-String signedPaceText(double kgPerWeek, BodyWeightUnit unit) =>
-    '${signedRate(unit == BodyWeightUnit.kg ? kgPerWeek : kgPerWeek * 2.20462)} '
-    '${unit == BodyWeightUnit.kg ? 'kg' : 'lb'} a week';
+/// A pace of [kgPerWeek] as the goal pages print it, "−0.5 kg a week",
+/// "−0.25 lb a week": as the planner sets it, to the quarter with a
+/// trailing zero dropped, in kg or in pounds for lb and st.
+String signedPaceText(double kgPerWeek, BodyWeightUnit unit) {
+  final text = signedRate(
+    unit == BodyWeightUnit.kg ? kgPerWeek : kgPerWeek * 2.20462,
+  );
+  final trimmed = text.endsWith('0')
+      ? text.substring(0, text.length - 1)
+      : text;
+  return '$trimmed ${unit == BodyWeightUnit.kg ? 'kg' : 'lb'} a week';
+}
+
+/// A body weight's unit as the goal pages write it, "lb" as [weightText]
+/// does, not upstream's "lbs".
+String goalWeightLabel(BodyWeightUnit unit) => switch (unit) {
+  BodyWeightUnit.kg => 'kg',
+  BodyWeightUnit.lb => 'lb',
+  BodyWeightUnit.st => 'st',
+};
 
 /// [start] – [end] in [format]; one date when both fall on the same day.
 String dateRangeText(intl.DateFormat format, DateTime start, DateTime end) {

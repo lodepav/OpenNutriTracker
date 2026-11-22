@@ -119,16 +119,16 @@ class FoodDatabasesView extends StatelessWidget {
           ),
         ),
         const SizedBox(height: Dimens.spacing8),
+        // The label on its own line, so wrapped links don't start under it
+        Padding(
+          padding: const EdgeInsets.only(left: Dimens.spacing4),
+          child: Text(
+            'About them',
+            style: text.bodySmall?.copyWith(color: palette.textMuted),
+          ),
+        ),
         Wrap(
-          crossAxisAlignment: WrapCrossAlignment.center,
           children: [
-            Padding(
-              padding: const EdgeInsets.only(left: Dimens.spacing4),
-              child: Text(
-                'About them:',
-                style: text.bodySmall?.copyWith(color: palette.textMuted),
-              ),
-            ),
             for (final MapEntry(key: name, value: url) in sites.entries)
               TextButton(onPressed: () => onOpenSite(url), child: Text(name)),
           ],

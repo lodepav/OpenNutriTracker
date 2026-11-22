@@ -187,6 +187,33 @@ void main() {
     expect([for (final w in await _kidWeights()) w.weightKg], [31]);
   });
 
+  test("another profile's demo mark travels in its folder and lands in its "
+      'own box', () async {
+    final db = await _device();
+    final kidBox = await _plain<dynamic>('ForkAdaptiveBox', 'kid');
+    await kidBox.put('isDemoProfile', false);
+    await kidBox.close();
+    final archive = await exportWithKid(db);
+    expect(
+      utf8.decode(
+        archive.findFile('profiles/kid/fork_adaptive.json')!.content
+            as List<int>,
+      ),
+      contains('"isDemoProfile":false'),
+    );
+
+    await Hive.deleteBoxFromDisk(
+      HiveDBProvider.boxNameFor('ForkAdaptiveBox', 'kid'),
+    );
+    await ProfilesBackup(db, openBox: _plain).prepareRestore(archive)!();
+
+    final kid = await _plain<dynamic>('ForkAdaptiveBox', 'kid');
+    expect(kid.get('isDemoProfile'), isFalse);
+    await kid.close();
+    final me = await _plain<dynamic>('ForkAdaptiveBox', '');
+    expect(me.containsKey('isDemoProfile'), isFalse);
+  });
+
   test("a restored profile never takes another profile's boxes", () async {
     final db = await _device();
     final exported = await exportWithKid(db);

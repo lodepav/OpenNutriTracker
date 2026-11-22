@@ -1,6 +1,7 @@
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/fork/backup/auto_backup.dart';
 import 'package:opennutritracker/fork/bulk/photo_meal_memory_store.dart';
+import 'package:opennutritracker/fork/custom_food/serving_mode.dart';
 import 'package:opennutritracker/fork/health/weight_import.dart';
 import 'package:opennutritracker/fork/leftovers/meal_groups.dart';
 import 'package:opennutritracker/fork/off/off_kinds.dart';
@@ -111,6 +112,8 @@ const storedFields = <String, Map<String, StoredField>>{
       'per device: the photo disclosure last read; lost, it shows again '
       '(photo_disclosure.dart)',
     ),
+    // demo_profile.dart: which profile holds the demo.
+    'isDemoProfile': backedUp,
   },
   WeightImport.boxName: {
     'enabled': StoredField.notBackedUp(
@@ -136,6 +139,14 @@ const storedFields = <String, Map<String, StoredField>>{
       "per install: the search cache's dish ids moved (moved_dish_ids.dart)",
     ),
     'keepMealPhotos': backedUp,
+  },
+  // With the custom foods, which every profile shares.
+  CustomFoodModes.boxName: {'perServing': backedUp},
+  'fork_demo_mark': {
+    'adopted': StoredField.notBackedUp(
+      "per install: this install's one upgrade from before the demo mark "
+      'ran; a restored profile carries its own mark (demo_profile.dart)',
+    ),
   },
   AutoBackup.boxName: {
     'folderUri': StoredField.notBackedUp('per device: the backup folder'),

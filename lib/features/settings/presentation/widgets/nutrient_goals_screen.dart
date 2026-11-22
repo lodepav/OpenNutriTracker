@@ -16,6 +16,9 @@ import 'package:opennutritracker/fork/units/amount_text.dart' show spokenUnit;
 import 'package:flutter/foundation.dart' show listEquals;
 import 'package:opennutritracker/fork/bulk/discard_guard.dart';
 // [/fork]
+// [fork] S586 nutrient-unit-space
+import 'package:opennutritracker/fork/settings/unit_spacing.dart';
+// [/fork]
 
 /// #173 + follow-up: full screen rather than a dialog because the ten
 /// nutrient sliders are tall enough to need real scroll room on a
@@ -379,8 +382,9 @@ class _NutrientGoalsScreenState extends State<NutrientGoalsScreen> {
         // Grow the bar with the text scale so the title can wrap to two lines
         // beside the actions rather than clipping at large font sizes.
         toolbarHeight: twoLineToolbarHeight(context), // [fork] S135
-        title: Text(
-          s.settingsNutrientGoalsLabel,
+        // Not the overview's "Nutrient goals" again, which opens it (G5-13)
+        title: const Text(
+          'Edit nutrient goals',
           maxLines: 2,
           softWrap: true, // [fork] S135 AppBar titles default to no wrap
           overflow: TextOverflow.ellipsis,
@@ -788,7 +792,10 @@ class _NutrientRow extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(top: 2.0),
               child: Text(
-                description,
+                // [fork] S586 nutrient-unit-space: "20 g" as in the fields
+                // description,
+                spaceUnits(description),
+                // [/fork]
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: Theme.of(context)
                           .colorScheme

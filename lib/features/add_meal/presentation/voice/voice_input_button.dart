@@ -221,9 +221,15 @@ class VoiceInputButtonState extends State<VoiceInputButton> {
           child: TextButton(
             onPressed: listening ? null : _toggleLanguage,
             style: TextButton.styleFrom(
-              minimumSize: const Size(40, 40),
+              // [fork] S555 voice-language-target: 40 dp, under the 48 a
+              // target needs (A1)
+              // minimumSize: const Size(40, 40),
+              minimumSize: const Size(48, 48),
+              // [/fork]
               padding: const EdgeInsets.symmetric(horizontal: 8),
-              visualDensity: VisualDensity.compact,
+              // [fork] S555 voice-language-target: compact took 8 dp off again
+              // visualDensity: VisualDensity.compact,
+              // [/fork]
             ),
             child: Tooltip(
               message: s.voiceInputLanguageTooltip(language.code.toUpperCase()),

@@ -93,15 +93,13 @@ void main() {
     expect(find.textContaining('107 kcal'), findsOneWidget);
   });
 
-  testWidgets('a food without one starts empty, with no preview', (
+  // G3-12: Add never meets an empty field
+  testWidgets('a food without one starts at 100 g, with its preview', (
     tester,
   ) async {
     await _openSheet(tester, _banana());
-    expect(_amountText(tester), '');
-    expect(
-      find.byKey(const ValueKey('ingredient-amount-preview')),
-      findsNothing,
-    );
+    expect(_amountText(tester), '100');
+    expect(find.textContaining('89 kcal'), findsOneWidget);
   });
 
   testWidgets('the typed amount shows its energy and macros', (tester) async {
@@ -120,5 +118,23 @@ void main() {
     await tester.enterText(find.byType(TextFormField), '50,5');
     await tester.pump();
     expect(find.textContaining('45 kcal'), findsOneWidget);
+  });
+
+  // G3-7: the unit menu stays on the screen
+  testWidgets('the unit menu opens inside the screen', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2340);
+    tester.view.devicePixelRatio = 2.625;
+    addTearDown(tester.view.reset);
+    await _openSheet(tester, _banana(servingQuantity: 120));
+    await tester.tap(find.byType(DropdownButtonFormField<String>));
+    await tester.pumpAndSettle();
+    final width = tester.view.physicalSize.width / tester.view.devicePixelRatio;
+    final items = find.byType(DropdownMenuItem<String>);
+    expect(items, findsWidgets);
+    for (var i = 0; i < items.evaluate().length; i++) {
+      final rect = tester.getRect(items.at(i));
+      expect(rect.right, lessThanOrEqualTo(width), reason: '$rect');
+      expect(rect.left, greaterThanOrEqualTo(0));
+    }
   });
 }

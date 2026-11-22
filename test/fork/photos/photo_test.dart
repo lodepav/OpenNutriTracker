@@ -41,6 +41,12 @@ class _FailingPhotos extends _MemoryPhotos {
       throw const FileSystemException('disk full');
 }
 
+class _FailingDelete extends _MemoryPhotos {
+  @override
+  Future<void> remove(String id) async =>
+      throw const FileSystemException('read-only');
+}
+
 void main() {
   group('store', () {
     late Directory dir;
@@ -534,6 +540,120 @@ void main() {
         expect(width, greaterThan(0));
         expect(width, lessThanOrEqualTo(tester.view.physicalSize.width / 2));
       }
+    });
+
+    // G5-17: the add sheet had no title or drag handle.
+    testWidgets('the add sheet is titled', (tester) async {
+      final semantics = tester.ensureSemantics();
+      await pump(tester);
+      await tester.tap(find.byKey(const ValueKey('photo-add')));
+      await tester.pumpAndSettle();
+      expect(
+        tester.getSemantics(find.text('Add a progress photo')),
+        isSemantics(isHeader: true),
+      );
+      expect(
+        tester
+            .widget<BottomSheet>(find.byType(BottomSheet))
+            .showDragHandle,
+        isTrue,
+      );
+      semantics.dispose();
+    });
+
+    // G5-7: the viewer zooms; audit A3: Delete reads as destructive.
+    testWidgets('the viewer zooms and its Delete is in the error colour', (
+      tester,
+    ) async {
+      await pump(tester, photos: 1);
+      await tester.tap(find.byKey(const ValueKey('photo-old0')));
+      await tester.pumpAndSettle();
+      expect(
+        find.descendant(
+          of: find.byType(AlertDialog),
+          matching: find.byType(InteractiveViewer),
+        ),
+        findsOneWidget,
+      );
+      final delete = find.byKey(const ValueKey('photo-delete'));
+      expect(
+        tester
+            .widget<TextButton>(delete)
+            .style
+            ?.foregroundColor
+            ?.resolve(const {}),
+        Theme.of(tester.element(delete)).colorScheme.error,
+      );
+    });
+
+    // Audit A3: a strip tile was decoded 192 px wide whatever the screen.
+    testWidgets('strip tiles decode at the tile\'s pixels', (tester) async {
+      await pump(tester, photos: 1);
+      final tile = tester.widget<Image>(
+        find.descendant(
+          of: find.byKey(const ValueKey('photo-old0')),
+          matching: find.byType(Image),
+        ),
+      );
+      expect(
+        (tile.image as ResizeImage).height,
+        (128 * tester.view.devicePixelRatio).round(),
+      );
+    });
+
+    // Audit A3: a delete that failed said nothing.
+    testWidgets('a delete that fails says so', (tester) async {
+      final store = _FailingDelete()
+        ..photos.add(ProgressPhoto(id: 'old0', date: DateTime(2026, 8, 1)));
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: ProgressPhotosCard(store: store, pick: (_) async => null),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('photo-old0')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('photo-delete')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('photo-delete-confirm')));
+      await tester.pumpAndSettle();
+      expect(
+        find.text("Couldn't delete the photo. Try again."),
+        findsOneWidget,
+      );
+    });
+
+    // G5-26: a fixed column left the photos no room in landscape.
+    testWidgets('compare scrolls in landscape, a photo a page tall', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(2340, 1080);
+      tester.view.devicePixelRatio = 3;
+      addTearDown(tester.view.reset);
+      await pump(tester, photos: 2);
+      await tester.tap(find.byKey(const ValueKey('photo-compare')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('compare-scroll')), findsOneWidget);
+      final photo = find.byType(Image).first;
+      // The page's height less its picker, not what the header leaves.
+      expect(tester.getSize(photo).height, greaterThan(240));
+      await tester.drag(
+        find.byKey(const ValueKey('compare-scroll')),
+        const Offset(0, -300),
+      );
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('compare in portrait fills the page, no scroll', (
+      tester,
+    ) async {
+      await pump(tester, photos: 2);
+      await tester.tap(find.byKey(const ValueKey('photo-compare')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('compare-scroll')), findsNothing);
     });
 
     testWidgets('compare starts with the oldest and the newest', (

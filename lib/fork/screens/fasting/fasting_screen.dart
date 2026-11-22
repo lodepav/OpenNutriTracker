@@ -27,6 +27,9 @@ class FastingScreen extends StatefulWidget {
 class _FastingScreenState extends State<FastingScreen> {
   late FastingBloc _bloc;
   bool _warningHandled = false;
+  // a fast started here, so the notification permission is asked then and
+  // not on opening the page (G2-12)
+  bool _forkStarting = false;
 
   // every session, for the last seven fasts; and a
   // change to the fast under way (its start or target) written, the timer
@@ -120,7 +123,8 @@ class _FastingScreenState extends State<FastingScreen> {
             _handleWarning(context);
           }
           if (state is FastingActive) {
-            _scheduleCompleteNotification(context, state);
+            _scheduleCompleteNotification(context, state, ask: _forkStarting);
+            _forkStarting = false;
           }
           if (state is FastingIdle) {
             _cancelCompleteNotification();
@@ -138,7 +142,10 @@ class _FastingScreenState extends State<FastingScreen> {
             return FastingView(
               state: state,
               history: _forkHistory,
-              onStart: (minutes) => _bloc.add(FastingStartRequested(minutes)),
+              onStart: (minutes) {
+                _forkStarting = true;
+                _bloc.add(FastingStartRequested(minutes));
+              },
               onEnd: () => _confirmCancel(context, l10n),
               onChange: _forkChange,
               pickHours: (hours) => _pickCustomHours(context, from: hours),
@@ -259,7 +266,10 @@ class _FastingScreenState extends State<FastingScreen> {
         scrollable: true,
         shape: Dimens.shapeL,
         title: Text(l10n.fastingCancelConfirmTitle),
-        content: Text(l10n.fastingCancelConfirmBody),
+        // "session" is no word the page uses
+        content: const Text(
+          'The time so far stays in your history as an ended fast.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
@@ -268,6 +278,10 @@ class _FastingScreenState extends State<FastingScreen> {
           Semantics(
             identifier: 'fasting-cancel-confirm',
             child: TextButton(
+              // red, as End fast is on the page
+              style: TextButton.styleFrom(
+                foregroundColor: Theme.of(ctx).colorScheme.error,
+              ),
               onPressed: () => Navigator.of(ctx).pop(true),
               child: Text(l10n.fastingCancel),
             ),
@@ -282,11 +296,14 @@ class _FastingScreenState extends State<FastingScreen> {
 
   Future<void> _scheduleCompleteNotification(
     BuildContext context,
-    FastingActive state,
-  ) async {
+    FastingActive state, {
+    bool ask = false,
+  }) async {
     final notificationService = locator<NotificationService>();
-    final permitted = await notificationService.requestPermission();
-    if (!permitted) return;
+    // shortcut: on opening the page the alarm is set again without asking, so
+    // with the permission refused it stays silent; upgrade when
+    // NotificationService can tell whether it is granted
+    if (ask && !await notificationService.requestPermission()) return;
     final when = state.session.startedAt.add(state.session.targetDuration);
     if (!when.isAfter(DateTime.now())) return;
     if (!context.mounted) return;

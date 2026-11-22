@@ -919,6 +919,9 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
                   textInputAction: TextInputAction.newline,
                   keyboardType: TextInputType.multiline,
                   decoration: InputDecoration(
+                    // a name that stays once the hint is typed over (A3)
+                    labelText: 'What you ate',
+                    floatingLabelBehavior: FloatingLabelBehavior.always,
                     hintText: staged != null
                         ? 'Describe it (optional)'
                         : S.of(context).bulkAddInputHint,
@@ -1251,7 +1254,17 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
                   // leave the device, and it is the last moment they can
                   // decline.
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                    child: Semantics(
+                      header: true,
+                      child: Text(
+                        'What happens to a meal photo',
+                        style: Theme.of(sheetContext).textTheme.titleMedium,
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
                     child: Text(
                       disclosure,
                       style: Theme.of(sheetContext).textTheme.bodySmall,
@@ -1275,6 +1288,19 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
                         _ => 'Use the shared photo',
                       }),
                       onTap: () => Navigator.of(sheetContext).pop(true),
+                    ),
+                  ),
+                  // declining is a choice here too, not only a swipe away
+                  Semantics(
+                    identifier: 'bulk-add-photo-cancel',
+                    child: ListTile(
+                      leading: const Icon(Icons.close_rounded),
+                      title: Text(
+                        MaterialLocalizations.of(
+                          sheetContext,
+                        ).cancelButtonLabel,
+                      ),
+                      onTap: () => Navigator.of(sheetContext).pop(false),
                     ),
                   ),
                 ],
@@ -1447,9 +1473,12 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
             children: [
               Padding(
                 padding: const EdgeInsets.all(16),
-                child: Text(
-                  S.of(context).bulkAddChooseFoodLabel,
-                  style: Theme.of(context).textTheme.titleMedium,
+                child: Semantics(
+                  header: true,
+                  child: Text(
+                    S.of(context).bulkAddChooseFoodLabel,
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
                 ),
               ),
               for (var i = 0; i < row.resolved.candidates.length; i++)

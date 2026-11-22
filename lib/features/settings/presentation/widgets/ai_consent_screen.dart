@@ -11,10 +11,16 @@ import 'package:opennutritracker/fork/ai/gemini_preset.dart';
 // saved there, and the features carry the names the app shows. A locale
 // whose wording differs keeps upstream's words for the features.
 String forkGeminiRowDisclosure(String paragraph) =>
-    geminiKeyDisclosure(paragraph).replaceFirst(
-      'on the multi-item add screen',
-      'in Log with AI and Photo log',
-    );
+    forkFeatureNames(geminiKeyDisclosure(paragraph));
+
+// [fork] S581 ai-feature-names: every provider's paragraph names the
+// screens the app shows, not a "multi-item add screen"; a locale whose
+// wording differs keeps upstream's
+String forkFeatureNames(String paragraph) => paragraph.replaceFirst(
+  'on the multi-item add screen',
+  'in Log with AI and Photo log',
+);
+// [/fork]
 
 /// The agree button in sentence case; upstream's English is all capitals.
 String forkAgreeLabel(S s) =>
@@ -109,7 +115,7 @@ class AiConsentScreen extends StatelessWidget {
             // between one user's decision and another's.
             Text(
               // [fork] S318 ai-consent-words
-              (forkGeminiRow ? forkGeminiRowDisclosure : (String p) => p)(
+              (forkGeminiRow ? forkGeminiRowDisclosure : forkFeatureNames)(
               // [/fork]
               aiDisclosureFor(
                 s,

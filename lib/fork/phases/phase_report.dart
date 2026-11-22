@@ -308,12 +308,12 @@ class _ReportCard extends StatelessWidget {
                       'plan $planPace',
                 ),
               ],
-              (
-                label: 'Eaten a day',
-                value: r.eatenKcal == null
-                    ? '–'
-                    : energyText(context, r.eatenKcal!),
-              ),
+              // none logged: no row, as "On target" says 0 of 0 below
+              if (r.eatenKcal != null)
+                (
+                  label: 'Eaten a day',
+                  value: energyText(context, r.eatenKcal!),
+                ),
               (
                 label: 'On target (within ${(onTargetShare * 100).round()}%)',
                 value: '${r.days.onTarget} of ${days(r.days.logged)} logged',

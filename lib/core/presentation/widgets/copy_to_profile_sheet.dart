@@ -7,6 +7,10 @@ import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/features/profile/presentation/utils/profile_display_name.dart';
 import 'package:opennutritracker/features/profile/presentation/widgets/profile_avatar.dart';
 import 'package:opennutritracker/generated/l10n.dart';
+// [fork] S564 copy-to-profile-wording
+import 'package:intl/intl.dart';
+import 'package:opennutritracker/fork/copy/copy_ui.dart' show mealLabel;
+// [/fork]
 
 /// Bottom sheet that lets the user pick one or more *other* profiles and
 /// copy the given intakes into each. Only profiles other than the active
@@ -22,8 +26,12 @@ Future<void> showCopyToProfileSheet(
   if (otherProfiles.isEmpty) return;
 
   final messenger = ScaffoldMessenger.of(context);
-  final copiedSnackbar = S.of(context).copiedToProfileSnackbar;
-  final copied = await showModalBottomSheet<bool>(
+  // [fork] S564 copy-to-profile-wording: the snackbar names the profiles
+  // (H6)
+  // final copiedSnackbar = S.of(context).copiedToProfileSnackbar;
+  // final copied = await showModalBottomSheet<bool>(
+  final copied = await showModalBottomSheet<String>(
+  // [/fork]
     context: context,
     showDragHandle: true,
     isScrollControlled: true,
@@ -31,9 +39,14 @@ Future<void> showCopyToProfileSheet(
         _CopyToProfileSheet(intakes: intakes, otherProfiles: otherProfiles),
   );
 
-  if (copied == true) {
-    messenger.showSnackBar(SnackBar(content: Text(copiedSnackbar)));
+  // [fork] S564 copy-to-profile-wording
+  // if (copied == true) {
+  //   messenger.showSnackBar(SnackBar(content: Text(copiedSnackbar)));
+  // }
+  if (copied != null) {
+    messenger.showSnackBar(SnackBar(content: Text('Copied to $copied')));
   }
+  // [/fork]
 }
 
 class _CopyToProfileSheet extends StatefulWidget {
@@ -74,6 +87,21 @@ class _CopyToProfileSheetState extends State<_CopyToProfileSheet> {
             ),
             // [/fork]
           ),
+          // [fork] S564 copy-to-profile-wording: what is copied, and to
+          // which day (H6)
+          if (widget.intakes.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              child: Text(
+                '${mealLabel(context, widget.intakes.first.type)} of '
+                '${DateFormat.MMMEd(Localizations.localeOf(context).toLanguageTag()).format(widget.intakes.first.dateTime)}'
+                ', to the same day',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+          // [/fork]
           Flexible(
             child: ListView(
               shrinkWrap: true,
@@ -171,6 +199,10 @@ class _CopyToProfileSheetState extends State<_CopyToProfileSheet> {
     }
     // [/fork]
     if (!mounted) return;
-    Navigator.of(context).pop(true);
+    // [fork] S564 copy-to-profile-wording
+    // Navigator.of(context).pop(true);
+    Navigator.of(context)
+        .pop(targets.map((p) => profileDisplayName(context, p)).join(', '));
+    // [/fork]
   }
 }

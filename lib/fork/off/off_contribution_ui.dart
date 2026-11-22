@@ -5,9 +5,11 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:opennutritracker/core/utils/barcode_validator.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
+import 'package:opennutritracker/core/utils/safe_url_launcher.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dart';
 import 'package:opennutritracker/fork/off/off_contribution.dart';
 import 'package:opennutritracker/fork/display/settings_tile.dart';
+import 'package:opennutritracker/generated/l10n.dart';
 
 const _nutrientLabels = {
   'energy-kcal': 'Energy',
@@ -271,7 +273,10 @@ class _ReviewDialogState extends State<_ReviewDialog> {
             if (upload.brand != null) field(_brand, 'Brand'),
             if (_values.isNotEmpty) ...[
               const SizedBox(height: 12),
-              Text('Per 100 g', style: textTheme.titleSmall),
+              Semantics(
+                header: true,
+                child: Text('Per 100 g', style: textTheme.titleSmall),
+              ),
             ],
             for (final MapEntry(key: nutrient, value: controller)
                 in _values.entries)
@@ -296,6 +301,9 @@ class _ReviewDialogState extends State<_ReviewDialog> {
                     photo,
                     width: 56,
                     height: 56,
+                    // decoded at the shown size, not the camera's
+                    cacheWidth:
+                        (56 * MediaQuery.devicePixelRatioOf(context)).round(),
                     fit: BoxFit.cover,
                   ),
                 ),
@@ -385,6 +393,9 @@ class _OffAccountTileState extends State<OffAccountTile> {
   );
 }
 
+// Open Food Facts' registration page (checked 2026-11-22: "Register")
+const _signUpUrl = 'https://world.openfoodfacts.org/cgi/user.pl';
+
 class _AccountDialog extends StatefulWidget {
   final OffAccount account;
 
@@ -407,6 +418,13 @@ class _AccountDialogState extends State<_AccountDialog> {
     super.dispose();
   }
 
+  Future<void> _openSignUp() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final errorText = S.of(context).errorOpeningBrowser;
+    if (await tryLaunchExternalUrl(_signUpUrl)) return;
+    messenger.showSnackBar(SnackBar(content: Text(errorText)));
+  }
+
   @override
   Widget build(BuildContext context) => AlertDialog(
     title: const Text('Open Food Facts account'),
@@ -424,9 +442,11 @@ class _AccountDialogState extends State<_AccountDialog> {
             value: _enabled,
             onChanged: (on) => setState(() => _enabled = on),
           ),
+          // The account waits for the switch, as the server switch does
           TextField(
             key: const Key('fork-off-user'),
             controller: _user,
+            enabled: _enabled,
             autocorrect: false,
             // A helper line wraps; at 200% the label's "not the e-mail" was cut
             decoration: const InputDecoration(
@@ -435,13 +455,23 @@ class _AccountDialogState extends State<_AccountDialog> {
               helperMaxLines: 3,
             ),
           ),
+          const SizedBox(height: 12),
           TextField(
             key: const Key('fork-off-password'),
             controller: _password,
+            enabled: _enabled,
             obscureText: true,
             autocorrect: false,
             enableSuggestions: false,
             decoration: const InputDecoration(labelText: 'Password'),
+          ),
+          Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: TextButton.icon(
+              onPressed: _openSignUp,
+              icon: const Icon(Icons.open_in_new_rounded, size: 18),
+              label: const Text('Create an account'),
+            ),
           ),
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
@@ -451,7 +481,9 @@ class _AccountDialogState extends State<_AccountDialog> {
               'real database.',
             ),
             value: _testServer,
-            onChanged: (on) => setState(() => _testServer = on),
+            onChanged: _enabled
+                ? (on) => setState(() => _testServer = on)
+                : null,
           ),
           Text(
             'Kept on this phone only, in its secure storage, and never in a '

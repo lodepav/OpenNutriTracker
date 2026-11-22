@@ -30,6 +30,15 @@ import 'package:opennutritracker/core/data/data_source/custom_meal_data_source.d
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/fork/recipe/recipe_delete.dart';
 // [/fork]
+// [fork] S560 custom-food-per-serving
+import 'package:opennutritracker/fork/custom_food/serving_mode.dart';
+// [/fork]
+// [fork] S561 custom-food-search
+import 'package:opennutritracker/fork/custom_food/custom_food_search.dart';
+// [/fork]
+// [fork] S568 recipes-audit-p3
+import 'package:opennutritracker/fork/display/contrast.dart' show chartSafe;
+// [/fork]
 
 /// Embeddable list of user-created custom meals (formerly the body of
 /// CustomMealsScreen in Settings). Hosted inside RecipesPage's TabBarView.
@@ -107,11 +116,19 @@ class CustomMealsTab extends StatelessWidget {
           final isDark = Theme.of(context).brightness == Brightness.dark;
           final palette = isDark ? AppPalette.dark : AppPalette.light;
           final textTheme = Theme.of(context).textTheme;
-          return ListView.builder(
+          // [fork] S561 custom-food-search: the list under a search by
+          // name, as Recipes has (H7)
+          // return ListView.builder(
+          return CustomFoodSearch(
+            meals: state.meals,
+            list: (context, shown) => ListView.builder(
             padding: const EdgeInsets.symmetric(vertical: Dimens.spacing8),
-            itemCount: state.meals.length,
+            // itemCount: state.meals.length,
+            itemCount: shown.length,
             itemBuilder: (context, index) {
-              final meal = state.meals[index];
+              // final meal = state.meals[index];
+              final meal = shown[index];
+              // [/fork]
               final canMerge = state.meals.length >= 2;
               return Padding(
                 padding: const EdgeInsets.symmetric(horizontal: Dimens.spacing16, vertical: Dimens.spacing4),
@@ -139,13 +156,20 @@ class CustomMealsTab extends StatelessWidget {
                                 // [fork] S142 custom-food-rows: what it holds,
                                 // as a recipe row says (H7)
                                 const SizedBox(height: Dimens.spacing4),
-                                Text.rich(
+                                // S560: a food typed per serving says so
+                                // (H2); S568: the unit spoken in words
+                                ValueListenableBuilder<Set<String>>(
+                                  valueListenable: CustomFoodModes.perServing,
+                                  builder: (context, perServing, _) => Text.rich(
                                   TextSpan(
                                     children: [
                                       TextSpan(
                                         text:
                                             '${energyText(context, meal.nutriments.energyKcal100 ?? 0)} '
-                                            'per 100 ${meal.isLiquid ? 'ml' : 'g'}\n',
+                                            '${perServing.contains(CustomFoodModes.keyOf(meal)) ? 'per serving' : 'per 100 ${meal.isLiquid ? 'ml' : 'g'}'}\n',
+                                        semanticsLabel:
+                                            '${energyText(context, meal.nutriments.energyKcal100 ?? 0)} '
+                                            '${perServing.contains(CustomFoodModes.keyOf(meal)) ? 'per serving' : 'per 100 ${meal.isLiquid ? 'millilitres' : 'grams'}'}, ',
                                       ),
                                       ...macroSpans(context, (
                                         kcal: meal.nutriments.energyKcal100 ?? 0,
@@ -157,6 +181,7 @@ class CustomMealsTab extends StatelessWidget {
                                   ),
                                   style: textTheme.bodySmall?.copyWith(color: palette.textMuted),
                                 ),
+                                ), // S560: the mode's listener
                                 // [/fork]
                                 if (meal.brands != null) ...[
                                   const SizedBox(height: Dimens.spacing4),
@@ -198,6 +223,10 @@ class CustomMealsTab extends StatelessWidget {
                                 ],
                               ),
                             ),
+                          // [fork] S568 recipes-audit-p3: More and Delete
+                          // targets apart (A1)
+                          const SizedBox(width: Dimens.spacing8),
+                          // [/fork]
                           IconButton(
                             icon: Icon(Icons.delete_outline_rounded, color: palette.textMuted),
                             tooltip: 'Delete ${meal.name ?? ''}', // [fork] S132 A3
@@ -210,6 +239,7 @@ class CustomMealsTab extends StatelessWidget {
                 ),
               );
             },
+          ), // [fork] S561: the search's list
           );
         }
         return const SizedBox.shrink();
@@ -488,7 +518,18 @@ class _MealLeadingThumbnail extends StatelessWidget {
         color: accent.withValues(alpha: 0.14),
         borderRadius: Dimens.borderRadiusS,
       ),
-      child: Icon(Icons.restaurant_rounded, color: accent, size: 24),
+      // [fork] S568 recipes-audit-p3: the icon at 3:1 on its tint, as the
+      // recipe rows' (A2)
+      // child: Icon(Icons.restaurant_rounded, color: accent, size: 24),
+      child: Icon(
+        Icons.restaurant_rounded,
+        color: chartSafe(
+          accent,
+          Color.alphaBlend(accent.withValues(alpha: 0.14), paletteOf(context).surface),
+        ),
+        size: 24,
+      ),
+      // [/fork]
     );
     if (relative == null) return fallback;
     // [fork] S481 thumb-sized-decode: decoded at the tile's size, the path

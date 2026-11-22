@@ -61,13 +61,17 @@ class _FoodSourcesScreenState extends State<FoodSourcesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final s = S.of(context);
+    // [fork] S587 search-sources-title: titled as the row that opens it,
+    // not as the Food databases section it sits in
+    // final s = S.of(context);
+    // [/fork]
     return Scaffold(
-      appBar: AppBar(title: Text(s.settingsFoodSourcesLabel)),
+      // [fork] S587 search-sources-title
+      // appBar: AppBar(title: Text(s.settingsFoodSourcesLabel)),
+      appBar: AppBar(title: const Text('Search sources')),
+      // [/fork]
       // [fork] S137 food-databases: MacroFactor's list, a tag for each
-      backgroundColor: Theme.of(context).brightness == Brightness.dark
-          ? AppPalette.dark.canvas
-          : AppPalette.light.canvas,
+      backgroundColor: paletteOf(context).canvas,
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : FoodDatabasesView(

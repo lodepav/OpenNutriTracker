@@ -10,8 +10,6 @@ import 'package:opennutritracker/fork/onboarding/start_failure.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
-import '../../helpers/test_l10n.dart';
-
 // The first-run audit of 2026-11-22: a failed Start says so, the intro's
 // policy link reads with a picked accent, and a backup that could not be
 // restored at start is said once on the first page.
@@ -83,13 +81,12 @@ void main() {
       find.byWidgetPredicate(
         (w) =>
             w is RichText &&
-            w.text.toPlainText().contains(l10nEn.privacyPolicyLabel),
+            w.text.toPlainText().startsWith('I have read and accept'),
       ),
     );
     TextSpan? link;
     rich.text.visitChildren((span) {
-      if (span is TextSpan &&
-          (span.text ?? '').contains(l10nEn.privacyPolicyLabel)) {
+      if (span is TextSpan && (span.text ?? '') == 'privacy policy') {
         link = span;
       }
       return true;

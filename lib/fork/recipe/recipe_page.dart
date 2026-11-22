@@ -65,7 +65,7 @@ class RecipeHeader extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
         color: palette.surfaceMuted,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: Dimens.borderRadiusS,
       ),
       child: Text(
         text,

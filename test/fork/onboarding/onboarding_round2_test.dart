@@ -269,25 +269,20 @@ void main() {
         isA<RoundedRectangleBorder>(),
         reason: 'a stadium cuts the first and last rows at the sides',
       );
-      final accentRow = find.byWidgetPredicate(
-        (w) => w is Scrollable && w.axisDirection == AxisDirection.right,
-      );
+      // The card's content column, which holds the accent swatches.
+      final content = find
+          .ancestor(of: find.byType(Wrap).last, matching: find.byType(Column))
+          .first;
       expect(
         tester.getSize(button).width,
-        moreOrLessEquals(tester.getSize(accentRow).width, epsilon: 0.5),
+        moreOrLessEquals(tester.getSize(content).width, epsilon: 0.5),
       );
     });
 
-    testWidgets('the last swatch scrolls fully into view', (tester) async {
+    testWidgets('the last swatch is fully in view', (tester) async {
       await pumpOptions(tester);
-      final row = find.byWidgetPredicate(
-        (w) => w is Scrollable && w.axisDirection == AxisDirection.right,
-      );
       final last = find.bySemanticsLabel(accentPresetNames.last);
-      await tester.scrollUntilVisible(last, 100, scrollable: row);
-      final position = tester.state<ScrollableState>(row).position;
-      position.jumpTo(position.maxScrollExtent);
-      await tester.pump();
+      final row = find.ancestor(of: last, matching: find.byType(Wrap)).first;
       expect(
         tester.getRect(last).right,
         lessThanOrEqualTo(tester.getRect(row).right),
