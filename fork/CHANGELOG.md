@@ -2,6 +2,29 @@
 
 Written by fork/tools/release_notes.dart at each release (D16).
 
+## 1.1.0 · 2026-11-22
+
+Based on OpenNutriTracker 2.7.0.
+
+### New
+
+- a full MacroFactor import brings steps, targets, check-ins, weight and whole days (D69)
+- Home's weight tile reloads after an import, the post-break trend restarts a week on (D68)
+- docs up to date with 1.0.0
+- hold the estimate through an intake change, ask about half-logged days
+
+### Fixes and changes
+
+- the camera prompt's permission_handler packages are reviewed
+- review fixes since the tooling review, restores never let leaving the demo wipe real data
+- fix every leftover from the six uncovered page groups
+- audit rounds 3 and 4 on the six uncovered page groups
+- critique and audit fixes on the six page groups reviews never covered
+- Home's bars and Expenditure tile reload, verify runs under Honolulu
+- UX review fixes for the check-in card and target ruler, D64 ramp open item
+- partly logged days asked about, 0.5 kg target slider, dish names and oil answer
+- upgrade fixture dates read back in any time zone
+
 ## 1.0.0 · 2026-11-19
 
 Based on OpenNutriTracker 2.7.0.
