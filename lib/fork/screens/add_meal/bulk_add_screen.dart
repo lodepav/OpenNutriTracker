@@ -52,6 +52,9 @@ import 'package:opennutritracker/fork/bulk/meal_scale.dart';
 import 'package:opennutritracker/fork/bulk/review_totals.dart';
 import 'package:opennutritracker/fork/bulk/review_units.dart';
 import 'package:opennutritracker/fork/bulk/shown_unit.dart';
+import 'package:opennutritracker/fork/bulk/submit_label.dart';
+import 'package:opennutritracker/fork/recipe/recipe_delete.dart'
+    show destructiveFilledStyle;
 import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/fork/display/meal_macros_line.dart';
@@ -1043,13 +1046,14 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
     // What the button will log, summed as the rows show it (#1469); at a
     // large font on a line of its own, so neither is cut (U3).
     final oneLine = MediaQuery.textScalerOf(context).scale(1) <= 1.5;
-    // rows held back for a unit check: the disabled button says so
-    final held = state.rows
-        .where((r) => r.isResolved && !r.skipped && r.amountWouldBeWrong)
-        .length;
-    final label = count == 0 && held > 0
-        ? 'Check $held ${held == 1 ? 'row' : 'rows'} to log'
-        : S.of(context).bulkAddSubmitLabel(count);
+    // rows held back for a unit check: the button says so, logging or not
+    final held = state.rows.where(heldForUnit).length;
+    final label = submitLabel(
+      count: count,
+      held: held,
+      oneDish: logsAsOneDish(state.rows, separate: _separateDishes),
+    );
+    final waiting = heldLabel(count: count, held: held);
     final energy = EnergyDisplay.formatSumWithUnit(
       context,
       loggedKcals(state.rows),
@@ -1068,10 +1072,18 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
             label: count == 0
                 ? Text(label)
                 : oneLine
-                ? Text('$label · $energy')
+                ? Text(
+                    [label, energy, ?waiting].join(' · '),
+                    textAlign: TextAlign.center,
+                  )
                 : Column(
                     mainAxisSize: MainAxisSize.min,
-                    children: [Text(label), Text(energy)],
+                    children: [
+                      Text(label),
+                      Text(energy),
+                      if (waiting != null)
+                        Text(waiting, textAlign: TextAlign.center),
+                    ],
                   ),
           ),
         ),
@@ -1116,6 +1128,7 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
             child: Text(S.of(dialog).dialogCancelLabel),
           ),
           FilledButton(
+            style: destructiveFilledStyle(dialog),
             onPressed: () => Navigator.of(dialog).pop(true),
             child: const Text('Replace'),
           ),
@@ -1637,7 +1650,9 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
       // Undo takes back the group and the memory record with the entries
       showLoggedBar(
         messenger,
-        'Added to ${_mealName(context)}',
+        loggedMessage(_mealName(context), [
+          for (final row in state.rows.where(heldForUnit)) shownRowTitle(row),
+        ]),
         day: _args.day,
         written: written,
         stamp: stamp,

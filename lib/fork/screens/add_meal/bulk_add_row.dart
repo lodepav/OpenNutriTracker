@@ -447,10 +447,11 @@ extension _BulkAddRow on _BulkAddScreenState {
       );
       if (_quantityErrors.containsKey(index)) _clearQuantityError(index);
       _review.pinRow(index);
+      // a held row's step is the user's answer to its unit check
       _bloc.add(
-        shown == null
+        shown == null && !row.amountWouldBeWrong
             ? ChangeRowAmountEvent(index, next)
-            : SetRowInShownUnitEvent(index, shown, next),
+            : SetRowInShownUnitEvent(index, unit, next),
       );
     }
 
@@ -550,15 +551,16 @@ extension _BulkAddRow on _BulkAddScreenState {
       }
       if (_quantityErrors.containsKey(index)) _clearQuantityError(index);
       _review.pinRow(index);
-      // typed in the unit shown, which the user did not choose: the row
-      // asks to check its amount still, as it would in metric units
+      // typed in the unit shown, which the user did not choose; on a held
+      // row, typed at all: the amount set by hand answers the unit check
+      final row = current.rows[index];
       if (!unitChosen &&
-          to == shown &&
-          current.rows[index].effectiveUnit != to) {
+          (to == shown && row.effectiveUnit != to ||
+              row.effectiveUnit == to && row.amountWouldBeWrong)) {
         _bloc.add(SetRowInShownUnitEvent(index, to, amount));
         return;
       }
-      if (unitChosen || current.rows[index].effectiveUnit != to) {
+      if (unitChosen || row.effectiveUnit != to) {
         _bloc.add(ChangeRowUnitEvent(index, to));
       }
       _bloc.add(ChangeRowAmountEvent(index, amount));

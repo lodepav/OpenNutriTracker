@@ -37,10 +37,13 @@ abstract final class OnboardingGoal {
   }
 
   /// [goal] picked on the page: one the plan is not for drops the plan,
-  /// so the page never shows a plan Start would not use.
-  static void picked(UserGoalSelectionEntity goal) {
+  /// so the page never shows a plan Start would not use. Returns the plan
+  /// dropped, for Undo.
+  static PhasePlan? picked(UserGoalSelectionEntity goal) {
     final plan = pending.value;
-    if (plan != null && choiceFor(plan.kind) != goal) pending.value = null;
+    if (plan == null || choiceFor(plan.kind) == goal) return null;
+    pending.value = null;
+    return plan;
   }
 
   /// [plan] from a weight corrected after planning; null when its target is

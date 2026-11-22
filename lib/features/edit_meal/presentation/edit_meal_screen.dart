@@ -358,8 +358,8 @@ class _EditMealScreenState extends State<EditMealScreen> {
           surfaceTintColor: Colors.transparent,
           toolbarHeight: twoLineToolbarHeight(context), // [fork] S132
           title: Text(
-            // [fork] S132 custom-food
-            _forkNew ? 'New custom food' : S.of(context).editMealLabel,
+            // [fork] S132 custom-food: editing one is a food too (crit r4 g2)
+            _forkNew ? 'New custom food' : 'Edit food',
             maxLines: 2,
             softWrap: true, // [fork] S132 AppBar titles default to no wrap
             overflow: TextOverflow.ellipsis,
@@ -591,10 +591,10 @@ class _EditMealScreenState extends State<EditMealScreen> {
           },
           // [/fork]
           decoration: InputDecoration(
-            // [fork] S290 food-name-label: a new custom food is a food;
-            // editing keeps upstream's label, which its tests find the field by
+            // [fork] S290 food-name-label: a food, new or edited, has a food
+            // name; a meal is Breakfast, Lunch, Dinner or Snack
             // labelText: S.of(context).mealNameLabel,
-            labelText: _forkNew ? 'Food name' : S.of(context).mealNameLabel,
+            labelText: 'Food name',
             // [/fork]
             errorText: _forkNameError, // [fork] S428
             border: const OutlineInputBorder(borderRadius: Dimens.borderRadiusM),
@@ -896,9 +896,9 @@ class _EditMealScreenState extends State<EditMealScreen> {
         // [fork] S428 food-name-error: on the field, named as its label (H9)
         // ScaffoldMessenger.of(context).showSnackBar(
         //     SnackBar(content: Text(S.of(context).mealNameValidationError)));
-        setState(() => _forkNameError = _forkNew
-            ? 'Food name must contain at least one letter'
-            : S.of(context).mealNameValidationError);
+        setState(
+          () => _forkNameError = 'Food name must contain at least one letter',
+        );
         final field = _forkNameKey.currentContext;
         if (field != null) unawaited(Scrollable.ensureVisible(field));
         // [/fork]

@@ -5,6 +5,7 @@ import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/features/fasting/domain/entity/fasting_session_entity.dart';
 import 'package:opennutritracker/features/fasting/presentation/bloc/fasting_bloc.dart';
+import 'package:opennutritracker/fork/add/chosen_chips.dart';
 import 'package:opennutritracker/fork/display/contrast.dart';
 import 'package:opennutritracker/fork/display/week_bars.dart';
 import 'package:opennutritracker/generated/l10n.dart';
@@ -481,37 +482,41 @@ class _Plans extends StatelessWidget {
             ),
           ),
           const SizedBox(height: Dimens.spacing8),
-          Wrap(
-            spacing: Dimens.spacing8,
-            runSpacing: Dimens.spacing8,
-            children: [
-              for (final h in fastingPlans)
+          // the accent fill marks the plan chosen
+          chosenChips(
+            context,
+            child: Wrap(
+              spacing: Dimens.spacing8,
+              runSpacing: Dimens.spacing8,
+              children: [
+                for (final h in fastingPlans)
+                  Semantics(
+                    identifier: 'fasting-plan-$h',
+                    child: ChoiceChip(
+                      label: Text(
+                        '$h:${24 - h}',
+                        semanticsLabel: '$h hours fasting, ${24 - h} eating',
+                      ),
+                      showCheckmark: false,
+                      materialTapTargetSize: MaterialTapTargetSize.padded,
+                      selected: h == hours,
+                      onSelected: (_) => onPick(h),
+                    ),
+                  ),
                 Semantics(
-                  identifier: 'fasting-plan-$h',
+                  identifier: 'fasting-preset-custom',
                   child: ChoiceChip(
                     label: Text(
-                      '$h:${24 - h}',
-                      semanticsLabel: '$h hours fasting, ${24 - h} eating',
+                      custom ? '$hours h' : S.of(context).fastingPresetCustom,
                     ),
                     showCheckmark: false,
                     materialTapTargetSize: MaterialTapTargetSize.padded,
-                    selected: h == hours,
-                    onSelected: (_) => onPick(h),
+                    selected: custom,
+                    onSelected: (_) => onCustom(),
                   ),
                 ),
-              Semantics(
-                identifier: 'fasting-preset-custom',
-                child: ChoiceChip(
-                  label: Text(
-                    custom ? '$hours h' : S.of(context).fastingPresetCustom,
-                  ),
-                  showCheckmark: false,
-                  materialTapTargetSize: MaterialTapTargetSize.padded,
-                  selected: custom,
-                  onSelected: (_) => onCustom(),
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
         ],
       ),

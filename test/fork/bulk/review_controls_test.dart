@@ -457,17 +457,19 @@ void main() {
       });
       await _parse(tester, '100g toast, 2 eggs');
 
-      expect(_submitText(tester), startsWith('Log 1 item'));
+      // and the held one is named beside it (crit r4 g2)
+      expect(_submitText(tester), startsWith('Log 1 food · '));
+      expect(_submitText(tester), endsWith(' · 1 waits for a unit'));
     });
 
-    testWidgets('all left out stays Log 0 items', (tester) async {
+    testWidgets('all left out stays Log 0 foods', (tester) async {
       await _register({
         'toast': [_food('Toast')],
       });
       await _parse(tester, '100g toast');
       await _tap(tester, find.byKey(const ValueKey('bulk-add-leave-out-0')));
 
-      expect(_submitText(tester), 'Log 0 items');
+      expect(_submitText(tester), 'Log 0 foods');
     });
   });
 
@@ -499,7 +501,7 @@ void main() {
 
       expect(find.byKey(const ValueKey('bulk-add-amount-done')), findsNothing);
       expect(find.text(l10nEn.bulkAddCheckAmountLabel), findsNothing);
-      expect(_submitText(tester), startsWith('Log 1 item'));
+      expect(_submitText(tester), startsWith('Log 1 food'));
       expect(
         tester
             .widgetList<Text>(
@@ -567,5 +569,22 @@ void main() {
     await _tap(tester, find.byKey(const ValueKey('bulk-add-other-match')));
     expect(find.text('155 kcal per 100 g'), findsOneWidget);
     expect(cutText(tester), isNot(contains('155 kcal per 100 g')));
+  });
+
+  testWidgets('at 200% on a narrow phone the held count shows in full', (
+    tester,
+  ) async {
+    tester.platformDispatcher.textScaleFactorTestValue = 2;
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+    await _register({
+      'toast': [_food('Toast')],
+      'eggs': [_food('Egg')],
+    });
+    await _parse(tester, '100g toast, 2 eggs', size: const Size(360, 2400));
+
+    expect(_submitText(tester), startsWith('Log 1 food '));
+    expect(_submitText(tester), endsWith(' 1 waits for a unit'));
+    expect(cutText(tester), isNot(contains('1 waits for a unit')));
+    expect(cutText(tester), isNot(contains('Log 1 food')));
   });
 }

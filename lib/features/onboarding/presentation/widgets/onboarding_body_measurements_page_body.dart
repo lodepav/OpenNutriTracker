@@ -654,6 +654,10 @@ class _OnboardingBodyMeasurementsPageBodyState
               padding: const EdgeInsets.symmetric(vertical: 8.0),
               child: ToggleButtons(
                 borderRadius: const BorderRadius.all(Radius.circular(8)),
+                // [fork] S452 unit-toggle-fill: the chosen unit stands out at 3:1
+                fillColor: Theme.of(context).colorScheme.primaryContainer,
+                selectedColor: Theme.of(context).colorScheme.onPrimaryContainer,
+                // [/fork]
                 isSelected: [!_isHeightImperial, _isHeightImperial],
                 onPressed: (int index) {
                   setState(() {
@@ -950,6 +954,12 @@ class _OnboardingBodyMeasurementsPageBodyState
                   identifier: 'onboarding-food-units',
                   child: ToggleButtons(
                     borderRadius: const BorderRadius.all(Radius.circular(8)),
+                    // [fork] S452 unit-toggle-fill
+                    fillColor: Theme.of(context).colorScheme.primaryContainer,
+                    selectedColor: Theme.of(
+                      context,
+                    ).colorScheme.onPrimaryContainer,
+                    // [/fork]
                     constraints: BoxConstraints(
                       minHeight: 48,
                       minWidth: buttonWidth,

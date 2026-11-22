@@ -189,7 +189,9 @@ void main() {
       // recipe/custom-meal list entry points get.
       await tester.tap(find.byIcon(Icons.edit_rounded));
       await tester.pumpAndSettle();
-      expect(find.text(l10nEn.editMealLabel), findsOneWidget);
+      // [fork] S290 food-name: editing a food is titled "Edit food"
+      expect(find.text('Edit food'), findsOneWidget);
+      // [/fork]
 
       await tester.tap(
         find.widgetWithText(FilledButton, l10nEn.buttonSaveLabel),
@@ -198,7 +200,9 @@ void main() {
 
       // The save lands on a fresh meal detail either way — the regression is
       // what it leaves underneath.
-      expect(find.text(l10nEn.editMealLabel), findsNothing);
+      // [fork] S290 food-name: editing a food is titled "Edit food"
+      expect(find.text('Edit food'), findsNothing);
+      // [/fork]
       expect(
         navigator.canPop(),
         isTrue,

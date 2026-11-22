@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:opennutritracker/fork/recipe/recipe_delete.dart'
+    show destructiveFilledStyle;
 import 'package:opennutritracker/generated/l10n.dart';
 
 /// Asks before Back leaves a screen whose [pending] work would be lost
@@ -37,6 +39,7 @@ Future<bool> confirmDiscard(BuildContext context) async {
           child: Text(s.dialogCancelLabel),
         ),
         FilledButton(
+          style: destructiveFilledStyle(dialog),
           onPressed: () => Navigator.of(dialog).pop(true),
           child: Text(s.discardChangesConfirmLabel),
         ),

@@ -151,13 +151,16 @@ class _OnboardingIntroPageBodyState extends State<OnboardingIntroPageBody> {
                       onPressed: _seedingDemo
                           ? null
                           : (_acceptedPolicy ? _tryDemo : _policyRequired),
-                      style: _acceptedPolicy
-                          ? null
-                          : OutlinedButton.styleFrom(
-                              foregroundColor: Theme.of(
-                                context,
-                              ).colorScheme.onSurface.withValues(alpha: 0.38),
-                            ),
+                      // [fork] S451 intro-buttons-contrast: live, so drawn
+                      // live; the tap's snackbar names the policy
+                      // style: _acceptedPolicy
+                      //     ? null
+                      //     : OutlinedButton.styleFrom(
+                      //         foregroundColor: Theme.of(
+                      //           context,
+                      //         ).colorScheme.onSurface.withValues(alpha: 0.38),
+                      //       ),
+                      // [/fork]
                       icon: _seedingDemo
                           ? const SizedBox(
                               width: 16,

@@ -116,8 +116,23 @@ void main() {
     expect(find.textContaining('1 in the basket'), findsOneWidget);
   });
 
+  test('the plan button names the day: today, or its date', () {
+    final now = DateTime(2026, 11, 22, 9);
+    expect(planButtonLabel(DateTime(2026, 11, 22, 23), now, 'en_US'),
+        'Plan for today');
+    expect(planButtonLabel(_day, now, 'en_US'), 'Plan for Tue, Nov 24');
+  });
+
   testWidgets('"Plan, don\'t log" names the day it plans for', (tester) async {
     await open(tester, [_item(apple, 100)]);
+    // the button says the day before anything is written (crit r4 g2)
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('basket-plan')),
+        matching: find.text('Plan for Tue, Nov 24'),
+      ),
+      findsOneWidget,
+    );
     await tester.tap(find.byKey(const ValueKey('basket-plan')));
     await tester.pumpAndSettle();
     expect(find.text('Planned 1 food for Tue, Nov 24.'), findsOneWidget);

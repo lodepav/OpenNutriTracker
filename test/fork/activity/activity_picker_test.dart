@@ -172,6 +172,20 @@ void main() {
     expect(logged.single.physicalActivityEntity, _yoga);
   });
 
+  // crit r4 g2: the chosen minutes chip takes the accent fill, as chips
+  // elsewhere; the theme's selected fill is the unselected one
+  testWidgets('the chosen minutes are filled in the accent', (tester) async {
+    await _pump(tester);
+    await _tap(tester, 'add-activity-row-02160');
+    final chip = find.descendant(
+      of: find.bySemanticsIdentifier('activity-duration-30'),
+      matching: find.byType(ChoiceChip),
+    );
+    expect(tester.widget<ChoiceChip>(chip).selected, isTrue);
+    final scheme = Theme.of(tester.element(chip)).colorScheme;
+    expect(scheme.secondaryContainer, scheme.primary);
+  });
+
   testWidgets('the keyboard leaves the field, its kcal and Add in sight', (
     tester,
   ) async {

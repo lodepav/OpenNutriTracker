@@ -18,7 +18,7 @@ import '../../../../../../helpers/test_l10n.dart';
 /// Renders the transparency screen against breakdowns computed by the real
 /// [KcalGoalBreakdownEntity.compute] and asserts the *displayed strings*
 /// equal independently hand-computed values. This pins the whole chain —
-/// math, formatting, and rounding conventions (truncation, matching the
+/// math, formatting, and rounding conventions (grams rounded, matching the
 /// dashboard) — so the screen cannot silently drift from the numbers the
 /// rest of the app shows.
 class _FakeBreakdownUsecase extends Fake
@@ -142,6 +142,19 @@ void main() {
       await tester.tap(find.byKey(const Key('goal-equations')));
       await tester.pumpAndSettle();
       expect(find.text(l10nEn.kcalGoalInfoIntro), findsOneWidget);
+    });
+
+    // S450: grams round as Home and Overview round them (S333), so the page
+    // explaining the goal shows the gram Home shows.
+    testWidgets('macro grams round as Home does', (tester) async {
+      await _pump(tester, breakdown());
+      // Protein: 3134.98 × 0.15 ÷ 4 = 117.56 → 118 g; carbs 470.25 → 470 g.
+      expect(find.textContaining('3135 × 15 % ÷ 4 = 118 g'), findsOneWidget);
+      expect(find.text('118 g'), findsOneWidget);
+      expect(find.textContaining('3135 × 60 % ÷ 4 = 470 g'), findsOneWidget);
+      expect(find.text('470 g'), findsOneWidget);
+      expect(find.textContaining('3135 × 25 % ÷ 9 = 87 g'), findsOneWidget);
+      expect(find.text('87 g'), findsOneWidget);
     });
   });
 }

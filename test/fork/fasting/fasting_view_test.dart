@@ -98,6 +98,18 @@ void main() {
     expect(calls.changed, hasLength(1));
   });
 
+  // crit r4 g2: the chosen plan takes the accent fill, as chips elsewhere
+  testWidgets('the chosen plan is filled in the accent', (tester) async {
+    await _pump(tester, FastingActive(session: active, now: _now));
+    final chip = find.ancestor(
+      of: find.text('16:8'),
+      matching: find.byType(ChoiceChip),
+    );
+    expect(tester.widget<ChoiceChip>(chip).selected, isTrue);
+    final scheme = Theme.of(tester.element(chip)).colorScheme;
+    expect(scheme.secondaryContainer, scheme.primary);
+  });
+
   testWidgets('before a fast, the plan picked is the one started', (
     tester,
   ) async {

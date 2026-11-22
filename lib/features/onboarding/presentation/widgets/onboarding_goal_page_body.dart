@@ -188,8 +188,28 @@ class _OnboardingGoalPageBodyState extends State<OnboardingGoalPageBody> {
   }
 
   void _onSelected(UserGoalSelectionEntity goal) {
-    // [fork] S88 onboarding-goal: a goal against the plan clears it
-    OnboardingGoal.picked(goal);
+    // [fork] S88 onboarding-goal: a goal against the plan clears it, with
+    // Undo back to the plan and the goal before
+    final previous = _selected;
+    final cleared = OnboardingGoal.picked(goal);
+    if (cleared != null) {
+      ScaffoldMessenger.of(context)
+        ..removeCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: const Text('Plan cleared'),
+            action: SnackBarAction(
+              label: 'Undo',
+              onPressed: () {
+                if (!mounted) return;
+                OnboardingGoal.pending.value = cleared;
+                setState(() => _selected = previous);
+                widget.setButtonContent(previous != null, previous);
+              },
+            ),
+          ),
+        );
+    }
     // [/fork]
     setState(() => _selected = goal);
     widget.setButtonContent(true, goal);

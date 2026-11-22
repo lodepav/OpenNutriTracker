@@ -210,6 +210,12 @@ Future<DayTotals> Function(DateTime day) basketDayTotals = loadDayTotals;
   );
 }
 
+/// The plan button's words: the day it plans for, "today" when it is.
+String planButtonLabel(DateTime day, DateTime now, String locale) =>
+    DateUtils.isSameDay(day, now)
+    ? 'Plan for today'
+    : 'Plan for ${DateFormat.MMMEd(locale).format(day)}';
+
 /// The basket's foods, each removable, and "Log all", which writes them
 /// one after another (each takes the tracked-day lock) and goes home.
 class BasketSheet extends StatefulWidget {
@@ -543,7 +549,13 @@ class _BasketSheetState extends State<BasketSheet> {
                 OutlinedButton(
                   key: const ValueKey('basket-plan'),
                   onPressed: _logging || items.isEmpty ? null : _plan,
-                  child: const Text('Plan, don\'t log'),
+                  child: Text(
+                    planButtonLabel(
+                      widget.day,
+                      DateTime.now(),
+                      Localizations.localeOf(context).toLanguageTag(),
+                    ),
+                  ),
                 ),
               ] else ...[
                 if (widget.basket.planning == PlanMode.once)

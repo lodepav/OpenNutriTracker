@@ -182,10 +182,14 @@ void main() {
       // Protein: ×0.15 ÷ 4 = 117.56 → 117 g.
       expect(find.textContaining('3135 × 60 % ÷ 4 = 470 g'), findsOneWidget);
       expect(find.textContaining('3135 × 25 % ÷ 9 = 87 g'), findsOneWidget);
-      expect(find.textContaining('3135 × 15 % ÷ 4 = 117 g'), findsOneWidget);
+      // [fork] S450 macro-grams-round: the fork rounds grams as Home does
+      expect(find.textContaining('3135 × 15 % ÷ 4 = 118 g'), findsOneWidget);
+      // [/fork]
       expect(find.text('470 g'), findsOneWidget);
       expect(find.text('87 g'), findsOneWidget);
-      expect(find.text('117 g'), findsOneWidget);
+      // [fork] S450 macro-grams-round: the fork rounds grams as Home does
+      expect(find.text('118 g'), findsOneWidget);
+      // [/fork]
     });
 
     testWidgets('kJ mode converts summary rows but keeps the formula in kcal', (

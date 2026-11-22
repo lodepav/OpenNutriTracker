@@ -37,6 +37,17 @@ void main() {
 
     await tapAndSettle(tester, _read);
     expect(find.text(_replaceTitle), findsOneWidget);
+    // Replace loses work: in the error colour (crit r4 g2)
+    final replace = tester.widget<FilledButton>(
+      find.ancestor(
+        of: find.text('Replace'),
+        matching: find.byType(FilledButton),
+      ),
+    );
+    expect(
+      replace.style?.backgroundColor?.resolve(const {}),
+      Theme.of(tester.element(find.text('Replace'))).colorScheme.error,
+    );
     await tapAndSettle(tester, find.text(l10nEn.dialogCancelLabel));
 
     expect(reviewReader.notes, isEmpty);

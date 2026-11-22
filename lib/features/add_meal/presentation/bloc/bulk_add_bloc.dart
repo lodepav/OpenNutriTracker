@@ -467,7 +467,7 @@ class BulkAddBloc extends Bloc<BulkAddEvent, BulkAddState> {
       }
     });
     // [/fork]
-    // [fork] S210 shown-unit: + and − in ounces leave the unit unchosen
+    // [fork] S210 shown-unit: + and − in ounces, and a held row's hand edit
     on<SetRowInShownUnitEvent>((event, emit) {
       final current = state;
       if (current is BulkAddLoadedState) {

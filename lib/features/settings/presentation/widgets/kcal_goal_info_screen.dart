@@ -25,6 +25,9 @@ import 'package:opennutritracker/fork/units/energy_text.dart';
 import 'package:opennutritracker/fork/goal/goal_explained.dart';
 import 'package:opennutritracker/fork/widget/toolbar_height.dart';
 // [/fork]
+// [fork] S450 goal-grams-rounded
+import 'package:opennutritracker/fork/onboarding/overview_grams.dart';
+// [/fork]
 
 /// Transparency screen: shows every variable and intermediate step behind
 /// today's kcal goal, so the number on the home screen is fully auditable
@@ -581,17 +584,17 @@ class _MacroCard extends StatelessWidget {
         ...inMacroOrder(
           carbs: _ValueRow(
             label: l10n.carbsLabel,
-            value: '${breakdown.carbsGoalGrams.toInt()} g',
+            value: '${overviewGrams(breakdown.carbsGoalGrams)} g',
             emphasized: true,
           ),
           fat: _ValueRow(
             label: l10n.fatLabel,
-            value: '${breakdown.fatsGoalGrams.toInt()} g',
+            value: '${overviewGrams(breakdown.fatsGoalGrams)} g',
             emphasized: true,
           ),
           protein: _ValueRow(
             label: l10n.proteinLabel,
-            value: '${breakdown.proteinsGoalGrams.toInt()} g',
+            value: '${overviewGrams(breakdown.proteinsGoalGrams)} g',
             emphasized: true,
           ),
         ),
@@ -612,8 +615,10 @@ class _MacroCard extends StatelessWidget {
   ) {
     final pct = (fraction * 100).round();
     final density = kcalPerGram.toStringAsFixed(0);
-    // Grams truncate (not round) to match the dashboard's macro tiles.
-    return '$goalKcal × $pct % ÷ $density = ${grams.toInt()} g';
+    // [fork] S450 goal-grams-rounded: rounded as Home and Overview round them
+    return '$goalKcal × $pct % ÷ $density = ${overviewGrams(grams)} g';
+    // return '$goalKcal × $pct % ÷ $density = ${grams.toInt()} g';
+    // [/fork]
   }
 }
 

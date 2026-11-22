@@ -12,6 +12,7 @@ import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/core/utils/calc/met_calc.dart';
 import 'package:opennutritracker/core/utils/id_generator.dart';
 import 'package:opennutritracker/features/activity_detail/presentation/widget/activity_info_button.dart';
+import 'package:opennutritracker/fork/add/chosen_chips.dart';
 import 'package:opennutritracker/fork/adaptive/activity_credit.dart';
 import 'package:opennutritracker/fork/display/contrast.dart';
 import 'package:opennutritracker/fork/widget/toolbar_height.dart';
@@ -684,32 +685,36 @@ class _DurationSheetState extends State<DurationSheet> {
             ],
           ),
           const SizedBox(height: Dimens.spacing12),
-          Row(
-            children: [
-              for (final (i, m) in activityDurations.indexed) ...[
-                if (i > 0) const SizedBox(width: Dimens.spacing8),
-                Expanded(
-                  child: Semantics(
-                    identifier: 'activity-duration-$m',
-                    child: ChoiceChip(
-                      materialTapTargetSize: MaterialTapTargetSize.padded,
-                      // The fill marks the choice; a check mark cut "30" at 200%.
-                      showCheckmark: false,
-                      label: SizedBox(
-                        width: double.infinity,
-                        child: Text(
-                          '$m',
-                          textAlign: TextAlign.center,
-                          semanticsLabel: '$m minutes',
+          chosenChips(
+            context,
+            child: Row(
+              children: [
+                for (final (i, m) in activityDurations.indexed) ...[
+                  if (i > 0) const SizedBox(width: Dimens.spacing8),
+                  Expanded(
+                    child: Semantics(
+                      identifier: 'activity-duration-$m',
+                      child: ChoiceChip(
+                        materialTapTargetSize: MaterialTapTargetSize.padded,
+                        // The accent fill marks the choice; a check mark cut "30"
+                        // at 200%.
+                        showCheckmark: false,
+                        label: SizedBox(
+                          width: double.infinity,
+                          child: Text(
+                            '$m',
+                            textAlign: TextAlign.center,
+                            semanticsLabel: '$m minutes',
+                          ),
                         ),
+                        selected: _minutes == m,
+                        onSelected: (_) => _set(m),
                       ),
-                      selected: _minutes == m,
-                      onSelected: (_) => _set(m),
                     ),
                   ),
-                ),
+                ],
               ],
-            ],
+            ),
           ),
           const SizedBox(height: Dimens.spacing16),
           Semantics(

@@ -142,7 +142,9 @@ void main() {
     await pumpEditor(tester, customMeal(code: null, name: 'Banana'));
 
     await tester.enterText(
-      find.widgetWithText(TextFormField, l10nEn.mealNameLabel),
+      // [fork] S290 food-name: the field says "Food name"
+      find.widgetWithText(TextFormField, 'Food name'),
+      // [/fork]
       'Banana, ripe',
     );
     await save(tester);

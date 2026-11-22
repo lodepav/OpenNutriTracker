@@ -117,13 +117,6 @@ class _RestoreBackupButtonState extends State<RestoreBackupButton> {
                   ? _run
                   : () =>
                         _say('Accept the privacy policy to restore a backup')),
-        style: widget.acceptedPolicy
-            ? null
-            : OutlinedButton.styleFrom(
-                foregroundColor: Theme.of(
-                  context,
-                ).colorScheme.onSurface.withValues(alpha: 0.38),
-              ),
         icon: _busy
             ? const SizedBox(
                 width: 16,

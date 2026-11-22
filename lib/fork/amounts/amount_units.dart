@@ -73,7 +73,15 @@ List<AmountUnitOption> amountUnitOptions(
     ],
   ];
   if (selected.isNotEmpty && !options.any((o) => o.unit == selected)) {
-    options.add(AmountUnitOption(selected));
+    // g and g/ml both read "Grams": the one the amount is in takes the chip
+    final twin = {_g, _gml}.contains(selected)
+        ? options.indexWhere((o) => o.unit == _g || o.unit == _gml)
+        : -1;
+    if (twin >= 0) {
+      options[twin] = AmountUnitOption(selected);
+    } else {
+      options.add(AmountUnitOption(selected));
+    }
   }
   return options;
 }

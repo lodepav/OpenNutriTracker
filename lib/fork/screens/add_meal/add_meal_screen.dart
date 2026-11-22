@@ -46,11 +46,19 @@ import 'package:opennutritracker/fork/recents/search_sections.dart';
 import 'package:opennutritracker/fork/widget/meal_picker_chip.dart';
 import 'package:opennutritracker/fork/add/chosen_chips.dart';
 import 'package:opennutritracker/fork/layout/width_cap.dart';
+import 'package:opennutritracker/fork/widget/toolbar_height.dart';
 
 /// The meal plan's search title: the meal and the day it plans for, since
-/// the search may be for a day other than the one on screen behind it.
-String planningTitle(String meal, DateTime day, String locale) =>
-    'Planning ${meal.toLowerCase()} · ${DateFormat.MMMEd(locale).format(day)}';
+/// the search may be for a day other than the one on screen behind it. Two
+/// lines, so the day is never the part cut off.
+({String meal, String day}) planningTitle(
+  String meal,
+  DateTime day,
+  String locale,
+) => (
+  meal: 'Planning ${meal.toLowerCase()}',
+  day: DateFormat.MMMEd(locale).format(day),
+);
 
 class AddMealScreen extends StatefulWidget {
   const AddMealScreen({super.key});
@@ -204,16 +212,9 @@ class _AddMealScreenState extends State<AddMealScreen> {
       // While planning (the meal plan's search) nothing here may log.
       floatingActionButton: _planning ? null : _aiAddFab(),
       appBar: AppBar(
+        toolbarHeight: _planning ? twoLineToolbarHeight(context) : null,
         // the meal is the chip under it, so the title does not repeat it
-        title: Text(
-          _planning
-              ? planningTitle(
-                  _mealType.getTypeName(context),
-                  _day,
-                  Localizations.localeOf(context).toLanguageTag(),
-                )
-              : 'Add food',
-        ),
+        title: _planning ? _planningTitle(context) : const Text('Add food'),
         // A plan's search stays on the meal it plans.
         bottom: _planning
             ? null
@@ -1036,6 +1037,28 @@ class _AddMealScreenState extends State<AddMealScreen> {
         _day,
         usesImperialUnits,
       ),
+    );
+  }
+
+  /// "Planning lunch" over the day, in full at any text size.
+  Widget _planningTitle(BuildContext context) {
+    final title = planningTitle(
+      _mealType.getTypeName(context),
+      _day,
+      Localizations.localeOf(context).toLanguageTag(),
+    );
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(title.meal, maxLines: 1, overflow: TextOverflow.ellipsis),
+        Text(
+          title.day,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: Theme.of(context).textTheme.bodyMedium,
+        ),
+      ],
     );
   }
 

@@ -248,3 +248,17 @@ deferred finding again without new evidence. Newest last.
 | 2026-11-22 | C4 | G5-18 | P2 | A6, H9 | Step goal dialog at 200% | The range error is cut off | accept | errorMaxLines 3, as the measurement dialog (critique G5 r4) |
 | 2026-11-22 | C4 | G5-19 | P2 | H1, H6 | Body measurements card | At the default week only "Latest" shows for older entries, with no reason given | accept | The card says how many are in range and to pick a longer one (critique G5 r4) |
 | 2026-11-22 | C4 | G5-20 | P3 | A10, A2, A1 | Compare-with-AI confirm, photo card | Keeps old theme colours if the theme flips while open; Compare and Add touch | accept | Theme read inside the dialog; 8 dp between the buttons (critique G5 r4) |
+| 2026-11-22 | C4 | G2-26 | P1 | H1, H5, H6 | Log with AI | A row held for a unit check is dropped on Log with only "Added to Dinner"; a hand edit doesn't clear the hold | accept | Log names the held rows and asks before logging the rest; a hand-set amount clears the hold (critique G2 r4) |
+| 2026-11-22 | C4 | G2-27 | P2 | H4, C5 | Photo review | "This meal · 2 foods" over "Log 1 item" | accept | The button says what is written: "Log as 1 dish" (critique G2 r4) |
+| 2026-11-22 | C4 | G2-28 | P3 | H6, H4 | Unit-check sheet, Diary edit | Two chips both named "Grams" | accept | One chip per distinct unit (critique G2 r4) |
+| 2026-11-22 | C4 | G2-29 | P3 | P3 | Discard and Replace dialogs | Destructive actions are filled primary buttons | accept | Error colour, as the profile delete (critique G2 r4) |
+| 2026-11-22 | C4 | G2-30 | P2 | H4, C5 | Edit meal (existing food) | The "Edit food" pencil opens "Edit meal" with a "Meal name" field | accept | "Edit food" and "Food name" on the edit path too (critique G2 r4) |
+| 2026-11-22 | C4 | G2-31 | P3 | H1, H3 | Basket "Plan, don't log" | Names no day and has no Undo | accept | "Plan for today", or the day it plans for (critique G2 r4) |
+| 2026-11-22 | C4 | G2-32 | P3 | H6, A6 | Planning header | The day is cut off ("Planning lunch · Mon, N…") | accept | The day on its own line (critique G2 r4) |
+| 2026-11-22 | C4 | G2-33 | P3 | H4 | Duration and fasting chips | A selected chip has the same fill as the rest | accept | The accent fill chosen chips use elsewhere (chosenChips) (critique G2 r4) |
+| 2026-11-22 | C4 | G1-19 | P2 | H4 | How your goal is calculated | Protein 105 g there, 106 g on Overview and Home | accept | Rounds as Home does (critique G1 r4) |
+| 2026-11-22 | C4 | G1-20 | P2 | H9 | Body, imperial height and stone weight | 5 ft with empty inches is refused as "between 1 and 9 ft" | defer | The fix is in upstream's shared height and weight inputs and flips two upstream tests (critique G1 r4) |
+| 2026-11-22 | C4 | G1-21 | P2 | A2, H4 | Intro | Try Demo and Restore are live but styled disabled (2.2:1) | accept | Full-contrast styling; the snackbar explains the policy tick (critique G1 r4) |
+| 2026-11-22 | C4 | G1-22 | P2 | A2, A10 | Body unit toggles | The selected unit is marked only by a 1.18:1 fill | accept | primaryContainer fill with onPrimaryContainer text (critique G1 r4) |
+| 2026-11-22 | C4 | G1-23 | P3 | H1, H3 | Goal page | Maintain clears a plan without notice | accept | "Plan cleared" with Undo (critique G1 r4) |
+| 2026-11-22 | C4 | G1-24 | P3 | H2, C1 | Goal planner at first run | Jargon in steps 3, 5 and 6 | defer | The planner is shared with Settings; wording pass later (critique G1 r4) |

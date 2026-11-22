@@ -385,6 +385,9 @@ void main() {
         await tester.tapAt(Offset.zero);
         await tester.pumpAndSettle();
         expect(find.textContaining('Planning '), findsOneWidget);
+        // the day on its own line, in full (crit r4 g2)
+        expect(find.text('Thu, Oct 1'), findsOneWidget);
+        expect(cutText(tester), isNot(contains('Thu, Oct 1')));
         expect(find.byKey(const ValueKey('add-meal-fits-left')), findsNothing);
       });
     }
