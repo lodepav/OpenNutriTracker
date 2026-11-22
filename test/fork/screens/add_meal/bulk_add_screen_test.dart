@@ -3,6 +3,9 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:opennutritracker/fork/leftovers/meal_groups.dart';
+import 'package:opennutritracker/core/styles/app_palette.dart';
+import 'package:opennutritracker/core/styles/app_theme.dart';
+import 'package:opennutritracker/fork/display/contrast.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -540,9 +543,11 @@ Widget _app({
   String? sharedPhotoPath,
   String? sharedText,
   // [/fork]
+  ThemeData? theme,
 }) => ChangeNotifierProvider<EnergyUnitProvider>(
   create: (_) => EnergyUnitProvider(usesKilojoules: false),
   child: MaterialApp(
+    theme: theme,
     localizationsDelegates: const [
       S.delegate,
       GlobalMaterialLocalizations.delegate,
@@ -765,6 +770,30 @@ void main() {
     expect(find.textContaining('Toast'), findsWidgets);
   });
 
+  testWidgets('a model that failed on typed text is said with the foods '
+      'found', (tester) async {
+    final semantics = tester.ensureSemantics();
+    await _registerWithFailingReader(
+      {
+        'toast': [_meal('Toast')],
+      },
+      const MealInterpreterException(
+        'request timed out',
+        failure: MealInterpreterFailure.timeout,
+      ),
+    );
+    await tester.pumpWidget(_app());
+    await tester.pumpAndSettle();
+    tester.takeAnnouncements();
+    await _parse(tester, '100g toast');
+
+    expect(tester.takeAnnouncements().map((a) => a.message), [
+      'Reading the meal',
+      'Found 1 food. ${l10nEn.bulkAddModelTimedOutLabel}',
+    ]);
+    semantics.dispose();
+  });
+
   testWidgets('the whole notice is readable at 2x on a narrow screen', (
     tester,
   ) async {
@@ -913,7 +942,7 @@ void main() {
       UnitDropdownItem.serving.toString(),
       _meal('Bread', servingQuantity: 38, servingSize: '1 slice (38 g)'),
     )!.round();
-    expect(find.text('Log 1 item · $kcal kcal'), findsOneWidget);
+    expect(find.text('Log 1 food · $kcal kcal'), findsOneWidget);
     // the amount says the count and the grams it is (D35)
     expect(find.text('3 × slice · 114 g'), findsOneWidget);
   });
@@ -939,11 +968,11 @@ void main() {
 
     expect(find.textContaining('≈'), findsNothing);
     final submit = find.ancestor(
-      of: find.text('Log 1 item'),
+      of: find.text('Log 1 food'),
       matching: find.byWidgetPredicate((w) => w is FilledButton),
     );
     final button = tester.getRect(submit);
-    for (final text in ['Log 1 item', '100 kcal']) {
+    for (final text in ['Log 1 food', '100 kcal']) {
       final found = find.descendant(of: submit, matching: find.text(text));
       expect(found, findsOneWidget, reason: text);
       final paragraph = tester.renderObject<RenderParagraph>(found);
@@ -2123,8 +2152,8 @@ void main() {
     testWidgets('its portion scales the foods; it logs as one', (tester) async {
       await readDish(tester);
       expect(find.text('Chicken bowl'), findsOneWidget);
-      final l10n = await S.delegate.load(const Locale('en'));
-      expect(find.textContaining(l10n.bulkAddSubmitLabel(1)), findsOneWidget);
+      // what is written: the dish, not its foods (crit r4 g2)
+      expect(find.textContaining('Log as 1 dish'), findsOneWidget);
       expectPortion('350');
 
       await setPortion(tester, '175');
@@ -2239,8 +2268,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(portion(), findsNothing);
       expect(find.text(DishStrings.logAsOneDish), findsOneWidget);
-      final l10n = await S.delegate.load(const Locale('en'));
-      expect(find.textContaining(l10n.bulkAddSubmitLabel(2)), findsOneWidget);
+      expect(find.textContaining('Log 2 foods'), findsOneWidget);
 
       await tester.tap(_submitButton());
       await tester.pumpAndSettle();
@@ -2351,33 +2379,41 @@ void main() {
       expect(find.text('1 oz'), findsOneWidget);
     });
 
-    testWidgets('a step in ounces leaves "check the unit" asking, as in '
-        'grams', (tester) async {
-      // "2 eggs" on a food with no serving weight: 2 g, which needs a look
+    testWidgets('a step or a typed amount answers "check the unit", in '
+        'ounces as in grams', (tester) async {
+      // "2 eggs" on a food with no serving weight: 2 g, which needs a look.
+      // An amount set by hand is the user's answer (crit r4 g2).
       await _register({
         'eggs': [_meal('Egg', mealUnit: 'g', servingSize: '1 egg')],
       });
       final l10n = await S.delegate.load(const Locale('en'));
       for (final imperial in [false, true]) {
-        await tester.pumpWidget(_app(imperial: imperial));
-        await _parse(tester, '2 eggs');
-        expect(find.text(l10n.bulkAddCheckAmountLabel), findsOneWidget);
-        await tester.tap(find.byKey(const ValueKey('bulk-add-more-0')));
-        await tester.pumpAndSettle();
-        expect(find.text(imperial ? '1 oz' : '10 g'), findsOneWidget);
-        expect(
-          find.text(l10n.bulkAddCheckAmountLabel),
-          findsOneWidget,
-          reason: imperial ? 'imperial' : 'metric',
-        );
-        // typed in the sheet, the same
-        await _typeRowAmount(tester, 0, '3');
-        expect(
-          find.text(l10n.bulkAddCheckAmountLabel),
-          findsOneWidget,
-          reason: imperial ? 'imperial' : 'metric',
-        );
-        await tester.pumpWidget(const SizedBox());
+        for (final typed in [false, true]) {
+          final reason =
+              '${imperial ? 'imperial' : 'metric'}, '
+              '${typed ? 'typed' : 'stepped'}';
+          await tester.pumpWidget(_app(imperial: imperial));
+          await _parse(tester, '2 eggs');
+          expect(find.text(l10n.bulkAddCheckAmountLabel), findsOneWidget);
+          if (typed) {
+            await _typeRowAmount(tester, 0, '3');
+          } else {
+            await tester.tap(find.byKey(const ValueKey('bulk-add-more-0')));
+            await tester.pumpAndSettle();
+            expect(find.text(imperial ? '1 oz' : '10 g'), findsOneWidget);
+          }
+          expect(
+            find.text(l10n.bulkAddCheckAmountLabel),
+            findsNothing,
+            reason: reason,
+          );
+          expect(
+            find.textContaining('Log 1 food'),
+            findsOneWidget,
+            reason: reason,
+          );
+          await tester.pumpWidget(const SizedBox());
+        }
       }
     });
   });
@@ -2568,10 +2604,7 @@ void main() {
       expect(_mealDetailBloc.writes, isEmpty);
       // And the button still offers all three, so nothing has silently left
       // the batch.
-      expect(find.textContaining(l10nEn.bulkAddSubmitLabel(3)), findsOneWidget);
-      // one item is one item.
-      expect(l10nEn.bulkAddSubmitLabel(1), 'Log 1 item');
-      expect(l10nEn.bulkAddSubmitLabel(3), 'Log 3 items');
+      expect(find.textContaining('Log 3 foods'), findsOneWidget);
     });
   });
 
@@ -2681,6 +2714,29 @@ void main() {
     expect(_mealDetailBloc.writes.map((w) => w.mealName), ['Toast']);
   });
 
+  for (final palette in [AppPalette.light, AppPalette.dark]) {
+    testWidgets('"No match" reads at 4.5:1 on its tint '
+        '(${palette.brightness.name})', (tester) async {
+      await _register({
+        'toast': [_meal('Toast')],
+      });
+      await tester.pumpWidget(_app(theme: buildAppTheme(palette)));
+      await _parse(tester, '100g toast, unicorn steak');
+
+      final label = find.text(l10nEn.bulkAddNoMatchLabel);
+      final context = tester.element(label);
+      final error = Theme.of(context).colorScheme.error;
+      final tint = Color.alphaBlend(
+        error.withValues(alpha: 0.14),
+        paletteOf(context).surface,
+      );
+      expect(
+        contrastRatio(tester.widget<Text>(label).style!.color!, tint),
+        greaterThanOrEqualTo(4.5),
+      );
+    });
+  }
+
   testWidgets('a bare count with nothing to count is flagged', (tester) async {
     // #622. Device-verified, but it belongs in CI: the label is the only
     // signal that the row's number does not mean what the user typed.
@@ -2707,10 +2763,18 @@ void main() {
 
     expect(find.text(l10nEn.bulkAddCheckAmountLabel), findsOneWidget);
 
+    // the button and the snackbar say the egg waits (crit r4 g2)
+    expect(find.textContaining('1 waits for a unit'), findsOneWidget);
     await tester.tap(_submitButton());
     await tester.pumpAndSettle();
 
     expect(_mealDetailBloc.writes.map((w) => w.mealName), ['Toast']);
+    expect(
+      find.text(
+        'Added to ${l10nEn.breakfastLabel}. Egg not logged: check its unit.',
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets("a row in the user's own portion is written as its weight", (

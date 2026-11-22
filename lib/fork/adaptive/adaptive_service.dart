@@ -58,6 +58,18 @@ bool checkInDueOn(DateTime today, DateTime? last, int? weekday) {
   return lastDay.isBefore(latest);
 }
 
+/// Whether an Undo of the check-in done after the record of [undoneAfter]
+/// (its date, '' for none) on [undoneOn] still keeps the automatic one from
+/// accepting it: until another record is the last ([lastNow]) or the next
+/// check-in comes due, as if one were done on [undoneOn].
+bool undoHolds({
+  required DateTime today,
+  required DateTime undoneOn,
+  required String undoneAfter,
+  required String lastNow,
+  required int? weekday,
+}) => undoneAfter == lastNow && !checkInDueOn(today, undoneOn, weekday);
+
 /// Reads upstream's profile, weight log and tracked days into a check-in,
 /// and gives seam S12 the target while the adaptive switch is on.
 class AdaptiveService {
@@ -225,6 +237,47 @@ class AdaptiveService {
   Future<void> leaveOutDay(DateTime day) => _store.setSkipped(day, true);
   Future<void> keepDay(DateTime day) => _store.setWhole(day, true);
 
+  /// Counts [day] again, undoing [leaveOutDay].
+  Future<void> putBackDay(DateTime day) => _store.setSkipped(day, false);
+
+  /// The check-ins as stored now, for [restoreCheckIns] to put back.
+  Future<List<CheckInRecord>> checkIns() async => [...await _store.history()];
+
+  /// Undoes the accepts since [checkIns] gave [records], and marks the
+  /// check-in due again as undone, so [autoAcceptIfDue] leaves it to Home's
+  /// card ([undoHolds]).
+  Future<void> restoreCheckIns(List<CheckInRecord> records) async {
+    await _store.restoreCheckIns(records);
+    await _store.writeKey(
+      _undoneKey,
+      '${records.lastOrNull?.date.toIso8601String() ?? ''}'
+      '|${_today().toIso8601String()}',
+    );
+  }
+
+  static const _undoneKey = 'checkInUndone';
+
+  /// Whether the due check-in is one the user undid, by the record before
+  /// it and the day of the Undo.
+  Future<bool> _undone() async {
+    final Object? mark;
+    try {
+      mark = await _store.readKey(_undoneKey);
+    } catch (_) {
+      // Unread, as in tests without a box: accepted on its own, as before.
+      return false;
+    }
+    if (mark is! String) return false;
+    final [last, on] = mark.split('|');
+    return undoHolds(
+      today: _today(),
+      undoneOn: DateTime.parse(on),
+      undoneAfter: last,
+      lastNow: (await _store.lastCheckIn())?.date.toIso8601String() ?? '',
+      weekday: AdaptiveStore.settings.value.checkInWeekday,
+    );
+  }
+
   /// Accepts a due check-in as proposed when the settings say so; the
   /// check-in accepted, or null when none was due or it is asked. A proposal
   /// under the advised floor is left to be done by hand, as is one with a
@@ -232,6 +285,8 @@ class AdaptiveService {
   Future<CheckIn?> autoAcceptIfDue() async {
     if (!AdaptiveStore.settings.value.autoAcceptCheckIn) return null;
     if (!await checkInDue()) return null;
+    // Undone by hand: Home's card asks rather than accepting it again.
+    if (await _undone()) return null;
     final due = await checkIn();
     if (due.belowRecommendedFloor || due.activityUnreadable) return null;
     // A day logged in part would pull the target down unseen (D65).

@@ -10,6 +10,10 @@ import 'package:opennutritracker/fork/layout/width_cap.dart';
 // [fork] S275 banner-text
 import 'package:opennutritracker/fork/display/contrast.dart' show textSafe;
 // [/fork]
+// [fork] S469 wipe-confirm
+import 'package:opennutritracker/fork/recipe/recipe_delete.dart'
+    show destructiveFilledStyle;
+// [/fork]
 
 /// Persistent banner shown above every tab of `MainScreen` while the
 /// active profile holds seeded sample data (see
@@ -50,6 +54,7 @@ class DemoModeBanner extends StatelessWidget {
       ),
       child: Semantics(
         identifier: 'main-demo-banner',
+        button: true, // [fork] S469: TalkBack says it does something
         child: Material(
           color: Colors.transparent,
           borderRadius: Dimens.borderRadiusM,
@@ -125,10 +130,17 @@ class DemoModeBanner extends StatelessWidget {
             onPressed: () => Navigator.of(ctx).pop(false),
             child: Text(l10n.dialogCancelLabel),
           ),
-          TextButton(
+          // [fork] S469 wipe-confirm: the wipe looks destructive, not like Cancel
+          FilledButton(
+            style: destructiveFilledStyle(ctx),
             onPressed: () => Navigator.of(ctx).pop(true),
             child: Text(l10n.homeDemoBannerConfirmAction),
           ),
+          // TextButton(
+          //   onPressed: () => Navigator.of(ctx).pop(true),
+          //   child: Text(l10n.homeDemoBannerConfirmAction),
+          // ),
+          // [/fork]
         ],
       ),
     );

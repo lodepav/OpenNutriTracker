@@ -188,7 +188,14 @@ class _WaterGoalDialogState extends State<WaterGoalDialog> {
                 ),
                 Semantics(
                   identifier: 'water-goal-slider',
-                  child: Slider(
+                  // [fork] S317 slider-values: the value shows live beside the slider, so
+                  // its label names it for a screen reader instead of a drag bubble
+                  child: SliderTheme(
+                    data: SliderTheme.of(context).copyWith(
+                      showValueIndicator: ShowValueIndicator.never,
+                    ),
+                    child: Slider(
+                  // [/fork]
                     min: _minDisplay.toDouble(),
                     max: _maxDisplay.toDouble(),
                     divisions: (_maxDisplay - _minDisplay) ~/ _stepDisplay,
@@ -196,13 +203,22 @@ class _WaterGoalDialogState extends State<WaterGoalDialog> {
                       _minDisplay.toDouble(),
                       _maxDisplay.toDouble(),
                     ),
-                    label:
-                        '${_toDisplay(_goalMl)} ${_imperial ? s.flOzUnit : s.mlLabel}',
+                    // [fork] S317 slider-values: named, and the amount
+                    // rather than the slider's position (A5)
+                    // label:
+                    //     '${_toDisplay(_goalMl)} ${_imperial ? s.flOzUnit : s.mlLabel}',
+                    label: s.settingsWaterGoalLabel,
+                    semanticFormatterCallback: (v) =>
+                        '${v.round()} ${_imperial ? s.flOzUnit : s.mlLabel}',
+                    // [/fork]
                     onChanged: (value) {
                       setState(() => _goalMl = _toMl(value.round()));
                       _controller.text = value.round().toString();
                     },
                   ),
+                  // [fork] S317 slider-values
+                  ),
+                  // [/fork]
                 ),
               ],
             ),

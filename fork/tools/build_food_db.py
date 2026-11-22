@@ -415,10 +415,10 @@ def add_dishes(dishes_path, out):
         rows.setdefault((row['source'], row['name']), row)
     kept = [food for food in table['foods']
             if (food[1], food[2]) not in WRONG_ROWS]
-    dropped = [food[3] for food in table['foods'] if food not in kept]
-    for food in table['foods']:
-        if food not in kept:
-            table['portions'].pop(str(food[0]), None)
+    wrong = [food for food in table['foods'] if (food[1], food[2]) in WRONG_ROWS]
+    dropped = [food[3] for food in wrong]
+    for food in wrong:
+        table['portions'].pop(str(food[0]), None)
     table['foods'] = kept
 
     at = {food[2]: i for i, food in enumerate(kept) if food[1] == 'fork_dishes'}

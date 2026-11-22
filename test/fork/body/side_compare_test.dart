@@ -6,6 +6,7 @@ import 'package:opennutritracker/fork/body/measurement_store.dart';
 import 'package:opennutritracker/fork/body/side_compare.dart';
 
 import '../../helpers/ux_checks.dart';
+import 'axis_labels.dart';
 
 DateTime _day(int offset) {
   final now = DateTime.now();
@@ -88,6 +89,16 @@ void main() {
     expect(stat('1.0'), findsOne);
     expect(find.textContaining('Right bigger by 1.0 cm, '), findsOne);
     expect(find.textContaining('Right bigger by 0.6 cm'), findsOne);
+    // Each side's ends in words: the chart has no dates.
+    String d(int offset) => DateFormat.MMMd().format(_day(offset));
+    expect(
+      find.text('Left 35.0 cm on ${d(-10)} \u2192 35.4 cm on ${d(-1)}'),
+      findsOne,
+    );
+    expect(
+      find.text('Right 35.6 cm on ${d(-10)} \u2192 36.4 cm on ${d(-1)}'),
+      findsOne,
+    );
     // A line a side, a point a measurement.
     final bars = tester.widget<LineChart>(find.byType(LineChart)).data;
     expect(
@@ -104,6 +115,62 @@ void main() {
     expect(find.text('Thighs: left and right'), findsOne);
     expect(find.textContaining('Measure your left and right thighs'), findsOne);
     expect(find.text('No thighs measured yet.'), findsOne);
+  });
+
+  testWidgets('the chart and the rows speak sides and units in words', (
+    tester,
+  ) async {
+    final semantics = tester.ensureSemantics();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: SideComparePage(
+          imperial: true,
+          rangeDays: 30,
+          load: () async => [
+            _m(-10, BodyMetric.leftArm, 35),
+            _m(-10, BodyMetric.rightArm, 35.6),
+            _m(-1, BodyMetric.leftArm, 35.4),
+            _m(-1, BodyMetric.rightArm, 36.4),
+          ],
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      find.bySemanticsLabel(
+        'Arms chart, left from 13.8 to 13.9 inches, '
+        'right from 14.0 to 14.3 inches',
+      ),
+      findsOne,
+    );
+    expect(
+      find.bySemanticsLabel(
+        'Left 13.9 inches, Right 14.3 inches, Difference 0.4 inches',
+      ),
+      findsOne,
+    );
+    final day = DateFormat.yMMMd().format(_day(-1));
+    expect(find.bySemanticsLabel('Right bigger by 0.4 inches, $day'), findsOne);
+    final short = DateFormat.MMMd();
+    // Merged with the legend into the card's one node.
+    expect(
+      find.bySemanticsLabel(
+        RegExp(
+          'Left 13.8 inches on ${short.format(_day(-10))} \u2192 '
+          '13.9 inches on ${short.format(_day(-1))}',
+        ),
+      ),
+      findsOne,
+    );
+    await tester.scrollUntilVisible(find.text(day).last, 200);
+    expect(
+      find.bySemanticsLabel(
+        '$day, left 13.9 inches, right 14.3 inches, '
+        'right bigger by 0.4 inches',
+      ),
+      findsOne,
+    );
+    semantics.dispose();
   });
 
   testWidgets('none in the range charts them all, and says so', (tester) async {
@@ -156,5 +223,50 @@ void main() {
         ],
       ),
     );
+  });
+
+  test('the axis step: round, and wider apart for taller labels', () {
+    // 180 dp at 40 dp a row: 4 rows over 2 cm, half a cm each.
+    expect(axisStep(2, 16), 0.5);
+    // 32 dp labels need 48 dp: 3 rows, a step of 1 rather than 0.67.
+    expect(axisStep(2, 32), 1);
+    expect(axisStep(0.06, 32), 0.02);
+  });
+
+  testWidgets('at 200% text the axis numbers stay whole and apart', (
+    tester,
+  ) async {
+    await pumpOnPhone(
+      tester,
+      SideComparePage(
+        imperial: false,
+        rangeDays: 30,
+        load: () async => [
+          _m(-10, BodyMetric.leftArm, 35),
+          _m(-10, BodyMetric.rightArm, 36.5),
+          _m(-1, BodyMetric.leftArm, 37.5),
+          _m(-1, BodyMetric.rightArm, 38),
+        ],
+      ),
+    );
+    await tester.pumpAndSettle();
+    expectAxisReadable(tester);
+  });
+
+  testWidgets('none measured: a button opens Add measurements', (tester) async {
+    SidePartPref.current.value = SidePart.thighs;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: SideComparePage(
+          imperial: false,
+          rangeDays: 30,
+          load: () async => [_m(-1, BodyMetric.leftThigh, 58)],
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('sides-add')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('measure-leftThigh')), findsOne);
   });
 }

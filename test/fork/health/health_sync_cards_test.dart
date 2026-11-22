@@ -1,10 +1,35 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:opennutritracker/features/settings/presentation/widgets/health_sync_screen.dart'
+    show healthPlatformName;
 import 'package:opennutritracker/fork/health/health_sync_cards.dart';
 import 'package:opennutritracker/fork/health/weight_import_ui.dart';
+import 'package:opennutritracker/generated/l10n.dart';
 
 Widget _app(Widget child) => MaterialApp(
+  localizationsDelegates: const [S.delegate],
+  supportedLocales: S.supportedLocales,
   home: Scaffold(body: ListView(children: [child])),
+);
+
+HealthImportTile _weightTile({
+  required Future<bool> Function() isOn,
+  required Future<int?> Function() turnOn,
+  required Future<void> Function() turnOff,
+}) => HealthImportTile(
+  available: true,
+  icon: Icons.monitor_weight_outlined,
+  identifier: 'health-sync-weight',
+  title: 'Weight in',
+  detail: 'from your smart scale',
+  what: 'weight',
+  disclosureTitle: 'Import weight?',
+  disclosure: 'OpenBite will read your weight.',
+  offMessage: 'Weight import off',
+  done: (days) => 'Imported $days days',
+  isOn: isOn,
+  turnOn: turnOn,
+  turnOff: turnOff,
 );
 
 void main() {
@@ -15,15 +40,7 @@ void main() {
     var asked = 0;
     await tester.pumpWidget(
       _app(
-        HealthImportTile(
-          available: true,
-          icon: Icons.monitor_weight_outlined,
-          identifier: 'health-sync-weight',
-          title: 'Weight in',
-          detail: 'from your smart scale',
-          what: 'weight',
-          offMessage: 'Weight import off',
-          done: (days) => 'Imported $days days',
+        _weightTile(
           isOn: () async => on,
           turnOn: () async {
             asked++;
@@ -41,12 +58,74 @@ void main() {
 
     await tester.tap(find.bySemanticsIdentifier('health-sync-weight'));
     await tester.pumpAndSettle();
+    expect(asked, 0, reason: 'the disclosure comes before the permission');
+    expect(find.text('Import weight?'), findsOneWidget);
+    expect(find.text('OpenBite will read your weight.'), findsOneWidget);
+    await tester.tap(find.text('Continue'));
+    await tester.pumpAndSettle();
     expect(asked, 1);
     expect(
       tester.widget<CheckboxListTile>(find.byType(CheckboxListTile)).value,
       isTrue,
     );
     expect(find.text('Imported 3 days'), findsOneWidget);
+  });
+
+  testWidgets('a failed read names the health store as the page does', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _app(
+        _weightTile(
+          isOn: () async => false,
+          turnOn: () async => throw Exception('down'),
+          turnOff: () async {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.bySemanticsIdentifier('health-sync-weight'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Continue'));
+    await tester.pumpAndSettle();
+    expect(
+      find.text('Could not read weight from $healthPlatformName'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('Cancel on the disclosure asks nothing and leaves it off', (
+    tester,
+  ) async {
+    var asked = 0;
+    await tester.pumpWidget(
+      _app(
+        _weightTile(
+          isOn: () async => false,
+          turnOn: () async {
+            asked++;
+            return 3;
+          },
+          turnOff: () async {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.bySemanticsIdentifier('health-sync-weight'));
+    await tester.pumpAndSettle();
+    // A tap outside is not consent either.
+    await tester.tapAt(const Offset(5, 5));
+    await tester.pumpAndSettle();
+    expect(find.text('Import weight?'), findsOneWidget);
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+    expect(asked, 0);
+    expect(find.text('Import weight?'), findsNothing);
+    expect(
+      tester.widget<CheckboxListTile>(find.byType(CheckboxListTile)).value,
+      isFalse,
+    );
+    expect(find.byType(SnackBar), findsNothing);
   });
 
   testWidgets('a card that can not change is greyed, not tappable', (

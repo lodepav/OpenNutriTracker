@@ -12,6 +12,7 @@ import 'package:opennutritracker/core/domain/usecase/get_profiles_usecase.dart';
 import 'package:opennutritracker/core/presentation/widgets/copy_to_profile_sheet.dart';
 // upstream's DeleteAllDialog import, unused since
 // import 'package:opennutritracker/core/presentation/widgets/delete_all_dialog.dart';
+import 'package:opennutritracker/fork/scan/shared_code_dialog.dart';
 import 'package:opennutritracker/fork/display/contrast.dart';
 import 'package:opennutritracker/fork/screens/home/intake_card.dart';
 import 'package:opennutritracker/core/presentation/widgets/placeholder_card.dart';
@@ -31,7 +32,6 @@ import 'package:opennutritracker/features/diary/presentation/widgets/diary_sort_
 import 'package:opennutritracker/features/home/domain/entity/shared_meal_payload.dart';
 import 'package:opennutritracker/features/home/presentation/bloc/home_bloc.dart';
 import 'package:opennutritracker/features/home/presentation/screens/import_meal_scanner_screen.dart';
-import 'package:opennutritracker/features/home/presentation/widgets/shared_meal_import_dialogs.dart';
 import 'package:opennutritracker/features/home/presentation/widgets/shared_meal_importer.dart';
 import 'package:opennutritracker/features/meal_detail/presentation/bloc/meal_detail_bloc.dart';
 import 'package:opennutritracker/fork/copy/diary_selection.dart';
@@ -556,12 +556,26 @@ class _IntakeVerticalListState extends State<IntakeVerticalList> {
                                   );
                                 }
                               case VerticalListPopupMenuSelections.onImportCode:
-                                final payload =
-                                    await showDialog<SharedMealPayload>(
-                                      context: context,
-                                      builder: (_) =>
-                                          const SharedMealCodeDialog(),
-                                    );
+                                // The same paste dialog as the meal scanner's (S344).
+                                final code = await showDialog<String>(
+                                  context: context,
+                                  builder: (_) => SharedCodeDialog(
+                                    hint: 'Paste the shared meal code here',
+                                    actionLabel: 'Import meal',
+                                    invalidLabel: "This isn't a meal code",
+                                    isValid: (code) {
+                                      try {
+                                        SharedMealPayload.fromJsonString(code);
+                                        return true;
+                                      } on SharedMealParseException {
+                                        return false;
+                                      }
+                                    },
+                                  ),
+                                );
+                                final payload = code == null
+                                    ? null
+                                    : SharedMealPayload.fromJsonString(code);
                                 if (payload != null && context.mounted) {
                                   final imported = await SharedMealImporter(
                                     context,

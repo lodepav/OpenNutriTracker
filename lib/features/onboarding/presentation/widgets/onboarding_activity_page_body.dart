@@ -69,10 +69,16 @@ class _OnboardingActivityPageBodyState
           mainAxisAlignment: MainAxisAlignment.start,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // [fork] S464 step-headings: a heading TalkBack can jump to
+            Semantics(
+              header: true,
+              child:
+            // [/fork]
             Text(
               S.of(context).activityLabel,
               style: Theme.of(context).textTheme.headlineSmall,
             ),
+            ), // [fork] S464
             Text(
               S.of(context).onboardingActivityQuestionSubtitle,
               style: Theme.of(context).textTheme.titleMedium,
@@ -96,6 +102,10 @@ class _OnboardingActivityPageBodyState
     final colors = Theme.of(context).colorScheme;
     return Semantics(
       identifier: 'onboarding-activity-${_identifierSuffix[activity]}',
+      // [fork] S465 activity-checked: TalkBack says which level is chosen
+      inMutuallyExclusiveGroup: true,
+      checked: isSelected,
+      // [/fork]
       child: AppCard(
         onTap: () => _onSelected(activity),
         color: isSelected ? colors.primaryContainer : null,
@@ -130,7 +140,12 @@ class _OnboardingActivityPageBodyState
               isSelected
                   ? Icons.radio_button_checked
                   : Icons.radio_button_unchecked,
-              color: isSelected ? colors.onPrimaryContainer : colors.outline,
+              // [fork] S335 activity-radio: outline read 1.3:1 on the card
+              color: isSelected
+                  ? colors.onPrimaryContainer
+                  : colors.onSurfaceVariant,
+              // color: isSelected ? colors.onPrimaryContainer : colors.outline,
+              // [/fork]
             ),
           ],
         ),

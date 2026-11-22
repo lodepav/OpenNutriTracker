@@ -6,6 +6,7 @@ import 'package:opennutritracker/core/domain/entity/tracked_day_entity.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_nutriments_entity.dart';
+import 'package:opennutritracker/fork/report/goal_standing.dart';
 import 'package:opennutritracker/fork/report/nutrient_explorer.dart';
 import 'package:opennutritracker/fork/report/weekly_report.dart';
 
@@ -16,6 +17,7 @@ IntakeEntity _eat(
   int day,
   double grams, {
   double? fiber,
+  double? sugars,
   int hour = 12,
 }) => IntakeEntity(
   id: '$food-$day-$grams',
@@ -36,7 +38,7 @@ IntakeEntity _eat(
       carbohydrates100: 30,
       fat100: 5,
       proteins100: 10,
-      sugars100: null,
+      sugars100: sugars,
       saturatedFat100: null,
       fiber100: fiber,
     ),
@@ -205,8 +207,183 @@ void main() {
 
     expect(find.text('Fibre by food'), findsOneWidget);
     expect(find.text('Lentils'), findsOneWidget);
-    expect(find.text('16 g in the range'), findsOneWidget);
-    expect(find.text('52%'), findsOneWidget);
+    // 16 g over the 2 days logged, as the explorer's 16 g a day is.
+    expect(find.text('8.0 g a day · 52% of the fibre logged'), findsOneWidget);
+    expect(find.text('7.5 g a day · 48% of the fibre logged'), findsOneWidget);
+    final semantics = tester.ensureSemantics();
+    await tester.pump();
+    expect(
+      find.bySemanticsLabel(RegExp('8.0 grams a day, 52% of the fibre logged')),
+      findsOneWidget,
+    );
+    semantics.dispose();
+    expect(find.text('Oct 17 – Oct 23 · 7 days, 2 logged'), findsOneWidget);
+  });
+
+  Widget explorer(List<IntakeEntity> intakes) => MaterialApp(
+    home: NutrientExplorerScreen(
+      days: [_day(20), _day(21)],
+      first: DateTime(2026, 10, 20),
+      last: DateTime(2026, 10, 21),
+      load: (first, last) async => intakes,
+      user: () async => null,
+      goalHistory: () async => null,
+    ),
+  );
+
+  testWidgets('the bars colour as Nutrient goals does, with its key', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1080, 7020);
+    addTearDown(tester.view.reset);
+    // Sugars 60 g a day, over the 50 g limit.
+    await tester.pumpWidget(
+      explorer([..._intakes, _eat('Jam', 21, 240, sugars: 50)]),
+    );
+    await tester.pumpAndSettle();
+    Color? bar(String nutrient) => tester
+        .widget<LinearProgressIndicator>(
+          find.descendant(
+            of: find.byKey(ValueKey('nutrient-$nutrient')),
+            matching: find.byType(LinearProgressIndicator),
+          ),
+        )
+        .color;
+    final scheme = Theme.of(
+      tester.element(find.byType(NutrientExplorerScreen)),
+    ).colorScheme;
+    // Fibre at 52% of its goal is not reached yet: grey, not green.
+    expect(bar('Fibre'), AppPalette.light.textMuted);
+    expect(bar('Energy'), AppPalette.light.textMuted);
+    expect(bar('Sugars'), scheme.error);
+    // Under its limit: green.
+    expect(bar('Saturated fat'), AppPalette.light.accent);
+    expect(find.textContaining('· over the limit'), findsOneWidget);
+    expect(find.textContaining('· reached'), findsNothing);
+    expect(find.textContaining(goalStandingKey), findsOneWidget);
+    expect(find.text('Oct 20 – Oct 21 · 2 days, 2 logged'), findsOneWidget);
+  });
+
+  testWidgets('a target met is green and says so; energy over its band is '
+      'red', (tester) async {
+    tester.view.physicalSize = const Size(1080, 7020);
+    addTearDown(tester.view.reset);
+    // 2 kg at 200 kcal per 100 g over two days: 2000 kcal over the 1300 a
+    // day the goal below makes it; fibre 100 g a day against 30.
+    await tester.pumpWidget(
+      MaterialApp(
+        home: NutrientExplorerScreen(
+          days: [
+            for (final d in [20, 21])
+              TrackedDayEntity(
+                day: DateTime(2026, 10, d),
+                calorieGoal: 1300,
+                caloriesTracked: 1,
+                carbsGoal: 280,
+                fatGoal: 40,
+                proteinGoal: 50,
+              ),
+          ],
+          first: DateTime(2026, 10, 20),
+          last: DateTime(2026, 10, 21),
+          load: (first, last) async => [
+            _eat('Bran', 20, 1000, fiber: 10),
+            _eat('Bran', 21, 1000, fiber: 10),
+          ],
+          user: () async => null,
+          goalHistory: () async => null,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    LinearProgressIndicator bar(String nutrient) =>
+        tester.widget<LinearProgressIndicator>(
+          find.descendant(
+            of: find.byKey(ValueKey('nutrient-$nutrient')),
+            matching: find.byType(LinearProgressIndicator),
+          ),
+        );
+    final scheme = Theme.of(
+      tester.element(find.byType(NutrientExplorerScreen)),
+    ).colorScheme;
+    expect(bar('Fibre').color, AppPalette.light.accent);
+    expect(find.text('100 g a day · goal 30 g · reached'), findsOneWidget);
+    expect(bar('Energy').color, scheme.error);
+    expect(find.textContaining('goal 1300 kcal · over'), findsOneWidget);
+    // Carbs and fat are bands as Home reads them; protein is a target.
+    expect(find.text('300 g a day · goal 280 g · on target'), findsOneWidget);
+    expect(bar('Fat').color, scheme.error);
+    expect(find.text('50 g a day · goal 40 g · over'), findsOneWidget);
+    expect(bar('Protein').color, AppPalette.light.accent);
+    expect(find.text('100 g a day · goal 50 g · reached'), findsOneWidget);
+
+    // A full bar ends where the others' tracks end, whatever its share's
+    // width (333% against 0%).
+    double right(String nutrient) => tester
+        .getTopRight(
+          find.descendant(
+            of: find.byKey(ValueKey('nutrient-$nutrient')),
+            matching: find.byType(LinearProgressIndicator),
+          ),
+        )
+        .dx;
+    expect(right('Fibre'), right('Saturated fat'));
+  });
+
+  testWidgets('TalkBack reads the row, not the bar\'s value', (tester) async {
+    final semantics = tester.ensureSemantics();
+    await tester.pumpWidget(explorer(_intakes));
+    await tester.pumpAndSettle();
+    final node = tester.getSemantics(
+      find.byKey(const ValueKey('nutrient-Energy')),
+    );
+    expect(node.value, isEmpty);
+    expect(node.label, startsWith('Energy'));
+    semantics.dispose();
+  });
+
+  testWidgets('a row speaks its units in words', (tester) async {
+    final semantics = tester.ensureSemantics();
+    await tester.pumpWidget(explorer(_intakes));
+    await tester.pumpAndSettle();
+    String label(String nutrient) =>
+        tester.getSemantics(find.byKey(ValueKey('nutrient-$nutrient'))).label;
+    expect(label('Energy'), contains('650 kilocalories a day'));
+    expect(label('Energy'), contains('goal 2000 kilocalories'));
+    expect(label('Fibre'), contains('grams a day'));
+    expect(label('Fibre'), isNot(contains(' g ')));
+    semantics.dispose();
+  });
+
+  testWidgets('salt is named as on Nutrient goals; a row with foods shows '
+      'it opens', (tester) async {
+    tester.view.physicalSize = const Size(1080, 7020);
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(explorer(_intakes));
+    await tester.pumpAndSettle();
+    expect(find.text('Salt (from sodium)'), findsOneWidget);
+    Finder chevron(String nutrient) => find.descendant(
+      of: find.byKey(ValueKey('nutrient-$nutrient')),
+      matching: find.byIcon(Icons.chevron_right_rounded),
+    );
+    expect(chevron('Fibre'), findsOneWidget);
+    // No food gave salt, so its row opens nothing.
+    expect(chevron('Salt'), findsNothing);
+  });
+
+  testWidgets('a food that gave none of a nutrient is not listed', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1080, 7020);
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      explorer([..._intakes, _eat('Water', 21, 500, fiber: 0)]),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('nutrient-Fibre')));
+    await tester.pumpAndSettle();
+    expect(find.text('Lentils'), findsOneWidget);
+    expect(find.text('Water'), findsNothing);
   });
 
   testWidgets(

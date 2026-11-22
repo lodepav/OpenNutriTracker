@@ -9,4 +9,9 @@ void main() {
     expect(spokenUnit('kJ'), 'kilojoules');
     expect(spokenUnit('cup'), 'cup');
   });
+
+  test('body lengths are spoken in words too', () {
+    expect(spokenUnit('in'), 'inches');
+    expect(spokenUnit('cm'), 'centimetres');
+  });
 }

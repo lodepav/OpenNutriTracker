@@ -47,10 +47,11 @@ def main():
         request = urllib.request.Request(photo['image_url'], headers={'User-Agent': UA})
         try:
             data = urllib.request.urlopen(request, timeout=60).read()
+            image = shrink(data, photo.get('crop'))  # an HTML page in place of a photo raises here
         except Exception as e:  # a dead link is reported, not fatal
             print(f"{photo['id']}: {e}")
             continue
-        target.write_bytes(shrink(data, photo.get('crop')))
+        target.write_bytes(image)
         print(f"{photo['id']}: {target.stat().st_size // 1024} KB")
 
 

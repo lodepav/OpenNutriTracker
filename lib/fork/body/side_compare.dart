@@ -10,12 +10,16 @@ import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/core/utils/hive_db_provider.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
+import 'package:opennutritracker/fork/body/body_card.dart'
+    show addMeasurements, fromToCaption;
 import 'package:opennutritracker/fork/body/measurement_store.dart';
 import 'package:opennutritracker/fork/display/contrast.dart';
 import 'package:opennutritracker/fork/report/chart_touch.dart';
 import 'package:opennutritracker/fork/trends/detail_widgets.dart';
 import 'package:opennutritracker/fork/trends/trends_widgets.dart';
+import 'package:opennutritracker/fork/trends/value_axis.dart' show niceStep;
 import 'package:opennutritracker/fork/display/chart_semantics.dart';
+import 'package:opennutritracker/fork/units/amount_text.dart' show spokenUnit;
 
 const _cmPerInch = 2.54;
 
@@ -101,13 +105,63 @@ class SideUnits {
 
   String text(double cm) => '${shown(cm).toStringAsFixed(1)} $unit';
 
+  /// [text] as a screen reader should say it: "13.9 inches" (A5).
+  String spoken(double cm) =>
+      '${shown(cm).toStringAsFixed(1)} ${spokenUnit(unit)}';
+
   /// The way [pair] differs: "Right bigger by 0.8 cm", or equal when it
   /// rounds to nothing.
-  String difference(SidePair pair) {
+  String difference(SidePair pair, {bool spoken = false}) {
     final diff = pair.right - pair.left;
     if (shown(diff.abs()) < 0.05) return 'Both equal';
-    return '${diff > 0 ? 'Right' : 'Left'} bigger by ${text(diff.abs())}';
+    final by = spoken ? this.spoken(diff.abs()) : text(diff.abs());
+    return '${diff > 0 ? 'Right' : 'Left'} bigger by $by';
   }
+
+  /// [pair] as a screen reader should say it: "left 13.9 inches, right
+  /// 14.3 inches, right bigger by 0.4 inches", where "L" and "R" were
+  /// read as letters.
+  String spokenPair(SidePair pair) {
+    final diff = pair.right - pair.left;
+    final differs = shown(diff.abs()) < 0.05
+        ? 'both equal'
+        : '${diff > 0 ? 'right' : 'left'} bigger by ${spoken(diff.abs())}';
+    return 'left ${spoken(pair.left)}, right ${spoken(pair.right)}, $differs';
+  }
+}
+
+/// A round step between axis labels [labelHeight] high, on a plot
+/// [plotHeight] high showing [span]: at least 40 dp apart (fl_chart's own
+/// spacing), more at a large font so the labels do not run into each other.
+double axisStep(double span, double labelHeight, {double plotHeight = 180}) {
+  final rows = (plotHeight / math.max(40, labelHeight * 1.5)).floor();
+  return niceStep(span / math.max(rows, 1));
+}
+
+/// The right axis from [min] to [max] at the user's font, its labels to
+/// [digits]: as wide as the widest label, so it stays on one line (a fixed
+/// 44 dp wrapped them at 200%), and stepped by [axisStep].
+({double width, double step}) axisFit(
+  BuildContext context,
+  TextStyle? style, {
+  required double min,
+  required double max,
+  required int digits,
+}) {
+  var width = 0.0, height = 0.0;
+  for (final value in [min, max]) {
+    final painter = TextPainter(
+      text: TextSpan(text: value.toStringAsFixed(digits), style: style),
+      textScaler: MediaQuery.textScalerOf(context),
+      textDirection: Directionality.of(context),
+      maxLines: 1,
+    )..layout();
+    width = math.max(width, painter.width);
+    height = math.max(height, painter.height);
+    painter.dispose();
+  }
+  // SideTitleWidget's own 8 dp gap from the plot.
+  return (width: width + 8, step: axisStep(max - min, height));
 }
 
 /// The Trends tile's figures: the latest difference and which side is
@@ -225,37 +279,59 @@ class _SideComparePageState extends State<SideComparePage> {
           onSelectionChanged: (s) => SidePartPref.save(s.single),
         ),
         const SizedBox(height: Dimens.spacing16),
-        if (last == null)
+        if (last == null) ...[
           Text(
             'Measure your left and right ${part.label.toLowerCase()} on the '
             'same day, under Body measurements, to compare them.',
-          )
-        else ...[
-          StatHeader(
-            stats: [
-              (
-                label: 'Left',
-                value: units.shown(last.left).toStringAsFixed(1),
-                unit: units.unit,
-              ),
-              (
-                label: 'Right',
-                value: units.shown(last.right).toStringAsFixed(1),
-                unit: units.unit,
-              ),
-              (
-                label: 'Difference',
-                value: units
-                    .shown((last.right - last.left).abs())
-                    .toStringAsFixed(1),
-                unit: units.unit,
-              ),
-            ],
+          ),
+          Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: TextButton.icon(
+              key: const ValueKey('sides-add'),
+              onPressed: () =>
+                  addMeasurements(context, imperial: widget.imperial),
+              icon: const Icon(Icons.add_rounded),
+              label: const Text('Add measurements'),
+            ),
+          ),
+        ] else ...[
+          // StatHeader's own labels would say "cm" letter by letter.
+          Semantics(
+            container: true,
+            label:
+                'Left ${units.spoken(last.left)}, '
+                'Right ${units.spoken(last.right)}, '
+                'Difference ${units.spoken((last.right - last.left).abs())}',
+            excludeSemantics: true,
+            child: StatHeader(
+              stats: [
+                (
+                  label: 'Left',
+                  value: units.shown(last.left).toStringAsFixed(1),
+                  unit: units.unit,
+                ),
+                (
+                  label: 'Right',
+                  value: units.shown(last.right).toStringAsFixed(1),
+                  unit: units.unit,
+                ),
+                (
+                  label: 'Difference',
+                  value: units
+                      .shown((last.right - last.left).abs())
+                      .toStringAsFixed(1),
+                  unit: units.unit,
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: Dimens.spacing8),
           Text(
             '${units.difference(last)}, '
             '${DateFormat.yMMMd(locale).format(last.date)}',
+            semanticsLabel:
+                '${units.difference(last, spoken: true)}, '
+                '${DateFormat.yMMMd(locale).format(last.date)}',
             style: Theme.of(context).textTheme.titleSmall,
           ),
         ],
@@ -271,16 +347,28 @@ class _SideComparePageState extends State<SideComparePage> {
         ),
         if (pairs.isNotEmpty) ...[
           trendSection(context, 'Both sides measured'),
-          TrendRows(
-            rows: [
-              for (final p in pairs.reversed)
-                (
-                  label: DateFormat.yMMMd(locale).format(p.date),
-                  value:
-                      'L ${units.text(p.left)} · R ${units.text(p.right)}'
-                      '\n${units.difference(p)}',
-                ),
-            ],
+          // TrendRows' rows, each with its spoken form.
+          AppCard(
+            padding: const EdgeInsets.symmetric(horizontal: Dimens.spacing16),
+            child: Column(
+              children: [
+                for (final (i, p) in pairs.reversed.indexed)
+                  Semantics(
+                    container: true,
+                    label:
+                        '${DateFormat.yMMMd(locale).format(p.date)}, '
+                        '${units.spokenPair(p)}',
+                    excludeSemantics: true,
+                    child: TrendRow(
+                      label: DateFormat.yMMMd(locale).format(p.date),
+                      value:
+                          'L ${units.text(p.left)} · R ${units.text(p.right)}'
+                          '\n${units.difference(p)}',
+                      first: i == 0,
+                    ),
+                  ),
+              ],
+            ),
           ),
         ],
       ],
@@ -330,6 +418,13 @@ class _SidesChart extends StatelessWidget {
     final small = theme.textTheme.labelSmall?.copyWith(
       color: palette.textMuted,
     );
+    final axis = axisFit(
+      context,
+      small,
+      min: low - pad,
+      max: high + pad,
+      digits: 1,
+    );
     LineChartBarData line(List<FlSpot> s, Color color) => LineChartBarData(
       spots: s,
       color: color,
@@ -340,10 +435,26 @@ class _SidesChart extends StatelessWidget {
       ),
     );
     final lastX = x(measurements.last.date);
+    // The chart has no date axis: each side's ends in words give the span.
+    String? ends(String name, BodyMetric metric, {bool spoken = false}) {
+      final side = [
+        for (final m in measurements)
+          if (m.metric == metric) m,
+      ];
+      if (side.length < 2) return null;
+      String size(double cm) => spoken ? units.spoken(cm) : units.text(cm);
+      return '$name ${fromToCaption(context, (size(side.first.value), side.first.date), (size(side.last.value), side.last.date))}';
+    }
+
+    final sideEnds = [
+      for (final (name, metric) in [('Left', part.left), ('Right', part.right)])
+        if (ends(name, metric) case final line?)
+          (line, ends(name, metric, spoken: true)!),
+    ];
     String fromTo(List<FlSpot> s) => spokenFromTo(
       s.first.y.toStringAsFixed(1),
       s.last.y.toStringAsFixed(1),
-      units.unit,
+      spokenUnit(units.unit),
     );
     return AppCard(
       padding: const EdgeInsets.all(Dimens.spacing16),
@@ -366,6 +477,7 @@ class _SidesChart extends StatelessWidget {
                   maxY: high + pad,
                   gridData: FlGridData(
                     drawVerticalLine: false,
+                    horizontalInterval: axis.step,
                     getDrawingHorizontalLine: (_) =>
                         FlLine(color: palette.border, strokeWidth: 1),
                   ),
@@ -377,7 +489,8 @@ class _SidesChart extends StatelessWidget {
                     rightTitles: AxisTitles(
                       sideTitles: SideTitles(
                         showTitles: true,
-                        reservedSize: 44,
+                        reservedSize: axis.width,
+                        interval: axis.step,
                         // Not the padded ends: they crowd the lines'.
                         getTitlesWidget: (y, meta) =>
                             y == meta.min || y == meta.max
@@ -403,6 +516,8 @@ class _SidesChart extends StatelessWidget {
               ),
             ),
           ),
+          for (final (line, spoken) in sideEnds)
+            Text(line, semanticsLabel: spoken, style: small),
           const SizedBox(height: Dimens.spacing8),
           ChartLegend(
             entries: [

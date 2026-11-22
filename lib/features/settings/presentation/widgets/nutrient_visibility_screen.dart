@@ -6,6 +6,9 @@ import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/core/utils/reload_diary_and_trends.dart';
 import 'package:opennutritracker/features/diary/presentation/widgets/daily_nutrient_panel.dart';
 import 'package:opennutritracker/generated/l10n.dart';
+// [fork] S314 nutrient-names
+import 'package:opennutritracker/fork/report/nutrient_order.dart';
+// [/fork]
 
 /// A small sub-screen inside Settings → Nutrients that lets the user pick
 /// which nutrients should appear on the daily nutrient panel. State is
@@ -51,6 +54,23 @@ class _NutrientVisibilityScreenState extends State<NutrientVisibilityScreen> {
 
   String _labelFor(BuildContext context, String key) {
     final s = S.of(context);
+    // [fork] S314 nutrient-names: sentence case, spelled as the goals editor
+    // and overview spell them. Iron keeps upstream's label, which upstream's
+    // test taps by its text.
+    final forkName = switch (key) {
+      NutrientPanelKeys.fiber => 'Fibre',
+      NutrientPanelKeys.sodium => 'Sodium',
+      NutrientPanelKeys.saturatedFat => 'Saturated fat',
+      NutrientPanelKeys.sugar => 'Sugars',
+      NutrientPanelKeys.calcium => 'Calcium',
+      NutrientPanelKeys.potassium => 'Potassium',
+      NutrientPanelKeys.vitaminD => 'Vitamin D',
+      NutrientPanelKeys.vitaminB12 => 'Vitamin B12',
+      NutrientPanelKeys.magnesium => 'Magnesium',
+      _ => null,
+    };
+    if (forkName != null) return forkName;
+    // [/fork]
     switch (key) {
       case NutrientPanelKeys.fiber:
         return s.fiberLabel;
@@ -94,7 +114,11 @@ class _NutrientVisibilityScreenState extends State<NutrientVisibilityScreen> {
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ),
-                for (final key in NutrientPanelKeys.all)
+                // [fork] S314 nutrient-names: the goals overview's and
+                // editor's order
+                // for (final key in NutrientPanelKeys.all)
+                for (final key in nutrientOrder)
+                // [/fork]
                   CheckboxListTile(
                     title: Text(_labelFor(context, key)),
                     value: _visibility[key] ?? true,

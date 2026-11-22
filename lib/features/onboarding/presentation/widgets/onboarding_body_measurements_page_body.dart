@@ -16,6 +16,7 @@ import 'package:opennutritracker/generated/l10n.dart';
 import 'package:opennutritracker/fork/health/onboarding_weight.dart';
 import 'package:opennutritracker/fork/health/weight_import.dart';
 // [/fork]
+import 'package:opennutritracker/fork/screens/onboarding/onboarding_limits.dart'; // [fork] S367
 
 class OnboardingBodyMeasurementsPageBody extends StatefulWidget {
   final Function(
@@ -58,6 +59,11 @@ class OnboardingBodyMeasurementsPageBody extends StatefulWidget {
   final WeightSource? healthWeightSource;
   // [/fork]
 
+  // [fork] S367 onboarding-body-errors: set to the blocked Next's message
+  // when one field alone is wrong, for the footer to name it
+  final ValueNotifier<String?>? blockedMessage;
+  // [/fork]
+
   const OnboardingBodyMeasurementsPageBody({
     super.key,
     required this.setButtonContent,
@@ -71,6 +77,7 @@ class OnboardingBodyMeasurementsPageBody extends StatefulWidget {
     // [fork] S99 onboarding-health-weight
     this.healthWeightSource,
     // [/fork]
+    this.blockedMessage, // [fork] S367
   });
 
   @override
@@ -557,10 +564,16 @@ class _OnboardingBodyMeasurementsPageBodyState
           mainAxisAlignment: MainAxisAlignment.start,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // [fork] S464 step-headings: a heading TalkBack can jump to
+            Semantics(
+              header: true,
+              child:
+            // [/fork]
             Text(
               S.of(context).heightLabel,
               style: Theme.of(context).textTheme.headlineSmall,
             ),
+            ), // [fork] S464
             Text(
               S.of(context).onboardingHeightQuestionSubtitle,
               style: Theme.of(context).textTheme.titleMedium,
@@ -581,6 +594,10 @@ class _OnboardingBodyMeasurementsPageBodyState
                         errorText: _showHeightError && _parsedHeight == null
                             ? S.of(context).onboardingWrongHeightLabel
                             : null,
+                        // [fork] S367 onboarding-body-errors: inches over 11
+                        // get their own range line
+                        onInchesOver: (over) => _forkInchesOver = over,
+                        // [/fork]
                         onChangedCm: (cm) {
                           setState(() => _parsedHeight = cm);
                           checkCorrectInput();
@@ -628,14 +645,32 @@ class _OnboardingBodyMeasurementsPageBodyState
                       ),
                     ),
                   ),
+            // [fork] S367 onboarding-body-errors: the range a refused value is
+            // held to, in the unit shown, under upstream's message
+            // shortcut: a half-typed ft/in or st/lb pair gets the range too, as
+            // the page sees only null; upgrade when the inputs say a half is missing
+            if (_showHeightError && _parsedHeight == null)
+              _forkRangeLine(
+                _isHeightImperial && _forkInchesOver
+                    ? 'Inches 0 to 11'
+                    : heightRangeText(imperial: _isHeightImperial),
+              ),
+            // [/fork]
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 8.0),
               child: ToggleButtons(
                 borderRadius: const BorderRadius.all(Radius.circular(8)),
+                // [fork] S452 unit-toggle-fill: the chosen unit stands out at 3:1
+                fillColor: Theme.of(context).colorScheme.primaryContainer,
+                selectedColor: Theme.of(context).colorScheme.onPrimaryContainer,
+                // [/fork]
                 isSelected: [!_isHeightImperial, _isHeightImperial],
                 onPressed: (int index) {
                   setState(() {
                     _isHeightImperial = index == 1;
+                    // [fork] S367: a new pair starts empty
+                    _forkInchesOver = false;
+                    // [/fork]
                     // Metric is a single field; when returning to it from
                     // ft/in, rewrite the displayed cm text from the live
                     // parsed value rather than leaving whatever was typed
@@ -670,10 +705,16 @@ class _OnboardingBodyMeasurementsPageBodyState
               crossAxisAlignment: WrapCrossAlignment.center,
               spacing: 8.0,
               children: [
+                // [fork] S464 step-headings: a heading TalkBack can jump to
+                Semantics(
+                  header: true,
+                  child:
+                // [/fork]
                 Text(
                   S.of(context).weightLabel,
                   style: Theme.of(context).textTheme.headlineSmall,
                 ),
+                ), // [fork] S464
                 if (defaultTargetPlatform == TargetPlatform.android)
                   HealthWeightButton(
                     onWeight: _applyHealthWeight,
@@ -790,6 +831,10 @@ class _OnboardingBodyMeasurementsPageBodyState
                       ),
                     ),
                   ),
+            // [fork] S367 onboarding-body-errors
+            if (_showWeightError && _parsedWeight == null)
+              _forkRangeLine(_forkWeightRange()),
+            // [/fork]
             // [fork] S99 onboarding-health-weight: what the read came to,
             // under the field it filled
             if (_healthWeightNote case final note?)
@@ -805,10 +850,16 @@ class _OnboardingBodyMeasurementsPageBodyState
             // Target weight — optional. A new user can set it once in onboarding
             // instead of having to find Profile after first-run. Leaving it blank
             // keeps the user without a target and is valid.
+            // [fork] S464 step-headings: a heading TalkBack can jump to
+            Semantics(
+              header: true,
+              child:
+            // [/fork]
             Text(
               S.of(context).profileTargetWeightLabel,
               style: Theme.of(context).textTheme.headlineSmall,
             ),
+            ), // [fork] S464
             Text(
               S.of(context).onboardingTargetWeightSubtitle,
               style: Theme.of(context).textTheme.titleMedium,
@@ -891,6 +942,9 @@ class _OnboardingBodyMeasurementsPageBodyState
                       ),
                     ),
                   ),
+            // [fork] S367 onboarding-body-errors
+            if (_forkTargetRefused) _forkRangeLine(_forkWeightRange()),
+            // [/fork]
             if (_parsedHeight != null && _parsedWeight != null) ...[
               const SizedBox(height: 16.0),
               _buildHealthyRangeCard(),
@@ -899,10 +953,16 @@ class _OnboardingBodyMeasurementsPageBodyState
             // Food units are chosen explicitly rather than inferred from the
             // height toggle, so a UK user on feet and stones can still log
             // food in grams.
+            // [fork] S464 step-headings: a heading TalkBack can jump to
+            Semantics(
+              header: true,
+              child:
+            // [/fork]
             Text(
               S.of(context).settingsFoodUnitsLabel,
               style: Theme.of(context).textTheme.headlineSmall,
             ),
+            ), // [fork] S464
             Text(
               S.of(context).onboardingFoodUnitsSubtitle,
               style: Theme.of(context).textTheme.titleMedium,
@@ -918,6 +978,12 @@ class _OnboardingBodyMeasurementsPageBodyState
                   identifier: 'onboarding-food-units',
                   child: ToggleButtons(
                     borderRadius: const BorderRadius.all(Radius.circular(8)),
+                    // [fork] S452 unit-toggle-fill
+                    fillColor: Theme.of(context).colorScheme.primaryContainer,
+                    selectedColor: Theme.of(
+                      context,
+                    ).colorScheme.onPrimaryContainer,
+                    // [/fork]
                     constraints: BoxConstraints(
                       minHeight: 48,
                       minWidth: buttonWidth,
@@ -955,6 +1021,36 @@ class _OnboardingBodyMeasurementsPageBodyState
       ),
     );
   }
+
+  // [fork] S367 onboarding-body-errors: the range lines and what they read
+  bool _forkInchesOver = false;
+
+  bool get _forkTargetRefused =>
+      _showTargetError &&
+      (_isWeightSt
+          ? _targetHasInput
+          : _targetWeightController.text.trim().isNotEmpty) &&
+      _parsedTargetWeight == null;
+
+  String _forkWeightRange() => weightRangeText(
+    _bodyWeightUnit,
+    switch (_bodyWeightUnit) {
+      BodyWeightUnit.kg => S.of(context).kgLabel,
+      BodyWeightUnit.lb => S.of(context).lbsLabel,
+      BodyWeightUnit.st => S.of(context).stLabel,
+    },
+  );
+
+  Widget _forkRangeLine(String text) => Padding(
+    padding: const EdgeInsets.only(left: 12, top: 4),
+    child: Text(
+      text,
+      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+        color: Theme.of(context).colorScheme.error,
+      ),
+    ),
+  );
+  // [/fork]
 
   String? validateHeight(String? value) {
     // Silence until the field has been left or Next was tried: the button
@@ -1028,6 +1124,14 @@ class _OnboardingBodyMeasurementsPageBodyState
       final targetText = _targetWeightController.text.trim();
       isTargetValid = targetText.isEmpty || _parsedTargetWeight != null;
     }
+    // [fork] S367 onboarding-body-errors: set before the parent rebuilds
+    // its footer from setButtonContent
+    widget.blockedMessage?.value = bodyBlockedMessage(
+      heightOk: _parsedHeight != null,
+      weightOk: _parsedWeight != null,
+      targetOk: isTargetValid,
+    );
+    // [/fork]
 
     if (isTargetValid && _parsedHeight != null && _parsedWeight != null) {
       widget.setButtonContent(

@@ -46,7 +46,11 @@ import 'package:opennutritracker/fork/off/off_contribution_ui.dart';
 import 'package:opennutritracker/fork/edit_meal/nutrition_facts.dart';
 // [/fork]
 // [fork] S272 meal-photo-evict
-import 'package:opennutritracker/fork/display/sized_file_image.dart';
+// S478 photo-staging: StagedPhoto evicts the photo now
+// import 'package:opennutritracker/fork/display/sized_file_image.dart';
+// [/fork]
+// [fork] S478 photo-staging
+import 'package:opennutritracker/fork/photos/staged_photo.dart';
 // [/fork]
 import 'package:opennutritracker/generated/l10n.dart';
 import 'package:provider/provider.dart';
@@ -134,6 +138,9 @@ class _EditMealScreenState extends State<EditMealScreen> {
   // rebuilt at save time.
   String? _localImagePath;
   bool _localImageCleared = false;
+  // [fork] S478 photo-staging: a picked or removed photo waits for Save (H3)
+  final _forkPhoto = StagedPhoto(UserImageKind.meal);
+  // [/fork]
 
   @override
   void initState() {
@@ -245,11 +252,21 @@ class _EditMealScreenState extends State<EditMealScreen> {
     ];
     // [fork] S132 custom-food: what Back compares against (H3)
     _forkSeeded = [for (final c in _forkFields) c.text];
+    // canPop follows the fields, which rebuild nothing themselves
+    for (final c in _forkFields) {
+      c.addListener(_forkDirtyChanged);
+    }
     _forkNew =
         _mealEntity.source == MealSourceEntity.custom &&
         (_mealEntity.name ?? '').isEmpty;
     // [/fork]
   }
+
+  // [fork] S428 food-name-error: a name without a letter is an error on the
+  // field, which Save scrolls to
+  String? _forkNameError;
+  final _forkNameKey = GlobalKey();
+  // [/fork]
 
   // [fork] S132 custom-food: Back asks before dropping what was typed, as
   // the recipe builder does
@@ -280,6 +297,7 @@ class _EditMealScreenState extends State<EditMealScreen> {
   ];
 
   bool get _forkDirty =>
+      _forkPhoto.pending || // S478 photo-staging: a new photo, same path
       _localImagePath != _mealEntity.localImagePath ||
       [
         for (final (i, c) in _forkFields.indexed) c.text != _forkSeeded[i],
@@ -308,6 +326,15 @@ class _EditMealScreenState extends State<EditMealScreen> {
             true;
     if (discard && mounted) Navigator.of(context).pop();
   }
+
+  bool _forkWasDirty = false;
+
+  void _forkDirtyChanged() {
+    final dirty = _forkDirty;
+    if (dirty != _forkWasDirty && mounted) {
+      setState(() => _forkWasDirty = dirty);
+    }
+  }
   // [/fork]
 
   @override
@@ -322,6 +349,7 @@ class _EditMealScreenState extends State<EditMealScreen> {
     _carbsTextController.dispose();
     _fatTextController.dispose();
     _proteinTextController.dispose();
+    _forkPhoto.discard(); // [fork] S478 photo-staging
     // Do not close _editMealBloc here if provided as a singleton by locator.
     super.dispose();
   }
@@ -336,11 +364,16 @@ class _EditMealScreenState extends State<EditMealScreen> {
     final palette = isDark ? AppPalette.dark : AppPalette.light;
     // [fork] S132 custom-food: Back asks first; Save pops past this
     return PopScope(
-      canPop: false,
+      // canPop: false,
+      // Predictive back while nothing changed (P1)
+      canPop: !_forkDirty,
       onPopInvokedWithResult: (didPop, _) {
         if (!didPop) _forkOnBack();
       },
-      child: SafeArea(
+      // [fork] S426 edit-meal-system-bars: a SafeArea outside the Scaffold
+      // left the system bars black; the app bar and Save bar take the insets
+      // child: SafeArea(
+      // [/fork]
       // [/fork]
       child: Scaffold(
         backgroundColor: palette.canvas,
@@ -349,9 +382,10 @@ class _EditMealScreenState extends State<EditMealScreen> {
           surfaceTintColor: Colors.transparent,
           toolbarHeight: twoLineToolbarHeight(context), // [fork] S132
           title: Text(
-            // [fork] S132 custom-food
-            _forkNew ? 'New custom food' : S.of(context).editMealLabel,
+            // [fork] S132 custom-food: editing one is a food too (crit r4 g2)
+            _forkNew ? 'New custom food' : 'Edit food',
             maxLines: 2,
+            softWrap: true, // [fork] S132 AppBar titles default to no wrap
             overflow: TextOverflow.ellipsis,
             style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
           ),
@@ -415,7 +449,9 @@ class _EditMealScreenState extends State<EditMealScreen> {
           },
         ),
       ),
-      ), // [fork] S132 custom-food: PopScope
+      // [fork] S426 edit-meal-system-bars: the SafeArea's close
+      // ), // [fork] S132 custom-food: PopScope
+      // [/fork]
     );
   }
 
@@ -519,9 +555,17 @@ class _EditMealScreenState extends State<EditMealScreen> {
     // selector (now the first Advanced field) so the labels and the per-100
     // helper all track the user's choice (#495).
     final unitSuffix = _massUnitSuffix(context);
+    // [fork] S407 edit-meal-per-100-unit: the base quantity is saved as
+    // typed, in grams or ml, so its label says so even for imperial
+    // final String advancedHelper = _isTotal
+    //     ? S.of(context).mealNutrientsTotalLabel
+    //     : S.of(context).mealNutrientsPerQtyLabel(_getDisplayQuantity(), unitSuffix);
+    final baseUnitSuffix = _forkBaseUnitSuffix(context);
     final String advancedHelper = _isTotal
         ? S.of(context).mealNutrientsTotalLabel
-        : S.of(context).mealNutrientsPerQtyLabel(_getDisplayQuantity(), unitSuffix);
+        : S.of(context).mealNutrientsPerQtyLabel(
+            _getDisplayQuantity(), baseUnitSuffix);
+    // [/fork]
     // [fork] S132 custom-food: the field helpers go; the facts card's "Per"
     // says what the values are for
     // [/fork]
@@ -550,7 +594,10 @@ class _EditMealScreenState extends State<EditMealScreen> {
           Center(
             child: UserImagePickerTile(
               kind: UserImageKind.meal,
-              imagePath: _localImagePath,
+              // [fork] S478 photo-staging
+              // imagePath: _localImagePath,
+              imagePath: _forkPhoto.shown(_localImagePath),
+              // [/fork]
               onPickFromGallery: () => _onPickMealImage(ImageSource.gallery),
               onTakePhoto: () => _onPickMealImage(ImageSource.camera),
               onRemove: _onRemoveMealImage,
@@ -564,8 +611,19 @@ class _EditMealScreenState extends State<EditMealScreen> {
         // [/fork]
         TextFormField(
           controller: _nameTextController,
+          // [fork] S428 food-name-error
+          key: _forkNameKey,
+          onChanged: (_) {
+            if (_forkNameError != null) setState(() => _forkNameError = null);
+          },
+          // [/fork]
           decoration: InputDecoration(
-            labelText: S.of(context).mealNameLabel,
+            // [fork] S290 food-name-label: a food, new or edited, has a food
+            // name; a meal is Breakfast, Lunch, Dinner or Snack
+            // labelText: S.of(context).mealNameLabel,
+            labelText: 'Food name',
+            // [/fork]
+            errorText: _forkNameError, // [fork] S428
             border: const OutlineInputBorder(borderRadius: Dimens.borderRadiusM),
           ),
           keyboardType: TextInputType.text,
@@ -677,7 +735,7 @@ class _EditMealScreenState extends State<EditMealScreen> {
                 inputFormatters: CustomTextInputFormatter.doubleOnly(),
                 onChanged: (_) => setState(() {}),
                 decoration: InputDecoration(
-                    labelText: '${S.of(context).baseQuantityLabel} ($unitSuffix)',
+                    labelText: '${S.of(context).baseQuantityLabel} ($baseUnitSuffix)',
                     border: const OutlineInputBorder(borderRadius: Dimens.borderRadiusM)),
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
               ),
@@ -689,7 +747,7 @@ class _EditMealScreenState extends State<EditMealScreen> {
                     ButtonSegment(
                       value: false,
                       label: Text(S.of(context).mealNutrientsPerQtyLabel(
-                          _getDisplayQuantity(), unitSuffix)),
+                          _getDisplayQuantity(), baseUnitSuffix)),
                     ),
                     ButtonSegment(
                       value: true,
@@ -764,10 +822,17 @@ class _EditMealScreenState extends State<EditMealScreen> {
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('· ${S.of(context).servingSizeLabelMetric}', style: perStyle),
+              // The label wraps and the field grows with the text, so a
+              // large-text amount isn't cut (A6)
+              Flexible(
+                child: Text(
+                  '· ${S.of(context).servingSizeLabelMetric}',
+                  style: perStyle,
+                ),
+              ),
               const SizedBox(width: Dimens.spacing8),
               SizedBox(
-                width: 96,
+                width: MediaQuery.textScalerOf(context).scale(96),
                 child: Semantics(
                   label: '${S.of(context).servingSizeLabelMetric} in $unitSuffix',
                   child: TextField(
@@ -830,6 +895,18 @@ class _EditMealScreenState extends State<EditMealScreen> {
     }
   }
 
+  // [fork] S407 edit-meal-per-100-unit: the unit the base quantity and the
+  // per-base values are stored in, which no imperial setting converts
+  String _forkBaseUnitSuffix(BuildContext context) {
+    final s = S.of(context);
+    return switch (selectedUnit ?? _units[2]) {
+      'g' => s.gramUnit,
+      'ml' => s.milliliterUnit,
+      _ => s.gramMilliliterUnit,
+    };
+  }
+  // [/fork]
+
   /// Set while a save runs, so a second tap on Save before the first one has
   /// navigated away does nothing. A second run would build the meal again
   /// from the same pre-edit [_mealEntity]: after a barcode clear that is a
@@ -850,8 +927,15 @@ class _EditMealScreenState extends State<EditMealScreen> {
     try {
       // Validate meal name: non-empty and contains at least one letter (#211, #214)
       if (!FoodNameValidator.isValid(_nameTextController.text)) {
-        ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(S.of(context).mealNameValidationError)));
+        // [fork] S428 food-name-error: on the field, named as its label (H9)
+        // ScaffoldMessenger.of(context).showSnackBar(
+        //     SnackBar(content: Text(S.of(context).mealNameValidationError)));
+        setState(
+          () => _forkNameError = 'Food name must contain at least one letter',
+        );
+        final field = _forkNameKey.currentContext;
+        if (field != null) unawaited(Scrollable.ensureVisible(field));
+        // [/fork]
         return;
       }
 
@@ -1089,6 +1173,14 @@ class _EditMealScreenState extends State<EditMealScreen> {
           previous: _mealEntity,
         );
       }
+      // [fork] S478 photo-staging: the photo once the food is saved; a
+      // one-off entry logs it too
+      if (!await _forkPhoto.commit() && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not save the photo')),
+        );
+      }
+      // [/fork]
 
       // [fork] S33 off-contributions: offer the saved food to Open Food Facts
       if (newMealEntity.source == MealSourceEntity.custom && mounted) {
@@ -1176,17 +1268,24 @@ class _EditMealScreenState extends State<EditMealScreen> {
       final picker = ImagePicker();
       final picked = await picker.pickImage(source: source);
       if (picked == null) return;
-      final relative = await UserImageStorage.importFrom(
-        kind: UserImageKind.meal,
+      // [fork] S478 photo-staging: staged; Save writes it to the stored path
+      // final relative = await UserImageStorage.importFrom(
+      //   kind: UserImageKind.meal,
+      //   ownerId: ownerId,
+      //   sourcePath: picked.path,
+      // );
+      final relative = await _forkPhoto.pick(
         ownerId: ownerId,
         sourcePath: picked.path,
       );
+      // [/fork]
       // Bust the in-memory Image.file cache so the new picture shows up
       // immediately instead of redrawing previous bytes for this path.
       // [fork] S272 meal-photo-evict: Home's and the Diary's thumbnails too,
       // which are cached at their own size
       // FileImage(File(await UserImageStorage.absolutePath(relative))).evict();
-      await evictPhoto(relative);
+      // S478 photo-staging: StagedPhoto evicts them on Save
+      // await evictPhoto(relative);
       // [/fork]
       if (!mounted) return;
       setState(() {
@@ -1204,7 +1303,10 @@ class _EditMealScreenState extends State<EditMealScreen> {
   Future<void> _onRemoveMealImage() async {
     final current = _localImagePath;
     if (current == null) return;
-    await UserImageStorage.delete(current);
+    // [fork] S478 photo-staging: deleted on Save
+    // await UserImageStorage.delete(current);
+    await _forkPhoto.remove(current);
+    // [/fork]
     if (!mounted) return;
     setState(() {
       _localImagePath = null;
@@ -1244,6 +1346,9 @@ class _EditMealScreenState extends State<EditMealScreen> {
   }
 
   String _convertToImperial(String value, String unit) {
+    // [fork] S407 edit-meal-per-100-unit: an empty size stays empty, not 0.00
+    if (value.trim().isEmpty) return value;
+    // [/fork]
     final double quantityValue = double.tryParse(value) ?? 0.0;
     switch (unit) {
       case 'g':
@@ -1256,6 +1361,9 @@ class _EditMealScreenState extends State<EditMealScreen> {
   }
 
   String _convertToMetric(String value, String unit) {
+    // [fork] S407 edit-meal-per-100-unit: an empty size stays empty, not 0.00
+    if (value.trim().isEmpty) return value;
+    // [/fork]
     final double quantityValue = double.tryParse(value) ?? 0.0;
     switch (unit) {
       case 'g':

@@ -13,9 +13,10 @@ import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/fork/adaptive/goal_plan.dart';
 import 'package:opennutritracker/fork/adaptive/goal_saving.dart';
 import 'package:opennutritracker/fork/display/contrast.dart';
+import 'package:opennutritracker/fork/goal/goal_figure_grid.dart';
 import 'package:opennutritracker/fork/goal/goal_plan_view.dart';
-import 'package:opennutritracker/fork/goal/goal_planner.dart';
 import 'package:opennutritracker/fork/goal/goal_progress.dart';
+import 'package:opennutritracker/fork/goal/goal_status.dart';
 import 'package:opennutritracker/fork/goal/goal_summary.dart';
 import 'package:opennutritracker/fork/phases/phases.dart';
 import 'package:opennutritracker/fork/report/chart_touch.dart';
@@ -247,16 +248,28 @@ class _GoalProgressPageState extends State<GoalProgressPage> {
         : d.year == p.today.year
         ? format.format(d)
         : yearFormat.format(d);
-    final recent = p.recentPace();
-    final atPace = p.arrivalAt(recent?.kgPerWeek);
+    final arrivals = goalArrivals(p, plan);
+    final recent = arrivals.recent;
+    final atPace = arrivals.atRecent;
     final atPlan = p.arrivalAt(p.paceKgPerWeek);
-    // The plan's own last day, while that is still ahead and reaches the
-    // target: a capped plan stops short of it.
-    final planEnds =
-        plan?.targetKg != null &&
-        endKgOf(plan!) == plan.targetKg &&
-        plan.end.isAfter(DateTime.now());
+    final planEnds = arrivals.planEnds;
+    // shortcut: on days 14-29 the 30-day pace still spans days before the
+    // plan; a pace since the plan's start would need its own figure.
+    final verdict = goalVerdict(
+      reached: p.reached,
+      planDays: CalendarDayCalc.daysBetween(p.start.planDate, p.today),
+      recentKgPerWeek: recent?.kgPerWeek,
+      paceArrival: atPace,
+      // Not the plan's own end: like the recent pace, no diet breaks.
+      planArrival: atPlan,
+      behindKg: p.behindKg,
+      planKgPerWeek: p.paceKgPerWeek,
+    );
     const gap = SizedBox(height: Dimens.spacing16);
+    final averaged = calories.meanKcal == null
+        ? null
+        : 'you averaged ${energyText(context, calories.meanKcal!)} '
+              'over 30 days';
 
     return [
       StatHeader(
@@ -273,8 +286,7 @@ class _GoalProgressPageState extends State<GoalProgressPage> {
       gap,
       _ProgressCard(
         progress: p,
-        kg: _kg,
-        unit: label,
+        verdict: verdict,
         summary: goalSummary(
           locale: Localizations.localeOf(context).toLanguageTag(),
           unit: widget.unit,
@@ -295,7 +307,7 @@ class _GoalProgressPageState extends State<GoalProgressPage> {
           progress: p,
           unit: widget.unit,
           atPace: recent?.kgPerWeek,
-          planLastDay: planEnds ? plan.lastDay : null,
+          planLastDay: planEnds ? arrivals.byPlan : null,
         ),
       ),
       trendSection(context, 'Pace'),
@@ -314,11 +326,13 @@ class _GoalProgressPageState extends State<GoalProgressPage> {
           rows: [
             // The plan's own end counts its diet breaks.
             if (planEnds)
-              (label: 'By your plan', value: date(plan.lastDay))
+              (label: 'By your plan', value: date(arrivals.byPlan))
             else
               (
                 label: 'From today at your plan’s pace',
-                value: atPlan == null ? 'Not at this pace' : date(atPlan),
+                value: arrivals.byPlan == null
+                    ? 'Not at this pace'
+                    : date(arrivals.byPlan),
               ),
             if (recent != null)
               (
@@ -329,11 +343,10 @@ class _GoalProgressPageState extends State<GoalProgressPage> {
         ),
       ],
       const SizedBox(height: Dimens.spacing12),
-      FigureGrid(
+      GoalFigureGrid(
         tiles: [
-          if (p.daysIn <= 0)
-            const FigureTile(label: 'Since the start', value: 'Started today')
-          else
+          // No figure on the first day: no tile.
+          if (p.daysIn > 0)
             FigureTile(
               label: 'Since the start',
               value: signedText(weightIn(widget.unit, p.nowKg - p.start.kg), 1),
@@ -344,17 +357,19 @@ class _GoalProgressPageState extends State<GoalProgressPage> {
                 final w => 'in $w weeks',
               },
             ),
-          FigureTile(
-            label: 'Calorie goal now',
-            value: calories.goalKcal == null
-                ? '–'
-                : '${energyValue(context, calories.goalKcal!)}',
-            unit: calories.goalKcal == null ? null : energyUnit(context),
-            note: calories.meanKcal == null
-                ? null
-                : 'you averaged ${energyText(context, calories.meanKcal!)} '
-                      'over 30 days',
-          ),
+          if (calories.goalKcal == null)
+            noDataTile(
+              'Calorie goal now',
+              note: averaged,
+              FigureTile(label: 'Calorie goal now', value: '–', note: averaged),
+            )
+          else
+            FigureTile(
+              label: 'Calorie goal now',
+              value: '${energyValue(context, calories.goalKcal!)}',
+              unit: energyUnit(context),
+              note: averaged,
+            ),
         ],
       ),
       ..._milestones(context, p, step, recent, date),
@@ -364,9 +379,10 @@ class _GoalProgressPageState extends State<GoalProgressPage> {
         body:
             'The plan runs from where your trend weight was when you set '
             'the target, at the pace in your goal planner, until it reaches '
-            'the target. When you change the pace, the plan starts again '
-            'from that day. The dates ahead assume your trend keeps the pace '
-            'they name.',
+            'the target. When you change the pace, the weeks so far stay '
+            'as they were and the change applies from the end of the '
+            'current week, where the plan starts again. The dates ahead '
+            'assume your trend keeps the pace they name.',
       ),
     ];
   }
@@ -420,7 +436,9 @@ class _GoalProgressPageState extends State<GoalProgressPage> {
                             ? Icons.check_circle_rounded
                             : Icons.radio_button_unchecked_rounded,
                         size: 20,
-                        color: m.reached ? palette.accent : palette.textMuted,
+                        color: m.reached
+                            ? chartAccent(context)
+                            : palette.textMuted,
                       ),
                       const SizedBox(width: Dimens.spacing12),
                       Expanded(
@@ -436,6 +454,9 @@ class _GoalProgressPageState extends State<GoalProgressPage> {
                                   ? 'Reached'
                                   : 'Reached ${date(m.on)}')
                             : (m.on == null ? '–' : 'About ${date(m.on)}'),
+                        semanticsLabel: !m.reached && m.on == null
+                            ? 'no data'
+                            : null,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: palette.textMuted,
                         ),
@@ -455,14 +476,12 @@ class _GoalProgressPageState extends State<GoalProgressPage> {
 /// where the plan has you today.
 class _ProgressCard extends StatelessWidget {
   final GoalProgress progress;
-  final String Function(double kg) kg;
-  final String unit;
+  final GoalVerdict verdict;
   final GoalSummary summary;
 
   const _ProgressCard({
     required this.progress,
-    required this.kg,
-    required this.unit,
+    required this.verdict,
     required this.summary,
   });
 
@@ -472,14 +491,11 @@ class _ProgressCard extends StatelessWidget {
     final palette = paletteOf(context);
     final text = Theme.of(context).textTheme;
     final planPercent = (p.planFraction * 100).round();
-    final status = p.reached
-        ? 'Target reached'
-        : p.behindKg.abs() < 0.2
-        ? 'On plan'
-        : p.behindKg > 0
-        ? '${kg(p.behindKg)} $unit behind the plan'
-        : '${kg(-p.behindKg)} $unit ahead of the plan';
-    final good = p.reached || p.behindKg < 0.2;
+    final status = verdict.label;
+    final good = switch (verdict) {
+      GoalVerdict.reached || GoalVerdict.ahead || GoalVerdict.onPlan => true,
+      GoalVerdict.tooEarly || GoalVerdict.behind => false,
+    };
     return AppCard(
       padding: const EdgeInsets.all(Dimens.spacing16),
       child: Semantics(
@@ -572,7 +588,7 @@ class _ProgressCard extends StatelessWidget {
                   ),
                   decoration: BoxDecoration(
                     color: good
-                        ? palette.accent.withValues(alpha: 0.14)
+                        ? chartAccent(context).withValues(alpha: 0.14)
                         : palette.surfaceMuted,
                     borderRadius: Dimens.borderRadiusM,
                   ),
@@ -776,7 +792,7 @@ class _GoalChart extends StatelessWidget {
                   horizontalLines: [
                     HorizontalLine(
                       y: y(p.targetKg),
-                      color: palette.accent,
+                      color: line,
                       strokeWidth: 1.4,
                       dashArray: const [6, 4],
                     ),

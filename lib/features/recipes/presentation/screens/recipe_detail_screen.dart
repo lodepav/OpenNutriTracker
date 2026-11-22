@@ -22,6 +22,10 @@ import 'package:logging/logging.dart';
 import 'package:opennutritracker/core/utils/tracked_day_lock.dart';
 import 'package:opennutritracker/fork/add/logged_bar.dart';
 // [/fork]
+// [fork] S436 recipe-detail-delete-undo
+import 'package:opennutritracker/features/recipes/presentation/bloc/recipes_bloc.dart';
+import 'package:opennutritracker/fork/recipe/recipe_delete.dart';
+// [/fork]
 import 'package:opennutritracker/generated/l10n.dart';
 
 class RecipeDetailArguments {
@@ -52,6 +56,7 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
   // The meal Log goes to: the + sheet's, else the time of day's (U7).
   late IntakeTypeEntity _meal;
   // [/fork]
+  RecipeEntity? _deleting; // [fork] S436 recipe-detail-delete-undo
 
   @override
   void initState() {
@@ -79,6 +84,17 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
       bloc: _bloc,
       listener: (context, state) {
         if (state is RecipeDetailDeleted || state is RecipeDetailMissing) {
+          // [fork] S436 recipe-detail-delete-undo: the bar outlives this page
+          final deleted = _deleting;
+          if (state is RecipeDetailDeleted && deleted != null) {
+            showRecipesDeleted(
+              ScaffoldMessenger.of(context),
+              [deleted],
+              onRestored: () =>
+                  locator<RecipesBloc>().add(const LoadRecipesEvent()),
+            );
+          }
+          // [/fork]
           Navigator.of(context).pop();
         }
       },
@@ -177,9 +193,12 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
           const SizedBox(height: Dimens.spacing12),
           RecipeTotalsStrip(portion: RecipePortion(recipe, _count)),
           const SizedBox(height: Dimens.spacing16),
-          Text(
-            S.of(context).recipeIngredientsLabel,
-            style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+          Semantics(
+            header: true, // TalkBack's heading navigation (A7)
+            child: Text(
+              S.of(context).recipeIngredientsLabel,
+              style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+            ),
           ),
           const SizedBox(height: Dimens.spacing4),
           for (final (i, ingredient) in recipe.ingredients.indexed) ...[
@@ -283,23 +302,30 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
   }
 
   Future<void> _confirmDelete(BuildContext context) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(S.of(context).recipeDeleteConfirmTitle),
-        content: Text(S.of(context).recipeDeleteConfirmContent),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text(S.of(context).dialogCancelLabel),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: Text(S.of(context).dialogDeleteLabel),
-          ),
-        ],
-      ),
-    );
+    // [fork] S436 recipe-detail-delete-undo: the list's confirm, by name
+    // and in red, and its Undo bar after (H3, H4)
+    // final confirmed = await showDialog<bool>(
+    //   context: context,
+    //   builder: (ctx) => AlertDialog(
+    //     title: Text(S.of(context).recipeDeleteConfirmTitle),
+    //     content: Text(S.of(context).recipeDeleteConfirmContent),
+    //     actions: [
+    //       TextButton(
+    //         onPressed: () => Navigator.of(ctx).pop(false),
+    //         child: Text(S.of(context).dialogCancelLabel),
+    //       ),
+    //       FilledButton(
+    //         onPressed: () => Navigator.of(ctx).pop(true),
+    //         child: Text(S.of(context).dialogDeleteLabel),
+    //       ),
+    //     ],
+    //   ),
+    // );
+    final loaded = _bloc.state;
+    if (loaded is! RecipeDetailLoaded) return;
+    final confirmed = await confirmDeleteRecipes(context, [loaded.recipe]);
+    _deleting = loaded.recipe;
+    // [/fork]
     if (confirmed == true) {
       _bloc.add(const DeleteRecipeFromDetailEvent());
     }
@@ -323,10 +349,13 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
 
   Future<IntakeTypeEntity?> _pickIntakeType(BuildContext context) {
     final s = S.of(context);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final palette = isDark ? AppPalette.dark : AppPalette.light;
+    // [fork] S487 drag-handle: the handle was the palette's only use
+    // final isDark = Theme.of(context).brightness == Brightness.dark;
+    // final palette = isDark ? AppPalette.dark : AppPalette.light;
+    // [/fork]
     return showModalBottomSheet<IntakeTypeEntity>(
       context: context,
+      showDragHandle: true, // [fork] S487 drag-handle: the platform's (P1)
       builder: (ctx) {
         Widget tile(IntakeTypeEntity type, String label) {
           final accent = Theme.of(ctx).colorScheme.primary;
@@ -352,16 +381,18 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const SizedBox(height: Dimens.spacing12),
-              Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: palette.border,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(height: Dimens.spacing8),
+              // [fork] S487 drag-handle
+              // const SizedBox(height: Dimens.spacing12),
+              // Container(
+              //   width: 40,
+              //   height: 4,
+              //   decoration: BoxDecoration(
+              //     color: palette.border,
+              //     borderRadius: BorderRadius.circular(2),
+              //   ),
+              // ),
+              // const SizedBox(height: Dimens.spacing8),
+              // [/fork]
               tile(IntakeTypeEntity.breakfast, s.breakfastLabel),
               tile(IntakeTypeEntity.lunch, s.lunchLabel),
               tile(IntakeTypeEntity.dinner, s.dinnerLabel),

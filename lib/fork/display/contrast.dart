@@ -41,10 +41,10 @@ Color chartSafe(Color color, Color surface) => _floor(color, surface, 3);
 /// [color] as text on [surface]: as [chartSafe], to 4.5:1 (WCAG 1.4.3).
 Color textSafe(Color color, Color surface) => _floor(color, surface, 4.5);
 
-/// [p]'s accent as text, at 4.5:1 on both its canvas and its card: a text
-/// button sits on either.
+/// [p]'s accent as text, at 4.5:1 on its canvas, its card and its muted
+/// panels: a text button sits on any of them.
 Color textAccentOf(AppPalette p) =>
-    textSafe(textSafe(p.accent, p.canvas), p.surface);
+    textSafe(textSafe(textSafe(p.accent, p.canvas), p.surface), p.surfaceMuted);
 
 /// The user's accent as a chart colour on a card: filled buttons keep the
 /// accent as picked, while a line or bar drawn in it reaches 3:1 on the card.
@@ -53,7 +53,8 @@ Color chartAccent(BuildContext context) => chartSafe(
   paletteOf(context).surface,
 );
 
-/// The user's accent as text, at 4.5:1 on the canvas and the card.
+/// The user's accent as text, at 4.5:1 on the canvas, the card and muted
+/// panels.
 Color textAccent(BuildContext context) => textAccentOf(
   paletteOf(context).withAccent(Theme.of(context).colorScheme.primary),
 );

@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/features/diary/presentation/bloc/diary_bloc.dart';
 import 'package:opennutritracker/features/profile/presentation/bloc/profile_bloc.dart';
+import 'package:opennutritracker/features/settings/presentation/widgets/health_sync_screen.dart'
+    show healthPlatformName;
 import 'package:opennutritracker/fork/dev/fake_health.dart';
 import 'package:opennutritracker/fork/health/body_fat_import.dart';
+import 'package:opennutritracker/fork/health/health_disclosure.dart';
 import 'package:opennutritracker/fork/health/health_sync_cards.dart';
 import 'package:opennutritracker/fork/health/nutrition_export.dart';
 import 'package:opennutritracker/fork/health/weight_import.dart';
@@ -39,6 +42,18 @@ class WeightImportTile extends StatelessWidget {
             title: 'Weight in',
             detail: 'From your smart scale; never over one you enter',
             what: 'weight',
+            disclosureTitle: 'Import weight from $healthPlatformName?',
+            disclosure:
+                'OpenBite will read your body weight from $healthPlatformName: '
+                'the last ${WeightImport.backfill.inDays} days now, then new '
+                'readings when you come back to the app. Each day\'s latest '
+                'reading goes into your weight log, and a weight you entered '
+                'yourself is never replaced. The newest becomes the weight '
+                'your BMI and calorie goal use.\n\n'
+                'This import writes nothing to $healthPlatformName and sends '
+                'none of it anywhere: it stays on this device.\n\n'
+                'Untick Weight in to stop. Weights already imported stay in '
+                'the log.',
             offMessage: 'Weight import off; imported weights stay in the log',
             done: (days) => days == 0
                 ? 'Weight import on; no new weigh-ins'
@@ -74,6 +89,18 @@ class BodyFatImportTile extends StatelessWidget {
             title: 'Body fat in',
             detail: 'Into body measurements; never over one you enter',
             what: 'body fat',
+            disclosureTitle: 'Import body fat from $healthPlatformName?',
+            disclosure:
+                'OpenBite will read your body fat percentage from '
+                '$healthPlatformName, such as a smart scale\'s: the last '
+                '${BodyFatImport.backfill.inDays} days now, then new readings '
+                'when you come back to the app. Each day\'s latest reading '
+                'goes into your body measurements, where it feeds your '
+                'energy estimate and lean mass; a value you entered yourself '
+                'is never replaced.\n\n'
+                'This import writes nothing to $healthPlatformName and sends '
+                'none of it anywhere: it stays on this device.\n\n'
+                'Untick Body fat in to stop. Readings already imported stay.',
             offMessage: 'Body fat import off; imported values stay',
             done: (days) => days == 0
                 ? 'Body fat import on; no new readings'
@@ -84,6 +111,20 @@ class BodyFatImportTile extends StatelessWidget {
           );
   }
 }
+
+/// What Nutrition out's disclosure says before its permission is asked.
+String nutritionOutDisclosure() =>
+    'OpenBite will write each food in your diary from the last '
+    '${NutritionExport.window.inDays} days to $healthPlatformName: '
+    'the food\'s name, the meal, the time, its calories and '
+    'macros, and fibre, sugars, saturated fat and sodium where the '
+    'food has them. It keeps them up to '
+    'date when you open or leave the app: an edited food is '
+    'written again, a deleted one removed.\n\n'
+    'Other apps you let read nutrition in $healthPlatformName can '
+    'see them. OpenBite sends them nowhere else.\n\n'
+    'Untick Nutrition out to stop. Records already written stay in '
+    '$healthPlatformName; you can delete them in its settings.';
 
 /// "Write nutrition": the diary's calories and macros to Health Connect.
 class NutritionExportTile extends StatelessWidget {
@@ -104,11 +145,14 @@ class NutritionExportTile extends StatelessWidget {
             title: 'Nutrition out',
             detail: 'Other apps see what you ate',
             what: 'nutrition',
+            disclosureTitle: 'Write nutrition to $healthPlatformName?',
+            disclosure: nutritionOutDisclosure(),
             verb: 'write',
             offMessage: 'Nutrition writing off; what was written stays',
             done: (n) => n == 0
                 ? 'Nutrition writing on; nothing new to write'
-                : 'Wrote $n ${n == 1 ? 'food' : 'foods'} to the health store',
+                : 'Wrote $n ${n == 1 ? 'food' : 'foods'} to '
+                      '$healthPlatformName',
             isOn: export.isOn,
             turnOn: export.turnOn,
             turnOff: export.turnOff,
@@ -130,6 +174,10 @@ class HealthImportTile extends StatefulWidget {
   /// What is read, in "Could not read [what]".
   final String what;
 
+  /// The disclosure put up before the permission, as Workouts in has.
+  final String disclosureTitle;
+  final String disclosure;
+
   /// "read", or "write" for an export.
   final String verb;
   final String offMessage;
@@ -150,6 +198,8 @@ class HealthImportTile extends StatefulWidget {
     required this.title,
     required this.detail,
     required this.what,
+    required this.disclosureTitle,
+    required this.disclosure,
     this.verb = 'read',
     required this.offMessage,
     required this.done,
@@ -175,6 +225,17 @@ class _HealthImportTileState extends State<HealthImportTile> {
   }
 
   Future<void> _toggle(bool on) async {
+    // Shown on every turn-on, as upstream's Workouts in does; anything but
+    // Continue leaves it off and asks for nothing.
+    if (on &&
+        !await confirmHealthDisclosure(
+          context,
+          title: widget.disclosureTitle,
+          body: widget.disclosure,
+        )) {
+      return;
+    }
+    if (!mounted) return;
     setState(() => _busy = true);
     String message;
     try {
@@ -189,8 +250,8 @@ class _HealthImportTileState extends State<HealthImportTile> {
       }
     } catch (_) {
       message = widget.verb == 'read'
-          ? 'Could not read ${widget.what} from the health store'
-          : 'Could not write ${widget.what} to the health store';
+          ? 'Could not read ${widget.what} from $healthPlatformName'
+          : 'Could not write ${widget.what} to $healthPlatformName';
     }
     final now = await widget.isOn();
     if (!mounted) return;

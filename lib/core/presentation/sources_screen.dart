@@ -11,7 +11,13 @@ import 'package:opennutritracker/core/utils/safe_url_launcher.dart';
 /// and the disclaimer dialog — so anyone scanning the app for citations
 /// (Apple's reviewers included) can find them within one tap.
 class SourcesScreen extends StatelessWidget {
-  const SourcesScreen({super.key});
+  // [fork] S304 sources-anchor: a caller's info button opens at its entry
+  // const SourcesScreen({super.key});
+  /// The title of the entry to open scrolled to; null opens at the top.
+  final String? initialEntry;
+
+  const SourcesScreen({super.key, this.initialEntry});
+  // [/fork]
 
   @override
   Widget build(BuildContext context) {
@@ -23,9 +29,16 @@ class SourcesScreen extends StatelessWidget {
         sources: const [
           _SourceLink(
             citation:
+                // [fork] S416 sources-cited-once: the chapter the inline
+                // "Source:" gave, which the card no longer prints
+                // 'Institute of Medicine (2005). Dietary Reference Intakes for '
+                // 'Energy, Carbohydrate, Fiber, Fat, Fatty Acids, Cholesterol, '
+                // 'Protein, and Amino Acids. National Academies Press.',
                 'Institute of Medicine (2005). Dietary Reference Intakes for '
                 'Energy, Carbohydrate, Fiber, Fat, Fatty Acids, Cholesterol, '
-                'Protein, and Amino Acids. National Academies Press.',
+                'Protein, and Amino Acids, Chapter 5 and Table 5-5. National '
+                'Academies Press.',
+                // [/fork]
             url: URLConst.sourceEnergyIomDriURL,
           ),
         ],
@@ -130,24 +143,119 @@ class SourcesScreen extends StatelessWidget {
           ),
         ],
       ),
+      // [fork] S415 sources-own-method: the numbers Home shows first, which
+      // no single paper gives; what each step rests on is cited
+      const _SourceEntry(
+        title: 'Expenditure and weight trend',
+        description:
+            "The expenditure and weight trend are the app's own method, "
+            'built on the structure MacroFactor describes. Weigh-ins are '
+            'filled in day by day and smoothed into a trend, as in The '
+            "Hacker's Diet. Expenditure starts from the Institute of Medicine "
+            'estimate above, then follows what you logged less the energy '
+            "stored in the trend's change over 20 days: about 9,400 kcal a kg "
+            "of fat and 1,800 of lean, the fat share by Forbes's rule as Hall "
+            '(2008) applies it, with body fat from your latest measurement or '
+            'else estimated from BMI (Deurenberg 1991). How fast it follows a '
+            "change is the app's own choice, tested in simulation; no paper "
+            'covers it. '
+            'Settings → Goals & nutrition → How your goal is calculated shows '
+            'each step with your numbers.',
+        sources: [
+          _SourceLink(
+            citation: 'MacroFactor. Expenditure. MacroFactor help centre.',
+            url: 'https://help.macrofactorapp.com/en/articles/20-expenditure',
+          ),
+          _SourceLink(
+            citation: "Walker J. The Hacker's Diet. Fourmilab.",
+            url:
+                'https://fourmilab.ch/hackdiet/www/subsubsection1_2_4_0_4_4.html',
+          ),
+          _SourceLink(
+            citation:
+                'Hall KD (2008). What is the required energy deficit per unit '
+                'weight loss? International Journal of Obesity.',
+            url: 'https://pubmed.ncbi.nlm.nih.gov/17848938/',
+          ),
+          _SourceLink(
+            citation:
+                'Deurenberg P, Weststrate JA, Seidell JC (1991). Body mass '
+                'index as a measure of body fatness: age- and sex-specific '
+                'prediction formulas. British Journal of Nutrition.',
+            url: 'https://pubmed.ncbi.nlm.nih.gov/2043597',
+          ),
+        ],
+      ),
+      // [/fork]
     ];
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.settingsSourcesLabel)),
-      body: ListView(
-        padding: const EdgeInsets.symmetric(horizontal: Dimens.spacing16, vertical: Dimens.spacing16),
-        children: [
+      // [fork] S304 sources-anchor: every card is built, so the anchored one
+      // exists to scroll to (a lazy ListView had not built the fifth)
+      // body: ListView(
+      body: SingleChildScrollView(
+        // The last card clears the navigation bar: a SingleChildScrollView
+        // adds no inset of its own.
+        // padding: const EdgeInsets.symmetric(horizontal: Dimens.spacing16, vertical: Dimens.spacing16),
+        padding: EdgeInsets.fromLTRB(
+          Dimens.spacing16,
+          Dimens.spacing16,
+          Dimens.spacing16,
+          Dimens.spacing16 + MediaQuery.paddingOf(context).bottom,
+        ),
+        // children: [
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+          // The intro claims only what is listed (round-3 critique)
+          // Text(
+          //   l10n.sourcesScreenIntro,
+          //   style: Theme.of(context).textTheme.bodyMedium,
+          // ),
           Text(
-            l10n.sourcesScreenIntro,
+            'The calculations below follow the sources cited under each '
+            'one, so you can check a number yourself.',
             style: Theme.of(context).textTheme.bodyMedium,
           ),
           const SizedBox(height: Dimens.spacing16),
-          ...entries.map((entry) => _SourceCard(entry: entry)),
-        ],
+          // ...entries.map((entry) => _SourceCard(entry: entry)),
+          ...entries.map(
+            (entry) => entry.title == initialEntry
+                ? _ScrollIntoView(child: _SourceCard(entry: entry))
+                : _SourceCard(entry: entry),
+          ),
+          ],
+        ),
       ),
+      // [/fork]
     );
   }
 }
+
+// [fork] S304 sources-anchor: scrolls its child to the top once laid out
+class _ScrollIntoView extends StatefulWidget {
+  final Widget child;
+
+  const _ScrollIntoView({required this.child});
+
+  @override
+  State<_ScrollIntoView> createState() => _ScrollIntoViewState();
+}
+
+class _ScrollIntoViewState extends State<_ScrollIntoView> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) Scrollable.ensureVisible(context);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
+}
+// [/fork]
 
 class _SourceEntry {
   final String title;
@@ -193,15 +301,35 @@ class _SourceCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              entry.title,
-              style: theme.textTheme.titleMedium,
+            // [fork] S305 sources-a11y: titles are headings, so TalkBack can
+            // jump card to card
+            Semantics(
+              header: true,
+              child: Text(
+                entry.title,
+                style: theme.textTheme.titleMedium,
+              ),
             ),
+            // Text(
+            //   entry.title,
+            //   style: theme.textTheme.titleMedium,
+            // ),
+            // [/fork]
             const SizedBox(height: Dimens.spacing8),
+            // [fork] S416 sources-cited-once: the italic citation below
+            // already names it
+            // Text(
+            //   entry.description,
+            //   style: theme.textTheme.bodyMedium,
+            // ),
             Text(
-              entry.description,
+              entry.description.replaceFirst(
+                RegExp(r'\s*Source: .*$', dotAll: true),
+                '',
+              ),
               style: theme.textTheme.bodyMedium,
             ),
+            // [/fork]
             const SizedBox(height: Dimens.spacing12),
             ...entry.sources.map(
               (source) => Padding(
@@ -220,12 +348,22 @@ class _SourceCard extends StatelessWidget {
                       child: TextButton.icon(
                         onPressed: () => _launch(context, source.url),
                         icon: const Icon(Icons.open_in_new_rounded, size: 18),
-                        label: Text(S.of(context).sourcesOpenSourceLabel),
+                        // [fork] S305 sources-a11y: 48 dp, and each says which
+                        // source it opens rather than all "View source"
+                        // label: Text(S.of(context).sourcesOpenSourceLabel),
+                        label: Text(
+                          S.of(context).sourcesOpenSourceLabel,
+                          semanticsLabel:
+                              '${S.of(context).sourcesOpenSourceLabel}: '
+                              '${_shortCitation(source.citation)}',
+                        ),
                         style: TextButton.styleFrom(
                           padding: const EdgeInsets.symmetric(horizontal: Dimens.spacing8),
-                          minimumSize: const Size(0, 32),
-                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          // minimumSize: const Size(0, 32),
+                          // tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          minimumSize: const Size(48, 48),
                         ),
+                        // [/fork]
                       ),
                     ),
                   ],
@@ -238,3 +376,10 @@ class _SourceCard extends StatelessWidget {
     );
   }
 }
+
+// [fork] S305 sources-a11y: the author and year ("Careau V, et al. (2021)"),
+// or the author alone where the citation has no year
+String _shortCitation(String citation) =>
+    RegExp(r'^[^()]*?\(\d{4}\)').stringMatch(citation) ??
+    citation.split('.').first;
+// [/fork]

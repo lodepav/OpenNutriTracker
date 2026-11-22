@@ -1,10 +1,13 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:opennutritracker/fork/photos/photo_card.dart';
 import 'package:opennutritracker/fork/photos/photo_store.dart';
+
+import '../../helpers/ux_checks.dart';
 
 /// In memory, as real Hive hangs under `testWidgets`.
 class _MemoryPhotos extends PhotoStore {
@@ -238,6 +241,276 @@ void main() {
 
       expect(store.photos, isEmpty);
       expect(find.byKey(const ValueKey('photo-old0')), findsNothing);
+    });
+
+    testWidgets('at 200% text each date stays within its photo', (
+      tester,
+    ) async {
+      final store = _MemoryPhotos()
+        ..photos.addAll([
+          ProgressPhoto(id: 'a', date: DateTime(2026, 11, 1)),
+          ProgressPhoto(id: 'b', date: DateTime(2026, 11, 21)),
+        ]);
+      await pumpOnPhone(
+        tester,
+        ProgressPhotosCard(store: store, pick: (_) async => null),
+      );
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      expect(cutText(tester), isEmpty);
+      for (final id in ['a', 'b']) {
+        final tile = tester.getRect(find.byKey(ValueKey('photo-$id')));
+        final image = tester.getRect(
+          find.descendant(
+            of: find.byKey(ValueKey('photo-$id')),
+            matching: find.byType(Image),
+          ),
+        );
+        final date = tester.getRect(
+          find.descendant(
+            of: find.byKey(ValueKey('photo-$id')),
+            matching: find.byType(Text),
+          ),
+        );
+        expect(date.left, greaterThanOrEqualTo(image.left - 0.5), reason: id);
+        expect(date.right, lessThanOrEqualTo(image.right + 0.5), reason: id);
+        expect(date.bottom, lessThanOrEqualTo(tile.bottom + 0.5), reason: id);
+      }
+    });
+
+    testWidgets('compare at 200% text: two pickers inside the page gutter, '
+        'each date in full in its own', (tester) async {
+      await pumpOnPhone(tester, const SizedBox());
+      Navigator.of(tester.element(find.byType(SizedBox).first)).push(
+        MaterialPageRoute<void>(
+          builder: (_) => ComparePhotosScreen(
+            photos: [
+              for (final (id, day) in [('a', 1), ('b', 21)])
+                (
+                  photo: ProgressPhoto(id: id, date: DateTime(2026, 11, day)),
+                  file: File('missing-$id.jpg'),
+                ),
+            ],
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      expect(cutText(tester), isEmpty);
+      final width =
+          tester.view.physicalSize.width / tester.view.devicePixelRatio;
+      final left = tester.getRect(find.byKey(const ValueKey('compare-left')));
+      final right = tester.getRect(find.byKey(const ValueKey('compare-right')));
+      expect(left.left, greaterThanOrEqualTo(16));
+      expect(right.right, lessThanOrEqualTo(width - 16));
+      // Stacked, each a full row, so its date fits on one line.
+      expect(right.top - left.bottom, greaterThanOrEqualTo(8));
+      for (final text in ['Nov 1, 2026', 'Nov 21, 2026']) {
+        final paragraph = tester.renderObject<RenderParagraph>(
+          find.descendant(
+            of: find.text(text).last,
+            matching: find.byType(RichText),
+          ),
+        );
+        final tops = {
+          for (final box in paragraph.getBoxesForSelection(
+            TextSelection(baseOffset: 0, extentOffset: text.length),
+          ))
+            box.top,
+        };
+        expect(tops, hasLength(1), reason: text);
+      }
+      // Outlined, so the two read as separate fields, not one underline.
+      for (final key in ['compare-left', 'compare-right']) {
+        final decorator = tester.widget<InputDecorator>(
+          find.descendant(
+            of: find.byKey(ValueKey(key)),
+            matching: find.byType(InputDecorator),
+          ),
+        );
+        expect(decorator.decoration.border, isA<OutlineInputBorder>());
+      }
+      for (final (key, text) in [
+        ('compare-left', 'Nov 1, 2026'),
+        ('compare-right', 'Nov 21, 2026'),
+      ]) {
+        final picker = tester.getRect(find.byKey(ValueKey(key)));
+        final date = tester.getRect(
+          find
+              .descendant(
+                of: find.byKey(ValueKey(key)),
+                matching: find.text(text),
+              )
+              .last,
+        );
+        expect(picker.contains(date.topLeft), isTrue, reason: text);
+        expect(picker.contains(date.bottomRight), isTrue, reason: text);
+      }
+      // Each photo sits at the top of the room left under its picker.
+      for (final image in tester.widgetList<Image>(find.byType(Image))) {
+        expect(image.alignment, Alignment.topCenter);
+      }
+    });
+
+    for (final scale in [1.0, 1.15, 1.29]) {
+      testWidgets(
+        'compare at ${(scale * 100).round()}% text: each date on one line, '
+        'side by side or stacked',
+        (tester) async {
+          await pumpOnPhone(tester, const SizedBox(), textScale: scale);
+          Navigator.of(tester.element(find.byType(SizedBox).first)).push(
+            MaterialPageRoute<void>(
+              builder: (_) => ComparePhotosScreen(
+                photos: [
+                  for (final (id, day) in [('a', 1), ('b', 21)])
+                    (
+                      photo: ProgressPhoto(
+                        id: id,
+                        date: DateTime(2026, 11, day),
+                      ),
+                      file: File('missing-$id.jpg'),
+                    ),
+                ],
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+          final left = tester.getRect(
+            find.byKey(const ValueKey('compare-left')),
+          );
+          final right = tester.getRect(
+            find.byKey(const ValueKey('compare-right')),
+          );
+          // At the default size they sit side by side.
+          if (scale == 1.0) {
+            expect(right.left - left.right, greaterThanOrEqualTo(8));
+          }
+          // Side by side while the dates fit, else stacked.
+          expect(
+            right.left - left.right >= 8 || right.top - left.bottom >= 8,
+            isTrue,
+          );
+          for (final text in ['Nov 1, 2026', 'Nov 21, 2026']) {
+            final paragraph = tester.renderObject<RenderParagraph>(
+              find.descendant(
+                of: find.text(text).last,
+                matching: find.byType(RichText),
+              ),
+            );
+            final tops = {
+              for (final box in paragraph.getBoxesForSelection(
+                TextSelection(baseOffset: 0, extentOffset: text.length),
+              ))
+                box.top,
+            };
+            expect(tops, hasLength(1), reason: text);
+          }
+        },
+      );
+    }
+
+    testWidgets("compare: the other side's date is left out, the menu within "
+        'its field', (tester) async {
+      await pumpOnPhone(tester, const SizedBox(), textScale: 1);
+      Navigator.of(tester.element(find.byType(SizedBox).first)).push(
+        MaterialPageRoute<void>(
+          builder: (_) => ComparePhotosScreen(
+            photos: [
+              for (final (id, day) in [('a', 1), ('b', 21)])
+                (
+                  photo: ProgressPhoto(id: id, date: DateTime(2026, 11, day)),
+                  file: File('missing-$id.jpg'),
+                ),
+            ],
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final field = tester.getRect(find.byKey(const ValueKey('compare-left')));
+      await tester.tap(find.byKey(const ValueKey('compare-left')));
+      await tester.pumpAndSettle();
+
+      // The right side's date: only on the right picker, not in the menu.
+      expect(find.text('Nov 21, 2026'), findsOne);
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('compare-right')),
+          matching: find.text('Nov 21, 2026'),
+        ),
+        findsOne,
+      );
+      final menu = tester.getRect(
+        find.ancestor(
+          of: find.text('Nov 1, 2026').last,
+          matching: find.byType(InkWell),
+        ),
+      );
+      expect(menu.left, greaterThanOrEqualTo(field.left));
+      expect(menu.right, lessThanOrEqualTo(field.right));
+    });
+
+    testWidgets('the strip, the compare pickers and photos are named', (
+      tester,
+    ) async {
+      final semantics = tester.ensureSemantics();
+      await pump(tester, photos: 3);
+      expect(find.bySemanticsLabel('Progress photo, Aug 1, 2026'), findsOne);
+      final tile = tester.getSemantics(
+        find.bySemanticsLabel('Progress photo, Aug 1, 2026'),
+      );
+      expect(tile.flagsCollection.isButton, isTrue);
+      expect(tile.getSemanticsData().hasAction(SemanticsAction.tap), isTrue);
+
+      await tester.tap(find.byKey(const ValueKey('photo-compare')));
+      await tester.pumpAndSettle();
+      // Side by side the pickers show no label; they are named all the same.
+      expect(find.text('Left photo'), findsNothing);
+      expect(find.bySemanticsLabel(RegExp('^Left photo')), findsOne);
+      expect(find.bySemanticsLabel(RegExp('^Right photo')), findsOne);
+      expect(
+        tester
+            .widgetList<Image>(find.byType(Image))
+            .map((i) => i.semanticLabel),
+        containsAll([
+          'Progress photo, Aug 1, 2026',
+          'Progress photo, Oct 1, 2026',
+        ]),
+      );
+      semantics.dispose();
+    });
+
+    testWidgets('the viewer and compare decode at the shown size', (
+      tester,
+    ) async {
+      await pump(tester, photos: 3);
+
+      await tester.tap(find.byKey(const ValueKey('photo-old0')));
+      await tester.pumpAndSettle();
+      final viewer = find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.byType(Image),
+      );
+      final shown = tester.widget<Image>(viewer);
+      expect(shown.semanticLabel, 'Progress photo, Aug 1, 2026');
+      final decoded = shown.image as ResizeImage;
+      expect(decoded.width, greaterThan(0));
+      expect(
+        decoded.width,
+        lessThanOrEqualTo(tester.view.physicalSize.width.round()),
+      );
+      await tester.tap(find.text('Close'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const ValueKey('photo-compare')));
+      await tester.pumpAndSettle();
+      final images = tester.widgetList<Image>(find.byType(Image)).toList();
+      expect(images, hasLength(2));
+      for (final image in images) {
+        // Half the page each, in device pixels.
+        final width = (image.image as ResizeImage).width!;
+        expect(width, greaterThan(0));
+        expect(width, lessThanOrEqualTo(tester.view.physicalSize.width / 2));
+      }
     });
 
     testWidgets('compare starts with the oldest and the newest', (

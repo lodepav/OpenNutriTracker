@@ -153,9 +153,11 @@ void main() {
   ) async {
     await pumpEditor(tester, customMeal(code: 'uuid-oats', name: 'Oats'));
     await tester.enterText(
-      find.widgetWithText(TextFormField, l10nEn.mealNameLabel),
+      find.widgetWithText(TextFormField, 'Food name'),
       'Oats, rolled',
     );
+    // A frame between typing and Back: canPop follows the fields (G3)
+    await tester.pump();
     await tester.pageBack();
     await tester.pumpAndSettle();
     expect(find.text(l10nEn.discardChangesTitle), findsOneWidget);
@@ -212,14 +214,37 @@ void main() {
     });
   });
 
+  // upstream's case of the same name, found by the fork's "Food name"
+  // (S290, crit r4 g2)
+  testWidgets('renaming a food without a code saves with its old name', (
+    tester,
+  ) async {
+    await pumpEditor(tester, customMeal(code: null, name: 'Banana'));
+
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Food name'),
+      'Banana, ripe',
+    );
+    await save(tester);
+
+    expect(dataSource.saves, hasLength(1));
+    final (saved, previous) = dataSource.saves.single;
+    expect(saved.name, equals('Banana, ripe'));
+    expect(previous?.code, isNull);
+    expect(previous?.name, equals('Banana'));
+    expect(intakeRepository.moves, hasLength(1));
+    expect(intakeRepository.moves.single.$1, equals('Banana'));
+    expect(intakeRepository.moves.single.$2.name, equals('Banana, ripe'));
+  });
+
   testWidgets('Back does not ask once the text is as it was', (tester) async {
     await pumpEditor(tester, customMeal(code: 'uuid-oats', name: 'Oats'));
     await tester.enterText(
-      find.widgetWithText(TextFormField, l10nEn.mealNameLabel),
+      find.widgetWithText(TextFormField, 'Food name'),
       'Oats, rolled',
     );
     await tester.enterText(
-      find.widgetWithText(TextFormField, l10nEn.mealNameLabel),
+      find.widgetWithText(TextFormField, 'Food name'),
       'Oats',
     );
     await tester.pageBack();

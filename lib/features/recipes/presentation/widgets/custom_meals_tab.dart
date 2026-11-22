@@ -1,4 +1,6 @@
-import 'dart:io';
+// [fork] S481 thumb-sized-decode: no File left here
+// import 'dart:io';
+// [/fork]
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -7,7 +9,9 @@ import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/core/utils/navigation_options.dart';
-import 'package:opennutritracker/core/utils/user_image_storage.dart';
+// [fork] S481 thumb-sized-decode: SizedFileImage looks the path up
+// import 'package:opennutritracker/core/utils/user_image_storage.dart';
+// [/fork]
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dart';
 import 'package:opennutritracker/features/edit_meal/presentation/edit_meal_screen.dart';
 import 'package:opennutritracker/features/settings/presentation/bloc/custom_meals_bloc.dart';
@@ -17,6 +21,14 @@ import 'package:opennutritracker/core/utils/meal_type_suggester.dart';
 import 'package:opennutritracker/features/meal_detail/meal_detail_screen.dart';
 import 'package:opennutritracker/fork/recipe/recipe_list.dart' show macroSpans;
 import 'package:opennutritracker/fork/units/energy_text.dart';
+// [/fork]
+// [fork] S481 thumb-sized-decode
+import 'package:opennutritracker/fork/display/sized_file_image.dart';
+// [/fork]
+// [fork] S438 custom-food-delete-undo
+import 'package:opennutritracker/core/data/data_source/custom_meal_data_source.dart';
+import 'package:opennutritracker/core/utils/locator.dart';
+import 'package:opennutritracker/fork/recipe/recipe_delete.dart';
 // [/fork]
 
 /// Embeddable list of user-created custom meals (formerly the body of
@@ -63,11 +75,32 @@ class CustomMealsTab extends StatelessWidget {
             return Center(
               child: Padding(
                 padding: const EdgeInsets.all(Dimens.spacing32),
-                child: Text(
-                  S.of(context).customMealsEmptyLabel,
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: palette.textMuted),
+                // [fork] S429 custom-foods-empty: say what a custom food is
+                // and how to add one (H10)
+                // child: Text(
+                //   S.of(context).customMealsEmptyLabel,
+                //   textAlign: TextAlign.center,
+                //   style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: palette.textMuted),
+                // ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      // upstream's says meals; the list and its button say foods
+                      'No custom foods yet.',
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: palette.textMuted),
+                    ),
+                    const SizedBox(height: Dimens.spacing8),
+                    Text(
+                      'A custom food is your own food with its nutrition, '
+                      'logged like any other. Add one with New custom food.',
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: palette.textMuted),
+                    ),
+                  ],
                 ),
+                // [/fork]
               ),
             );
           }
@@ -99,7 +132,7 @@ class CustomMealsTab extends StatelessWidget {
                               children: [
                                 Text(
                                   meal.name ?? '',
-                                  maxLines: 1,
+                                  maxLines: 2, // [fork] S486 two-line-names: as recipe rows (A6)
                                   overflow: TextOverflow.ellipsis,
                                   style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
                                 ),
@@ -222,30 +255,49 @@ class CustomMealsTab extends StatelessWidget {
 
   Future<void> _confirmDelete(BuildContext context, MealEntity meal) async {
     final bloc = context.read<CustomMealsBloc>();
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(S.of(context).customMealsDeleteConfirmTitle),
-        // [fork] S142 keep-history
-        content: const Text(
-          'Past diary entries logged from it will be kept.',
-        ),
-        // [/fork]
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text(S.of(context).dialogCancelLabel),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: Text(S.of(context).dialogDeleteLabel),
-          ),
-        ],
-      ),
+    // [fork] S438 custom-food-delete-undo: the recipe delete's confirm, by
+    // name and in red, and an Undo bar that writes the stored rows back
+    // (H3, H4)
+    // final confirmed = await showDialog<bool>(
+    //   context: context,
+    //   builder: (ctx) => AlertDialog(
+    //     title: Text(S.of(context).customMealsDeleteConfirmTitle),
+    //     content: Text(S.of(context).customMealsDeleteConfirmContent),
+    //     actions: [
+    //       TextButton(
+    //         onPressed: () => Navigator.of(ctx).pop(false),
+    //         child: Text(S.of(context).dialogCancelLabel),
+    //       ),
+    //       TextButton(
+    //         onPressed: () => Navigator.of(ctx).pop(true),
+    //         child: Text(S.of(context).dialogDeleteLabel),
+    //       ),
+    //     ],
+    //   ),
+    // );
+    // if (confirmed == true) {
+    //   bloc.add(DeleteCustomMealEvent(meal.code ?? meal.name ?? ''));
+    // }
+    final key = _keyFor(meal);
+    final messenger = ScaffoldMessenger.of(context);
+    if (!await confirmDeleteCustomFood(context, meal.name ?? '')) return;
+    final stored = locator<CustomMealDataSource>()
+        .getAllCustomMeals()
+        .where((m) => (m.code ?? m.name) == key)
+        .toList();
+    bloc.add(DeleteCustomMealEvent(key));
+    // The bar waits for the delete, so Undo cannot run before it
+    final after = await bloc.stream.firstWhere(
+      (s) => s is CustomMealsLoadedState || s is CustomMealsFailedState,
     );
-    if (confirmed == true) {
-      bloc.add(DeleteCustomMealEvent(meal.code ?? meal.name ?? ''));
-    }
+    if (after is! CustomMealsLoadedState) return;
+    showCustomFoodDeleted(
+      messenger,
+      meal.name ?? '',
+      stored,
+      onRestored: () => bloc.add(LoadCustomMealsEvent()),
+    );
+    // [/fork]
   }
 
   /// Two-step flow: pick the partner to merge with, then choose which of
@@ -439,17 +491,28 @@ class _MealLeadingThumbnail extends StatelessWidget {
       child: Icon(Icons.restaurant_rounded, color: accent, size: 24),
     );
     if (relative == null) return fallback;
-    return FutureBuilder<String>(
-      future: UserImageStorage.absolutePath(relative),
-      builder: (context, snapshot) {
-        if (!snapshot.hasData) return fallback;
-        final file = File(snapshot.data!);
-        if (!file.existsSync()) return fallback;
-        return ClipRRect(
-          borderRadius: Dimens.borderRadiusS,
-          child: Image.file(file, width: _size, height: _size, fit: BoxFit.cover),
-        );
-      },
+    // [fork] S481 thumb-sized-decode: decoded at the tile's size, the path
+    // looked up once, no file check on the UI thread
+    // return FutureBuilder<String>(
+    //   future: UserImageStorage.absolutePath(relative),
+    //   builder: (context, snapshot) {
+    //     if (!snapshot.hasData) return fallback;
+    //     final file = File(snapshot.data!);
+    //     if (!file.existsSync()) return fallback;
+    //     return ClipRRect(
+    //       borderRadius: Dimens.borderRadiusS,
+    //       child: Image.file(file, width: _size, height: _size, fit: BoxFit.cover),
+    //     );
+    //   },
+    // );
+    return ClipRRect(
+      borderRadius: Dimens.borderRadiusS,
+      child: SizedFileImage(
+        relativePath: relative,
+        size: _size,
+        fallback: (_) => fallback,
+      ),
     );
+    // [/fork]
   }
 }

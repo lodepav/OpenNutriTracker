@@ -1,5 +1,6 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart'; // [fork] S334
 import 'package:opennutritracker/core/presentation/sources_screen.dart';
 import 'package:opennutritracker/core/presentation/widgets/app_banner_version.dart';
 import 'package:opennutritracker/core/utils/app_const.dart';
@@ -9,6 +10,15 @@ import 'package:opennutritracker/core/utils/url_const.dart';
 import 'package:opennutritracker/features/profile/presentation/utils/profile_switch_coordinator.dart';
 // [fork] S37 onboarding-restore
 import 'package:opennutritracker/fork/backup/onboarding_restore.dart';
+// [/fork]
+// [fork] S430 demo-one-profile
+import 'package:opennutritracker/fork/onboarding/demo_one_profile.dart';
+// [/fork]
+// [fork] S501 restore-failed-notice
+import 'package:opennutritracker/fork/backup/storage_rescue.dart';
+// [/fork]
+// [fork] S502 policy-link-accent
+import 'package:opennutritracker/fork/display/contrast.dart';
 // [/fork]
 import 'package:opennutritracker/generated/l10n.dart';
 import 'package:opennutritracker/core/utils/safe_url_launcher.dart';
@@ -35,10 +45,25 @@ class _OnboardingIntroPageBodyState extends State<OnboardingIntroPageBody> {
   late bool _acceptedDataCollection = widget.initialAcceptedDataCollection;
   bool _seedingDemo = false;
 
+  // [fork] S470 intro-init: made once, not on every checkbox tap's rebuild
+  late final Future<String> _forkVersion = AppConst.getVersionNumber();
+  late final TapGestureRecognizer _forkPolicyTap = TapGestureRecognizer()
+    ..onTap = _launchUrl;
+
+  @override
+  void dispose() {
+    _forkPolicyTap.dispose();
+    super.dispose();
+  }
+  // [/fork]
+
   @override
   Widget build(BuildContext context) {
     return FutureBuilder(
-      future: AppConst.getVersionNumber(),
+      // [fork] S470 intro-init
+      future: _forkVersion,
+      // future: AppConst.getVersionNumber(),
+      // [/fork]
       builder: (BuildContext context, AsyncSnapshot<dynamic> snapshot) {
         if (snapshot.hasData) {
           // Scroll so the demo CTA + checkboxes still fit on shorter
@@ -46,6 +71,10 @@ class _OnboardingIntroPageBodyState extends State<OnboardingIntroPageBody> {
           return SingleChildScrollView(
             child: Column(
               children: [
+                // [fork] S501 restore-failed-notice: a backup the recovery
+                // screen chose that would not restore is said once
+                const RestoreFailedNotice(),
+                // [/fork]
                 AppBannerVersion(versionNumber: snapshot.requireData),
                 const SizedBox(height: 32.0),
                 Text(
@@ -61,9 +90,22 @@ class _OnboardingIntroPageBodyState extends State<OnboardingIntroPageBody> {
                 ),
                 const SizedBox(height: 16.0),
                 // Policy first: both Start (footer) and Try Demo require it.
+                // [fork] S334 consent-rows: each checkbox and its sentence
+                // are one labelled control; the policy link is its action
+                MergeSemantics(
+                  child: Semantics(
+                    customSemanticsActions: {
+                      const CustomSemanticsAction(label: 'Open privacy policy'):
+                          _launchUrl,
+                    },
+                    child:
+                // [/fork]
                 ListTile(
                   onTap: () => _togglePolicy(),
                   title: Text.rich(
+                    // [fork] S334: the link is the row's action, not a node
+                    semanticsLabel: S.of(context).readLabel,
+                    // [/fork]
                     textAlign: TextAlign.center,
                     TextSpan(
                       text: S.of(context).readLabel,
@@ -73,13 +115,20 @@ class _OnboardingIntroPageBodyState extends State<OnboardingIntroPageBody> {
                           text: ' ${S.of(context).privacyPolicyLabel}',
                           style: Theme.of(context).textTheme.bodySmall
                               ?.copyWith(
-                                color: Theme.of(context).colorScheme.primary,
+                                // [fork] S502 policy-link-accent: a picked
+                                // yellow was 1.27:1 on the canvas
+                                // color: Theme.of(context).colorScheme.primary,
+                                color: textAccent(context),
+                                // [/fork]
                                 decoration: TextDecoration.underline,
                               ),
-                          recognizer: TapGestureRecognizer()
-                            ..onTap = () {
-                              _launchUrl();
-                            },
+                          // [fork] S470 intro-init
+                          recognizer: _forkPolicyTap,
+                          // recognizer: TapGestureRecognizer()
+                          //   ..onTap = () {
+                          //     _launchUrl();
+                          //   },
+                          // [/fork]
                         ),
                       ],
                     ),
@@ -96,6 +145,12 @@ class _OnboardingIntroPageBodyState extends State<OnboardingIntroPageBody> {
                     ),
                   ),
                 ),
+                // [fork] S334
+                  ),
+                ),
+                MergeSemantics(
+                  child:
+                // [/fork]
                 ListTile(
                   onTap: () => _toggleDataCollection(),
                   title: Text(
@@ -111,7 +166,12 @@ class _OnboardingIntroPageBodyState extends State<OnboardingIntroPageBody> {
                     ),
                   ),
                 ),
+                ), // [fork] S334
                 const SizedBox(height: 16.0),
+                // [fork] S430 demo-one-profile: the demo wipe clears boxes
+                // every profile shares, so only a lone profile gets it
+                if (canOfferDemo()) ...[
+                // [/fork]
                 Semantics(
                   identifier: 'onboarding-try-demo',
                   child: SizedBox(
@@ -123,13 +183,16 @@ class _OnboardingIntroPageBodyState extends State<OnboardingIntroPageBody> {
                       onPressed: _seedingDemo
                           ? null
                           : (_acceptedPolicy ? _tryDemo : _policyRequired),
-                      style: _acceptedPolicy
-                          ? null
-                          : OutlinedButton.styleFrom(
-                              foregroundColor: Theme.of(
-                                context,
-                              ).colorScheme.onSurface.withValues(alpha: 0.38),
-                            ),
+                      // [fork] S451 intro-buttons-contrast: live, so drawn
+                      // live; the tap's snackbar names the policy
+                      // style: _acceptedPolicy
+                      //     ? null
+                      //     : OutlinedButton.styleFrom(
+                      //         foregroundColor: Theme.of(
+                      //           context,
+                      //         ).colorScheme.onSurface.withValues(alpha: 0.38),
+                      //       ),
+                      // [/fork]
                       icon: _seedingDemo
                           ? const SizedBox(
                               width: 16,
@@ -155,6 +218,7 @@ class _OnboardingIntroPageBodyState extends State<OnboardingIntroPageBody> {
                   ),
                   textAlign: TextAlign.center,
                 ),
+                ], // [fork] S430
                 // [fork] S37 onboarding-restore: start from a backup (#1355)
                 const SizedBox(height: 12.0),
                 RestoreBackupButton(

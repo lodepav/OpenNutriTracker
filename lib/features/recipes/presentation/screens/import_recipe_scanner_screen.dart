@@ -8,6 +8,9 @@ import 'package:opennutritracker/core/presentation/scanner_orientation_mixin.dar
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/features/recipes/domain/entity/shared_recipe_payload.dart';
 import 'package:opennutritracker/features/recipes/presentation/bloc/recipes_bloc.dart';
+import 'package:opennutritracker/fork/scan/scan_hint.dart'; // [fork] S291
+import 'package:opennutritracker/fork/scan/scanner_error.dart'; // [fork] S291
+import 'package:opennutritracker/fork/scan/shared_code_dialog.dart'; // [fork] S292
 import 'package:opennutritracker/generated/l10n.dart';
 
 class ImportRecipeScannerArguments {
@@ -96,6 +99,18 @@ class _ImportRecipeScannerScreenState extends State<ImportRecipeScannerScreen>
       body: MobileScanner(
         controller: _cameraController,
         onDetect: _onDetect,
+        // [fork] S291 recipe-scanner-camera-refused: a way on, not a black box,
+        // and over the feed what to scan
+        errorBuilder: (_, error) => ScannerError(
+          error: error,
+          controller: _cameraController,
+          onPaste: _showPasteCodeDialog,
+        ),
+        overlayBuilder: (_, _) => ScanHint(
+          text: 'Point at the QR code from Share recipe',
+          onPaste: _showPasteCodeDialog,
+        ),
+        // [/fork]
       ),
     );
   }
@@ -113,32 +128,51 @@ class _ImportRecipeScannerScreenState extends State<ImportRecipeScannerScreen>
   }
 
   Future<void> _showPasteCodeDialog() async {
-    final controller = TextEditingController();
+    // [fork] S292 recipe-paste-dialog: a recipe hint, and a bad code stays in
+    // the open dialog with the error under it
+    // final controller = TextEditingController();
+    // final code = await showDialog<String>(
+    //   context: context,
+    //   builder: (ctx) => AlertDialog(
+    //     title: Text(S.of(ctx).pasteCodeLabel),
+    //     content: TextField(
+    //       controller: controller,
+    //       maxLines: 5,
+    //       decoration: InputDecoration(
+    //         hintText: S.of(ctx).pasteCodeHint,
+    //         border: const OutlineInputBorder(),
+    //       ),
+    //       autofocus: true,
+    //     ),
+    //     actions: [
+    //       TextButton(
+    //         onPressed: () => Navigator.of(ctx).pop(),
+    //         child: Text(S.of(ctx).dialogCancelLabel),
+    //       ),
+    //       TextButton(
+    //         onPressed: () => Navigator.of(ctx).pop(controller.text.trim()),
+    //         child: Text(S.of(ctx).importRecipeLabel),
+    //       ),
+    //     ],
+    //   ),
+    // );
     final code = await showDialog<String>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(S.of(ctx).pasteCodeLabel),
-        content: TextField(
-          controller: controller,
-          maxLines: 5,
-          decoration: InputDecoration(
-            hintText: S.of(ctx).pasteCodeHint,
-            border: const OutlineInputBorder(),
-          ),
-          autofocus: true,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: Text(S.of(ctx).dialogCancelLabel),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(controller.text.trim()),
-            child: Text(S.of(ctx).importRecipeLabel),
-          ),
-        ],
+      builder: (ctx) => SharedCodeDialog(
+        hint: 'Paste the shared recipe code here',
+        actionLabel: S.of(ctx).importRecipeLabel,
+        invalidLabel: "This isn't a recipe code",
+        isValid: (code) {
+          try {
+            SharedRecipePayload.fromJsonString(code);
+            return true;
+          } on SharedRecipeParseException {
+            return false;
+          }
+        },
       ),
     );
+    // [/fork]
     if (code != null && code.isNotEmpty) {
       await _processCode(code);
     }
@@ -203,7 +237,10 @@ class _ImportRecipeScannerScreenState extends State<ImportRecipeScannerScreen>
           ),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: Text(S.of(ctx).dialogOKLabel),
+            // [fork] S293 recipe-import-button: the button says what it does
+            // child: Text(S.of(ctx).dialogOKLabel),
+            child: Text(S.of(ctx).importAction),
+            // [/fork]
           ),
         ],
       ),

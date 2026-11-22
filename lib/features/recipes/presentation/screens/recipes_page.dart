@@ -21,6 +21,13 @@ import 'package:opennutritracker/generated/l10n.dart';
 // [fork] S130 recipes-list
 import 'package:opennutritracker/fork/recipe/recipe_list.dart';
 // [/fork]
+// [fork] S425 recipe-delete-undo
+import 'package:opennutritracker/core/domain/entity/recipe_entity.dart';
+import 'package:opennutritracker/fork/recipe/recipe_delete.dart';
+// [/fork]
+// [fork] S506 selection-bar-contrast
+import 'package:opennutritracker/fork/display/contrast.dart';
+// [/fork]
 
 class RecipesPage extends StatefulWidget {
   const RecipesPage({super.key});
@@ -91,7 +98,17 @@ class _RecipesPageState extends State<RecipesPage>
     // iPhone and the create/import actions live where you'd expect them.
     return Scaffold(
       appBar: AppBar(
-        title: Text(S.of(context).recipesLabel),
+        // [fork] S429 custom-foods-empty: the title names the list shown
+        // title: Text(S.of(context).recipesLabel),
+        title: ListenableBuilder(
+          listenable: _tabController,
+          builder: (context, _) => Text(
+            _tabController.index == 0
+                ? S.of(context).recipesLabel
+                : 'Custom foods',
+          ),
+        ),
+        // [/fork]
         actions: [
           PopupMenuButton<_RecipesAction>(
             tooltip: S.of(context).addLabel,
@@ -340,6 +357,7 @@ class _RecipesPageState extends State<RecipesPage>
                     prefixIcon: Icon(Icons.search_rounded, color: palette.textMuted),
                     suffixIcon: _searchQuery.isNotEmpty
                         ? IconButton(
+                            tooltip: 'Clear search', // [fork] S480 recipes-no-match: A3
                             icon: Icon(Icons.clear_rounded, color: palette.textMuted),
                             onPressed: () {
                               _searchController.clear();
@@ -395,13 +413,40 @@ class _RecipesPageState extends State<RecipesPage>
                     ? Center(
                         child: Padding(
                           padding: const EdgeInsets.all(Dimens.spacing32),
-                          child: Text(
-                            S.of(context).recipesEmptyLabel,
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodyLarge
-                                ?.copyWith(color: palette.textMuted),
+                          // [fork] S480 recipes-no-match: there are recipes,
+                          // the search or tag hides them (H9)
+                          // child: Text(
+                          //   S.of(context).recipesEmptyLabel,
+                          //   style: Theme.of(context)
+                          //       .textTheme
+                          //       .bodyLarge
+                          //       ?.copyWith(color: palette.textMuted),
+                          // ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                'No recipes match',
+                                textAlign: TextAlign.center,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodyLarge
+                                    ?.copyWith(color: palette.textMuted),
+                              ),
+                              const SizedBox(height: Dimens.spacing8),
+                              TextButton(
+                                onPressed: () {
+                                  _searchController.clear();
+                                  setState(() {
+                                    _searchQuery = '';
+                                    _activeTag = null;
+                                  });
+                                },
+                                child: const Text('Clear filters'),
+                              ),
+                            ],
                           ),
+                          // [/fork]
                         ),
                       )
                     : Column(
@@ -419,6 +464,7 @@ class _RecipesPageState extends State<RecipesPage>
                                 return RecipeListItem(
                                   recipe: recipe,
                                   isSelected: isSelected,
+                                  selecting: _selectionMode, // [fork] S505
                                   onTap: () async {
                                     if (_selectionMode) {
                                       setState(() {
@@ -469,6 +515,15 @@ class _RecipesPageState extends State<RecipesPage>
   Widget _buildSelectionBar(BuildContext context) {
     final s = S.of(context);
     final accent = Theme.of(context).colorScheme.primary;
+    // [fork] S506 selection-bar-contrast: on its tint over the page, as the
+    // row's check mark is
+    final tint = Color.alphaBlend(
+      accent.withValues(alpha: 0.12),
+      paletteOf(context).canvas,
+    );
+    final ink = textSafe(accent, tint);
+    final mark = chartSafe(accent, tint);
+    // [/fork]
     return Container(
       margin: const EdgeInsets.fromLTRB(Dimens.spacing16, Dimens.spacing4, Dimens.spacing16, Dimens.spacing4),
       padding: const EdgeInsets.symmetric(horizontal: Dimens.spacing8, vertical: Dimens.spacing4),
@@ -480,7 +535,10 @@ class _RecipesPageState extends State<RecipesPage>
         children: [
           IconButton(
             tooltip: s.dialogCancelLabel,
-            icon: Icon(Icons.close_rounded, color: accent),
+            // [fork] S506
+            // icon: Icon(Icons.close_rounded, color: accent),
+            icon: Icon(Icons.close_rounded, color: mark),
+            // [/fork]
             onPressed: () => setState(_selectedIds.clear),
           ),
           Expanded(
@@ -489,14 +547,20 @@ class _RecipesPageState extends State<RecipesPage>
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: accent,
+                    // [fork] S506
+                    // color: accent,
+                    color: ink,
+                    // [/fork]
                     fontWeight: FontWeight.w700,
                   ),
             ),
           ),
           IconButton(
             tooltip: s.dialogDeleteLabel,
-            icon: Icon(Icons.delete_outline_rounded, color: accent),
+            // [fork] S506
+            // icon: Icon(Icons.delete_outline_rounded, color: accent),
+            icon: Icon(Icons.delete_outline_rounded, color: mark),
+            // [/fork]
             onPressed: _onBulkDelete,
           ),
         ],
@@ -505,30 +569,46 @@ class _RecipesPageState extends State<RecipesPage>
   }
 
   Future<void> _onBulkDelete() async {
-    final s = S.of(context);
-    final count = _selectedIds.length;
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(s.deleteSelectedRecipesConfirmTitle(count)),
-        content: Text(s.recipeDeleteConfirmContent),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text(s.dialogCancelLabel),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: Text(s.dialogDeleteLabel),
-          ),
-        ],
-      ),
-    );
+    // [fork] S425 recipe-delete-undo: the confirm names one recipe and
+    // Delete is red; after it a bar offers Undo (H3, H4)
+    // final s = S.of(context);
+    // final count = _selectedIds.length;
+    // final confirmed = await showDialog<bool>(
+    //   context: context,
+    //   builder: (ctx) => AlertDialog(
+    //     title: Text(s.deleteSelectedRecipesConfirmTitle(count)),
+    //     content: Text(s.recipeDeleteConfirmContent),
+    //     actions: [
+    //       TextButton(
+    //         onPressed: () => Navigator.of(ctx).pop(false),
+    //         child: Text(s.dialogCancelLabel),
+    //       ),
+    //       FilledButton(
+    //         onPressed: () => Navigator.of(ctx).pop(true),
+    //         child: Text(s.dialogDeleteLabel),
+    //       ),
+    //     ],
+    //   ),
+    // );
+    final loaded = _bloc.state;
+    final chosen = loaded is RecipesLoaded
+        ? loaded.recipes.where((r) => _selectedIds.contains(r.id)).toList()
+        : <RecipeEntity>[];
+    final messenger = ScaffoldMessenger.of(context);
+    final confirmed = await confirmDeleteRecipes(context, chosen);
+    // [/fork]
     if (confirmed != true) return;
     final deleteUseCase = locator<DeleteRecipeUseCase>();
     for (final id in _selectedIds) {
       await deleteUseCase.delete(id);
     }
+    // [fork] S425 recipe-delete-undo
+    showRecipesDeleted(
+      messenger,
+      chosen,
+      onRestored: () => _bloc.add(const LoadRecipesEvent()),
+    );
+    // [/fork]
     if (!mounted) return;
     setState(_selectedIds.clear);
     _bloc.add(const LoadRecipesEvent());

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -31,6 +32,10 @@ import 'package:opennutritracker/fork/adaptive/expenditure.dart';
 import 'package:opennutritracker/fork/adaptive/goal_plan.dart';
 import 'package:opennutritracker/fork/adaptive/goal_saving.dart';
 import 'package:opennutritracker/fork/body/measurement_store.dart';
+import 'package:opennutritracker/fork/goal/goal_planner.dart';
+import 'package:opennutritracker/fork/goal/goal_progress.dart';
+import 'package:opennutritracker/fork/phases/phases.dart';
+import 'package:intl/intl.dart' show DateFormat;
 import 'package:opennutritracker/core/domain/entity/body_weight_unit_entity.dart';
 import 'package:opennutritracker/fork/adaptive/trend_points.dart';
 import 'package:opennutritracker/fork/units/weight_text.dart';
@@ -131,6 +136,16 @@ class _NoLogs extends Fake implements GetTrackedDayUsecase {
 }
 
 /// The check-in on a phone's width at 200% text.
+/// A cut from 87.1 to 82 at 0.5 a week begun [today], as Goal progress
+/// reads it.
+GoalProgress _progress(DateTime today) => GoalProgress(
+  start: GoalStart(date: today, kg: 87.1, targetKg: 82, paceKgPerWeek: -0.5),
+  nowKg: 87.1,
+  paceKgPerWeek: -0.5,
+  trend: const [87.1],
+  today: today,
+);
+
 Future<void> _pumpLarge(WidgetTester tester, AdaptiveService service) async {
   tester.view.physicalSize = const Size(1080, 2400);
   tester.view.devicePixelRatio = 3;
@@ -874,6 +889,8 @@ void main() {
   ) async {
     locator.registerSingleton<GetKcalGoalUsecase>(_Goal());
     addTearDown(locator.unregister<GetKcalGoalUsecase>);
+    AdaptiveStore.settings.value = const AdaptiveSettings(adaptiveTarget: true);
+    addTearDown(() => AdaptiveStore.settings.value = const AdaptiveSettings());
     final service = AdaptiveService(
       _User(),
       _Weights(),
@@ -888,16 +905,22 @@ void main() {
     // Home's goal adds the day's activity to it.
     expect(find.text('Formula target without activity'), findsOneWidget);
     expect(find.text('2847 kcal'), findsOneWidget);
-    expect(find.text('Change'), findsOneWidget);
-    // The rows add up as shown.
+    // From Home's goal today, 3096 with the day's activity, which the
+    // check-in's target does not add.
+    expect(find.text('Change'), findsNothing);
+    expect(find.text("Change from today's goal"), findsOneWidget);
     final proposed = checkIn!.proposedTargetKcal.round();
     // A cut: the change down, with a true minus.
     expect(proposed, lessThan(2847));
-    expect(find.text('\u2212${2847 - proposed} kcal'), findsOneWidget);
+    expect(
+      find.text('\u2212${3096 - proposed} kcal (activity no longer added)'),
+      findsOneWidget,
+    );
     expect(
       find.textContaining(
         'That is the expenditure less '
-        '${checkIn.expenditureKcal.round() - proposed} kcal',
+        '${checkIn.expenditureKcal.round() - proposed} kcal '
+        'for \u22120.50 kg a week',
       ),
       findsOneWidget,
     );
@@ -950,7 +973,10 @@ void main() {
     );
     await _pumpLarge(tester, service);
 
-    expect(find.textContaining('Your first target'), findsOneWidget);
+    expect(
+      find.textContaining('Your first target, from your profile'),
+      findsOneWidget,
+    );
     expect(find.textContaining('under the formula'), findsOneWidget);
     // No week before it to report, nor to carry the expenditure from.
     expect(find.text('Past week'), findsNothing);
@@ -975,6 +1001,12 @@ void main() {
     expect(find.textContaining('Your first target'), findsNothing);
     expect(find.text('Past week'), findsOneWidget);
     expect(find.textContaining('Not enough data'), findsOneWidget);
+    // A warning, in the warning text colour as the trend's "away" change.
+    final note = find.textContaining('Not enough data');
+    expect(
+      tester.widget<Text>(note).style?.color,
+      paletteOf(tester.element(note)).warningText,
+    );
   });
 
   testWidgets('a later check-in shows the current target and the change', (
@@ -992,10 +1024,12 @@ void main() {
     final change = (await service.checkIn()).proposedTargetKcal.round() - 2000;
     await _pumpLarge(tester, service);
 
+    // the list's, not the target field's own
+    final list = find.byType(Scrollable).first;
     final current = find.text('Current target');
-    await tester.scrollUntilVisible(current, 200);
+    await tester.scrollUntilVisible(current, 200, scrollable: list);
     expect(find.text('2000 kcal'), findsOneWidget);
-    await tester.scrollUntilVisible(find.text('Change'), 200);
+    await tester.scrollUntilVisible(find.text('Change'), 200, scrollable: list);
     // A true minus for a change down.
     expect(
       find.text(
@@ -1009,7 +1043,7 @@ void main() {
     );
     // The cap is explained whether or not it held the change back.
     final cap = find.textContaining(RegExp('check-in limit|A check-in moves'));
-    await tester.scrollUntilVisible(cap, 200);
+    await tester.scrollUntilVisible(cap, 200, scrollable: list);
     expect(cap, findsOneWidget);
   });
 
@@ -1199,8 +1233,10 @@ void main() {
         find.text(weightChangeText(checkIn.weekChangeKg!, BodyWeightUnit.lb)),
         findsOneWidget,
       );
-      expect(find.textContaining('for -1.1 lb a week'), findsOneWidget);
-      final perLb = (checkIn.kcalPerKg! / 2.20462).round();
+      // The pace as Goal progress prints it.
+      expect(find.textContaining('for \u22121.10 lb a week'), findsOneWidget);
+      // To the nearest 100, as 7700 a kg is the familiar 3500 a lb.
+      final perLb = (checkIn.kcalPerKg! / 2.20462 / 100).round() * 100;
       expect(
         find.textContaining('at $perLb kcal a lb of weight change'),
         findsOneWidget,
@@ -1296,6 +1332,73 @@ void main() {
     await tester.pumpAndSettle();
     expect(tester.getBottomLeft(keep).dy, lessThanOrEqualTo(640 - 300));
     expect(keep.hitTestable(), findsOneWidget);
+  });
+
+  testWidgets('a second tap on Accept or Keep records no second check-in', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1000, 4000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final memory = _SlowStore();
+    final service = AdaptiveService(
+      _User(),
+      _Weights(),
+      _TrackedDays(),
+      memory,
+      () => _today.add(const Duration(hours: 9)),
+    );
+    await service.accept(await service.checkIn(), 2100);
+    await tester.pumpWidget(MaterialApp(home: CheckInScreen(service: service)));
+    await tester.pumpAndSettle();
+
+    // Saving takes a while, as on a phone; the taps come meanwhile.
+    memory.gate = Completer<void>();
+    await tester.tap(find.byKey(const ValueKey('check-in-accept')));
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.tap(find.byKey(const ValueKey('check-in-accept')));
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.tap(find.byKey(const ValueKey('check-in-keep')));
+    await tester.pump(const Duration(milliseconds: 100));
+    memory.gate!.complete();
+    await tester.pumpAndSettle();
+    expect(memory.accepts, 2);
+  });
+
+  testWidgets('the target field takes digits and says what is wrong in it', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1000, 4000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final memory = _MemoryStore();
+    final service = AdaptiveService(
+      _User(),
+      _Weights(),
+      _TrackedDays(),
+      memory,
+      () => _today.add(const Duration(hours: 9)),
+    );
+    await tester.pumpWidget(MaterialApp(home: CheckInScreen(service: service)));
+    await tester.pumpAndSettle();
+    final field = find.byKey(const ValueKey('check-in-target'));
+    TextField widget() => tester.widget<TextField>(field);
+
+    await tester.enterText(field, '2a1x0');
+    expect(widget().controller!.text, '210');
+
+    await tester.enterText(field, '');
+    await tester.tap(find.byKey(const ValueKey('check-in-accept')));
+    await tester.pump();
+    expect(widget().decoration!.errorText, 'Enter a daily target above 0 kcal.');
+    // not refilled with the proposal under its own error
+    expect(widget().controller!.text, isEmpty);
+    expect(find.byType(SnackBar), findsNothing);
+    expect(memory.records, isEmpty);
+
+    await tester.enterText(field, '2000');
+    await tester.pump();
+    expect(widget().decoration!.errorText, isNull);
   });
 
   testWidgets('Keep current target records the check-in at it', (tester) async {
@@ -1396,7 +1499,8 @@ void main() {
     await tester.pumpWidget(MaterialApp(home: CheckInScreen(service: service)));
     await tester.pumpAndSettle();
 
-    expect(find.text('Target settings changed'), findsOneWidget);
+    // titled as Home's card is for the same reason
+    expect(find.text('Your target settings changed'), findsOneWidget);
     expect(find.text('Weekly check-in'), findsNothing);
     expect(find.text('Activity is now counted weekly'), findsOneWidget);
     expect(
@@ -1409,6 +1513,247 @@ void main() {
     );
     // not Trends' expenditure, which holds the average activity
     expect(find.text("Expenditure with this week's activity"), findsOneWidget);
+  });
+
+  testWidgets("the first check-in is titled as Home's card, with today's "
+      'goal as Home shows it, and Keep names its figure', (tester) async {
+    locator.registerSingleton<GetKcalGoalUsecase>(_Goal());
+    addTearDown(locator.unregister<GetKcalGoalUsecase>);
+    tester.view.physicalSize = const Size(1000, 4000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final service = AdaptiveService(
+      _User(),
+      _Weights(),
+      _TrackedDays(),
+      _MemoryStore(),
+      () => _today.add(const Duration(hours: 9)),
+    );
+    final proposed = (await tester.runAsync(
+      service.checkIn,
+    ))!.proposedTargetKcal.round();
+    await tester.pumpWidget(MaterialApp(home: CheckInScreen(service: service)));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.descendant(
+        of: find.byType(AppBar),
+        matching: find.text('Your first target'),
+      ),
+      findsOneWidget,
+    );
+    expect(find.text("Today's goal"), findsOneWidget);
+    expect(find.text('3096 kcal (2847 + 249 activity)'), findsOneWidget);
+    expect(find.text('Keep 2847 kcal'), findsOneWidget);
+    // The field is the one place the proposal shows.
+    expect(find.text('Proposed target'), findsNothing);
+    expect(find.text('$proposed kcal'), findsNothing);
+    expect(
+      tester
+          .widget<TextField>(find.byKey(const ValueKey('check-in-target')))
+          .controller!
+          .text,
+      '$proposed',
+    );
+  });
+
+  testWidgets("with no activity, today's goal is the figure alone", (
+    tester,
+  ) async {
+    locator.registerSingleton<GetKcalGoalUsecase>(_Goal(activity: 0));
+    addTearDown(locator.unregister<GetKcalGoalUsecase>);
+    tester.view.physicalSize = const Size(1000, 4000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final service = AdaptiveService(
+      _User(),
+      _Weights(),
+      _TrackedDays(),
+      _MemoryStore(),
+      () => _today.add(const Duration(hours: 9)),
+    );
+    await tester.pumpWidget(MaterialApp(home: CheckInScreen(service: service)));
+    await tester.pumpAndSettle();
+
+    expect(find.text("Today's goal"), findsOneWidget);
+    // the same figure as the target in use beside it
+    expect(find.text('2847 kcal'), findsNWidgets(2));
+    expect(find.textContaining('activity)'), findsNothing);
+  });
+
+  testWidgets('a later check-in titled weekly keeps the accepted figure', (
+    tester,
+  ) async {
+    final service = AdaptiveService(
+      _User(),
+      _Weights(),
+      _TrackedDays(),
+      _MemoryStore(),
+      () => _today.add(const Duration(hours: 9)),
+    );
+    await service.accept(await service.checkIn(), 2100);
+    tester.view.physicalSize = const Size(1000, 4000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(MaterialApp(home: CheckInScreen(service: service)));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Weekly check-in'), findsOneWidget);
+    expect(find.text('Keep 2100 kcal'), findsOneWidget);
+    expect(find.text('Keep current target'), findsNothing);
+  });
+
+  testWidgets("off Adaptive, accepting leaves Home's goal: the change is "
+      "the target's", (tester) async {
+    locator.registerSingleton<GetKcalGoalUsecase>(_Goal());
+    addTearDown(locator.unregister<GetKcalGoalUsecase>);
+    tester.view.physicalSize = const Size(1000, 4000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final service = AdaptiveService(
+      _User(),
+      _Weights(),
+      _TrackedDays(),
+      _MemoryStore(),
+      () => _today.add(const Duration(hours: 9)),
+    );
+    await tester.pumpWidget(MaterialApp(home: CheckInScreen(service: service)));
+    await tester.pumpAndSettle();
+    expect(find.text('Change'), findsOneWidget);
+    expect(find.text("Change from today's goal"), findsNothing);
+  });
+
+  testWidgets('the arrival dates are the ones Goal progress gives', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1000, 4000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final t = DateTime.now();
+    final now = DateTime(t.year, t.month, t.day);
+    // 87.1 to 82 at 0.5 a week: whole weeks, 11, where the pace alone
+    // would take 72 days.
+    final plan = GoalDraft(
+      kind: PhaseKind.cut,
+      startKg: 87.1,
+      targetKg: 82,
+      start: now,
+      paceKg: 0.5,
+    ).toPlan();
+    final service = AdaptiveService(
+      _User(),
+      _Weights(),
+      _TrackedDays(),
+      _MemoryStore(),
+      () => _today.add(const Duration(hours: 9)),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: CheckInScreen(
+          service: service,
+          loadArrivals: () async => goalArrivals(_progress(now), plan),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('By your plan'), findsOneWidget);
+    expect(
+      find.text(
+        'about 11 weeks (${DateFormat.yMMMd('en_US').format(plan.lastDay)})',
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Target weight, chosen pace'), findsNothing);
+  });
+
+  test("today's goal changes to the proposal with today's shift, and only "
+      "the daily mode's activity", () {
+    int shown(double kcal) => kcal.round();
+    // The critique's: 2988 with 249 of activity, to 2545 with none.
+    final off = todayGoalChange(
+      todayKcal: 2987.8,
+      todayActivityKcal: 249.4,
+      proposedKcal: 2545.2,
+      weekdayOffsetKcal: 0,
+      dailyActivityKcal: null,
+      shown: shown,
+    );
+    expect(off, (change: -443, activityDropped: true));
+    // A shift today is in the goal after too.
+    expect(
+      todayGoalChange(
+        todayKcal: 3088,
+        todayActivityKcal: 0,
+        proposedKcal: 2545,
+        weekdayOffsetKcal: 300,
+        dailyActivityKcal: null,
+        shown: shown,
+      ),
+      (change: -243, activityDropped: false),
+    );
+    // The daily mode adds the day's counted activity, at most its cap.
+    expect(
+      todayGoalChange(
+        todayKcal: 2988,
+        todayActivityKcal: 249,
+        proposedKcal: 2545,
+        weekdayOffsetKcal: 0,
+        dailyActivityKcal: 1000,
+        shown: shown,
+      ),
+      (
+        change: 2545 + maxDailyActivityKcal.round() - 2988,
+        activityDropped: false,
+      ),
+    );
+  });
+
+  testWidgets("today's goal's parts add up to its total as shown", (
+    tester,
+  ) async {
+    late String text;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) {
+            text = todayGoalText(context, 2987.8, 249.4);
+            return const SizedBox.shrink();
+          },
+        ),
+      ),
+    );
+    // 2738.4 and 249.4 rounded apart made 2738 + 249 under 2988.
+    expect(text, '2988 kcal (2738 + 250 activity)');
+    // Activity that rounds to nothing beside the total is not named.
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) {
+            text = todayGoalText(context, 2988.4, 0.6);
+            return const SizedBox.shrink();
+          },
+        ),
+      ),
+    );
+    expect(text, '2988 kcal');
+  });
+
+  test("today's goal's activity: the daily mode's on a check-in's target, "
+      'else what the logged activities add', () {
+    // formula: 3096 with the logged activities, 2847 without
+    expect(todayGoalActivity(3096, 2847, null), 249);
+    expect(todayGoalActivity(3096, 2847, const ForkKcalGoal()), 249);
+    // a check-in's target ignores the activities asked for; the daily
+    // mode's own is in it
+    expect(
+      todayGoalActivity(
+        2300,
+        2300,
+        const ForkKcalGoal(target: 2300, activityKcal: 300),
+      ),
+      300,
+    );
   });
 
   test('each changed setting is a sentence', () {
@@ -1443,13 +1788,35 @@ void main() {
       _MemoryStore(),
       () => _today.add(const Duration(hours: 9)),
     );
-    await _pumpLarge(tester, service);
+    final t = DateTime.now();
+    final now = DateTime(t.year, t.month, t.day);
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      MaterialApp(
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(
+            context,
+          ).copyWith(textScaler: const TextScaler.linear(2)),
+          child: child!,
+        ),
+        home: CheckInScreen(
+          service: service,
+          loadArrivals: () async => goalArrivals(_progress(now), null),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
 
-    final label = find.text('Target weight, chosen pace');
+    final label = find.text('From today at your plan’s pace');
     await tester.scrollUntilVisible(label, 200);
     // Squeezed beside its value it took a letter a line.
     expect(tester.getSize(label).height, lessThan(200));
-    expect(find.textContaining('Your first target'), findsNothing);
+    expect(
+      find.textContaining('Your first target, from your profile'),
+      findsNothing,
+    );
     expect(tester.takeException(), isNull);
   });
 
@@ -1528,12 +1895,17 @@ class _Config extends Fake implements GetConfigUsecase {
 }
 
 class _Goal extends Fake implements GetKcalGoalUsecase {
+  /// What the day's logged activities add to the formula.
+  final double activity;
+
+  _Goal({this.activity = 249});
+
   @override
   Future<double> getKcalGoal({
     UserEntity? userEntity,
     double? totalKcalActivitiesParam,
     double? kcalUserAdjustment,
-  }) async => totalKcalActivitiesParam == 0 ? 2847 : 3096;
+  }) async => totalKcalActivitiesParam == 0 ? 2847 : 2847 + activity;
 }
 
 /// Hive's file I/O does not finish in a widget test's fake time.
@@ -1556,6 +1928,17 @@ class _MemoryStore extends AdaptiveStore {
   Future<void> replaceLastCheckIn(CheckInRecord record) async {
     accepts++;
     records[records.length - 1] = record;
+  }
+}
+
+/// Holds each check-in saved while [gate] is open.
+class _SlowStore extends _MemoryStore {
+  Completer<void>? gate;
+
+  @override
+  Future<void> addCheckIn(CheckInRecord record) async {
+    await gate?.future;
+    return super.addCheckIn(record);
   }
 }
 

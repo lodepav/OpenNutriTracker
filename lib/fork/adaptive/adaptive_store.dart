@@ -463,6 +463,10 @@ class AdaptiveStore {
     await box.put('checkIns', [...all.take(all.length - 1), record.toJson()]);
   }
 
+  /// Puts [records] in place of all check-ins, as an Undo of one does.
+  Future<void> restoreCheckIns(List<CheckInRecord> records) async =>
+      (await _box()).put('checkIns', [for (final r in records) r.toJson()]);
+
   Future<void> addCheckIn(CheckInRecord record) async {
     final box = await _box();
     await box.put('checkIns', [

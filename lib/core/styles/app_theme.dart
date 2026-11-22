@@ -181,7 +181,13 @@ ThemeData buildAppTheme(AppPalette p) {
         // [/fork]
       ),
     ),
-    listTileTheme: const ListTileThemeData(shape: RoundedRectangleBorder(borderRadius: Dimens.borderRadiusM)),
+    // [fork] S503 list-tile-selected: a chosen row drew in the raw accent
+    // listTileTheme: const ListTileThemeData(shape: RoundedRectangleBorder(borderRadius: Dimens.borderRadiusM)),
+    listTileTheme: ListTileThemeData(
+      shape: const RoundedRectangleBorder(borderRadius: Dimens.borderRadiusM),
+      selectedColor: textAccentOf(p),
+    ),
+    // [/fork]
     bottomSheetTheme: BottomSheetThemeData(
       backgroundColor: p.surface,
       surfaceTintColor: Colors.transparent,

@@ -116,7 +116,8 @@ extension _AppearanceSettings on _SettingsScreenState {
             palette: palette,
             icon: Icons.tune_rounded,
             title: S.of(context).settingsNutrientsLabel,
-            subtitle: S.of(context).settingsNutrientsSubtitle,
+            // The page it opens says "daily panel"
+            subtitle: 'Pick which nutrients appear on the daily panel',
             showChevron: true,
             onTap: () => _openNutrientVisibilityScreen(context),
           ),

@@ -126,7 +126,7 @@ void main() {
     tester,
   ) async {
     await pump(tester);
-    await tester.tap(find.byTooltip('More'));
+    await tester.tap(find.byTooltip('More servings'));
     await tester.pump();
     await tester.tap(find.text('Dinner').last);
     await tester.pumpAndSettle();

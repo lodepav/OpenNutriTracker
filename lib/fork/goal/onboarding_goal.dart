@@ -36,12 +36,35 @@ abstract final class OnboardingGoal {
     if (await (actions ?? GoalActions()).start(plan)) pending.value = null;
   }
 
+  /// [goal] picked on the page: one the plan is not for drops the plan,
+  /// so the page never shows a plan Start would not use. Returns the plan
+  /// dropped, for Undo.
+  static PhasePlan? picked(UserGoalSelectionEntity goal) {
+    final plan = pending.value;
+    if (plan == null || choiceFor(plan.kind) == goal) return null;
+    pending.value = null;
+    return plan;
+  }
+
   /// [plan] from a weight corrected after planning; null when its target is
   /// no longer ahead of it.
   static PhasePlan? replanned(PhasePlan plan, double? weightKg) {
     if (weightKg == null || plan.startKg == weightKg) return plan;
     final moved = restarted(plan, plan.start, weightKg);
     return queuedProblem(moved) == null ? moved : null;
+  }
+
+  /// A new plan's draft, on the goal [chosen] on the page when one was.
+  static GoalDraft freshDraft(
+    double nowKg,
+    DateTime today, {
+    double? targetKg,
+    UserGoalSelectionEntity? chosen,
+  }) {
+    final draft = GoalDraft.fresh(nowKg, today, targetKg: targetKg);
+    if (chosen == null) return draft;
+    final kind = PhaseKind.values.firstWhere((k) => choiceFor(k) == chosen);
+    return kind == draft.kind ? draft : draftOfKind(draft, kind);
   }
 
   /// Upstream's goal choice for [kind].
@@ -77,10 +100,11 @@ class OnboardingPlanRow extends StatelessWidget {
     final pending = OnboardingGoal.pending.value;
     final draft = pending != null
         ? GoalDraft.of(pending, setup.nowKg).copyWith(startKg: setup.nowKg)
-        : GoalDraft.fresh(
+        : OnboardingGoal.freshDraft(
             setup.nowKg,
             DateTime.now(),
             targetKg: setup.targetKg,
+            chosen: chosen,
           );
     await Navigator.of(context).push<bool>(
       MaterialPageRoute(

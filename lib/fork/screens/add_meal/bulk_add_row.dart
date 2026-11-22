@@ -14,12 +14,11 @@ extension _BulkAddRow on _BulkAddScreenState {
   /// name and its macros under it, its energy and amount on the trailing
   /// edge. A tap opens its amount (the food page's picker, with another
   /// match a tap away). A food that needs a look shows a warning in place
-  /// of its picture and a short note, and comes first. A swipe to the left
-  /// leaves it out, with Undo; a left-out food says so and puts it back.
+  /// of its picture and a short note, and comes first. A swipe to the left,
+  /// or its Leave out button, leaves it out, with Undo; a left-out food says
+  /// so and puts it back.
   Widget _buildRow(BuildContext context, BulkAddLoadedState state, int index) {
     final row = state.rows[index];
-    // an amount set by a chip, said once a row is built
-    _sayAmountAnswer(context);
     final theme = Theme.of(context);
     final textTheme = theme.textTheme;
     final palette = paletteOf(context);
@@ -126,6 +125,17 @@ extension _BulkAddRow on _BulkAddScreenState {
                     ),
                   ),
               ],
+            ),
+          ),
+        // the swipe's visible twin; a left-out row has Put back instead
+        if (!row.skipped)
+          IconButton(
+            key: ValueKey('bulk-add-leave-out-$index'),
+            tooltip: 'Leave out ${shownRowTitle(row)}',
+            onPressed: () => _leaveOut(index, row),
+            icon: Icon(
+              Icons.remove_circle_outline_rounded,
+              color: palette.textMuted,
             ),
           ),
       ],
@@ -289,7 +299,7 @@ extension _BulkAddRow on _BulkAddScreenState {
       shownEditUnit(row, imperial);
 
   /// The amber of a card that needs a look: the tertiary colour, which is
-  /// the app's warning hue.
+  /// the app's warning hue. For fills and icons; its text is warningText.
   Color _warnColor(BuildContext context) =>
       Theme.of(context).colorScheme.tertiary;
 
@@ -326,7 +336,9 @@ extension _BulkAddRow on _BulkAddScreenState {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final warn = _warnColor(context);
-    Widget pill(String text, Color color) => Container(
+    // light tertiary is under 4.5:1 as text
+    final warnText = paletteOf(context).warningText;
+    Widget pill(String text, Color color, [Color? ink]) => Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.14),
@@ -335,7 +347,7 @@ extension _BulkAddRow on _BulkAddScreenState {
       child: Text(
         text,
         style: theme.textTheme.labelSmall?.copyWith(
-          color: color,
+          color: ink ?? color,
           fontWeight: FontWeight.w600,
         ),
       ),
@@ -343,16 +355,25 @@ extension _BulkAddRow on _BulkAddScreenState {
     Widget line(String text, Color color) =>
         Text(text, style: theme.textTheme.bodySmall?.copyWith(color: color));
     if (!row.isResolved) {
-      return pill(S.of(context).bulkAddNoMatchLabel, scheme.error);
+      // light error is 4.12:1 on its own tint
+      final tint = Color.alphaBlend(
+        scheme.error.withValues(alpha: 0.14),
+        paletteOf(context).surface,
+      );
+      return pill(
+        S.of(context).bulkAddNoMatchLabel,
+        scheme.error,
+        textSafe(scheme.error, tint),
+      );
     }
     if (_dishBreakdown.isPending(row)) {
-      return line(DishStrings.breakingDown, scheme.tertiary);
+      return line(DishStrings.breakingDown, warnText);
     }
     if (row.isLowConfidence) {
-      return pill(S.of(context).bulkAddUncertainLabel, warn);
+      return pill(S.of(context).bulkAddUncertainLabel, warn, warnText);
     }
     if (row.amountNeedsCheck) {
-      return pill(S.of(context).bulkAddCheckAmountLabel, warn);
+      return pill(S.of(context).bulkAddCheckAmountLabel, warn, warnText);
     }
     // Only that the number is the app's, not the user's (#864): muted.
     if (row.amountIsProvisional) {
@@ -364,7 +385,7 @@ extension _BulkAddRow on _BulkAddScreenState {
     // under its dish's heading it needs no line of its own
     if (row.dishIngredient case final ingredient?
         when _separateDishes.contains(ingredient.group)) {
-      return line(DishStrings.ingredientOf(ingredient.dish), scheme.tertiary);
+      return line(DishStrings.ingredientOf(ingredient.dish), warnText);
     }
     return null;
   }
@@ -435,10 +456,11 @@ extension _BulkAddRow on _BulkAddScreenState {
       );
       if (_quantityErrors.containsKey(index)) _clearQuantityError(index);
       _review.pinRow(index);
+      // a held row's step is the user's answer to its unit check
       _bloc.add(
-        shown == null
+        shown == null && !row.amountWouldBeWrong
             ? ChangeRowAmountEvent(index, next)
-            : SetRowInShownUnitEvent(index, shown, next),
+            : SetRowInShownUnitEvent(index, unit, next),
       );
     }
 
@@ -446,7 +468,7 @@ extension _BulkAddRow on _BulkAddScreenState {
       children: [
         IconButton.filledTonal(
           key: ValueKey('bulk-add-less-$index'),
-          tooltip: 'Less',
+          tooltip: 'Less ${shownRowTitle(row)}',
           style: _stepperStyle,
           onPressed: quantity == null ? null : () => step(up: false),
           icon: const Icon(Icons.remove),
@@ -478,7 +500,7 @@ extension _BulkAddRow on _BulkAddScreenState {
         const SizedBox(width: 4),
         IconButton.filledTonal(
           key: ValueKey('bulk-add-more-$index'),
-          tooltip: 'More',
+          tooltip: 'More ${shownRowTitle(row)}',
           style: _stepperStyle,
           onPressed: () => step(up: true),
           icon: const Icon(Icons.add),
@@ -538,15 +560,16 @@ extension _BulkAddRow on _BulkAddScreenState {
       }
       if (_quantityErrors.containsKey(index)) _clearQuantityError(index);
       _review.pinRow(index);
-      // typed in the unit shown, which the user did not choose: the row
-      // asks to check its amount still, as it would in metric units
+      // typed in the unit shown, which the user did not choose; on a held
+      // row, typed at all: the amount set by hand answers the unit check
+      final row = current.rows[index];
       if (!unitChosen &&
-          to == shown &&
-          current.rows[index].effectiveUnit != to) {
+          (to == shown && row.effectiveUnit != to ||
+              row.effectiveUnit == to && row.amountWouldBeWrong)) {
         _bloc.add(SetRowInShownUnitEvent(index, to, amount));
         return;
       }
-      if (unitChosen || current.rows[index].effectiveUnit != to) {
+      if (unitChosen || row.effectiveUnit != to) {
         _bloc.add(ChangeRowUnitEvent(index, to));
       }
       _bloc.add(ChangeRowAmountEvent(index, amount));
@@ -564,6 +587,7 @@ extension _BulkAddRow on _BulkAddScreenState {
         text: text,
         imperial: imperial,
         send: send,
+        flagged: row.amountNeedsCheck,
         // another of the foods the search found, from the sheet (D37)
         onOtherMatch: row.resolved.candidates.length > 1
             ? () {
@@ -658,6 +682,9 @@ class _RowAmountSheet extends StatefulWidget {
   /// Picks another match for the food; null when the search found one.
   final VoidCallback? onOtherMatch;
 
+  /// The row asks to check its unit: the sheet offers to keep it as it is.
+  final bool flagged;
+
   const _RowAmountSheet({
     required this.base,
     required this.meal,
@@ -666,6 +693,7 @@ class _RowAmountSheet extends StatefulWidget {
     required this.imperial,
     required this.send,
     this.onOtherMatch,
+    this.flagged = false,
   });
 
   @override
@@ -677,6 +705,7 @@ class _RowAmountSheetState extends State<_RowAmountSheet> {
   late String _unit = widget.unit;
   late MealEntity _meal = widget.meal;
   var _setting = false;
+  late var _flagged = widget.flagged;
 
   @override
   void initState() {
@@ -700,6 +729,16 @@ class _RowAmountSheetState extends State<_RowAmountSheet> {
     final own = await OwnPortions.current.of(widget.base);
     if (mounted) setState(() => _meal = withOwnPortions(widget.base, own));
     return _meal;
+  }
+
+  /// "1 oz", "2 slice": the amount as the field shows it.
+  String _keptAmount(BuildContext context) {
+    final option = amountUnitOptions(
+      _meal,
+      selected: _unit,
+      imperial: widget.imperial,
+    ).firstWhere((o) => o.unit == _unit);
+    return '${_controller.text.trim()} ${amountUnitWord(context, _meal, option)}';
   }
 
   @override
@@ -733,7 +772,7 @@ class _RowAmountSheetState extends State<_RowAmountSheet> {
             _controller.text = text;
             _setting = false;
             widget.send(text, to, _meal, true);
-            setState(() {});
+            setState(() => _flagged = false);
           },
           onAddPortion: (label, grams) async {
             await OwnPortions.current.add(widget.base, label, grams);
@@ -744,6 +783,23 @@ class _RowAmountSheetState extends State<_RowAmountSheet> {
             return _reload();
           },
         ),
+        // the answer the row's check asks for, without a new portion (G2 r3)
+        if (_flagged) ...[
+          const SizedBox(height: 12),
+          OutlinedButton.icon(
+            key: const ValueKey('bulk-add-keep-unit'),
+            onPressed: () {
+              widget.send(_controller.text, _unit, _meal, true);
+              Navigator.pop(context);
+            },
+            icon: const Icon(Icons.check_rounded),
+            // follows what is typed, which is what Keep keeps
+            label: ListenableBuilder(
+              listenable: _controller,
+              builder: (context, _) => Text('Keep ${_keptAmount(context)}'),
+            ),
+          ),
+        ],
         const SizedBox(height: 16),
         Row(
           children: [

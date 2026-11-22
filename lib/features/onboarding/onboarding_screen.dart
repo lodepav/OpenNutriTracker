@@ -32,6 +32,9 @@ import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/fork/adaptive/onboarding_macros.dart';
 import 'package:opennutritracker/fork/goal/onboarding_goal.dart';
 // [/fork]
+import 'package:opennutritracker/fork/onboarding/onboarding_back.dart'; // [fork] S332
+import 'package:opennutritracker/fork/onboarding/overview_grams.dart'; // [fork] S333
+import 'package:opennutritracker/fork/onboarding/start_failure.dart'; // [fork] S466
 
 /// The onboarding pages, in the order they are shown.
 ///
@@ -78,6 +81,25 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   /// that page reveals the errors for fields the user never left.
   final _bodyMeasurementsShowErrors = ValueNotifier<int>(0);
 
+  // [fork] S368 onboarding-body-blocked: the body page's message naming the
+  // one wrong field; null keeps the general one
+  final _forkBodyBlocked = ValueNotifier<String?>(null);
+  // [/fork]
+
+  // [fork] S420 onboarding-about-you-blocked: About you's message naming
+  // the one wrong field; null keeps the general one
+  final _forkAboutYouBlocked = ValueNotifier<String?>(null);
+  // [/fork]
+
+  // [fork] S332 onboarding-back: the page shown, so system Back can step back
+  int _forkPage = 0;
+  // [/fork]
+
+  // [fork] S466 start-busy: set while Start saves, so a second tap does not
+  // save again and push the main route twice
+  bool _forkStarting = false;
+  // [/fork]
+
   @override
   void initState() {
     _onboardingBloc = locator<OnboardingBloc>();
@@ -104,6 +126,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     AdaptiveStore.settings.removeListener(_forkMacrosChanged);
     // [/fork]
     _bodyMeasurementsShowErrors.dispose();
+    _forkBodyBlocked.dispose(); // [fork] S368
+    _forkAboutYouBlocked.dispose(); // [fork] S420
     super.dispose();
   }
 
@@ -130,15 +154,26 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       ),
     );
 
-    if (cancelToProfileId == null) return scaffold;
-
-    return PopScope(
-      canPop: false,
-      onPopInvokedWithResult: (didPop, _) {
-        if (!didPop) _onCancelAddProfile(cancelToProfileId);
-      },
+    // [fork] S332 onboarding-back: system Back steps back a page and keeps
+    // the answers; only the first page leaves (or cancels an added profile)
+    return OnboardingBack(
+      page: _forkPage,
+      onPrevious: () => _introKey.currentState?.previous(),
+      onFirstPage: cancelToProfileId == null
+          ? null
+          : () => _onCancelAddProfile(cancelToProfileId),
       child: scaffold,
     );
+    // if (cancelToProfileId == null) return scaffold;
+    //
+    // return PopScope(
+    //   canPop: false,
+    //   onPopInvokedWithResult: (didPop, _) {
+    //     if (!didPop) _onCancelAddProfile(cancelToProfileId);
+    //   },
+    //   child: scaffold,
+    // );
+    // [/fork]
   }
 
   /// Backs out of onboarding for a freshly-added profile: deletes that
@@ -178,6 +213,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       key: _introKey,
       scrollPhysics: const NeverScrollableScrollPhysics(),
       back: const Icon(Icons.arrow_back_outlined),
+      backSemantic: 'Back', // [fork] S332: the arrow was unlabelled
       showBackButton: true,
       showNextButton: false,
       showDoneButton: false,
@@ -234,13 +270,20 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           initialGender: selection.gender,
           initialCaloriesProfile: selection.caloriesProfile,
           initialBirthday: selection.birthday,
+          blockedMessage: _forkAboutYouBlocked, // [fork] S420
         ),
         footer: HighlightButton(
           buttonLabel: S.of(context).buttonNextLabel,
           onButtonPressed: () =>
               _scrollToPage(_OnboardingPage.bodyMeasurements),
           buttonActive: _aboutYouPageButtonActive,
-          inactiveMessage: S.of(context).onboardingBlockedProfileSnack,
+          // [fork] S420 onboarding-about-you-blocked: set before
+          // setPageContent's rebuild, so it is current
+          inactiveMessage:
+              _forkAboutYouBlocked.value ??
+              S.of(context).onboardingBlockedProfileSnack,
+          // inactiveMessage: S.of(context).onboardingBlockedProfileSnack,
+          // [/fork]
         ),
       ),
       PageViewModel(
@@ -257,12 +300,18 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           initialBodyWeightUnit: selection.bodyWeightUnit,
           initialFoodImperial: selection.foodUsesImperial,
           showErrorsSignal: _bodyMeasurementsShowErrors,
+          blockedMessage: _forkBodyBlocked, // [fork] S368
         ),
         footer: HighlightButton(
           buttonLabel: S.of(context).buttonNextLabel,
           onButtonPressed: () => _scrollToPage(_OnboardingPage.activity),
           buttonActive: _bodyMeasurementsPageButtonActive,
-          inactiveMessage: S.of(context).onboardingBlockedBodySnack,
+          // [fork] S368 onboarding-body-blocked: set before setButtonContent's
+          // rebuild, so it is current
+          inactiveMessage:
+              _forkBodyBlocked.value ?? S.of(context).onboardingBlockedBodySnack,
+          // inactiveMessage: S.of(context).onboardingBlockedBodySnack,
+          // [/fork]
           onBlockedPressed: () => _bodyMeasurementsShowErrors.value++,
         ),
       ),
@@ -341,18 +390,30 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   .toString() ?? // [fork] S89
               _onboardingBloc.getOverviewCalorieGoal()?.round().toString() ??
               "?",
-          carbsGoalString:
-              _forkMacros()?.carbsG.round().toString() ?? // [fork] S89
-              _onboardingBloc.getOverviewCarbsGoal()?.toInt().toString() ??
-              "?",
-          fatGoalString:
-              _forkMacros()?.fatG.round().toString() ?? // [fork] S89
-              _onboardingBloc.getOverviewFatGoal()?.toInt().toString() ??
-              "?",
-          proteinGoalString:
-              _forkMacros()?.proteinG.round().toString() ?? // [fork] S89
-              _onboardingBloc.getOverviewProteinGoal()?.toInt().toString() ??
-              "?",
+          // [fork] S333 overview-grams: rounded as Home rounds; toInt()
+          // showed 322 g where Home showed 323 g
+          carbsGoalString: overviewGrams(
+            _forkMacros()?.carbsG ?? _onboardingBloc.getOverviewCarbsGoal(),
+          ),
+          fatGoalString: overviewGrams(
+            _forkMacros()?.fatG ?? _onboardingBloc.getOverviewFatGoal(),
+          ),
+          proteinGoalString: overviewGrams(
+            _forkMacros()?.proteinG ?? _onboardingBloc.getOverviewProteinGoal(),
+          ),
+          // carbsGoalString:
+          //     _forkMacros()?.carbsG.round().toString() ?? // [fork] S89
+          //     _onboardingBloc.getOverviewCarbsGoal()?.toInt().toString() ??
+          //     "?",
+          // fatGoalString:
+          //     _forkMacros()?.fatG.round().toString() ?? // [fork] S89
+          //     _onboardingBloc.getOverviewFatGoal()?.toInt().toString() ??
+          //     "?",
+          // proteinGoalString:
+          //     _forkMacros()?.proteinG.round().toString() ?? // [fork] S89
+          //     _onboardingBloc.getOverviewProteinGoal()?.toInt().toString() ??
+          //     "?",
+          // [/fork]
           setButtonActive: _setOverviewPageContent,
           breakdown:
               OnboardingMacros.overviewKcal(
@@ -374,6 +435,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           },
           buttonActive: _overviewPageButtonActive,
           inactiveMessage: S.of(context).onboardingBlockedOverviewSnack,
+          busy: _forkStarting, // [fork] S466
         ),
       ),
     ];
@@ -471,6 +533,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   void onPageChanged(int page) {
+    _forkPage = page; // [fork] S332: for system Back
     checkUserDataProvided();
   }
 
@@ -544,7 +607,21 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     return true;
   }
 
+  // [fork] S466 start-busy: one save at a time, Start off while it runs
   Future<void> _onOverviewStartButtonPressed(BuildContext context) async {
+    if (_forkStarting) return;
+    setState(() => _forkStarting = true);
+    try {
+      // a save that throws says so, and Start comes back on below
+      await startOrSay(context, () => _forkStart(context));
+    } finally {
+      if (mounted) setState(() => _forkStarting = false);
+    }
+  }
+
+  Future<void> _forkStart(BuildContext context) async {
+  // Future<void> _onOverviewStartButtonPressed(BuildContext context) async {
+  // [/fork]
     final userEntity = _onboardingBloc.userSelection.toUserEntity();
     final hasAcceptedDataCollection =
         _onboardingBloc.userSelection.acceptDataCollection;

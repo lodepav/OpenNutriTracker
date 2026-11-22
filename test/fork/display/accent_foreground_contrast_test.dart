@@ -107,7 +107,9 @@ void main() {
   ) async {
     for (final p in [AppPalette.light, AppPalette.dark]) {
       await _pumpSegments(tester, p);
-      expect(_labelColor(tester), p.accent, reason: p.brightness.name);
+      // the text accent: light's moves a shade, to 4.5:1 on muted panels,
+      // and dark's is the accent (accent_floor_test)
+      expect(_labelColor(tester), textAccentOf(p), reason: p.brightness.name);
       await _pumpTile(tester, p);
       expect(_iconColor(tester), p.accent, reason: p.brightness.name);
     }

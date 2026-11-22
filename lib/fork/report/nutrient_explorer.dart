@@ -6,13 +6,15 @@ import 'package:opennutritracker/core/domain/entity/tracked_day_entity.dart';
 import 'package:opennutritracker/core/domain/entity/user_entity.dart';
 import 'package:opennutritracker/core/domain/usecase/get_config_usecase.dart';
 import 'package:opennutritracker/core/domain/usecase/get_user_usecase.dart';
+import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/utils/calc/day_boundary_calc.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_nutriments_entity.dart';
 import 'package:opennutritracker/features/diary/presentation/widgets/daily_nutrient_panel.dart';
 import 'package:opennutritracker/features/settings/presentation/widgets/nutrient_goals_screen.dart';
-import 'package:opennutritracker/fork/display/contrast.dart';
 import 'package:opennutritracker/fork/display/display_prefs.dart';
+import 'package:opennutritracker/fork/report/goal_standing.dart';
+import 'package:opennutritracker/fork/units/amount_text.dart' show spokenUnit;
 import 'package:opennutritracker/fork/units/energy_text.dart';
 
 /// One nutrient the explorer follows.
@@ -41,6 +43,10 @@ class ExplorerNutrient {
   /// Decimals its amounts show with: salt's few grams need one.
   final int decimals;
 
+  /// A goal to land near, not just reach: energy, carbs or fat over its
+  /// band is over.
+  final bool isBand;
+
   /// Energy and the macros follow a plan that may be under or over on
   /// purpose, so their bars are not marked as missed.
   bool get marksMiss => fallbackGoal != null;
@@ -55,6 +61,7 @@ class ExplorerNutrient {
     this.isLimit = false,
     this.scale = 1,
     this.decimals = 0,
+    this.isBand = false,
   });
 
   /// Upstream's own sum (`NutrientPanelTotals`): amount times per 100 / 100.
@@ -78,14 +85,23 @@ final _energy = ExplorerNutrient(
   'kcal',
   (n) => n.energyKcal100,
   (d) => d.calorieGoal,
+  isBand: true,
 );
 final _carbs = ExplorerNutrient(
   'Carbs',
   'g',
   (n) => n.carbohydrates100,
   (d) => d.carbsGoal,
+  isBand: true,
 );
-final _fat = ExplorerNutrient('Fat', 'g', (n) => n.fat100, (d) => d.fatGoal);
+// Home says fat and carbs past their goal are over, so they are bands too.
+final _fat = ExplorerNutrient(
+  'Fat',
+  'g',
+  (n) => n.fat100,
+  (d) => d.fatGoal,
+  isBand: true,
+);
 final _protein = ExplorerNutrient(
   'Protein',
   'g',
@@ -208,13 +224,23 @@ class NutrientSummary {
   /// floor (Open Food Facts often lacks the micronutrients).
   final int foodsWithout;
 
+  /// The days in the range with anything logged, which [perDay] is over.
+  final int daysLogged;
+
   const NutrientSummary({
     required this.nutrient,
     required this.perDay,
     required this.goal,
     required this.foods,
     required this.foodsWithout,
+    required this.daysLogged,
   });
+
+  /// [foods] less those that added none of it, as the by-food list shows.
+  List<FoodShare> get foodsGiving => [
+    for (final f in foods)
+      if (f.amount > 0) f,
+  ];
 }
 
 String _foodKey(IntakeEntity i) => i.meal.code ?? i.meal.name ?? '';
@@ -291,6 +317,7 @@ List<NutrientSummary> summarizeNutrients(
       foods: byFood.values.toList()
         ..sort((a, b) => b.amount.compareTo(a.amount)),
       foodsWithout: without.length,
+      daysLogged: logged.length,
     );
   }
 
@@ -451,14 +478,16 @@ class _NutrientExplorerScreenState extends State<NutrientExplorerScreen> {
         }
         return ListView(
           children: [
+            _RangeLine(widget.first, widget.last, all.first.daysLogged),
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
               child: Text(
-                'A day\'s mean over the days logged, against their goals.',
+                'A day\'s average over the days logged, against their goals. '
+                '$goalStandingKey',
                 style: Theme.of(context).textTheme.bodySmall,
               ),
             ),
-            for (final s in all) _NutrientTile(s),
+            for (final s in all) _NutrientTile(s, widget.first, widget.last),
           ],
         );
       },
@@ -466,15 +495,52 @@ class _NutrientExplorerScreenState extends State<NutrientExplorerScreen> {
   );
 }
 
+/// The row's name: salt says where it comes from, as the editor and the
+/// Nutrients list call it Sodium.
+String goalRowLabel(ExplorerNutrient n) =>
+    n.driKey == NutrientPanelKeys.sodium ? '${n.label} (from sodium)' : n.label;
+
 String _amount(BuildContext context, ExplorerNutrient n, double value) =>
     n.unit == 'kcal'
     ? energyText(context, value)
     : '${value < 10 ? value.toStringAsFixed(1) : value.round()} ${n.unit}';
 
+/// [_amount] as a screen reader should say it: "12.0 micrograms" (A5).
+String _spokenAmount(BuildContext context, ExplorerNutrient n, double value) {
+  final text = _amount(context, n, value);
+  final cut = text.lastIndexOf(' ');
+  return '${text.substring(0, cut)} ${spokenUnit(text.substring(cut + 1))}';
+}
+
+/// The dated range a page averages over, under its title.
+class _RangeLine extends StatelessWidget {
+  final DateTime first;
+  final DateTime last;
+  final int logged;
+
+  const _RangeLine(this.first, this.last, this.logged);
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+    child: Text(
+      nutrientRangeLine(
+        first,
+        last,
+        logged,
+        locale: Localizations.localeOf(context).toLanguageTag(),
+      ),
+      style: Theme.of(context).textTheme.bodyMedium,
+    ),
+  );
+}
+
 class _NutrientTile extends StatelessWidget {
   final NutrientSummary summary;
+  final DateTime first;
+  final DateTime last;
 
-  const _NutrientTile(this.summary);
+  const _NutrientTile(this.summary, this.first, this.last);
 
   @override
   Widget build(BuildContext context) {
@@ -482,12 +548,38 @@ class _NutrientTile extends StatelessWidget {
     final n = s.nutrient;
     final goal = s.goal;
     final share = goal == null || goal == 0 ? null : s.perDay / goal;
-    final scheme = Theme.of(context).colorScheme;
-    final missed =
-        n.marksMiss && share != null && (n.isLimit ? share > 1 : share < 0.9);
+    final palette = paletteOf(context);
+    final standing = goalStanding(
+      isLimit: n.isLimit,
+      perDay: s.perDay,
+      goal: goal,
+      isBand: n.isBand,
+    );
+    final color = goalStandingColor(
+      standing,
+      palette,
+      Theme.of(context).colorScheme,
+    );
+    final word = goalStandingWord(
+      standing,
+      isLimit: n.isLimit,
+      isBand: n.isBand,
+    );
+    final foods = s.foodsGiving;
     return ListTile(
       key: ValueKey('nutrient-${n.label}'),
-      title: Text(n.label),
+      // The share sits in the title row, not trailing: a wider trailing
+      // narrowed that row's bar, so a full bar stopped short of the others.
+      title: Row(
+        children: [
+          Expanded(child: Text(goalRowLabel(n))),
+          if (share != null) Text('${(share * 100).round()}%'),
+          // In the title row too, so a row that opens its foods keeps its bar
+          // as wide as one that doesn't.
+          if (foods.isNotEmpty)
+            const Icon(Icons.chevron_right_rounded, key: ValueKey('opens')),
+        ],
+      ),
       subtitle: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -496,17 +588,27 @@ class _NutrientTile extends StatelessWidget {
               '${_amount(context, n, s.perDay)} a day',
               if (goal != null)
                 '${n.isLimit ? 'limit' : 'goal'} ${_amount(context, n, goal)}',
+              ?word,
             ].join(' · '),
+            semanticsLabel: [
+              '${_spokenAmount(context, n, s.perDay)} a day',
+              if (goal != null)
+                '${n.isLimit ? 'limit' : 'goal'} '
+                    '${_spokenAmount(context, n, goal)}',
+              ?word,
+            ].join(', '),
           ),
           if (share != null)
             Padding(
               padding: const EdgeInsets.only(top: 4),
-              child: LinearProgressIndicator(
-                value: share.clamp(0.0, 1.0),
-                // the default track is secondaryContainer
-                color: missed
-                    ? scheme.error
-                    : chartSafe(scheme.primary, scheme.secondaryContainer),
+              // The row's text says the amount and goal; the bar's own value
+              // would be read first.
+              child: ExcludeSemantics(
+                child: LinearProgressIndicator(
+                  value: share.clamp(0.0, 1.0),
+                  color: color,
+                  backgroundColor: palette.surfaceMuted,
+                ),
               ),
             ),
           if (s.foodsWithout > 0)
@@ -517,36 +619,60 @@ class _NutrientTile extends StatelessWidget {
             ),
         ],
       ),
-      trailing: share == null ? null : Text('${(share * 100).round()}%'),
-      onTap: s.foods.isEmpty
+      onTap: foods.isEmpty
           ? null
           : () => Navigator.push(
               context,
-              MaterialPageRoute<void>(builder: (_) => _FoodsScreen(s)),
+              MaterialPageRoute<void>(
+                builder: (_) => _FoodsScreen(s, first, last),
+              ),
             ),
     );
   }
 }
 
+/// [label] inside a sentence: only its first letter lowers ("vitamin D").
+String _inLine(String label) => label[0].toLowerCase() + label.substring(1);
+
 class _FoodsScreen extends StatelessWidget {
   final NutrientSummary summary;
+  final DateTime first;
+  final DateTime last;
 
-  const _FoodsScreen(this.summary);
+  const _FoodsScreen(this.summary, this.first, this.last);
 
   @override
   Widget build(BuildContext context) {
     final n = summary.nutrient;
+    final label = goalRowLabel(n);
     final total = summary.foods.fold<double>(0, (s, f) => s + f.amount);
+    final foods = summary.foodsGiving;
+    final days = summary.daysLogged;
     return Scaffold(
-      appBar: AppBar(title: Text('${n.label} by food')),
+      appBar: AppBar(title: Text('$label by food')),
       body: ListView(
         children: [
-          for (final f in summary.foods)
+          _RangeLine(first, last, summary.daysLogged),
+          for (final f in foods)
             ListTile(
               title: Text(f.name),
-              subtitle: Text('${_amount(context, n, f.amount)} in the range'),
-              trailing: Text(
-                total == 0 ? '' : '${(f.amount / total * 100).round()}%',
+              // Over the days logged, as the explorer's "a day", so the
+              // foods add up to its figure.
+              subtitle: Text(
+                [
+                  '${_amount(context, n, days == 0 ? 0 : f.amount / days)} '
+                      'a day',
+                  if (total > 0)
+                    '${(f.amount / total * 100).round()}% of the '
+                        '${_inLine(label)} logged',
+                ].join(' · '),
+                semanticsLabel: [
+                  '${_spokenAmount(context, n, days == 0 ? 0 : f.amount / days)} '
+                      'a day',
+                  if (total > 0)
+                    '${(f.amount / total * 100).round()}% of the '
+                        '${_inLine(label)} logged',
+                ].join(', '),
               ),
             ),
         ],

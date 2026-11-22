@@ -96,7 +96,10 @@ extension _DataSettings on _SettingsScreenState {
             iconColor: error,
             titleColor: error,
             title: S.of(context).settingsDeleteAllDataLabel,
-            subtitle: S.of(context).settingsDeleteAllDataSubtitle,
+            // The shared AI key is named here too: it goes for every profile
+            subtitle:
+                'Profile, logged foods, activities, weight history, progress '
+                'photos, fasting sessions and the shared AI key',
             onTap: () => _confirmDeleteAllData(context),
           ),
         ],
@@ -131,8 +134,34 @@ extension _DataSettings on _SettingsScreenState {
       builder: (ctx) => AlertDialog(
         scrollable: true,
         title: Text(l10n.settingsDeleteAllDataConfirmTitle),
-        content: Text(l10n.settingsDeleteAllDataConfirmContent),
+        // What goes first, what stays next, then that it is final
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Deletes this profile and its goals, logged foods, water, '
+              'favourites, activities, weigh-ins, body measurements, '
+              'progress photos and fasting sessions, and the AI key and '
+              'server address every profile shares.',
+            ),
+            SizedBox(height: Dimens.spacing12),
+            Text(
+              'Other profiles, custom meals, recipes, activity templates and '
+              'the food catalogues stay.',
+            ),
+            SizedBox(height: Dimens.spacing12),
+            Text('This cannot be undone.'),
+          ],
+        ),
         actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(ctx).pop(false);
+              _showExportImportDialog(context);
+            },
+            child: const Text('Export first'),
+          ),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
             child: Text(l10n.dialogCancelLabel),

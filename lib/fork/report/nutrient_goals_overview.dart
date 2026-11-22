@@ -7,7 +7,10 @@ import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/fork/copy/copy_ui.dart';
+import 'package:opennutritracker/fork/report/goal_standing.dart';
 import 'package:opennutritracker/fork/report/nutrient_explorer.dart';
+import 'package:opennutritracker/fork/report/nutrient_order.dart';
+import 'package:opennutritracker/fork/units/amount_text.dart' show spokenUnit;
 
 /// The tracked days from the first to the last.
 typedef TrackedDayLoader =
@@ -16,31 +19,12 @@ typedef TrackedDayLoader =
 Future<List<TrackedDayEntity>> _trackedDays(DateTime first, DateTime last) =>
     locator<TrackedDayRepository>().getTrackedDayByRange(first, last);
 
-/// How a nutrient stands against its goal.
-enum GoalStanding {
-  /// A target: green, however far along.
-  toReach,
-
-  /// A limit not passed: grey.
-  under,
-
-  /// A limit passed: red.
-  over,
-}
-
-GoalStanding standingOf(NutrientSummary s) => !s.nutrient.isLimit
-    ? GoalStanding.toReach
-    : s.perDay > (s.goal ?? double.infinity)
-    ? GoalStanding.over
-    : GoalStanding.under;
-
-/// The nutrients with a goal of their own (not energy or the macros), the
-/// ones to reach first, then the limits.
+/// The nutrients with a goal of their own (not energy or the macros), in
+/// [nutrientOrder], as the editor and the Nutrients list show them.
 List<NutrientSummary> goalRows(List<NutrientSummary> all) => [
-  for (final s in all)
-    if (s.nutrient.marksMiss && !s.nutrient.isLimit) s,
-  for (final s in all)
-    if (s.nutrient.marksMiss && s.nutrient.isLimit) s,
+  for (var rank = 0; rank <= nutrientOrder.length; rank++)
+    for (final s in all)
+      if (s.nutrient.marksMiss && nutrientRank(s.nutrient) == rank) s,
 ];
 
 String _number(double value) =>
@@ -175,7 +159,7 @@ class _NutrientGoalsOverviewState extends State<NutrientGoalsOverview> {
             ),
             child: Text(
               [
-                'Green: reach it. Grey: stay under. Red: over a limit.',
+                goalStandingKey,
                 if (_week) 'The average is over the days with food logged.',
               ].join(' '),
               style: text.bodySmall?.copyWith(color: palette.textMuted),
@@ -199,22 +183,30 @@ class _GoalBar extends StatelessWidget {
     final s = summary;
     final unit = s.nutrient.unit;
     final goal = s.goal;
-    final standing = standingOf(s);
-    final color = switch (standing) {
-      GoalStanding.toReach => palette.accent,
-      GoalStanding.under => palette.textMuted,
-      GoalStanding.over => Theme.of(context).colorScheme.error,
-    };
+    final standing = goalStanding(
+      isLimit: s.nutrient.isLimit,
+      perDay: s.perDay,
+      goal: goal,
+      isBand: s.nutrient.isBand,
+    );
+    final color = goalStandingColor(
+      standing,
+      palette,
+      Theme.of(context).colorScheme,
+    );
     final share = goal == null || goal == 0 ? 0.0 : s.perDay / goal;
-    final of = goal == null ? '' : ' of ${_number(goal)} $unit';
-    final says = switch (standing) {
-      GoalStanding.toReach when share >= 1 => ', reached',
-      GoalStanding.over => ', over the limit',
-      _ => '',
-    };
+    final of = goal == null ? '' : ' of ${_number(goal)}';
+    final word = goalStandingWord(
+      standing,
+      isLimit: s.nutrient.isLimit,
+      isBand: s.nutrient.isBand,
+    );
+    final says = word == null ? '' : ', $word';
     return Semantics(
       identifier: 'nutrient-goal-${s.nutrient.label}',
-      label: '${s.nutrient.label}, ${_number(s.perDay)}$of$says',
+      label:
+          '${goalRowLabel(s.nutrient)}, ${_number(s.perDay)}$of '
+          '${spokenUnit(unit)}$says',
       excludeSemantics: true,
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: Dimens.spacing8),
@@ -222,7 +214,25 @@ class _GoalBar extends StatelessWidget {
           children: [
             Row(
               children: [
-                Expanded(child: Text(s.nutrient.label, style: text.bodyLarge)),
+                Expanded(
+                  child: Text.rich(
+                    TextSpan(
+                      children: [
+                        TextSpan(text: goalRowLabel(s.nutrient)),
+                        if (word != null)
+                          TextSpan(
+                            text: ' · $word',
+                            style: text.bodySmall?.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                      ],
+                    ),
+                    style: text.bodyLarge,
+                  ),
+                ),
+                // Keeps a wrapped label off the number at large text.
+                const SizedBox(width: Dimens.spacing8),
                 Text.rich(
                   TextSpan(
                     children: [

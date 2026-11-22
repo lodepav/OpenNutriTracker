@@ -7,11 +7,15 @@ import 'package:intl/intl.dart';
 import 'package:logging/logging.dart';
 import 'package:opennutritracker/core/utils/hive_db_provider.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
+import 'package:opennutritracker/features/settings/domain/export_import_failure.dart';
 import 'package:opennutritracker/features/settings/domain/usecase/import_data_usecase.dart';
 import 'package:opennutritracker/features/settings/presentation/bloc/export_import_bloc.dart';
 import 'package:opennutritracker/fork/backup/auto_backup.dart';
 import 'package:opennutritracker/fork/backup/backup_folder.dart';
 import 'package:opennutritracker/fork/backup/onboarding_restore.dart';
+import 'package:opennutritracker/fork/display/contrast.dart';
+import 'package:opennutritracker/fork/recipe/recipe_delete.dart'
+    show destructiveFilledStyle;
 import 'package:path_provider/path_provider.dart';
 
 /// A way out when the local data will not open (seam S112): Android can
@@ -24,6 +28,10 @@ import 'package:path_provider/path_provider.dart';
 /// onboarding can restore a backup file.
 class StorageRescue {
   static const pendingKey = 'restorePending';
+
+  /// What onboarding's first page says once when [finishPending] could
+  /// not restore its backup; null when there is nothing to say.
+  static String? failedRestore;
 
   /// Whether moving the files aside can help: only for data that will not
   /// open. A lost or broken key still fails with the files gone, as the
@@ -133,7 +141,10 @@ class StorageRescue {
     try {
       final uri = box.get('folderUri') as String?;
       final bytes = uri == null ? null : await _folder.read(uri, name);
-      if (bytes == null) return false;
+      if (bytes == null) {
+        _failed('The backup file could not be found.');
+        return false;
+      }
       await locator<ImportDataUsecase>().importArchive(
         ZipDecoder().decodeBytes(bytes),
         ExportImportBloc.userActivityJsonFileName,
@@ -153,8 +164,80 @@ class StorageRescue {
       return true;
     } catch (error, stackTrace) {
       _log.severe('Restoring $name failed', error, stackTrace);
+      _failed(switch (error) {
+        ExportImportFailure(
+          reason: ExportImportFailureReason.unreadableOrWrongFormat,
+        ) =>
+          'The file is not a backup the app can read.',
+        ExportImportFailure(reason: ExportImportFailureReason.writeFailed) =>
+          'It could not be saved on the phone.',
+        _ => null,
+      });
       return false;
     }
+  }
+
+  static void _failed(String? why) => failedRestore =
+      'Your backup could not be restored.${why == null ? '' : ' $why'} The '
+      'files that would not open are still set aside on the phone. To try a '
+      'backup file, use Restore a backup below.';
+}
+
+/// Onboarding's first page after a backup failed to restore at start (seam
+/// S501): says so once, and that onboarding's restore can try a file.
+class RestoreFailedNotice extends StatefulWidget {
+  const RestoreFailedNotice({super.key});
+
+  @override
+  State<RestoreFailedNotice> createState() => _RestoreFailedNoticeState();
+}
+
+class _RestoreFailedNoticeState extends State<RestoreFailedNotice> {
+  // Taken, so a later trip through onboarding (adding a profile) is quiet.
+  final _message = StorageRescue.failedRestore;
+
+  @override
+  void initState() {
+    super.initState();
+    StorageRescue.failedRestore = null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final message = _message;
+    if (message == null) return const SizedBox.shrink();
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Semantics(
+        liveRegion: true,
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: scheme.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(
+                Icons.error_outline_rounded,
+                color: chartSafe(scheme.error, scheme.surfaceContainerHighest),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  message,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyMedium?.copyWith(color: scheme.onSurface),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 
@@ -165,7 +248,19 @@ class StorageRescuePanel extends StatefulWidget {
   final Future<void> Function() onRetry;
   final StorageRescue? rescue;
 
-  const StorageRescuePanel({super.key, required this.onRetry, this.rescue});
+  /// The screen's Retry is running: the buttons here are off too.
+  final bool busy;
+
+  /// Told when a step here starts and ends, so the screen can turn Retry off.
+  final ValueChanged<bool>? onBusy;
+
+  const StorageRescuePanel({
+    super.key,
+    required this.onRetry,
+    this.rescue,
+    this.busy = false,
+    this.onBusy,
+  });
 
   @override
   State<StorageRescuePanel> createState() => _StorageRescuePanelState();
@@ -181,6 +276,7 @@ class _StorageRescuePanelState extends State<StorageRescuePanel> {
     required String body,
     required String action,
     required Future<void> Function() step,
+    bool destructive = false,
   }) async {
     final go = await showDialog<bool>(
       context: context,
@@ -193,15 +289,23 @@ class _StorageRescuePanelState extends State<StorageRescuePanel> {
             onPressed: () => Navigator.pop(context, false),
             child: const Text('Cancel'),
           ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: Text(action),
-          ),
+          if (destructive)
+            FilledButton(
+              style: destructiveFilledStyle(context),
+              onPressed: () => Navigator.pop(context, true),
+              child: Text(action),
+            )
+          else
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: Text(action),
+            ),
         ],
       ),
     );
-    if (go != true || !mounted) return;
+    if (go != true || !mounted || widget.busy) return;
     setState(() => _busy = true);
+    widget.onBusy?.call(true);
     try {
       await step();
       await widget.onRetry();
@@ -219,6 +323,7 @@ class _StorageRescuePanelState extends State<StorageRescuePanel> {
       }
     } finally {
       if (mounted) setState(() => _busy = false);
+      widget.onBusy?.call(false);
     }
   }
 
@@ -227,6 +332,7 @@ class _StorageRescuePanelState extends State<StorageRescuePanel> {
     future: _latest,
     builder: (context, snapshot) {
       final latest = snapshot.data;
+      final busy = _busy || widget.busy;
       const aside =
           'The files that will not open are moved aside on the phone, not '
           'deleted.';
@@ -237,7 +343,7 @@ class _StorageRescuePanelState extends State<StorageRescuePanel> {
             const SizedBox(height: 12),
             FilledButton.tonalIcon(
               key: const ValueKey('storage-rescue-restore'),
-              onPressed: _busy
+              onPressed: busy
                   ? null
                   : () => _run(
                       title: 'Restore the automatic backup?',
@@ -259,7 +365,7 @@ class _StorageRescuePanelState extends State<StorageRescuePanel> {
           const SizedBox(height: 12),
           TextButton(
             key: const ValueKey('storage-rescue-fresh'),
-            onPressed: _busy
+            onPressed: busy
                 ? null
                 : () => _run(
                     title: 'Start again?',
@@ -268,6 +374,7 @@ class _StorageRescuePanelState extends State<StorageRescuePanel> {
                         'restore a backup file.',
                     action: 'Start again',
                     step: _rescue.setAside,
+                    destructive: true,
                   ),
             child: const Text('Start again without this data'),
           ),

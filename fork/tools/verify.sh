@@ -55,9 +55,7 @@ if git grep -nE '^(<{7}|>{7})( |$)' -- '*.md'; then
   exit 1
 fi
 python3 fork/tools/seam_check.py
-python3 -B test/fork/tools/upstream_status_test.py
-python3 -B test/fork/tools/actions_status_test.py
-python3 -B test/fork/tools/seam_check_test.py
+for t in test/fork/tools/*_test.py; do python3 -B "$t"; done
 fork/tools/sibling_check.sh
 diff <(fork/tools/decision-index.sh) fork/DECISIONS-INDEX.md || {
   echo "verify: run fork/tools/decision-index.sh > fork/DECISIONS-INDEX.md" >&2

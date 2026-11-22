@@ -3,17 +3,21 @@ import 'package:intl/intl.dart';
 import 'package:opennutritracker/core/domain/entity/body_weight_unit_entity.dart';
 import 'package:opennutritracker/core/domain/usecase/get_config_usecase.dart';
 import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
+import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
+import 'package:opennutritracker/fork/display/contrast.dart';
 import 'package:opennutritracker/fork/goal/phase_colors.dart';
 import 'package:opennutritracker/fork/phases/phases.dart';
 import 'package:opennutritracker/fork/units/energy_text.dart';
 import 'package:opennutritracker/fork/units/weight_text.dart';
 
 /// What moved the target from [before] to [now], in parts that add up to
-/// the change: the estimate, the counted activity, the user's edits, and
-/// the rest, which the goal's pace or the plan made (its energy is not
-/// stored). Null when either record is older than its goal and basis.
+/// the change: the estimate, the counted activity, the figure set at
+/// [before] in place of its proposal no longer applying, the one set at
+/// [now], and the rest, which the goal's pace or the plan made (its energy
+/// is not stored). Null when either record is older than its goal and
+/// basis.
 List<({String label, double kcal})>? checkInChangeParts(
   CheckInRecord before,
   CheckInRecord now,
@@ -29,14 +33,20 @@ List<({String label, double kcal})>? checkInChangeParts(
     return by.abs() >= 1 ? by : 0;
   }
 
-  final edited = edit(now) - edit(before);
+  // The proposal is built afresh, so last time's own figure drops out.
+  final earlier = -edit(before);
+  final edited = edit(now);
+  // shortcut: a Keep that adds the day's activity reads as an edit, the
+  // record has no flag for it; store one if that misleads.
+  final kept = edited != 0 && total.abs() < 1;
   return [
     (label: 'Your estimate moved', kcal: estimate),
     (label: 'Counted activity', kcal: activity),
-    (label: 'You edited it', kcal: edited),
+    (label: "Last time's change to the proposal ends", kcal: earlier),
+    (label: kept ? 'You kept the last target' : 'You edited it', kcal: edited),
     (
       label: "Goal's pace or the plan",
-      kcal: total - estimate - activity - edited,
+      kcal: total - estimate - activity - earlier - edited,
     ),
   ];
 }
@@ -44,16 +54,30 @@ List<({String label, double kcal})>? checkInChangeParts(
 /// The weekly check-ins as accepted, newest first: the target each set,
 /// how far it moved from the one before, and the expenditure and proposal
 /// it came from. A row whose move can be split opens the split.
-class CheckInHistoryScreen extends StatelessWidget {
+class CheckInHistoryScreen extends StatefulWidget {
   final AdaptiveStore store;
 
   const CheckInHistoryScreen({super.key, required this.store});
 
   @override
+  State<CheckInHistoryScreen> createState() => _CheckInHistoryScreenState();
+}
+
+class _CheckInHistoryScreenState extends State<CheckInHistoryScreen> {
+  // read once, not on every rebuild
+  late Future<List<CheckInRecord>> _history = widget.store.history();
+
+  @override
+  void didUpdateWidget(CheckInHistoryScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.store != oldWidget.store) _history = widget.store.history();
+  }
+
+  @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(title: const Text('Check-in history')),
     body: FutureBuilder<List<CheckInRecord>>(
-      future: store.history(),
+      future: _history,
       builder: (context, snapshot) {
         final all = snapshot.data;
         if (all == null) {
@@ -72,7 +96,10 @@ class CheckInHistoryScreen extends StatelessWidget {
           );
         }
         return ListView(
-          padding: const EdgeInsets.only(top: 12),
+          padding: EdgeInsets.only(
+            top: 12,
+            bottom: MediaQuery.paddingOf(context).bottom,
+          ),
           children: [
             for (var i = all.length - 1; i >= 0; i--)
               _row(context, all[i], i == 0 ? null : all[i - 1]),
@@ -97,8 +124,7 @@ class CheckInHistoryScreen extends StatelessWidget {
       ),
       subtitle: Text(
         [
-          DateFormat(
-            'd MMM yyyy',
+          DateFormat.yMMMd(
             Localizations.localeOf(context).toLanguageTag(),
           ).format(r.date),
           'expenditure ${energyText(context, r.expenditureKcal)}',
@@ -137,15 +163,22 @@ class CheckInHistoryScreen extends StatelessWidget {
     final color = none
         ? Theme.of(context).colorScheme.onSurfaceVariant
         : phaseColor(context, change < 0 ? PhaseKind.cut : PhaseKind.bulk);
+    final tint = color.withValues(alpha: 0.15);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.15),
+        color: tint,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Text(
         none ? 'no change' : energyText(context, change, signed: true),
-        style: TextStyle(color: color, fontWeight: FontWeight.w600),
+        style: TextStyle(
+          color: textSafe(
+            color,
+            Color.alphaBlend(tint, paletteOf(context).surface),
+          ),
+          fontWeight: FontWeight.w600,
+        ),
       ),
     );
   }
@@ -157,12 +190,14 @@ Future<BodyWeightUnit> _weightUnit() async {
   return (await locator<GetConfigUsecase>().getConfig()).bodyWeightUnit;
 }
 
-/// [kgPerWeek] signed, to the quarter kilo a pace is set in.
+/// [kgPerWeek] signed with a true minus, never "−0.0", to the quarter
+/// kilo a pace is set in.
 String _pace(double kgPerWeek, BodyWeightUnit unit) {
   final v = unit == BodyWeightUnit.kg ? kgPerWeek : kgPerWeek * 2.20462;
-  final text = v.toStringAsFixed(2);
-  final trimmed = text.endsWith('0') ? v.toStringAsFixed(1) : text;
-  return '${v > 0 ? '+' : ''}$trimmed';
+  final text = v.abs().toStringAsFixed(2);
+  final trimmed = text.endsWith('0') ? v.abs().toStringAsFixed(1) : text;
+  if (double.parse(trimmed) == 0) return trimmed;
+  return '${v > 0 ? '+' : '\u2212'}$trimmed';
 }
 
 Future<void> _showParts(
@@ -215,7 +250,7 @@ Future<void> _showParts(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
-                'Why it moved from ${DateFormat('d MMM', Localizations.localeOf(context).toLanguageTag()).format(before.date)}',
+                'Why it moved from ${DateFormat.MMMd(Localizations.localeOf(context).toLanguageTag()).format(before.date)}',
                 style: text.titleMedium,
               ),
               for (final p in parts)
@@ -236,7 +271,10 @@ Future<void> _showParts(
               ),
               for (final n in notes)
                 Padding(
-                  padding: const EdgeInsets.only(top: 12),
+                  padding: EdgeInsets.only(
+            top: 12,
+            bottom: MediaQuery.paddingOf(context).bottom,
+          ),
                   child: Text(n, style: text.bodySmall),
                 ),
             ],

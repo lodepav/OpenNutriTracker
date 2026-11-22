@@ -5,13 +5,19 @@ import 'package:opennutritracker/core/domain/usecase/get_tracked_day_usecase.dar
 import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/core/utils/calc/calendar_day_calc.dart';
+import 'package:opennutritracker/core/utils/calc/unit_calc.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/features/profile/presentation/widgets/set_target_weight_dialog.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
+import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
+import 'package:opennutritracker/fork/adaptive/adaptive_ui.dart'
+    show refreshGoals;
 import 'package:opennutritracker/fork/goal/goal_actions.dart';
 import 'package:opennutritracker/fork/goal/goal_chart.dart';
+import 'package:opennutritracker/fork/goal/goal_figure_grid.dart';
 import 'package:opennutritracker/fork/goal/goal_plan_view.dart' show goalTitle;
 import 'package:opennutritracker/fork/goal/goal_planner.dart';
+import 'package:opennutritracker/fork/goal/goal_status.dart';
 import 'package:opennutritracker/fork/goal/phase_colors.dart';
 import 'package:opennutritracker/fork/goal/planner_screen.dart';
 import 'package:opennutritracker/fork/phases/phases.dart';
@@ -93,6 +99,35 @@ Future<bool> openGoalReached(
     ) ??
     false;
 
+/// After a goal is completed: with the adaptive target on, the check-in
+/// its new pace makes due, accepted as proposed as an automatic one is
+/// (D18), so the target is in force at once. False when it is left to
+/// Home's check-in: a proposal under the advised floor, a week of
+/// unreadable activity, a day that looks partly logged (D65), or a failed
+/// read.
+Future<bool> applyGoalTarget([AdaptiveService? service]) async {
+  final settings = AdaptiveStore.settings.value;
+  // Off, the profile's save rewrote today's goal; a fixed target stays.
+  if (!settings.adaptiveTarget || settings.fixedTarget) return true;
+  try {
+    final adaptive = service ?? AdaptiveService.fromLocator();
+    // With no check-in yet the formula sets the goal, which the save moved.
+    if (!await adaptive.goalChanged()) return true;
+    final due = await adaptive.checkIn();
+    if (due.belowRecommendedFloor || due.activityUnreadable) return false;
+    if ((await adaptive.partialDays()).isNotEmpty) return false;
+    await adaptive.accept(due, due.proposedTargetKcal);
+  } catch (_) {
+    return false;
+  }
+  try {
+    await refreshGoals();
+  } catch (_) {
+    // The target is saved; Home's next load shows it.
+  }
+  return true;
+}
+
 enum _Next { maintain, extend, planNext }
 
 /// Goal reached (round 4, B): the goal done, how it went, and what next:
@@ -108,6 +143,10 @@ class GoalReachedPage extends StatefulWidget {
   /// The goals queued after this one; the active profile's by default.
   final Future<List<PhasePlan>> Function()? upcoming;
 
+  /// Puts the completed goal's target in force; [applyGoalTarget] by
+  /// default.
+  final Future<bool> Function()? applyTarget;
+
   const GoalReachedPage({
     super.key,
     required this.plan,
@@ -117,6 +156,7 @@ class GoalReachedPage extends StatefulWidget {
     this.actions,
     this.today,
     this.upcoming,
+    this.applyTarget,
   });
 
   @override
@@ -153,9 +193,11 @@ class _GoalReachedPageState extends State<GoalReachedPage> {
   Future<void> _continue() async {
     setState(() => _busy = true);
     var done = false;
+    var applied = true;
     switch (_next) {
       case _Next.maintain:
         done = await _actions.complete(widget.plan, widget.nowKg);
+        if (done) applied = await (widget.applyTarget ?? applyGoalTarget)();
       case _Next.extend:
         done = await showExtendSheet(
           context,
@@ -172,12 +214,52 @@ class _GoalReachedPageState extends State<GoalReachedPage> {
     if (!mounted) return;
     setState(() => _busy = false);
     if (done) {
+      // Shown from here, it stays up on the page this one returns to.
+      if (_next == _Next.maintain) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(_completedText(applied))));
+      }
       Navigator.of(context).pop(true);
     } else if (_next != _Next.extend) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Not saved: the profile changed.')),
       );
     }
+  }
+
+  /// "Cut to 82.0 kg completed. Maintaining now.", or the goal next; or,
+  /// with the target not [applied], that Home's check-in sets it; or that a
+  /// fixed target stays.
+  String _completedText(bool applied) {
+    final target = widget.plan.targetKg;
+    final next = _queued;
+    final fixed = _fixedText();
+    final note =
+        fixed ??
+        (applied
+            ? null
+            : 'Your check-in on Home sets the '
+                  '${next == null ? 'maintenance' : 'new'} target.');
+    final then = next == null
+        ? note ?? 'Maintaining now.'
+        : '${goalTitle(next, widget.unit)} starts today.'
+              '${note == null ? '' : ' $note'}';
+    return '${widget.plan.kind.label}'
+        '${target == null ? '' : ' to ${weightText(target, widget.unit)}'} '
+        'completed. $then';
+  }
+
+  /// With a fixed target on, what a new goal leaves it at; null otherwise.
+  String? _fixedText() {
+    final settings = AdaptiveStore.settings.value;
+    if (!settings.fixedTarget) return null;
+    // Read from the Continue handler too, so not listening.
+    final kj = usesKj(context, listen: false);
+    final kcal = settings.fixedTargetKcal;
+    return 'Your fixed target stays at '
+        '${(kj ? UnitCalc.kcalToKj(kcal) : kcal).round()} '
+        '${kj ? 'kJ' : 'kcal'}.';
   }
 
   @override
@@ -189,6 +271,7 @@ class _GoalReachedPageState extends State<GoalReachedPage> {
     final locale = Localizations.localeOf(context).toLanguageTag();
     final format = intl.DateFormat.yMMMd(locale);
     final weeks = goalWeeks(plan.start, today);
+    final days = CalendarDayCalc.daysBetween(plan.start, today);
     final startKg = plan.startKg;
     final target = plan.targetKg;
     return Scaffold(
@@ -220,8 +303,8 @@ class _GoalReachedPageState extends State<GoalReachedPage> {
             style: theme.textTheme.headlineSmall,
           ),
           Text(
-            '${format.format(plan.start)} – ${format.format(today)} · '
-            '$weeks ${weeks == 1 ? 'week' : 'weeks'}',
+            '${dateRangeText(format, plan.start, today)} · '
+            '${goalLengthText(plan.start, today)}',
             textAlign: TextAlign.center,
             style: theme.textTheme.bodyMedium,
           ),
@@ -236,6 +319,10 @@ class _GoalReachedPageState extends State<GoalReachedPage> {
                   child: Center(child: CircularProgressIndicator()),
                 );
               }
+              final onTarget = run.onTargetShare == null
+                  ? null
+                  : '${(run.onTargetShare! * 100).round()}% '
+                        'within 10% of the target';
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -261,42 +348,61 @@ class _GoalReachedPageState extends State<GoalReachedPage> {
                       ),
                     ),
                   const SizedBox(height: Dimens.spacing12),
-                  FigureGrid(
+                  GoalFigureGrid(
                     tiles: [
+                      if (startKg == null)
+                        noDataTile(
+                          'Change',
+                          const FigureTile(label: 'Change', value: '–'),
+                        )
+                      else
+                        FigureTile(
+                          label: 'Change',
+                          value: signedWeightText(widget.nowKg - startKg, unit),
+                          note:
+                              '${weightText(startKg, unit)} → '
+                              '${weightText(widget.nowKg, unit)}',
+                        ),
+                      // Under a week, as the line above counts it.
                       FigureTile(
-                        label: 'Change',
-                        value: startKg == null
-                            ? '–'
-                            : weightChangeText(widget.nowKg - startKg, unit),
-                        note: startKg == null
-                            ? null
-                            : '${weightText(startKg, unit)} → '
-                                  '${weightText(widget.nowKg, unit)}',
-                      ),
-                      FigureTile(
-                        label: 'Weeks',
-                        value: '$weeks',
+                        label: days < 7 ? 'Days' : 'Weeks',
+                        value: days < 7 ? '${days < 1 ? 1 : days}' : '$weeks',
                         note: plan.extensions == 0
                             ? 'as planned: ${_plannedWeeks(plan)}'
                             : 'extended ${plan.extensions}×',
                       ),
-                      FigureTile(
-                        label: 'Average eaten',
-                        value: run.meanKcal == null
-                            ? '–'
-                            : energyText(context, run.meanKcal!),
-                        note: 'a logged day',
-                      ),
-                      FigureTile(
-                        label: 'Days logged',
-                        value: run.loggedShare == null
-                            ? '–'
-                            : '${(run.loggedShare! * 100).round()}%',
-                        note: run.onTargetShare == null
-                            ? null
-                            : '${(run.onTargetShare! * 100).round()}% '
-                                  'within 10% of the target',
-                      ),
+                      if (run.meanKcal == null)
+                        noDataTile(
+                          'Average eaten',
+                          note: 'a logged day',
+                          const FigureTile(
+                            label: 'Average eaten',
+                            value: '–',
+                            note: 'a logged day',
+                          ),
+                        )
+                      else
+                        FigureTile(
+                          label: 'Average eaten',
+                          value: energyText(context, run.meanKcal!),
+                          note: 'a logged day',
+                        ),
+                      if (run.loggedShare == null)
+                        noDataTile(
+                          'Days logged',
+                          note: onTarget,
+                          FigureTile(
+                            label: 'Days logged',
+                            value: '–',
+                            note: onTarget,
+                          ),
+                        )
+                      else
+                        FigureTile(
+                          label: 'Days logged',
+                          value: '${(run.loggedShare! * 100).round()}%',
+                          note: onTarget,
+                        ),
                       if (run.expenditureKcal != null)
                         FigureTile(
                           label: 'You burn now',
@@ -329,7 +435,10 @@ class _GoalReachedPageState extends State<GoalReachedPage> {
                       _Next.maintain,
                       'goal-next-maintain',
                       'Mark completed and maintain',
-                      'Eat at what you burn from today.',
+                      switch (_fixedText()) {
+                        final fixed? => '$fixed Change it in Settings.',
+                        null => 'Eat at what you burn from today.',
+                      },
                     ),
                   _choice(
                     _Next.extend,

@@ -12,6 +12,7 @@ import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/core/utils/calc/met_calc.dart';
 import 'package:opennutritracker/core/utils/id_generator.dart';
 import 'package:opennutritracker/features/activity_detail/presentation/widget/activity_info_button.dart';
+import 'package:opennutritracker/fork/add/chosen_chips.dart';
 import 'package:opennutritracker/fork/adaptive/activity_credit.dart';
 import 'package:opennutritracker/fork/display/contrast.dart';
 import 'package:opennutritracker/fork/widget/toolbar_height.dart';
@@ -58,6 +59,13 @@ UserActivityEntity repeatEntry(
     );
   }
   return activityEntry(activity, user, recent.duration.round(), day);
+}
+
+/// [activity]'s name to stand on its own: the Compendium's are lowercase
+/// ("bicycling"), a name the user typed stays as typed.
+String activityTitle(BuildContext context, PhysicalActivityEntity activity) {
+  final name = activity.getName(context);
+  return activity.isCustom ? name : toBeginningOfSentenceCase(name);
 }
 
 /// "Today", "Yesterday" or the date in [locale].
@@ -138,7 +146,8 @@ class ActivityPickerView extends StatelessWidget {
               filled: true,
               fillColor: palette.surface,
               prefixIcon: Icon(Icons.search_rounded, color: palette.textMuted),
-              hintText: 'Search activities',
+              // a label, not a hint: it stays once the user types
+              labelText: 'Search activities',
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(24),
                 borderSide: BorderSide(color: palette.border),
@@ -195,7 +204,7 @@ class ActivityPickerView extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: palette.canvas,
         toolbarHeight: twoLineToolbarHeight(context),
-        title: Text(title, maxLines: 2, overflow: TextOverflow.ellipsis),
+        title: Text(title, maxLines: 2, softWrap: true, overflow: TextOverflow.ellipsis),
         actions: [
           Semantics(
             identifier: 'add-activity-quick-add',
@@ -391,7 +400,7 @@ class _RecentChip extends StatelessWidget {
           avatar: Icon(activity.displayIcon, size: 18),
           label: Text.rich(
             TextSpan(
-              text: '$name ',
+              text: '${activityTitle(context, activity)} ',
               children: [
                 TextSpan(
                   text: amount,
@@ -452,7 +461,10 @@ class _ActivityRow extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(activity.getName(context), style: text.bodyLarge),
+                        Text(
+                          activityTitle(context, activity),
+                          style: text.bodyLarge,
+                        ),
                         if (description.isNotEmpty)
                           Text(
                             description,
@@ -549,7 +561,7 @@ class _DurationSheetState extends State<DurationSheet> {
     final palette = paletteOf(context);
     final text = Theme.of(context).textTheme;
     final activity = widget.activity;
-    final name = activity.getName(context);
+    final name = activityTitle(context, activity);
     final kcal = METCalc.getTotalBurnedKcal(
       widget.user,
       activity,
@@ -674,30 +686,36 @@ class _DurationSheetState extends State<DurationSheet> {
             ],
           ),
           const SizedBox(height: Dimens.spacing12),
-          Row(
-            children: [
-              for (final (i, m) in activityDurations.indexed) ...[
-                if (i > 0) const SizedBox(width: Dimens.spacing8),
-                Expanded(
-                  child: Semantics(
-                    identifier: 'activity-duration-$m',
-                    child: ChoiceChip(
-                      materialTapTargetSize: MaterialTapTargetSize.padded,
-                      label: SizedBox(
-                        width: double.infinity,
-                        child: Text(
-                          '$m',
-                          textAlign: TextAlign.center,
-                          semanticsLabel: '$m minutes',
+          chosenChips(
+            context,
+            child: Row(
+              children: [
+                for (final (i, m) in activityDurations.indexed) ...[
+                  if (i > 0) const SizedBox(width: Dimens.spacing8),
+                  Expanded(
+                    child: Semantics(
+                      identifier: 'activity-duration-$m',
+                      child: ChoiceChip(
+                        materialTapTargetSize: MaterialTapTargetSize.padded,
+                        // The accent fill marks the choice; a check mark cut "30"
+                        // at 200%.
+                        showCheckmark: false,
+                        label: SizedBox(
+                          width: double.infinity,
+                          child: Text(
+                            '$m',
+                            textAlign: TextAlign.center,
+                            semanticsLabel: '$m minutes',
+                          ),
                         ),
+                        selected: _minutes == m,
+                        onSelected: (_) => _set(m),
                       ),
-                      selected: _minutes == m,
-                      onSelected: (_) => _set(m),
                     ),
                   ),
-                ),
+                ],
               ],
-            ],
+            ),
           ),
           const SizedBox(height: Dimens.spacing16),
           Semantics(

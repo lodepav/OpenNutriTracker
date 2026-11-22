@@ -10,6 +10,8 @@ import 'package:opennutritracker/fork/goal/goal_plan_view.dart' show goalTitle;
 import 'package:opennutritracker/fork/goal/phase_colors.dart';
 import 'package:opennutritracker/fork/goal/planner_screen.dart';
 import 'package:opennutritracker/fork/phases/phases.dart';
+import 'package:opennutritracker/fork/recipe/recipe_delete.dart'
+    show destructiveFilledStyle;
 import 'package:opennutritracker/fork/units/weight_text.dart';
 import 'package:opennutritracker/fork/undo/undo_delete.dart';
 
@@ -114,6 +116,12 @@ class CalendarGoals {
       last: ends.reduce((a, b) => a.isAfter(b) ? a : b),
     );
   }
+
+  /// The kinds the calendar colours its days in, for its legend.
+  Set<PhaseKind> get kinds => {
+    for (final p in [?plan, ...upcoming]) ...p.phases.map((ph) => ph.kind),
+    for (final r in history) r.kind,
+  };
 
   /// The stretches of one kind, each phase of a plan and each completed
   /// goal, first to last.
@@ -286,50 +294,74 @@ class _GoalCalendarPageState extends State<GoalCalendarPage> {
           ? const Center(child: CircularProgressIndicator())
           : span == null
           ? const Center(child: Text('No goals yet.'))
-          : SingleChildScrollView(
-              padding: EdgeInsets.fromLTRB(
-                // the gutter every other page has
-                Dimens.spacing16,
-                0,
-                Dimens.spacing16,
-                Dimens.spacing32 + MediaQuery.paddingOf(context).bottom,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const Padding(
-                    padding: EdgeInsets.fromLTRB(4, 0, 4, 8),
-                    child: _Legend(),
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Above the months, which open scrolled to today's.
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    Dimens.spacing16 + 4,
+                    0,
+                    Dimens.spacing16 + 4,
+                    8,
                   ),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(4, 0, 4, 12),
-                    child: Text(
-                      'From your first goal to the last one planned. Tap a '
-                      'day to edit or remove its goal.',
-                      style: Theme.of(context).textTheme.bodySmall,
+                  child: _Legend(
+                    kinds: goals.kinds,
+                    upNext: goals.upcoming.isNotEmpty,
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    Dimens.spacing16 + 4,
+                    0,
+                    Dimens.spacing16 + 4,
+                    12,
+                  ),
+                  child: Text(
+                    'From your first goal to the last one planned. Tap a '
+                    'day to edit or remove its goal.',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ),
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: EdgeInsets.fromLTRB(
+                      // the gutter every other page has
+                      Dimens.spacing16,
+                      0,
+                      Dimens.spacing16,
+                      Dimens.spacing32 + MediaQuery.paddingOf(context).bottom,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        for (
+                          var m = DateTime(span.first.year, span.first.month);
+                          !m.isAfter(span.last);
+                          m = DateTime(m.year, m.month + 1)
+                        )
+                          Padding(
+                            key:
+                                m.year == _today.year && m.month == _today.month
+                                ? _todayKey
+                                : null,
+                            padding: const EdgeInsets.only(
+                              bottom: Dimens.spacing12,
+                            ),
+                            child: _Month(
+                              month: m,
+                              goals: goals,
+                              bands: goals.bands(widget.unit),
+                              today: _today,
+                              locale: locale,
+                              onDay: (day) => _openDay(context, goals, day),
+                            ),
+                          ),
+                      ],
                     ),
                   ),
-                  for (
-                    var m = DateTime(span.first.year, span.first.month);
-                    !m.isAfter(span.last);
-                    m = DateTime(m.year, m.month + 1)
-                  )
-                    Padding(
-                      key: m.year == _today.year && m.month == _today.month
-                          ? _todayKey
-                          : null,
-                      padding: const EdgeInsets.only(bottom: Dimens.spacing12),
-                      child: _Month(
-                        month: m,
-                        goals: goals,
-                        bands: goals.bands(widget.unit),
-                        today: _today,
-                        locale: locale,
-                        onDay: (day) => _openDay(context, goals, day),
-                      ),
-                    ),
-                ],
-              ),
+                ),
+              ],
             ),
     );
   }
@@ -367,14 +399,14 @@ class _GoalCalendarPageState extends State<GoalCalendarPage> {
               ? null
               : () => _act(
                   sheet,
-                  undo: 'Moved',
+                  undo: '${goalTitle(goals.upcoming[i], widget.unit)} moved',
                   () => _actions.moveUpcoming(i, i - 1),
                 ),
           onLater: i == goals.upcoming.length - 1
               ? null
               : () => _act(
                   sheet,
-                  undo: 'Moved',
+                  undo: '${goalTitle(goals.upcoming[i], widget.unit)} moved',
                   () => _actions.moveUpcoming(i, i + 1),
                 ),
           onRemove: () => _act(
@@ -384,7 +416,7 @@ class _GoalCalendarPageState extends State<GoalCalendarPage> {
               body: 'It is taken out of the goals up next.',
               action: 'Remove',
             ),
-            undo: 'Removed',
+            undo: '${goalTitle(goals.upcoming[i], widget.unit)} removed',
             () => _actions.removeUpcoming(i),
           ),
         ),
@@ -464,7 +496,7 @@ Future<void> showRunningGoal(
         body: 'It is not saved in your completed goals.',
         action: 'Remove',
       ),
-      undo: 'Removed',
+      undo: '${goalTitle(plan, unit)} removed',
       () => actions.remove(nowKg),
     ),
   ),
@@ -495,7 +527,8 @@ Future<void> _actOn(
           ),
           Semantics(
             identifier: 'goal-calendar-confirm',
-            child: TextButton(
+            child: FilledButton(
+              style: destructiveFilledStyle(dialog),
               onPressed: () => Navigator.of(dialog).pop(true),
               child: Text(confirm.action),
             ),
@@ -563,7 +596,10 @@ void showGoalUndo(
 }
 
 class _Legend extends StatelessWidget {
-  const _Legend();
+  final Set<PhaseKind> kinds;
+  final bool upNext;
+
+  const _Legend({required this.kinds, required this.upNext});
 
   @override
   Widget build(BuildContext context) => ExcludeSemantics(
@@ -572,12 +608,14 @@ class _Legend extends StatelessWidget {
       runSpacing: 4,
       children: [
         for (final kind in PhaseKind.values)
-          _Key(color: phaseColor(context, kind), label: kind.label),
-        _Key(
-          color: phaseColor(context, PhaseKind.bulk),
-          label: 'Up next',
-          striped: true,
-        ),
+          if (kinds.contains(kind))
+            _Key(color: phaseColor(context, kind), label: kind.label),
+        if (upNext)
+          _Key(
+            color: phaseColor(context, PhaseKind.bulk),
+            label: 'Up next',
+            striped: true,
+          ),
       ],
     ),
   );
@@ -684,27 +722,21 @@ class _Month extends StatelessWidget {
             ),
           ),
           for (var w = 0; w < cells.length; w += 7)
-            Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Row(
-                children: [
-                  for (var i = w; i < w + 7; i++)
-                    Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 2),
-                        child: i < cells.length && cells[i] != null
-                            ? _Day(
-                                day: cells[i]!,
-                                at: goals.on(cells[i]!),
-                                today: today,
-                                locale: locale,
-                                onTap: onDay,
-                              )
-                            : const SizedBox(height: 40),
-                      ),
-                    ),
-                ],
-              ),
+            Row(
+              children: [
+                for (var i = w; i < w + 7; i++)
+                  Expanded(
+                    child: i < cells.length && cells[i] != null
+                        ? _Day(
+                            day: cells[i]!,
+                            at: goals.on(cells[i]!),
+                            today: today,
+                            locale: locale,
+                            onTap: onDay,
+                          )
+                        : const SizedBox(height: 48),
+                  ),
+              ],
             ),
         ],
       ),
@@ -793,14 +825,25 @@ class _Day extends StatelessWidget {
         ),
       ),
     );
+    final open = tappable ? () => onTap(at) : null;
+    // The whole slot, 48 dp tall, takes the tap around the 40 dp chip; the
+    // node carries the tap itself, as it excludes the detector's.
     return Semantics(
       identifier: 'goal-calendar-day-${day.year}-${day.month}-${day.day}',
       button: tappable,
       label: label,
+      onTap: open,
       excludeSemantics: true,
       child: GestureDetector(
-        onTap: tappable ? () => onTap(at) : null,
-        child: ClipRRect(borderRadius: BorderRadius.circular(9), child: cell),
+        behavior: HitTestBehavior.opaque,
+        onTap: open,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 4),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(9),
+            child: cell,
+          ),
+        ),
       ),
     );
   }

@@ -52,6 +52,7 @@ class _CopyToProfileSheet extends StatefulWidget {
 class _CopyToProfileSheetState extends State<_CopyToProfileSheet> {
   final _selectedIds = <String>{};
   bool _copying = false;
+  bool _failed = false; // [fork] S484 copy-to-profile-errors
 
   @override
   Widget build(BuildContext context) {
@@ -63,10 +64,15 @@ class _CopyToProfileSheetState extends State<_CopyToProfileSheet> {
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-            child: Text(
-              s.copyToProfileLabel,
-              style: Theme.of(context).textTheme.titleLarge,
+            // [fork] S482 section-headings: TalkBack's heading navigation (A7)
+            child: Semantics(
+              header: true,
+              child: Text(
+                s.copyToProfileLabel,
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
             ),
+            // [/fork]
           ),
           Flexible(
             child: ListView(
@@ -93,6 +99,27 @@ class _CopyToProfileSheetState extends State<_CopyToProfileSheet> {
               ],
             ),
           ),
+          // [fork] S484 copy-to-profile-errors: why Copy is off, and a copy
+          // that failed (H6, H9)
+          if (_failed || (_selectedIds.isEmpty && !_copying))
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+              child: Semantics(
+                liveRegion: _failed,
+                child: Text(
+                  _failed
+                      ? 'Could not copy. Try again.'
+                      : 'Pick a profile to copy to',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: _failed
+                        ? Theme.of(context).colorScheme.error
+                        : Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+            ),
+          // [/fork]
           Padding(
             padding: const EdgeInsets.all(16),
             child: Semantics(
@@ -116,12 +143,33 @@ class _CopyToProfileSheetState extends State<_CopyToProfileSheet> {
   }
 
   Future<void> _onConfirm() async {
-    setState(() => _copying = true);
+    // [fork] S484 copy-to-profile-errors
+    // setState(() => _copying = true);
+    setState(() {
+      _copying = true;
+      _failed = false;
+    });
+    // [/fork]
     final targets = widget.otherProfiles
         .where((p) => _selectedIds.contains(p.id))
         .toList();
-    await locator<SendIntakeToProfilesUsecase>()
-        .copyToProfiles(widget.intakes, targets);
+    // [fork] S484 copy-to-profile-errors: a failed copy no longer leaves the
+    // spinner on for good
+    // await locator<SendIntakeToProfilesUsecase>()
+    //     .copyToProfiles(widget.intakes, targets);
+    try {
+      await locator<SendIntakeToProfilesUsecase>()
+          .copyToProfiles(widget.intakes, targets);
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _copying = false;
+          _failed = true;
+        });
+      }
+      return;
+    }
+    // [/fork]
     if (!mounted) return;
     Navigator.of(context).pop(true);
   }

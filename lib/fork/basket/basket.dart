@@ -100,10 +100,17 @@ class FoodBasket extends ChangeNotifier {
   /// Empties the basket for now; call what it returns to put back what it held
   /// in place of anything added since.
   VoidCallback setAside() {
+    final restore = restorePoint();
+    clear();
+    return restore;
+  }
+
+  /// Call what it returns to put back what the basket holds now, for its
+  /// meal and day, in place of anything changed since.
+  VoidCallback restorePoint() {
     final items = [..._items];
     final type = _type;
     final day = _day;
-    clear();
     return () {
       _items
         ..clear()

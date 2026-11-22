@@ -71,10 +71,16 @@ class _OnboardingGoalPageBodyState extends State<OnboardingGoalPageBody> {
           mainAxisAlignment: MainAxisAlignment.start,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // [fork] S464 step-headings: a heading TalkBack can jump to
+            Semantics(
+              header: true,
+              child:
+            // [/fork]
             Text(
               S.of(context).goalLabel,
               style: Theme.of(context).textTheme.headlineSmall,
             ),
+            ), // [fork] S464
             Text(
               S.of(context).onboardingGoalQuestionSubtitle,
               style: Theme.of(context).textTheme.titleMedium,
@@ -111,7 +117,6 @@ class _OnboardingGoalPageBodyState extends State<OnboardingGoalPageBody> {
       spacing: Dimens.spacing8,
       runSpacing: Dimens.spacing4,
       children: [
-        // [/fork]
         Semantics(
           identifier: 'onboarding-goal-${_identifierSuffix[goal]}',
           child: ChoiceChip(
@@ -189,6 +194,29 @@ class _OnboardingGoalPageBodyState extends State<OnboardingGoalPageBody> {
   }
 
   void _onSelected(UserGoalSelectionEntity goal) {
+    // [fork] S88 onboarding-goal: a goal against the plan clears it, with
+    // Undo back to the plan and the goal before
+    final previous = _selected;
+    final cleared = OnboardingGoal.picked(goal);
+    if (cleared != null) {
+      ScaffoldMessenger.of(context)
+        ..removeCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: const Text('Plan cleared'),
+            action: SnackBarAction(
+              label: 'Undo',
+              onPressed: () {
+                if (!mounted) return;
+                OnboardingGoal.pending.value = cleared;
+                setState(() => _selected = previous);
+                widget.setButtonContent(previous != null, previous);
+              },
+            ),
+          ),
+        );
+    }
+    // [/fork]
     setState(() => _selected = goal);
     widget.setButtonContent(true, goal);
   }

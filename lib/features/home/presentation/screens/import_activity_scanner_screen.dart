@@ -14,6 +14,9 @@ import 'package:opennutritracker/features/diary/presentation/bloc/calendar_day_b
 import 'package:opennutritracker/features/diary/presentation/bloc/diary_bloc.dart';
 import 'package:opennutritracker/features/home/domain/entity/shared_activity_payload.dart';
 import 'package:opennutritracker/features/home/presentation/bloc/home_bloc.dart';
+import 'package:opennutritracker/fork/scan/scan_hint.dart'; // [fork] S294
+import 'package:opennutritracker/fork/scan/scanner_error.dart'; // [fork] S294
+import 'package:opennutritracker/fork/scan/shared_code_dialog.dart'; // [fork] S295
 import 'package:opennutritracker/generated/l10n.dart';
 
 class ImportActivityScannerArguments {
@@ -109,6 +112,18 @@ class _ImportActivityScannerScreenState
       body: MobileScanner(
         controller: _cameraController,
         onDetect: _onDetect,
+        // [fork] S294 workout-scanner-camera-refused: a way on, not a black box,
+        // and over the feed what to scan
+        errorBuilder: (_, error) => ScannerError(
+          error: error,
+          controller: _cameraController,
+          onPaste: _showPasteCodeDialog,
+        ),
+        overlayBuilder: (_, _) => ScanHint(
+          text: 'Point at the QR code from Share workout',
+          onPaste: _showPasteCodeDialog,
+        ),
+        // [/fork]
       ),
     );
   }
@@ -128,33 +143,52 @@ class _ImportActivityScannerScreenState
   }
 
   Future<void> _showPasteCodeDialog() async {
-    final controller = TextEditingController();
+    // [fork] S295 workout-paste-dialog: a workout hint, and a bad code stays in
+    // the open dialog with the error under it
+    // final controller = TextEditingController();
+    // final code = await showDialog<String>(
+    //   context: context,
+    //   builder: (ctx) => AlertDialog(
+    //     shape: Dimens.shapeL,
+    //     title: Text(S.of(ctx).pasteCodeLabel),
+    //     content: TextField(
+    //       controller: controller,
+    //       maxLines: 5,
+    //       decoration: InputDecoration(
+    //         hintText: S.of(ctx).pasteCodeHint,
+    //         border: const OutlineInputBorder(borderRadius: Dimens.borderRadiusS),
+    //       ),
+    //       autofocus: true,
+    //     ),
+    //     actions: [
+    //       TextButton(
+    //         onPressed: () => Navigator.of(ctx).pop(),
+    //         child: Text(S.of(ctx).dialogCancelLabel),
+    //       ),
+    //       TextButton(
+    //         onPressed: () => Navigator.of(ctx).pop(controller.text.trim()),
+    //         child: Text(S.of(ctx).importActivityLabel),
+    //       ),
+    //     ],
+    //   ),
+    // );
     final code = await showDialog<String>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        shape: Dimens.shapeL,
-        title: Text(S.of(ctx).pasteCodeLabel),
-        content: TextField(
-          controller: controller,
-          maxLines: 5,
-          decoration: InputDecoration(
-            hintText: S.of(ctx).pasteCodeHint,
-            border: const OutlineInputBorder(borderRadius: Dimens.borderRadiusS),
-          ),
-          autofocus: true,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: Text(S.of(ctx).dialogCancelLabel),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(controller.text.trim()),
-            child: Text(S.of(ctx).importActivityLabel),
-          ),
-        ],
+      builder: (ctx) => SharedCodeDialog(
+        hint: 'Paste the shared workout code here',
+        actionLabel: 'Import workout',
+        invalidLabel: "This isn't a workout code",
+        isValid: (code) {
+          try {
+            SharedActivityPayload.fromJsonString(code);
+            return true;
+          } on SharedActivityParseException {
+            return false;
+          }
+        },
       ),
     );
+    // [/fork]
     if (code != null && code.isNotEmpty) {
       await _processCode(code);
     }

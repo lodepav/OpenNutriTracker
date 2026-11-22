@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:logging/logging.dart';
 import 'package:opennutritracker/core/domain/entity/intake_entity.dart';
+import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/domain/usecase/get_intake_usecase.dart';
 import 'package:opennutritracker/core/utils/ai_credential_storage.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
@@ -271,9 +272,8 @@ class _GroupLeftoversDialogState extends State<GroupLeftoversDialog> {
                 padding: const EdgeInsets.only(top: 8),
                 child: Text(
                   note,
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.tertiary,
-                  ),
+                  // light tertiary is under 4.5:1 as text
+                  style: TextStyle(color: paletteOf(context).warningText),
                 ),
               ),
             const SizedBox(height: 8),

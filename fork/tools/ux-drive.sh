@@ -14,6 +14,11 @@
 #   nodes                 clickable nodes: bounds, size in dp, text, desc
 #   font_scale X          system font scale (1.0 normal, 2.0 for A6)
 #   night yes|no          dark theme on or off
+#   states NAME           NAME.png, NAME-200.png, NAME-dark.png of the screen
+#                         you are on, then back to 1.0 light; no dump
+#   back                  press_back, but refuses on the main screen, where
+#                         Back leaves the app and the next launch reseeds
+#   reseed                restart the app: demo data seeded again, on Home
 #
 # A dump takes about 3 s, so helpers reuse the last one, across calls, until
 # something could have changed the screen: any adb command that isn't only a
@@ -25,8 +30,15 @@
 # on another app's screen, the system file picker, sleep instead.
 #
 # UX defaults to build/ux; set it before sourcing to put shots elsewhere.
+# The device is ANDROID_SERIAL (what fork/tools/emulator.sh and ~/.claude/bin/emu
+# print), else DEVICE. One must be set: another session's emulator may be up.
 
 export PATH="$HOME/Android/Sdk/platform-tools:$PATH"
+DEVICE="${ANDROID_SERIAL:-${DEVICE:-}}"
+if [[ -z $DEVICE ]]; then
+  echo "ux-drive: set ANDROID_SERIAL to your emulator's serial (emu list)" >&2
+  return 1 2>/dev/null || exit 1
+fi
 _ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 # shellcheck source=/dev/null
 source "$_ROOT/tools/adb/adb-driver.sh" >/dev/null 2>&1
@@ -174,3 +186,44 @@ PY
 
 font_scale() { adb -s "$DEVICE" shell settings put system font_scale "$1"; }
 night() { adb -s "$DEVICE" shell cmd uimode night "$1" >/dev/null; }
+
+# The page stays open across font and theme changes (the activity handles
+# fontScale and uiMode), so all three states come from one visit.
+# settle sees a still screen before the app has started redrawing for the new
+# setting, so each change waits a moment first.
+states() {
+  shot "$1"
+  font_scale 2.0
+  command sleep 1
+  shot "$1-200"
+  font_scale 1.0
+  night yes
+  # the theme change redraws later than the font change
+  command sleep 2
+  shot "$1-dark"
+  night no
+  command sleep 1
+  settle
+}
+
+back() {
+  if id_exists nav-home; then
+    echo "back: on the main screen, Back would leave the app (press_back to force)" >&2
+    return 1
+  fi
+  press_back
+}
+
+reseed() {
+  adb -s "$DEVICE" shell am force-stop io.github.lodepav.openbite.develop
+  adb -s "$DEVICE" shell monkey -p io.github.lodepav.openbite.develop \
+    -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1
+  for _ in $(seq 1 20); do
+    # the seed loads after Home first draws
+    id_exists nav-home && { command sleep 5; rm -f "$LOCAL_DUMP"; return 0; }
+    command sleep 1
+    rm -f "$LOCAL_DUMP"
+  done
+  echo "reseed: no nav-home after 20 s" >&2
+  return 1
+}

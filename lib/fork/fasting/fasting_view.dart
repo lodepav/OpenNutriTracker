@@ -5,6 +5,7 @@ import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/features/fasting/domain/entity/fasting_session_entity.dart';
 import 'package:opennutritracker/features/fasting/presentation/bloc/fasting_bloc.dart';
+import 'package:opennutritracker/fork/add/chosen_chips.dart';
 import 'package:opennutritracker/fork/display/contrast.dart';
 import 'package:opennutritracker/fork/display/week_bars.dart';
 import 'package:opennutritracker/generated/l10n.dart';
@@ -295,13 +296,22 @@ class _Timer extends StatelessWidget {
                 child: Stack(
                   alignment: Alignment.center,
                   children: [
-                    SizedBox.expand(
-                      child: CircularProgressIndicator(
-                        value: progress,
-                        strokeWidth: 12,
-                        strokeCap: StrokeCap.round,
-                        color: accent,
-                        backgroundColor: palette.surfaceMuted,
+                    // hours, not the bare percent the ring says by itself
+                    // (its value must be a number, so it is left out)
+                    Semantics(
+                      label:
+                          'Fasted ${active.elapsed.isNegative ? 0 : active.elapsed.inHours} '
+                          'of $hoursText hours',
+                      child: ExcludeSemantics(
+                        child: SizedBox.expand(
+                          child: CircularProgressIndicator(
+                            value: progress,
+                            strokeWidth: 12,
+                            strokeCap: StrokeCap.round,
+                            color: accent,
+                            backgroundColor: palette.surfaceMuted,
+                          ),
+                        ),
                       ),
                     ),
                     // The ring is fixed; the text scales down into it at
@@ -481,37 +491,41 @@ class _Plans extends StatelessWidget {
             ),
           ),
           const SizedBox(height: Dimens.spacing8),
-          Wrap(
-            spacing: Dimens.spacing8,
-            runSpacing: Dimens.spacing8,
-            children: [
-              for (final h in fastingPlans)
+          // the accent fill marks the plan chosen
+          chosenChips(
+            context,
+            child: Wrap(
+              spacing: Dimens.spacing8,
+              runSpacing: Dimens.spacing8,
+              children: [
+                for (final h in fastingPlans)
+                  Semantics(
+                    identifier: 'fasting-plan-$h',
+                    child: ChoiceChip(
+                      label: Text(
+                        '$h:${24 - h}',
+                        semanticsLabel: '$h hours fasting, ${24 - h} eating',
+                      ),
+                      showCheckmark: false,
+                      materialTapTargetSize: MaterialTapTargetSize.padded,
+                      selected: h == hours,
+                      onSelected: (_) => onPick(h),
+                    ),
+                  ),
                 Semantics(
-                  identifier: 'fasting-plan-$h',
+                  identifier: 'fasting-preset-custom',
                   child: ChoiceChip(
                     label: Text(
-                      '$h:${24 - h}',
-                      semanticsLabel: '$h hours fasting, ${24 - h} eating',
+                      custom ? '$hours h' : S.of(context).fastingPresetCustom,
                     ),
                     showCheckmark: false,
                     materialTapTargetSize: MaterialTapTargetSize.padded,
-                    selected: h == hours,
-                    onSelected: (_) => onPick(h),
+                    selected: custom,
+                    onSelected: (_) => onCustom(),
                   ),
                 ),
-              Semantics(
-                identifier: 'fasting-preset-custom',
-                child: ChoiceChip(
-                  label: Text(
-                    custom ? '$hours h' : S.of(context).fastingPresetCustom,
-                  ),
-                  showCheckmark: false,
-                  materialTapTargetSize: MaterialTapTargetSize.padded,
-                  selected: custom,
-                  onSelected: (_) => onCustom(),
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
         ],
       ),
@@ -553,19 +567,26 @@ class _History extends StatelessWidget {
       padding: const EdgeInsets.all(Dimens.spacing12),
       child: Column(
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                fasts.length == 1 ? 'Last fast' : 'Last ${fasts.length} fasts',
-                style: muted,
-              ),
-              if (ended.isNotEmpty)
+          // At large text the count goes under the title rather than off the card.
+          SizedBox(
+            width: double.infinity,
+            child: Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              spacing: Dimens.spacing8,
+              children: [
                 Text(
-                  '$reached of ${ended.length} reached $targetText',
+                  fasts.length == 1
+                      ? 'Last fast'
+                      : 'Last ${fasts.length} fasts',
                   style: muted,
                 ),
-            ],
+                if (ended.isNotEmpty)
+                  Text(
+                    '$reached of ${ended.length} reached $targetText',
+                    style: muted,
+                  ),
+              ],
+            ),
           ),
           const SizedBox(height: Dimens.spacing8),
           Row(

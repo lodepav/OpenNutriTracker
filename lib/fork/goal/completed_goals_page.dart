@@ -6,6 +6,8 @@ import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/core/utils/calc/calendar_day_calc.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
 import 'package:opennutritracker/fork/goal/goal_chart.dart';
+import 'package:opennutritracker/fork/goal/goal_figure_grid.dart';
+import 'package:opennutritracker/fork/goal/goal_status.dart';
 import 'package:opennutritracker/fork/goal/phase_colors.dart';
 import 'package:opennutritracker/fork/phases/phases.dart';
 import 'package:opennutritracker/fork/trends/detail_widgets.dart';
@@ -22,6 +24,18 @@ typedef GoalHistory = ({
   List<double> trend,
   DateTime today,
 });
+
+/// The time [history] took in all, counted as its rows count each goal
+/// (a day at least): in days under a week, else in weeks.
+({String label, String value}) timeInGoals(List<GoalRecord> history) {
+  final days = history.fold(0, (s, r) {
+    final d = CalendarDayCalc.daysBetween(r.start, r.end);
+    return s + (d < 1 ? 1 : d);
+  });
+  return days < 7
+      ? (label: 'Days in goals', value: '$days')
+      : (label: 'Weeks in goals', value: '${(days / 7).round()}');
+}
 
 Future<GoalHistory> _loadHistory() async {
   final store = PhaseStore();
@@ -99,6 +113,9 @@ class _CompletedGoalsPageState extends State<CompletedGoalsPage> {
     final history = data.history;
     final running = data.running;
     final today = data.today;
+    final dayOne =
+        running != null &&
+        CalendarDayCalc.daysBetween(running.start, today) < 1;
     final first = DateTime(
       today.year,
       today.month,
@@ -107,9 +124,20 @@ class _CompletedGoalsPageState extends State<CompletedGoalsPage> {
     double sum(PhaseKind kind) => history
         .where((r) => r.kind == kind && r.startKg != null && r.endKg != null)
         .fold(0.0, (s, r) => s + (r.endKg! - r.startKg!));
-    final weeks = history.fold(0, (w, r) => w + r.weeks);
+    final time = timeInGoals(history);
     final lost = sum(PhaseKind.cut);
     final gained = sum(PhaseKind.bulk);
+    final bands = <GoalBand>[
+      for (final r in history) (start: r.start, end: r.end, kind: r.kind),
+      if (running != null)
+        for (final (i, p) in running.phases.indexed)
+          (
+            start: running.startOf(i),
+            end: running.startOf(i + 1),
+            kind: p.kind,
+          ),
+    ];
+    final drawn = drawnKinds(bands, first, data.trend.length);
     return [
       if (data.trend.length >= 2)
         AppCard(
@@ -121,70 +149,72 @@ class _CompletedGoalsPageState extends State<CompletedGoalsPage> {
                 trend: data.trend,
                 first: first,
                 unit: unit,
-                bands: [
-                  for (final r in history)
-                    (start: r.start, end: r.end, kind: r.kind),
-                  if (running != null)
-                    for (final (i, p) in running.phases.indexed)
-                      (
-                        start: running.startOf(i),
-                        end: running.startOf(i + 1),
-                        kind: p.kind,
-                      ),
-                ],
+                bands: bands,
                 label:
                     'Trend from ${format.format(first)}, '
                     '${weightText(data.trend.first, unit)}, to '
                     '${weightText(data.trend.last, unit)} today',
               ),
-              const SizedBox(height: Dimens.spacing8),
-              const PhaseLegend(),
+              // Only the colours drawn, none for a chart with no band.
+              if (drawn.isNotEmpty) ...[
+                const SizedBox(height: Dimens.spacing8),
+                PhaseLegend(kinds: drawn),
+              ],
             ],
           ),
         ),
       const SizedBox(height: Dimens.spacing12),
-      FigureGrid(
-        tiles: [
-          FigureTile(label: 'Goals completed', value: '${history.length}'),
-          FigureTile(
-            label: 'Weeks in goals',
-            value: '$weeks',
-            note: running == null ? null : 'and the one running',
-          ),
-          // A kind with no goal completed has no tile; a cut that ended
-          // heavier shows its change, not "lost" a negative.
-          if (history.any((r) => r.kind == PhaseKind.cut))
-            lost <= 0
-                ? FigureTile(
-                    label: 'Lost while cutting',
-                    value: weightText(-lost, unit),
-                  )
-                : FigureTile(
-                    label: 'Change while cutting',
-                    value: weightChangeText(lost, unit),
-                  ),
-          if (history.any((r) => r.kind == PhaseKind.bulk))
-            gained >= 0
-                ? FigureTile(
-                    label: 'Gained while bulking',
-                    value: weightText(gained, unit),
-                  )
-                : FigureTile(
-                    label: 'Change while bulking',
-                    value: weightChangeText(gained, unit),
-                  ),
-        ],
-      ),
+      if (history.isEmpty)
+        noData(
+          context,
+          'Goals you complete show here, with how long each took.',
+        )
+      else
+        GoalFigureGrid(
+          tiles: [
+            FigureTile(label: 'Goals completed', value: '${history.length}'),
+            FigureTile(
+              label: time.label,
+              value: time.value,
+              note: running == null ? null : 'and the one running',
+            ),
+            // A kind with no goal completed has no tile; a cut that ended
+            // heavier shows its change, not "lost" a negative.
+            if (history.any((r) => r.kind == PhaseKind.cut))
+              lost <= 0
+                  ? FigureTile(
+                      label: 'Lost while cutting',
+                      value: weightText(-lost, unit),
+                    )
+                  : FigureTile(
+                      label: 'Change while cutting',
+                      value: signedWeightText(lost, unit),
+                    ),
+            if (history.any((r) => r.kind == PhaseKind.bulk))
+              gained >= 0
+                  ? FigureTile(
+                      label: 'Gained while bulking',
+                      value: weightText(gained, unit),
+                    )
+                  : FigureTile(
+                      label: 'Change while bulking',
+                      value: signedWeightText(gained, unit),
+                    ),
+          ],
+        ),
       if (running != null) ...[
         trendSection(context, 'Running'),
         AppCard(
           child: _row(
             context,
             kind: running.kind,
-            weeks: goalWeeks(running.start, today),
-            dates: '${format.format(running.start)} – now',
+            length: goalLengthText(running.start, today),
+            // On its first day there is no change yet to show.
+            dates: dayOne
+                ? 'Started today'
+                : '${format.format(running.start)} – now',
             startKg: running.startKg,
-            endKg: data.trend.isEmpty ? null : data.trend.last,
+            endKg: data.trend.isEmpty || dayOne ? null : data.trend.last,
             targetKg: running.targetKg,
             now: true,
           ),
@@ -200,8 +230,8 @@ class _CompletedGoalsPageState extends State<CompletedGoalsPage> {
                 _row(
                   context,
                   kind: r.kind,
-                  weeks: r.weeks,
-                  dates: '${format.format(r.start)} – ${format.format(r.end)}',
+                  length: goalLengthText(r.start, r.end),
+                  dates: dateRangeText(format, r.start, r.end),
                   startKg: r.startKg,
                   endKg: r.endKg,
                   targetKg: r.targetKg,
@@ -218,7 +248,7 @@ class _CompletedGoalsPageState extends State<CompletedGoalsPage> {
   Widget _row(
     BuildContext context, {
     required PhaseKind kind,
-    required int weeks,
+    required String length,
     required String dates,
     required double? startKg,
     required double? endKg,
@@ -233,7 +263,7 @@ class _CompletedGoalsPageState extends State<CompletedGoalsPage> {
         : '${weightText(startKg, unit)} → ${weightText(endKg, unit)}';
     final change = startKg == null || endKg == null
         ? null
-        : weightChangeText(endKg - startKg, unit);
+        : signedWeightText(endKg - startKg, unit);
     return MergeSemantics(
       child: Padding(
         padding: const EdgeInsets.all(Dimens.spacing16),
@@ -254,7 +284,7 @@ class _CompletedGoalsPageState extends State<CompletedGoalsPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '${kind.label} · $weeks ${weeks == 1 ? 'week' : 'weeks'}'
+                    '${kind.label} · $length'
                     '${extensions == 0 ? '' : ' · extended $extensions×'}',
                     style: theme.textTheme.titleSmall,
                   ),
@@ -263,6 +293,11 @@ class _CompletedGoalsPageState extends State<CompletedGoalsPage> {
                     Text(
                       '$weights'
                       '${targetKg == null ? '' : ' · target ${weightText(targetKg, unit)}'}',
+                      style: theme.textTheme.bodySmall,
+                    )
+                  else if (targetKg != null)
+                    Text(
+                      'Target ${weightText(targetKg, unit)}',
                       style: theme.textTheme.bodySmall,
                     ),
                 ],

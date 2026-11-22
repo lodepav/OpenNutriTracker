@@ -28,7 +28,15 @@ import 'package:opennutritracker/fork/recipe/recipe_builder.dart';
 import 'package:opennutritracker/fork/widget/toolbar_height.dart';
 // [/fork]
 // [fork] S273 recipe-photo-evict
-import 'package:opennutritracker/fork/display/sized_file_image.dart';
+// S478 photo-staging: StagedPhoto evicts the photo now
+// import 'package:opennutritracker/fork/display/sized_file_image.dart';
+// [/fork]
+// [fork] S437 builder-discard-red
+import 'package:opennutritracker/fork/recipe/recipe_delete.dart'
+    show destructiveFilledStyle;
+// [/fork]
+// [fork] S478 photo-staging
+import 'package:opennutritracker/fork/photos/staged_photo.dart';
 // [/fork]
 
 class RecipeBuilderArguments {
@@ -52,6 +60,9 @@ class _RecipeBuilderScreenState extends State<RecipeBuilderScreen> {
   late TextEditingController _tagsController;
 
   bool _initialized = false;
+  // [fork] S478 photo-staging: a picked or removed photo waits for Save (H3)
+  final _forkPhoto = StagedPhoto(UserImageKind.recipe);
+  // [/fork]
 
   @override
   void initState() {
@@ -104,6 +115,7 @@ class _RecipeBuilderScreenState extends State<RecipeBuilderScreen> {
     _servingsController.dispose();
     _totalWeightController.dispose();
     _tagsController.dispose();
+    _forkPhoto.discard(); // [fork] S478 photo-staging
     super.dispose();
   }
 
@@ -123,7 +135,10 @@ class _RecipeBuilderScreenState extends State<RecipeBuilderScreen> {
       bloc: _bloc,
       listener: (context, state) {
         if (state.didSave) {
-          Navigator.of(context).pop();
+          // [fork] S478 photo-staging: the photo once the recipe is saved
+          // Navigator.of(context).pop();
+          _forkCommitPhotoThenPop(context);
+          // [/fork]
           return;
         }
         // Sync the auto-computed total weight into the controller so the
@@ -156,6 +171,7 @@ class _RecipeBuilderScreenState extends State<RecipeBuilderScreen> {
                   ? S.of(context).editRecipeTitle
                   : S.of(context).createRecipeTitle,
               maxLines: 2,
+              softWrap: true, // [fork] S127 AppBar titles default to no wrap
               overflow: TextOverflow.ellipsis,
             ),
             // [fork] S127 recipe-builder: Save is at the bottom, with the
@@ -177,9 +193,12 @@ class _RecipeBuilderScreenState extends State<RecipeBuilderScreen> {
                 onChanged: (v) => _bloc.add(UpdateNameEvent(v)),
               ),
               const SizedBox(height: Dimens.spacing24),
-              Text(
-                S.of(context).recipeIngredientsLabel,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+              Semantics(
+                header: true, // TalkBack's heading navigation (A7)
+                child: Text(
+                  S.of(context).recipeIngredientsLabel,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+                ),
               ),
               const SizedBox(height: Dimens.spacing8),
               if (state.ingredients.isEmpty)
@@ -332,7 +351,10 @@ class _RecipeBuilderScreenState extends State<RecipeBuilderScreen> {
                   const SizedBox(height: Dimens.spacing12),
               UserImagePickerTile(
                 kind: UserImageKind.recipe,
-                imagePath: state.imagePath,
+                // [fork] S478 photo-staging
+                // imagePath: state.imagePath,
+                imagePath: _forkPhoto.shown(state.imagePath),
+                // [/fork]
                 onPickFromGallery: () => _onPickImage(
                   context,
                   source: ImageSource.gallery,
@@ -371,6 +393,9 @@ class _RecipeBuilderScreenState extends State<RecipeBuilderScreen> {
 
   bool _hasUnsavedChanges(RecipeBuilderState state) {
     if (state.didSave || state.isSaving) return false;
+    // [fork] S478 photo-staging: a new photo keeps the stored path
+    if (_forkPhoto.pending) return true;
+    // [/fork]
     // An opened recipe is never empty, so the checks below would always
     // ask. Compare what Save would write with what was loaded instead
     // (#1443).
@@ -401,6 +426,10 @@ class _RecipeBuilderScreenState extends State<RecipeBuilderScreen> {
             child: Text(s.dialogCancelLabel),
           ),
           FilledButton(
+            // [fork] S437 builder-discard-red: it loses the work, as a
+            // delete does (H3)
+            style: destructiveFilledStyle(ctx),
+            // [/fork]
             onPressed: () => Navigator.of(ctx).pop(true),
             child: Text(s.discardChangesConfirmLabel),
           ),
@@ -410,6 +439,10 @@ class _RecipeBuilderScreenState extends State<RecipeBuilderScreen> {
   }
 
   Future<void> _onAddIngredient(BuildContext context) async {
+    // [fork] S346 builder-stale-save-error: a save error would stay on the
+    // picker and on the return, long after it was about the empty recipe
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    // [/fork]
     final selectedMeal = await Navigator.of(context).push<MealEntity>(
       MaterialPageRoute(
         builder: (searchContext) => Scaffold(
@@ -485,24 +518,38 @@ class _RecipeBuilderScreenState extends State<RecipeBuilderScreen> {
       // source (camera / gallery) the photo came from.
       final picked = await picker.pickImage(source: source);
       if (picked == null) return;
-      final relative = await UserImageStorage.importFrom(
-        kind: UserImageKind.recipe,
-        ownerId: recipeId,
-        sourcePath: picked.path,
-      );
+      // [fork] S478 photo-staging: staged; Save writes it to the stored path
+      // final relative = await UserImageStorage.importFrom(
+      //   kind: UserImageKind.recipe,
+      //   ownerId: recipeId,
+      //   sourcePath: picked.path,
+      // );
+      // [/fork]
       // Bust the in-memory Image.file cache so the new picture shows up
       // immediately instead of redrawing the previous bytes for this path.
       // [fork] S273 recipe-photo-evict: Home's and the Diary's thumbnails
       // too, which are cached at their own size
       // FileImage(File(await UserImageStorage.absolutePath(relative)))
       //     .evict();
-      await evictPhoto(relative);
+      // S478 photo-staging: StagedPhoto evicts them on Save
+      // await evictPhoto(relative);
+      // [/fork]
+      // [fork] S478 photo-staging
+      final relative = await _forkPhoto.pick(
+        ownerId: recipeId,
+        sourcePath: picked.path,
+      );
+      if (!mounted) return;
+      setState(() {}); // the tile shows the staged photo
       // [/fork]
       _bloc.add(UpdateImagePathEvent(relative));
     } catch (_) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(S.of(context).recipeSaveErrorLabel)),
+        // [fork] S483 builder-photo-error: not a lost recipe (H9)
+        // SnackBar(content: Text(S.of(context).recipeSaveErrorLabel)),
+        const SnackBar(content: Text('Could not add the photo')),
+        // [/fork]
       );
     }
   }
@@ -510,9 +557,31 @@ class _RecipeBuilderScreenState extends State<RecipeBuilderScreen> {
   Future<void> _onRemoveImage(BuildContext context) async {
     final current = _bloc.state.imagePath;
     if (current == null) return;
-    await UserImageStorage.delete(current);
+    // [fork] S478 photo-staging: deleted on Save
+    // await UserImageStorage.delete(current);
+    await _forkPhoto.remove(current);
+    if (!mounted) return;
+    // [/fork]
     _bloc.add(const UpdateImagePathEvent(null));
   }
+
+  // [fork] S478 photo-staging: the recipe list reloads on the pop, so the
+  // file is in place first
+  var _forkPopping = false;
+
+  Future<void> _forkCommitPhotoThenPop(BuildContext context) async {
+    if (_forkPopping) return;
+    _forkPopping = true;
+    final saved = await _forkPhoto.commit();
+    if (!context.mounted) return;
+    if (!saved) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not save the photo')),
+      );
+    }
+    Navigator.of(context).pop();
+  }
+  // [/fork]
 
   void _showSaveError(BuildContext context, SaveError error) {
     final s = S.of(context);

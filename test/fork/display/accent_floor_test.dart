@@ -54,12 +54,12 @@ String _hex(Color c) => c.toARGB32().toRadixString(16);
 
 void main() {
   for (final MapEntry(key: name, value: base) in _palettes.entries) {
-    test('$name: every accent reaches 4.5:1 as text on the canvas and the '
-        'card', () {
+    test('$name: every accent reaches 4.5:1 as text on the canvas, the '
+        'card and a muted panel', () {
       for (final accent in _accents) {
         final p = base.withAccent(accent);
         final text = textAccentOf(p);
-        for (final bg in [p.canvas, p.surface]) {
+        for (final bg in [p.canvas, p.surface, p.surfaceMuted]) {
           expect(
             contrastRatio(text, bg),
             greaterThanOrEqualTo(4.5),
@@ -100,8 +100,19 @@ void main() {
   }
 
   test('an accent that already reads is unchanged as text', () {
-    expect(textAccentOf(AppPalette.light), AppPalette.light.accent);
     expect(textAccentOf(AppPalette.dark), AppPalette.dark.accent);
+  });
+
+  test('the light default, 4.48:1 on a muted panel, moves only a little', () {
+    const p = AppPalette.light;
+    expect(contrastRatio(p.accent, p.surfaceMuted), lessThan(4.5));
+    final text = textAccentOf(p);
+    expect(contrastRatio(text, p.surfaceMuted), greaterThanOrEqualTo(4.5));
+    expect(
+      HSLColor.fromColor(p.accent).lightness -
+          HSLColor.fromColor(text).lightness,
+      lessThanOrEqualTo(0.02),
+    );
   });
 
   group('with a yellow accent in light', () {
@@ -113,6 +124,12 @@ void main() {
       ).textButtonTheme.style!.foregroundColor!.resolve(const {})!;
       expect(fg, textAccentOf(p));
       expect(contrastRatio(fg, p.canvas), greaterThanOrEqualTo(4.5));
+    });
+
+    test('a chosen list row draws in the text-safe accent', () {
+      final selected = buildAppTheme(p).listTileTheme.selectedColor;
+      expect(selected, textAccentOf(p));
+      expect(contrastRatio(selected!, p.surface), greaterThanOrEqualTo(4.5));
     });
 
     testWidgets('the weight history\'s trend line is chart-safe', (

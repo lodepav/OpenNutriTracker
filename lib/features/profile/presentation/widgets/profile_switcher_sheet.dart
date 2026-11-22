@@ -118,10 +118,21 @@ Future<void> showAddProfileDialog(BuildContext pageContext) async {
           ),
           Semantics(
             identifier: 'profile-add-confirm',
-            child: TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(true),
-              child: Text(s.addLabel),
+            // [fork] S302 profile-name-required: Add waits for a name
+            // child: TextButton(
+            //   onPressed: () => Navigator.of(dialogContext).pop(true),
+            //   child: Text(s.addLabel),
+            // ),
+            child: ValueListenableBuilder<TextEditingValue>(
+              valueListenable: controller,
+              builder: (context, value, _) => TextButton(
+                onPressed: value.text.trim().isEmpty
+                    ? null
+                    : () => Navigator.of(dialogContext).pop(true),
+                child: Text(s.addLabel),
+              ),
             ),
+            // [/fork]
           ),
         ],
       );

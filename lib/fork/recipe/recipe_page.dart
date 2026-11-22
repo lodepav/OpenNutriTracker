@@ -8,7 +8,8 @@ import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/fork/copy/copy_ui.dart' show mealLabel;
 import 'package:opennutritracker/fork/display/display_prefs.dart';
-import 'package:opennutritracker/fork/off/off_kinds.dart';
+import 'package:opennutritracker/fork/recipe/recipe_builder.dart'
+    show ingredientEmoji;
 import 'package:opennutritracker/fork/recipe/recipe_list.dart' show macroSpans;
 import 'package:opennutritracker/fork/units/energy_text.dart';
 import 'package:opennutritracker/fork/widget/meal_picker_chip.dart';
@@ -129,10 +130,10 @@ class RecipeTotalsStrip extends StatelessWidget {
             excludeSemantics: true,
             child: Column(
               children: [
+                // Wraps rather than cut a figure at large text (A6)
                 Text(
                   value,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
                   style: theme.textTheme.titleLarge?.copyWith(
                     color: color,
                     fontWeight: FontWeight.w800,
@@ -152,39 +153,45 @@ class RecipeTotalsStrip extends StatelessWidget {
             ),
           ),
         );
+    final cells = [
+      cell(
+        '${energyValue(context, of(per100.energyKcal100))}',
+        energyUnit(context),
+        theme.colorScheme.onSurface,
+      ),
+      ...inMacroOrder(
+        carbs: cell(
+          of(per100.carbohydrates100).round().toString(),
+          '${s.carbsLabel} g',
+          palette.carbs,
+          macro: s.carbsLabel.toLowerCase(),
+        ),
+        fat: cell(
+          of(per100.fat100).round().toString(),
+          '${s.fatLabel} g',
+          palette.fat,
+          macro: s.fatLabel.toLowerCase(),
+        ),
+        protein: cell(
+          of(per100.proteins100).round().toString(),
+          '${s.proteinLabel} g',
+          palette.protein,
+          macro: s.proteinLabel.toLowerCase(),
+        ),
+      ),
+    ];
+    // Two rows of two at large text, so no figure is squeezed (A6)
+    final twoRows = MediaQuery.textScalerOf(context).scale(1) >= 1.5;
     return AppCard(
       padding: const EdgeInsets.all(Dimens.spacing12),
       child: Column(
         children: [
-          Row(
-            children: [
-              cell(
-                '${energyValue(context, of(per100.energyKcal100))}',
-                energyUnit(context),
-                theme.colorScheme.onSurface,
-              ),
-              ...inMacroOrder(
-                carbs: cell(
-                  of(per100.carbohydrates100).round().toString(),
-                  '${s.carbsLabel} g',
-                  palette.carbs,
-                  macro: s.carbsLabel.toLowerCase(),
-                ),
-                fat: cell(
-                  of(per100.fat100).round().toString(),
-                  '${s.fatLabel} g',
-                  palette.fat,
-                  macro: s.fatLabel.toLowerCase(),
-                ),
-                protein: cell(
-                  of(per100.proteins100).round().toString(),
-                  '${s.proteinLabel} g',
-                  palette.protein,
-                  macro: s.proteinLabel.toLowerCase(),
-                ),
-              ),
-            ],
-          ),
+          if (twoRows) ...[
+            Row(children: cells.sublist(0, 2)),
+            const SizedBox(height: Dimens.spacing8),
+            Row(children: cells.sublist(2)),
+          ] else
+            Row(children: cells),
           const SizedBox(height: Dimens.spacing8),
           Text(
             '${portion.label}, ${_grams(portion.grams)} g · per 100 g '
@@ -235,7 +242,7 @@ class RecipeIngredientRow extends StatelessWidget {
               color: palette.surfaceMuted,
               borderRadius: Dimens.borderRadiusS,
             ),
-            child: switch (OffKinds.emojiFor(meal)) {
+            child: switch (ingredientEmoji(meal)) {
               final emoji? => ExcludeSemantics(
                 child: Text(emoji, style: const TextStyle(fontSize: 18)),
               ),
@@ -339,7 +346,7 @@ class RecipeLogBar extends StatelessWidget {
               Row(
                 children: [
                   IconButton.outlined(
-                    tooltip: 'Less',
+                    tooltip: 'Fewer servings',
                     icon: const Icon(Icons.remove_rounded),
                     onPressed: count > RecipePortion.step
                         ? () => onCount(count - RecipePortion.step)
@@ -353,7 +360,7 @@ class RecipeLogBar extends StatelessWidget {
                     ),
                   ),
                   IconButton.outlined(
-                    tooltip: 'More',
+                    tooltip: 'More servings',
                     icon: const Icon(Icons.add_rounded),
                     onPressed: () => onCount(count + RecipePortion.step),
                   ),

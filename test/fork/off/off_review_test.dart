@@ -121,6 +121,28 @@ void main() {
     expect(find.text('Added to Open Food Facts. Thank you!'), findsOneWidget);
   });
 
+  testWidgets('a mistyped value is marked and keeps Send off', (tester) async {
+    await offer(
+      tester,
+      client({'product_name': 'Rye crispbread', 'brands': 'Finn Crisp'}),
+    );
+    FilledButton send() =>
+        tester.widget(find.byKey(const Key('fork-off-send')));
+
+    for (final typo in ['1o', '-2']) {
+      await tester.enterText(find.byKey(const Key('fork-off-fat')), typo);
+      await tester.pump();
+      expect(find.text('Enter a number, or clear it'), findsOneWidget);
+      expect(send().onPressed, isNull);
+    }
+
+    // Cleared still means leave it out.
+    await tester.enterText(find.byKey(const Key('fork-off-fat')), '');
+    await tester.pump();
+    expect(find.text('Enter a number, or clear it'), findsNothing);
+    expect(send().onPressed, isNotNull);
+  });
+
   testWidgets('a food saved per serving offers its name, no figures', (
     tester,
   ) async {

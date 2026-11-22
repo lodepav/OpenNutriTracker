@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
+import 'package:opennutritracker/core/styles/app_theme.dart';
 import 'package:opennutritracker/fork/health/steps.dart';
 import 'package:opennutritracker/fork/health/steps_card.dart';
 
@@ -139,6 +140,35 @@ void main() {
       expect(range, hasLength(30));
     });
 
+    test('a step goal is whole digits from 1,000 to 100,000', () {
+      expect(parseStepGoal('7500'), 7500);
+      expect(parseStepGoal(' 1000 '), 1000);
+      expect(parseStepGoal('100000'), 100000);
+      // Thousands grouped as people type them.
+      expect(parseStepGoal('8,000'), 8000);
+      expect(parseStepGoal('8.000'), 8000);
+      expect(parseStepGoal('8 000'), 8000);
+      expect(parseStepGoal('8\u202F000'), 8000);
+      expect(parseStepGoal('10,500'), 10500);
+      expect(parseStepGoal('100,000'), 100000);
+      // Any other separator is refused, not stripped: "7.5" was saved as 75.
+      for (final typed in [
+        '7.5',
+        '7,5',
+        '75,00',
+        '8,000.000',
+        '8,0000',
+        '1000,000',
+        '-8000',
+        '7.5k',
+        '',
+      ]) {
+        expect(parseStepGoal(typed), isNull, reason: typed);
+      }
+      expect(parseStepGoal('999'), isNull);
+      expect(parseStepGoal('100001'), isNull);
+    });
+
     test('the goal is kept', () async {
       expect(await steps.goal(), StepCounts.defaultGoal);
       await steps.setGoal(10000);
@@ -210,6 +240,30 @@ void main() {
       expect(find.textContaining('refused the read'), findsOneWidget);
     });
 
+    testWidgets('the goal button is a 48 dp target in the app theme', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: buildAppTheme(AppPalette.light),
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: StepsCard(
+                rangeDays: 7,
+                palette: AppPalette.light,
+                steps: _MemorySteps(_Source(), on: true),
+                clock: () => _now,
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final size = tester.getSize(find.byKey(const ValueKey('steps-goal')));
+      expect(size.height, greaterThanOrEqualTo(48));
+      expect(size.width, greaterThanOrEqualTo(48));
+    });
+
     testWidgets('the goal is edited', (tester) async {
       final steps = _MemorySteps(
         _Source(),
@@ -230,6 +284,38 @@ void main() {
 
       expect(find.text('Goal 10,000'), findsOneWidget);
       expect(find.text('0 of 1'), findsOneWidget);
+    });
+
+    testWidgets('a goal out of range says why and is not saved', (
+      tester,
+    ) async {
+      final steps = _MemorySteps(_Source(), on: true);
+      await pump(tester, steps);
+      await tester.tap(find.byKey(const ValueKey('steps-goal')));
+      await tester.pumpAndSettle();
+      final field = find.byKey(const ValueKey('steps-goal-field'));
+      // Named for a screen reader, not only by the dialog's title.
+      expect(
+        tester.widget<TextField>(field).decoration?.labelText,
+        'Steps a day',
+      );
+
+      for (final typed in ['0', '999', '7.5', '100001', '']) {
+        await tester.enterText(field, typed);
+        await tester.pump();
+        expect(find.text('Enter 1,000 to 100,000 steps'), findsNothing);
+        await tester.tap(find.text('Save'));
+        await tester.pumpAndSettle();
+        expect(find.text('Enter 1,000 to 100,000 steps'), findsOneWidget);
+      }
+      // At large text the range wraps rather than losing its upper bound.
+      expect(tester.widget<TextField>(field).decoration!.errorMaxLines, 3);
+      expect(await steps.goal(), StepCounts.defaultGoal);
+
+      // The error goes as the text changes.
+      await tester.enterText(field, '9000');
+      await tester.pump();
+      expect(find.text('Enter 1,000 to 100,000 steps'), findsNothing);
     });
   });
 }

@@ -76,21 +76,25 @@ Future<bool> confirmBodyCompare(
     if (!context.mounted) return false;
   }
   final destination = aiDestination(provider, endpoint: endpoint);
-  final text = Theme.of(context).textTheme;
-  Widget day(String name, BodyDay d) => Padding(
-    padding: const EdgeInsets.only(top: Dimens.spacing8),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          '$name, ${DateFormat.yMMMd(Localizations.localeOf(context).toLanguageTag()).format(d.date)}',
-          style: text.titleSmall,
-        ),
-        if (d.lines.isEmpty) Text('Nothing logged', style: text.bodySmall),
-        for (final line in d.lines) Text(line, style: text.bodySmall),
-      ],
-    ),
-  );
+  // The dialog's own context, so a theme flip while it is open recolours it.
+  Widget day(BuildContext context, String name, BodyDay d) {
+    final text = Theme.of(context).textTheme;
+    return Padding(
+      padding: const EdgeInsets.only(top: Dimens.spacing8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '$name, ${DateFormat.yMMMd(Localizations.localeOf(context).toLanguageTag()).format(d.date)}',
+            style: text.titleSmall,
+          ),
+          if (d.lines.isEmpty) Text('Nothing logged', style: text.bodySmall),
+          for (final line in d.lines) Text(line, style: text.bodySmall),
+        ],
+      ),
+    );
+  }
+
   final send = await showDialog<bool>(
     context: context,
     builder: (context) => AlertDialog(
@@ -105,8 +109,8 @@ Future<bool> confirmBodyCompare(
               '$destination. It judges how your body '
               'composition changed and how sure it is.',
             ),
-            day('Earlier', earlier),
-            day('Later', later),
+            day(context, 'Earlier', earlier),
+            day(context, 'Later', later),
           ],
         ),
       ),

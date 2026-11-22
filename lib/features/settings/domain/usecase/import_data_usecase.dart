@@ -70,6 +70,11 @@ class ImportDataUsecase {
   final BackupExtras? _forkExtras;
   // [/fork]
 
+  // [fork] S413 import-confirm: asked once a file is picked, before it is
+  // read; false is a cancel. The Export / import dialog sets it while open
+  Future<bool> Function()? forkConfirmImport;
+  // [/fork]
+
   ImportDataUsecase(
     this._userActivityRepository,
     this._intakeRepository,
@@ -379,6 +384,10 @@ class ImportDataUsecase {
   /// decoder accepts a plain `.csv` as an *empty* archive rather than
   /// rejecting it — that case is caught by [_missingEntry] instead.
   Future<Archive> _pickAndDecodeArchive() async {
+    // [fork] S413 import-confirm: read before the pick, so a dialog closed
+    // while the picker was open still answers (no)
+    final forkConfirm = forkConfirmImport;
+    // [/fork]
     final result = await _pickFile();
     if (result == null) {
       throw const ExportImportFailure(
@@ -393,6 +402,14 @@ class ImportDataUsecase {
         'The file picker returned "${result.name}" without a readable path',
       );
     }
+    // [fork] S413 import-confirm
+    if (forkConfirm != null && !await forkConfirm()) {
+      throw const ExportImportFailure(
+        ExportImportFailureReason.cancelled,
+        'The user kept their data over the picked file',
+      );
+    }
+    // [/fork]
 
     final zipBytes = await ExportImportFailure.guard(
       ExportImportFailureReason.unreadableOrWrongFormat,

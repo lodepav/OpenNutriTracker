@@ -151,6 +151,17 @@ class _HealthSyncScreenState extends State<HealthSyncScreen> {
     if (!enabled) {
       setState(() => _importEnabled = false);
       await locator<SettingsBloc>().setHealthImportEnabled(false);
+      // [fork] S457 workouts-off-says: what stays, as the other cards say
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Workout import off; imported workouts stay in the diary',
+            ),
+          ),
+        );
+      }
+      // [/fork]
       return;
     }
 
@@ -263,9 +274,17 @@ class _HealthSyncScreenState extends State<HealthSyncScreen> {
   }
 
   void _openSources() {
-    Navigator.of(
-      context,
-    ).push(MaterialPageRoute<void>(builder: (_) => const SourcesScreen()));
+    // [fork] S303 credit-card: Sources opens at the credit's own entry
+    // Navigator.of(
+    //   context,
+    // ).push(MaterialPageRoute<void>(builder: (_) => const SourcesScreen()));
+    final entry = S.of(context).sourcesEnergyCompensationTitle;
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => SourcesScreen(initialEntry: entry),
+      ),
+    );
+    // [/fork]
   }
 
   /// Puts the disclosure up and reports whether the user chose to go on.
@@ -328,12 +347,13 @@ class _HealthSyncScreenState extends State<HealthSyncScreen> {
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : ListView(
-              // [fork] S138 health-connect
-              padding: const EdgeInsets.fromLTRB(
+              // [fork] S138 health-connect: the last row clears the
+              // navigation bar, as explicit padding drops the inset
+              padding: EdgeInsets.fromLTRB(
                 Dimens.spacing12,
                 0,
                 Dimens.spacing12,
-                Dimens.spacing32,
+                Dimens.spacing32 + MediaQuery.paddingOf(context).bottom,
               ),
               // [/fork]
               children: [
@@ -463,9 +483,14 @@ class _HealthSyncScreenState extends State<HealthSyncScreen> {
               max: ConfigEntity.maxHealthWorkoutKcalMultiplier,
               divisions: _multiplierDivisions,
               value: _multiplier,
-              label: s.healthSyncKcalMultiplierValueLabel(
-                _percentOf(_multiplier),
-              ),
+              // [fork] S303 credit-card: TalkBack read the label and the
+              // value, "100%, 100%"; the figure above shows it while dragging
+              // label: s.healthSyncKcalMultiplierValueLabel(
+              //   _percentOf(_multiplier),
+              // ),
+              semanticFormatterCallback: (value) =>
+                  '${_percentOf(value)}% of workout calories',
+              // [/fork]
               onChanged: canEdit
                   ? (value) => setState(() => _multiplier = value)
                   : null,
@@ -473,6 +498,22 @@ class _HealthSyncScreenState extends State<HealthSyncScreen> {
             ),
           ),
           Text(s.healthSyncKcalMultiplierSubtitle, style: textTheme.bodySmall),
+          // [fork] S303 credit-card: before opt-in, what the first opt-in
+          // sets (the suggestion is applied only while nothing is stored)
+          if (!_importEnabled && _storedMultiplier == null)
+            Padding(
+              padding: const EdgeInsets.only(top: Dimens.spacing4),
+              child: Text(
+                healthStoreReadsBodyFat
+                    ? 'When you turn on Workouts in, OpenBite sets the credit '
+                          'from your body fat in $healthPlatformName, or from '
+                          'your height and weight without one.'
+                    : 'When you turn on Workouts in, OpenBite sets the credit '
+                          'from your height and weight.',
+                style: textTheme.bodySmall,
+              ),
+            ),
+          // [/fork]
           if (canEdit && suggested != null)
             Align(
               alignment: AlignmentDirectional.centerStart,

@@ -210,6 +210,12 @@ Future<DayTotals> Function(DateTime day) basketDayTotals = loadDayTotals;
   );
 }
 
+/// The plan button's words: the day it plans for, "today" when it is.
+String planButtonLabel(DateTime day, DateTime now, String locale) =>
+    DateUtils.isSameDay(day, now)
+    ? 'Plan for today'
+    : 'Plan for ${DateFormat.MMMEd(locale).format(day)}';
+
 /// The basket's foods, each removable, and "Log all", which writes them
 /// one after another (each takes the tracked-day lock) and goes home.
 class BasketSheet extends StatefulWidget {
@@ -235,9 +241,45 @@ class BasketSheet extends StatefulWidget {
 class _BasketSheetState extends State<BasketSheet> {
   bool _logging = false;
 
+  /// Log all, not a plan, is under way: its button shows it.
+  bool _loggingAll = false;
+
   /// Why the last "Log all" wrote nothing: said here, as a bar would show
   /// under this sheet, which stays open for another go.
   String? _failed;
+
+  /// The food just removed while others stay, and how to put it back: said
+  /// in the sheet, as a bar would show under it.
+  ({String name, VoidCallback restore})? _removed;
+
+  void _remove(int index, BasketItem item) {
+    final restore = widget.basket.restorePoint();
+    widget.basket.removeAt(index);
+    final name = item.meal.name ?? 'Food';
+    if (widget.basket.items.isNotEmpty) {
+      setState(() => _removed = (name: name, restore: restore));
+      return;
+    }
+    _closeWithUndo('Removed $name.', restore);
+  }
+
+  void _empty() {
+    _closeWithUndo('Emptied the basket.', widget.basket.setAside());
+  }
+
+  /// Closes the sheet and offers [restore] on the screen under it.
+  void _closeWithUndo(String message, VoidCallback restore) {
+    final messenger = ScaffoldMessenger.of(context);
+    Navigator.of(context).pop();
+    messenger
+      ..removeCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(message),
+          action: SnackBarAction(label: 'Undo', onPressed: restore),
+        ),
+      );
+  }
 
   /// Puts the foods on the day's plan (`PlanStore`) instead of the diary,
   /// repeating on [weekdays] if any.
@@ -248,13 +290,14 @@ class _BasketSheetState extends State<BasketSheet> {
     // is still the previous day's plan.
     final offset = (await locator<GetConfigUsecase>().getConfig())
         .dayStartOffsetTotalMinutes;
+    final planDay = DayBoundaryCalc.dayLabelOf(widget.day, offset);
     await (widget.plans ?? PlanStore()).add(
       [
         for (final i in items)
           (meal: i.meal, unit: i.unit, amountText: i.amountText, kcal: i.kcal),
       ],
       widget.type,
-      DayBoundaryCalc.dayLabelOf(widget.day, offset),
+      planDay,
       weekdays: weekdays,
     );
     final planning = widget.basket.planning != null;
@@ -264,7 +307,10 @@ class _BasketSheetState extends State<BasketSheet> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          weekdays.isEmpty ? 'Planned $count.' : 'Repeating $count.',
+          weekdays.isEmpty
+              ? 'Planned $count for '
+                    '${DateFormat.MMMEd(Localizations.localeOf(context).toLanguageTag()).format(planDay)}.'
+              : 'Repeating $count.',
         ),
       ),
     );
@@ -296,6 +342,7 @@ class _BasketSheetState extends State<BasketSheet> {
   Future<void> _logAll() async {
     setState(() {
       _logging = true;
+      _loggingAll = true;
       _failed = null;
     });
     final items = widget.basket.itemsFor(widget.type, widget.day);
@@ -328,6 +375,7 @@ class _BasketSheetState extends State<BasketSheet> {
       if (failed) {
         setState(() {
           _logging = false;
+          _loggingAll = false;
           _failed = unwritten;
         });
         return;
@@ -436,7 +484,13 @@ class _BasketSheetState extends State<BasketSheet> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text('Basket', style: Theme.of(context).textTheme.titleLarge),
+              Semantics(
+                header: true,
+                child: Text(
+                  'Basket',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+              ),
               if (items.isNotEmpty) ...[
                 const SizedBox(height: 12),
                 _mealCard(context, items),
@@ -458,19 +512,31 @@ class _BasketSheetState extends State<BasketSheet> {
                           key: ValueKey('basket-remove-$i'),
                           icon: const Icon(Icons.close_rounded),
                           tooltip: 'Remove ${item.meal.name ?? ''}',
-                          onPressed: _logging
-                              ? null
-                              : () {
-                                  widget.basket.removeAt(i);
-                                  if (widget.basket.items.isEmpty) {
-                                    Navigator.of(context).pop();
-                                  }
-                                },
+                          onPressed: _logging ? null : () => _remove(i, item),
                         ),
                       ),
                   ],
                 ),
               ),
+              if (_removed case final removed?)
+                Semantics(
+                  liveRegion: true,
+                  child: Row(
+                  key: const ValueKey('basket-removed'),
+                  children: [
+                    Expanded(child: Text('Removed ${removed.name}.')),
+                    TextButton(
+                      onPressed: _logging
+                          ? null
+                          : () {
+                              removed.restore();
+                              setState(() => _removed = null);
+                            },
+                      child: const Text('Undo'),
+                    ),
+                  ],
+                  ),
+                ),
               const Divider(),
               if (_failed case final failed?)
                 Padding(
@@ -484,9 +550,16 @@ class _BasketSheetState extends State<BasketSheet> {
                 ),
               const SizedBox(height: 12),
               if (widget.basket.planning == null) ...[
-                FilledButton(
+                FilledButton.icon(
                   onPressed: _logging || items.isEmpty ? null : _logAll,
-                  child: Text(
+                  // a slow log shows it is under way
+                  icon: _loggingAll
+                      ? const SizedBox.square(
+                          dimension: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : null,
+                  label: Text(
                     'Log all ${items.length} to '
                     '${mealLabel(context, widget.type)}',
                   ),
@@ -494,7 +567,13 @@ class _BasketSheetState extends State<BasketSheet> {
                 OutlinedButton(
                   key: const ValueKey('basket-plan'),
                   onPressed: _logging || items.isEmpty ? null : _plan,
-                  child: const Text('Plan, don\'t log'),
+                  child: Text(
+                    planButtonLabel(
+                      widget.day,
+                      DateTime.now(),
+                      Localizations.localeOf(context).toLanguageTag(),
+                    ),
+                  ),
                 ),
               ] else ...[
                 if (widget.basket.planning == PlanMode.once)
@@ -512,12 +591,7 @@ class _BasketSheetState extends State<BasketSheet> {
                 ),
               ],
               TextButton(
-                onPressed: _logging
-                    ? null
-                    : () {
-                        widget.basket.clear();
-                        Navigator.of(context).pop();
-                      },
+                onPressed: _logging ? null : _empty,
                 child: const Text('Empty the basket'),
               ),
             ],

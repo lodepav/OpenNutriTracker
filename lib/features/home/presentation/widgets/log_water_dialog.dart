@@ -37,6 +37,10 @@ class _LogWaterDialogState extends State<LogWaterDialog> {
       ? LogWaterDialog.sliderDefaultFlOz.toDouble()
       : LogWaterDialog.sliderDefaultMl.toDouble();
 
+  // [fork] S474 water-log-once: a write under way, so Log can't add it twice
+  bool _saving = false;
+  // [/fork]
+
   int get _selectedMl => widget.usesImperialUnits
       ? UnitCalc.flOzToMl(_selected).round()
       : _selected.round();
@@ -52,7 +56,9 @@ class _LogWaterDialogState extends State<LogWaterDialog> {
           Expanded(
             child: Text(
               s.logWaterDialogTitle,
-              overflow: TextOverflow.ellipsis,
+              // [fork] S341 water-title-wraps: at 200% it read "Log water i..."
+              // overflow: TextOverflow.ellipsis,
+              // [/fork]
             ),
           ),
           const SizedBox(width: 8),
@@ -63,7 +69,11 @@ class _LogWaterDialogState extends State<LogWaterDialog> {
               onPressed: _selected == 0
                   ? null
                   : () => setState(() => _selected = 0),
-              child: Text(s.buttonResetLabel),
+              // [fork] S289 water-dialog-words: it only zeroes the slider,
+              // nothing logged is reset
+              // child: Text(s.buttonResetLabel),
+              child: const Text('Clear'),
+              // [/fork]
             ),
           ),
         ],
@@ -97,6 +107,12 @@ class _LogWaterDialogState extends State<LogWaterDialog> {
               label: widget.usesImperialUnits
                   ? '${_selected.round()} ${s.flOzUnit}'
                   : '${_selected.round()} ${s.mlLabel}',
+              // [fork] S473 water-slider-says: TalkBack read a percent while
+              // the dialog shows the amount
+              semanticFormatterCallback: (value) => widget.usesImperialUnits
+                  ? '${value.round()} ${s.flOzUnit}'
+                  : '${value.round()} ${s.mlLabel}',
+              // [/fork]
               onChanged: (value) {
                 setState(() => _selected = value);
               },
@@ -126,7 +142,10 @@ class _LogWaterDialogState extends State<LogWaterDialog> {
         Semantics(
           identifier: 'log-water-save',
           child: FilledButton(
-            onPressed: _onSavePressed,
+            // [fork] S474 water-log-once
+            // onPressed: _onSavePressed,
+            onPressed: _saving ? null : _onSavePressed,
+            // [/fork]
             child: Text(s.dialogOKLabel),
           ),
         ),
@@ -135,10 +154,23 @@ class _LogWaterDialogState extends State<LogWaterDialog> {
   }
 
   Future<void> _onSavePressed() async {
+    // [fork] S474 water-log-once: a second tap while the write ran logged the
+    // drink twice; Log waits for it, and comes back if the write fails
+    if (_saving) return;
+    setState(() => _saving = true);
+    // [/fork]
     final amount = _selectedMl;
     final navigator = Navigator.of(context);
     if (amount > 0) {
-      await locator<HomeBloc>().addWaterIntake(amount);
+      // [fork] S474 water-log-once
+      // await locator<HomeBloc>().addWaterIntake(amount);
+      try {
+        await locator<HomeBloc>().addWaterIntake(amount);
+      } catch (_) {
+        if (mounted) setState(() => _saving = false);
+        rethrow;
+      }
+      // [/fork]
     }
     if (mounted) {
       navigator.pop();
@@ -147,6 +179,11 @@ class _LogWaterDialogState extends State<LogWaterDialog> {
 
   Future<void> _onUndoPressed() async {
     final messenger = ScaffoldMessenger.of(context);
+    // [fork] S340 water-undo-says: Undo was silent and left OK to log the
+    // same drink again; it now closes and says what it removed
+    final navigator = Navigator.of(context);
+    final removed = _undoneMessage(locator<HomeBloc>().state);
+    // [/fork]
     final undone = await locator<HomeBloc>().undoLastWaterIntake();
     if (!mounted) return;
     if (!undone) {
@@ -154,5 +191,32 @@ class _LogWaterDialogState extends State<LogWaterDialog> {
         SnackBar(content: Text(S.of(context).logWaterNothingToUndoLabel)),
       );
     }
+    // [fork] S340 water-undo-says
+    else {
+      navigator.pop();
+      messenger.showSnackBar(SnackBar(content: Text(removed)));
+    }
+    // [/fork]
   }
+
+  // [fork] S340 water-undo-says: the drink the bloc's undo picks, the latest
+  // by time, and what today comes to without it.
+  // shortcut: read from the loaded Home state, so a drink logged elsewhere
+  // since its last load is missed; upgrade when undoLastWaterIntake returns
+  // the removed entry.
+  String _undoneMessage(HomeState state) {
+    if (state is! HomeLoadedState || state.waterIntakes.isEmpty) {
+      return 'Removed the last drink';
+    }
+    final last = state.waterIntakes.reduce(
+      (a, b) => b.dateTime.isBefore(a.dateTime) ? a : b,
+    );
+    String shown(int ml) => widget.usesImperialUnits
+        ? '${UnitCalc.mlToFlOz(ml.toDouble()).round()} fl oz'
+        : '$ml ml';
+    return 'Removed ${shown(last.amountMl)} · '
+        'today ${shown(state.waterMlToday - last.amountMl)}';
+  }
+
+  // [/fork]
 }

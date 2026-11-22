@@ -17,6 +17,8 @@ import 'package:opennutritracker/fork/photos/body_compare_sheet.dart';
 import 'package:opennutritracker/fork/photos/photo_card.dart';
 import 'package:opennutritracker/fork/photos/photo_store.dart';
 
+import '../../helpers/ux_checks.dart';
+
 List<ParsedMealItem> _items(List<String> queries) => [
   for (final q in queries) ParsedMealItem(query: q),
 ];
@@ -252,6 +254,24 @@ void main() {
       await tester.pumpAndSettle();
     }
 
+    // The photos are read off the disk, which a fake clock never finishes.
+    Future<void> send(WidgetTester tester) async {
+      await tester.tap(find.byKey(const ValueKey('body-compare-send')));
+      // Past the dialog's close, then until the reads finish.
+      await tester.pump(const Duration(milliseconds: 500));
+      for (
+        var i = 0;
+        i < 100 && find.byType(LinearProgressIndicator).evaluate().isNotEmpty;
+        i++
+      ) {
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 10)),
+        );
+        await tester.pump(const Duration(milliseconds: 16));
+      }
+      await tester.pumpAndSettle();
+    }
+
     const answer = BodyComparison(
       fat: BodyChange.less,
       muscle: BodyChange.same,
@@ -261,6 +281,29 @@ void main() {
       signs: ['narrower waist'],
       summary: 'A little leaner.',
     );
+
+    for (final scale in [1.15, 1.3, 2.0]) {
+      testWidgets('at ${(scale * 100).round()}% text the title shows in full '
+          'beside Ask AI', (tester) async {
+        await pumpOnPhone(tester, const SizedBox(), textScale: scale);
+        // Pushed, as from the card, so the back button takes its room.
+        Navigator.of(tester.element(find.byType(SizedBox).first)).push(
+          MaterialPageRoute<void>(
+            builder: (_) => ComparePhotosScreen(
+              photos: photos,
+              useCase: _UseCase(),
+              loadDay: (d) async => BodyDay(date: d),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(find.byKey(const ValueKey('compare-ai')), findsOne);
+        // Its label kept: an icon alone doesn't say what it does.
+        expect(find.text('Ask AI'), findsOne);
+        expect(cutText(tester), isEmpty);
+        await expectAccessible(tester);
+      });
+    }
 
     testWidgets('no model set up: no Ask AI', (tester) async {
       await pump(tester, null);
@@ -286,8 +329,7 @@ void main() {
 
       await tester.tap(find.byKey(const ValueKey('compare-ai')));
       await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const ValueKey('body-compare-send')));
-      await tester.pumpAndSettle();
+      await send(tester);
       expect(useCase.calls, 1);
       expect(find.text('Less body fat'), findsOne);
       expect(find.text('Muscle looks the same'), findsOne);
@@ -328,8 +370,7 @@ void main() {
       await pump(tester, _UseCase());
       await tester.tap(find.byKey(const ValueKey('compare-ai')));
       await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const ValueKey('body-compare-send')));
-      await tester.pumpAndSettle();
+      await send(tester);
       expect(find.text('Set up an AI model in Settings to compare.'), findsOne);
     });
 
@@ -340,8 +381,7 @@ void main() {
       );
       await tester.tap(find.byKey(const ValueKey('compare-ai')));
       await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const ValueKey('body-compare-send')));
-      await tester.pumpAndSettle();
+      await send(tester);
       expect(find.text("Couldn't compare the photos. Try again."), findsOne);
     });
   });

@@ -3,6 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_ui.dart';
 import 'package:opennutritracker/fork/adaptive/check_in_history.dart';
+import 'package:opennutritracker/core/styles/app_palette.dart';
+import 'package:opennutritracker/fork/display/contrast.dart';
 
 import '../../helpers/ux_checks.dart';
 
@@ -68,7 +70,8 @@ void main() {
         {
           'Your estimate moved': -50,
           'Counted activity': 120,
-          'You edited it': 105,
+          "Last time's change to the proposal ends": 50,
+          'You edited it': 55,
           "Goal's pace or the plan": 175,
         },
       );
@@ -136,7 +139,7 @@ void main() {
 
     await tester.tap(tappable);
     await tester.pumpAndSettle();
-    expect(find.text('Why it moved from 5 Oct'), findsOneWidget);
+    expect(find.text('Why it moved from Oct 5'), findsOneWidget);
     expect(find.text('Your estimate moved'), findsOneWidget);
     expect(find.text('\u221250 kcal'), findsOneWidget);
     expect(find.text("Goal's pace or the plan"), findsOneWidget);
@@ -145,7 +148,10 @@ void main() {
     expect(find.text('Counted activity'), findsNothing);
     expect(find.text('You edited it'), findsNothing);
     expect(find.text('In all'), findsOneWidget);
-    expect(find.text('Pace went from -0.5 to -0.25 kg a week.'), findsOne);
+    expect(
+      find.text('Pace went from \u22120.5 to \u22120.25 kg a week.'),
+      findsOne,
+    );
     expect(
       find.text('How activity or a kg is counted changed in Settings.'),
       findsOne,
@@ -204,12 +210,12 @@ void main() {
     ]);
     expect(find.text('2150 kcal'), findsNWidgets(2));
     expect(
-      find.text('12 Oct 2026 · expenditure 2550 kcal · proposed 2050 kcal'),
+      find.text('Oct 12, 2026 · expenditure 2550 kcal · proposed 2050 kcal'),
       findsOneWidget,
     );
     expect(find.text('+50 kcal'), findsOneWidget);
     expect(find.text('no change'), findsOneWidget);
-    expect(find.text('5 Oct 2026 · expenditure 2600 kcal'), findsOneWidget);
+    expect(find.text('Oct 5, 2026 · expenditure 2600 kcal'), findsOneWidget);
   });
 
   testWidgets('says when there are none yet', (tester) async {
@@ -251,4 +257,42 @@ void main() {
       );
     },
   );
+
+  for (final brightness in Brightness.values) {
+    testWidgets('the change chips are 4.5:1 on their tint, ${brightness.name}', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: ThemeData(brightness: brightness),
+          home: CheckInHistoryScreen(
+            store: _Store([
+              _record(1, 2600, 2100, 2100),
+              _record(8, 2600, 2100, 1900), // down: the cut's orange
+              _record(15, 2600, 2100, 2200), // up: the bulk's blue
+            ]),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final card = (brightness == Brightness.dark
+          ? AppPalette.dark
+          : AppPalette.light).surface;
+      for (final text in ['\u2212200 kcal', '+300 kcal']) {
+        final chip = find.ancestor(
+          of: find.text(text),
+          matching: find.byType(Container),
+        );
+        final tint =
+            (tester.widget<Container>(chip.first).decoration! as BoxDecoration)
+                .color!;
+        final color = tester.widget<Text>(find.text(text)).style!.color!;
+        expect(
+          contrastRatio(color, Color.alphaBlend(tint, card)),
+          greaterThanOrEqualTo(4.5),
+          reason: text,
+        );
+      }
+    });
+  }
 }

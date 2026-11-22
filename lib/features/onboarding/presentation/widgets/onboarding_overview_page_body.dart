@@ -54,10 +54,16 @@ class OnboardingOverviewPageBody extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // [fork] S464 step-headings: a heading TalkBack can jump to
+          Semantics(
+            header: true,
+            child:
+          // [/fork]
           Text(
             S.of(context).onboardingOverviewLabel,
             style: Theme.of(context).textTheme.headlineSmall,
           ),
+          ), // [fork] S464
           const SizedBox(height: 32.0),
           Text(
             S.of(context).onboardingYourGoalLabel,
@@ -78,9 +84,12 @@ class OnboardingOverviewPageBody extends StatelessWidget {
                 Text(
                   perDayLabel,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withValues(alpha: 0.6),
+                        // [fork] S463 overview-hint-contrast: alpha 0.6 read 3.85:1
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        // color: Theme.of(
+                        //   context,
+                        // ).colorScheme.onSurface.withValues(alpha: 0.6),
+                        // [/fork]
                       ),
                 ),
               ],
@@ -148,9 +157,12 @@ class OnboardingOverviewPageBody extends StatelessWidget {
               s.settingsMacroSplitLabel,
             ),
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.onSurface.withValues(alpha: 0.6),
+                  // [fork] S463 overview-hint-contrast: alpha 0.6 read 3.74:1
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  // color: Theme.of(
+                  //   context,
+                  // ).colorScheme.onSurface.withValues(alpha: 0.6),
+                  // [/fork]
                 ),
           ),
         ],
@@ -231,9 +243,11 @@ class OnboardingOverviewPageBody extends StatelessWidget {
                   MaterialPageRoute(
                     // [fork] S134 goal-explained: the steps are on this page
                     // already, so the link goes to every number
+                    // titled as this link, the inputs in onboarding's units
                     builder: (_) => KcalGoalInfoScreen(
                       breakdown: breakdown,
                       equations: true,
+                      onboarding: true,
                     ),
                     // [/fork]
                   ),

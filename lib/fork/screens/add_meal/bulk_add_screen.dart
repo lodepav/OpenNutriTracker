@@ -10,6 +10,7 @@ import 'package:flutter/semantics.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/presentation/widgets/badged_title.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:logging/logging.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -18,7 +19,9 @@ import 'package:opennutritracker/features/add_meal/presentation/add_meal_type.da
 import 'package:opennutritracker/core/utils/ai_credential_storage.dart';
 import 'package:opennutritracker/features/add_meal/domain/usecase/run_ai_endpoint_probe_usecase.dart';
 import 'package:opennutritracker/core/utils/ai_model_catalogue.dart';
+import 'package:opennutritracker/core/utils/calc/unit_calc.dart';
 import 'package:opennutritracker/core/utils/energy_display.dart';
+import 'package:opennutritracker/core/utils/energy_unit_provider.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/core/utils/navigation_options.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dart';
@@ -52,6 +55,9 @@ import 'package:opennutritracker/fork/bulk/meal_scale.dart';
 import 'package:opennutritracker/fork/bulk/review_totals.dart';
 import 'package:opennutritracker/fork/bulk/review_units.dart';
 import 'package:opennutritracker/fork/bulk/shown_unit.dart';
+import 'package:opennutritracker/fork/bulk/submit_label.dart';
+import 'package:opennutritracker/fork/recipe/recipe_delete.dart'
+    show destructiveFilledStyle;
 import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/fork/display/meal_macros_line.dart';
@@ -532,6 +538,8 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
         _quantityErrors.containsKey(index)) {
       _clearQuantityError(index);
     }
+    // said here, where it was answered, so a rebuild cannot say it again
+    _sayAmountAnswer(context);
   }
 
   Future<void> _chooseCookingFat(int choice) async {
@@ -546,14 +554,48 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
   void _sayAmountAnswer(BuildContext context) {
     final said = _review.takeAmountSaid();
     if (said == null) return;
+    // EnergyDisplay.formatSumWithUnit's sum of rounded rows, read without
+    // listening: this runs from the tap, where watching is not allowed
+    final kj = Provider.of<EnergyUnitProvider>(
+      context,
+      listen: false,
+    ).usesKilojoules;
+    final sum = loggedKcals(said.rows).fold(
+      0,
+      (sum, kcal) => sum + (kj ? UnitCalc.kcalToKj(kcal) : kcal).round(),
+    );
     final message = DishStrings.amountSaid(
       said.amount,
-      EnergyDisplay.formatSumWithUnit(context, loggedKcals(said.rows)),
+      '$sum ${EnergyDisplay.unitLabelStatic(context)}',
     );
     final view = View.of(context);
     final direction = Directionality.of(context);
     WidgetsBinding.instance.addPostFrameCallback(
       (_) => SemanticsService.sendAnnouncement(view, message, direction),
+    );
+  }
+
+  /// A read to a screen reader, once as it changes: started, the foods it
+  /// found, or why it failed. The list and the messages say it on screen.
+  void _sayReadStatus(BuildContext context, BulkAddState state) {
+    final message = switch (state) {
+      BulkAddLoadingState() => 'Reading the meal',
+      BulkAddLoadedState(:final rows) when rows.isEmpty => _nothingFoundText(
+        context,
+        state,
+      ),
+      BulkAddLoadedState(:final rows, :final modelFailure) => [
+        'Found ${rows.length} ${rows.length == 1 ? 'food' : 'foods'}',
+        // the parser's rows, and why the model did not read them
+        if (modelFailure != null) _modelFailureText(context, modelFailure),
+      ].join('. '),
+      _ => _readFailedText(context, state),
+    };
+    if (message == null) return;
+    SemanticsService.sendAnnouncement(
+      View.of(context),
+      message,
+      Directionality.of(context),
     );
   }
 
@@ -685,8 +727,13 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
         ],
       ),
       body: SafeArea(
-        child: BlocBuilder<BulkAddBloc, BulkAddState>(
+        child: BlocConsumer<BulkAddBloc, BulkAddState>(
           bloc: _bloc,
+          // into and out of a read only: a row edit is a new loaded state too
+          listenWhen: (previous, next) =>
+              (previous is BulkAddLoadingState) !=
+              (next is BulkAddLoadingState),
+          listener: _sayReadStatus,
           builder: (context, state) => LayoutBuilder(
             builder: (context, constraints) => Column(
               children: [
@@ -776,6 +823,7 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
       final theme = Theme.of(context);
       return Semantics(
         identifier: 'bulk-add-model-hint',
+        button: true,
         child: Padding(
           // The screen's 16 dp edge, which the list below it has not
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
@@ -864,6 +912,8 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
                 child: TextField(
                   controller: _textController,
                   focusNode: _noteFocus,
+                  // a tap on a row lets go too, or its sheet hands focus back
+                  onTapOutside: (_) => _dropFocus(),
                   minLines: 2,
                   maxLines: 4,
                   textInputAction: TextInputAction.newline,
@@ -894,34 +944,58 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
             // words for the photo's note (D49)
             if (staged != null && !busy) ...[
               const SizedBox(height: 8),
-              NoteChipsView(controller: _textController, focus: _noteFocus),
+              // a chip types into the note, so tapping one keeps the keyboard
+              TextFieldTapRegion(
+                child: NoteChipsView(
+                  controller: _textController,
+                  focus: _noteFocus,
+                ),
+              ),
             ],
             const SizedBox(height: 12),
             // nothing to send on an empty box, or while a read runs
             ListenableBuilder(
               listenable: _textController,
-              builder: (context, _) => Semantics(
-                identifier: 'bulk-add-parse',
-                child: FilledButton.icon(
-                  onPressed: busy
-                      ? null
+              builder: (context, _) {
+                final onPressed = busy
+                    ? null
+                    : staged != null
+                    ? _readStagedPhoto
+                    : _textController.text.trim().isEmpty
+                    ? null
+                    : _onParseButtonPressed;
+                final icon = Icon(
+                  staged != null ? Icons.send_rounded : Icons.search,
+                );
+                // with foods found, Log is the one primary action
+                final rowsShown =
+                    state is BulkAddLoadedState && state.rows.isNotEmpty;
+                final again = staged == null && rowsShown;
+                final label = Text(
+                  _readingStaged
+                      ? 'Reading the photo…'
                       : staged != null
-                      ? _readStagedPhoto
-                      : _textController.text.trim().isEmpty
-                      ? null
-                      : _onParseButtonPressed,
-                  icon: Icon(
-                    staged != null ? Icons.send_rounded : Icons.search,
-                  ),
-                  label: Text(
-                    _readingStaged
-                        ? 'Reading the photo…'
-                        : staged != null
-                        ? S.of(context).bulkAddPhotoLabel
-                        : S.of(context).bulkAddParseLabel,
-                  ),
-                ),
-              ),
+                      ? S.of(context).bulkAddPhotoLabel
+                      : again
+                      ? 'Find again'
+                      : S.of(context).bulkAddParseLabel,
+                );
+                return Semantics(
+                  identifier: 'bulk-add-parse',
+                  child: rowsShown
+                      // outlined: the theme fills every FilledButton alike
+                      ? OutlinedButton.icon(
+                          onPressed: onPressed,
+                          icon: icon,
+                          label: label,
+                        )
+                      : FilledButton.icon(
+                          onPressed: onPressed,
+                          icon: icon,
+                          label: label,
+                        ),
+                );
+              },
             ),
           ],
         ),
@@ -1017,7 +1091,14 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
     // What the button will log, summed as the rows show it (#1469); at a
     // large font on a line of its own, so neither is cut (U3).
     final oneLine = MediaQuery.textScalerOf(context).scale(1) <= 1.5;
-    final label = S.of(context).bulkAddSubmitLabel(count);
+    // rows held back for a unit check: the button says so, logging or not
+    final held = state.rows.where(heldForUnit).length;
+    final label = submitLabel(
+      count: count,
+      held: held,
+      oneDish: logsAsOneDish(state.rows, separate: _separateDishes),
+    );
+    final waiting = heldLabel(count: count, held: held);
     final energy = EnergyDisplay.formatSumWithUnit(
       context,
       loggedKcals(state.rows),
@@ -1036,10 +1117,18 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
             label: count == 0
                 ? Text(label)
                 : oneLine
-                ? Text('$label · $energy')
+                ? Text(
+                    [label, energy, ?waiting].join(' · '),
+                    textAlign: TextAlign.center,
+                  )
                 : Column(
                     mainAxisSize: MainAxisSize.min,
-                    children: [Text(label), Text(energy)],
+                    children: [
+                      Text(label),
+                      Text(energy),
+                      if (waiting != null)
+                        Text(waiting, textAlign: TextAlign.center),
+                    ],
                   ),
           ),
         ),
@@ -1049,14 +1138,56 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
 
   /// Find foods pressed by hand. Dictation in progress ends first, or its
   /// pause timeout would match the text again and reset the rows the user
-  /// may already be correcting.
-  void _onParseButtonPressed() {
+  /// may already be correcting. Rows the user changed are only replaced
+  /// once they say so.
+  Future<void> _onParseButtonPressed() async {
     _voice.currentState?.cancel();
+    if (_bloc.state case BulkAddLoadedState(:final rows)) {
+      final changed = rows.where(_rowChanged).length;
+      if (changed > 0 && !await _confirmReplace(changed)) return;
+      if (!mounted) return;
+    }
     _onParsePressed();
   }
 
+  /// Edited, matched to another food, or left out by the user.
+  bool _rowChanged(BulkAddRow row) =>
+      row.skipped ||
+      !row.isPristine ||
+      row.selectedIndex != row.resolved.selectedIndex;
+
+  /// Whether the user lets [changed] corrected foods go to a new search.
+  Future<bool> _confirmReplace(int changed) async {
+    final replace = await showDialog<bool>(
+      context: context,
+      builder: (dialog) => AlertDialog(
+        scrollable: true,
+        title: const Text('Replace your edited foods?'),
+        content: Text(
+          'Your changes to $changed ${changed == 1 ? 'food' : 'foods'} '
+          'will be lost.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialog).pop(false),
+            child: Text(S.of(dialog).dialogCancelLabel),
+          ),
+          FilledButton(
+            style: destructiveFilledStyle(dialog),
+            onPressed: () => Navigator.of(dialog).pop(true),
+            child: const Text('Replace'),
+          ),
+        ],
+      ),
+    );
+    return replace == true;
+  }
+
+  // the page scope's unfocus leaves the field for a closing sheet to refocus
+  void _dropFocus() => FocusManager.instance.primaryFocus?.unfocus();
+
   void _onParsePressed() {
-    FocusScope.of(context).unfocus();
+    _dropFocus();
     // a recipe link reads as its ingredient lines
     if (recipeLinkIn(_textController.text) case final link?) {
       _readRecipeLink(link);
@@ -1082,7 +1213,7 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
     String? sharedPath,
     ImageSource from = ImageSource.camera,
   }) async {
-    FocusScope.of(context).unfocus();
+    _dropFocus();
     final destination = await _photoDestination;
     // say so when the photo is kept for leftovers
     final keepsPhoto = await MealPhotoCache().keepsPhotos;
@@ -1211,13 +1342,20 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
   }
 
   /// Sends the photo waiting by the buttons, with the box as its note.
-  /// The photo stays until rows come back; the note leaves the box.
-  void _readStagedPhoto() {
-    final photo = _stagedPhoto;
-    if (photo == null) return;
+  /// The photo stays until rows come back; the note leaves the box. Rows
+  /// the user changed are only replaced once they say so, as Find again.
+  Future<void> _readStagedPhoto() async {
+    if (_stagedPhoto == null) return;
     // A note still being dictated would land after the photo went.
     _voice.currentState?.cancel();
-    FocusScope.of(context).unfocus();
+    _dropFocus();
+    if (_bloc.state case BulkAddLoadedState(:final rows)) {
+      final changed = rows.where(_rowChanged).length;
+      if (changed > 0 && !await _confirmReplace(changed)) return;
+      if (!mounted) return;
+    }
+    final photo = _stagedPhoto;
+    if (photo == null) return;
     final note = _textController.text.trim();
     _photoNote = note.isEmpty ? null : note;
     _textController.clear();
@@ -1268,6 +1406,12 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
   Future<void> _rereadPhotoWithNote() async {
     final photo = _forkMealPhoto;
     if (photo == null) return;
+    // asked before the name, so no name is typed for a read that won't run
+    if (_bloc.state case BulkAddLoadedState(:final rows)) {
+      final changed = rows.where(_rowChanged).length;
+      if (changed > 0 && !await _confirmReplace(changed)) return;
+      if (!mounted) return;
+    }
     final note = await askDishName(context, initial: _photoNote ?? '');
     if (note == null || !mounted) return;
     _photoNote = note;
@@ -1310,10 +1454,13 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
               ),
               for (var i = 0; i < row.resolved.candidates.length; i++)
                 ListTile(
+                  // said as selected, not only drawn with a check
+                  selected: i == row.selectedIndex,
                   title: Text(row.resolved.candidates[i].name ?? ''),
-                  subtitle: row.resolved.candidates[i].brands != null
-                      ? Text(row.resolved.candidates[i].brands!)
-                      : null,
+                  subtitle: _candidateSubtitle(
+                    context,
+                    row.resolved.candidates[i],
+                  ),
                   trailing: i == row.selectedIndex
                       ? const Icon(Icons.check)
                       : null,
@@ -1325,6 +1472,20 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
       ),
     );
     if (chosen != null) _bloc.add(ChangeRowCandidateEvent(index, chosen));
+  }
+
+  /// A candidate's brand and its energy per 100 g (or ml), on one basis
+  /// for all, so candidates of one name can be told apart.
+  Widget? _candidateSubtitle(BuildContext context, MealEntity meal) {
+    final perUnit = meal.nutriments.energyPerUnit;
+    final s = S.of(context);
+    final parts = [
+      ?meal.brands,
+      if (perUnit != null)
+        '${EnergyDisplay.formatWithUnit(context, perUnit * 100)} per 100 '
+            '${meal.isLiquid ? s.milliliterUnit : s.gramUnit}',
+    ];
+    return parts.isEmpty ? null : Text(parts.join(' · '));
   }
 
   /// Quick add for [row]: the other rows stay to review, and [row] is done.
@@ -1536,7 +1697,9 @@ class _BulkAddScreenState extends State<BulkAddScreen> {
       // Undo takes back the group and the memory record with the entries
       showLoggedBar(
         messenger,
-        'Added to ${_mealName(context)}',
+        loggedMessage(_mealName(context), [
+          for (final row in state.rows.where(heldForUnit)) shownRowTitle(row),
+        ]),
         day: _args.day,
         written: written,
         stamp: stamp,

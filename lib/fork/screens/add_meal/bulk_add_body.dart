@@ -22,26 +22,12 @@ extension _BulkAddBody on _BulkAddScreenState {
       );
     }
     if (state is BulkAddErrorState) {
-      return _centeredMessage(context, S.of(context).bulkAddSearchFailedLabel);
+      return _centeredMessage(context, _readFailedText(context, state)!);
     }
     if (state is BulkAddPhotoErrorState) {
       return _centeredMessage(
         context,
-        switch (state.error) {
-          BulkAddPhotoError.unavailable =>
-            S.of(context).bulkAddPhotoUnavailableLabel,
-          BulkAddPhotoError.auth => S.of(context).bulkAddPhotoKeyRejectedLabel,
-          BulkAddPhotoError.transient => S.of(context).bulkAddPhotoFailedLabel,
-          BulkAddPhotoError.camera =>
-            S.of(context).bulkAddPhotoCameraFailedLabel,
-          BulkAddPhotoError.unreadable =>
-            S.of(context).bulkAddPhotoUnreadableLabel,
-          BulkAddPhotoError.unsupported =>
-            S.of(context).bulkAddPhotoUnsupportedLabel,
-          BulkAddPhotoError.insecureDestination =>
-            S.of(context).bulkAddModelInsecureServerLabel,
-          BulkAddPhotoError.billing => S.of(context).bulkAddPhotoNoCreditLabel,
-        },
+        _readFailedText(context, state)!,
         // #992. Three of these sentences send the user to Settings by name and
         // the fourth is answered there too, but only the *text* path ever
         // carried a way in — the photo path said "check it in Settings" and
@@ -81,21 +67,7 @@ extension _BulkAddBody on _BulkAddScreenState {
     if (state.rows.isEmpty) {
       return _withModelHint(
         context,
-        _centeredMessage(context, switch (state) {
-          // A bad segment explains itself; that outranks either generic line.
-          _ when state.parseErrors.isNotEmpty => _parseErrorsText(
-            context,
-            state.parseErrors,
-          ),
-          // The model looked at a photograph and reported no food. "Nothing to
-          // log yet" is true but reads as though nothing happened, and the
-          // notice that would have said a photo was read is not drawn on this
-          // branch — so the one screen where the user most needs to know a
-          // machine answered was the one screen that never said so.
-          _ when state.source == BulkAddReadSource.photo =>
-            S.of(context).bulkAddPhotoNoFoodLabel,
-          _ => S.of(context).bulkAddNothingToLogLabel,
-        }),
+        _centeredMessage(context, _nothingFoundText(context, state)),
       );
     }
 
@@ -162,18 +134,7 @@ extension _BulkAddBody on _BulkAddScreenState {
           // declined to send in the clear.
           MealTextModelFailure.insecureDestination => Icons.lock_outline,
         },
-        text: switch (failure) {
-          MealTextModelFailure.auth =>
-            S.of(context).bulkAddModelKeyRejectedLabel,
-          MealTextModelFailure.unsupported =>
-            S.of(context).bulkAddModelUnsupportedLabel,
-          MealTextModelFailure.billing =>
-            S.of(context).bulkAddModelNoCreditLabel,
-          MealTextModelFailure.timeout =>
-            S.of(context).bulkAddModelTimedOutLabel,
-          MealTextModelFailure.insecureDestination =>
-            S.of(context).bulkAddModelInsecureServerLabel,
-        },
+        text: _modelFailureText(context, failure),
         // Coloured as a warning, unlike the neutral "read by AI" banner:
         // this one is asking the user to go and change something.
         emphasised: true,
@@ -212,8 +173,72 @@ extension _BulkAddBody on _BulkAddScreenState {
       // a wrong dish name is the costliest photo error, and a note fixes it
       action: photo && _forkMealPhoto != null ? _rereadPhotoWithNote : null,
       actionLabel: 'Name the dish',
+      // each food is checked against the photo, so the photo stays in view
+      leading: photo && _forkMealPhoto != null
+          ? _buildPhotoThumbnail(context, _forkMealPhoto!)
+          : null,
     );
   }
+
+  /// The photo the foods were read from, small; a tap shows it whole.
+  Widget _buildPhotoThumbnail(BuildContext context, MealPhoto photo) {
+    const size = 48.0;
+    return Semantics(
+      identifier: 'bulk-add-review-photo',
+      button: true,
+      image: true,
+      label: 'Show the photo',
+      child: InkWell(
+        onTap: () => unawaited(_showPhoto(context, photo)),
+        borderRadius: BorderRadius.circular(8),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: Image.memory(
+            photo.bytes,
+            width: size,
+            height: size,
+            fit: BoxFit.cover,
+            excludeFromSemantics: true,
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// The photo full screen, to zoom into, with a way back.
+  Future<void> _showPhoto(BuildContext context, MealPhoto photo) =>
+      showDialog<void>(
+        context: context,
+        builder: (dialog) => Dialog.fullscreen(
+          backgroundColor: Colors.black,
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: InteractiveViewer(
+                  child: Semantics(
+                    identifier: 'bulk-add-review-photo-full',
+                    image: true,
+                    label: 'The meal photo',
+                    child: Image.memory(
+                      photo.bytes,
+                      fit: BoxFit.contain,
+                      excludeFromSemantics: true,
+                    ),
+                  ),
+                ),
+              ),
+              SafeArea(
+                child: IconButton(
+                  onPressed: () => Navigator.of(dialog).pop(),
+                  icon: const Icon(Icons.close_rounded),
+                  color: Colors.white,
+                  tooltip: MaterialLocalizations.of(dialog).closeButtonTooltip,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
 
   /// The meal's card, as the Diary's day card reads (D37): what Log logs,
   /// its energy and its macros on the Diary's line, and that day's energy
@@ -416,6 +441,7 @@ extension _BulkAddBody on _BulkAddScreenState {
     bool emphasised = false,
     VoidCallback? action,
     String? actionLabel,
+    Widget? leading,
   }) {
     final scheme = Theme.of(context).colorScheme;
     // The ceiling is a share of what this widget was actually given, not of
@@ -449,11 +475,14 @@ extension _BulkAddBody on _BulkAddScreenState {
                     children: [
                       Row(
                         children: [
-                          Icon(
-                            icon,
-                            size: 16,
-                            color: emphasised ? scheme.onErrorContainer : null,
-                          ),
+                          leading ??
+                              Icon(
+                                icon,
+                                size: 16,
+                                color: emphasised
+                                    ? scheme.onErrorContainer
+                                    : null,
+                              ),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
@@ -528,6 +557,62 @@ extension _BulkAddBody on _BulkAddScreenState {
   void _openAiSettings(BuildContext context) => unawaited(
     _openSettings(arguments: const SettingsScreenArguments(openAiAssist: true)),
   );
+
+  /// What a failed read says, on screen and to a screen reader; null when
+  /// [state] is no failure.
+  String? _readFailedText(
+    BuildContext context,
+    BulkAddState state,
+  ) => switch (state) {
+    BulkAddErrorState() => S.of(context).bulkAddSearchFailedLabel,
+    BulkAddPhotoErrorState(:final error) => switch (error) {
+      BulkAddPhotoError.unavailable =>
+        S.of(context).bulkAddPhotoUnavailableLabel,
+      BulkAddPhotoError.auth => S.of(context).bulkAddPhotoKeyRejectedLabel,
+      BulkAddPhotoError.transient => S.of(context).bulkAddPhotoFailedLabel,
+      BulkAddPhotoError.camera => S.of(context).bulkAddPhotoCameraFailedLabel,
+      BulkAddPhotoError.unreadable => S.of(context).bulkAddPhotoUnreadableLabel,
+      BulkAddPhotoError.unsupported =>
+        S.of(context).bulkAddPhotoUnsupportedLabel,
+      BulkAddPhotoError.insecureDestination =>
+        S.of(context).bulkAddModelInsecureServerLabel,
+      BulkAddPhotoError.billing => S.of(context).bulkAddPhotoNoCreditLabel,
+    },
+    _ => null,
+  };
+
+  /// Why the model did not read typed text, above the parser's rows; on
+  /// screen and to a screen reader.
+  String _modelFailureText(
+    BuildContext context,
+    MealTextModelFailure failure,
+  ) => switch (failure) {
+    MealTextModelFailure.auth => S.of(context).bulkAddModelKeyRejectedLabel,
+    MealTextModelFailure.unsupported =>
+      S.of(context).bulkAddModelUnsupportedLabel,
+    MealTextModelFailure.billing => S.of(context).bulkAddModelNoCreditLabel,
+    MealTextModelFailure.timeout => S.of(context).bulkAddModelTimedOutLabel,
+    MealTextModelFailure.insecureDestination =>
+      S.of(context).bulkAddModelInsecureServerLabel,
+  };
+
+  /// What a read that found no food says, on screen and to a screen reader.
+  String _nothingFoundText(BuildContext context, BulkAddLoadedState state) =>
+      switch (state) {
+        // A bad segment explains itself; that outranks either generic line.
+        _ when state.parseErrors.isNotEmpty => _parseErrorsText(
+          context,
+          state.parseErrors,
+        ),
+        // The model looked at a photograph and reported no food. "Nothing to
+        // log yet" is true but reads as though nothing happened, and the
+        // notice that would have said a photo was read is not drawn on this
+        // branch — so the one screen where the user most needs to know a
+        // machine answered was the one screen that never said so.
+        _ when state.source == BulkAddReadSource.photo =>
+          S.of(context).bulkAddPhotoNoFoodLabel,
+        _ => S.of(context).bulkAddNothingToLogLabel,
+      };
 
   /// A message that fills the body, optionally with something to do about it.
   ///

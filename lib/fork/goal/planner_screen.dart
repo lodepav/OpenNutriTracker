@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart' as intl;
+import 'package:logging/logging.dart';
 import 'package:opennutritracker/core/domain/entity/body_weight_unit_entity.dart';
 import 'package:opennutritracker/core/domain/entity/user_entity.dart';
 import 'package:opennutritracker/core/domain/usecase/get_config_usecase.dart';
@@ -210,6 +211,18 @@ Future<bool> openGoalPlanner(
   return started ?? false;
 }
 
+/// [draft] turned to [kind], at that kind's steady pace; breaks only on a
+/// cut.
+GoalDraft draftOfKind(GoalDraft draft, PhaseKind kind) => draft.copyWith(
+  kind: kind,
+  paceKg: switch (kind) {
+    PhaseKind.cut => cutPacesKg[1],
+    PhaseKind.bulk => bulkPacesKg[1],
+    PhaseKind.maintain => 0,
+  },
+  breaks: kind == PhaseKind.cut && draft.breaks,
+);
+
 enum _Step {
   goal('Goal'),
   pace('Pace'),
@@ -375,7 +388,39 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
       // A goal that cannot be planned as it is says why at once.
       if (_draft.problem != null) _detour = _Step.goal;
     }
+    _draftAtOpen = _draft;
   }
+
+  /// The draft as the planner opened, to tell whether anything changed.
+  late final GoalDraft _draftAtOpen;
+
+  /// Nothing to lose by leaving: the draft, the settings and the pending
+  /// macros are as they were.
+  bool get _unchanged =>
+      _draft == _draftAtOpen &&
+      identical(AdaptiveStore.settings.value, _before) &&
+      identical(OnboardingMacros.pending.value, _macrosBefore);
+
+  /// The Adaptive target is chosen but no check-in accepted yet, so Home
+  /// runs on the formula until the first one is; false when unread.
+  late final Future<bool> _beforeFirstCheckIn = () async {
+    try {
+      return await _store.lastCheckIn() == null;
+    } catch (_) {
+      // No store in a test: nothing said.
+      return false;
+    }
+  }();
+
+  /// The last check-in accepted; null when none or unread.
+  late final Future<CheckInRecord?> _lastCheckIn = () async {
+    try {
+      return await _store.lastCheckIn();
+    } catch (_) {
+      // No store in a test: nothing said.
+      return null;
+    }
+  }();
 
   /// The goal edited, once begun: its start stays.
   bool get _begun =>
@@ -461,6 +506,26 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
   double _kcalAt(double kgPerWeek) =>
       _baseKcal + paceKcalPerDay(kgPerWeek, _kcalPerKg);
 
+  /// Why a pace's deficit or surplus differs from the Formula's: on
+  /// Adaptive a kg counts by body composition, not the flat 7700.
+  List<Widget> _perKgNote(BuildContext context) {
+    final s = AdaptiveStore.settings.value;
+    if (!s.adaptiveTarget || s.fixedTarget || s.flatEnergy) return const [];
+    return [
+      Padding(
+        padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+        child: Text(
+          'On Adaptive a ${_perLb ? 'lb' : 'kg'} counts as about '
+          '${energyText(context, kcalPerWeightUnit(_kcalPerKg, _unit))}, as '
+          'part of a change is lean tissue, which holds less; Formula counts '
+          'every '
+          '${energyPerWeightText(context, AdaptiveSettings.commonKcalPerKg, _unit)}.',
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
+      ),
+    ];
+  }
+
   /// The grams at the main phase's target: by weight with a program,
   /// else the macro split's shares.
   FixedMacros _gramsAt(double kcal, MacroProgram? program) =>
@@ -472,12 +537,6 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
         goalKcal: kcal - _baseKcal,
       ) ??
       splitGrams(kcal, _setup.split);
-
-  static String _gramsText(FixedMacros g) => inMacroOrder(
-    protein: 'Protein ${g.proteinG.round()} g',
-    carbs: 'Carbs ${g.carbsG.round()} g',
-    fat: 'Fat ${g.fatG.round()} g',
-  ).join(' · ');
 
   String get _splitText {
     final s = _setup.split;
@@ -491,6 +550,11 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
   }
 
   Future<void> _leave() async {
+    // A planner left as it opened has nothing to ask about.
+    if (_unchanged) {
+      Navigator.of(context).pop(false);
+      return;
+    }
     final keep = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -500,11 +564,16 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
               ? 'Leave without saving?'
               : _queued
               ? 'Leave without adding it?'
+              : _setup.onboarding
+              ? 'Leave the planner?'
               : 'Leave without a plan?',
         ),
         content: Text(
-          '${_place == null ? 'Your goal stays' : 'Your plan stays'} as it '
-          'is, and the settings changed here go back.',
+          // In onboarding there is no goal yet to stay.
+          _setup.onboarding
+              ? 'Nothing you set here is kept.'
+              : '${_place == null ? 'Your goal stays' : 'Your plan stays'} '
+                    'as it is, and the settings changed here go back.',
         ),
         actions: [
           TextButton(
@@ -533,11 +602,23 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
   Future<void> _start() async {
     setState(() => _saving = true);
     final place = _place;
-    final saved = place == null
-        ? await widget.onStart(_planOf(_draft))
-        : await widget.onQueue!(place, _draft.toPlan());
+    final bool saved;
+    try {
+      saved = place == null
+          ? await widget.onStart(_planOf(_draft))
+          : await widget.onQueue!(place, _draft.toPlan());
+    } catch (error, stackTrace) {
+      Logger('GoalPlannerScreen').severe('Plan save failed', error, stackTrace);
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Not saved. Try again.')));
+      }
+      return;
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
     if (!mounted) return;
-    setState(() => _saving = false);
     if (saved) {
       Navigator.of(context).pop(true);
     } else {
@@ -819,15 +900,7 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
             // The kind it is already: a custom pace stays.
             if (_draft.kind == kind) return;
             _customPace = false;
-            _draft = _draft.copyWith(
-              kind: kind,
-              paceKg: switch (kind) {
-                PhaseKind.cut => cutPacesKg[1],
-                PhaseKind.bulk => bulkPacesKg[1],
-                PhaseKind.maintain => 0,
-              },
-              breaks: kind == PhaseKind.cut && _draft.breaks,
-            );
+            _draft = draftOfKind(_draft, kind);
             final place = _place;
             if (place != null) _moveTo(place);
           }),
@@ -1256,6 +1329,7 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
           },
         ),
       ..._customPaceRows(context, cut),
+      ..._perKgNote(context),
       ..._floorWarning(context),
       ..._capWarning(context),
       if (cut)
@@ -1307,8 +1381,11 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
     _question(
       context,
       'Your expenditure',
-      'What you burn a day. An Adaptive target is built on it, so a good '
-          'estimate matters more than the pace.',
+      // At first run Adaptive is not met yet.
+      _setup.onboarding
+          ? 'What you burn a day, which your target starts from.'
+          : 'What you burn a day. An Adaptive target is built on it, so a '
+                'good estimate matters more than the pace.',
     ),
     _Panel(
       children: [
@@ -1329,16 +1406,30 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
                     'below.',
           style: Theme.of(context).textTheme.bodySmall,
         ),
-        if (_formula)
+        if (_formula && !_setup.onboarding)
           Text(
             'Your target is on Formula, which goes by your profile, '
             '${energyText(context, _setup.formulaKcal)}; this estimate sets '
             'it only on Adaptive.',
             style: Theme.of(context).textTheme.bodySmall,
           ),
+        // The switch below also sets the estimate, so it stays as set.
+        if (_formula && !_setup.onboarding)
+          Text(
+            key: const ValueKey('goal-burn-formula-per-kg'),
+            'Formula counts every '
+            '${energyPerWeightText(context, AdaptiveSettings.commonKcalPerKg, _unit)} '
+            'whatever the switch below says; the switch sets it for this '
+            'estimate and Adaptive.',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
       ],
     ),
-    ExpenditureGroups.estimate(store: _store),
+    ExpenditureGroups.estimate(
+      store: _store,
+      unit: _unit,
+      onboarding: _setup.onboarding,
+    ),
   ];
 
   // -------------------------------------------------------------- target
@@ -1391,13 +1482,15 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
             ),
             if (pace != 0)
               line(
-                'Pace, ${weightChangeText(pace, _unit)} a week',
+                // The signed figure beside it gives the direction.
+                'Pace, ${_rate(pace.abs())}',
                 energyText(context, shift.toDouble(), signed: true),
               ),
             if (breaks && pace != 0) line('On diet breaks', base),
           ],
         ],
       ),
+      if (pace != 0) ..._perKgNote(context),
       if (_formula && !_setup.onboarding)
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
@@ -1412,26 +1505,42 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
             ),
           ),
         ),
-      if (_formula && _setup.onboarding)
+      // At first run Adaptive has nothing to go by yet: the choice waits
+      // folded, open when one other than Formula is already picked.
+      if (_setup.onboarding)
+        ExpansionTile(
+          key: const ValueKey('goal-target-more'),
+          title: const Text('Other ways to set the target'),
+          initiallyExpanded: !_formula,
+          childrenPadding: const EdgeInsets.symmetric(horizontal: 16),
+          children: [
+            if (_formula)
+              Text(
+                'After a few weeks of weigh-ins and logging, Adaptive follows '
+                'what you actually burn: switch in Settings, or here when you '
+                'edit the plan.',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            TargetModeFields(
+              _store,
+              perLb: _perLb,
+              showMacros: false,
+              showExpenditure: false,
+            ),
+          ],
+        )
+      else
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-          child: Text(
-            'After a few weeks of weigh-ins and logging, Adaptive follows '
-            'what you actually burn: switch in Settings, or here when you '
-            'edit the plan.',
-            style: Theme.of(context).textTheme.bodySmall,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: TargetModeFields(
+            _store,
+            perLb: _perLb,
+            showMacros: false,
+            showExpenditure: false,
           ),
         ),
-      Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: TargetModeFields(
-          _store,
-          perLb: _perLb,
-          showMacros: false,
-          showExpenditure: false,
-        ),
-      ),
-      ExpenditureGroups.checkIn(store: _store),
+      // Check-ins come after a week of use.
+      if (!_setup.onboarding) ExpenditureGroups.checkIn(store: _store),
     ];
   }
 
@@ -1472,7 +1581,7 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
             Semantics(
               identifier: 'goal-macros-grams',
               child: Text(
-                _gramsText(grams),
+                macroGramsText(grams),
                 style: Theme.of(context).textTheme.titleMedium,
               ),
             ),
@@ -1546,7 +1655,7 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
               identifier: 'goal-carried-macros',
               title: 'Macros',
               subtitle:
-                  '${_gramsText(_gramsAt(_mainKcal, settings.macroProgram))} · '
+                  '${macroGramsText(_gramsAt(_mainKcal, settings.macroProgram))} · '
                   '${settings.macroProgram?.summary(perLb: _perLb) ?? 'your split, $_splitText'}',
               onChange: () => _goTo(_Step.macros),
             ),
@@ -1600,6 +1709,48 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
                 ? 'Maintenance'
                 : '${goalTitle(_nextGoal!, _unit)}, up next',
           ),
+          if (settings.adaptiveTarget && !settings.fixedTarget)
+            FutureBuilder<bool>(
+              future: _beforeFirstCheckIn,
+              builder: (context, before) => before.data != true
+                  ? const SizedBox.shrink()
+                  : Padding(
+                      padding: const EdgeInsets.only(top: 6),
+                      child: Text(
+                        key: const ValueKey('goal-plan-adaptive-starts'),
+                        'Adaptive starts at your first check-in. Until you '
+                        'accept it, your goal stays on the formula, with '
+                        'logged activities added.',
+                        style: theme.textTheme.bodySmall,
+                      ),
+                    ),
+            ),
+          // The rows are the pace's figures, which a check-in kept or
+          // typed over leaves; the target Home uses is said beside them.
+          if (settings.adaptiveTarget && !settings.fixedTarget)
+            FutureBuilder<CheckInRecord?>(
+              future: _lastCheckIn,
+              builder: (context, last) {
+                final kept = last.data?.acceptedKcal;
+                if (kept == null ||
+                    energyValue(context, kept) ==
+                        energyValue(context, _kcalAt(_draft.signedPace))) {
+                  return const SizedBox.shrink();
+                }
+                return Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: Text(
+                    key: const ValueKey('goal-plan-target-now'),
+                    'Your target now is ${energyText(context, kept)}'
+                    '${settings.activityMode == ActivityMode.daily ? ' before activity' : ''}, '
+                    'from your last check-in. The figures above are what '
+                    'the pace works out to; each check-in proposes one '
+                    'again.',
+                    style: theme.textTheme.bodySmall,
+                  ),
+                );
+              },
+            ),
         ],
       ),
       _Panel(
@@ -1644,7 +1795,7 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
             title: 'Macros',
             subtitle: settings.fixedTarget && settings.fixedMacros != null
                 ? 'The fixed target\'s grams'
-                : '${_gramsText(_gramsAt(_mainKcal, program))} · '
+                : '${macroGramsText(_gramsAt(_mainKcal, program))} · '
                       '${program?.summary(perLb: _perLb) ?? 'your split, $_splitText'}',
             onChange: () => _goTo(_Step.macros),
           ),

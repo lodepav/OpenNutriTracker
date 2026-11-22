@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:opennutritracker/core/domain/entity/body_weight_unit_entity.dart';
 import 'package:intl/intl.dart' show DateFormat;
 import 'package:opennutritracker/fork/layout/arrange_screen.dart';
 import 'package:opennutritracker/fork/report/trends_layout.dart';
@@ -1063,6 +1064,57 @@ void main() {
     await tester.tap(find.text('Close'));
     await tester.pumpAndSettle();
     expect(find.byType(AlertDialog), findsNothing);
+  });
+
+  testWidgets("the balance's weight is at 3500 a lb for a lb user", (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(2400, 3600);
+    addTearDown(tester.view.reset);
+    final history = [
+      for (var i = -6; i <= 0; i++)
+        ExpenditureDay(
+          date: day(i),
+          expenditureKcal: 3000,
+          intakeKcal: 2500,
+          settled: true,
+        ),
+    ];
+    final state = loaded(unit: BodyWeightUnit.lb);
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: const [
+          S.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+        ],
+        supportedLocales: S.supportedLocales,
+        home: Scaffold(
+          body: BlocProvider<TrendsBloc>.value(
+            value: SeededTrendsBloc(state),
+            child: TrendsOverview(
+              state: state,
+              weightCard: (_) => const SizedBox(),
+              waterCard: (_) => const SizedBox(),
+              cards: const {},
+              service: _Service(history),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await openTile(tester, 'balance');
+    await tester.scrollUntilVisible(
+      find.text('From the balance'),
+      200,
+      scrollable: find.byType(Scrollable).last,
+    );
+    expect(
+      find.textContaining('at 3500 kcal a lb', findRichText: true),
+      findsOneWidget,
+    );
+    expect(find.textContaining('a kg', findRichText: true), findsNothing);
   });
 
   testWidgets('left vs right: the latest difference; it opens the page', (

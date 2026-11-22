@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -29,11 +30,17 @@ Future<List<int>?> _pickWithImagePicker(ImageSource source) async {
   return picked?.readAsBytes();
 }
 
+const _thumbWidth = 96.0;
+
 /// A photo with its image file.
 typedef ShownPhoto = ({ProgressPhoto photo, File file});
 
 String _date(BuildContext context, DateTime d) =>
     DateFormat.yMMMd(Localizations.localeOf(context).toLanguageTag()).format(d);
+
+/// A photo's spoken name: "Progress photo, Nov 1, 2026".
+String _photoName(BuildContext context, DateTime d) =>
+    'Progress photo, ${_date(context, d)}';
 
 /// Seam S40: progress photos on Trends, kept on the device and in the
 /// backup. A strip of thumbnails, each opening to view or delete, and a
@@ -142,7 +149,20 @@ class _ProgressPhotosCardState extends State<ProgressPhotosCard> {
       builder: (context) => AlertDialog(
         title: Text(_date(context, shown.photo.date)),
         contentPadding: const EdgeInsets.all(Dimens.spacing8),
-        content: Image.file(shown.file, fit: BoxFit.contain),
+        // Decoded no wider than the screen: a full 12 MP photo is about
+        // 48 MB. The dialog sizes to its content, which a LayoutBuilder
+        // can't report, so the screen's width bounds it.
+        content: Image.file(
+          shown.file,
+          semanticLabel: _photoName(context, shown.photo.date),
+          cacheWidth: switch ((MediaQuery.sizeOf(context).width *
+                  MediaQuery.devicePixelRatioOf(context))
+              .round()) {
+            > 0 && final width => width,
+            _ => null,
+          },
+          fit: BoxFit.contain,
+        ),
         actions: [
           TextButton(
             key: const ValueKey('photo-delete'),
@@ -195,6 +215,22 @@ class _ProgressPhotosCardState extends State<ProgressPhotosCard> {
 
   Widget _card(BuildContext context, List<ShownPhoto> photos) {
     final theme = Theme.of(context);
+    // The strip as tall as a photo and its tallest date, wrapped to the
+    // photo's width at the user's font: a fixed height cut it at large text.
+    var dateHeight = 0.0;
+    for (final shown in photos) {
+      final dateLine = TextPainter(
+        text: TextSpan(
+          text: _date(context, shown.photo.date),
+          style: theme.textTheme.labelSmall,
+        ),
+        textScaler: MediaQuery.textScalerOf(context),
+        textDirection: Directionality.of(context),
+      )..layout(maxWidth: _thumbWidth);
+      if (dateLine.height > dateHeight) dateHeight = dateLine.height;
+      dateLine.dispose();
+    }
+    final stripHeight = 128 + dateHeight;
     return AppCard(
       padding: const EdgeInsets.all(Dimens.spacing20),
       child: Column(
@@ -220,6 +256,7 @@ class _ProgressPhotosCardState extends State<ProgressPhotosCard> {
                   ),
                   child: const Text('Compare'),
                 ),
+              if (photos.length > 1) const SizedBox(width: Dimens.spacing8),
               TextButton.icon(
                 key: const ValueKey('photo-add'),
                 onPressed: _add,
@@ -236,7 +273,7 @@ class _ProgressPhotosCardState extends State<ProgressPhotosCard> {
             )
           else
             SizedBox(
-              height: 150,
+              height: stripHeight,
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 itemCount: photos.length,
@@ -244,31 +281,44 @@ class _ProgressPhotosCardState extends State<ProgressPhotosCard> {
                 // Newest first.
                 itemBuilder: (context, i) {
                   final shown = photos[photos.length - 1 - i];
-                  return InkWell(
-                    key: ValueKey('photo-${shown.photo.id}'),
+                  // One button that says it is a photo, not a bare date.
+                  return Semantics(
+                    container: true,
+                    button: true,
+                    label: _photoName(context, shown.photo.date),
                     onTap: () => _open(shown),
-                    child: Column(
-                      children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: Image.file(
-                            shown.file,
-                            width: 96,
-                            height: 128,
-                            fit: BoxFit.cover,
-                            cacheWidth: 192,
-                            errorBuilder: (_, _, _) => const SizedBox(
-                              width: 96,
-                              height: 128,
-                              child: Icon(Icons.broken_image_outlined),
+                    excludeSemantics: true,
+                    child: InkWell(
+                      key: ValueKey('photo-${shown.photo.id}'),
+                      onTap: () => _open(shown),
+                      // The date wraps under its photo: at 200% it ran into the next.
+                      child: SizedBox(
+                        width: _thumbWidth,
+                        child: Column(
+                          children: [
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.file(
+                                shown.file,
+                                width: _thumbWidth,
+                                height: 128,
+                                fit: BoxFit.cover,
+                                cacheWidth: 192,
+                                errorBuilder: (_, _, _) => const SizedBox(
+                                  width: _thumbWidth,
+                                  height: 128,
+                                  child: Icon(Icons.broken_image_outlined),
+                                ),
+                              ),
                             ),
-                          ),
+                            Text(
+                              _date(context, shown.photo.date),
+                              style: theme.textTheme.labelSmall,
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
                         ),
-                        Text(
-                          _date(context, shown.photo.date),
-                          style: theme.textTheme.labelSmall,
-                        ),
-                      ],
+                      ),
                     ),
                   );
                 },
@@ -368,11 +418,15 @@ class _ComparePhotosScreenState extends State<ComparePhotosScreen> {
     }
     setState(() => _busy = true);
     try {
-      MealPhoto read(File f) =>
-          MealPhoto(bytes: f.readAsBytesSync(), mediaType: 'image/jpeg');
+      Future<MealPhoto> read(File f) async =>
+          MealPhoto(bytes: await f.readAsBytes(), mediaType: 'image/jpeg');
+      final (earlierPhoto, laterPhoto) = await (
+        read(earlier.file),
+        read(later.file),
+      ).wait;
       final result = await _useCase!.compare(
-        earlier: read(earlier.file),
-        later: read(later.file),
+        earlier: earlierPhoto,
+        later: laterPhoto,
         earlierDay: earlierDay,
         laterDay: laterDay,
       );
@@ -421,36 +475,85 @@ class _ComparePhotosScreenState extends State<ComparePhotosScreen> {
     ).abs();
     final (earlier, later) = _pair;
     final answered = _answers.containsKey((earlier.photo.id, later.photo.id));
+    // At large text the AI label pushes the title into "Compare ph…".
+    final aiBelow = MediaQuery.textScalerOf(context).scale(10) >= 13;
+    final stacked = _datesCut(context);
+    final ai = _provider == null
+        ? null
+        : TextButton.icon(
+            key: const ValueKey('compare-ai'),
+            onPressed: _busy ? null : _ask,
+            icon: const Icon(Icons.auto_awesome_outlined),
+            label: Text(answered ? 'AI result' : 'Ask AI'),
+          );
+    // Stacked, each picker shows the photo it sets; side by side, it is
+    // only spoken.
+    final left = _picker(
+      'compare-left',
+      _left,
+      _right,
+      (i) => _left = i,
+      label: 'Left photo',
+      shown: stacked,
+    );
+    final right = _picker(
+      'compare-right',
+      _right,
+      _left,
+      (i) => _right = i,
+      label: 'Right photo',
+      shown: stacked,
+    );
     return Scaffold(
       appBar: AppBar(
         title: const Text('Compare photos'),
-        actions: [
-          if (_provider != null)
-            TextButton.icon(
-              key: const ValueKey('compare-ai'),
-              onPressed: _busy ? null : _ask,
-              icon: const Icon(Icons.auto_awesome_outlined),
-              label: Text(answered ? 'AI result' : 'Ask AI'),
-            ),
-        ],
+        actions: [if (!aiBelow) ?ai],
       ),
       body: SafeArea(
         child: Column(
           children: [
             Padding(
               padding: const EdgeInsets.all(Dimens.spacing8),
-              child: Text('$days days apart'),
+              child: Wrap(
+                alignment: WrapAlignment.center,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: Dimens.spacing8,
+                children: [Text('$days days apart'), if (aiBelow) ?ai],
+              ),
             ),
             if (_busy)
               const LinearProgressIndicator(
                 semanticsLabel: 'Comparing the photos',
               ),
+            if (stacked)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  Dimens.spacing16,
+                  0,
+                  Dimens.spacing16,
+                  Dimens.spacing8,
+                ),
+                child: Column(
+                  children: [
+                    left,
+                    const SizedBox(height: Dimens.spacing8),
+                    right,
+                  ],
+                ),
+              ),
             Expanded(
-              child: Row(
-                children: [
-                  _side('compare-left', _left, (i) => _left = i),
-                  _side('compare-right', _right, (i) => _right = i),
-                ],
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: Dimens.spacing16,
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _side(_left, stacked ? null : left),
+                    const SizedBox(width: Dimens.spacing12),
+                    _side(_right, stacked ? null : right),
+                  ],
+                ),
               ),
             ),
           ],
@@ -459,31 +562,109 @@ class _ComparePhotosScreenState extends State<ComparePhotosScreen> {
     );
   }
 
-  Widget _side(String key, int index, void Function(int) set) => Expanded(
+  /// Whether the longest date overflows a half-width picker at the user's
+  /// text size; a wrapped date was cut to "Nov 1," on a phone.
+  bool _datesCut(BuildContext context) {
+    final style = Theme.of(context).textTheme.titleMedium;
+    final scaler = MediaQuery.textScalerOf(context);
+    final widest = widget.photos
+        .map((s) {
+          final painter = TextPainter(
+            text: TextSpan(text: _date(context, s.photo.date), style: style),
+            textScaler: scaler,
+            textDirection: Directionality.of(context),
+            maxLines: 1,
+          )..layout();
+          final width = painter.width;
+          painter.dispose();
+          return width;
+        })
+        .fold(0.0, math.max);
+    // The page's gutters and the gap, then the field's padding and arrow.
+    final half =
+        (MediaQuery.sizeOf(context).width -
+                2 * Dimens.spacing16 -
+                Dimens.spacing12) /
+            2 -
+        2 * Dimens.spacing12 -
+        24 -
+        Dimens.spacing8;
+    return widest > half;
+  }
+
+  /// The date picker of one side, without [other]'s photo: comparing a
+  /// photo with itself says nothing.
+  Widget _picker(
+    String key,
+    int index,
+    int other,
+    void Function(int) set, {
+    required String label,
+    required bool shown,
+  }) => Semantics(
+    // Once: a shown label is the field's own name already.
+    label: shown ? null : label,
+    child:
+        // Aligned, the menu opens as wide as its field instead of past it to
+        // the screen edge.
+        ButtonTheme(
+          alignedDropdown: true,
+          child: DropdownButtonFormField<int>(
+            key: ValueKey(key),
+            // Within its half of the page: a long date overflowed it at 200%.
+            isExpanded: true,
+            // Unset, a date wraps to two lines at large text instead of cutting.
+            itemHeight: null,
+            initialValue: index,
+            // Outlined, so the two pickers read as separate controls.
+            decoration: InputDecoration(
+              labelText: shown ? label : null,
+              border: const OutlineInputBorder(),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: Dimens.spacing12,
+                vertical: Dimens.spacing8,
+              ),
+            ),
+            items: [
+              for (final (i, s) in widget.photos.indexed)
+                // Its own value stays, as the picker must hold it.
+                if (i == index || i != other)
+                  DropdownMenuItem(
+                    value: i,
+                    child: Text(_date(context, s.photo.date)),
+                  ),
+            ],
+            onChanged: (i) {
+              if (i != null) setState(() => set(i));
+            },
+          ),
+        ),
+  );
+
+  Widget _side(int index, Widget? picker) => Expanded(
     child: Column(
       children: [
-        DropdownButton<int>(
-          key: ValueKey(key),
-          value: index,
-          items: [
-            for (final (i, s) in widget.photos.indexed)
-              DropdownMenuItem(
-                value: i,
-                child: Text(_date(context, s.photo.date)),
-              ),
-          ],
-          onChanged: (i) {
-            if (i != null) setState(() => set(i));
-          },
-        ),
+        ?picker,
         Expanded(
           child: Padding(
-            padding: const EdgeInsets.all(4),
-            child: Image.file(
-              widget.photos[index].file,
-              fit: BoxFit.contain,
-              errorBuilder: (_, _, _) =>
-                  const Center(child: Icon(Icons.broken_image_outlined)),
+            padding: const EdgeInsets.only(top: Dimens.spacing8),
+            // Decoded at the width shown, not the photo's full size.
+            child: LayoutBuilder(
+              builder: (context, box) => Image.file(
+                widget.photos[index].file,
+                semanticLabel: _photoName(
+                  context,
+                  widget.photos[index].photo.date,
+                ),
+                cacheWidth: box.maxWidth.isFinite && box.maxWidth > 0
+                    ? (box.maxWidth * MediaQuery.devicePixelRatioOf(context))
+                          .round()
+                    : null,
+                fit: BoxFit.contain,
+                alignment: Alignment.topCenter,
+                errorBuilder: (_, _, _) =>
+                    const Center(child: Icon(Icons.broken_image_outlined)),
+              ),
             ),
           ),
         ),

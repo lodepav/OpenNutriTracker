@@ -25,6 +25,9 @@ import 'package:opennutritracker/fork/units/energy_text.dart';
 import 'package:opennutritracker/fork/goal/goal_explained.dart';
 import 'package:opennutritracker/fork/widget/toolbar_height.dart';
 // [/fork]
+// [fork] S450 goal-grams-rounded
+import 'package:opennutritracker/fork/onboarding/overview_grams.dart';
+// [/fork]
 
 /// Transparency screen: shows every variable and intermediate step behind
 /// today's kcal goal, so the number on the home screen is fully auditable
@@ -48,6 +51,8 @@ class KcalGoalInfoScreen extends StatefulWidget {
   // [fork] S134 goal-explained: true for upstream's page of every step,
   // "The equations" from the overview
   final bool equations;
+  // onboarding's link: titled as the link, the inputs in onboarding's units
+  final bool onboarding;
   // [/fork]
 
   const KcalGoalInfoScreen({
@@ -55,6 +60,7 @@ class KcalGoalInfoScreen extends StatefulWidget {
     this.usecase,
     this.breakdown,
     this.equations = false, // [fork] S134
+    this.onboarding = false, // [fork] S134
   });
 
   @override
@@ -63,6 +69,18 @@ class KcalGoalInfoScreen extends StatefulWidget {
 
 class _KcalGoalInfoScreenState extends State<KcalGoalInfoScreen> {
   late final Future<KcalGoalBreakdownEntity> _breakdown;
+  // [fork] S134 goal-explained: the inputs in the user's units, read with
+  // the breakdown so the page never shows the other ones first
+  InputUnits _units = metricInputUnits;
+  late final Future<KcalGoalBreakdownEntity> _ready = _breakdown.then((
+    b,
+  ) async {
+    _units = widget.onboarding
+        ? onboardingInputUnits()
+        : await savedInputUnits();
+    return b;
+  });
+  // [/fork]
 
   @override
   void initState() {
@@ -82,14 +100,21 @@ class _KcalGoalInfoScreenState extends State<KcalGoalInfoScreen> {
       appBar: AppBar(
         toolbarHeight: twoLineToolbarHeight(context), // [fork] S134
         title: Text(
-          widget.equations ? 'The equations' : l10n.settingsKcalGoalInfoLabel,
+          // as onboarding's link names the page
+          widget.equations && !widget.onboarding
+              ? 'The equations'
+              : l10n.settingsKcalGoalInfoLabel,
           maxLines: 2,
+          softWrap: true, // [fork] S134 AppBar titles default to no wrap
           overflow: TextOverflow.ellipsis,
         ),
       ),
       // [/fork]
       body: FutureBuilder<KcalGoalBreakdownEntity>(
-        future: _breakdown,
+        // [fork] S134 goal-explained
+        // future: _breakdown,
+        future: _ready,
+        // [/fork]
         builder: (context, snapshot) {
           final breakdown = snapshot.data;
           if (breakdown == null) {
@@ -100,6 +125,7 @@ class _KcalGoalInfoScreenState extends State<KcalGoalInfoScreen> {
             return GoalExplainedBody(
               breakdown: breakdown,
               showTargetNote: widget.breakdown == null,
+              units: _units,
               onInputs: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(
                   builder: (_) => Scaffold(
@@ -113,7 +139,9 @@ class _KcalGoalInfoScreenState extends State<KcalGoalInfoScreen> {
                         Dimens.spacing16 + MediaQuery.paddingOf(context).bottom,
                       ),
                       // [/fork]
-                      children: [_InputsCard(breakdown: breakdown)],
+                      children: [
+                        _InputsCard(breakdown: breakdown, units: _units),
+                      ],
                     ),
                   ),
                 ),
@@ -145,7 +173,10 @@ class _KcalGoalInfoScreenState extends State<KcalGoalInfoScreen> {
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
               const SizedBox(height: Dimens.spacing16),
-              _InputsCard(breakdown: breakdown),
+              // [fork] S134 goal-explained: the user's units
+              // _InputsCard(breakdown: breakdown),
+              _InputsCard(breakdown: breakdown, units: _units),
+              // [/fork]
               const SizedBox(height: Dimens.spacing12),
               _TdeeCard(breakdown: breakdown),
               const SizedBox(height: Dimens.spacing12),
@@ -204,8 +235,12 @@ class _KcalGoalInfoScreenState extends State<KcalGoalInfoScreen> {
 /// "Your inputs" — the profile values every later step reads from.
 class _InputsCard extends StatelessWidget {
   final KcalGoalBreakdownEntity breakdown;
+  // [fork] S134 goal-explained: the user's units
+  final InputUnits units;
 
-  const _InputsCard({required this.breakdown});
+  // const _InputsCard({required this.breakdown});
+  const _InputsCard({required this.breakdown, required this.units});
+  // [/fork]
 
   @override
   Widget build(BuildContext context) {
@@ -217,14 +252,23 @@ class _InputsCard extends StatelessWidget {
           label: l10n.ageLabel,
           value: l10n.yearsLabel(breakdown.age),
         ),
+        // [fork] S134 goal-explained: the user's units, the formula's in
+        // brackets
         _ValueRow(
           label: l10n.heightLabel,
-          value: '${breakdown.heightCM.toStringAsFixed(0)} ${l10n.cmLabel}',
+          // value: '${breakdown.heightCM.toStringAsFixed(0)} ${l10n.cmLabel}',
+          value: heightInputText(
+            l10n,
+            breakdown.heightCM,
+            units.heightImperial,
+          ),
         ),
         _ValueRow(
           label: l10n.weightLabel,
-          value: '${breakdown.weightKG.toStringAsFixed(1)} ${l10n.kgLabel}',
+          // value: '${breakdown.weightKG.toStringAsFixed(1)} ${l10n.kgLabel}',
+          value: weightInputText(l10n, breakdown.weightKG, units.weight),
         ),
+        // [/fork]
         _ValueRow(
           label: l10n.activityLabel,
           value: breakdown.palCategory.getName(context),
@@ -251,8 +295,15 @@ class _InputsCard extends StatelessWidget {
         if (breakdown.targetWeightKg != null)
           _ValueRow(
             label: l10n.profileTargetWeightLabel,
-            value:
-                '${breakdown.targetWeightKg!.toStringAsFixed(1)} ${l10n.kgLabel}',
+            // [fork] S134 goal-explained: the user's units
+            // value:
+            //     '${breakdown.targetWeightKg!.toStringAsFixed(1)} ${l10n.kgLabel}',
+            value: weightInputText(
+              l10n,
+              breakdown.targetWeightKg!,
+              units.weight,
+            ),
+            // [/fork]
           ),
       ],
     );
@@ -533,17 +584,17 @@ class _MacroCard extends StatelessWidget {
         ...inMacroOrder(
           carbs: _ValueRow(
             label: l10n.carbsLabel,
-            value: '${breakdown.carbsGoalGrams.toInt()} g',
+            value: '${overviewGrams(breakdown.carbsGoalGrams)} g',
             emphasized: true,
           ),
           fat: _ValueRow(
             label: l10n.fatLabel,
-            value: '${breakdown.fatsGoalGrams.toInt()} g',
+            value: '${overviewGrams(breakdown.fatsGoalGrams)} g',
             emphasized: true,
           ),
           protein: _ValueRow(
             label: l10n.proteinLabel,
-            value: '${breakdown.proteinsGoalGrams.toInt()} g',
+            value: '${overviewGrams(breakdown.proteinsGoalGrams)} g',
             emphasized: true,
           ),
         ),
@@ -564,8 +615,10 @@ class _MacroCard extends StatelessWidget {
   ) {
     final pct = (fraction * 100).round();
     final density = kcalPerGram.toStringAsFixed(0);
-    // Grams truncate (not round) to match the dashboard's macro tiles.
-    return '$goalKcal × $pct % ÷ $density = ${grams.toInt()} g';
+    // [fork] S450 goal-grams-rounded: rounded as Home and Overview round them
+    return '$goalKcal × $pct % ÷ $density = ${overviewGrams(grams)} g';
+    // return '$goalKcal × $pct % ÷ $density = ${grams.toInt()} g';
+    // [/fork]
   }
 }
 

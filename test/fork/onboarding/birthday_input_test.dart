@@ -95,6 +95,6 @@ void main() {
     await tester.enterText(field, '02301990');
     await tester.pump();
     expect(birthday, isNull);
-    expect(find.text('Not a date in range'), findsOneWidget);
+    expect(find.text("That date doesn't exist"), findsOneWidget);
   });
 }

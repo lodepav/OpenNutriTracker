@@ -35,7 +35,13 @@ class ActivityTitleExpanded extends StatelessWidget {
                 ],
               ),
               textAlign: TextAlign.center,
-              maxLines: 2,
+              // [fork] S339 activity-title-lines: at the 6 px floor the
+              // spans' 36 px style still drew 15 px, cutting Custom's help;
+              // S409: the lines grow with text size, as the screen's header
+              // maxLines: 2,
+              maxLines: (3 * MediaQuery.textScalerOf(context).scale(16) / 16)
+                  .ceil(),
+              // [/fork]
               overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: 16),

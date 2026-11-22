@@ -194,14 +194,26 @@ class _ReviewDialogState extends State<_ReviewDialog> {
     super.dispose();
   }
 
+  /// [controller]'s value: null when cleared, which leaves it out, and NaN
+  /// when it is no amount ("1o", "-2"), which Send waits on.
+  static double? _valueOf(TextEditingController controller) {
+    final text = controller.text.trim();
+    if (text.isEmpty) return null;
+    final value = double.tryParse(text.replaceAll(',', '.'));
+    return value != null && value.isFinite && value >= 0 ? value : double.nan;
+  }
+
+  bool get _anyMistyped =>
+      _values.values.any((c) => _valueOf(c)?.isNaN ?? false);
+
   /// The values as the fields hold them; a cleared field is left out.
   _Review get _review {
     String? text(TextEditingController controller) =>
         controller.text.trim().isEmpty ? null : controller.text.trim();
     final nutrients = <String, (double, String)>{};
     for (final MapEntry(key: nutrient, value: controller) in _values.entries) {
-      final value = double.tryParse(controller.text.replaceAll(',', '.'));
-      if (value != null && value.isFinite && value >= 0) {
+      final value = _valueOf(controller);
+      if (value != null && !value.isNaN) {
         nutrients[nutrient] = (value, widget.upload.nutrients[nutrient]!.$2);
       }
     }
@@ -234,7 +246,12 @@ class _ReviewDialogState extends State<_ReviewDialog> {
         labelText: label,
         suffixText: unit,
         isDense: true,
+        errorText: unit != null && (_valueOf(controller)?.isNaN ?? false)
+            ? 'Enter a number, or clear it'
+            : null,
       ),
+      // Send and the field's error follow each keystroke.
+      onChanged: unit == null ? null : (_) => setState(() {}),
     );
     return AlertDialog(
       title: const Text('Add to Open Food Facts?'),
@@ -300,14 +317,16 @@ class _ReviewDialogState extends State<_ReviewDialog> {
         ),
         FilledButton(
           key: const Key('fork-off-send'),
-          onPressed: () {
-            final review = _review;
-            if (review.upload.isEmpty && review.photo == null) {
-              Navigator.of(context).pop();
-            } else {
-              Navigator.of(context).pop(review);
-            }
-          },
+          onPressed: _anyMistyped
+              ? null
+              : () {
+                  final review = _review;
+                  if (review.upload.isEmpty && review.photo == null) {
+                    Navigator.of(context).pop();
+                  } else {
+                    Navigator.of(context).pop(review);
+                  }
+                },
           child: const Text('Send'),
         ),
       ],
@@ -409,8 +428,11 @@ class _AccountDialogState extends State<_AccountDialog> {
             key: const Key('fork-off-user'),
             controller: _user,
             autocorrect: false,
+            // A helper line wraps; at 200% the label's "not the e-mail" was cut
             decoration: const InputDecoration(
-              labelText: 'User name (not the e-mail)',
+              labelText: 'User name',
+              helperText: 'Not your e-mail address',
+              helperMaxLines: 3,
             ),
           ),
           TextField(

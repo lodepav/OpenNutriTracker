@@ -11,6 +11,7 @@ import 'package:opennutritracker/core/utils/bounds/validator.dart';
 import 'package:opennutritracker/features/onboarding/domain/entity/user_gender_selection_entity.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 import 'package:opennutritracker/fork/onboarding/birthday_input.dart';
+import 'package:opennutritracker/fork/screens/onboarding/onboarding_limits.dart';
 
 class OnboardingAboutYouPageBody extends StatefulWidget {
   final Function(
@@ -25,12 +26,17 @@ class OnboardingAboutYouPageBody extends StatefulWidget {
   final CaloriesProfileEntity? initialCaloriesProfile;
   final DateTime? initialBirthday;
 
+  /// Set to the blocked Next's message naming the one field wrong; null
+  /// keeps the general one.
+  final ValueNotifier<String?>? blockedMessage;
+
   const OnboardingAboutYouPageBody({
     super.key,
     required this.setPageContent,
     this.initialGender,
     this.initialCaloriesProfile,
     this.initialBirthday,
+    this.blockedMessage,
   });
 
   @override
@@ -52,6 +58,12 @@ class _OnboardingAboutYouPageBodyState
     _selectedGender = widget.initialGender;
     _selectedCaloriesProfile = widget.initialCaloriesProfile;
     _selectedDate = widget.initialBirthday;
+  }
+
+  @override
+  void dispose() {
+    _dateInput.dispose();
+    super.dispose();
   }
 
   @override
@@ -114,16 +126,18 @@ class _OnboardingAboutYouPageBodyState
           Row(
             children: [
               Expanded(
-                child: AutoSizeText(
-                  S.of(context).genderLabel,
-                  maxLines: 1,
-                  minFontSize: 16,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.headlineSmall,
+                child: Semantics(
+                  header: true,
+                  child: AutoSizeText(
+                    S.of(context).genderLabel,
+                    maxLines: 1,
+                    minFontSize: 16,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.headlineSmall,
+                  ),
                 ),
               ),
               IconButton(
-                visualDensity: VisualDensity.compact,
                 tooltip: S.of(context).sourcesIconTooltip,
                 icon: const Icon(Icons.info_outline),
                 onPressed: () => Navigator.of(context).push(
@@ -194,9 +208,12 @@ class _OnboardingAboutYouPageBodyState
             ),
           ],
           const SizedBox(height: 32.0),
-          Text(
-            S.of(context).ageLabel,
-            style: Theme.of(context).textTheme.headlineSmall,
+          Semantics(
+            header: true,
+            child: Text(
+              S.of(context).ageLabel,
+              style: Theme.of(context).textTheme.headlineSmall,
+            ),
           ),
           Text(
             S.of(context).onboardingBirthdayQuestionSubtitle,
@@ -215,7 +232,7 @@ class _OnboardingAboutYouPageBodyState
               decoration: InputDecoration(
                 hintText: _forkBirthday.hint,
                 labelText: S.of(context).onboardingEnterBirthdayLabel,
-                errorText: _forkBirthdayBad ? 'Not a date in range' : null,
+                errorText: _forkBirthdayError,
                 prefixIcon: IconButton(
                   icon: const Icon(Icons.calendar_month_outlined),
                   tooltip: 'Pick from a calendar',
@@ -284,20 +301,16 @@ class _OnboardingAboutYouPageBodyState
 
   BirthdayFormat get _forkBirthday =>
       BirthdayFormat.of(MaterialLocalizations.of(context));
-  bool _forkBirthdayBad = false;
+  String? _forkBirthdayError;
 
   /// A complete date in the picker's range is the birthday; anything else
   /// is none yet, and a complete one that is not says so.
   void _forkBirthdayTyped(String text) {
     final date = _forkBirthday.parse(text);
-    final ok =
-        date != null &&
-        !date.isBefore(ValueValidator.getFirstDate()) &&
-        !date.isAfter(ValueValidator.getLastDate());
+    final error = birthdayError(text, _forkBirthday);
     setState(() {
-      _forkBirthdayBad =
-          !ok && text.replaceAll(RegExp(r'[^0-9]'), '').length == 8;
-      _selectedDate = ok ? date : null;
+      _forkBirthdayError = error;
+      _selectedDate = date != null && error == null ? date : null;
       checkCorrectInput();
     });
   }
@@ -319,7 +332,7 @@ class _OnboardingAboutYouPageBodyState
     if (pickedDate == null || !mounted) return;
     final formattedDate = _forkBirthday.write(pickedDate);
     setState(() {
-      _forkBirthdayBad = false;
+      _forkBirthdayError = null;
       _selectedDate = pickedDate;
       _dateInput.text = formattedDate;
       checkCorrectInput();
@@ -327,6 +340,12 @@ class _OnboardingAboutYouPageBodyState
   }
 
   void checkCorrectInput() {
+    // Before setPageContent, whose rebuild reads it.
+    widget.blockedMessage?.value = aboutYouBlockedMessage(
+      genderOk: _selectedGender != null,
+      birthdayOk: _selectedDate != null,
+      birthdayError: _forkBirthdayError,
+    );
     if (_selectedGender != null && _selectedDate != null) {
       widget.setPageContent(
         true,
@@ -335,7 +354,13 @@ class _OnboardingAboutYouPageBodyState
         _selectedDate,
       );
     } else {
-      widget.setPageContent(false, null, null, null);
+      // What is chosen stays chosen while the rest is missing.
+      widget.setPageContent(
+        false,
+        _selectedGender,
+        _selectedCaloriesProfile,
+        _selectedDate,
+      );
     }
   }
 }

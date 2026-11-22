@@ -7,6 +7,7 @@ import 'package:opennutritracker/core/utils/ai_credential_storage.dart';
 import 'package:opennutritracker/features/add_meal/domain/usecase/run_ai_endpoint_probe_usecase.dart';
 import 'package:opennutritracker/features/settings/presentation/widgets/ai_assist_dialog.dart';
 import 'package:opennutritracker/core/styles/accent_colors.dart';
+import 'package:opennutritracker/fork/settings/accent_view.dart'; // [fork] S336
 import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/core/utils/off_const.dart';
@@ -183,8 +184,10 @@ class _OnboardingOtherOptionsPageBodyState
   Widget _buildAccentColorRow(BuildContext context) {
     final isAndroid = Theme.of(context).platform == TargetPlatform.android;
     final materialYouSelected = _useMaterialYou && _accentColor == null;
+    // [fork] S336 accent-swatches: 48 dp swatches, each named for a screen
+    // reader; the row is as tall as they are
     return SizedBox(
-      height: 44,
+      height: 48,
       child: ListView(
         scrollDirection: Axis.horizontal,
         children: [
@@ -195,6 +198,7 @@ class _OnboardingOtherOptionsPageBodyState
                 message: S.of(context).settingsMaterialYouTitle,
                 child: _swatch(
                   context,
+                  name: S.of(context).settingsMaterialYouTitle,
                   color: Theme.of(context).colorScheme.primaryContainer,
                   selected: materialYouSelected,
                   onTap: _onMaterialYouSelected,
@@ -206,11 +210,12 @@ class _OnboardingOtherOptionsPageBodyState
                 ),
               ),
             ),
-          for (final color in accentPresetColors)
+          for (final (i, color) in accentPresetColors.indexed)
             Padding(
               padding: const EdgeInsets.only(right: 8.0),
               child: _swatch(
                 context,
+                name: accentPresetNames[i],
                 color: color,
                 selected: !materialYouSelected &&
                     _accentColor == color.toARGB32(),
@@ -220,21 +225,72 @@ class _OnboardingOtherOptionsPageBodyState
         ],
       ),
     );
+    // return SizedBox(
+    //   height: 44,
+    //   child: ListView(
+    //     scrollDirection: Axis.horizontal,
+    //     children: [
+    //       if (isAndroid)
+    //         Padding(
+    //           padding: const EdgeInsets.only(right: 8.0),
+    //           child: Tooltip(
+    //             message: S.of(context).settingsMaterialYouTitle,
+    //             child: _swatch(
+    //               context,
+    //               color: Theme.of(context).colorScheme.primaryContainer,
+    //               selected: materialYouSelected,
+    //               onTap: _onMaterialYouSelected,
+    //               child: Icon(
+    //                 Icons.auto_awesome_rounded,
+    //                 size: 20,
+    //                 color: Theme.of(context).colorScheme.onPrimaryContainer,
+    //               ),
+    //             ),
+    //           ),
+    //         ),
+    //       for (final color in accentPresetColors)
+    //         Padding(
+    //           padding: const EdgeInsets.only(right: 8.0),
+    //           child: _swatch(
+    //             context,
+    //             color: color,
+    //             selected: !materialYouSelected &&
+    //                 _accentColor == color.toARGB32(),
+    //             onTap: () => _onAccentColorSelected(color),
+    //           ),
+    //         ),
+    //     ],
+    //   ),
+    // );
+    // [/fork]
   }
 
   Widget _swatch(
     BuildContext context, {
+    required String name, // [fork] S336
     required Color color,
     required bool selected,
     required VoidCallback onTap,
     Widget? child,
   }) {
-    return InkWell(
+    // [fork] S336 accent-swatches: a named, 48 dp control
+    return Semantics(
+      container: true,
+      button: true,
+      selected: selected,
+      label: name,
+      child:
+    // [/fork]
+    InkWell(
       onTap: onTap,
       customBorder: const CircleBorder(),
       child: Container(
-        width: 44,
-        height: 44,
+        // [fork] S336: the touch target's floor
+        width: 48,
+        height: 48,
+        // width: 44,
+        // height: 44,
+        // [/fork]
         alignment: Alignment.center,
         decoration: BoxDecoration(
           color: color,
@@ -252,8 +308,14 @@ class _OnboardingOtherOptionsPageBodyState
             ? Icon(Icons.check_rounded, color: AppPalette.readableOn(color))
             : child,
       ),
-    );
+    ),
+    ); // [fork] S336
   }
+
+  // [fork] S337 theme-segments
+  bool get _forkThemeStacked =>
+      MediaQuery.textScalerOf(context).scale(10) > 15;
+  // [/fork]
 
   String _themeLabel(BuildContext context, AppThemeEntity theme) {
     switch (theme) {
@@ -275,10 +337,16 @@ class _OnboardingOtherOptionsPageBodyState
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // [fork] S464 step-headings: a heading TalkBack can jump to
+            Semantics(
+              header: true,
+              child:
+            // [/fork]
             Text(
               s.onboardingOtherOptionsLabel,
               style: Theme.of(context).textTheme.headlineSmall,
             ),
+            ), // [fork] S464
             Text(
               s.onboardingOtherOptionsSubtitle,
               style: Theme.of(context).textTheme.titleMedium,
@@ -293,7 +361,29 @@ class _OnboardingOtherOptionsPageBodyState
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // [fork] S337 theme-segments: stacked, the card's
+                      // width, as content width left rows cut
+                      SizedBox(
+                        width: _forkThemeStacked ? double.infinity : null,
+                        child:
+                      // [/fork]
                       SegmentedButton<AppThemeEntity>(
+                        // [fork] S337 theme-segments: stacked at large text,
+                        // where "System default" broke mid-word, in a rounded
+                        // box, as a stadium cut the first and last rows
+                        direction: _forkThemeStacked
+                            ? Axis.vertical
+                            : Axis.horizontal,
+                        style: _forkThemeStacked
+                            ? ButtonStyle(
+                                shape: WidgetStatePropertyAll(
+                                  RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                              )
+                            : null,
+                        // [/fork]
                         segments: [
                           for (final theme in AppThemeEntity.values)
                             ButtonSegment(
@@ -305,6 +395,7 @@ class _OnboardingOtherOptionsPageBodyState
                         onSelectionChanged: (selection) =>
                             _onThemeSelected(selection.first),
                       ),
+                      ), // [fork] S337
                       const SizedBox(height: Dimens.spacing16),
                       Text(
                         s.settingsAccentColourTitle,

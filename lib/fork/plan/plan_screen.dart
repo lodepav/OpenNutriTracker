@@ -155,7 +155,9 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
         if (first == null) return const SizedBox.shrink();
         final day = _picked ?? first;
         return ListView(
-          padding: const EdgeInsets.only(bottom: 48),
+          padding: EdgeInsets.only(
+            bottom: 48 + MediaQuery.paddingOf(context).bottom,
+          ),
           children: [
             _days(first, day),
             _nothingPlanned(day),

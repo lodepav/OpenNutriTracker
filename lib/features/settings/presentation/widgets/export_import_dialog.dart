@@ -6,6 +6,9 @@ import 'package:opennutritracker/features/diary/presentation/bloc/diary_bloc.dar
 import 'package:opennutritracker/features/home/presentation/bloc/home_bloc.dart';
 import 'package:opennutritracker/features/profile/presentation/bloc/profile_bloc.dart';
 import 'package:opennutritracker/features/settings/domain/usecase/export_data_usecase.dart';
+// [fork] S413 import-confirm
+import 'package:opennutritracker/features/settings/domain/usecase/import_data_usecase.dart';
+// [/fork]
 import 'package:opennutritracker/features/settings/presentation/bloc/export_import_bloc.dart';
 import 'package:opennutritracker/features/settings/presentation/bloc/settings_bloc.dart';
 import 'package:opennutritracker/features/settings/presentation/widgets/export_import_error_text.dart';
@@ -39,6 +42,61 @@ class _ExportImportDialogState extends State<ExportImportDialog> {
 
   ExportFormat _exportFormat = ExportFormat.json;
 
+  // [fork] S413 import-confirm: a picked file is confirmed before it
+  // replaces anything, since at 200% the warning can be off screen
+  ImportDataUsecase? get _forkImporter =>
+      locator.isRegistered<ImportDataUsecase>()
+      ? locator<ImportDataUsecase>()
+      : null;
+
+  @override
+  void initState() {
+    super.initState();
+    _forkImporter?.forkConfirmImport = _forkConfirmImport;
+  }
+
+  @override
+  void dispose() {
+    final importer = _forkImporter;
+    if (importer?.forkConfirmImport == _forkConfirmImport) {
+      importer!.forkConfirmImport = null;
+    }
+    super.dispose();
+  }
+
+  Future<bool> _forkConfirmImport() async {
+    if (!mounted) return false;
+    // A CSV backup holds no goal settings
+    final goals = _exportFormat == ExportFormat.json;
+    final replace = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        scrollable: true,
+        title: Text(
+          goals
+              ? 'Replace your goals and the entries this file shares?'
+              : 'Replace the entries this file shares?',
+        ),
+        content: const Text(
+          'Entries in the file overwrite the same ones here. This cannot be '
+          'undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text(S.of(context).dialogCancelLabel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Replace'),
+          ),
+        ],
+      ),
+    );
+    return mounted && replace == true;
+  }
+  // [/fork]
+
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
@@ -47,7 +105,13 @@ class _ExportImportDialogState extends State<ExportImportDialog> {
         overflow: TextOverflow.ellipsis,
         maxLines: 2,
       ),
-      content: Wrap(
+      // [fork] S315 export-dialog-scrolls: at 200% text the warning ran under
+      // the buttons. Not `scrollable: true`: its IntrinsicWidth cannot
+      // measure the SegmentedButton and throws
+      // content: Wrap(
+      content: SingleChildScrollView(
+        child: Wrap(
+      // [/fork]
         children: [
           Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -60,7 +124,11 @@ class _ExportImportDialogState extends State<ExportImportDialog> {
                   ),
                   ButtonSegment(
                     value: ExportFormat.csv,
-                    label: Text('CSV'),
+                    // [fork] S414 csv-backup-words: a backup to restore, not
+                    // the diary's CSV export one row above in Settings
+                    // label: Text('CSV'),
+                    label: Text('CSV backup'),
+                    // [/fork]
                   ),
                 ],
                 selected: {_exportFormat},
@@ -87,7 +155,13 @@ class _ExportImportDialogState extends State<ExportImportDialog> {
                       child: Text(
                         S.of(context).exportImportCsvRecipesNote,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Theme.of(context).colorScheme.secondary,
+                              // [fork] S414 csv-backup-words: the accent was
+                              // 4.0:1 at this size; the icon keeps it
+                              // color: Theme.of(context).colorScheme.secondary,
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurfaceVariant,
+                              // [/fork]
                             ),
                       ),
                     ),
@@ -100,20 +174,21 @@ class _ExportImportDialogState extends State<ExportImportDialog> {
                 builder: (context, state) {
                   if (state is ExportImportInitial) {
                     // [fork] S142 import-says: what Import does to what is
-                    // here, before the file is picked (H3)
+                    // here, before the file is picked (H3); first, so it is
+                    // on screen at 200% without scrolling
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          S.of(context).exportImportDescription,
-                          overflow: TextOverflow.ellipsis,
-                          maxLines: 15,
-                        ),
-                        const SizedBox(height: 8),
                         const Text(
                           'Import adds the file\'s entries to this profile, '
                           'overwriting any it shares, and the goals it holds '
                           'replace yours.',
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          S.of(context).exportImportDescription,
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 15,
                         ),
                       ],
                     );
@@ -159,8 +234,17 @@ class _ExportImportDialogState extends State<ExportImportDialog> {
             ],
           ),
         ],
+      // [fork] S315 export-dialog-scrolls
+      ),
+      // [/fork]
       ),
       actions: <Widget>[
+        // [fork] S315 export-dialog-scrolls: an exit that does neither
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(S.of(context).dialogCancelLabel),
+        ),
+        // [/fork]
         TextButton(
           onPressed: () => _exportImportBloc.add(
             ExportDataEvent(format: _exportFormat),

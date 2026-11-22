@@ -49,6 +49,24 @@ void main() {
       );
     });
 
+    test('g and g/ml are one "Grams" chip, the one the row is in', () {
+      // crit r4 g2: a row in g/ml showed "Grams" twice
+      expect(
+        units(amountUnitOptions(bread(), selected: 'g/ml', imperial: false)),
+        ['serving', 'serving#1', 'g/ml'],
+      );
+      expect(
+        units(
+          amountUnitOptions(
+            rye(serving: null, mealUnit: ''),
+            selected: 'g',
+            imperial: false,
+          ),
+        ),
+        ['g'],
+      );
+    });
+
     test("the user's own portions come after the food's", () {
       final meal = withOwnPortions(bread(), const [
         OwnPortionEntity(label: 'thick slice', gramWeight: 45),

@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:opennutritracker/core/domain/entity/recipe_ingredient_entity.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
+import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_nutriments_entity.dart';
 import 'package:opennutritracker/features/add_meal/util/food_emoji_resolver.dart';
 import 'package:opennutritracker/fork/display/display_prefs.dart';
@@ -16,6 +17,11 @@ import 'package:opennutritracker/generated/l10n.dart';
 /// Seam S127: the recipe builder after the canvas's "Recipe builder · A".
 /// The name, then the ingredients with their amounts typed in place, the
 /// rest folded under "Optional", and the totals with Save at the bottom.
+
+/// An ingredient's emoji, the same in the builder and on the recipe page:
+/// its food kind, else one by its name; null for the leaf.
+String? ingredientEmoji(MealEntity meal) =>
+    OffKinds.emojiFor(meal) ?? resolveFoodEmoji(meal.name);
 
 /// [amount] without a trailing ".0".
 String _amountText(double amount) => amount == amount.roundToDouble()
@@ -79,7 +85,7 @@ class _BuilderIngredientRowState extends State<BuilderIngredientRow> {
       fat: of(n.fat100),
       protein: of(n.proteins100),
     );
-    final emoji = OffKinds.emojiFor(meal) ?? resolveFoodEmoji(meal.name);
+    final emoji = ingredientEmoji(meal);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: Dimens.spacing4),
       child: Row(
@@ -221,29 +227,36 @@ class BuilderSaveBar extends StatelessWidget {
     final theme = Theme.of(context);
     final palette = paletteOf(context);
     double of(double? value) => (value ?? 0) * totalWeightG / 100;
-    Widget figure(String value, String label, Color? color) => Expanded(
-      child: MergeSemantics(
-        child: Column(
-          children: [
-            Text(
-              value,
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w800,
-                color: color,
-              ),
+    // Spoken "29 grams carbs", as the totals strip says it (A5)
+    Widget figure(String value, String label, Color? color, {String? macro}) =>
+        Expanded(
+          child: Semantics(
+            label: macro == null ? '$value $label' : '$value grams $macro',
+            excludeSemantics: true,
+            child: Column(
+              children: [
+                Text(
+                  value,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    // 16 sp is not large text: the macro hues need 4.5:1
+                    color: color == null
+                        ? null
+                        : textSafe(color, palette.surface),
+                  ),
+                ),
+                // Wraps at large text rather than cut "protein" (A6)
+                Text(
+                  label,
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: palette.textMuted,
+                  ),
+                ),
+              ],
             ),
-            // Wraps at large text rather than cut "protein" (A6)
-            Text(
-              label,
-              textAlign: TextAlign.center,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: palette.textMuted,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+          ),
+        );
     return Material(
       color: palette.surface,
       child: SafeArea(
@@ -270,16 +283,19 @@ class BuilderSaveBar extends StatelessWidget {
                       '${of(per100.carbohydrates100).round()}',
                       '${s.carbsLabel} g',
                       palette.carbs,
+                      macro: s.carbsLabel.toLowerCase(),
                     ),
                     fat: figure(
                       '${of(per100.fat100).round()}',
                       '${s.fatLabel} g',
                       palette.fat,
+                      macro: s.fatLabel.toLowerCase(),
                     ),
                     protein: figure(
                       '${of(per100.proteins100).round()}',
                       '${s.proteinLabel} g',
                       palette.protein,
+                      macro: s.proteinLabel.toLowerCase(),
                     ),
                   ),
                 ],

@@ -204,6 +204,14 @@ void main() {
     expect(find.textContaining('Move'), findsNothing);
     await tester.tap(find.text('Remove'));
     await tester.pumpAndSettle();
+    // A delete confirms on a filled button in the error colour.
+    expect(
+      find.ancestor(
+        of: find.text('Remove').last,
+        matching: find.byType(FilledButton),
+      ),
+      findsOneWidget,
+    );
     await tester.tap(find.text('Remove').last);
     await tester.pumpAndSettle();
     expect(store.queue, isEmpty);
@@ -292,6 +300,21 @@ void main() {
     final next = tester.getRect(_id('goal-plan-new'));
     expect(next.top, greaterThan(edit.bottom));
     expect(next.width, edit.width);
+    // Edit plan is the main action: filled, the other outlined.
+    expect(
+      find.descendant(
+        of: _id('goal-plan-edit'),
+        matching: find.byWidgetPredicate((w) => w is FilledButton),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: _id('goal-plan-new'),
+        matching: find.byType(OutlinedButton),
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets('removing the running goal from the calendar is undone', (
@@ -316,7 +339,7 @@ void main() {
     await tester.tap(_id('goal-calendar-confirm'));
     await tester.pumpAndSettle();
     expect(store.saved!.kind, PhaseKind.maintain);
-    expect(find.text('Removed'), findsOneWidget);
+    expect(find.text('Cut to 80.0 kg removed'), findsOneWidget);
     await tester.tap(find.text('Undo'));
     await tester.pumpAndSettle();
     expect(store.saved, same(_cut));
@@ -479,9 +502,11 @@ void main() {
       );
     }
 
-    testWidgets('on the first day: "Started today"', (tester) async {
+    testWidgets('on the first day: no "Since the start" tile', (tester) async {
       await pumpProgress(tester, daysIn: 0);
-      await tester.scrollUntilVisible(find.text('Started today'), 200);
+      await tester.scrollUntilVisible(find.text('Calorie goal now'), 200);
+      expect(find.text('Started today'), findsNothing);
+      expect(find.text('Since the start'), findsNothing);
       expect(find.textContaining('in 0 days'), findsNothing);
     });
 

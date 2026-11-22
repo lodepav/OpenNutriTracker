@@ -20,6 +20,7 @@ import 'package:opennutritracker/features/activity_detail/presentation/widget/ac
 import 'package:opennutritracker/features/diary/presentation/bloc/calendar_day_bloc.dart';
 import 'package:opennutritracker/features/diary/presentation/bloc/diary_bloc.dart';
 import 'package:opennutritracker/features/home/presentation/bloc/home_bloc.dart';
+import 'package:opennutritracker/fork/meal_detail/food_page.dart' show ReportHeight; // [fork] S409
 import 'package:opennutritracker/generated/l10n.dart';
 import 'package:provider/provider.dart';
 
@@ -35,6 +36,10 @@ class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
 
   final log = Logger('ItemDetailScreen');
   final _scrollController = ScrollController();
+  // [fork] S409 activity-detail-large-text: the bottom sheet's measured
+  // height, which the page's end clears so the readout can scroll above it
+  double _sheetHeight = 200;
+  // [/fork]
 
   late PhysicalActivityEntity activityEntity;
   late DateTime _day;
@@ -49,7 +54,11 @@ class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
   void initState() {
     _activityDetailBloc = locator<ActivityDetailBloc>();
     quantityTextController = TextEditingController();
-    quantityTextController.text = "0";
+    // [fork] S338 activity-amount-empty: typing into a "0" gave "0300"; the
+    // field starts empty with its hint, and Add stays off until a number
+    // quantityTextController.text = "0";
+    quantityTextController.text = "";
+    // [/fork]
     quantityTextController.addListener(_onQuantityChanged);
     totalQuantity = 0; // TODO change to 60
     totalKcal = 0;
@@ -77,10 +86,18 @@ class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final palette = isDark ? AppPalette.dark : AppPalette.light;
-    return SafeArea(
-      child: Scaffold(
+    // [fork] S287 activity-detail-bars: the Scaffold paints behind the system
+    // bars, the SafeArea moves into its body
+    // return SafeArea(
+    //   child: Scaffold(
+    return Scaffold(
+        // [/fork]
         backgroundColor: palette.canvas,
-        body: BlocBuilder<ActivityDetailBloc, ActivityDetailState>(
+        // [fork] S287 activity-detail-bars
+        // body: BlocBuilder<ActivityDetailBloc, ActivityDetailState>(
+        body: SafeArea(
+          child: BlocBuilder<ActivityDetailBloc, ActivityDetailState>(
+            // [/fork]
           bloc: _activityDetailBloc,
           builder: (context, state) {
             if (state is ActivityDetailInitial) {
@@ -94,14 +111,35 @@ class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
               return const SizedBox();
             }
           },
+          // [fork] S287 activity-detail-bars
+          ),
+          // [/fork]
         ),
-        bottomSheet: ActivityDetailBottomSheet(
+        // [fork] S287 activity-detail-bars: the Scaffold strips the bottom
+        // inset from its bottomSheet; give the screen's back so the sheet's
+        // SafeArea keeps Add above the navigation bar
+        // bottomSheet: ActivityDetailBottomSheet(
+        // S409 activity-detail-large-text: measured for the page's end
+        bottomSheet: ReportHeight(
+          onHeight: (height) {
+            if (mounted) setState(() => _sheetHeight = height);
+          },
+          child: MediaQuery(
+          data: MediaQuery.of(context),
+          child: ActivityDetailBottomSheet(
+          // [/fork]
           onAddButtonPressed: onAddButtonPressed,
           quantityTextController: quantityTextController,
           activityEntity: activityEntity,
           activityDetailBloc: _activityDetailBloc,
         ),
-      ),
+        // [fork] S287 activity-detail-bars
+        ),
+        ),
+        // [/fork]
+      // [fork] S287 activity-detail-bars: the SafeArea's close
+      // ),
+      // [/fork]
     );
   }
 
@@ -120,7 +158,12 @@ class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
         SliverAppBar(
           pinned: true,
           backgroundColor: palette.canvas,
-          expandedHeight: 200,
+          // [fork] S409 activity-detail-large-text: room for the wrapped
+          // name and description at large text
+          // expandedHeight: 200,
+          // scaled as 16 px text is, since Android scales large sizes less
+          expandedHeight: 200 * MediaQuery.textScalerOf(context).scale(16) / 16,
+          // [/fork]
           flexibleSpace: LayoutBuilder(
             builder: (BuildContext context, BoxConstraints constraints) {
               final top = constraints.biggest.height;
@@ -210,7 +253,11 @@ class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
                   // built-in activities it actually sourced. Custom activities
                   // are user-entered, so the citation would be misleading.
                   if (!activityEntity.isCustom) const ActivityInfoButton(),
-                  const SizedBox(height: 200.0), // height added to scroll
+                  // [fork] S409 activity-detail-large-text: the sheet
+                  // can be taller than 200 at large text
+                  // const SizedBox(height: 200.0), // height added to scroll
+                  SizedBox(height: _sheetHeight + Dimens.spacing16),
+                  // [/fork]
                 ],
               ),
             ),
@@ -257,7 +304,11 @@ class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
 
   void scrollToCalorieText() {
     _scrollController.animateTo(
-      _containerSize,
+      // [fork] S409 activity-detail-large-text: the page's end puts the
+      // readout just above the sheet, wherever the taller header leaves it
+      // _containerSize,
+      _scrollController.position.maxScrollExtent,
+      // [/fork]
       duration: const Duration(seconds: 1),
       curve: Curves.easeInOut,
     );

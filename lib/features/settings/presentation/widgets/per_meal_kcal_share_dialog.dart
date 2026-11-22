@@ -305,14 +305,29 @@ class _MealShareRow extends StatelessWidget {
         ),
         Semantics(
           identifier: identifier,
-          child: Slider(
+// [fork] S317 slider-values: the value shows live beside the slider, so
+          // its label names it for a screen reader instead of a drag bubble
+          child: SliderTheme(
+            data: SliderTheme.of(context).copyWith(
+              showValueIndicator: ShowValueIndicator.never,
+            ),
+            child: Slider(
+          // [/fork]
             min: 0,
             max: 100,
             value: value.clamp(0, 100),
             divisions: 100,
-            label: '${value.round()}%',
+            // [fork] S317 slider-values: four sliders sit together; the
+            // share rather than the slider's position (A5)
+            // label: '${value.round()}%',
+            label: label,
+            semanticFormatterCallback: (v) => '${v.round()}%',
+            // [/fork]
             onChanged: onChanged,
           ),
+          // [fork] S317 slider-values
+          ),
+          // [/fork]
         ),
       ],
     );

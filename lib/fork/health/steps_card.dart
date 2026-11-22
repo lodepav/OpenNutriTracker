@@ -1,6 +1,5 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
@@ -154,7 +153,7 @@ class _StepsCardState extends State<StepsCard> {
               style: theme.textTheme.bodySmall,
             ),
             Align(
-              alignment: Alignment.centerRight,
+              alignment: AlignmentDirectional.centerEnd,
               child: TextButton(
                 key: const ValueKey('steps-on'),
                 onPressed: _turnOn,
@@ -168,7 +167,7 @@ class _StepsCardState extends State<StepsCard> {
               style: theme.textTheme.bodySmall,
             ),
             Align(
-              alignment: Alignment.centerRight,
+              alignment: AlignmentDirectional.centerEnd,
               child: TextButton(
                 onPressed: _turnOn,
                 child: const Text('Connect again'),
@@ -187,7 +186,7 @@ class _StepsCardState extends State<StepsCard> {
             ),
           if (read.on)
             Align(
-              alignment: Alignment.centerRight,
+              alignment: AlignmentDirectional.centerEnd,
               child: TextButton(
                 key: const ValueKey('steps-off'),
                 onPressed: _steps.turnOff,
@@ -305,6 +304,20 @@ class _StepsCardState extends State<StepsCard> {
   );
 }
 
+/// The step goal typed in the goal dialog, or null when it isn't a whole
+/// number from 1,000 to 100,000. Thousands may be grouped ("8,000", "8.000",
+/// "8 000"); any other separator is refused, as "7.5" meant 7,500, not 75.
+int? parseStepGoal(String typed) {
+  final text = typed.trim();
+  if (!RegExp(
+    r'^(?:[0-9]+|[0-9]{1,3}([,. \u202F])[0-9]{3}(?:\1[0-9]{3})*)$',
+  ).hasMatch(text)) {
+    return null;
+  }
+  final steps = int.tryParse(text.replaceAll(RegExp(r'[^0-9]'), ''));
+  return steps != null && steps >= 1000 && steps <= 100000 ? steps : null;
+}
+
 class _GoalDialog extends StatefulWidget {
   final int goal;
 
@@ -316,6 +329,7 @@ class _GoalDialog extends StatefulWidget {
 
 class _GoalDialogState extends State<_GoalDialog> {
   late final _field = TextEditingController(text: '${widget.goal}');
+  String? _error;
 
   @override
   void dispose() {
@@ -332,8 +346,15 @@ class _GoalDialogState extends State<_GoalDialog> {
       controller: _field,
       autofocus: true,
       keyboardType: TextInputType.number,
-      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-      decoration: const InputDecoration(suffixText: 'steps'),
+      decoration: InputDecoration(
+        labelText: 'Steps a day',
+        suffixText: 'steps',
+        errorText: _error,
+        errorMaxLines: 3,
+      ),
+      onChanged: (_) {
+        if (_error != null) setState(() => _error = null);
+      },
     ),
     actions: [
       TextButton(
@@ -342,9 +363,11 @@ class _GoalDialogState extends State<_GoalDialog> {
       ),
       TextButton(
         onPressed: () {
-          final steps = int.tryParse(_field.text);
-          if (steps != null && steps > 0 && steps <= 100000) {
+          final steps = parseStepGoal(_field.text);
+          if (steps != null) {
             Navigator.pop(context, steps);
+          } else {
+            setState(() => _error = 'Enter 1,000 to 100,000 steps');
           }
         },
         child: const Text('Save'),

@@ -1,9 +1,14 @@
-import 'dart:io';
+// [fork] S481 thumb-sized-decode: no File left here
+// import 'dart:io';
+// [/fork]
 
 import 'package:flutter/material.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/core/utils/user_image_storage.dart';
 import 'package:opennutritracker/generated/l10n.dart';
+// [fork] S481 thumb-sized-decode
+import 'package:opennutritracker/fork/display/sized_file_image.dart';
+// [/fork]
 
 /// Shared picker tile used by both the recipe builder and the Edit
 /// Meal screen so the affordance feels the same in either place: a
@@ -95,29 +100,43 @@ class UserImagePickerTile extends StatelessWidget {
                       width: 96,
                       height: 96,
                       child: hasImage
-                          ? FutureBuilder<String>(
-                              future:
-                                  UserImageStorage.absolutePath(imagePath!),
-                              builder: (context, snapshot) {
-                                if (!snapshot.hasData) {
-                                  return Container(
-                                    color: theme.colorScheme.primaryContainer,
-                                  );
-                                }
-                                return Image.file(
-                                  File(snapshot.data!),
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (_, error, stack) => Container(
-                                    color: theme.colorScheme.primaryContainer,
-                                    child: Icon(
-                                      _fallbackIcon,
-                                      color: theme
-                                          .colorScheme.onPrimaryContainer,
-                                    ),
-                                  ),
-                                );
-                              },
+                          // [fork] S481 thumb-sized-decode: decoded at 96 dp,
+                          // not the photo's own size, the path looked up once
+                          // ? FutureBuilder<String>(
+                          //     future:
+                          //         UserImageStorage.absolutePath(imagePath!),
+                          //     builder: (context, snapshot) {
+                          //       if (!snapshot.hasData) {
+                          //         return Container(
+                          //           color: theme.colorScheme.primaryContainer,
+                          //         );
+                          //       }
+                          //       return Image.file(
+                          //         File(snapshot.data!),
+                          //         fit: BoxFit.cover,
+                          //         errorBuilder: (_, error, stack) => Container(
+                          //           color: theme.colorScheme.primaryContainer,
+                          //           child: Icon(
+                          //             _fallbackIcon,
+                          //             color: theme
+                          //                 .colorScheme.onPrimaryContainer,
+                          //           ),
+                          //         ),
+                          //       );
+                          //     },
+                          //   )
+                          ? SizedFileImage(
+                              relativePath: imagePath!,
+                              size: 96,
+                              fallback: (_) => Container(
+                                color: theme.colorScheme.primaryContainer,
+                                child: Icon(
+                                  _fallbackIcon,
+                                  color: theme.colorScheme.onPrimaryContainer,
+                                ),
+                              ),
                             )
+                          // [/fork]
                           : Container(
                               color: theme.colorScheme.primaryContainer,
                               child: Icon(
