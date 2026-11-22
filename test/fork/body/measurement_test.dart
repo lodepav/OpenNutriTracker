@@ -449,6 +449,7 @@ void main() {
   testWidgets('the chart states its ends and the range, with a true minus', (
     tester,
   ) async {
+    final semantics = tester.ensureSemantics();
     final now = DateTime.now();
     final start = DateTime(now.year, now.month, now.day - 5);
     final end = DateTime(now.year, now.month, now.day);
@@ -472,6 +473,7 @@ void main() {
     expect(find.text('Change, last 7 days'), findsOneWidget);
     // Body fat's change is in percentage points, not a relative %.
     expect(find.text('\u22120.7 pts'), findsOneWidget);
+    expect(find.bySemanticsLabel('\u22120.7 points'), findsOneWidget);
     expect(
       find.text(
         '22.5 % on ${DateFormat.MMMd().format(start)} \u2192 '
@@ -479,6 +481,7 @@ void main() {
       ),
       findsOneWidget,
     );
+    semantics.dispose();
   });
 
   testWidgets('the chart speaks its unit in words', (tester) async {
@@ -502,6 +505,31 @@ void main() {
     await pumpCard(tester, memory, rangeDays: 7);
     expect(
       find.bySemanticsLabel('Waist, from 80.0 to 79.0 centimetres'),
+      findsOneWidget,
+    );
+    // The rows, the caption and the entries say it in words too.
+    expect(find.bySemanticsLabel('79.0 centimetres'), findsOneWidget);
+    expect(find.bySemanticsLabel('\u22121.0 centimetres'), findsOneWidget);
+    final day = DateFormat.MMMd();
+    expect(
+      find.bySemanticsLabel(
+        '80.0 centimetres on ${day.format(memory.entries.first.date)} '
+        '\u2192 79.0 centimetres on ${day.format(memory.entries.last.date)}',
+      ),
+      findsOneWidget,
+    );
+    await tester.tap(find.text('Waist entries'));
+    await tester.pumpAndSettle();
+    expect(
+      find.byTooltip(
+        'Delete 79.0 centimetres, '
+        '${DateFormat.yMMMd().format(memory.entries.last.date)}',
+      ),
+      findsOneWidget,
+    );
+    // The entry's tile, merged with its date.
+    expect(
+      find.bySemanticsLabel(RegExp(r'^79\.0 centimetres\n')),
       findsOneWidget,
     );
     semantics.dispose();

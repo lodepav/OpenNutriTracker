@@ -347,6 +347,7 @@ class _GoalDialogState extends State<_GoalDialog> {
       autofocus: true,
       keyboardType: TextInputType.number,
       decoration: InputDecoration(
+        labelText: 'Steps a day',
         suffixText: 'steps',
         errorText: _error,
         errorMaxLines: 3,

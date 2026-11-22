@@ -14,6 +14,12 @@ import 'package:opennutritracker/fork/backup/onboarding_restore.dart';
 // [fork] S430 demo-one-profile
 import 'package:opennutritracker/fork/onboarding/demo_one_profile.dart';
 // [/fork]
+// [fork] S501 restore-failed-notice
+import 'package:opennutritracker/fork/backup/storage_rescue.dart';
+// [/fork]
+// [fork] S502 policy-link-accent
+import 'package:opennutritracker/fork/display/contrast.dart';
+// [/fork]
 import 'package:opennutritracker/generated/l10n.dart';
 import 'package:opennutritracker/core/utils/safe_url_launcher.dart';
 
@@ -65,6 +71,10 @@ class _OnboardingIntroPageBodyState extends State<OnboardingIntroPageBody> {
           return SingleChildScrollView(
             child: Column(
               children: [
+                // [fork] S501 restore-failed-notice: a backup the recovery
+                // screen chose that would not restore is said once
+                const RestoreFailedNotice(),
+                // [/fork]
                 AppBannerVersion(versionNumber: snapshot.requireData),
                 const SizedBox(height: 32.0),
                 Text(
@@ -105,7 +115,11 @@ class _OnboardingIntroPageBodyState extends State<OnboardingIntroPageBody> {
                           text: ' ${S.of(context).privacyPolicyLabel}',
                           style: Theme.of(context).textTheme.bodySmall
                               ?.copyWith(
-                                color: Theme.of(context).colorScheme.primary,
+                                // [fork] S502 policy-link-accent: a picked
+                                // yellow was 1.27:1 on the canvas
+                                // color: Theme.of(context).colorScheme.primary,
+                                color: textAccent(context),
+                                // [/fork]
                                 decoration: TextDecoration.underline,
                               ),
                           // [fork] S470 intro-init

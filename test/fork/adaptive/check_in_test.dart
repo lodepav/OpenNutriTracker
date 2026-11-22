@@ -1001,6 +1001,12 @@ void main() {
     expect(find.textContaining('Your first target'), findsNothing);
     expect(find.text('Past week'), findsOneWidget);
     expect(find.textContaining('Not enough data'), findsOneWidget);
+    // A warning, in the warning text colour as the trend's "away" change.
+    final note = find.textContaining('Not enough data');
+    expect(
+      tester.widget<Text>(note).style?.color,
+      paletteOf(tester.element(note)).warningText,
+    );
   });
 
   testWidgets('a later check-in shows the current target and the change', (

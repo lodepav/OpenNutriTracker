@@ -34,6 +34,7 @@ import 'package:opennutritracker/fork/goal/onboarding_goal.dart';
 // [/fork]
 import 'package:opennutritracker/fork/onboarding/onboarding_back.dart'; // [fork] S332
 import 'package:opennutritracker/fork/onboarding/overview_grams.dart'; // [fork] S333
+import 'package:opennutritracker/fork/onboarding/start_failure.dart'; // [fork] S466
 
 /// The onboarding pages, in the order they are shown.
 ///
@@ -611,7 +612,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     if (_forkStarting) return;
     setState(() => _forkStarting = true);
     try {
-      await _forkStart(context);
+      // a save that throws says so, and Start comes back on below
+      await startOrSay(context, () => _forkStart(context));
     } finally {
       if (mounted) setState(() => _forkStarting = false);
     }

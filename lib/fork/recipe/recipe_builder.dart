@@ -239,7 +239,10 @@ class BuilderSaveBar extends StatelessWidget {
                   value,
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w800,
-                    color: color,
+                    // 16 sp is not large text: the macro hues need 4.5:1
+                    color: color == null
+                        ? null
+                        : textSafe(color, palette.surface),
                   ),
                 ),
                 // Wraps at large text rather than cut "protein" (A6)

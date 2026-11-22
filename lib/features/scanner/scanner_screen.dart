@@ -30,6 +30,9 @@ import 'package:opennutritracker/fork/scan/missing_product.dart';
 // [fork] S343 scanner-title-fits
 import 'package:opennutritracker/fork/widget/toolbar_height.dart';
 // [/fork]
+// [fork] S504 scanner-error
+import 'package:opennutritracker/fork/scan/scanner_error.dart';
+// [/fork]
 import 'package:opennutritracker/generated/l10n.dart';
 
 class ScannerScreen extends StatefulWidget {
@@ -267,6 +270,14 @@ class _ScannerScreenState extends State<ScannerScreen>
               placeholderBuilder: (_) => const ColoredBox(
                 color: Colors.black,
                 child: Center(child: CircularProgressIndicator()),
+              ),
+              // [/fork]
+              // [fork] S504 scanner-error: the fork's message and a way
+              // around, not the package's black box
+              errorBuilder: (context, error) => ScannerError(
+                error: error,
+                controller: _cameraController,
+                onPaste: () => _showManualEntryDialog(context),
               ),
               // [/fork]
               onDetect: (capture) {

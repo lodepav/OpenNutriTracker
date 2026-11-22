@@ -3,6 +3,9 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
 import 'package:opennutritracker/fork/leftovers/meal_groups.dart';
+import 'package:opennutritracker/core/styles/app_palette.dart';
+import 'package:opennutritracker/core/styles/app_theme.dart';
+import 'package:opennutritracker/fork/display/contrast.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -540,9 +543,11 @@ Widget _app({
   String? sharedPhotoPath,
   String? sharedText,
   // [/fork]
+  ThemeData? theme,
 }) => ChangeNotifierProvider<EnergyUnitProvider>(
   create: (_) => EnergyUnitProvider(usesKilojoules: false),
   child: MaterialApp(
+    theme: theme,
     localizationsDelegates: const [
       S.delegate,
       GlobalMaterialLocalizations.delegate,
@@ -2708,6 +2713,29 @@ void main() {
 
     expect(_mealDetailBloc.writes.map((w) => w.mealName), ['Toast']);
   });
+
+  for (final palette in [AppPalette.light, AppPalette.dark]) {
+    testWidgets('"No match" reads at 4.5:1 on its tint '
+        '(${palette.brightness.name})', (tester) async {
+      await _register({
+        'toast': [_meal('Toast')],
+      });
+      await tester.pumpWidget(_app(theme: buildAppTheme(palette)));
+      await _parse(tester, '100g toast, unicorn steak');
+
+      final label = find.text(l10nEn.bulkAddNoMatchLabel);
+      final context = tester.element(label);
+      final error = Theme.of(context).colorScheme.error;
+      final tint = Color.alphaBlend(
+        error.withValues(alpha: 0.14),
+        paletteOf(context).surface,
+      );
+      expect(
+        contrastRatio(tester.widget<Text>(label).style!.color!, tint),
+        greaterThanOrEqualTo(4.5),
+      );
+    });
+  }
 
   testWidgets('a bare count with nothing to count is flagged', (tester) async {
     // #622. Device-verified, but it belongs in CI: the label is the only

@@ -23,6 +23,10 @@ class RecipeListItem extends StatelessWidget {
   final VoidCallback? onLongPress;
   final bool isSelected;
 
+  /// The list is in selection mode: a tap selects or deselects the row,
+  /// and the row says which it is.
+  final bool selecting;
+
   // logs one serving; a chevron without it
   final VoidCallback? onLog;
 
@@ -37,6 +41,7 @@ class RecipeListItem extends StatelessWidget {
     required this.onTap,
     this.onLongPress,
     this.isSelected = false,
+    this.selecting = false,
     this.onLog,
     this.logMeal,
   });
@@ -75,110 +80,117 @@ class RecipeListItem extends StatelessWidget {
       child: AppCard(
         color: isSelected ? accent.withValues(alpha: 0.12) : null,
         padding: EdgeInsets.zero,
-        child: InkWell(
-          borderRadius: Dimens.borderRadiusL,
-          onTap: onTap,
-          onLongPress: onLongPress,
-          child: Padding(
-            padding: const EdgeInsets.all(Dimens.spacing12),
-            child: Row(
-              children: [
-                _buildLeading(context, palette, accent, thumbnailUrl),
-                const SizedBox(width: Dimens.spacing12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      AutoSizeText(
-                        recipe.name,
-                        maxLines: large ? 3 : 1,
-                        minFontSize: 12,
-                        overflow: TextOverflow.ellipsis,
-                        style: textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const SizedBox(height: Dimens.spacing4),
-                      // the ingredients and one
-                      // serving's macros; its energy on the right
-                      Text.rich(
-                        TextSpan(
-                          children: [
-                            TextSpan(
-                              text:
-                                  '${S.of(context).recipeIngredientCountLabel(ingredientCount)}\n', // macros on their own line
-                            ),
-                            ...macroSpans(context, serving),
-                            if (large)
-                              TextSpan(
-                                text:
-                                    ' · ${energyValue(context, serving.kcal)} $energy',
-                              ),
-                          ],
-                        ),
-                        maxLines: large ? 4 : 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: textTheme.bodyMedium?.copyWith(
-                          color: palette.textMuted,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: Dimens.spacing8),
-                if (!large)
-                  MergeSemantics(
+        // the tint and the check say it to the eye only
+        child: Semantics(
+          container: selecting,
+          selected: selecting ? isSelected : null,
+          onTapHint: selecting ? (isSelected ? 'Deselect' : 'Select') : null,
+          child: InkWell(
+            borderRadius: Dimens.borderRadiusL,
+            onTap: onTap,
+            onLongPress: onLongPress,
+            child: Padding(
+              padding: const EdgeInsets.all(Dimens.spacing12),
+              child: Row(
+                children: [
+                  _buildLeading(context, palette, accent, thumbnailUrl),
+                  const SizedBox(width: Dimens.spacing12),
+                  Expanded(
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          '${energyValue(context, serving.kcal)}',
+                        AutoSizeText(
+                          recipe.name,
+                          maxLines: large ? 3 : 1,
+                          minFontSize: 12,
+                          overflow: TextOverflow.ellipsis,
                           style: textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.w700,
                           ),
                         ),
-                        Text(
-                          energy,
-                          style: textTheme.bodySmall?.copyWith(
+                        const SizedBox(height: Dimens.spacing4),
+                        // the ingredients and one
+                        // serving's macros; its energy on the right
+                        Text.rich(
+                          TextSpan(
+                            children: [
+                              TextSpan(
+                                text:
+                                    '${S.of(context).recipeIngredientCountLabel(ingredientCount)}\n', // macros on their own line
+                              ),
+                              ...macroSpans(context, serving),
+                              if (large)
+                                TextSpan(
+                                  text:
+                                      ' · ${energyValue(context, serving.kcal)} $energy',
+                                ),
+                            ],
+                          ),
+                          maxLines: large ? 4 : 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: textTheme.bodyMedium?.copyWith(
                             color: palette.textMuted,
                           ),
                         ),
                       ],
                     ),
                   ),
-                if (isSelected)
-                  Padding(
-                    padding: const EdgeInsets.only(left: Dimens.spacing8),
-                    child: Icon(
-                      Icons.check_circle_rounded,
-                      // on the selected card's tint
-                      color: chartSafe(
-                        accent,
-                        Color.alphaBlend(
-                          accent.withValues(alpha: 0.12),
-                          palette.surface,
-                        ),
+                  const SizedBox(width: Dimens.spacing8),
+                  if (!large)
+                    MergeSemantics(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            '${energyValue(context, serving.kcal)}',
+                            style: textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          Text(
+                            energy,
+                            style: textTheme.bodySmall?.copyWith(
+                              color: palette.textMuted,
+                            ),
+                          ),
+                        ],
                       ),
+                    ),
+                  if (isSelected)
+                    Padding(
+                      padding: const EdgeInsets.only(left: Dimens.spacing8),
+                      child: Icon(
+                        Icons.check_circle_rounded,
+                        // on the selected card's tint
+                        color: chartSafe(
+                          accent,
+                          Color.alphaBlend(
+                            accent.withValues(alpha: 0.12),
+                            palette.surface,
+                          ),
+                        ),
+                        size: 24,
+                        semanticLabel: 'Selected',
+                      ),
+                    )
+                  else if (onLog != null)
+                    IconButton(
+                      key: ValueKey('recipe-log-${recipe.id}'),
+                      tooltip: logServingTooltip(context, recipe, logMeal),
+                      icon: Icon(
+                        Icons.add_circle_outline_rounded,
+                        color: chartAccent(context),
+                      ),
+                      onPressed: onLog,
+                    )
+                  else
+                    Icon(
+                      Icons.chevron_right_rounded,
+                      color: palette.textMuted,
                       size: 24,
                     ),
-                  )
-                else if (onLog != null)
-                  IconButton(
-                    key: ValueKey('recipe-log-${recipe.id}'),
-                    tooltip: logServingTooltip(context, recipe, logMeal),
-                    icon: Icon(
-                      Icons.add_circle_outline_rounded,
-                      color: chartAccent(context),
-                    ),
-                    onPressed: onLog,
-                  )
-                else
-                  Icon(
-                    Icons.chevron_right_rounded,
-                    color: palette.textMuted,
-                    size: 24,
-                  ),
-              ],
+                ],
+              ),
             ),
           ),
         ),

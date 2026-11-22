@@ -666,6 +666,13 @@ class _FoodsScreen extends StatelessWidget {
                     '${(f.amount / total * 100).round()}% of the '
                         '${_inLine(label)} logged',
                 ].join(' · '),
+                semanticsLabel: [
+                  '${_spokenAmount(context, n, days == 0 ? 0 : f.amount / days)} '
+                      'a day',
+                  if (total > 0)
+                    '${(f.amount / total * 100).round()}% of the '
+                        '${_inLine(label)} logged',
+                ].join(', '),
               ),
             ),
         ],

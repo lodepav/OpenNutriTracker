@@ -22,6 +22,7 @@ import 'package:opennutritracker/fork/display/contrast.dart';
 import 'package:opennutritracker/fork/report/chart_touch.dart';
 import 'package:opennutritracker/fork/trends/detail_widgets.dart';
 import 'package:opennutritracker/fork/trends/trends_widgets.dart';
+import 'package:opennutritracker/fork/units/amount_text.dart' show spokenUnit;
 import 'package:opennutritracker/fork/units/weight_text.dart';
 import 'package:opennutritracker/fork/display/chart_semantics.dart';
 
@@ -250,25 +251,36 @@ class _WaistRatioPageState extends State<WaistRatioPage> {
                       'against your height.',
           )
         else ...[
-          StatHeader(
-            stats: [
-              (
-                label: 'Waist to height',
-                value: last.ratio.toStringAsFixed(2),
-                unit: null,
-              ),
-              (
-                label: 'Waist',
-                value: units.shown(last.waistCm).toStringAsFixed(1),
-                unit: units.unit,
-              ),
+          // StatHeader's own labels would say "cm" letter by letter.
+          Semantics(
+            container: true,
+            label: [
+              'Waist to height ${last.ratio.toStringAsFixed(2)}',
+              'Waist ${units.spoken(last.waistCm)}',
               if (last.hipRatio case final hip?)
+                'Waist to hips ${hip.toStringAsFixed(2)}',
+            ].join(', '),
+            excludeSemantics: true,
+            child: StatHeader(
+              stats: [
                 (
-                  label: 'Waist to hips',
-                  value: hip.toStringAsFixed(2),
+                  label: 'Waist to height',
+                  value: last.ratio.toStringAsFixed(2),
                   unit: null,
                 ),
-            ],
+                (
+                  label: 'Waist',
+                  value: units.shown(last.waistCm).toStringAsFixed(1),
+                  unit: units.unit,
+                ),
+                if (last.hipRatio case final hip?)
+                  (
+                    label: 'Waist to hips',
+                    value: hip.toStringAsFixed(2),
+                    unit: null,
+                  ),
+              ],
+            ),
           ),
           const SizedBox(height: Dimens.spacing8),
           Text(
@@ -286,6 +298,12 @@ class _WaistRatioPageState extends State<WaistRatioPage> {
               '${weightChangeText(against.trendKg, widget.imperial ? BodyWeightUnit.lb : BodyWeightUnit.kg)}, '
               '${DateFormat.MMMd(locale).format(against.from)} to '
               '${DateFormat.MMMd(locale).format(against.to)}',
+              semanticsLabel:
+                  'Waist ${signedText(units.shown(against.waistCm), 1)} '
+                  '${spokenUnit(units.unit)}, trend weight '
+                  '${weightChangeText(against.trendKg, widget.imperial ? BodyWeightUnit.lb : BodyWeightUnit.kg)}, '
+                  '${DateFormat.MMMd(locale).format(against.from)} to '
+                  '${DateFormat.MMMd(locale).format(against.to)}',
               style: Theme.of(context).textTheme.bodyMedium,
             ),
           ],
@@ -305,17 +323,31 @@ class _WaistRatioPageState extends State<WaistRatioPage> {
         ),
         if (points.isNotEmpty) ...[
           trendSection(context, 'Waist measured'),
-          TrendRows(
-            rows: [
-              for (final p in points.reversed)
-                (
-                  label: DateFormat.yMMMd(locale).format(p.date),
-                  value:
-                      '${p.ratio.toStringAsFixed(2)} · waist '
-                      '${units.text(p.waistCm)}'
-                      '${p.hipRatio == null ? '' : '\nWaist to hips ${p.hipRatio!.toStringAsFixed(2)}'}',
-                ),
-            ],
+          // TrendRows' rows, each with its spoken form.
+          AppCard(
+            padding: const EdgeInsets.symmetric(horizontal: Dimens.spacing16),
+            child: Column(
+              children: [
+                for (final (i, p) in points.reversed.indexed)
+                  Semantics(
+                    container: true,
+                    label:
+                        '${DateFormat.yMMMd(locale).format(p.date)}, '
+                        '${p.ratio.toStringAsFixed(2)}, waist '
+                        '${units.spoken(p.waistCm)}'
+                        '${p.hipRatio == null ? '' : ', waist to hips ${p.hipRatio!.toStringAsFixed(2)}'}',
+                    excludeSemantics: true,
+                    child: TrendRow(
+                      label: DateFormat.yMMMd(locale).format(p.date),
+                      value:
+                          '${p.ratio.toStringAsFixed(2)} · waist '
+                          '${units.text(p.waistCm)}'
+                          '${p.hipRatio == null ? '' : '\nWaist to hips ${p.hipRatio!.toStringAsFixed(2)}'}',
+                      first: i == 0,
+                    ),
+                  ),
+              ],
+            ),
           ),
         ],
       ],

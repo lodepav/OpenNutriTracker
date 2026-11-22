@@ -111,10 +111,11 @@ class SideUnits {
 
   /// The way [pair] differs: "Right bigger by 0.8 cm", or equal when it
   /// rounds to nothing.
-  String difference(SidePair pair) {
+  String difference(SidePair pair, {bool spoken = false}) {
     final diff = pair.right - pair.left;
     if (shown(diff.abs()) < 0.05) return 'Both equal';
-    return '${diff > 0 ? 'Right' : 'Left'} bigger by ${text(diff.abs())}';
+    final by = spoken ? this.spoken(diff.abs()) : text(diff.abs());
+    return '${diff > 0 ? 'Right' : 'Left'} bigger by $by';
   }
 
   /// [pair] as a screen reader should say it: "left 13.9 inches, right
@@ -294,31 +295,43 @@ class _SideComparePageState extends State<SideComparePage> {
             ),
           ),
         ] else ...[
-          StatHeader(
-            stats: [
-              (
-                label: 'Left',
-                value: units.shown(last.left).toStringAsFixed(1),
-                unit: units.unit,
-              ),
-              (
-                label: 'Right',
-                value: units.shown(last.right).toStringAsFixed(1),
-                unit: units.unit,
-              ),
-              (
-                label: 'Difference',
-                value: units
-                    .shown((last.right - last.left).abs())
-                    .toStringAsFixed(1),
-                unit: units.unit,
-              ),
-            ],
+          // StatHeader's own labels would say "cm" letter by letter.
+          Semantics(
+            container: true,
+            label:
+                'Left ${units.spoken(last.left)}, '
+                'Right ${units.spoken(last.right)}, '
+                'Difference ${units.spoken((last.right - last.left).abs())}',
+            excludeSemantics: true,
+            child: StatHeader(
+              stats: [
+                (
+                  label: 'Left',
+                  value: units.shown(last.left).toStringAsFixed(1),
+                  unit: units.unit,
+                ),
+                (
+                  label: 'Right',
+                  value: units.shown(last.right).toStringAsFixed(1),
+                  unit: units.unit,
+                ),
+                (
+                  label: 'Difference',
+                  value: units
+                      .shown((last.right - last.left).abs())
+                      .toStringAsFixed(1),
+                  unit: units.unit,
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: Dimens.spacing8),
           Text(
             '${units.difference(last)}, '
             '${DateFormat.yMMMd(locale).format(last.date)}',
+            semanticsLabel:
+                '${units.difference(last, spoken: true)}, '
+                '${DateFormat.yMMMd(locale).format(last.date)}',
             style: Theme.of(context).textTheme.titleSmall,
           ),
         ],
@@ -423,16 +436,21 @@ class _SidesChart extends StatelessWidget {
     );
     final lastX = x(measurements.last.date);
     // The chart has no date axis: each side's ends in words give the span.
-    String? ends(String name, BodyMetric metric) {
+    String? ends(String name, BodyMetric metric, {bool spoken = false}) {
       final side = [
         for (final m in measurements)
           if (m.metric == metric) m,
       ];
       if (side.length < 2) return null;
-      return '$name ${fromToCaption(context, (units.text(side.first.value), side.first.date), (units.text(side.last.value), side.last.date))}';
+      String size(double cm) => spoken ? units.spoken(cm) : units.text(cm);
+      return '$name ${fromToCaption(context, (size(side.first.value), side.first.date), (size(side.last.value), side.last.date))}';
     }
 
-    final sideEnds = [?ends('Left', part.left), ?ends('Right', part.right)];
+    final sideEnds = [
+      for (final (name, metric) in [('Left', part.left), ('Right', part.right)])
+        if (ends(name, metric) case final line?)
+          (line, ends(name, metric, spoken: true)!),
+    ];
     String fromTo(List<FlSpot> s) => spokenFromTo(
       s.first.y.toStringAsFixed(1),
       s.last.y.toStringAsFixed(1),
@@ -498,7 +516,8 @@ class _SidesChart extends StatelessWidget {
               ),
             ),
           ),
-          for (final line in sideEnds) Text(line, style: small),
+          for (final (line, spoken) in sideEnds)
+            Text(line, semanticsLabel: spoken, style: small),
           const SizedBox(height: Dimens.spacing8),
           ChartLegend(
             entries: [

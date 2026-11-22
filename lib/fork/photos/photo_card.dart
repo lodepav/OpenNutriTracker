@@ -149,7 +149,20 @@ class _ProgressPhotosCardState extends State<ProgressPhotosCard> {
       builder: (context) => AlertDialog(
         title: Text(_date(context, shown.photo.date)),
         contentPadding: const EdgeInsets.all(Dimens.spacing8),
-        content: Image.file(shown.file, fit: BoxFit.contain),
+        // Decoded no wider than the screen: a full 12 MP photo is about
+        // 48 MB. The dialog sizes to its content, which a LayoutBuilder
+        // can't report, so the screen's width bounds it.
+        content: Image.file(
+          shown.file,
+          semanticLabel: _photoName(context, shown.photo.date),
+          cacheWidth: switch ((MediaQuery.sizeOf(context).width *
+                  MediaQuery.devicePixelRatioOf(context))
+              .round()) {
+            > 0 && final width => width,
+            _ => null,
+          },
+          fit: BoxFit.contain,
+        ),
         actions: [
           TextButton(
             key: const ValueKey('photo-delete'),
@@ -635,16 +648,23 @@ class _ComparePhotosScreenState extends State<ComparePhotosScreen> {
         Expanded(
           child: Padding(
             padding: const EdgeInsets.only(top: Dimens.spacing8),
-            child: Image.file(
-              widget.photos[index].file,
-              semanticLabel: _photoName(
-                context,
-                widget.photos[index].photo.date,
+            // Decoded at the width shown, not the photo's full size.
+            child: LayoutBuilder(
+              builder: (context, box) => Image.file(
+                widget.photos[index].file,
+                semanticLabel: _photoName(
+                  context,
+                  widget.photos[index].photo.date,
+                ),
+                cacheWidth: box.maxWidth.isFinite && box.maxWidth > 0
+                    ? (box.maxWidth * MediaQuery.devicePixelRatioOf(context))
+                          .round()
+                    : null,
+                fit: BoxFit.contain,
+                alignment: Alignment.topCenter,
+                errorBuilder: (_, _, _) =>
+                    const Center(child: Icon(Icons.broken_image_outlined)),
               ),
-              fit: BoxFit.contain,
-              alignment: Alignment.topCenter,
-              errorBuilder: (_, _, _) =>
-                  const Center(child: Icon(Icons.broken_image_outlined)),
             ),
           ),
         ),

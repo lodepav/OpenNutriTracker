@@ -15,6 +15,8 @@ import 'package:opennutritracker/fork/goal/phase_colors.dart';
 import 'package:opennutritracker/fork/goal/planner_screen.dart';
 import 'package:opennutritracker/fork/phases/phase_report.dart';
 import 'package:opennutritracker/fork/phases/phases.dart';
+import 'package:opennutritracker/fork/recipe/recipe_delete.dart'
+    show destructiveFilledStyle;
 import 'package:opennutritracker/fork/units/weight_text.dart';
 
 DateTime _date(DateTime t) => DateTime(t.year, t.month, t.day);
@@ -353,7 +355,8 @@ class _UpNext extends StatelessWidget {
             onPressed: () => Navigator.pop(context, false),
             child: const Text('Cancel'),
           ),
-          TextButton(
+          FilledButton(
+            style: destructiveFilledStyle(context),
             onPressed: () => Navigator.pop(context, true),
             child: const Text('Remove'),
           ),

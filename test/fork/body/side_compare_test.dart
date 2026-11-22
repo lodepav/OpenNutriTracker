@@ -143,7 +143,25 @@ void main() {
       ),
       findsOne,
     );
+    expect(
+      find.bySemanticsLabel(
+        'Left 13.9 inches, Right 14.3 inches, Difference 0.4 inches',
+      ),
+      findsOne,
+    );
     final day = DateFormat.yMMMd().format(_day(-1));
+    expect(find.bySemanticsLabel('Right bigger by 0.4 inches, $day'), findsOne);
+    final short = DateFormat.MMMd();
+    // Merged with the legend into the card's one node.
+    expect(
+      find.bySemanticsLabel(
+        RegExp(
+          'Left 13.8 inches on ${short.format(_day(-10))} \u2192 '
+          '13.9 inches on ${short.format(_day(-1))}',
+        ),
+      ),
+      findsOne,
+    );
     await tester.scrollUntilVisible(find.text(day).last, 200);
     expect(
       find.bySemanticsLabel(

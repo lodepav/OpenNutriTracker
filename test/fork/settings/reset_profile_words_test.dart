@@ -189,8 +189,8 @@ void main() {
     await tester.pumpAndSettle();
     expect(
       find.text(
-        'Profile, logged foods, activities, weight history, fasting '
-        'sessions and the shared AI key',
+        'Profile, logged foods, activities, weight history, progress '
+        'photos, fasting sessions and the shared AI key',
       ),
       findsOneWidget,
     );
@@ -218,6 +218,7 @@ void main() {
     final deletes = lines.indexWhere((l) => l.startsWith('Deletes '));
     expect(deletes, isNonNegative, reason: '$lines');
     expect(lines[deletes], contains('logged foods'));
+    expect(lines[deletes], contains('progress photos'));
     expect(lines[deletes], contains('every profile shares'));
     expect(lines[deletes], isNot(contains(' meals, activities')));
     expect(lines[deletes + 1], startsWith('Other profiles'));

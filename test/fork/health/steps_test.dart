@@ -294,6 +294,11 @@ void main() {
       await tester.tap(find.byKey(const ValueKey('steps-goal')));
       await tester.pumpAndSettle();
       final field = find.byKey(const ValueKey('steps-goal-field'));
+      // Named for a screen reader, not only by the dialog's title.
+      expect(
+        tester.widget<TextField>(field).decoration?.labelText,
+        'Steps a day',
+      );
 
       for (final typed in ['0', '999', '7.5', '100001', '']) {
         await tester.enterText(field, typed);

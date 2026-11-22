@@ -37,9 +37,16 @@ class _StorageRecoveryScreen extends StatefulWidget {
 
 class _StorageRecoveryScreenState extends State<_StorageRecoveryScreen> {
   bool _retrying = false;
+  // [fork] S500 recovery-busy: a rescue step is moving files, so Retry is
+  // off as the panel's buttons are while Retry runs
+  bool _forkRescueBusy = false;
+  // [/fork]
 
   Future<void> _retry() async {
-    if (_retrying) return;
+    // [fork] S500 recovery-busy
+    // if (_retrying) return;
+    if (_retrying || _forkRescueBusy) return;
+    // [/fork]
     setState(() => _retrying = true);
     try {
       await widget.onRetry();
@@ -102,7 +109,10 @@ class _StorageRecoveryScreenState extends State<_StorageRecoveryScreen> {
                   Semantics(
                     identifier: 'storage-recovery-retry',
                     child: FilledButton.icon(
-                      onPressed: _retrying ? null : _retry,
+                      // [fork] S500 recovery-busy
+                      // onPressed: _retrying ? null : _retry,
+                      onPressed: _retrying || _forkRescueBusy ? null : _retry,
+                      // [/fork]
                       icon: _retrying
                           ? const SizedBox.square(
                               dimension: 18,
@@ -112,9 +122,17 @@ class _StorageRecoveryScreenState extends State<_StorageRecoveryScreen> {
                       label: const Text('Retry'),
                     ),
                   ),
-                  // [fork] S112 storage-rescue: restore the automatic
-                  // backup, or start again
-                  if (rescue) StorageRescuePanel(onRetry: widget.onRetry),
+                  // [fork] S112 S500 storage-rescue: restore the automatic
+                  // backup, or start again; off while Retry runs, and
+                  // Retry off while it does
+                  if (rescue)
+                    StorageRescuePanel(
+                      onRetry: widget.onRetry,
+                      busy: _retrying,
+                      onBusy: (busy) {
+                        if (mounted) setState(() => _forkRescueBusy = busy);
+                      },
+                    ),
                   // [/fork]
                 ],
               ),

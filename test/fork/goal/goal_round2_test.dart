@@ -204,6 +204,14 @@ void main() {
     expect(find.textContaining('Move'), findsNothing);
     await tester.tap(find.text('Remove'));
     await tester.pumpAndSettle();
+    // A delete confirms on a filled button in the error colour.
+    expect(
+      find.ancestor(
+        of: find.text('Remove').last,
+        matching: find.byType(FilledButton),
+      ),
+      findsOneWidget,
+    );
     await tester.tap(find.text('Remove').last);
     await tester.pumpAndSettle();
     expect(store.queue, isEmpty);

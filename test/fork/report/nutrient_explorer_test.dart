@@ -210,6 +210,13 @@ void main() {
     // 16 g over the 2 days logged, as the explorer's 16 g a day is.
     expect(find.text('8.0 g a day · 52% of the fibre logged'), findsOneWidget);
     expect(find.text('7.5 g a day · 48% of the fibre logged'), findsOneWidget);
+    final semantics = tester.ensureSemantics();
+    await tester.pump();
+    expect(
+      find.bySemanticsLabel(RegExp('8.0 grams a day, 52% of the fibre logged')),
+      findsOneWidget,
+    );
+    semantics.dispose();
     expect(find.text('Oct 17 – Oct 23 · 7 days, 2 logged'), findsOneWidget);
   });
 

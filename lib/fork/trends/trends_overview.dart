@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:opennutritracker/fork/units/amount_text.dart';
 import 'package:opennutritracker/fork/layout/width_cap.dart';
 import 'package:opennutritracker/fork/display/contrast.dart';
 import 'package:intl/intl.dart' as intl;
@@ -762,7 +763,7 @@ TrendTile _sidesTile(
         '${switch (text) {
           null => 'not measured',
           (value: final v, suffix: null) => v.toLowerCase(),
-          (value: final v, suffix: final s?) => '$v ${s.replaceAll(' · ', ', ')}',
+          (value: final v, suffix: final s?) => '$v ${s.replaceAll(' · ', ', ').replaceFirst(units.unit, spokenUnit(units.unit))}',
         }}',
     chart: const SizedBox(),
     onTap: () => openSideCompare(

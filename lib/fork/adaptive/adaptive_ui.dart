@@ -943,7 +943,7 @@ class _CheckInScreenState extends State<CheckInScreen> {
                                   'weigh-in are needed), so the expenditure '
                                   'carries from before.'
                             : _breakHoldText(checkIn.breakHold!),
-                        style: TextStyle(color: theme.colorScheme.tertiary),
+                        style: TextStyle(color: paletteOf(context).warningText),
                       ),
                     ),
                 ],

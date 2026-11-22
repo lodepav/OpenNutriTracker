@@ -35,6 +35,18 @@ String _valueText(
       '${_unitOf(metric, imperial)}';
 }
 
+/// [_valueText] as a screen reader should say it: "80.0 centimetres" (A5).
+String _spokenValueText(
+  BodyMetric metric,
+  double value,
+  bool imperial, {
+  bool signed = false,
+}) {
+  final shown = _shownIn(metric, value, imperial);
+  return '${signed ? signedText(shown, 1) : shown.toStringAsFixed(1)} '
+      '${spokenUnit(_unitOf(metric, imperial))}';
+}
+
 String _dateText(BuildContext context, DateTime d) =>
     DateFormat.yMMMd(Localizations.localeOf(context).toLanguageTag()).format(d);
 
@@ -203,6 +215,9 @@ class _BodyMeasurementsCardState extends State<BodyMeasurementsCard> {
   String _text(BodyMetric metric, double value, {bool signed = false}) =>
       _valueText(metric, value, widget.imperial, signed: signed);
 
+  String _spoken(BodyMetric metric, double value, {bool signed = false}) =>
+      _spokenValueText(metric, value, widget.imperial, signed: signed);
+
   String _date(DateTime d) => _dateText(context, d);
 
   Future<void> _add() async {
@@ -326,6 +341,7 @@ class _BodyMeasurementsCardState extends State<BodyMeasurementsCard> {
               _row(
                 'Latest (${_date(series.last.date)})',
                 _text(metric, series.last.value),
+                _spoken(metric, series.last.value),
               ),
             if (measurementRangeHint(
                   series: series.length,
@@ -345,6 +361,13 @@ class _BodyMeasurementsCardState extends State<BodyMeasurementsCard> {
                         inRange.last.value - inRange.first.value,
                         signed: true,
                       ),
+                metric == BodyMetric.bodyFat
+                    ? '${signedText(inRange.last.value - inRange.first.value, 1)} points'
+                    : _spoken(
+                        metric,
+                        inRange.last.value - inRange.first.value,
+                        signed: true,
+                      ),
               ),
             if (inRange.length > 1) ...[
               const SizedBox(height: Dimens.spacing16),
@@ -355,6 +378,11 @@ class _BodyMeasurementsCardState extends State<BodyMeasurementsCard> {
                   context,
                   (_text(metric, inRange.first.value), inRange.first.date),
                   (_text(metric, inRange.last.value), inRange.last.date),
+                ),
+                semanticsLabel: fromToCaption(
+                  context,
+                  (_spoken(metric, inRange.first.value), inRange.first.date),
+                  (_spoken(metric, inRange.last.value), inRange.last.date),
                 ),
                 style: theme.textTheme.bodySmall,
               ),
@@ -389,12 +417,15 @@ class _BodyMeasurementsCardState extends State<BodyMeasurementsCard> {
                   ListTile(
                     dense: true,
                     contentPadding: EdgeInsets.zero,
-                    title: Text(_text(metric, m.value)),
+                    title: Text(
+                      _text(metric, m.value),
+                      semanticsLabel: _spoken(metric, m.value),
+                    ),
                     subtitle: Text(_date(m.date)),
                     trailing: IconButton(
                       key: ValueKey('measure-delete-${m.id}'),
                       tooltip:
-                          'Delete ${_text(metric, m.value)}, ${_date(m.date)}',
+                          'Delete ${_spoken(metric, m.value)}, ${_date(m.date)}',
                       icon: const Icon(Icons.delete_outline_rounded),
                       onPressed: () => _delete(m),
                     ),
@@ -467,12 +498,16 @@ class _BodyMeasurementsCardState extends State<BodyMeasurementsCard> {
     onTap: onTap,
   );
 
-  Widget _row(String label, String value) => Padding(
+  Widget _row(String label, String value, String spoken) => Padding(
     padding: const EdgeInsets.symmetric(vertical: 2),
     child: Row(
       children: [
         Expanded(child: Text(label)),
-        Text(value, style: const TextStyle(fontWeight: FontWeight.w600)),
+        Text(
+          value,
+          semanticsLabel: spoken,
+          style: const TextStyle(fontWeight: FontWeight.w600),
+        ),
       ],
     ),
   );

@@ -59,6 +59,7 @@ void main() {
   testWidgets('the page: ratio, waist and hips, the band, the days', (
     tester,
   ) async {
+    final semantics = tester.ensureSemantics();
     await tester.pumpWidget(
       MaterialApp(
         home: WaistRatioPage(
@@ -84,6 +85,21 @@ void main() {
     String d(int offset) => DateFormat.MMMd().format(_day(offset));
     expect(find.text('0.51 on ${d(-12)} \u2192 0.48 on ${d(-1)}'), findsOne);
     expect(find.text('0.5 risk line'), findsOne);
+    // Units in words for a screen reader.
+    expect(
+      find.bySemanticsLabel(
+        'Waist to height 0.48, Waist 33.9 inches, Waist to hips 0.88',
+      ),
+      findsOne,
+    );
+    await tester.scrollUntilVisible(find.textContaining('waist 36.0 in'), 200);
+    expect(
+      find.bySemanticsLabel(
+        '${DateFormat.yMMMd().format(_day(-12))}, 0.51, waist 36.0 inches',
+      ),
+      findsOne,
+    );
+    semantics.dispose();
 
     await tester.ensureVisible(find.text('What is waist to height?'));
     await tester.tap(find.text('What is waist to height?'));

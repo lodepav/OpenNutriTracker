@@ -25,6 +25,9 @@ import 'package:opennutritracker/fork/recipe/recipe_list.dart';
 import 'package:opennutritracker/core/domain/entity/recipe_entity.dart';
 import 'package:opennutritracker/fork/recipe/recipe_delete.dart';
 // [/fork]
+// [fork] S506 selection-bar-contrast
+import 'package:opennutritracker/fork/display/contrast.dart';
+// [/fork]
 
 class RecipesPage extends StatefulWidget {
   const RecipesPage({super.key});
@@ -461,6 +464,7 @@ class _RecipesPageState extends State<RecipesPage>
                                 return RecipeListItem(
                                   recipe: recipe,
                                   isSelected: isSelected,
+                                  selecting: _selectionMode, // [fork] S505
                                   onTap: () async {
                                     if (_selectionMode) {
                                       setState(() {
@@ -511,6 +515,15 @@ class _RecipesPageState extends State<RecipesPage>
   Widget _buildSelectionBar(BuildContext context) {
     final s = S.of(context);
     final accent = Theme.of(context).colorScheme.primary;
+    // [fork] S506 selection-bar-contrast: on its tint over the page, as the
+    // row's check mark is
+    final tint = Color.alphaBlend(
+      accent.withValues(alpha: 0.12),
+      paletteOf(context).canvas,
+    );
+    final ink = textSafe(accent, tint);
+    final mark = chartSafe(accent, tint);
+    // [/fork]
     return Container(
       margin: const EdgeInsets.fromLTRB(Dimens.spacing16, Dimens.spacing4, Dimens.spacing16, Dimens.spacing4),
       padding: const EdgeInsets.symmetric(horizontal: Dimens.spacing8, vertical: Dimens.spacing4),
@@ -522,7 +535,10 @@ class _RecipesPageState extends State<RecipesPage>
         children: [
           IconButton(
             tooltip: s.dialogCancelLabel,
-            icon: Icon(Icons.close_rounded, color: accent),
+            // [fork] S506
+            // icon: Icon(Icons.close_rounded, color: accent),
+            icon: Icon(Icons.close_rounded, color: mark),
+            // [/fork]
             onPressed: () => setState(_selectedIds.clear),
           ),
           Expanded(
@@ -531,14 +547,20 @@ class _RecipesPageState extends State<RecipesPage>
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: accent,
+                    // [fork] S506
+                    // color: accent,
+                    color: ink,
+                    // [/fork]
                     fontWeight: FontWeight.w700,
                   ),
             ),
           ),
           IconButton(
             tooltip: s.dialogDeleteLabel,
-            icon: Icon(Icons.delete_outline_rounded, color: accent),
+            // [fork] S506
+            // icon: Icon(Icons.delete_outline_rounded, color: accent),
+            icon: Icon(Icons.delete_outline_rounded, color: mark),
+            // [/fork]
             onPressed: _onBulkDelete,
           ),
         ],

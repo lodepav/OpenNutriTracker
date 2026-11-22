@@ -355,7 +355,16 @@ extension _BulkAddRow on _BulkAddScreenState {
     Widget line(String text, Color color) =>
         Text(text, style: theme.textTheme.bodySmall?.copyWith(color: color));
     if (!row.isResolved) {
-      return pill(S.of(context).bulkAddNoMatchLabel, scheme.error);
+      // light error is 4.12:1 on its own tint
+      final tint = Color.alphaBlend(
+        scheme.error.withValues(alpha: 0.14),
+        paletteOf(context).surface,
+      );
+      return pill(
+        S.of(context).bulkAddNoMatchLabel,
+        scheme.error,
+        textSafe(scheme.error, tint),
+      );
     }
     if (_dishBreakdown.isPending(row)) {
       return line(DishStrings.breakingDown, warnText);

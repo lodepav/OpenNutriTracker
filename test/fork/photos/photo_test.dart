@@ -479,6 +479,40 @@ void main() {
       semantics.dispose();
     });
 
+    testWidgets('the viewer and compare decode at the shown size', (
+      tester,
+    ) async {
+      await pump(tester, photos: 3);
+
+      await tester.tap(find.byKey(const ValueKey('photo-old0')));
+      await tester.pumpAndSettle();
+      final viewer = find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.byType(Image),
+      );
+      final shown = tester.widget<Image>(viewer);
+      expect(shown.semanticLabel, 'Progress photo, Aug 1, 2026');
+      final decoded = shown.image as ResizeImage;
+      expect(decoded.width, greaterThan(0));
+      expect(
+        decoded.width,
+        lessThanOrEqualTo(tester.view.physicalSize.width.round()),
+      );
+      await tester.tap(find.text('Close'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const ValueKey('photo-compare')));
+      await tester.pumpAndSettle();
+      final images = tester.widgetList<Image>(find.byType(Image)).toList();
+      expect(images, hasLength(2));
+      for (final image in images) {
+        // Half the page each, in device pixels.
+        final width = (image.image as ResizeImage).width!;
+        expect(width, greaterThan(0));
+        expect(width, lessThanOrEqualTo(tester.view.physicalSize.width / 2));
+      }
+    });
+
     testWidgets('compare starts with the oldest and the newest', (
       tester,
     ) async {

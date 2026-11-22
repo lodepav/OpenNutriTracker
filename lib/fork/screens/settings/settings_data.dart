@@ -98,8 +98,8 @@ extension _DataSettings on _SettingsScreenState {
             title: S.of(context).settingsDeleteAllDataLabel,
             // The shared AI key is named here too: it goes for every profile
             subtitle:
-                'Profile, logged foods, activities, weight history, fasting '
-                'sessions and the shared AI key',
+                'Profile, logged foods, activities, weight history, progress '
+                'photos, fasting sessions and the shared AI key',
             onTap: () => _confirmDeleteAllData(context),
           ),
         ],
@@ -141,9 +141,9 @@ extension _DataSettings on _SettingsScreenState {
           children: [
             Text(
               'Deletes this profile and its goals, logged foods, water, '
-              'favourites, activities, weigh-ins, body measurements and '
-              'fasting sessions, and the AI key and server address every '
-              'profile shares.',
+              'favourites, activities, weigh-ins, body measurements, '
+              'progress photos and fasting sessions, and the AI key and '
+              'server address every profile shares.',
             ),
             SizedBox(height: Dimens.spacing12),
             Text(

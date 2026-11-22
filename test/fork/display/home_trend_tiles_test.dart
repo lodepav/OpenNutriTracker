@@ -194,7 +194,7 @@ void main() {
     expect(tester.widget<TrendTile>(sides).suffix, 'cm · right bigger');
     // Spoken as on Trends.
     expect(
-      find.bySemanticsLabel('Arms left versus right, 1.2 cm, right bigger'),
+      find.bySemanticsLabel('Arms left versus right, 1.2 centimetres, right bigger'),
       findsOne,
     );
     // First, beside the weight.

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -6,7 +7,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_ce/hive.dart';
 import 'package:opennutritracker/core/domain/usecase/add_config_usecase.dart';
+import 'package:opennutritracker/core/presentation/storage_recovery_app.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
+import 'package:opennutritracker/features/settings/domain/export_import_failure.dart';
 import 'package:opennutritracker/features/settings/domain/usecase/import_data_usecase.dart';
 import 'package:opennutritracker/fork/backup/auto_backup.dart';
 import 'package:opennutritracker/fork/backup/backup_folder.dart';
@@ -28,6 +31,7 @@ class _Folder extends BackupFolder {
 class _Import extends Fake implements ImportDataUsecase {
   int imports = 0;
   bool fails = false;
+  Object error = const FormatException('not a backup');
 
   @override
   Future<bool> importArchive(
@@ -43,7 +47,7 @@ class _Import extends Fake implements ImportDataUsecase {
     Object? startedOn,
   }) async {
     imports++;
-    if (fails) throw const FormatException('not a backup');
+    if (fails) throw error;
     return true;
   }
 }
@@ -162,6 +166,7 @@ void main() {
     });
 
     tearDown(() async {
+      StorageRescue.failedRestore = null;
       await locator.unregister<ImportDataUsecase>();
       await locator.unregister<AddConfigUsecase>();
     });
@@ -205,6 +210,53 @@ void main() {
       expect(config.policy, isNull);
       expect(await broken.finishPending(), isFalse);
       expect(import.imports, 1);
+    });
+
+    test('a backup that fails is kept for onboarding to say, with why when '
+        'known; nothing pending leaves it', () async {
+      final gone = rescue(['openbite-2026-10-24.zip'], readable: false);
+      await gone.restoreAtStart('openbite-2026-10-24.zip');
+      expect(await gone.finishPending(), isFalse);
+      expect(
+        StorageRescue.failedRestore,
+        allOf(
+          contains('Your backup could not be restored.'),
+          contains('could not be found'),
+          contains('Restore a backup'),
+        ),
+      );
+      // main_dev asks again before forkStartup does
+      expect(await gone.finishPending(), isFalse);
+      expect(StorageRescue.failedRestore, isNotNull);
+
+      StorageRescue.failedRestore = null;
+      import.fails = true;
+      final broken = rescue(['openbite-2026-10-24.zip']);
+      await broken.restoreAtStart('openbite-2026-10-24.zip');
+      expect(await broken.finishPending(), isFalse);
+      expect(
+        StorageRescue.failedRestore,
+        contains('Your backup could not be restored.'),
+      );
+
+      import.error = const ExportImportFailure(
+        ExportImportFailureReason.unreadableOrWrongFormat,
+        'test',
+      );
+      final wrong = rescue(['openbite-2026-10-24.zip']);
+      await wrong.restoreAtStart('openbite-2026-10-24.zip');
+      expect(await wrong.finishPending(), isFalse);
+      expect(
+        StorageRescue.failedRestore,
+        contains('The file is not a backup the app can read.'),
+      );
+    });
+
+    test('a restored backup leaves nothing to say', () async {
+      final r = rescue(['openbite-2026-10-24.zip']);
+      await r.restoreAtStart('openbite-2026-10-24.zip');
+      expect(await r.finishPending(), isTrue);
+      expect(StorageRescue.failedRestore, isNull);
     });
   });
 
@@ -266,20 +318,74 @@ void main() {
     expect(find.textContaining('Nothing was deleted'), findsOneWidget);
     expect(retried, 0);
   });
+
+  _busyTests();
 }
 
 var asides = 0;
 
+void _busyTests() {
+  testWidgets('while Retry runs, the way-out buttons are off', (tester) async {
+    final retry = Completer<void>();
+    await tester.pumpWidget(
+      StorageRecoveryApp(
+        errorCode: 'hive_wrong_key_or_corrupted',
+        onRetry: () => retry.future,
+      ),
+    );
+    await tester.pumpAndSettle();
+    final fresh = find.byKey(const ValueKey('storage-rescue-fresh'));
+    expect(tester.widget<TextButton>(fresh).onPressed, isNotNull);
+    await tester.tap(find.text('Retry'));
+    await tester.pump();
+    expect(tester.widget<TextButton>(fresh).onPressed, isNull);
+    retry.complete();
+    await tester.pump();
+    expect(tester.widget<TextButton>(fresh).onPressed, isNotNull);
+  });
+
+  testWidgets('while a way out runs, the screen is told, to turn Retry off', (
+    tester,
+  ) async {
+    final step = Completer<void>();
+    final busy = <bool>[];
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: StorageRescuePanel(
+            rescue: _Rescue((_) {}, step: step.future),
+            onRetry: () async {},
+            onBusy: busy.add,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Restore the backup of Oct 24, 2026'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Restore'));
+    await tester.pump();
+    expect(busy, [true]);
+    step.complete();
+    await tester.pumpAndSettle();
+    expect(busy, [true, false]);
+  });
+}
+
 class _Rescue extends StorageRescue {
   final void Function(String) onRestore;
-  _Rescue(this.onRestore);
+  final Future<void>? step;
+  _Rescue(this.onRestore, {this.step});
 
   @override
   Future<({String name, DateTime day})?> latestBackup() async =>
       (name: 'openbite-2026-10-24.zip', day: DateTime(2026, 10, 24));
 
   @override
-  Future<void> restoreAtStart(String backup) async => onRestore(backup);
+  Future<void> restoreAtStart(String backup) async {
+    onRestore(backup);
+    await step;
+  }
 
   @override
   Future<Directory> setAside() async {
