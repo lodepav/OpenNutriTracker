@@ -44,6 +44,27 @@ void main() {
     await syncDemoFlag();
     expect(await banner(), isTrue, reason: 'the demo profile still is');
 
+    // A restore wrote real data here, whatever the backup said: leaving the
+    // demo would wipe it, so the profile is no longer a demo (F1)
+    await syncRestoredDemoMark();
+    expect(await banner(), isFalse, reason: 'a restored profile is not a demo');
+    await switcher.switchProfile(other);
+    await syncDemoFlag();
+    await switcher.switchProfile(demo);
+    await syncDemoFlag();
+    expect(await banner(), isFalse, reason: 'and it stays so after a switch');
+    // The banner on screen was read before the restore: leaving the demo
+    // from it must not wipe the restored profile
+    final restoredName = locator<GetProfilesUsecase>().getActiveProfile()!.name;
+    await exitDemoMode();
+    expect(
+      locator<GetProfilesUsecase>().getActiveProfile()!.name,
+      restoredName,
+      reason: 'a restored profile is not reset by leaving the demo',
+    );
+    await markDemoProfile(true);
+    await syncDemoFlag();
+
     // Sam's own recipe, in the library every profile shares
     await locator<RecipeRepository>().saveRecipe(
       RecipeEntity(

@@ -454,3 +454,4 @@ the row says so; the release merge then finds the files equal and the row goes.
 | S599 | `lib/core/utils/demo/demo_seeder.dart` | Leaving the demo also clears the per-serving marks of the custom foods it clears. | active |
 | S600 | `lib/features/home/home_page.dart` | Inside S162, the check-in card comes before the tiles, so a due check-in sits above them; `homeSectionNames` in `lib/fork/layout/home_layout.dart` has the same order for Arrange Home. Test: `test/fork/layout/home_layout_test.dart`. | active |
 | S605 | `lib/core/styles/app_theme.dart` | Slider inactive tracks in the muted text colour, 3:1 against the surface in light and dark. Test: `test/fork/styles/slider_track_contrast_test.dart`. | active |
+| S606 | `lib/core/utils/demo/demo_seeder.dart` | Leaving the demo skips the wipe when the active profile was marked as no longer a demo, as after a restore while the banner was still up. Test: `test/fork/demo/demo_per_profile_test.dart`. | active |

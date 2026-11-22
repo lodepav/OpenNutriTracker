@@ -84,4 +84,25 @@ void main() {
     expect(find.byKey(const ValueKey('check-in-2026-11-21')), findsNothing);
     expect(find.byKey(const ValueKey('check-in-2026-11-14')), findsOneWidget);
   });
+
+  testWidgets('a check-in that came in while the confirm was open is not '
+      'undone in its place', (tester) async {
+    final store = _Store([_record(14, 2500), _record(21, 2400)]);
+    final service = _Service(store);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: CheckInHistoryScreen(store: store, service: service),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('undo-latest-check-in')));
+    await tester.pumpAndSettle();
+    store.records = [...store.records, _record(28, 2300)];
+    await tester.tap(find.text('Undo check-in'));
+    await tester.pumpAndSettle();
+    expect(service.restored, isNull);
+    expect(store.records, hasLength(3));
+    expect(find.text('A newer check-in came in. Nothing was undone.'),
+        findsOneWidget);
+  });
 }

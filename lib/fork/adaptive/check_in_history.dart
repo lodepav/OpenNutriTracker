@@ -123,8 +123,22 @@ class _CheckInHistoryScreenState extends State<CheckInHistoryScreen> {
     try {
       // Read again: the list on screen may be older than the store.
       final all = await widget.store.history();
+      // Only the check-in the dialog named, and only while it is the latest.
+      if (all.isEmpty || all.last.date != latest.date) {
+        if (mounted) {
+          setState(() {
+            _history = widget.store.history();
+          });
+        }
+        messenger.showSnackBar(
+          const SnackBar(
+            content: Text('A newer check-in came in. Nothing was undone.'),
+          ),
+        );
+        return;
+      }
       await (widget.service ?? AdaptiveService.fromLocator()).restoreCheckIns(
-        all.isEmpty ? all : all.sublist(0, all.length - 1),
+        all.sublist(0, all.length - 1),
       );
       AutoCheckIn.accepted.value = null;
       await refreshGoals();

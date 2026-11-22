@@ -173,7 +173,10 @@ class _RecipeBuilderScreenState extends State<RecipeBuilderScreen> {
         }
         // [fork] S564 builder-name-error: Save is in the footer; the name
         // field is at the list's top, maybe scrolled away
-        if (state.saveError == SaveError.nameRequired &&
+        final newError = state.saveError != _forkShownError;
+        _forkShownError = state.saveError;
+        if (newError &&
+            state.saveError == SaveError.nameRequired &&
             _forkList.hasClients) {
           _forkList.animateTo(
             0,
@@ -441,6 +444,8 @@ class _RecipeBuilderScreenState extends State<RecipeBuilderScreen> {
 
   // [fork] S564 builder-name-error
   final _forkList = ScrollController();
+  // The error stays in the state until a save passes: scroll once per error.
+  SaveError? _forkShownError;
   // [/fork]
 
   bool _hasUnsavedChanges(RecipeBuilderState state) {
